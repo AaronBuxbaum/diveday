@@ -153,6 +153,23 @@ export type CloseoutTripInput = {
   endsAt: Date;
   /** Non-cancelled bookings — a fact about the trip, shown beside its state. */
   booked: number;
+  /**
+   * **Divers the departure actually carried** — `booked` less the seats a
+   * staffer marked `no_show` (issue #1689).
+   *
+   * Its own field rather than a narrowing of `booked`, because the two readers
+   * either side of it want the roster: `openSeatsDebrief` subtracts seats from
+   * capacity, and a released seat never came back to the shelf, while
+   * `closeout.departures.detail.allHome` names the people who bought them.
+   * The homecoming sentence is the one reader asking who was *aboard*, and it
+   * counted a dock no-show as having gone out and come home because all three
+   * shared one number.
+   *
+   * **Never defaulted to `booked`.** A default is how a later caller puts that
+   * miscount back with a green suite, which is why this is required on the
+   * input rather than optional.
+   */
+  sailed: number;
   /** Seats the departure had, for the evening's open-seats reading. */
   capacity: number;
   /** Decides the closing checkpoint the crew are counted at. */
@@ -230,6 +247,8 @@ export type CloseoutDeparture = {
   startsAt: Date;
   endsAt: Date;
   booked: number;
+  /** See `CloseoutTripInput.sailed` — the divers aboard, never the seats sold. */
+  sailed: number;
   capacity: number;
   plannedDives: number;
   /** See `CloseoutTripInput.crew` — the assigned crew, at the closing checkpoint. */
@@ -420,6 +439,7 @@ export function assembleDayCloseout(input: {
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       booked: trip.booked,
+      sailed: trip.sailed,
       capacity: trip.capacity,
       plannedDives: trip.plannedDives,
       crew: trip.crew,
@@ -701,7 +721,16 @@ export type StationClose = {
   /** The roster the day is judged against — non-cancelled bookings. */
   booked: number;
   /**
-   * How many of that roster the head count brought back.
+   * **The divers this station sent out** — see `CloseoutTripInput.sailed`.
+   *
+   * The homecoming numbers are built from this and never from `booked`, at
+   * both scales: the day's sentence and the station's own sentence say the
+   * same thing about one boat, and reading two different counts is how they
+   * would come to disagree (issue #1689).
+   */
+  sailed: number;
+  /**
+   * How many of the divers who sailed the head count brought back.
    *
    * Only an **after-dive** gap subtracts: those are the reasons that can mean
    * a person is still in the water (`AFTER_DIVE_GAP_REASONS`). A dock-count
@@ -764,7 +793,15 @@ export type EveningClose = {
   out: number;
   /** Souls the head counts brought back. */
   back: number;
-  /** The diver half of {@link out}, for a sentence that names both. */
+  /**
+   * The diver half of {@link out}, for a sentence that names both.
+   *
+   * **Divers who sailed, not seats that were sold** (issue #1689). A booking a
+   * staffer marked `no_show` is the shop saying that person never turned up,
+   * and while this summed `booked` the sentence counted them out *and* back —
+   * both numbers moving together, so even `out === back` held and the moment
+   * below was still spent.
+   */
   divers: number;
   /** The crew half of {@link out} — every assigned crew member of the day. */
   crew: number;
@@ -834,7 +871,8 @@ export function assembleEveningClose(
         diveNumber: departure.diveNumber,
         uncounted: departure.uncounted,
         booked: departure.booked,
-        back: Math.max(0, departure.booked - missing),
+        sailed: departure.sailed,
+        back: Math.max(0, departure.sailed - missing),
         crewAssigned: crewCounts.crewAssigned,
         crewAccountedFor: crewIsAccountedFor(closingCheckpoint, departure.crew),
         crewBack: Math.max(0, crewCounts.crewAssigned - crewCounts.crewNotBackAboard),
@@ -850,7 +888,7 @@ export function assembleEveningClose(
         a.endsAt.getTime() - b.endsAt.getTime() ||
         a.tripId.localeCompare(b.tripId),
     );
-  const divers = stations.reduce((total, station) => total + station.booked, 0);
+  const divers = stations.reduce((total, station) => total + station.sailed, 0);
   const crew = stations.reduce((total, station) => total + station.crewAssigned, 0);
   const out = divers + crew;
   const back = stations.reduce((total, station) => total + station.back + station.crewBack, 0);

@@ -4,6 +4,7 @@ import { nowMs } from "@/lib/clock";
 import { assembleEveningClose } from "@/lib/closeout";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { seededShopContext } from "@/test/db";
+import { standingArrivalStatus } from "./arrival-provenance";
 import { createBookingParty } from "./bookings";
 import {
   closeDay,
@@ -11,9 +12,11 @@ import {
   listLatestLeftoverDecisions,
   recordLeftoverDecision,
 } from "./closeout";
+import { markBookingNoShow } from "./no-show";
 import { addCrewRecapPhoto } from "./recap";
 import { listShopReviewsForStaff, submitTripReview } from "./reviews";
 import {
+  bookingArrivalEvents,
   bookings as bookingsTable,
   people,
   rollCallCrewEvents,
@@ -410,6 +413,169 @@ describe("day close-out (in-memory PGlite)", () => {
         now,
       );
       expect(other.state.departures).toEqual([]);
+    });
+  });
+
+  /**
+   * **What the evening counts as having been aboard** (issue #1689).
+   *
+   * The homecoming sentence used to sum the roster, so a diver a staffer
+   * marked absent at the desk went out *and* came home. Both numbers moved
+   * together, which is why arithmetic alone never caught it — `out === back`
+   * held over a boat whose own records said one of those souls never sailed.
+   */
+  describe("the divers the evening counts as sailed", () => {
+    /**
+     * A boat that left five hours ago and tied up two: sailed, home, and
+     * still inside the counter's own backward reach, so
+     * `markBookingNoShow` — the product's only writer of that status — is
+     * the thing under test rather than a hand-written row.
+     */
+    const boatThatSailedShort = async () => {
+      const { db, shop } = await seededShopContext();
+      const [staff] = await listStaff(db, shop.id);
+      if (!staff) throw new Error("seed staff missing");
+      const now = new Date(nowMs() + HOUR);
+      const [trip] = await db
+        .insert(tripsTable)
+        .values({
+          shopId: shop.id,
+          title: "Sailed Short — Molasses",
+          startsAt: new Date(now.getTime() - 5 * HOUR),
+          endsAt: new Date(now.getTime() - 2 * HOUR),
+          capacity: 12,
+          plannedDives: 1,
+          priceCents: 13000,
+        })
+        .returning();
+      if (!trip) throw new Error("fixture trip insert returned no row");
+      const divers = await db
+        .select({ id: people.id })
+        .from(people)
+        .where(eq(people.shopId, shop.id))
+        .limit(3);
+      if (divers.length < 3) throw new Error("seed has too few people");
+      return { db, shop, staff, now, trip, divers };
+    };
+
+    const seat = async (
+      db: Awaited<ReturnType<typeof boatThatSailedShort>>["db"],
+      values: { shopId: string; tripId: string; personId: string; status: "booked" | "checked_in" },
+    ) => {
+      const [booking] = await db.insert(bookingsTable).values(values).returning();
+      if (!booking) throw new Error("fixture booking insert returned no row");
+      return booking;
+    };
+
+    const departureOf = async (
+      ctx: Awaited<ReturnType<typeof boatThatSailedShort>>,
+      tripId: string,
+    ) => {
+      const { state } = await getDayCloseout(
+        ctx.db,
+        ctx.shop.id,
+        ctx.shop.slug,
+        ctx.shop.timezone,
+        ctx.now,
+      );
+      const departure = state.departures.find((row) => row.tripId === tripId);
+      if (!departure) throw new Error("fixture departure missing from today's closeout");
+      return departure;
+    };
+
+    it("drops a seat the desk marked no-show, and leaves the roster and the shelf alone", async () => {
+      const ctx = await boatThatSailedShort();
+      const { db, shop, staff, now, trip, divers } = ctx;
+      const sailing = await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[0].id,
+        status: "booked",
+      });
+      const absent = await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[1].id,
+        status: "booked",
+      });
+
+      const before = await departureOf(ctx, trip.id);
+      expect([before.booked, before.sailed]).toEqual([2, 2]);
+
+      const marked = await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: absent.id,
+        recordedByPersonId: staff.person.id,
+        now,
+      });
+      if (!marked.ok) throw new Error(`no-show refused: ${marked.reason}`);
+
+      const after = await departureOf(ctx, trip.id);
+      // The roster is untouched — two people bought seats on this boat, and
+      // that stays true tonight. One of them was aboard.
+      expect([after.booked, after.sailed]).toEqual([2, 1]);
+      const evening = assembleEveningClose([after], now);
+      expect([evening.divers, evening.back]).toEqual([1, 1]);
+      // **The debrief still reads the seats.** Ten of twelve went unsold, and
+      // narrowing the shared count would have quietly made it eleven.
+      expect(after.openSeats?.openSeats).toBe(10);
+      expect(sailing.status).toBe("booked");
+    });
+
+    it("keeps a checked-in diver out of the count once the desk says they never came", async () => {
+      // **The adversarial case, and it lands the opposite way round from the
+      // one #1558 imagined.** This booking has a standing `arrived` row: a
+      // staffer tapped them in at the desk, and `markBookingNoShow` leaves
+      // that trail alone on purpose. The mark is still the later human
+      // statement — made by somebody looking at the empty space — so it is
+      // the one the count follows, exactly as the dive-day readers were
+      // changed to do on 2026-09-11 (`standingArrivalStatus`,
+      // src/db/arrival-provenance.ts). A sighting at the desk at 06:40 is not
+      // a body on the boat at 06:50.
+      //
+      // The rail is the statement that *does* outrank it, and it needs no
+      // reader here: boarding a diver marked absent puts the booking back to
+      // `booked` (`reclaimReleasedSeat`, src/db/manifests.ts), so a diver the
+      // crew counted is never sitting at `no_show` when the evening reads it.
+      const ctx = await boatThatSailedShort();
+      const { db, shop, staff, now, trip, divers } = ctx;
+      await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[0].id,
+        status: "booked",
+      });
+      const seen = await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[1].id,
+        status: "checked_in",
+      });
+      await db.insert(bookingArrivalEvents).values({
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: seen.id,
+        recordedByPersonId: staff.person.id,
+        status: "arrived",
+        source: "live",
+        occurredAt: new Date(now.getTime() - 6 * HOUR),
+      });
+      expect(await standingArrivalStatus(db, shop.id, trip.id, seen.id)).toBe("arrived");
+
+      const marked = await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: seen.id,
+        recordedByPersonId: staff.person.id,
+        now,
+      });
+      if (!marked.ok) throw new Error(`no-show refused: ${marked.reason}`);
+      // The sighting is still on the trail; it simply does not answer this
+      // question.
+      expect(await standingArrivalStatus(db, shop.id, trip.id, seen.id)).toBe("arrived");
+
+      const after = await departureOf(ctx, trip.id);
+      expect([after.booked, after.sailed]).toEqual([2, 1]);
+      expect(assembleEveningClose([after], now).divers).toBe(1);
     });
   });
 

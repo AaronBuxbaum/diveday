@@ -34,12 +34,16 @@ const CREW_COUNTED_BACK: CrewRollCallSubject[] = [
 ];
 
 function trip(overrides: Partial<CloseoutTripInput> & { tripId: string }): CloseoutTripInput {
+  const booked = overrides.booked ?? 8;
   return {
     title: "Two-Tank Reef",
     // Sailed 07:30 local, home 11:30 local — an ordinary finished morning boat.
     startsAt: new Date("2026-08-04T11:30:00Z"),
     endsAt: new Date("2026-08-04T15:30:00Z"),
-    booked: 8,
+    booked,
+    // Everybody who booked turned up, which is the ordinary day. A case about
+    // a no-show says so by setting `sailed` lower (issue #1689).
+    sailed: booked,
     capacity: 12,
     plannedDives: 2,
     crew: CREW_COUNTED_BACK,
@@ -587,6 +591,36 @@ describe("assembleEveningClose", () => {
     expect([evening.out, evening.back]).toEqual([12, 12]);
     expect(evening.closing).toBe(true);
     expect(evening.allHome).toBe(true);
+  });
+
+  /**
+   * **A diver who never turned up did not go out, so nothing brings them
+   * home** (issue #1689).
+   *
+   * Ten seats sold, one marked `no_show` at the desk, and the nine who sailed
+   * all counted back. The sentence read "10 divers and 2 crew out, 12 back",
+   * and because both numbers came off the one roster count they moved
+   * together — so even `out === back` held and the moment was spent over a
+   * boat whose own records say one of those twelve was never aboard.
+   *
+   * **The numbers are the assertion, never the flag.** Everybody who sailed is
+   * home, so `allHome` stays correctly true; a case pinning it false would be
+   * pinning the wrong fix.
+   */
+  it("leaves a diver marked no-show out of the souls that went out and came back", () => {
+    const evening = assembleEveningClose(day({ tripId: "t1", booked: 10, sailed: 9 }), now);
+
+    expect([evening.divers, evening.crew]).toEqual([9, 2]);
+    expect([evening.out, evening.back]).toEqual([11, 11]);
+    expect([evening.stations[0]?.sailed, evening.stations[0]?.back]).toEqual([9, 9]);
+    expect(evening.allHome).toBe(true);
+    // **The debrief wants the seats, not the souls, and this is what stops the
+    // shared count being narrowed later by accident.** D47 asks why the boat
+    // sailed short of *sold* seats — the last booking, the deal, the
+    // comparable that filled — so ten sold of twelve is still two open, and
+    // the roster the per-departure sentence names is still ten.
+    expect(evening.stations[0]?.openSeats?.openSeats).toBe(2);
+    expect(evening.stations[0]?.booked).toBe(10);
   });
 
   it("withholds the moment when nobody counted the crew, and says so the way the manifest does", () => {

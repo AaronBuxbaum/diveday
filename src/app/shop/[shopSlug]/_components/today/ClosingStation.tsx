@@ -78,8 +78,14 @@ export function ClosingStation({
   // that has never tapped a crew roll call keeps the diver-only wording it has
   // always had, rather than a line asserting a crew count nobody made.
   const souls = counted && close.crewAccountedFor;
+  // **`sailed`, never `booked`, in every number this sentence prints** (issue
+  // #1689). A seat a staffer marked `no_show` is a diver who never turned up,
+  // and the roster count had them going out and coming home. The `booked`
+  // placeholder in `spine.close.back`/`backBy` is the bundle's word for "of
+  // how many" — the sentence is about who was aboard, so what it is handed is
+  // the count of who was.
   const soulCounts = {
-    divers: close.booked,
+    divers: close.sailed,
     crew: close.crewAssigned,
     back: close.back + close.crewBack,
   };
@@ -92,12 +98,12 @@ export function ClosingStation({
           })
         : t("shopHome.spine.close.backBy", {
             back: close.back,
-            booked: close.booked,
+            booked: close.sailed,
             time: formatTime(headCountClose.closedAt, locale, timeZone),
           })
       : souls
         ? t("shopHome.spine.close.backSouls", soulCounts)
-        : t("shopHome.spine.close.back", { back: close.back, booked: close.booked })
+        : t("shopHome.spine.close.back", { back: close.back, booked: close.sailed })
     : closeoutDepartureDetailText(t, close, detailTime);
   const checkpoint = close.diveNumber >= 1 ? `after_dive_${close.diveNumber}` : "departure";
   // Two quiet readings the day already contains, each rendering nothing when

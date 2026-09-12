@@ -316,8 +316,31 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     planChangeRows,
     stagesByTrip,
   ] = await Promise.all([
+    // **Two counts off one roster, because the evening and the shelf ask
+    // different questions** (issue #1689). `booked` is the seats this
+    // departure sold — what `openSeatsDebrief` subtracts from capacity, and
+    // what the per-departure sentence calls the roster. `sailed` is the divers
+    // the day actually carried: a staffer who marks a seat `no_show` has said
+    // that person never turned up, and the homecoming line counted them out
+    // *and* home because both numbers came off the one count.
+    //
+    // `filter (where …)` rather than a second query, the same way
+    // `src/db/waivers.ts` takes its two populations off one scan.
+    //
+    // **Status alone, with no look at the arrival trail.** A `no_show` is one
+    // staffer's deliberate tap, always later than the check-in it overwrote,
+    // and if the crew board that diver after all the rail takes the seat back
+    // to `booked` (`reclaimReleasedSeat`, src/db/manifests.ts). So a row still
+    // standing at `no_show` tonight is the shop's own latest word on who was
+    // not aboard, and letting an earlier `arrived` row outrank it is the
+    // escape a `dive-domain-expert` review took out of the dive-day readers on
+    // 2026-09-11 (`standingArrivalStatus`, src/db/arrival-provenance.ts).
     db
-      .select({ tripId: bookings.tripId, booked: count() })
+      .select({
+        tripId: bookings.tripId,
+        booked: count(),
+        sailed: sql<number>`count(*) filter (where ${bookings.status} <> 'no_show')::int`,
+      })
       .from(bookings)
       .where(
         and(
@@ -483,6 +506,7 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     latestTripStagesByTrip(db, shopId, tripIds),
   ]);
   const bookedByTrip = new Map(counts.map((row) => [row.tripId, Number(row.booked)]));
+  const sailedByTrip = new Map(counts.map((row) => [row.tripId, Number(row.sailed)]));
   const photosByTrip = new Map<string, typeof photos>();
   for (const photo of photos) {
     const list = photosByTrip.get(photo.tripId) ?? [];
@@ -552,6 +576,7 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     startsAt: row.startsAt,
     endsAt: row.endsAt,
     booked: bookedByTrip.get(row.id) ?? 0,
+    sailed: sailedByTrip.get(row.id) ?? 0,
     capacity: row.capacity,
     plannedDives: row.plannedDives,
     stage: stagesByTrip.get(row.id) ?? null,

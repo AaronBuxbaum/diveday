@@ -87,11 +87,15 @@ const boat = (tripId: string, label = "Two-Tank Reef · 7:00 AM") => ({ tripId, 
  * is about.
  */
 function closed(overrides: Partial<CloseoutDeparture> & { tripId: string }): CloseoutDeparture {
+  const booked = overrides.booked ?? 10;
   return {
     title: "Two-Tank Reef",
     startsAt: hoursFromNow(-6),
     endsAt: hoursFromNow(-3),
-    booked: 10,
+    booked,
+    // Nobody was marked absent, so the boat carried its whole roster — a case
+    // about a no-show sets `sailed` lower (issue #1689).
+    sailed: booked,
     capacity: 12,
     plannedDives: 2,
     // Two crew, both counted back at the closing checkpoint — the shape a
