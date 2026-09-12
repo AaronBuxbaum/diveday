@@ -74,7 +74,7 @@ when you open the file.
 | --- | --- |
 | Public pages (landing, sign-in) | `src/app/` |
 | A shop's diver-facing pages (schedule, booking, courses) | `src/app/s/[shopSlug]/**` — no auth anywhere in it; paths from `src/lib/public-routes.ts`. `/shop/**` is staff, without exception |
-| An unknown URL under `/s/**` (a 404 that is really a 404) | refused in `src/proxy.ts` before the shell — the URL's shape first, then one existence read; a page's own `notFound()` is only the second layer. A shape it does not recognise is passed through untouched, so a new route here that is not taught to `publicRouteShape` silently goes back to answering 200 |
+| An unknown public URL (a 404 that is really a 404) | refused in `src/proxy.ts` before the shell — the URL's shape first, then one existence read where no closed list settles it; a page's own `notFound()` is only the second layer. An unrecognised shape passes through untouched, so `src/app/edge-refusal-coverage.test.ts` fails on a dynamic public route not taught to `publicRouteShape` |
 | Where a diver can go on a shop's public pages | `src/components/PublicShopNav.tsx`, assembled in `src/app/s/[shopSlug]/layout.tsx` — never a per-page cross-link |
 | Bearer-token pages (waiver signing, trip-prep "ready", recap, email verify, password reset, staff calendar feed) | `src/app/waivers/[token]`, `src/app/ready/[token]`, `src/app/recap/[token]`, `src/app/verify/[token]`, `src/app/reset-password/[token]`, `src/app/calendar/[token]` — the URL *is* the capability |
 | Account lifecycle (sign-up welcome/verify, forgot/reset password) | `src/app/onboard/`, `src/app/forgot-password/`; tokens in `src/db/account-tokens.ts` / `src/lib/account-tokens.ts`; accounts in `src/db/user-accounts.ts` |

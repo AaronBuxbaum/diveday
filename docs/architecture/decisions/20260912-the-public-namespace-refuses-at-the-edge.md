@@ -251,11 +251,28 @@ recognise returns `null`, which means *no opinion*: the request is passed throug
 deliberate and not negotiable — `/s/<shop>/opengraph-image` and `/s/<shop>/trips/<id>/opengraph-image`
 are routes this module must never refuse, and a namespace-wide "refuse what I have not been taught"
 would take them off the internet the day somebody adds the next one. So the failure mode is the safe
-one, and it is silent: a new route under `/s/**` that nobody teaches the shape module keeps its
-static shell and goes straight back to answering 200 for its own unknown sub-resources, with no test
-going red, because the `/s/**` status assertions in `e2e/seo.spec.ts` enumerate paths rather than
-routes. Adding a public page here means adding it to `publicRouteShape` and adding its refusal to
-that list. The route-map row in `AGENTS.md` says so, in those terms.
+one, and it was silent: a new route that nobody teaches the shape module keeps its static shell and
+goes straight back to answering 200 for its own unknown sub-resources, with no test going red,
+because the status assertions in `e2e/` enumerate paths rather than routes.
+
+**That silence cost six weeks and is now closed (issue #1734).** This decision was scoped to `/s/**`,
+and the three dynamic public routes outside it went on answering 200 with a not-found page —
+`/dive/<town>`, `/switching/<incumbent>`, `/demo/<story>`, two of them surfaces DiveDay wants
+indexed — exactly as predicted by the paragraph above and exactly as invisibly. So recognition is
+pinned to the route tree rather than to memory: `src/app/edge-refusal-coverage.test.ts` walks
+`src/app`, and a dynamic public route `publicRouteShape` has no opinion about fails it by name. It
+asserts the other direction too, which is the one that costs an outage rather than crawl budget — a
+*static* route must never be judged, because it always has a page to serve. Writing it caught
+`/switching/spreadsheet`, a live guide whose slug is deliberately absent from
+`MIGRATION_GUIDE_SLUGS`, being read as an unregistered competitor and refused.
+
+The three routes also widened the shape module past "which row?": a switching guide and a demo story
+are judged against closed lists this repository holds, so they are settled with no query at all
+(`{ kind: "absent" }`, which `PublicRouteQuery` excludes so it cannot reach a database). A town is
+not — `isRegionSlug` is a pattern and the real set is a projection of `shops.region_slug`, so
+`/dive/not-a-town` passes every shape check there is and pays one `limit 1` read through the page's
+own `listedShopScope`. A shape-only refusal there would have left the issue's own probe answering
+200 with every new unit test green, which is the trap its triage comment named.
 
 **The escape hatch.** If the edge read shows up in the p95, the cheap retreat is to keep the pure
 shape half in the proxy (which needs no read and catches every malformed segment) and let existence
