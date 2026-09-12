@@ -9,7 +9,7 @@ import { JumpNav } from "@/components/JumpNav";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
 import { getShopReviewAggregate } from "@/db/reviews";
-import { getShopBySlug } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops";
 import { listUpcomingSessionsForCourse } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { dateRequestCopy } from "@/i18n/date-request-copy";
@@ -50,7 +50,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { shopSlug, slug } = await params;
   const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   const course = shop ? await getCourseBySlug(db, shop.id, slug) : null;
   if (!course) return { title: "Course — DiveDay" };
   // A hidden course 404s in the page body for anyone but this shop's own
@@ -100,7 +100,7 @@ export default async function CoursePage({
   await connection(); // session dates are live data — render per request
   const { shopSlug, slug } = await params;
   const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) notFound();
   const stored = await getCourseBySlug(db, shop.id, slug);
   if (!stored) notFound();

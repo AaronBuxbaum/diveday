@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { getDb } from "@/db/client";
-import { getShopBySlug } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { requestLocale, requestTranslator } from "@/i18n/request";
 import { publicShopRegisterPath } from "@/lib/public-routes";
@@ -18,7 +17,7 @@ export async function generateMetadata({
   params: Promise<{ shopSlug: string }>;
 }): Promise<Metadata> {
   const { shopSlug } = await params;
-  const shop = await getShopBySlug(await getDb(), shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) return { title: "Register — DiveDay" };
   const { t } = await requestTranslator(shop.defaultLocale);
   return {
@@ -50,7 +49,7 @@ export async function generateMetadata({
  */
 export default async function RegisterPage({ params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
-  const shop = await getShopBySlug(await getDb(), shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) notFound();
   const locale = await requestLocale(shop.defaultLocale);
   const { t } = await requestTranslator(shop.defaultLocale);

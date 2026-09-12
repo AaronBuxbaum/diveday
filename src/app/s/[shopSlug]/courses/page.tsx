@@ -11,7 +11,7 @@ import { GroupLabel } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { activeCourseAgencies, listActiveCourses } from "@/db/courses";
-import { getShopBySlug } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";
@@ -60,7 +60,7 @@ export async function generateMetadata({
   params: Promise<{ shopSlug: string }>;
 }): Promise<Metadata> {
   const { shopSlug } = await params;
-  const shop = await getShopBySlug(await getDb(), shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) return { title: "Courses — DiveDay" };
   const { t } = await requestTranslator(shop.defaultLocale);
   const description = t("courses.index.description");
@@ -92,7 +92,7 @@ export default async function PublicCoursesPage({
   const { shopSlug } = await params;
   const { agency } = await searchParams;
   const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) notFound();
 
   const { locale, t } = await requestTranslator(shop.defaultLocale);

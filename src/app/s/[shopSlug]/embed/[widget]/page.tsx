@@ -5,7 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { listBoats } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
-import { getShopBySlug } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops";
 import { getTripWithBooked, pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
@@ -50,7 +50,7 @@ export default async function EmbedWidgetPage({
   const { shopSlug, widget } = await params;
   if (!isEmbedWidget(widget)) notFound();
   const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) notFound();
   const { t, locale } = await requestTranslator(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);

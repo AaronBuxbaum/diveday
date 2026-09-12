@@ -19,7 +19,7 @@ import { listActiveCourses } from "@/db/courses";
 import { tripRequirementSummaries } from "@/db/readiness";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { listSeasonEvents } from "@/db/season-events";
-import { getShopBySlug } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops";
 import { listTripLenses } from "@/db/trip-lenses";
 import { liveShopStage } from "@/db/trip-stages";
 import {
@@ -112,7 +112,7 @@ export async function generateMetadata({
   params: Promise<{ shopSlug: string }>;
 }): Promise<Metadata> {
   const { shopSlug } = await params;
-  const shop = await getShopBySlug(await getDb(), shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) return { title: "Schedule — DiveDay" };
   const { t } = await requestTranslator(shop.defaultLocale);
   const description = shop.description ?? shop.tagline ?? t("schedule.diverDescription");
@@ -209,7 +209,9 @@ export default async function SchedulePage({
    */
   const EMBED_TRIP_LIMIT = 4;
   const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
+  // The same row `generateMetadata` above already read: one query for both
+  // (issue #1737).
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) {
     notFound();
   }
@@ -1463,7 +1465,7 @@ async function ScheduleReviewsSection({
   t,
 }: {
   db: AppDb;
-  shop: NonNullable<Awaited<ReturnType<typeof getShopBySlug>>>;
+  shop: NonNullable<Awaited<ReturnType<typeof shopBySlugCached>>>;
   /** Read once, at the top of the page, for the hero's rating line. */
   aggregate: ReviewAggregate;
   upcoming: Awaited<ReturnType<typeof pagedUpcomingTripsWithCounts>>["trips"];
