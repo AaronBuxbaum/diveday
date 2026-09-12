@@ -107,6 +107,15 @@ jobs:
       issues: read
     steps:
       - uses: actions/checkout@v7
+        with:
+          # `fetch-depth: 0` because two guards inside `check:repo` read the
+          # commits this branch adds, and both resolve them from a merge base a
+          # shallow clone does not contain. `check-closing-keywords.mjs` reads
+          # the branch's commit messages and has nothing at all to check
+          # without it; `check-migrations.mjs` degrades to "no reachable git
+          # history" and stops comparing migrations against the previous
+          # release, which is the destructive-DDL gate silently not running.
+          fetch-depth: 0
       - uses: ./.github/actions/setup
       - run: pnpm check:repo
         env:
