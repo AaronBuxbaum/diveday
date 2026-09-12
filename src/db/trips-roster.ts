@@ -35,18 +35,27 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * a trip UUID for the wrong shop.
  *
  * **Ordered by seat time, then by the diver's name, and neither key is
- * decoration.** `created_at` alone was never a total order: Postgres stamps a
- * whole seeding transaction with one instant, so every seeded diver on a
- * departure already shared it and this list's order fell out of whatever the
- * heap returned. Since `createBooking` stamps the application clock — frozen
- * outright under the e2e harness — two divers seated in one spec, or in one
- * request, share that instant *by construction* rather than by bad luck. A
- * roster is read at the rail; it does not get to be nondeterministic.
+ * decoration.** `created_at` alone was never a total order. `createBooking`
+ * stamps the application clock, and that clock is frozen for the unit fleet
+ * and for e2e, so **every booking the app writes during a test run carries one
+ * instant** — two divers seated in a spec, or a party booked in a single
+ * `createBookingParty` transaction, tie *by construction* rather than by bad
+ * luck. (Most seeded bookings do not: `nextCreatedAt` in `seed-clock.ts`
+ * exists to give them distinct stamps, and the seeds use it.
+ * `seed-year-band.ts` is the one that stamps none.) A roster is read at the
+ * rail; it does not get to be nondeterministic.
  *
  * The tie-break used to be `asc(bookings.id)`, and that was the wrong half of
  * the promise (issue #1720). A `defaultRandom()` uuid makes one database
- * answer the same way every time — so nothing reorders under a crew member and
- * a printed copy cannot disagree with the screen — but it is arbitrary, it is
+ * answer the same way every time — and it was immune to a name edit, which
+ * this key is not: correcting a walk-up's name re-orders that diver inside
+ * their own tie group, so a sheet printed at 06:40 and the screen at 06:55 can
+ * put a different body at 05. That trade is deliberate and bounded to one
+ * party-sized block, and the number was **already** a position rather than an
+ * identity — a cancellation or a resold released seat re-numbers everything
+ * below it. What the order is stable against is a re-read and a fresh seed of
+ * the same data. See the glossary's *Roll-call order* and issue #1759. The
+ * uuid is arbitrary, it is
  * different in every freshly seeded database, and it is unexplainable to the
  * person reading the list. The index of this array **is** the rail numbering:
  * `DiverRollCall.tsx` and the departure log both render
@@ -55,13 +64,30 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * hand review on every pull request (issue #1720, reproduced on #1739), and it
  * is the same defect `arrival-provenance.ts` was reviewed for on 2026-09-11.
  *
- * `people.full_name` is the replacement because it is a property of the data
- * (ADR 20260815-roll-call-order-is-a-property-of-the-data), reproducible
- * anywhere the same divers are on the same boat, and the order a person would
- * have written the list in themselves. The column carries `COLLATE "und-x-icu"`
+ * ADR 20260815-roll-call-order-is-a-property-of-the-data already says of the
+ * key that was here: "**Order by `id`** — `defaultRandom()`, so arbitrary,
+ * merely arbitrary consistently." That ADR is cited for *that* sentence and
+ * nothing more — it is about ordering the append-only roll-call trail by a
+ * monotonic `seq`, it never mentions `bookings` or this query, and `bookings`
+ * is a mutable row rather than a trail, so its prescription does not transfer
+ * here by category. A monotonic column on `bookings` would have worked too;
+ * this change deliberately does not add one.
+ *
+ * `people.full_name` is the replacement because it is a property of the data,
+ * reproducible anywhere the same divers are on the same boat, and — the real
+ * argument — because the second of the two people calling the roll can find a
+ * called name in one pass down a name-ordered list and can *see* a skip. On an
+ * arbitrarily-ordered list they must scan every row for every name, which is
+ * how the second check quietly stops happening. It is **not** the order a
+ * person would have written the list in themselves: `full_name` is one free
+ * text box whose entry convention is not a fact (`src/db/schema.ts` records
+ * that rows arrive as "Tanaka Keiko" and as "Smith, John"), so this sorts on
+ * whichever token happens to be first. Never call the manifest alphabetical in
+ * staff copy — a crew would search it that way and conclude a diver is
+ * missing. The column carries `COLLATE "und-x-icu"`
  * (`drizzle/20260911200158_person-name-collation`), so this inherits an
- * ordering that is sensible in any language without the query saying so —
- * `Ángel` beside `Ana`, not after `Zoe`.
+ * ordering sensible in any language without the query saying so — `Ángel`
+ * beside `Ana`, not after `Zoe`.
  *
  * Seat time stays *above* the name: the roster is still oldest-seat-first, and
  * a diver added at the counter this morning does not jump the queue by being

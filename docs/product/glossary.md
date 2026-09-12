@@ -959,7 +959,9 @@ new domain concept, define it here in the same PR.
   **the app is the record and the card is the fallback**, so nothing printed is ever a second,
   quieter register; and **the roll is called by name**, every diver and every crew member, by two
   people — a head count is the practice that leaves people behind, which is why no DiveDay surface
-  asks for one.
+  asks for one. The number printed beside each name is a line number and never an identity; see
+  **roll-call order**.
+- **Roll-call order** — the order the manifest lists divers in: **oldest seat first, then the diver's name, then the booking id** (`getTripRoster`, `src/db/trips-roster.ts`). The screen, the departure log and the saved dock copy all read that one query, so the three can never disagree about who sits where in the list. The **number beside each name is a line number, not the diver's number**: it is that row's position in today's list, so it shifts when a seat is cancelled, when a released seat is resold to somebody else, and when a name is corrected inside a group of seats sold in the same instant. It exists so a person can keep their place down a wet list, and for nothing else — **the roll is still called by name** (see **Manifest**), and no note, message, export or radio call ever refers to a diver as a number. A shop wanting a number a diver keeps for the day (a tank station, a group) does not have one: that is a stored fact about a person on a departure, not a position in a list. The order is stable against a re-read and against a fresh seed of the same data; it is not stable against the roster's own contents changing (issue #1720, and #1759 for the stronger promise).
 - **Print register** — the pane in Settings that lists the shop's own printable sheets in the
   groups of where the paper goes: at the dock and the door, on the boat, for a diver, on the wall
   (ADR 20260908-one-hand, decision 6, lever X). Every row names the sheet, the paper it prints on,

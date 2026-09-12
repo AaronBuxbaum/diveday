@@ -2362,10 +2362,18 @@ export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tri
  * Staff roster view: only the current record joins each active booking across
  * multiple trips.
  *
- * Ordered by seat time then id, for the reason `getTripRoster` states in full:
- * `bookings.created_at` ties across a seeding transaction, and since
- * `createBooking` stamps the application clock it ties across a spec's own
- * writes too. A list a staffer works down is not left to the heap.
+ * Ordered by seat time then id. `bookings.created_at` alone is not a total
+ * order — `createBooking` stamps the application clock, frozen for tests, so a
+ * party or a spec's own writes tie — and a list a staffer works down is not
+ * left to the heap.
+ *
+ * **Note the divergence, deliberately left.** `getTripRoster` no longer agrees
+ * with this: it breaks the same tie on `people.full_name` and calls
+ * `bookings.id` "the wrong half of the promise" (issue #1720), because the
+ * index of *that* array is the manifest's rail numbering and a random uuid was
+ * deciding who is 01. This reader feeds no numbering, so it was left where it
+ * was rather than reordering five surfaces in a change about the manifest.
+ * Issue #1753 carries it and the four others with the same clause.
  */
 export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tripIds: string[]) {
   if (tripIds.length === 0) return [];

@@ -111,6 +111,45 @@ describe("getTripRoster", () => {
    * roster inherits the collation without naming it
    * (`src/db/name-collation.test.ts` owns that property itself).
    */
+  /**
+   * **Two divers of the same name on one boat** — the case the docblock keeps
+   * `asc(bookings.id)` for, and which nothing exercised (domain review of
+   * issue #1720).
+   *
+   * A father and son, or two unrelated regulars: ordinary, and precisely when
+   * an unstable number does damage, because the name no longer disambiguates
+   * the row either. Read twice, because "total order" is the claim and one read
+   * cannot tell a total order from a lucky heap.
+   */
+  it("falls through to the booking id for two divers of the same name", async () => {
+    const { db, shop } = await seededShopContext();
+    const [trip] = await twoTrips(db, shop.id);
+    const seatedAt = nowDate();
+
+    for (const bookingId of [HIGH_BOOKING_ID, LOW_BOOKING_ID]) {
+      const person = await makeDiver(db, shop.id, { name: "John Smith" });
+      await db.insert(bookings).values({
+        id: bookingId,
+        shopId: shop.id,
+        tripId: trip,
+        personId: person.id,
+        createdAt: seatedAt,
+      });
+    }
+
+    // Filtered to this test's own pair: the departure carries seeded bookings
+    // too, and what is under test is the order of the two that tie.
+    const mine = new Set<string>([LOW_BOOKING_ID, HIGH_BOOKING_ID]);
+    const idsOf = async () =>
+      (await getTripRoster(db, shop.id, trip))
+        .map((row) => row.booking.id)
+        .filter((id) => mine.has(id));
+
+    expect(await idsOf()).toEqual([LOW_BOOKING_ID, HIGH_BOOKING_ID]);
+    // The same sequence on a second read, which is what "total order" means.
+    expect(await idsOf()).toEqual([LOW_BOOKING_ID, HIGH_BOOKING_ID]);
+  });
+
   it("breaks a same-instant tie on the diver's name, whichever way the uuids fall", async () => {
     const { db, shop } = await seededShopContext();
     const [tripA, tripB] = await twoTrips(db, shop.id);
