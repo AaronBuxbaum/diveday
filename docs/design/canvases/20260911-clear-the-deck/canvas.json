@@ -1,0 +1,358 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Clear the deck — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 5700,
+      "page": "page-1"
+    },
+    {
+      "file": "ThreeWords.dc.html",
+      "title": "1 · Three words — by noun",
+      "x": 0,
+      "y": 5900,
+      "w": 1180,
+      "h": 3520,
+      "page": "page-1"
+    },
+    {
+      "file": "TheWeek.dc.html",
+      "title": "2 · The week — by time",
+      "x": 1300,
+      "y": 5900,
+      "w": 1180,
+      "h": 3140,
+      "page": "page-1"
+    },
+    {
+      "file": "AshoreAboard.dc.html",
+      "title": "3 · Ashore and aboard — by place",
+      "x": 2600,
+      "y": 5900,
+      "w": 1180,
+      "h": 2850,
+      "page": "page-1"
+    },
+    {
+      "file": "Ask.dc.html",
+      "title": "4 · Ask — by question",
+      "x": 0,
+      "y": 9620,
+      "w": 1180,
+      "h": 3330,
+      "page": "page-1"
+    },
+    {
+      "file": "TheCard.dc.html",
+      "title": "5 · The shop's card — by default",
+      "x": 1300,
+      "y": 9620,
+      "w": 1180,
+      "h": 4110,
+      "page": "page-1"
+    },
+    {
+      "file": "OneFace.dc.html",
+      "title": "6 · One face — by face",
+      "x": 2600,
+      "y": 9620,
+      "w": 1180,
+      "h": 3820,
+      "page": "page-1"
+    },
+    {
+      "file": "Round2.dc.html",
+      "title": "Round 2 — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 4600,
+      "page": "page-2"
+    },
+    {
+      "file": "Salt.dc.html",
+      "title": "I · Salt — white, black, one accent",
+      "x": 0,
+      "y": 4800,
+      "w": 1180,
+      "h": 3570,
+      "page": "page-2"
+    },
+    {
+      "file": "Air.dc.html",
+      "title": "II · Air — space is the structure",
+      "x": 1300,
+      "y": 4800,
+      "w": 1180,
+      "h": 3860,
+      "page": "page-2"
+    },
+    {
+      "file": "Headline.dc.html",
+      "title": "III · Headline — size is the hierarchy",
+      "x": 2600,
+      "y": 4800,
+      "w": 1180,
+      "h": 3840,
+      "page": "page-2"
+    },
+    {
+      "file": "TheirInk.dc.html",
+      "title": "IV · Their ink — the shop's colour is the ink",
+      "x": 3900,
+      "y": 4800,
+      "w": 1180,
+      "h": 3960,
+      "page": "page-2"
+    },
+    {
+      "file": "Slate.dc.html",
+      "title": "V · Slate — a tool, drawn for reading",
+      "x": 5200,
+      "y": 4800,
+      "w": 1180,
+      "h": 3450,
+      "page": "page-2"
+    },
+    {
+      "file": "Round3.dc.html",
+      "title": "Round 3 — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 3330,
+      "page": "page-3"
+    },
+    {
+      "file": "Console.dc.html",
+      "title": "Console — the sheet",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 3390,
+      "page": "page-3"
+    },
+    {
+      "file": "ConsoleDay.dc.html",
+      "title": "Console — the home by day, 6:40 AM",
+      "x": 0,
+      "y": 3600,
+      "w": 1180,
+      "h": 2280,
+      "page": "page-3"
+    },
+    {
+      "file": "ConsoleDepth.dc.html",
+      "title": "Console — the home at depth, 6:10 PM",
+      "x": 1300,
+      "y": 3600,
+      "w": 1180,
+      "h": 2060,
+      "page": "page-3"
+    },
+    {
+      "file": "ConsolePhones.dc.html",
+      "title": "Console — the counter, the roll call, the pocket",
+      "x": 2600,
+      "y": 3600,
+      "w": 1180,
+      "h": 2820,
+      "page": "page-3"
+    },
+    {
+      "file": "Round4.dc.html",
+      "title": "Round 4 — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 2420,
+      "page": "page-4"
+    },
+    {
+      "file": "ConsoleParts.dc.html",
+      "title": "Console — the display, the gauge, the telemetry line",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 2360,
+      "page": "page-4"
+    },
+    {
+      "file": "ConsoleRefined.dc.html",
+      "title": "Console — the home, refined",
+      "x": 2600,
+      "y": 0,
+      "w": 1180,
+      "h": 2420,
+      "page": "page-4"
+    },
+    {
+      "file": "ConsoleBoat.dc.html",
+      "title": "Console — a boat's page, and the week",
+      "x": 0,
+      "y": 2700,
+      "w": 1180,
+      "h": 2900,
+      "page": "page-4"
+    },
+    {
+      "file": "ConsolePerson.dc.html",
+      "title": "Console — a person, and the money",
+      "x": 1300,
+      "y": 2700,
+      "w": 1180,
+      "h": 2820,
+      "page": "page-4"
+    },
+    {
+      "file": "ConsoleOutside.dc.html",
+      "title": "Console — the storefront, the log card, DiveDay's hero",
+      "x": 2600,
+      "y": 2700,
+      "w": 1180,
+      "h": 3120,
+      "page": "page-4"
+    },
+    {
+      "file": "Round5.dc.html",
+      "title": "Round 5 — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 3100,
+      "page": "page-5"
+    },
+    {
+      "file": "TheDial.dc.html",
+      "title": "The dial — the same morning at three stops",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 3080,
+      "page": "page-5"
+    },
+    {
+      "file": "Chart.dc.html",
+      "title": "Chart — the sheet",
+      "x": 2600,
+      "y": 0,
+      "w": 1180,
+      "h": 3700,
+      "page": "page-5"
+    },
+    {
+      "file": "ChartHome.dc.html",
+      "title": "Chart — the home by day, 6:40 AM",
+      "x": 0,
+      "y": 4000,
+      "w": 1180,
+      "h": 2500,
+      "page": "page-5"
+    },
+    {
+      "file": "ChartNight.dc.html",
+      "title": "Chart — the home at night, 6:10 PM",
+      "x": 1300,
+      "y": 4000,
+      "w": 1180,
+      "h": 2340,
+      "page": "page-5"
+    },
+    {
+      "file": "ChartPhones.dc.html",
+      "title": "Chart — the counter, the roll call, the pocket",
+      "x": 2600,
+      "y": 4000,
+      "w": 1180,
+      "h": 2900,
+      "page": "page-5"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "read-first",
+      "x": 1300,
+      "y": 0,
+      "w": 560,
+      "text": "Start with the cover: the count at HEAD, the floor every concept shares, and the owner's four calls (H-77). The six concepts follow in two rows — by noun, by time, by place; then by question, by default, by face. Every board redraws the shop home for Blue Mantis on Thursday, August 27 at 6:40 AM, at desktop and at 390.",
+      "page": "page-1"
+    },
+    {
+      "id": "row-1",
+      "x": 0,
+      "y": 5760,
+      "w": 760,
+      "text": "Row 1 — what the staff app is organised by: the noun (1 · Three words), the date (2 · The week), the place you are standing (3 · Ashore and aboard).",
+      "page": "page-1"
+    },
+    {
+      "id": "row-2",
+      "x": 0,
+      "y": 9480,
+      "w": 760,
+      "text": "Row 2 — the question (4 · Ask), the default (5 · The shop's card), the shop's own page (6 · One face). 5 composes with every other concept; 6 needs 3's boat half. The recommendation on the cover: 5 now, then 1 with 4 as its search, then 3's boat.",
+      "page": "page-1"
+    },
+    {
+      "id": "round-2",
+      "x": 1300,
+      "y": 0,
+      "w": 620,
+      "page": "page-2",
+      "text": "Round 2, drawn on the owner's read of round 1: the six consolidations land, and Reef itself is now overbearing and ugly. This page redraws the surface: five candidates to replace Reef, each on the same home (Three words with Ask) and the same counter at 390, so they compare by eye. The recommendation and the calls (e)–(h) are on the cover."
+    },
+    {
+      "id": "round-3",
+      "x": 2600,
+      "y": 0,
+      "w": 620,
+      "page": "page-3",
+      "text": "Round 3, drawn on the owner's read of round 2: the problem is Reef itself; the instrument is the direction; farther from the cutesy. One direction, deep — Console — the sheet beside this cover, then the home by day, the home at depth, and three phones. The recommendation and calls (i)–(l) are on the cover."
+    },
+    {
+      "id": "round-4",
+      "x": 3900,
+      "y": 0,
+      "w": 620,
+      "page": "page-4",
+      "text": "Round 4, drawn on the owner's read of round 3 (\"can we improve this further?\"): more instrument, not more decoration. Five additions to the sheet — the display, the seat gauge, the telemetry line, fixed digits and the crew's words, motion complete — the home redrawn with them, and four more surfaces: a boat and the week, a person and the money, and the outside. Calls (m)–(o) are on the cover."
+    },
+    {
+      "id": "round-5",
+      "x": 3900,
+      "y": 0,
+      "w": 620,
+      "page": "page-5",
+      "text": "Round 5, drawn on the owner’s read of round 4 (light mode should render light still; further changes follow; somewhere between an instrument and the existing design): Chart — the instrument printed on Reef’s own paper. The dial beside the cover draws the same morning at three stops (Console, Chart, Reef after the floor) so “between” is a position; then Chart’s sheet, its home by day, its home at night, and three phones. Calls (p)–(r) are on the cover."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-5"
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Round 1 — six consolidations"
+    },
+    {
+      "id": "page-2",
+      "name": "Round 2 — Reef, rethought: five surfaces"
+    },
+    {
+      "id": "page-3",
+      "name": "Round 3 — Console, the instrument"
+    },
+    {
+      "id": "page-4",
+      "name": "Round 4 — Console, further"
+    },
+    {
+      "id": "page-5",
+      "name": "Round 5 — Chart: light renders light"
+    }
+  ]
+}

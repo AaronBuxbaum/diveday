@@ -6179,7 +6179,14 @@ for (const scheme of ["light", "dark"] as const) {
       // run. Both kinds, because the rows are not the same shape: only the
       // check-in link expires, so only it prints an expiry line and carries a
       // Renew beside its Revoke (issue #1609). The date is stable because the
-      // e2e harness freezes the clock (src/lib/clock.ts).
+      // e2e harness freezes the clock (src/lib/clock.ts) — which is also why
+      // the kiosk link asks for a `createdAtOffsetSeconds`. The panel lists
+      // newest first and breaks a tie on `id`, a fresh uuid every run, so two
+      // links minted in the same frozen second rendered in a random order and
+      // reported this capture as changed on pull requests that touched nothing
+      // near it. The offset stays inside the frozen minute, so every stamp in
+      // the picture reads the same and only the order is settled: the kiosk row
+      // is the newer of the two, and sits on top.
       test(`the lobby display settings render true to the design (${scheme})`, async ({
         page,
         request,
@@ -6189,7 +6196,7 @@ for (const scheme of ["light", "dark"] as const) {
         });
         expect(seeded.ok()).toBe(true);
         const kiosk = await request.post("/api/test/seed-display-token", {
-          data: { label: "Counter tablet", purpose: "check_in" },
+          data: { label: "Counter tablet", purpose: "check_in", createdAtOffsetSeconds: 30 },
         });
         expect(kiosk.ok()).toBe(true);
         await page.goto("/shop/blue-mantis/settings/display");

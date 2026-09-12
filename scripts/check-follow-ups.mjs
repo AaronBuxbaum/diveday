@@ -168,23 +168,30 @@ const GLOB_WALK_BUDGET_MS = 2_000;
 const GLOB_SKIPPED = ["node_modules", ".git", ".next", ".pglite", "test-results"];
 
 export async function touchedPathExists(root, token) {
-  // **Literal first, glob characters and all.** A Next.js dynamic segment is a
-  // real path and a character class at the same time:
-  // `src/app/ready/[token]/actions.ts` is spelled exactly right on disk and
-  // expands to `src/app/ready/t/actions.ts` and friends, none of which exist.
-  // Reading it only as a pattern failed a correct path, and the failure said
-  // "does not exist" about a file anybody could `cat` — three rounds of red
-  // `Repository safeguards` on PR #1746 (issue #1761). One `access()` is the
-  // same question the plain branch below always asked, and it cannot walk, so
-  // it does not widen this guard's blast radius.
+  // Containment first, and for *both* lookups. It used to guard only the glob
+  // branch, so `../../../etc/passwd` — no glob character in it — was joined
+  // onto the root and answered from outside the checkout, which is the
+  // file-existence oracle the glob branch was hardened against (#1356). A
+  // token that leaves the checkout is refused whatever shape it is.
+  if (path.isAbsolute(token) || token.split("/").includes("..")) return false;
+
+  // The literal lookup then runs for *every* token, glob characters or not.
+  // Next's dynamic segments are square brackets — `src/app/shop/[shopSlug]/…`
+  // is most of this repository's route tree — and to a glob `[shopSlug]` is a
+  // character class matching one of `s h o p S l u g`, never a directory of
+  // that name. Testing for glob characters before looking made every
+  // dynamic-route path in an issue body unresolvable the day expansion landed
+  // (#1743), which reddened `Repository safeguards` on every open pull request
+  // at once — the exact outage the expansion was added to stop (#1339). A real
+  // pattern does not exist literally, so it costs one `access()` and falls
+  // through to the walk.
   try {
     await access(path.join(root, token));
     return true;
   } catch {
-    // Not there under that spelling; a pattern may still expand to it.
+    // Not a literal path in the tree; it may still be a pattern.
   }
   if (!GLOB_CHARS.test(token)) return false;
-  if (path.isAbsolute(token) || token.split("/").includes("..")) return false;
   const deadline = Date.now() + GLOB_WALK_BUDGET_MS;
   for await (const match of glob(token, {
     cwd: root,

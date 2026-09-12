@@ -1,0 +1,405 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&family=Bricolage+Grotesque:wght@600;700&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+/* deck:start — the Clear-the-deck kit. Pasted verbatim into every board of this canvas; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --lagoon:#0e7490; --lagoon-deep:#0a4d61; --lagoon-tint:#e6f3f5; --shop:#1d7a5f; --shop-deep:#145a46; --shop-tint:#e4f1ea; --ok:#15803d; --warn:#b45309; --danger:#b91c1c; --danger-tint:#f8e8e6; --coral:#ff6f61; --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 960px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.board-head .three p b { color: var(--ink); font-weight: 600; }
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--lagoon); }
+.k { font-size: 11px; line-height: 16px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+.frame-cap { display: flex; align-items: baseline; gap: 12px; padding: 28px 48px 10px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 960px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.aside b { color: var(--ink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--border); }
+.sec h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 980px; }
+.sec p b { font-weight: 600; }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot p b { color: var(--ink); font-weight: 600; }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot li b { color: var(--ink); font-weight: 600; }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 150px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.stat b { display: block; font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat b small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.stat span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 600; }
+.tbl td b { color: var(--ink); font-weight: 600; }
+.tbl td.ink { color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; color: var(--ink); }
+.card p.m { color: var(--muted); }
+.card .k { color: var(--lagoon); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0 48px; }
+.count { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.count .k { display: block; }
+.count b { display: block; margin-top: 4px; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.count b small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.count span { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--muted); }
+
+/* — a frame: the app drawn inside the board — */
+.frame { margin: 0 48px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.frame.desktop { width: 1084px; }
+.phone { width: 390px; min-height: 760px; border: 1px solid var(--border); border-radius: 22px; overflow: hidden; background: var(--bg); position: relative; }
+.pair { display: flex; gap: 32px; align-items: flex-start; padding: 0 48px; }
+.pair .beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.pair .beside h3 { margin: 0 0 8px 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pair .beside p { margin: 0 0 12px 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside p b { color: var(--ink); font-weight: 600; }
+.pair .beside ul { margin: 0 0 16px 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside li b { color: var(--ink); font-weight: 600; }
+
+/* — app type — */
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--lagoon); font-weight: 500; }
+.blocked { color: var(--danger); font-weight: 600; }
+.word { font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 4px; border-bottom: 1px solid var(--border); }
+.row:first-child { border-top: 1px solid var(--border); }
+.row .who { flex: 0 0 200px; font-size: 16px; font-weight: 600; color: var(--ink); }
+.row .what { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .what b { font-weight: 600; color: var(--ink); }
+.row .state { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.row .state.blocked { color: var(--danger); }
+.row .state.ok { color: var(--ok); }
+.row.add { color: var(--lagoon); font-weight: 500; font-size: 16px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px 0 8px 0; }
+.group-h .h { font-size: 20px; line-height: 26px; }
+.group-h .meta { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--shop); color: #fff; }
+.btn.quiet { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+.field { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); font-size: 16px; color: var(--muted); }
+.field b { color: var(--ink); font-weight: 500; }
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 40px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.chrome .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--shop); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.glyph { width: 20px; height: 20px; flex: 0 0 20px; }
+/* deck:end */
+
+/* console:start — Console, the instrument. Pasted verbatim into every round-3 board; edit it once, re-assemble all. */
+.con, .con * { box-sizing: border-box; }
+.con { --g:#f5f6f5; --ink:#0b0f12; --mu:#5c6670; --hl:#d9dedf; --fill:#0b0f12; --fill-ink:#ffffff; --red:#c81e1e; --amber:#b45309; --shop:#1d7a5f; background: var(--g); color: var(--ink); font-family: Geist,"Helvetica Neue",Arial,system-ui,sans-serif; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased; position: relative; }
+.con.depth { --g:#0b0f12; --ink:#e8ecee; --mu:#8b959c; --hl:#263036; --fill:#e8ecee; --fill-ink:#0b0f12; --red:#ff5a5a; --amber:#ffb020; }
+.con.boat { --g:#000000; --ink:#ffffff; --mu:#b8c2c8; --hl:#3a4650; --fill:#ffffff; --fill-ink:#000000; --red:#ff6b6b; --amber:#ffc247; }
+.con .mono, .con .n, .con .u, .con .lbl, .con .st, .con .clock, .con .tminus { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+.con .bezel { height: 3px; background: var(--shop); }
+.con .bar { display: flex; align-items: center; gap: 24px; height: 48px; padding: 0 32px; border-bottom: 1px solid var(--hl); }
+.con .bar .shop { font-size: 15px; font-weight: 600; white-space: nowrap; }
+.con .bar .words { display: flex; gap: 20px; height: 48px; }
+.con .bar .words span { display: inline-flex; align-items: center; font-size: 14px; font-weight: 500; color: var(--mu); }
+.con .bar .words span.on { color: var(--ink); box-shadow: inset 0 -2px 0 var(--ink); }
+.con .bar .ask { margin-left: auto; display: flex; align-items: center; gap: 8px; width: 300px; height: 34px; padding: 0 10px; border: 1px solid var(--hl); border-radius: 2px; font-size: 14px; color: var(--mu); }
+.con .bar .clock { font-size: 14px; letter-spacing: 0.04em; }
+.con .bar .me { font-size: 14px; color: var(--mu); }
+.con .page { width: 960px; margin: 0 auto; padding: 24px 0 40px 0; }
+.con .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--ink); }
+.con .t { margin: 0; font-size: 24px; line-height: 30px; font-weight: 600; letter-spacing: -0.01em; }
+.con .lede { margin: 4px 0 0 0; font-size: 14px; line-height: 20px; color: var(--mu); }
+.con .readout { display: flex; flex-direction: column; align-items: flex-end; }
+.con .readout .n { font-size: 56px; line-height: 56px; font-weight: 700; letter-spacing: -0.03em; }
+.con .readout .n small { font-size: 20px; font-weight: 500; letter-spacing: 0; color: var(--mu); }
+.con .readout .u { font-size: 11px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); margin-top: 6px; }
+.con .boatrow { display: grid; grid-template-columns: 128px 1fr auto; gap: 0 24px; align-items: start; padding: 22px 0 10px 0; border-bottom: 1px solid var(--hl); }
+.con .tminus { font-size: 28px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; }
+.con .tminus small { display: block; font-size: 11px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); margin-top: 4px; font-weight: 500; }
+.con .tminus.red { color: var(--red); }
+.con .boatrow .name { font-size: 18px; line-height: 24px; font-weight: 600; margin: 0; }
+.con .boatrow .meta { font-size: 14px; line-height: 20px; color: var(--mu); margin: 2px 0 0 0; }
+.con .figs { display: flex; gap: 28px; }
+.con .fig { display: flex; flex-direction: column; align-items: flex-end; }
+.con .fig .n { font-size: 28px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; }
+.con .fig .n small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--mu); }
+.con .fig .u { font-size: 11px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); margin-top: 4px; }
+.con .fig.red .n { color: var(--red); }
+.con .fig.amber .n { color: var(--amber); }
+.con .line { display: grid; grid-template-columns: 112px 1fr 128px; gap: 0 16px; align-items: center; min-height: 44px; border-bottom: 1px solid var(--hl); font-size: 16px; line-height: 22px; }
+.con .line .lbl { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); font-weight: 500; }
+.con .line .val { color: var(--ink); padding: 8px 0; }
+.con .line .val b { font-weight: 600; }
+.con .line .val i { font-style: normal; color: var(--mu); }
+.con .line .st { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; text-align: right; font-weight: 600; }
+.con .line .st.red { color: var(--red); }
+.con .line .st.amber { color: var(--amber); }
+.con .line .st.mu { color: var(--mu); font-weight: 500; }
+.con .line.act .val { font-weight: 600; }
+.con .line.act .lbl { color: var(--ink); }
+.con .meter { height: 4px; background: var(--hl); position: relative; margin-top: 10px; }
+.con .meter i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); }
+.con .meter.gap-amber { background: var(--amber); }
+.con .meter.gap-red { background: var(--red); }
+.con .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--ink); border-radius: 2px; font-size: 15px; font-weight: 600; white-space: nowrap; color: var(--ink); }
+.con .btn.fill { background: var(--fill); color: var(--fill-ink); }
+.con .group { display: flex; align-items: baseline; justify-content: space-between; padding: 26px 0 6px 0; }
+.con .group .g { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mu); font-weight: 600; font-family: "Geist Mono", ui-monospace, Menlo, monospace; }
+.con .group .gm { font-size: 13px; color: var(--mu); font-variant-numeric: tabular-nums; }
+/* the phone */
+.con.ph .bar { height: 48px; padding: 0 14px; gap: 12px; }
+.con.ph .bar .words { gap: 14px; }
+.con.ph .bar .words span { font-size: 14px; }
+.con.ph .page { width: auto; padding: 16px 16px 72px 16px; }
+.con.ph .t { font-size: 18px; line-height: 24px; }
+.con.ph .readout .n { font-size: 64px; line-height: 64px; }
+.con .cell { display: flex; align-items: center; gap: 14px; min-height: 60px; border-bottom: 1px solid var(--hl); font-size: 18px; font-weight: 600; }
+.con .cell .sub { display: block; font-size: 13px; line-height: 18px; font-weight: 400; color: var(--mu); }
+.con .cell .sub.red { color: var(--red); font-weight: 600; }
+.con .cell .sub.amber { color: var(--amber); font-weight: 600; }
+.con .cell .w { margin-left: auto; font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; white-space: nowrap; }
+.con .cell .w.mu { color: var(--mu); font-weight: 500; }
+.con .cell .w.red { color: var(--red); }
+.con .cell .tap { margin-left: auto; width: 48px; height: 48px; flex: 0 0 48px; border: 2px solid var(--ink); border-radius: 2px; display: inline-flex; align-items: center; justify-content: center; }
+.con .cell .tap.on { background: var(--fill); color: var(--fill-ink); }
+.con .cell .tap.red { border-color: var(--red); }
+.con .cell.big { min-height: 64px; font-size: 20px; }
+.con .dock { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--hl); background: var(--g); }
+.con .dock span { display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: var(--mu); }
+.con .dock span.on { color: var(--ink); box-shadow: inset 0 2px 0 var(--ink); }
+/* the system sheet's own cells */
+.sys { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 0 48px; }
+.sys .cell { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 16px; }
+.sys h4 { margin: 0 0 10px 0; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.sys .sw { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.sys .sw div { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); }
+.sys .sw i { display: block; height: 32px; border-radius: 4px; border: 1px solid rgba(0,0,0,.08); }
+.sys .sw b { font-size: 12px; color: var(--ink); font-weight: 600; }
+.sys .spec { display: flex; flex-direction: column; gap: 8px; }
+.sys .spec small { display: block; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.sys .rules { display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 19px; color: var(--muted); }
+.sys .rules b { color: var(--ink); font-weight: 600; }
+.specimen { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+
+/* round 4 — the display, the seat gauge, the telemetry line, the dashes */
+.con .display { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 6px; padding: 14px 18px 12px 18px; background: #0b0f12; color: #e8ecee; border: 1px solid #263036; border-radius: 2px; min-width: 240px; }
+.con .display .n { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; font-size: 56px; line-height: 56px; font-weight: 700; letter-spacing: -0.03em; color: #e8ecee; }
+.con .display .n small { font-size: 20px; font-weight: 500; letter-spacing: 0; color: #8b959c; }
+.con .display .n.amber { color: #ffb020; }
+.con .display .n.red { color: #ff5a5a; }
+.con .display .u { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 11px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: #8b959c; }
+.con .display.wide { min-width: 320px; }
+.con .display.sm { padding: 10px 14px 8px 14px; min-width: 0; }
+.con .display.sm .n { font-size: 40px; line-height: 40px; }
+.con .gauge { display: flex; gap: 3px; height: 10px; margin-top: 10px; }
+.con .gauge i { flex: 1 1 0; background: var(--hl); }
+.con .gauge i.on { background: var(--ink); }
+.con .gauge i.red { background: var(--red); }
+.con .gauge i.amber { background: var(--amber); }
+.con .gauge i.mu { background: var(--mu); opacity: .55; }
+.con .gauge.tall { height: 16px; }
+.con .legend { display: flex; gap: 16px; margin-top: 6px; font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mu); }
+.con .legend b { font-weight: 600; color: var(--ink); }
+.con .legend b.red { color: var(--red); }
+.con .legend b.amber { color: var(--amber); }
+.con .tele { display: flex; gap: 20px; flex-wrap: wrap; padding: 10px 0 0 0; margin-top: 24px; border-top: 1px solid var(--hl); font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 11px; line-height: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mu); }
+.con .tele b { font-weight: 600; color: var(--ink); }
+.con .tele b.amber { color: var(--amber); }
+.con .tele b.red { color: var(--red); }
+.con .dash { letter-spacing: -0.02em; }
+.con .daygauge { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 16px; }
+.con .daygauge .d { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--hl); }
+.con .daygauge .d .lbl { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); }
+.con .daygauge .d.today .lbl { color: var(--ink); font-weight: 600; }
+.con .daygauge .d .n { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; font-size: 28px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; }
+.con .daygauge .d .n small { font-size: 14px; font-weight: 500; color: var(--mu); letter-spacing: 0; }
+.con .daygauge .d .boat { font-size: 13px; line-height: 18px; color: var(--mu); }
+.con .daygauge .d .boat b { color: var(--ink); font-weight: 600; }
+.con .daygauge .d .gauge { margin-top: 2px; }
+.con .roster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
+.con.harbor { --shop:#1d7a5f; }
+.con.harbor .bar { background: #1d7a5f; color: #fff; border-bottom: 0; }
+.con.harbor .bar .shop { font-family: "Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; font-size: 17px; }
+.con.harbor .bar .words span { color: rgba(255,255,255,.85); }
+.con.harbor .bar .words span.on { color: #fff; box-shadow: inset 0 -2px 0 #fff; }
+.con.harbor .t { font-family: "Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; font-size: 28px; line-height: 32px; }
+.con.harbor .btn.fill { background: #1d7a5f; border-color: #1d7a5f; color: #fff; }
+.con .card { width: 420px; padding: 20px 22px; border: 1px solid var(--ink); border-radius: 2px; background: #fff; color: #0b0f12; }
+.con .card .cardh { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #0b0f12; padding-bottom: 8px; }
+.con .card .cardh b { font-size: 16px; font-weight: 600; }
+.con .card .cardh span { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #5c6670; }
+.con .card .line { grid-template-columns: 88px 1fr 96px; min-height: 36px; font-size: 14px; line-height: 20px; }
+.con .card .figs { gap: 22px; padding: 12px 0 4px 0; }
+.con .card .fig .n { font-size: 24px; line-height: 28px; }
+/* console:end */
+/* the sheet's narrow line specimen */
+.con.line-narrow .line { grid-template-columns: 56px 1fr 78px; gap: 0 10px; font-size: 14px; line-height: 20px; }
+.con.line-narrow .line .st { font-size: 11px; }
+/* the sheet's narrow line specimen */
+.con.line-narrow .line { grid-template-columns: 56px 1fr 78px; gap: 0 10px; font-size: 14px; line-height: 20px; }
+.con.line-narrow .line .st { font-size: 11px; }
+
+  </style>
+</helmet>
+<div class="board harbor-fonts">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow">Console, further · the outside</span><span class="note">Design canvas · 2026-09-11 · Clear the deck · round 4</span></div>
+    <h1>The storefront's row, the log card, and DiveDay's own hero</h1>
+    <p class="lede">Console is the staff instrument, but its parts reach the outside three ways: the storefront keeps the shop's colour and face on Console's line, figure and button; the recap becomes a log card that prints black on white with the dive's figures; and DiveDay's own homepage shows the instrument itself — the visitor's first Today as a live console — instead of describing it.</p>
+    <div class="three">
+      <div><span class="k">The storefront</span><p>Harbor stands: the bar in the shop's green, the day's name in its face. Beneath, each boat is Console's row: the time as a figure, the name, seats left as a figure in amber when few, the price, and one green button. No lens rail, no season band, no badge wall on the front page.</p></div>
+      <div><span class="k">The log card</span><p>The postcard's replacement: a card the diver keeps, in the same seven tokens, printed or saved — the dives as lines with depth and time, the boat and crew, what the crew logged as seen, the next seat. No drawing; the figures are the keepsake.</p></div>
+      <div><span class="k">DiveDay's hero</span><p>"Try it with your boats" already asks for a shop, a boat and a first departure. The hero draws the answer as a console: the visitor's boat on glass, counting down, with the seat gauge empty and waiting. The product is the demo.</p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>The storefront</b> · /s/blue-mantis on Thursday morning · desktop · the shop's brand on Console's parts</div>
+  <div class="frame desktop" style="border-color:#d9dedf;"><div class="con harbor">
+    <div class="bar"><span class="shop">Blue Mantis Divers</span><div class="words"><span class="on">Schedule</span><span>Courses</span></div><span class="me" style="margin-left:auto; color:rgba(255,255,255,.85);">English</span></div>
+    <div class="page">
+      <div class="head" style="border-bottom:1px solid var(--ink);">
+        <div><h1 class="t">Thursday, August 27</h1><p class="lede">Small-boat reef and wreck diving out of Key Largo · ★ 4.3 · 83 reviews · all times Eastern</p></div>
+        <div class="display sm"><span class="n">2</span><span class="u">Boats with space today</span></div>
+      </div>
+      <div class="boatrow" style="grid-template-columns:96px 1fr auto auto; align-items:center;">
+        <div class="tminus" style="font-size:22px;">07:00<small>home 10:30</small></div>
+        <div><p class="name">Two-Tank Reef — Molasses &amp; French</p><p class="meta">Easygoing reef · Open Water or higher · Mantis II · Keiko and Sal</p></div>
+        <div class="figs"><div class="fig amber"><span class="n">2</span><span class="u">Seats left</span></div><div class="fig"><span class="n">$95</span><span class="u">A seat</span></div></div>
+        <span class="btn fill" style="margin-left:24px;">Book</span>
+      </div>
+      <div class="boatrow" style="grid-template-columns:96px 1fr auto auto; align-items:center;">
+        <div class="tminus" style="font-size:22px;">13:00<small>home 17:00</small></div>
+        <div><p class="name">Wreck Trip — Spiegel Grove</p><p class="meta">Wrecks · Advanced · deep · Mantis II</p></div>
+        <div class="figs"><div class="fig"><span class="n">0</span><span class="u">Seats left</span></div><div class="fig"><span class="n">$145</span><span class="u">A seat</span></div></div>
+        <span class="btn" style="margin-left:24px;">Wait list</span>
+      </div>
+      <div class="boatrow" style="grid-template-columns:96px 1fr auto auto; align-items:center;">
+        <div class="tminus" style="font-size:22px;">19:30<small>home 23:00</small></div>
+        <div><p class="name">Night Dive — City of Washington</p><p class="meta">After dark · Open Water or higher · Skiff · Keiko</p></div>
+        <div class="figs"><div class="fig"><span class="n">5</span><span class="u">Seats left</span></div><div class="fig"><span class="n">$120</span><span class="u">A seat</span></div></div>
+        <span class="btn fill" style="margin-left:24px;">Book</span>
+      </div>
+      <div class="group"><span class="g">Friday, August 28</span><span class="gm">2 boats</span></div>
+      <div class="boatrow" style="grid-template-columns:96px 1fr auto auto; align-items:center; padding-top:12px;">
+        <div class="tminus" style="font-size:22px;">07:00<small>home 10:30</small></div>
+        <div><p class="name">Morning Two-Tank — Molasses Reef</p><p class="meta">Easygoing reef · Open Water or higher · Mantis II</p></div>
+        <div class="figs"><div class="fig"><span class="n">3</span><span class="u">Seats left</span></div><div class="fig"><span class="n">$95</span><span class="u">A seat</span></div></div>
+        <span class="btn fill" style="margin-left:24px;">Book</span>
+      </div>
+      <div class="line" style="margin-top:16px;"><span class="lbl">A day</span><span class="val">Nothing on a day that works? Ask for one and the shop answers by text.</span><span class="st mu">Ask</span></div>
+      <div class="tele"><span>100 Ocean Drive, Key Largo, FL 33037 · +1 305 555 0142</span><span>Bookings by DiveDay</span></div>
+    </div>
+  </div></div>
+  <p class="aside"><b>Whose page it is, and whose parts.</b> The bar, the title's face and the button are the shop's; the row, the figures, the slot words and the telemetry line are Console's. The front page is the week and Right now, as round 1's floor asks; courses, reviews and the site pages are one tap in. The seats-left figure goes amber under three, which is a fact about the boat and not a sales device.</p>
+
+  <div class="frame-cap"><b>The log card</b> · Grace Mensah's, printed the evening of August 27 · 420 wide · replaces the postcard</div>
+  <div class="pair">
+    <div class="con" style="background:transparent; padding:0;"><div class="card">
+      <div class="cardh"><b>Blue Mantis Divers</b><span>Log card · Thu Aug 27 2026</span></div>
+      <p class="name" style="font-size:20px; line-height:26px; font-weight:600; margin:14px 0 0 0;">Grace Mensah</p>
+      <p class="lede" style="margin:2px 0 0 0;">Two-Tank Reef — Molasses &amp; French · Mantis II · Keiko Tanaka, Sal Moretti</p>
+      <div class="figs">
+        <div class="fig" style="align-items:flex-start;"><span class="n">2</span><span class="u">Dives</span></div>
+        <div class="fig" style="align-items:flex-start;"><span class="n">24<small> m</small></span><span class="u">Max depth</span></div>
+        <div class="fig" style="align-items:flex-start;"><span class="n">87<small> min</small></span><span class="u">Bottom time</span></div>
+        <div class="fig" style="align-items:flex-start;"><span class="n">27<small> °C</small></span><span class="u">Water</span></div>
+      </div>
+      <div>
+        <div class="line"><span class="lbl">Dive 1</span><span class="val">Molasses Reef · 07:40 · 18 m · 42 min</span><span class="st mu">Reef</span></div>
+        <div class="line"><span class="lbl">Dive 2</span><span class="val">French Reef · 09:20 · 24 m · 45 min</span><span class="st mu">Reef</span></div>
+        <div class="line"><span class="lbl">Seen</span><span class="val">Green turtle · parrotfish · a nurse shark under the ledge</span><span class="st mu">Crew's log</span></div>
+        <div class="line"><span class="lbl">With us</span><span class="val">Your 3rd dive day · Advanced Open Water, verified today</span><span class="st mu">3</span></div>
+        <div class="line"><span class="lbl">Next</span><span class="val">Sat Aug 29 · 11:00 Two-Tank — French Reef · 2 seats</span><span class="st mu">Book</span></div>
+      </div>
+      <p class="lede" style="margin:14px 0 0 0;">Printed 18:40 · bluemantis.demo.invalid/log/g7k2 · Bookings by DiveDay</p>
+    </div></div>
+    <div class="beside">
+      <h3>What the card keeps of the postcard</h3>
+      <ul>
+        <li><b>The keepsake.</b> A diver still gets a thing to keep and show: her day as figures, the sites, what the crew logged, the next seat with its reason. It saves as an image and prints on the shop's printer in black.</li>
+        <li><b>The crew's log</b> feeds it, as One hand's N intended; "Seen" is a record with a date, never a promise.</li>
+      </ul>
+      <h3>What it drops</h3>
+      <ul>
+        <li>The drawing of the site, the coral, the private pulse as a wash, the shop's display face — the card is Console's seven tokens on paper, and the shop's name is its only brand.</li>
+      </ul>
+      <h3>What it needs</h3>
+      <ul><li>The recap page rebuilt as the card plus the review ask beneath it; the postcard's image export pointed at the card; the "seen" line read from the sightings already logged. Call (g) as recommended: entirely.</li></ul>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>DiveDay's own hero</b> · the homepage at 1180 · the visitor has typed a shop, a boat and a first departure</div>
+  <div class="frame desktop" style="border-color:#d9dedf;"><div class="con">
+    <div class="bar" style="padding:0 40px;"><span class="shop" style="font-size:17px;">DiveDay</span><div class="words"><span>Pricing</span><span>Switching</span></div><span class="me" style="margin-left:auto;">Sign in</span><span class="btn fill" style="min-height:36px; padding:0 14px; font-size:14px;">Try the live demo</span></div>
+    <div class="page" style="width:1000px; padding:40px 0 36px 0;">
+      <div style="display:grid; grid-template-columns:1fr 440px; gap:48px; align-items:start;">
+        <div>
+          <h1 class="t" style="font-size:40px; line-height:44px; letter-spacing:-0.02em;">Who is booked, who is cleared, who is on the boat. One reading, all day.</h1>
+          <p class="lede" style="font-size:17px; line-height:26px; margin-top:14px; color:var(--mu);">DiveDay is the shop's instrument: the countdown to lines off, the seats as a gauge, every diver's card, waiver and payment as a line with a word. Type your shop and this page becomes your first morning.</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr 140px; gap:12px; margin-top:24px;">
+            <span class="ask" style="width:auto; height:44px; margin:0; border-color:var(--ink);"><b style="color:var(--ink); font-weight:500;">Coral Cove Dive Co.</b></span>
+            <span class="ask" style="width:auto; height:44px; margin:0; border-color:var(--ink);"><b style="color:var(--ink); font-weight:500;">Reef Runner</b></span>
+            <span class="ask" style="width:auto; height:44px; margin:0; border-color:var(--ink);"><b style="color:var(--ink); font-weight:500;">07:30</b></span>
+          </div>
+          <div style="display:flex; gap:12px; margin-top:14px;"><span class="btn fill">Draw my morning</span><span class="btn">Start a trial</span></div>
+          <p class="lede" style="margin-top:14px;">$99 per location per month · three-week trial · nothing is stored until you open the door</p>
+        </div>
+        <div style="border:1px solid var(--ink); border-radius:2px; padding:18px 20px; background:var(--g);">
+          <div class="bezel" style="margin:-18px -20px 14px -20px; background:#b45309;"></div>
+          <div class="head" style="border-bottom:1px solid var(--ink); padding-bottom:12px;">
+            <div><p class="lede" style="margin:0;">Coral Cove Dive Co. · Day</p><h2 class="t" style="font-size:20px; line-height:26px;">Your first morning</h2></div>
+            <div class="display sm"><span class="n">00:20</span><span class="u">Lines off 07:30 · Reef Runner</span></div>
+          </div>
+          <div class="boatrow" style="grid-template-columns:80px 1fr auto; border-bottom:0; padding-bottom:0;">
+            <div class="tminus" style="font-size:22px;">−00:20<small>Lines off 07:30</small></div>
+            <div><p class="name" style="font-size:16px;">Reef Runner · first departure</p><p class="meta">12 seats · nobody booked yet — that is what the link below is for</p></div>
+            <div class="figs"><div class="fig"><span class="n">0<small>/12</small></span><span class="u">Booked</span></div></div>
+          </div>
+          <div class="gauge"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="legend"><span><b>12</b> open</span></div>
+          <div class="line act" style="margin-top:8px;"><span class="lbl">Seat</span><span class="val">Seat your first diver</span><span class="st"></span></div>
+          <div class="tele" style="margin-top:14px;"><span><b>Preview</b></span><span>Nothing looked up, nothing stored</span></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  <p class="aside"><b>The product is the demo.</b> The hero is the instrument with the visitor's own words in it: their boat on glass, twelve empty seats, the first line an invitation. The colour of the rule is derived from their shop's name, as the shipped hero already does. Beneath the fold, the page shows screenshots of the instrument and nothing it cannot do today, per the claims policy.</p>
+
+  <div class="foot">
+    <div><h3>Where it stops</h3><p>The storefront keeps every Harbor promise, so a shop's brand still ends at the roll call and never reaches it. The log card is only as good as the crew's log: a boat with no logged sites prints a card with dashes, and says so. The hero's console is a preview and stores nothing until the door is opened.</p></div>
+    <div><h3>What it needs</h3><p>The storefront's ledger row rebuilt on Console's boatrow under Harbor's tokens; the recap page as the card; the try-it hero's preview drawn with the display and the gauge. DiveDay's own pages take the day scheme and lose Reef's sand (call h).</p></div>
+    <div><h3>Its wow</h3><p>A shop owner types her boat's name on the homepage and sees it on glass, counting down. Her divers see the same instrument's row in her colours when they book. Her crew's log becomes a card a diver keeps. One instrument, three sides.</p></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

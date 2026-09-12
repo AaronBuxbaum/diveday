@@ -6,6 +6,7 @@ import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { issueDisplayToken } from "@/db/display-tokens";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
+import { nowDate } from "@/lib/clock";
 import { boardPath } from "@/lib/display-tokens";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 import { kioskCheckInPath } from "@/lib/kiosk-check-in";
@@ -26,6 +27,17 @@ const bodySchema = z.object({
   /** Which surface the minted link opens — the board, or the check-in kiosk (N-24). */
   purpose: z.enum(["board", "check_in"]).optional(),
   showNames: z.boolean().optional(),
+  /**
+   * Seconds to add to the frozen clock before stamping `created_at`, so a
+   * fixture that mints two links can decide which one the settings panel lists
+   * first. The panel orders newest-first and breaks a tie on `id`, which is a
+   * fresh uuid on every run — under `TEST_FROZEN_CLOCK` two links minted in the
+   * same test share `created_at` exactly, and the row order became a coin flip
+   * that moved pixels on unrelated pull requests. Capped below a minute because
+   * that is what keeps the shift invisible: every rendered stamp on that page is
+   * minute-resolution, so the picture is identical and only the order is fixed.
+   */
+  createdAtOffsetSeconds: z.number().int().min(0).max(59).optional(),
 });
 
 export async function POST(request: Request) {
@@ -50,12 +62,14 @@ export async function POST(request: Request) {
   if (!owner) return NextResponse.json({ error: "owner_not_found" }, { status: 404 });
 
   const purpose = parsed.data.purpose ?? "board";
+  const offsetSeconds = parsed.data.createdAtOffsetSeconds ?? 0;
   const outcome = await issueDisplayToken(db, {
     shopId: shop.id,
     personId: owner.id,
     label: parsed.data.label ?? "Lobby TV",
     purpose,
     showNames: parsed.data.showNames ?? false,
+    ...(offsetSeconds > 0 ? { now: new Date(nowDate().getTime() + offsetSeconds * 1000) } : {}),
   });
   if (!outcome.ok) return NextResponse.json({ error: outcome.reason }, { status: 400 });
   return NextResponse.json({

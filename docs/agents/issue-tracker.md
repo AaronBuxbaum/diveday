@@ -263,6 +263,21 @@ comment saying what would un-park it, so the next reader does not re-triage it f
 - **Every section filled**, including a runnable prompt that names real paths and tells the session
   to close the issue.
 - **Close by closing the issue**, never by commenting "done" and leaving it open.
+- **One closing keyword per issue, in the commit message.** GitHub acts on a keyword only where it
+  sits immediately before the number, so `Closes #1392, #1393, #1395` closes #1392 and leaves the
+  rest open — merged green, with nothing to notice. Write one per line:
+
+  ```
+  Closes #1392
+  Closes #1393
+  Closes #1395
+  ```
+
+  In the **commit message**, not only the pull request body. On a stack a layer merges into the
+  layer below, and what reaches the default branch — where a keyword fires at all — is the commit.
+  `pnpm check:closing-keywords` refuses the list form on your branch while the message can still be
+  amended; it cannot see a pull request body, which is the other way to lose a closure. This cost
+  eight issues on 2026-09-12 ([repo-checks.md](repo-checks.md#closing-keywords)).
 - **An issue blocked on somebody outside this repo carries `waiting-on-external`**, with a
   `**Waiting on:**` line naming the event and how to check it. Not "blocked on Aaron" — that is
   what a plain `needs-triage` issue already is.

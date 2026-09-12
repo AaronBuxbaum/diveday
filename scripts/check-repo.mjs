@@ -89,6 +89,7 @@ const checks = [
   ["stack-ci-skip", "check-stack-ci-skip.mjs"],
   ["ci-change-detection", "check-ci-change-detection.mjs"],
   ["node-version", "check-node-version.mjs"],
+  ["closing-keywords", "check-closing-keywords.mjs"],
 ];
 
 function runCheck(label, scriptFile) {

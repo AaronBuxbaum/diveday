@@ -1,0 +1,253 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+/* deck:start — the Clear-the-deck kit. Pasted verbatim into every board of this canvas; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --lagoon:#0e7490; --lagoon-deep:#0a4d61; --lagoon-tint:#e6f3f5; --shop:#1d7a5f; --shop-deep:#145a46; --shop-tint:#e4f1ea; --ok:#15803d; --warn:#b45309; --danger:#b91c1c; --danger-tint:#f8e8e6; --coral:#ff6f61; --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 960px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.board-head .three p b { color: var(--ink); font-weight: 600; }
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--lagoon); }
+.k { font-size: 11px; line-height: 16px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+.frame-cap { display: flex; align-items: baseline; gap: 12px; padding: 28px 48px 10px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 960px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.aside b { color: var(--ink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--border); }
+.sec h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 980px; }
+.sec p b { font-weight: 600; }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot p b { color: var(--ink); font-weight: 600; }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot li b { color: var(--ink); font-weight: 600; }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 150px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.stat b { display: block; font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat b small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.stat span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 600; }
+.tbl td b { color: var(--ink); font-weight: 600; }
+.tbl td.ink { color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; color: var(--ink); }
+.card p.m { color: var(--muted); }
+.card .k { color: var(--lagoon); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0 48px; }
+.count { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.count .k { display: block; }
+.count b { display: block; margin-top: 4px; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.count b small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.count span { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--muted); }
+
+/* — a frame: the app drawn inside the board — */
+.frame { margin: 0 48px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.frame.desktop { width: 1084px; }
+.phone { width: 390px; min-height: 760px; border: 1px solid var(--border); border-radius: 22px; overflow: hidden; background: var(--bg); position: relative; }
+.pair { display: flex; gap: 32px; align-items: flex-start; padding: 0 48px; }
+.pair .beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.pair .beside h3 { margin: 0 0 8px 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pair .beside p { margin: 0 0 12px 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside p b { color: var(--ink); font-weight: 600; }
+.pair .beside ul { margin: 0 0 16px 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside li b { color: var(--ink); font-weight: 600; }
+
+/* — app type — */
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--lagoon); font-weight: 500; }
+.blocked { color: var(--danger); font-weight: 600; }
+.word { font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 4px; border-bottom: 1px solid var(--border); }
+.row:first-child { border-top: 1px solid var(--border); }
+.row .who { flex: 0 0 200px; font-size: 16px; font-weight: 600; color: var(--ink); }
+.row .what { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .what b { font-weight: 600; color: var(--ink); }
+.row .state { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.row .state.blocked { color: var(--danger); }
+.row .state.ok { color: var(--ok); }
+.row.add { color: var(--lagoon); font-weight: 500; font-size: 16px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px 0 8px 0; }
+.group-h .h { font-size: 20px; line-height: 26px; }
+.group-h .meta { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--shop); color: #fff; }
+.btn.quiet { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+.field { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); font-size: 16px; color: var(--muted); }
+.field b { color: var(--ink); font-weight: 500; }
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 40px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.chrome .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--shop); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.glyph { width: 20px; height: 20px; flex: 0 0 20px; }
+/* deck:end */
+
+.shots { display: grid; grid-template-columns: 560px 240px 240px; gap: 22px; padding: 0 48px; align-items: start; }
+.shot { display: flex; flex-direction: column; gap: 8px; }
+.shot img { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 6px; }
+.shot p { margin: 0; font-size: 13px; line-height: 19px; color: var(--muted); }
+.shot p b { color: var(--ink); font-weight: 600; }
+.concepts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.concept { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.concept .n { font-family: var(--mono); font-size: 12px; color: var(--border-strong); }
+.concept h3 { margin: 0; font-size: 24px; line-height: 1.15; font-weight: 700; letter-spacing: -0.015em; }
+.concept .axis { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lagoon); }
+.concept p { margin: 0; font-size: 14px; line-height: 21px; color: var(--ink); }
+.concept p.m { color: var(--muted); }
+.concept p b { font-weight: 600; }
+.calls { display: grid; grid-template-columns: 40px 1fr; gap: 10px 14px; font-size: 15px; line-height: 23px; }
+.calls b { font-family: var(--mono); font-size: 13px; color: var(--muted); padding-top: 3px; }
+.calls i { font-style: normal; color: var(--muted); }
+.floor td.job { white-space: nowrap; }
+.rec { padding: 20px 24px; border: 1px solid var(--ink); border-radius: 10px; font-size: 15px; line-height: 23px; }
+.rec b { font-weight: 600; }
+
+  </style>
+</helmet>
+<div class="board">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow">Design canvas · 2026-09-11 · read me first</span><span class="note">Follows One hand (09-08 to 09-10); its ADR holds the pick open as H-77</span></div>
+    <h1>Clear the deck — six ways to make DiveDay smaller</h1>
+    <p class="lede">The owner's brief: the design system is ugly and has far too many controls and external-facing features; rethink the visual presentation; give at least five concepts that consolidate concepts and make it clean and simple. This canvas answers with <b>a count</b> of what is there, <b>a floor</b> every concept shares, and <b>six concepts</b> that each consolidate along a different axis — by noun, by time, by place, by question, by default, by face — every one redrawing the shop home for the same shop on the same morning so they compare like for like. Nothing here is normative until the owner picks and the ADR moves to Accepted.</p>
+  </div>
+
+  <div class="sec">
+    <h2>The diagnosis in one paragraph</h2>
+    <p>DiveDay is not short of a design system. It is long on product. Thirteen design canvases landed in fifteen days, and the last one ran four rounds in three days: round 2 added five levers, round 3 eight more and a redraw of every surface, round 4 seven possibilities — all seven of which shipped on 09-10 as a stack of seven pull requests. The floor that would have made any of it cohere — One hand's five deletion slices, 20a to 20e — is still open. <b>Every feature arrived three times: as a switch in Settings, as a door on a surface, and as a page outside.</b> So the home carries about twenty tappable controls before a staffer has done anything, three grammars sit on one screen (a 28px panel, a bare ledger, two tiles), and a decoration layer — the water band, the drawn tile, the dial, the stage chip — sits on top of all of it. The storefront's one page has fourteen sections and twenty-five controls. Settings is forty-three rows and twelve more pages. None of that is a bad component; it is <b>addition with no subtraction</b>, and the fix is not a fourteenth vocabulary but fewer things — fewer nouns, fewer doors, fewer switches, and fewer pages outside.</p>
+  </div>
+
+  <div class="frame-cap"><b>Counted at HEAD</b> · 748021f · from the tree, not from memory</div>
+  <div class="strip">
+    <div class="stat"><b>96</b><span>page routes: 57 staff · 9 storefront · 13 by link · 17 DiveDay's own</span></div>
+    <div class="stat"><b>21</b><span>staff destinations: 4 tabs, 15 under More, 2 in ⌘K only</span></div>
+    <div class="stat"><b>43 <small>+ 12</small></b><span>Settings rows on the hub, and pages beneath it</span></div>
+    <div class="stat"><b>~20</b><span>controls on the home at rest, before a staffer has done anything</span></div>
+    <div class="stat"><b>27 <small>· 8</small></b><span>primitives in <span class="mono" style="font-size:12px;">ui/</span>, and button variants</span></div>
+    <div class="stat"><b>14 <small>· 25</small></b><span>sections and controls on the storefront's one page</span></div>
+    <div class="stat"><b>39</b><span>staff message namespaces — one per feature, roughly</span></div>
+    <div class="stat"><b>13 <small>in 15 days</small></b><span>design canvases since 08-27; 7 features shipped on 09-10 alone</span></div>
+    <div class="stat"><b>0 <small>of 5</small></b><span>One hand's floor slices landed (20a–20e, the deletions)</span></div>
+  </div>
+
+  <div class="frame-cap"><b>Today at HEAD</b> · captured from the running demo shop on 2026-09-11 · light · the demo banner at the top is dev-only</div>
+  <div class="shots">
+    <div class="shot"><img src="today-home.jpg" alt="The shop home at 1280 today"><p><b>The home at 1280.</b> Count the doors: Print the day, Generate log twice, Send waiver, Open crew, Open prep list, Open trip, Open guests, Open inbox, Open reviews, Open the schedule, two horizon tiles, four tabs, More, search — and under them a band, a drawn tile, a chip, a dial and a disclosure. Three row grammars on one screen.</p></div>
+    <div class="shot"><img src="today-storefront.jpg" alt="The public storefront at 1280 today, the whole page"><p><b>The storefront, the whole page.</b> Hero, rating and three badges, Right now, Next boat with space, In season, the lens rail (seven chips), two selects and a checkbox, nine days of ledger, Show later, three courses, the boats, two reviews, three disclosures, the footer. Fourteen sections for a diver who came to book a boat.</p></div>
+    <div class="shot"><img src="today-settings.jpg" alt="Settings on a phone today, the first 1,650 pixels"><p><b>Settings at 390, the first 1,650 of 2,567 pixels.</b> Forty-three rows in three groups, twelve of them doors to a page of their own. Every row is a conditional somewhere else in the app.</p></div>
+  </div>
+
+  <div class="sec">
+    <h2>The floor every concept shares</h2>
+    <p>Whatever the owner picks, these happen first — and unlike One hand's twelve, which hold each job at one spelling and are still the floor's floor, these are <b>deletions of kinds of thing</b>, not of spellings. Three of them need the owner's word and are marked with their call.</p>
+    <table class="tbl floor">
+      <thead><tr><th>Kind of thing</th><th>Today</th><th>The floor</th><th>Held by</th></tr></thead>
+      <tbody>
+        <tr><td class="job">The door</td><td>a row ends in "Open …" and a chevron; 9 on the home alone</td><td class="ink">a row's own tap is its only door; the trailing verb, where one exists, is the fix and nothing else</td><td>a guard on a link inside a row</td></tr>
+        <tr><td class="job">The chip and the pill</td><td>13 translucent pills, a stage chip, a grey capsule for a neutral fact</td><td class="ink">a state is a word: Blocked in danger ink, or a sentence in muted ink; nothing tinted behind text on a staff surface</td><td><span class="mono">Badge</span> is deleted, not narrowed (20c, taken to zero)</td></tr>
+        <tr><td class="job">The decoration <i style="color:#b45309;">· call b</i></td><td>the water band, the drawn site tile, the dial's water, coral washes, the greeting's mark</td><td class="ink">off every <span class="mono">/shop/**</span> page; the shop's colour is the staff app's one accent; the hand and the coral stay on the diver's side, where a shop shows them to a friend</td><td>the coral table gains a row; <span class="mono">WaterBandStyle</span> stops rendering under <span class="mono">/shop</span></td></tr>
+        <tr><td class="job">The switch <i style="color:#b45309;">· call c</i></td><td>~30 settings that turn a feature on or off; each one a conditional on a surface</td><td class="ink">a feature is on with a default, changeable in a sentence, or it does not exist — concept 5 in full, or its first half under any other pick</td><td>the settings registry shrinks to facts; each retired switch's conditional goes with it</td></tr>
+        <tr><td class="job">The outside <i style="color:#b45309;">· call c</i></td><td>14 sections on the storefront's front page; embeds in 8 kinds; 6 print sheets; 4 integrations; a lobby display</td><td class="ink">the front page is the week and Right now; every other public noun is one tap in or gone; one embed, one look; every page prints; three connects</td><td>the storefront's composition test; the embed catalogue's snippet table shrinks to one</td></tr>
+        <tr><td class="job">DiveDay's own pages <i style="color:#b45309;">· call d</i></td><td>17: home, product, pricing, about, three switching pages, two regions, demo stories, status, onboard, the doors</td><td class="ink">three, plus the two legal ones: the homepage (which already is the demo), pricing, switching; product, about, regions and status fold into the homepage or leave</td><td>the marketing route table; <span class="mono">check:route-coverage</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2>Six concepts, one fiction</h2>
+    <p>Each board redraws the shop home for Blue Mantis Divers on Thursday, August 27, 2026, at 6:40 AM — the same day every canvas since Clearwater has used — at desktop and at 390, and says what it folds, what it deletes, what it keeps, where it stops, what it needs and what its one wow is. They are deliberately far apart: not six shades of one look, but six answers to <b>"what is the one thing the app is organised by?"</b> A concept's name is stable from here on; none of them reuses a letter from One hand's A to Z. Three words and Ask draw nearly the same rows on purpose — the day's facts are the day's facts; what differs is how you reach anything else: three words, or one field.</p>
+    <div class="concepts">
+      <div class="concept"><span class="n">1</span><span class="axis">by noun</span><h3>Three words</h3><p>The staff app is Day, People, Shop. Twenty-one destinations, More, the dock and ⌘K fold into three words; every page beneath is one list in one grammar.</p><p class="m"><b>For:</b> learned in a sentence; Direction A taken from the row up to the map. <b>Against:</b> Shop is a drawer of nine; it looks like a list that lines up. <b>Cost:</b> 3–4 sessions.</p></div>
+      <div class="concept"><span class="n">2</span><span class="axis">by time</span><h3>The week</h3><p>One list in the product: the calendar. Everything with a date is a mark on the week; nothing with a date has an index page. People and things are a drawer.</p><p class="m"><b>For:</b> the plan and the memory are one page; requests, waivers and orders land where they belong. <b>Against:</b> seven columns hate a phone; the month has no home. <b>Cost:</b> 5–6.</p></div>
+      <div class="concept"><span class="n">3</span><span class="axis">by place</span><h3>Ashore and aboard</h3><p>Two tools: a dense desktop ledger for the desk and the owner, and a phone with one boat on it for the crew. Nothing is drawn for both.</p><p class="m"><b>For:</b> half the controls each, by construction; the boat finally gets a tool drawn for glare. <b>Against:</b> two things to learn; the owner who also drives. <b>Cost:</b> 6–8.</p></div>
+      <div class="concept"><span class="n">4</span><span class="axis">by question</span><h3>Ask</h3><p>One control: a field that takes a name, a day, a boat or a word and answers with the fact and its fix. No navigation; the home is the answer to "today".</p><p class="m"><b>For:</b> the 09-06 palette already does this; nothing to find. <b>Against:</b> typing on a dock; discoverability; can read as a launcher. <b>Cost:</b> 3–4.</p></div>
+      <div class="concept"><span class="n">5</span><span class="axis">by default</span><h3>The shop's card</h3><p>No settings. One card of what the shop is and twelve sentences DiveDay decided for it. Every switch becomes a default; every control that existed because a switch could be off goes with it.</p><p class="m"><b>For:</b> the direct answer to "too many external-facing features"; composes with all five others. <b>Against:</b> DiveDay decides more; the exception is a person. <b>Cost:</b> 4–5.</p></div>
+      <div class="concept"><span class="n">6</span><span class="axis">by face</span><h3>One face</h3><p>The storefront is the app. Staff sign in and the same page grows a strip and a layer of ink. The staff app as a separate product is deleted; the boat and the till stay apart.</p><p class="m"><b>For:</b> "our website is our office"; one component set, the shop's. <b>Against:</b> needs 3's boat; the hero is in the desk's way; privacy is structural. <b>Cost:</b> 8–10.</p></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>Side by side</h2>
+    <table class="tbl">
+      <thead><tr><th></th><th>1 · Three words</th><th>2 · The week</th><th>3 · Ashore and aboard</th><th>4 · Ask</th><th>5 · The shop's card</th><th>6 · One face</th></tr></thead>
+      <tbody>
+        <tr><td>Organised by</td><td>the noun</td><td>the date</td><td>the place you stand</td><td>the question</td><td>the default</td><td>the shop's own page</td></tr>
+        <tr><td>Destinations</td><td>3</td><td>2</td><td>5 + 1</td><td>0, answers</td><td>unchanged − 1</td><td>1 + 2</td></tr>
+        <tr><td>On a phone</td><td>three words at the bottom</td><td>one day, swiped</td><td>the boat, and only the boat</td><td>the field under the thumb</td><td>the card</td><td>the page with a strip</td></tr>
+        <tr><td>A row</td><td>who · what · a word</td><td>a block on an hour</td><td>a ledger line · a 64px name</td><td>a fact · a verb</td><td>a fact, or a decided sentence</td><td>the public row · a grey line of ink</td></tr>
+        <tr><td>Settings</td><td>under Shop</td><td>in the drawer</td><td>Ashore › Shop</td><td>a question</td><td><b>the card</b></td><td>the till</td></tr>
+        <tr><td>The storefront</td><td>unchanged</td><td>unchanged</td><td>unchanged</td><td>unchanged</td><td>fewer things on it</td><td><b>is the app</b></td></tr>
+        <tr><td>Controls on the home at rest</td><td>4 + rows</td><td>5 + blocks</td><td>6 · 1</td><td>1 + answers</td><td>−3</td><td>4 + rows</td></tr>
+        <tr><td>Kit</td><td>7</td><td>6</td><td>6 + 3</td><td>4</td><td>22</td><td>the storefront's + 2</td></tr>
+        <tr><td>Composes with</td><td>4 (search), 5 (Shop)</td><td>4, 5 (the drawer)</td><td>1, 2 or 4 ashore; 6 needs it</td><td>any, as the field</td><td><b>all five</b></td><td>3 (required), 5</td></tr>
+        <tr><td>Cost</td><td>3–4</td><td>5–6</td><td>6–8</td><td>3–4</td><td>4–5</td><td>8–10</td></tr>
+        <tr><td>Its wow</td><td>three words</td><td>last Saturday is still there</td><td>one boat on the captain's phone</td><td>three letters</td><td>nothing to configure</td><td>the website is the office</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2>How they combine, and a recommendation</h2>
+    <p>Five is not a concept in competition with the others; it is the one deletion that every other board assumes in its Settings row, and the one that answers the half of the brief about external-facing features directly. Three's boat half is the right phone under any of them and is required by six. Four is any concept's search. The real choice of shape is between one and two — a shop that thinks in nouns against a shop that thinks in weeks — and six is the boldest, the most expensive, and the one a shop would repeat to a friend.</p>
+    <div class="rec"><b>Stated so it can be disagreed with: 5 now, then 1 with 4 as its search, then 3's boat.</b> The card is pure subtraction and lands one row at a time. Three words and a field is the smallest staff app that still reads as a day rather than a dashboard, and it composes with the deletions already on One hand's floor. Aboard gives the crew the one screen the dock test was always about. Six stays on the canvas as the pitch to return to once the boat is its own tool; two is the honest alternative for a shop whose owner already plans on a wall calendar.</div>
+  </div>
+
+  <div class="sec">
+    <h2>The owner's calls (H-77)</h2>
+    <div class="calls">
+      <b>(a)</b><span>Which concept, or which composition — recommended 5, then 1 + 4, then 3's boat. <i>Everything below assumes the answer includes 5.</i></span>
+      <b>(b)</b><span>Whether the staff surface loses Reef's decoration — the water band, the drawn tile, the dial's water, the coral washes, the greeting's mark — and keeps the shop's colour as its one accent (H, which the owner liked on 09-09). Recommended yes. <i>The hand and the coral stay on the diver's side untouched.</i></span>
+      <b>(c)</b><span>Whether the outside shrinks as the floor proposes: the storefront's front page to Right now and the week; the embed catalogue to one line with one look; the print register to "every page prints"; the four integrations to three connects; the lobby display to the storefront full-screen — and what becomes of the seven features shipped on 09-10 (recommended: all kept, on by default, and off the front page: the boat's line and the year card stay public by link, the shelf and the gift stay in the thread, sightings on the site page, paper from any page).</span>
+      <b>(d)</b><span>Whether DiveDay's own pages shrink to three plus the two legal ones — the homepage, which is already the demo; pricing; switching — with product, about, the regions, the demo stories and status folded into the homepage or removed. Recommended yes.</span>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>What no concept changes</h2>
+    <p>The name and the mark. Harbor — the diver-facing pages wear the shop's brand, and six makes that everything rather than less. The dock test: 44px targets, 16px critical text, AA, never colour alone. The coral bans on manifests, roll call, certs, waivers and payments. The claims policy. The roll call commits before it renders. H-02's retention and erasure promises. Boat mode as the palette of whatever screen is on the boat. And One hand's twelve deletions, which every concept here stands on and none restates.</p>
+  </div>
+
+  <div class="sec">
+    <h2>How to read the canvas</h2>
+    <p>This cover, then the six boards in two rows of three — by noun, by time, by place on the first; by question, by default, by face on the second. Each board opens with its case, its tradeoff and its cost; then the counts, today against the concept; then the home at desktop; then the same at 390 beside what it folds, what leaves and what it keeps; and closes with where it stops, what it needs and its one wow. Every name, number and time is demo-seed fiction — Blue Mantis Divers, Key Largo, Dana at the desk, Keiko and Sal aboard Mantis II, the 7:00 Two-Tank Reef, the 1:00 Wreck Trip, the 7:30 Night Dive — as the earlier canvases recorded it. Nothing here is real customer data.</p>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>
