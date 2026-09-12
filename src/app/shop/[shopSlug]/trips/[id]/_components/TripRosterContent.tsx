@@ -58,6 +58,7 @@ export function TripRosterContent({
   locale,
   timezone,
   depthUnit,
+  shopRentalItems,
   tripNotice,
   pageNotice,
   noteDeleted,
@@ -78,6 +79,8 @@ export function TripRosterContent({
   locale: string;
   timezone: string;
   depthUnit: "feet" | "meters";
+  /** The shop's rental catalog, read by the ledger's fit line (`RosterSection`). */
+  shopRentalItems?: readonly string[];
   tripNotice?: FormNotice;
   pageNotice?: FormNotice;
   noteDeleted?: { bookingId: string; body: string };
@@ -176,6 +179,7 @@ export function TripRosterContent({
         readinessByBooking={readinessByBooking}
         waiverByBooking={waiverByBooking}
         rentalFitByBooking={rentalFitByBooking}
+        shopRentalItems={shopRentalItems}
         nitroxByBooking={nitroxByBooking}
         requiresPayment={Boolean(requirement?.requiresPayment)}
         paymentsConnected={paymentsConnected}

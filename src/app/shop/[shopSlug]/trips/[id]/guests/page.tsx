@@ -341,6 +341,7 @@ async function TripGuestsBody({
         readinessByBooking={readinessByBooking}
         waiverByBooking={waiverByBooking}
         rentalFitByBooking={rentalFitByBooking}
+        shopRentalItems={shop.rentalItems}
         nitroxByBooking={nitroxByBooking}
         requiresPayment={Boolean(requirement?.requiresPayment)}
         paymentsConnected={paymentsConnected}

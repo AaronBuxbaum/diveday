@@ -1730,8 +1730,18 @@ new domain concept, define it here in the same PR.
   computer (default-on); the GoPro and nitrox are opt-in — most shops don't fill nitrox, so a shop
   that hasn't ticked it never shows the nitrox request, its price field, or the packing list's
   nitrox tank count and blockers. Editing the catalog changes what is offered going forward; it
-  does not rewrite a fit a diver already recorded. The catalog is only **half** the nitrox
-  answer — see **Nitrox-compatible course** below.
+  does not rewrite a fit a diver already recorded, and **what the read side then does with a
+  stored flag the catalog contradicts is the other half of that promise.** The piece *stays* on
+  the trip prep list, marked as something the shop no longer rents: dropping it silently would
+  hide a fit nobody can fill, which is the same failure the writer refuses one layer up. What
+  comes off is everything that piece was making *other* lines say. So a diver whose shop stopped
+  renting drysuits gets their stated weighting back on the weights line, ordinary fin sizing, and
+  no drysuit-card advisory — none of those three is about the suit itself; each is a claim about
+  what changes *because a rental suit is going out*, which a contradicted flag does not say
+  (`src/lib/dive-prep.ts`'s `inShopDrysuit`, `src/lib/drysuit-card.ts`). Completeness stops
+  chasing that piece's size at the same time (**Complete rental fit** below), so the list neither
+  nags for a size nobody can hand over nor pretends the piece was never asked for. The catalog is
+  only **half** the nitrox answer — see **Nitrox-compatible course** below.
 - **Nitrox-compatible course** — whether a shop will run a given course on enriched air
   (`courses.nitrox_compatible`, set on the course editor's *At a glance* box). It is the second of
   two gates on the enriched-air request: `nitroxAvailableOn` (`src/lib/rentals.ts`) offers the box
@@ -1771,6 +1781,16 @@ new domain concept, define it here in the same PR.
   itself ("ML, rock boot 9"), which is free text staff-side and reaches the packing list verbatim.
   The diver's shoe size still matters for fins over that boot, and the mask/fins question already
   asks it.
+  Every size field holds **40 characters** and the usual-weighting note 120
+  (`RENTAL_FIT_TEXT_LIMITS`, `src/lib/rentals.ts`) — one bound for all four writers, because the
+  diver's own form re-submits whatever staff stored, so a tighter cap on the diver's side fails
+  their save on a box they never typed in (issue #1728). That bound is product behaviour and not
+  only form validation: the contact importer **drops** a longer size, with the original cell on
+  the import report beside its row, rather than truncating it (issue #1754). A cut-off size is a
+  plausible-looking wrong size that reaches the packing list verbatim and is acted on at the dock,
+  while a size DiveDay does not hold is a gap completeness already chases and the diver's own form
+  asks for again. It is the tightest constraint on the drysuit's second fact above: a fleet
+  writing its rock-boot size into `drysuit_size` has 40 characters for both.
   A drysuit ticked here with no **Drysuit** specialty on the diver's record raises a roster advisory
   (`src/lib/drysuit-card.ts`) and nothing more: air in the suit expands on the way up and the
   specialty exists for exactly that, but a shop runs its own orientations, so this is a
@@ -1871,8 +1891,12 @@ new domain concept, define it here in the same PR.
   same question one step over: every fit form asks one shoe size ("Fin & boot size", "US 9 / EU
   42"), a vulcanised drysuit boot is two to three fin sizes bigger than the foot in it, and a pair
   packed to the stated number does not go on at the bench. That size stays on the line as the
-  number the packer sizes up from, and the line says the pair has to clear the boot. Rules in
-  `src/lib/dive-prep.ts`.
+  number the packer sizes up from, and the line says the pair has to clear the boot.
+  **Both of those hold only while the shop actually rents drysuits.** A piece the shop has since
+  dropped from its **rental catalog** is the one line here that carries a reason rather than only
+  a size: it stays on the list, says the shop no longer rents it, and stops changing any other
+  line — so a diver at a shop that stopped renting suits is packed lead to their stated number
+  and fins to their stated size, like anyone else. Rules in `src/lib/dive-prep.ts`.
 - **Diver profile** — the shop's person-first operational record. A diver profile gathers contact
   details, certification evidence, rental fit, and bookings; cards are not managed as an unrelated
   certification inbox.

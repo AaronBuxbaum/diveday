@@ -22,7 +22,7 @@
 import { DAY_MS } from "@/lib/clock";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { nowDate } from "./clock";
-import { rentalFitCompleteness, type SizedRentalKind } from "./rentals";
+import { rentalFitCompleteness, type SizedRentalKind, toRentableKinds } from "./rentals";
 import { hasSupportNeeds, type SupportNeeds, supportDiversToArrange } from "./support-needs";
 
 export type RentalItemKind =
@@ -184,6 +184,18 @@ export type PrepPiece = {
    * foot's and never the pair that goes over the boot (see `rentedItems`).
    */
   drysuitFinFit: boolean;
+  /**
+   * **The diver's fit asks for this piece and the shop's catalog no longer
+   * offers it.** The piece stays on the list and says so.
+   *
+   * Dropping it silently would be the write side's own bug moved one layer
+   * down (`saveRentalFit`, issue #1755): the diver's answer was never
+   * retracted, and a packing list that quietly loses a piece tells the packer
+   * nothing while the fit behind it still records one. So the list
+   * over-includes and names the reason, which is a loose end a staffer can
+   * actually close — put the item back in the catalog, or ask the diver.
+   */
+  notOffered: boolean;
 };
 
 /** One row of the packing list: N of this item in this size, and who they're for. */
@@ -215,6 +227,13 @@ export type PrepLine = {
    * rows.
    */
   drysuitFinFit: boolean;
+  /**
+   * This line's item is not in the shop's catalog any more (`PrepPiece`). A
+   * property of the shop rather than of the diver, so it is the same answer
+   * for every diver on the line and never splits one — which is why
+   * {@link prepLineKey} does not read it.
+   */
+  notOffered: boolean;
 };
 
 /**
@@ -388,6 +407,10 @@ function size(value: string | null): string | null {
  * things, so each gets its own sentinel rather than collapsing into the row
  * for "nobody wrote a size down". Exported because the page keys its rendered
  * rows by it: two rows the grouping kept apart must not share a React key.
+ *
+ * `notOffered` is deliberately absent. It is a fact about the shop's catalog,
+ * so every piece of one kind on one departure carries the same answer and it
+ * can never be what separates two rows.
  */
 export function prepLineKey(piece: Omit<PrepPiece, "kind">): string {
   if (piece.fitAtCheckIn) return "\u0000fit";
@@ -397,6 +420,34 @@ export function prepLineKey(piece: Omit<PrepPiece, "kind">): string {
   // drysuit boot, so the same string is two rows rather than one of two.
   if (piece.drysuitFinFit) return `\u0000drysuit-fin:${stated}`;
   return stated;
+}
+
+/**
+ * **Which pieces the shop still rents**, or `null` for "no catalog was handed
+ * over", which reads as renting everything.
+ *
+ * Absent is the over-including direction on purpose, and it is the same answer
+ * {@link rentalFitCompleteness} gives its own absent `offeredKinds`: a caller
+ * with no catalog to hand should see every piece the fit asks for rather than a
+ * list quietly short of one.
+ */
+type CatalogScope = ReadonlySet<string> | null;
+
+function catalogScope(offeredKinds: readonly string[] | undefined): CatalogScope {
+  return offeredKinds ? new Set<string>(toRentableKinds(offeredKinds)) : null;
+}
+
+/**
+ * Whether this shop's catalog still offers a packing piece.
+ *
+ * **Boots take the wetsuit's answer.** They are not a catalog entry of their
+ * own — nothing ticks them, they ride along with the suit (`RENTABLE_ITEMS` in
+ * `src/lib/rentals.ts`) — so asking the catalog about `boots` directly would
+ * read every shop on earth as having dropped them.
+ */
+function offersKind(offered: CatalogScope, kind: RentalItemKind): boolean {
+  if (offered === null) return true;
+  return offered.has(kind === "boots" ? "wetsuit" : kind);
 }
 
 /**
@@ -410,19 +461,73 @@ export function prepLineKey(piece: Omit<PrepPiece, "kind">): string {
  * about in the first place. What changes is that their *sized* pieces carry no
  * size: the line keeps its count and reads "fit at check-in" rather than naming
  * a size the shop already knows it is short of.
+ *
+ * `offered` is the shop's own catalog. A piece the catalog no longer offers is
+ * **kept and marked** rather than filtered out (`PrepPiece.notOffered`); what
+ * it loses is the right to change any *other* line, which is the whole of
+ * `inShopDrysuit` below.
  */
-function rentedItems(fit: RentalFit): PrepPiece[] {
+function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] {
   const flagged = Boolean(fit.needsStaffFitAt);
+  const offers = (kind: RentalItemKind) => offersKind(offered, kind);
+  /**
+   * **A drysuit off this shop's wall is actually going out to this diver.**
+   *
+   * `rents_drysuit` survives a shop dropping drysuits from its catalog, which
+   * is correct: the diver's answer was theirs and a catalog edit is not the
+   * diver speaking (`saveRentalFit`, issue #1755, and the glossary's **Rental
+   * catalog**). But three things on this list are conditioned on a rental suit
+   * being handed over, and none of them may be derived from a flag the catalog
+   * contradicts:
+   *
+   * 1. **The weights line loses its number.** `weightPreference` is a wetsuit
+   *    answer and a drysuit needs two to four kilos more, so the lead is
+   *    settled in the water. No suit going out, no correction to make — and
+   *    withholding the most safety-relevant number in the fit over a suit
+   *    nobody is handing over is the expensive direction: under-weighted is
+   *    the diver who cannot hold a safety stop.
+   * 2. **The fins line sizes up over a boot.** A vulcanised drysuit boot is
+   *    two to three fin sizes bigger than the foot in it. With no boot in the
+   *    picture that instruction packs a pair two to three sizes too big, which
+   *    is a fin that comes off on a drift dive.
+   * 3. **The card advisory** (`src/lib/drysuit-card.ts`), which is the
+   *    shop-facing half of the same fact and is scoped there for the same
+   *    reason.
+   *
+   * All three go, not some. The shared argument is that none of them is about
+   * the drysuit *piece* — each is a claim about what else changes **because a
+   * rental suit is going out** — and a contradicted flag does not say that.
+   * Nothing here is a judgement about whether the diver dives dry: this column
+   * records what the shop hands over, there is no field for a suit the diver
+   * owns (issue #1752, which is the mirror case and deliberately unfixed until
+   * someone decides where that fact lives), and reading one column as the other
+   * is the over-reach that issue is about.
+   *
+   * The drysuit piece itself stays, marked `notOffered`, so the packer still
+   * meets the contradiction — on the surface where gear is reasoned about, in a
+   * form they can close, and without the danger tone of an advisory that has no
+   * honest way to clear (the checkbox no longer renders, so neither staff nor
+   * diver can retract the flag).
+   */
+  const inShopDrysuit = fit.rentsDrysuit && offers("drysuit");
   /** A piece whose size is the thing in question — blanked when flagged. */
   const sized = (kind: RentalItemKind, value: string | null): PrepPiece =>
     flagged
-      ? { kind, size: null, fitAtCheckIn: true, drysuitWeightCheck: false, drysuitFinFit: false }
+      ? {
+          kind,
+          size: null,
+          fitAtCheckIn: true,
+          drysuitWeightCheck: false,
+          drysuitFinFit: false,
+          notOffered: !offers(kind),
+        }
       : {
           kind,
           size: size(value),
           fitAtCheckIn: false,
           drysuitWeightCheck: false,
           drysuitFinFit: false,
+          notOffered: !offers(kind),
         };
   /** A piece with no size at all; a flag never changes what to pack. */
   const unsized = (kind: RentalItemKind): PrepPiece => ({
@@ -431,6 +536,7 @@ function rentedItems(fit: RentalFit): PrepPiece[] {
     fitAtCheckIn: false,
     drysuitWeightCheck: false,
     drysuitFinFit: false,
+    notOffered: !offers(kind),
   });
   /**
    * Weights: a piece that records a value but has no stock *size* to be short
@@ -454,15 +560,19 @@ function rentedItems(fit: RentalFit): PrepPiece[] {
    * `rentalFitLine` feeds the roll call, the offline manifest and the roster
    * from these same pieces, and the rail is the last place a wetsuit number
    * should appear beside "Drysuit ML".
+   *
+   * **Only while the shop actually rents drysuits** — `inShopDrysuit`, not the
+   * raw flag.
    */
   const weights = (value: string | null): PrepPiece => {
-    if (fit.rentsDrysuit) {
+    if (inShopDrysuit) {
       return {
         kind: "weights",
         size: null,
         fitAtCheckIn: false,
         drysuitWeightCheck: true,
         drysuitFinFit: false,
+        notOffered: !offers("weights"),
       };
     }
     return {
@@ -471,6 +581,7 @@ function rentedItems(fit: RentalFit): PrepPiece[] {
       fitAtCheckIn: false,
       drysuitWeightCheck: false,
       drysuitFinFit: false,
+      notOffered: !offers("weights"),
     };
   };
 
@@ -486,10 +597,14 @@ function rentedItems(fit: RentalFit): PrepPiece[] {
    * sizes *up* from, and the line carries the flag that says so rather than
    * reading like any other size to pull. A diver already flagged for hands-on
    * fitting keeps "fit at check-in", which is this same job done in person.
+   *
+   * **Only while the shop actually rents drysuits** — `inShopDrysuit`, not the
+   * raw flag. Sizing up over a boot that is not coming is how a fin ends up two
+   * to three sizes too big.
    */
   const maskFins = (): PrepPiece => ({
     ...sized("mask_fins", fit.finSize),
-    drysuitFinFit: fit.rentsDrysuit && !flagged,
+    drysuitFinFit: inShopDrysuit && !flagged,
   });
 
   const items: PrepPiece[] = [];
@@ -571,17 +686,30 @@ export function buildDivePrepChecklist(input: {
   /** Names of the trip's diving crew (instructor/divemaster) — air tanks only, no rental fit. */
   divingCrew?: string[];
   /**
-   * The shop's own rental catalog (`shops.rental_items`). Scopes the
-   * completeness question to gear the shop still hands over, so a fit written
-   * before the shop stopped renting BCDs doesn't flag a size nobody can be
-   * given. Omit it and every item counts — which is what a caller with no
-   * catalog to hand should want, since over-asking is the safe direction.
+   * The shop's own rental catalog (`shops.rental_items`), read by **both**
+   * halves of this list.
+   *
+   * It scopes the completeness question to gear the shop still hands over, so
+   * a fit written before the shop stopped renting BCDs doesn't flag a size
+   * nobody can be given. It also decides which pieces are still the shop's to
+   * hand over at all: a piece the catalog has dropped is marked
+   * (`PrepPiece.notOffered`) and stops changing any other line
+   * (`inShopDrysuit` in `rentedItems`). Until issue #1755's review this
+   * argument reached only the first half, which left the drysuit's three
+   * safety consequences hanging off a flag the catalog contradicted.
+   *
+   * Omit it and every item counts — which is what a caller with no catalog to
+   * hand should want, since over-including is the safe direction.
    */
   offeredKinds?: readonly string[];
   /** Injectable for tests; defaults to the clock (src/lib/clock.ts). */
   now?: Date;
 }): DivePrepChecklist {
   const diveCount = Math.max(1, Math.trunc(input.plannedDives) || 1);
+  // One catalog read for the whole departure, shared by the completeness
+  // question below and by `rentedItems`, so the nag and the packing line can
+  // never disagree about what this shop still rents.
+  const offered = catalogScope(input.offeredKinds);
   const grouped = new Map<string, PrepLine>();
   const diverLines: PrepDiverLine[] = [];
   const nitroxBlockers: NitroxBlocker[] = [];
@@ -659,7 +787,7 @@ export function buildDivePrepChecklist(input: {
     // One call, both groupings. `rentedItems` already emits in `KIND_ORDER`,
     // so a diver's row reads down the rack in the same order the by-item rows
     // do — and neither grouping can hold a piece the other doesn't.
-    const items = rentedItems(diver.fit);
+    const items = rentedItems(diver.fit, offered);
     diverLines.push({
       bookingId: diver.bookingId,
       personId: diver.personId,
@@ -684,6 +812,7 @@ export function buildDivePrepChecklist(input: {
         fitAtCheckIn: item.fitAtCheckIn,
         drysuitWeightCheck: item.drysuitWeightCheck,
         drysuitFinFit: item.drysuitFinFit,
+        notOffered: item.notOffered,
       });
     }
   }
@@ -775,7 +904,18 @@ export type RentalFitLine =
       items: { kind: RentalItemKind; size: string | null; drysuitFinFit?: true }[];
     };
 
-export function rentalFitLine(fit: RentalFit | null): RentalFitLine {
+/**
+ * `offeredKinds` is the shop's catalog, and it is optional for the same reason
+ * it is optional on {@link buildDivePrepChecklist}: a caller with none to hand
+ * sees every piece the fit asks for. A caller that **has** one should pass it,
+ * so `drysuitFinFit` cannot ride on a flag the catalog contradicts — the rail
+ * is the last place to read "size up over the boot" about a suit the shop
+ * stopped renting (`inShopDrysuit` in `rentedItems`, issue #1755's review).
+ */
+export function rentalFitLine(
+  fit: RentalFit | null,
+  offeredKinds?: readonly string[],
+): RentalFitLine {
   // A row that exists only to hold the diver's note reads exactly as no row at
   // all: they have not answered the gear question, so there is nothing to pack
   // from and nothing to claim they brought.
@@ -787,7 +927,7 @@ export function rentalFitLine(fit: RentalFit | null): RentalFitLine {
   if (fit.needsStaffFitAt) {
     return { state: "needs_staff_fit", note: fit.needsStaffFitNote?.trim() || null };
   }
-  const items = rentedItems(fit).map((item) =>
+  const items = rentedItems(fit, catalogScope(offeredKinds)).map((item) =>
     item.drysuitFinFit
       ? { kind: item.kind, size: item.size, drysuitFinFit: true as const }
       : { kind: item.kind, size: item.size },

@@ -194,6 +194,7 @@ export function RosterSection({
   readinessByBooking,
   waiverByBooking,
   rentalFitByBooking,
+  shopRentalItems,
   nitroxByBooking,
   requiresPayment,
   paymentsConnected,
@@ -248,6 +249,18 @@ export function RosterSection({
   readinessByBooking: ReadinessByBooking;
   waiverByBooking: WaiverByBooking;
   rentalFitByBooking: RentalFitByBooking;
+  /**
+   * The shop's own rental catalog (`shops.rental_items`), so this ledger reads
+   * a diver's fit the way the packing list does.
+   *
+   * A stored `rents_*` flag outlives the shop dropping that item, deliberately
+   * (issue #1755) — but the two things this row derives *from* the drysuit flag
+   * are conditioned on a suit actually coming off the wall: the card advisory,
+   * and "size up over the boot" on the fit line. Omitted, both are raised as
+   * before; over-warning is the safe direction for something that gates
+   * nothing (`checkDrysuitCard`, `src/lib/dive-prep.ts`'s `inShopDrysuit`).
+   */
+  shopRentalItems?: readonly string[];
   nitroxByBooking: NitroxByBooking;
   requiresPayment: boolean;
   /**
@@ -546,6 +559,7 @@ export function RosterSection({
       ? checkDrysuitCard(
           rentalFitByBooking.get(booking.id)?.rentsDrysuit ?? false,
           readinessByBooking.get(booking.id)?.specialtyCertifications ?? [],
+          shopRentalItems,
         )
       : ({ status: "ok" } as const);
     // The namesake refusal (issue #1573) holds its row open for the same
@@ -1222,7 +1236,7 @@ export function RosterSection({
                 {rentalFitLineText(
                   t,
                   locale,
-                  rentalFitLine(rentalFitByBooking.get(booking.id) ?? null),
+                  rentalFitLine(rentalFitByBooking.get(booking.id) ?? null, shopRentalItems),
                 )}
               </p>
               {nitrox ? (

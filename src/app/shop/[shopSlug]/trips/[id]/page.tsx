@@ -887,6 +887,7 @@ export default async function ManageTripPage({
         locale={locale}
         timezone={shop.timezone}
         depthUnit={shop.depthUnit}
+        shopRentalItems={shop.rentalItems}
         tripNotice={tripNotice}
         pageNotice={rosterPageNotice}
         noteDeleted={
