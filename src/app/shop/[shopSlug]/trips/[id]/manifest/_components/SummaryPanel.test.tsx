@@ -366,10 +366,16 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
     expect(chips.length).toBe(2);
     for (const chip of chips) {
       const id = chip.getAttribute("href")?.slice(1) ?? "";
-      expect(
-        container.querySelector(`li[id="${id}"]`),
-        `no row for ${chip.textContent}`,
-      ).not.toBeNull();
+      const row = container.querySelector(`li[id="${id}"]`);
+      expect(row, `no row for ${chip.textContent}`).not.toBeNull();
+      // **And it is that person's row**, not merely a row (`dive-domain-expert`
+      // review, issue #1773). Both halves of the id carry a booking id, so a
+      // transposition resolves to somebody — and lands a captain on the wrong
+      // diver while a named person is in the water, which is worse than
+      // #1675's tap that did nothing at all.
+      expect(row?.textContent, `${chip.textContent}'s chip points at another row`).toContain(
+        chip.textContent,
+      );
     }
   });
 });

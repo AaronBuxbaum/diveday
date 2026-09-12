@@ -44,9 +44,18 @@ export function scopedHash(prefix: string | undefined, id: string): string {
  * it — each side hard-coded its own string, so both suites stayed green with
  * the halves disagreeing.
  *
- * Unscoped on purpose, unlike the crew rows beside them: whether a diver row
- * should take a prefix is the separate question of rendering two manifests on
- * one page, and `e2e/manifest.spec.ts` pins this fragment in a URL.
+ * **Unscoped, and safe that way permanently** — which is not true of the crew
+ * rows beside them, and the difference is in the key rather than in anyone's
+ * preference (`dive-domain-expert` review, issue #1773). A booking belongs to
+ * exactly one departure by construction: `bookings.id` is its own primary key
+ * and the row carries `trip_id` (`src/db/schema.ts`). So the paper day, which
+ * renders this block once per departure of today, cannot produce two diver
+ * rows with one id however many boats it prints. A crew member can be rostered
+ * on several of those departures and their row keys on `people.id`, which is
+ * exactly why the crew half takes `idPrefix` and this half does not.
+ *
+ * `e2e/manifest.spec.ts` also pins this fragment in a URL, so the prefix
+ * itself is not free to change.
  */
 export function diverRowId(bookingId: string): string {
   return `diver-row-${bookingId}`;
@@ -55,4 +64,21 @@ export function diverRowId(bookingId: string): string {
 /** The same id as a fragment/`href` target. */
 export function diverRowHash(bookingId: string): string {
   return `#${diverRowId(bookingId)}`;
+}
+
+/**
+ * **A crew member's row on the same manifest**, spelled in one place for the
+ * same reason the diver row is: it was three bare literals across two files —
+ * the roll call's `<li>` and both of the summary panel's chip lists — and the
+ * half the glossary ranks graver, since a divemaster who did not come back
+ * outranks a diver who did not (`dive-domain-expert` review, issue #1773).
+ *
+ * Unlike a diver row this one **must** be scoped: a crew member can be
+ * rostered on several of one day's departures and this id keys on `people.id`,
+ * so the paper day would otherwise print two rows answering to the same name
+ * and send every reference to the first boat's. Callers wrap it in
+ * {@link scopedId} or {@link scopedHash}, which is where that prefix lives.
+ */
+export function crewRowId(personId: string): string {
+  return `crew-row-${personId}`;
 }
