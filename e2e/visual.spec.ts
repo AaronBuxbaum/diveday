@@ -5203,10 +5203,23 @@ for (const scheme of ["light", "dark"] as const) {
       // Blue Mantis fills nitrox, so the Tanks tile grid is at its full
       // Total/Air/Nitrox width; the collapsed single-tile layout for a shop that
       // doesn't is its own test below.
+      //
+      // **And one diver is in a drysuit** (issues 1414 and #1727), which is the
+      // state this page had never been photographed in: the seed carried no
+      // drysuit renter at all, so the sized drysuit piece and the weights line
+      // that deliberately carries no number — a stated weighting is a wetsuit
+      // answer, and a drysuit needs two to four kilos more — were unit-tested
+      // and unseen. Both are waited on rather than assumed, because a capture
+      // on the right route in the wrong state is the blind spot this file's own
+      // "A capture only covers the state it captures" note is about.
       test(`a trip's prep list renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         await openTripTab(page, "Prep");
         await page.getByRole("heading", { name: "Tanks" }).waitFor();
+        // `exact`, because the weights line's own cell reads "Drysuit: weight
+        // check in the water" and a substring match would find two.
+        await expect(page.getByRole("cell", { name: "Drysuit", exact: true })).toBeVisible();
+        await expect(page.getByText("Drysuit: weight check in the water")).toBeVisible();
         await capture(page, "prep", scheme);
       });
 
@@ -5222,6 +5235,9 @@ for (const scheme of ["light", "dark"] as const) {
         // The by-item grouping has no Diver column, so this cannot resolve
         // against the view that was on screen a moment ago.
         await page.getByRole("columnheader", { name: "Diver" }).waitFor();
+        // The drysuit diver's whole row, which is where the two states read as
+        // one fit rather than as two rack lines (issue #1727).
+        await expect(page.getByText("Drysuit: weight check in the water")).toBeVisible();
         await capture(page, "prep-by-diver", scheme);
       });
 

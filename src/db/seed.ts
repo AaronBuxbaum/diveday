@@ -388,6 +388,11 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         "weights",
         "dive_computer",
         "gopro",
+        // **The one add-on the demo offers, and the one that carries a size**
+        // (issue 1414). A shop with a drysuit renter on its fit book has to say
+        // it rents drysuits, or both fit forms read that fit as "not rented"
+        // and the next save clears it (`divers/[personId]/actions.ts`).
+        "drysuit",
         "nitrox",
       ],
       rentalPricing: {
@@ -400,6 +405,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
           weights: 500,
           dive_computer: 1000,
           gopro: 2000,
+          drysuit: 3500,
         },
         nitroxCents: 1200,
       },
@@ -617,6 +623,7 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, timezone?: st
             "weights",
             "dive_computer",
             "gopro",
+            "drysuit",
             "nitrox",
           ],
           rentalPricing: {
@@ -629,6 +636,7 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, timezone?: st
               weights: 500,
               dive_computer: 1000,
               gopro: 2000,
+              drysuit: 3500,
             },
             nitroxCents: 1200,
           },
