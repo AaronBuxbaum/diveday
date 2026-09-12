@@ -50,6 +50,7 @@ const NOTICE_TONE = {
   "signup-failed-register": "danger",
   "signup-failed-subscribe": "danger",
   "signup-failed-template": "danger",
+  "waba-already-connected": "danger",
 } as const;
 
 type NoticeCode = keyof typeof NOTICE_TONE;

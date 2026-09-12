@@ -10,7 +10,7 @@ import {
   whatsAppTextSender,
 } from "@/lib/notifications/whatsapp";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
-import type { DbExecutor } from "./client";
+import { type DbExecutor, violatesUniqueIndex } from "./client";
 import type { ShopWhatsappAccount } from "./schema";
 import { shopWhatsappAccounts } from "./schema";
 
@@ -30,6 +30,17 @@ import { shopWhatsappAccounts } from "./schema";
  */
 
 export type WhatsAppKeyRefusal = "encryption_key_unset" | "encryption_key_invalid";
+
+/**
+ * Why a connection was not stored. The key refusals are about DiveDay's own
+ * configuration; `waba_already_connected` is about another shop — the WABA this
+ * one is trying to claim is the tenant key inbound events are routed on, and one
+ * WABA resolves to one shop or to none (see {@link shopIdForWhatsAppWaba}).
+ */
+export type WhatsAppConnectRefusal = WhatsAppKeyRefusal | "waba_already_connected";
+
+/** The unique index that makes a WABA resolve to one shop; named so its 23505 can be told apart. */
+const WABA_UNIQUE_INDEX = "shop_whatsapp_accounts_waba_unique";
 
 export type ConnectWhatsAppInput = {
   shopId: string;
@@ -51,7 +62,7 @@ export type ConnectWhatsAppInput = {
 
 export type ConnectWhatsAppResult =
   | { status: "connected"; account: ShopWhatsappAccount }
-  | { status: "refused"; reason: WhatsAppKeyRefusal };
+  | { status: "refused"; reason: WhatsAppConnectRefusal };
 
 /** Options exist so tests can supply a key and a fake fetch without touching the environment. */
 export type WhatsAppSenderOptions = {
@@ -95,15 +106,14 @@ export async function getShopWhatsAppAccount(
  * a delivery outcome being applied across a multi-tenant table on a provider
  * message id alone.
  *
- * Two rows asked for, one expected. Nothing in the database stops two shops
- * holding the same WABA — `waba_id` carries no unique index (issue #1715) — and
- * a chain or an agency completing Embedded Signup for two DiveDay tenants
- * against one Meta Business is the ordinary way to get there. Taking the first
- * of an unordered `limit(1)` would then route every inbound diver message and
- * every reply keyword to an arbitrary one of them, and a reply keyword is a
- * cancellation: the wrong shop's booking, silently. There is no honest answer
- * to pick, so pick none and say so loudly — the webhook already drops what it
- * cannot place.
+ * Two rows asked for, one expected — the belt to the constraint's braces.
+ * `shop_whatsapp_accounts_waba_unique` is what makes the second row impossible
+ * (issue #1715), so this branch is unreachable while the index stands, and it
+ * stays anyway: the cost of asking for one extra row is nothing, and the cost of
+ * guessing is a reply keyword — a cancellation — applied to the wrong shop's
+ * booking, silently. There is no honest answer to pick when two rows come back,
+ * so pick none and say so loudly; the webhook already drops what it cannot
+ * place. Dropping the index without noticing this is the failure it guards.
  */
 export async function shopIdForWhatsAppWaba(
   db: DbExecutor,
@@ -129,6 +139,14 @@ export async function shopIdForWhatsAppWaba(
  * insert-or-fail: rotating a token or fixing a mistyped template name is the
  * same gesture as connecting for the first time, and forcing a disconnect in
  * between would blank the channel for no reason.
+ *
+ * The one thing it will not do is take a WABA another shop already holds. That
+ * is the trap in an upsert whose whole design is "never fail, just overwrite":
+ * `onConflictDoUpdate` handles a collision on `shop_id` and nothing else, so a
+ * WABA collision arrives as a raw 23505 from
+ * `shop_whatsapp_accounts_waba_unique`. Caught by that index's name rather than
+ * by message text or a bare code, so an unrelated constraint failure is never
+ * reported to a staffer as "already connected to another shop".
  */
 export async function connectShopWhatsAppAccount(
   db: DbExecutor,
@@ -156,19 +174,26 @@ export async function connectShopWhatsAppAccount(
   const pin = input.registrationPin?.trim()
     ? { registrationPinSealed: sealSecret(input.registrationPin.trim(), key) }
     : {};
-  const [account] = await db
-    .insert(shopWhatsappAccounts)
-    .values({ ...values, ...pin, connectedAt: now })
-    .onConflictDoUpdate({
-      target: shopWhatsappAccounts.shopId,
-      // `connectedAt` deliberately survives a re-connect — it is when this shop
-      // first switched WhatsApp on, not when it last rotated a token.
-      // `verifiedAt` deliberately does not: new credentials are unproven until
-      // a fresh test send proves them.
-      set: { ...values, ...pin, verifiedAt: null },
-    })
-    .returning();
-  return { status: "connected", account };
+  try {
+    const [account] = await db
+      .insert(shopWhatsappAccounts)
+      .values({ ...values, ...pin, connectedAt: now })
+      .onConflictDoUpdate({
+        target: shopWhatsappAccounts.shopId,
+        // `connectedAt` deliberately survives a re-connect — it is when this shop
+        // first switched WhatsApp on, not when it last rotated a token.
+        // `verifiedAt` deliberately does not: new credentials are unproven until
+        // a fresh test send proves them.
+        set: { ...values, ...pin, verifiedAt: null },
+      })
+      .returning();
+    return { status: "connected", account };
+  } catch (error) {
+    if (violatesUniqueIndex(error, WABA_UNIQUE_INDEX)) {
+      return { status: "refused", reason: "waba_already_connected" };
+    }
+    throw error;
+  }
 }
 
 /** Disconnect by deleting the row — holding a live credential a shop revoked serves nobody. */

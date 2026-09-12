@@ -4462,43 +4462,59 @@ export const shopStripeAccounts = pgTable(
  * the business. Once a shop says "disconnect", the safest thing to hold is
  * nothing.
  */
-export const shopWhatsappAccounts = pgTable("shop_whatsapp_accounts", {
-  shopId: uuid("shop_id")
-    .primaryKey()
-    .references(() => shops.id),
-  /** Meta's id for the sending number — the path segment of the Cloud API send endpoint. */
-  phoneNumberId: text("phone_number_id").notNull(),
-  /** The human-readable number Meta reports for it, shown back to staff for confirmation. */
-  displayPhoneNumber: text("display_phone_number"),
-  /** The WhatsApp Business Account the number belongs to; recorded for support, never sent. */
-  wabaId: text("waba_id"),
-  /**
-   * The shop's Meta access token, sealed with AES-256-GCM (`src/lib/secret-box.ts`)
-   * — never plaintext. This column is the reason `SECRET_ENCRYPTION_KEY` exists:
-   * a token here can send messages as the shop's business, so a database dump
-   * must not be enough to use it.
-   */
-  accessTokenSealed: text("access_token_sealed").notNull(),
-  /**
-   * The six-digit PIN this number was registered with during Embedded Signup,
-   * sealed like the token. DiveDay generates it — the shop never types it — but
-   * Meta demands the same PIN for any later re-registration, and a shop that
-   * cannot re-register is a shop locked out of its own number.
-   */
-  registrationPinSealed: text("registration_pin_sealed"),
-  /**
-   * The approved template courtesy messages are sent through, and its Meta
-   * language code. Stored per shop rather than hard-coded: WhatsApp requires
-   * business-initiated messages to use a template the *shop* got approved, and
-   * a shop whose review went through under a different name must still work.
-   */
-  templateName: text("template_name").notNull(),
-  templateLanguage: text("template_language").notNull(),
-  connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
-  /** Set by the settings page's test send, so staff can see the connection was proven, not just saved. */
-  verifiedAt: timestamp("verified_at", { withTimezone: true }),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const shopWhatsappAccounts = pgTable(
+  "shop_whatsapp_accounts",
+  {
+    shopId: uuid("shop_id")
+      .primaryKey()
+      .references(() => shops.id),
+    /** Meta's id for the sending number — the path segment of the Cloud API send endpoint. */
+    phoneNumberId: text("phone_number_id").notNull(),
+    /** The human-readable number Meta reports for it, shown back to staff for confirmation. */
+    displayPhoneNumber: text("display_phone_number"),
+    /**
+     * The WhatsApp Business Account the number belongs to — and the **tenant key
+     * for everything inbound**, not merely a support note. Meta names the WABA in
+     * `entry[].id` on every webhook delivery, and `shopIdForWhatsAppWaba` is what
+     * turns that into the shop whose bookings a reply keyword acts on. The unique
+     * index below is why that resolution has one answer: without it a chain
+     * completing Embedded Signup for two of its DiveDay shops against one Meta
+     * Business put two rows here, and a diver's message — up to a cancellation —
+     * landed in whichever came back first (issue #1715).
+     *
+     * Nullable on purpose, and Postgres lets nulls repeat under a unique index:
+     * a row connected before a WABA was recorded stays legal.
+     */
+    wabaId: text("waba_id"),
+    /**
+     * The shop's Meta access token, sealed with AES-256-GCM (`src/lib/secret-box.ts`)
+     * — never plaintext. This column is the reason `SECRET_ENCRYPTION_KEY` exists:
+     * a token here can send messages as the shop's business, so a database dump
+     * must not be enough to use it.
+     */
+    accessTokenSealed: text("access_token_sealed").notNull(),
+    /**
+     * The six-digit PIN this number was registered with during Embedded Signup,
+     * sealed like the token. DiveDay generates it — the shop never types it — but
+     * Meta demands the same PIN for any later re-registration, and a shop that
+     * cannot re-register is a shop locked out of its own number.
+     */
+    registrationPinSealed: text("registration_pin_sealed"),
+    /**
+     * The approved template courtesy messages are sent through, and its Meta
+     * language code. Stored per shop rather than hard-coded: WhatsApp requires
+     * business-initiated messages to use a template the *shop* got approved, and
+     * a shop whose review went through under a different name must still work.
+     */
+    templateName: text("template_name").notNull(),
+    templateLanguage: text("template_language").notNull(),
+    connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Set by the settings page's test send, so staff can see the connection was proven, not just saved. */
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("shop_whatsapp_accounts_waba_unique").on(table.wabaId)],
+);
 
 export const shopBackupDestinations = pgTable("shop_backup_destinations", {
   /** One destination per shop, like `shop_whatsapp_accounts` — reconfiguring is an upsert, never a second row. */

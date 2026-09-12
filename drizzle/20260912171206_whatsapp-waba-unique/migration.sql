@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "shop_whatsapp_accounts_waba_unique" ON "shop_whatsapp_accounts" ("waba_id");

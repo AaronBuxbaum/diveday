@@ -8,7 +8,8 @@ import {
   disconnectShopWhatsAppAccount,
   getShopWhatsAppAccount,
   markShopWhatsAppVerified,
-  type WhatsAppKeyRefusal,
+  shopIdForWhatsAppWaba,
+  type WhatsAppConnectRefusal,
   whatsAppProviderForAccount,
 } from "@/db/whatsapp-accounts";
 import { diverTranslator } from "@/i18n/messages";
@@ -60,7 +61,8 @@ type Notice =
   | "not-authorized"
   | "no-account"
   | "encryption-key-unset"
-  | "encryption-key-invalid";
+  | "encryption-key-invalid"
+  | "waba-already-connected";
 
 /**
  * What Meta's Embedded Signup popup hands back. All three are opaque ids from
@@ -93,11 +95,11 @@ async function settingsPath(): Promise<{ shopId: string; personId: string; path:
 }
 
 /**
- * `WhatsAppKeyRefusal` rides along beside `Notice` because `src/db` answers in
- * its own snake_case domain spelling; `noticeUrl` normalises it to the kebab the
- * bundle key uses, so the refusal arrives worded rather than silent.
+ * `WhatsAppConnectRefusal` rides along beside `Notice` because `src/db` answers
+ * in its own snake_case domain spelling; `noticeUrl` normalises it to the kebab
+ * the bundle key uses, so the refusal arrives worded rather than silent.
  */
-function done(path: string, notice: Notice | WhatsAppKeyRefusal): never {
+function done(path: string, notice: Notice | WhatsAppConnectRefusal): never {
   revalidateAndRedirect(path, noticeUrl(path, notice));
 }
 
@@ -126,6 +128,16 @@ export async function completeWhatsAppSignupAction(formData: FormData): Promise<
     phoneNumberId: formData.get("phoneNumberId") ?? "",
   });
   if (!parsed.success) done(path, "invalid");
+
+  // Refused before Meta is touched, not only after the write. The WABA is the
+  // tenant key every inbound event is routed on, so one belonging to another
+  // DiveDay shop can never be stored here — and the unique index behind
+  // `connectShopWhatsAppAccount` is the authority on that. What this read buys
+  // is the *order*: registering a number mints a PIN, and registering one whose
+  // row is then refused would leave the number bound to a PIN nobody holds,
+  // which is exactly the lockout `registration_pin_sealed` exists to prevent.
+  const wabaHolder = await shopIdForWhatsAppWaba(db, parsed.data.wabaId);
+  if (wabaHolder && wabaHolder !== shopId) done(path, "waba_already_connected");
 
   const shop = await getShopById(db, shopId);
   // The template is submitted in the shop's own diver-facing language, with its
