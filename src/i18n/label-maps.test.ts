@@ -100,9 +100,9 @@ import { type WaiverRowState, waiverRowStateText } from "./waiver-labels";
  *
  * The failure the issue opens with — a code mapped to the **wrong real key** —
  * is caught by none of that on its own: a wrong-but-real key renders a
- * perfectly good sentence. What narrows it is the per-code assertions below
- * (a label is never its own code) plus the fact that the table is a reviewable
- * list of every map in the directory, which is the form a reviewer can check a
+ * perfectly good sentence. What narrows it is that a compound code never
+ * renders as itself, plus the fact that the table is a reviewable list of
+ * every map in the directory — which is the form a reviewer can check a
  * mapping against and a guard cannot.
  *
  * ## Why a test file and not a guard beside `scripts/check-locale.mjs`
@@ -477,6 +477,11 @@ function keysOf<Code extends string>(map: Record<Code, unknown>): readonly Code[
  * Asserted as *equal*, not merely skipped: if a translator ever decides one of
  * these does have a Spanish form, this file says so in one failing line and the
  * fix is deleting the entry.
+ *
+ * Eighteen keys is what the thirty-four maps below happen to reach. The
+ * bundles hold 206 identical values across 7,944 keys, and a count that covers
+ * every key rather than the mapped ones belongs in `check:locale` as a ratchet
+ * — issue #1757.
  */
 const SAME_IN_BOTH_LOCALES = new Map<string, string>([
   // "Plan" is spelled and read the same in Spanish.
@@ -576,8 +581,11 @@ const I18N_DIR = path.join(process.cwd(), "src/i18n");
  * Modules whose maps are proved by their own `<module>.test.ts` instead of the
  * table above. Named per module rather than per map, which is what those files
  * actually do — `today-labels.ts` carries seven maps behind one test file — and
- * is the weaker claim of the two. Issue #1701's table is the stronger form;
- * folding these in is follow-up work, not a silent exemption.
+ * is the weaker claim of the two: `gear-labels.test.ts` is sixteen lines and
+ * exercises one of that module's four maps. The table above is the stronger
+ * form, and folding these twenty-four in is issue #1756 — not a silent
+ * exemption. Delete this list, and the test below that guards it, when it
+ * empties.
  */
 const PROVED_BY_MODULE_TEST = [
   "compass-labels.ts",
