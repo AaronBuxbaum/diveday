@@ -71,7 +71,7 @@ describe("confirming a held seat's identity from the check-in queue", () => {
     const { db, shop, bookingId, form } = await heldSeatAtTheCounter();
 
     await expect(
-      confirmIdentityFromCheckIn(shop.slug, FOCUS_TRIP_ID, form),
+      confirmIdentityFromCheckIn(shop.slug, FOCUS_TRIP_ID, null, form),
     ).resolves.toBeUndefined();
 
     const [after] = await db
@@ -94,11 +94,39 @@ describe("confirming a held seat's identity from the check-in queue", () => {
    */
   it("says so when the seat was no longer held, back on the focused departure", async () => {
     const { shop, form } = await heldSeatAtTheCounter();
-    await confirmIdentityFromCheckIn(shop.slug, FOCUS_TRIP_ID, form);
+    await confirmIdentityFromCheckIn(shop.slug, FOCUS_TRIP_ID, null, form);
 
-    const to = await redirectedTo(() => confirmIdentityFromCheckIn(shop.slug, FOCUS_TRIP_ID, form));
+    const to = await redirectedTo(() =>
+      confirmIdentityFromCheckIn(shop.slug, FOCUS_TRIP_ID, null, form),
+    );
 
     expect(to).toBe(noticeUrl(counterQueuePath(shop.slug, FOCUS_TRIP_ID), "identity-not-held"));
+  });
+
+  /**
+   * **…and it keeps the search that found the diver** (`dive-domain-expert`
+   * review). This is the branch with the diver still at the desk, and
+   * `counterQueuePath` carries the focused departure and nothing else — so a
+   * refusal that landed on the bare queue emptied the search box, and the next
+   * act began by typing the name again. The same regression issue #1674
+   * removed from the paper-waiver door two controls along this row.
+   */
+  it("carries the queue's search onto that refusal", async () => {
+    const { shop, form } = await heldSeatAtTheCounter();
+    await confirmIdentityFromCheckIn(shop.slug, FOCUS_TRIP_ID, "Zoe Bennett", form);
+
+    const to = await redirectedTo(() =>
+      confirmIdentityFromCheckIn(shop.slug, FOCUS_TRIP_ID, "Zoe Bennett", form),
+    );
+
+    expect(to).toBe(
+      noticeUrl(counterQueuePath(shop.slug, FOCUS_TRIP_ID), "identity-not-held", {
+        q: "Zoe Bennett",
+      }),
+    );
+    // Encoded by `noticeUrl`, never concatenated: the search is whatever a
+    // staffer typed, and it lands in a URL.
+    expect(to).toContain("q=Zoe%20Bennett");
   });
 
   /**
@@ -112,7 +140,7 @@ describe("confirming a held seat's identity from the check-in queue", () => {
     const form = new FormData();
     form.set("bookingId", "99999999-9999-4999-8999-999999999999");
 
-    const to = await redirectedTo(() => confirmIdentityFromCheckIn(shop.slug, null, form));
+    const to = await redirectedTo(() => confirmIdentityFromCheckIn(shop.slug, null, null, form));
 
     expect(to).toBe(noticeUrl(counterQueuePath(shop.slug, null), "identity-not-held"));
   });

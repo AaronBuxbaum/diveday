@@ -1609,7 +1609,29 @@ export type InPersonWaiverOutcome =
          * telling them the names match would be wrong for either of the two
          * above, which is why splitting beats re-wording.
          */
-        | "guardian_name_matches_diver";
+        | "guardian_name_matches_diver"
+        /**
+         * **The seat is held over who the diver is** (H-13), so nobody may
+         * attest a release onto it yet.
+         *
+         * A staff-attested paper record is the strongest evidence in the
+         * product — it says a named staffer watched this person sign, and it
+         * carries the medical tick — and it lands on the *matched* person's
+         * history, which is precisely the record the flag says the shop is not
+         * sure about. Recorded there, it cannot be taken back by clearing a
+         * flag later.
+         *
+         * Refused at the writer rather than left to the surfaces
+         * (`dive-domain-expert` review of issue #1696). The counter only hid its
+         * control because `identity` outranks `waiver` in `KIND_SEVERITY`
+         * (`src/lib/today.ts`) and `blockerFixFor` offers one fix at a time —
+         * re-rank that table for an unrelated reason and the control comes back
+         * — and the roster's `PaperWaiverControl` never consulted the flag at
+         * all, so that door was open. The fix for a diver standing there with
+         * paper in hand is one tap away on both surfaces: confirm the identity,
+         * then record the release.
+         */
+        | "identity_unconfirmed";
     };
 
 /**
@@ -1690,6 +1712,7 @@ async function bookingSigner(
       fullName: people.fullName,
       dateOfBirth: people.dateOfBirth,
       tripStatus: trips.status,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -1704,6 +1727,11 @@ async function bookingSigner(
     .limit(1);
   if (!booking) return { ok: false, reason: "booking_not_found" };
   if (booking.tripStatus !== "scheduled") return { ok: false, reason: "booking_unavailable" };
+  // A seat still held over whose seat it is cannot take an attestation about
+  // the person in it — see `identity_unconfirmed` on `InPersonWaiverOutcome`.
+  // `personSigner` below has no such check and needs none: there is no seat, so
+  // there is no guess, and the release lands on the diver the caller named.
+  if (booking.identityUnconfirmedAt) return { ok: false, reason: "identity_unconfirmed" };
   return {
     ok: true,
     bookingId: booking.id,

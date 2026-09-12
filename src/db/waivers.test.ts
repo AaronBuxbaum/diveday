@@ -931,6 +931,89 @@ describe("staff records a paper / in-person signature", () => {
     ).toMatchObject({ ok: false });
   });
 
+  /**
+   * **A seat held over *whose* seat it is takes no attestation** (H-13,
+   * `dive-domain-expert` review of issue #1696).
+   *
+   * This record is the strongest evidence in the product: a named staffer says
+   * they watched this person sign, with the medical tick, and it lands on the
+   * *matched* person's history — the record the flag exists to say the shop is
+   * not sure about. Nothing later undoes that.
+   *
+   * Refused here rather than left to the surfaces. The counter only hides its
+   * control because `identity` outranks `waiver` in `KIND_SEVERITY` and
+   * `blockerFixFor` offers one fix at a time, and the roster's own
+   * `PaperWaiverControl` never consulted the flag at all — so on the evidence
+   * the property was resting on an integer in an unrelated table.
+   */
+  it("refuses a paper waiver on a seat whose identity is still unconfirmed", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const staff = await staffPerson(db, shop.id);
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: now })
+      .where(eq(bookings.id, booking.id));
+
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: shop.id,
+        subject: { bookingId: booking.id },
+        recordedByPersonId: staff.id,
+        medicalAttested: true,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "identity_unconfirmed" });
+    // Nothing written, so the seat still owes a release and the gate still holds.
+    expect(
+      await db.select().from(waiverRecords).where(eq(waiverRecords.bookingId, booking.id)),
+    ).toHaveLength(0);
+    const readiness = await getBookingReadiness(db, shop.id, booking.id);
+    expect(readiness?.blockers).toContainEqual(
+      expect.objectContaining({ code: "identity_unconfirmed" }),
+    );
+
+    // …and the same tap lands the moment the shop says who this is.
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null })
+      .where(eq(bookings.id, booking.id));
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: shop.id,
+        subject: { bookingId: booking.id },
+        recordedByPersonId: staff.id,
+        medicalAttested: true,
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
+  /**
+   * The diver's own record attests for a *person*, with no seat in sight, so
+   * there is no guess to refuse — the release lands on the diver the caller
+   * named. Pinned because the refusal above is one `select` away from being
+   * written into `personSigner` too, where it would block the one door a
+   * standing release is recorded through.
+   */
+  it("still records a diver's own paper release while a seat of theirs is held", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const staff = await staffPerson(db, shop.id);
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: now })
+      .where(eq(bookings.id, booking.id));
+
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: shop.id,
+        subject: { personId: booking.personId },
+        recordedByPersonId: staff.id,
+        medicalAttested: true,
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
   it("refuses to record a paper waiver without a medical-clear attestation", async () => {
     const { db, shop, booking } = await waiverContext();
     const staff = await staffPerson(db, shop.id);

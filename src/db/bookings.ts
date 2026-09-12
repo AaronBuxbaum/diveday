@@ -1,4 +1,5 @@
 import { and, count, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import type { ActivityCode } from "@/lib/activity";
 import { checkMinimumAge } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -1704,6 +1705,25 @@ async function settleConfirmedPackageCoverage(
 }
 
 /**
+ * **Which control the attestation was made at.**
+ *
+ * Both doors write the same clearance, and the trail may not say the same
+ * sentence about them (`dive-domain-expert` review of issue #1696): the whole
+ * case for the counter's door is that the evidence there is different in kind —
+ * the person is standing in front of the staffer — and a shop reading the trail
+ * months later, when a stranger's dives are sitting under somebody else's name,
+ * is asking precisely which of the two happened. Named rather than defaulted so
+ * a third door cannot inherit somebody else's story by omission.
+ */
+export type IdentityConfirmDoor = "counter" | "roster";
+
+/** One line per door, and `src/lib/activity.ts` holds the words. */
+const IDENTITY_CONFIRMED_CODE = {
+  counter: "identity_confirmed_at_counter",
+  roster: "identity_confirmed",
+} as const satisfies Record<IdentityConfirmDoor, ActivityCode>;
+
+/**
  * Staff confirm a flagged booking really is the person it was attached to
  * (H-13): clears `identity_unconfirmed_at`, which drops the readiness blocker.
  * Shop-scoped and idempotent — a no-op on an already-clear or unknown booking
@@ -1738,7 +1758,13 @@ async function settleConfirmedPackageCoverage(
  */
 export async function confirmBookingIdentity(
   db: AppDb,
-  input: { shopId: string; bookingId: string; actorPersonId: string },
+  input: {
+    shopId: string;
+    bookingId: string;
+    actorPersonId: string;
+    /** Which control the staffer used — see {@link IdentityConfirmDoor}. */
+    door: IdentityConfirmDoor;
+  },
 ) {
   const booking = await db.transaction(async (tx) => {
     const [row] = await tx
@@ -1761,20 +1787,21 @@ export async function confirmBookingIdentity(
     return row;
   });
   if (!booking) return false;
+  const code = IDENTITY_CONFIRMED_CODE[input.door];
   const diver = await bookingDiverName(db, input.shopId, input.bookingId);
   if (diver) {
     await recordTripActivity(db, {
       shopId: input.shopId,
       tripId: booking.tripId,
       actorPersonId: input.actorPersonId,
-      entry: { code: "identity_confirmed", diver },
+      entry: { code, diver },
     });
   }
   await recordDiverActivity(db, {
     shopId: input.shopId,
     personId: booking.personId,
     actorPersonId: input.actorPersonId,
-    code: "identity_confirmed",
+    code,
   });
   return true;
 }

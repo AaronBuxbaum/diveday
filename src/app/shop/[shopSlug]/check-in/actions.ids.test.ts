@@ -80,7 +80,14 @@ describe("a malformed booking id at the counter", () => {
     ["undoing a check-in", undoCheckInAction],
     ["marking a diver not here", markNoShowAction],
     ["undoing that mark", undoNoShowAction],
-    ["confirming a held seat's identity", confirmIdentityFromCheckIn],
+    // The one door with a fourth bound argument — the queue's search, which
+    // its refusal carries back (issue #1696). A malformed id is refused before
+    // that matters, so it stands in with no search at all.
+    [
+      "confirming a held seat's identity",
+      (shopSlug: string, focusTripId: string | null, formData: FormData) =>
+        confirmIdentityFromCheckIn(shopSlug, focusTripId, null, formData),
+    ],
   ])("settles %s back on the focused departure instead of erroring", async (_label, action) => {
     signIn();
 

@@ -31,9 +31,9 @@
 
 /**
  * What the form says happened, in the form's own vocabulary rather than the
- * writer's. `recordInPersonWaiver` refuses for nine reasons and a staffer can
- * only act on three of them, so `paperWaiverRefusalFor`
- * (`src/app/actions/paper-waiver-fields.ts`) folds the nine down to these —
+ * writer's. `recordInPersonWaiver` refuses for eleven reasons and a staffer can
+ * act on three of them, so `paperWaiverRefusalFor`
+ * (`src/app/actions/paper-waiver-fields.ts`) folds them down to these —
  * totally, so a new refusal reason is a type error there rather than a form
  * that says nothing.
  *
@@ -42,10 +42,19 @@
  *   The one refusal an *honest* submission produces, and the only one with a
  *   way through: the namesake confirmation, offered on the surfaces where the
  *   staffer watched both people sign.
+ * - `identity_unconfirmed` — the seat is still held over who the diver is
+ *   (H-13), so no attestation may land on the matched person's history yet. The
+ *   other refusal an *honest* submission produces, and the only one whose way
+ *   through is a different control: confirm the identity on the row, then record
+ *   the release.
  * - `error` — everything else. The form marks every field required, so
  *   reaching one of these means the request did not come from it.
  */
-export type PaperWaiverRefusal = "medical_attestation" | "guardian_name" | "error";
+export type PaperWaiverRefusal =
+  | "medical_attestation"
+  | "guardian_name"
+  | "identity_unconfirmed"
+  | "error";
 
 /**
  * The three things the staffer typed, echoed back so the form can stand them

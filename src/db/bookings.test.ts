@@ -1206,6 +1206,7 @@ describe("createBooking identity safeguard (H-13)", () => {
       shopId: shop.id,
       bookingId: shared.bookingId,
       actorPersonId: staffer.id,
+      door: "roster" as const,
     };
     expect(await confirmBookingIdentity(db, confirm)).toBe(true);
     expect(await identityFlag(db, shared.bookingId)).toBeNull();
@@ -1272,6 +1273,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         shopId: shop.id,
         bookingId: outcome.bookingId,
         actorPersonId: staffer.id,
+        door: "roster",
       }),
     ).toBe(true);
     expect(await identityFlag(db, outcome.bookingId)).toBeNull();
@@ -1354,6 +1356,11 @@ describe("createBooking identity safeguard (H-13)", () => {
    * departure's trail is what the crew reads that day, and the matched person's
    * record is where a shop looks months later — a trip-scoped row carries no
    * booking and no subject, so it never reaches that second surface.
+   *
+   * **And both name the door.** The counter's attestation is made with the
+   * person standing at the desk and the roster's is made by somebody reading a
+   * list, so one sentence for the two would lose the only thing that separates
+   * the evidence behind them (`dive-domain-expert` review of issue #1696).
    */
   it("records who cleared the flag, on the departure and on the matched diver's record", async () => {
     const { db, shop, open } = await seededContext();
@@ -1375,22 +1382,60 @@ describe("createBooking identity safeguard (H-13)", () => {
         shopId: shop.id,
         bookingId: shared.bookingId,
         actorPersonId: staffer.id,
+        door: "counter",
       }),
     ).toBe(true);
 
     // The name on the line is the *matched* record's, which is the whole point:
-    // it says whose evidence this seat was just attached to.
+    // it says whose evidence this seat was just attached to — and the code says
+    // it was vouched for at the desk rather than off a list.
     expect((await listTripActivity(db, shop.id, night.id))[0]).toMatchObject({
-      code: "identity_confirmed",
+      code: "identity_confirmed_at_counter",
       params: { actor: staffer.fullName, diver: visitor.fullName },
     });
 
     const record = await pagedDiverActivity(db, shop.id, shared.personId);
     expect(
       record.rows.some(
-        (row) => row.code === "identity_confirmed" && row.params.actor === staffer.fullName,
+        (row) =>
+          row.code === "identity_confirmed_at_counter" && row.params.actor === staffer.fullName,
       ),
     ).toBe(true);
+  });
+
+  /**
+   * The other door, whose line has to be a different one. Same write, same
+   * clearance, different evidence: a staffer working the roster is reading a
+   * list, and the trail is the only place that difference survives.
+   */
+  it("says the roster when the roster is where it was confirmed", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    const first = await bookVisitor(db, shop.id, open.id);
+    if (!first.ok) throw new Error("setup booking failed");
+    const shared = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: night.id,
+      fullName: "Ben Quinn",
+      email: "nora@example.com",
+    });
+    if (!shared.ok) throw new Error("shared-inbox booking failed");
+    const staffer = await counterStaffer(db, shop.id);
+
+    expect(
+      await confirmBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId: shared.bookingId,
+        actorPersonId: staffer.id,
+        door: "roster",
+      }),
+    ).toBe(true);
+
+    expect((await listTripActivity(db, shop.id, night.id))[0]).toMatchObject({
+      code: "identity_confirmed",
+      params: { actor: staffer.fullName, diver: visitor.fullName },
+    });
   });
 
   it("writes no certification claim under a name-match seat", async () => {

@@ -47,11 +47,22 @@ type ActivityParamShapes = {
   support_needs_cleared: { actor: string; diver: string; self: "yes" | "no" };
   /**
    * A staffer attested that a booking flagged `identity_unconfirmed` really is
-   * the diver it was attached to. The trail is what makes that tap safe: it
-   * hands a stranger a matched diver's waiver, cards and prepaid dives, and
-   * every staff role can make it (`src/db/bookings.ts`, `confirmBookingIdentity`).
+   * the diver it was attached to, **on the trip roster**. The trail is what
+   * makes that tap safe: it hands a stranger a matched diver's waiver, cards
+   * and prepaid dives, and every staff role can make it (`src/db/bookings.ts`,
+   * `confirmBookingIdentity`).
    */
   identity_confirmed: { actor: string; diver: string };
+  /**
+   * …and **at the counter**, which is the same write and not the same evidence:
+   * the person is standing in front of the staffer who vouched for them, while
+   * the roster's version is somebody reading a list. A shop asking months later
+   * how a stranger's dives ended up under this name is asking exactly that, so
+   * the two doors do not share one sentence (`dive-domain-expert` review of
+   * issue #1696) — the same distinction `counter_check_in` and
+   * `kiosk_check_in` already draw.
+   */
+  identity_confirmed_at_counter: { actor: string; diver: string };
   /** A seat was taken off a departure. */
   booking_removed: { actor: string; diver: string };
   /** …and put back. */
@@ -187,6 +198,7 @@ export const ACTIVITY_CODES = [
   "booking_no_show_boarded",
   "booking_no_show_missing_after_dive",
   "identity_confirmed",
+  "identity_confirmed_at_counter",
   "crew_assigned",
   "crew_removed",
   "blowout_called",

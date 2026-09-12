@@ -71,14 +71,15 @@ export function paperWaiverTypedFrom(formData: FormData): PaperWaiverTypedValues
 }
 
 /**
- * **Every way the writer can refuse, folded onto the three the form can say.**
+ * **Every way the writer can refuse, folded onto the four the form can say.**
  *
  * Total over `recordInPersonWaiver`'s reasons on purpose: a new refusal reason
- * is a type error here rather than a form that renders nothing. Six of the nine
- * share `error` because the staffer's next move is the same for every "that row
- * is not what you think it is" — and the form marks every field required, so
- * reaching one of those six means the request did not come from the form at
- * all. The other two are acts a staffer can complete from where they stand.
+ * is a type error here rather than a form that renders nothing. Eight of the
+ * eleven share `error` because the staffer's next move is the same for every
+ * "that row is not what you think it is" — and the form marks every field
+ * required, so reaching one of those eight means the request did not come from
+ * the form at all. The other three name the act that clears them: tick the
+ * attestation, confirm a namesake co-signer, confirm whose seat this is.
  *
  * This replaces the per-surface `?notice=` tables the three actions used to
  * build (`IN_PERSON_WAIVER_NOTICE` and two ternaries). The words still differ
@@ -90,6 +91,7 @@ const REFUSAL: Record<Extract<InPersonWaiverOutcome, { ok: false }>["reason"], P
   {
     medical_attestation_required: "medical_attestation",
     guardian_name_matches_diver: "guardian_name",
+    identity_unconfirmed: "identity_unconfirmed",
     booking_not_found: "error",
     booking_unavailable: "error",
     person_not_found: "error",

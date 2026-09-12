@@ -61,7 +61,7 @@ export type PaperWaiverCopy = {
 export type PaperWaiverSurface = "roster" | "counter" | "diver";
 
 /**
- * The three refusals a staffer can act on, in each surface's own words.
+ * Every refusal the form can say, in each surface's own words.
  *
  * **These are the keys the three page-level notice tables already used** —
  * `TripNoticeBanner.tsx`, `check-in/page.tsx` and `record-notices.ts` — read
@@ -77,16 +77,23 @@ const REFUSAL_COPY: Record<
   roster: {
     medical_attestation: { key: "trips.notices.waiverMedicalAttestation", tone: "danger" },
     guardian_name: { key: "trips.notices.waiverGuardianName", tone: "danger" },
+    identity_unconfirmed: { key: "trips.notices.waiverIdentityUnconfirmed", tone: "danger" },
     error: { key: "trips.notices.waiverError", tone: "danger" },
   },
   counter: {
     medical_attestation: { key: "checkIn.notice.waiverMedicalAttestation", tone: "warning" },
     guardian_name: { key: "checkIn.notice.waiverGuardianName", tone: "danger" },
+    identity_unconfirmed: { key: "checkIn.notice.waiverIdentityUnconfirmed", tone: "danger" },
     error: { key: "checkIn.notice.waiverError", tone: "danger" },
   },
   diver: {
     medical_attestation: { key: "divers.notices.waiverMedicalAttestation", tone: "warning" },
     guardian_name: { key: "divers.notices.waiverGuardianName", tone: "danger" },
+    // This surface attests for a *person*, never a seat, so `bookingSigner` —
+    // the only reader of the flag — is never reached from here. The words exist
+    // because the table is total and a refusal with no sentence renders nothing;
+    // they point at the seat, which is where the confirm lives.
+    identity_unconfirmed: { key: "divers.notices.waiverIdentityUnconfirmed", tone: "danger" },
     error: { key: "divers.notices.waiverError", tone: "danger" },
   },
 };
@@ -112,6 +119,10 @@ export function paperWaiverCopy(t: StaffTranslator, surface: PaperWaiverSurface)
         tone: refusals.medical_attestation.tone,
       },
       guardian_name: { text: t(refusals.guardian_name.key), tone: refusals.guardian_name.tone },
+      identity_unconfirmed: {
+        text: t(refusals.identity_unconfirmed.key),
+        tone: refusals.identity_unconfirmed.tone,
+      },
       error: { text: t(refusals.error.key), tone: refusals.error.tone },
     },
   };

@@ -52,7 +52,7 @@
   },
   "identity": {
     "trigger": "Confirm this is {name}",
-    "message": "Is the person at the counter {name}? Confirming releases that diver’s certifications, waiver and packages to this seat, and it cannot be undone.",
+    "message": "Is the person at the counter {name}? Only do this once you’ve checked it’s the same person, and not someone else with a similar name or a shared email. Confirming hands that diver’s certifications and waiver to this seat, spends any prepaid dives that cover it, and cannot be undone. If it’s someone else, book them under their own email instead.",
     "confirm": "Yes, this is them",
     "cancel": "Never mind",
     "confirming": "Confirming…"
@@ -90,6 +90,7 @@
     "invalid": "Choose a diver from the queue before checking in.",
     "waiverMedicalAttestation": "Confirm you reviewed the medical questionnaire before recording a paper waiver, or send the digital link so the diver answers it.",
     "waiverGuardianName": "The co-signer’s name is the diver’s own, so this release would show one person signing twice. Type the guardian’s name as their own ID reads it, and if the diver’s record is shorter than the diver’s ID, correct the record to match. If the two really do read exactly alike, tick the confirmation on this form and record it.",
+    "waiverIdentityUnconfirmed": "This seat is held until somebody confirms who this diver is, so a paper release can’t go on their record yet. Confirm it on their row, then record the release.",
     "waiverError": "That paper waiver couldn’t be recorded. Try again, or open the diver’s trip to see why.",
     "walkinAdded": "Added to this boat’s list. Check them in when they arrive.",
     "walkinAddedWaiverUndelivered": "Added to this boat’s list, but their waiver wasn’t emailed. Send it or share the link from their row below.",
@@ -105,7 +106,7 @@
     "walkinInvalid": "Choose a boat and enter a name before adding a walk-in.",
     "noShowAlreadyBoarded": "The crew boarded that diver, so they can’t be marked as not diving. Open the trip’s manifest.",
     "noShowAlreadyMissingAfterDive": "The crew recorded that diver as not back aboard after a dive. Call the boat and open the trip’s manifest.",
-    "identityNotHeld": "That seat is no longer held. Somebody has already confirmed who this diver is.",
+    "identityNotHeld": "That seat is no longer held. It may already have been confirmed by somebody else.",
     "noShowAlreadyMarked": "That diver is already marked not here.",
     "noShowNotBooked": "That seat was given up, so there is nothing to mark.",
     "noShowTripCancelled": "That departure is cancelled, so its guest list can’t change.",

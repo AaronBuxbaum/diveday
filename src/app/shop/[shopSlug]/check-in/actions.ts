@@ -272,12 +272,25 @@ export async function markWaiverInPersonFromCheckIn(
  *
  * The refusal does navigate, because it has no row state to land on: the seat
  * was not held when the tap arrived — a double tap, or a row another staffer
- * cleared while this one was reading it — and the row it is about renders
- * exactly as it did before.
+ * cleared while this one was reading it — so on the next render the row has no
+ * identity blocker and no confirm control, and a `useActionState` answer would
+ * have nowhere to land. (For a booking this shop does not hold, the row is not
+ * on the page at all.)
+ *
+ * **So the refusal carries the search with it** (`dive-domain-expert` review of
+ * issue #1696). `counterQueuePath` holds the focused departure and nothing
+ * else, and the branch that navigates is precisely the one with the diver still
+ * at the desk — landing it on the bare queue threw away the `?q=` that found
+ * them, which is the regression issue #1674 removed from the paper-waiver door
+ * two controls along this row. Passed as a `noticeUrl` parameter, so it is
+ * percent-encoded at the one door that builds these URLs rather than
+ * concatenated here.
  */
 export async function confirmIdentityFromCheckIn(
   shopSlug: string,
   focusTripId: string | null,
+  /** The queue's live search, bound by the page — see the refusal below. */
+  query: string | null,
   formData: FormData,
 ): Promise<void> {
   const session = await requireStaffSession();
@@ -289,10 +302,16 @@ export async function confirmIdentityFromCheckIn(
     shopId: session.user.shopId,
     bookingId,
     actorPersonId: session.user.personId,
+    // The trail says which door this came through, because the evidence here is
+    // different in kind: the person is at the desk (`IdentityConfirmDoor`).
+    door: "counter",
   });
   if (confirmed) {
     revalidatePath(back);
     return;
   }
-  revalidateAndRedirect(back, noticeUrl(back, "identity-not-held"));
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, "identity-not-held", { q: query?.trim() || undefined }),
+  );
 }

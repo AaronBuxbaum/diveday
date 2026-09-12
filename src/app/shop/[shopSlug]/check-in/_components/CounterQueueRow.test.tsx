@@ -191,6 +191,44 @@ describe("a held seat's identity confirm", () => {
   });
 
   /**
+   * **One button on a held row, and it is the attestation** (`dive-domain-expert`
+   * review of issue #1696).
+   *
+   * The hold's own fix is "Open roster", rendered as a small secondary button
+   * immediately before this one — and on this surface it buys the staffer
+   * nothing, because the roster withholds the same particulars behind the same
+   * flag. Two identical-looking buttons with the walk-away on top is a mis-tap
+   * costing exactly what the row's own confirm bought.
+   */
+  it("drops the pointing link, so the attestation is the only button", () => {
+    renderRow(held);
+    expect(screen.queryByRole("link", { name: "Open roster" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Confirm this is Nadia Petrov" }),
+    ).toBeInTheDocument();
+    // The reason itself is untouched: the row still says why it cannot board.
+    expect(screen.getByText(/identity/i)).toBeInTheDocument();
+  });
+
+  /**
+   * …and only when the hold is what the link is about. A diver also held for a
+   * medical review is pointed at their record for *that*, which the confirm
+   * cannot clear — so suppressing it there would strand the row.
+   */
+  it("keeps a link that points at a different blocker", () => {
+    renderRow({
+      readiness: {
+        status: "blocked",
+        blockers: [{ code: "medical_review" }, { code: "identity_unconfirmed" }],
+      },
+    });
+    expect(screen.getByRole("link", { name: "Open Nadia’s record" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Confirm this is Nadia Petrov" }),
+    ).toBeInTheDocument();
+  });
+
+  /**
    * **The flag gates disclosure as well as boarding** (security review
    * 2026-09-11). The roster withholds the matched person's particulars behind
    * this same blocker, and the fix for the walk was a control on the row, not a

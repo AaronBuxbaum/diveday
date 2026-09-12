@@ -406,7 +406,11 @@ export default async function CheckInPage({
   const recordPaperWaiver = markWaiverInPersonFromCheckIn.bind(null, shopSlug, focusedTripId);
   const markNoShow = markNoShowAction.bind(null, shopSlug, focusedTripId);
   const undoNoShow = undoNoShowAction.bind(null, shopSlug, focusedTripId);
-  const confirmIdentity = confirmIdentityFromCheckIn.bind(null, shopSlug, focusedTripId);
+  // The search is bound too, and only this action takes it: its refusal lands
+  // the staffer back on a queue they very often reached by typing a name, so it
+  // carries the `?q=` along. The surface's other refusals still drop theirs
+  // (issue #1803).
+  const confirmIdentity = confirmIdentityFromCheckIn.bind(null, shopSlug, focusedTripId, query);
 
   /**
    * **The identity confirm's words, per row** (issue #1696). The trigger names

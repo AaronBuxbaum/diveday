@@ -2213,8 +2213,9 @@ new domain concept, define it here in the same PR.
   public booking that reuses an email under a genuinely different name is stamped
   `bookings.identity_unconfirmed_at`. That raises a fail-closed `identity_unconfirmed` readiness
   blocker — so a shared inbox (a spouse, or a minor booked under a parent's email; see **Junior
-  certification**) can't board on the matched diver's evidence — until staff **Confirm identity** on
-  the roster. **The same blocker has a second raiser (#1556):** a staffer who types a name at the
+  certification**) can't board on the matched diver's evidence — until staff **Confirm identity**
+  (below), on the trip roster or on the check-in queue's own row. **The same blocker has a second
+  raiser (#1556):** a staffer who types a name at the
   counter is shown the divers it half-matches (`similarity() > 0.4`, `findSimilarDivers`) with the
   day each of them last dived, and tapping one seats that diver `identity_unconfirmed` too. The
   prompt fires on genuinely different people, so the answer is to make a wrong tap harmless rather
@@ -2224,6 +2225,26 @@ new domain concept, define it here in the same PR.
   unrelated person (that soft-delete window is accepted as-is; it fails closed to a blank record). See H-13 in
   [human-decisions.md](human-decisions.md) and
   [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md).
+- **Confirm identity** — the staff tap that clears `bookings.identity_unconfirmed_at`, and the
+  most consequential one in the product: it says *this person is the diver this seat was attached
+  to*. Clearing the flag hands the seat the matched diver's **certifications** (readiness stops
+  withholding them) and their **live signed release** — `issueWaiverOnJoin` asks for no new one
+  from somebody who already holds a valid signature, so the seat boards on that paper — and
+  **spends** the prepaid dives that cover it: `settleConfirmedPackageCoverage` settles the fare
+  against the diver's package in the same transaction, which is money leaving a balance rather
+  than a permission being granted. **There is no undo.** `confirmBookingIdentity`
+  (`src/db/bookings.ts`) is the only writer, reached by two doors — the trip roster's guest row
+  and the check-in queue's own row (issue #1696) — and each writes its own trail line, on the
+  departure and on the *matched person's* record, naming the staffer and which door it was
+  (`identity_confirmed` / `identity_confirmed_at_counter`). **Open to every live staff role on
+  purpose**: the flag is raised at the counter, and a staffer who cannot clear one they just
+  raised strands a walk-in until a manager walks past — what carries the weight is the trail, not
+  the role list (`src/lib/authz.ts`). **When the answer is no**, the resolution is not a different
+  tap: staff book that person under their own email, which creates their own record, and leave
+  this seat held or remove it. Nothing else may be attested onto a held seat in the meantime —
+  recording a paper release on one is refused at the writer (`recordInPersonWaiver`), because a
+  staff-attested signature with a medical tick would land on the very record the flag says the
+  shop is unsure of. See H-13 in [human-decisions.md](human-decisions.md).
 - **Remove vs. erase (a diver)** — two different operations, deliberately not the same button.
   **Removing** a diver is the reversible archive action every entity has
   ([20260719-crud-archive-semantics](../architecture/decisions/20260719-crud-archive-semantics.md)):

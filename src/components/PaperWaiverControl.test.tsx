@@ -43,6 +43,10 @@ const COPY: PaperWaiverCopy = {
   refusals: {
     medical_attestation: { text: "Confirm you reviewed the questionnaire.", tone: "warning" },
     guardian_name: { text: "The co-signer’s name is the diver’s own.", tone: "danger" },
+    identity_unconfirmed: {
+      text: "This seat is held until somebody confirms who this diver is.",
+      tone: "danger",
+    },
     error: { text: "That paper waiver couldn’t be recorded.", tone: "danger" },
   },
 };

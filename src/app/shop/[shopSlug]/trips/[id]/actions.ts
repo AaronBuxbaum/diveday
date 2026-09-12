@@ -1148,6 +1148,7 @@ export async function confirmDiverIdentityAction(
     shopId: s.user.shopId,
     bookingId,
     actorPersonId: s.user.personId,
+    door: "roster",
   });
   revalidateAndRedirect(
     back,

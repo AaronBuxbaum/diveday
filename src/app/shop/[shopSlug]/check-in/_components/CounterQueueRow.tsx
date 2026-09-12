@@ -21,6 +21,7 @@ import { guardianSignatureRequired } from "@/lib/guardian";
 import type { NoShowClaim } from "@/lib/no-show";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import type { FormNotice } from "@/lib/staff-notices";
+import { primaryBlocker } from "@/lib/today";
 import { counterBlockerDisclosure } from "../blocker-disclosure";
 import { CheckInActionForm } from "../CheckInActionForm";
 import { NoShowSalvage, type NoShowSalvageCopy, NoShowScript } from "./NoShowScript";
@@ -428,6 +429,25 @@ export function CounterQueueRow({
   const identityUnconfirmed = row.readiness.blockers.some(
     (blocker) => blocker.code === "identity_unconfirmed",
   );
+  /**
+   * **…and it is the blocker the row's pointing link is about**, which is the
+   * one case where that link has to go (`dive-domain-expert` review of issue
+   * #1696).
+   *
+   * `blockerDestination` answers this hold with "Open roster", and on *this*
+   * surface that link buys the staffer nothing: the roster withholds the same
+   * particulars behind the same flag, so the only thing it offers is the
+   * attestation this row now carries itself. Two identically styled secondary
+   * buttons, the pointing one first, and the mis-tap costs exactly what this
+   * change bought — the diver waits at the desk while the staffer navigates
+   * away and back.
+   *
+   * Suppressed here rather than in `blockerDestination`: Today's queue reads
+   * the same rule and has no confirm control of its own, so the link is still
+   * the only door it can offer (`src/lib/today.ts`).
+   */
+  const identityHoldsTheRow =
+    primaryBlocker(row.readiness.blockers)?.code === "identity_unconfirmed";
   // A diver at the counter with a signed paper release in hand: record it here
   // rather than sending them off to the trip's guest list. Offered only when
   // the waiver is the one fix this row is showing.
@@ -471,11 +491,16 @@ export function CounterQueueRow({
    * on the trip roster a navigation away.
    *
    * A two-step `InlineConfirm` and never the one-tap `SubmitButton` its
-   * neighbours on this row use: this attestation releases another person's
-   * certifications, waiver and packages onto this seat and there is no undo,
-   * which is the case `docs/design/principles.md` §7 reserves a blocking
-   * confirm for. The row's own check-in tap stays the only large target while
-   * this sits unarmed.
+   * neighbours on this row use: this attestation hands another person's
+   * certifications and waiver to this seat, spends the prepaid dives that cover
+   * it, and has no undo — the case `docs/design/principles.md` §7 reserves a
+   * blocking confirm for.
+   *
+   * **And while it is showing it is the row's only button.** A blocked row is
+   * offered no check-in control at all (`e2e/check-in.spec.ts`), so the small
+   * secondary treatment was justified against a large target that is not there;
+   * what it sat beside was the blocker's own "Open roster" link, suppressed
+   * above on exactly the rows that render this.
    *
    * The row still prints nothing new about the matched person. The flag gates
    * disclosure as well as boarding (security review 2026-09-11), and the fix
@@ -540,7 +565,10 @@ export function CounterQueueRow({
         surface="check_in"
         waiverCopy={waiverSendCopy(t)}
         blockers={row.readiness.blockers}
-        fix={fix}
+        // Nothing to point at when the hold *is* the blocker: the attestation
+        // below is the whole fix, and a second secondary button walks the
+        // staffer away from it (`identityHoldsTheRow`).
+        fix={identityHoldsTheRow ? null : fix}
         collapseReasons={counterBlockerDisclosure(t, row.readiness.blockers) ?? undefined}
         t={t}
         extra={
