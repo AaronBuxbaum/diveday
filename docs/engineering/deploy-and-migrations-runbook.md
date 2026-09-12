@@ -171,6 +171,16 @@ runs, and it is what you fall back to when the new one is wrong.
 - Add a new table.
 - Add an index. On a table with meaningful row counts, write it `CREATE INDEX CONCURRENTLY` by hand
   — the default `CREATE INDEX` takes a lock that blocks writes for the duration.
+- Change a column's **collation** (`ALTER TABLE ... ALTER COLUMN ... SET DATA TYPE text COLLATE
+  "..."`). Binary-coercible, so no row is rewritten and the table keeps its files — but Postgres
+  *always* rebuilds every index on that column, inside the ACCESS EXCLUSIVE lock the statement
+  already holds, and for that whole window the live deployment can neither read nor write the table.
+  Lock acquisition is the other half: the statement queues behind any open transaction on the table
+  and blocks every request arriving behind it, so the window a user feels is set by the slowest
+  transaction in flight, not by the rebuild. On a table with meaningful row counts this is not a
+  build-step migration. The guard below reads it as `alter-column-type` and refuses it, so it also
+  carries a `diveday:allow-destructive` line naming the indexes it rebuilds —
+  `20260911200158_person-name-collation` is the worked example.
 - Add a new enum **value** (`ALTER TYPE ... ADD VALUE`). Note it cannot run inside a transaction
   block in older Postgres and cannot be removed later.
 - Add a constraint as `NOT VALID`, then `VALIDATE CONSTRAINT` in a later migration.
@@ -270,7 +280,9 @@ locally and in CI, before anything is merged) and `scripts/vercel-build.mjs` imm
 `ADD COLUMN` (including `NOT NULL DEFAULT` inline), `CREATE INDEX` and `CREATE INDEX CONCURRENTLY`,
 `DROP INDEX`, `ALTER TYPE … ADD VALUE`, `CREATE TYPE … AS ENUM`, `ADD CONSTRAINT … NOT VALID`,
 `VALIDATE CONSTRAINT`, `ADD CONSTRAINT … FOREIGN KEY`, `DROP NOT NULL`, `SET DEFAULT`, and a
-`WHERE`-bounded `UPDATE` backfill. In other words: everything in the expand list above.
+`WHERE`-bounded `UPDATE` backfill. In other words: everything in the expand list above, with one
+exception — a collation change is expand-safe but reaches the guard as `alter-column-type`, so it is
+refused until it carries the marker below.
 
 **Not covered.** `DROP VIEW` / `DROP FUNCTION` / `DROP TRIGGER` (this schema has none), and the
 constraint *additions* in the contract list — drizzle emits an `ADD CONSTRAINT … FOREIGN KEY` for
