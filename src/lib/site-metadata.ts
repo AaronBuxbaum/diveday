@@ -67,7 +67,9 @@ export const sharedLinkCardImage = {
   // i18n-exempt: alt text for crawlers and chat clients, which carry no visitor locale — the same carve-out as static `metadata.title`.
   alt: "DiveDay — dive shop software: who's booked, who's cleared, who's on the boat, one answer all day.",
   type: "image/png",
-} as const;
+  // `satisfies`, so a mistyped field is a compile error rather than a tag Next
+  // silently drops — the only reader of these five keys is a crawler.
+} as const satisfies NonNullable<NonNullable<Metadata["openGraph"]>["images"]>;
 
 /**
  * The `robots` field for a shop's own public pages, from its opt-out stamp.

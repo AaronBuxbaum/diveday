@@ -94,8 +94,12 @@ omission one table over, because the rows above also cover `waiver_records`,
 three `account_tokens` purposes,
 `shop_contact_email_confirmation_tokens`, `person_shelf_tokens`, three
 `display_tokens` purposes, two unsubscribe tables and two stateless signed
-shapes. Nothing mechanical checks this today: no script under `scripts/` opens
-this file, which is how `handoff`, `shelf` and `gift` all went missing at once.
+shapes. Nothing mechanical checked this until `handoff`, `shelf` and `gift` had
+all gone missing at once; `scripts/check-capability-runbook.mjs`
+(inside `pnpm check:repo`) now reads those three lists and fails naming any
+member this file never mentions. It asks only for a *mention*, anywhere here,
+because `?gate=` belongs in prose rather than in the table — so a new
+capability's author still decides which of the two theirs needs.
 
 For a leaked recap link, the only current mitigations are confirming the
 redaction above stops further leakage, waiting out the 180 days, and — for a

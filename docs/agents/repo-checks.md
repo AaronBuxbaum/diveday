@@ -1,12 +1,12 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 45 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 48 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
 shape being refused.
 
-Only the 24 guards whose reasoning is not obvious from their own failure message are
+Only the 26 guards whose reasoning is not obvious from their own failure message are
 written up here. The rest say everything they need to say when they go red.
 
 This is the long-form half of one row in [AGENTS.md](../../AGENTS.md)'s command table, and it lives
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, voice, logical-property, clock, transaction-concurrency, timezone, Intl-cache, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, departure-buffer, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, stack-CI-skip, CI-change-detection and Node-version safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, voice, logical-property, clock, transaction-concurrency, timezone, Intl-cache, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, stack-CI-skip, CI-change-detection and Node-version safeguards.
 
 ## The guards worth reading about
 
@@ -73,6 +73,14 @@ The bundle-reach one (`scripts/check-bundle-reach.mjs`) reports message-bundle k
 The one exception is a key assembled at runtime (`` t(`switching.common.facts.${fact}.label`) ``), which has no literal anywhere. The static head of such a call is collected and every key under it is treated as reached — prefix matching, deliberately, because that prefix is *read out of a dynamic call* rather than guessed, and declining to decide is the only sound answer there.
 
 Ratcheted like `check:copy` (`--write` / `--absorb` / `--report <path>`), because the first run found 135 keys across 12 bundles and a guard that goes red on arrival gets a baseline entry per file and stops meaning anything. **A baseline entry is a list to triage, never a list to delete on sight**: some will be a hole in the walk rather than dead copy, and each of those is a fix to the walk or an exemption with a written reason.
+
+### capability-runbook
+
+The capability-runbook one (`scripts/check-capability-runbook.mjs`) fails when a bearer capability has no mention in [../engineering/capability-telemetry-runbook.md](../engineering/capability-telemetry-runbook.md), the rotate-and-revoke table an operator reads when a capability URL leaks. A capability missing from that file is a credential nobody can revoke under pressure, because the only index of them does not know it exists. The cost was measured rather than hypothetical: three live capabilities were absent at once — the `handoff` purpose, `/shelf/[token]` and `/gift/[token]` — while the file's own post-mortem sentence, a few lines above the table, said that "a list that silently omits an entry is how the `confirm` token stayed unprotected through the first CR-001 fix". That sentence was describing the present tense three times over and nothing went red; two stale claims about a closed redaction gap survived in the same document for the same reason, that no script opened the file.
+
+Two decisions inside it are the reason this is written up rather than left to its failure message. It is keyed on **three** lists — `CAPABILITY_ROUTE_PREFIXES` and `CAPABILITY_QUERY_PARAMS` (`src/lib/capability-urls.ts`) and the `CapabilityPurpose` union (`src/db/booking-capabilities.ts`) — because the purpose union alone would have caught `handoff` and missed the other two, re-creating the same omission one table over. It reads them out of *source text* rather than importing the module: `CAPABILITY_QUERY_PARAMS` is module-local, and widening a module's exports to suit a script is the wrong direction. A list it cannot find is a failure, not a pass.
+
+And it does **not** parse the Markdown table. `?gate=` is deliberately prose and deliberately not a row — its signature unlocks a sentence rather than a resource, so it is redacted for what its value says rather than as a bearer credential — and a guard permanently red on a correct entry gets routed around. So the bar is that the member appears in the file as its own word, table or prose, which is why the failure message has to say that a mention is not a row and that choosing between them is still the author's call. Delimited rather than substring, with a hyphen counting as part of the word, because the members are short and ordinary: otherwise "onboarding" covers `board`, "already" covers `ready`, "mitigate" covers `gate`, and `/confirm-contact` stands in for the `confirm` purpose. It is a **hard fail with no baseline**, unlike its ratcheted neighbours: the list is short, a new bearer capability is a rare and deliberate act, and a baseline would let the next omission live in a JSON file instead of in the runbook, which is this guard's own failure one file to the left.
 
 ### shop-word
 

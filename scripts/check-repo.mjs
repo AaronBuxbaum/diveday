@@ -69,6 +69,7 @@ const checks = [
   ["exit-curves", "check-exit-curves.mjs"],
   ["soft-delete", "check-soft-delete.mjs"],
   ["shop-word", "check-shop-word.mjs"],
+  ["capability-runbook", "check-capability-runbook.mjs"],
   ["icu-plurals", "check-icu-plurals.mjs"],
   ["live-trips", "check-live-trips.mjs"],
   ["trip-revision", "check-trip-revision.mjs"],
