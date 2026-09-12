@@ -76,7 +76,12 @@ export async function regionIsListed(db: AppDb, regionSlug: string): Promise<boo
     .select({ one: shops.id })
     .from(shops)
     .where(
-      and(eq(shops.regionSlug, regionSlug)), // TEMPORARY REVERT — scope dropped
+      and(
+        listedShopScope(db),
+        eq(shops.regionSlug, regionSlug),
+        isNotNull(shops.addressLocality),
+        ne(shops.addressLocality, ""),
+      ),
     )
     .limit(1);
   return row !== undefined;

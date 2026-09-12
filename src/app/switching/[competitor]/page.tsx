@@ -41,10 +41,12 @@ import {
 // request. `next build` audits the claim. See ADR 20260804-instant-navigation.
 export const instant = true;
 
-// Only the registered guides are valid routes; an unknown competitor 404s via
-// the `notFound()` call below — `dynamicParams` is not compatible with
-// Cache Components (nextConfig.cacheComponents), so the 404 for an
-// unregistered slug is enforced in the page body instead of this config.
+// Only the registered guides are valid routes. `dynamicParams` is not
+// compatible with Cache Components (nextConfig.cacheComponents), so an
+// unregistered slug cannot be refused from this config: the status is decided
+// in `src/proxy.ts`, which judges the segment against this same
+// `MIGRATION_GUIDE_SLUGS` before anything streams (issue #1734). What this
+// still buys is the prerendered shell for each registered guide.
 export function generateStaticParams() {
   return MIGRATION_GUIDE_SLUGS.map((competitor) => ({ competitor }));
 }
@@ -87,18 +89,18 @@ export default async function MigrationGuidePage({
 }: {
   params: Promise<{ competitor: string }>;
 }) {
-  // Resolved and checked here, before any Suspense boundary starts streaming
-  // the shell: `notFound()` only changes the response's HTTP status if it
-  // throws before the first byte goes out. Called from inside a
-  // Suspense-wrapped child instead (as this used to), the shell had already
-  // streamed with a 200 by the time the child resolved and rendered its
-  // not-found UI, so the page LOOKED right but answered a request for an
-  // unregistered competitor with status 200, not 404 — caught by
-  // e2e/marketing.spec.ts's `expect(response?.status()).toBe(404)`. Resolving
-  // `params` here doesn't cost this route its static shell for a *registered*
-  // slug: `generateStaticParams` still prerenders each one at build time, and
-  // this lookup is a synchronous in-memory match against
-  // `MIGRATION_GUIDE_SLUGS`, not a dynamic API call.
+  // Resolved and checked here rather than inside a Suspense-wrapped child, and
+  // it is the *second* layer: under `cacheComponents` a slug outside
+  // `generateStaticParams` gets an optimistic 200 App Shell on the wire before
+  // this body runs, so no `notFound()` anywhere in the page can move the status
+  // line. `src/proxy.ts` decides it against this same list before anything
+  // streams (issue #1734, ADR
+  // 20260912-the-public-namespace-refuses-at-the-edge), and
+  // `e2e/marketing.spec.ts` asserts the status. This check stays because it is
+  // what renders the refusal, and it costs the route nothing: for a registered
+  // slug `generateStaticParams` still prerenders the shell, and the lookup is a
+  // synchronous in-memory match against `MIGRATION_GUIDE_SLUGS`, not a dynamic
+  // API call.
   const { competitor } = await params;
   const guide = getMigrationGuide(competitor);
   if (!guide) notFound();

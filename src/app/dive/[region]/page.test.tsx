@@ -6,11 +6,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
  * One town's page (issue #1436, N-49). The two refusals are the point of the
  * file: a `[region]` that is not a slug this app could have produced never
  * reaches the database, and a valid slug with nothing listed in it renders the
- * not-found page rather than a heading over an empty ledger. What that refusal
- * is worth over the wire is measured on `regionShops` in `./page.tsx` — under
- * this app's `cacheComponents` setup it is a soft 404, which `/s/**` no longer
- * is and this route still is (issue #1734) — so nothing in this file should
- * read as if it were a 404 status line.
+ * not-found page rather than a heading over an empty ledger. Both are the
+ * *second* layer: the status line is decided above the streaming boundary in
+ * `src/proxy.ts` (issue #1734), which applies the same shape test and asks the
+ * same scoped question, so nothing asserted here is what a crawler reads. What
+ * this file pins is that the page still refuses on its own — the edge fails
+ * open on a database outage, and a page that stopped agreeing with it would
+ * either 404 a town the edge served or put a heading over nothing. The status
+ * itself is asserted in `e2e/marketing.spec.ts`.
  */
 
 vi.mock("next/navigation", () => ({

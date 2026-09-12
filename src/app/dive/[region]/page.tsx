@@ -52,24 +52,24 @@ function regionName(shops: readonly RegionShop[]): string | null {
  * way: a town DiveDay cannot serve gets the not-found page rather than a
  * heading over nothing.
  *
- * **What that refusal is worth, measured rather than assumed.** Under this
- * app's `cacheComponents` setup a `notFound()` thrown from a dynamic page body
- * answers **200** with the not-found page in the streamed payload — the status
- * line is gone by the time the body runs. Probed 2026-09-07 against a
- * production build: `/s/<unknown-shop>` and `/s/blue-mantis/courses/<unknown>`
- * answered 200 the same way, so this route was consistent with every other
- * dynamic page here rather than uniquely wrong.
+ * **Both refusals are the second layer; the status comes from the first.**
+ * Under this app's `cacheComponents` setup a `notFound()` thrown from a dynamic
+ * page body answers **200** with the not-found page in the streamed payload —
+ * the status line is gone by the time the body runs — so this route read as a
+ * page worth keeping to a crawler, which is what it was filed as (issue #1734,
+ * measured against a production build on 2026-09-07). The status is decided
+ * above the streaming boundary instead, in `src/proxy.ts` (ADR
+ * 20260912-the-public-namespace-refuses-at-the-edge): the edge applies this
+ * same `isRegionSlug` test to the segment, and for one that passes it asks
+ * `regionIsListed` the same `listedShopScope` question `listRegionShops`
+ * answers below.
  *
- * **That stopped being true of `/s/**`, and it is still true here.** The public
- * shop namespace now decides the status above the streaming boundary, in
- * `src/proxy.ts` (ADR 20260912-the-public-namespace-refuses-at-the-edge), so
- * its unknown URLs answer a real 404 and this route is no longer consistent
- * with them. It was left out of that change because it asks a different
- * question — a region slug is a closed list this repository holds, not a row —
- * so it is still a soft 404 to a crawler, on a page DiveDay does want indexed.
- * Issue #1734 carries it, together with `/switching/[competitor]` and
- * `/demo/[story]`, which are soft for the same reason. Until it lands, no
- * comment here should read as if the status were 404.
+ * What survives here is the layer that runs when the edge could not decide —
+ * its read failed, and a database outage must never take a live town off the
+ * internet to fix a soft 404 — so both refusals stay, and both have to stay in
+ * step with the edge's in **both** directions: a page that refused more than
+ * the edge would 404 a town the edge served, and one that refused less would
+ * put a heading over nothing.
  */
 const regionShops = cache(async (region: string) => {
   if (!isRegionSlug(region)) notFound();
