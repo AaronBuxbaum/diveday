@@ -35,6 +35,7 @@ function row(overrides: Partial<CheckInQueueRow> = {}): CheckInQueueRow {
     bookingStatus: "booked",
     readiness: { status: "ready", blockers: [] },
     boarded: false,
+    onTheWater: null,
     missingEmergencyContact: false,
     firstVisit: false,
     ...overrides,

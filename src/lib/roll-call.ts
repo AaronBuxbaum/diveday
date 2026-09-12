@@ -142,6 +142,41 @@ export function rollCallNoteAllowed(
   return isNotBackAboard(checkpoint, standing);
 }
 
+/**
+ * **Does one standing roll-call result mean this person went to sea?**
+ *
+ * The atom under every reader that answers that question, so none of them can
+ * drift about one diver. Two statements a crew can make mean it:
+ *
+ * - `boarded`, at **any** checkpoint. A diver who joined at the second site has
+ *   no departure event at all.
+ * - `not_boarded` at an **after-dive** checkpoint, which is not "never came"
+ *   but **did not come back from the dive**. That is the missing-diver row, and
+ *   the diver it is about sailed (`docs/product/glossary.md`, **sailed**).
+ *
+ * **A `departure` `not_boarded` is deliberately false, and that asymmetry is
+ * the whole of this function.** At the dock the same word means "never left the
+ * dock" — the benign half, and the ordinary absence the counter exists to let a
+ * shop record.
+ *
+ * **Standing results only.** A superseded row, and a `cleared` that undid one,
+ * must already have been collapsed away by the caller; this reads one result at
+ * face value. `cleared` answers false, which is what makes a checkpoint whose
+ * newest row is an undo drop out rather than fall back to an older one.
+ *
+ * The four callers, each of which said this in its own words before a
+ * dive-domain-expert review found two of them disagreeing (issue #1704):
+ * `onTheWaterByRollCall` and `recordRollCall`'s seat reclaim (src/db/manifests.ts),
+ * `inAfterDivePopulation` (src/db/today.ts), and `seatSailed` (src/lib/closeout.ts).
+ */
+export function standingResultMeansSailed(
+  checkpoint: string,
+  status: "boarded" | "not_boarded" | "cleared",
+): boolean {
+  if (status === "boarded") return true;
+  return status === "not_boarded" && checkpoint !== "departure";
+}
+
 export function isNotBackAboard(
   checkpoint: RollCallCheckpoint,
   rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,

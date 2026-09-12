@@ -286,6 +286,70 @@ describe("counter check-in", () => {
     // states stay independent rather than one implying the other.
     expect(afterBoarding[0]?.boarded).toBe(true);
     expect(afterBoarding[0]?.bookingStatus).toBe("booked");
+    // The wider question the no-show door is drawn on agrees with the badge
+    // here, because a dock boarding satisfies both.
+    expect(afterBoarding[0]?.onTheWater).toBe("boarded");
+  });
+
+  /**
+   * **The queue row that decides whether "Did not dive?" is drawn**
+   * (dive-domain-expert review, issue #1704).
+   *
+   * The badge above is the dock, and it is right to be: it says the crew
+   * counted this diver onto the boat. The gate asks a wider question, and for
+   * one slice it was handed the badge's narrower answer — so the counter drew
+   * the door over a diver the crew had recorded as not back aboard after a
+   * dive, and the writer then refused the tap. No seat was ever lost; the app
+   * spent two taps inviting the desk to write off a missing person.
+   *
+   * No waiver on this seat, deliberately: readiness gates the boarded tap at
+   * the dock and nothing else, so the after-dive result is recordable here.
+   */
+  it("tells the no-show door a diver missing after a dive is on the water", async () => {
+    const { db, shop, reef, staff, booking, personName } = await context();
+
+    const before = await listCheckInQueue(db, shop.id, { query: personName });
+    expect(before[0]?.onTheWater).toBeNull();
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const after = await listCheckInQueue(db, shop.id, { query: personName });
+    expect(after[0]?.onTheWater).toBe("missing_after_dive");
+    // The dock badge stays false, which is the point of keeping them apart:
+    // this diver has no departure result at all.
+    expect(after[0]?.boarded).toBe(false);
+  });
+
+  /**
+   * And the dock's own `not_boarded` leaves the door open, because there the
+   * word means "never left the dock" — the ordinary walk-away the counter
+   * exists to record. A row that read `not_boarded` without its checkpoint
+   * would close the door on every one of them.
+   */
+  it("leaves the no-show door open for a diver the crew marked ashore at the dock", async () => {
+    const { db, shop, reef, staff, booking, personName } = await context();
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const queue = await listCheckInQueue(db, shop.id, { query: personName });
+    expect(queue[0]?.onTheWater).toBeNull();
   });
 
   it("refuses a cross-tenant booking or non-staff actor", async () => {

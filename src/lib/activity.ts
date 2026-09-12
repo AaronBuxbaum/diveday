@@ -92,6 +92,14 @@ type ActivityParamShapes = {
    * what an owner reconciling a full departure needs to see.
    */
   booking_no_show_boarded: { actor: string; diver: string };
+  /**
+   * …or the crew reported them **not back aboard after a dive**, which also
+   * takes the seat back — a diver who did not come back is one who sailed. Its
+   * own line rather than the boarding above, because at 18:00 the two say
+   * opposite things about where the person is: one was carried and walked off,
+   * the other is who the day is still looking for.
+   */
+  booking_no_show_missing_after_dive: { actor: string; diver: string };
   /** Somebody was put on the crew for a departure. */
   crew_assigned: { actor: string; crew: string };
   /** …or taken off it. */
@@ -177,6 +185,7 @@ export const ACTIVITY_CODES = [
   "booking_no_show_undone",
   "booking_no_show_undo_refused",
   "booking_no_show_boarded",
+  "booking_no_show_missing_after_dive",
   "identity_confirmed",
   "crew_assigned",
   "crew_removed",

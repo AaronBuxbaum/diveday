@@ -32,7 +32,7 @@ import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
 import type { TodayAction } from "@/lib/today";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
-import { listDepartureRollCallByTrip } from "./manifests";
+import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import {
   bookings,
   closeoutLeftoverDecisions,
@@ -307,6 +307,7 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
   const [
     roster,
     dockResults,
+    afterDiveSpoken,
     photos,
     crewPhotos,
     recapDeliveries,
@@ -355,6 +356,10 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     // there means "never left the dock", and the same word at an after-dive
     // checkpoint means "did not come back" — a diver who sailed.
     listDepartureRollCallByTrip(db, shopId, tripIds),
+    // The other half of the crew's evidence: a seat spoken for at sea. Read
+    // beside the dock rather than instead of it, because the two words mean
+    // opposite things at the two checkpoints ({@link seatSailed}, issue #1704).
+    listAfterDiveRollCallByTrip(db, shopId, tripIds),
     db
       .select({
         id: recapPhotos.id,
@@ -517,6 +522,7 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     const sailed = seatSailed({
       noShow: seat.status === "no_show",
       dockResult: dockResults.get(seat.tripId)?.get(seat.bookingId) ?? null,
+      afterDiveResultStands: afterDiveSpoken.get(seat.tripId)?.has(seat.bookingId) === true,
     });
     if (sailed) sailedByTrip.set(seat.tripId, (sailedByTrip.get(seat.tripId) ?? 0) + 1);
   }

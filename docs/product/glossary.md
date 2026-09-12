@@ -686,13 +686,20 @@ new domain concept, define it here in the same PR.
   the crew recorded aboard at any **roll-call checkpoint** can never be marked absent
   (`already_boarded`), and neither can one the crew recorded `not_boarded` at an *after-dive*
   checkpoint: there the word is "did not come back from the dive" rather than "never came", and it
-  is the row that means somebody may still be in the water. One reader answers both
-  (`onTheWaterByRollCall`, `src/db/manifests.ts`), mirroring `inAfterDivePopulation` rather than
-  inventing a second definition of who is on the water; the same word at the **departure**
-  checkpoint is the benign half and stays markable, because "never left the dock" is the ordinary
-  absence this mark exists to record. When the crew get there second, boarding takes the released
-  seat straight back rather than refusing a body somebody is looking at (`reclaimReleasedSeat`,
-  `src/db/manifests.ts`). It is never a **dive day**, in any of the four readers that count them.
+  is the row that means somebody may still be in the water. **The two refusals say different
+  sentences**, because the desk's next act differs: a diver counted aboard is fine and there is
+  nothing to do, while a diver the crew recorded missing means call the boat and open the manifest
+  (`already_boarded` / `already_missing_after_dive`). One reader answers both
+  (`onTheWaterByRollCall`, `src/db/manifests.ts`), over the diver roll call *and* the crew roll
+  call — a staffer can hold a seat on a trip they crew, and **missing crew** outranks a missing
+  diver — and it applies `standingResultMeansSailed` (`src/lib/roll-call.ts`), the one predicate
+  every reader of this question shares rather than inventing a second definition of who is on the
+  water. The same word at the **departure** checkpoint is the benign half and stays markable,
+  because "never left the dock" is the ordinary absence this mark exists to record. When the crew
+  get there second, **both** statements take the released seat straight back rather than refusing a
+  body somebody is looking at (`reclaimReleasedSeat`, `src/db/manifests.ts`): for one slice only
+  the boarding did, which left a mark standing over a diver in the water on the ordering the
+  offline manifest makes ordinary — after-dive taps are made with no signal and sync hours later. It is never a **dive day**, in any of the four readers that count them.
 - **Seat release** — the confirm tap on a **no-show** *is* the release. There is no second tap, no
   timer, no evening sweep and no `seat_released_at` column: `no_show` leaves the statuses that hold
   a seat (**seat held**), so the boat reads one seat lighter the moment the mark lands and the next
@@ -1025,13 +1032,17 @@ new domain concept, define it here in the same PR.
   See [20260824-pre-departure-safety-check](../architecture/decisions/20260824-pre-departure-safety-check.md).
 - **Sailed** — how many of a departure's booked divers the boat actually **carried**, as distinct
   from the roster it sold. One rule answers it per seat (`seatSailed`, `src/lib/closeout.ts`),
-  reading the shop's two statements about that seat strongest first: the crew's own result at the
+  reading the shop's statements about that seat strongest first: the crew's own result at the
   `departure` **roll-call** checkpoint, where `boarded` counts and `not_boarded` ("never left the
-  dock") does not, and then — only for a seat the crew said nothing about — the desk's **no-show**
-  mark. A seat nobody has spoken for counts, because no result is an unfinished dock count rather
-  than a statement about a person, and the departure's own status is already saying so
-  (`departure_uncounted`). `not_boarded` at an *after-dive* checkpoint is the opposite fact and
-  subtracts nothing: that diver sailed, and is the one the day is still looking for. It is **not**
+  dock") does not; then any result standing at an *after-dive* checkpoint, either word of which
+  means the person was on the boat; and then — only for a seat the crew said nothing about at all —
+  the desk's **no-show** mark. A seat nobody has spoken for counts, because no result is an
+  unfinished dock count rather than a statement about a person, and the departure's own status is
+  already saying so (`departure_uncounted`). `not_boarded` at an *after-dive* checkpoint is the
+  opposite fact and subtracts nothing: that diver sailed, and is the one the day is still looking
+  for. The dock still wins where it *spoke*, which is what keeps the ashore-then-boarded-later seat
+  out of a count that asks how many the vessel left with; for one slice its *silence* won too, and
+  the evening read "0 out, 0 back" over a boat carrying a missing diver (issue #1704). It is **not**
   `booked`, and the two must not be collapsed — every question about seats *sold* still reads the
   roster, because a released seat never came back to the shelf. Its reader is the evening's
   **souls on board** line, whose crew half is the same idea: assigned crew less the ones a human

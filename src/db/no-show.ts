@@ -164,7 +164,7 @@ export async function markBookingNoShow(
       // exactly the divers `inAfterDivePopulation` (src/db/today.ts) says are
       // at risk in the water. The dock's own `not_boarded` is the other
       // direction and stays eligible: there it means "never left".
-      boarded: await onTheWaterByRollCall(tx, input.shopId, seat.tripId, seat.id),
+      onTheWater: await onTheWaterByRollCall(tx, input.shopId, seat.tripId, seat.id),
       tripStatus: seat.tripStatus,
       startsAt: seat.startsAt,
       now,

@@ -198,6 +198,96 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   });
 
   /**
+   * **The same ordering when the crew get there second, for the statement that
+   * is not a boarding** (dive-domain-expert review, issue #1704).
+   *
+   * `noShowGate` refuses the desk when the crew have already recorded a diver
+   * as not back aboard. For one slice the mirror act covered only `boarded`, so
+   * the desk-first ordering left a `no_show` standing over a diver in the
+   * water: the seat had left `SEAT_HELD_STATUSES` at the desk's tap, the
+   * counter had already offered it to the wait list, and the glossary's promise
+   * that the mark "cannot co-exist with a boarding at any checkpoint" was
+   * false.
+   *
+   * Not the unlucky ordering — the expected one. The desk's door is open for
+   * six hours after departure, and the offline manifest exists precisely
+   * because after-dive marks are made with no signal and sync hours later.
+   */
+  it("takes a released seat back when the crew record the diver missing after a dive", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+
+    expect(
+      await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        now: reef.startsAt,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await statusOf(db, booking.booking.id)).toBe("no_show");
+
+    // No waiver on this seat, deliberately: readiness gates the boarded tap at
+    // the dock and nothing else, so "did not come back from dive one" is
+    // recordable on a diver whose paperwork never cleared.
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    expect(await statusOf(db, booking.booking.id)).toBe("booked");
+    // **Its own trail line.** At 18:00 "the boat carried somebody the desk had
+    // written off" and "the desk wrote off somebody the crew then reported
+    // missing" are the two facts an owner has to tell apart, and only one of
+    // them is still an open question.
+    const codes = await activityCodesFor(db, booking.booking.id);
+    expect(codes).toEqual(
+      expect.arrayContaining(["booking_no_show", "booking_no_show_missing_after_dive"]),
+    );
+    expect(codes).not.toContain("booking_no_show_boarded");
+  });
+
+  /**
+   * **And the dock's own `not_boarded` still does not**, which is the asymmetry
+   * the whole fix rests on: there the word means "never left the dock", so the
+   * crew are agreeing with the desk rather than contradicting it. A rule that
+   * read `not_boarded` without its checkpoint would undo every walk-away the
+   * desk ever recorded.
+   */
+  it("leaves the release alone when the crew mark the diver ashore at the dock", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+
+    expect(
+      await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        now: reef.startsAt,
+      }),
+    ).toMatchObject({ ok: true });
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    expect(await statusOf(db, booking.booking.id)).toBe("no_show");
+    expect(await activityCodesFor(db, booking.booking.id)).not.toContain(
+      "booking_no_show_missing_after_dive",
+    );
+  });
+
+  /**
    * Releasing a seat is the desk's act, with its own gate and its own confirm
    * tap. A mis-tap at the rail corrects the head count; it must never sell a
    * diver's seat out from under them.
@@ -479,7 +569,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     // all, and the desk must not be able to call them absent
     // (`inAfterDivePopulation`, src/db/today.ts).
     const { db, shop, reef, booking, staff } = await manifestContext();
-    expect(await onTheWaterByRollCall(db, shop.id, reef.id, booking.booking.id)).toBe(false);
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, booking.booking.id)).toBeNull();
 
     // No waiver: readiness gates boarding at the dock only, so an after-dive
     // head count takes the diver as they are.
@@ -491,7 +581,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       status: "boarded",
       checkpoint: "after_dive_1",
     });
-    expect(await onTheWaterByRollCall(db, shop.id, reef.id, booking.booking.id)).toBe(true);
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, booking.booking.id)).toBe("boarded");
     expect(await departureRollCallForBooking(db, shop.id, reef.id, booking.booking.id)).toBeNull();
 
     // And a `cleared` undo drops it back out, the same supersession every other
@@ -504,7 +594,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       status: "cleared",
       checkpoint: "after_dive_1",
     });
-    expect(await onTheWaterByRollCall(db, shop.id, reef.id, booking.booking.id)).toBe(false);
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, booking.booking.id)).toBeNull();
   });
 
   /**
@@ -533,7 +623,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       status: "not_boarded",
     });
     expect(await departureRollCallForBooking(db, shop.id, reef.id, seatId)).toBe("not_boarded");
-    expect(await onTheWaterByRollCall(db, shop.id, reef.id, seatId)).toBe(false);
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, seatId)).toBeNull();
 
     // That dock result is the only row this seat has, and it stays false: the
     // trap this reader is built to avoid is composing on
@@ -552,7 +642,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       status: "not_boarded",
       checkpoint: "after_dive_1",
     });
-    expect(await onTheWaterByRollCall(db, shop.id, reef.id, seatId)).toBe(true);
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, seatId)).toBe("missing_after_dive");
 
     // A `cleared` at that checkpoint is the crew undoing a mistake, so nothing
     // stands there any more and the dock's own result still does not count.
@@ -564,7 +654,89 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       status: "cleared",
       checkpoint: "after_dive_1",
     });
-    expect(await onTheWaterByRollCall(db, shop.id, reef.id, seatId)).toBe(false);
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, seatId)).toBeNull();
+  });
+
+  /**
+   * **A staffer who dives, and the half of the head count the diver table
+   * cannot see** (dive-domain-expert review, issue #1704).
+   *
+   * On a shop where staff dive too, one person can be on `trip_assignments`
+   * *and* hold a seat on the same departure. Their crew result lives in
+   * `roll_call_crew_events`, keyed on the person rather than the booking, so a
+   * reader of the diver trail alone answered "nothing stands" about a human the
+   * crew half of the head count had recorded as not back aboard — and the desk
+   * could mark that seat absent. Missing crew is severity 2 in this product's
+   * own ranking, above a missing diver, on the grounds that the crew are the
+   * people most reliably in the water.
+   */
+  it("reads the crew roll call for a staffer holding a seat on a trip they crew", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id })
+      .onConflictDoNothing();
+    const [seat] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: reef.id, personId: staff.id, status: "booked" })
+      .returning({ id: bookings.id });
+    if (!seat) throw new Error("expected the crew member's own seat");
+
+    // Nothing in either trail yet.
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, seat.id)).toBeNull();
+
+    await expect(
+      recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, seat.id)).toBe("missing_after_dive");
+    // And the desk is refused on that seat, which is the whole point of the
+    // second read: the refusal is what stops the release.
+    expect(
+      await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: seat.id,
+        recordedByPersonId: staff.id,
+        now: reef.startsAt,
+      }),
+    ).toEqual({ ok: false, reason: "already_missing_after_dive" });
+  });
+
+  /**
+   * The crew counterpart of the dock asymmetry: at `departure` the crew's
+   * `not_boarded` means the staffer never sailed, so their own seat is an
+   * ordinary absence the desk may still record.
+   */
+  it("leaves a crew member's seat markable when the crew mark them ashore at the dock", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id })
+      .onConflictDoNothing();
+    const [seat] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: reef.id, personId: staff.id, status: "booked" })
+      .returning({ id: bookings.id });
+    if (!seat) throw new Error("expected the crew member's own seat");
+
+    await expect(
+      recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, seat.id)).toBeNull();
   });
 
   it("carries the counter check-in status onto the manifest, independent of roll call (task 149)", async () => {

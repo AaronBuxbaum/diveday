@@ -28,7 +28,12 @@ import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { giftGiversByBooking } from "./gifts";
-import { departureRollCallForBooking, listDepartureBoardedBookingIds } from "./manifests";
+import {
+  departureRollCallForBooking,
+  listAfterDiveRollCallByTrip,
+  listDepartureBoardedBookingIds,
+  type OnTheWater,
+} from "./manifests";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
 import {
   activityEvents,
@@ -77,6 +82,23 @@ export type CheckInQueueRow = {
    * UX persona lens 17).
    */
   boarded: boolean;
+  /**
+   * **The crew's own roll call puts this diver on the water**, which is a wider
+   * question than the badge above and is asked for a different reason: it is
+   * what `noShowGate` refuses on (src/lib/no-show.ts). True on a `boarded`
+   * standing at **any** checkpoint, and on a `not_boarded` standing at an
+   * **after-dive** one — "did not come back from the dive" rather than "never
+   * came", which is the manifest holding them as missing.
+   *
+   * Separate from `boarded` rather than replacing it, because the two are
+   * genuinely different facts: the badge says the crew counted this diver onto
+   * the boat at the dock, and this says the shop's records place them at sea.
+   * Feeding the gate the badge's narrower answer is what drew "Did not dive?"
+   * over a diver the crew were still looking for — the writer refused the tap,
+   * so no seat was lost, but the counter spent two taps inviting the desk to
+   * write off a missing person (dive-domain-expert review, issue #1704).
+   */
+  onTheWater: OnTheWater;
   /**
    * This seat's arrival was **self-reported at the lobby tablet**, not seen by
    * a staffer (N-24). The counter still counts them as here — they very
@@ -188,6 +210,10 @@ export async function listCheckInQueue(
     readinessByBooking.set(row.booking.id, row.readiness);
   }
   const boardedBookingIds = await listDepartureBoardedBookingIds(db, shopId, tripIds);
+  // The other half of what "on the water" means, for the no-show door. One
+  // grouped query for the queue's trips, beside the departure read rather than
+  // instead of it — the badge needs the dock and the gate needs both.
+  const afterDiveByTrip = await listAfterDiveRollCallByTrip(db, shopId, tripIds);
   const selfReportedBookingIds = await listSelfReportedArrivalBookingIds(
     db,
     shopId,
@@ -207,6 +233,9 @@ export async function listCheckInQueue(
     giftGiverName: claimedAt === null ? (giftGivers.get(row.bookingId) ?? null) : null,
     bookingStatus: row.bookingStatus as "booked" | "checked_in" | "no_show",
     boarded: boardedBookingIds.has(row.bookingId),
+    onTheWater: boardedBookingIds.has(row.bookingId)
+      ? "boarded"
+      : (afterDiveByTrip.get(row.tripId)?.get(row.bookingId) ?? null),
     selfReported: selfReportedBookingIds.has(row.bookingId),
     missingEmergencyContact: !emergencyContactName || !emergencyContactPhone,
     firstVisit: history.firstVisitBookingIds.has(row.bookingId),

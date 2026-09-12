@@ -8,7 +8,7 @@ const DEPARTURE = new Date("2026-09-11T14:00:00.000Z");
 function gate(overrides: Partial<NoShowGateInput> = {}) {
   return noShowGate({
     bookingStatus: "booked",
-    boarded: false,
+    onTheWater: null,
     tripStatus: "scheduled",
     startsAt: DEPARTURE,
     now: new Date(DEPARTURE.getTime() + 10 * MINUTE_MS),
@@ -60,18 +60,20 @@ describe("noShowGate", () => {
    *
    * Which of the crew's two statements produced the `true` is decided one layer
    * down, in `onTheWaterByRollCall` (src/db/manifests.ts), because only a
-   * reader of `roll_call_events` can tell a dock `not_boarded` ("never left")
-   * from an after-dive one ("did not come back"). This gate is handed the fact.
+   * reader of the roll-call trail can tell a dock `not_boarded` ("never left")
+   * from an after-dive one ("did not come back") — and only that reader knows
+   * to ask the crew table as well, for a staffer holding a seat on a trip they
+   * crew. This gate is handed the fact.
    */
   it("never lets a diver the roll call puts on the water be marked absent", () => {
-    expect(gate({ boarded: true })).toBe("already_boarded");
-    expect(gate({ boarded: true, bookingStatus: "no_show" })).toBe("already_boarded");
-    expect(gate({ boarded: true, bookingStatus: "cancelled" })).toBe("already_boarded");
-    expect(gate({ boarded: true, tripStatus: "cancelled" })).toBe("already_boarded");
-    expect(gate({ boarded: true, now: new Date(DEPARTURE.getTime() - 3 * HOUR_MS) })).toBe(
+    expect(gate({ onTheWater: "boarded" })).toBe("already_boarded");
+    expect(gate({ onTheWater: "boarded", bookingStatus: "no_show" })).toBe("already_boarded");
+    expect(gate({ onTheWater: "boarded", bookingStatus: "cancelled" })).toBe("already_boarded");
+    expect(gate({ onTheWater: "boarded", tripStatus: "cancelled" })).toBe("already_boarded");
+    expect(gate({ onTheWater: "boarded", now: new Date(DEPARTURE.getTime() - 3 * HOUR_MS) })).toBe(
       "already_boarded",
     );
-    expect(gate({ boarded: true, now: new Date(DEPARTURE.getTime() + 12 * HOUR_MS) })).toBe(
+    expect(gate({ onTheWater: "boarded", now: new Date(DEPARTURE.getTime() + 12 * HOUR_MS) })).toBe(
       "already_boarded",
     );
   });

@@ -445,9 +445,13 @@ describe("markBookingNoShow", () => {
       }),
     ).toMatchObject({ ok: true });
 
+    // Its **own** code, not the boarded one. The desk's next act differs — a
+    // diver counted aboard is fine and this one is who the day is looking for —
+    // so the counter says a different sentence for each
+    // (dive-domain-expert review, issue #1704).
     expect(
       await markBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now }),
-    ).toEqual({ ok: false, reason: "already_boarded" });
+    ).toEqual({ ok: false, reason: "already_missing_after_dive" });
     expect(await statusOf(db, bookingId)).not.toBe("no_show");
   });
 

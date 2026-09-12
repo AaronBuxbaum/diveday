@@ -212,12 +212,21 @@ const noticeCopy: NoticeMap = {
   // the same rule as checking in: the row moves into the "Not here" group, or
   // back out of it, under the finger that did it.
   //
-  // The safety one is `no-show-already-boarded`: the crew recorded this diver
-  // onto the boat, so the counter is being asked to take a person off the
-  // expected list while somebody may be counting heads at the rail. It is a
-  // refusal with an instruction attached, because the staffer is not wrong to
-  // want it — the roll call is simply the record that outranks the desk.
+  // The safety ones are the two roll-call refusals, and they say different
+  // sentences because the desk's next act differs. `no-show-already-boarded` is
+  // the calm half: the crew recorded this diver onto the boat, so the counter
+  // is being asked to take a person off the expected list while somebody may be
+  // counting heads at the rail. A refusal with an instruction attached, because
+  // the staffer is not wrong to want it — the roll call simply outranks the desk.
   "no-show-already-boarded": { tone: "danger", key: "checkIn.notice.noShowAlreadyBoarded" },
+  // And the loud half: a crew member has recorded that this diver did not come
+  // back from a dive. The desk is standing at the one screen that can reach
+  // the boat and the emergency contact, so the sentence names the fact rather
+  // than the rule that produced it (issue #1704).
+  "no-show-already-missing-after-dive": {
+    tone: "danger",
+    key: "checkIn.notice.noShowAlreadyMissingAfterDive",
+  },
   "no-show-already-marked": { tone: "neutral", key: "checkIn.notice.noShowAlreadyMarked" },
   "no-show-not-booked": { tone: "neutral", key: "checkIn.notice.noShowNotBooked" },
   // Both taps answer this one: nobody fails to show for a boat that never left,
@@ -420,7 +429,7 @@ export default async function CheckInPage({
   const noShowClaimFor = (row: CheckInQueueRow): NoShowClaim | null =>
     noShowGate({
       bookingStatus: row.bookingStatus,
-      boarded: row.boarded,
+      onTheWater: row.onTheWater,
       tripStatus: "scheduled",
       startsAt: row.startsAt,
       now,

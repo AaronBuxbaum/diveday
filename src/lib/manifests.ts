@@ -38,6 +38,7 @@ export {
   ROLL_CALL_NOTE_MAX,
   rollCallCheckpoints,
   rollCallNoteAllowed,
+  standingResultMeansSailed,
 } from "./roll-call";
 
 /**

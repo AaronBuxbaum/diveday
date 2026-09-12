@@ -179,6 +179,21 @@ export type CloseoutPlanChange = {
  * `count_open` and {@link EveningClose.allHome} can never be granted on the
  * strength of this fallback.
  *
+ * **The crew's evidence is ranked across every checkpoint, not the dock
+ * alone** — which is what this function got wrong for one slice
+ * (dive-domain-expert review, issue #1704). A seat with no dock result, an
+ * after-dive `not_boarded`, and the desk's mark answered "did not sail" here
+ * while `onTheWaterByRollCall` answered "on the water" about the same diver, so
+ * the evening printed "0 divers out, 0 back" over a one-diver boat carrying
+ * somebody the day was raising a top-severity missing-diver row about. The
+ * clamp on {@link EveningClose} hid the `-1` that would have exposed it. The
+ * dock still wins where it spoke, which keeps the ashore-then-boarded-later
+ * case below; what changed is that its *silence* no longer outranks a statement
+ * the crew made at sea. The test that guarded the old shape wrote the safety
+ * argument down and the widening broke it: a `no_show` can never stand over a
+ * diver the crew placed on the water, because `noShowGate` refuses one and
+ * `reclaimReleasedSeat` undoes the other — and both now cover all of it.
+ *
  * **Two cases it deliberately answers "not aboard" to, with the direction
  * stated so nobody reads them as oversights.** A diver the crew marked ashore
  * at the dock and then boarded at a later checkpoint — `inAfterDivePopulation`
@@ -195,9 +210,17 @@ export function seatSailed(input: {
   noShow: boolean;
   /** The standing result at the **departure** checkpoint; null when there is none. */
   dockResult: "boarded" | "not_boarded" | null;
+  /**
+   * Whether a result stands at any **after-dive** checkpoint —
+   * `standingResultMeansSailed` over `listAfterDiveRollCallByTrip`. Either word
+   * there means the person was on the boat: `boarded` counted them at a later
+   * site, and `not_boarded` says they did not come *back*.
+   */
+  afterDiveResultStands: boolean;
 }): boolean {
   if (input.dockResult === "boarded") return true;
   if (input.dockResult === "not_boarded") return false;
+  if (input.afterDiveResultStands) return true;
   return !input.noShow;
 }
 

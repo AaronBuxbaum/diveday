@@ -64,13 +64,19 @@ export function seatIsHeld(status: string): status is SeatHeldStatus {
  *   nothing at the rail may refuse a body somebody is looking at
  *   (`reclaimReleasedSeat`, src/db/manifests.ts).
  *
- *   **One code, both facts.** It was the boarded half alone for one slice, and
- *   the after-dive "did not come back" reaches this same refusal rather than a
- *   second code: the staffer's next move is identical for both — open the
- *   manifest — and the code is a shipped `?notice=` value. What changed with it
- *   are the words, which now say *on the water* rather than *aboard*, so the
- *   sentence is true of a diver the crew are still looking for
- *   (`checkIn.notice.noShowAlreadyBoarded`).
+ *   This is the half where the crew counted the diver **onto** the boat.
+ * - `already_missing_after_dive` — the same refusal, for the other statement:
+ *   the crew recorded this diver as **not back aboard** after a dive. It was
+ *   one code with the boarded half for a slice, argued as "the staffer's next
+ *   move is identical — open the manifest". A dive-domain-expert review took
+ *   that apart and was right to (issue #1704): the next move is not identical.
+ *   A diver counted aboard is fine and the desk has nothing to do; a diver the
+ *   crew have recorded missing in the water means radio the boat, get the
+ *   emergency contact up, and hold the next departure. Telling the desk "the
+ *   roll call puts them on the water, check the manifest" is the loudest row in
+ *   the product arriving as a rule citation — so the two say different
+ *   sentences now (`checkIn.notice.noShowAlreadyBoarded` /
+ *   `noShowAlreadyMissingAfterDive`).
  * - `already_marked` — a second device, or a second tap, arriving after the
  *   work is done.
  * - `not_booked` — the seat was given up (cancelled). Somebody who told the
@@ -85,6 +91,7 @@ export function seatIsHeld(status: string): status is SeatHeldStatus {
 export type NoShowGate =
   | "eligible"
   | "already_boarded"
+  | "already_missing_after_dive"
   | "already_marked"
   | "not_booked"
   | "trip_cancelled"
@@ -94,30 +101,34 @@ export type NoShowGate =
 export type NoShowGateInput = {
   bookingStatus: string;
   /**
-   * **The crew's own roll call puts this diver on the water.** Read it as that
-   * question rather than as its name, which is one slice old: `boarded`
-   * standing at **any** checkpoint, since a diver counted at the second site
-   * was never at the dock at all, **or** an explicit `not_boarded` standing at
-   * an **after-dive** checkpoint, which says "did not come back from the dive"
-   * rather than "never came" (`onTheWaterByRollCall`, src/db/manifests.ts, is
-   * the one reader that answers all of it).
+   * **The crew's own roll call puts this diver on the water.** Two statements
+   * mean it: `boarded` standing at **any** checkpoint, since a diver counted at
+   * the second site was never at the dock at all, **or** an explicit
+   * `not_boarded` standing at an **after-dive** checkpoint, which says "did not
+   * come back from the dive" rather than "never came".
+   * `standingResultMeansSailed` (src/lib/roll-call.ts) is the one predicate, and
+   * `onTheWaterByRollCall` (src/db/manifests.ts) is the reader that applies it
+   * over both the diver and the crew roll call. It says *which* statement
+   * stands, because the two refusals say different sentences; null is neither.
    *
    * A `departure` `not_boarded` is deliberately *not* this. There the same word
    * means "never left the dock", which is the ordinary absence this gate exists
    * to let a shop record — so a reader that ignores the checkpoint is wrong in
    * the direction that stops a shop doing its work.
    *
-   * **The writer feeds this the whole answer; the counter's door does not, and
-   * that is a known gap.** `markBookingNoShow` (src/db/no-show.ts) asks
-   * `onTheWaterByRollCall` under the booking's lock. The check-in page draws the
-   * disclosure from `CheckInQueueRow.boarded`, which is the **departure**
-   * checkpoint alone (`listDepartureBoardedBookingIds`, src/db/check-in.ts), so
-   * "Not here?" is still offered over a diver the crew counted at the second
-   * site or recorded as not back from a dive, and the tap is then refused. The
-   * seat is safe either way, because the refusal sits on the writer and the
-   * writer *is* the release.
+   * **The writer and the door now feed this the same answer.** `markBookingNoShow`
+   * (src/db/no-show.ts) asks `onTheWaterByRollCall` under the booking's lock;
+   * the check-in page passes `CheckInQueueRow.onTheWater`, which is the
+   * departure-boarded set plus every seat spoken for at sea
+   * (`listAfterDiveRollCallByTrip`). For one slice the door was fed the
+   * departure checkpoint alone, so "Did not dive?" was drawn over a diver the
+   * crew had recorded as not back aboard and the tap was then refused. The seat
+   * was safe, because the refusal sits on the writer and the writer *is* the
+   * release — and the app still spent two taps inviting the desk to write off
+   * the person the crew were looking for (dive-domain-expert review, issue
+   * #1704).
    */
-  boarded: boolean;
+  onTheWater: "boarded" | "missing_after_dive" | null;
   tripStatus: "scheduled" | "cancelled";
   startsAt: Date;
   now: Date;
@@ -147,7 +158,8 @@ export function noShowGate(input: NoShowGateInput): NoShowGate {
   // Safety first, and ahead of every other condition so none of them can mask
   // it: a diver on the water is never a no-show, whatever the clock says and
   // whatever the row says.
-  if (input.boarded) return "already_boarded";
+  if (input.onTheWater === "boarded") return "already_boarded";
+  if (input.onTheWater === "missing_after_dive") return "already_missing_after_dive";
   if (input.bookingStatus === "no_show") return "already_marked";
   if (!seatIsHeld(input.bookingStatus)) return "not_booked";
   if (input.tripStatus === "cancelled") return "trip_cancelled";
@@ -176,8 +188,8 @@ export function noShowGate(input: NoShowGateInput): NoShowGate {
  *   from their dive-day count, and their own ready link telling them they were
  *   recorded absent. The Undo still exists and nobody learns they need it: the
  *   diver is at sea or gone home, and the row has left the counter's working
- *   list. On a shop that runs no roll call `already_boarded` never fires
- *   either, so the words on the door are the only thing standing between a
+ *   list. On a shop that runs no roll call neither roll-call refusal ever
+ *   fires, so the words on the door are the only thing standing between a
  *   mis-tap and writing off a diver who dived.
  *
  * Codes only. The counter picks the two sets of sentences

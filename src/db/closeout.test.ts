@@ -713,8 +713,14 @@ describe("day close-out (in-memory PGlite)", () => {
      * only safe because a `no_show` can never stand over a diver the crew
      * recorded aboard: `noShowGate` refuses `already_boarded` ahead of every
      * other condition, and a boarding that arrives second takes the released
-     * seat straight back (`reclaimReleasedSeat`). Nothing asserted that here,
-     * and the whole of `sailed` leans on it.
+     * seat straight back. Nothing asserted that here, and the whole of `sailed`
+     * leans on it.
+     *
+     * The argument was written for the boarded half alone, and a
+     * dive-domain-expert review found the other half missing on both sides
+     * (issue #1704): the gate now also refuses `already_missing_after_dive`,
+     * and `reclaimReleasedSeat` also fires for an after-dive `not_boarded`. The
+     * test below it asserts the second half of the same claim.
      */
     it("counts a released seat again the moment the crew board that diver", async () => {
       const ctx = await boatThatSailedShort();
@@ -763,6 +769,66 @@ describe("day close-out (in-memory PGlite)", () => {
         .where(eq(bookingsTable.id, released.id));
       expect(reclaimed?.status).toBe("booked");
       expect((await departureOf(ctx, trip.id)).sailed).toBe(2);
+    });
+
+    /**
+     * **The state the evening was wrong about** (dive-domain-expert review,
+     * issue #1704). One seat, no dock result, the desk's mark, and then the
+     * crew recording the diver as not back aboard after a dive.
+     *
+     * `seatSailed` read the dock alone, fell through to `!noShow`, and answered
+     * "did not sail" — so this boat reported "0 divers out, 0 back" while the
+     * day was raising a top-severity missing-diver row about the same person,
+     * and the clamp on the homecoming line hid the `-1`. Two things now hold
+     * it: the crew's after-dive statement outranks the dock's *silence* in the
+     * count, and the mark itself no longer survives the tap.
+     *
+     * Reachable on an ordinary morning: the desk's door is open for six hours
+     * after departure, and an offline after-dive tap syncs hours after it was
+     * made.
+     */
+    it("counts a diver the desk wrote off and the crew then reported missing", async () => {
+      const ctx = await boatThatSailedShort();
+      const { db, shop, staff, now, trip, divers } = ctx;
+      const released = await seat(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: divers[0].id,
+        status: "booked",
+      });
+      const marked = await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: released.id,
+        recordedByPersonId: staff.person.id,
+        now,
+      });
+      if (!marked.ok) throw new Error(`no-show refused: ${marked.reason}`);
+      expect((await departureOf(ctx, trip.id)).sailed).toBe(0);
+
+      const missing = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: released.id,
+        recordedByPersonId: staff.person.id,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+        occurredAt: new Date(trip.startsAt.getTime() + 60_000),
+      });
+      if (!missing.ok) throw new Error(`roll call refused: ${missing.reason}`);
+
+      // The mark is gone, because the crew's statement means the diver sailed.
+      const [reclaimed] = await db
+        .select({ status: bookingsTable.status })
+        .from(bookingsTable)
+        .where(eq(bookingsTable.id, released.id));
+      expect(reclaimed?.status).toBe("booked");
+
+      const after = await departureOf(ctx, trip.id);
+      expect([after.booked, after.sailed]).toEqual([1, 1]);
+      expect([after.status, after.gapReason]).toEqual(["unreconciled", "missing_diver"]);
+      const evening = assembleEveningClose([after], now);
+      expect([evening.divers, evening.stations[0]?.back]).toEqual([1, 0]);
+      expect(evening.allHome).toBe(false);
     });
   });
 
