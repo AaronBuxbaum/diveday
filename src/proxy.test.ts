@@ -540,6 +540,12 @@ describe("the public namespace's edge refusal", () => {
       shape: "course",
       code: "ECONNREFUSED",
     });
+    // The same absence the refused branch asserts. Held here too, because
+    // otherwise adding `error: String(error)` to this branch's `log()` would
+    // ship drizzle's wrapper message — the SQL and the bound parameters
+    // verbatim, which is the caller's own string — with the suite green.
+    expect(JSON.stringify(line)).not.toContain("10.0.0.1");
+    expect(JSON.stringify(line)).not.toContain("open-water");
   });
 
   it("logs a statement the server refused at warn, carrying none of the request's own strings", async () => {
@@ -598,13 +604,41 @@ describe("the public namespace's edge refusal", () => {
     // for.
     const later = new Date(Date.parse(TEST_FROZEN_CLOCK) + 61_000).toISOString();
     vi.stubEnv("DIVEDAY_CLOCK", later);
-    const second = await logged(() => runOn(fresh, request("/s/probe-slug")));
-    expect(second).toHaveLength(1);
-    expect(second[0]).toMatchObject({
-      level: "warn",
-      event: "public_route.existence_query_refused",
-      swallowed: 200,
+    try {
+      const second = await logged(() => runOn(fresh, request("/s/probe-slug")));
+      expect(second).toHaveLength(1);
+      expect(second[0]).toMatchObject({
+        level: "warn",
+        event: "public_route.existence_query_refused",
+        swallowed: 200,
+      });
+    } finally {
+      // `vitest.config.ts` sets `DIVEDAY_CLOCK` process-wide and nothing
+      // unstubs it between tests, so leaving this stubbed would hand a clock 61
+      // seconds ahead to every later test in this worker — and the frozen
+      // instant is load-bearing in several of them.
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("keeps a code a stranger cannot produce out of the flood's bucket", async () => {
+    // A single global bucket would let whoever is sending `/s/%00` hold it open
+    // and fold every other refused-class failure into `swallowed`, unreported —
+    // letting a stranger choose what an operator can see. `28P01` is our own
+    // credentials being rejected: nobody's bytes produce it, and it must get
+    // its own first line even mid-flood (security review of #1736, F1).
+    refuseWithSqlState();
+    const fresh = await freshProxy();
+    const lines = await logged(async () => {
+      for (let i = 0; i < 50; i += 1) await runOn(fresh, request("/s/probe-slug"));
+      existence.throwsWith = Object.assign(new Error("password authentication failed"), {
+        code: "28P01",
+      });
+      await runOn(fresh, request("/s/probe-slug"));
     });
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toMatchObject({ code: "22021", swallowed: 1 });
+    expect(lines[1]).toMatchObject({ code: "28P01", swallowed: 1, level: "warn" });
   });
 
   it("never damps an unreachable database", async () => {

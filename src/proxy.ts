@@ -34,7 +34,7 @@ import {
   REQUEST_PATH_HEADER,
 } from "@/lib/embed-routes";
 import { log } from "@/lib/log";
-import { publicRouteShape } from "@/lib/public-route-shape";
+import { type PublicRouteShape, publicRouteShape } from "@/lib/public-route-shape";
 import { shopSlugFromPublicPath } from "@/lib/public-routes";
 import {
   encodeReferralCookie,
@@ -322,11 +322,22 @@ function rememberPartnerReferral(req: NextRequest, res: Response): void {
  */
 const NOT_FOUND_ROUTE = "/_not-found";
 
-/** One refused-statement line per instance per minute. */
+/** One refused-statement line per failure kind, per instance, per minute. */
 const REFUSED_QUERY_REPORT_INTERVAL_MS = MINUTE_MS;
 
+/**
+ * How many distinct `shape:code` pairs get a bucket of their own before the
+ * rest share one. The key is built from two closed vocabularies, so a caller
+ * cannot mint keys — but this is the map a flood writes into, so it is bounded
+ * anyway rather than trusted to stay small.
+ */
+const REFUSED_QUERY_KIND_LIMIT = 16;
+
+/** Where pairs past the limit are counted, so the map cannot be grown. */
+const REFUSED_QUERY_OVERFLOW = "overflow";
+
 /** Module state, so the bound is per instance and dies with the instance. */
-const refusedQueries = { lastReportedAt: Number.NEGATIVE_INFINITY, swallowed: 0 };
+const refusedQueries = new Map<string, { lastReportedAt: number; swallowed: number }>();
 
 /**
  * The refused-statement line, bounded — the damper shape `reportStoreFailure`
@@ -340,7 +351,22 @@ const refusedQueries = { lastReportedAt: Number.NEGATIVE_INFINITY, swallowed: 0 
  * `DatabaseUnavailable` alarms at one datapoint in five minutes
  * (`infra/lib/observability.ts`), and delaying it would blunt the one line
  * here worth waking somebody for — which is the whole reason
- * `classifyDatabaseFailure` splits the two.
+ * `classifyDatabaseFailure` splits the two. That does leave the *error* branch
+ * unbounded by request rate: pool exhaustion under a flood throws without a
+ * `code`, classifies as unreachable, and writes a line per request. That is a
+ * genuine incident and should page somebody, so it is not damped here; the
+ * fleet-wide answer to the flood itself is a platform rate rule.
+ *
+ * **Bucketed per `shape:code`, not globally.** A single bucket would let
+ * whoever is sending `/s/%00` hold it open and fold every *other* refused-class
+ * failure into `swallowed`, unreported — a stranger choosing what an operator
+ * can see. That matters because the refused class is wider than the caller's
+ * own bytes: `28P01` (our credentials rejected), `42501` (a revoked grant) and
+ * `42P01` (a table missing mid-deploy) all classify here today, and each takes
+ * the whole existence check back to fail-open soft 404s. Keyed per kind, a code
+ * a caller cannot produce always gets its own first line. The key is built from
+ * two closed vocabularies and the map is capped regardless, so the bucket count
+ * is bounded whatever arrives.
  *
  * **The bound is per instance, not fleet-wide.** Serverless instances are many
  * and short-lived, so a flood spread across them still writes a line each.
@@ -359,16 +385,34 @@ const refusedQueries = { lastReportedAt: Number.NEGATIVE_INFINITY, swallowed: 0 
  * `swallowed` keeps the real rate visible through the damping, the same as
  * `rate_limit.store_failed`.
  */
-function reportRefusedQuery(shape: string, code: string, now: number): void {
-  refusedQueries.swallowed += 1;
-  const sinceLastReport = now - refusedQueries.lastReportedAt;
-  // A `now` that moved backwards reports rather than silently suppressing
-  // until the clock catches up again.
-  if (sinceLastReport >= 0 && sinceLastReport < REFUSED_QUERY_REPORT_INTERVAL_MS) return;
-  const swallowed = refusedQueries.swallowed;
-  refusedQueries.swallowed = 0;
-  refusedQueries.lastReportedAt = now;
-  log("public_route.existence_query_refused", "warn", { shape, code, swallowed });
+function reportRefusedQuery(shape: PublicRouteShape["kind"], code: string, now: number): void {
+  try {
+    const kind = `${shape}:${code}`;
+    const key =
+      refusedQueries.has(kind) || refusedQueries.size < REFUSED_QUERY_KIND_LIMIT
+        ? kind
+        : REFUSED_QUERY_OVERFLOW;
+    let bucket = refusedQueries.get(key);
+    if (!bucket) {
+      bucket = { lastReportedAt: Number.NEGATIVE_INFINITY, swallowed: 0 };
+      refusedQueries.set(key, bucket);
+    }
+    bucket.swallowed += 1;
+    const sinceLastReport = now - bucket.lastReportedAt;
+    // A `now` that moved backwards reports rather than silently suppressing
+    // until the clock catches up again.
+    if (sinceLastReport >= 0 && sinceLastReport < REFUSED_QUERY_REPORT_INTERVAL_MS) return;
+    const swallowed = bucket.swallowed;
+    bucket.swallowed = 0;
+    bucket.lastReportedAt = now;
+    log("public_route.existence_query_refused", "warn", { shape, code, swallowed });
+  } catch {
+    // The precedent's rule, and the reason it wraps its whole body:
+    // observability failing must never become the outage the fail-open policy
+    // exists to prevent. A throw out of here would escape this function's
+    // caller's `catch` and turn a database hiccup into a 500 on every public
+    // page.
+  }
 }
 
 /**
