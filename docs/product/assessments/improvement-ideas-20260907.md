@@ -38,49 +38,19 @@ Lens: the app knows the weather (marine outlook) but not the water. Florida divi
 around tide, current, moon and the reef's own calendar, and all of that lives in the captain's
 head or a NOAA tab.
 
-- **N-01 Tide and current window on the site and the add panel.** NOAA CO-OPS publishes free tide
-  predictions per station; a site row gains an optional station id and a "best on" rule (slack,
-  flood, ebb). The site briefing, the board's add panel and the departure page then say "Slack at
-  09:40; this departure reaches the site on the flood", and the diver's trip page carries the same
-  line when the shop switches it on. *Build:* `src/lib/tides.ts` (pure window math) +
-  `src/lib/tide-predictions.ts` behind the existing external-HTTP seam (`marine-forecast.ts`
-  pattern), a `dive_sites.tide_station_id` + `tide_preference` column, one line in
-  `TripSiteNotes` and the add panel. Informs. *Effort:* M. *Needs:* ADR (external service).
-- **N-02 The reef's calendar.** Lobster mini-season, goliath grouper aggregation, turtle nesting,
-  a lionfish derby: the events a Florida shop plans its summer around. A shop-worded
-  `season_events` table (name, date range, optional lens) that renders as a storefront band while
-  it is live, tags departures inside the window with the lens, and reminds the board a month out.
-  *Build:* schema + `src/lib/season-events.ts`, a Settings inset, one storefront band, a lens
-  join in `trip-lenses.ts`. *Effort:* M. *Needs:* i18n for the band's frame only; the words are
-  the shop's.
-
-- **N-03 Moon and light on night departures.** Sunset, civil twilight and moon phase computed
-  locally (a small pure solar/lunar module, no dependency) for any departure that starts after the
-  shop's dusk. Renders on the briefing, the thread's prep step and the night-before brief.
-  *Build:* `src/lib/sky.ts` + a line in `TripDayPlan` and `night-before-brief.ts`. *Effort:* S.
+Every idea in this section shipped. The register below keeps their rows; the deliveries are in
+[shipped.md](../shipped.md).
 
 ## 2. The diver's body
 
 Lens: readiness ends when the boat leaves. The physiology of the day continues after it.
 
-- **N-04 "Fly-safe from" and surface-interval line on the recap.** From the last executed dive's
-  end, the thread's after-state says "Fly-safe from Sunday 10:20" using a shop-set hours value
-  (default DAN's 18 h single, 24 h repetitive), and the recap email carries the same sentence.
-  Informs, attributed ("by DAN's guidance and the shop's setting"). *Build:*
-  `src/lib/fly-safe.ts` from `executedDives`, a `shops.fly_safe_hours_*` pair, one line in
-  `AfterState` and the `trip_recap` body. *Effort:* S. *Needs:* domain.
 - **N-05 The after-dive check-in inside the recap.** The recap already goes four hours after
   return. It gains one row: "Feeling fine · Something's not right", where the second answer shows
   the shop's emergency lines and DAN's number and writes a desk event so the crew sees it. No new
   send (the delight report's ban on unrequested messages stands); it rides the send that exists.
   *Build:* a recap-token action, `tripDeskEvents` row kind, one Today row. *Effort:* S.
   *Needs:* domain, security (a health answer on a bearer link).
-- **N-06 The day's profile before booking.** The public departure page states each dive's planned
-  depth, bottom time and the surface interval between them, and, once the reader has stated a
-  card, whether the second dive exceeds that card's ceiling. `depth-ceiling.ts` and `trip-dives`
-  carry the facts; the page does not yet say the interval or the reader's own ceiling. *Effort:* S.
-  *Needs:* domain on wording. (The nitrox MOD card in `brainstorm.md` is the sibling.)
-
 ## 3. The worst day
 
 Lens: the emergency reference card shipped as fixed text. Nothing yet runs the minutes.
@@ -169,11 +139,6 @@ Lens: Stripe owns the arithmetic; the shop still loses money in the gaps around 
 Lens: every message the app sends is one-way. Divers reply anyway, and the reply lands in a
 mailbox nobody reads at the counter.
 
-- **N-20 Two-way inbox.** Replies to any DiveDay email, SMS or WhatsApp land on the diver's record
-  and in one shop inbox; Today counts the unanswered; staff answer from the record in the
-  diver's own channel and language. WhatsApp inbound exists; SES gains an inbound receipt rule,
-  SNS an inbound number. *Build:* `inbound_messages` table, three webhook branches, the record's
-  thread, a Today row. *Effort:* L. *Needs:* ADR (inbound mail path, a phone number), security.
 - **N-21 Reply keywords.** "Reply C to cancel, M to move" on reminders, handled on the same inbound
   path and confirmed with the existing self-service cancel. *Effort:* S once N-20 exists.
 - **N-22 "Took a call".** One counter act that turns a phone call into a date request, a wait-list
@@ -183,16 +148,6 @@ mailbox nobody reads at the counter.
 
 Lens: the app lives on staff phones. The room and the dock have walls and a counter.
 
-- **N-23 Departures board display mode.** A revocable token URL for a lobby TV or dock tablet:
-  today's boats, boarding state, the crew's stage words, the outlook, "meet at dock B", in
-  display type, refreshing itself, no staff session. *Build:* `display_tokens`, a
-  `/board/[token]` route reusing the day spine's readers in read-only shape, a Settings row.
-  *Effort:* M. *Needs:* security (a shop's day on a public screen; names off by default).
-- **N-24 Self check-in at the counter.** A counter tablet where the diver types their last name or
-  scans the arrival card's QR, sees "You're set, dock B" or "See Chloe", and check-in is recorded
-  as arrival (never boarding). *Build:* a kiosk mode on `/check-in` behind a display token,
-  reusing `find-my-booking.ts` and the arrival card. *Effort:* M. *Needs:* domain (arrival vs
-  aboard), security.
 - **N-25 Lost and found.** "Left aboard" on a departure with a photo and a claimant; the diver's
   thread says "We have your mask." *Build:* `lost_items` + one thread line. *Effort:* S.
 
@@ -284,10 +239,6 @@ German before it is anything else.
 
 Lens: a family books together; the minor's paperwork is still one adult signature (H-21).
 
-- **N-38 Guardian co-signature.** A minor's waiver link asks for a second signer with their own
-  token; readiness says "Guardian signature missing" until both have signed. *Build:* a second
-  `waiverRecords` signer, a guardian token, one readiness code. *Effort:* M. *Needs:* owner
-  (H-01/H-21 legal), security, domain.
 - **N-39 Junior ceilings at booking.** Where the stated card is a junior rating, the departure
   page says which dive exceeds its depth before the seat is sold, using `depth-ceiling.ts`.
   *Effort:* S. *Needs:* domain.
@@ -347,13 +298,6 @@ Lens: every public URL is a schedule or a booking page. The words that rank are 
 - **N-48 Public dive-site pages.** `/s/<slug>/sites/<site>` from the briefing the shop already
   wrote: the prose, the field guide, the drawn route, the next departures there, JSON-LD, in the
   sitemap, behind the same search-listing switch. *Effort:* M.
-- **N-49 Regional pages across opted-in shops.** `/dive/key-largo`: public departures from every
-  DiveDay shop that opts in, this weekend first. *Effort:* M. *Needs:* owner (cross-shop marketing
-  under a bounded business).
-- **N-50 Agent-ready storefront.** An `llms.txt` and a machine-readable availability document per
-  shop so an AI travel agent finds the departure and hands off to the booking page, which still
-  does the booking. *Effort:* S.
-
 ## 21. Software talking to software
 
 Lens: the roadmap's read API is a transport with no first client. In 2026 the first client is an
@@ -365,22 +309,13 @@ owner's own assistant.
   to build, and the read API's first customer. *Build:* `src/app/api/mcp/`, scoped
   `api_tokens`, tools named after the export tables. *Effort:* M read-only. *Needs:* ADR,
   security.
-- **N-52 Xero beside QuickBooks.** The integrations registry takes a fourth provider with the same
-  contract. *Effort:* M. *Needs:* owner (a second accounting partner for a bounded cohort).
-
 ## 22. The day the network dies
 
 Lens: the manifest survives offline. The counter and the desk do not.
 
-- **N-53 Offline counter.** Check-in works with no signal: queued arrival writes with the
-  reconciliation rules roll call already has, arrival never promoted to aboard by the queue.
-  *Effort:* L. *Needs:* domain, security, ADR.
 - **N-54 The paper day.** One "print the day" document at 5 am: every departure's manifest,
   emergency card, waiver state and packing list, so a dead tablet costs a printer and not the
   day. `/print` exists per trip; this is the day. *Effort:* S.
-- **N-55 Status page and external uptime monitor.** The rollout's own line, still unbuilt (H-45).
-  *Effort:* S. *Needs:* owner (H-45 row).
-
 ## 23. The founder's cockpit
 
 Lens: agents ship daily; the founder runs support, billing and the north star by hand.
@@ -402,14 +337,8 @@ Lens: agents ship daily; the founder runs support, billing and the north star by
 
 Lens: V-04 asks a human to rehearse a whole day. A script can rehearse it every night.
 
-- **N-60 The one-day simulator.** A script drives a fresh shop through a day with the frozen clock
-  advancing: book, sign, check in, roll call, underway, home, close out, recap. It produces the
-  rehearsal artifacts, a screenshot per hour, and fails on any state the day cannot reach.
-  Nightly in CI. *Build:* `scripts/simulate-day.mjs` over the e2e fixtures and
-  `/api/test/*`. *Effort:* M.
-- **N-61 Persona bots.** A weekly agent run walks each of the fifteen personas' flows against the
-  demo and files `needs-triage` issues with screenshots. *Effort:* M. *Needs:* owner (issue
-  volume against a one-person inbox).
+Both ideas in this section shipped. The register below keeps their rows; the deliveries are in
+[shipped.md](../shipped.md).
 
 ## 25. The reef itself
 
@@ -470,7 +399,7 @@ said fifteen *Build now* over fourteen rows.
 | N-21 | Reply keywords | S |  | After N-20 | **Build now** (2026-09-09) |
 | N-22 | "Took a call" | S |  | After pilot | **Build now** (2026-09-09) |
 | N-23 | Departures board display mode | M | security | Now | **Build now** (2026-09-07) · shipped |
-| N-24 | Self check-in at the counter | M | domain, security | After pilot | **Build now** (2026-09-09) |
+| N-24 | Self check-in at the counter | M | domain, security | After pilot | **Build now** (2026-09-09) · shipped |
 | N-25 | Lost and found | S |  | After pilot | **After pilot** (2026-09-07) |
 | N-26 | A rationed sound layer | S | design | Now | **After pilot** (2026-09-09) |
 | N-27 | Read it aloud | S |  | Now | **No** (2026-09-07) |
