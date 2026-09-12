@@ -1,3 +1,5 @@
+import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
@@ -55,6 +57,29 @@ function excerpt(body: string): string {
  * that address instead of a link — a stretched row link reaching nothing is a
  * promise the surface cannot keep, and the address is half of what that row is
  * for.
+ *
+ * **That same row is the only one that can be deleted** (issue #1506). With no
+ * record there is no door and no composer, so a stranger's message could be
+ * read and never answered, and it went on counting against Today's
+ * `unanswered_messages` with nothing on any surface able to clear it. Delete
+ * is that missing move. A row that *has* a record gets none: it already has a
+ * door and a composer, and the way to finish it is to answer it.
+ *
+ * The control asks first, which principles.md §7 ("Undo over confirm")
+ * otherwise reserves for the irreversible. The write is a soft delete (ADR
+ * 20260820-every-delete-is-soft), but no surface a staffer can reach offers a
+ * restore — from where they stand this is one-way, and a confirm is the honest
+ * shape for that. Give the inbox a restore and this becomes an undo toast.
+ *
+ * The form sits in `trailing`, and that placement is safe on any row, door or
+ * not: `LedgerRow` renders `trailing` as a **sibling** of its door link, given
+ * `relative z-10` so it paints and receives taps above the overlay
+ * (`src/components/ui/ledger.tsx`). No button of ours ends up inside an
+ * anchor. So nothing about the markup is what keeps Delete off a diver's row
+ * — the product decision above is, and the invariant that actually holds is
+ * `person_id is null` in `deleteStrangerInboundMessage`'s `where`
+ * (`security-reviewer`, issue 1506). A render guard decides what a staffer is
+ * offered; it has never decided what the server accepts.
  */
 export function InboxRow({
   row,
@@ -62,12 +87,15 @@ export function InboxRow({
   locale,
   timezone,
   t,
+  deleteAction,
 }: {
   row: InboxMessageRow;
   shopSlug: string;
   locale: string;
   timezone: string;
   t: StaffTranslator;
+  /** A prop rather than an import so this renders under jsdom. */
+  deleteAction: (formData: FormData) => Promise<void>;
 }) {
   const { message, personName } = row;
   const name = personName ?? t("inbox.unknownSender");
@@ -93,8 +121,25 @@ export function InboxRow({
       className="py-3"
       kind={{ word: t(CHANNEL_KEYS[message.channel]), tone: "neutral" }}
       trailing={
-        <span className="text-sm text-muted tabular-nums">
-          {formatDateTimeTz(message.receivedAt, locale, timezone)}
+        <span className="flex items-center gap-3">
+          <span className="text-sm text-muted tabular-nums">
+            {formatDateTimeTz(message.receivedAt, locale, timezone)}
+          </span>
+          {message.personId ? null : (
+            <form action={deleteAction}>
+              <input type="hidden" name="messageId" value={message.id} />
+              <SubmitButton
+                pendingLabel={t("inbox.delete.pending")}
+                className={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                confirmMessage={t("inbox.delete.confirm")}
+                // One "Delete" per row would name them all the same, so the
+                // accessible name carries the address the row is about.
+                ariaLabel={t("inbox.delete.actionFor", { address: message.fromAddress })}
+              >
+                {t("inbox.delete.action")}
+              </SubmitButton>
+            </form>
+          )}
         </span>
       }
       {...door}

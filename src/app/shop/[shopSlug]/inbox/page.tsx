@@ -2,14 +2,32 @@ import type { Metadata } from "next";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { pagedInboxMessages } from "@/db/inbound-messages";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { shopPath } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { InboxRow } from "./_components/InboxRow";
+import { deleteInboxMessageAction } from "./actions";
+
+/**
+ * `?notice=` codes this page redirects back to itself with. Read through
+ * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
+ * attacker-supplied (src/lib/staff-notices.ts).
+ *
+ * Two codes, because from here there are two outcomes: the row went, or it was
+ * not there to go. `gone` covers a second click on a row a colleague already
+ * deleted, an id belonging to another shop, and an id that is not an id at all
+ * — all of which name no row, and all of which leave the staffer in the same
+ * place.
+ */
+const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
+  deleted: { tone: "success", key: "inbox.notices.deleted" },
+  gone: { tone: "warning", key: "inbox.notices.gone" },
+};
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx` is what stands in while the
@@ -39,10 +57,10 @@ export default async function InboxPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; notice?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { page } = await searchParams;
+  const { page, notice } = await searchParams;
   // No gate of its own since 2026-09-10 (issues #1505/#1518): every live staff
   // role may read this and answer it. `requireShopSurface` is still the whole
   // check — `requireStaffSession` re-reads the account's live roles on every
@@ -60,12 +78,15 @@ export default async function InboxPage({
   });
   const waiting = messages.rows.filter((row) => row.message.answeredAt === null);
   const answered = messages.rows.filter((row) => row.message.answeredAt !== null);
+  const banner = noticeFromParam(notice, NOTICES);
   const base = shopPath(shopSlug, "inbox");
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.inbox)} title={t("inbox.title")} />
+
+      {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
       {messages.total === 0 ? (
         <EmptyState title={t("inbox.emptyHeading")} body={t("inbox.emptyDetail")} />
@@ -86,6 +107,7 @@ export default async function InboxPage({
                     locale={locale}
                     timezone={shop.timezone}
                     t={t}
+                    deleteAction={deleteInboxMessageAction}
                   />
                 ))}
               </ul>
@@ -103,6 +125,7 @@ export default async function InboxPage({
                     locale={locale}
                     timezone={shop.timezone}
                     t={t}
+                    deleteAction={deleteInboxMessageAction}
                   />
                 ))}
               </ul>

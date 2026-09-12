@@ -85,7 +85,10 @@ checked before the send, and the outcome recorded whether it went or not). Today
 as the shop, and the list holds addresses for people who never booked. **Widened 2026-09-10** to
 every live staff role, reading and answering both — the message that most wants answering at 7am is
 answered by whoever is at the dock (issues #1505/#1518, an H-14 amendment; the two predicates are
-deleted, and the Today row widened with them).
+deleted, and the Today row widened with them). **The stranger's row gained a Delete** the same day
+(issue #1506): with no record it has no door and no composer, so it was the one row in the worklist
+nothing could finish, and it counted against the Today row for as long as it sat there. Soft, on
+that row alone, and no restore — a row that has a record is finished by answering it.
 
 ## The counter survives a lost signal (delivered 2026-09-07)
 

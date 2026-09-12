@@ -396,8 +396,9 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
   planned pull request per issue: batch A the `.ics` SEQUENCE and the reminder rhythm, batch B the
   six the shop's own words run through. #1284's remaining half — the stored named set of embed
   departures — was dropped from this slice on 2026-09-05: the owner deferred it on 2026-09-03
-  pending a shop asking, and slice 16f's lens vocabulary is now a live candidate for the reusable
-  tag that deferral wanted decided first. #1357 keeps its take-down question open, which is
+  pending a shop asking. The tag question that deferral wanted decided first was answered on
+  2026-09-10 (issue #1395): the set is the shape, no reusable departure tag is built for the
+  embeds, and 16f's lens vocabulary stays a lens. #1357 keeps its take-down question open, which is
   `ready-for-human`; its consent stamp shipped.
 
 16h, 16i and 16j landed as a stack, each cut from the layer below and merged bottom-up.

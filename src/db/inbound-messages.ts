@@ -373,8 +373,22 @@ export async function markInboundAnswered(
   return updated.length > 0;
 }
 
-/** Soft delete (ADR 20260820-every-delete-is-soft). A no-op outside the shop. */
-export async function deleteInboundMessage(
+/**
+ * Soft delete a message from a sender nobody on the roster holds (ADR
+ * 20260820-every-delete-is-soft; issue 1506). A no-op outside the shop, and a
+ * no-op on a row that has a diver behind it.
+ *
+ * **`person_id is null` is in the `where`, not in the caller's promise.** The
+ * surface renders the Delete on a stranger's row only (`_components/InboxRow.tsx`),
+ * but that is JSX, and the action it submits takes a posted id: a diver-linked
+ * id is one copy-paste from any staffer who can open a diver record, where the
+ * reply composer prints it into a hidden input. Deleting one of those would
+ * take what a diver wrote out of their own conversation with no way back, drop
+ * Today's unanswered count, and — when it is their newest inbound — close the
+ * 24-hour window the shop has to answer them at all (`src/lib/inbox.ts`). The
+ * name says stranger because the query does (`security-reviewer`, issue 1506).
+ */
+export async function deleteStrangerInboundMessage(
   db: DbExecutor,
   shopId: string,
   messageId: string,
@@ -383,7 +397,13 @@ export async function deleteInboundMessage(
   const updated = await db
     .update(inboundMessages)
     .set({ deletedAt: now })
-    .where(and(liveMessage(shopId), eq(inboundMessages.id, messageId)))
+    .where(
+      and(
+        liveMessage(shopId),
+        isNull(inboundMessages.personId),
+        eq(inboundMessages.id, messageId),
+      ),
+    )
     .returning({ id: inboundMessages.id });
   return updated.length > 0;
 }

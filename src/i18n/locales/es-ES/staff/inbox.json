@@ -19,6 +19,12 @@
   },
   "attachments": "{count, plural, one {# archivo adjunto, sigue con quien lo envió} other {# archivos adjuntos, siguen con quien los envió}}",
   "openRecord": "Abrir la ficha de {name}",
+  "delete": {
+    "action": "Eliminar",
+    "actionFor": "Eliminar el mensaje de {address}",
+    "confirm": "¿Eliminar este mensaje?",
+    "pending": "Eliminando…"
+  },
   "pagination": {
     "total": "{count, plural, one {# mensaje} other {# mensajes}}"
   },
@@ -51,6 +57,8 @@
     "cannotBeSent": "Esta respuesta no se puede enviar tal como está. No salió nada, y volver a intentarlo no cambiará eso.",
     "whatsappWindowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo.",
     "whatsappNotConnected": "Para responder por WhatsApp hace falta el remitente que conectas en Ajustes.",
-    "notAuthorized": "Tu cuenta ya no puede responder a los buceadores en este centro. Pide a un propietario o gerente que revise tu acceso."
+    "notAuthorized": "Tu cuenta ya no puede responder a los buceadores en este centro. Pide a un propietario o gerente que revise tu acceso.",
+    "deleted": "Mensaje eliminado.",
+    "gone": "Ese mensaje ya no está en la bandeja."
   }
 }

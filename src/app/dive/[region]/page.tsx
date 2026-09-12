@@ -109,10 +109,16 @@ export async function generateMetadata({
  * day-zero row is a shorter card, not an apologetic one, which is the rule
  * `ShopfrontHero` keeps on the storefront itself.
  *
- * **No departures.** `listRegionShops` is unbounded and
+ * **No departures** — the owner's call of 2026-09-10 (issue #1511), not an
+ * unfinished half of #1436's spec. `listRegionShops` is unbounded and
  * `publicAvailabilityTrips` is three queries per shop, so showing "next out"
  * on every card would fan a busy town out to 3N reads on an anonymous,
  * crawler-visible page. The storefront one tap away answers it properly.
+ * Weighed and declined, so nobody re-derives it: one bounded read
+ * `listRegionDepartures(db, regionSlug, { days: 7, limit })` in
+ * `src/db/regions.ts`, joining `trips` to the `listedShopScope` shops in a
+ * single query, plus the pager and the town-with-departures capture it would
+ * bring with it. Never the per-shop loop over `publicAvailabilityTrips`.
  */
 export default async function RegionPage({ params }: { params: Promise<{ region: string }> }) {
   const { region } = await params;

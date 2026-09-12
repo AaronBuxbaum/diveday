@@ -68,3 +68,33 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   ).toBeVisible();
   await expect(conversation.getByText("This one did not reach them.")).toBeVisible();
 });
+
+/**
+ * **A stranger's message is finished by deleting it** (issue #1506).
+ *
+ * Its own test rather than a tail on the flow above: that one already widens
+ * its timeout for three surfaces and a send, and this walks one page.
+ *
+ * The seeded Marta row (`src/db/seed-inbox.ts`) is the shape this is about —
+ * `person_id` null, unanswered, an address nobody on the roster holds — so it
+ * has no record to open and no composer, and until this control it was the one
+ * row in the worklist a staffer could not finish.
+ */
+test("a staffer deletes the message from a sender nobody on the roster holds", async ({ page }) => {
+  // The control confirms first, and Playwright dismisses a native dialog by
+  // default — so the handler goes on before the click, not after it.
+  page.on("dialog", (dialog) => dialog.accept());
+
+  await page.goto("/shop/blue-mantis/inbox");
+  await expect(page.getByText("marta.keller@example.net")).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Delete the message from marta.keller@example.net" })
+    .click();
+
+  // The action's own `?notice=` redirect is the wait: the click returns when
+  // the request is sent, not when the write has landed.
+  await page.waitForURL(/notice=deleted/);
+  await expect(page.getByText("Message deleted.")).toBeVisible();
+  await expect(page.getByText("marta.keller@example.net")).toHaveCount(0);
+});

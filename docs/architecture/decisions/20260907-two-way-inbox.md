@@ -104,6 +104,29 @@ URL the app then acts on without checking it against what the stack provisioned.
    `unanswered_messages` row widened with it, because a role that may answer a waiting diver has to
    be told one is waiting.
 
+   **Amended 2026-09-10: a stranger's row can be deleted** (issue #1506). The paragraph above gives
+   every live staff role a composer; it gives them one only on the diver's record, and a row whose
+   `person_id` is null has no record, so it had no door and no composer. A message from an address
+   nobody on the roster holds could therefore be read and never finished — and it went on counting
+   against Today's `unanswered_messages` for as long as it existed, with nothing on any surface able
+   to clear it. The inbox row gains a Delete, and only that row does: a row with a record already
+   has both doors and is finished by answering it. The answer is delete rather than seat-and-answer
+   because a roster row is never minted from an unauthenticated sender's address: seating a diver
+   stays the staff-driven consequence path in `src/db/seat-diver.ts`, and decision 9's one-composer
+   rule stands unbent. Mechanically it is one write: `deleteStrangerInboundMessage` stamps
+   `deleted_at`, and `liveMessage` is inside both `pagedInboxMessages` and
+   `countUnansweredMessages`, so the row leaves the worklist and the Today row clears together.
+   **"And only that row does" is a `where` clause, not a render guard**: `person_id is null` sits in
+   the delete's own query beside the shop scope, because the action takes a posted id and every
+   diver record prints one into the reply composer's hidden input — a diver's own message must not
+   be destroyable by copy-paste, least of all their newest one, which is what holds the shop's
+   24-hour window to answer them open. The gate is the surface's own — a live
+   staff session, no predicate — for the reason the amendment above gives: a staffer who may read
+   the stranger's message and its address is the staffer who may clear it. The delete is soft (ADR
+   20260820-every-delete-is-soft), the retention window and erasure sweep still reach the row, and
+   no surface offers a restore, which is why the control confirms before it writes rather than
+   handing back an undo.
+
 ## Alternatives considered
 
 - **Keep `Reply-To` on the front desk and forward a copy into the app** — rejected: two inboxes

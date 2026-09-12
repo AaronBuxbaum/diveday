@@ -2060,16 +2060,19 @@ new domain concept, define it here in the same PR.
   back in a while"), written once in `trip_lenses` and hung on a departure by `trips.lens_id`. It
   is **shop prose**, like a site briefing and unlike the conservation codes or the marine-life
   catalog: DiveDay never translates it, and the whole value is that the schedule sounds like the
-  shop rather than like every other shop. A diver filters the public schedule by one
-  (`?lens=<slug>`, whose slug is derived on create and never rewritten, so a shared link survives
-  a rename).
+  shop rather than like every other shop. Shop prose is a decision rather than a default: the owner
+  chose it on 2026-09-10 (issue #1392) over the fixed DiveDay taxonomy issue #1162's triage
+  recommended, and the untranslated rail is the accepted cost. A diver filters the public schedule
+  by one (`?lens=<slug>`, whose slug is derived on create and never rewritten, so a shared link
+  survives a rename).
   **It is never a safety label and never an eligibility signal.** Nothing in
   `src/lib/trip-admission.ts` or `src/lib/readiness.ts` reads it, and it is deliberately kept
   structurally separate from the requirement markers it sits beside on a schedule row: "First time
   back in a while" next to a certification marker, in the same tint or weight, would read as a rule
   about who may board rather than as the shop describing its own morning (the trap issue #1162's
-  triage names). One lens per departure; none is the ordinary case and renders nothing at all
-  (ADR
+  triage names). One lens per departure — settled on 2026-09-10 (issue #1393), not a first cut, and
+  the canvas's two-word row is a deviation that stays; none is the ordinary case and renders
+  nothing at all (ADR
   [20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md),
   decision 2).
 - **Season event** — a week the shop plans its year around, written in the shop's own words:

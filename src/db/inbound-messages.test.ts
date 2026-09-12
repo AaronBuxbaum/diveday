@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import {
   countUnansweredMessages,
-  deleteInboundMessage,
+  deleteStrangerInboundMessage,
   getInboundMessage,
   lastInboundAt,
   markInboundAnswered,
@@ -275,14 +275,34 @@ describe("the unanswered count and the inbox", () => {
     const unknown = page.rows.find((row) => row.message.personId === null);
     expect(unknown?.personName).toBeNull();
 
-    const victim = page.rows[0]?.message;
-    if (!victim) throw new Error("no rows");
-    expect(await deleteInboundMessage(db, shop.id, victim.id, NOW)).toBe(true);
+    // The stranger's row is the only deletable one, so it is the victim here.
+    const victim = unknown?.message;
+    if (!victim) throw new Error("no unknown-sender row");
+    expect(await deleteStrangerInboundMessage(db, shop.id, victim.id, NOW)).toBe(true);
     const after = await pagedInboxMessages(db, shop.id, { page: 1 });
     expect(after.total).toBe(page.total - 1);
     expect(after.rows.some((row) => row.message.id === victim.id)).toBe(false);
     // Gone from the shop's count too, and a second delete finds nothing.
-    expect(await deleteInboundMessage(db, shop.id, victim.id, NOW)).toBe(false);
+    expect(await deleteStrangerInboundMessage(db, shop.id, victim.id, NOW)).toBe(false);
+  });
+
+  it("refuses a row with a diver behind it, whoever asks", async () => {
+    // The `where` carries `person_id is null`, so this is refused by the query
+    // rather than by the component that declines to draw the button. A
+    // diver-linked id is one copy-paste from the reply composer, which prints
+    // it into a hidden input on every diver record, and deleting one would
+    // take what a diver wrote out of their conversation with no way back and
+    // close the 24-hour window the shop has to answer them.
+    const { db, shop } = await seededShopContext();
+    const page = await pagedInboxMessages(db, shop.id, { page: 1 });
+    const linked = page.rows.find((row) => row.message.personId !== null)?.message;
+    if (!linked) throw new Error("seeded shop has no diver-linked message");
+
+    expect(await deleteStrangerInboundMessage(db, shop.id, linked.id, NOW)).toBe(false);
+
+    const after = await pagedInboxMessages(db, shop.id, { page: 1 });
+    expect(after.rows.some((row) => row.message.id === linked.id)).toBe(true);
+    expect(await personThread(db, shop.id, linked.personId ?? "")).not.toEqual([]);
   });
 
   it("refuses to answer or delete another shop's message", async () => {
@@ -292,7 +312,9 @@ describe("the unanswered count and the inbox", () => {
     if (!target) throw new Error("no rows");
     const otherShopId = "00000000-0000-4000-8000-000000000000";
     expect(await markInboundAnswered(db, otherShopId, target.id, NOW)).toBe(false);
-    expect(await deleteInboundMessage(db, otherShopId, target.id, NOW)).toBe(false);
+    const stranger = page.rows.find((row) => row.message.personId === null)?.message;
+    if (!stranger) throw new Error("seeded shop has no unknown-sender row");
+    expect(await deleteStrangerInboundMessage(db, otherShopId, stranger.id, NOW)).toBe(false);
     expect(await personThread(db, otherShopId, target.personId ?? "")).toEqual([]);
   });
 

@@ -19,6 +19,12 @@
   },
   "attachments": "{count, plural, one {# attachment, still with the sender} other {# attachments, still with the sender}}",
   "openRecord": "Open the record for {name}",
+  "delete": {
+    "action": "Delete",
+    "actionFor": "Delete the message from {address}",
+    "confirm": "Delete this message?",
+    "pending": "Deleting…"
+  },
   "pagination": {
     "total": "{count, plural, one {# message} other {# messages}}"
   },
@@ -51,6 +57,8 @@
     "cannotBeSent": "This reply cannot be sent as it stands. Nothing went out, and trying again will not change that.",
     "whatsappWindowClosed": "WhatsApp takes a typed reply for 24 hours after a diver’s last message. Theirs is older than that.",
     "whatsappNotConnected": "Answering on WhatsApp needs the sender you connect in Settings.",
-    "notAuthorized": "Your account can’t answer divers for this shop any more. Ask an owner or manager to check your access."
+    "notAuthorized": "Your account can’t answer divers for this shop any more. Ask an owner or manager to check your access.",
+    "deleted": "Message deleted.",
+    "gone": "That message is no longer in the inbox."
   }
 }

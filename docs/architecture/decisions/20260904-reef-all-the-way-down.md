@@ -93,6 +93,25 @@ on the Budget board, each naming what renders when it is not true: nothing.
 The hand gains its eighth drawing, the boat, and the boat is the only drawing that ever moves. It
 appears on the home, the board and the storefront; never on the manifest.
 
+One question these surfaces raise is not about the budget at all — *whose words* the storefront's
+lens rail is in — and the code that renders it already cites this decision
+([`src/lib/trip-lenses.ts`](../../../src/lib/trip-lenses.ts) and the storefront both name decision
+2), so the answer is recorded here rather than in a decision of its own. **The lens is the shop's
+own word (issue #1392, answered by the owner 2026-09-10).** A lens is prose a shop writes into
+`trip_lenses` and hangs on a departure with `trips.lens_id`; it is not a DiveDay vocabulary a shop
+picks from. Issue #1162's triage recommended the opposite — a fixed `as const` taxonomy, on the
+ground that a per-shop word on a filter rail is untranslated — and that recommendation is declined
+here by name, so the next session finding it does not reopen this. A fixed list is the thing the
+whole pass exists to undo: it cannot say "technical wrecks" for one shop and "first time back in a
+while" for the next, and it makes every shop's schedule read identically. The cost is real and
+accepted rather than overlooked: on `/s/<slug>` in Spanish the chrome is Spanish and the rail's
+words are the shop's English, which is the same contract a boat's description, a trip title and a
+site's fit tone already carry. If a pilot shop says the untranslated rail matters, the answer is
+additive and needs no migration — a DiveDay-published starting set the shop copies and then owns,
+the contract [`src/db/dive-site-templates.ts`](../../../src/db/dive-site-templates.ts) and
+[`src/db/course-templates.ts`](../../../src/db/course-templates.ts) already use. Replacing the table
+with a code column would be a reversal and would need its own ADR.
+
 ### 3. Every open feature idea gets one verdict
 
 Thirty-six issues, one line each on the Verdicts board. **Eighteen drawn** onto the surfaces
