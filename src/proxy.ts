@@ -418,10 +418,10 @@ function reportRefusedQuery(shape: PublicRouteShape["kind"], code: string, now: 
 }
 
 /**
- * **A `/s/**` URL that names nothing is refused here, above the streaming
+ * **A public URL that names nothing is refused here, above the streaming
  * boundary** (ADR 20260912-the-public-namespace-refuses-at-the-edge).
  *
- * Under `cacheComponents` every page in the public namespace streams a static
+ * Under `cacheComponents` every public page streams a static
  * shell first, so the `notFound()` in its body arrives long after a 200 went
  * out on the wire: a dead booking link, a course a shop deleted, a mistyped
  * shop slug all answered 200 with a not-found page in the body, and a crawler
@@ -430,9 +430,19 @@ function reportRefusedQuery(shape: PublicRouteShape["kind"], code: string, now: 
  * rest. The only layer left is this one, and the embed catalogue above has been
  * proving it works for one route since before this one generalised it.
  *
+ * **Every dynamic public route, not one namespace.** This shipped for `/s/**`
+ * alone, and the three dynamic routes outside it went on answering 200 —
+ * `/dive/<town>`, `/switching/<incumbent>`, `/demo/<story>`, two of them
+ * surfaces DiveDay wants indexed (issue #1734). Nothing failed while they did,
+ * because a pathname `publicRouteShape` has no opinion about is passed through
+ * untouched, which is silence by construction. That is now the one thing a new
+ * route cannot do quietly: `src/app/edge-refusal-coverage.test.ts` walks the
+ * route tree and fails on a dynamic public route the shape module does not
+ * recognise.
+ *
  * **What it costs.** One indexed read on `shops.slug` for a shop-level URL or
  * an unmintable segment under one, two for a URL that names a course, a dive
- * site or a departure inside a shop —
+ * site or a departure inside a shop, one on `shops.region_slug` for a town —
  * paid on the request path by every diver on every public page, which is
  * exactly the latency ADR 20260804-instant-navigation set out to avoid. It is
  * the same read the page itself is about to do a few milliseconds later, so
@@ -440,6 +450,10 @@ function reportRefusedQuery(shape: PublicRouteShape["kind"], code: string, now: 
  * matter, the fix is a process-local cache of **positive** shop-slug results
  * with a short TTL and never a negative one — a shop created a second ago must
  * not 404 — and it should be measured before it is written.
+ *
+ * A switching guide and a demo story cost nothing at all: both are closed lists
+ * this repository holds, so `publicRouteShape` settles them and this function
+ * never opens a database for them.
  *
  * **What happens when the read fails or hangs.** A throw is not a refusal:
  * `catch` returns `null` and the request continues exactly as it does today,
@@ -468,6 +482,15 @@ async function refusedPublicRoute(
   if (req.method !== "GET" && req.method !== "HEAD") return null;
   const shape = publicRouteShape(req.nextUrl.pathname);
   if (!shape) return null;
+  // Already an answer. A segment judged against a closed list this repository
+  // holds — a switching guide, a demo story, a town whose slug no locality
+  // could have produced — needs no database, so it never opens one: `getDb()`
+  // below is a connection a crawler probing `/demo/nope` would otherwise be
+  // able to ask a cold instance for. No shop frames it either; these are
+  // DiveDay's own pages, and issue #765's rule is about a diver stranded on a
+  // storefront. `PublicRouteQuery` is what makes this branch mandatory rather
+  // than remembered — the lookup below does not accept an `absent` shape.
+  if (shape.kind === "absent") return { liveShopSlug: null };
   try {
     const db = await getDb();
     const { exists, shopExists } = await publicRouteLookup(db, shape);
@@ -481,7 +504,10 @@ async function refusedPublicRoute(
     // reason: a well-formed shop with a segment no shop could have minted is
     // exactly the case that should still be framed as that shop's. A refused
     // `shop` shape *is* the missing shop, and `shopExists` is false there
-    // without a branch here saying so.
+    // without a branch here saying so. A town is the one refused shape with no
+    // shop over it at all — the lookup already answers `shopExists: false`, and
+    // this says it in the one way the compiler can check.
+    if (shape.kind === "region") return { liveShopSlug: null };
     return { liveShopSlug: shopExists ? shape.shopSlug : null };
   } catch (error) {
     // Two kinds of failure land here and only one of them is the caller's

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import type { PublicRouteShape } from "@/lib/public-route-shape";
+import type { PublicRouteQuery } from "@/lib/public-route-shape";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { publicRouteLookup } from "./public-route-existence";
@@ -14,7 +14,7 @@ const ctx = fileScopedShopContext();
 const HOUR_MS = 60 * 60 * 1000;
 
 /** The half of the answer most of these tests are about. */
-async function routeExists(db: AppDb, shape: PublicRouteShape): Promise<boolean> {
+async function routeExists(db: AppDb, shape: PublicRouteQuery): Promise<boolean> {
   return (await publicRouteLookup(db, shape)).exists;
 }
 
@@ -25,6 +25,11 @@ async function routeExists(db: AppDb, shape: PublicRouteShape): Promise<boolean>
  * is the number of round trips a shape costs — which is the thing the return
  * shape exists to hold down. The proxy used to ask a refused route about its
  * shop a second time, and nothing failed when it did.
+ *
+ * The one shape where the count is not the round-trip count is `region`:
+ * `listedShopScope` composes an `exists(...)` subquery, which is a second
+ * `db.select()` that never leaves on its own. That test says so where it
+ * asserts.
  */
 function countingDb(db: AppDb): { db: AppDb; reads: () => number } {
   let reads = 0;
@@ -221,6 +226,30 @@ describe("publicRouteLookup", () => {
         routeExists(ctx.db, { kind: "trip", shopSlug: ctx.shop.slug, tripId }),
       ).resolves.toBe(true);
     }
+  });
+
+  /**
+   * The one shape with no shop over it (issue #1734). `shopExists: false` is
+   * not "the shop is gone" here, it is "there was never a shop in the URL" —
+   * the proxy reads it as "frame this as DiveDay's own refusal", which is what
+   * `/dive/<town>` is.
+   */
+  it("answers a town on one read, and names no shop to frame it as", async () => {
+    const counting = countingDb(ctx.db);
+    await expect(
+      publicRouteLookup(counting.db, { kind: "region", regionSlug: "key-largo" }),
+    ).resolves.toEqual({ exists: true, shopExists: false });
+    // Two `db.select()` calls, one statement: `listedShopScope` composes an
+    // `exists(...)` subquery that never leaves on its own, and reading the
+    // scope through the page's own fragment rather than hand-writing the join
+    // is the invariant. What matters is what is absent — the `shops.slug`
+    // probe every other shape opens with, which asks whose refusal a diver is
+    // about to read, and a town has no answer to that.
+    expect(counting.reads()).toBe(2);
+
+    await expect(
+      publicRouteLookup(ctx.db, { kind: "region", regionSlug: "not-a-town" }),
+    ).resolves.toEqual({ exists: false, shopExists: false });
   });
 
   it("refuses a departure the shop took off the board", async () => {

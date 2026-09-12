@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { listRegionShops, listRegions } from "./regions";
+import { listRegionShops, listRegions, regionIsListed } from "./regions";
 import { shops } from "./schema";
 import { REGION_NEIGHBOUR_SLUGS } from "./seed-region-neighbours";
 import { setShopAddress, setShopSearchListing } from "./shops";
@@ -102,5 +102,52 @@ describe("listRegionShops (in-memory PGlite)", () => {
 
   it("is empty for a region nobody is in", async () => {
     expect(await listRegionShops(ctx.db, "atlantis")).toEqual([]);
+  });
+});
+
+/**
+ * The edge refusal's half of the same question (issue #1734). Every assertion
+ * here is paired with one above on purpose: the moment this reader and
+ * `listRegionShops` disagree, `/dive/<town>` either 404s a page that renders or
+ * answers 200 for a town nobody dives out of.
+ */
+describe("regionIsListed (in-memory PGlite)", () => {
+  it("finds the seeded town and refuses one no listed shop is in", async () => {
+    await expect(regionIsListed(ctx.db, "key-largo")).resolves.toBe(true);
+    // The issue's own probe, and the case a shape-only edge refusal would have
+    // passed: `not-a-town` is a slug this app could have minted.
+    await expect(regionIsListed(ctx.db, "not-a-town")).resolves.toBe(false);
+    await expect(regionIsListed(ctx.db, "atlantis")).resolves.toBe(false);
+  });
+
+  it("agrees with the page on every shop the scope leaves out", async () => {
+    await shopIn("Marathon", { slug: "marathon-edge-quiet", departure: false });
+    await shopIn("Tavernier", { slug: "tavernier-edge-shy", listed: false });
+    await shopIn("Big Pine Key", { slug: "big-pine-edge-demo", isDemo: true });
+    for (const slug of ["marathon", "tavernier", "big-pine-key"]) {
+      await expect(regionIsListed(ctx.db, slug), slug).resolves.toBe(false);
+      expect(await listRegionShops(ctx.db, slug), slug).toEqual([]);
+    }
+  });
+
+  it("changes its mind the moment a shop opts out of search", async () => {
+    // The failure that would cost an outage: an edge scoped even slightly wider
+    // than the page goes on serving a town the page has stopped serving, and
+    // one scoped narrower 404s a town that renders.
+    const id = await shopIn("Islamorada", { slug: "isla-edge-leaving" });
+    await expect(regionIsListed(ctx.db, "islamorada")).resolves.toBe(true);
+    await setShopSearchListing(ctx.db, id, false);
+    await expect(regionIsListed(ctx.db, "islamorada")).resolves.toBe(false);
+  });
+
+  it("refuses a town whose only shops have no locality to name it by", async () => {
+    // `regionName` drops a shop with no locality and the page 404s when none of
+    // them names one, because the heading is that name and never the slug. A
+    // reader that stopped at the region slug would 404 nothing and the page
+    // would refuse anyway — a soft 404 straight back.
+    const id = await shopIn("Marathon", { slug: "marathon-edge-nameless" });
+    await expect(regionIsListed(ctx.db, "marathon")).resolves.toBe(true);
+    await ctx.db.update(shops).set({ addressLocality: "" }).where(eq(shops.id, id));
+    await expect(regionIsListed(ctx.db, "marathon")).resolves.toBe(false);
   });
 });
