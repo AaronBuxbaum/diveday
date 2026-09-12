@@ -29,12 +29,7 @@ import {
   diverSearchPrefill,
 } from "@/lib/person-fields";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
-import {
-  type NoticeTone,
-  noticeFromParam,
-  safeShopReturnPath,
-  shopPath,
-} from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 
 export const instant = true;
 
@@ -76,7 +71,6 @@ export default async function NewDiverPage({
     surface?: string;
     tripId?: string;
     waitlist?: string;
-    returnTo?: string;
     request?: string;
     confirmName?: string;
     confirmEmail?: string;
@@ -93,7 +87,6 @@ export default async function NewDiverPage({
     surface: surfaceParam,
     tripId: tripIdParam,
     waitlist: waitlistParam,
-    returnTo: returnToParam,
     request: requestParam,
     confirmName,
     confirmEmail,
@@ -128,15 +121,8 @@ export default async function NewDiverPage({
       : null;
   const isWaitlist = waitlistParam === "true";
   const tripId = tripIdParam?.trim() || null;
-  // `?returnTo=` is whatever was in the address bar, and it becomes the back
-  // link's href here and the redirect target in `createDiverFormAction` below.
-  // Only a path inside this staffer's own shop survives; anything else falls
-  // back to the roster, which is where the page lands with no `returnTo` at all.
-  const returnTo = safeShopReturnPath(shop.slug, returnToParam);
-
-  const backLink = returnTo
-    ? { href: returnTo, label: t("divers.page.backToRoster") }
-    : surface === "trip-guests" && tripId
+  const backLink =
+    surface === "trip-guests" && tripId
       ? {
           href: `${shopPath(shopSlug, "trips", tripId)}#add-diver`,
           label: t("divers.page.backToTripGuests"),
@@ -175,15 +161,6 @@ export default async function NewDiverPage({
     const activeSurface = formData.get("surface") as SeatSurfaceId | null;
     const activeTripId = formData.get("tripId") ? String(formData.get("tripId")) : null;
     const activeWaitlist = formData.get("waitlist") === "true";
-    // Re-validated against the *session's* shop, not the page's: the hidden
-    // input is as client-supplied as the query param was, and this value is
-    // handed to `revalidateAndRedirect` as both the revalidate key and the
-    // redirect target.
-    const returnToField = formData.get("returnTo");
-    const activeReturnTo = safeShopReturnPath(
-      staff.user.shopSlug,
-      typeof returnToField === "string" ? returnToField : null,
-    );
     const force = formData.get("force") === "true";
 
     const buildNewDiverUrl = (extraParams: Record<string, string>) => {
@@ -196,7 +173,6 @@ export default async function NewDiverPage({
       if (activeSurface) search.surface = activeSurface;
       if (activeTripId) search.tripId = activeTripId;
       if (activeWaitlist) search.waitlist = "true";
-      if (activeReturnTo) search.returnTo = activeReturnTo;
       redirect(buildNewDiverUrl(search));
     }
 
@@ -211,7 +187,6 @@ export default async function NewDiverPage({
         if (activeSurface) search.surface = activeSurface;
         if (activeTripId) search.tripId = activeTripId;
         if (activeWaitlist) search.waitlist = "true";
-        if (activeReturnTo) search.returnTo = activeReturnTo;
         redirect(buildNewDiverUrl(search));
       }
     }
@@ -229,21 +204,6 @@ export default async function NewDiverPage({
         activeSurface === "new-booking")
     ) {
       await seatNewDiverAction(activeSurface, staff.user.shopSlug, formData);
-    } else if (activeReturnTo) {
-      const diver = await createDiver(activeDb, {
-        shopId: staff.user.shopId,
-        fullName: parsed.data.fullName,
-        email: parsed.data.email,
-        phone: parsed.data.phone,
-      });
-      if (!diver) {
-        redirect(buildNewDiverUrl({ notice: "duplicate", returnTo: activeReturnTo }));
-      }
-      const separator = activeReturnTo.includes("?") ? "&" : "?";
-      revalidateAndRedirect(
-        activeReturnTo,
-        `${activeReturnTo}${separator}personId=${encodeURIComponent(diver.id)}`,
-      );
     } else {
       const diver = await createDiver(activeDb, {
         shopId: staff.user.shopId,
@@ -361,7 +321,6 @@ export default async function NewDiverPage({
               <input type="hidden" name="surface" value={surfaceParam ?? ""} />
               <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
               <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
-              <input type="hidden" name="returnTo" value={returnTo ?? ""} />
               <input type="hidden" name="request" value={requestParam ?? ""} />
               <input type="hidden" name="force" value="true" />
               <SubmitButton
@@ -402,7 +361,6 @@ export default async function NewDiverPage({
           <input type="hidden" name="surface" value={surfaceParam ?? ""} />
           <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
           <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
-          <input type="hidden" name="returnTo" value={returnTo ?? ""} />
           <input type="hidden" name="request" value={requestParam ?? ""} />
           <FieldActions className="mt-6">
             <SubmitButton pendingLabel={t("divers.page.adding")} className={buttonClass()}>

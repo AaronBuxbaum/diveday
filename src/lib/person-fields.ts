@@ -88,7 +88,6 @@ export function newDiverHref(
     surface?: string;
     tripId?: string;
     waitlist?: boolean;
-    returnTo?: string;
     request?: string;
     extra?: Record<string, string | undefined>;
   },
@@ -106,7 +105,6 @@ export function newDiverHref(
   if (params?.surface) search.set("surface", params.surface);
   if (params?.tripId) search.set("tripId", params.tripId);
   if (params?.waitlist) search.set("waitlist", "true");
-  if (params?.returnTo) search.set("returnTo", params.returnTo);
   if (params?.request) search.set("request", params.request);
   if (params?.extra) {
     for (const [k, v] of Object.entries(params.extra)) {

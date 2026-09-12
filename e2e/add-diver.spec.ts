@@ -273,14 +273,22 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
 });
 
 /**
- * **An off-origin `?returnTo=`.** The create-diver page takes a return path in
- * the query, shows it as the back link, and hands it to `revalidateAndRedirect`
- * once the diver is written — so before `safeShopReturnPath` a staffer who
+ * **An off-origin `?returnTo=` is inert.** This page once took a return path
+ * from the query, showed it as the back link, and handed it to
+ * `revalidateAndRedirect` once the diver was written — so a staffer who
  * followed a crafted link was bounced to another origin the moment an
  * authenticated write succeeded, with the app's own success state behind it.
- * Refused by falling back to the roster, never by erroring at the staffer.
+ * `safeShopReturnPath` closed that, and issue #1691 then deleted the parameter
+ * outright: nothing in the app ever produced one, so the whole branch was
+ * reachable only by hand-typed URL.
+ *
+ * The test stays, and asserts the stronger property the deletion bought:
+ * the param is *ignored*. Both halves are still here — the redirect after the
+ * write, and the back link a staffer can follow before submitting — because
+ * re-introducing either without validation is the regression this guards, and
+ * a deleted test guards nothing.
  */
-test("a returnTo pointing off-origin never survives the create", async ({ page }) => {
+test("a crafted returnTo is ignored, before and after the create", async ({ page }) => {
   const crafted = "/shop/blue-mantis/divers/new?returnTo=https%3A%2F%2Fevil.invalid%2Fsteal";
   await page.goto(crafted);
   await expect(page.getByRole("heading", { level: 1, name: "Add a diver" })).toBeVisible();
@@ -291,11 +299,12 @@ test("a returnTo pointing off-origin never survives the create", async ({ page }
   await page.getByRole("button", { name: "Add diver", exact: true }).click();
 
   // The write succeeded and the staffer is still inside their own shop, on the
-  // new diver's record — the destination a request with no returnTo gets.
+  // new diver's record — which is now the only destination this form has.
   await page.waitForURL(/\/shop\/blue-mantis\/divers\/[^/?#]+\?edit=1/);
 
   // ...and the other half of the same param: the back link and Cancel, which a
-  // staffer can follow before submitting anything.
+  // staffer can follow before submitting anything. Both now come from the
+  // page's own `surface`/`tripId` fallback chain, which ends at the roster.
   await page.goto(crafted);
   for (const name of ["All divers", "Cancel"]) {
     await expect(page.getByRole("link", { name, exact: true }).first()).toHaveAttribute(
