@@ -85,6 +85,14 @@ describe("isE164", () => {
     "+",
     "",
     "ask at the desk",
+    // A leading zero after the `+` is not an E.164 country code, and the reader
+    // this predicate gates strips `00` as an international prefix -- so
+    // `+001234567` would have printed two digits shorter than the row. No
+    // writer can produce one, since `toE164` strips the `00` before storing;
+    // refusing it keeps the guard and the reader saying the same thing
+    // (security review, 2026-09-12).
+    "+001234567",
+    "+0123456789",
   ])("refuses %j", (value) => {
     expect(isE164(value)).toBe(false);
   });

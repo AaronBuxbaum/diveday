@@ -99,4 +99,52 @@ describe("ForgivingInput", () => {
     expect(screen.getByRole("textbox")).toHaveValue("$62.50");
     expect(hidden("price")).toHaveValue("62.5");
   });
+
+  /**
+   * **A box nobody touched submits the row, not a re-read of the label.**
+   *
+   * The box shows the *label* on mount, so what it submitted used to be a fresh
+   * read of that label. For a phone that read is lossy —
+   * `+1 305 555 0142 x21` comes back `+1 305 555 014 221`, which is why
+   * `displayStoredPhone` may not go through `readTypedPhone` at all.
+   *
+   * No live save was ever wrong, and the check is worth stating rather than
+   * implying: `phoneForStorage` runs the same `toE164` on write, so that row
+   * cannot exist, and across every reachable shape
+   * `stored -> readTypedPhone -> phoneForStorage` returns the same string. What
+   * this pins is that the property stops depending on those two modules
+   * agreeing. The value below is one the writer would never store, which is the
+   * point: the box must not care.
+   */
+  it("submits the stored value byte for byte when nobody edits the box", () => {
+    render(
+      <ForgivingInput
+        kind="phone"
+        name="phone"
+        locale="en-US"
+        country="US"
+        defaultValue="+1 305 555 0142 x21"
+        copy={copy}
+      />,
+    );
+    expect(hidden("phone")).toHaveValue("+1 305 555 0142 x21");
+  });
+
+  it("still canonicalises once somebody types in it", async () => {
+    const user = userEvent.setup();
+    render(
+      <ForgivingInput
+        kind="phone"
+        name="phone"
+        locale="en-US"
+        country="US"
+        defaultValue="+13055550142"
+        copy={copy}
+      />,
+    );
+    const box = screen.getByRole("textbox");
+    await user.clear(box);
+    await user.type(box, "305 555 0199");
+    expect(hidden("phone")).toHaveValue("+1 305 555 0199");
+  });
 });

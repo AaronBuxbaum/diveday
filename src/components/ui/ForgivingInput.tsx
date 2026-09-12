@@ -96,11 +96,34 @@ export function ForgivingInput({
   const [text, setText] = useState(() => settledLabel(defaultValue));
   const [raw, setRaw] = useState(text);
   const [focused, setFocused] = useState(false);
+  // **Has anybody put anything in this box.** While it is false the form
+  // submits `defaultValue` byte for byte instead of a fresh read of the label
+  // the box is showing.
+  //
+  // Be accurate about what this buys, because a security review on 2026-09-12
+  // reported it as a live corruption and it is not one. The claim was that a
+  // phone on file as `+1 305 555 0142 x21` re-reads as `+1 305 555 014 221`
+  // and saves as `+1305555014221`, so opening "Edit details" for a date of
+  // birth swallows the extension. The read is real — `displayStoredPhone`'s
+  // docblock cites it — but that row cannot exist: `phoneForStorage` runs the
+  // same `toE164` on write, so the column would have held `+1305555014221`
+  // from the first save. Every reachable shape was checked, stored-as-typed
+  // ones included: `stored -> readTypedPhone -> phoneForStorage` returns the
+  // same string, and where `readTypedPhone` reads nothing the box already
+  // submitted the stored text unchanged.
+  //
+  // So this is defence in depth, and what it changes is *why* the property
+  // holds. "Opening a form and saving rewrites nothing you did not touch" was
+  // a coincidence of two modules agreeing about every value in range; it is
+  // now structural, and a field nobody touched sends what a native control
+  // would have sent. `ForgivingInput.test.tsx` states the invariant.
+  const [touched, setTouched] = useState(false);
   const readingId = useId();
   const reading = read(text);
-  // What the form submits: the reading when there is one, else the text as
-  // typed, so an unreadable entry reaches the server's own refusal.
-  const canonical = reading?.canonical ?? text;
+  // What the form submits: what is already on file until somebody edits, then
+  // the reading when there is one, else the text as typed, so an unreadable
+  // entry reaches the server's own refusal.
+  const canonical = touched ? (reading?.canonical ?? text) : defaultValue;
   const showReading = focused && reading !== null && reading.label !== text;
 
   return (
@@ -121,6 +144,7 @@ export function ForgivingInput({
         }
         onChange={(event) => {
           const next = event.currentTarget.value;
+          setTouched(true);
           // A value that arrives while nobody is in the box — a draft picked
           // up, the weekday's pattern — was not typed, so it settles at once
           // rather than sitting as "07:00" until a blur that never comes.

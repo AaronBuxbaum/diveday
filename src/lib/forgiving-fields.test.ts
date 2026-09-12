@@ -205,14 +205,12 @@ describe("the never-list", () => {
     "medicalAnswer3",
     "questionnaireQ1",
     "emergencyContactName",
+    "emergencyContactPhone",
   ])("refuses %s", (name) => {
     expect(isNeverForgivingFieldName(name)).toBe(true);
   });
 
-  it.each(["phone", "fullName", "startTime", "priceDollars", "emergencyContactPhone"])(
-    "allows %s",
-    (name) => {
-      expect(isNeverForgivingFieldName(name)).toBe(false);
-    },
-  );
+  it.each(["phone", "fullName", "startTime", "priceDollars"])("allows %s", (name) => {
+    expect(isNeverForgivingFieldName(name)).toBe(false);
+  });
 });

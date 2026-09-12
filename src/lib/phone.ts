@@ -75,7 +75,18 @@ function inE164Range(digits: string): boolean {
  * first (`displayStoredPhone`, src/lib/forgiving-fields.ts).
  */
 export function isE164(value: string): boolean {
-  return value.startsWith("+") && /^\d+$/.test(value.slice(1)) && inE164Range(value.slice(1));
+  const digits = value.slice(1);
+  // No leading zero, which is not E.164's rule but is the one that keeps this
+  // predicate honest about its readers. `readTypedPhone` strips a leading `00`
+  // as an international prefix, so `+001234567` would have printed as
+  // `+1 234 567` -- two digits shorter than the row, in front of a staffer
+  // about to dial it, and the one shape where "this value is E.164, so
+  // reshaping it preserves the digits" was false. Unreachable through any
+  // writer, since `toE164` strips the `00` before storing, so this closes a
+  // disagreement between the guard and the reader rather than a live bug
+  // (security review, 2026-09-12).
+  if (digits.startsWith("0")) return false;
+  return value.startsWith("+") && /^\d+$/.test(digits) && inE164Range(digits);
 }
 
 /**

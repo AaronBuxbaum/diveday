@@ -50,6 +50,15 @@ export const NEVER_FORGIVING_FIELD_NAMES = [
   "maxDepth",
   "maximumDepth",
   "emergencyContactName",
+  // The number the crew dials from the manifest when something has gone wrong.
+  // `src/db/person-phone.ts` says it plainly -- "a number rewritten on a safety
+  // document is the failure that rule exists to prevent" -- and the writer
+  // honours that, storing it trimmed and unnormalized. Until a security review
+  // on 2026-09-12 the policy held only by accident: every one of the six call
+  // sites happens to use a plain `<input type="tel">`, and nothing would have
+  // refused a `kind="phone"` here. Its sibling name was on this list and it was
+  // not.
+  "emergencyContactPhone",
 ] as const;
 
 const NEVER_FORGIVING_PREFIXES = ["medical", "questionnaire"] as const;
