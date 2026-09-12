@@ -1672,10 +1672,21 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   //   1. **By address.** Both callers of `startBookingCheckout` pass a
   //      `people.email`, so a stored address equal to this diver's is theirs,
   //      whoever the checkout covers — including a party they paid for but
-  //      hold no seat on, which the booking join cannot see at all. Nulled
-  //      unconditionally. Co-travellers on that party lose the hosted link and
-  //      the recovery nudge; staff can quote them a fresh checkout. That is a
-  //      cost of erasure, not a reason to leave the address standing.
+  //      hold no seat on, which the booking join cannot see at all. Address
+  //      and hosted page both nulled, unconditionally: the page is the same
+  //      Stripe object rendering the same customer, on the same reasoning
+  //      that nulls `orders.hosted_invoice_url` (issue #1607), so a copy of
+  //      that URL is a durable pointer at the address this statement just
+  //      destroyed. Nulling only the address here left exactly one row
+  //      standing — the party checkout, the one the join cannot reach by any
+  //      other handle — and `startBookingCheckout` hands an unexpired
+  //      `pending` row's `checkout_url` to whoever starts checkout on those
+  //      same bookings next, so a co-traveller could be handed the page
+  //      minted with the erased diver's address (issue #1722). Co-travellers
+  //      on that party lose the hosted link and the recovery nudge; the reuse
+  //      branch sees a null URL, falls through and mints them a fresh
+  //      session, and staff can quote one too. That is a cost of erasure, not
+  //      a reason to leave the address standing.
   //
   //   2. **By booking, but only when the checkout covers nothing but this
   //      diver's own seats.** This reaches an address that is theirs yet no
@@ -1697,7 +1708,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   if (ctx.email) {
     const byAddress = await tx
       .update(bookingCheckouts)
-      .set({ customerEmail: null })
+      .set({ customerEmail: null, checkoutUrl: null })
       .where(
         and(
           eq(bookingCheckouts.shopId, shopId),
@@ -1770,7 +1781,9 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
           .update(bookingCheckouts)
           // The hosted page goes with the address: it is the same Stripe object
           // rendering the same customer, on the same reasoning that nulls
-          // `orders.hosted_invoice_url` (issue #1607).
+          // `orders.hosted_invoice_url` (issue #1607). Not redundant with the
+          // sweep above now that it nulls the URL too — the row this one exists
+          // for is the changed-address one, which that sweep never matched.
           .set({ customerEmail: null, checkoutUrl: null })
           .where(
             and(eq(bookingCheckouts.shopId, shopId), inArray(bookingCheckouts.id, soleOccupant)),

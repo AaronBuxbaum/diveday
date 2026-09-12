@@ -1470,6 +1470,73 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
     ]);
   });
 
+  it("clears the hosted page on a party checkout this diver paid for but holds no seat on", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    const [payer] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Paying Pilar", email: "pilar@example.com" })
+      .returning({ id: people.id });
+    const [traveller] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Travelling Theo", email: "theo@example.com" })
+      .returning({ id: people.id });
+    if (!payer || !traveller) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: payer.id, role: "diver" });
+    const tripId = await seededTripId(db, shop.id);
+    const [theirSeat] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId, personId: traveller.id })
+      .returning({ id: bookings.id });
+    if (!theirSeat) throw new Error("fixture insert failed");
+    // Her address, nobody's seat but Theo's. The sole-occupant sweep cannot see
+    // this row — the booking join reaches nothing of hers — so the address
+    // sweep is the only statement that touches it, and while it nulled only
+    // `customer_email` the hosted page minted for her stayed live and
+    // reusable: `startBookingCheckout` hands an unexpired `pending` row's
+    // `checkout_url` to whoever starts checkout on Theo's seat next (issue
+    // #1722).
+    const [checkout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId,
+        stripeAccountId: "acct_test",
+        stripeSessionId: "cs_pilar_party",
+        stripeCustomerId: "cus_pilar_party",
+        currency: "usd",
+        amountPerDiverCents: 12000,
+        totalCents: 12000,
+        customerEmail: "pilar@example.com",
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_pilar_party",
+      })
+      .returning({ id: bookingCheckouts.id });
+    if (!checkout) throw new Error("fixture insert failed");
+    await db
+      .insert(bookingCheckoutBookings)
+      .values({ shopId: shop.id, checkoutId: checkout.id, bookingId: theirSeat.id });
+
+    await anonymizeDiver(
+      db,
+      { shopId: shop.id, personId: payer.id, actorPersonId: owner.id },
+      { customerProvider: providerReturning({ status: "deleted" }) },
+    );
+
+    const [erased] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkout.id));
+    expect(erased?.customerEmail).toBeNull();
+    expect(erased?.checkoutUrl).toBeNull();
+    // The bystander keeps everything of his own: his record, his seat, and the
+    // row itself, which is the shop's evidence that money was asked for. What
+    // he loses is the link, which is the cost the sweep's comment promises.
+    expect(erased?.status).toBe("pending");
+    const [bystander] = await db.select().from(people).where(eq(people.id, traveller.id));
+    expect(bystander?.email).toBe("theo@example.com");
+    expect(bystander?.anonymizedAt).toBeNull();
+  });
+
   it("folds one customer object reached twice into a single obligation", async () => {
     const { db, shop, owner } = await erasureFixtures();
     await upsertShopStripeAccount(db, shop.id, "acct_test");

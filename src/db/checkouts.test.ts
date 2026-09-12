@@ -500,6 +500,39 @@ describe("startBookingCheckout", () => {
     expect(second.checkout.id).toBe(first.checkout.id);
   });
 
+  it("mints a fresh session when the hosted page was erased off the pending row", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const provider = fakeCheckout();
+    const first = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    if (!first.ok) throw new Error("first checkout failed");
+    // What an erasure leaves behind: the row stays `pending` and unexpired, and
+    // covers exactly this party, but its hosted page is gone because it was
+    // minted with an address a diver asked to have destroyed
+    // (`anonymizeDiver`, src/db/anonymize.ts, issue #1722). Reuse must not
+    // resurrect it — there is nothing to hand back — and must not refuse the
+    // party either.
+    await db
+      .update(bookingCheckouts)
+      .set({ checkoutUrl: null })
+      .where(eq(bookingCheckouts.id, first.checkout.id));
+
+    const second = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect(second.reused).toBe(false);
+    expect(second.checkout.id).not.toBe(first.checkout.id);
+    expect(second.checkout.checkoutUrl).toContain("checkout.stripe.com");
+  });
+
   it("mints a fresh session when the party composition changed", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
     const provider = fakeCheckout();
