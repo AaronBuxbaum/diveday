@@ -398,11 +398,7 @@ export async function deleteStrangerInboundMessage(
     .update(inboundMessages)
     .set({ deletedAt: now })
     .where(
-      and(
-        liveMessage(shopId),
-        isNull(inboundMessages.personId),
-        eq(inboundMessages.id, messageId),
-      ),
+      and(liveMessage(shopId), isNull(inboundMessages.personId), eq(inboundMessages.id, messageId)),
     )
     .returning({ id: inboundMessages.id });
   return updated.length > 0;
