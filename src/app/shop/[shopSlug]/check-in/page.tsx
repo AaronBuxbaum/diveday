@@ -823,9 +823,7 @@ export default async function CheckInPage({
                         {diver.fullName}
                       </Link>
                       <p className="text-sm text-muted">
-                        {[diver.email, displayStoredPhone(diver.phone, shop.addressCountry)]
-                          .filter(Boolean)
-                          .join(" · ")}
+                        {[diver.email, displayStoredPhone(diver.phone)].filter(Boolean).join(" · ")}
                       </p>
                     </div>
                     {openDepartures.length > 0 ? (

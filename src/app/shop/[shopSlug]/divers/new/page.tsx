@@ -19,6 +19,7 @@ import { createDiver, findSimilarDivers } from "@/db/divers";
 import { discardFormDraft, readFormDraft } from "@/db/form-drafts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -297,7 +298,7 @@ export default async function NewDiverPage({
                   )}
                   {match.email || match.phone ? (
                     <span className="text-muted text-sm ms-1">
-                      ({[match.email, match.phone].filter(Boolean).join(", ")})
+                      ({[match.email, displayStoredPhone(match.phone)].filter(Boolean).join(", ")})
                     </span>
                   ) : null}
                   {match.lastDiveDayAt ? (

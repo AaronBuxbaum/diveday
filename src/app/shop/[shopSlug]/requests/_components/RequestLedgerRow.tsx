@@ -7,6 +7,7 @@ import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import type { DateRequestMatch } from "@/lib/date-requests";
+import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { formatShortDate } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 
@@ -150,7 +151,12 @@ export function RequestLedgerRow({
                 </a>
               ) : null}
               {request.email && request.phone ? " · " : null}
-              {request.phone}
+              {/* A request's number is the diver's own typing, not a
+                  normalised `people.phone`, so this mostly hands back exactly
+                  what they wrote — it groups the one shape that would
+                  otherwise arrive here as an unbroken run, a diver who typed
+                  E.164 into the public form. */}
+              {displayStoredPhone(request.phone)}
             </p>
           ) : null}
           {request.timing ? (

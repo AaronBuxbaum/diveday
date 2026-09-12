@@ -2,7 +2,7 @@ import { type CalendarDate, calendarDateWeekday, isValidCalendarDate } from "./c
 import { formatMoneyScanned, formatTime, weekdayNames } from "./format";
 import { cachedFormatter } from "./intl-cache";
 import { currencyFractionDigits, majorToMinor, maxPriceMajor } from "./money";
-import { CALLING_CODES } from "./phone";
+import { CALLING_CODES, isE164 } from "./phone";
 
 /**
  * "Type it any way": what a field makes of what a person would say out loud.
@@ -258,25 +258,34 @@ export function readTypedPhone(
 /**
  * The stored number, grouped for a person to read off a screen.
  *
- * Since #1547 `people.phone` holds E.164, so the column is one unbroken run of
- * digits — right, and no longer shaped for the staffer who is reading it aloud
- * down a phone line while the diver stands there. The grouping already exists
- * one function up, so this is `readTypedPhone` again rather than a second set
- * of rules that can drift from the first (#1712).
+ * Since #1547 every writer of `people.phone` normalises through
+ * `phoneForStorage`, so the column holds E.164 — one unbroken run of digits,
+ * right, and no longer shaped for the staffer reading it aloud down a phone
+ * line while the diver stands at the counter. The grouping already exists one
+ * function up, so this is `readTypedPhone` again rather than a second set of
+ * rules that can drift from the first (#1712).
  *
- * A value it cannot read is returned exactly as stored. A row can still hold
- * text a writer could not resolve — an extension, a note, a number typed for a
- * shop with no country on file — and mangling that would be worse than leaving
- * it alone. The `tel:` href stays the stored value either way: `telHref` keeps
- * only digits and a leading plus, so a grouped string and an E.164 one produce
- * the same link.
+ * **Only an E.164 value is grouped; anything else reaches the screen as
+ * stored** — and the rows that are not E.164 are exactly the ones no writer
+ * could resolve: an extension, a note, a number typed where DiveDay had no
+ * calling code to put in front of it. `readTypedPhone` is a reader for text
+ * someone is *typing*, beside the field they are typing it in, where a wrong
+ * reading is visible and correctable. Turned loose on a stored value it
+ * swallowed an extension's digits into the number — `+1 305 555 0142 x21` read
+ * back as `+1 305 555 014 221` — and it re-resolved a bare national run against
+ * the shop's *current* country, which is the read-time dependency `storedPhone`
+ * (src/db/person-phone.ts) exists to take out of the meaning. A staffer dials
+ * what they see, so a number DiveDay cannot vouch for is shown untouched.
+ *
+ * The `tel:` href stays the stored value either way: `telHref` keeps only
+ * digits and a leading plus, so a grouped string and an E.164 one produce the
+ * same link.
  */
-export function displayStoredPhone(
-  stored: string | null | undefined,
-  country: string | null | undefined,
-): string {
-  if (!stored) return "";
-  return readTypedPhone(stored, country)?.label ?? stored;
+export function displayStoredPhone(stored: string | null | undefined): string {
+  const text = stored?.trim();
+  if (!text) return "";
+  if (!isE164(text)) return text;
+  return readTypedPhone(text, null)?.label ?? text;
 }
 
 function reading(value: string): TypedReading {

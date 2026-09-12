@@ -120,7 +120,7 @@ export function DiverHeader({
                   className: "hover:underline",
                 })}
               >
-                {displayStoredPhone(diver.person.phone, country)}
+                {displayStoredPhone(diver.person.phone)}
               </a>
             ) : null}
             {!diver.person.email && !diver.person.phone ? (

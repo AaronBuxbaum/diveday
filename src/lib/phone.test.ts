@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toE164 } from "./phone";
+import { isE164, toE164 } from "./phone";
 
 /**
  * `toE164` decides what a diver's number looks like in the row, and therefore
@@ -56,5 +56,36 @@ describe("toE164", () => {
     expect(toE164(undefined, "US")).toBeNull();
     expect(toE164("   ", "US")).toBeNull();
     expect(toE164("call the shop", "US")).toBeNull();
+  });
+});
+
+/**
+ * The predicate a *reader* asks before it reshapes a stored number: what
+ * `toE164` answers looks like this, and a `people.phone` that does not is text
+ * a writer could not resolve and stored as typed (`displayStoredPhone`,
+ * src/lib/forgiving-fields.ts, which shows such a row untouched).
+ */
+describe("isE164", () => {
+  it.each(["+13055550110", "+34612345678", "+442079460018", "+1234567", "+123456789012345"])(
+    "recognises %j as the stored shape",
+    (value) => {
+      expect(isE164(value)).toBe(true);
+    },
+  );
+
+  it.each([
+    // Grouped, punctuated, or bare — every shape that is not the column's own.
+    "+1 305 555 0110",
+    "+1-305-555-0110",
+    "3055550110",
+    // An extension is not part of the number, and the length bounds hold.
+    "+13055550110 x21",
+    "+123456",
+    "+1234567890123456",
+    "+",
+    "",
+    "ask at the desk",
+  ])("refuses %j", (value) => {
+    expect(isE164(value)).toBe(false);
   });
 });

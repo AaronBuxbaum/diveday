@@ -9,6 +9,7 @@ import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { rentalFitLine } from "@/lib/dive-prep";
+import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { formatShortDate } from "@/lib/format";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { newDiverHref } from "@/lib/person-fields";
@@ -102,7 +103,7 @@ export function AddDiverSection({
                   </form>
                   {match.email || match.phone ? (
                     <span className="text-muted text-xs ms-1">
-                      ({[match.email, match.phone].filter(Boolean).join(", ")})
+                      ({[match.email, displayStoredPhone(match.phone)].filter(Boolean).join(", ")})
                     </span>
                   ) : null}
                   {match.lastDiveDayAt ? (

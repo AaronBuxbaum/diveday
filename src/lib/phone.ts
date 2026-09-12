@@ -64,6 +64,21 @@ function inE164Range(digits: string): boolean {
 }
 
 /**
+ * Whether this string is already the stored shape: a `+` and nothing but
+ * digits, seven to fifteen of them.
+ *
+ * What {@link toE164} answers, and therefore what `people.phone` holds for
+ * every number DiveDay could resolve. A row holding anything else holds text a
+ * writer could not resolve and stored as typed ({@link phoneForStorage}) — an
+ * extension, a note, a number typed where there was no calling code to put in
+ * front of it — which is why a reader that reshapes a stored number asks this
+ * first (`displayStoredPhone`, src/lib/forgiving-fields.ts).
+ */
+export function isE164(value: string): boolean {
+  return value.startsWith("+") && /^\d+$/.test(value.slice(1)) && inE164Range(value.slice(1));
+}
+
+/**
  * The E.164 form of a number a person typed, read against the shop's own
  * country — or null when this text cannot be resolved into one.
  *
