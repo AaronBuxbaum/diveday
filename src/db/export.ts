@@ -945,7 +945,6 @@ export async function loadShopExportBundleInput(
             // The shop's yes for its year card on DiveDay's pages, which is the
             // shop's setting and so the shop's to take with it.
             "show_year_on_diveday",
-            "conservation_commitments",
             "tagline",
             "description",
             "logo_url",
@@ -1008,7 +1007,6 @@ export async function loadShopExportBundleInput(
               shop.tideWindowPublic,
               shop.publicBoatLine,
               shop.showYearOnDiveday,
-              JSON.stringify(shop.conservationCommitments),
               shop.tagline,
               shop.description,
               shop.logoUrl,
@@ -3239,7 +3237,6 @@ export async function loadShopExportBundleInput(
             "conservation_note",
             "fit_tone",
             "fit_note",
-            "conservation_note",
             "field_guide_tips_heading",
             "marine_life",
             "marine_life_description",
@@ -3290,7 +3287,6 @@ export async function loadShopExportBundleInput(
             row.conservationNote,
             row.fitTone,
             row.fitNote,
-            row.conservationNote,
             row.fieldGuideTipsHeading,
             row.marineLife,
             row.marineLifeDescription,
