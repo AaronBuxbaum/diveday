@@ -1124,6 +1124,21 @@ describe("the evening reading", () => {
     expect(screen.queryByText(/All boats are home/)).toBeNull();
   });
 
+  it("says nobody was aboard rather than counting a boat that carried no divers back", () => {
+    // **Issue #1689's review, finding 7.** The numbers sentence is gated on
+    // who sailed, never on the roster — a one-seat boat whose only diver was
+    // marked absent printed "0 of 0 back", which reads as a head count of an
+    // empty boat somebody closed. The per-status wording is the honest answer,
+    // and it is the one sentence this key is ever asked for.
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1", booked: 1, sailed: 0 })]),
+    });
+
+    expect(screen.getByText("No divers were aboard.")).toBeInTheDocument();
+    expect(screen.queryByText("0 of 0 back")).toBeNull();
+  });
+
   it("says the plan changed on the station's own meta line, and nothing when it did not", () => {
     renderSpine({
       departures: [],

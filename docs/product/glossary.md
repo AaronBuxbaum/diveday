@@ -676,8 +676,13 @@ new domain concept, define it here in the same PR.
   from the manifest.** The roster keeps every non-cancelled booking (`getTripRoster`,
   `src/db/trips-roster.ts`), because a diver the desk wrote off is still a name the crew must
   account for at roll call; the row wears a mark of its own so it cannot read as somebody merely
-  late, and it stays in the expected head count until somebody at the boat speaks for them. **A
-  statement made at the boat outranks one made at a desk.** A diver the crew recorded aboard at any
+  late, and it stays in the expected head count until somebody at the boat speaks for them. **The
+  evening's souls count is the one place it does subtract, because that line asks a different
+  question** (issue #1689): it counts who the boat *carried*, so a seat still marked absent when the
+  day closes is taken out of it on the desk's statement alone (**sailed**). Nobody is in the water to
+  be missing there — the mark cannot co-exist with a boarding at any checkpoint, since `noShowGate`
+  refuses one and `reclaimReleasedSeat` undoes the other — and the crew's own `not_boarded` at the
+  dock is read ahead of it. **A statement made at the boat outranks one made at a desk.** A diver the crew recorded aboard at any
   **roll-call checkpoint** can never be marked absent (`already_boarded`), and when the crew get
   there second, boarding takes the released seat straight back rather than refusing a body somebody
   is looking at (`reclaimReleasedSeat`, `src/db/manifests.ts`). It is never a **dive day**, in any
@@ -1012,6 +1017,19 @@ new domain concept, define it here in the same PR.
   array rather than a widened roll-call event, and its own answer — checked, by whom, when, or
   explicitly not checked — is what the **departure log** prints.
   See [20260824-pre-departure-safety-check](../architecture/decisions/20260824-pre-departure-safety-check.md).
+- **Sailed** — how many of a departure's booked divers the boat actually **carried**, as distinct
+  from the roster it sold. One rule answers it per seat (`seatSailed`, `src/lib/closeout.ts`),
+  reading the shop's two statements about that seat strongest first: the crew's own result at the
+  `departure` **roll-call** checkpoint, where `boarded` counts and `not_boarded` ("never left the
+  dock") does not, and then — only for a seat the crew said nothing about — the desk's **no-show**
+  mark. A seat nobody has spoken for counts, because no result is an unfinished dock count rather
+  than a statement about a person, and the departure's own status is already saying so
+  (`departure_uncounted`). `not_boarded` at an *after-dive* checkpoint is the opposite fact and
+  subtracts nothing: that diver sailed, and is the one the day is still looking for. It is **not**
+  `booked`, and the two must not be collapsed — every question about seats *sold* still reads the
+  roster, because a released seat never came back to the shelf. Its reader is the evening's
+  **souls on board** line, whose crew half is the same idea: assigned crew less the ones a human
+  recorded ashore at the dock.
 - **Souls on board** — the industry's (and the coast guard's) term for how many *people* a vessel
   left with: divers plus crew, one number, no distinction between who paid and who works. It is
   printed at the top of the paper manifest and nowhere on screen, deliberately. On paper it is a
@@ -1019,9 +1037,14 @@ new domain concept, define it here in the same PR.
   live roll-call count, because a "Boarded 6" printed at 07:12 is wrong by 07:20 and paper cannot
   correct itself. The screen answers the live question, in the checkpoint panel. **One screen does
   count this way**: the shop home's evening homecoming line, which since 2026-09-05 reads "8 divers
-  and 2 crew out, 10 back" (issue #1346). It counted bookings before that, which left the crew out
+  and 2 crew out, 10 back" (issue #1346). It counted bookings until then, which left the crew out
   of both numbers on the one sentence in the product about who came home — and it says the two
   halves rather than one total, because a shop reading its own evening wants to know which is which.
+  **Both halves now count who was carried, not who was rostered** (issue #1689): the diver half is
+  **sailed** and the crew half is the assigned crew less the ones recorded ashore at the dock. A
+  count that includes a divemaster standing on the dock is the failure "left with" exists to
+  prevent, and it was reachable through an ordinary last-minute crew swap, because `changeTripCrew`
+  refuses to unassign anybody who has roll-call history.
 - **Departure log** (was "incident-ready export" until 2026-08-12) — the print-optimized document a
   shop hands to authorities or insurers after a departure, generated from close-out: the manifest roster with each person's per-checkpoint roll-call state, the
   **pre-departure checklist**'s own answer for each shop-defined item (checked, by whom, when, or

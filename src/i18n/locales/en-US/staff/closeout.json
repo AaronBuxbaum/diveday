@@ -22,7 +22,7 @@
       "notDeparted": "Not departed"
     },
     "detail": {
-      "allHome": "{booked, plural, =0 {Nobody was booked} one {# diver, head count closed} other {# divers, head count closed}}.",
+      "allHome": "No divers were aboard.",
       "stillOut": "Due back at {time}.",
       "notDeparted": "Departs at {time}.",
       "missingDiver": "{count, plural, one {# diver was marked not back aboard after dive {dive}.} other {# divers were marked not back aboard after dive {dive}.}} Find them. The count closes on the manifest.",

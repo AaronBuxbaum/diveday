@@ -1,7 +1,6 @@
 import {
   and,
   asc,
-  count,
   desc,
   eq,
   gte,
@@ -25,6 +24,7 @@ import {
   type DayCloseoutState,
   type LeftoverDecision,
   parseCloseoutSnapshot,
+  seatSailed,
   shopDayOf,
 } from "@/lib/closeout";
 import type { CrewRollCallSubject } from "@/lib/manifests";
@@ -32,6 +32,7 @@ import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
 import type { TodayAction } from "@/lib/today";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
+import { listDepartureRollCallByTrip } from "./manifests";
 import {
   bookings,
   closeoutLeftoverDecisions,
@@ -304,7 +305,8 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
   if (rows.length === 0) return [];
   const tripIds = rows.map((row) => row.id);
   const [
-    counts,
+    roster,
+    dockResults,
     photos,
     crewPhotos,
     recapDeliveries,
@@ -318,41 +320,41 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
   ] = await Promise.all([
     // **Two counts off one roster, because the evening and the shelf ask
     // different questions** (issue #1689). `booked` is the seats this
-    // departure sold — what `openSeatsDebrief` subtracts from capacity, and
-    // what the per-departure sentence calls the roster. `sailed` is the divers
-    // the day actually carried: a staffer who marks a seat `no_show` has said
-    // that person never turned up, and the homecoming line counted them out
-    // *and* home because both numbers came off the one count.
+    // departure sold — what `openSeatsDebrief` subtracts from capacity, since
+    // a released seat never came back to the shelf. `sailed` is the divers the
+    // day actually carried, and the homecoming line counted a diver left
+    // standing on the dock out *and* home because both numbers came off the
+    // one count.
     //
-    // `filter (where …)` rather than a second query, the same way
-    // `src/db/waivers.ts` takes its two populations off one scan.
-    //
-    // **Status alone, with no look at the arrival trail.** A `no_show` is one
-    // staffer's deliberate tap, always later than the check-in it overwrote,
-    // and if the crew board that diver after all the rail takes the seat back
-    // to `booked` (`reclaimReleasedSeat`, src/db/manifests.ts). So a row still
-    // standing at `no_show` tonight is the shop's own latest word on who was
-    // not aboard, and letting an earlier `arrived` row outrank it is the
-    // escape a `dive-domain-expert` review took out of the dive-day readers on
-    // 2026-09-11 (`standingArrivalStatus`, src/db/arrival-provenance.ts).
+    // The rows themselves rather than `count()` and a `filter (where …)`,
+    // because deciding whether a seat sailed takes two statements about that
+    // seat and only one of them is on this row: the rule is
+    // `seatSailed` (src/lib/closeout.ts) and the other half is the query
+    // below. One shop day of non-cancelled bookings is bounded by the day's
+    // capacity, which is the same population `listRollCallGaps` already walks
+    // per booking over a thirty-day residue window.
     db
-      .select({
-        tripId: bookings.tripId,
-        booked: count(),
-        sailed: sql<number>`count(*) filter (where ${bookings.status} <> 'no_show')::int`,
-      })
+      .select({ tripId: bookings.tripId, bookingId: bookings.id, status: bookings.status })
       .from(bookings)
       .where(
         and(
           eq(bookings.shopId, shopId),
-          inArray(
-            bookings.tripId,
-            rows.map((row) => row.id),
-          ),
+          inArray(bookings.tripId, tripIds),
           ne(bookings.status, "cancelled"),
         ),
-      )
-      .groupBy(bookings.tripId),
+      ),
+    // **The crew's own word on who got on the boat**, which outranks the desk's
+    // (`seatSailed`). Through the manifest's departure-pinned reader rather
+    // than a second scan of `roll_call_events` here: it already applies the
+    // supersession every reader of that trail applies (newest event per
+    // booking wins, a newest `cleared` drops out) and the cancelled-booking
+    // guard, and a second copy of those rules beside the head count is the
+    // drift `src/db/manifests.ts` keeps warning about.
+    //
+    // Pinned to `departure` is the whole of why this is safe: `not_boarded`
+    // there means "never left the dock", and the same word at an after-dive
+    // checkpoint means "did not come back" — a diver who sailed.
+    listDepartureRollCallByTrip(db, shopId, tripIds),
     db
       .select({
         id: recapPhotos.id,
@@ -505,8 +507,19 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     // the whole day, never one per boat.
     latestTripStagesByTrip(db, shopId, tripIds),
   ]);
-  const bookedByTrip = new Map(counts.map((row) => [row.tripId, Number(row.booked)]));
-  const sailedByTrip = new Map(counts.map((row) => [row.tripId, Number(row.sailed)]));
+  // **The roster, and the subset of it the boat carried** (issue #1689). One
+  // walk, one rule per seat, so the two numbers can never be derived by
+  // different readings of the same rows.
+  const bookedByTrip = new Map<string, number>();
+  const sailedByTrip = new Map<string, number>();
+  for (const seat of roster) {
+    bookedByTrip.set(seat.tripId, (bookedByTrip.get(seat.tripId) ?? 0) + 1);
+    const sailed = seatSailed({
+      noShow: seat.status === "no_show",
+      dockResult: dockResults.get(seat.tripId)?.get(seat.bookingId) ?? null,
+    });
+    if (sailed) sailedByTrip.set(seat.tripId, (sailedByTrip.get(seat.tripId) ?? 0) + 1);
+  }
   const photosByTrip = new Map<string, typeof photos>();
   for (const photo of photos) {
     const list = photosByTrip.get(photo.tripId) ?? [];

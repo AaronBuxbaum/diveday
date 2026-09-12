@@ -256,7 +256,7 @@ const CASES: readonly LabelMapCase[] = [
     rows: codeRows(keysOf(ROLL_CALL_GAP_KINDS), (locale, gapReason) =>
       closeoutDepartureDetailText(
         staffTranslator(locale),
-        { status: "unreconciled", gapReason, uncounted: 2, diveNumber: 1, booked: 6 },
+        { status: "unreconciled", gapReason, uncounted: 2, diveNumber: 1 },
         "4:30 PM",
       ),
     ),

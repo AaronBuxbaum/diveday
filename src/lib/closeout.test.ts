@@ -9,6 +9,7 @@ import {
   type CloseoutTripInput,
   closeoutAdminTaskStatus,
   parseCloseoutSnapshot,
+  seatSailed,
   shopDayOf,
 } from "./closeout";
 import { type CrewRollCallSubject, rollCallCompleteness } from "./manifests";
@@ -559,6 +560,37 @@ describe("shopDayOf", () => {
 });
 
 /**
+ * **The one rule that decides who the homecoming sentence counts** (issue
+ * #1689). Everything else in the evening is arithmetic over it, so this is
+ * where the adversarial cases belong: the two statements a shop can make about
+ * one seat, each way round, and the case where it has made neither.
+ */
+describe("seatSailed", () => {
+  it("follows the crew's dock tap over the desk's mark, in both directions", () => {
+    // The rail outranks the desk, which is the ranking the product already
+    // keeps everywhere else: a crew member tapping Boarded is the strongest
+    // evidence held about where a person is, and `reclaimReleasedSeat` makes
+    // the booking agree by taking it back to `booked`. A row that somehow
+    // still read `no_show` under a boarding must not drop a counted body.
+    expect(seatSailed({ noShow: true, dockResult: "boarded" })).toBe(true);
+    // And the commoner half: the crew closed the dock count by marking the two
+    // who never showed, and nobody at the desk ever did the "Not here?" tap.
+    // Booking status is still `booked`, and this is the case the first fix of
+    // #1689 counted out *and* home.
+    expect(seatSailed({ noShow: false, dockResult: "not_boarded" })).toBe(false);
+  });
+
+  it("falls back to the desk's mark only for a seat the crew never answered for", () => {
+    expect(seatSailed({ noShow: true, dockResult: null })).toBe(false);
+    // **A seat nobody spoke for counts.** This is an unfinished dock count,
+    // and `listRollCallGaps` is already raising `departure_uncounted` or
+    // `no_roll_call` over it — so the station reads `count_open` and no moment
+    // can be spent on the strength of this answer.
+    expect(seatSailed({ noShow: false, dockResult: null })).toBe(true);
+  });
+});
+
+/**
  * **The evening reading, and the one thing it must never get wrong** (ADR
  * 20260827-clearwater-surface-language, decision 4).
  *
@@ -658,13 +690,14 @@ describe("assembleEveningClose", () => {
     expect([evening.divers, evening.crew, evening.out]).toEqual([10, 0, 10]);
   });
 
-  it("withholds it from a crew recorded entirely ashore", () => {
+  it("withholds it from a crew recorded entirely ashore, and counts none of them out", () => {
     // `crew_none_aboard`: a complete set of results that together say the boat
     // sailed with nobody running it.
     // `implied` is the carried-forward dock result: they never left, so they
-    // are accounted for on land rather than missing from the water. The
-    // arithmetic therefore comes out even — and precisely because it does, the
-    // moment must not.
+    // are accounted for on land rather than missing from the water — and a
+    // body that never left is not a soul the vessel sailed with, so neither
+    // number carries them (issue #1689). The moment is withheld on the
+    // verdict, not on the arithmetic, which is what the next case is about.
     const ashore: CrewRollCallSubject[] = [
       { rollCall: { state: "not_boarded", implied: true } },
       { rollCall: { state: "not_boarded", implied: true } },
@@ -672,8 +705,38 @@ describe("assembleEveningClose", () => {
     const evening = assembleEveningClose(day({ tripId: "t1", booked: 10, crew: ashore }), now);
 
     expect(evening.stations[0]?.crewAccountedFor).toBe(false);
-    expect([evening.out, evening.back]).toEqual([12, 12]);
+    expect([evening.divers, evening.crew]).toEqual([10, 0]);
+    expect([evening.out, evening.back]).toEqual([10, 10]);
     expect(evening.allHome).toBe(false);
+  });
+
+  /**
+   * **A divemaster the crew marked ashore is not a soul the boat left with**
+   * (issue #1689, review finding 2).
+   *
+   * The dock reality is a last-minute crew change: swap a DM at 07:00, the
+   * crew mark the original ashore, and `changeTripCrew` refuses to unassign
+   * anybody who has roll-call history — so they stay assigned forever and
+   * stayed in the souls count. With one hand aboard and one ashore nothing
+   * withheld the moment either: `crewIsAccountedFor` needs only one rostered
+   * body aboard, so the evening said "10 divers and 2 crew out, 12 back" over
+   * a boat that carried eleven people.
+   */
+  it("counts only the crew who boarded, on a trip that left one of them on the dock", () => {
+    const swapped: CrewRollCallSubject[] = [
+      { rollCall: { state: "boarded" } },
+      { rollCall: { state: "not_boarded", implied: true } },
+    ];
+    const evening = assembleEveningClose(day({ tripId: "t1", booked: 10, crew: swapped }), now);
+
+    expect([evening.divers, evening.crew]).toEqual([10, 1]);
+    expect([evening.out, evening.back]).toEqual([11, 11]);
+    expect([evening.stations[0]?.crewSailed, evening.stations[0]?.crewBack]).toEqual([1, 1]);
+    // The records are complete and everybody rostered is accounted for — one
+    // aboard and home, one ashore — so the moment is correctly granted. The
+    // fix is the number, not the flag.
+    expect(evening.stations[0]?.crewAccountedFor).toBe(true);
+    expect(evening.allHome).toBe(true);
   });
 
   it("counts a crew member who did not come back as still out", () => {
