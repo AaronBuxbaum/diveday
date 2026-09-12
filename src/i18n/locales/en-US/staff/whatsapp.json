@@ -46,7 +46,7 @@
     "signup-failed-register": "Meta couldn’t activate that phone number for sending. It may already be in use with the WhatsApp app. Remove it there first, then try again.",
     "signup-failed-subscribe": "Your number connected, but DiveDay couldn’t subscribe to its delivery updates. Press Connect to try again.",
     "signup-failed-template": "Your number connected, but the message template couldn’t be submitted for approval. Press Connect to try again.",
-    "waba-already-connected": "That WhatsApp Business account is already connected to another DiveDay shop. Disconnect it there first, then press Connect again."
+    "waba-already-connected": "That WhatsApp Business account is already connected to another DiveDay shop, and one account serves one shop. Disconnecting it there frees it for this one."
   },
   "comingSoon": {
     "heading": "Coming soon",

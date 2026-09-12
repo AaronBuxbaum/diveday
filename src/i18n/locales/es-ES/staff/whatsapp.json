@@ -46,7 +46,7 @@
     "signup-failed-register": "Meta no pudo activar ese número para enviar mensajes. Puede que ya se esté usando en la app de WhatsApp; elimínalo allí primero e inténtalo de nuevo.",
     "signup-failed-subscribe": "Tu número se conectó, pero DiveDay no pudo suscribirse a sus actualizaciones de entrega. Presiona Conectar para intentarlo de nuevo.",
     "signup-failed-template": "Tu número se conectó, pero no se pudo enviar la plantilla de mensaje a revisión. Presiona Conectar para intentarlo de nuevo.",
-    "waba-already-connected": "Esa cuenta de WhatsApp Business ya está conectada a otro centro de DiveDay. Desconéctala allí primero y presiona Conectar de nuevo."
+    "waba-already-connected": "Esa cuenta de WhatsApp Business ya está conectada a otro centro de DiveDay, y una cuenta sirve a un solo centro. Desconectarla allí la libera para este."
   },
   "comingSoon": {
     "heading": "Próximamente",

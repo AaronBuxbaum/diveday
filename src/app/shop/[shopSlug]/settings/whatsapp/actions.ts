@@ -136,8 +136,22 @@ export async function completeWhatsAppSignupAction(formData: FormData): Promise<
   // is the *order*: registering a number mints a PIN, and registering one whose
   // row is then refused would leave the number bound to a PIN nobody holds,
   // which is exactly the lockout `registration_pin_sealed` exists to prevent.
+  //
+  // That order is also a cross-tenant existence oracle, written down here
+  // because it was priced rather than missed. Because the read sits above the
+  // code exchange, any shop's owner or manager can post a WABA id with ten junk
+  // characters for a `code` and tell `waba-already-connected` ("another DiveDay
+  // shop holds it") from `signup-failed-exchange` ("nobody does") without
+  // holding a Meta credential at all. A WABA id is a 15-digit opaque number, so
+  // it confirms a suspicion about a named business rather than enumerating
+  // customers, and the refusal's own words concede the same fact to anyone with
+  // a real code. Accepted for now; #1766 moves the read between step 1 and step
+  // 2 of `completeEmbeddedSignup`, which keeps the PIN property and makes the
+  // oracle cost a valid code. The check is also a check-then-act, so two
+  // simultaneous Connects can both register a number: #1769 (security review,
+  // 2026-09-12).
   const wabaHolder = await shopIdForWhatsAppWaba(db, parsed.data.wabaId);
-  if (wabaHolder && wabaHolder !== shopId) done(path, "waba_already_connected");
+  if (wabaHolder && wabaHolder !== shopId) done(path, "waba-already-connected");
 
   const shop = await getShopById(db, shopId);
   // The template is submitted in the shop's own diver-facing language, with its
