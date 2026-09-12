@@ -1,12 +1,12 @@
 import { LOGO_MARK_CIRCLES, LOGO_MARK_VIEWBOX } from "@/components/Logo";
 
 // i18n-exempt-file: link-preview card chrome rendered for crawlers with no
-// visitor locale context, the same carve-out every `opengraph-image.tsx` takes.
+// visitor locale context, the same carve-out every card takes.
 /**
  * The chrome every DiveDay link-preview card wears: the deep-ocean gradient,
  * the wordmark, and the tagline footer.
  *
- * There are four cards (`src/app/opengraph-image.tsx`, the shop schedule, one
+ * There are four cards (`src/app/link-card/route.tsx`, the shop schedule, one
  * departure, and a shared recap) and their *bodies* are genuinely their own —
  * a headline, a shop name, a trip and price, a recap line. Only the chrome
  * repeats, and repeating it by hand is what let the mark be wrong on all four

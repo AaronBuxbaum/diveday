@@ -18,16 +18,56 @@ import type { Metadata } from "next";
  *
  * So: **every page that exports an `openGraph` block spreads this first.** It
  * is deliberately only the site-level pair — a card's image is a separate
- * decision (`sharedLinkCard` in `src/lib/marketing.ts` for the marketing
- * pages; a segment's own `opengraph-image.tsx` everywhere else), and `url` is
- * per page and must stay absent on bearer-token pages, where the URL is the
- * credential.
+ * decision (`sharedLinkCardImage` below, and `sharedLinkCard` in
+ * `src/lib/marketing.ts`, which is this pair plus that image; a segment's own
+ * `opengraph-image.tsx` everywhere else), and `url` is per page and must stay
+ * absent on bearer-token pages, where the URL is the credential.
+ *
+ * **The card is not folded in here, and that is load-bearing.** Next skips a
+ * segment's own `opengraph-image` file whenever that level's `openGraph` block
+ * carries an own `images` property (`mergeStaticMetadata` in
+ * `next/dist/lib/metadata/resolve-metadata.js`). Every page that spreads this
+ * constant would therefore shadow its *own* card with the generic one — the
+ * per-shop schedule card, the departure card and the recap card all live on
+ * pages that spread it.
  */
 export const openGraphSite = {
   // i18n-exempt: brand name, rendered as-is in every locale
   siteName: "DiveDay",
   type: "website",
 } as const satisfies Metadata["openGraph"];
+
+/** The card's pixels, read by the route that draws it and the metadata that names it. */
+export const LINK_CARD_SIZE = { width: 1200, height: 630 } as const;
+
+/**
+ * **DiveDay's own link-preview card, named rather than attached by file
+ * convention.** `src/app/link-card/route.tsx` draws it.
+ *
+ * It was `src/app/opengraph-image.tsx` until issue #1709. Next attaches a
+ * metadata module to **every page entry**, so that file's
+ * `import { ImageResponse } from "next/og"` put 3.07 MiB of satori, its
+ * bundled font, `resvg.wasm` and `yoga.wasm` into the traced closure of every
+ * route in the app — `/sign-in`, a staff settings form, every page that
+ * renders no image at all. A route handler is its own closure and is attached
+ * to nothing, which is why `src/app/pwa-icon-maskable/route.tsx` is one too
+ * (ADR 20260804-og-svg-rasterizer's amendment).
+ *
+ * What naming it costs: Next's generated metadata URL carried a
+ * `?<contenthash>` that a hand-written path cannot, so a chat client holding
+ * cached bytes keeps them until its own cache turns over. Every marketing page
+ * except `/` already paid exactly that through `sharedLinkCard`; `/` now does
+ * too. Keep `alt` and the size in step with the route — they are this card's
+ * contract with every unfurl, and the route no longer exports them.
+ */
+export const sharedLinkCardImage = {
+  url: "/link-card",
+  width: LINK_CARD_SIZE.width,
+  height: LINK_CARD_SIZE.height,
+  // i18n-exempt: alt text for crawlers and chat clients, which carry no visitor locale — the same carve-out as static `metadata.title`.
+  alt: "DiveDay — dive shop software: who's booked, who's cleared, who's on the boat, one answer all day.",
+  type: "image/png",
+} as const;
 
 /**
  * The `robots` field for a shop's own public pages, from its opt-out stamp.

@@ -8,7 +8,7 @@ import { allowSvgRasterization } from "@/lib/og-rasterizer";
 import { verifyRecapToken } from "@/lib/recap-links";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
-// locale context, the same carve-out as the root `opengraph-image.tsx`.
+// locale context, the same carve-out as `src/app/link-card/route.tsx`.
 /**
  * The unfurl card for a shared recap link (task 59 — `recap-links.ts` calls
  * the link "shareable" but nothing made it shareable before this). This is a

@@ -64,7 +64,7 @@ const metadataFileNames = new Set(["opengraph-image.tsx", "twitter-image.tsx", "
  * by filename, because these carry no Next convention to key on.
  *
  * `src/app/_og/card.tsx` is the chrome (ground, wordmark, tagline footer) the
- * four `opengraph-image.tsx` cards share. It was copied into all four until
+ * four link-preview cards share. It was copied into all four until
  * FU-20260812, which is how the mark managed to be wrong on every card at once
  * and then drift again inside its own fix. Extracting it is only possible if
  * the extracted file keeps the exemption the four originals have: it is the

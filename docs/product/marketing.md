@@ -489,16 +489,24 @@ substrate:
 - **A page-level `openGraph` block replaces the root layout's — it does not merge into it.** Next
   merges `metadata` shallowly, so the moment a page exports its own `openGraph` (every marketing page
   does, because a shared link has to unfurl with *that page's* words) it loses `siteName`, `type`,
-  and the shared link card from `src/app/opengraph-image.tsx`. File-based image metadata is collected
-  per route segment, so the root card re-attaches only to pages in the root segment — `/` — and every
-  other marketing route was unfurling image-less until 2026-08-03. That is why `sharedLinkCard` in
-  `src/lib/marketing.ts` exists and why every page except `/` spreads it into its `openGraph`. The
-  failure mode is what makes this worth a rule: it is invisible from inside the app and only shows up
-  in someone else's chat window, which is precisely where these pages do their work.
+  and the shared link card. Every marketing route was unfurling image-less until 2026-08-03. That is
+  why `sharedLinkCard` in `src/lib/marketing.ts` exists and why **every** marketing page spreads it
+  into its `openGraph`. The failure mode is what makes this worth a rule: it is invisible from inside
+  the app and only shows up in someone else's chat window, which is precisely where these pages do
+  their work.
+  The card itself is `src/app/link-card/route.tsx`, named by `sharedLinkCardImage` in
+  `src/lib/site-metadata.ts`. It was `src/app/opengraph-image.tsx` until issue #1709, and while it
+  was, file-based image metadata being collected per route segment meant Next re-attached it to the
+  root segment's own page for free — so `/` was the one marketing page that did not spread
+  `sharedLinkCard`. A convention file is also attached to every page entry in its subtree, which put
+  3.07 MiB of renderer into every closure in the app; the card is a route handler now, attached to
+  nothing, and `/` names it like everybody else.
   The site-level half of that pair — `siteName` and `type` — is `openGraphSite` in
   `src/lib/site-metadata.ts`, and it reaches further than the marketing surface: **every page that
-  exports an `openGraph` block spreads it first**, including `/` (which supplies its own card by file
-  convention and so does not spread `sharedLinkCard`) and every route under `/s/`. Until 2026-08-12
+  exports an `openGraph` block spreads it first**, including `/` and every route under `/s/`. The
+  card is deliberately *not* inside it: Next skips a segment's own `opengraph-image.tsx` whenever
+  that level's block names `images`, so a card in the constant every page spreads would shadow the
+  per-shop, per-departure and recap cards. Until 2026-08-12
   the result read backwards from outside — a page with nothing to say about itself carried
   `og:site_name` by inheritance and no `og:url`, while the homepage and every shop page carried
   `og:url` and no site name at all. `e2e/seo.spec.ts` and `e2e/marketing.spec.ts` assert the pair on

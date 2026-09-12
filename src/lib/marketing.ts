@@ -1,5 +1,5 @@
 import type { DiverMessageKey } from "@/i18n/messages";
-import { openGraphSite } from "@/lib/site-metadata";
+import { openGraphSite, sharedLinkCardImage } from "@/lib/site-metadata";
 
 /**
  * Public-facing product claims, as message-bundle *keys* — never words. The
@@ -21,21 +21,21 @@ import { openGraphSite } from "@/lib/site-metadata";
  * `openGraphSite` (see `src/lib/site-metadata.ts` for why a page-level
  * `openGraph` block drops it) plus the shared link card itself.
  *
- * File-based image metadata is collected per segment, so the root card is
- * re-attached only to pages in the root segment (`/`). Every other marketing
- * route names it here instead. `/` deliberately does not spread this: its own
- * segment supplies the file, and Next's generated URL carries a cache-busting
- * id this hand-written path can't — it spreads `openGraphSite` directly.
+ * **Every marketing page spreads this, `/` included.** It used to be every
+ * page *except* `/`, because the card was `src/app/opengraph-image.tsx` and
+ * file-based image metadata is collected per segment, so Next re-attached it to
+ * the root segment's own page for free. The card is now a route handler
+ * (`src/app/link-card/route.tsx`, issue #1709) precisely so that it is attached
+ * to nothing, which means `/` has to name it like every other page — a
+ * page-level `openGraph` block replaces the root layout's rather than merging
+ * into it.
  *
  * Setting it explicitly is safe either way — if a field would have been
  * inherited, restating it changes nothing.
  */
 export const sharedLinkCard = {
   ...openGraphSite,
-  // The route Next generates for `src/app/opengraph-image.tsx`; resolved
-  // against `metadataBase` (set in `src/app/layout.tsx`). Dimensions mirror the
-  // `size` that file exports — keep the three in step.
-  images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
+  images: [sharedLinkCardImage],
 };
 
 export interface FeatureGroupKeys {

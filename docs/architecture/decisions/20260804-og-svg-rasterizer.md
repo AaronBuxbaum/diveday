@@ -107,16 +107,48 @@ Nothing about this decision changes. The PNGs are rendered by
 sharp pipeline, and that script calls `allowSvgRasterization()` first for the
 same reason a route would: it is the same libvips block, just moved to a
 developer's machine. What still rasterizes at request time is
-`src/app/pwa-icon-maskable/route.tsx`, `/s/[shopSlug]/year-card`,
-`/shop/[shopSlug]/reports/card` and the four `opengraph-image` routes, and each
-of them calls it.
+`src/app/link-card/route.tsx`, `src/app/pwa-icon-maskable/route.tsx`,
+`/s/[shopSlug]/year-card`, `/shop/[shopSlug]/reports/card` and the three
+`opengraph-image` routes, and each of them calls it.
 
 It did **not** get `next/og` out of every page entry, which is what issue #1361
 set out to do. Measured on the build that landed the PNGs: 46 of 183 closures
-still trace `@vercel/og`, unchanged, because `src/app/opengraph-image.tsx` is
+still traced `@vercel/og`, unchanged, because `src/app/opengraph-image.tsx` was
 also a metadata module and Next attaches it to every page entry exactly as it
-attached the icons. `next.config.ts`'s `outputFileTracingExcludes` therefore
-keeps its `/shop/**` key; issue #1709 carries the root card.
+attached the icons. See the next amendment for that half.
+
+## Amendment — 2026-09-12: DiveDay's own card is a route handler
+
+`src/app/opengraph-image.tsx` is now `src/app/link-card/route.tsx` (issue
+#1709). A metadata module is attached to every page entry in its segment's
+subtree, and the root segment's subtree is the whole app, so that one file put
+satori, its bundled font, `resvg.wasm` and `yoga.wasm` into the traced closure
+of every route — `/sign-in`, a staff settings form, every page that renders no
+image. A route handler is its own closure and is attached to nothing, which is
+why `pwa-icon-maskable` was already one.
+
+`allowSvgRasterization()` is still the first call on the card's render path;
+this amendment moves *who imports the renderer*, not what the renderer needs.
+The card's artwork, its 1200x630 size and its `alt` text are unchanged.
+
+What the move costs is that Next no longer generates the URL, so the metadata
+has to name it: `sharedLinkCardImage` in `src/lib/site-metadata.ts` carries the
+path, the size and the `alt` the convention file used to export, the root layout
+names it as the app-wide floor, and `/` joins every other marketing page in
+spreading `sharedLinkCard`. Two consequences worth knowing. The hand-written
+path carries no `?<contenthash>`, so a chat client holding cached bytes keeps
+them until its own cache turns over — which every marketing page except `/`
+already lived with. And the card must never be folded into `openGraphSite`:
+Next skips a segment's own `opengraph-image` file whenever that level's
+`openGraph` block names `images`, so a card in the constant every page spreads
+would shadow the per-shop, per-departure and recap cards.
+
+The three remaining `opengraph-image.tsx` cards — `/recap/[token]`,
+`/s/[shopSlug]`, `/s/[shopSlug]/trips/[id]` — stay convention files. Each
+reaches only its own subtree, which is the cost of the card that subtree
+renders. `src/app/_og/card.test.tsx` refuses a new metadata module in the root
+segment that imports `next/og`, and holds the moved card to the same shared
+chrome as the other three.
 
 The cost this buys is drift: the mark is now bytes in the repository, so a
 change to `src/app/_brand/mark.tsx` or `_brand/colors.ts` does not reach the
