@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -12,14 +13,20 @@ import {
 } from "./helpers";
 
 /**
- * The `data:` URL of the code drawn into a saved card — the QR of that
- * download's own `arrival` token, so two downloads carrying the same image
- * would be two cards carrying one credential.
+ * A **digest** of the code drawn into a saved card — the QR of that download's
+ * own `arrival` token, so two downloads digesting the same would be two cards
+ * carrying one credential.
+ *
+ * A digest rather than the `data:` URL itself, which is what this compared
+ * first. Playwright prints both sides of a failed `not.toBe` into the run's
+ * report, and both sides there are live bearer credentials: the database is
+ * per-worker and ephemeral so nothing real was ever at stake, but a credential
+ * in a CI artifact costs nothing to avoid (security review, 2026-09-12).
  */
 function codeImageIn(cardHtml: string): string {
   const match = /src="(data:image\/png[^"]+)"/.exec(cardHtml);
   if (!match?.[1]) throw new Error("saved card carries no arrival code");
-  return match[1];
+  return createHash("sha256").update(match[1]).digest("hex");
 }
 
 test.describe("the dive arrival arc", () => {

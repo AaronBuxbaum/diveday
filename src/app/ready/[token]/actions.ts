@@ -910,10 +910,21 @@ export async function emailFreshReadinessLinkAction(token: string) {
  * is the one the token resolved to and the shop is that booking's own, so the
  * write cannot reach another seat, at this shop or any other.
  *
- * **No narrower bucket than the shared one, deliberately.** Somebody holding a
- * leaked readiness URL can already release the seat outright
- * (`cancelMyBookingAction`); stopping a code that a re-download replaces is
- * strictly the smaller act, so a second budget here would guard the lesser door.
+ * **No narrower bucket than the shared one, deliberately — and the reason is
+ * the harm, not the act.** "Strictly the smaller act" was the first way this
+ * was written and it is falsifiable: `selfCancelBooking` refuses anything but
+ * `booked` and refuses once the boat `hasSailed`, while this revoke runs for the
+ * life of the readiness capability, so there are two windows where the larger
+ * act is unavailable and this one is not. Neither window buys an attacker
+ * anything — in `checked_in` the code has already been spent and a re-scan
+ * answers `alreadyArrived`, and past the kiosk's grace the tablet will not look
+ * at the departure at all — so the honest sentence is that the larger *harm* is
+ * already available to whoever holds this URL. What repeated taps do cost, that
+ * the self-cancel's own 5/hour bucket does not: a bearer can deny the arrival
+ * code indefinitely, revoking each time the diver re-downloads. Bounded, because
+ * the surname still resolves at the kiosk and the desk is the documented
+ * fallback, and nothing on a manifest or in readiness moves. Accepted; #1778
+ * carries the staff-side door that would end it (security review, 2026-09-12).
  *
  * Success only. `revokeBookingCapabilities` is an idempotent `UPDATE` with no
  * refusal to report: a second tap, or a tap on a booking holding no live rows,

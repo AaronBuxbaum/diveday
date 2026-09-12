@@ -419,9 +419,17 @@ async function hasLiveCapabilityRow(
 }
 
 /**
- * Explicit revocation: invalidates every outstanding, unexpired capability
- * for a booking (optionally scoped to one purpose) immediately, ahead of
- * their natural expiry.
+ * Explicit revocation: stamps `revoked_at` on every capability row for a
+ * booking that is not already revoked (optionally scoped to one purpose),
+ * immediately, ahead of natural expiry.
+ *
+ * **Not "unexpired", which is what this said for a slice.** There is no
+ * `expires_at > now` condition, so an already-aged-out row is stamped too. No
+ * resolver's answer changes either way — `resolveRevokedBookingCapability`
+ * requires an unexpired row, `staleBookingCapabilityForToken` relaxes both, and
+ * `staleReadinessBookingForResend` matches revoked *or* expired — so this is the
+ * docblock catching up with the predicate rather than a behaviour change
+ * (security review, 2026-09-12).
  *
  * Two callers. Unscoped, on cancellation — every purpose at once. Scoped to
  * `arrival`, from `stopArrivalCodesFromReady`
