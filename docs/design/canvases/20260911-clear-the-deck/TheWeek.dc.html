@@ -1,0 +1,279 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+/* deck:start — the Clear-the-deck kit. Pasted verbatim into every board of this canvas; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --lagoon:#0e7490; --lagoon-deep:#0a4d61; --lagoon-tint:#e6f3f5; --shop:#1d7a5f; --shop-deep:#145a46; --shop-tint:#e4f1ea; --ok:#15803d; --warn:#b45309; --danger:#b91c1c; --danger-tint:#f8e8e6; --coral:#ff6f61; --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 960px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.board-head .three p b { color: var(--ink); font-weight: 600; }
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--lagoon); }
+.k { font-size: 11px; line-height: 16px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+.frame-cap { display: flex; align-items: baseline; gap: 12px; padding: 28px 48px 10px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 960px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.aside b { color: var(--ink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--border); }
+.sec h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 980px; }
+.sec p b { font-weight: 600; }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot p b { color: var(--ink); font-weight: 600; }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot li b { color: var(--ink); font-weight: 600; }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 150px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.stat b { display: block; font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat b small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.stat span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 600; }
+.tbl td b { color: var(--ink); font-weight: 600; }
+.tbl td.ink { color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; color: var(--ink); }
+.card p.m { color: var(--muted); }
+.card .k { color: var(--lagoon); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0 48px; }
+.count { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.count .k { display: block; }
+.count b { display: block; margin-top: 4px; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.count b small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.count span { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--muted); }
+
+/* — a frame: the app drawn inside the board — */
+.frame { margin: 0 48px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.frame.desktop { width: 1084px; }
+.phone { width: 390px; min-height: 760px; border: 1px solid var(--border); border-radius: 22px; overflow: hidden; background: var(--bg); position: relative; }
+.pair { display: flex; gap: 32px; align-items: flex-start; padding: 0 48px; }
+.pair .beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.pair .beside h3 { margin: 0 0 8px 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pair .beside p { margin: 0 0 12px 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside p b { color: var(--ink); font-weight: 600; }
+.pair .beside ul { margin: 0 0 16px 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside li b { color: var(--ink); font-weight: 600; }
+
+/* — app type — */
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--lagoon); font-weight: 500; }
+.blocked { color: var(--danger); font-weight: 600; }
+.word { font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 4px; border-bottom: 1px solid var(--border); }
+.row:first-child { border-top: 1px solid var(--border); }
+.row .who { flex: 0 0 200px; font-size: 16px; font-weight: 600; color: var(--ink); }
+.row .what { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .what b { font-weight: 600; color: var(--ink); }
+.row .state { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.row .state.blocked { color: var(--danger); }
+.row .state.ok { color: var(--ok); }
+.row.add { color: var(--lagoon); font-weight: 500; font-size: 16px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px 0 8px 0; }
+.group-h .h { font-size: 20px; line-height: 26px; }
+.group-h .meta { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--shop); color: #fff; }
+.btn.quiet { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+.field { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); font-size: 16px; color: var(--muted); }
+.field b { color: var(--ink); font-weight: 500; }
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 40px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.chrome .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--shop); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.glyph { width: 20px; height: 20px; flex: 0 0 20px; }
+/* deck:end */
+
+/* the week's grid */
+.grid7 { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--border); }
+.grid7 .col { position: relative; height: 540px; border-left: 1px solid var(--border); background-image: repeating-linear-gradient(to bottom, transparent 0 29px, var(--border) 29px 30px); }
+.grid7 .col.today { background-color: #f4f8f5; }
+.grid7 .col:first-child { border-left: 0; }
+.dayh { display: flex; align-items: baseline; gap: 8px; padding: 12px 10px 8px 10px; border-left: 1px solid var(--border); font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.dayh:first-child { border-left: 0; }
+.dayh b { font-size: 22px; letter-spacing: -0.01em; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.dayh.today { color: var(--shop); box-shadow: inset 0 3px 0 var(--shop); }
+.hours { position: absolute; left: -28px; top: 0; width: 26px; height: 540px; }
+.hours span { position: absolute; right: 0; font-family: var(--mono); font-size: 10px; color: var(--border-strong); transform: translateY(-6px); }
+.blk { position: absolute; left: 4px; right: 4px; padding: 6px 8px; border-radius: 6px; background: var(--surface); border: 1px solid var(--border-strong); overflow: hidden; font-size: 12px; line-height: 16px; color: var(--muted); }
+.blk b { display: block; font-size: 13px; line-height: 17px; font-weight: 600; color: var(--ink); }
+.blk i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--shop-tint); z-index: 0; }
+.blk > span, .blk > b { position: relative; z-index: 1; display: block; }
+.blk.gone { border-color: var(--border); color: var(--border-strong); }
+.blk.gone b { color: var(--muted); }
+.blk.now { border-width: 2px; border-color: var(--shop); }
+.blk .danger { color: var(--danger); font-weight: 600; }
+.mark { position: absolute; left: 4px; right: 4px; padding: 3px 8px; border-radius: 6px; font-size: 11px; line-height: 15px; color: var(--ink); background: var(--sunken); border: 1px dashed var(--border-strong); }
+.mark.stamp { border-style: solid; border-color: var(--ok); color: var(--ok); background: transparent; font-weight: 600; }
+.strip5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-bottom: 1px solid var(--border); }
+.strip5 span { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 0 8px 0; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.strip5 span b { font-size: 20px; letter-spacing: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
+.strip5 span.on { color: var(--shop); box-shadow: inset 0 -3px 0 var(--shop); }
+.tl { position: relative; padding-left: 64px; }
+.tl .t { position: absolute; left: 0; width: 52px; text-align: right; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.tl .card { border-radius: 6px; padding: 12px 14px; gap: 4px; }
+
+  </style>
+</helmet>
+<div class="board">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow">Concept 2 · by time · one list in the product</span><span class="note">Design canvas · 2026-09-11 · Clear the deck</span></div>
+    <h1>The week</h1>
+    <p class="lede">There is one list in DiveDay: the calendar. Everything with a date — a departure, a booking, a waiver coming due, a request for a day, a blow-out, a close-out, an order, a unit due for service — is a mark on the week, and today is the column you are standing in. <b>Nothing with a date has an index page of its own.</b> The two things without a date, people and the shop's things, are one drawer.</p>
+    <div class="three">
+      <div><span class="k">The case</span><p>A dive shop already thinks in boats and weeks; the board is the page a shop opens first, and every incoming thing already has a day it belongs to. Requests appear on the day they ask for. Waivers come due the evening before the boat. Last Saturday is still there when you scroll back, logged — <b>the shop's memory and its plan are the same page.</b></p></div>
+      <div><span class="k">The honest tradeoff</span><p>Seven columns do not fit a phone, so the phone shows one day and you swipe. Work without a date — Grace's card — borrows the day of her next boat. A five-boat Saturday is a tall column. <b>Reports become the weeks behind you</b>, which is right for a day and wrong for the month's money; the month figure needs a home at the top of the past.</p></div>
+      <div><span class="k">Cost</span><p><b>5–6 sessions.</b> The grid is a new surface with hour rules and overlap. Eleven index pages are deleted with their tests, not hidden. The drawer is Three words' People and Shop as a sheet. Series become a block with a repeat mark. Composes with 5 (the drawer's Shop half) and with 4 (search over the week).</p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>Counted</b> · today at HEAD → this concept</div>
+  <div class="counts">
+    <div class="count"><span class="k">Destinations</span><b>21 <small>→ 2</small></b><span>the week, and the drawer</span></div>
+    <div class="count"><span class="k">Chrome controls on the home</span><b>20 <small>→ 5</small></b><span>previous, next, today, search, the drawer</span></div>
+    <div class="count"><span class="k">Kit</span><b>27 <small>→ 6</small></b><span>grid, block, mark, drawer, row, field</span></div>
+    <div class="count"><span class="k">Settings rows</span><b>43 <small>→ 43</small></b><span>in the drawer, unless composed with The card (5)</span></div>
+    <div class="count"><span class="k">Outside</span><b>9 + 17 <small>→ same</small></b><span>the storefront already is a week; it does not move</span></div>
+  </div>
+
+  <div class="frame-cap"><b>The shop home</b> · the week of August 24, standing in Thursday at 6:40 AM · desktop</div>
+  <div class="frame desktop">
+    <div class="chrome">
+      <div class="shop"><span class="mark">BM</span>Blue Mantis Divers</div>
+      <div style="display:flex; align-items:center; gap:14px; margin-left:24px; font-size:16px; color:#0c2a35;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid #e6dcc8; border-radius:8px; color:#54676d;"><svg class="glyph" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l-6 6 6 6"></path></svg></span>
+        <span style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid #e6dcc8; border-radius:8px; color:#54676d;"><svg class="glyph" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4l6 6-6 6"></path></svg></span>
+        <b style="font-weight:600;">August 24 – 30</b>
+        <span style="color:#54676d;">Today</span>
+      </div>
+      <div class="right"><svg class="glyph" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="M13 13l4 4"></path></svg><span style="display:inline-flex; align-items:center; gap:6px;"><svg class="glyph" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="12" rx="2"></rect><path d="M3 9h14M8 12h4"></path></svg>People &amp; things</span><span>Dana</span></div>
+    </div>
+    <div style="padding:20px 24px 24px 52px;">
+      <div style="display:grid; grid-template-columns:repeat(7, minmax(0,1fr));">
+        <div class="dayh"><b>24</b>Mon</div><div class="dayh"><b>25</b>Tue</div><div class="dayh"><b>26</b>Wed</div><div class="dayh today"><b>27</b>Thu · today</div><div class="dayh"><b>28</b>Fri</div><div class="dayh"><b>29</b>Sat</div><div class="dayh"><b>30</b>Sun</div>
+      </div>
+      <div class="grid7">
+        <div class="hours"><span style="top:0">6</span><span style="top:90px">9</span><span style="top:180px">12</span><span style="top:270px">15</span><span style="top:360px">18</span><span style="top:450px">21</span></div>
+        <div class="col">
+          <div class="blk gone" style="top:30px; height:105px;"><i style="height:100%; opacity:.4;"></i><b>7:00 Two-Tank Reef</b><span>Sailed · 11 of 12 · logged</span></div>
+          <div class="mark" style="top:250px;">Reg #4 · service due</div>
+        </div>
+        <div class="col">
+          <div class="blk gone" style="top:30px; height:105px;"><i style="height:100%; opacity:.4;"></i><b>7:00 Two-Tank Reef</b><span>Sailed · 12 of 12 · logged</span></div>
+          <div class="blk gone" style="top:210px; height:120px;"><i style="height:80%; opacity:.4;"></i><b>1:00 Afternoon Two-Tank</b><span>Sailed · 8 of 10 · logged</span></div>
+        </div>
+        <div class="col">
+          <div class="blk gone" style="top:30px; height:105px;"><i style="height:100%; opacity:.4;"></i><b>7:00 Two-Tank Reef</b><span>Sailed · 12 of 12</span></div>
+          <div class="blk gone" style="top:210px; height:120px;"><i style="height:100%; opacity:.4;"></i><b>1:00 Two-Tank — Benwood</b><span>Sailed · 11 of 12</span></div>
+          <div class="mark stamp" style="top:345px;">Logged · 23 divers · 2 boats</div>
+          <div class="mark" style="top:420px;">Waivers for Thursday · 1 not sent</div>
+        </div>
+        <div class="col today">
+          <div class="mark" style="top:2px; z-index:2;">6:02 · Priya's $95 · Stripe unconfirmed</div>
+          <div class="blk now" style="top:30px; height:105px;"><i style="height:83%;"></i><b>7:00 Two-Tank Reef · boarding</b><span>Mantis II · 10 of 12 · 6 here</span><span class="danger">2 can't board yet</span></div>
+          <div class="blk" style="top:210px; height:120px;"><i style="height:100%;"></i><b>1:00 Wreck Trip — Spiegel Grove</b><span>Mantis II · full</span><span class="danger">No crew · Tomás's card</span></div>
+          <div class="blk" style="top:405px; height:105px;"><i style="height:38%;"></i><b>7:30 Night Dive</b><span>Skiff · 3 of 8 · no deal sent</span></div>
+        </div>
+        <div class="col">
+          <div class="blk" style="top:30px; height:105px; right:50%;"><i style="height:75%;"></i><b>7:00 Two-Tank</b><span>9 of 12 · +2 draft</span></div>
+          <div class="blk" style="top:60px; height:150px; left:50%;"><i style="height:12%;"></i><b>8:00 Duane</b><span>1 of 8</span></div>
+          <div class="mark" style="top:250px;">Emmet O'Brien asks for Fri or Sat</div>
+        </div>
+        <div class="col">
+          <div class="blk" style="top:150px; height:105px;"><i style="height:100%;"></i><b>11:00 Two-Tank — French Reef</b><span>Sold out · 2 waiting</span></div>
+          <div class="blk" style="top:405px; height:105px;"><i style="height:62%;"></i><b>7:30 Night Dive</b><span>Skiff · 5 of 8</span></div>
+        </div>
+        <div class="col">
+          <div class="blk" style="top:165px; height:105px;"><i style="height:25%;"></i><b>11:30 Two-Tank — Benwood</b><span>3 of 12 · $90</span></div>
+          <div class="mark" style="top:500px; border-style:solid; color:#54676d; background:transparent;">+ a boat</div>
+        </div>
+      </div>
+      <div class="group-h" style="padding-top:26px;"><h2 class="h">Thursday, in full</h2><span class="meta">the column you are standing in</span></div>
+      <div>
+        <div class="row"><span class="who">7:00 · Two-Tank Reef</span><span class="what"><b>Grace Mensah</b> — card waits for a look · <b>Priya Sharma</b> — waiver not sent · Nadia Petrov — no emergency contact · 3 divers without sizes · Hugo and Ben not here yet</span><span class="state blocked">2 blocked</span></div>
+        <div class="row"><span class="who">1:00 · Wreck Trip</span><span class="what">Nobody assigned to the boat · <b>Tomás Ferreira</b> — no card for a deep wreck</span><span class="state blocked">2 blocked</span></div>
+        <div class="row"><span class="who">7:30 · Night Dive</span><span class="what">5 seats open, no deal sent · Jonas Berg's first dive since 2019</span><span class="state"></span></div>
+        <div class="row"><span class="who">At the desk</span><span class="what">3 messages · 1 review · Priya's $95 unconfirmed · Emmet's booking unfinished</span><span class="state"></span></div>
+      </div>
+    </div>
+  </div>
+  <p class="aside"><b>What the grid carries that no page carries today.</b> A sailed boat is still on the week, quieter, with its log stamped beneath it. A request is a dashed mark on the day it asks for. The waiver deadline sits on Wednesday evening, where the reminder actually fires. A gear unit's service date is on Monday because that is when it is due. The unconfirmed Stripe call sits at 6:02 on Thursday. The empty end of Sunday is where you add a boat — the same "last row" rule, drawn on a grid.</p>
+
+  <div class="frame-cap"><b>The same, at 390</b> · one day at a time, swiped; the week is the strip</div>
+  <div class="pair">
+    <div class="phone" style="height:860px;">
+      <div class="chrome" style="padding:0 16px; gap:12px;">
+        <div class="shop"><span class="mark">BM</span>Blue Mantis</div>
+        <div class="right" style="gap:12px;"><svg class="glyph" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="M13 13l4 4"></path></svg><svg class="glyph" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="12" rx="2"></rect><path d="M3 9h14M8 12h4"></path></svg></div>
+      </div>
+      <div class="strip5"><span><b>25</b>Tue</span><span><b>26</b>Wed</span><span class="on"><b>27</b>Thu</span><span><b>28</b>Fri</span><span><b>29</b>Sat</span></div>
+      <div style="padding:20px 16px 24px 16px; display:flex; flex-direction:column; gap:16px;">
+        <div class="tl"><span class="t" style="top:14px;">6:02</span><div class="mark" style="position:static; display:block;">Priya's $95 · Stripe unconfirmed</div></div>
+        <div class="tl"><span class="t" style="top:12px;">7:00</span><div class="card" style="border:2px solid #1d7a5f;"><b style="font-size:16px;">Two-Tank Reef · boarding</b><span class="note">Mantis II · 10 of 12 · 6 here</span><span class="blocked" style="font-size:14px;">Can't board: Grace's card · Priya's waiver</span><span class="note" style="font-size:14px;">Nadia · 3 sizes · Hugo, Ben</span></div></div>
+        <div class="tl"><span class="t" style="top:12px;">1:00</span><div class="card"><b style="font-size:16px;">Wreck Trip — Spiegel Grove</b><span class="note">Mantis II · full</span><span class="blocked" style="font-size:14px;">No crew · Tomás's card</span></div></div>
+        <div class="tl"><span class="t" style="top:12px;">7:30</span><div class="card"><b style="font-size:16px;">Night Dive — City of Washington</b><span class="note">Skiff · Keiko · 3 of 8 · no deal sent</span></div></div>
+        <div class="tl"><span class="t" style="top:12px;">desk</span><div class="card" style="border-style:dashed;"><span class="note" style="color:#0c2a35;">3 messages · 1 review · Emmet's booking unfinished</span></div></div>
+        <div class="tl"><span class="t" style="top:10px;"></span><div class="row add" style="border:0; min-height:44px;"><span>+ a boat on Thursday</span></div></div>
+      </div>
+    </div>
+    <div class="beside">
+      <h3>What folds into the week</h3>
+      <ul>
+        <li><b>Today, the board, check-in, the walk-in counter, Took a call, staffing, the blow-out, the close-out</b> — the day column, today.</li>
+        <li><b>Requests</b> — a dashed mark on the day asked for. <b>Waivers</b> — a mark the evening before. <b>Orders</b> — a mark at the minute the money moved. <b>Series</b> — a block with a repeat mark. <b>Reports</b> — the weeks behind you, with the month's figures at the top of the past.</li>
+        <li><b>Gear service, the season's events, a course's next session</b> — marks on their days.</li>
+      </ul>
+      <h3>What leaves</h3>
+      <ul>
+        <li>Eleven index pages and their headers, filters, pagers and empty states: bookings, requests, waivers, orders, reports, staffing, calls, inbox, reviews, the close-out, the series list.</li>
+        <li>The board's three header buttons; "+ Add" under every day (the empty end of a column is the add); the horizons; the desk group as a place.</li>
+      </ul>
+      <h3>What it keeps</h3>
+      <ul><li>The trip page as a block's tap; the roll call as the boat's own screen; the drawer for people, gear, sites, courses, the team and the shop's card; ⌘K over the week ("sat" lands you in Saturday).</li></ul>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div><h3>Where it stops</h3><p>The month. A calendar is the wrong shape for "how was August" — the money figure and the year strip need the top of the past weeks, or Reports survives as one page in the drawer. The phone loses the week as a picture; the strip of five days is what it gets. Undated work borrows a day and says so.</p></div>
+    <div><h3>What it needs</h3><p><b>A grid with hour rules, overlap and marks</b>, drawn once for the week and once for the day; every dated noun gets a <span class="mono">day</span> and a mark kind; the eleven index routes are removed with their tests; the drawer is a sheet over the week, and the shop's card lives in it. The storefront's week ledger and this grid read the same rows.</p></div>
+    <div><h3>Its wow</h3><p>You scroll back to last Saturday and it is still there, logged. You scroll forward and Emmet's request is already sitting on Friday, next to the boat it wants. The plan and the memory are one page, and nothing on it was typed into a form called Reports.</p></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

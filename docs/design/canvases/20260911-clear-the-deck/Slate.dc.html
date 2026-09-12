@@ -1,0 +1,297 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+/* deck:start — the Clear-the-deck kit. Pasted verbatim into every board of this canvas; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --lagoon:#0e7490; --lagoon-deep:#0a4d61; --lagoon-tint:#e6f3f5; --shop:#1d7a5f; --shop-deep:#145a46; --shop-tint:#e4f1ea; --ok:#15803d; --warn:#b45309; --danger:#b91c1c; --danger-tint:#f8e8e6; --coral:#ff6f61; --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 960px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.board-head .three p b { color: var(--ink); font-weight: 600; }
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--lagoon); }
+.k { font-size: 11px; line-height: 16px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+.frame-cap { display: flex; align-items: baseline; gap: 12px; padding: 28px 48px 10px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 960px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.aside b { color: var(--ink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--border); }
+.sec h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 980px; }
+.sec p b { font-weight: 600; }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot p b { color: var(--ink); font-weight: 600; }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot li b { color: var(--ink); font-weight: 600; }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 150px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.stat b { display: block; font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat b small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.stat span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 600; }
+.tbl td b { color: var(--ink); font-weight: 600; }
+.tbl td.ink { color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; color: var(--ink); }
+.card p.m { color: var(--muted); }
+.card .k { color: var(--lagoon); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0 48px; }
+.count { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.count .k { display: block; }
+.count b { display: block; margin-top: 4px; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.count b small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.count span { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--muted); }
+
+/* — a frame: the app drawn inside the board — */
+.frame { margin: 0 48px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.frame.desktop { width: 1084px; }
+.phone { width: 390px; min-height: 760px; border: 1px solid var(--border); border-radius: 22px; overflow: hidden; background: var(--bg); position: relative; }
+.pair { display: flex; gap: 32px; align-items: flex-start; padding: 0 48px; }
+.pair .beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.pair .beside h3 { margin: 0 0 8px 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pair .beside p { margin: 0 0 12px 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside p b { color: var(--ink); font-weight: 600; }
+.pair .beside ul { margin: 0 0 16px 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside li b { color: var(--ink); font-weight: 600; }
+
+/* — app type — */
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--lagoon); font-weight: 500; }
+.blocked { color: var(--danger); font-weight: 600; }
+.word { font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 4px; border-bottom: 1px solid var(--border); }
+.row:first-child { border-top: 1px solid var(--border); }
+.row .who { flex: 0 0 200px; font-size: 16px; font-weight: 600; color: var(--ink); }
+.row .what { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .what b { font-weight: 600; color: var(--ink); }
+.row .state { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.row .state.blocked { color: var(--danger); }
+.row .state.ok { color: var(--ok); }
+.row.add { color: var(--lagoon); font-weight: 500; font-size: 16px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px 0 8px 0; }
+.group-h .h { font-size: 20px; line-height: 26px; }
+.group-h .meta { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--shop); color: #fff; }
+.btn.quiet { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+.field { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); font-size: 16px; color: var(--muted); }
+.field b { color: var(--ink); font-weight: 500; }
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 40px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.chrome .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--shop); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.glyph { width: 20px; height: 20px; flex: 0 0 20px; }
+/* deck:end */
+
+/* Slate — cool grey ground, one white sheet, hairlines, compact, a face built for legibility */
+.app.slate, .app.slate * { box-sizing: border-box; }
+.app.slate { --g:#eef1f3; --sheet:#ffffff; --ink:#0f1720; --mu:#5b6670; --hl:#dfe4e8; --ac:#1d7a5f; --dn:#b42318; background: var(--g); color: var(--ink); font-family: "Atkinson Hyperlegible","Helvetica Neue",Arial,sans-serif; font-size: 15px; line-height: 22px; }
+.slate .bar { display: flex; align-items: center; gap: 24px; height: 48px; padding: 0 32px; background: var(--sheet); border-bottom: 1px solid var(--hl); }
+.slate .bar .shop { font-size: 15px; font-weight: 700; }
+.slate .bar .words { display: flex; gap: 18px; height: 48px; }
+.slate .bar .words span { display: inline-flex; align-items: center; font-size: 14px; font-weight: 700; color: var(--mu); }
+.slate .bar .words span.on { color: var(--ink); box-shadow: inset 0 -2px 0 var(--ac); }
+.slate .bar .ask { margin-left: auto; display: flex; align-items: center; gap: 8px; width: 280px; height: 34px; padding: 0 10px; border-radius: 4px; border: 1px solid #c9d1d6; background: var(--sheet); font-size: 14px; color: var(--mu); }
+.slate .bar .me { font-size: 14px; color: var(--mu); }
+.slate .page { width: 960px; margin: 0 auto; padding: 24px 0 40px 0; }
+.slate .sheet { background: var(--sheet); border: 1px solid var(--hl); border-radius: 4px; padding: 20px 24px 8px 24px; }
+.slate .t { margin: 0; font-size: 24px; line-height: 30px; font-weight: 700; }
+.slate .lede { margin: 4px 0 0 0; font-size: 14px; color: var(--mu); }
+.slate .gh { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 22px 0 6px 0; }
+.slate .gh b { font-size: 15px; font-weight: 700; }
+.slate .gh span { font-size: 13px; color: var(--mu); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.slate .r { display: flex; align-items: center; gap: 14px; min-height: 44px; border-bottom: 1px solid var(--hl); font-size: 14px; }
+.slate .r:first-child { border-top: 1px solid var(--hl); }
+.slate .r .who { flex: 0 0 200px; font-weight: 700; }
+.slate .r .what { flex: 1 1 auto; min-width: 0; color: var(--mu); }
+.slate .r .st { flex: 0 0 auto; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.slate .r .st.dn { color: var(--dn); }
+.slate .r .st.mu { color: var(--mu); font-weight: 400; }
+.slate .r .st.ac { color: var(--ac); }
+.slate .r.add { color: var(--ac); font-weight: 700; }
+.slate.ph .bar { height: 48px; padding: 0 14px; gap: 12px; }
+.slate.ph .sheet { padding: 16px 14px 6px 14px; border-radius: 4px; }
+.slate.ph .t { font-size: 20px; line-height: 26px; }
+.slate.ph .fig { font-size: 36px; line-height: 40px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.slate.ph .fig small { font-size: 14px; font-weight: 400; color: var(--mu); margin-left: 6px; }
+.slate.ph .r { min-height: 48px; font-size: 16px; }
+.slate.ph .r .who { flex: 1 1 auto; font-size: 16px; }
+.slate.ph .r .sub { display: block; font-size: 13px; font-weight: 400; color: var(--mu); line-height: 18px; }
+.slate.ph .ask { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 10px; border-radius: 4px; border: 1px solid #c9d1d6; font-size: 14px; color: var(--mu); margin: 12px 0 8px 0; }
+.sys { display: grid; grid-template-columns: 300px 1fr 300px; gap: 20px; padding: 0 48px; }
+.sys .cell { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 16px; }
+.sys h4 { margin: 0 0 10px 0; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.sys .sw { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.sys .sw div { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); }
+.sys .sw i { display: block; height: 36px; border-radius: 6px; border: 1px solid rgba(0,0,0,.08); }
+.sys .sw b { font-size: 12px; color: var(--ink); font-weight: 600; }
+.sys .spec { display: flex; flex-direction: column; gap: 6px; }
+.sys .spec span { display: block; }
+.sys .spec small { display: block; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.sys .shape { display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 19px; color: var(--muted); }
+.sys .shape b { color: var(--ink); font-weight: 600; }
+.sys .shape i { display: inline-block; width: 44px; height: 28px; border: 1px solid #dfe4e8; background: #fff; border-radius: 4px; vertical-align: middle; margin-right: 8px; }
+
+.slate.ph .bar .words { gap: 12px; }
+.slate.ph .bar .words span { font-size: 15px; }
+.slate.ph .bar .shop { font-size: 15px; white-space: nowrap; }
+
+  </style>
+</helmet>
+<div class="board">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow">Surface V · Slate · a tool, drawn for reading</span><span class="note">Design canvas · 2026-09-11 · Clear the deck · round 2</span></div>
+    <h1>Slate</h1>
+    <p class="lede">A cool grey ground, one white sheet on it, hairlines, and a face designed for people who read badly in bad light. Fourteen-pixel rows at 44px, tabular figures, no fills, no marks, nothing warm. The shop's colour is the current word and the verb, red is the word <b>Blocked</b>, and everything else is ink on white. It is the surface that argues DiveDay is a tool first and should look like a good one.</p>
+    <div class="three">
+      <div><span class="k">The case</span><p>Reef was drawn to feel like a day on the water; Slate is drawn to be read at the counter with a queue in front of you. It is the densest surface here without being a table, and the face — <b>Atkinson Hyperlegible, cut for low vision and glare</b> — is the dock test as a typeface rather than a rule. A five-boat Saturday fits above the fold.</p></div>
+      <div><span class="k">The honest tradeoff</span><p>It is the surface most likely to be called "another app". Grey ground and white sheets are what every admin tool wears, and nothing on Slate would make a shop owner say wow. The warmth is entirely the shop's colour on two things. <b>And the compact rows that suit the desk are the wrong size for a phone</b>, so the phone gets its own 48px rung, which is a second density to keep in step.</p></div>
+      <div><span class="k">Cost</span><p><b>3 sessions.</b> Tokens to seven; one radius (4); one sheet replaces the panel and the bed; the deletions as every surface; one face replaces Geist. The cheapest after Salt, and the most like today's tree in structure.</p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>The system</b> · seven colours, one face, one sheet</div>
+  <div class="sys">
+    <div class="cell"><h4>Colour · seven</h4><div class="sw">
+      <div><i style="background:#eef1f3;"></i><b>Ground</b>#eef1f3 · cool</div>
+      <div><i style="background:#ffffff;"></i><b>Sheet</b>#ffffff · the one white</div>
+      <div><i style="background:#0f1720;"></i><b>Ink</b>#0f1720 · 17:1</div>
+      <div><i style="background:#5b6670;"></i><b>Meta</b>#5b6670 · 5.9:1</div>
+      <div><i style="background:#dfe4e8;"></i><b>Hairline</b>#dfe4e8</div>
+      <div><i style="background:#1d7a5f;"></i><b>The shop's</b>the current word, the verb</div>
+    </div><p class="note" style="margin:10px 0 0 0;">And #b42318 for Blocked, 6.6:1 on the sheet.</p></div>
+    <div class="cell" style="font-family:'Atkinson Hyperlegible','Helvetica Neue',Arial,sans-serif; color:#0f1720;"><h4>Type · Atkinson Hyperlegible, three sizes</h4><div class="spec">
+      <span style="font-size:24px; line-height:30px; font-weight:700;">Thursday, August 27</span><small>24 / 700 · the page's name</small>
+      <span style="font-size:15px; line-height:22px; font-weight:700;">7:00 · Two-Tank Reef — Molasses &amp; French</span><small>15 / 700 · a group</small>
+      <span style="font-size:14px; line-height:20px;"><b style="font-weight:700;">Grace Mensah</b> &nbsp; <span style="color:#5b6670;">Advanced card, added yesterday, waits for a look</span> &nbsp; <b style="font-weight:700; color:#b42318;">Blocked</b></span><small>14 / 400 and 700 · a row · the face's l, I and 1 cannot be confused, which is why it was cut</small>
+    </div></div>
+    <div class="cell"><h4>Shape and structure</h4><div class="shape">
+      <span><i></i><b>Radius 4</b> on the sheet and the field.</span>
+      <span><b>One device:</b> a hairline. One white sheet on the ground holds the page; rows are hairlines inside it. No shadows, no fills, no tints.</span>
+      <span><b>Density:</b> 44px rows at 14px on the desk; 48px rows at 16px on the phone.</span>
+      <span><b>Elevation:</b> none; the sheet is a border, not a lift.</span>
+      <span><b>Night:</b> ground #0e1216, sheet #171c21, ink #e6ebee — the same seven, inverted.</span>
+    </div></div>
+  </div>
+
+  <div class="frame-cap"><b>The shop home</b> · Thursday, August 27, 6:40 AM · desktop · Three words with Ask as its search</div>
+  <div class="frame desktop" style="border-color:#dfe4e8;"><div class="app slate">
+    <div class="bar"><span class="shop">Blue Mantis Divers</span><div class="words"><span class="on">Day</span><span>People</span><span>Shop</span></div><div class="ask"><svg class="glyph" style="width:14px;height:14px;flex-basis:14px;" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="M13 13l4 4"></path></svg>Ask — a name, a day, a boat</div><span class="me">Dana Reyes</span></div>
+    <div class="page"><div class="sheet">
+      <h1 class="t">Thursday, August 27</h1>
+      <p class="lede">Three boats · 23 divers · four things before the 7:00 leaves, and one after.</p>
+      <div class="gh"><b>7:00 · Two-Tank Reef — Molasses &amp; French</b><span>Mantis II · Keiko, Sal · 10 of 12 · 6 of 10 here</span></div>
+      <div>
+        <div class="r"><span class="who">Grace Mensah</span><span class="what">Advanced card, added yesterday, waits for a look</span><span class="st dn">Blocked</span></div>
+        <div class="r"><span class="who">Priya Sharma</span><span class="what">Waiver not sent</span><span class="st dn">Blocked</span></div>
+        <div class="r"><span class="who">Nadia Petrov</span><span class="what">No emergency contact on file</span><span class="st"></span></div>
+        <div class="r"><span class="who">Hannah Liu, Ben Carter, Emma Fischer</span><span class="what">No rental sizes yet</span><span class="st"></span></div>
+        <div class="r"><span class="who">Hugo Marsh, Ben Okafor</span><span class="what">Not here yet · check-in closes 6:45</span><span class="st"></span></div>
+        <div class="r add"><span>Seat a walk-in</span></div>
+      </div>
+      <div class="gh"><b>1:00 · Wreck Trip — Spiegel Grove</b><span>Mantis II · no crew yet · 10 of 10</span></div>
+      <div>
+        <div class="r"><span class="who">Crew</span><span class="what">Nobody is assigned to this boat</span><span class="st dn">Blocked</span></div>
+        <div class="r"><span class="who">Tomás Ferreira</span><span class="what">No card on file for a deep wreck</span><span class="st dn">Blocked</span></div>
+      </div>
+      <div class="gh"><b>7:30 · Night Dive — City of Washington</b><span>Skiff · Keiko · 3 of 8</span></div>
+      <div>
+        <div class="r"><span class="who">Seats</span><span class="what">5 open · no deal sent</span><span class="st"></span></div>
+        <div class="r"><span class="who">Jonas Berg</span><span class="what">First dive since 2019 · the briefing knows</span><span class="st"></span></div>
+      </div>
+      <div class="gh"><b>At the desk</b><span>since yesterday</span></div>
+      <div>
+        <div class="r"><span class="who">Messages</span><span class="what">3 divers wrote back</span><span class="st mu">People</span></div>
+        <div class="r"><span class="who">Reviews</span><span class="what">1 waiting on you</span><span class="st mu">People</span></div>
+        <div class="r"><span class="who">Money</span><span class="what">Priya's $95 at 6:02 · Stripe has not confirmed</span><span class="st mu">Shop</span></div>
+        <div class="r"><span class="who">Unfinished</span><span class="what">Emmet O'Brien on Friday's 7:00 · started 6:02</span><span class="st"></span></div>
+      </div>
+      <div class="gh"><b>Later</b><span>this week</span></div>
+      <div>
+        <div class="r"><span class="who">Friday</span><span class="what">2 boats · 7 things</span><span class="st"></span></div>
+        <div class="r"><span class="who">Saturday</span><span class="what">2 boats · the 11:00 sold out, 2 waiting</span><span class="st"></span></div>
+      </div>
+    </div></div>
+  </div></div>
+  <p class="aside"><b>What is on the page:</b> one white sheet on grey, hairlines, 14px rows in a face cut for legibility, the shop's green on Day and the add row, red on four words. <b>What is not:</b> a second sheet, a tint, a mark, a shadow, a size above 24, a corner above 4.</p>
+
+  <div class="frame-cap"><b>The counter</b> · the 7:00 at 6:40 AM · 390 · the same sheet, one rung up</div>
+  <div class="pair">
+    <div class="phone" style="height:860px; border-radius:6px; border-color:#dfe4e8;"><div class="app slate ph">
+      <div class="bar"><span class="shop">Blue Mantis</span><div class="words"><span class="on">Day</span><span>People</span><span>Shop</span></div></div>
+      <div style="padding:12px 12px 20px 12px;"><div class="sheet">
+        <h1 class="t">Check-in · 7:00 Two-Tank Reef</h1>
+        <div class="fig" style="margin-top:8px;">6<small>of 10 here</small></div>
+        <div class="ask"><svg class="glyph" style="width:14px;height:14px;flex-basis:14px;" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="M13 13l4 4"></path></svg>Name or booking</div>
+        <div>
+          <div class="r"><span class="who">Ravi Nair</span><span class="st mu">Here</span></div>
+          <div class="r"><span class="who">Hannah Liu<span class="sub">buddy · Ben Carter</span></span><span class="st mu">Here</span></div>
+          <div class="r"><span class="who">Ben Carter</span><span class="st mu">Here</span></div>
+          <div class="r"><span class="who">Emma Fischer<span class="sub">no rental sizes yet</span></span><span class="st mu">Here</span></div>
+          <div class="r"><span class="who">Ines Costa</span><span class="st mu">Here</span></div>
+          <div class="r"><span class="who">Nadia Petrov<span class="sub">no emergency contact · ask</span></span><span class="st mu">Here</span></div>
+          <div class="r"><span class="who">Hugo Marsh</span><span class="st ac">Check in</span></div>
+          <div class="r"><span class="who">Ben Okafor<span class="sub">first time with us</span></span><span class="st ac">Check in</span></div>
+          <div class="r"><span class="who">Grace Mensah<span class="sub" style="color:#b42318; font-weight:700;">Can't board · card waits for a look</span></span><span class="st ac">Verify</span></div>
+          <div class="r"><span class="who">Priya Sharma<span class="sub" style="color:#b42318; font-weight:700;">Can't board · waiver not sent</span></span><span class="st ac">Send</span></div>
+          <div class="r add"><span>Add a walk-in</span></div>
+        </div>
+      </div></div>
+    </div></div>
+    <div class="beside">
+      <h3>What stays of Reef</h3>
+      <ul><li>Nothing on a staff surface; the postcard on the recap until call (g). Harbor keeps the storefront in the shop's colour and face, on Slate's rows — which is the one place Slate looks like a shop rather than a tool.</li></ul>
+      <h3>What leaves</h3>
+      <ul>
+        <li>Every hue but the seven and red; the radius ladder; the bed; the band, the tile, the dial, the chip, the pill, the glyph; the eyebrow; the greeting at 44px; Geist.</li>
+      </ul>
+      <h3>What it keeps</h3>
+      <ul><li>The safety floor, and it is the reason for the face: at 16px on the phone, an l, an I and a 1 read as three different letters in glare. The two who cannot board carry a bold red sentence and a green verb. Boat mode is the same seven with the ink pushed to black.</li></ul>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div><h3>Where it stops</h3><p>The wow, honestly. Slate will never be the reason a shop chooses DiveDay; it is the reason they never notice the software. And two rungs (44 on the desk, 48 on the phone) is one more than Salt or Air carry — a small tax for a dense desk.</p></div>
+    <div><h3>What it needs</h3><p><b>Seven tokens, one radius, one sheet component</b> replacing <span class="mono">SectionCard</span>, the bed and the panel; the deletions as every surface; one face replacing Geist, loaded once. The closest of the five to the tree as it stands, which is why it is cheap.</p></div>
+    <div><h3>Its wow</h3><p>A captain with reading glasses on a wet deck reads the roster without them. Everything is where a tool puts it, nothing is decorated, and a full Saturday fits on one laptop screen. The wow is that there is nothing to get used to.</p></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>
