@@ -19,8 +19,13 @@ afterEach(cleanup);
  * These are the tests that would have caught both: one asserts the mark's
  * pixels are *derived* from the one geometry list rather than typed, and one
  * walks the route tree and refuses any card that draws its own chrome — so a
- * fifth card added tomorrow is covered without anybody remembering to add it
- * here.
+ * fifth `opengraph-image.tsx` added tomorrow is covered without anybody
+ * remembering to add it here.
+ *
+ * The third is about the *cost* of a card rather than its pixels: a metadata
+ * convention file in the root segment is attached to every page entry in the
+ * app, so DiveDay's own card is a route handler and this file refuses a root
+ * metadata module that imports a renderer (issue #1709).
  */
 
 const APP = path.join(process.cwd(), "src/app");

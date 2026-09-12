@@ -1261,11 +1261,12 @@ test("every public marketing page unfurls as a card, not a bare URL", async ({ p
     expect(await content('meta[property="og:site_name"]'), `${path} og:site_name`).toBe("DiveDay");
     expect(await content('meta[property="og:type"]'), `${path} og:type`).toBe("website");
     // Policy (docs/product/marketing.md): `summary_large_image` wherever the
-    // shared link card applies. The root `src/app/opengraph-image.tsx` renders
-    // for every marketing page (a segment with its own file overrides it — see
-    // the per-shop card in e2e/seo.spec.ts), so today that is all of them, and
-    // asserting the image beside the card type is what keeps the pair honest:
-    // a large-image card with no image unfurls worse than a small one.
+    // shared link card applies. Every marketing page names DiveDay's card
+    // (`sharedLinkCard` -> `src/app/link-card/route.tsx`), so today that is all
+    // of them, and asserting the image beside the card type is what keeps the
+    // pair honest: a large-image card with no image unfurls worse than a small
+    // one. A segment with its own `opengraph-image.tsx` overrides it — see the
+    // per-shop card in e2e/seo.spec.ts.
     expect(await content('meta[property="og:image"]'), `${path} og:image`).toMatch(/^https?:\/\//);
     expect(await content('meta[name="twitter:card"]'), `${path} twitter:card`).toBe(
       "summary_large_image",

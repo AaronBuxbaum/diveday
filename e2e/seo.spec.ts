@@ -249,11 +249,46 @@ test("the schedule page's canonical stays on the standalone URL in both standalo
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
 });
 
+/**
+ * The card is `src/app/link-card/route.tsx`, not a metadata convention file:
+ * Next attaches a convention file to every page entry in its subtree, and the
+ * root segment's subtree is the whole app (issue #1709). Nothing generates the
+ * URL any more — `sharedLinkCardImage` in `src/lib/site-metadata.ts` names it —
+ * so the two halves can disagree, and a card nobody in this repo ever looks at
+ * is exactly the place a 404 would sit unnoticed. This walks the whole hop: the
+ * tag, the URL it names, and the bytes that come back from it.
+ */
 test("the homepage carries a resolvable og:image", { tag: READ_ONLY }, async ({ page }) => {
   await page.goto("/");
   const content = await page.locator('meta[property="og:image"]').getAttribute("content");
   expect(content).toBeTruthy();
   expect(content).toMatch(/^https?:\/\//);
+  expect(content, "the root layout and `/` both name the card route").toContain("/link-card");
+
+  // Fetched relative, never through the tag's own href: `metadataBase` is baked
+  // at build time from E2E_APP_HOST, which is a reserved `.example` host no
+  // worker can reach (e2e/servers.ts).
+  const card = await page.request.get("/link-card");
+  expect(card.ok()).toBe(true);
+  expect(card.headers()["content-type"]).toContain("image/png");
+  // A severed stream can still arrive as a 200 with an empty body (ADR
+  // 20260804-og-svg-rasterizer), so the bytes are the assertion that actually
+  // distinguishes a rendered card.
+  expect((await card.body()).length).toBeGreaterThan(1000);
+});
+
+/**
+ * The other half of the same move: a page with no `openGraph` block of its own
+ * inherits the root layout's, and the card used to arrive there by file
+ * convention. It is named on the floor now, and this is the page that proves
+ * the floor still carries it.
+ */
+test("a page with no unfurl words of its own still inherits the card", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  await page.goto("/sign-in");
+  const content = await page.locator('meta[property="og:image"]').getAttribute("content");
+  expect(content).toContain("/link-card");
 });
 
 /**
