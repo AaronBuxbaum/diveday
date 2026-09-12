@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   ALL_SIZES,
   candidatePool,
+  declarationsInListing,
   fetchedCandidate,
   mediaConditionHolds,
   resolveLength,
@@ -104,3 +105,77 @@ describe("fetchedCandidate", () => {
 function canonical(target) {
   return ALL_SIZES.find((size) => size >= target) ?? ALL_SIZES[ALL_SIZES.length - 1];
 }
+
+/**
+ * **The enumeration half**, which used to be welded to the reading half inside
+ * the guard and took the whole run down with it (issue #1763).
+ *
+ * `git ls-files` answers from the index, so a file deleted in the working tree
+ * and not staged yet is still listed — an ordinary state between `rm` and `git
+ * add`. The guard used to `readFile` it and die on a raw Node stack trace, in
+ * the middle of a concurrent 47-guard run where a stack trace reads as a broken
+ * script rather than as "stage your deletion".
+ */
+describe("declarationsInListing", () => {
+  const hero = [
+    "export function Hero() {",
+    '  return <img className="w-32" sizes="128px" alt="" src="/a.png" />;',
+    "}",
+  ].join("\n");
+
+  it("finds every declaration, with the element's own block for its width class", async () => {
+    const { declarations, missing } = await declarationsInListing(["src/a.tsx"], async () => hero);
+    expect(missing).toEqual([]);
+    expect(declarations).toHaveLength(1);
+    expect(declarations[0]).toMatchObject({ file: "src/a.tsx", line: 2, sizes: "128px" });
+    // The block stops at this element's own opening tag, so the class read off
+    // it is its own and not a wrapper's.
+    expect(declarations[0].block).toContain('className="w-32"');
+  });
+
+  it("treats every literal in a conditional expression as its own declaration", async () => {
+    const source = '<Image sizes={many ? "50vw" : "100vw"} alt="" />';
+    const { declarations } = await declarationsInListing(["src/b.tsx"], async () => source);
+    expect(declarations.map((declaration) => declaration.sizes)).toEqual(["50vw", "100vw"]);
+  });
+
+  it("reports a listed path that is not on disk instead of throwing", async () => {
+    const read = async (file) => {
+      if (file === "src/gone.tsx") {
+        throw Object.assign(new Error("ENOENT: no such file or directory"), { code: "ENOENT" });
+      }
+      return hero;
+    };
+    const { declarations, missing } = await declarationsInListing(
+      ["src/gone.tsx", "src/a.tsx"],
+      read,
+    );
+    expect(missing).toEqual(["src/gone.tsx"]);
+    // The rest of the tree is still checked: one vanished path is not a reason
+    // to stop looking at the files that are there.
+    expect(declarations.map((declaration) => declaration.file)).toEqual(["src/a.tsx"]);
+  });
+
+  it("still throws on a read error that is not a missing file", async () => {
+    const read = async () => {
+      throw Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });
+    };
+    // A permission error is a broken checkout, and swallowing it would make the
+    // guard lie about its own coverage.
+    await expect(declarationsInListing(["src/a.tsx"], read)).rejects.toThrow(/EACCES/);
+  });
+
+  it("skips a pass-through file before reading it, not after", async () => {
+    // The old order read the file and then discarded it, so a pass-through file
+    // the guard does not even care about could still crash the run.
+    const read = vi.fn(async () => hero);
+    const { declarations, missing } = await declarationsInListing(
+      ["src/components/Photo.tsx"],
+      read,
+      { passThrough: new Set(["src/components/Photo.tsx"]) },
+    );
+    expect(read).not.toHaveBeenCalled();
+    expect(declarations).toEqual([]);
+    expect(missing).toEqual([]);
+  });
+});

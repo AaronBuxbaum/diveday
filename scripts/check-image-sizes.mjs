@@ -1,7 +1,12 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { candidatePool, fetchedCandidate, resolveSizes } from "./image-sizes-lib.mjs";
+import {
+  candidatePool,
+  declarationsInListing,
+  fetchedCandidate,
+  resolveSizes,
+} from "./image-sizes-lib.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 /**
@@ -95,6 +100,15 @@ function fixedWidthFromClasses(block) {
   return null;
 }
 
+/**
+ * Every declaration in the tree, and the tracked paths that are not on disk.
+ *
+ * `git ls-files` is the right enumerator — it asks which `.tsx` files this
+ * repository tracks, and costs one process rather than a walk — but it answers
+ * from the index, so an unstaged deletion is still listed. The reading half
+ * lives in `image-sizes-lib.mjs` so the listed-but-absent case can be tested
+ * without a git index (issue #1763).
+ */
 async function declarationsInTree() {
   const listed = readBounded("git", ["ls-files", "src/**/*.tsx"], {
     cwd: ROOT,
@@ -104,47 +118,9 @@ async function declarationsInTree() {
     .split("\n")
     .filter((file) => file !== "" && !file.includes(".test."));
 
-  const found = [];
-  for (const file of listed) {
-    const text = await readFile(path.join(ROOT, file), "utf8");
-    if (PASS_THROUGH.has(file)) continue;
-    for (const match of text.matchAll(/\bsizes=/g)) {
-      const at = match.index + match[0].length;
-      // A `sizes` is either one literal or an expression choosing between
-      // several — `TripDayPlan` picks its declaration off the length of the
-      // list it is laying out, which is the honest way to write one for a
-      // conditional grid. Every literal inside the expression is a declaration
-      // in its own right and each is checked.
-      let region;
-      if (text[at] === '"') {
-        region = text.slice(at, text.indexOf('"', at + 1) + 1);
-      } else if (text[at] === "{") {
-        let depth = 0;
-        let end = at;
-        for (; end < text.length; end += 1) {
-          if (text[end] === "{") depth += 1;
-          else if (text[end] === "}") {
-            depth -= 1;
-            if (depth === 0) break;
-          }
-        }
-        region = text.slice(at, end + 1);
-      } else continue;
-
-      const literals = [...region.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-      if (literals.length === 0) continue;
-
-      const line = text.slice(0, match.index).split("\n").length;
-      // Back to this element's own opening tag, so the class read below is its
-      // own rather than a wrapper's.
-      const before = text.slice(0, match.index);
-      const tagStart = Math.max(before.lastIndexOf("<"), 0);
-      const block = text.slice(tagStart, match.index);
-
-      for (const sizes of literals) found.push({ file, line, sizes, block });
-    }
-  }
-  return found;
+  return declarationsInListing(listed, (file) => readFile(path.join(ROOT, file), "utf8"), {
+    passThrough: PASS_THROUGH,
+  });
 }
 
 function stepsApart(sizes, from, to) {
@@ -195,7 +171,18 @@ function check(declaration, renderedByViewport, problems) {
 }
 
 const registry = JSON.parse(await readFile(path.join(ROOT, REGISTRY), "utf8"));
-const declarations = await declarationsInTree();
+const { declarations, missing } = await declarationsInTree();
+
+// Said before anything else, so it is visible whether the run passes or fails:
+// the counts below moved, and the reason is a deletion this session has not
+// staged rather than anything wrong with the tree.
+if (missing.length > 0) {
+  console.warn(
+    `image-sizes: skipped ${missing.length} tracked path(s) that are not on disk — ${missing.join(", ")}.\n` +
+      "    `git ls-files` answers from the index, so a deletion that is not staged yet is still listed. Stage it\n" +
+      "    (`git add -- <path>`) and the count below, and the registry sweep, come back in step.",
+  );
+}
 
 const problems = [];
 const usedKeys = new Set();
@@ -241,9 +228,15 @@ for (const declaration of declarations) {
   check(declaration, entry.rendered ?? {}, problems);
 }
 
+const missingFiles = new Set(missing);
 for (const key of Object.keys(registry)) {
   // `_`-prefixed keys are the file's own notes to a reader, not entries.
-  if (!key.startsWith("_") && !usedKeys.has(key)) {
+  if (key.startsWith("_")) continue;
+  // An entry keyed to a file this session has deleted but not staged is not
+  // stale — the file's declarations are simply not in the scan. Refusing here
+  // would trade one confusing failure for another (issue #1763).
+  if (missingFiles.has(key.split(" :: ")[0])) continue;
+  if (!usedKeys.has(key)) {
     problems.push(
       `${REGISTRY}: stale entry for ${JSON.stringify(key)} — no such sizes declaration in the tree.`,
     );
@@ -261,5 +254,6 @@ if (problems.length > 0) {
 console.log(
   `image-sizes: ${derived} derived from their element's own width class, ${registered} checked against measured slots at ${VIEWPORTS.length} viewports` +
     (exempt > 0 ? `, ${exempt} exempt with a written reason` : "") +
+    (missing.length > 0 ? `, ${missing.length} tracked but not on disk (skipped above)` : "") +
     " (the visual suite cannot see any of these — issue #1350)",
 );

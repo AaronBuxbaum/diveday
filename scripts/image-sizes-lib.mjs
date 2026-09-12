@@ -137,3 +137,95 @@ export function fetchedCandidate(sizes, slotCssWidth, devicePixelRatio) {
   const needed = slotCssWidth * devicePixelRatio;
   return pool.find((size) => size >= needed) ?? pool[pool.length - 1];
 }
+
+/**
+ * Every `sizes` declaration in one file's source, as
+ * `{ file, line, sizes, block }`.
+ *
+ * A `sizes` is either one literal or an expression choosing between several —
+ * `TripDayPlan` picks its declaration off the length of the list it is laying
+ * out, which is the honest way to write one for a conditional grid. Every
+ * literal inside the expression is a declaration in its own right and each is
+ * returned.
+ *
+ * `block` is the text from the element's own opening tag to its `sizes`, never
+ * further back: the first `className` in a wider window is the *parent's*
+ * (`<li className="flex min-w-0 gap-3">` wrapping a `<StoredPhoto>`), which has
+ * no width class, and reading it would silently downgrade every derived
+ * declaration to "needs a registry entry".
+ */
+export function declarationsInSource(file, text) {
+  const found = [];
+  for (const match of text.matchAll(/\bsizes=/g)) {
+    const at = match.index + match[0].length;
+    let region;
+    if (text[at] === '"') {
+      region = text.slice(at, text.indexOf('"', at + 1) + 1);
+    } else if (text[at] === "{") {
+      let depth = 0;
+      let end = at;
+      for (; end < text.length; end += 1) {
+        if (text[end] === "{") depth += 1;
+        else if (text[end] === "}") {
+          depth -= 1;
+          if (depth === 0) break;
+        }
+      }
+      region = text.slice(at, end + 1);
+    } else continue;
+
+    const literals = [...region.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    if (literals.length === 0) continue;
+
+    const line = text.slice(0, match.index).split("\n").length;
+    const before = text.slice(0, match.index);
+    const tagStart = Math.max(before.lastIndexOf("<"), 0);
+    const block = text.slice(tagStart, match.index);
+
+    for (const sizes of literals) found.push({ file, line, sizes, block });
+  }
+  return found;
+}
+
+/**
+ * Every declaration across a listing of files, read through `readText`, plus
+ * the listed paths that are **not on disk**.
+ *
+ * The guard enumerates with `git ls-files`, which is the right question —
+ * "which `.tsx` files does this repository track" — but it reads the *index*,
+ * so a file deleted in the working tree and not yet staged is still listed. The
+ * read used to throw straight out of the guard, which turned an ordinary
+ * working state (delete a file, run `pnpm check:repo` before committing) into a
+ * raw Node stack trace in the middle of a concurrent 47-guard run, where it
+ * reads as a broken script rather than as "stage your deletion" (issue #1763).
+ * So a listed path that has vanished is reported, not thrown — and its registry
+ * entries are left out of the stale sweep by the caller, because a mid-edit
+ * session must not be refused for entries whose file it is in the middle of
+ * deleting.
+ *
+ * Any other read error still throws: a permission error or a directory in the
+ * listing is a broken checkout, and swallowing it would make this guard lie
+ * about its own coverage.
+ *
+ * `passThrough` files are skipped **before** the read, not after. Their `sizes`
+ * is a variable checked at the call site, so the guard does not care what is in
+ * them — and reading a file only to discard it is one more path that can crash
+ * for nothing.
+ */
+export async function declarationsInListing(listed, readText, { passThrough = new Set() } = {}) {
+  const declarations = [];
+  const missing = [];
+  for (const file of listed) {
+    if (passThrough.has(file)) continue;
+    let text;
+    try {
+      text = await readText(file);
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+      missing.push(file);
+      continue;
+    }
+    declarations.push(...declarationsInSource(file, text));
+  }
+  return { declarations, missing };
+}
