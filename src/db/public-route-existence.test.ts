@@ -3,27 +3,43 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import type { PublicRouteShape } from "@/lib/public-route-shape";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { publicRouteExists } from "./public-route-existence";
+import { publicRouteLookup } from "./public-route-existence";
 import { courses, diveSites, shops, trips } from "./schema";
 import { createTrip, setTripStatus } from "./trips";
 
 const ctx = fileScopedShopContext();
 const HOUR_MS = 60 * 60 * 1000;
 
+/** The half of the answer most of these tests are about. */
+async function routeExists(db: AppDb, shape: PublicRouteShape): Promise<boolean> {
+  return (await publicRouteLookup(db, shape)).exists;
+}
+
 /**
- * A database handle that fails the test the moment anything touches it — the
- * only honest way to assert that a shape needing no query makes none.
+ * The same database, counting the reads that pass through it.
+ *
+ * Every reader this module calls goes out through `db.select()`, so the count
+ * is the number of round trips a shape costs — which is the thing the return
+ * shape exists to hold down. The proxy used to ask a refused route about its
+ * shop a second time, and nothing failed when it did.
  */
-const NO_DATABASE = new Proxy(
-  {},
-  {
-    get() {
-      throw new Error("publicRouteExists queried the database for a malformed route");
+function countingDb(db: AppDb): { db: AppDb; reads: () => number } {
+  let reads = 0;
+  const counting = new Proxy(db as object, {
+    get(target, property, receiver) {
+      const value = Reflect.get(target, property, receiver);
+      if (property !== "select" || typeof value !== "function") return value;
+      return (...args: unknown[]) => {
+        reads += 1;
+        return (value as (...called: unknown[]) => unknown).apply(target, args);
+      };
     },
-  },
-) as unknown as AppDb;
+  }) as AppDb;
+  return { db: counting, reads: () => reads };
+}
 
 async function aCourseSlug(): Promise<string> {
   const [course] = await ctx.db
@@ -66,24 +82,78 @@ async function anotherShop(): Promise<string> {
   return slug;
 }
 
-describe("publicRouteExists", () => {
-  it("answers a malformed shape without opening a connection", async () => {
-    await expect(publicRouteExists(NO_DATABASE, { kind: "malformed" })).resolves.toBe(false);
+describe("publicRouteLookup", () => {
+  it("answers a malformed shape with the one read that frames it", async () => {
+    // A segment no shop could have minted needs no query to be refused. The
+    // shop under it is a different question, and the refusal is framed as that
+    // shop's (issue #765), so the shop read is made — once, here, rather than
+    // by a second call from the proxy.
+    const counting = countingDb(ctx.db);
+    await expect(
+      publicRouteLookup(counting.db, { kind: "malformed", shopSlug: ctx.shop.slug }),
+    ).resolves.toEqual({ exists: false, shopExists: true });
+    expect(counting.reads()).toBe(1);
+  });
+
+  /**
+   * The fact the proxy stamps on `REFUSED_SHOP_SLUG_HEADER`, and the reason
+   * this function answers with a record rather than a boolean: a dead link
+   * under a live shop is owed that shop's own 404, and working that out used to
+   * cost a third read of `shops.slug` on the one request nobody legitimate is
+   * making.
+   */
+  it("says whether the shop is there, on the same read that refuses the route", async () => {
+    const counting = countingDb(ctx.db);
+    await expect(
+      publicRouteLookup(counting.db, {
+        kind: "course",
+        shopSlug: ctx.shop.slug,
+        courseSlug: "never-minted-course",
+      }),
+    ).resolves.toEqual({ exists: false, shopExists: true });
+    expect(counting.reads()).toBe(2);
+
+    // No shop, so nothing under it is looked up and nothing frames the 404.
+    const missing = countingDb(ctx.db);
+    await expect(
+      publicRouteLookup(missing.db, {
+        kind: "course",
+        shopSlug: "no-such-shop",
+        courseSlug: "never-minted-course",
+      }),
+    ).resolves.toEqual({ exists: false, shopExists: false });
+    expect(missing.reads()).toBe(1);
   });
 
   it("finds a live shop and refuses a slug nobody holds", async () => {
-    await expect(
-      publicRouteExists(ctx.db, { kind: "shop", shopSlug: ctx.shop.slug }),
-    ).resolves.toBe(true);
-    await expect(
-      publicRouteExists(ctx.db, { kind: "shop", shopSlug: "no-such-shop" }),
-    ).resolves.toBe(false);
+    await expect(routeExists(ctx.db, { kind: "shop", shopSlug: ctx.shop.slug })).resolves.toBe(
+      true,
+    );
+    await expect(routeExists(ctx.db, { kind: "shop", shopSlug: "no-such-shop" })).resolves.toBe(
+      false,
+    );
   });
 
-  it("finds a course, an inactive one included", async () => {
+  /**
+   * **The accepted disclosure, pinned.** A course a shop has hidden answers
+   * `true` here and a slug it never minted answers `false`, so from outside the
+   * two are one status apart — the price of leaving `isActive` to the page,
+   * weighed in this module's header rather than overlooked (issue #1735). The
+   * flip is what this assertion guards: an edge that applied `isActive` would
+   * hard-404 the staff previewer, whose own check is live and per-shop and who
+   * arrives here carrying nothing the edge can verify.
+   */
+  it("finds a course a shop has hidden, and refuses a slug it never minted", async () => {
     const courseSlug = await aCourseSlug();
     const shape = { kind: "course", shopSlug: ctx.shop.slug, courseSlug } as const;
-    await expect(publicRouteExists(ctx.db, shape)).resolves.toBe(true);
+    await expect(routeExists(ctx.db, shape)).resolves.toBe(true);
+    await expect(
+      routeExists(ctx.db, {
+        kind: "course",
+        shopSlug: ctx.shop.slug,
+        courseSlug: "never-minted-course",
+      }),
+    ).resolves.toBe(false);
 
     // `courses/[slug]/page.tsx` serves an inactive course to a staff previewer
     // and 404s it for everyone else. That decision is the page's; an edge that
@@ -92,16 +162,16 @@ describe("publicRouteExists", () => {
       .update(courses)
       .set({ isActive: false })
       .where(and(eq(courses.shopId, ctx.shop.id), eq(courses.slug, courseSlug)));
-    await expect(publicRouteExists(ctx.db, shape)).resolves.toBe(true);
+    await expect(routeExists(ctx.db, shape)).resolves.toBe(true);
   });
 
   it("finds a dive site, and refuses a slug the shop never minted", async () => {
     const siteSlug = await aSiteSlug();
     await expect(
-      publicRouteExists(ctx.db, { kind: "site", shopSlug: ctx.shop.slug, siteSlug }),
+      routeExists(ctx.db, { kind: "site", shopSlug: ctx.shop.slug, siteSlug }),
     ).resolves.toBe(true);
     await expect(
-      publicRouteExists(ctx.db, {
+      routeExists(ctx.db, {
         kind: "site",
         shopSlug: ctx.shop.slug,
         siteSlug: "never-minted-reef",
@@ -112,10 +182,10 @@ describe("publicRouteExists", () => {
   it("finds a departure, and refuses an id no departure carries", async () => {
     const tripId = await aDeparture();
     await expect(
-      publicRouteExists(ctx.db, { kind: "trip", shopSlug: ctx.shop.slug, tripId }),
+      routeExists(ctx.db, { kind: "trip", shopSlug: ctx.shop.slug, tripId }),
     ).resolves.toBe(true);
     await expect(
-      publicRouteExists(ctx.db, { kind: "trip", shopSlug: ctx.shop.slug, tripId: randomUUID() }),
+      routeExists(ctx.db, { kind: "trip", shopSlug: ctx.shop.slug, tripId: randomUUID() }),
     ).resolves.toBe(false);
   });
 
@@ -126,15 +196,11 @@ describe("publicRouteExists", () => {
       await aSiteSlug(),
       await aDeparture(),
     ];
-    await expect(publicRouteExists(ctx.db, { kind: "course", shopSlug, courseSlug })).resolves.toBe(
+    await expect(routeExists(ctx.db, { kind: "course", shopSlug, courseSlug })).resolves.toBe(
       false,
     );
-    await expect(publicRouteExists(ctx.db, { kind: "site", shopSlug, siteSlug })).resolves.toBe(
-      false,
-    );
-    await expect(publicRouteExists(ctx.db, { kind: "trip", shopSlug, tripId })).resolves.toBe(
-      false,
-    );
+    await expect(routeExists(ctx.db, { kind: "site", shopSlug, siteSlug })).resolves.toBe(false);
+    await expect(routeExists(ctx.db, { kind: "trip", shopSlug, tripId })).resolves.toBe(false);
   });
 
   /**
@@ -152,7 +218,7 @@ describe("publicRouteExists", () => {
 
     for (const tripId of [cancelled, unlisted]) {
       await expect(
-        publicRouteExists(ctx.db, { kind: "trip", shopSlug: ctx.shop.slug, tripId }),
+        routeExists(ctx.db, { kind: "trip", shopSlug: ctx.shop.slug, tripId }),
       ).resolves.toBe(true);
     }
   });
@@ -165,7 +231,34 @@ describe("publicRouteExists", () => {
     const removed = await aDeparture();
     await ctx.db.update(trips).set({ deletedAt: nowDate() }).where(eq(trips.id, removed));
     await expect(
-      publicRouteExists(ctx.db, { kind: "trip", shopSlug: ctx.shop.slug, tripId: removed }),
+      routeExists(ctx.db, { kind: "trip", shopSlug: ctx.shop.slug, tripId: removed }),
     ).resolves.toBe(false);
+  });
+});
+
+/**
+ * The premise the proxy's `catch` is built on, pinned against a real database.
+ *
+ * A shop slug is not pattern-checked before it gets here — the row decides, and
+ * `public-route-shape.ts` says at length why that must stay true. So a request
+ * can hand this function a string Postgres will not accept as a text parameter,
+ * and it raises instead of answering "no such shop". `src/lib/db-failure.ts`
+ * reads that raise apart from an unreachable database; if this ever stopped
+ * throwing, the `warn` branch it feeds would be dead code.
+ */
+describe("a slug the driver cannot send", () => {
+  it("raises, carrying a SQLSTATE on the cause and the parameter in the wrapper's message", async () => {
+    const slug = `blue${String.fromCharCode(0)}mantis`;
+    const raised = await routeExists(ctx.db, { kind: "shop", shopSlug: slug }).then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(raised).toBeInstanceOf(Error);
+    // Class 22, data exception: a server received the statement and refused it,
+    // which is exactly what tells the classifier nothing is down.
+    expect((raised as { cause?: { code?: string } })?.cause?.code).toBe("22021");
+    // And why no branch logs the caught message: drizzle's wrapper repeats the
+    // bound parameters verbatim, which here is the request's own string.
+    expect(String((raised as Error).message)).toContain(slug);
   });
 });

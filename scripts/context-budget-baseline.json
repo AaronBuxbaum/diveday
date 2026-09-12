@@ -15,7 +15,7 @@
       }
     },
     {
-      "why": "the dive-site briefing row now names both halves \u2014 which form writes each column and which beat reads it \u2014 after slice 7c deleted the reader and left eight authored columns reaching no diver",
+      "why": "the dive-site briefing row now names both halves — which form writes each column and which beat reads it — after slice 7c deleted the reader and left eight authored columns reaching no diver",
       "files": {
         "AGENTS.md": "11143 -> 11166"
       }
@@ -46,7 +46,7 @@
       }
     },
     {
-      "why": "The debug skill's trigger now names a dev server that died, refuses to start, or serves stale data. Those are the symptoms this change added rows for, and they were the one class of failure whose sufferer had no reason to open the debug skill at all \u2014 an OOM-killed dev server reads as 'my change broke the app', not as 'a bug report or a red check'. Fourteen words to make the playbook load for the failure it now documents.",
+      "why": "The debug skill's trigger now names a dev server that died, refuses to start, or serves stale data. Those are the symptoms this change added rows for, and they were the one class of failure whose sufferer had no reason to open the debug skill at all — an OOM-killed dev server reads as 'my change broke the app', not as 'a bug report or a red check'. Fourteen words to make the playbook load for the failure it now documents.",
       "files": {
         ".claude/skills/*/SKILL.md (description lines)": "740 -> 754"
       }
@@ -59,7 +59,7 @@
       }
     },
     {
-      "why": "The db:reset row now states the rule is enforced rather than remembered: a second opener of one .pglite is refused naming the process to stop, and a lock left by a killed server is taken over rather than obeyed. Both halves matter at the moment a session hits it \u2014 the first so an 'is already open by process N' refusal reads as working-as-intended, the second so nobody deletes the lock file by hand and re-opens the silent fork it exists to stop (ADR 20260903-one-process-per-pglite-directory).",
+      "why": "The db:reset row now states the rule is enforced rather than remembered: a second opener of one .pglite is refused naming the process to stop, and a lock left by a killed server is taken over rather than obeyed. Both halves matter at the moment a session hits it — the first so an 'is already open by process N' refusal reads as working-as-intended, the second so nobody deletes the lock file by hand and re-opens the silent fork it exists to stop (ADR 20260903-one-process-per-pglite-directory).",
       "files": {
         "AGENTS.md": "11503 -> 11533"
       }

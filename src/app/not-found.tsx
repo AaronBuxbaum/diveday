@@ -73,8 +73,8 @@ export default function NotFound() {
  * The header is read rather than the pathname: `REQUEST_PATH_HEADER` beside it
  * would yield a slug too, but only one the URL *claimed*. Handing a diver a
  * button to a schedule that is itself a 404 is a worse landing than DiveDay's
- * own, so the frame goes up only for a shop `src/proxy.ts` looked up and
- * found.
+ * own, so the frame goes up for a shop `src/proxy.ts` looked up and found
+ * rather than for whatever slug the dead URL happened to carry.
  */
 async function RequestScopedNotFound() {
   const shopSlug = refusedShopSlug((await headers()).get(REFUSED_SHOP_SLUG_HEADER));
@@ -87,11 +87,23 @@ async function RequestScopedNotFound() {
  * The stamped slug, held to the same charset every other reader of a
  * proxy-stamped slug is held to. `shopSlugFromPublicPath` is where that rule
  * is written down and it takes a pathname, so the value is put back into the
- * path it would build and read out again — the round trip *is* the check. The
- * proxy overwrites this header on every request it sees, but its matcher
- * carries a static-asset escape hatch, so a reader here still treats the value
- * as a claim: anything but a slug costs the frame rather than producing a
- * wrong one.
+ * path it would build and read out again — the round trip *is* the check.
+ *
+ * **A claim rather than a fact, and deliberately left one.** `src/proxy.ts`
+ * overwrites this header on every request it sees except the refusal's own
+ * render, where it carries the incoming value forward instead — there is no
+ * other way, because Next routes a rewrite from the top and the pass that
+ * reaches this page is the one whose URL is `/_not-found` and which knows
+ * nothing — and its matcher carries a static-asset escape hatch besides. So a
+ * client that is not a browser can request `/_not-found` with this header set
+ * and be handed the frame it named. Confirming the slug against the database
+ * here would close that and is not worth what it costs: the forger is the only
+ * reader of the page they forged, every string in the frame is already public
+ * on that shop's storefront, and the lookup would be paid ahead of the branch
+ * by every diver whose link really did die — the read the proxy already does
+ * once precisely so this page does not have to. What is left is the bound that
+ * matters: anything but a slug costs the frame rather than producing a wrong
+ * one.
  */
 function refusedShopSlug(value: string | null): string | null {
   return value ? shopSlugFromPublicPath(publicSchedulePath(value)) : null;

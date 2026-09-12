@@ -2,7 +2,7 @@ import { getCookieCache, getSessionCookie } from "better-auth/cookies";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { publicRouteExists } from "@/db/public-route-existence";
+import { publicRouteLookup } from "@/db/public-route-existence";
 import { authSecret } from "@/lib/auth-secret";
 import { isStaff, type Role } from "@/lib/authz";
 import {
@@ -18,6 +18,7 @@ import {
   reportingEndpointsHeader,
   reportOnlyPolicy,
 } from "@/lib/content-security-policy";
+import { classifyDatabaseFailure } from "@/lib/db-failure";
 import {
   EMBED_BRAND_HEADER,
   EMBED_FONT_HEADER,
@@ -289,7 +290,8 @@ function rememberPartnerReferral(req: NextRequest, res: Response): void {
   if (!(res instanceof NextResponse)) return;
   // Only on the storefront a partner link actually points at, and only for a
   // slug that is shaped like one: `shopSlugFromPublicPath` holds it to
-  // `SHOP_SLUG` rather than taking whatever the URL's second segment says.
+  // `SHOP_SLUG_PATTERN` rather than taking whatever the URL's second segment
+  // says.
   const shopSlug = shopSlugFromPublicPath(req.nextUrl.pathname);
   if (!shopSlug) return;
   // A document navigation, never a subresource — see above. An absent header is
@@ -332,8 +334,9 @@ const NOT_FOUND_ROUTE = "/_not-found";
  * rest. The only layer left is this one, and the embed catalogue above has been
  * proving it works for one route since before this one generalised it.
  *
- * **What it costs.** One indexed read on `shops.slug` for a shop-level URL,
- * two for one that names a course, a dive site or a departure inside a shop —
+ * **What it costs.** One indexed read on `shops.slug` for a shop-level URL or
+ * an unmintable segment under one, two for a URL that names a course, a dive
+ * site or a departure inside a shop —
  * paid on the request path by every diver on every public page, which is
  * exactly the latency ADR 20260804-instant-navigation set out to avoid. It is
  * the same read the page itself is about to do a few milliseconds later, so
@@ -357,8 +360,11 @@ const NOT_FOUND_ROUTE = "/_not-found";
  * the one thing `/_not-found` cannot work out for itself — whether the shop
  * the URL named is really there — because issue #765 says a diver whose link
  * died is owed that shop's own refusal and *not* a button to a schedule that
- * would 404 in its turn. That costs one more indexed read on `shops.slug`, and
- * it is paid only on the refusal path: a live page never reaches this line.
+ * would 404 in its turn. It costs no read of its own: the lookup opens by
+ * resolving the shop slug either way, so it hands both answers back together.
+ * This used to ask a second time, which made a dead URL the most expensive
+ * request in the public namespace — three reads, unauthenticated, for a path
+ * nobody legitimate requests.
  */
 async function refusedPublicRoute(
   req: NextRequest,
@@ -368,23 +374,44 @@ async function refusedPublicRoute(
   if (!shape) return null;
   try {
     const db = await getDb();
-    if (await publicRouteExists(db, shape)) return null;
-    // A `shop` shape that was refused *is* the missing shop, so the answer is
-    // already in hand; every other shape was refused for a reason the lookup
-    // does not report, and the slug it claims has still to be proved. The
-    // claim itself comes from the pathname rather than from `shape`, which
-    // carries no slug on the `malformed` branch — a well-formed shop with a
-    // segment no shop could have minted is exactly the case that should still
-    // be framed as that shop's.
-    const claimed = shape.kind === "shop" ? null : shopSlugFromPublicPath(req.nextUrl.pathname);
-    const live =
-      claimed !== null && (await publicRouteExists(db, { kind: "shop", shopSlug: claimed }));
-    return { liveShopSlug: live ? claimed : null };
+    const { exists, shopExists } = await publicRouteLookup(db, shape);
+    if (exists) return null;
+    // The slug the refusal is framed by is the one `shape` carries — the same
+    // string the lookup just resolved — and no longer a second parse of the
+    // pathname. That parse decoded nothing and held the segment to a charset
+    // narrower than what sign-up mints, so a live `blue--mantis` and a live
+    // shop reached as `/s/blue%2Dmantis` were framed as DiveDay's sales 404
+    // instead of their own (issue #765). `malformed` carries its shop for this
+    // reason: a well-formed shop with a segment no shop could have minted is
+    // exactly the case that should still be framed as that shop's. A refused
+    // `shop` shape *is* the missing shop, and `shopExists` is false there
+    // without a branch here saying so.
+    return { liveShopSlug: shopExists ? shape.shopSlug : null };
   } catch (error) {
-    log("public_route.existence_unavailable", "error", {
-      path: req.nextUrl.pathname,
-      message: error instanceof Error ? error.message : String(error),
-    });
+    // Two unrelated failures land here and only one of them is an incident.
+    // The slugs above reach Postgres unfiltered and length-unbounded on
+    // purpose, so `/s/%00` is a statement the server refuses — once per
+    // request, for as long as it is sent, and free for whoever is sending it.
+    // The database being gone is the other one, and it stops this check for
+    // every diver at once: that is the line worth an alarm, and it has one
+    // (`DatabaseUnavailable` in `infra/lib/observability.ts`).
+    //
+    // Neither branch logs the caught message or the pathname. Drizzle's
+    // wrapper message is the SQL followed by the bound parameters verbatim,
+    // which is the attacker's own string, and so was the `path` this used to
+    // ship to CloudWatch unauthenticated and unthrottled. `shape.kind` says
+    // which lookup failed out of a closed set of five, and
+    // `classifyDatabaseFailure` reports a SQLSTATE, a Node errno, or
+    // `"unknown"` — closed vocabularies, never a string off the wire.
+    //
+    // Both codes are written out as literals at their own `log(` call rather
+    // than chosen in an argument: `infra/lib/observability.test.ts` reads the
+    // codes the app emits straight off the source, and a metric filter
+    // matching a code nothing writes counts zero forever without erroring.
+    const failure = classifyDatabaseFailure(error);
+    const context = { shape: shape.kind, code: failure.code };
+    if (failure.unreachable) log("public_route.existence_unavailable", "error", context);
+    else log("public_route.existence_query_refused", "warn", context);
     return null;
   }
 }
@@ -435,13 +462,25 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // carries them rather than re-deriving them from a path they are not in.
   //
   // Carrying a value off the incoming request is the one place this file does
-  // not overwrite a client-supplied header, and it is safe for a reason worth
-  // writing down: no top-level navigation can carry a custom request header,
-  // and no cross-origin `fetch` can set an `x-diveday-*` one without a
-  // preflight this app never grants. Only same-origin script — already running
-  // as the reader — could forge one, and the whole of what it would buy is
-  // DiveDay's own 404 wearing the public header of a real shop. Both readers
-  // still hold the value to the slug charset rather than trusting it.
+  // not overwrite a client-supplied header, so what forging one buys is worth
+  // stating exactly. A *browser* cannot send one: no top-level navigation
+  // carries a custom request header, and no cross-origin `fetch` sets an
+  // `x-diveday-*` one without a preflight this app never grants. Every other
+  // HTTP client can — `/_not-found` is inside the matcher at the bottom of
+  // this file, so `curl` reaches this line directly with both headers set.
+  // This comment used to say only same-origin script could forge one, which is
+  // true of browsers and of nothing else. Blanking the pair on a direct hit is
+  // not the fix: the rewrite pass above *is* a direct hit and indistinguishable
+  // from one, so blanking there is issue #765 all over again.
+  //
+  // What it buys is a page the forger is the only reader of. The response goes
+  // back to the client that sent the headers; the one route to a third party
+  // was a shared cache keeping the refusal, and the `no-store` below closes
+  // that. Both readers hold the value to the slug charset
+  // (`shopSlugFromPublicPath`), so the most a forged one can name is a shop of
+  // this app. Why that residual is left standing rather than closed by a
+  // lookup is weighed where the lookup would have to go: the note on
+  // `refusedShopSlug` in `src/app/not-found.tsx`.
   const isRefusalRender = req.nextUrl.pathname === NOT_FOUND_ROUTE;
   const refused = isRefusalRender ? null : await refusedPublicRoute(req);
   const embedParams = req.nextUrl.searchParams.getAll("embed");
@@ -472,6 +511,31 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   const res = refused
     ? NextResponse.rewrite(new URL(NOT_FOUND_ROUTE, req.nextUrl))
     : ((await authGateResponse(req)) ?? NextResponse.next());
+  // **A refusal says for itself that it is not cacheable.** The rewrite keeps
+  // the original URL, so whatever the `/_not-found` render emits is what
+  // attaches to the refused path — and a negative answer pinned at a shared
+  // cache is the one failure this refusal cannot tolerate: a shop slug probed
+  // an hour before onboarding finishes, or a course slug probed before the
+  // shop publishes it, would go on answering 404 after the row exists. The
+  // docblock above already rules that out for the process-local cache it
+  // contemplates — positive results may be cached, negative ones never — and
+  // this is the same rule applied to every cache in front of the app.
+  //
+  // Measured rather than assumed, against `next build` + `next start` on
+  // 2026-09-12: the refusal already came back `private, no-cache, no-store,
+  // max-age=0, must-revalidate`, which is Next's own default for a response it
+  // did not prerender, and so did a live storefront. So this line fixes no
+  // observed leak. It removes a dependence: the promise is this refusal's, the
+  // directive was the framework's, and nothing would go red the day that
+  // default changes or a CDN in front rewrites it.
+  //
+  // `no-store` rather than the referral cookies' `private, no-store`, and
+  // stamped before them so their stronger directive wins where both apply.
+  //
+  // Both passes: Next routes the rewrite from the top, so the second pass sees
+  // `/_not-found` with `refused` null, and a bare `notFound()` from anywhere
+  // else in the app lands there too. No 404 in this product is worth caching.
+  if (refused || isRefusalRender) res.headers.set("Cache-Control", "no-store");
   rememberPartnerReferral(req, res);
   rememberBuddyReferral(req, res);
   // Forward embed-mode and the request's own pathname to the server-component

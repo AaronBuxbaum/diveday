@@ -20,28 +20,36 @@ const existence = vi.hoisted(() => ({
   /** What the stubbed lookup answers, and what it was asked. */
   answer: true as boolean,
   throws: false,
+  /**
+   * What a throwing lookup throws. The proxy's `catch` now classifies it, and
+   * the two classes take different branches, so "an outage" and "a slug the
+   * server refused" have to be distinguishable here.
+   */
+  throwsWith: null as unknown,
   asked: [] as PublicRouteShape[],
   /**
    * The shops the stub says are really there, whatever `answer` says about the
-   * resource under them — `null` to let `answer` speak for every shape alike.
-   * A refusal asks twice, and issue #765 is exactly the case where the two
-   * answers differ: the shop is alive, the departure under it is not.
+   * resource under them — `null` to let `answer` speak for both halves alike.
+   * Issue #765 is exactly the case where the two differ: the shop is alive, the
+   * departure under it is not. One question, two facts back.
    */
   liveShops: null as Set<string> | null,
 }));
 
 vi.mock("@/db/client", () => ({ getDb: async () => ({}) }));
 vi.mock("@/db/public-route-existence", () => ({
-  publicRouteExists: async (_db: unknown, shape: PublicRouteShape) => {
+  publicRouteLookup: async (_db: unknown, shape: PublicRouteShape) => {
     existence.asked.push(shape);
-    if (existence.throws) throw new Error("database unavailable");
-    // The one answer the real module gives without a query, kept here so the
-    // stub cannot disagree with it.
-    if (shape.kind === "malformed") return false;
-    if (existence.liveShops && shape.kind === "shop") {
-      return existence.liveShops.has(shape.shopSlug);
-    }
-    return existence.answer;
+    if (existence.throws) throw existence.throwsWith ?? new Error("database unavailable");
+    const shopExists = existence.liveShops
+      ? existence.liveShops.has(shape.shopSlug)
+      : existence.answer;
+    // Two answers the real module gives whatever the resource reader would
+    // have said, kept here so the stub cannot disagree with it: a segment that
+    // could never have been minted names nothing, and nothing at all exists
+    // under a shop that does not.
+    if (shape.kind === "malformed") return { exists: false, shopExists };
+    return { exists: shopExists && existence.answer, shopExists };
   },
 }));
 
@@ -169,6 +177,7 @@ describe("the public namespace's edge refusal", () => {
   beforeEach(() => {
     existence.answer = true;
     existence.throws = false;
+    existence.throwsWith = null;
     existence.asked = [];
     existence.liveShops = null;
   });
@@ -176,6 +185,35 @@ describe("the public namespace's edge refusal", () => {
   function rewriteTarget(res: Response): string | null {
     const value = res.headers.get("x-middleware-rewrite");
     return value ? new URL(value).pathname : null;
+  }
+
+  /**
+   * Every structured line `log()` wrote while `act` ran, parsed back.
+   *
+   * `src/lib/log.ts` writes over `console.error`/`console.warn`, so this reads
+   * what a log drain would receive — which is the point of the assertions
+   * below: what is *absent* from the shipped line matters as much as what is
+   * in it.
+   */
+  async function logged(act: () => Promise<unknown>): Promise<Record<string, unknown>[]> {
+    const lines: Record<string, unknown>[] = [];
+    const capture = (line: unknown) => {
+      if (typeof line !== "string") return;
+      try {
+        lines.push(JSON.parse(line) as Record<string, unknown>);
+      } catch {
+        // Not a structured line; nothing under test writes one.
+      }
+    };
+    const spies = (["error", "warn"] as const).map((level) =>
+      vi.spyOn(console, level).mockImplementation(capture),
+    );
+    try {
+      await act();
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+    }
+    return lines;
   }
 
   it("rewrites a URL that names nothing to Next's own not-found entry", async () => {
@@ -214,13 +252,11 @@ describe("the public namespace's edge refusal", () => {
     // second opinion about what a trip id may look like.
     const res = await run(request("/s/blue-mantis/trips/not-a-uuid"));
     expect(rewriteTarget(res)).toBe("/_not-found");
-    // Two questions, and the second is only asked because the first said no:
-    // the shape needs no query, and the shop probe behind it is what decides
-    // whose 404 the diver is about to read (issue #765).
-    expect(existence.asked).toEqual([
-      { kind: "malformed" },
-      { kind: "shop", shopSlug: "blue-mantis" },
-    ]);
+    // One question. The shape needs no resource query, and the shop probe that
+    // decides whose 404 the diver is about to read (issue #765) comes back on
+    // the same answer — it used to be a second call from this file.
+    expect(existence.asked).toEqual([{ kind: "malformed", shopSlug: "blue-mantis" }]);
+    expect(res.headers.get(`x-middleware-request-${REFUSED_SHOP_SLUG_HEADER}`)).toBe("blue-mantis");
   });
 
   it("never refuses anything but a GET or a HEAD", async () => {
@@ -252,15 +288,45 @@ describe("the public namespace's edge refusal", () => {
     const res = await run(request(`/s/blue-mantis/trips/${TRIP_ID}`));
     expect(rewriteTarget(res)).toBe("/_not-found");
     expect(res.headers.get(`x-middleware-request-${REFUSED_SHOP_SLUG_HEADER}`)).toBe("blue-mantis");
+    // And the frame costs no question of its own. This used to ask the shop
+    // again, so a dead link under a live shop — the one URL nobody legitimate
+    // requests — was the most expensive request in the public namespace.
+    expect(existence.asked).toEqual([{ kind: "trip", shopSlug: "blue-mantis", tripId: TRIP_ID }]);
   });
 
   it("frames a segment no shop could have minted as that shop's own refusal", async () => {
-    // The malformed shape carries no slug of its own, so the claim is read off
-    // the pathname — and a live shop with an unmintable segment under it is
-    // still a diver at that shop, not a stranger at DiveDay's door.
+    // A live shop with an unmintable segment under it is still a diver at that
+    // shop, not a stranger at DiveDay's door — so the malformed shape carries
+    // the shop it sat under, and the claim is read off that.
     existence.answer = false;
     existence.liveShops = new Set(["blue-mantis"]);
     const res = await run(request("/s/blue-mantis/sites/Molasses%20Reef"));
+    expect(res.headers.get(`x-middleware-request-${REFUSED_SHOP_SLUG_HEADER}`)).toBe("blue-mantis");
+  });
+
+  it("frames the refusal for a shop whose slug is legal but unusual", async () => {
+    // Sign-up sells `[a-z0-9-]+`, so `blue--mantis` is somebody's storefront.
+    // The claim used to be re-parsed out of the pathname and held to a
+    // narrower matcher, which returned null here — and a dead link under a
+    // real shop was answered by DiveDay's *sales* 404 with a trial button,
+    // which is the regression issue #765 exists to prevent. The slug now comes
+    // off the shape the lookup already used.
+    existence.answer = false;
+    existence.liveShops = new Set(["blue--mantis"]);
+    const res = await run(request(`/s/blue--mantis/trips/${TRIP_ID}`));
+    expect(rewriteTarget(res)).toBe("/_not-found");
+    expect(res.headers.get(`x-middleware-request-${REFUSED_SHOP_SLUG_HEADER}`)).toBe(
+      "blue--mantis",
+    );
+  });
+
+  it("frames the refusal for a live shop reached through a percent-escape", async () => {
+    // `/s/blue%2Dmantis` is the same shop the page would have rendered, and
+    // the shape decodes it before the lookup. The old second parse read the
+    // raw pathname, so this lost the frame too.
+    existence.answer = false;
+    existence.liveShops = new Set(["blue-mantis"]);
+    const res = await run(request(`/s/blue%2Dmantis/trips/${TRIP_ID}`));
     expect(res.headers.get(`x-middleware-request-${REFUSED_SHOP_SLUG_HEADER}`)).toBe("blue-mantis");
   });
 
@@ -323,6 +389,30 @@ describe("the public namespace's edge refusal", () => {
     expect(existence.asked).toEqual([]);
   });
 
+  it("carries a refused-shop claim a non-browser client made for itself, bounded rather than blanked", async () => {
+    // `/_not-found` is inside the matcher, so `curl` sends both headers
+    // straight at it and gets the frame it named. Blanking them on a direct
+    // hit is not available as a fix: the pass above *is* a direct hit and
+    // indistinguishable from one, and blanking there is issue #765 again. The
+    // residual is bounded rather than removed, and these are the bounds — the
+    // forger is the only reader of the page they forged, nothing is looked up
+    // on their behalf, and `no-store` keeps a shared cache from handing it to
+    // anybody else. `src/app/not-found.tsx` holds the value to the slug
+    // charset, so the frame it can name is a real shop's public chrome or
+    // nothing at all.
+    const res = await run(
+      request("/_not-found", {
+        [REQUEST_PATH_HEADER]: "/s/somebody-elses-shop/trips/nope",
+        [REFUSED_SHOP_SLUG_HEADER]: "somebody-elses-shop",
+      }),
+    );
+    expect(res.headers.get(`x-middleware-request-${REFUSED_SHOP_SLUG_HEADER}`)).toBe(
+      "somebody-elses-shop",
+    );
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(existence.asked).toEqual([]);
+  });
+
   it("carries nothing into a bare /_not-found render", async () => {
     // Next's own `notFound()` reaches this route without a refusal in front of
     // it — a stale email link, a cross-tenant staff URL. Nothing to carry, and
@@ -332,12 +422,113 @@ describe("the public namespace's edge refusal", () => {
     expect(res.headers.get(`x-middleware-request-${REQUEST_PATH_HEADER}`)).toBe("/_not-found");
   });
 
+  it("tells every cache never to keep the refusal", async () => {
+    // The rewrite keeps the original URL, so a cached negative answer is
+    // pinned to the path a diver typed — and a shop slug probed an hour before
+    // onboarding finishes, or a course slug probed before the shop publishes
+    // it, would keep answering 404 after the row exists. The refusal carries
+    // the directive itself rather than inheriting whatever `/_not-found`
+    // happens to emit.
+    existence.answer = false;
+    const res = await run(request("/s/no-such-shop"));
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("puts back the no-store the availability document loses on this path", async () => {
+    // `/s/<shop>/availability.json` answers its own 404 `no-store` on purpose
+    // (its route handler says so). For a shop that does not exist the edge
+    // refuses first and that handler never runs, so the one route in the
+    // namespace with a stated caching intent would silently lose it.
+    existence.answer = false;
+    const res = await run(request("/s/no-such-shop/availability.json"));
+    expect(rewriteTarget(res)).toBe("/_not-found");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("keeps the refusal uncacheable on the second pass, and on a bare not-found render", async () => {
+    // Next routes the rewrite from the top, so `proxy` is re-entered with
+    // `/_not-found` and no refusal in hand. Whichever pass's headers reach the
+    // wire, the answer is the same.
+    const second = await run(
+      request("/_not-found", { [REQUEST_PATH_HEADER]: "/s/blue-mantis/courses/nope" }),
+    );
+    expect(second.headers.get("cache-control")).toBe("no-store");
+    expect((await run(request("/_not-found"))).headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("says nothing about caching a page that is really there", async () => {
+    // Scoped to the refusal: a live storefront's caching is the app's to
+    // decide, and an edge `no-store` on it would take every public page off
+    // every cache at once.
+    expect((await run(request("/s/blue-mantis"))).headers.get("cache-control")).toBeNull();
+  });
+
+  it("leaves the referral cookie's stronger directive alone", async () => {
+    // A dead partner link is both a refusal and a mint. `private, no-store`
+    // already forbids every cache the refusal cares about and says one more
+    // true thing about the Set-Cookie, so the refusal is stamped before the
+    // cookie rather than after it.
+    existence.answer = false;
+    const res = await run(
+      request("/s/no-such-shop?utm_source=partner&utm_campaign=coral-sands", {
+        "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
+      }),
+    );
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+  });
+
   it("does not refuse when the lookup itself fails", async () => {
     // A 404 fired by a database outage would take every live shop off the
     // internet to fix a soft 404 on dead links.
     existence.throws = true;
     const res = await run(request("/s/blue-mantis"));
     expect(rewriteTarget(res)).toBeNull();
+  });
+
+  it("logs an unreachable database at the code the alarm counts", async () => {
+    // Failing open means this line is the only trace the failure leaves, and
+    // `DatabaseUnavailable` in `infra/lib/observability.ts` counts it by this
+    // exact string. Renaming the code silently stops the alarm.
+    existence.throws = true;
+    existence.throwsWith = Object.assign(new Error("connect ECONNREFUSED 10.0.0.1:5432"), {
+      code: "ECONNREFUSED",
+    });
+    const [line, ...rest] = await logged(() => run(request("/s/blue-mantis/courses/open-water")));
+    expect(rest).toEqual([]);
+    expect(line).toMatchObject({
+      level: "error",
+      event: "public_route.existence_unavailable",
+      shape: "course",
+      code: "ECONNREFUSED",
+    });
+  });
+
+  it("logs a statement the server refused at warn, carrying none of the request's own strings", async () => {
+    // A shop slug reaches this lookup unfiltered and length-unbounded on
+    // purpose, so `/s/%00` is a statement Postgres refuses — SQLSTATE 22021,
+    // once per request, free to send. Logging that at `error` alongside a real
+    // outage put whoever was sending it in charge of the alarm, and the line
+    // carried their own path *and* drizzle's wrapper message, which is the SQL
+    // followed by the bound parameters verbatim.
+    const driver = Object.assign(new Error('invalid byte sequence for encoding "UTF8": 0x00'), {
+      code: "22021",
+    });
+    existence.throws = true;
+    existence.throwsWith = new Error(
+      'Failed query: select "id" from "shops" where "shops"."slug" = $1\nparams: probe-slug,1',
+      { cause: driver },
+    );
+    const lines = await logged(() => run(request("/s/probe-slug")));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({
+      level: "warn",
+      event: "public_route.existence_query_refused",
+      shape: "shop",
+      code: "22021",
+    });
+    expect(JSON.stringify(lines)).not.toContain("probe-slug");
+    expect(JSON.stringify(lines)).not.toContain("invalid byte sequence");
   });
 });
 

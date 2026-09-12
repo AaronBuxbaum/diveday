@@ -173,6 +173,15 @@ test("sitemap.xml lists the marketing pages, excludes the demo shop, and never l
  * The two 200s at the end are not decoration: a guard that only proves
  * unknown URLs are refused is satisfied by refusing every URL, which would be
  * the far worse bug — a shop's storefront off the internet.
+ *
+ * The `no-store` assertion is a floor, not a discriminator, and that is worth
+ * knowing before trusting it: in this build Next's own default for a response
+ * it did not prerender is already `private, no-cache, no-store, max-age=0,
+ * must-revalidate`, so this passes with or without the proxy's own stamp
+ * (measured 2026-09-12). It is here because the promise — a negative answer is
+ * never pinned to a URL that later becomes real — is DiveDay's rather than the
+ * framework's, and this is the only assertion in the repository that reads it
+ * off the wire. `src/proxy.test.ts` is what goes red if the stamp is removed.
  */
 test("an unknown URL under /s/** answers 404, not 200 with the not-found page", {
   tag: READ_ONLY,
@@ -182,6 +191,10 @@ test("an unknown URL under /s/** answers 404, not 200 with the not-found page", 
     "/s/no-such-shop-here",
     // …and one of its children, which must not resolve past its missing shop.
     "/s/no-such-shop-here/courses",
+    // The one route in the namespace that states a caching intent of its own —
+    // its handler answers 404 `no-store` deliberately, and for a shop that does
+    // not exist the edge refuses before the handler runs.
+    "/s/no-such-shop-here/availability.json",
     // A live shop, naming a course, a site and a departure it does not have.
     `/s/${DEMO_SHOP_SLUG}/courses/nope-nope`,
     `/s/${DEMO_SHOP_SLUG}/sites/somebody-elses-ledge`,
@@ -189,13 +202,20 @@ test("an unknown URL under /s/** answers 404, not 200 with the not-found page", 
     // Segments no shop could have minted: refused on shape, before any query.
     `/s/${DEMO_SHOP_SLUG}/sites/Molasses%20Reef`,
     `/s/${DEMO_SHOP_SLUG}/trips/nope`,
-    // The one path that answered 404 before any of this — the widget
-    // catalogue, refused at the edge since it shipped. It is in the list
-    // because it is the proof the mechanism works, and it must keep working.
-    `/s/${DEMO_SHOP_SLUG}/embed/nope`,
   ]) {
-    expect((await page.request.get(path)).status(), path).toBe(404);
+    const res = await page.request.get(path);
+    expect(res.status(), path).toBe(404);
+    // A negative answer must never be pinned to a URL that later becomes real:
+    // a shop slug probed before onboarding finishes, a course slug probed
+    // before the shop publishes it.
+    expect(res.headers()["cache-control"], path).toContain("no-store");
   }
+
+  // The one path that answered 404 before any of this — the widget catalogue,
+  // refused at the edge since it shipped. It is asserted separately because it
+  // is a complete response rather than a rewrite, and its segment is a closed
+  // list in this repository that no row can turn real.
+  expect((await page.request.get(`/s/${DEMO_SHOP_SLUG}/embed/nope`)).status()).toBe(404);
 
   for (const path of [
     `/s/${DEMO_SHOP_SLUG}`,

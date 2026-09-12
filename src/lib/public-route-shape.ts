@@ -25,14 +25,24 @@
  * rather than a row. A shop slug and a course slug are *not* pattern-checked
  * here even though both are minted from a known charset: the page does not
  * check them either, it just looks them up, and a slug charset that drifts
- * apart from the minting rule (`onboardSchema` accepts `[a-z0-9-]+`, which
- * admits `blue--mantis`, while the matcher in `public-routes.ts` does not)
- * would turn a real shop's whole storefront into a 404. The row decides.
+ * apart from the minting rule would turn a real shop's whole storefront into a
+ * 404. That drift was real — `onboardSchema` sells `blue--mantis` and
+ * `SHOP_SLUG_PATTERN` used to refuse it — and it cost a shop its 404 frame
+ * rather than its storefront only because this module never applied it. The
+ * row decides.
  *
  * `null` means "this module has no opinion" — the URL is outside the
  * namespace, or names no route in it at all, which Next already answers with a
  * real 404 of its own. `{ kind: "malformed" }` means "this names nothing and
  * cannot name anything", which needs no query.
+ *
+ * **Every shape names its shop, `malformed` included.** A refusal is framed as
+ * the shop the URL was under (issue #765), and the proxy used to recover that
+ * slug by re-reading the pathname through `shopSlugFromPublicPath` — a second
+ * parse, undecoded and held to a charset narrower than the minting rule, so a
+ * live `blue--mantis` and a live shop reached as `/s/blue%2Dmantis` both lost
+ * the frame. The slug this module already decoded and already looked the shop
+ * up by is the honest one, so it rides on the shape.
  */
 
 import { parseDiveSiteSlug } from "./dive-site-slug";
@@ -45,7 +55,7 @@ export type PublicRouteShape =
   | { kind: "course"; shopSlug: string; courseSlug: string }
   | { kind: "site"; shopSlug: string; siteSlug: string }
   | { kind: "trip"; shopSlug: string; tripId: string }
-  | { kind: "malformed" };
+  | { kind: "malformed"; shopSlug: string };
 
 /**
  * Routes below `/s/<shopSlug>` that name nothing but the shop — the course
@@ -92,14 +102,14 @@ export function publicRouteShape(pathname: string): PublicRouteShape | null {
     if (first === "courses") return { kind: "course", shopSlug, courseSlug: second };
     if (first === "sites") {
       const siteSlug = parseDiveSiteSlug(second);
-      return siteSlug ? { kind: "site", shopSlug, siteSlug } : { kind: "malformed" };
+      return siteSlug ? { kind: "site", shopSlug, siteSlug } : { kind: "malformed", shopSlug };
     }
     if (first === "trips" || first === "boats") return tripShape(shopSlug, second);
     // The proxy answers an unknown widget before it ever asks for a shape
     // (`isUnknownEmbedWidgetRoute`), because that refusal needs no shop. Said
     // again here so this function stays true on its own terms rather than by
     // an ordering two files away.
-    if (first === "embed") return isEmbedWidget(second) ? shop : { kind: "malformed" };
+    if (first === "embed") return isEmbedWidget(second) ? shop : { kind: "malformed", shopSlug };
     return null;
   }
   if (rest.length === 3 && first === "trips" && second && third && TRIP_CHILDREN.has(third)) {
@@ -115,5 +125,5 @@ export function publicRouteShape(pathname: string): PublicRouteShape | null {
  */
 function tripShape(shopSlug: string, candidate: string): PublicRouteShape {
   const tripId = uuidParam(candidate);
-  return tripId ? { kind: "trip", shopSlug, tripId } : { kind: "malformed" };
+  return tripId ? { kind: "trip", shopSlug, tripId } : { kind: "malformed", shopSlug };
 }

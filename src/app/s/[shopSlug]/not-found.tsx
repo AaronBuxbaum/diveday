@@ -30,9 +30,10 @@ import { publicSchedulePath, shopSlugFromPublicPath } from "@/lib/public-routes"
  * `src/app/not-found.tsx`, which composes the same shop shell for the slug the
  * proxy named. What still arrives here is every `notFound()` the edge cannot
  * pre-empt: a row that existed when the edge looked and was gone when the page
- * read it, and a page that refuses a row it found — an opted-out shop's
- * `availability.json`, a year card a shop keeps private. Those keep this
- * boundary, and the two renderings are kept identical on purpose.
+ * read it, and a page that refuses a row it found — a course a shop has hidden
+ * (`courses/[slug]/page.tsx`, `is_active` off and the reader not its staff), a
+ * departure whose shop has the boat line switched off (`boats/[tripId]`). Those
+ * keep this boundary, and the two renderings are kept identical on purpose.
  *
  * **The slug comes from the request, because this file is handed no `params`**
  * — Next passes `not-found.tsx` no props at all. `REQUEST_PATH_HEADER` is

@@ -130,10 +130,20 @@ export function publicDiveSitePath(shopSlug: string, siteSlug: string): string {
 }
 
 /**
- * A shop slug as the routes spell it: lowercase, digits, inner hyphens. Kept
- * in step with the embed matchers in src/lib/auth.config.ts.
+ * A shop slug as the routes spell it — and it is `onboardSchema`'s rule,
+ * imported by the minter rather than restated, so the two cannot drift again.
+ * Lowercase, digits and hyphens, in any arrangement; same charset the embed
+ * matchers in src/lib/embed-routes.ts already use.
+ *
+ * It used to be `^[a-z0-9]+(?:-[a-z0-9]+)*$`, which reads like a slug and is
+ * not what a shop can own: sign-up accepts `[a-z0-9-]+`, so `blue--mantis`,
+ * `-reef` and `reef-` are live storefronts every reader of this pattern then
+ * refused to name. The one a diver saw was `src/app/not-found.tsx`: a dead
+ * link under such a shop lost its frame and was answered by DiveDay's *sales*
+ * 404 with a trial button, which is the first impression issue #765 exists to
+ * prevent. A matcher narrower than the minting rule is a bug in the matcher.
  */
-const SHOP_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const SHOP_SLUG_PATTERN = /^[a-z0-9-]+$/;
 
 /**
  * The shop a staff URL names, or `null` when it names none.
@@ -161,7 +171,7 @@ export function shopSlugFromStaffUrl(candidate: string | null | undefined): stri
     return null;
   }
   const [prefix, slug] = pathname.split("/").filter(Boolean);
-  if (prefix !== "shop" || !slug || !SHOP_SLUG.test(slug)) return null;
+  if (prefix !== "shop" || !slug || !SHOP_SLUG_PATTERN.test(slug)) return null;
   return slug;
 }
 
@@ -172,16 +182,17 @@ export function shopSlugFromStaffUrl(candidate: string | null | undefined): stri
  * `params` — Next passes that file no props at all — so a 404 under
  * `/s/<slug>/**` learns which shop the visitor was trying to reach from
  * `REQUEST_PATH_HEADER`, which `src/proxy.ts` stamps and always overwrites.
- * Same rule as its staff sibling above: the slug is held to `SHOP_SLUG`, and
- * anything else — a path outside `/s/`, a bare `/s`, a segment carrying a dot
- * or a slash — is `null`, which the caller renders as no link at all. The
- * value is only ever concatenated by `publicSchedulePath`, so a slug that
- * somehow arrived from a client still cannot address anything but this app.
+ * Same rule as its staff sibling above: the slug is held to
+ * `SHOP_SLUG_PATTERN`, and anything else — a path outside `/s/`, a bare `/s`,
+ * a segment carrying a dot or a slash — is `null`, which the caller renders as
+ * no link at all. The value is only ever concatenated by
+ * `publicSchedulePath`, so a slug that somehow arrived from a client still
+ * cannot address anything but this app.
  */
 export function shopSlugFromPublicPath(pathname: string | null | undefined): string | null {
   if (!pathname) return null;
   const [prefix, slug] = pathname.split("/").filter(Boolean);
-  if (`/${prefix}` !== PUBLIC_SHOP_PREFIX || !slug || !SHOP_SLUG.test(slug)) return null;
+  if (`/${prefix}` !== PUBLIC_SHOP_PREFIX || !slug || !SHOP_SLUG_PATTERN.test(slug)) return null;
   return slug;
 }
 

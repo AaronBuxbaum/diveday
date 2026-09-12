@@ -39,19 +39,25 @@ looked at the page:
 None of it is the mechanism. The 404 comes from the edge:
 
 ```ts
-// src/proxy.ts:320
+// src/proxy.ts:431 — the first statement in `proxy()`
 if (isUnknownEmbedWidgetRoute(req.nextUrl.pathname)) {
   return new NextResponse("Not found", { status: 404, headers: { ... } });
 }
 ```
 
-`isUnknownEmbedWidgetRoute` (`src/lib/embed-routes.ts:41`) matches
+`isUnknownEmbedWidgetRoute` (`src/lib/embed-routes.ts:49`) matches
 `/^\/s\/[a-z0-9-]+\/embed\/([^/]+)\/?$/` and asks whether the captured segment is in `EMBED_WIDGETS`;
-the proxy matcher (`src/proxy.ts:420`) covers every non-asset path, so this returns a complete
-response **before Next resolves a route at all**. The page's `if (!isEmbedWidget(widget)) notFound()`
-at `embed/[widget]/page.tsx:51` is unreachable on that path and contributes nothing to the status,
-and its `export const metadata` at `:29` is irrelevant to it. `src/lib/embed-routes.ts:34-40` and
+the proxy matcher (`config.matcher`, `src/proxy.ts:615`) covers every non-asset path, so this
+returns a complete response **before Next resolves a route at all**. The page's
+`if (!isEmbedWidget(widget)) notFound()` at `src/app/s/[shopSlug]/embed/[widget]/page.tsx:51` is
+unreachable on that path and contributes nothing to the status, and its `export const metadata` at
+`:29` is irrelevant to it. `src/lib/embed-routes.ts:34-48` and
 `e2e/embed-catalogue.spec.ts:87-93` have both said so in as many words since the widget shipped.
+
+Every line number in this record was re-derived against the tree this decision landed on. They are
+anchors and not guarantees — a record whose subject is three issues citing the wrong line has no
+business shipping its own — so each one names the symbol beside it, which is the half that survives
+the next edit above it.
 
 Verified here by calling `proxy()` directly, with no Next render in the picture at all:
 `/s/blue-mantis/embed/nope` comes back `404` with the body `Not found`, while `/s/no-such-shop` and
@@ -102,8 +108,10 @@ joins it.
    turns a `/s/**` pathname into the thing it names (a shop, a course, a site, a departure, or a
    segment malformed on its face) using the parsers the app already holds slugs to;
    `src/db/public-route-existence.ts` answers whether that thing exists in one indexed lookup. The
-   proxy asks both and returns a refusal before any shell is sent. A malformed segment costs no read
-   at all.
+   proxy asks both and returns a refusal before any shell is sent. One question, and the answer
+   carries whether the shop itself is there, because the refusal is framed as that shop's (point 3)
+   and asking again would make a dead URL the most expensive request in the namespace. A malformed
+   segment costs only that shop read.
 
 2. **The page-level `notFound()` calls all stay.** They are the second layer, and they are what a
    diver sees when the row disappears between the edge's answer and the page's read. Deleting them
@@ -157,11 +165,48 @@ pages keep their static shells and their instant paint; nothing in ADR 20260804-
 given back.
 
 **What it costs.** One indexed read on the request path, before the shell, on every `/s/**` request
-that names a shop — the edge is now a place with a data dependency, which is what #1489's triage
-comment named as the reason to be careful there. The read is by slug or id on an indexed column and
-it answers before the shell would have been sent, so it is latency the page's own lookup no longer
-has to spend; it is not free, and the public pages' latency is the number to watch
-(`infra/lib/observability.ts`).
+that names a shop, and two for one that names a course, a dive site or a departure inside it — the
+edge is now a place with a data dependency, which is what #1489's triage comment named as the reason
+to be careful there. It is the same read the page is about to issue a few milliseconds later, so the
+*work* is duplicated rather than new; the **TTFB is not**. Nothing carries the edge's answer down
+into the render — `getShopBySlug` is memoized nowhere, and the course page, the trip page and the
+public shell each look the shop up again — so this is a serial addition to time-to-first-byte on
+every public request, not latency moved off a later layer. `src/proxy.ts` says the same at the
+function that pays it. The number to watch is therefore the public pages' TTFB, collected and
+graphed by `infra/lib/observability.ts` and deliberately not alarmed on. If it moves, the first
+answer is a process-local cache of **positive** shop-slug results with a short TTL and never a
+negative one — a shop created a second ago must not go on 404ing — measured before it is written;
+the retreat past that is "The escape hatch" below.
+
+**Failing open is silent, so it is counted.** The `catch` around the lookup serves the page on any
+throw, which means an unreachable database takes the whole namespace back to soft 404s with nothing
+on a screen, no thrown exception for Sentry, and no status for the uptime check to notice — the log
+line is the entire trace. It is therefore `public_route.existence_unavailable`, counted by the
+`DatabaseUnavailable` signal in `infra/lib/observability.ts` and pinned by a test there, because a
+metric filter matching a renamed code counts zero forever without erroring. The other failure that
+reaches the same `catch` is not an incident and must not share the alarm: a shop slug and a course
+slug go into the lookup unfiltered and length-unbounded on purpose, so `/s/%00` is a statement
+Postgres refuses (SQLSTATE 22021), once per request, free for whoever is sending it. That branch is
+`public_route.existence_query_refused` at `warn`, split by `src/lib/db-failure.ts` on whether a
+server answered at all. Neither line carries the pathname or the driver's message: drizzle's wrapper
+message is the SQL followed by the bound parameters verbatim, and both were being shipped to
+CloudWatch unauthenticated and unthrottled at the request of a stranger.
+
+**What it discloses.** A status line is an oracle, and under `/s/**` there is one row whose
+visibility a page decides for itself: `courses.is_active` is the shop's Hidden toggle, and
+`courses/[slug]/page.tsx` still serves a hidden course to that shop's live staff — the editor's
+Preview button opens exactly that URL. The existence lookup therefore cannot apply `is_active`
+without hard-404ing the previewer, so a hidden course answers 200 with the page's refusal under the
+shell while a course that never existed answers 404, and a stranger guessing template course slugs
+learns which unpublished drafts a shop is holding. Accepted rather than overlooked: at this layer
+the reader is only ever a cookie, `getSessionCookie` verifies nothing, and the snapshot
+`getCookieCache` decrypts is a five-minute cache the proxy already refuses to read as "signed out"
+— so every cheap refusal is either defeated by a forged header or 404s a staffer back from lunch.
+The three dead ends are written out in `src/db/public-route-existence.ts`'s header, the behaviour is
+pinned in its test, and issue #1735 holds the mechanism that would close it: a preview capability
+the edge can verify. The private-charter departure looks like the same hole and isn’t one — a trip
+id is a random uuid with no namespace to sweep, and the trip page carries no `isPrivate` check at
+all, so whoever holds the id already reads the whole booking page.
 
 **The proxy runs twice on a refusal, and the second pass is the one the page sees.** Next routes a
 rewrite from the top, matcher included, so `proxy` is re-entered with `/_not-found` as its own
@@ -171,6 +216,22 @@ refused shop came back empty, so decision 3's frame silently reverted to DiveDay
 green in the unit tests, wrong in a real build. The second pass carries those two values forward
 instead of re-deriving them; `src/proxy.ts` holds the reasoning and `src/proxy.test.ts` the
 regression guard. Anything else that has to reach a refusal's render pays the same tax.
+
+**The refusal carries its own `no-store`, and it is a dependence removed rather than a leak fixed.**
+Answering with a rewrite keeps the original URL, so whatever cache directive the `/_not-found` render
+emits is what attaches to the refused path — and a negative answer is the one thing this refusal must
+never let a shared cache keep. A shop slug probed an hour before onboarding finishes, or a course
+slug probed before the shop publishes it, would go on 404ing after the row exists, which is the
+failure "What it costs" already rules out for a process-local cache in as many words: positive
+results may be cached, negative ones never. Measured against `next build` + `next start` on
+2026-09-12, that is *already* what happens — the refusal came back `private, no-cache, no-store,
+max-age=0, must-revalidate`, Next's default for a response it did not prerender, and so did a live
+storefront — so nothing was leaking. What was missing is that the promise belonged to the framework's
+default and to no test: `src/proxy.ts` now stamps `Cache-Control: no-store` on the refusal itself, on
+both passes, and `src/proxy.test.ts` fails if it is removed. `/s/<shop>/availability.json` is the one
+route in the namespace that had stated the intent for itself — its handler answers its own 404
+`no-store` deliberately — and for a shop that does not exist the edge refuses before that handler
+runs, so the edge is where the intent has to be restated.
 
 **What it commits us to, and the direction it fails in.** A shape `publicRouteShape` does not
 recognise returns `null`, which means *no opinion*: the request is passed through untouched. That is
