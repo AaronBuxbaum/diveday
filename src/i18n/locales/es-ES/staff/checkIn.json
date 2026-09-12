@@ -62,6 +62,7 @@
   "checkInAriaLabel": "Registrar a {name}",
   "checkingIn": "Registrando…",
   "sendFailed": "No se envió. Toca la fila otra vez.",
+  "sendFailedButton": "No se envió. Tócalo otra vez.",
   "offlineLabel": "Sin conexión: este listado puede estar desactualizado",
   "pullToRefresh": {
     "pulling": "Desliza hacia abajo para sincronizar…",

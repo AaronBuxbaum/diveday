@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CheckInQueueRow } from "@/db/check-in";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -46,7 +46,14 @@ function row(name: string, overrides: Partial<CheckInQueueRow> = {}): CheckInQue
 
 const settled = (name: string) => row(name, { bookingStatus: "checked_in" });
 
-function renderQueue(rows: CheckInQueueRow[], settledOpen = false, showFirstVisit = true) {
+function renderQueue(
+  rows: CheckInQueueRow[],
+  settledOpen = false,
+  showFirstVisit = true,
+  confirmIdentityAction: (formData: FormData) => Promise<void> = vi
+    .fn()
+    .mockResolvedValue(undefined),
+) {
   return render(
     <CounterQueue
       rows={rows}
@@ -60,7 +67,7 @@ function renderQueue(rows: CheckInQueueRow[], settledOpen = false, showFirstVisi
       noShowClaimFor={() => null}
       markNoShowAction={vi.fn().mockResolvedValue(undefined)}
       undoNoShowAction={vi.fn().mockResolvedValue(undefined)}
-      confirmIdentityAction={vi.fn().mockResolvedValue(undefined)}
+      confirmIdentityAction={confirmIdentityAction}
       identityCopyFor={(queued) => ({
         trigger: `Confirm this is ${queued.personName}`,
         message: `Is the person at the counter ${queued.personName}?`,
@@ -75,6 +82,52 @@ function renderQueue(rows: CheckInQueueRow[], settledOpen = false, showFirstVisi
     />,
   );
 }
+
+describe("a send that does not go through", () => {
+  /**
+   * **The queue survives a failed mutation** (issue #1788). Every control on a
+   * counter row posts through `RowActionForm` now, whose whole reason for
+   * existing is that the alternative is the shop's error boundary: on marina
+   * wifi a bare `<form action={…}>` used to replace this segment — the
+   * twenty-six-name queue, the departure groups, the scroll position and
+   * anything typed into the scan field — in front of a diver standing at the
+   * desk (issue #819).
+   *
+   * The identity confirm is the sharpest case, which is why it is the one
+   * asserted here: a held row is offered no check-in tap at all, so this is the
+   * row's only control, and the hold is the reason that diver is standing
+   * there.
+   *
+   * The assertion that matters is the second one. "The message appeared" would
+   * pass on a surface that had been torn down to a single row; what #819 was
+   * about is the names still being on the glass.
+   */
+  it("says so on the row and leaves every other name on the glass", async () => {
+    renderQueue(
+      [
+        row("Nadia Petrov", {
+          readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+        }),
+        row("Ines Costa"),
+        row("June Park"),
+      ],
+      false,
+      true,
+      vi.fn().mockRejectedValue(new Error("Failed to fetch")),
+    );
+
+    // Two taps, because the attestation is armed before it is sent.
+    fireEvent.click(screen.getByRole("button", { name: "Confirm this is Nadia Petrov" }));
+    fireEvent.click(screen.getByRole("button", { name: "Yes, this is them" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("That didn’t send. Tap it again.");
+    });
+    expect(screen.getByText("Nadia Petrov")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Check in Ines Costa" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Check in June Park" })).toBeInTheDocument();
+  });
+});
 
 describe("the settled group", () => {
   /**

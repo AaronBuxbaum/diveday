@@ -24,6 +24,7 @@ import type { FormNotice } from "@/lib/staff-notices";
 import { primaryBlocker } from "@/lib/today";
 import { counterBlockerDisclosure } from "../blocker-disclosure";
 import { CheckInActionForm } from "../CheckInActionForm";
+import { RowActionForm } from "../RowActionForm";
 import { NoShowSalvage, type NoShowSalvageCopy, NoShowScript } from "./NoShowScript";
 
 /**
@@ -248,7 +249,10 @@ export function CounterQueueRow({
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <Badge tone="neutral">{t("checkIn.noShow.badge")}</Badge>
-            <form action={undoNoShowAction}>
+            <RowActionForm
+              action={undoNoShowAction}
+              sendFailedLabel={t("checkIn.sendFailedButton")}
+            >
               <input type="hidden" name="bookingId" value={row.bookingId} />
               <SubmitButton
                 pendingLabel={t("checkIn.noShow.undoing")}
@@ -257,7 +261,7 @@ export function CounterQueueRow({
               >
                 {t("checkIn.noShow.undo")}
               </SubmitButton>
-            </form>
+            </RowActionForm>
           </div>
         </div>
         {salvage ? <NoShowSalvage copy={salvage} /> : null}
@@ -388,6 +392,7 @@ export function CounterQueueRow({
                     confirmAriaLabel: t("checkIn.noShow.sailedConfirmAriaLabel", {
                       name: row.personName,
                     }),
+                    sendFailed: t("checkIn.sendFailedButton"),
                   }
                 : {
                     door: t("checkIn.noShow.door"),
@@ -397,6 +402,7 @@ export function CounterQueueRow({
                     confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", {
                       name: row.personName,
                     }),
+                    sendFailed: t("checkIn.sendFailedButton"),
                   }
             }
           />
@@ -507,7 +513,11 @@ export function CounterQueueRow({
    * for the walk was a control, not a preview.
    */
   const identityControl = identityUnconfirmed ? (
-    <form action={confirmIdentityAction} className="mt-3">
+    <RowActionForm
+      action={confirmIdentityAction}
+      sendFailedLabel={t("checkIn.sendFailedButton")}
+      className="mt-3"
+    >
       <input type="hidden" name="bookingId" value={row.bookingId} />
       <InlineConfirm
         triggerLabel={identityCopy.trigger}
@@ -517,7 +527,7 @@ export function CounterQueueRow({
         pendingLabel={identityCopy.confirming}
         triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
       />
-    </form>
+    </RowActionForm>
   ) : null;
   return (
     <LedgerRow as="article" size="lg" className="px-4 py-3 sm:px-5">
@@ -608,7 +618,7 @@ export function CounterQueueRow({
  */
 function PassDoor({ shopSlug, row, t }: { shopSlug: string; row: QueueRow; t: StaffTranslator }) {
   return (
-    <form action={printPassAction}>
+    <RowActionForm action={printPassAction} sendFailedLabel={t("checkIn.sendFailedButton")}>
       <input type="hidden" name="shopSlug" value={shopSlug} />
       <input type="hidden" name="bookingId" value={row.bookingId} />
       <SubmitButton
@@ -618,6 +628,6 @@ function PassDoor({ shopSlug, row, t }: { shopSlug: string; row: QueueRow; t: St
       >
         {t("print.counter.passDoor")}
       </SubmitButton>
-    </form>
+    </RowActionForm>
   );
 }

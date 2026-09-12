@@ -62,6 +62,7 @@
   "checkInAriaLabel": "Check in {name}",
   "checkingIn": "Checking in…",
   "sendFailed": "That didn’t send. Tap the row again.",
+  "sendFailedButton": "That didn’t send. Tap it again.",
   "offlineLabel": "Offline — this board may be out of date",
   "pullToRefresh": {
     "pulling": "Pull down to sync…",
