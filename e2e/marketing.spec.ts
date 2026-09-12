@@ -931,12 +931,14 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // that is the byte three issues chased without a test reading it.
   await page.goto("/switching/checkfront");
   await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
-  // `.first()`: the server HTML (confirmed via curl against a fresh build)
-  // carries exactly one `<meta name="robots">`, but this route's dynamic
-  // hole resolving client-side after a full navigation inserts a second,
-  // identical one — a harmless PPR-resolution duplicate, not a second,
-  // differing directive: a route with no dynamic-hole resolution step hits
-  // the same not-found boundary and never duplicates it.
+  // `.first()`: this route used to resolve a dynamic hole client-side after a
+  // full navigation and insert a second, identical `<meta name="robots">` — a
+  // harmless PPR-resolution duplicate, never a second differing directive.
+  // `src/proxy.ts` now rewrites the request before the route renders at all
+  // (issue #1734), so there is no hole left to resolve and the count may well
+  // be one. `.first()` stays because the assertion is about the *directive*,
+  // and pinning a count here would be asserting a framework detail this test
+  // does not care about.
   await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", "noindex");
 });
 

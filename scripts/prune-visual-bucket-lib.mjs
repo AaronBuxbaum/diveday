@@ -48,9 +48,11 @@ export const KEEP_MAIN_BASELINES = 10;
  * age at the moment a branch's visual run published was p50 2.5h, p95 23.8h,
  * max 34.3h. Seventy-two hours is a little over twice that measured tail.
  *
- * It costs almost nothing: about 35 main tips at the measured merge rate, or
- * ~7 GB at this bucket's ~213 MB a snapshot, which is ~$0.17/month against a
- * ~$12 bill that is request-shaped rather than storage-shaped (ADR
+ * Replayed over this repository's real history it keeps 29 tips covering 71.4
+ * hours of main, where the ten-slot rule it replaces covered 5.4 — so the "nine
+ * hours" this was filed as was itself generous. It costs almost nothing: 29
+ * snapshots is ~6 GB at this bucket's ~213 MB a snapshot, ~$0.14/month against
+ * a ~$12 bill that is request-shaped rather than storage-shaped (ADR
  * 20260826-prune-visual-bucket's second amendment). And
  * `scripts/wait-for-baseline.mjs` walks 40 first-parent ancestors behind it —
  * a walk that can only resolve anything *because* the kept baselines are now a

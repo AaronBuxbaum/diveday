@@ -26,8 +26,10 @@ export const KEEP_MAIN_BASELINES = 10;
  * A count alone re-files the bug it fixes -- at the measured 11.7 merges a day
  * ten main tips is about twenty hours, and the measured fork-point age at the
  * moment a branch's visual run published was p50 2.5h, p95 23.8h, max 34.3h.
- * Seventy-two hours is a little over twice that tail, about 35 main tips, or
- * ~7 GB at this bucket's ~213 MB a snapshot: ~$0.17/month.
+ * Seventy-two hours is a little over twice that tail. Replayed over this
+ * repository's real history it keeps 29 tips covering 71.4 hours of main, where
+ * the ten-slot rule it replaces covered 5.4: ~6 GB at this bucket's ~213 MB a
+ * snapshot, or ~$0.14/month.
  */
 export const KEEP_MAIN_BASELINE_AGE_MS = 72 * 60 * 60 * 1000;
 
