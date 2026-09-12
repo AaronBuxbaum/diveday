@@ -1,10 +1,12 @@
-import { eq } from "drizzle-orm";
+import { readFileSync } from "node:fs";
+import { eq, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { RETENTION_DAYS } from "@/lib/retention";
+import { RETENTION_DAYS, UNBOUNDED_BY_DECISION } from "@/lib/retention";
 import { seededShopContext } from "@/test/db";
 import { createGiftBooking } from "./bookings";
 import { setBookingPayment } from "./payments";
 import { pruneExpiredRecords } from "./retention";
+import * as schema from "./schema";
 import {
   accountTokens,
   activityEvents,
@@ -427,5 +429,296 @@ describe("pruneExpiredRecords", () => {
       expect(outcome.failed).toBe(false);
       expect(outcome.capped).toBe(false);
     }
+  });
+});
+
+/**
+ * Every table in the schema, by its database name.
+ *
+ * `getTableName` throws on everything the schema module exports that is not a
+ * table — the enums and the views — which is how they are skipped, the same
+ * way `export.test.ts` and `erasure-coverage.test.ts` skip them.
+ */
+function schemaTableNames(): string[] {
+  return Object.values(schema)
+    .map((value) => {
+      try {
+        return getTableName(value as Parameters<typeof getTableName>[0]);
+      } catch {
+        return null;
+      }
+    })
+    .filter((name): name is string => typeof name === "string");
+}
+
+/**
+ * Tables retention does not govern — and a list that has to be edited by hand
+ * for every table added to the schema, which is the price of the guard below.
+ *
+ * Retention's subject is the operational trail: rows DiveDay writes about its
+ * own working, whose count follows the calendar and the traffic rather than
+ * anything a shop would recognise as its own records. Everything named here is
+ * outside that subject. A name here is **not** a claim that the table is
+ * small; it is a claim that a clock is the wrong instrument for it, because
+ * what removes a row is a delete, an erasure request, or the work the row
+ * exists to track finishing.
+ *
+ * So a new append-only trail does not belong here. It belongs in
+ * `RETENTION_DAYS` with a window, or in `UNBOUNDED_BY_DECISION` with a
+ * paragraph saying who decided and when — and if which of those two is right
+ * is not yet known, that is the question this guard exists to raise rather
+ * than a reason to add a name below.
+ */
+const OUTSIDE_RETENTION: readonly string[] = [
+  // The shop's own catalogue and configuration: what a shop sets up, edits,
+  // and deletes when it stops being true. Nothing here ages.
+  "shops",
+  "boats",
+  "trip_lenses",
+  "courses",
+  "dive_sites",
+  "dive_site_creatures",
+  "dive_site_moments",
+  "waiver_templates",
+  "shop_promo_codes",
+  "dive_packages",
+  "pre_departure_checklist_items",
+  "trip_requirements",
+  "gear_items",
+  "trip_series",
+  "trip_series_skips",
+  "trip_schedule_days",
+  // DiveDay's own shared catalogue, and a shop asking for an addition to it.
+  // Vendor-side content rather than a shop's records, and pruning a species
+  // would break the shops whose copies point at it.
+  "global_dive_sites",
+  "global_dive_site_versions",
+  "marine_life_requests",
+  // People, and what a shop knows about one. The standing decision at the top
+  // of src/lib/retention.ts is that this data is kept until somebody asks for
+  // it gone: the erasure path is the requested one (`src/db/anonymize.ts`),
+  // never a dormancy timer.
+  "people",
+  "person_roles",
+  "certifications",
+  "specialty_certifications",
+  "nitrox_certifications",
+  "rental_fit_profiles",
+  "dive_support_needs",
+  "prior_visits",
+  "prior_gear_assignments",
+  "imported_payment_history",
+  "last_minute_list_entries",
+  "course_inquiries",
+  "internal_notes",
+  "staff_credentials",
+  "staff_shifts",
+  "crew_availability_blocks",
+  "crew_assignment_requests",
+  // Departures and what happened on one. Several of these are append-only —
+  // a departure's change history, a close-out's per-leftover choices, a
+  // review's publish/hide trail — and they are still outside retention's
+  // subject, because each is read as part of a record the shop still has. A
+  // window would leave that record with a hole rather than free anything, and
+  // the count follows the shop's own departures rather than the calendar.
+  "trips",
+  "trip_dives",
+  "trip_change_events",
+  "executed_dives",
+  "trip_sightings",
+  "season_events",
+  "trip_assignments",
+  "trip_help_requests",
+  "trip_waitlist_entries",
+  "trip_invitations",
+  "trip_last_minute_promos",
+  "trip_last_minute_promo_recipients",
+  "trip_blowouts",
+  "trip_blowout_divers",
+  "buddy_pair_members",
+  "pre_departure_check_events",
+  "gear_reservations",
+  "recap_photos",
+  "trip_recap_photos",
+  "trip_reviews",
+  "review_moderation_events",
+  "recap_pulses",
+  // A row per close, normally one per shop per day, plus the choices made
+  // while reviewing it: growth is bounded by the ritual, which is the argument
+  // `day_closeouts`' own docblock makes. Adding a window anyway is HD-11's
+  // call, not an agent's.
+  "day_closeouts",
+  "closeout_leftover_decisions",
+  // Waivers. H-02's question about these is whether signed evidence may be
+  // erased at all — the opposite end of the same question from a window, and
+  // never an argument for expiring one on a clock.
+  "waiver_records",
+  "waiver_materiality_decisions",
+  "waiver_deliveries",
+  // Seats and money: the shop's own books. `booking_payment_events` is the one
+  // trail among these and it has a window (7 years); the rows here are the
+  // seats, orders and tips that trail is about.
+  "bookings",
+  "booking_payments",
+  "booking_referrals",
+  "booking_checkouts",
+  "booking_checkout_bookings",
+  "orders",
+  "order_line_items",
+  "tips",
+  "dive_package_entitlements",
+  "shop_promo_redemptions",
+  // Credentials that live and die with the thing they open: revoked, spent, or
+  // deleted with their parent. The token tables that are *not* here
+  // (`account_tokens`, `person_shelf_tokens`,
+  // `shop_contact_email_confirmation_tokens`, `integration_oauth_states`) are
+  // the ones whose already-dead rows are kept on purpose for an incident
+  // review — which is what a window is for, and why they have one.
+  "user_accounts",
+  "account_sessions",
+  "account_security",
+  "account_step_ups",
+  "auth_provider_accounts",
+  "auth_verifications",
+  "booking_capabilities",
+  "calendar_feeds",
+  "display_tokens",
+  "last_minute_list_unsubscribe_tokens",
+  "person_courtesy_email_unsubscribe_tokens",
+  // Current state about DiveDay's own machinery: one row per object, replaced
+  // in place rather than appended, so there is no history here to age out.
+  // `shop_print_runs`' docblock makes the point in the other direction — a
+  // print register that answered "when did we last print this" from a trail
+  // would be a table wanting a window.
+  "notification_rate_limit_state",
+  "integration_sync_records",
+  "shop_integrations",
+  "shop_stripe_accounts",
+  "shop_whatsapp_accounts",
+  "shop_backup_destinations",
+  "shop_backup_deliveries",
+  "shop_print_runs",
+  // Queues that empty themselves. Both are argued in src/lib/retention.ts or
+  // in their own docblock: a finished send clears its payload and every
+  // handle, and a held send is deleted by whichever claimant reaches it first.
+  "notification_send_queue",
+  "held_sends",
+  // An obligation, deleted when it is discharged. A window here would delete
+  // exactly the rows that still owe something — the local blob whose provider
+  // delete never landed, the Stripe side effect whose response was lost, the
+  // erased diver a processor still holds — which is the opposite of what it
+  // would be for.
+  "media_deletion_attempts",
+  "payment_operation_intents",
+  "processor_erasure_obligations",
+  // Bounded by a table that *is* pruned: an integration delivery is a child of
+  // `integration_events` with ON DELETE CASCADE, so its rows leave when that
+  // 400-day window takes the event they belong to.
+  "integration_deliveries",
+];
+
+/** What the guard's failure says, so a session reads the rule and not the list. */
+const UNCLASSIFIED_HELP =
+  "a table in src/db/schema.ts that retention classifies as nothing. Give it a window " +
+  "in RETENTION_DAYS if it is a trail that should be pruned; add it to " +
+  "UNBOUNDED_BY_DECISION *and write the paragraph in src/lib/retention.ts saying who " +
+  "decided it is kept forever and when*, the way gear_service_events and " +
+  "trip_stage_events do; or add it to OUTSIDE_RETENTION if a clock is the wrong " +
+  "instrument for it at all. Adding a bare name to whichever list makes this test go " +
+  "green is the one wrong answer";
+
+/**
+ * The three classifications, checked against the names a schema actually has.
+ *
+ * Takes the table names rather than reading the schema, so the failure paths
+ * below can hand it a schema that has grown a table or lost one.
+ */
+function classifyTables(tableNames: readonly string[]) {
+  const declared = [...Object.keys(RETENTION_DAYS), ...UNBOUNDED_BY_DECISION, ...OUTSIDE_RETENTION];
+  const declaredSet = new Set(declared);
+  const present = new Set(tableNames);
+  return {
+    /** Tables no list classifies: the new-table case this guard exists for. */
+    unclassified: tableNames.filter((name) => !declaredSet.has(name)),
+    /** Names the schema no longer has: the rename that orphans a window. */
+    orphaned: declared.filter((name) => !present.has(name)),
+    /** A name in two lists at once, which is two answers to one question. */
+    contradictory: declared.filter((name, index) => declared.indexOf(name) !== index),
+  };
+}
+
+/**
+ * Names in `UNBOUNDED_BY_DECISION` that the retention docblock does not argue.
+ *
+ * "Deliberate" is the whole value of that list, so the cheapest half of it is
+ * checked mechanically: the file's leading docblock must carry a paragraph
+ * naming the table, and that paragraph must cite the decision — a date, an ADR
+ * id, or an issue number. Whether the argument is any good is a reviewer's
+ * call; that somebody wrote one is a test's.
+ */
+function unarguedUnboundedTables(source: string, names: readonly string[]): string[] {
+  const docblock = source.slice(0, source.indexOf("*/"));
+  // Unwrapped before matching: a paragraph that says "ADR\n * 20260804-…"
+  // cites its decision exactly as well as one that fits the id on a line, and
+  // a guard that disagreed would be a guard against re-wrapping a comment.
+  const paragraphs = docblock
+    .split(/\n \*\n/)
+    .map((text) => text.replace(/^\s*\*[ \t]?/gm, "").replace(/\s+/g, " "));
+  const cites = /\d{4}-\d{2}-\d{2}|ADR \d{8}-|#\d+/;
+  return names.filter(
+    (name) => !paragraphs.some((text) => text.includes(name) && cites.test(text)),
+  );
+}
+
+describe("retention classification", () => {
+  it("forces every schema table to be pruned, unbounded on purpose, or out of scope", () => {
+    const tableNames = schemaTableNames();
+    // A floor, not a census: an enumeration that silently stopped finding
+    // tables would leave `unclassified` empty and read green. The same reason
+    // export.test.ts carries this line, and the same reason it is a low number
+    // — the reverse assertion below is what actually notices a table leaving.
+    expect(tableNames.length).toBeGreaterThan(20);
+
+    const { unclassified, orphaned, contradictory } = classifyTables(tableNames);
+    expect(unclassified, UNCLASSIFIED_HELP).toEqual([]);
+    // The half most likely to be skipped, and the one that catches a rename
+    // leaving a window pointed at a table that no longer exists.
+    expect(orphaned, "a retention list names a table the schema does not have").toEqual([]);
+    expect(contradictory, "a table is classified twice, which is two answers").toEqual([]);
+  });
+
+  it("refuses a new table that nobody classified", () => {
+    const { unclassified, orphaned } = classifyTables([...schemaTableNames(), "diver_mood_events"]);
+    expect(unclassified).toEqual(["diver_mood_events"]);
+    expect(orphaned).toEqual([]);
+  });
+
+  it("refuses a rename that orphans a window", () => {
+    const renamed = schemaTableNames().filter((name) => name !== "activity_events");
+    expect(classifyTables(renamed).orphaned).toEqual(["activity_events"]);
+  });
+
+  it("holds every deliberately unbounded trail to a paragraph that cites its decision", () => {
+    const source = readFileSync("src/lib/retention.ts", "utf8");
+    expect(
+      unarguedUnboundedTables(source, UNBOUNDED_BY_DECISION),
+      "a table is unbounded by decision with no paragraph in src/lib/retention.ts saying " +
+        "who decided and when",
+    ).toEqual([]);
+  });
+
+  it("refuses an unbounded trail whose paragraph is missing or cites nothing", () => {
+    const source = [
+      "/**",
+      " * **`argued_events` is deliberately unbounded.** Chosen by the product owner,",
+      " * 2026-09-10, over a 30-day window.",
+      " *",
+      " * **`asserted_events` is deliberately unbounded.** Because it is.",
+      " */",
+      "export const UNBOUNDED_BY_DECISION = [];",
+    ].join("\n");
+    expect(
+      unarguedUnboundedTables(source, ["argued_events", "asserted_events", "absent_events"]),
+    ).toEqual(["asserted_events", "absent_events"]);
   });
 });

@@ -19,8 +19,9 @@ line between the two.
 ## The guards that live in files you will never edit
 
 A focused `pnpm test <file>` runs the tests you can name. The **coverage guards** are the ones you
-cannot: `src/db/export.test.ts`, `src/db/diver-merge.test.ts` and `src/db/delete-path-coverage.test.ts`
-assert over `src/db/schema.ts` from files whose whole job is to notice something you added
+cannot: `src/db/export.test.ts`, `src/db/diver-merge.test.ts`, `src/db/delete-path-coverage.test.ts`
+and `src/db/retention.test.ts` assert over `src/db/schema.ts` from files whose whole job is to
+notice something you added
 *elsewhere*. Nothing you touch selects them, so they go red on CI instead — four times in one
 afternoon on 2026-09-05: slice 16g's four columns, 16i's `recap_pulses` table and its
 `addressed_by_person_id`, and 16j-B's two `person_id` columns. Every one of those agents had run
@@ -31,10 +32,10 @@ step rather than a mid-iteration convenience. Know its cost before you start it:
 in nearly every import chain, so a diff touching it selects the **whole** suite — 9,391 of 9,391
 entries, measured 2026-09-06 — and on a stack the diff against `origin/main` is every layer
 beneath you, so that is a floor rather than a ceiling. That run belongs to CI. When you touched
-`schema.ts`, name the three by path instead:
+`schema.ts`, name the four by path instead:
 
 ```bash
-pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts --reporter=dot
+pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot
 ```
 
 40 tests, about a minute, and it catches every failure listed above. The trigger is touching

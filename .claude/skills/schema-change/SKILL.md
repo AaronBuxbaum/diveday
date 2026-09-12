@@ -28,7 +28,7 @@ questions — read `schema.ts`.
    or a single column — is the trigger, not the shape of the change:
 
    ```bash
-   pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts --reporter=dot
+   pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot
    ```
 
    Three files, 40 tests, about a minute. They assert over `schema.ts` from files your change will
