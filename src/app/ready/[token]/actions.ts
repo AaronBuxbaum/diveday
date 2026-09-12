@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { verifyBookingCapability } from "@/db/booking-capabilities";
+import { revokeBookingCapabilities, verifyBookingCapability } from "@/db/booking-capabilities";
 import {
   confirmCarriedFacts,
   selfCancelBooking,
@@ -877,4 +877,55 @@ export async function emailFreshReadinessLinkAction(token: string) {
   }
 
   redirect(`${base(token)}?sent=${RESCUE_PARAM[await sendPlannedReadinessLink(db, plan)]}`);
+}
+
+/**
+ * **Kill the code on a card the diver cannot find** (issue #1729).
+ *
+ * The arrival card is the one DiveDay credential that routinely leaves on
+ * paper. A diver saves the HTML from `/ready`, prints it, and the QR inside it
+ * is an `arrival` capability that checks them in at that shop's self check-in
+ * tablet (`bookingForArrivalCode`, `src/db/kiosk-check-in.ts`). What a printout
+ * left on a hotel table still buys is a **false arrival on a manifest** — the
+ * roll call saying a diver is aboard who is not — and that is a safety surface,
+ * so the paper needed a way to be retired. Until this, the only things that ever
+ * retired an `arrival` row were cancelling the booking, the per-purpose live cap
+ * pushing out the oldest, and expiry.
+ *
+ * **Every live `arrival` row for the booking, not "the one on the card I
+ * lost".** Tokens are stored only as hashes and a card is minted per download,
+ * so no caller anywhere can identify one printout among several. Saving the
+ * card again mints a fresh code, which is both the recovery path and the
+ * sentence `trip.arrivalCodeStopConfirm` promises — and the reason this control
+ * is explicit rather than a silent revoke-on-download: a quiet replace would
+ * kill the copy a diver printed for the buddy carrying their bag, with no
+ * sentence anywhere saying so.
+ *
+ * **Nothing here answers a question the token could not already.**
+ * `contextFor` is the only door, exactly as for every sibling action: it spends
+ * the shared per-IP bucket, resolves the *readiness* capability, and its two
+ * refusals land on the same two URLs the rest of this file lands on — so a tap
+ * against a stranger's token is indistinguishable from a tap against a real one
+ * and this is not an oracle for "is this booking real". The booking written to
+ * is the one the token resolved to and the shop is that booking's own, so the
+ * write cannot reach another seat, at this shop or any other.
+ *
+ * **No narrower bucket than the shared one, deliberately.** Somebody holding a
+ * leaked readiness URL can already release the seat outright
+ * (`cancelMyBookingAction`); stopping a code that a re-download replaces is
+ * strictly the smaller act, so a second budget here would guard the lesser door.
+ *
+ * Success only. `revokeBookingCapabilities` is an idempotent `UPDATE` with no
+ * refusal to report: a second tap, or a tap on a booking holding no live rows,
+ * writes nothing and the notice stays true either way.
+ */
+export async function stopArrivalCodesFromReady(token: string) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  await revokeBookingCapabilities(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    purpose: "arrival",
+  });
+  revalidateAndRedirect(base(token), `${base(token)}?saved=arrival-code`);
 }

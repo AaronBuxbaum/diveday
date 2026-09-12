@@ -5,6 +5,8 @@ import { CAPABILITY_MAX_TTL_MS, CAPABILITY_MIN_TTL_MS } from "@/lib/booking-capa
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import {
+  hasLiveArrivalCapability,
+  hasLiveReadinessCapability,
   issueBookingCapability,
   MAX_LIVE_CAPABILITIES_PER_PURPOSE,
   resolveRevokedBookingCapability,
@@ -615,5 +617,71 @@ describe("staleBookingCapabilityForToken (naming the shop on a dead link)", () =
         purpose: "readiness",
       }),
     ).toBeNull();
+  });
+});
+
+/**
+ * **`hasLiveArrivalCapability`** — the one question that decides whether
+ * `/ready` offers a diver a way to stop the code on a card they printed (issue
+ * #1729).
+ *
+ * It gates *copy*, not a claim: only the arrival-card download mints an
+ * `arrival` row, so `false` means nothing has ever been saved and a control
+ * offering to stop it would stop nothing. What has to hold is that the answer
+ * is about `arrival` and nothing else — a booking full of readiness links is
+ * not a booking with a card out on paper, and the readiness twin's query is one
+ * line away.
+ */
+describe("hasLiveArrivalCapability (is there a card out on paper?)", () => {
+  it("says no until a card has been downloaded, and yes once one has", async () => {
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    expect(await hasLiveArrivalCapability(db, { shopId: shop.id, bookingId })).toBe(false);
+
+    await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "arrival" });
+    expect(await hasLiveArrivalCapability(db, { shopId: shop.id, bookingId })).toBe(true);
+  });
+
+  it("counts the arrival purpose alone, in both directions", async () => {
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    // A diver who has opened their thread all week holds a pile of readiness
+    // links and has never saved the card.
+    await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "readiness" });
+    await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "confirm" });
+    expect(await hasLiveArrivalCapability(db, { shopId: shop.id, bookingId })).toBe(false);
+    // And the twin does not start answering for a card.
+    await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "arrival" });
+    expect(await hasLiveReadinessCapability(db, { shopId: shop.id, bookingId })).toBe(true);
+  });
+
+  it("says no once the diver has stopped the code, so the control stops being offered", async () => {
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "arrival" });
+    await revokeBookingCapabilities(db, { shopId: shop.id, bookingId, purpose: "arrival" });
+    expect(await hasLiveArrivalCapability(db, { shopId: shop.id, bookingId })).toBe(false);
+  });
+
+  it("says no for an expired code, and for another booking's live one", async () => {
+    const { db, shop, open, other } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    const elsewhere = await bookVisitor(db, shop.id, other.id);
+    await issueBookingCapability(db, { shopId: shop.id, bookingId: elsewhere, purpose: "arrival" });
+    expect(await hasLiveArrivalCapability(db, { shopId: shop.id, bookingId })).toBe(false);
+
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "arrival",
+    });
+    if (!issued) throw new Error("expected an arrival code");
+    expect(
+      await hasLiveArrivalCapability(db, {
+        shopId: shop.id,
+        bookingId,
+        now: new Date(issued.expiresAt.getTime() + 1000),
+      }),
+    ).toBe(false);
   });
 });

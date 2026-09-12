@@ -361,6 +361,46 @@ export async function hasLiveReadinessCapability(
   db: DbExecutor,
   input: { shopId: string; bookingId: string; now?: Date },
 ): Promise<boolean> {
+  return hasLiveCapabilityRow(db, { ...input, purpose: "readiness" });
+}
+
+/**
+ * **Is there an arrival code out on paper for this booking?**
+ *
+ * Asked to decide whether to *offer* the diver a control, never to authorize
+ * anything (issue #1729). An `arrival` row exists only because the arrival-card
+ * route minted one for a download
+ * (`src/app/s/[shopSlug]/trips/[id]/arrival-card/route.ts`), so no row means
+ * nothing has ever been saved or printed and "stop the code on a saved card"
+ * would stop nothing — words on a page whose copy is deliberately spare.
+ *
+ * So a `false` here hides a sentence rather than refusing an act, and that is
+ * the whole difference from the readiness twin above: this answer reaches no
+ * claim about whether a credential still works, so it needs no prior check on
+ * the booking or its trip, and `stopArrivalCodesFromReady` re-derives nothing
+ * from it — revoking is idempotent and harmless on a booking holding no live
+ * rows at all.
+ *
+ * Purpose-named rather than purpose-taking, like its twin: a shared `purpose`
+ * parameter on an exported door would hand every future caller one sentence of
+ * reasoning for five different questions.
+ */
+export async function hasLiveArrivalCapability(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string; now?: Date },
+): Promise<boolean> {
+  return hasLiveCapabilityRow(db, { ...input, purpose: "arrival" });
+}
+
+/**
+ * One unrevoked, unexpired row for this booking+purpose, or none. Private: what
+ * a caller may conclude from "live" differs per purpose, and the two exported
+ * doors above are where each of those arguments is written down.
+ */
+async function hasLiveCapabilityRow(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string; purpose: CapabilityPurpose; now?: Date },
+): Promise<boolean> {
   const now = input.now ?? nowDate();
   const [row] = await db
     .select({ id: bookingCapabilities.id })
@@ -369,7 +409,7 @@ export async function hasLiveReadinessCapability(
       and(
         eq(bookingCapabilities.shopId, input.shopId),
         eq(bookingCapabilities.bookingId, input.bookingId),
-        eq(bookingCapabilities.purpose, "readiness"),
+        eq(bookingCapabilities.purpose, input.purpose),
         isNull(bookingCapabilities.revokedAt),
         gt(bookingCapabilities.expiresAt, now),
       ),
@@ -381,8 +421,14 @@ export async function hasLiveReadinessCapability(
 /**
  * Explicit revocation: invalidates every outstanding, unexpired capability
  * for a booking (optionally scoped to one purpose) immediately, ahead of
- * their natural expiry. Used on cancellation; also the seam a future
- * staff-facing "revoke this link" action would call.
+ * their natural expiry.
+ *
+ * Two callers. Unscoped, on cancellation — every purpose at once. Scoped to
+ * `arrival`, from `stopArrivalCodesFromReady`
+ * (`src/app/ready/[token]/actions.ts`), which is the diver killing the code on
+ * a card they have lost: that is the one credential here that leaves on paper,
+ * so it is the one that needed a door of its own (issue #1729). A staff-facing
+ * "revoke this link" would call the same function and needs no widening of it.
  */
 export async function revokeBookingCapabilities(
   db: DbExecutor,
