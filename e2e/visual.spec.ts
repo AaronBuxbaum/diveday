@@ -19,6 +19,7 @@ import {
   offlineCopySaved,
   openManifestPerson,
   openOnThisPhone,
+  openRosterDetails,
   openRosterNotes,
   openSettingsRow,
   openThreadStep,
@@ -34,8 +35,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Two hundred and thirty-eight key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 952 screenshots per run (see
+ * Visual regression coverage. Two hundred and forty-four key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 976 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -60,8 +61,13 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * `TABLET_SURFACES` adds 16 — eight surfaces a shop runs on a tablet get a
  * third, portrait width, at one screenshot per scheme rather than two — and
  * `TV_SURFACES` adds 2 for the one board a lobby screen shows. That brings the
- * run to 968 screenshots: the extra widths are a 2% addition, not the 50% a
+ * run to 992 screenshots: the extra widths are a 2% addition, not the 50% a
  * third viewport applied to every surface would have cost.
+ *
+ * Three of the 244 are the same surface twice, in a second language: see
+ * {@link SPANISH}. A Spanish sibling takes the standard pair and keys its own
+ * baseline off `<name>-es-ES`, so it is a new item in the report rather than a
+ * change to the English one.
  *
  * ## One surface, one `test()`
  *
@@ -1154,7 +1160,81 @@ async function withTransitionsOff<T>(page: Page, shoot: () => Promise<T>): Promi
   }
 }
 
-async function capture(page: Page, name: string, scheme: "light" | "dark") {
+/**
+ * **The one language other than English these baselines are rendered in**
+ * (issue #1681).
+ *
+ * Spanish strings here are systematically longer than their English siblings
+ * and the words are chosen deliberately (`src/i18n/locales/es-ES/README.md`),
+ * so a layout that fits in English is untested in the language most likely to
+ * break it. Nothing in this file had ever rendered one: the only non-default
+ * locale block is `de-DE`, and that is a language DiveDay carries **no bundle
+ * for** — it photographs the unsupported-language band, not translated copy.
+ *
+ * A constant rather than a parameter over every locale, for the same reason
+ * `TABLET_SURFACES` is a set: capturing everything twice is another 480
+ * screenshots and the triage burden to match, so which surfaces earn a second
+ * language is a decision a reviewer can argue with in one place.
+ *
+ * **No ledger row.** `scripts/route-coverage.json` names the *surface*, and
+ * `parseCaptureNames` reads the first argument of each `capture()` call — so a
+ * Spanish sibling is already covered by its English name and adding an
+ * `-es-ES` row would name a capture no call produces.
+ */
+const SPANISH = "es-ES" as const;
+
+/**
+ * How a Spanish capture is *reached*, which is not one mechanism but two — and
+ * the reason the switch cannot live inside {@link capture}.
+ *
+ * - **The staff surfaces negotiate per request.** `requestLocale` reads the
+ *   reader's own `diveday_locale` cookie first, then `Accept-Language`, then
+ *   the shop's stored default (ADR 20260812-reader-chosen-language). A
+ *   `test.use({ locale })` block sets the header for every request the context
+ *   makes, which is as deterministic as the frozen clock and is the whole
+ *   switch for these.
+ * - **The offline manifest negotiates from the device.** It renders entirely
+ *   client-side from an encrypted IndexedDB snapshot with the radio off, so
+ *   there is no request to carry a cookie or a header: `translatorForThisDevice`
+ *   (`src/components/OfflineManifestView.tsx`) reads `navigator.language`. A
+ *   cookie reaches it never.
+ *
+ * `test.use({ locale })` sets both, which is why one describe block covers all
+ * three surfaces — and why each capture below asserts what the page itself
+ * reports rather than what the block asked for.
+ */
+async function readerLanguage(page: Page): Promise<string> {
+  return withRendererBound(
+    page,
+    "reading navigator.language",
+    5_000,
+    page.evaluate(() => navigator.language),
+    "unknown",
+  );
+}
+
+async function capture(
+  page: Page,
+  name: string,
+  scheme: "light" | "dark",
+  options: { locale?: typeof SPANISH } = {},
+) {
+  // A second language is a second baseline, never a replacement: the English
+  // one keeps its name and its history, and the reviewer sees a new item.
+  const baseline = options.locale ? `${name}-${options.locale}` : name;
+  if (options.locale) {
+    // The footgun this closes: a capture named for a locale the page is not
+    // being read in photographs English under a Spanish baseline name, and
+    // nothing anywhere fails. Asked of the page rather than of the fixture,
+    // because the page is what rendered.
+    const reading = await readerLanguage(page);
+    if (reading !== options.locale) {
+      throw new Error(
+        `capture(${name}) asked for ${options.locale} but the page reports navigator.language ` +
+          `"${reading}" — the locale comes from a test.use({ locale }) block, not from here.`,
+      );
+    }
+  }
   const baseViewport = page.viewportSize();
   // Park the pointer somewhere inert, or the capture photographs whatever the
   // test's last click left it hovering.
@@ -1209,16 +1289,23 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
   // shop runs on one. Widest last is deliberate: the base viewport is restored
   // below either way, but a capture that fails mid-loop leaves the page at a
   // width a trace viewer can make sense of.
+  // Keyed on the baseline name, so a Spanish sibling takes the standard pair
+  // rather than inheriting a third width: those sets are about the *device* a
+  // surface runs on, and a second language has nothing new to say at 820px
+  // that it does not say louder at 390.
   const viewports = [
     ...VIEWPORTS,
-    ...(TABLET_SURFACES.has(name) ? [TABLET_VIEWPORT] : []),
-    ...(TV_SURFACES.has(name) ? [TV_VIEWPORT] : []),
+    ...(TABLET_SURFACES.has(baseline) ? [TABLET_VIEWPORT] : []),
+    ...(TV_SURFACES.has(baseline) ? [TV_VIEWPORT] : []),
   ];
   await withTransitionsOff(page, async () => {
     for (const viewport of viewports) {
       await page.setViewportSize(viewport);
       await paintWholeDocument(page);
-      await screenshotOrGiveUp(page, `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`);
+      await screenshotOrGiveUp(
+        page,
+        `e2e/screenshots/${baseline}-${scheme}-vw-${viewport.width}.png`,
+      );
     }
     // capture() runs mid-flow (navigation and clicks continue after it), so
     // restore the base viewport the test was using before resizing for each
@@ -3814,6 +3901,60 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **A held seat's identity confirm, armed** (H-13, issue #1696).
+       *
+       * The counter's second blocking attestation, and the one shape nothing in
+       * this file photographs: `InlineConfirm`'s message mode replaces the
+       * trigger with a bordered `role="alert"` block carrying a sentence and
+       * two buttons, *inside* a blocked queue row that already holds a badge, a
+       * reason and a pointing link. The unarmed half is a secondary button
+       * under those reasons — structurally the row
+       * `check-in-waiver-refused` above already frames — so the armed state is
+       * the one worth a baseline.
+       *
+       * Seeded through `/api/test/seed-trouble-states?identityHeld=1` rather
+       * than into blue-mantis: the flag moves readiness, which the nav badges,
+       * the close-out and every blocked count read (`.claude/rules/e2e.md`).
+       * The route seats the diver through `seatDiver` with `fromNameMatch`, so
+       * this is the row the counter's own name prompt makes.
+       *
+       * `?trip=` pins the departure the route seated onto rather than trusting
+       * whichever boat the instrument focuses.
+       */
+      test(`a held seat's identity confirm renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?identityHeld=1");
+        expect(seeded.ok()).toBe(true);
+        const { identityHeld } = (await seeded.json()) as {
+          identityHeld?: { diver: string; tripId: string };
+        };
+        if (!identityHeld) throw new Error("seed-trouble-states could not hold a seat");
+
+        await page.goto(`/shop/blue-mantis/check-in?trip=${identityHeld.tripId}`);
+        // The search box focuses itself from a mount effect and the ring it
+        // paints is in the frame — the same signal the neighbouring captures
+        // wait on.
+        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
+        const row = page
+          .locator("article")
+          .filter({ hasText: identityHeld.diver })
+          .filter({ visible: true });
+        await expect(row.getByText("Identity unconfirmed", { exact: false })).toBeVisible();
+        await row.getByRole("button", { name: `Confirm this is ${identityHeld.diver}` }).click();
+        // Armed, and waited on by the block the tap reveals rather than by the
+        // trigger it replaces: the consequence sentence is the frame's subject.
+        await expect(
+          row.getByText(`Is the person at the counter ${identityHeld.diver}?`),
+        ).toBeVisible();
+        await capture(page, "check-in-identity-held", scheme);
+      });
+
+      /**
        * **"Not here?", open** (issue #1209) — the counter's script for the
        * diver who never turned up.
        *
@@ -4301,6 +4442,62 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await page.getByText("If you move it").waitFor();
         await capture(page, "schedule-builder-move-impact", scheme);
+      });
+
+      /**
+       * **The same panel once a target date is typed** (issue #1688).
+       *
+       * The capture above opens the panel and never touches the fields, and
+       * `getMovePreflight` only asks `crewMoveConflicts` when it is given a
+       * target — so the baseline holds the muted costs list alone and the crew
+       * clash, the loudest line the block can draw, is in no baseline at all.
+       * It is the only state where two warning weights stack: a
+       * `role="alert"` line per clashing person above the muted "If you move
+       * it" list.
+       *
+       * No seeding. `seed-trips.ts` puts the same captain and divemaster on
+       * every seeded charter, so landing one charter on another's hours is the
+       * whole of it — the target below is the Christ of the Abyss window
+       * (`at(7, 11, 30)` in the seed), and the wreck charter is the mover
+       * because it is the one departure carrying paid seats, reserved gear and
+       * told divers, which is what keeps the muted list in the frame too.
+       *
+       * **The wait is on the clash sentence, not on `data-move-impact`.** That
+       * attribute is already on the page from the target-null read the panel
+       * opened with, so waiting on it resolves instantly against the *old*
+       * preview and shoots the panel without the clash. And the sentence names
+       * the other departure, which is what makes a mistyped date fail loudly
+       * here rather than silently photograph the calm state.
+       *
+       * Both fields are filled before anything is waited on: `MoveImpact`
+       * re-reads on every change to either string and discards stale answers
+       * with its own `live` flag, so a wait between the two would be a wait on
+       * a read that is about to be replaced.
+       */
+      test(`the move panel says who would be on two boats (${scheme})`, async ({ page }) => {
+        const title = "Wreck Trip — Spiegel Grove";
+        const host = "Two-Tank Reef — Christ of the Abyss";
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await boardListSettled(page);
+        await page
+          .getByRole("button", { name: new RegExp(`^Move, copy, or remove ${title},`) })
+          .first()
+          .click();
+        await page
+          .getByRole("button", { name: new RegExp(`^Move ${title},`) })
+          .first()
+          .click();
+        await page.getByLabel("New date").fill(daysFromNow(7));
+        await page.getByLabel("New departure time").fill("11:30");
+        // One alert per person, because two clashing crew are two facts — and
+        // the muted list is still under them, which is the stack worth a
+        // baseline.
+        await expect(
+          page.getByText(new RegExp(`is already crewing ${host} at that time`)),
+        ).toHaveCount(2);
+        await expect(page.getByText("If you move it")).toBeVisible();
+        await capture(page, "schedule-builder-move-clash", scheme);
       });
 
       // The add-a-departure form as a shop meets it all week: the quick path,
@@ -6330,6 +6527,48 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The same seat with its reference panel open** (issue #1700).
+       *
+       * The capture above shoots every row collapsed, and the thing worth
+       * watching is in the open half: the flag gates *disclosure* as well as
+       * boarding, so while it stands the panel prints none of the matched
+       * person's flagged medical prompts, date of birth, emergency contact or
+       * sizes, and one substitute line stands where they would be
+       * (`RosterSection.tsx`'s `showsPersonDetail`). A later hand putting a
+       * stranger's medical answers back on that row would move no pixels in the
+       * collapsed frame at all.
+       *
+       * A second capture rather than an expand on the one above, because that
+       * one is the baseline for the collapsed reading of this state and moving
+       * it would trade one blind spot for another.
+       *
+       * `openRosterDetails` rather than a bare click: the disclosure is
+       * uncontrolled native DOM state, so a click on an already-open row closes
+       * it.
+       */
+      test(`the roster's held seat withholds its particulars (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await openTripFromBoard(page, "Night Dive — City of Washington");
+        await openTripTab(page, "Trip");
+        const row = page
+          .locator("#roster li")
+          .filter({ hasText: "Identity unconfirmed" })
+          .filter({ visible: true })
+          .first();
+        await row.getByText("Identity unconfirmed").waitFor();
+        await openRosterDetails(row);
+        // The line that stands in for the withheld fields — waited on rather
+        // than the panel, because the panel is open either way and it is this
+        // sentence the baseline exists for.
+        await expect(
+          row.getByText("Contact, medical and gear details stay hidden until you confirm"),
+        ).toBeVisible();
+        // And the control that clears it, in the frame beside them.
+        await expect(row.getByRole("button", { name: /^Confirm this is / })).toBeVisible();
+        await capture(page, "trip-guests-identity-open", scheme);
+      });
+
+      /**
        * DOM-H3. After a dive, the only control that isn't "Boarded" means
        * **did not return to the boat** — a different state from the dock's
        * "never left", with its own wording, its own danger-toned row, and a
@@ -7068,6 +7307,109 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/no-such-page");
         await page.getByRole("heading", { level: 1, name: "We couldn’t find that page" }).waitFor();
         await capture(page, "not-found", scheme);
+      });
+
+      /**
+       * **Three dense surfaces, read in Spanish** (issue #1681).
+       *
+       * Every other capture in this file signs in with an English reader, so no
+       * baseline had ever seen an `es-ES` string in a layout — in a product
+       * whose Spanish is systematically longer and whose word choices are
+       * recorded and guarded (`src/i18n/locales/es-ES/README.md`). What no
+       * check held was whether the chosen word *fits*.
+       *
+       * Three, not everything: the surfaces where length is most likely to
+       * break something are the dense fixed-width ones, and these are the three
+       * reviews have pointed at. Each costs four screenshots and a triage
+       * burden on every future pull request, which is why the set is named here
+       * rather than derived.
+       *
+       * One block, because `test.use` is describe-scoped — so these sit
+       * together instead of beside their English siblings, which is the one
+       * place this file's "one surface, one test" layout bends.
+       *
+       * The phone width is the one that matters. Every finding these are here
+       * to catch is a string that fits at 1280 and does not at 390.
+       */
+      test.describe("read in Spanish", () => {
+        test.use({ locale: SPANISH });
+
+        /**
+         * **The missing-divers grid, whose chips are 80px wide.**
+         *
+         * The question that raised the issue: a blocked diver's chip carries
+         * the offline page's qualified readiness word — "Blocked when saved",
+         * which was measured and accepted at two wrapped lines — and the
+         * Spanish is "Bloqueado cuando se guardó", four words and none of them
+         * short, in a tile capped at `max-w-20`. The chip **wraps** rather than
+         * truncating, on purpose (`MissingDiversGrid.tsx`: a clipped
+         * "Blocked wh…" says less than the bare word it replaced), so the cost
+         * lands as tile height inside a `flex-wrap` row.
+         *
+         * This is the baseline that lets that be looked at rather than argued
+         * about. It is also the only one of the three whose Spanish does not
+         * come from a request at all: this view renders offline from IndexedDB
+         * and reads `navigator.language`.
+         */
+        test(`the offline roll call reads in Spanish (${scheme})`, async ({ page }) => {
+          // Board → trip → Manifest, then the saved copy. By URL rather than
+          // through `openTripTab`, which resolves the sub-nav by its English
+          // accessible name — the one helper in this flow that is language-
+          // bound. `openReefTrip` is not: it finds the departure by the title
+          // the shop typed.
+          test.setTimeout(FLOW_TIMEOUT_MS);
+          await openReefTrip(page);
+          await page.goto(`${new URL(page.url()).pathname}/manifest`);
+          await settleOfflineShellWorker(page);
+          await openOnThisPhone(page);
+          await page.getByRole("link", { name: "Abrir pase de lista sin conexión" }).click();
+          await page.waitForURL(/offline-manifest/);
+          await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
+          // The grid itself, by its own heading — the roster above it renders
+          // first, so a wait on a diver's name is not a wait on this.
+          await expect(
+            page.getByRole("heading", { name: /^Pendientes de embarcar/ }),
+          ).toBeVisible();
+          await capture(page, "offline-manifest-roll-call", scheme, { locale: SPANISH });
+        });
+
+        /**
+         * **The manifest's checkpoint track**, whose tabs carry a checkpoint
+         * name and a state word in a row that has to stay one line: "Punto de
+         * control activo" against "Active checkpoint", and "No embarcado"
+         * against "Not boarded" on every row's control.
+         */
+        test(`a trip's manifest reads in Spanish (${scheme})`, async ({ page }) => {
+          await openReefTrip(page);
+          await page.goto(`${new URL(page.url()).pathname}/manifest`);
+          await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
+          // The same background save the English sibling waits out, in this
+          // reader's words: `offlineCopySaved` matches "(Fresh|Aging|Stale)
+          // copy" and would wait forever here.
+          await expect(page.getByText(/Copia (reciente|antigua|caducada)/)).toBeVisible();
+          // The track, not the page: it is what this capture is for, and the
+          // heading above it is true before the checkpoints render.
+          await expect(page.getByText("Punto de control activo").first()).toBeVisible();
+          await capture(page, "manifest", scheme, { locale: SPANISH });
+        });
+
+        /**
+         * **The staffing week's gap chips**, three words in English ("Nobody in
+         * the water") and four in Spanish ("Nadie en el agua") inside a day
+         * cell whose width is a seventh of the grid.
+         *
+         * Through the same trouble-states route its English sibling uses: a
+         * demo shop permanently short-handed is a worse demo.
+         */
+        test(`the staffing week's crew gap reads in Spanish (${scheme})`, async ({
+          page,
+          request,
+        }) => {
+          await request.post("/api/test/seed-trouble-states?crewGap=1");
+          await page.goto("/shop/blue-mantis/staffing");
+          await page.getByText("Nadie en el agua").first().waitFor();
+          await capture(page, "staffing-week-gap", scheme, { locale: SPANISH });
+        });
       });
     });
   });

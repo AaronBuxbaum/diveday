@@ -313,6 +313,7 @@
     "visual": [
       "check-in",
       "check-in-checked",
+      "check-in-identity-held",
       "check-in-no-show",
       "check-in-no-show-sailed",
       "check-in-waiver-refused"
@@ -487,6 +488,7 @@
       "booking.spec.ts",
       "check-in.spec.ts",
       "courses.spec.ts",
+      "crew-clash.spec.ts",
       "depth-and-age-surfaces.spec.ts",
       "dive-sites.spec.ts",
       "divers.spec.ts",
@@ -515,6 +517,7 @@
       "schedule-builder-add-full",
       "schedule-builder-add-tide",
       "schedule-builder-empty",
+      "schedule-builder-move-clash",
       "schedule-builder-move-impact"
     ],
     "a11y": ["a11y.spec.ts"]
@@ -669,6 +672,7 @@
       "trip-guests-deal-recipients",
       "trip-guests-depth-warning",
       "trip-guests-identity",
+      "trip-guests-identity-open",
       "trip-guests-note-undo",
       "trip-guests-refusal-card",
       "trip-guests-refusal-level",

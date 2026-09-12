@@ -186,7 +186,20 @@ export function MissingDiversGrid({
                   of the word here, and `truncate` on an 80px tile renders
                   "Blocked wh…" — a clipped chip that says less than the bare
                   word it replaced. Two or three tight lines is the density
-                  cost, accepted on #1360. */}
+                  cost, accepted on #1360.
+                  **And it holds in Spanish** (issue #1681), which is the
+                  language that asked the question: "Bloqueado cuando se
+                  guardó" wraps to the same two or three lines, because the
+                  longest token in it — `Bloqueado`, ~57px at 12px semibold —
+                  still fits the chip's 60px content box (80px tile less
+                  `px-2.5` either side). So the tile is *not* widened: that
+                  would cost every tile in every language to rescue one chip,
+                  and the chip is doing what it was built to do. The es-ES
+                  string is not shortened either — the qualifier is the whole
+                  reason it exists, and `es-ES/README.md` owns those words.
+                  `e2e/visual.spec.ts` now photographs this grid in Spanish at
+                  390px, so the next hand to make it longer has a baseline to
+                  answer to rather than a paragraph. */}
               {diver.blocked ? (
                 <Badge
                   tone="danger"

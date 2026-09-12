@@ -90,3 +90,39 @@ describe("seeded crew — every shop role × trip role combination", () => {
     );
   });
 });
+
+/**
+ * **The pair the Move panel's clash capture lands on** (issue #1688).
+ *
+ * The board's move preview draws its loudest line — one `role="alert"` per
+ * person who would be on two boats at once — only when the target hours overlap
+ * a departure that shares crew. The capture types the Christ of the Abyss
+ * window into the wreck charter's Move panel, and that only says anything
+ * because the seed rosters the same captain and divemaster on both.
+ *
+ * Asserted here rather than left for the capture to discover: a capture that
+ * quietly lands on the calm state photographs nothing and fails nothing, which
+ * is exactly how a visual baseline stops being evidence.
+ */
+describe("seeded charters share their crew", () => {
+  it("puts the same two people on the wreck charter and the Christ of the Abyss reef day", async () => {
+    const { db, shop } = await seededShopContext();
+    const titles = ["Wreck Trip — Spiegel Grove", "Two-Tank Reef — Christ of the Abyss"];
+
+    const rows = await db
+      .select({ title: trips.title, personId: tripAssignments.personId })
+      .from(tripAssignments)
+      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+      .where(and(eq(trips.shopId, shop.id), inArray(trips.title, titles)));
+
+    const crewOf = (title: string) =>
+      new Set(rows.filter((row) => row.title === title).map((row) => row.personId));
+    const mover = crewOf(titles[0] as string);
+    const host = crewOf(titles[1] as string);
+    expect(mover.size).toBe(2);
+    expect(host.size).toBe(2);
+    // Both, not one: the block draws a line per person, and the capture counts
+    // two.
+    expect([...mover].filter((personId) => host.has(personId))).toHaveLength(2);
+  });
+});
