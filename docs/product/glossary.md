@@ -1695,7 +1695,12 @@ new domain concept, define it here in the same PR.
   The **drysuit** is the one add-on that carries a size, and it is sized on its own scale — the
   manufacturer grid a rental wall is racked from (a girth letter, a trailing `T` for the tall cut),
   which shares the wetsuit's girth letters but carries a second axis the wetsuit scale has no room
-  for. Which codes the diver's own select offers is open as H-76. It contributes exactly **one**
+  for. Which codes the diver's own select offers is open as H-76. **A stored size the diver's grid
+  cannot spell is offered back to them as a selected option, and they can replace it** (issue
+  #1728): a staffer typing `ML, rock boot 9` should know the diver will see those words on their own
+  gear form. Before that the box painted blank over the stored value and the next save overwrote it,
+  which was worse — but it does mean the free text is a shared field rather than a staff-only one.
+  It contributes exactly **one**
   piece to the packing list and no boots of its own: most rental drysuits have their boots
   vulcanised on, so they come off the wall with the suit and there is nothing extra to pull. A fleet
   stocking neoprene-sock suits worn with separate rock boots writes that into the drysuit size

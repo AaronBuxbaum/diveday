@@ -521,12 +521,61 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
     // contributes no entry at all, so the column was overwritten the moment
     // anybody touched the box.
     expect(submitted(container, "drysuitSize")).toBe(offGrid);
+    // The option carries words, not bare data. Unlabelled it reads as a
+    // mistake to tidy up, and the diver's plausible correction to a clean
+    // letter is the same data loss arriving through the front door.
+    const stored = [...select.options].find((option) => option.value === offGrid);
+    expect(stored?.textContent).toContain("on file from the shop");
+  });
+
+  it("clears the stored size when the diver says they are not sure", () => {
+    // H-76 wants this path to exist: "Not sure, help me fit it" leaves the fit
+    // incomplete on purpose, so the hands-on fitting path picks the diver up.
+    // Pinned so the next reader knows the clearing is a decision and not the
+    // bug above wearing a different hat — an empty string reaches
+    // `saveRentalFit` as a present key and nulls the column, which is the
+    // visible gap, not the silent overwrite.
+    const { container } = renderDrysuit({ drysuitSize: offGrid });
+    fireEvent.change(drysuitSelect(container), { target: { value: "" } });
+    expect(submitted(container, "drysuitSize")).toBe("");
   });
 
   it("still lets a deliberate change win", () => {
     const { container } = renderDrysuit({ drysuitSize: offGrid });
     fireEvent.change(drysuitSelect(container), { target: { value: "MT" } });
     expect(submitted(container, "drysuitSize")).toBe("MT");
+  });
+
+  it("offers a stored off-grid size on the BCD and wetsuit selects too", () => {
+    // Both are free text staff-side at the same cap, so both hold real
+    // off-grid values. The helper is applied to all three selects; without a
+    // test for two of them the generalization is incidental rather than pinned.
+    const { container } = renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={{
+          ...emptyFit,
+          rentsBcd: true,
+          bcdSize: "M, short straps",
+          rentsWetsuit: true,
+          wetsuitSize: "M short",
+        }}
+        rentalItems={["bcd", "wetsuit"]}
+        course={null}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+    const bcd = container.querySelector('select[name="bcdSize"]') as HTMLSelectElement;
+    const wetsuit = container.querySelector('select[name="wetsuitSize"]') as HTMLSelectElement;
+    expect(bcd.value).toBe("M, short straps");
+    expect(wetsuit.value).toBe("M short");
+    expect(submitted(container, "bcdSize")).toBe("M, short straps");
+    expect(submitted(container, "wetsuitSize")).toBe("M short");
   });
 
   it("adds no duplicate option for a size already on the grid", () => {

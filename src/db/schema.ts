@@ -7232,8 +7232,11 @@ export const rentalFitProfiles = pgTable(
      * separately, which is why `rents_drysuit` pushes one packing piece where
      * `rents_wetsuit` pushes two (`src/lib/dive-prep.ts`). A fleet stocking
      * neoprene-sock suits worn with separate rock boots says so in this same
-     * free text ("ML, rock boot 9"): no column records a rock-boot size, and
-     * this is the one field on the fit that reaches the packing list verbatim.
+     * free text ("ML, rock boot 9"): no column records a rock-boot size, so
+     * this is the one size field with no companion column or packing piece for
+     * what it implies — the only one whose free text is load-bearing beyond the
+     * size itself. Every size reaches the packing list verbatim; only this one
+     * carries a second fact with nothing on the list to notice its loss.
      */
     drysuitSize: text("drysuit_size"),
     bootSize: text("boot_size"),

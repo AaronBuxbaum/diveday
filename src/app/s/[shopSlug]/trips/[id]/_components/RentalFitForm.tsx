@@ -79,6 +79,19 @@ function optionsWithStored(grid: readonly string[], stored: string | null | unde
 }
 
 /**
+ * Whether an option is the stored off-grid value rather than a grid code, so
+ * the select can say what it is.
+ *
+ * Rendered bare, the stored string sits above nine clean letters looking like a
+ * mistake to tidy up — and the diver's plausible move is to "correct" it to the
+ * letter they believe they are, which writes away the shop's own encoding of a
+ * boot the fleet does not stock separately. Closing the *accidental* overwrite
+ * without saying anything leaves the innocent one wide open (domain review of
+ * issue #1728).
+ */
+const isStoredOffGrid = (grid: readonly string[], option: string) => !grid.includes(option);
+
+/**
  * `src/lib/rentals.ts` returns item codes, never rendered words (see the
  * domain-strings-common notes on a domain function rendered on both a staff
  * and a diver page) — `SettingsPage.tsx`/`RentalFit.tsx` resolve the same
@@ -204,9 +217,15 @@ export function RentalFitForm({
           .map((item) => item.kind),
       ),
   );
-  const [bcdSize, setBcdSize] = useState(rentalFit?.bcdSize ?? "");
-  const [wetsuitSize, setWetsuitSize] = useState(rentalFit?.wetsuitSize ?? "");
-  const [drysuitSize, setDrysuitSize] = useState(rentalFit?.drysuitSize ?? "");
+  // Trimmed to match `optionsWithStored`, which compares a trimmed value
+  // against the grid. Untrimmed here, a stored `" MT "` would be offered as
+  // clean `MT` and then bind to a value matching no option — the blank box over
+  // a size on file that this whole helper exists to stop. Unreachable today
+  // (every writer trims), which is exactly why the two halves must agree rather
+  // than one of them being half-defensive.
+  const [bcdSize, setBcdSize] = useState((rentalFit?.bcdSize ?? "").trim());
+  const [wetsuitSize, setWetsuitSize] = useState((rentalFit?.wetsuitSize ?? "").trim());
+  const [drysuitSize, setDrysuitSize] = useState((rentalFit?.drysuitSize ?? "").trim());
   // One shoe-size figure for fins and boots alike: they were two fields asking
   // the same question, and a diver who answered one and not the other left the
   // crew guessing. `bootSize` is still its own column (imports carry one), and
@@ -452,7 +471,9 @@ export function RentalFitForm({
                 >
                   <option value="">{t("rental.notSure")}</option>
                   {bcdOptions.map((size) => (
-                    <option key={size}>{size}</option>
+                    <option key={size} value={size}>
+                      {isStoredOffGrid(SIZES, size) ? t("rental.sizeOnFile", { size }) : size}
+                    </option>
                   ))}
                 </select>
               </Field>
@@ -467,7 +488,9 @@ export function RentalFitForm({
                 >
                   <option value="">{t("rental.notSure")}</option>
                   {wetsuitOptions.map((size) => (
-                    <option key={size}>{size}</option>
+                    <option key={size} value={size}>
+                      {isStoredOffGrid(SIZES, size) ? t("rental.sizeOnFile", { size }) : size}
+                    </option>
                   ))}
                 </select>
               </Field>
@@ -482,7 +505,11 @@ export function RentalFitForm({
                 >
                   <option value="">{t("rental.notSure")}</option>
                   {drysuitOptions.map((size) => (
-                    <option key={size}>{size}</option>
+                    <option key={size} value={size}>
+                      {isStoredOffGrid(DRYSUIT_SIZES, size)
+                        ? t("rental.sizeOnFile", { size })
+                        : size}
+                    </option>
                   ))}
                 </select>
               </Field>

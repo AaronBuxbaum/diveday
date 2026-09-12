@@ -17,6 +17,7 @@ import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { handoffHref } from "@/lib/booking-handoff";
 import { readEmergencyContact } from "@/lib/contact";
 import { publicTripPath } from "@/lib/public-routes";
+import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import {
   SHELF_COOKIE,
   SHELF_COOKIE_MAX_AGE,
@@ -107,11 +108,17 @@ export async function forgetShelfAction(token: string): Promise<void> {
   redirect(`${shelfBase(token)}?forgot=1`);
 }
 
+// The caps are the shared registry's, not this form's own: these four boxes
+// are prefilled from what staff stored, and HTML `maxLength` does not constrain
+// a value the visitor never typed. At 20 against the staff writer's 40, a
+// staffer recording a 24-character fin size made this whole form unsaveable
+// while every visible box read right (issue #1728, found by a domain review of
+// its first half, which fixed the other two writers and missed this one).
 const sizesSchema = z.object({
-  bcdSize: z.string().trim().max(20),
-  wetsuitSize: z.string().trim().max(20),
-  bootSize: z.string().trim().max(20),
-  finSize: z.string().trim().max(20),
+  bcdSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size),
+  wetsuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size),
+  bootSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size),
+  finSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size),
 });
 
 /**

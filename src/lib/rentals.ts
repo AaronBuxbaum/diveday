@@ -240,9 +240,10 @@ export function nitroxCardWanted(
  * since issue 1414 and is the exception among the add-ons: it has a size column, on
  * its own scale, and the vulcanised boots most rental suits carry need no shoe
  * size of their own. A suit that takes separate rock boots gets no extra kind
- * here either — that size rides in the drysuit's own free text, which is the
- * one field on the fit that reaches the packing list verbatim
- * (`src/lib/dive-prep.ts`).
+ * here either — that size rides in the drysuit's own free text, the one size
+ * field with no companion column or packing piece for what it implies, so the
+ * only one whose free text is load-bearing beyond the size itself
+ * (`src/lib/dive-prep.ts`; every size reaches the packing list verbatim).
  *
  * Same union `statedSizeItems` in `dive-prep.ts` already speaks, so a surface
  * can render both through `src/i18n/rental-labels.ts` without a second map.
@@ -259,13 +260,20 @@ export const SIZED_RENTAL_KINDS = [
 export type SizedRentalKind = (typeof SIZED_RENTAL_KINDS)[number];
 
 /**
- * How long a rental-fit text field may be, for **both** writers of
+ * How long a rental-fit text field may be, for **every** writer of
  * `rental_fit_profiles`.
  *
- * Written down once because the two writers cannot hold different limits. The
+ * There are three, and a domain review found the third after the first two were
+ * fixed: the staff fit editor, the diver's gear form on `/ready/[token]`, and
+ * the diver's own shelf (`src/app/shelf/[token]/actions.ts`). `confirmRentalFitSize`
+ * is a fourth door onto one column.
+ *
+ * Written down once because they cannot hold different limits. The
  * staff fit editor is free text — a neoprene-sock fleet records "ML, rock boot
- * 9", which is the one field on the fit that reaches the packing list verbatim
- * (`drysuit_size` in `src/db/schema.ts`, read by `src/lib/dive-prep.ts`). The
+ * 9" in `drysuit_size`, the one size field with no companion column or packing
+ * piece for what it implies, so the only one whose free text is load-bearing
+ * beyond the size itself (`src/db/schema.ts`, read by `src/lib/dive-prep.ts`,
+ * which reaches the packing list verbatim like every other size). The
  * diver's own gear form then **re-submits whatever staff stored**, so a cap
  * tighter on the diver's side fails `safeParse` and redirects `?error=fit` on
  * a form where every visible box is right — issue #1062's bug, arrived at from

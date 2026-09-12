@@ -1227,6 +1227,7 @@
     "whatToPlan": "What should we plan to have ready?",
     "askWhatsIncluded": "Ask the shop what’s included in the trip price.",
     "notSure": "Not sure — help me fit it",
+    "sizeOnFile": "{size} — on file from the shop",
     "wetsuitSize": "Wetsuit size",
     "drysuitSize": "Drysuit size",
     "finSize": "Fin & boot size",
