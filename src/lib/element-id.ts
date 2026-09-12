@@ -29,3 +29,30 @@ export function scopedId(prefix: string | undefined, id: string): string {
 export function scopedHash(prefix: string | undefined, id: string): string {
   return `#${scopedId(prefix, id)}`;
 }
+
+/**
+ * **The live manifest's diver row, minted once.** Its roll call renders the
+ * row and its sticky summary panel links two lists of name chips at it, in two
+ * files — three bare template literals until this existed, agreeing only
+ * because nobody had edited one of them.
+ *
+ * That is the shape of the bug #1675 shipped on the offline manifest: the face
+ * grid built `diver-row-<bookingId>` while the rows it jumped to answered to
+ * `offline-roll-call-<bookingId>`, two literals one screen apart, on the
+ * surface a crew member reads at the rail with no signal. Every tap did
+ * nothing, silently. What made it shippable is that the tests could not catch
+ * it — each side hard-coded its own string, so both suites stayed green with
+ * the halves disagreeing.
+ *
+ * Unscoped on purpose, unlike the crew rows beside them: whether a diver row
+ * should take a prefix is the separate question of rendering two manifests on
+ * one page, and `e2e/manifest.spec.ts` pins this fragment in a URL.
+ */
+export function diverRowId(bookingId: string): string {
+  return `diver-row-${bookingId}`;
+}
+
+/** The same id as a fragment/`href` target. */
+export function diverRowHash(bookingId: string): string {
+  return `#${diverRowId(bookingId)}`;
+}

@@ -4,7 +4,7 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessStatusText } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { scopedHash, scopedId } from "@/lib/element-id";
+import { diverRowHash, scopedHash, scopedId } from "@/lib/element-id";
 import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
 import { HeadCount } from "./HeadCount";
 
@@ -215,7 +215,7 @@ export function SummaryPanel({
   const missing: Array<{ key: string; href: string; label: string }> = [
     ...notBackAboardDivers.map((diver) => ({
       key: `missing-diver-${diver.bookingId}`,
-      href: `#diver-row-${diver.bookingId}`,
+      href: diverRowHash(diver.bookingId),
       label: diver.fullName,
     })),
     ...notBackAboardCrew.map((member) => ({
@@ -227,7 +227,7 @@ export function SummaryPanel({
   const stillToCall: Array<{ key: string; href: string; label: string; blocked: boolean }> = [
     ...uncalled.map((diver) => ({
       key: `diver-${diver.bookingId}`,
-      href: `#diver-row-${diver.bookingId}`,
+      href: diverRowHash(diver.bookingId),
       label: diver.fullName,
       // A readiness fact, and only at the dock: after a dive roll call is a
       // physical head count that readiness never gates, so the word would
