@@ -80,7 +80,7 @@ export type GearServiceKind = "service" | "hydro_test" | "visual_inspection" | "
  * the same way; register-only categories follow, with `other` last as the
  * genuine catch-all.
  */
-export const GEAR_KIND_ORDER: readonly GearItemKind[] = [
+export const GEAR_KIND_ORDER = [
   "bcd",
   "regulator",
   "wetsuit",
@@ -102,9 +102,32 @@ export const GEAR_KIND_ORDER: readonly GearItemKind[] = [
   "nitrox_analyzer",
   "o2_kit",
   "other",
-];
+] as const satisfies readonly GearItemKind[];
 
-const GEAR_KIND_RANK = new Map(GEAR_KIND_ORDER.map((kind, index) => [kind, index]));
+/**
+ * A kind the array above has no position for. `never` while it is complete.
+ *
+ * The array is the one list here the compiler cannot hold exhaustive on its
+ * own, and it is the one the fleet page renders from — every neighbour that
+ * could have caught a gap is a total `Record` (`GEAR_SERVICE_KINDS_FOR` below,
+ * `src/i18n/gear-labels.ts`), so a 22nd kind would be forced into all of them,
+ * save fine, and land in an unlabelled trailing position nobody looks at
+ * (`gearKindRank` sorts an unknown kind last rather than throwing, which is
+ * right for a value off a database row and wrong as the only defence).
+ *
+ * Chosen over the cheaper assertion in `gear.test.ts` because the failure
+ * arrives at `tsc` alongside the two compile errors that same union member
+ * already produces, naming the kind — so all three are fixed in one pass
+ * rather than one of them a test run later (issue #1799).
+ */
+type GearKindWithNoFleetPosition = Exclude<GearItemKind, (typeof GEAR_KIND_ORDER)[number]>;
+
+/** `Record<never, never>` is `{}`; a missing kind makes `{}` a type error naming it. */
+const _everyGearKindHasAFleetPosition: Record<GearKindWithNoFleetPosition, never> = {};
+
+const GEAR_KIND_RANK = new Map<GearItemKind, number>(
+  GEAR_KIND_ORDER.map((kind, index) => [kind, index]),
+);
 
 export function gearKindRank(kind: GearItemKind): number {
   return GEAR_KIND_RANK.get(kind) ?? GEAR_KIND_ORDER.length;

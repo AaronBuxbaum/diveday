@@ -15,7 +15,10 @@ import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
-const kindValues = GEAR_KIND_ORDER as [GearItemKind, ...GearItemKind[]];
+// Copied, because `GEAR_KIND_ORDER` is `as const` so a gear kind with no
+// fleet position is a compile error (issue #1799); zod's `enum` wants a
+// mutable non-empty tuple.
+const kindValues = [...GEAR_KIND_ORDER] as [GearItemKind, ...GearItemKind[]];
 
 const unitFormSchema = z.object({
   kind: z.enum(kindValues),
