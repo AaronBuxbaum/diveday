@@ -615,14 +615,17 @@ async function writeEvidence(
       // issue #1755's rule, reached through the importer, which the
       // `security-reviewer` pass over both changes found still open here.
       //
-      // Five of the eleven `rents_*` columns are `not null default true`, so a
-      // row created here with sizes and no flags stated a fit claiming a BCD, a
-      // regulator, a wetsuit, a mask, fins and weights — for up to 20,000
-      // divers in one action, at a shop whose catalog may hold none of them,
-      // and the packing-list reader applies no catalog filter. A file carries no claim about which pieces
-      // a diver *wants*: a size column says what fits, not what they asked
-      // for, which is the same reading `registerDiverAtShop` already takes of
-      // the counter's QR form (`src/db/self-registration.ts`).
+      // Five of the eleven `rents_*` columns were `not null default true` when
+      // this landed, so a row created here with sizes and no flags stated a fit
+      // claiming a BCD, a regulator, a wetsuit, a mask, fins and weights — for
+      // up to 20,000 divers in one action, at a shop whose catalog may hold
+      // none of them, and the packing-list reader applies no catalog filter.
+      // Those defaults are `false` now (issue #1793), so this spread no longer
+      // has a default to beat. It stays because it is a *claim*: a file carries
+      // none about which pieces a diver wants — a size column says what fits,
+      // not what they asked for — and saying so out loud is the same reading
+      // `registerDiverAtShop` takes of the counter's QR form
+      // (`src/db/self-registration.ts`).
       //
       // `set:` deliberately keeps only the sizes, so a diver's real stated fit
       // is never rewritten by a re-import.

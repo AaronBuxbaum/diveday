@@ -191,11 +191,14 @@ export function offeredRentalFitFields(rentalItems: readonly string[]): Set<Rent
  * self-registration and the contact importer, which record sizes without
  * claiming the diver asked for equipment, and all four writers in
  * `src/db/rental-fit.ts` — the fit forms, the diver's note, the diver's shelf
- * and the evening's "keep it". A column no form asked about must not arrive as
- * its `default(true)` (`src/db/schema.ts` — five of the eleven default on,
- * which is six unasked-for pieces on a packing list), and a row created
- * claiming nothing is also the only thing that makes it safe for the next
- * writer to stamp `fit_stated_at` on a row it did not create.
+ * and the evening's "keep it". Five of the eleven columns defaulted to `true`
+ * when this was written, so a column no form asked about arrived as a claim —
+ * six unasked-for pieces on a packing list. They default to `false` now (issue
+ * #1793), which is why `saveRentalFit` no longer lays this under its own
+ * insert. It stays under the rest because a row created **claiming nothing** is
+ * what makes it safe for the next writer to stamp `fit_stated_at` on a row it
+ * did not create, and because the self-registration and the importer are
+ * *stating* that this diver rents nothing rather than declining to say.
  *
  * The cast is load-bearing and cannot check itself: `Object.fromEntries` types
  * as an index signature, so a member of {@link RentalFitField} with no
