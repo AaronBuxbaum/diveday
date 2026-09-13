@@ -7291,6 +7291,46 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The same editor with the one thing the frame above deliberately
+       * excludes** (issue #1772): the implausible-station advisory, and the
+       * box that answers it.
+       *
+       * The capture above says in as many words that "no distance warning
+       * belongs in this frame" — Carysfort genuinely is the nearest station to
+       * that reef — so the warning tone, its two-line wrap under the field, and
+       * the checkbox that follows the grid had no baseline at all. They are
+       * what a shop sees on the one occasion this form has anything to say
+       * beyond echoing an id back.
+       *
+       * Seeded, not typed: `fixtureTideStation` answers Carysfort for every id,
+       * so no station a spec could type is far from anything. The distance has
+       * to come from the site, and a site that remote is one the demo shop must
+       * not carry standing (`.claude/rules/surfaces.md`), so it arrives through
+       * `/api/test/seed-trouble-states` and leaves with the next reset.
+       */
+      test(`the dive-site editor warns about a station nowhere near it (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?farStation=1");
+        expect(seeded.ok()).toBe(true);
+        const { farStation } = (await seeded.json()) as {
+          farStation?: { siteId: string; name: string; slug: string };
+        };
+        if (!farStation) throw new Error("seed-trouble-states seeded no far-station site");
+
+        await page.goto(`/shop/blue-mantis/dive-sites/${farStation.siteId}`);
+        await page.getByRole("heading", { level: 1, name: farStation.name }).waitFor();
+        // The editor's own mounted marker, as the calm capture uses.
+        await page.getByLabel("What the route is called").waitFor();
+        // The sentence itself, not the echo line: the echo renders whether or
+        // not the station is far, so waiting on it would photograph the calm
+        // state without failing.
+        await page.getByText(/so the turn it predicts can reach this water/).waitFor();
+        await capture(page, "dive-site-far-station", scheme);
+      });
+
+      /**
        * The same long form with nothing in it — a landmark editor, a creature
        * picker, and every field a shop meets before it has anything to edit.
        * Its sibling above was captured and this one never was (issue #727),

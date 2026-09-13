@@ -345,7 +345,7 @@
   },
   "/shop/[shopSlug]/dive-sites/[id]": {
     "e2e": ["dive-sites.spec.ts", "tide-window.spec.ts"],
-    "visual": ["dive-site-edit"]
+    "visual": ["dive-site-edit", "dive-site-far-station"]
   },
   "/shop/[shopSlug]/dive-sites/new": {
     "e2e": ["dive-sites.spec.ts"],
