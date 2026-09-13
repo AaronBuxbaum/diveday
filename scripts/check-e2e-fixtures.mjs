@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 /**
  * e2e-shaped invariants nothing else enforces.
@@ -32,6 +33,17 @@ import process from "node:process";
  *    one do so, and a missed guard plus one misconfigured deployment is
  *    account takeover (the finding behind the guard —
  *    docs/product/archive/specialist-optimization-audit-20260731.md §5).
+ * 4. Every one of those routes must also be registered in
+ *    `src/app/api/test/seed-routes.test.ts`'s shared table, which is the only
+ *    thing that proves the guard refuses *before* the route reads a body or
+ *    opens the database. Check 3 is satisfied by a route that parses a body,
+ *    resolves a shop and only then asks about the bearer — and such a route
+ *    answers differently for a real slug than for a nonsense one, which is an
+ *    oracle on a door that is supposed to be shut. The table was
+ *    hand-maintained and had drifted five routes short while check 3's count
+ *    read as complete (issue #1791). The registration is checked here; the
+ *    refusal itself stays in the test, because what it proves is that `getDb`
+ *    was never reached, and that has to be exercised rather than grepped.
  */
 
 const ROOT = process.cwd();
@@ -50,6 +62,25 @@ const importPattern =
 const unwrappedNewPagePattern = /=\s*await\s+(?!makeActivitySafe\()[\w.]+\.newPage\(\)/;
 
 const TEST_ROUTE_DIR = "src/app/api/test";
+const SEED_ROUTE_TABLE = "src/app/api/test/seed-routes.test.ts";
+/**
+ * The two routes the shared table deliberately leaves out, with the reason its
+ * own docblock gives: `reset` has its own colocated `route.test.ts` covering
+ * the same refusal *and* its success path, and `clock` is the fleet's frozen
+ * clock, which the docblock records the fleet never calls. Anything else
+ * missing is drift.
+ */
+const UNREGISTERED_BY_DESIGN = new Set(["reset", "clock"]);
+/**
+ * `slug: "seed-thing",` in the table above.
+ *
+ * Line-anchored, so a slug quoted inside one of the table's docblocks — several
+ * of which name sibling routes while explaining an expectation — cannot read as
+ * a registration and hide the drift this exists to catch. The optional `{` is
+ * for an entry written on one line: Biome would split it on the next format
+ * pass, but the guard should not answer differently in the window before that.
+ */
+const tableSlugPattern = /^\s*(?:\{\s*)?slug:\s*"([^"]+)",/gm;
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const guardImportPattern =
   /import\s*\{[^}]*\be2eTestRouteAuthorized\b[^}]*\}\s*from\s*["']@\/lib\/e2e-test-routes["']/;
@@ -120,7 +151,40 @@ async function checkTestRouteGuards() {
       }
     }
   }
+  for (const problem of await unregisteredRoutes(routeFiles)) problems.push(problem);
   return { count: routeFiles.length, problems };
+}
+
+/**
+ * Route directories with no entry in the shared refusal table.
+ *
+ * Keyed on the directory name, which is what the table's `slug` holds and what
+ * the URL carries — a route file's path is the only spelling both sides agree
+ * on without importing anything.
+ */
+export function unregisteredSlugs(routeFiles, tableSource) {
+  const registered = new Set([...tableSource.matchAll(tableSlugPattern)].map((match) => match[1]));
+  return routeFiles
+    .map((relativePath) => path.basename(path.dirname(relativePath)))
+    .filter((slug) => !registered.has(slug) && !UNREGISTERED_BY_DESIGN.has(slug))
+    .sort();
+}
+
+async function unregisteredRoutes(routeFiles) {
+  let table;
+  try {
+    table = await readFile(path.join(ROOT, SEED_ROUTE_TABLE), "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return [`${SEED_ROUTE_TABLE}: missing — nothing proves these routes refuse before they read`];
+    }
+    throw error;
+  }
+  return unregisteredSlugs(routeFiles, table).map(
+    (slug) =>
+      `${TEST_ROUTE_DIR}/${slug}: not registered in ${SEED_ROUTE_TABLE}, so nothing proves ` +
+      `it refuses before it reads a body or opens the database`,
+  );
 }
 
 async function main() {
@@ -166,11 +230,15 @@ async function main() {
       );
     }
     if (testRoutes.problems.length > 0) {
-      console.error("check:e2e-fixtures: /api/test route handler(s) without the shared guard:");
+      console.error("check:e2e-fixtures: /api/test route problem(s):");
       for (const problem of testRoutes.problems) console.error(`  - ${problem}`);
       console.error(
         "Open every handler with: if (!e2eTestRouteAuthorized(request)) " +
           'return NextResponse.json({ error: "not_available" }, { status: 404 });',
+      );
+      console.error(
+        `…and add a row for it to ${SEED_ROUTE_TABLE}, with the expectation its own code earns ` +
+          "past the guard (an invalid body, a 200, or getDb having been reached).",
       );
     }
     process.exitCode = 1;
@@ -179,8 +247,11 @@ async function main() {
 
   console.log(
     `check:e2e-fixtures: ok — ${specFiles.length} spec files import from ./fixtures, ` +
-      `${testRoutes.count} /api/test route files guarded`,
+      `${testRoutes.count} /api/test route files guarded and registered`,
   );
 }
 
-await main();
+// Importable for its own test without running the whole sweep.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await main();
+}

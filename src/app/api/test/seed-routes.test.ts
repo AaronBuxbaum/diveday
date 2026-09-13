@@ -41,12 +41,24 @@ const seedDisplayToken = await import("./seed-display-token/route");
 const seedYearBandShop = await import("./seed-year-band-shop/route");
 const inboundMessage = await import("./inbound-message/route");
 const seedOffSeason = await import("./seed-off-season/route");
+const departTrip = await import("./depart-trip/route");
+const emailPreviews = await import("./email-previews/route");
+const seedContactEmail = await import("./seed-contact-email-confirmation-token/route");
+const seedGift = await import("./seed-gift/route");
+const seedRecapPulse = await import("./seed-recap-pulse/route");
 
 const secret = "e2e-test-secret";
 
 type SeedRoute = {
   slug: string;
-  POST: (request: Request) => Promise<Response>;
+  /**
+   * The verb this route answers on. Only `email-previews` is a `GET`; it is in
+   * this table for the same reason the rest are — the guard has to close it
+   * before it does anything, and "it only reads" is not an exemption when the
+   * thing it reads is every notification template the product sends.
+   */
+  method?: "GET";
+  handler: (request: Request) => Promise<Response>;
   // What the route does *immediately after* the guard lets a request through.
   // Asserting it keeps the 404 cases honest: they prove the guard refused, not
   // that the route is broken in some other way that happens to 404 too.
@@ -64,27 +76,27 @@ const routes: SeedRoute[] = [
     // inbound message on a shop's behalf, which on a misconfigured deployment
     // would let anyone cancel a diver's seat (ADR 20260909-reply-keywords).
     slug: "inbound-message",
-    POST: inboundMessage.POST,
+    handler: inboundMessage.POST,
     expectPastTheGuard: expectInvalidBody,
   },
   {
     slug: "seed-account-token",
-    POST: seedAccountToken.POST,
+    handler: seedAccountToken.POST,
     expectPastTheGuard: expectInvalidBody,
   },
   {
     slug: "seed-last-minute-unsubscribe-token",
-    POST: seedLastMinute.POST,
+    handler: seedLastMinute.POST,
     expectPastTheGuard: expectInvalidBody,
   },
   {
     slug: "seed-courtesy-email-unsubscribe-token",
-    POST: seedCourtesyEmail.POST,
+    handler: seedCourtesyEmail.POST,
     expectPastTheGuard: expectInvalidBody,
   },
   {
     slug: "seed-stripe-account",
-    POST: seedStripeAccount.POST,
+    handler: seedStripeAccount.POST,
     // No request body to validate — the first thing this one does past the
     // guard is open the database, so that call is the signal it got through.
     expectPastTheGuard: async () => {
@@ -93,7 +105,7 @@ const routes: SeedRoute[] = [
   },
   {
     slug: "seed-trouble-states",
-    POST: seedTroubleStates.POST,
+    handler: seedTroubleStates.POST,
     // Same shape as seed-stripe-account: no body, so reaching the database is
     // what proves the guard let it through. This one writes a stuck payment
     // intent, an owed refund and two erasure obligations, so a route that
@@ -105,7 +117,7 @@ const routes: SeedRoute[] = [
   },
   {
     slug: "seed-evening",
-    POST: seedEvening.POST,
+    handler: seedEvening.POST,
     // Same shape as the two above: no body, so reaching the database is what
     // proves the guard let it through. This one rewrites the departure times
     // of a whole shop day, so a route that answered on a misconfigured
@@ -116,7 +128,7 @@ const routes: SeedRoute[] = [
   },
   {
     slug: "seed-changed-dive-site",
-    POST: seedChangedDiveSite.POST,
+    handler: seedChangedDiveSite.POST,
     // Same shape as the three above: no body, so reaching the database is what
     // proves the guard let it through. This one writes an `executed_dives` row
     // — a record of a dive that was performed — so a route that answered on a
@@ -129,7 +141,7 @@ const routes: SeedRoute[] = [
   },
   {
     slug: "seed-observed-species",
-    POST: seedObservedSpecies.POST,
+    handler: seedObservedSpecies.POST,
     // The same `executed_dives` write as the route above, carrying a *claim
     // about what somebody saw* — so a route answering on a misconfigured
     // deployment would put a sighting nobody made onto a real diver's keepsake,
@@ -141,7 +153,7 @@ const routes: SeedRoute[] = [
   },
   {
     slug: "seed-dive-times",
-    POST: seedDiveTimes.POST,
+    handler: seedDiveTimes.POST,
     // The same `executed_dives` write as the two above, carrying times in and
     // out — the instants the fly-safe line counts from. A route answering on a
     // misconfigured deployment would be telling a real diver when they may
@@ -153,7 +165,7 @@ const routes: SeedRoute[] = [
   },
   {
     slug: "seed-booking-handoff",
-    POST: seedBookingHandoff.POST,
+    handler: seedBookingHandoff.POST,
     // A shop slug and an email, refused first — and it must be, because past
     // that it mints a working ten-minute credential over a diver's booking. A
     // route answering on a misconfigured deployment would be handing out the
@@ -162,7 +174,7 @@ const routes: SeedRoute[] = [
   },
   {
     slug: "seed-arrival-code",
-    POST: seedArrivalCode.POST,
+    handler: seedArrivalCode.POST,
     // A shop slug and an email, refused first — and it must be, because past
     // that it mints a working arrival code for a diver's seat, and a scan of
     // one *writes an arrival on a manifest*. A route answering on a
@@ -172,7 +184,7 @@ const routes: SeedRoute[] = [
   },
   {
     slug: "seed-shelf-token",
-    POST: seedShelfToken.POST,
+    handler: seedShelfToken.POST,
     // A shop slug and an email, refused first — and it must be, because past
     // that it mints a year-long credential over a diver's whole file at that
     // shop. A route answering on a misconfigured deployment would be handing
@@ -181,7 +193,7 @@ const routes: SeedRoute[] = [
   },
   {
     slug: "seed-returning-diver",
-    POST: seedReturningDiver.POST,
+    handler: seedReturningDiver.POST,
     // It takes a shop slug and an email, so the body is what it refuses first —
     // and it must, because past that it writes a diver's sizes and their
     // emergency contact. A route answering on a misconfigured deployment would
@@ -190,7 +202,7 @@ const routes: SeedRoute[] = [
   },
   {
     slug: "seed-display-token",
-    POST: seedDisplayToken.POST,
+    handler: seedDisplayToken.POST,
     // No body is a valid ask (the defaults are the fixture), so reaching the
     // database is what proves the guard let it through. Past that it mints a
     // working, non-expiring link over a shop's whole day for a lobby screen —
@@ -202,7 +214,7 @@ const routes: SeedRoute[] = [
   },
   {
     slug: "seed-off-season",
-    POST: seedOffSeason.POST,
+    handler: seedOffSeason.POST,
     // No body is a valid ask (the shared fixture is the default), so reaching
     // the database is what proves the guard let it through. Past that it soft-
     // deletes every upcoming departure a shop has, so a route answering on a
@@ -218,7 +230,7 @@ const routes: SeedRoute[] = [
     // line (`db.transaction`) throws the moment the guard lets it through.
     // Swallowed on purpose: what this file asserts is *whether* the request
     // reached the database, never that the mint succeeded against a mock.
-    POST: async (request) =>
+    handler: async (request) =>
       seedPrivateShop.POST(request).catch(() => new Response(null, { status: 500 })),
     // Same shape as the two above: no body, so reaching the database is what
     // proves the guard let it through. This one mints a whole `isDemo` tenant
@@ -231,8 +243,64 @@ const routes: SeedRoute[] = [
     },
   },
   {
+    slug: "depart-trip",
+    handler: departTrip.POST,
+    // Body first past the guard. It names one trip and slides its departure
+    // into the past, so a route answering on a misconfigured deployment would
+    // be telling a real shop's counter that a boat it can still see on the
+    // board has already sailed — which is what opens "Not here?" against a
+    // diver who is standing there.
+    expectPastTheGuard: expectInvalidBody,
+  },
+  {
+    slug: "email-previews",
+    method: "GET",
+    handler: emailPreviews.GET,
+    // The one read-only route here, and the only one whose past-the-guard
+    // signal is a 200 rather than a refusal or a database call: it renders
+    // fixture notifications and touches nothing. Asserting `getDb` was never
+    // called is still the point — it proves the 200 came from the sample
+    // renderer and not from something that had reached a real shop's rows.
+    expectPastTheGuard: async (response) => {
+      expect(response.status).toBe(200);
+      expect(getDb).not.toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-contact-email-confirmation-token",
+    handler: seedContactEmail.POST,
+    // Body first past the guard. Same class as the two unsubscribe-token
+    // routes above it: the token it mints is otherwise only ever readable from
+    // inside the confirmation email and is hashed at rest, so a route that
+    // answered would hand anyone the address-confirmation for any shop.
+    expectPastTheGuard: expectInvalidBody,
+  },
+  {
+    slug: "seed-gift",
+    handler: seedGift.POST,
+    // Database first, then the body — so reaching the database is what proves
+    // the guard let it through. Past that it books a real seat through
+    // `createGiftBooking` and mints a claim capability for it, so a route that
+    // answered on a misconfigured deployment would be selling a real shop's
+    // seats and handing out the links to sit in them.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-recap-pulse",
+    handler: seedRecapPulse.POST,
+    // No body at all, so reaching the database is the signal. Past that it
+    // files a private pulse against a booking — a diver's own words about
+    // something that went wrong — so a route that answered would be putting
+    // fabricated complaints into a real shop's moderation queue.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
     slug: "seed-year-band-shop",
-    POST: async (request) =>
+    handler: async (request) =>
       seedYearBandShop.POST(request).catch(() => new Response(null, { status: 500 })),
     // No body, so reaching the database is what proves the guard let it
     // through. This one writes a shop with `show_year_on_diveday` on, which is
@@ -259,14 +327,17 @@ afterEach(() => {
 });
 
 describe.each(routes)(
-  "POST /api/test/$slug — auth gate (specialist-optimization-audit-20260731.md §5)",
-  ({ slug, POST, expectPastTheGuard }) => {
+  "/api/test/$slug — auth gate (specialist-optimization-audit-20260731.md §5)",
+  ({ slug, method, handler, expectPastTheGuard }) => {
     function seedRequest(authorization?: string) {
       const headers: Record<string, string> = {};
       if (authorization !== undefined) headers.authorization = authorization;
       // Deliberately no body: every refusal must land before the route ever
       // reads one, so the same request shape exercises all of them.
-      return new Request(`http://localhost/api/test/${slug}`, { method: "POST", headers });
+      return new Request(`http://localhost/api/test/${slug}`, {
+        method: method ?? "POST",
+        headers,
+      });
     }
 
     async function expectRefused(response: Response) {
@@ -279,31 +350,31 @@ describe.each(routes)(
     it("404s with a missing Authorization header, even with DIVEDAY_E2E=1 in a production-shaped runtime", async () => {
       vi.stubEnv("NODE_ENV", "production");
       vi.stubEnv("DIVEDAY_E2E", "1");
-      await expectRefused(await POST(seedRequest()));
+      await expectRefused(await handler(seedRequest()));
     });
 
     it("404s with the wrong bearer token", async () => {
-      await expectRefused(await POST(seedRequest("Bearer wrong-secret")));
+      await expectRefused(await handler(seedRequest("Bearer wrong-secret")));
     });
 
     it("404s when DIVEDAY_E2E_SECRET isn't configured at all, regardless of the header sent", async () => {
       vi.stubEnv("DIVEDAY_E2E_SECRET", "");
-      await expectRefused(await POST(seedRequest(`Bearer ${secret}`)));
+      await expectRefused(await handler(seedRequest(`Bearer ${secret}`)));
     });
 
     it("404s whenever a real database is configured, even with the correct secret", async () => {
       vi.stubEnv("DATABASE_URL", "postgres://example");
-      await expectRefused(await POST(seedRequest(`Bearer ${secret}`)));
+      await expectRefused(await handler(seedRequest(`Bearer ${secret}`)));
     });
 
     it("404s in a production runtime that never opted in via DIVEDAY_E2E, even with the correct secret", async () => {
       vi.stubEnv("NODE_ENV", "production");
       vi.stubEnv("DIVEDAY_E2E", "");
-      await expectRefused(await POST(seedRequest(`Bearer ${secret}`)));
+      await expectRefused(await handler(seedRequest(`Bearer ${secret}`)));
     });
 
     it("gets past the guard with the correct bearer token", async () => {
-      await expectPastTheGuard(await POST(seedRequest(`Bearer ${secret}`)));
+      await expectPastTheGuard(await handler(seedRequest(`Bearer ${secret}`)));
     });
   },
 );
