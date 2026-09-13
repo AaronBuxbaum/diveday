@@ -273,9 +273,11 @@ describe("saveRentalFit / getRentalFit", () => {
       const { db, shopId, tripId } = await context();
       const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
       // A shop that rents wetsuits and nothing else. Five of the eleven columns
-      // default to **true** in the schema, so "leave an unasked column alone"
-      // on a brand-new row would put a BCD, a regulator, a mask, fins and
-      // weights on this diver's packing list that nobody ever ticked.
+      // defaulted to **true** until issue #1793, so "leave an unasked column
+      // alone" on a brand-new row would have put a BCD, a regulator, a mask,
+      // fins and weights on this diver's packing list that nobody ever ticked.
+      // The defaults are `false` now and the assertions below hold either way,
+      // which is the point: this test is what proved the base could go.
       await setShopRentalItems(db, shopId, ["wetsuit"]);
 
       await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsBcd: true });
@@ -292,8 +294,9 @@ describe("saveRentalFit / getRentalFit", () => {
       const { db, shopId, tripId } = await context();
       const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
       await setShopRentalItems(db, shopId, ["wetsuit"]);
-      // `saveRentalFitNote` creates the row with `fit_stated_at` null, so its
-      // flags are still at the schema defaults and no answer has been given.
+      // `saveRentalFitNote` creates the row with `fit_stated_at` null: no answer
+      // has been given, and nothing — neither the writer nor the schema — may
+      // invent one on the diver's behalf.
       await saveRentalFitNote(db, { shopId, personId, note: "Titanium hip, runs heavy" });
 
       await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsWetsuit: true });
@@ -303,6 +306,22 @@ describe("saveRentalFit / getRentalFit", () => {
       expect(fetched?.rentsWetsuit).toBe(true);
       expect(fetched?.rentsBcd).toBe(false);
       expect(fetched?.rentsWeights).toBe(false);
+    });
+
+    it("claims nothing on a row inserted with no flags at all", async () => {
+      const { db, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+      // Straight past every writer, which is the only way to read the schema's
+      // own opinion. Five of these defaulted to `true` (issue #1793) and two
+      // separate defences existed to stop that reaching a packing list; this is
+      // the assertion that lets both of them go.
+      await db.insert(rentalFitProfiles).values({ shopId, personId });
+
+      const fetched = await getRentalFit(db, shopId, personId);
+      expect(fetched).toMatchObject(NOTHING_RENTED);
+      // And still not a fit: a row claiming nothing is not a diver who answered
+      // "nothing", which is what the discriminator is for.
+      expect(fetched?.fitStatedAt).toBeNull();
     });
 
     it("refuses the save outright when the shop's catalog cannot be read", async () => {

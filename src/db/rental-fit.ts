@@ -96,19 +96,16 @@ function flagUpdates(
 }
 
 /**
- * The shop's catalog and whether this diver has a **stated fit** on file — the
- * two facts {@link flagUpdates} needs, in one round trip, or **null when the
- * shop itself cannot be read**.
+ * The shop's catalog — the one fact {@link flagUpdates} needs — or **null when
+ * the shop itself cannot be read**.
  *
- * A row with `fit_stated_at` null exists for something other than a fit: today
- * that is `saveRentalFitNote`, which creates one for a diver who has only left
- * the crew a note. Its `rents_*` columns are still at their schema defaults,
- * five of which are **true**, and nothing reads them while the discriminator is
- * null (`schema.ts`, `rental_fit_profiles.fit_stated_at`). So "leave the column
- * alone" has to mean "leave the diver's own prior answer alone" — where there
- * has never been an answer, an un-offered item must land `false` rather than
- * inherit a default that would pack a BCD, a regulator, a wetsuit, a mask, fins
- * and weights nobody asked for.
+ * It used to carry a second fact, whether this diver had a *stated fit* on
+ * file, and a whole read to get it. That was needed while five `rents_*`
+ * columns defaulted to `true`: "leave an un-offered column alone" had to mean
+ * "leave the diver's own prior answer alone", and on a row with no answer the
+ * default would have spoken for them. Those defaults are `false` now (issue
+ * #1793), so there is no difference left to detect and the read is gone with
+ * it.
  *
  * **A missing shop row is a refusal, not an empty catalog** (`dive-domain-expert`
  * review). `?? []` on the column is right — a shop really can rent nothing —
@@ -117,20 +114,14 @@ function flagUpdates(
  * saved. `saveRentalFit` already answers an unknown person with null, and a
  * shop whose catalog cannot be read deserves the same answer.
  */
-async function fitWritingContext(db: AppDb, shopId: string, personId: string) {
-  const [[shop], [profile]] = await Promise.all([
-    db.select({ rentalItems: shops.rentalItems }).from(shops).where(eq(shops.id, shopId)).limit(1),
-    db
-      .select({ fitStatedAt: rentalFitProfiles.fitStatedAt })
-      .from(rentalFitProfiles)
-      .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)))
-      .limit(1),
-  ]);
+async function fitWritingContext(db: AppDb, shopId: string) {
+  const [shop] = await db
+    .select({ rentalItems: shops.rentalItems })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
   if (!shop) return null;
-  return {
-    offered: offeredRentalFitFields(shop.rentalItems ?? []),
-    statedBefore: Boolean(profile?.fitStatedAt),
-  };
+  return { offered: offeredRentalFitFields(shop.rentalItems ?? []) };
 }
 
 /** The size columns the caller actually named, trimmed; the rest stay as they are. */
@@ -163,19 +154,20 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
     .limit(1);
   if (!person) return null;
 
-  const context = await fitWritingContext(db, input.shopId, input.personId);
+  const context = await fitWritingContext(db, input.shopId);
   if (!context) return null;
-  const { offered, statedBefore } = context;
+  const { offered } = context;
   const values = {
     // Only the pieces this shop currently rents are written; an item its
     // catalog has dropped keeps whatever the diver last said (`flagUpdates`,
     // issue #1755 -- the mirror of the absent-size rule below).
     //
-    // `NOTHING_RENTED` underneath it is for a row that has never stated a fit:
-    // a column nobody has answered must not arrive as its `default(true)`,
-    // which would be six unasked-for pieces on the packing list
-    // (`fitWritingContext`).
-    ...(statedBefore ? {} : NOTHING_RENTED),
+    // A `NOTHING_RENTED` base used to sit here, for a row that had never stated
+    // a fit: a column nobody had answered must not arrive as its
+    // `default(true)`. Those five defaults are `false` now (issue #1793), so an
+    // insert naming no flag already lands `false` and a note-only row was
+    // already eleven explicit `false`s from its own writer -- the base could
+    // not change a single column, in either path.
     ...flagUpdates(input, offered),
     // Each size is written only when the caller actually carried it -- the
     // same rule as `note` below, and for the same reason. The diver record's
