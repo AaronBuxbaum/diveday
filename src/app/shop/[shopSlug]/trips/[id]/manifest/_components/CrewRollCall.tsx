@@ -13,6 +13,7 @@ import { rollCallLabelText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { crewRowId, scopedId } from "@/lib/element-id";
 import { formatDateTimeTz } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import {
   type ManifestBuddyTeam,
   type RollCallCheckpoint,
@@ -198,6 +199,28 @@ export function CrewRollCall({
                   {buddyAlertText(t, member.buddyAlert)}
                 </Badge>
               ) : null;
+              /**
+               * **Printed aboard another boat too, and only while that is still
+               * a question** (issue #1779).
+               *
+               * At the **departure** checkpoint and only for a crew member
+               * nobody has tapped yet. Two reasons, both from the
+               * `dive-domain-expert` review of this change:
+               *
+               * 1. A result on this boat is the authority. Once somebody has
+               *    said "aboard", a sheet still reading "cannot be on both"
+               *    contradicts its own roll call.
+               * 2. **After a dive it would be an excuse.** An unaccounted-for
+               *    crew member at an after-dive count is a body in the water
+               *    until proven otherwise, and a pre-written reason for their
+               *    absence is exactly the sentence that stops a search for
+               *    somebody who went back down for a weight belt.
+               *
+               * It marks and gates nothing: #1345 settled that the owner
+               * assigns crew, and a safety document that declines to print is
+               * the wrong direction from every angle.
+               */
+              const clashes = isDeparture && !rc ? (member.clashes ?? []) : [];
               return (
                 <li
                   key={member.id}
@@ -265,6 +288,16 @@ export function CrewRollCall({
                             <span className="text-sm text-muted">{member.roles.join(", ")}</span>
                             {capsule}
                           </span>
+                          {clashes.length > 0 ? (
+                            <span className="mt-0.5 block text-sm text-warning-strong">
+                              {t("manifest.crewClashDetail", {
+                                departures: cachedListFormat(locale, {
+                                  style: "long",
+                                  type: "conjunction",
+                                }).format(clashes.map((clash) => clash.title)),
+                              })}
+                            </span>
+                          ) : null}
                         </span>
                       }
                     >

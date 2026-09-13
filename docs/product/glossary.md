@@ -746,6 +746,18 @@ new domain concept, define it here in the same PR.
   redirect with a `?notice=` whose form re-opens About, so the read speaks on the next paint. A
   clash already **home** is reported nowhere: it is permanent, unfixable and true, which is the
   shape of a warning a shop learns to scroll past.
+  **The boat manifest reads it too, and it is the loudest of the five** (issue #1779): a crew member
+  on two overlapping departures prints aboard both, and the sheet said nothing — so the second boat's
+  deck met a crew member missing at the count with no reason, and souls-on-board named a body that
+  was on the other hull. The crew row now says which other departure, and the printed souls-on-board
+  line carries how many of the named crew another boat claims, because a qualification forty lines
+  below a number does not reach somebody reading that number over the radio. It is **bounded to the
+  departure checkpoint and to a crew member nobody has tapped yet**: a roll-call result on this boat
+  is the authority and supersedes it, and after a dive the same sentence would be a pre-written
+  excuse for a body that is unaccounted for, which is what stops a search (dive-domain-expert review
+  2026-09-13). The dock copy carries it for the same reason it carries everything else — the rail is
+  where there is no signal to ring the office with. Still information: nothing gates, and the sheet
+  always prints.
 - **Crew gap** — a scheduled trip with nobody rostered on it, or a course session `courseCrewGap`
   reports as instructorless or booked past its ratio. It is a prompt for staff, not a boarding
   authorization by itself. **Today owns it**: Today names it (`instructor_missing`) and its

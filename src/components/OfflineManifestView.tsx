@@ -1852,6 +1852,29 @@ export function OfflineManifestView() {
                             </span>
                           ) : null}
                         </p>
+                        {/* **Printed aboard another boat too** (issue #1779).
+                          The dock copy is the one read at the rail with no
+                          signal, which is exactly when nobody can ring the
+                          office to ask where the divemaster is.
+
+                          Departure only, and only while nobody has tapped this
+                          person — the same two bounds the live row keeps, and
+                          the second is the one that matters: after a dive this
+                          would be a pre-written excuse for a body that is
+                          unaccounted for, which is the sentence that stops a
+                          search. It marks and gates nothing; the aboard control
+                          below is unchanged. */}
+                        {isDeparture &&
+                        !member.state &&
+                        (member.clashDepartures ?? []).length > 0 ? (
+                          <p className="mt-0.5 text-sm text-warning-strong">
+                            {t("manifest.crewClashDetail", {
+                              departures: cachedListFormat(locale, { type: "conjunction" }).format(
+                                member.clashDepartures ?? [],
+                              ),
+                            })}
+                          </p>
+                        ) : null}
                         {/* No controls on an expired copy (the H-05 stop rule,
                           stated once in the banner above and enforced in
                           `record`), and none for a crew member this copy has

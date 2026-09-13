@@ -302,6 +302,29 @@ export type ManifestCrewMember = {
    * what keeps a diver's row unambiguous.
    */
   buddyTeams?: ManifestBuddyTeam[];
+  /**
+   * Other departures this person is also rostered on whose hours overlap this
+   * one — they are printed aboard two hulls (`crewClashes`, issue #1695).
+   *
+   * **The manifest is where the consequence lands.** Boat B sails with a sheet
+   * naming somebody who is on boat A, B's crew roll call reads them as
+   * unaccounted for at the departure checkpoint, the row gives no reason, and
+   * B's crew spend the one minute that matters looking for a person who was
+   * never coming — while souls-on-board counts a human who is not aboard
+   * (issue #1779).
+   *
+   * **It marks, it never gates.** Nothing about crew refuses a departure
+   * (#1345), and a safety document that declines to print is the wrong
+   * direction from every angle: the boat sails either way, and the sheet the
+   * coastguard reads is the last thing to withhold.
+   *
+   * Plural for the same reason `buddyTeams` is: the hours a departure occupies
+   * can overlap two others. Absent on the ordinary crew member, and absent for
+   * every crew member once the departure is home — `crewClashes` stops
+   * answering then, because a clash nobody can act on is noise on a document
+   * being read for something else.
+   */
+  clashes?: { tripId: string; title: string }[];
 };
 
 /**

@@ -45,6 +45,7 @@ import {
 import { getShopById } from "./shops";
 import { supportNeedsByTripPerson } from "./support-needs";
 import { getTripRoster, getTripWithBooked } from "./trips";
+import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { welcomeCueInputsByBooking } from "./welcome-cues";
 
@@ -762,6 +763,7 @@ export async function getTripManifests(
     crew,
     crewRollCalls,
     buddyTeams,
+    standingClashes,
     supportByPerson,
     welcomeInputs,
     selfReportedBookingIds,
@@ -775,6 +777,12 @@ export async function getTripManifests(
     listTripCrew(db, shopId, tripId),
     listLatestCrewRollCalls(db, shopId, tripId),
     listTripBuddyTeams(db, shopId, tripId),
+    // Who on this crew is also on another departure these hours overlap. Read
+    // here rather than on the page so the offline snapshot and every other
+    // consumer of a manifest carry the same fact (issue #1779). It answers
+    // nothing for a departure that has come home, which is the rule the week
+    // grid already keeps.
+    crewClashes(db, shopId, tripId),
     supportNeedsByTripPerson(db, shopId, tripId),
     // The two facts behind the welcome word (issue #1182): who consented, and
     // when this shop last had them on a boat. Read here rather than in the page
@@ -827,6 +835,14 @@ export async function getTripManifests(
   const teamByBooking = new Map<string, ManifestBuddyTeam>();
   // Crew accumulate a *list*: one divemaster commonly leads several groups on
   // one boat, so unlike a diver they have no "at most one team" constraint.
+  // One entry per (person, other departure) already, so this only groups.
+  const clashesByCrewId = new Map<string, { tripId: string; title: string }[]>();
+  for (const clash of standingClashes) {
+    clashesByCrewId.set(clash.personId, [
+      ...(clashesByCrewId.get(clash.personId) ?? []),
+      { tripId: clash.otherTripId, title: clash.otherTitle },
+    ]);
+  }
   const teamsByCrewId = new Map<string, ManifestBuddyTeam[]>();
   for (const team of buddyTeams) {
     const aboard = team.members.flatMap((member): BuddyTeammate[] =>
@@ -938,6 +954,7 @@ export async function getTripManifests(
         ...member,
         rollCall: crewEffective.get(member.id)?.[index],
         buddyTeams: teamsByCrewId.get(member.id) ?? [],
+        clashes: clashesByCrewId.get(member.id) ?? [],
       })),
       divers: diverInputs.map((diver) => ({
         ...diver,
