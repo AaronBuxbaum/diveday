@@ -1,6 +1,8 @@
+import type { DiverMergeRefusal } from "@/db/diver-merge";
+import type { SendStaffReplyRefusal } from "@/db/staff-reply";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { type FormNotice, noticeFromParam } from "@/lib/staff-notices";
+import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 
 /**
@@ -31,25 +33,58 @@ type NoticeLink = { key: StaffMessageKey; href: (shopSlug: string) => string };
  * one case the server can point at exactly: an email another active diver
  * already holds.
  */
-const NOTICE_KEYS: Record<
-  string,
-  {
-    form: string;
-    tone: "success" | "danger" | "warning";
-    /** Absent only when `silent` is — nothing renders, so there is nothing to say. */
-    key?: StaffMessageKey;
-    field?: string;
-    /**
-     * A pure "it worked" outcome the surface already shows on its own: a
-     * captured card lands in the list right below as a new pending row, so a
-     * banner repeating "captured as pending" would be a caption on a
-     * photograph of itself (copy-restraint, deletion #1). Routing (`form`)
-     * still resolves normally — only the text is withheld, by both
-     * `DiverFormStatus` and `NoticeBanner`.
-     */
-    silent?: true;
-  }
-> = {
+type DiverNoticeDefinition = {
+  form: string;
+  tone: "success" | "danger" | "warning";
+  /** Absent only when `silent` is — nothing renders, so there is nothing to say. */
+  key?: StaffMessageKey;
+  field?: string;
+  /**
+   * A pure "it worked" outcome the surface already shows on its own: a
+   * captured card lands in the list right below as a new pending row, so a
+   * banner repeating "captured as pending" would be a caption on a
+   * photograph of itself (copy-restraint, deletion #1). Routing (`form`)
+   * still resolves normally — only the text is withheld, by both
+   * `DiverFormStatus` and `NoticeBanner`.
+   */
+  silent?: true;
+};
+
+/**
+ * The two domain unions this page prefixes and forwards whole, so a reason
+ * added to either one with no entry below is a `pnpm typecheck` failure rather
+ * than a banner that never renders (issue #1782).
+ *
+ * `reply_` carries every member of `SendStaffReplyRefusal` untouched
+ * (`replyToDiverAction`: ``notice = `reply-${result.reason}` ``, kebabed by
+ * `noticeUrl`). `merge_` carries `DiverMergeRefusal` minus the two the action
+ * translates by hand — `not_authorized` into the page's own
+ * `not-authorized-merge`, and `not_found` into `merge-invalid`, which is why
+ * neither can be derived from the union.
+ *
+ * **The other vocabularies that reach this map are deliberately not here.** The
+ * seating codes (`trip-full`, `course-min-age`, the rest of the "Book an
+ * activity" block) come from `SEAT_SURFACES["diver-record"].refusalNotice`,
+ * which is already `Record<SeatDiverRefusal, string>` — exhaustive by type at
+ * the table that owns it, which is where that guarantee belongs rather than
+ * copied one page over. `CertificationReviewRefusal` cannot produce an
+ * unmapped code at all: `reviewNotice` in the actions file names two members
+ * and collapses everything else to `invalid`.
+ */
+type OwnedDiverNoticeReason =
+  | `reply_${SendStaffReplyRefusal}`
+  | `merge_${Exclude<DiverMergeRefusal, "not_authorized" | "not_found">}`;
+
+/** Loose in the keys it accepts, exact in the ones it demands. */
+type DiverNoticeMap = Record<string, DiverNoticeDefinition> &
+  Record<NoticeCodeOf<OwnedDiverNoticeReason>, DiverNoticeDefinition>;
+
+/**
+ * One entry per notice code, carrying its tone, its message key, and — the
+ * field that changed here — the form it belongs to. See `DiverNoticeMap` above
+ * for which halves of it are proved by the type and which are borrowed.
+ */
+const NOTICE_KEYS: DiverNoticeMap = {
   // Cards — the two card sections emit the same codes, so their actions stamp
   // an explicit `?form=`; these defaults are what an old link still resolves to.
   captured: { form: "cards", tone: "success", silent: true },
