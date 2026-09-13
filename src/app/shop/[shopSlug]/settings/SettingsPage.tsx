@@ -29,6 +29,7 @@ import { listDivePackages } from "@/db/dive-packages";
 import { listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listOwedProcessorErasures } from "@/db/processor-erasure";
+import type { MediaDeletionKind, ProcessorErasureTarget } from "@/db/schema";
 import { listSeasonEvents } from "@/db/season-events";
 import { shopHasPricedRecords } from "@/db/shops";
 import {
@@ -400,8 +401,22 @@ const DOCK_DAY_FIELD_KEYS: Record<
  * lookup falls through to the raw enum value, so a stuck deletion would read
  * "certification_card" on the panel. `certification_card` and
  * `waiver_document` are queued by diver erasure (ADR 20260802-diver-data-erasure).
+ *
+ * **Keyed by the enum**, so a tenth member cannot arrive without a word. Open
+ * keys are not hypothetical here: `src/i18n/today-labels.ts`'s
+ * `MEDIA_DELETION_KIND_KEYS` shipped seven rows against nine reachable kinds
+ * and put a raw `shop_logo` on the Today queue until it was closed the same way
+ * (issue #1798).
+ *
+ * **The nine words exist twice on purpose**, here and as
+ * `today.opsAlert.mediaKind.*`. Two areas, two bundles, one file per area — the
+ * duplication is what that rule buys (`.claude/rules/i18n.md`, ADR
+ * 20260807-per-area-staff-bundles), and the alternative is Settings reading
+ * Today's namespace for a word on its own panel. The two surfaces are also free
+ * to diverge: Today's word is the subject of a sentence, this one is a list
+ * label. Edit both when the wording changes.
  */
-const MEDIA_KIND_KEYS: Record<string, StaffMessageKey> = {
+const MEDIA_KIND_KEYS: Record<MediaDeletionKind, StaffMessageKey> = {
   course_photo: "settings.main.dataJobs.mediaKind.course_photo",
   recap_photo: "settings.main.dataJobs.mediaKind.recap_photo",
   arrival_photo: "settings.main.dataJobs.mediaKind.arrival_photo",
@@ -416,9 +431,10 @@ const MEDIA_KIND_KEYS: Record<string, StaffMessageKey> = {
 /**
  * Which record at the processor is still owed an erasure, present for the same
  * reason `MEDIA_KIND_KEYS` is: without it the lookup falls through to the raw
- * enum value and the panel reads "stripe_invoice_snapshot".
+ * enum value and the panel reads "stripe_invoice_snapshot". Keyed by the enum
+ * for the same reason, so a fourth target fails typecheck rather than the panel.
  */
-const PROCESSOR_ERASURE_TARGET_KEYS: Record<string, StaffMessageKey> = {
+const PROCESSOR_ERASURE_TARGET_KEYS: Record<ProcessorErasureTarget, StaffMessageKey> = {
   stripe_customer: "settings.main.dataJobs.erasureTarget.stripe_customer",
   stripe_invoice_snapshot: "settings.main.dataJobs.erasureTarget.stripe_invoice_snapshot",
   stripe_checkout_session_snapshot:
