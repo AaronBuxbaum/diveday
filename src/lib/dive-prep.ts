@@ -901,7 +901,22 @@ export type RentalFitLine =
        * hand over (see `rentedItems`). Absent rather than `false` on every
        * other piece, so a reader that has never heard of it is unchanged.
        */
-      items: { kind: RentalItemKind; size: string | null; drysuitFinFit?: true }[];
+      items: {
+        kind: RentalItemKind;
+        size: string | null;
+        drysuitFinFit?: true;
+        /**
+         * A piece the shop's catalog no longer offers. Kept rather than
+         * filtered for the same reason `PrepPiece.notOffered` is kept: the
+         * diver asked for it and the shop has to meet that, not lose it. What
+         * it adds here is the marker, so a one-line fit cannot read a suit
+         * nobody is handing over as an ordinary piece to fetch — the rail and
+         * the packing list said different things about the same departure
+         * until it existed (issue #1804). Absent rather than `false`, like
+         * `drysuitFinFit`.
+         */
+        notOffered?: true;
+      }[];
     };
 
 /**
@@ -927,11 +942,12 @@ export function rentalFitLine(
   if (fit.needsStaffFitAt) {
     return { state: "needs_staff_fit", note: fit.needsStaffFitNote?.trim() || null };
   }
-  const items = rentedItems(fit, catalogScope(offeredKinds)).map((item) =>
-    item.drysuitFinFit
-      ? { kind: item.kind, size: item.size, drysuitFinFit: true as const }
-      : { kind: item.kind, size: item.size },
-  );
+  const items = rentedItems(fit, catalogScope(offeredKinds)).map((item) => ({
+    kind: item.kind,
+    size: item.size,
+    ...(item.drysuitFinFit ? { drysuitFinFit: true as const } : {}),
+    ...(item.notOffered ? { notOffered: true as const } : {}),
+  }));
   if (items.length === 0) return { state: "own_kit" };
   return { state: "rents", items };
 }

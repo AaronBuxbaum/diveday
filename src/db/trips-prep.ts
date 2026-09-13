@@ -115,7 +115,10 @@ export async function getTripPrep(
 
   const assignmentRows = divers
     .map((diver) => {
-      const line = rentalFitLine(diver.fit);
+      // The shop's own catalog, the same one the checklist above reads: a kind
+      // the shop dropped must not send the picker hunting for a unit nobody is
+      // handing over (`rentalFitLine`, src/lib/dive-prep.ts).
+      const line = rentalFitLine(diver.fit, shop.rentalItems);
       const assigned = assignmentsByBooking.get(diver.bookingId) ?? [];
       // Weights stay off: lead is bulk stock, never a tagged unit to be short
       // of (glossary, "Needs staff fit"). Kinds the fleet doesn't track at all
@@ -124,6 +127,11 @@ export async function getTripPrep(
       const wanted =
         line.state === "rents"
           ? line.items
+              // A piece the catalog no longer offers rides the line so the
+              // packer meets the contradiction, but it is not a unit to
+              // reserve: the register may still hold one, and offering it
+              // would put the kind back into circulation the shop retired.
+              .filter((item) => !item.notOffered)
               .flatMap(gearAssignmentNeeds)
               .filter(
                 (item) =>

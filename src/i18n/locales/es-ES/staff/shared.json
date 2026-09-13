@@ -439,6 +439,7 @@
     "itemWithSize": "{item} {size}",
     "itemOverDrysuitBoot": "{item} sobre la bota del traje seco",
     "itemOverDrysuitBootWithSize": "{item} sobre la bota del traje seco, calzado {size}",
+    "itemNoLongerRented": "{item} (ya no se alquila)",
     "notRecorded": "No hay equipo registrado, aún no se ha preguntado",
     "ownKit": "Trae su propio equipo",
     "needsStaffFit": "Necesita ajuste del personal en el check-in",

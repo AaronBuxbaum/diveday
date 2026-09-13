@@ -1044,6 +1044,32 @@ describe("a piece the shop stopped renting", () => {
       kind: "mask_fins",
       size: "US 9",
     });
+    // And the suit itself carries the contradiction rather than reading as an
+    // ordinary piece to fetch. The rail is where a staffer acts on this line
+    // (issue #1804); the packing list already said so and the two disagreed.
+    expect(items.find((item) => item.kind === "drysuit")).toEqual({
+      kind: "drysuit",
+      size: "ML",
+      notOffered: true,
+    });
+  });
+
+  it("leaves the mark off every piece the shop still rents", () => {
+    const line = rentalFitLine(drysuitDiver, withDrysuits);
+    const items = line.state === "rents" ? line.items : [];
+    expect(items.some((item) => item.notOffered)).toBe(false);
+    // Absent rather than `false`, so a reader that has never heard of it — the
+    // offline manifest snapshot written before this shipped — is unchanged.
+    expect(items.find((item) => item.kind === "drysuit")).toEqual({
+      kind: "drysuit",
+      size: "ML",
+    });
+  });
+
+  it("marks nothing at all when no catalog was handed over", () => {
+    const line = rentalFitLine(drysuitDiver);
+    const items = line.state === "rents" ? line.items : [];
+    expect(items.some((item) => item.notOffered)).toBe(false);
   });
 
   it("leaves all three alone while the shop still rents drysuits", () => {

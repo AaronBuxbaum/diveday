@@ -876,7 +876,10 @@ export async function getTripManifests(
       emergencyContactName: person.emergencyContactName,
       emergencyContactPhone: person.emergencyContactPhone,
       readiness: readinessByBooking.get(booking.id),
-      rentalFit: rentalFitLine(fitByBooking.get(booking.id) ?? null),
+      // The shop's own catalog. Without it the rail and the offline snapshot
+      // read a dropped piece as an ordinary piece to fetch, and size a
+      // drysuit diver's fins up over a boot that is not coming (issue #1804).
+      rentalFit: rentalFitLine(fitByBooking.get(booking.id) ?? null, shop.rentalItems),
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
       // Null/false whenever the shop holds no date of birth, so the captain's

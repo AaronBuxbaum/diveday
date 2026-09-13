@@ -251,6 +251,7 @@ export function TripRosterContent({
               confirmEmail={confirmEmail}
               confirmPhone={confirmPhone}
               confirmMatches={confirmMatches}
+              shopRentalItems={shopRentalItems}
             />
           )
         }

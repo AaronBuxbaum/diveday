@@ -110,11 +110,17 @@ describe("the seeded rental fit book", () => {
   });
 
   /**
-   * The catalog and the fit have to agree: both fit forms read a rented item
-   * the shop does not offer as "not rented", and the next save of either one
-   * clears the column (`divers/[personId]/actions.ts`'s `profileSchema`). A
-   * seed whose drysuit renter the shop does not rent drysuits to is one the
-   * product erases.
+   * The catalog and the fit have to agree, though not by the route this
+   * docblock once claimed. A contradicted `rents_*` column is no longer
+   * cleared by the next save of either fit form — the diver's answer was
+   * theirs and a catalog edit is not the diver speaking, so the writer leaves
+   * the flag alone (`ad4e182d1`, issue #1755). What the contradiction costs is
+   * narrower: the piece is marked `notOffered` and may not change any other
+   * line (`inShopDrysuit`, `src/lib/dive-prep.ts`).
+   *
+   * The seed still has to agree, for a different reason: a demo shop whose
+   * drysuit renter it does not rent drysuits to photographs the contradiction
+   * on every capture, and the seed is supposed to show the ordinary case.
    */
   it("offers drysuits in the shop's own catalog, so the fit is one a staffer could have saved", async () => {
     const { shop } = await seededShopContext();
