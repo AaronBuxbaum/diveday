@@ -517,6 +517,7 @@
       "schedule-builder-add-full",
       "schedule-builder-add-tide",
       "schedule-builder-empty",
+      "schedule-builder-move-blocked",
       "schedule-builder-move-clash",
       "schedule-builder-move-impact"
     ],

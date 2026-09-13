@@ -4500,6 +4500,68 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder-move-clash", scheme);
       });
 
+      /**
+       * **The state the panel refuses outright** (issue #1786) — the third and
+       * last thing `MoveImpact` can draw, and the one with no baseline: a
+       * warning-toned `role="alert"` above the muted costs list, saying the
+       * move will not happen at all.
+       *
+       * The issue proposed a charter whose window had already passed.
+       * `blockedReason` (`src/lib/move-preflight.ts`) does not read the clock:
+       * it refuses a cancelled departure as `not_scheduled` and one the crew
+       * have counted heads against as `already_sailed`. So the seed records a
+       * single boarding through `recordRollCall`, which is cheaper, is the
+       * product's own door, and leaves the departure on the board the panel is
+       * opened from — a row dragged into the past would not be on it.
+       *
+       * `not_scheduled` is deliberately not photographed beside it. The board's
+       * stream carries upcoming departures, a cancelled one is not among them,
+       * and the two refusals draw the same element with different words — a
+       * second capture would buy one message bundle string.
+       *
+       * **The wait is on the banner's own sentence**, for the reason the clash
+       * capture states about `data-move-impact`: that attribute is on the page
+       * from the read the panel opens with, so waiting on it proves nothing
+       * about which preview is drawn.
+       */
+      test(`the move panel refuses a departure the crew has counted (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?moveBlocked=1");
+        expect(seeded.ok()).toBe(true);
+        const { moveBlocked } = (await seeded.json()) as {
+          moveBlocked?: { tripId: string; title: string };
+        };
+        if (!moveBlocked) {
+          throw new Error("seed-trouble-states found no upcoming departure to count heads on");
+        }
+
+        // **Anchored, not a substring.** "Move <title>" *is* a substring of the
+        // row's own "Move, copy, or remove <title>" — `remove` ends in `move`
+        // — so a substring match re-clicks the control that disclosed the
+        // panel and shuts it again, which is what the first run of this
+        // capture photographed. The title comes back from the seed rather
+        // than being spelled here, so it is escaped before it becomes a
+        // pattern.
+        const rowAction = (verb: string) =>
+          new RegExp(`^${verb} ${moveBlocked.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")},`);
+
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await boardListSettled(page);
+        await page
+          .getByRole("button", { name: rowAction("Move, copy, or remove") })
+          .first()
+          .click();
+        await page
+          .getByRole("button", { name: rowAction("Move") })
+          .first()
+          .click();
+        await expect(page.getByText(/The crew has already counted heads/)).toBeVisible();
+        await capture(page, "schedule-builder-move-blocked", scheme);
+      });
+
       // The add-a-departure form as a shop meets it all week: the quick path,
       // which the board only ever shows as a button — every field a departure
       // is born with, price included, with the rare half collapsed behind
