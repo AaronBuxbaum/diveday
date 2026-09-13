@@ -643,7 +643,7 @@ describe("crewMoveConflicts", () => {
 
     const moving = await movingBoat(db, shop.id, [first.person.id, second.person.id]);
     // Shop-local 2030-08-05 08:00–12:00 — the same hours the move proposes.
-    await boat(
+    const other = await boat(
       db,
       shop.id,
       "Thursday's other boat",
@@ -664,6 +664,66 @@ describe("crewMoveConflicts", () => {
         personId: first.person.id,
         fullName: first.person.fullName,
         otherTitle: "Thursday's other boat",
+        otherTripId: other.id,
+      },
+    ]);
+  });
+
+  /**
+   * **The panel was right and incomplete, which is the shape of warning a
+   * person stops trusting** (issue #1777).
+   *
+   * The two other boats do not overlap *each other* — 07:00–09:00 and
+   * 10:00–12:00 — which is why the roster let one person onto both. They both
+   * overlap the 08:00–12:00 the move proposes. Deduping on the person alone
+   * kept whichever sorted first and dropped the other, so a staffer sorted out
+   * the boat they were told about while the second one stood.
+   */
+  it("names both boats when the move collides one person with two departures", async () => {
+    const { db, shop } = await seededShopContext();
+    const timeZone = await honoluluShop(db, shop.id);
+    const [first] = await listStaff(db, shop.id);
+    if (!first) throw new Error("expected a seeded staff member");
+
+    const moving = await movingBoat(db, shop.id, [first.person.id]);
+    const early = await boat(
+      db,
+      shop.id,
+      "The 07:00 shore dive",
+      "2030-08-05T17:00:00Z",
+      "2030-08-05T19:00:00Z",
+      [first.person.id],
+    );
+    const late = await boat(
+      db,
+      shop.id,
+      "The 10:00 reef drift",
+      "2030-08-05T20:00:00Z",
+      "2030-08-05T22:00:00Z",
+      [first.person.id],
+    );
+
+    const { clashes } = await crewMoveConflicts(
+      db,
+      shop.id,
+      moving.id,
+      new Date("2030-08-05T18:00:00Z"),
+      timeZone,
+    );
+    // Earliest other departure first — the query's own order, so the panel
+    // reads down the day rather than in whatever order the rows arrived.
+    expect(clashes).toEqual([
+      {
+        personId: first.person.id,
+        fullName: first.person.fullName,
+        otherTitle: "The 07:00 shore dive",
+        otherTripId: early.id,
+      },
+      {
+        personId: first.person.id,
+        fullName: first.person.fullName,
+        otherTitle: "The 10:00 reef drift",
+        otherTripId: late.id,
       },
     ]);
   });
