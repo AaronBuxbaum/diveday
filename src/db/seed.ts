@@ -114,7 +114,7 @@ import {
 import { seedBackup } from "./seed-backup";
 import { seedBookings } from "./seed-bookings";
 import { seedBuddyPairs } from "./seed-buddy-pairs";
-import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
+import { LEAD_INSTRUCTOR_NAME, OWNER_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
 import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
@@ -789,6 +789,15 @@ export async function seedDemoSchedule(
   const reliefInstructor = instructorsByName.get(RELIEF_INSTRUCTOR_NAME);
   if (!instructor) throw new Error("seed: lead instructor missing from stable staff");
   if (!reliefInstructor) throw new Error("seed: relief instructor missing from stable staff");
+  // The owner, looked up the same way and for the same reason. She is the
+  // relief skipper on the three departures the shop's one captain could not
+  // physically be on (issue #1781); `seed-cast.ts`'s `OWNER_NAME` argues it.
+  const [owner] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.shopId, shopId), eq(people.fullName, OWNER_NAME)))
+    .limit(1);
+  if (!owner) throw new Error("seed: owner missing from stable staff");
 
   // **Reset-owned, not settings.** A blackout is a fact about one week, and the
   // staffing week is a surface specs write to — so it lives in the resettable
@@ -965,6 +974,7 @@ export async function seedDemoSchedule(
     instructorId: instructor.id,
     captainId,
     divemasterId,
+    ownerId: owner.id,
     waiverTemplate,
   });
 
@@ -987,13 +997,19 @@ export async function seedDemoSchedule(
   // so the counter has a card with five reasons on it to render
   // (src/db/seed-counter-blockers.ts). Nothing seeded before it moves, and it
   // has not sailed, so it opens no head count.
-  await seedCounterBlockers(db, shopId, { siteByName, captainId, divemasterId });
+  await seedCounterBlockers(db, shopId, {
+    siteByName,
+    captainId,
+    divemasterId,
+    ownerId: owner.id,
+    assistingInstructorId: instructor.id,
+  });
 
   // Same shape and the same reasons: its own departure, added late, four days
   // out and three of six seats sold — the long-range run a shop states a
   // minimum head count on, in the state it is worked in (short, deadline still
   // ahead). See src/db/seed-minimum-seats.ts.
-  await seedMinimumSeats(db, shopId, { siteByName, captainId, divemasterId });
+  await seedMinimumSeats(db, shopId, { siteByName, captainId, divemasterId, ownerId: owner.id });
 
   // Adds-only and late for the same reasons as the three above: two people who
   // are on the shop-wide last-minute list and nothing else, one claiming Open

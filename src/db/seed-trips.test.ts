@@ -1,9 +1,10 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { inWaterCrewRole } from "@/lib/crew-roles";
 import { seededShopContext } from "@/test/db";
 import { people, personRoles, tripAssignments, trips } from "./schema";
 import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME } from "./seed-cast";
+import { crewClashes } from "./trips-crew";
 
 /**
  * DOM-M7 (review 20260802). `crew-roles.test.ts` asserts the rule abstractly —
@@ -124,5 +125,47 @@ describe("seeded charters share their crew", () => {
     // Both, not one: the block draws a line per person, and the capture counts
     // two.
     expect([...mover].filter((personId) => host.has(personId))).toHaveLength(2);
+  });
+});
+
+/**
+ * **Nobody on the demo board is on two hulls at once.**
+ *
+ * The seed writes `trip_assignments` from four independent modules
+ * (`seed-more-trips`, `seed-counter-blockers`, `seed-minimum-seats`,
+ * `seed-cert-gates`), and none of them can see what the others rostered. Every
+ * constraint `setTripCrew` enforces is therefore one the fixture can violate
+ * without anybody noticing until a reader is built that looks — and crew
+ * overlap was the first such reader (`crewClashes`, issue #1695), which found
+ * ten standing clashes across seven seeded departures the day it shipped.
+ *
+ * A prospective customer opening the demo met ten warnings about physically
+ * impossible rosters. Every one was true, which is why the answer was the
+ * fixture and never the predicate: a reader taught to look away here would look
+ * away at a real shop too.
+ *
+ * This walks the whole board rather than the three days that were wrong, so the
+ * eleventh cannot arrive silently (issue #1781).
+ */
+describe("the seeded board holds no standing crew clash", () => {
+  it("rosters nobody onto two overlapping departures", async () => {
+    const { db, shop } = await seededShopContext();
+
+    const board = await db
+      .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt })
+      .from(trips)
+      .where(
+        and(eq(trips.shopId, shop.id), ne(trips.status, "cancelled"), isNull(trips.deletedAt)),
+      );
+
+    const clashing: string[] = [];
+    for (const trip of board) {
+      const clashes = await crewClashes(db, shop.id, trip.id, new Date("2026-07-21T13:30:00Z"));
+      for (const clash of clashes) {
+        clashing.push(`${trip.title} — ${clash.fullName} is also on ${clash.otherTitle}`);
+      }
+    }
+
+    expect(clashing).toEqual([]);
   });
 });

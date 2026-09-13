@@ -110,6 +110,18 @@ export const staffDefs = [
   emergencyContact?: readonly [string, string];
 }>;
 
+/**
+ * The owner, resolved by name for the same reason the instructors are.
+ *
+ * She skippers three departures (issue #1781): the shop has exactly one
+ * captain, and four independent seed modules each rostered him onto every boat
+ * they created, so any two departures that overlapped put him on two hulls at
+ * once. An owner who takes the wheel on a busy day is what a five-person shop
+ * actually does, and it is the only roster the cast can produce that puts two
+ * boats out at the same time.
+ */
+export const OWNER_NAME = "Dana Reyes";
+
 /** Whose course sessions these are — the instructor of record on every one. */
 export const LEAD_INSTRUCTOR_NAME = "Marcus Webb";
 /** The second instructor, rostered as a session's *divemaster* (DOM-M7). */
