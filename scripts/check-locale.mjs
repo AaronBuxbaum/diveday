@@ -477,7 +477,23 @@ const SIMPLE_ARGUMENT = /\{[^{}]*\}/g;
  * message. The tag *name* is markup, like an argument name; anything between
  * the tags is not, and still counts.
  */
-const RICH_TEXT_TAG = /<\/?[A-Za-z][A-Za-z0-9]*>/g;
+const RICH_TEXT_TAG = /<\/?[A-Za-z][A-Za-z0-9]*>/;
+
+/**
+ * The two together, for one left-to-right pass over a value.
+ *
+ * **Read between the markup, never strip it out.** The first version of this
+ * asked the same question by deleting both patterns and testing what was left,
+ * and CodeQL correctly read `value.replace(/<\/?[A-Za-z]\w*>/g, "")` as the
+ * shape of an HTML sanitizer — one that `<<diver>diver>` walks straight
+ * through, because deleting the inner tag reassembles an outer one. Nothing
+ * here is sanitizing anything (the result is thrown away; only "were there
+ * letters" survives, and the input is this repository's own message bundles),
+ * but a guard whose code is indistinguishable from a broken sanitizer is a
+ * guard somebody copies. Scanning the gaps answers the question without ever
+ * producing a "cleaned" string for anyone to trust.
+ */
+const MARKUP = new RegExp(`${SIMPLE_ARGUMENT.source}|${RICH_TEXT_TAG.source}`, "g");
 
 /**
  * Whether a value has nothing in it to translate.
@@ -504,8 +520,15 @@ const RICH_TEXT_TAG = /<\/?[A-Za-z][A-Za-z0-9]*>/g;
  */
 export function nothingToTranslate(value) {
   if (/\{[^{}]*\{/.test(value)) return false;
-  return !/\p{Letter}/u.test(value.replace(SIMPLE_ARGUMENT, "").replace(RICH_TEXT_TAG, ""));
+  let readFrom = 0;
+  for (const match of value.matchAll(MARKUP)) {
+    if (hasALetter(value.slice(readFrom, match.index))) return false;
+    readFrom = match.index + match[0].length;
+  }
+  return !hasALetter(value.slice(readFrom));
 }
+
+const hasALetter = (text) => /\p{Letter}/u.test(text);
 
 export function compareValues(bundle, reference, other, declared = DELIBERATELY_IDENTICAL) {
   const identical = new Map();

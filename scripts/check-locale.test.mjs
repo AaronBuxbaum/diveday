@@ -223,4 +223,16 @@ describe("a value with nothing in it to translate", () => {
   it("keeps the words between rich-text tags, dropping only the tag names", () => {
     expect(nothingToTranslate("<b>Sold out</b>")).toBe(false);
   });
+
+  /**
+   * The reason this reads the gaps between the markup instead of deleting the
+   * markup and reading what is left (CodeQL alert 47 on PR #1809). Stripping
+   * `<diver>` out of `<<diver>diver>` reassembles a tag that was never there
+   * and answers "nothing to translate" about a value full of letters. Nothing
+   * here was ever sanitizing anything, but the mistake is one line away, and
+   * this is the line that would have made it.
+   */
+  it("does not let a nested tag reassemble into one it would have dropped", () => {
+    expect(nothingToTranslate("<<diver>diver>")).toBe(false);
+  });
 });
