@@ -114,11 +114,16 @@ export async function forgetShelfAction(token: string): Promise<void> {
 // staffer recording a 24-character fin size made this whole form unsaveable
 // while every visible box read right (issue #1728, found by a domain review of
 // its first half, which fixed the other two writers and missed this one).
+//
+// **Every field optional.** The page renders only the sizes this shop's catalog
+// asks for (issue #1802), so a shop that rents no BCDs posts no `bcdSize` at
+// all — and a required key would refuse the save on a box the diver was never
+// shown. An absent key reaches `saveRentalFitSizes` as "the caller did not
+// carry this", which is already how it reads one: the stored size stays.
 const sizesSchema = z.object({
-  bcdSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size),
-  wetsuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size),
-  bootSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size),
-  finSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size),
+  bcdSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  wetsuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  finSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
 });
 
 /**
@@ -135,6 +140,11 @@ export async function saveShelfSizesAction(token: string, formData: FormData): P
     shopId: ctx.shopId,
     personId: ctx.personId,
     ...parsed.data,
+    // One shoe size, written to both columns — the same thing the staff record
+    // and the readiness gear form do. This page used to ask twice and keep both
+    // answers, which the next save of either of those forms silently collapsed
+    // (issue #1802).
+    ...(parsed.data.finSize === undefined ? {} : { bootSize: parsed.data.finSize }),
   });
   if (!saved) redirect(`${shelfBase(token)}?error=sizes`);
   revalidatePath(shelfBase(token));

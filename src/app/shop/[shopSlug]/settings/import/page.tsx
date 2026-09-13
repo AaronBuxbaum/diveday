@@ -114,6 +114,7 @@ function importWizardCopy(t: StaffTranslator) {
     merged_duplicate: t.raw("settings.import.issues.mergedDuplicate"),
     no_email_new_record: t("settings.import.issues.noEmailNewRecord"),
     size_too_long: t.raw("settings.import.issues.sizeTooLong"),
+    shoe_size_collapsed: t.raw("settings.import.issues.shoeSizeCollapsed"),
   };
 
   const errors: Record<ImportActionErrorCode, string> = {

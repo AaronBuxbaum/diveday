@@ -282,7 +282,11 @@ describe("commitContactImport", () => {
     // The readable size on the same row still lands, so one unusable cell
     // never costs the diver the sizes their old shop did record.
     expect(profile?.wetsuitSize).toBeNull();
-    expect(profile?.bootSize).toBeNull();
+    // Both shoe columns carry the one answer DiveDay keeps (issue #1802). The
+    // over-long boot cell is still declined — it never becomes the answer — and
+    // the readable fin size fills both, which is what the staff record and the
+    // readiness gear form write on every save anyway.
+    expect(profile?.bootSize).toBe("L");
     expect(profile?.finSize).toBe("L");
   });
 

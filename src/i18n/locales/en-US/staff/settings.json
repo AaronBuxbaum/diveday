@@ -751,8 +751,8 @@
         "nitrox_certification_number": "Nitrox number",
         "bcd_size": "BCD size",
         "wetsuit_size": "Wetsuit size",
-        "boot_size": "Boot size",
-        "fin_size": "Fin size",
+        "boot_size": "Boot size (kept as one fin & boot size)",
+        "fin_size": "Fin & boot size",
         "waiver_accepted": "Waiver accepted",
         "waiver_signed_at": "Waiver signed",
         "waiver_source_name": "Waiver source",
@@ -884,7 +884,8 @@
       "noName": "This row has no name and was skipped.",
       "mergedDuplicate": "Same diver as row {row} ({email}), so this row’s certifications, waiver, and past visit are added to them, with contact details left as the earlier row has them.",
       "noEmailNewRecord": "This row has no email and was imported as a new record; a re-import can’t match it to update.",
-      "sizeTooLong": "{field} \"{value}\" is too long for a size box, so the diver imports without it. Set it on their record, or their gear form will ask them for it."
+      "sizeTooLong": "{field} \"{value}\" is too long for a size box, so the diver imports without it. Set it on their record, or their gear form will ask them for it.",
+      "shoeSizeCollapsed": "The boot size and the fin size differ, and DiveDay keeps one shoe size for both. This diver imports with the fin size, “{value}”, which is what every gear form reads."
     },
     "errors": {
       "notOwnerOrManager": "Importing contacts is limited to the shop’s owner or manager.",

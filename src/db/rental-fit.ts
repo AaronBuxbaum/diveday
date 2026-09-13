@@ -272,10 +272,18 @@ export async function saveRentalFitSizes(
   input: {
     shopId: string;
     personId: string;
-    bcdSize: string;
-    wetsuitSize: string;
-    bootSize: string;
-    finSize: string;
+    /**
+     * Each size is written only when the caller actually carried it — the same
+     * absent-key rule `saveRentalFit` holds one function up, and for the same
+     * reason. The shelf renders only the boxes this shop's catalog asks for
+     * (issue #1802), so a shop that rents no BCDs posts no `bcdSize`; writing
+     * `null` for an absent key would erase a size the diver gave before the
+     * shop dropped the piece.
+     */
+    bcdSize?: string;
+    wetsuitSize?: string;
+    bootSize?: string;
+    finSize?: string;
   },
 ) {
   const [person] = await db
@@ -286,10 +294,10 @@ export async function saveRentalFitSizes(
   if (!person) return null;
 
   const values = {
-    bcdSize: optional(input.bcdSize),
-    wetsuitSize: optional(input.wetsuitSize),
-    bootSize: optional(input.bootSize),
-    finSize: optional(input.finSize),
+    ...(input.bcdSize === undefined ? {} : { bcdSize: optional(input.bcdSize) }),
+    ...(input.wetsuitSize === undefined ? {} : { wetsuitSize: optional(input.wetsuitSize) }),
+    ...(input.bootSize === undefined ? {} : { bootSize: optional(input.bootSize) }),
+    ...(input.finSize === undefined ? {} : { finSize: optional(input.finSize) }),
     fitStatedAt: nowDate(),
     updatedAt: nowDate(),
   };
@@ -300,8 +308,8 @@ export async function saveRentalFitSizes(
     // `fit_stated_at`, which is what makes the five `default(true)` columns
     // readable, so without the baseline a diver correcting one size on their
     // own phone stated a fit claiming six pieces their shop may not even rent.
-    // On the insert only: `set:` stays four sizes and the clock, so nothing a
-    // diver did not touch is rewritten.
+    // On the insert only: `set:` stays the sizes the caller carried plus the
+    // clock, so nothing a diver did not touch is rewritten.
     .values({ shopId: input.shopId, personId: input.personId, ...NOTHING_RENTED, ...values })
     .onConflictDoUpdate({
       target: [rentalFitProfiles.shopId, rentalFitProfiles.personId],

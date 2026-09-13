@@ -59,6 +59,8 @@ export type ShelfShop = {
   brandColor: string | null;
   brandDisplayFont: BrandDisplayFontCode | null;
   logoUrl: string | null;
+  /** The shop's rental catalog — which sizes the shelf may ask for (#1802). */
+  rentalItems: string[] | null;
 };
 
 /** A departure this diver holds a seat on. */
@@ -222,6 +224,10 @@ export async function getShelfPageData(
         brandColor: shops.brandColor,
         brandDisplayFont: shops.brandDisplayFont,
         logoUrl: shops.logoUrl,
+        // Which sizes this page may ask for. Every other fit surface renders
+        // from the offered set; the shelf asked all four regardless, so a diver
+        // at a shop with no BCDs was asked their BCD size (issue #1802).
+        rentalItems: shops.rentalItems,
       },
       fullName: people.fullName,
       emergencyContactName: people.emergencyContactName,
