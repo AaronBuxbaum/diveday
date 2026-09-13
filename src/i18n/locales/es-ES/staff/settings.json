@@ -789,7 +789,7 @@
         "cards": "Certificaciones",
         "specialties": "Especialidades",
         "nitroxCards": "Certificaciones de nitrox",
-        "waivers": "Waivers",
+        "waivers": "Exenciones",
         "pastVisits": "Visitas anteriores",
         "paymentHistory": "Historial de pagos / recibos",
         "internalNotes": "Notas internas"
@@ -799,7 +799,7 @@
         "name": "Nombre",
         "email": "Correo",
         "card": "Certificación",
-        "waiver": "Waiver",
+        "waiver": "Exención",
         "notes": "Notas",
         "noName": "— sin nombre —",
         "skippedBadge": "omitida",
