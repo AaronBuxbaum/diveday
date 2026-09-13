@@ -850,6 +850,8 @@
         "paymentHistorySkippedNote": " {count} ya estaban importados y se dejaron como están.",
         "notesLineOne": "{count} nota interna importada a perfiles de buceadores.",
         "notesLineOther": "{count} notas internas importadas a perfiles de buceadores.",
+        "sizesDeclinedLineOne": "{count} talla no cabía en su campo y se guarda como nota del personal en la ficha del buceador.",
+        "sizesDeclinedLineOther": "{count} tallas no cabían en sus campos y se guardan como notas del personal en las fichas de los buceadores.",
         "receiptDocumentsFailedNote": " {count} enlace(s) de documento de recibo no se pudieron descargar y se dejaron fuera del registro del origen.",
         "seeRoster": "Ver el listado"
       }
@@ -887,6 +889,7 @@
       "sizeTooLong": "{field}: “{value}” es demasiado larga para un campo de talla, así que el buceador se importa sin ella. Indícala en su ficha, o su formulario de equipo se la pedirá.",
       "shoeSizeCollapsed": "La talla de botas y la de aletas no coinciden, y DiveDay guarda una sola talla de calzado. Este buceador se importa con la talla de aletas, “{value}”, que es la que lee cada formulario de equipo."
     },
+    "declinedSizeNote": "{item} de la importación, demasiado larga para el campo de talla: “{value}”",
     "errors": {
       "notOwnerOrManager": "Importar contactos está limitado al propietario o gerente del centro.",
       "csvRequired": "Elige un archivo CSV para importar.",

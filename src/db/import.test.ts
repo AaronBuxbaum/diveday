@@ -6,6 +6,7 @@ import { prepareContactImport } from "@/lib/import";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
+import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { canPersonImportShopData, commitContactImport } from "./import";
 import { saveRentalFit } from "./rental-fit";
@@ -975,5 +976,99 @@ describe("import privilege re-check (database, not JWT)", () => {
       .set({ status: "disabled" })
       .where(eq(userAccounts.personId, owner));
     expect(await canPersonImportShopData(db, shop.id, owner)).toBe(false);
+  });
+});
+
+/**
+ * **A declined size survives the confirm** (issue #1801).
+ *
+ * The original cell reached the pre-commit preview and nothing else. A shop
+ * importing four hundred rows will not catch twelve warnings there, and once
+ * they tapped through DiveDay held nothing: "Medium Large, long torso, prefers
+ * 5mm not 3mm" was gone, and the only record the shop ever knew it was a
+ * spreadsheet on somebody's laptop. That is the weak half of an otherwise
+ * correct decision — declining rather than truncating is right, and its whole
+ * argument rested on a report that does not last.
+ */
+describe("commitContactImport — a declined size is kept as a staff note (#1801)", () => {
+  const noteFiledAsASize = "Medium Large, long torso, prefers 5mm not 3mm";
+
+  async function importOne(db: AppDb, shopId: string, csv: string) {
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    return commitContactImport(db, shopId, prepareContactImport(csv), importer);
+  }
+
+  it("files the value on the diver, and counts it", async () => {
+    const { db, shop } = await seededShopContext();
+    expect(noteFiledAsASize.length).toBeGreaterThan(RENTAL_FIT_TEXT_LIMITS.size);
+    const summary = await importOne(
+      db,
+      shop.id,
+      [
+        "full_name,email,wetsuit_size",
+        `Kept Kira,kira.import@example.com,"${noteFiledAsASize}"`,
+      ].join("\n"),
+    );
+
+    expect(summary.sizesDeclined).toBe(1);
+
+    const person = await personByEmail(db, shop.id, "kira.import@example.com");
+    if (!person) throw new Error("person not created");
+    const notes = await db
+      .select({ body: internalNotes.body })
+      .from(internalNotes)
+      .where(eq(internalNotes.personId, person.id));
+    // The value itself, and the piece it was about — a staffer meeting this at
+    // the counter can set the size by hand without the file.
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.body).toContain(noteFiledAsASize);
+    expect(notes[0]?.body).toContain("Wetsuit");
+  });
+
+  /**
+   * **Not the rental fit's own note column.** That one holds the diver's own
+   * words to the crew, diver-visible and diver-editable on their gear form, so
+   * a prior shop's staff shorthand there is words put in the diver's mouth that
+   * the diver can then delete.
+   */
+  it("leaves the diver's own note untouched", async () => {
+    const { db, shop } = await seededShopContext();
+    await importOne(
+      db,
+      shop.id,
+      [
+        "full_name,email,wetsuit_size",
+        `Kept Kira,kira.import@example.com,"${noteFiledAsASize}"`,
+      ].join("\n"),
+    );
+
+    const person = await personByEmail(db, shop.id, "kira.import@example.com");
+    if (!person) throw new Error("person not created");
+    const [profile] = await db
+      .select()
+      .from(rentalFitProfiles)
+      .where(eq(rentalFitProfiles.personId, person.id));
+    expect(profile?.note ?? null).toBeNull();
+    // And the column it could not hold is still empty rather than truncated.
+    expect(profile?.wetsuitSize ?? null).toBeNull();
+  });
+
+  it("does not stack a second copy when the same file is re-run", async () => {
+    const { db, shop } = await seededShopContext();
+    const csv = [
+      "full_name,email,wetsuit_size",
+      `Kept Kira,kira.import@example.com,"${noteFiledAsASize}"`,
+    ].join("\n");
+    await importOne(db, shop.id, csv);
+    const second = await importOne(db, shop.id, csv);
+
+    expect(second.sizesDeclined).toBe(0);
+    const person = await personByEmail(db, shop.id, "kira.import@example.com");
+    if (!person) throw new Error("person not created");
+    const notes = await db
+      .select({ body: internalNotes.body })
+      .from(internalNotes)
+      .where(eq(internalNotes.personId, person.id));
+    expect(notes).toHaveLength(1);
   });
 });

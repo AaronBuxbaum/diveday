@@ -219,6 +219,8 @@ function importWizardCopy(t: StaffTranslator) {
       receiptDocumentsFailedNote: t.raw("settings.import.wizard.result.receiptDocumentsFailedNote"),
       notesLineOne: t.raw("settings.import.wizard.result.notesLineOne"),
       notesLineOther: t.raw("settings.import.wizard.result.notesLineOther"),
+      sizesDeclinedLineOne: t.raw("settings.import.wizard.result.sizesDeclinedLineOne"),
+      sizesDeclinedLineOther: t.raw("settings.import.wizard.result.sizesDeclinedLineOther"),
       seeRoster: t("settings.import.wizard.result.seeRoster"),
     },
   };

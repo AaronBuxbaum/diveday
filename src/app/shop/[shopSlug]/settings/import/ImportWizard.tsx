@@ -135,6 +135,8 @@ type ImportWizardCopy = {
     receiptDocumentsFailedNote: string;
     notesLineOne: string;
     notesLineOther: string;
+    sizesDeclinedLineOne: string;
+    sizesDeclinedLineOther: string;
     seeRoster: string;
   };
 };
@@ -698,6 +700,21 @@ export function ImportWizard({
                     other: copy.result.notesLineOther,
                   }),
                   { count: state.summary.notesAdded },
+                )}
+              </p>
+            ) : null}
+            {/* Counted here because the per-row warning lives in the preview,
+                and a shop importing four hundred rows will not catch twelve of
+                them there — then taps through, and until issue #1801 nothing
+                held the value at all. */}
+            {state.summary.sizesDeclined > 0 ? (
+              <p className="mt-1 text-sm">
+                {fill(
+                  pluralForm(state.summary.sizesDeclined, {
+                    one: copy.result.sizesDeclinedLineOne,
+                    other: copy.result.sizesDeclinedLineOther,
+                  }),
+                  { count: state.summary.sizesDeclined },
                 )}
               </p>
             ) : null}
