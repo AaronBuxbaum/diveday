@@ -631,3 +631,36 @@ test.describe("the divers search on a phone", () => {
     expect(await search.boundingBox()).toEqual(before);
   });
 });
+
+/**
+ * **The number on the screen finds the diver on the same screen** (issue #1765,
+ * covered in the browser by #1787).
+ *
+ * One module prints the phone number (`displayStoredPhone`) and a different one
+ * matches it (`src/db/person-search.ts`), and the bug was that they disagreed
+ * on one surface while each was individually correct — a unit test of either
+ * half passed, and did. So this reads the number **out of the page** and
+ * searches with that exact string. A literal here would pass while the two
+ * halves drifted apart again, which is how it shipped the first time.
+ */
+test("a phone number read off a diver's record finds that diver in the roster search", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/divers");
+  const search = page.getByRole("searchbox", { name: "Search divers" });
+  await search.fill("Priya Sharma");
+  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
+
+  const header = page.locator("header").filter({ visible: true }).last();
+  const printed = (
+    await header.locator('a[href^="tel:"]').filter({ visible: true }).first().innerText()
+  ).trim();
+  // The grouped form, not the stored one: "+1 305 555 0143" rather than
+  // "+13055550143". That difference is the whole of what this asserts.
+  expect(printed).toMatch(/\s/);
+
+  await page.goto("/shop/blue-mantis/divers");
+  await search.fill(printed);
+  await expect(page.getByRole("link", { name: "Priya Sharma", exact: true })).toBeVisible();
+});
