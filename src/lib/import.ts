@@ -1435,18 +1435,30 @@ function fitSize(value: string | null): string | null {
 }
 
 /**
- * How much of a declined cell a warning quotes back. Twenty characters past the
- * size cap itself, so any value that could have been a size is shown whole and
- * anything cut is by definition too long to be one.
+ * How much of a declined cell a warning quotes back.
  *
  * The bound exists because the echo was the *cell*, capped only by
  * `MAX_IMPORT_CELL_LENGTH`: four size columns over sixty previewed rows is a
  * quarter of a megabyte of warning text in one table column
- * (`security-reviewer`, issue #1754). Nothing is lost that anyone needed — the
+ * (`security-reviewer`, issue #1754). Nothing is lost that anyone needed: the
  * head of the value is what identifies the row, and the staffer running the
  * import has the file itself open.
+ *
+ * **No longer derived from `RENTAL_FIT_TEXT_LIMITS.size`** (issue #1808). It
+ * was `size + 20`, and that arithmetic is an argument about sizes — twenty past
+ * the cap means anything cut is by definition too long to have been one. It now
+ * bounds four date warnings as well, and a date has no such cap, so a derived
+ * constant would have moved every date echo whenever somebody changed an
+ * unrelated rental-size limit.
+ *
+ * Sixty keeps both arguments standing. It is comfortably past the size cap, so
+ * a declined size is still shown whole, and comfortably past any real date, so
+ * a cell cut here was never a date either. `import.test.ts` pins the first half
+ * behaviourally — a cell one character over the size cap echoes without an
+ * ellipsis — so a size cap raised past this number goes red rather than quietly
+ * truncating the values this was written to show whole.
  */
-const MAX_ECHOED_CELL_LENGTH = RENTAL_FIT_TEXT_LIMITS.size + 20;
+const MAX_ECHOED_CELL_LENGTH = 60;
 
 /** A declined cell quoted back to the staffer, bounded for display. */
 function echoedCell(value: string): string {
@@ -1853,7 +1865,7 @@ export function prepareContactImport(text: string): PreparedImport {
           issues.push({
             level: "warning",
             code: "waiver_date_invalid",
-            params: { value: signedAtRaw },
+            params: { value: echoedCell(signedAtRaw) },
           });
         }
       }
@@ -1882,7 +1894,7 @@ export function prepareContactImport(text: string): PreparedImport {
         issues.push({
           level: "warning",
           code: "dob_invalid",
-          params: { value: dobRaw },
+          params: { value: echoedCell(dobRaw) },
         });
       }
     }
@@ -1909,7 +1921,7 @@ export function prepareContactImport(text: string): PreparedImport {
         issues.push({
           level: "warning",
           code: "visit_date_unreadable",
-          params: { value: visitDateRaw },
+          params: { value: echoedCell(visitDateRaw) },
         });
       } else {
         const visitedOn = parsed.date;
@@ -1991,7 +2003,7 @@ export function prepareContactImport(text: string): PreparedImport {
             issues.push({
               level: "warning",
               code: "payment_history_date_unreadable",
-              params: { value: occurredOnRaw },
+              params: { value: echoedCell(occurredOnRaw) },
             });
           }
         } else {

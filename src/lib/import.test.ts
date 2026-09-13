@@ -1332,3 +1332,57 @@ describe("prepareContactImport — one shoe size, from either column (#1802)", (
     expect(row?.issues.some((issue) => issue.code === "shoe_size_collapsed")).toBe(false);
   });
 });
+
+/**
+ * **Every echoed cell is bounded, not only the size ones** (issue #1808).
+ *
+ * The bound was added for the size warning after a `security-reviewer` pass:
+ * four size columns over sixty previewed rows, each echoing a 2,000-character
+ * cell, is a quarter of a megabyte of warning text in one table column. The
+ * four date warnings beside it were the same arithmetic with a different
+ * column, and a prior system's free-text notes mapped onto a date column is not
+ * exotic — that is exactly how the size one was found.
+ */
+describe("prepareContactImport — a declined cell is quoted, not reproduced (#1808)", () => {
+  const longCell = "not a date, ".repeat(40);
+  const issueFor = (csv: string, code: string) =>
+    prepareContactImport(csv).rows[0]?.issues.find((issue) => issue.code === code);
+
+  it.each([
+    ["waiver_signed_at", "waiver_date_invalid", "waiver_accepted,waiver_signed_at", "yes,"],
+    ["date_of_birth", "dob_invalid", "date_of_birth", ""],
+    ["visit_date", "visit_date_unreadable", "visit_date", ""],
+    // This one needs the row to name financial evidence at all, or the date is
+    // never read.
+    ["payment_date", "payment_history_date_unreadable", "payment_amount,payment_date", "120.00,"],
+  ])("bounds the %s warning", (_column, code, columns, lead) => {
+    const csv = [
+      `full_name,email,${columns}`,
+      `Long Cell Lena,lena.import@example.com,${lead}"${longCell}"`,
+    ].join("\n");
+
+    const value = issueFor(csv, code)?.params?.value;
+    expect(value).toBeDefined();
+    expect(longCell.length).toBeGreaterThan(100);
+    expect((value as string).length).toBeLessThanOrEqual(61);
+    expect(value).toMatch(/…$/);
+  });
+
+  /**
+   * The half of the bound's argument that a number alone cannot hold: it has to
+   * stay above the size cap, or a declined size gets cut and the staffer is
+   * shown a value that looks like it could have been one. Pinned here rather
+   * than by re-deriving the constant, so raising `RENTAL_FIT_TEXT_LIMITS.size`
+   * past the bound goes red instead of quietly truncating.
+   */
+  it("shows a declined size whole, however the bound is spelled", () => {
+    const oneOver = "x".repeat(RENTAL_FIT_TEXT_LIMITS.size + 1);
+    const csv = ["full_name,email,bcd_size", `Just Over Jo,jo.import@example.com,${oneOver}`].join(
+      "\n",
+    );
+
+    const value = issueFor(csv, "size_too_long")?.params?.value;
+    expect(value).toBe(oneOver);
+    expect(value).not.toMatch(/…$/);
+  });
+});
