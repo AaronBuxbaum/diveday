@@ -1731,9 +1731,15 @@ new domain concept, define it here in the same PR.
   that hasn't ticked it never shows the nitrox request, its price field, or the packing list's
   nitrox tank count and blockers. Editing the catalog changes what is offered going forward; it
   does not rewrite a fit a diver already recorded, and **what the read side then does with a
-  stored flag the catalog contradicts is the other half of that promise.** The piece *stays* on
-  the trip prep list, marked as something the shop no longer rents: dropping it silently would
-  hide a fit nobody can fill, which is the same failure the writer refuses one layer up. What
+  stored flag the catalog contradicts is the other half of that promise.** The piece *stays*,
+  marked as something the shop no longer rents: dropping it silently would
+  hide a fit nobody can fill, which is the same failure the writer refuses one layer up. It is
+  marked on every surface that reads the fit, not only the trip prep list — the roll call, the
+  offline manifest snapshot, the seat-a-diver list and the diver record's own fit summary all say
+  it now (issue #1804), because two surfaces describing one departure differently is worse than
+  either sentence. The offline snapshot freezes that fact with everything else it holds, so a shop
+  that re-adds the piece after a snapshot is taken carries the old mark onto the boat until the
+  next one. What
   comes off is everything that piece was making *other* lines say. So a diver whose shop stopped
   renting drysuits gets their stated weighting back on the weights line, ordinary fin sizing, and
   no drysuit-card advisory — none of those three is about the suit itself; each is a claim about
@@ -1894,8 +1900,8 @@ new domain concept, define it here in the same PR.
   number the packer sizes up from, and the line says the pair has to clear the boot.
   **Both of those hold only while the shop actually rents drysuits.** A piece the shop has since
   dropped from its **rental catalog** is the one line here that carries a reason rather than only
-  a size: it stays on the list, says the shop no longer rents it, and stops changing any other
-  line — so a diver at a shop that stopped renting suits is packed lead to their stated number
+  a size: it stays on the list and on every other surface that reads the fit, says the shop no
+  longer rents it, and stops changing any other line — so a diver at a shop that stopped renting suits is packed lead to their stated number
   and fins to their stated size, like anyone else. Rules in `src/lib/dive-prep.ts`.
 - **Diver profile** — the shop's person-first operational record. A diver profile gathers contact
   details, certification evidence, rental fit, and bookings; cards are not managed as an unrelated

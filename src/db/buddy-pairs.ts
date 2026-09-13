@@ -715,6 +715,12 @@ export async function listTripBuddyTeams(
       recordedByName: people.fullName,
     })
     .from(buddyTeamEvents)
+    // Inner is safe here, and was questioned: a recorder row that had gone
+    // would drop the whole event and send both facts back to a member row,
+    // which is the wrong attribution this reader exists to remove. It cannot
+    // happen — `buddy_team_events.recorded_by_person_id` is `notNull` with a
+    // hard reference to `people.id`, so the row is there for as long as the
+    // event is, and erasure anonymises a person rather than deleting them.
     .innerJoin(people, eq(people.id, buddyTeamEvents.recordedByPersonId))
     .where(
       and(

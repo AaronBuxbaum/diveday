@@ -127,11 +127,16 @@ export async function getTripPrep(
       const wanted =
         line.state === "rents"
           ? line.items
-              // A piece the catalog no longer offers rides the line so the
-              // packer meets the contradiction, but it is not a unit to
-              // reserve: the register may still hold one, and offering it
-              // would put the kind back into circulation the shop retired.
-              .filter((item) => !item.notOffered)
+              // A piece the catalog no longer offers still gets a picker.
+              // Filtering it out was the obvious reading of issue #1804 and
+              // the wrong one (`dive-domain-expert`, 2026-09-13):
+              // `assignGearUnit` is the only door that creates a
+              // booking-held reservation, so a shop that unticks drysuits
+              // while six in-service suits hang on its wall could no longer
+              // reserve one at all — the suit goes out on paper and the
+              // register says "On the wall" while it is in a diver's car,
+              // which breaks overdue and never-picked-up. The `notOffered`
+              // marker on the line is the signal; closing the door is not.
               .flatMap(gearAssignmentNeeds)
               .filter(
                 (item) =>
