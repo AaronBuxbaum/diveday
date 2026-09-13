@@ -5500,6 +5500,44 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "prep-by-diver", scheme);
       });
 
+      /**
+       * **The one state of a packing line neither capture above may hold**
+       * (issue #1805): a piece the diver's stored fit asks for that the shop's
+       * catalog no longer offers. It is kept and marked rather than dropped —
+       * a stored `rents_*` flag survives the shop dropping that item (#1755),
+       * and a silent drop would hide a fit nobody can fill — so the Size cell
+       * reads "You no longer rent this" in warning tone, appended to whatever
+       * it already held.
+       *
+       * Beside the calm captures rather than folded into them, which is the
+       * rule for a panel that only renders when something looks wrong
+       * (`.claude/rules/e2e.md`). The reach is why it matters here:
+       * `rentalFitLine` feeds the roll call, the offline manifest and the
+       * diver record from these same pieces, so a demo carrying this standing
+       * would print an oddity nobody can clear on the boat manifest.
+       *
+       * One capture, both groupings, because the marker is the whole of what
+       * moved and the by-diver cell is the narrower of the two Size columns.
+       */
+      test(`a trip's prep list marks a piece the shop stopped renting (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?droppedRental=1");
+        expect(seeded.ok()).toBe(true);
+        const { droppedRental } = (await seeded.json()) as { droppedRental?: { fullName: string } };
+        if (!droppedRental) throw new Error("seed-trouble-states found no fit to contradict");
+
+        await openReefTrip(page);
+        await openTripTab(page, "Prep");
+        await page.getByRole("link", { name: "By diver" }).click();
+        await page.getByRole("columnheader", { name: "Diver" }).waitFor();
+        // The marker itself, not the row: a capture on the right route in the
+        // wrong state catches nothing.
+        await expect(page.getByText("You no longer rent this")).toBeVisible();
+        await capture(page, "prep-dropped-rental", scheme);
+      });
+
       // The prep page's rental-assignments panel in its lived-in state: the
       // wreck trip ships with seeded units already assigned (seed-gear.ts),
       // so the frame holds assigned chips with their Release taps beside

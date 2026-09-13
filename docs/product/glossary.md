@@ -1729,8 +1729,9 @@ new domain concept, define it here in the same PR.
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive
   computer**, and a **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). The dive computer is default-on
-  for every diver **and** part of the priced core set (H-06, reconfirmed 2026-08-02 — HD-9); the
-  **GoPro** is the one off-by-default add-on, always priced separately. A diver who skips a core
+  for every diver **and** part of the priced core set (H-06, reconfirmed 2026-08-02 — HD-9). Four
+  add-ons are off by default and priced separately: the **GoPro**, the **drysuit**, **hood &
+  gloves**, a **dive light** and an **SMB** (`RENTABLE_ITEMS`, `src/lib/rentals.ts`). A diver who skips a core
   piece (brings their own dive computer, say) is quoted whichever is cheaper — the set price or the
   sum of the pieces they actually take — so skipping one never costs more than the full set would
   have (`quoteRentalFit`, `src/lib/rentals.ts`).
@@ -1783,7 +1784,8 @@ new domain concept, define it here in the same PR.
   the shop rather than quoted at zero. A shop that prices nothing keeps the "ask the shop what's
   included" behaviour.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
-  and in *what size* (BCD, wetsuit, drysuit, boot, fin, usual weighting, plus the dive-computer/GoPro add-ons).
+  and in *what size* (BCD, wetsuit, drysuit, boot, fin, usual weighting, plus the dive-computer,
+  GoPro, hood-and-gloves, dive-light and SMB add-ons).
   The **drysuit** is the one add-on that carries a size, and it is sized on its own scale — the
   manufacturer grid a rental wall is racked from (a girth letter, a trailing `T` for the tall cut),
   which shares the wetsuit's girth letters but carries a second axis the wetsuit scale has no room
@@ -1876,8 +1878,11 @@ new domain concept, define it here in the same PR.
 - **Complete rental fit** — a fit is complete when *every piece the diver takes from the shop* has
   the size it needs, not merely when a record exists: a diver who ticks BCD, wetsuit and weights and
   supplies only a shoe size has an **incomplete** fit, with three loose ends. One shoe size answers
-  for both boots and fins. The one-size pieces (regulator, dive computer, GoPro) have no size to be
-  missing. "Not recorded" (nobody asked) and "incomplete" (asked, half blank) stay distinct.
+  for both boots and fins. The **sized** pieces are BCD, wetsuit, boots, mask & fins, weights and
+  drysuit (`SIZED_RENTAL_KINDS`, `src/lib/rentals.ts`); every other piece has no size column, so it
+  has no size to be missing. Named that way round on purpose: the unsized list was kept by hand as
+  three, drifted to six without anybody noticing, and a diver renting a dive light read "Not
+  recorded" — a gap nobody could fill (#1805). "Not recorded" (nobody asked) and "incomplete" (asked, half blank) stay distinct.
   Completeness is a prompt for staff, never a gate: it refuses nobody a seat and blocks nobody from
   boarding.
 - **Needs staff fit** — the safe fallback when the shop can't fill a size a diver asked for (H-06):
@@ -1886,8 +1891,7 @@ new domain concept, define it here in the same PR.
   from, so dropping them arrives a BCD short with nothing to fit them from — but the **size** comes
   off, reading "fit at check-in", and they're named in their own "fit these divers at check-in"
   section, along with the sizes they asked for — the captain doing the fit can't edit the profile
-  and needs somewhere to start. Unsized pieces (regulator, dive computer, GoPro) are untouched by
-  the flag; so are weights (lead is bulk stock, never a size to be short of, and usual weighting is
+  and needs somewhere to start. Pieces with no size column are untouched by the flag; so are weights (lead is bulk stock, never a size to be short of, and usual weighting is
   the fit's most safety-relevant number) and tanks, since gas is never sized. Distinct from both "own kit" and "not asked yet" on
   a roster/manifest line, and sticky: editing sizes never clears it, only an explicit resolve does.
   See [20260724-gear-fit-fallback](../architecture/decisions/20260724-gear-fit-fallback.md).

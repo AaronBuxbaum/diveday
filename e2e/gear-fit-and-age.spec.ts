@@ -61,6 +61,56 @@ test.describe("staff", () => {
     await expect(page.getByRole("table")).toContainText("Fit at check-in");
   });
 
+  /**
+   * **A piece the shop stopped renting stays on the list and says why** (issue
+   * #1805).
+   *
+   * A stored `rents_*` flag survives the shop dropping that item from its
+   * catalog (#1755) — the diver's answer was theirs, and a catalog edit is not
+   * the diver speaking. So the packing line is kept and marked rather than
+   * filtered out, and *kept* is the assertion that matters: a silent drop
+   * would hide a fit nobody can fill, on the one surface where gear is
+   * reasoned about.
+   *
+   * Seeded through `/api/test/seed-trouble-states`, never into blue-mantis:
+   * `rentalFitLine` feeds the roll call, the offline manifest and the diver
+   * record from these same pieces, so a demo carrying this standing would
+   * print an oddity nobody can clear on the boat manifest — and a marker a
+   * crew meets every morning is a marker they stop reading
+   * (`.claude/rules/e2e.md`, `.claude/rules/db.md`).
+   *
+   * Both groupings, because the same fact is drawn three times — the phone
+   * cards, the by-item table and the by-diver kit cell — and only the table
+   * had ever been looked at.
+   */
+  test("a piece the shop no longer rents stays on the packing list and says so", async ({
+    page,
+    request,
+  }) => {
+    const seeded = await request.post("/api/test/seed-trouble-states?droppedRental=1");
+    expect(seeded.ok()).toBe(true);
+    const { droppedRental } = (await seeded.json()) as { droppedRental?: { fullName: string } };
+    if (!droppedRental) throw new Error("seed-trouble-states found no fit to contradict");
+
+    const tripPath = await tripPathByTitle(page, SHOP, "Two-Tank Reef — Molasses & French");
+    await page.goto(`${tripPath}/prep`);
+
+    // Down the rack: the line is there at all, which is the point.
+    const byItem = page.getByRole("table");
+    await expect(byItem).toContainText("Dive light");
+    await expect(byItem).toContainText("You no longer rent this");
+
+    // Down the roster, reached through the switch a packer would use rather
+    // than a typed `?group=`.
+    await page.getByRole("link", { name: "By diver" }).click();
+    // The by-item grouping has no Diver column, so this cannot resolve against
+    // the view that was on screen a moment ago.
+    await page.getByRole("columnheader", { name: "Diver" }).waitFor();
+    const june = page.getByRole("row").filter({ hasText: droppedRental.fullName });
+    await expect(june).toContainText("Dive light");
+    await expect(june).toContainText("You no longer rent this");
+  });
+
   test("an owner rewrites a diver's fit, flags them, and clears it when resolved", async ({
     page,
   }) => {

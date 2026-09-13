@@ -113,9 +113,17 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
   //
   // The drysuit is the one add-on that carries a size (issue 1414), on a drysuit
   // scale rather than the wetsuit's: a letter for girth and a trailing `T`
-  // for the tall cut, which is how a rental wall is stocked. The other three
-  // carry none and want none — a hood, a torch and an SMB are one size off
-  // the shelf, and a size column there would be a field nobody can answer.
+  // for the tall cut, which is how a rental wall is stocked.
+  //
+  // A dive light and an SMB carry none and want none — both are one size off
+  // the shelf. **Hood and gloves are not**, and the sentence that used to say
+  // so here was wrong (`dive-domain-expert`, issue #1805): hoods rack S/M/L/XL
+  // and 3/5/7 mm, gloves S–XL, a hood two sizes big flushes on every descent,
+  // and gloves a size small cannot be pulled onto a wet hand at the dock. What
+  // is true is narrower — DiveDay holds no size for them yet, so there is
+  // nothing to be missing and the packing line must not claim a gap nobody can
+  // close. Whether to give them a column, and whether they are one kind or
+  // two, is issue #1816.
   { kind: "drysuit", field: "rentsDrysuit", name: "drysuit", defaultRented: false },
   { kind: "hood_gloves", field: "rentsHoodGloves", name: "hoodGloves", defaultRented: false },
   { kind: "torch", field: "rentsTorch", name: "torch", defaultRented: false },
@@ -475,8 +483,10 @@ export function rentalFitCompleteness(
 ): RentalFitCompleteness {
   // A row that exists only to hold the diver's note is not an incomplete fit —
   // it is no fit at all, and reading it as incomplete would nag staff about
-  // five missing sizes for a diver who never asked to rent anything. Every
-  // `rents_*` column defaults to true, so this guard is the whole difference.
+  // missing sizes for a diver who never asked to rent anything. `fitStatedAt`
+  // is the whole difference: since #1793 the columns default to false, so an
+  // unstated row claims nothing, and this guard is what keeps "nobody asked"
+  // from reading as "asked, and takes none of it".
   if (!fit || fit.fitStatedAt === null) return { state: "not_recorded" };
   const offered = offeredKinds ? new Set<string>(toRentableKinds(offeredKinds)) : null;
   const offers = (kind: RentableItemKind) => offered === null || offered.has(kind);

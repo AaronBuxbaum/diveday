@@ -22,7 +22,12 @@
 import { DAY_MS } from "@/lib/clock";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { nowDate } from "./clock";
-import { rentalFitCompleteness, type SizedRentalKind, toRentableKinds } from "./rentals";
+import {
+  rentalFitCompleteness,
+  SIZED_RENTAL_KINDS,
+  type SizedRentalKind,
+  toRentableKinds,
+} from "./rentals";
 import { hasSupportNeeds, type SupportNeeds, supportDiversToArrange } from "./support-needs";
 
 export type RentalItemKind =
@@ -377,15 +382,18 @@ export type DivePrepChecklist = {
   };
 };
 
-/** Kit that has no size to record, so a blank is expected rather than a gap. */
-export const UNSIZED_ITEM_KINDS: readonly RentalItemKind[] = [
-  "regulator",
-  "dive_computer",
-  "gopro",
-];
-
-/** Fixed order so the list reads the same way every morning. */
-const KIND_ORDER: RentalItemKind[] = [
+/**
+ * Fixed order so the list reads the same way every morning: the core kit a
+ * packer walks the rack for, then the add-ons a particular dive calls for.
+ *
+ * **Exhaustive, and the compiler says so** (issue #1805, the same shape as
+ * #1799's fleet order). `KIND_ORDER.indexOf` answers `-1` for a kind that is
+ * not here, and `-1` sorts *first* — so the three add-ons added in September
+ * led the packing table above the BCDs, and nobody saw it because no seeded
+ * diver rented one. A kind with no position here is now a typecheck failure
+ * rather than a silent promotion to the top of the rack.
+ */
+const KIND_ORDER = [
   "bcd",
   "regulator",
   "wetsuit",
@@ -394,8 +402,39 @@ const KIND_ORDER: RentalItemKind[] = [
   "mask_fins",
   "weights",
   "dive_computer",
+  "hood_gloves",
+  "torch",
+  "smb",
+  // **Last, below the dive-specific add-ons** (`dive-domain-expert`). The
+  // principle above is "the add-ons a particular dive calls for", and a GoPro
+  // is called for by no dive: a light on a night departure and an SMB on a
+  // drift departure *are* the dive, and the camera is the only piece here
+  // whose absence changes nothing in the water. The bottom of a packing list
+  // is what gets skipped at 6:40 with the truck loading, so it is the right
+  // place for the one line that can be.
   "gopro",
-];
+] as const satisfies readonly RentalItemKind[];
+
+type KindWithNoPackingPosition = Exclude<RentalItemKind, (typeof KIND_ORDER)[number]>;
+/** Add the kind to `KIND_ORDER` above; this line is what fails if you don't. */
+const _everyKindHasAPackingPosition: Record<KindWithNoPackingPosition, never> = {};
+
+/**
+ * Kit that has no size to record, so a blank is expected rather than a gap.
+ *
+ * **Derived, not listed** (issue #1805). This was a hand-kept list of three,
+ * and it had drifted: a hood, a torch and an SMB have no
+ * `rental_fit_profiles` size column either — `src/lib/rentals.ts` says so at
+ * `RENTABLE_ITEMS` and enforces it in `SIZED_RENTAL_KINDS` — so a diver
+ * renting one read "Not recorded" on the packing line, naming a gap that
+ * cannot be filled by anybody. The complement of the sized kinds is the
+ * answer, and taking it from the same constant is what stops the two lists
+ * disagreeing again.
+ */
+const SIZED = new Set<string>(SIZED_RENTAL_KINDS);
+export const UNSIZED_ITEM_KINDS: readonly RentalItemKind[] = KIND_ORDER.filter(
+  (kind) => !SIZED.has(kind),
+);
 
 function size(value: string | null): string | null {
   return value?.trim() || null;
@@ -640,7 +679,18 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
   if (fit.rentsHoodGloves) items.push(unsized("hood_gloves"));
   if (fit.rentsTorch) items.push(unsized("torch"));
   if (fit.rentsSmb) items.push(unsized("smb"));
-  return items;
+  // **Sorted, not pushed in order** (issue #1805, `dive-domain-expert`). The
+  // pushes above are grouped by the flag that produces them — the wetsuit's
+  // two pieces, the drysuit's one — and that grouping is not `KIND_ORDER`:
+  // the drysuit went out *last*, after the GoPro, while the by-item table
+  // sorts it fifth. So the two groupings disagreed about the same departure,
+  // and `rentalFitLine` carried the wrong one to the roll call, the offline
+  // manifest and the diver record: a drysuit diver's rail line read "Mask &
+  // fins over the drysuit boot · Weights: weight check in the water · Drysuit
+  // ML", putting both derived instructions ahead of the fact they derive from.
+  // Sorting here makes the invariant hold by construction rather than by a
+  // discipline the next added kind has to remember.
+  return items.sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind));
 }
 
 /**
@@ -784,9 +834,10 @@ export function buildDivePrepChecklist(input: {
         ),
       });
     }
-    // One call, both groupings. `rentedItems` already emits in `KIND_ORDER`,
-    // so a diver's row reads down the rack in the same order the by-item rows
-    // do — and neither grouping can hold a piece the other doesn't.
+    // One call, both groupings. `rentedItems` sorts into `KIND_ORDER` before
+    // it returns, so a diver's row reads down the rack in the same order the
+    // by-item rows do — and neither grouping can hold a piece the other
+    // doesn't.
     const items = rentedItems(diver.fit, offered);
     diverLines.push({
       bookingId: diver.bookingId,
