@@ -41,6 +41,7 @@ export function AddDiverSection({
   confirmEmail,
   confirmPhone,
   confirmMatches,
+  shopRentalItems,
 }: {
   shopSlug: string;
   tripId: string;
@@ -65,6 +66,14 @@ export function AddDiverSection({
   confirmEmail?: string;
   confirmPhone?: string;
   confirmMatches?: SimilarDiver[];
+  /**
+   * The shop's rental catalog, so "same as last time" cannot offer back a
+   * piece the shop stopped renting as an ordinary one to hand over. Optional
+   * for the same reason it is optional on `rentalFitLine`: a caller with none
+   * to hand shows every piece the fit asks for, which over-includes rather
+   * than hides.
+   */
+  shopRentalItems?: readonly string[];
 }) {
   const t = staffTranslator(locale);
   const searched = query.length > 0;
@@ -184,7 +193,11 @@ export function AddDiverSection({
                   <p className="mt-0.5 text-xs text-muted">
                     {rentalFit
                       ? t("trips.addDiver.rentalFitOnFile", {
-                          fit: rentalFitLineText(t, locale, rentalFitLine(rentalFit)),
+                          fit: rentalFitLineText(
+                            t,
+                            locale,
+                            rentalFitLine(rentalFit, shopRentalItems),
+                          ),
                         })
                       : t("trips.addDiver.noRentalFitYet")}
                   </p>

@@ -490,6 +490,9 @@ export default async function TripManifestPage({
   // the order the desk happened to work. Composed here because the names are
   // joined by `Intl.ListFormat` in the reader's own locale.
   const catchUpSentenceList = catchUpSentences(t, locale, groupCatchUp(catchUp.events));
+  // How many of the named crew another departure claims at the same hours
+  // (issue #1779) — the head figure's own qualification, printed beside it.
+  const crewToConfirm = manifest.crew.filter((member) => (member.clashes ?? []).length > 0).length;
   // Same narrower context as the note above: the checklist is checkpoint-
   // independent, so its action re-proves nothing about which one was open.
   const boundPreDepartureCheckAction = preDepartureCheckAction.bind(null, { shopSlug, tripId });
@@ -730,6 +733,21 @@ export default async function TripManifestPage({
           crew: manifest.crew.length,
           souls: manifest.summary.totalDivers + manifest.crew.length,
         })}
+        {/* **The count is the number read over the radio, and a crew member
+            rostered on two overlapping boats makes it wrong** (issue #1779).
+            Their row below says which other departure; this says the head
+            figure is not settled, because a qualification forty lines down
+            does not reach somebody reading a number aloud.
+
+            Still a static fact, like everything else on this line: how many of
+            the named crew are claimed by another boat, not how many have been
+            tapped. Nothing here moves after the sheet comes off the printer. */}
+        {crewToConfirm > 0 ? (
+          <span className="font-normal">
+            {" "}
+            {t("manifest.soulsOnBoardCrewToConfirm", { count: crewToConfirm })}
+          </span>
+        ) : null}
       </p>
       {/* **The catch-up strip**, under the sub-nav and above the instrument,
           exactly where the canvas draws it (ADR 20260904-reef-all-the-way-down

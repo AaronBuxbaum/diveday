@@ -164,8 +164,13 @@ export type IncidentRollCallResult = {
  * everyone on this team come back?" is a manual name-chase across a page
  * break, which is precisely the comparison this document leaves to the reader
  * instead of computing a verdict. Numbering is stable: `listTripBuddyTeams`
- * orders by `createdAt` then `pairId`, so the same records always number the
- * same way and the integrity code stays reproducible.
+ * orders by the team's formation instant, then by its members' names in their
+ * own display order, then by `pairId` as a last resort — so the same records
+ * always number the same way and the integrity code stays reproducible. It
+ * used to fall through to `pairId`, a writer-minted uuid that made "Team 1" a
+ * coin flip per database (issue #1753), and the formation instant used to come
+ * off whichever member row sorted first, which a later addition could win
+ * (issue #1796).
  */
 export type IncidentBuddyPairing = {
   /** 1-based, in pairing order — printed as "Team 03". */

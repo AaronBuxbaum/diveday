@@ -345,7 +345,7 @@
   },
   "/shop/[shopSlug]/dive-sites/[id]": {
     "e2e": ["dive-sites.spec.ts", "tide-window.spec.ts"],
-    "visual": ["dive-site-edit"]
+    "visual": ["dive-site-edit", "dive-site-far-station"]
   },
   "/shop/[shopSlug]/dive-sites/new": {
     "e2e": ["dive-sites.spec.ts"],
@@ -517,6 +517,7 @@
       "schedule-builder-add-full",
       "schedule-builder-add-tide",
       "schedule-builder-empty",
+      "schedule-builder-move-blocked",
       "schedule-builder-move-clash",
       "schedule-builder-move-impact"
     ],
@@ -723,6 +724,7 @@
       "prep",
       "prep-assignments",
       "prep-by-diver",
+      "prep-dropped-rental",
       "prep-load-out-handed-over",
       "prep-no-nitrox"
     ]

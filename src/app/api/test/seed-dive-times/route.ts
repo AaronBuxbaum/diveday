@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
@@ -43,11 +43,25 @@ export async function POST(request: Request) {
   const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
   if (!shop?.isDemo) return NextResponse.json({ error: "not_demo" }, { status: 404 });
 
+  // The shop on the read, not only on the guard (issue #1812). The id is a
+  // constant and the handler has already refused a shop that is not `isDemo`,
+  // so nothing here is open — but the guarantee lives in a seed flag three
+  // files away, which is precisely the reasoning `depart-trip` refuses to rely
+  // on.
+  //
+  // Both sides of the join, because this one reads a value back *out* of the
+  // departure row rather than only naming it.
   const [booking] = await db
     .select({ tripId: bookings.tripId, startsAt: trips.startsAt })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(eq(bookings.id, DEMO_RECAP_BOOKING_ID))
+    .where(
+      and(
+        eq(bookings.id, DEMO_RECAP_BOOKING_ID),
+        eq(bookings.shopId, shop.id),
+        eq(trips.shopId, shop.id),
+      ),
+    )
     .limit(1);
   if (!booking) return NextResponse.json({ error: "no_booking" }, { status: 404 });
 

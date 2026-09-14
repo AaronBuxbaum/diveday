@@ -190,6 +190,32 @@ export type OfflineManifestPayload = {
            * three groups is this?".
            */
           buddyTeamNames?: string[];
+          /**
+           * Other departures whose hours overlap this one that this person is
+           * also rostered on, by title (issue #1779).
+           *
+           * **Carried, and this is the copy that needs it most.** The dock copy
+           * is read at the rail with no signal, which is exactly when the deck
+           * cannot ring the office to ask where the divemaster is — so a crew
+           * gap with no reason costs them the one minute that matters. The
+           * payload is a departure title the shop already owns and prints on
+           * its own board, not a fact about a person, so H-21's argument about
+           * shipping age and birthdays to every crew phone does not reach it.
+           *
+           * The one caveat, and it is why this says *titles* rather than
+           * anything else about the other departure: a trip title is free text,
+           * and shops type a client's name into a private charter. So the dock
+           * copy can carry a third party's name to a crew phone for a
+           * fortnight. Accepted over withholding the fact, because the crew who
+           * would read it already see that title on the staffing week
+           * (`dive-domain-expert`, 2026-09-13).
+           *
+           * Optional and additive, so a snapshot written before this parses
+           * unchanged and no `OFFLINE_MANIFEST_RECORD_VERSION` bump is owed —
+           * the same reasoning `note` above records, and a bump purges every
+           * roll call a captain has queued and not synced.
+           */
+          clashDepartures?: string[];
           rollCall?: {
             state: "boarded" | "not_boarded";
             occurredAt: string;
@@ -832,6 +858,11 @@ export function serializeManifests(
             (member.buddyTeams ?? []).flatMap((team) => team.others.map((other) => other.fullName)),
           ),
         ],
+        // Absent when there is none, so a snapshot of an ordinary departure
+        // serializes to exactly what it did before.
+        ...(member.clashes && member.clashes.length > 0
+          ? { clashDepartures: member.clashes.map((clash) => clash.title) }
+          : {}),
         rollCall: member.rollCall
           ? {
               state: member.rollCall.state,

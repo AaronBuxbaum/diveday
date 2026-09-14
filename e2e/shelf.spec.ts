@@ -84,6 +84,17 @@ test("a diver opens their shelf, is greeted on the storefront, and forgets the p
   await expect(page.getByText("Saved.")).toBeVisible();
   await expect(page.getByLabel("Wetsuit")).toHaveValue("3mm L");
 
+  // **One shoe answer, not two** (issue #1802). This page used to ask for a
+  // boot size and a fin size separately while the staff record and the
+  // readiness gear form each ask once and write both columns — so two answers
+  // here died on the next save of either of those, silently.
+  await expect(page.getByLabel("Fins & boots")).toBeVisible();
+  await expect(page.getByLabel("Boots", { exact: true })).toHaveCount(0);
+  await page.getByLabel("Fins & boots").fill("US 9");
+  await page.getByRole("button", { name: "Save sizes" }).click();
+  await page.waitForURL(/saved=sizes/);
+  await expect(page.getByLabel("Fins & boots")).toHaveValue("US 9");
+
   // **The greeting.** Opening the shelf set the cookie; the storefront reads it
   // and greets by first name with which visit the next one is.
   await page.goto("/s/blue-mantis");

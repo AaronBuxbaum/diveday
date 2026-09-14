@@ -1278,3 +1278,111 @@ describe("IMPORT_HONESTY_TABLE", () => {
     expect(prepared.totals.withNotes).toBe(1);
   });
 });
+
+/**
+ * **The importer promises what the product keeps** (issue #1802).
+ *
+ * The file may carry `boot_size` and `fin_size` separately, and DiveDay keeps
+ * one shoe size: the staff diver record and the readiness gear form each render
+ * a single "Fin & boot size" box and write it to both columns. So two imported
+ * values survived exactly until the next save of either form, and then silently
+ * became one. Reading them as one answer at the boundary is the same shape
+ * issue #1754 took with the caps — decide it where the file is read, not two
+ * saves later.
+ */
+describe("prepareContactImport — one shoe size, from either column (#1802)", () => {
+  const sizesOf = (csv: string) => prepareContactImport(csv).rows[0]?.sizes;
+
+  it("fills both columns from the fin size alone", () => {
+    const sizes = sizesOf(["full_name,email,fin_size", "Fin Only,fin@example.com,US 9"].join("\n"));
+
+    expect(sizes).toMatchObject({ finSize: "US 9", bootSize: "US 9" });
+  });
+
+  it("fills both columns from the boot size when that is all the file carries", () => {
+    const sizes = sizesOf(
+      ["full_name,email,boot_size", "Boot Only,boot@example.com,US 9"].join("\n"),
+    );
+
+    expect(sizes).toMatchObject({ finSize: "US 9", bootSize: "US 9" });
+  });
+
+  it("keeps the fin size when the two disagree, and says so", () => {
+    const prepared = prepareContactImport(
+      ["full_name,email,boot_size,fin_size", "Two Answers,two@example.com,US 10,US 9"].join("\n"),
+    );
+    const row = prepared.rows[0];
+
+    // The fin size wins because it is the one every surface pre-fills from.
+    expect(row?.sizes).toMatchObject({ finSize: "US 9", bootSize: "US 9" });
+    // And the shop is told, rather than an answer being discarded without a
+    // word — a warning, not a refusal: the row imports either way.
+    expect(row?.issues).toContainEqual({
+      level: "warning",
+      code: "shoe_size_collapsed",
+      params: { value: "US 9" },
+    });
+  });
+
+  it("says nothing when the two columns agree", () => {
+    const row = prepareContactImport(
+      ["full_name,email,boot_size,fin_size", "Agreed Ana,ana@example.com,US 9,US 9"].join("\n"),
+    ).rows[0];
+
+    expect(row?.issues.some((issue) => issue.code === "shoe_size_collapsed")).toBe(false);
+  });
+});
+
+/**
+ * **Every echoed cell is bounded, not only the size ones** (issue #1808).
+ *
+ * The bound was added for the size warning after a `security-reviewer` pass:
+ * four size columns over sixty previewed rows, each echoing a 2,000-character
+ * cell, is a quarter of a megabyte of warning text in one table column. The
+ * four date warnings beside it were the same arithmetic with a different
+ * column, and a prior system's free-text notes mapped onto a date column is not
+ * exotic — that is exactly how the size one was found.
+ */
+describe("prepareContactImport — a declined cell is quoted, not reproduced (#1808)", () => {
+  const longCell = "not a date, ".repeat(40);
+  const issueFor = (csv: string, code: string) =>
+    prepareContactImport(csv).rows[0]?.issues.find((issue) => issue.code === code);
+
+  it.each([
+    ["waiver_signed_at", "waiver_date_invalid", "waiver_accepted,waiver_signed_at", "yes,"],
+    ["date_of_birth", "dob_invalid", "date_of_birth", ""],
+    ["visit_date", "visit_date_unreadable", "visit_date", ""],
+    // This one needs the row to name financial evidence at all, or the date is
+    // never read.
+    ["payment_date", "payment_history_date_unreadable", "payment_amount,payment_date", "120.00,"],
+  ])("bounds the %s warning", (_column, code, columns, lead) => {
+    const csv = [
+      `full_name,email,${columns}`,
+      `Long Cell Lena,lena.import@example.com,${lead}"${longCell}"`,
+    ].join("\n");
+
+    const value = issueFor(csv, code)?.params?.value;
+    expect(value).toBeDefined();
+    expect(longCell.length).toBeGreaterThan(100);
+    expect((value as string).length).toBeLessThanOrEqual(61);
+    expect(value).toMatch(/…$/);
+  });
+
+  /**
+   * The half of the bound's argument that a number alone cannot hold: it has to
+   * stay above the size cap, or a declined size gets cut and the staffer is
+   * shown a value that looks like it could have been one. Pinned here rather
+   * than by re-deriving the constant, so raising `RENTAL_FIT_TEXT_LIMITS.size`
+   * past the bound goes red instead of quietly truncating.
+   */
+  it("shows a declined size whole, however the bound is spelled", () => {
+    const oneOver = "x".repeat(RENTAL_FIT_TEXT_LIMITS.size + 1);
+    const csv = ["full_name,email,bcd_size", `Just Over Jo,jo.import@example.com,${oneOver}`].join(
+      "\n",
+    );
+
+    const value = issueFor(csv, "size_too_long")?.params?.value;
+    expect(value).toBe(oneOver);
+    expect(value).not.toMatch(/…$/);
+  });
+});

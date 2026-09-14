@@ -7239,12 +7239,25 @@ export const rentalFitProfiles = pgTable(
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id),
-    /** Which pieces the shop supplies. A diver with their own kit rents none. */
-    rentsBcd: boolean("rents_bcd").notNull().default(true),
-    rentsRegulator: boolean("rents_regulator").notNull().default(true),
-    rentsWetsuit: boolean("rents_wetsuit").notNull().default(true),
-    rentsMaskFins: boolean("rents_mask_fins").notNull().default(true),
-    rentsWeights: boolean("rents_weights").notNull().default(true),
+    /**
+     * Which pieces the shop supplies. A diver with their own kit rents none.
+     *
+     * **Every `rents_*` column defaults to `false`**, these five included, and
+     * that is the whole of the column's opinion: a row is a claim about what a
+     * diver answered, and a row nobody has answered for claims nothing. These
+     * five defaulted to `true` until issue #1793 — the core kit a shop stocks
+     * for everyone — which put the assumption in the one place it does no work
+     * and real harm. A form seeds its checkboxes from `defaultRented`
+     * (`src/lib/rentals.ts`), which is where that product fact belongs and
+     * where it stays; a row that exists *without* a form having run is
+     * precisely the row that must claim nothing, and it was the one the
+     * defaults spoke for.
+     */
+    rentsBcd: boolean("rents_bcd").notNull().default(false),
+    rentsRegulator: boolean("rents_regulator").notNull().default(false),
+    rentsWetsuit: boolean("rents_wetsuit").notNull().default(false),
+    rentsMaskFins: boolean("rents_mask_fins").notNull().default(false),
+    rentsWeights: boolean("rents_weights").notNull().default(false),
     /**
      * Optional add-ons — a diver usually owns a computer, and the rest are kit
      * a particular dive calls for rather than kit everybody takes. All default
@@ -7293,21 +7306,23 @@ export const rentalFitProfiles = pgTable(
      * exists: since issue 627 the diver's free-text note ("titanium hip, I run
      * heavy") is its own question on `/ready`, saved by `saveRentalFitNote`,
      * which will create this row for a diver who has never touched the gear
-     * form. **Five** of the eleven `rents_*` columns above default to `true`
-     * (the core kit: BCD, regulator, wetsuit, mask and fins, weights), so
-     * without this discriminator a diver who only left a note would appear on
-     * the boat's packing list renting all five with no sizes, nobody having
-     * asked for any of them. `rentalFitLine` and the prep checklist read a null
-     * here as "no fit recorded", exactly as they already read a missing row.
+     * form. `rentalFitLine` and the prep checklist read a null here as "no fit
+     * recorded", exactly as they already read a missing row.
      *
-     * That hazard now has a second defence under it rather than only this one:
-     * every writer that can *create* one of these rows lays `NOTHING_RENTED`
-     * (src/lib/rentals.ts) under its insert, including `saveRentalFitNote`
-     * itself — so a note-only row holds eleven explicit `false`s and no longer
-     * hands those five defaults to whichever writer stamps this column next
-     * (`security-reviewer`, issue #1755). The discriminator still earns its
-     * keep: it is what separates a note from a fit for every reader, and no
-     * amount of explicit `false` makes a row with no answers into an answer.
+     * **This used to be the only thing standing between a note and a six-piece
+     * packing line.** Five of the eleven `rents_*` columns above defaulted to
+     * `true` (the core kit), so a diver who had only left the crew a note would
+     * otherwise have appeared on the boat's packing list renting a BCD, a
+     * regulator, a wetsuit, a mask, fins and weights — no sizes, nobody having
+     * asked for any of them. Issue #1755 put a second defence under that, every
+     * creating writer laying `NOTHING_RENTED` (src/lib/rentals.ts) beneath its
+     * insert; issue #1793 removed the hazard instead, and the five columns
+     * default to `false` like the other six.
+     *
+     * The discriminator still earns its keep, and always did for a reason
+     * beyond the defaults: it is what separates a note from a fit for every
+     * reader, and no amount of explicit `false` makes a row with no answers
+     * into an answer.
      */
     fitStatedAt: timestamp("fit_stated_at", { withTimezone: true }),
     /**

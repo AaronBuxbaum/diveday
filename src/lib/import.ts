@@ -86,7 +86,7 @@ import { isPlausibleDateOfBirth } from "./age";
 import { type CalendarDate, isValidCalendarDate } from "./calendar-date";
 import { CERTIFICATION_AGENCIES } from "./certification-options";
 import { currencyMinorUnits, isShopCurrency } from "./money";
-import { RENTAL_FIT_TEXT_LIMITS } from "./rentals";
+import { RENTAL_FIT_TEXT_LIMITS, type SizedRentalKind } from "./rentals";
 
 /**
  * Sized for the largest file the switching guides actually ask an owner to
@@ -675,7 +675,8 @@ export type ImportIssueCode =
   | "no_name"
   | "merged_duplicate"
   | "no_email_new_record"
-  | "size_too_long";
+  | "size_too_long"
+  | "shoe_size_collapsed";
 
 /**
  * The data a translated message needs to fill in its placeholders. Which
@@ -1037,6 +1038,23 @@ export type PreparedRow = {
     bootSize: string | null;
     finSize: string | null;
   };
+  /**
+   * Sizes the file carried that no size box could hold, kept so the value
+   * survives the confirm.
+   *
+   * Declining rather than truncating is right — a cut-off size is a plausible
+   * wrong size that reaches the packing list verbatim — but the argument for it
+   * rested on "the full cell is on the report", and the report is transient: a
+   * shop importing four hundred rows will not catch twelve warnings in the
+   * preview, and once they tap through DiveDay held nothing at all (issue
+   * #1801). `commitContactImport` files each of these as a staff note.
+   *
+   * Bounded by {@link echoedCell} like the warning beside it. Any real size is
+   * under that bound and survives whole; what it stops is a 2,000-character
+   * cell becoming a line on the boat manifest, which is where a staff note is
+   * read.
+   */
+  declinedSizes: { kind: SizedRentalKind; value: string }[];
   waiver: PreparedWaiver | null;
   /**
    * The visit this row records at the prior shop, when it carried a readable
@@ -1434,18 +1452,30 @@ function fitSize(value: string | null): string | null {
 }
 
 /**
- * How much of a declined cell a warning quotes back. Twenty characters past the
- * size cap itself, so any value that could have been a size is shown whole and
- * anything cut is by definition too long to be one.
+ * How much of a declined cell a warning quotes back.
  *
  * The bound exists because the echo was the *cell*, capped only by
  * `MAX_IMPORT_CELL_LENGTH`: four size columns over sixty previewed rows is a
  * quarter of a megabyte of warning text in one table column
- * (`security-reviewer`, issue #1754). Nothing is lost that anyone needed — the
+ * (`security-reviewer`, issue #1754). Nothing is lost that anyone needed: the
  * head of the value is what identifies the row, and the staffer running the
  * import has the file itself open.
+ *
+ * **No longer derived from `RENTAL_FIT_TEXT_LIMITS.size`** (issue #1808). It
+ * was `size + 20`, and that arithmetic is an argument about sizes — twenty past
+ * the cap means anything cut is by definition too long to have been one. It now
+ * bounds four date warnings as well, and a date has no such cap, so a derived
+ * constant would have moved every date echo whenever somebody changed an
+ * unrelated rental-size limit.
+ *
+ * Sixty keeps both arguments standing. It is comfortably past the size cap, so
+ * a declined size is still shown whole, and comfortably past any real date, so
+ * a cell cut here was never a date either. `import.test.ts` pins the first half
+ * behaviourally — a cell one character over the size cap echoes without an
+ * ellipsis — so a size cap raised past this number goes red rather than quietly
+ * truncating the values this was written to show whole.
  */
-const MAX_ECHOED_CELL_LENGTH = RENTAL_FIT_TEXT_LIMITS.size + 20;
+const MAX_ECHOED_CELL_LENGTH = 60;
 
 /** A declined cell quoted back to the staffer, bounded for display. */
 function echoedCell(value: string): string {
@@ -1789,10 +1819,14 @@ export function prepareContactImport(text: string): PreparedImport {
     // size raises a `warning` naming its column and quoting the head of the
     // cell: the staffer running the import is the one person who can read it
     // and set the size by hand, and this is the moment they are looking.
-    const sizeCell = (field: ImportField) => {
+    const declinedSizes: { kind: SizedRentalKind; value: string }[] = [];
+    const sizeCell = (field: ImportField, kind: SizedRentalKind) => {
       const raw = clean(at(cells, field));
       const held = fitSize(raw);
       if (raw && !held) {
+        // Kept, not only reported. The preview is the only place this value has
+        // ever been shown, and it is gone the moment the staffer confirms.
+        declinedSizes.push({ kind, value: echoedCell(raw) });
         // The column, then as much of its value as identifies the row
         // (`echoedCell`): every sibling warning here names its field, and a
         // row with three unusable size cells otherwise reads as one sentence
@@ -1805,11 +1839,35 @@ export function prepareContactImport(text: string): PreparedImport {
       }
       return held;
     };
+    // **One shoe size, from either column.** The file may carry `boot_size` and
+    // `fin_size` separately, and DiveDay keeps one answer: the staff diver
+    // record and the readiness gear form each render a single "Fin & boot size"
+    // box and write it to both columns, so two imported values survived exactly
+    // until the next save of either form and then silently became one (issue
+    // #1802). The importer promises what the product keeps.
+    //
+    // The fin size wins where both are given, because it is the one every
+    // surface pre-fills from — and a row whose two cells disagree says so,
+    // rather than discarding an answer without a word.
+    // Read in column order, so the per-cell warnings above keep arriving in the
+    // order the file lists them.
+    const bcdCell = sizeCell("bcd_size", "bcd");
+    const wetsuitCell = sizeCell("wetsuit_size", "wetsuit");
+    const bootCell = sizeCell("boot_size", "boots");
+    const finCell = sizeCell("fin_size", "mask_fins");
+    const shoeSize = finCell ?? bootCell;
+    if (bootCell && finCell && bootCell !== finCell) {
+      issues.push({
+        level: "warning",
+        code: "shoe_size_collapsed",
+        params: { value: shoeSize ?? "" },
+      });
+    }
     const sizes = {
-      bcdSize: sizeCell("bcd_size"),
-      wetsuitSize: sizeCell("wetsuit_size"),
-      bootSize: sizeCell("boot_size"),
-      finSize: sizeCell("fin_size"),
+      bcdSize: bcdCell,
+      wetsuitSize: wetsuitCell,
+      bootSize: shoeSize,
+      finSize: shoeSize,
     };
 
     // Trusted per row (ADR 20260724-import-waiver-acceptance): a truthy
@@ -1828,7 +1886,7 @@ export function prepareContactImport(text: string): PreparedImport {
           issues.push({
             level: "warning",
             code: "waiver_date_invalid",
-            params: { value: signedAtRaw },
+            params: { value: echoedCell(signedAtRaw) },
           });
         }
       }
@@ -1857,7 +1915,7 @@ export function prepareContactImport(text: string): PreparedImport {
         issues.push({
           level: "warning",
           code: "dob_invalid",
-          params: { value: dobRaw },
+          params: { value: echoedCell(dobRaw) },
         });
       }
     }
@@ -1884,7 +1942,7 @@ export function prepareContactImport(text: string): PreparedImport {
         issues.push({
           level: "warning",
           code: "visit_date_unreadable",
-          params: { value: visitDateRaw },
+          params: { value: echoedCell(visitDateRaw) },
         });
       } else {
         const visitedOn = parsed.date;
@@ -1966,7 +2024,7 @@ export function prepareContactImport(text: string): PreparedImport {
             issues.push({
               level: "warning",
               code: "payment_history_date_unreadable",
-              params: { value: occurredOnRaw },
+              params: { value: echoedCell(occurredOnRaw) },
             });
           }
         } else {
@@ -2045,6 +2103,7 @@ export function prepareContactImport(text: string): PreparedImport {
       specialties: action === "skip" ? [] : specialties,
       nitrox: action === "skip" ? null : nitrox,
       sizes,
+      declinedSizes: action === "skip" ? [] : declinedSizes,
       waiver: action === "skip" ? null : waiver,
       visit: action === "skip" ? null : visit,
       paymentHistory: action === "skip" ? null : paymentHistory,

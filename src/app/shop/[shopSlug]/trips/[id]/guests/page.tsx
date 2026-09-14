@@ -429,6 +429,7 @@ async function TripGuestsBody({
           confirmEmail={confirmEmail}
           confirmPhone={confirmPhone}
           confirmMatches={confirmMatches}
+          shopRentalItems={shop.rentalItems}
         />
       )}
 

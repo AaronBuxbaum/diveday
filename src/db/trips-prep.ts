@@ -115,7 +115,10 @@ export async function getTripPrep(
 
   const assignmentRows = divers
     .map((diver) => {
-      const line = rentalFitLine(diver.fit);
+      // The shop's own catalog, the same one the checklist above reads: a kind
+      // the shop dropped must not send the picker hunting for a unit nobody is
+      // handing over (`rentalFitLine`, src/lib/dive-prep.ts).
+      const line = rentalFitLine(diver.fit, shop.rentalItems);
       const assigned = assignmentsByBooking.get(diver.bookingId) ?? [];
       // Weights stay off: lead is bulk stock, never a tagged unit to be short
       // of (glossary, "Needs staff fit"). Kinds the fleet doesn't track at all
@@ -124,6 +127,16 @@ export async function getTripPrep(
       const wanted =
         line.state === "rents"
           ? line.items
+              // A piece the catalog no longer offers still gets a picker.
+              // Filtering it out was the obvious reading of issue #1804 and
+              // the wrong one (`dive-domain-expert`, 2026-09-13):
+              // `assignGearUnit` is the only door that creates a
+              // booking-held reservation, so a shop that unticks drysuits
+              // while six in-service suits hang on its wall could no longer
+              // reserve one at all — the suit goes out on paper and the
+              // register says "On the wall" while it is in a diver's car,
+              // which breaks overdue and never-picked-up. The `notOffered`
+              // marker on the line is the signal; closing the door is not.
               .flatMap(gearAssignmentNeeds)
               .filter(
                 (item) =>

@@ -70,6 +70,7 @@ const checks = [
   ["soft-delete", "check-soft-delete.mjs"],
   ["shop-word", "check-shop-word.mjs"],
   ["capability-runbook", "check-capability-runbook.mjs"],
+  ["rental-fit-caps", "check-rental-fit-caps.mjs"],
   ["icu-plurals", "check-icu-plurals.mjs"],
   ["live-trips", "check-live-trips.mjs"],
   ["trip-revision", "check-trip-revision.mjs"],

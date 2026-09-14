@@ -41,7 +41,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { listRollCallGaps } from "./today";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 
 vi.mock("@/lib/log", () => ({ log: vi.fn() }));
@@ -2721,5 +2721,115 @@ describe("the manifest and Today agree about who is still in the water (DOM-H3)"
       expect(manifest?.summary.notBackAboard).toBe(0);
       expect(isRollCallAccountedFor(checkpoint, diver?.rollCall)).toBe(true);
     }
+  });
+});
+
+/**
+ * **A crew member printed aboard two hulls** (issue #1779).
+ *
+ * The state is real and reachable: `moveTrip` slides a departure's window
+ * without reading `trip_assignments`, the About form writes the times with no
+ * crew read at all, and reinstating a called-off departure brings back a roster
+ * that was re-crewed while it was cancelled. Since #1695 the clash is named on
+ * the Crew panel and in the staffing week; the manifest was the last reader
+ * still silent, and it is where the consequence lands. Boat B sails with a
+ * sheet naming somebody who is on boat A, B's crew roll call reads them as
+ * unaccounted for, the row gives no reason, and B's crew spend the one minute
+ * that matters looking for a person who was never coming.
+ */
+describe("the manifest names a crew member rostered on two overlapping boats", () => {
+  /** A second departure, on `reef`'s own hours, with the same person aboard. */
+  async function twinDeparture(
+    db: Awaited<ReturnType<typeof manifestContext>>["db"],
+    shopId: string,
+    reef: { startsAt: Date; endsAt: Date },
+    personId: string,
+    title: string,
+    shift = 0,
+  ) {
+    const trip = await createTrip(db, {
+      shopId,
+      title,
+      startsAt: new Date(reef.startsAt.getTime() + shift),
+      endsAt: new Date(reef.endsAt.getTime() + shift),
+      capacity: 6,
+    });
+    if (!trip) throw new Error(`${title} not created`);
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: trip.id, personId, tripRole: "divemaster" })
+      .onConflictDoNothing();
+    return trip;
+  }
+
+  /** The dock copy, serialized exactly as `saveOfflineManifest` does. */
+  function dockCopy(
+    manifest: NonNullable<Awaited<ReturnType<typeof getTripManifest>>>,
+    shop: Parameters<typeof serializeManifests>[1],
+  ) {
+    return serializeManifests([manifest], shop, (blocker) => blocker.code).manifests[0];
+  }
+
+  it("names the other departure on that person's row", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id, tripRole: "divemaster" })
+      .onConflictDoNothing();
+    await twinDeparture(db, shop.id, reef, staff.id, "The other boat, same hours");
+
+    const manifest = await getTripManifest(db, shop.id, reef.id);
+    const member = manifest?.crew.find((crew) => crew.id === staff.id);
+    expect(member?.clashes).toEqual([
+      { tripId: expect.any(String), title: "The other boat, same hours" },
+    ]);
+  });
+
+  it("says nothing about the ordinary double shift", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id, tripRole: "divemaster" })
+      .onConflictDoNothing();
+    // Four hours after this one ties up. A morning two-tank and an afternoon
+    // single is how a shop runs a Saturday, and calling that a clash is the
+    // saturation failure issues #757 and #1203 paid for once.
+    const day = reef.endsAt.getTime() - reef.startsAt.getTime();
+    await twinDeparture(db, shop.id, reef, staff.id, "The afternoon single", day + 4 * 60 * 60_000);
+
+    const manifest = await getTripManifest(db, shop.id, reef.id);
+    const member = manifest?.crew.find((crew) => crew.id === staff.id);
+    expect(member?.clashes ?? []).toEqual([]);
+  });
+
+  it("carries it onto the dock copy, where nobody can ring the office", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id, tripRole: "divemaster" })
+      .onConflictDoNothing();
+    await twinDeparture(db, shop.id, reef, staff.id, "The other boat, same hours");
+
+    const manifest = await getTripManifest(db, shop.id, reef.id);
+    if (!manifest) throw new Error("manifest missing");
+    const snapshot = dockCopy(manifest, shop);
+    const member = snapshot?.crew.find((crew) => crew.fullName === staff.fullName);
+    expect(member?.clashDepartures).toEqual(["The other boat, same hours"]);
+  });
+
+  it("leaves the ordinary crew member's row untouched", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id, tripRole: "divemaster" })
+      .onConflictDoNothing();
+
+    const manifest = await getTripManifest(db, shop.id, reef.id);
+    if (!manifest) throw new Error("manifest missing");
+    const snapshot = dockCopy(manifest, shop);
+    const member = snapshot?.crew.find((crew) => crew.fullName === staff.fullName);
+    // Absent, not empty: a snapshot of a departure with nothing to say
+    // serializes to exactly what it did before.
+    expect(member && "clashDepartures" in member).toBe(false);
   });
 });

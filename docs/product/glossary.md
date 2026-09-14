@@ -746,6 +746,18 @@ new domain concept, define it here in the same PR.
   redirect with a `?notice=` whose form re-opens About, so the read speaks on the next paint. A
   clash already **home** is reported nowhere: it is permanent, unfixable and true, which is the
   shape of a warning a shop learns to scroll past.
+  **The boat manifest reads it too, and it is the loudest of the five** (issue #1779): a crew member
+  on two overlapping departures prints aboard both, and the sheet said nothing — so the second boat's
+  deck met a crew member missing at the count with no reason, and souls-on-board named a body that
+  was on the other hull. The crew row now says which other departure, and the printed souls-on-board
+  line carries how many of the named crew another boat claims, because a qualification forty lines
+  below a number does not reach somebody reading that number over the radio. It is **bounded to the
+  departure checkpoint and to a crew member nobody has tapped yet**: a roll-call result on this boat
+  is the authority and supersedes it, and after a dive the same sentence would be a pre-written
+  excuse for a body that is unaccounted for, which is what stops a search (dive-domain-expert review
+  2026-09-13). The dock copy carries it for the same reason it carries everything else — the rail is
+  where there is no signal to ring the office with. Still information: nothing gates, and the sheet
+  always prints.
 - **Crew gap** — a scheduled trip with nobody rostered on it, or a course session `courseCrewGap`
   reports as instructorless or booked past its ratio. It is a prompt for staff, not a boarding
   authorization by itself. **Today owns it**: Today names it (`instructor_missing`) and its
@@ -1717,8 +1729,9 @@ new domain concept, define it here in the same PR.
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive
   computer**, and a **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). The dive computer is default-on
-  for every diver **and** part of the priced core set (H-06, reconfirmed 2026-08-02 — HD-9); the
-  **GoPro** is the one off-by-default add-on, always priced separately. A diver who skips a core
+  for every diver **and** part of the priced core set (H-06, reconfirmed 2026-08-02 — HD-9). Four
+  add-ons are off by default and priced separately: the **GoPro**, the **drysuit**, **hood &
+  gloves**, a **dive light** and an **SMB** (`RENTABLE_ITEMS`, `src/lib/rentals.ts`). A diver who skips a core
   piece (brings their own dive computer, say) is quoted whichever is cheaper — the set price or the
   sum of the pieces they actually take — so skipping one never costs more than the full set would
   have (`quoteRentalFit`, `src/lib/rentals.ts`).
@@ -1731,9 +1744,15 @@ new domain concept, define it here in the same PR.
   that hasn't ticked it never shows the nitrox request, its price field, or the packing list's
   nitrox tank count and blockers. Editing the catalog changes what is offered going forward; it
   does not rewrite a fit a diver already recorded, and **what the read side then does with a
-  stored flag the catalog contradicts is the other half of that promise.** The piece *stays* on
-  the trip prep list, marked as something the shop no longer rents: dropping it silently would
-  hide a fit nobody can fill, which is the same failure the writer refuses one layer up. What
+  stored flag the catalog contradicts is the other half of that promise.** The piece *stays*,
+  marked as something the shop no longer rents: dropping it silently would
+  hide a fit nobody can fill, which is the same failure the writer refuses one layer up. It is
+  marked on every surface that reads the fit, not only the trip prep list — the roll call, the
+  offline manifest snapshot, the seat-a-diver list and the diver record's own fit summary all say
+  it now (issue #1804), because two surfaces describing one departure differently is worse than
+  either sentence. The offline snapshot freezes that fact with everything else it holds, so a shop
+  that re-adds the piece after a snapshot is taken carries the old mark onto the boat until the
+  next one. What
   comes off is everything that piece was making *other* lines say. So a diver whose shop stopped
   renting drysuits gets their stated weighting back on the weights line, ordinary fin sizing, and
   no drysuit-card advisory — none of those three is about the suit itself; each is a claim about
@@ -1765,7 +1784,8 @@ new domain concept, define it here in the same PR.
   the shop rather than quoted at zero. A shop that prices nothing keeps the "ask the shop what's
   included" behaviour.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
-  and in *what size* (BCD, wetsuit, drysuit, boot, fin, usual weighting, plus the dive-computer/GoPro add-ons).
+  and in *what size* (BCD, wetsuit, drysuit, boot, fin, usual weighting, plus the dive-computer,
+  GoPro, hood-and-gloves, dive-light and SMB add-ons).
   The **drysuit** is the one add-on that carries a size, and it is sized on its own scale — the
   manufacturer grid a rental wall is racked from (a girth letter, a trailing `T` for the tall cut),
   which shares the wetsuit's girth letters but carries a second axis the wetsuit scale has no room
@@ -1858,8 +1878,11 @@ new domain concept, define it here in the same PR.
 - **Complete rental fit** — a fit is complete when *every piece the diver takes from the shop* has
   the size it needs, not merely when a record exists: a diver who ticks BCD, wetsuit and weights and
   supplies only a shoe size has an **incomplete** fit, with three loose ends. One shoe size answers
-  for both boots and fins. The one-size pieces (regulator, dive computer, GoPro) have no size to be
-  missing. "Not recorded" (nobody asked) and "incomplete" (asked, half blank) stay distinct.
+  for both boots and fins. The **sized** pieces are BCD, wetsuit, boots, mask & fins, weights and
+  drysuit (`SIZED_RENTAL_KINDS`, `src/lib/rentals.ts`); every other piece has no size column, so it
+  has no size to be missing. Named that way round on purpose: the unsized list was kept by hand as
+  three, drifted to six without anybody noticing, and a diver renting a dive light read "Not
+  recorded" — a gap nobody could fill (#1805). "Not recorded" (nobody asked) and "incomplete" (asked, half blank) stay distinct.
   Completeness is a prompt for staff, never a gate: it refuses nobody a seat and blocks nobody from
   boarding.
 - **Needs staff fit** — the safe fallback when the shop can't fill a size a diver asked for (H-06):
@@ -1868,8 +1891,7 @@ new domain concept, define it here in the same PR.
   from, so dropping them arrives a BCD short with nothing to fit them from — but the **size** comes
   off, reading "fit at check-in", and they're named in their own "fit these divers at check-in"
   section, along with the sizes they asked for — the captain doing the fit can't edit the profile
-  and needs somewhere to start. Unsized pieces (regulator, dive computer, GoPro) are untouched by
-  the flag; so are weights (lead is bulk stock, never a size to be short of, and usual weighting is
+  and needs somewhere to start. Pieces with no size column are untouched by the flag; so are weights (lead is bulk stock, never a size to be short of, and usual weighting is
   the fit's most safety-relevant number) and tanks, since gas is never sized. Distinct from both "own kit" and "not asked yet" on
   a roster/manifest line, and sticky: editing sizes never clears it, only an explicit resolve does.
   See [20260724-gear-fit-fallback](../architecture/decisions/20260724-gear-fit-fallback.md).
@@ -1894,8 +1916,8 @@ new domain concept, define it here in the same PR.
   number the packer sizes up from, and the line says the pair has to clear the boot.
   **Both of those hold only while the shop actually rents drysuits.** A piece the shop has since
   dropped from its **rental catalog** is the one line here that carries a reason rather than only
-  a size: it stays on the list, says the shop no longer rents it, and stops changing any other
-  line — so a diver at a shop that stopped renting suits is packed lead to their stated number
+  a size: it stays on the list and on every other surface that reads the fit, says the shop no
+  longer rents it, and stops changing any other line — so a diver at a shop that stopped renting suits is packed lead to their stated number
   and fins to their stated size, like anyone else. Rules in `src/lib/dive-prep.ts`.
 - **Diver profile** — the shop's person-first operational record. A diver profile gathers contact
   details, certification evidence, rental fit, and bookings; cards are not managed as an unrelated

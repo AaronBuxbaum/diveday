@@ -20,7 +20,11 @@ import { STAFF_MESSAGES } from "./staff-messages";
  * departure's Crew panel and the staffing week — and this file still covered
  * only the first. It covers all three now (dive-domain-expert review,
  * 2026-09-12): the class of failure it exists to catch is a tone that moves
- * without its words, and a new surface is exactly where that happens.
+ * without its words, and a new surface is exactly where that happens. Issue
+ * #1779 then added the fifth and loudest, the boat manifest, and it arrived
+ * hedging the one certain half of the fact — caught by the review that asked
+ * for this line rather than by this guard, which is why the guard now names it
+ * too.
  *
  * A reader told only that two things happen at once has been told to reconcile
  * them.
@@ -78,6 +82,20 @@ describe("crew-clash copy, on every surface that says it", () => {
       const sentence = STAFF_MESSAGES[locale].trips.crew.assignClash;
 
       expect(sentence, locale).toContain("{name}");
+      expect(sentence, locale).toMatch(CANNOT[locale]);
+    });
+
+    /**
+     * The boat manifest, which is the document the coastguard's copy is made
+     * from (issue #1779). It prints on the crew member's own row at the
+     * departure checkpoint, so it names no name — and unlike every surface
+     * above it ends in an instruction, because the reader is a captain about to
+     * sail rather than a manager rearranging a week.
+     */
+    it(`names the impossibility on the boat manifest in ${locale}`, () => {
+      const sentence = STAFF_MESSAGES[locale].manifest.crewClashDetail;
+
+      expect(sentence, locale).toContain("{departures}");
       expect(sentence, locale).toMatch(CANNOT[locale]);
     });
 

@@ -766,3 +766,42 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   // a deleted booking, and the crew reading this boat gets both facts.
   await expect(page.getByRole("heading", { name: "Not here — 1" })).toBeVisible();
 });
+
+/**
+ * **The counter's half of the same act** (issue #1765, in the browser for
+ * #1787).
+ *
+ * This is the surface the bug was on: the grouped number was printed in one
+ * place and not found in another, thirty lines apart, with both halves
+ * individually correct. The number is read off the diver's record and pasted
+ * here, exactly as a staffer would — a literal would pass while the printer and
+ * the matcher drifted apart again.
+ */
+test("a phone number read off a diver's record finds their seat at the counter", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
+  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+  const header = page.locator("header").filter({ visible: true }).last();
+  const printed = (
+    await header.locator('a[href^="tel:"]').filter({ visible: true }).first().innerText()
+  ).trim();
+  expect(printed).toMatch(/\s/);
+
+  await page.goto("/shop/blue-mantis/check-in");
+  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
+  await search.fill(printed);
+  await search.press("Enter");
+
+  // In the queue, on the departure she holds a seat on…
+  const queue = page.getByRole("region", { name: "Check-in queue" });
+  await expect(queue.getByText("Priya Sharma").first()).toBeVisible();
+  // …and not offered a seat she already has. "Known divers" is the people in
+  // the shop record who are *not* booked on today's departures, and a diver
+  // found there beside a seat button is the same failure wearing the other
+  // face: the search matched the person and missed their booking.
+  const known = page.getByRole("region", { name: "Known divers" });
+  await expect(known.getByText("Priya Sharma")).toHaveCount(0);
+});

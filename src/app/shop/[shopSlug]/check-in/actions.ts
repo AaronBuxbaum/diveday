@@ -16,6 +16,28 @@ import { uuidParam } from "@/lib/uuid";
 import { counterQueuePath } from "./focus";
 
 /**
+ * **The search the staffer found this diver by, as a `noticeUrl` extra.**
+ *
+ * Every refusal on this surface navigates — they have no row state to land on,
+ * since `checkInBooking`'s `not_ready` leaves the row exactly as it was — and
+ * every one of them is a diver standing at the desk, which is the case the
+ * search was open for. Landing back with an empty box put the row that was
+ * under the finger off the screen (issue #1803).
+ *
+ * **It goes on the redirect and never on the path.** The same string,
+ * `counterQueuePath(shopSlug, focusTripId)`, is also the `revalidatePath`
+ * argument, and a search string does not belong in a cache key. `noticeUrl`
+ * percent-encodes its extras, so nothing here is concatenated by hand.
+ *
+ * `undefined` rather than `""` for an empty search: `noticeUrl` drops an
+ * undefined extra instead of writing an empty param, so a staffer who searched
+ * nothing lands on the URL they would have had before.
+ */
+function foundBy(query: string | null): { q?: string } {
+  return { q: query?.trim() || undefined };
+}
+
+/**
  * **Every refusal lands back on the boat the staffer was working.**
  *
  * The counter is one instrument pointed at one departure (ADR
@@ -39,12 +61,15 @@ import { counterQueuePath } from "./focus";
 export async function checkInAction(
   shopSlug: string,
   focusTripId: string | null,
+  /** The queue's live search, bound by the page — see `found` below. */
+  query: string | null,
   formData: FormData,
 ): Promise<{ ok: true }> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, focusTripId);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+  const found = foundBy(query);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid", found));
 
   const outcome = await checkInBooking(await getDb(), {
     shopId: session.user.shopId,
@@ -73,13 +98,13 @@ export async function checkInAction(
   // `not_ready` carries the diver's booking/trip so the notice can link
   // straight to their guest row instead of just naming the problem.
   if (outcome.reason === "not_ready" && outcome.tripId) {
-    redirect(noticeUrl(back, "not-ready", { bid: bookingId, tid: outcome.tripId }));
+    redirect(noticeUrl(back, "not-ready", { bid: bookingId, tid: outcome.tripId, ...found }));
   }
   // `outcome.reason` is a domain code in the domain's own casing; `noticeUrl`
   // encodes it and normalises it to the one spelling the queue's notice map
   // holds. Interpolating it raw was how a value carrying `&` or `#` could
   // append query params of its own.
-  redirect(noticeUrl(back, outcome.reason));
+  redirect(noticeUrl(back, outcome.reason, found));
 }
 
 /**
@@ -91,12 +116,15 @@ export async function checkInAction(
 export async function undoCheckInAction(
   shopSlug: string,
   focusTripId: string | null,
+  /** The queue's live search, bound by the page — see `found` below. */
+  query: string | null,
   formData: FormData,
 ): Promise<{ ok: true }> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, focusTripId);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+  const found = foundBy(query);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid", found));
 
   const outcome = await undoCheckInBooking(await getDb(), {
     shopId: session.user.shopId,
@@ -111,7 +139,9 @@ export async function undoCheckInAction(
     return { ok: true };
   }
   revalidatePath(back);
-  redirect(noticeUrl(back, outcome.reason === "not_checked_in" ? "not-bookable" : outcome.reason));
+  redirect(
+    noticeUrl(back, outcome.reason === "not_checked_in" ? "not-bookable" : outcome.reason, found),
+  );
 }
 
 /**
@@ -132,12 +162,15 @@ export async function undoCheckInAction(
 export async function markNoShowAction(
   shopSlug: string,
   focusTripId: string | null,
+  /** The queue's live search, bound by the page — see `found` below. */
+  query: string | null,
   formData: FormData,
 ): Promise<void> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, focusTripId);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+  const found = foundBy(query);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid", found));
 
   const outcome = await markBookingNoShow(await getDb(), {
     shopId: session.user.shopId,
@@ -152,7 +185,7 @@ export async function markNoShowAction(
     revalidatePath(back);
     return;
   }
-  revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
+  revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`, found));
 }
 
 /**
@@ -167,12 +200,15 @@ export async function markNoShowAction(
 export async function undoNoShowAction(
   shopSlug: string,
   focusTripId: string | null,
+  /** The queue's live search, bound by the page — see `found` below. */
+  query: string | null,
   formData: FormData,
 ): Promise<void> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, focusTripId);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+  const found = foundBy(query);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid", found));
 
   const outcome = await undoBookingNoShow(await getDb(), {
     shopId: session.user.shopId,
@@ -183,7 +219,7 @@ export async function undoNoShowAction(
     revalidatePath(back);
     return;
   }
-  revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
+  revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`, found));
 }
 
 /**
@@ -296,7 +332,8 @@ export async function confirmIdentityFromCheckIn(
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, focusTripId);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+  const found = foundBy(query);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid", found));
 
   const confirmed = await confirmBookingIdentity(await getDb(), {
     shopId: session.user.shopId,
@@ -310,8 +347,5 @@ export async function confirmIdentityFromCheckIn(
     revalidatePath(back);
     return;
   }
-  revalidateAndRedirect(
-    back,
-    noticeUrl(back, "identity-not-held", { q: query?.trim() || undefined }),
-  );
+  revalidateAndRedirect(back, noticeUrl(back, "identity-not-held", found));
 }

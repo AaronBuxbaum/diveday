@@ -5,6 +5,7 @@ import {
   compareValues,
   DELIBERATELY_IDENTICAL,
   locateKey,
+  nothingToTranslate,
 } from "./check-locale.mjs";
 
 /**
@@ -176,5 +177,62 @@ describe("the declared list", () => {
     const declared = [...DELIBERATELY_IDENTICAL.keys()].join("\n");
     expect(declared).toContain("course.certificationLevels.openWater");
     expect(declared).not.toContain("certificationLevels.rescue");
+  });
+});
+
+/**
+ * The one structural exemption (issue #1797), which is the judgement in this
+ * guard that could quietly become a blanket one. It has to clear a value with
+ * no word in it and hold on to every value that has one — including the two
+ * shapes that look like templates and are not: a unit beside a placeholder, and
+ * a plural whose branches are English prose.
+ */
+describe("a value with nothing in it to translate", () => {
+  it.each([
+    "{date} · {trip}",
+    "{tripTitle}",
+    "“{words}”",
+    "{count, number}",
+    "{from} – {until}",
+    "#",
+    "—",
+    "…",
+    "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
+  ])("clears %j", (value) => {
+    expect(nothingToTranslate(value)).toBe(true);
+  });
+
+  it.each([
+    // A unit or a word beside a placeholder is still a word.
+    "{value} ft",
+    "Re: {subject}",
+    "{agency} · Nitrox",
+    "Stripe: {id}",
+    // Plain prose, with no template about it at all.
+    "Walk-in",
+    // The shape that would make this exemption dangerous: the branches of a
+    // plural are real sentences, and they sit inside braces.
+    "{count, plural, one {# diver is waiting} other {# divers are waiting}}",
+    // And the same trap one level down, where the sub-message is the only
+    // English left.
+    "{count, plural, other {# aboard}}",
+  ])("keeps %j in the count", (value) => {
+    expect(nothingToTranslate(value)).toBe(false);
+  });
+
+  it("keeps the words between rich-text tags, dropping only the tag names", () => {
+    expect(nothingToTranslate("<b>Sold out</b>")).toBe(false);
+  });
+
+  /**
+   * The reason this reads the gaps between the markup instead of deleting the
+   * markup and reading what is left (CodeQL alert 47 on PR #1809). Stripping
+   * `<diver>` out of `<<diver>diver>` reassembles a tag that was never there
+   * and answers "nothing to translate" about a value full of letters. Nothing
+   * here was ever sanitizing anything, but the mistake is one line away, and
+   * this is the line that would have made it.
+   */
+  it("does not let a nested tag reassemble into one it would have dropped", () => {
+    expect(nothingToTranslate("<<diver>diver>")).toBe(false);
   });
 });

@@ -66,6 +66,15 @@ export async function seedCertGates(
     courseRows: (typeof courses.$inferSelect)[];
     instructorId: string;
     captainId: string | undefined;
+    /**
+     * Who has the wheel on the two-day Advanced Open Water course. Its second
+     * leg runs 08:00–16:00 local on the same day as
+     * `Two-Tank Reef — French Reef & Molasses`, so rostering the shop's one
+     * captain on both put him on two hulls at once — refused by `setTripCrew`,
+     * and reported by the standing-clash marker on the demo board (issue
+     * #1781). The charter keeps its usual crew; the course gets the owner.
+     */
+    ownerId: string;
     divemasterId: string | undefined;
     waiverTemplate: {
       id: string;
@@ -76,7 +85,7 @@ export async function seedCertGates(
     };
   },
 ): Promise<void> {
-  const { customers, siteByName, courseRows, instructorId, captainId, divemasterId } = ctx;
+  const { customers, siteByName, courseRows, instructorId, captainId, divemasterId, ownerId } = ctx;
 
   // The two departures that carry a *site's* own gate need the Duane to exist;
   // the rest name their site by the same string `siteByName` is keyed on.
@@ -293,9 +302,11 @@ export async function seedCertGates(
       if (trip.courseId) {
         return [
           { tripId: trip.id, personId: instructorId, tripRole: "instructor" as TripAssignmentRole },
-          ...(captainId
-            ? [{ tripId: trip.id, personId: captainId, tripRole: "captain" as TripAssignmentRole }]
-            : []),
+          // The owner, not the captain — see `ownerId` above. A course session
+          // still has somebody driving it, which is the thing the seeded
+          // roster is careful about (`seed-trips.ts`: "a boat with nobody
+          // driving it").
+          { tripId: trip.id, personId: ownerId, tripRole: "captain" as TripAssignmentRole },
         ];
       }
       return [

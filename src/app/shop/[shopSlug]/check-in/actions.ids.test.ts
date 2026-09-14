@@ -75,25 +75,39 @@ function bookingForm(bookingId: string): FormData {
 }
 
 describe("a malformed booking id at the counter", () => {
+  // Every one of these takes the queue's search as its third bound argument
+  // and carries it back on the refusal (issue #1803; #1696 for the identity
+  // door, which was first). A malformed id is refused before the search
+  // matters, so the table stands in with none.
   it.each([
     ["checking a diver in", checkInAction],
     ["undoing a check-in", undoCheckInAction],
     ["marking a diver not here", markNoShowAction],
     ["undoing that mark", undoNoShowAction],
-    // The one door with a fourth bound argument — the queue's search, which
-    // its refusal carries back (issue #1696). A malformed id is refused before
-    // that matters, so it stands in with no search at all.
-    [
-      "confirming a held seat's identity",
-      (shopSlug: string, focusTripId: string | null, formData: FormData) =>
-        confirmIdentityFromCheckIn(shopSlug, focusTripId, null, formData),
-    ],
+    ["confirming a held seat's identity", confirmIdentityFromCheckIn],
   ])("settles %s back on the focused departure instead of erroring", async (_label, action) => {
     signIn();
 
-    const to = await redirectedTo(() => action(SHOP_SLUG, FOCUS_TRIP_ID, bookingForm(NOT_A_UUID)));
+    const to = await redirectedTo(() =>
+      action(SHOP_SLUG, FOCUS_TRIP_ID, null, bookingForm(NOT_A_UUID)),
+    );
 
     expect(to).toBe(noticeUrl(counterQueuePath(SHOP_SLUG, FOCUS_TRIP_ID), "invalid"));
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  it("keeps the search on a malformed id, so the row stays under the finger", async () => {
+    signIn();
+
+    const to = await redirectedTo(() =>
+      checkInAction(SHOP_SLUG, FOCUS_TRIP_ID, "Zoe & co", bookingForm(NOT_A_UUID)),
+    );
+
+    // Percent-encoded by `noticeUrl`, never concatenated here — an `&` in a
+    // search would otherwise append a query param of its own.
+    expect(to).toBe(
+      noticeUrl(counterQueuePath(SHOP_SLUG, FOCUS_TRIP_ID), "invalid", { q: "Zoe & co" }),
+    );
     expect(getDb).not.toHaveBeenCalled();
   });
 
@@ -121,7 +135,7 @@ describe("a malformed booking id at the counter", () => {
   it("refuses a form with no booking id at all", async () => {
     signIn();
 
-    const to = await redirectedTo(() => checkInAction(SHOP_SLUG, null, new FormData()));
+    const to = await redirectedTo(() => checkInAction(SHOP_SLUG, null, null, new FormData()));
 
     expect(to).toBe(noticeUrl(counterQueuePath(SHOP_SLUG, null), "invalid"));
     expect(getDb).not.toHaveBeenCalled();

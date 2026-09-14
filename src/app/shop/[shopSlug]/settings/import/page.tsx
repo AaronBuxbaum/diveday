@@ -114,6 +114,7 @@ function importWizardCopy(t: StaffTranslator) {
     merged_duplicate: t.raw("settings.import.issues.mergedDuplicate"),
     no_email_new_record: t("settings.import.issues.noEmailNewRecord"),
     size_too_long: t.raw("settings.import.issues.sizeTooLong"),
+    shoe_size_collapsed: t.raw("settings.import.issues.shoeSizeCollapsed"),
   };
 
   const errors: Record<ImportActionErrorCode, string> = {
@@ -218,6 +219,8 @@ function importWizardCopy(t: StaffTranslator) {
       receiptDocumentsFailedNote: t.raw("settings.import.wizard.result.receiptDocumentsFailedNote"),
       notesLineOne: t.raw("settings.import.wizard.result.notesLineOne"),
       notesLineOther: t.raw("settings.import.wizard.result.notesLineOther"),
+      sizesDeclinedLineOne: t.raw("settings.import.wizard.result.sizesDeclinedLineOne"),
+      sizesDeclinedLineOther: t.raw("settings.import.wizard.result.sizesDeclinedLineOther"),
       seeRoster: t("settings.import.wizard.result.seeRoster"),
     },
   };

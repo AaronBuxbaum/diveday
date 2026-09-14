@@ -401,11 +401,11 @@ export default async function CheckInPage({
     )
       ? waiverNotice
       : undefined;
-  const checkIn = checkInAction.bind(null, shopSlug, focusedTripId);
-  const undo = undoCheckInAction.bind(null, shopSlug, focusedTripId);
+  const checkIn = checkInAction.bind(null, shopSlug, focusedTripId, query);
+  const undo = undoCheckInAction.bind(null, shopSlug, focusedTripId, query);
   const recordPaperWaiver = markWaiverInPersonFromCheckIn.bind(null, shopSlug, focusedTripId);
-  const markNoShow = markNoShowAction.bind(null, shopSlug, focusedTripId);
-  const undoNoShow = undoNoShowAction.bind(null, shopSlug, focusedTripId);
+  const markNoShow = markNoShowAction.bind(null, shopSlug, focusedTripId, query);
+  const undoNoShow = undoNoShowAction.bind(null, shopSlug, focusedTripId, query);
   // The search is bound too, and only this action takes it: its refusal lands
   // the staffer back on a queue they very often reached by typing a name, so it
   // carries the `?q=` along. The surface's other refusals still drop theirs

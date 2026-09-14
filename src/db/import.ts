@@ -32,6 +32,9 @@
  */
 
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { rentalItemLabel } from "@/i18n/rental-labels";
+import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { canImportShopData, type Role } from "@/lib/authz";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -98,6 +101,13 @@ export type ImportSummary = {
   paymentHistorySkippedExisting: number;
   /** Internal / staff / diver notes imported onto diver profiles. */
   notesAdded: number;
+  /**
+   * Sizes the file carried that no size box could hold, filed as staff notes
+   * instead (issue #1801). Counted on the result screen because the per-row
+   * warnings live in the preview, and a shop importing four hundred rows will
+   * not catch twelve of them there.
+   */
+  sizesDeclined: number;
   rowsSkipped: number;
 };
 
@@ -251,12 +261,22 @@ export async function commitContactImport(
     paymentHistoryAdded: 0,
     paymentHistorySkippedExisting: 0,
     notesAdded: 0,
+    sizesDeclined: 0,
     rowsSkipped: prepared.rows.length - preparedRows.length,
   };
   if (preparedRows.length === 0) return summary;
 
   const [shop] = await db
-    .select({ currency: shops.currency, country: shops.addressCountry })
+    .select({
+      currency: shops.currency,
+      country: shops.addressCountry,
+      // The shop's own language. `commitContactImport` takes no locale — it is
+      // not a request — and the one line it composes itself (a declined size,
+      // issue #1801) lands in a note a staffer reads later, so the shop's
+      // default is the only honest answer. Same reading `push-subscriptions.ts`
+      // takes for a message with no reader in front of it.
+      defaultLocale: shops.defaultLocale,
+    })
     .from(shops)
     .where(eq(shops.id, shopId))
     .limit(1);
@@ -264,6 +284,7 @@ export async function commitContactImport(
     await resolveImportDocuments(preparedRows);
   summary.waiverDocumentsFailed = waiverDocumentsFailed;
   summary.receiptDocumentsFailed = receiptDocumentsFailed;
+  const t = staffTranslator(shop?.defaultLocale ?? DEFAULT_DIVER_LOCALE);
   const now = nowDate();
 
   return db.transaction(async (tx) => {
@@ -382,6 +403,7 @@ export async function commitContactImport(
           template,
           importedByPersonId,
           shopCurrency: shop?.currency ?? "usd",
+          t,
         });
         continue;
       }
@@ -478,6 +500,7 @@ export async function commitContactImport(
         template,
         importedByPersonId,
         shopCurrency: shop?.currency ?? "usd",
+        t,
       });
     }
 
@@ -514,9 +537,12 @@ async function writeEvidence(
     template: Awaited<ReturnType<typeof getCurrentWaiverTemplate>> | null;
     importedByPersonId: string;
     shopCurrency: string;
+    /** The shop's own language, for the one line this writer composes itself. */
+    t: StaffTranslator;
   },
 ): Promise<void> {
-  const { row, personId, shopId, now, summary, template, importedByPersonId, shopCurrency } = ctx;
+  const { row, personId, shopId, now, summary, template, importedByPersonId, shopCurrency, t } =
+    ctx;
 
   if (row.visit) {
     // Inert history, not an operational record (ADR 20260725-import-prior-visits):
@@ -615,14 +641,17 @@ async function writeEvidence(
       // issue #1755's rule, reached through the importer, which the
       // `security-reviewer` pass over both changes found still open here.
       //
-      // Five of the eleven `rents_*` columns are `not null default true`, so a
-      // row created here with sizes and no flags stated a fit claiming a BCD, a
-      // regulator, a wetsuit, a mask, fins and weights — for up to 20,000
-      // divers in one action, at a shop whose catalog may hold none of them,
-      // and the packing-list reader applies no catalog filter. A file carries no claim about which pieces
-      // a diver *wants*: a size column says what fits, not what they asked
-      // for, which is the same reading `registerDiverAtShop` already takes of
-      // the counter's QR form (`src/db/self-registration.ts`).
+      // Five of the eleven `rents_*` columns were `not null default true` when
+      // this landed, so a row created here with sizes and no flags stated a fit
+      // claiming a BCD, a regulator, a wetsuit, a mask, fins and weights — for
+      // up to 20,000 divers in one action, at a shop whose catalog may hold
+      // none of them, and the packing-list reader applies no catalog filter.
+      // Those defaults are `false` now (issue #1793), so this spread no longer
+      // has a default to beat. It stays because it is a *claim*: a file carries
+      // none about which pieces a diver wants — a size column says what fits,
+      // not what they asked for — and saying so out loud is the same reading
+      // `registerDiverAtShop` takes of the counter's QR form
+      // (`src/db/self-registration.ts`).
       //
       // `set:` deliberately keeps only the sizes, so a diver's real stated fit
       // is never rewritten by a re-import.
@@ -811,31 +840,67 @@ async function writeEvidence(
   }
 
   if (row.notes && row.notes.trim().length > 0) {
-    const body = row.notes.trim();
-    const existing = await tx
-      .select({ id: internalNotes.id })
-      .from(internalNotes)
-      .where(
-        and(
-          eq(internalNotes.shopId, shopId),
-          eq(internalNotes.personId, personId),
-          isNull(internalNotes.bookingId),
-          eq(internalNotes.body, body),
-        ),
-      )
-      .limit(1);
-    if (existing.length === 0) {
-      await tx.insert(internalNotes).values({
-        shopId,
-        personId,
-        bookingId: null,
-        body,
-        createdByPersonId: importedByPersonId,
-        createdAt: now,
-      });
+    if (await writeImportedNote(tx, { shopId, personId, importedByPersonId, now }, row.notes)) {
       summary.notesAdded += 1;
     }
   }
+
+  /**
+   * **A declined size becomes a staff note, not a rental-fit note.**
+   *
+   * `rental_fit_profiles.note` is the diver's own words to the crew: it is
+   * diver-visible and diver-editable on their gear form (`saveRentalFitNote`,
+   * issue 627). A prior shop's staff shorthand there is words put in the
+   * diver's mouth that the diver can then delete. `internal_notes` is the
+   * staff-side record, shared across the diver record and the live boat
+   * manifest — which is exactly where "prefers 5mm not 3mm" belongs and where
+   * somebody will meet it at the counter.
+   */
+  for (const declined of row.declinedSizes) {
+    const body = t("settings.import.declinedSizeNote", {
+      item: rentalItemLabel(t, declined.kind),
+      value: declined.value,
+    });
+    if (await writeImportedNote(tx, { shopId, personId, importedByPersonId, now }, body)) {
+      summary.sizesDeclined += 1;
+    }
+  }
+}
+
+/**
+ * One staff note on a diver, written once. Re-running the same file must not
+ * stack a second copy of a line somebody has already read, which is why the
+ * body itself is the key — an imported note carries no source id to match on.
+ */
+async function writeImportedNote(
+  tx: Parameters<Parameters<AppDb["transaction"]>[0]>[0],
+  ctx: { shopId: string; personId: string; importedByPersonId: string; now: Date },
+  raw: string,
+): Promise<boolean> {
+  const body = raw.trim();
+  if (!body) return false;
+  const existing = await tx
+    .select({ id: internalNotes.id })
+    .from(internalNotes)
+    .where(
+      and(
+        eq(internalNotes.shopId, ctx.shopId),
+        eq(internalNotes.personId, ctx.personId),
+        isNull(internalNotes.bookingId),
+        eq(internalNotes.body, body),
+      ),
+    )
+    .limit(1);
+  if (existing.length > 0) return false;
+  await tx.insert(internalNotes).values({
+    shopId: ctx.shopId,
+    personId: ctx.personId,
+    bookingId: null,
+    body,
+    createdByPersonId: ctx.importedByPersonId,
+    createdAt: ctx.now,
+  });
+  return true;
 }
 
 /**

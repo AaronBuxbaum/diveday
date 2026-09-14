@@ -4500,6 +4500,68 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder-move-clash", scheme);
       });
 
+      /**
+       * **The state the panel refuses outright** (issue #1786) — the third and
+       * last thing `MoveImpact` can draw, and the one with no baseline: a
+       * warning-toned `role="alert"` above the muted costs list, saying the
+       * move will not happen at all.
+       *
+       * The issue proposed a charter whose window had already passed.
+       * `blockedReason` (`src/lib/move-preflight.ts`) does not read the clock:
+       * it refuses a cancelled departure as `not_scheduled` and one the crew
+       * have counted heads against as `already_sailed`. So the seed records a
+       * single boarding through `recordRollCall`, which is cheaper, is the
+       * product's own door, and leaves the departure on the board the panel is
+       * opened from — a row dragged into the past would not be on it.
+       *
+       * `not_scheduled` is deliberately not photographed beside it. The board's
+       * stream carries upcoming departures, a cancelled one is not among them,
+       * and the two refusals draw the same element with different words — a
+       * second capture would buy one message bundle string.
+       *
+       * **The wait is on the banner's own sentence**, for the reason the clash
+       * capture states about `data-move-impact`: that attribute is on the page
+       * from the read the panel opens with, so waiting on it proves nothing
+       * about which preview is drawn.
+       */
+      test(`the move panel refuses a departure the crew has counted (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?moveBlocked=1");
+        expect(seeded.ok()).toBe(true);
+        const { moveBlocked } = (await seeded.json()) as {
+          moveBlocked?: { tripId: string; title: string };
+        };
+        if (!moveBlocked) {
+          throw new Error("seed-trouble-states found no upcoming departure to count heads on");
+        }
+
+        // **Anchored, not a substring.** "Move <title>" *is* a substring of the
+        // row's own "Move, copy, or remove <title>" — `remove` ends in `move`
+        // — so a substring match re-clicks the control that disclosed the
+        // panel and shuts it again, which is what the first run of this
+        // capture photographed. The title comes back from the seed rather
+        // than being spelled here, so it is escaped before it becomes a
+        // pattern.
+        const rowAction = (verb: string) =>
+          new RegExp(`^${verb} ${moveBlocked.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")},`);
+
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await boardListSettled(page);
+        await page
+          .getByRole("button", { name: rowAction("Move, copy, or remove") })
+          .first()
+          .click();
+        await page
+          .getByRole("button", { name: rowAction("Move") })
+          .first()
+          .click();
+        await expect(page.getByText(/The crew has already counted heads/)).toBeVisible();
+        await capture(page, "schedule-builder-move-blocked", scheme);
+      });
+
       // The add-a-departure form as a shop meets it all week: the quick path,
       // which the board only ever shows as a button — every field a departure
       // is born with, price included, with the rare half collapsed behind
@@ -5436,6 +5498,44 @@ for (const scheme of ["light", "dark"] as const) {
         // one fit rather than as two rack lines (issue #1727).
         await expect(page.getByText("Drysuit: weight check in the water")).toBeVisible();
         await capture(page, "prep-by-diver", scheme);
+      });
+
+      /**
+       * **The one state of a packing line neither capture above may hold**
+       * (issue #1805): a piece the diver's stored fit asks for that the shop's
+       * catalog no longer offers. It is kept and marked rather than dropped —
+       * a stored `rents_*` flag survives the shop dropping that item (#1755),
+       * and a silent drop would hide a fit nobody can fill — so the Size cell
+       * reads "You no longer rent this" in warning tone, appended to whatever
+       * it already held.
+       *
+       * Beside the calm captures rather than folded into them, which is the
+       * rule for a panel that only renders when something looks wrong
+       * (`.claude/rules/e2e.md`). The reach is why it matters here:
+       * `rentalFitLine` feeds the roll call, the offline manifest and the
+       * diver record from these same pieces, so a demo carrying this standing
+       * would print an oddity nobody can clear on the boat manifest.
+       *
+       * One capture, both groupings, because the marker is the whole of what
+       * moved and the by-diver cell is the narrower of the two Size columns.
+       */
+      test(`a trip's prep list marks a piece the shop stopped renting (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?droppedRental=1");
+        expect(seeded.ok()).toBe(true);
+        const { droppedRental } = (await seeded.json()) as { droppedRental?: { fullName: string } };
+        if (!droppedRental) throw new Error("seed-trouble-states found no fit to contradict");
+
+        await openReefTrip(page);
+        await openTripTab(page, "Prep");
+        await page.getByRole("link", { name: "By diver" }).click();
+        await page.getByRole("columnheader", { name: "Diver" }).waitFor();
+        // The marker itself, not the row: a capture on the right route in the
+        // wrong state catches nothing.
+        await expect(page.getByText("You no longer rent this")).toBeVisible();
+        await capture(page, "prep-dropped-rental", scheme);
       });
 
       // The prep page's rental-assignments panel in its lived-in state: the
@@ -7188,6 +7288,46 @@ for (const scheme of ["light", "dark"] as const) {
         // to this reef, so no distance warning belongs in this frame.
         await page.getByText("8723583 · Carysfort Reef, FL").waitFor();
         await capture(page, "dive-site-edit", scheme);
+      });
+
+      /**
+       * **The same editor with the one thing the frame above deliberately
+       * excludes** (issue #1772): the implausible-station advisory, and the
+       * box that answers it.
+       *
+       * The capture above says in as many words that "no distance warning
+       * belongs in this frame" — Carysfort genuinely is the nearest station to
+       * that reef — so the warning tone, its two-line wrap under the field, and
+       * the checkbox that follows the grid had no baseline at all. They are
+       * what a shop sees on the one occasion this form has anything to say
+       * beyond echoing an id back.
+       *
+       * Seeded, not typed: `fixtureTideStation` answers Carysfort for every id,
+       * so no station a spec could type is far from anything. The distance has
+       * to come from the site, and a site that remote is one the demo shop must
+       * not carry standing (`.claude/rules/surfaces.md`), so it arrives through
+       * `/api/test/seed-trouble-states` and leaves with the next reset.
+       */
+      test(`the dive-site editor warns about a station nowhere near it (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?farStation=1");
+        expect(seeded.ok()).toBe(true);
+        const { farStation } = (await seeded.json()) as {
+          farStation?: { siteId: string; name: string; slug: string };
+        };
+        if (!farStation) throw new Error("seed-trouble-states seeded no far-station site");
+
+        await page.goto(`/shop/blue-mantis/dive-sites/${farStation.siteId}`);
+        await page.getByRole("heading", { level: 1, name: farStation.name }).waitFor();
+        // The editor's own mounted marker, as the calm capture uses.
+        await page.getByLabel("What the route is called").waitFor();
+        // The sentence itself, not the echo line: the echo renders whether or
+        // not the station is far, so waiting on it would photograph the calm
+        // state without failing.
+        await page.getByText(/so the turn it predicts can reach this water/).waitFor();
+        await capture(page, "dive-site-far-station", scheme);
       });
 
       /**

@@ -74,6 +74,14 @@ export type CrewMoveConflict = {
   fullName: string;
   /** The other departure they are on, for a clash; absent for a blackout. */
   otherTitle?: string;
+  /**
+   * Which other departure, for a clash; absent for a blackout. Carried so the
+   * clash list can dedupe on the *pair* — one person really can be on two
+   * departures the proposed hours both overlap, and a dedupe on the person
+   * alone dropped the second boat before the panel ever saw it (issue #1777).
+   * The same shape {@link CrewClash} already keeps.
+   */
+  otherTripId?: string;
 };
 
 export type CrewMoveConflicts = {
@@ -357,14 +365,30 @@ export async function crewMoveConflicts(
     }),
   ]);
 
-  // **Distinct on the id, never the name.** Two crew members who share a name
-  // are two people to ring, and collapsing them loses one of them silently.
+  // **One line per person per other departure**, deduped on the pair and never
+  // on the name — the shape `crewClashes` beside it already keeps, so the two
+  // readings of one predicate cannot report different numbers of boats.
+  //
+  // Two crew members who share a name are two people to ring, so the id is what
+  // dedupes. And one person really can be on two other departures these hours
+  // both overlap: a shop reaches that state through a move (the roster refuses
+  // to write it) and a second move onto the same hours is the same tap again.
+  // Keeping only the first left a staffer sorting out the 09:00 they were told
+  // about while the 10:30 stood, which is the shape of warning people stop
+  // trusting (issue #1777). The left join still repeats a row per leg of the
+  // other boat, which is the other thing this collapses.
   const clashes: CrewMoveConflict[] = [];
   const seen = new Set<string>();
   for (const row of overlapping) {
-    if (seen.has(row.personId)) continue;
-    seen.add(row.personId);
-    clashes.push({ personId: row.personId, fullName: row.fullName, otherTitle: row.title });
+    const key = `${row.personId}:${row.otherTripId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    clashes.push({
+      personId: row.personId,
+      fullName: row.fullName,
+      otherTitle: row.title,
+      otherTripId: row.otherTripId,
+    });
   }
 
   const crew = new Set(crewIds);

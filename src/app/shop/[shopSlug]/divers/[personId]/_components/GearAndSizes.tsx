@@ -68,7 +68,10 @@ export function GearAndSizes({
   const mayEdit = canOverride || !profile;
   const offered = offeredRentableItems(rentalItems);
   const offers = new Set(offered.map((item) => item.kind));
-  const line = rentalFitLine(profile ?? null);
+  // The same catalog the size list below is built from: the summary at the top
+  // of this group must not read a piece the shop dropped as one to hand over
+  // while the form under it offers no size for it (issue #1804).
+  const line = rentalFitLine(profile ?? null, rentalItems);
   const list = cachedListFormat(locale, { style: "long", type: "unit" });
   // Only sizes the shop can actually hand over. `requires` is the second half
   // of that question — which ticks make this size worth asking for — and it is

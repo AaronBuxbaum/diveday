@@ -22,7 +22,7 @@ import { DIVER_CERTIFICATION_AGENCY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale, requestTranslator } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
 import { formatRelativeDay, formatShortDate, formatTime, formatWeekday } from "@/lib/format";
-import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
+import { offeredRentableItems, RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { RememberShelf } from "./_components/RememberShelf";
 import {
   forgetShelfAction,
@@ -278,6 +278,48 @@ function TheFile({
   const zone = data.shop.timezone;
   const { file } = data;
   const day = (value: Date) => formatShortDate(value, locale, zone);
+  /**
+   * Only the sizes this shop's catalog asks for — the rule the staff diver
+   * record, the readiness gear form and the booking-time picker have always
+   * followed and this page did not, so a diver at a shop with no BCDs in its
+   * catalog was asked their BCD size and the answer was stored (issue #1802).
+   *
+   * **A stored size keeps its box even when the shop has dropped the piece**,
+   * the same direction the writer takes with the `rents_*` flags since #1755: a
+   * catalog edit is not the diver retracting an answer, and hiding the box
+   * would leave them holding a size they cannot see or correct.
+   *
+   * Fins and boots are **one** answer here now, as they already are on the
+   * other two forms. Two boxes was a promise the product takes away on the next
+   * save of either of them, which writes the one shoe size to both columns.
+   */
+  const offers = new Set(
+    offeredRentableItems(data.shop.rentalItems ?? []).map((item) => item.kind),
+  );
+  const shoeSize = file.sizes.finSize ?? file.sizes.bootSize ?? "";
+  const sizeBoxes = [
+    Boolean(offers.has("bcd") || file.sizes.bcdSize) && {
+      id: "shelf-bcd",
+      name: "bcdSize",
+      label: "shelf.sizeBcd" as const,
+      defaultValue: file.sizes.bcdSize ?? "",
+    },
+    Boolean(offers.has("wetsuit") || file.sizes.wetsuitSize) && {
+      id: "shelf-wetsuit",
+      name: "wetsuitSize",
+      label: "shelf.sizeWetsuit" as const,
+      defaultValue: file.sizes.wetsuitSize ?? "",
+    },
+    // Boots ride along with the suit rather than being a catalog entry of their
+    // own, so either kind earns the one shoe box (`offersKind`,
+    // src/lib/dive-prep.ts).
+    Boolean(offers.has("mask_fins") || offers.has("wetsuit") || shoeSize) && {
+      id: "shelf-fins",
+      name: "finSize",
+      label: "shelf.sizeFinsBoots" as const,
+      defaultValue: shoeSize,
+    },
+  ].filter((box) => box !== false);
   return (
     <SectionCard title={t("shelf.fileHeading")}>
       <dl className="mt-2 divide-y divide-border">
@@ -296,42 +338,17 @@ function TheFile({
       <form action={saveShelfSizesAction.bind(null, token)} className="mt-6">
         <h3 className="text-base font-semibold">{t("shelf.sizes")}</h3>
         <FieldGrid columns={2} className="mt-3">
-          <Field label={t("shelf.sizeBcd")} htmlFor="shelf-bcd">
-            <input
-              id="shelf-bcd"
-              name="bcdSize"
-              defaultValue={file.sizes.bcdSize ?? ""}
-              maxLength={RENTAL_FIT_TEXT_LIMITS.size}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("shelf.sizeWetsuit")} htmlFor="shelf-wetsuit">
-            <input
-              id="shelf-wetsuit"
-              name="wetsuitSize"
-              defaultValue={file.sizes.wetsuitSize ?? ""}
-              maxLength={RENTAL_FIT_TEXT_LIMITS.size}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("shelf.sizeBoots")} htmlFor="shelf-boots">
-            <input
-              id="shelf-boots"
-              name="bootSize"
-              defaultValue={file.sizes.bootSize ?? ""}
-              maxLength={RENTAL_FIT_TEXT_LIMITS.size}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("shelf.sizeFins")} htmlFor="shelf-fins">
-            <input
-              id="shelf-fins"
-              name="finSize"
-              defaultValue={file.sizes.finSize ?? ""}
-              maxLength={RENTAL_FIT_TEXT_LIMITS.size}
-              className={controlClass}
-            />
-          </Field>
+          {sizeBoxes.map((box) => (
+            <Field key={box.id} label={t(box.label)} htmlFor={box.id}>
+              <input
+                id={box.id}
+                name={box.name}
+                defaultValue={box.defaultValue}
+                maxLength={RENTAL_FIT_TEXT_LIMITS.size}
+                className={controlClass}
+              />
+            </Field>
+          ))}
         </FieldGrid>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <SubmitButton

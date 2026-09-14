@@ -45,6 +45,27 @@ export async function seedCounterBlockers(
   ctx: {
     siteByName: Map<string, typeof diveSites.$inferSelect>;
     captainId: string | undefined;
+    /**
+     * The relief skipper for this charter. It sails 08:00–13:00 local on the
+     * same morning as `Morning Two-Tank — Molasses Reef`, and the shop has one
+     * captain and one divemaster — so rostering the usual pair here put both of
+     * them on two hulls at once, which `setTripCrew` refuses to write and the
+     * standing-clash marker reported on the demo board (issue #1781). The owner
+     * takes the wheel and the second instructor assists: what a five-person
+     * shop does on a morning with two boats out.
+     */
+    ownerId: string;
+    /**
+     * Who assists on this charter, so the regular divemaster can run the reef
+     * boat.
+     *
+     * The **lead** instructor, not the relief one: Talia's single assignment is
+     * the whole of the DOM-M7 fixture (`seed-trips.test.ts` asserts she is on
+     * exactly one trip, the Nitrox session), so borrowing her here would quietly
+     * dismantle it. Marcus teaches no session that morning, and a lead
+     * instructor deckhanding the deep charter is an ordinary Wednesday.
+     */
+    assistingInstructorId: string;
     divemasterId: string | undefined;
   },
 ): Promise<void> {
@@ -117,19 +138,17 @@ export async function seedCounterBlockers(
     requiresPayment: true,
   });
 
+  // The owner and the lead instructor, not the usual captain and divemaster —
+  // see `ownerId` above. An instructor rostered as a boat's divemaster is a
+  // genuine downgrade rather than a roster over-claim, and `inWaterCrewRole`
+  // counts him as the certified assistant he is qualified to be.
   await db.insert(tripAssignments).values([
-    ...(ctx.captainId
-      ? [{ tripId: trip.id, personId: ctx.captainId, tripRole: "captain" as TripAssignmentRole }]
-      : []),
-    ...(ctx.divemasterId
-      ? [
-          {
-            tripId: trip.id,
-            personId: ctx.divemasterId,
-            tripRole: "divemaster" as TripAssignmentRole,
-          },
-        ]
-      : []),
+    { tripId: trip.id, personId: ctx.ownerId, tripRole: "captain" as TripAssignmentRole },
+    {
+      tripId: trip.id,
+      personId: ctx.assistingInstructorId,
+      tripRole: "divemaster" as TripAssignmentRole,
+    },
   ]);
 
   // The seat and nothing else: no waiver row, certification, specialty, nitrox

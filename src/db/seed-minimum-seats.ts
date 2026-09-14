@@ -57,6 +57,15 @@ export async function seedMinimumSeats(
   ctx: {
     siteByName: Map<string, typeof diveSites.$inferSelect>;
     captainId: string | undefined;
+    /**
+     * Who skippers the Tortugas run. It is offshore 06:30–17:00 local, and the
+     * shop's one captain is at the counter that same day running the refresher
+     * and the Discover Scuba session — so rostering him here had him on the
+     * water and in the pool at once, which `setTripCrew` refuses to write and
+     * the standing-clash marker reported on the demo board (issue #1781). The
+     * owner takes the long day offshore; the captain keeps the shop-side pair.
+     */
+    ownerId: string;
     divemasterId: string | undefined;
   },
 ): Promise<void> {
@@ -104,9 +113,8 @@ export async function seedMinimumSeats(
   });
 
   await db.insert(tripAssignments).values([
-    ...(ctx.captainId
-      ? [{ tripId: trip.id, personId: ctx.captainId, tripRole: "captain" as TripAssignmentRole }]
-      : []),
+    // The owner, not the captain — see `ownerId` above.
+    { tripId: trip.id, personId: ctx.ownerId, tripRole: "captain" as TripAssignmentRole },
     ...(ctx.divemasterId
       ? [
           {

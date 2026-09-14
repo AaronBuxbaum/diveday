@@ -94,14 +94,20 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
         // forms ask for, and the pair has to clear a vulcanised boot two to
         // three sizes bigger, so the rail reads the job rather than a number
         // to hand over (src/lib/dive-prep.ts's `rentedItems`).
-        if (item.drysuitFinFit) {
-          return item.size
+        const piece = item.drysuitFinFit
+          ? item.size
             ? t("shared.rentalFit.itemOverDrysuitBootWithSize", { item: label, size: item.size })
-            : t("shared.rentalFit.itemOverDrysuitBoot", { item: label });
-        }
-        return item.size
-          ? t("shared.rentalFit.itemWithSize", { item: label, size: item.size })
-          : label;
+            : t("shared.rentalFit.itemOverDrysuitBoot", { item: label })
+          : item.size
+            ? t("shared.rentalFit.itemWithSize", { item: label, size: item.size })
+            : label;
+        // Wrapped rather than substituted, so the piece keeps whatever it
+        // already said and gains the contradiction. A staffer reading the rail
+        // is about to go and fetch this: "Drysuit ML" with nothing on it sends
+        // them looking for a suit the shop stopped renting, which is the
+        // disagreement between the rail and the packing list that issue #1804
+        // opened on.
+        return item.notOffered ? t("shared.rentalFit.itemNoLongerRented", { item: piece }) : piece;
       });
       return cachedListFormat(locale, { style: "long", type: "unit" }).format(parts);
     }

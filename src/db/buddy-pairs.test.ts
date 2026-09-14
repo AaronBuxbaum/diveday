@@ -15,6 +15,7 @@ import { getTripManifest, getTripManifests, recordCrewRollCall, recordRollCall }
 import {
   bookings,
   buddyPairMembers,
+  buddyTeamEvents,
   people,
   personRoles,
   tripAssignments,
@@ -555,6 +556,102 @@ describe("buddy teams (in-memory PGlite)", () => {
       ["Alpha Adler", "Alpha Brecht"],
       ["Zulu Cabral", "Zulu Dorn"],
     ]);
+  });
+
+  /**
+   * **"Recorded by" named whoever wrote the last row, not whoever built the
+   * team** (issue #1796).
+   *
+   * Both `createdAt` and `recordedByName` used to come off the first member
+   * row the reader saw, and a member added later carries the `recorded_by` of
+   * *that* write. The two writes tie on `created_at` by construction here — the
+   * clock is frozen for the unit fleet, and `formBuddyTeam` and
+   * `addBuddyTeamMember` both stamp `input.now ?? nowDate()` — so nothing but
+   * heap order decided which staffer the panel credited.
+   *
+   * **The heap order is forced, because it is the confounder under test.**
+   * Re-inserting the two formation rows after the addition puts the adder's
+   * row first, which is the case the old reader gets wrong every time rather
+   * than half the time. The names are both real staff and neither line looks
+   * wrong, which is the shape of error nobody catches at the rail.
+   */
+  it("credits the staffer who formed the team, not the one who added to it", async () => {
+    const { db, shop, trip, a, b, c, staff } = await buddyContext();
+    const roster = await listStaff(db, shop.id);
+    const adder = roster.map((entry) => entry.person).find((person) => person.id !== staff.id);
+    if (!adder) throw new Error("expected a second staff member");
+
+    const base = { shopId: shop.id, tripId: trip.id };
+    const formed = await formBuddyTeam(db, {
+      ...base,
+      recordedByPersonId: staff.id,
+      members: [diver(a.booking.id), diver(b.booking.id)],
+    });
+    if (!formed.ok) throw new Error("expected a team");
+    expect(
+      await addBuddyTeamMember(db, {
+        ...base,
+        teamId: formed.teamId,
+        member: diver(c.booking.id),
+        recordedByPersonId: adder.id,
+      }),
+    ).toEqual({ ok: true });
+
+    // The premise: all three rows share one instant, so `created_at` separates
+    // nothing and the reader has no honest first row to prefer.
+    const stamps = await db
+      .select({ createdAt: buddyPairMembers.createdAt })
+      .from(buddyPairMembers)
+      .where(eq(buddyPairMembers.pairId, formed.teamId));
+    expect(stamps).toHaveLength(3);
+    expect(new Set(stamps.map((row) => row.createdAt.getTime())).size).toBe(1);
+
+    // Put the adder's row first: re-insert the two formation rows behind it.
+    const formation = await db
+      .select()
+      .from(buddyPairMembers)
+      .where(
+        and(
+          eq(buddyPairMembers.pairId, formed.teamId),
+          inArray(buddyPairMembers.bookingId, [a.booking.id, b.booking.id]),
+        ),
+      );
+    expect(formation).toHaveLength(2);
+    await db.delete(buddyPairMembers).where(
+      inArray(
+        buddyPairMembers.id,
+        formation.map((row) => row.id),
+      ),
+    );
+    await db.insert(buddyPairMembers).values(formation);
+
+    const [team] = await listTripBuddyTeams(db, shop.id, trip.id);
+    expect(team?.members).toHaveLength(3);
+    expect(team?.recordedByName).toBe(staff.fullName);
+    expect(team?.recordedByName).not.toBe(adder.fullName);
+  });
+
+  /**
+   * The membership rows and the trail are separate tables, and nothing writes a
+   * team without its `formed` event today. But a team that fell off the panel
+   * entirely would be worse than one dated from its earliest member row, so the
+   * reader keeps the old read as a fallback rather than an inner join.
+   */
+  it("still shows a team whose formation event is missing", async () => {
+    const { db, shop, trip, a, b, staff } = await buddyContext();
+    const formed = await formBuddyTeam(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      recordedByPersonId: staff.id,
+      members: [diver(a.booking.id), diver(b.booking.id)],
+    });
+    if (!formed.ok) throw new Error("expected a team");
+    await db.delete(buddyTeamEvents).where(eq(buddyTeamEvents.pairId, formed.teamId));
+
+    const [team] = await listTripBuddyTeams(db, shop.id, trip.id);
+    expect(team?.members).toHaveLength(2);
+    expect(team?.recordedByName).toBe(staff.fullName);
+    expect(team?.createdAt).toBeInstanceOf(Date);
   });
 
   it("keeps a half-cancelled team visible and dissolvable, but off the manifest", async () => {

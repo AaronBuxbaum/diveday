@@ -657,12 +657,17 @@ export type TripBuddyTeam = {
  * the ones built last night. `teamId` stays last, as the only resort for two
  * teams formed in one instant with the same member names.
  *
- * **Deliberately not fixed here**: a team's `recordedByName` is read off the
- * first of its rows, so when `formBuddyTeam` and a later
- * `addBuddyTeamMember` tie on `created_at` — which the frozen clock
- * guarantees — "recorded by" can name the adder rather than the person who
- * formed the team. That is a different bug with a different answer (the
- * `formed` row of `buddy_team_events`), not an ordering key.
+ * **Who formed the team, and when, comes from the trail** (issue #1796). Both
+ * used to be read off whichever member row sorted first, and a member added
+ * later carries the `recorded_by` and the `created_at` of *that* write — so a
+ * tie on `created_at`, which the frozen clock guarantees and which production
+ * reaches inside one millisecond, credited the adder and dated the team to the
+ * addition. No ordering key fixes that: "who formed this team" is not a
+ * property of any member row, so picking a different row picks a different
+ * staffer rather than a more correct one. The `formed` row of
+ * `buddy_team_events` is the one that knows, and it is read in one batched
+ * query for the whole trip rather than per team, because this reader is
+ * already three `people` aliases deep.
  */
 export async function listTripBuddyTeams(
   db: DbExecutor,
@@ -693,17 +698,55 @@ export async function listTripBuddyTeams(
     // `created_at` only. The trailing `asc(pair_id)` that used to be here did
     // no work the `Map` below does not already do — every row of a team shares
     // a `pair_id`, so it never separated two teams — and it was the random
-    // uuid the whole order fell through to. What this key still buys is that
-    // the *first* row seen for a team is its earliest, which is where
-    // `createdAt` and `recordedByName` below come from. The order of the teams
-    // themselves is decided after the grouping, on their members' names.
+    // uuid the whole order fell through to. What this key still buys is the
+    // fallback below: with no `formed` event to read, the *first* row seen for
+    // a team is its earliest. The order of the teams themselves is decided
+    // after the grouping, on their members' names.
     .orderBy(asc(buddyPairMembers.createdAt));
+  // One query for the whole trip, not one per team. A team's formation is a
+  // fact about the team, and the only row that holds it is its `formed` event:
+  // `occurredAt` there is the same instant the writer stamped on the member
+  // rows it inserted in the same transaction, so this moves the *source* of
+  // both facts without moving their values for a team nobody added to.
+  const formations = await db
+    .select({
+      teamId: buddyTeamEvents.pairId,
+      occurredAt: buddyTeamEvents.occurredAt,
+      recordedByName: people.fullName,
+    })
+    .from(buddyTeamEvents)
+    // Inner is safe here, and was questioned: a recorder row that had gone
+    // would drop the whole event and send both facts back to a member row,
+    // which is the wrong attribution this reader exists to remove. It cannot
+    // happen — `buddy_team_events.recorded_by_person_id` is `notNull` with a
+    // hard reference to `people.id`, so the row is there for as long as the
+    // event is, and erasure anonymises a person rather than deleting them.
+    .innerJoin(people, eq(people.id, buddyTeamEvents.recordedByPersonId))
+    .where(
+      and(
+        eq(buddyTeamEvents.shopId, shopId),
+        eq(buddyTeamEvents.tripId, tripId),
+        eq(buddyTeamEvents.action, "formed"),
+      ),
+    )
+    .orderBy(asc(buddyTeamEvents.occurredAt), asc(buddyTeamEvents.createdAt));
+  const formedByTeam = new Map<string, { occurredAt: Date; recordedByName: string }>();
+  for (const row of formations) {
+    // Earliest wins. A team is formed once, but the trail is append-only and
+    // never pruned, so this reader does not get to assume that.
+    if (!formedByTeam.has(row.teamId)) formedByTeam.set(row.teamId, row);
+  }
   const byTeam = new Map<string, TripBuddyTeam>();
   for (const row of rows) {
+    // The fallback is for a team whose membership rows outlived their trail —
+    // nothing writes one today, but the two tables are separate and a team
+    // that fell off this panel entirely would be worse than one dated from its
+    // earliest member row.
+    const formed = formedByTeam.get(row.teamId);
     const team = byTeam.get(row.teamId) ?? {
       teamId: row.teamId,
-      createdAt: row.createdAt,
-      recordedByName: row.recordedByName,
+      createdAt: formed?.occurredAt ?? row.createdAt,
+      recordedByName: formed?.recordedByName ?? row.recordedByName,
       members: [],
     };
     if (row.bookingId) {

@@ -1044,6 +1044,32 @@ describe("a piece the shop stopped renting", () => {
       kind: "mask_fins",
       size: "US 9",
     });
+    // And the suit itself carries the contradiction rather than reading as an
+    // ordinary piece to fetch. The rail is where a staffer acts on this line
+    // (issue #1804); the packing list already said so and the two disagreed.
+    expect(items.find((item) => item.kind === "drysuit")).toEqual({
+      kind: "drysuit",
+      size: "ML",
+      notOffered: true,
+    });
+  });
+
+  it("leaves the mark off every piece the shop still rents", () => {
+    const line = rentalFitLine(drysuitDiver, withDrysuits);
+    const items = line.state === "rents" ? line.items : [];
+    expect(items.some((item) => item.notOffered)).toBe(false);
+    // Absent rather than `false`, so a reader that has never heard of it — the
+    // offline manifest snapshot written before this shipped — is unchanged.
+    expect(items.find((item) => item.kind === "drysuit")).toEqual({
+      kind: "drysuit",
+      size: "ML",
+    });
+  });
+
+  it("marks nothing at all when no catalog was handed over", () => {
+    const line = rentalFitLine(drysuitDiver);
+    const items = line.state === "rents" ? line.items : [];
+    expect(items.some((item) => item.notOffered)).toBe(false);
   });
 
   it("leaves all three alone while the shop still rents drysuits", () => {
@@ -1205,6 +1231,67 @@ describe("the same packing list grouped by diver", () => {
       size: "6 kg",
       fitAtCheckIn: false,
     });
+  });
+
+  /**
+   * **One order, down the rack and down the roster** (issue #1805, found by a
+   * `dive-domain-expert` review).
+   *
+   * `rentedItems` pushes its pieces grouped by the flag that produces them,
+   * and that grouping is not the packing order: the drysuit's push sits after
+   * the GoPro's, while the by-item table sorts a drysuit fifth. So the two
+   * groupings disagreed about the same departure — and `rentalFitLine` carries
+   * this order to the roll call, the offline manifest and the diver record, so
+   * a drysuit diver's rail line read "Mask & fins over the drysuit boot ·
+   * Weights: weight check in the water · Drysuit ML": both derived
+   * instructions ahead of the fact they derive from, at the rail, in the dark.
+   *
+   * A drysuit renter with every add-on on is the one fit that catches it,
+   * which is why no existing case did.
+   */
+  it("hands back one diver's pieces in the order the rack reads, whatever order the flags are in", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Tom Okafor",
+          fit: {
+            ...fullFit,
+            rentsWetsuit: false,
+            wetsuitSize: null,
+            rentsDrysuit: true,
+            drysuitSize: "ML",
+            rentsDiveComputer: true,
+            rentsGopro: true,
+            rentsHoodGloves: true,
+            rentsTorch: true,
+            rentsSmb: true,
+          },
+        }),
+      ],
+      plannedDives: 1,
+      now: new Date("2026-07-21T12:00:00Z"),
+    });
+
+    expect(checklist.diverLines[0]?.items.map((piece) => piece.kind)).toEqual([
+      "bcd",
+      "regulator",
+      "drysuit",
+      "mask_fins",
+      "weights",
+      "dive_computer",
+      "hood_gloves",
+      "torch",
+      "smb",
+      // Last on purpose: the only piece here whose absence changes nothing in
+      // the water, and the bottom of the list is what gets skipped at 6:40.
+      "gopro",
+    ]);
+    // The same order the by-item grouping reads, which is the invariant that
+    // was quietly false.
+    expect(checklist.lines.map((line) => line.kind)).toEqual(
+      checklist.diverLines[0]?.items.map((piece) => piece.kind),
+    );
   });
 });
 

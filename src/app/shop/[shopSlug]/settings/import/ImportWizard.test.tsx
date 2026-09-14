@@ -172,6 +172,8 @@ const COPY = {
     receiptDocumentsFailedNote: " ({count} receipt documents failed)",
     notesLineOne: "Note added: {count}",
     notesLineOther: "Notes added: {count}",
+    sizesDeclinedLineOne: "Size kept as a note: {count}",
+    sizesDeclinedLineOther: "Sizes kept as notes: {count}",
     seeRoster: "See roster",
   },
 };

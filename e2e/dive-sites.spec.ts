@@ -844,3 +844,78 @@ test("a template can be read in full before it is imported", async ({ page }) =>
   // `SiteLibraryLedger.test.tsx`).
   await expect(page.getByText(/Advanced Open Water/).first()).toBeVisible();
 });
+
+/**
+ * **The implausible-station advisory, and the box that answers it** (issue
+ * #1772).
+ *
+ * Until this spec nothing the fleet ran could reach either. `fixtureTideStation`
+ * (`src/lib/tide-stations.ts`) answers Carysfort Reef for *every* seven-digit
+ * id — one station for every id is what keeps the fleet deterministic with
+ * NOAA unreachable — and Carysfort is nineteen to twenty-nine kilometres from
+ * the demo's Key Largo sites, well inside the 40 km threshold. So
+ * `checkStationAgainstSite` could only ever answer `far: false`, and the only
+ * coverage was jsdom tests that hand `SiteFields` an echo object and therefore
+ * never exercise a save.
+ *
+ * The distance comes from the *site*, not the station: the seeded Flower
+ * Garden Banks point is about 1,400 km from Carysfort, which is the genuinely
+ * remote case ADR 20260907-noaa-tide-predictions names when it argues the
+ * advisory has to be answerable at all. Seeded through
+ * `/api/test/seed-trouble-states` rather than into blue-mantis, because a demo
+ * dive-site list with a standing warning on it is a worse demo
+ * (`.claude/rules/surfaces.md`).
+ *
+ * The round trip is the point. Warning → tick → save → gone, then edit the id
+ * → save → back: each leg goes through the real writer, which is the path
+ * `src/db/dive-sites.test.ts` pins at the database and nothing pinned through
+ * the form.
+ */
+test.describe("a site whose station is nowhere near it", () => {
+  signedInAsOwner();
+
+  test("warns about the distance, stops once the shop says it meant it, and asks again when the id changes", async ({
+    page,
+    request,
+  }) => {
+    // Four saves, each its own navigation and status wait — the same
+    // aggregate-cost reasoning as the long test at the top of this file.
+    test.setTimeout(30_000);
+    const seeded = await request.post("/api/test/seed-trouble-states?farStation=1");
+    expect(seeded.ok()).toBe(true);
+    const { farStation } = (await seeded.json()) as {
+      farStation?: { siteId: string; name: string; slug: string };
+    };
+    if (!farStation) throw new Error("seed-trouble-states seeded no far-station site");
+    const siteUrl = `/shop/blue-mantis/dive-sites/${farStation.siteId}`;
+
+    // The advisory, on a real row rather than a handed-in echo object.
+    await page.goto(siteUrl);
+    await expect(page.getByLabel("NOAA tide station")).toHaveValue("8771450");
+    await expect(page.getByText(/so the turn it predicts can reach this water/)).toBeVisible();
+
+    // The shop says it meant that station. The id is unchanged, so the answer
+    // is about the pairing the row already holds.
+    await page.getByRole("checkbox", { name: "This is the right station for this site" }).check();
+    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByText("Dive site saved.").waitFor();
+
+    // Gone — and the box stays on the page, ticked, so the shop can take the
+    // answer back. A tick that hides its own control is an answer nobody can
+    // revise.
+    await expect(page.getByText(/so the turn it predicts can reach this water/)).toHaveCount(0);
+    await expect(
+      page.getByRole("checkbox", { name: "This is the right station for this site" }),
+    ).toBeChecked();
+
+    // A different station is a different pairing, so the answer does not carry
+    // over and the question is put again.
+    await page.getByLabel("NOAA tide station").fill("8723583");
+    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByText("Dive site saved.").waitFor();
+    await expect(page.getByText(/so the turn it predicts can reach this water/)).toBeVisible();
+    await expect(
+      page.getByRole("checkbox", { name: "This is the right station for this site" }),
+    ).not.toBeChecked();
+  });
+});

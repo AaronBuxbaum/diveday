@@ -41,18 +41,35 @@ import { pathToFileURL } from "node:url";
  * untranslated in the same file and the file's count nets out. `--report` lists
  * the keys, which is how that gets looked at.
  *
- * **It will never reach zero, and driving it there would be the bug.** The
- * training-agency acronyms (PADI, SSI, NAUI…), the course-name ladder (Open
- * Water, Advanced Open Water, Divemaster, Instructor) and "Plan" are the same
- * word in Spanish; so are a brand (GoPro, Stripe), a unit abbreviation, five of
- * the eight compass points, and a template that is nothing but placeholders
- * (`"{date} · {trip}"`). Inventing Spanish for any of those is worse than the
- * problem this rule exists for. `DELIBERATELY_IDENTICAL` is where a key like
- * that is said out loud, one line and one reason each — never a blanket
- * exemption, and held both ways: a declared key that stops being identical
- * fails, so the list cannot rot into one. Its eighteen seed entries are the
- * ones issue #1757 signed off; the rest of the count is unexamined and is what
- * the ratchet is for. The floor and this reasoning are also in
+ * **The count is zero, and that is the examination finishing rather than the
+ * bug this warned about.** What would be the bug is inventing Spanish for PADI
+ * to make a number go down — the training-agency acronyms, the course-name
+ * ladder (Open Water, Advanced Open Water, Divemaster, Instructor), a brand
+ * (GoPro, Stripe), a unit abbreviation and five of the eight compass points are
+ * all the same word in Spanish, and translating any of them is worse than the
+ * problem this rule exists for.
+ *
+ * They are **declared**, not translated. `DELIBERATELY_IDENTICAL` is where each
+ * is said out loud, one line and one reason — never a blanket exemption, and
+ * held both ways: a declared key that stops being identical fails, so the list
+ * cannot rot into one. Eighteen seed entries were the ones issue #1757 signed
+ * off; issue #1797 worked the remaining 188 one at a time, and every one of
+ * them turned out to be a brand, an acronym, a place, a unit, a loanword
+ * Spanish diving uses, example data in a placeholder attribute, or a template
+ * with no word in it at all.
+ *
+ * That last group is the one structural exemption ({@link nothingToTranslate}),
+ * taken in preference to declaring forty templates by hand with the same
+ * sentence forty times. It is not the blanket rule this paragraph warns about,
+ * because it is decidable and self-revoking: a value qualifies only while every
+ * letter in it sits inside a placeholder or a rich-text tag, so adding one word
+ * to one of those templates puts it straight back in the count.
+ *
+ * **A zero baseline is a stricter guard than the old floor, not a weaker one.**
+ * Every file now starts from nothing, so a single untranslated paste into any
+ * bundle fails on that file's own line rather than hiding inside a number over
+ * a hundred. `scripts/check-locale.test.mjs` and the report are what keep that
+ * honest. This reasoning is also in
  * [docs/agents/repo-checks.md](../docs/agents/repo-checks.md).
  *
  * Not checked here: copy that never reached a bundle at all. That was long
@@ -157,6 +174,205 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/shared.json readiness.certificationLevels.instructor", "course name, used untranslated"],
   // Spelled and read the same in Spanish.
   ["diver.json factSource.plan", "the same word in both languages"],
+  // Examined one by one for issue #1797. Each is a value with no Spanish
+  // form to give it: a brand, an acronym, a place, a unit, or a word Spanish
+  // diving uses unchanged. Held both ways like every entry above — the day
+  // somebody translates one of these, the declaration fails.
+  ["staff/print.json settings.dockSign.paper", "ISO paper size"],
+  ["staff/print.json settings.paperPass.paper", "ISO paper size"],
+  ["staff/print.json settings.siteBriefing.paper", "ISO paper size"],
+  ["staff/print.json settings.yearPoster.paper", "ISO paper size"],
+  [
+    "diver.json marketing.guides.fareharbor.website.rows.row2.theirs",
+    "a competitor's own product name",
+  ],
+  [
+    "diver.json marketing.guides.fareharbor.website.rows.row5.theirs",
+    "a competitor's own product name",
+  ],
+  ["staff/shared.json waterLocker.holdLine2", "a duration in seconds"],
+  ["staff/print.json settings.windowSticker.paper", "a width in millimetres"],
+  ["staff/divers.json shared.agencies.bsac", "agency acronym"],
+  ["staff/divers.json shared.agencies.cmas", "agency acronym"],
+  ["staff/divers.json shared.agencies.gue", "agency acronym"],
+  ["staff/divers.json shared.agencies.naui", "agency acronym"],
+  ["staff/divers.json shared.agencies.padi", "agency acronym"],
+  ["staff/divers.json shared.agencies.raid", "agency acronym"],
+  ["staff/divers.json shared.agencies.sdi", "agency acronym"],
+  ["staff/divers.json shared.agencies.ssi", "agency acronym"],
+  ["staff/divers.json shared.agencies.tdi", "agency acronym"],
+  ["staff/schedule.json builder.courseAgencies.padi", "agency acronym"],
+  ["staff/schedule.json builder.courseAgencies.ssi", "agency acronym"],
+  ["diver.json marketing.privacy.processors.awsTerm", "brand"],
+  ["diver.json marketing.privacy.processors.googleTerm", "brand"],
+  ["diver.json marketing.privacy.processors.metaTerm", "brand"],
+  ["diver.json marketing.privacy.processors.neonTerm", "brand"],
+  ["diver.json marketing.privacy.processors.sentryTerm", "brand"],
+  ["diver.json marketing.privacy.processors.stripeTerm", "brand"],
+  ["diver.json marketing.privacy.processors.vercelTerm", "brand"],
+  ["diver.json rental.itemLabels.gopro", "brand"],
+  ["diver.json trip.rentalItems.gopro", "brand"],
+  ["staff/inbox.json channel.whatsapp", "brand"],
+  ["staff/integrations.json quickbooks.name", "brand"],
+  ["staff/integrations.json shopify.name", "brand"],
+  ["staff/integrations.json xero.name", "brand"],
+  ["staff/integrations.json zapier.name", "brand"],
+  ["staff/orders.json index.paymentOps.stripeId", "brand"],
+  ["staff/settings.json embed.platforms.squarespace.name", "brand"],
+  ["staff/settings.json embed.platforms.wix.name", "brand"],
+  ["staff/settings.json embed.platforms.wordpress.name", "brand"],
+  ["staff/settings.json main.whatsapp.heading", "brand"],
+  ["staff/shared.json rentalFit.itemLabels.gopro", "brand"],
+  ["staff/today.json actionKind.stuckPaymentOperation", "brand"],
+  ["staff/whatsapp.json title", "brand"],
+  ["staff/shared.json compass.e", "compass point, the same abbreviation in Spanish"],
+  ["staff/shared.json compass.n", "compass point, the same abbreviation in Spanish"],
+  ["staff/shared.json compass.ne", "compass point, the same abbreviation in Spanish"],
+  ["staff/shared.json compass.s", "compass point, the same abbreviation in Spanish"],
+  ["staff/shared.json compass.se", "compass point, the same abbreviation in Spanish"],
+  ["staff/integrations.json zapier.webhookPlaceholder", "example URL in a placeholder attribute"],
+  [
+    "staff/gear.json form.brandModelPlaceholder",
+    "example brand and model in a placeholder attribute",
+  ],
+  ["staff/orders.json new.countryPlaceholder", "example country code in a placeholder attribute"],
+  [
+    "staff/diveSites.json form.depthRangePlaceholder",
+    "example depth range in a placeholder attribute",
+  ],
+  ["staff/diveSites.json form.locationPlaceholder", "example location in a placeholder attribute"],
+  ["diver.json inquiry.namePlaceholder", "example name in a placeholder attribute"],
+  ["staff/promos.json fields.codePlaceholder", "example promo code in a placeholder attribute"],
+  ["staff/diveSites.json form.namePlaceholder", "example site name in a placeholder attribute"],
+  [
+    "staff/shared.json tripDiveFields.namePlaceholderFirst",
+    "example site name in a placeholder attribute",
+  ],
+  ["staff/divers.json rentalFit.bcdSizePlaceholder", "example size in a placeholder attribute"],
+  ["staff/divers.json rentalFit.drysuitSizePlaceholder", "example size in a placeholder attribute"],
+  ["staff/divers.json rentalFit.wetsuitSizePlaceholder", "example size in a placeholder attribute"],
+  ["diver.json rental.finSizePlaceholder", "example sizes in a placeholder attribute"],
+  ["staff/divers.json rentalFit.finSizePlaceholder", "example sizes in a placeholder attribute"],
+  ["staff/gear.json form.sizePlaceholder", "example sizes in a placeholder attribute"],
+  ["staff/settings.json embed.platforms.html.name", "format acronym"],
+  ["diver.json demo.roles.divemaster.title", "industry rung, not translated in Spanish diving"],
+  ["diver.json recap.printSignature", "industry rung, not translated in Spanish diving"],
+  ["diver.json trip.crewRole.divemaster", "industry rung, not translated in Spanish diving"],
+  [
+    "staff/settings.json team.roleLabels.divemaster",
+    "industry rung, not translated in Spanish diving",
+  ],
+  ["staff/trips.json crew.roleDivemaster", "industry rung, not translated in Spanish diving"],
+  ["diver.json shelf.sizeBcd", "kit acronym, used as-is in Spanish"],
+  ["staff/gear.json itemKinds.dpv", "kit acronym, used as-is in Spanish"],
+  ["diver.json booking.money.eLearning", "loanword Spanish diving uses"],
+  ["staff/reviews.json pulseCategoryBriefing", "loanword Spanish diving uses"],
+  [
+    "staff/checkIn.json walkIn.title",
+    "loanword this file already uses (its Spanish reads “Modo mostrador”, “Volver al check-in”)",
+  ],
+  [
+    "staff/shared.json shopNavLinks.walkIn",
+    "loanword this file already uses (its Spanish reads “Modo mostrador”, “Volver al check-in”)",
+  ],
+  [
+    "staff/backup.json form.bucketLabel",
+    "object-storage term this file's own Spanish already uses (“escribir en este bucket”)",
+  ],
+  [
+    "staff/backup.json status.bucket",
+    "object-storage term this file's own Spanish already uses (“escribir en este bucket”)",
+  ],
+  [
+    "staff/backup.json form.endpointLabel",
+    "object-storage term this file's own Spanish already uses (“sin bucket ni ruta”)",
+  ],
+  [
+    "staff/backup.json status.endpoint",
+    "object-storage term this file's own Spanish already uses (“sin bucket ni ruta”)",
+  ],
+  ["staff/settings.json embed.lookLight", "our own name"],
+  ["diver.json account.onboard.timezone.auckland", "place name"],
+  ["diver.json account.onboard.timezone.bangkok", "place name"],
+  ["diver.json account.onboard.timezone.manila", "place name"],
+  ["staff/settings.json main.timezone.zones.auckland", "place name"],
+  ["staff/settings.json main.timezone.zones.bangkok", "place name"],
+  ["staff/settings.json main.timezone.zones.manila", "place name"],
+  ["diver.json account.onboard.timezone.cancun", "place names"],
+  ["diver.json account.onboard.timezone.roatan", "place names"],
+  ["staff/settings.json main.timezone.zones.cancun", "place names"],
+  ["staff/settings.json main.timezone.zones.roatan", "place names"],
+  ["diver.json notifications.whatsappTemplate.exampleShopName", "the demo shop's own name"],
+  ["diver.json marineLife.species.cobia.name", "the fish's name in Spanish too"],
+  [
+    "diver.json marketing.guides.shared.scopeTable.nitrox.what",
+    "the gas, and the word Spanish diving uses for it",
+  ],
+  ["diver.json ready.tanksNitrox", "the gas, and the word Spanish diving uses for it"],
+  ["diver.json rental.nitroxLegend", "the gas, and the word Spanish diving uses for it"],
+  [
+    "diver.json switching.spreadsheet.columns.nitrox.column",
+    "the gas, and the word Spanish diving uses for it",
+  ],
+  ["diver.json trip.requirementMarkerNitrox", "the gas, and the word Spanish diving uses for it"],
+  ["staff/diveSites.json form.nitroxCheckbox", "the gas, and the word Spanish diving uses for it"],
+  ["staff/diveSites.json list.nitroxBadge", "the gas, and the word Spanish diving uses for it"],
+  [
+    "staff/divers.json specialty.nitroxAgencyLine",
+    "the gas, and the word Spanish diving uses for it",
+  ],
+  ["staff/divers.json specialty.nitroxLine", "the gas, and the word Spanish diving uses for it"],
+  ["staff/divers.json specialty.nitroxOption", "the gas, and the word Spanish diving uses for it"],
+  ["staff/orders.json detail.kind.nitrox", "the gas, and the word Spanish diving uses for it"],
+  [
+    "staff/settings.json import.scopeTable.nitrox.what",
+    "the gas, and the word Spanish diving uses for it",
+  ],
+  [
+    "staff/settings.json import.wizard.fieldLabels.nitrox_certified",
+    "the gas, and the word Spanish diving uses for it",
+  ],
+  [
+    "staff/settings.json main.rentalPricing.nitroxLabel",
+    "the gas, and the word Spanish diving uses for it",
+  ],
+  [
+    "staff/shared.json certificationSummary.nitrox",
+    "the gas, and the word Spanish diving uses for it",
+  ],
+  ["staff/shared.json tripAdmission.nitrox", "the gas, and the word Spanish diving uses for it"],
+  ["staff/today.json actionKind.nitroxGate", "the gas, and the word Spanish diving uses for it"],
+  ["staff/trips.json prep.nitrox", "the gas, and the word Spanish diving uses for it"],
+  ["staff/trips.json requirements.nitrox", "the gas, and the word Spanish diving uses for it"],
+  [
+    "diver.json notifications.staffReply.reSubject",
+    "the mail reply prefix, used unchanged in Spanish",
+  ],
+  ["diver.json demo.roles.instructor.title", "the same word in Spanish"],
+  ["diver.json ready.supportDiversNone", "the same word in Spanish"],
+  ["diver.json trip.crewRole.instructor", "the same word in Spanish"],
+  ["diver.json waiver.answerNo", "the same word in Spanish"],
+  ["staff/diveSites.json form.route.zoomLabel", "the same word in Spanish"],
+  ["staff/requests.json flexible", "the same word in Spanish"],
+  ["staff/settings.json team.roleLabels.instructor", "the same word in Spanish"],
+  ["staff/settings.json team.rolesLegend", "the same word in Spanish"],
+  ["staff/trips.json prep.total", "the same word in Spanish"],
+  [
+    "staff/incidentExport.json executedDiveSurfaceIntervalValue",
+    "the unit abbreviation, unchanged in Spanish",
+  ],
+  ["staff/settings.json main.dockCall.siteOverride", "the unit abbreviation, unchanged in Spanish"],
+  ["staff/settings.json main.flySafe.value", "the unit abbreviation, unchanged in Spanish"],
+  ["diver.json common.units.feet", "the unit symbol, unchanged in Spanish"],
+  ["diver.json common.units.meters", "the unit symbol, unchanged in Spanish"],
+  ["diver.json marketing.guides.fareharbor.heroEyebrow", "two product names"],
+  ["diver.json marketing.guides.rezdy.heroEyebrow", "two product names"],
+  ["staff/settings.json main.units.celsius", "unit name, the same in Spanish"],
+  ["staff/settings.json main.units.fahrenheit", "unit name, the same in Spanish"],
+  ["staff/shared.json depth.feet", "unit symbol"],
+  ["staff/shared.json depth.meters", "unit symbol"],
+  ["staff/shared.json temperature.celsius", "unit symbol"],
+  ["staff/shared.json temperature.fahrenheit", "unit symbol"],
 ]);
 
 const sourceExtensions = new Set([".ts", ".tsx"]);
@@ -248,6 +464,72 @@ export function locateKey(bundle, key) {
  * in two locales. Only keys present in both with a string on each side are
  * compared; anything else belongs to rule 2, not here.
  */
+/**
+ * A **simple** ICU argument: `{date}`, `{value}`, `{count, number}` — one that
+ * carries no sub-message of its own. `{count, plural, one {# diver} …}` is
+ * deliberately not matched: its sub-messages hold real words, and a value that
+ * contained one would otherwise be exempted with those words untranslated.
+ */
+const SIMPLE_ARGUMENT = /\{[^{}]*\}/g;
+
+/**
+ * A rich-text tag the renderer consumes — `<diver>…</diver>` in a `t.rich`
+ * message. The tag *name* is markup, like an argument name; anything between
+ * the tags is not, and still counts.
+ */
+const RICH_TEXT_TAG = /<\/?[A-Za-z][A-Za-z0-9]*>/;
+
+/**
+ * The two together, for one left-to-right pass over a value.
+ *
+ * **Read between the markup, never strip it out.** The first version of this
+ * asked the same question by deleting both patterns and testing what was left,
+ * and CodeQL correctly read `value.replace(/<\/?[A-Za-z]\w*>/g, "")` as the
+ * shape of an HTML sanitizer — one that `<<diver>diver>` walks straight
+ * through, because deleting the inner tag reassembles an outer one. Nothing
+ * here is sanitizing anything (the result is thrown away; only "were there
+ * letters" survives, and the input is this repository's own message bundles),
+ * but a guard whose code is indistinguishable from a broken sanitizer is a
+ * guard somebody copies. Scanning the gaps answers the question without ever
+ * producing a "cleaned" string for anyone to trust.
+ */
+const MARKUP = new RegExp(`${SIMPLE_ARGUMENT.source}|${RICH_TEXT_TAG.source}`, "g");
+
+/**
+ * Whether a value has nothing in it to translate.
+ *
+ * **The one structural exemption, and it is not a blanket one** (issue #1797).
+ * Roughly a quarter of the identical values are a template and nothing else —
+ * `"{date} · {trip}"`, `"{tripTitle}"`, `"“{words}”"`, `"{count, number}"`.
+ * There is no Spanish form of those, because there is no word in them: what
+ * would be translated is a middle dot. Declaring forty of them by hand is
+ * honest and says nothing, and the reason would be the same sentence forty
+ * times.
+ *
+ * What keeps it from being the blanket exemption `DELIBERATELY_IDENTICAL`
+ * exists to avoid is that it is **decidable and self-revoking**. A value
+ * qualifies only when every letter in it sits inside a simple argument, so
+ * `"Re: {subject}"` and `"{value} ft"` do not — and the moment anybody adds a
+ * word to one of these templates it stops qualifying and has to be translated
+ * or declared by name. It cannot hide an English sentence, because a sentence
+ * has letters.
+ *
+ * Sub-messages are excluded above for the same reason, so a plural whose
+ * branches are English is still counted, and rich-text tag *names* are dropped
+ * with the arguments while everything between the tags is kept.
+ */
+export function nothingToTranslate(value) {
+  if (/\{[^{}]*\{/.test(value)) return false;
+  let readFrom = 0;
+  for (const match of value.matchAll(MARKUP)) {
+    if (hasALetter(value.slice(readFrom, match.index))) return false;
+    readFrom = match.index + match[0].length;
+  }
+  return !hasALetter(value.slice(readFrom));
+}
+
+const hasALetter = (text) => /\p{Letter}/u.test(text);
+
 export function compareValues(bundle, reference, other, declared = DELIBERATELY_IDENTICAL) {
   const identical = new Map();
   const stale = [];
@@ -259,6 +541,7 @@ export function compareValues(bundle, reference, other, declared = DELIBERATELY_
     const address = `${file} ${inFile}`;
     if (theirs === value) {
       if (declared.has(address)) continue;
+      if (nothingToTranslate(value)) continue;
       const hits = identical.get(file) ?? [];
       hits.push(inFile);
       identical.set(file, hits);

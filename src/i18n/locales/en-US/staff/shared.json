@@ -439,6 +439,7 @@
     "itemWithSize": "{item} {size}",
     "itemOverDrysuitBoot": "{item} over a drysuit boot",
     "itemOverDrysuitBootWithSize": "{item} over a drysuit boot, shoe {size}",
+    "itemNoLongerRented": "{item} (shop no longer rents this)",
     "notRecorded": "No fit on file, not asked yet",
     "ownKit": "Own kit",
     "needsStaffFit": "Needs staff fit at check-in",

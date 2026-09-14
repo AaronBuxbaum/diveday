@@ -158,14 +158,14 @@ describe("a refused session at the counter", () => {
   /**
    * One invoker per exported action, because their signatures differ: the
    * paper-waiver door is a `useActionState` reducer and the identity door
-   * carries the queue's search. Checked for exhaustiveness against the source
+   * carries the queue's search (issue #1803). Checked for exhaustiveness against the source
    * in the roster above, so a seventh action cannot arrive without one.
    */
   const INVOKE: Record<string, (form: FormData) => Promise<unknown>> = {
-    checkInAction: (form) => checkInAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
-    undoCheckInAction: (form) => undoCheckInAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
-    markNoShowAction: (form) => markNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
-    undoNoShowAction: (form) => undoNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
+    checkInAction: (form) => checkInAction(SHOP_SLUG, FOCUS_TRIP_ID, null, form),
+    undoCheckInAction: (form) => undoCheckInAction(SHOP_SLUG, FOCUS_TRIP_ID, null, form),
+    markNoShowAction: (form) => markNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, null, form),
+    undoNoShowAction: (form) => undoNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, null, form),
     markWaiverInPersonFromCheckIn: (form) =>
       markWaiverInPersonFromCheckIn(SHOP_SLUG, FOCUS_TRIP_ID, PAPER_WAIVER_IDLE, form),
     confirmIdentityFromCheckIn: (form) =>
