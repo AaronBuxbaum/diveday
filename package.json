@@ -89,22 +89,22 @@
     "persona:bots": "node scripts/persona-bots.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-cloudwatch-logs": "^3.1131.0",
-    "@aws-sdk/client-geo-places": "^3.1131.0",
-    "@aws-sdk/client-s3": "^3.1131.0",
-    "@aws-sdk/client-sesv2": "^3.1131.0",
-    "@aws-sdk/client-sns": "^3.1131.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.1132.0",
+    "@aws-sdk/client-geo-places": "^3.1132.0",
+    "@aws-sdk/client-s3": "^3.1132.0",
+    "@aws-sdk/client-sesv2": "^3.1132.0",
+    "@aws-sdk/client-sns": "^3.1132.0",
     "@electric-sql/pglite": "^0.5.8",
     "@sentry/nextjs": "^10.74.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "aws-rum-web": "^3.2.1",
     "bcryptjs": "^3.0.3",
-    "better-auth": "^1.7.4",
+    "better-auth": "^1.7.5",
     "drizzle-orm": "rc",
     "fflate": "^0.8.3",
     "next": "^16.3.5",
-    "next-intl": "^4.14.4",
+    "next-intl": "^4.14.5",
     "pg": "^8.23.0",
     "qrcode": "1.5.4",
     "react": "^19.3.0",
@@ -116,7 +116,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@biomejs/biome": "^2.5.13",
-    "@playwright/mcp": "^0.0.80",
+    "@playwright/mcp": "^0.0.81",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.1",
@@ -147,7 +147,7 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
-    "vercel": "^59.16.0",
+    "vercel": "^59.17.0",
     "vitest": "^5.0.0"
   }
 }
