@@ -222,7 +222,6 @@ test.describe("H-14 role permissions", () => {
       page,
     }) => {
       await page.goto(`/shop/${SHOP}/requests`);
-      const addDeparture = page.getByRole("link", { name: "Add a departure" });
       // The page's own heading, not a bounce to Today carrying a notice.
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/requests`));
       await expect(page.getByRole("heading", { level: 1, name: "Requested dates" })).toBeVisible();
@@ -231,17 +230,17 @@ test.describe("H-14 role permissions", () => {
       // menu's captain list in `staff-nav.spec.ts`, and the registry three
       // ways over in `staff-destinations.test.ts`.
 
-      // **And the day group's one act works for them**, which is the half a
-      // gate removal quietly gets wrong. Opening the page was never the point;
-      // turning a request into a departure is. The board read those rows
-      // behind the *same* `canPersonViewShopReports` check, justified in a
-      // comment as "the same live report gate that protects /requests" — so
-      // leaving it would have handed a captain an open page whose only act
-      // led to an empty builder with nothing on screen saying why
-      // (`security-reviewer`, 2026-09-16).
-      const day = page.getByRole("region").filter({ has: addDeparture }).first();
-      await day.getByRole("link", { name: "Add a departure" }).click();
-      await expect(page.getByRole("group", { name: "Starting from requests" })).toBeVisible();
+      // The rows themselves, not only the chrome — a page that renders its
+      // heading and no leads would pass a URL assertion and help nobody.
+      await expect(page.getByRole("link", { name: "Add a departure" }).first()).toBeVisible();
+
+      // **Turning one into a departure is not this role's** — and that is
+      // `canConfigureTrips` (owner, manager, instructor), a different gate
+      // this change does not touch. The instructor lens below is where the
+      // hand-off is asserted, because an instructor is the role that can
+      // configure a trip *and* fails `canViewShopReports`, which is exactly
+      // who the removed downstream check was emptying the builder for. Filed
+      // as #1831: the link is drawn for a captain who cannot complete it.
     });
   });
 
@@ -269,6 +268,36 @@ test.describe("H-14 role permissions", () => {
       await page.goto(`/shop/${SHOP}/settings`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
       await expect(page.getByRole("button", { name: "Save rental catalog" })).toHaveCount(0);
+    });
+
+    /**
+     * **The hand-off a date request exists for** (issue #1679, 2026-09-16).
+     *
+     * An instructor is the role this turns on: they pass `canConfigureTrips`,
+     * so the builder is theirs, and they fail `canViewShopReports`, which is
+     * owner/manager only. The board read the request rows behind that second
+     * check — justified in a comment as "the same live report gate that
+     * protects /requests", which stopped being true the moment that page was
+     * opened. So an instructor got the builder with no "Starting from
+     * requests" block and nothing on screen saying why (`security-reviewer`).
+     *
+     * Asserted through the link rather than by typing the URL, because the
+     * href is half of what broke: it carries the ids the block is built from.
+     */
+    test("an instructor opens the builder on a day's requests", { tag: READ_ONLY }, async ({
+      page,
+    }) => {
+      await page.goto(`/shop/${SHOP}/requests`);
+      const addDeparture = page.getByRole("link", { name: "Add a departure" });
+      await expect(addDeparture.first()).toBeVisible();
+      await page
+        .getByRole("region")
+        .filter({ has: addDeparture })
+        .first()
+        .getByRole("link", { name: "Add a departure" })
+        .click();
+
+      await expect(page.getByRole("group", { name: "Starting from requests" })).toBeVisible();
     });
   });
 
