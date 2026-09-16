@@ -15,7 +15,7 @@ import { languageNameIn } from "@/i18n/language-labels";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { staffTideWindowText } from "@/i18n/tide-labels";
+import { staffTideStationText, staffTideWindowText } from "@/i18n/tide-labels";
 import { DSD_RATIO } from "@/lib/course-ratios";
 import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { depthInUnit } from "@/lib/depth-units";
@@ -364,6 +364,7 @@ export default async function ManageTripPage({
       entry.preference,
       formatTime(entry.window.nearestTurn.at, locale, shop.timezone),
     ),
+    station: entry.stationLabel ? staffTideStationText(t, entry.stationLabel) : null,
   }));
 
   const aboutForms = new Set([

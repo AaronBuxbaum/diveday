@@ -439,7 +439,8 @@
       "crew": "Tripulación"
     },
     "pitchDoor": "El resto del briefing",
-    "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}"
+    "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}",
+    "tideStation": "Marea en {station}"
   },
   "factSource": {
     "forecast": "Pronóstico",

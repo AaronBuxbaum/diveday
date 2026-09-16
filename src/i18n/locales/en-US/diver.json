@@ -439,7 +439,8 @@
       "crew": "Crew"
     },
     "pitchDoor": "The rest of the briefing",
-    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}"
+    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}",
+    "tideStation": "Tide at {station}"
   },
   "factSource": {
     "forecast": "Forecast",

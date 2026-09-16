@@ -189,3 +189,19 @@ no prediction; and it stays a prompt rather than a refusal — an unanswered far
 as it did before the box existed. The box itself stays on the page once ticked, so the shop can take
 the answer back, and it renders only while there is a question: a station inside the threshold, a
 site with no coordinates, and a lookup that answered nothing all ask nothing.
+
+## Amendment 2026-09-16 — the station's name reaches the line a crew acts on
+
+The 2026-09-10 amendment above says two things come off the station endpoint, "both on the dive-site editor and nowhere else". A third does now, and it is on the departure: NOAA's own name for the station, beside the tide sentence, on the staff departure page and on the diver's page where the shop has published it. Issue #1732, which that amendment itself filed.
+
+**The editor is the wrong place for the only copy.** A wrong id is caught by a person who reads the name and disagrees with it, and the shop that typed the station in March never opens that page again — while the divemaster reading a turn on the morning of the trip does, every day, and had no way to ask whose tide it was. So the one surface that names the station was the one least likely to catch the mistake, and the one that could catch it daily said nothing.
+
+A correct pairing is worth naming too, and for a reason that is this record's own: the time on the line is a **height turn rather than slack** (the 2026-09-07 amendment). A captain who knows the water applies their own site lag to it, and cannot without knowing which station the number came from. The station's name is what turns a bare clock time into something a local can agree or disagree with.
+
+**The sentence is the product; the station is the footnote.** `tideWindowsForDeparture` carries `stationLabel: string | null`, and `null` is ordinary: a station lookup that answers nothing leaves the tide sentence exactly as it was, rendering no footnote and removing no line. Nothing in this feature has ever let a failed lookup take a line away, and this does not become the first.
+
+**The second lookup costs no wall clock.** The diver's departure page is unauthenticated and each seam is bounded at four seconds, so the station lookups are started in the same `Promise.all` as the prediction fetches rather than after them: the worst case is the slower of the two, not their sum. Both seams share an in-flight promise per key, so a two-tank day on one station asks each endpoint once. `departure-tides.test.ts` pins the ordering rather than the timing — the function is synchronous up to that one `await`, so both requests are out before the test's next line, and a serial version has issued one.
+
+**Not the id.** The seven digits stay off the line. Translating away from them is the whole point of the editor's echo, and putting them back where a crew reads would undo it.
+
+What is unchanged: no new endpoint, no new cache, no authorization or gate anywhere near this. The add panel's composer and the dive-site preview both call the same function and both ignore the new field — the editor already echoes the station a few inches above its own preview, and a proposal a staffer is still typing is not a line anyone acts on.

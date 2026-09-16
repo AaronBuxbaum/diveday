@@ -51,8 +51,12 @@ export function ConditionsSection({
    * The tide at each stationed site, already worded in the reader's language
    * with the time in the shop's zone (`src/i18n/tide-labels.ts`). Empty for
    * a departure whose sites name no NOAA station, which is most of them.
+   *
+   * `station` is whose water it is, already worded — absent when the station
+   * lookup answered nothing, which leaves the sentence exactly as it was
+   * (issue #1732).
    */
-  tideLines?: { site: string; text: string }[];
+  tideLines?: { site: string; text: string; station?: string | null }[];
   /** The Trip surface's About panel supplies the outer section chrome. */
   embedded?: boolean;
 }) {
@@ -214,6 +218,11 @@ export function ConditionsSection({
               <span className="font-medium text-foreground">{line.site}</span>
               <span aria-hidden="true"> · </span>
               {line.text}
+              {/* Whose water, after the sentence rather than before it: the
+                  turn is what a crew acts on and the station is what lets a
+                  captain who knows the water agree with it. Absent when the
+                  lookup answered nothing (issue #1732). */}
+              {line.station ? <span className="block text-xs">{line.station}</span> : null}
             </li>
           ))}
         </ul>
