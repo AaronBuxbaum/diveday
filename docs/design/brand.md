@@ -154,6 +154,14 @@ Color rules:
 > looks wrong on screen; `pnpm check:voice` now refuses the straight one, because Playwright matches
 > the two as different strings and every e2e spec hard-codes its English.
 
+> **Settled 2026-09-16 (#1664):** quotation marks are `“ ”`, never `"`, in every message bundle and
+> every locale — including Spanish, where `es-ES/README.md` had already chosen them over the
+> peninsular `« »`. The same collision as the apostrophe above at a fifth of the volume: 24
+> strings carrying 54 straight characters against 238 spelling them curly, with two marketing guides
+> one scroll apart making the same rhetorical move in different characters. `pnpm check:voice`
+> refuses the straight one with **no ICU exemption** — unlike `'`, a `"` carries no meaning to ICU, so
+> no value needs it and the rule landed at zero.
+
 
 The current product type system is:
 

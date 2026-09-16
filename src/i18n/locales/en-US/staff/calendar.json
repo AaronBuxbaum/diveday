@@ -41,7 +41,7 @@
     "webcalLabel": "Apple Calendar and Outlook",
     "httpsLabel": "Google Calendar and everything else",
     "webcalHint": "Opens your calendar app and subscribes.",
-    "httpsHint": "Paste under \"Other calendars → From URL\"."
+    "httpsHint": "Paste under “Other calendars → From URL”."
   },
   "warning": {
     "rotate": "Replacing the link stops the old one working right away. Any calendar still using it will stop updating until you paste the new link in.",

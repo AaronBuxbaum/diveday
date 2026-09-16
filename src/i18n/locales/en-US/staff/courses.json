@@ -128,7 +128,7 @@
     "startTimeLabel": "Day {number} start time",
     "endTimeLabel": "Day {number} end time",
     "timeNoteLabel": "Day {number} time note",
-    "timeNoteDescription": "For a day with no fixed clock time, e.g. \"week 1–2\" or \"about 3 hours\".",
+    "timeNoteDescription": "For a day with no fixed clock time, e.g. “week 1–2” or “about 3 hours”.",
     "timeNoteTitle": "Ignored when a start time is set for this day.",
     "timeNotePlaceholder": "about 3 hours",
     "whatHappens": "Day {number} — what happens",

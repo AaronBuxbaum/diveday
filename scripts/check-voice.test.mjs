@@ -6,6 +6,7 @@ import {
   proseDashes,
   RULES,
   straightApostrophes,
+  straightDoubleQuotes,
 } from "./check-voice.mjs";
 
 const rules = (value, locale = "en-US") => findTells(value, locale).map((hit) => hit.rule);
@@ -163,6 +164,49 @@ describe("the house apostrophe", () => {
     expect(straightApostrophes("A diver's card and a shop's day.")).toEqual([
       { rule: "apostrophe", text: "A diver's card" },
       { rule: "apostrophe", text: "a shop's day." },
+    ]);
+  });
+});
+
+describe("the house quotation marks", () => {
+  it("catches a straight double quote in prose", () => {
+    expect(rules('A "leave a review" link on the recap')).toContain("quote");
+    expect(rules('What does "trial" mean right now?')).toContain("quote");
+  });
+
+  it("leaves the curly pair alone", () => {
+    expect(rules("A \u201cleave a review\u201d link on the recap")).toEqual([]);
+    expect(rules("everything between \u201cbooked\u201d and \u201cback at the dock\u201d")).toEqual(
+      [],
+    );
+  });
+
+  /**
+   * The apostrophe rule has to strip ICU-quoted spans before it scans, because
+   * a straight `'` is what makes `'{depth18}'` a literal. A `"` carries no
+   * meaning in ICU, so there is no span where it is required \u2014 which is why
+   * this rule has no exemption list and could land at zero.
+   */
+  it("still reads a value that carries an ICU-quoted marker", () => {
+    expect(rules("<marker>'{depth18}'</marker> is \u201cabout 18 metres\u201d")).toEqual([]);
+    expect(rules(`<marker>'{depth18}'</marker> is "about 18 metres"`)).toContain("quote");
+  });
+
+  it("holds every locale to it \u2014 es-ES is \u201c \u201d, not \xab \xbb", () => {
+    // src/i18n/locales/es-ES/README.md settles it: guillemets read as
+    // peninsular typesetting. Beside `proseDashes` rather than inside `RULES`,
+    // so a third language inherits the typography without naming it.
+    expect(rules('\xbfQu\xe9 significa "prueba" ahora mismo?', "es-ES")).toContain("quote");
+    expect(rules("\xbfQu\xe9 significa \u201cprueba\u201d ahora mismo?", "es-ES")).toEqual([]);
+  });
+
+  it("reports one hit per character, with the words around it", () => {
+    expect(straightDoubleQuotes('Its "manifest" is a list.')).toEqual([
+      { rule: "quote", text: 'Its"manifest" is' },
+      // The closing one's two preceding words are `Its` and `"manifest"`, so
+      // its excerpt overlaps the opening one's. That is the apostrophe rule's
+      // shape too, and it is what makes both greppable back to the string.
+      { rule: "quote", text: 'Its "manifest"is a' },
     ]);
   });
 });
