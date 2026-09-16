@@ -422,6 +422,19 @@ test.describe("schedule builder", () => {
       // changed shape, so a future re-wrap is caught wherever it happens.
       for (const width of widths) {
         await page.setViewportSize({ width, height: 800 });
+        // Wait on the bar itself before measuring it. `measure()` reads
+        // `document.querySelector("header.sticky")` and falls back to `0` when
+        // it finds nothing, so a measurement taken in the same frame as the
+        // resize reports a **0px bar** rather than an absent one — which is
+        // what shard 3/4 failed on for the shopfront at 390px, with the board
+        // green at all three widths on the same run. This is the same trick
+        // the `h1` above uses: make the measurement wait on the page rather
+        // than on the clock.
+        //
+        // It cannot hide a regression. A bar that genuinely never renders
+        // still fails here, and says so in as many words instead of arriving
+        // as an arithmetic complaint about zero.
+        await expect(page.locator("header.sticky")).toBeVisible();
         const measured = await measure();
 
         // One height, both shells. Preflight makes the bar `border-box`, so
