@@ -149,8 +149,10 @@ test.describe("H-14 role permissions", () => {
     test("a refused surface lands somewhere that says why", { tag: READ_ONLY }, async ({
       page,
     }) => {
-      // Four sequential refusal round trips now, not three; the suite default
-      // is sized for a single flow.
+      // Three sequential refusal round trips; the suite default is sized for a
+      // single flow. It was four until Date requests was opened to every live
+      // staff role on 2026-09-16 (issue #1679) — that surface is asserted
+      // positively in the test below, beside the inbox it now matches.
       test.setTimeout(40_000);
 
       // Revenue is owner/manager work — Today explains, rather than dumping
@@ -158,13 +160,6 @@ test.describe("H-14 role permissions", () => {
       await page.goto(`/shop/${SHOP}/reports`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
       await expect(page.getByText(/Reports read the shop’s revenue/i)).toBeVisible();
-
-      // Date requests carry contact details for people who have not booked, and
-      // choosing which unscheduled day gets a boat is desk work — the same
-      // owner/manager gate revenue takes, with the row absent from the nav.
-      await page.goto(`/shop/${SHOP}/requests`);
-      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
-      await expect(page.getByText(/Date requests carry contact details/i)).toBeVisible();
 
       // Team and Import are Settings sub-pages, and they used to land their
       // refusal on Settings — the nearest parent that could explain it. Now
@@ -210,6 +205,29 @@ test.describe("H-14 role permissions", () => {
       await expect(
         page.getByLabel("Reply by email to priya.sharma@example.com", { exact: true }),
       ).toBeVisible();
+    });
+
+    /**
+     * **Nor is Date requests, since 2026-09-16** (issue #1679, the same H-14
+     * row). It was owner/manager on the written ground that the rows carry
+     * contact details for people who have not booked — which is what the inbox
+     * above shows this same captain, for a stranger with no diver record, and
+     * lets them answer in the shop's name. Asserted in this file for the same
+     * reason the inbox is: the captain lens is where a gate would come back.
+     *
+     * The refusal it used to land is gone from the test above, so this is the
+     * only place either behaviour is stated.
+     */
+    test("the daily crew may read the days divers asked for", { tag: READ_ONLY }, async ({
+      page,
+    }) => {
+      await page.goto(`/shop/${SHOP}/requests`);
+      // The page's own heading, not a bounce to Today carrying a notice.
+      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/requests`));
+      await expect(page.getByRole("heading", { level: 1, name: "Requested dates" })).toBeVisible();
+      // And it is a place they can get to, not only one they can type: the row
+      // is in More rather than hidden by `visibleStaffDestinations`.
+      await expect(page.getByRole("link", { name: "Requests" }).first()).toBeVisible();
     });
   });
 

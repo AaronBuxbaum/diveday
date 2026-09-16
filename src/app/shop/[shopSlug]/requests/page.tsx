@@ -5,7 +5,6 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { listBoats } from "@/db/boats";
 import { listDateRequestsForStaff } from "@/db/course-inquiries";
-import { canPersonViewShopReports } from "@/db/reporting";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
@@ -63,18 +62,15 @@ export default async function RequestsPage({
 }) {
   const { shopSlug } = await params;
   const { page, notice } = await searchParams;
-  // Checked against the database, not the JWT, so a demoted manager loses the
-  // contact details on this page immediately — the same live check Reports
-  // makes, and for the same reason (canPersonViewShopReports).
-  //
-  // The nav already hides this destination from everyone but owners and
-  // managers (ADR 20260724-role-gated-surfaces-hide-not-explain); the refusal
-  // landing is for a bookmark, a deep link, or a role that changed under
-  // someone — and it says why rather than teleporting them silently.
-  const { db, shop } = await requireShopSurface(shopSlug, {
-    allow: canPersonViewShopReports,
-    refusal: { notice: "requests-not-authorized" },
-  });
+  // **No role gate, since 2026-09-16** (issue #1679, an H-14 amendment). This
+  // read `allow: canPersonViewShopReports` with a refusal notice, on the
+  // written ground that the rows carry contact details for people who have not
+  // booked. The shop inbox renders the same thing — a stranger's address or
+  // number, their subject, their message — to every live staff role and lets
+  // them answer as the shop, and has since 2026-09-10. The gate was deleted
+  // rather than relaxed, the way the inbox's was, so there is nothing left here
+  // to drift out of step with it.
+  const { db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const timezone = shop.timezone;
   const t = staffTranslator(locale);
