@@ -19,6 +19,7 @@
   "paperWaiver": {
     "markSignedOnPaper": "Marcar como firmado en papel",
     "medicalAttestationLabel": "Tengo la exención firmada de este buceador archivada, he revisado su cuestionario médico y ninguna respuesta necesita el visto bueno de un médico.",
+    "medicalAttestationMinorLabel": "Tengo la exención firmada de este buceador archivada, he revisado su cuestionario médico, ninguna respuesta necesita el visto bueno de un médico y la madre, el padre o el tutor respondió las preguntas de salud.",
     "recording": "Registrando…",
     "recordPaperSignature": "Registrar firma en papel",
     "guardianNameLabel": "Madre, padre o tutor que firmó",
