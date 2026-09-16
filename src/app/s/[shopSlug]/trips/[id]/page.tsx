@@ -38,7 +38,7 @@ import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { diverTideWindowText } from "@/i18n/tide-labels";
+import { diverTideStationText, diverTideWindowText } from "@/i18n/tide-labels";
 import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
@@ -322,6 +322,7 @@ export default async function TripDetailPage({
         entry.preference,
         formatTime(entry.window.nearestTurn.at, locale, shop.timezone),
       ),
+      station: entry.stationLabel ? diverTideStationText(t, entry.stationLabel) : null,
     }));
 
   // The embed's short confirmation renders only from a verified `confirm`
