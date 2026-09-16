@@ -212,15 +212,30 @@ function groupNorthAmerican(national: string): string {
   return `${national.slice(0, 3)} ${national.slice(3, 6)} ${national.slice(6)}`;
 }
 
-function groupInThrees(national: string): string {
-  const groups: string[] = [];
-  let rest = national;
-  while (rest.length > 4) {
-    groups.push(rest.slice(0, 3));
-    rest = rest.slice(3);
-  }
-  groups.push(rest);
-  return groups.join(" ");
+/**
+ * **The one grouping rule DiveDay actually knows** — and the only one it
+ * applies (issue #1764).
+ *
+ * Everywhere outside North America the national part is printed as one
+ * unbroken run. This used to split it into threes, which is a guess at that
+ * country's convention: it printed a UK mobile as `+44 770 090 0123` where a
+ * British staffer reads `+44 7700 900123`, and a Mexican number carrying the
+ * historic mobile `1` as four groups and a stray pair.
+ *
+ * A wrong reading was correctable while this only rendered inside the
+ * forgiving edit field, beside the box a staffer was typing in. Since #1712 it
+ * also groups `people.phone` on every staff surface that prints the column —
+ * read aloud, down a phone line, with the diver at the counter — and there the
+ * mistake has nowhere to be caught. **Unbroken is never wrong; grouped by a
+ * guess is wrong quietly**, which is the worse of the two on a surface nobody
+ * proofreads. The cost is a nine-digit run on screen for a Spanish number,
+ * which is what the number is.
+ *
+ * A per-country table beside `CALLING_CODES` was the alternative and was not
+ * taken: somebody has to keep it correct for every country DiveDay sells into.
+ */
+function groupNational(callingCode: string, national: string): string {
+  return callingCode === "1" ? `+1 ${groupNorthAmerican(national)}` : `+${callingCode} ${national}`;
 }
 
 /**
@@ -244,7 +259,7 @@ export function readTypedPhone(
   const home = CALLING_CODES[(country ?? "").toUpperCase()];
   if (international) {
     if (digits.startsWith("1") && digits.length === 11) {
-      return reading(`+1 ${groupNorthAmerican(digits.slice(1))}`);
+      return reading(groupNational("1", digits.slice(1)));
     }
     // The longest calling code we know that prefixes the digits, else the
     // first two digits — enough to keep the country in front of the rest.
@@ -252,16 +267,16 @@ export function readTypedPhone(
       Object.values(CALLING_CODES)
         .filter((candidate) => digits.startsWith(candidate))
         .sort((a, b) => b.length - a.length)[0] ?? digits.slice(0, 2);
-    return reading(`+${code} ${groupInThrees(digits.slice(code.length))}`);
+    return reading(groupNational(code, digits.slice(code.length)));
   }
   if (!home) return null;
   if (home === "1") {
     const national = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
     if (national.length !== 10) return null;
-    return reading(`+1 ${groupNorthAmerican(national)}`);
+    return reading(groupNational("1", national));
   }
   const national = digits.startsWith("0") ? digits.slice(1) : digits;
-  return reading(`+${home} ${groupInThrees(national)}`);
+  return reading(groupNational(home, national));
 }
 
 /**
