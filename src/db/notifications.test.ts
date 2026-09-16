@@ -727,11 +727,18 @@ describe("what the retry queue is allowed to hold", () => {
       .select()
       .from(notificationSendQueue)
       .where(eq(notificationSendQueue.shopId, shop.id));
-    // Its own code, never `missing_payload` — the two say different things to
-    // whoever reads the parked-failure surface — and the value is left in
-    // place, so a restored key can still drain it. The handles stay for the
-    // same span: erasure matches on them, and a parked row that had dropped
-    // them would be a row an erasure could no longer find.
+    // Its own code, never `missing_payload` — the two describe different
+    // faults, and on a `failed` row `error_code` is the only place either is
+    // written down. This used to say the two "say different things to whoever
+    // reads the parked-failure surface", and no such surface exists: the Today
+    // panel's `listNotificationDeliveryIssues` reads `notification_deliveries`
+    // and never this queue, so a parked row is invisible on every staff screen
+    // (issue #1719). What reads the code is `drainableStatus()`, which is a
+    // better reason for keeping them apart than a screen nobody built.
+    //
+    // The value is left in place, so a restored key can still drain it. The
+    // handles stay for the same span: erasure matches on them, and a parked row
+    // that had dropped them would be a row an erasure could no longer find.
     expect(row?.errorCode).toBe("sealed_payload_unreadable");
     expect(row?.payloadSealed).toBe("v1.not.a.real.seal");
     expect(row?.recipientEmail).toBe("front-desk@example.invalid");
@@ -791,6 +798,93 @@ describe("what the retry queue is allowed to hold", () => {
       subjectEmail: null,
       subjectPhone: null,
       bookingId: null,
+      // Including the code that parked it. A row that recovered exactly as
+      // #1340 intended used to end its life as `sent` still carrying
+      // `sealed_payload_unreadable`, which is indistinguishable from one that
+      // never recovered at all. Nothing reads this off a sent row today, so it
+      // was a trap for the first reader who does rather than a live defect
+      // (issue #1719).
+      errorCode: null,
+      lastError: null,
+      httpStatus: null,
+    });
+  });
+
+  it("gives a recovered row its whole transient budget, not what the fortnight left of it", async () => {
+    const { db, shop } = await seededShopContext();
+    await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
+    const [queued] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    const sealed = queued?.payloadSealed;
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0), payloadSealed: "v1.not.a.real.seal" })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    // Four days of a key nobody has put back yet — deliberately one more than
+    // `RETRY_QUEUE_MAX_ATTEMPTS`, because that is the whole of issue #1719:
+    // both bounds read `attempts`, so by here the row's three provider retries
+    // were spent by passes that never reached a provider at all, and the first
+    // real failure below retired it on the spot.
+    const A_DAY = 25 * 60 * 60_000;
+    for (let pass = 0; pass < 4; pass += 1) {
+      await drainNotificationRetries(db, {
+        provider: failsRetryably,
+        now: new Date(nowMs() + pass * A_DAY),
+      });
+    }
+    const [parked] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    expect(parked).toMatchObject({
+      errorCode: "sealed_payload_unreadable",
+      recoveryAttempts: 4,
+      attempts: 4,
+    });
+
+    // The key comes back, and the provider is having an ordinary bad day.
+    await db
+      .update(notificationSendQueue)
+      .set({ payloadSealed: sealed })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    // Three passes that each reach the provider and are each turned away, and
+    // the row survives the first two of them — the same three a row that was
+    // never parked gets, counted from its first send rather than from its
+    // first claim.
+    for (const pass of [4, 5]) {
+      await expect(
+        drainNotificationRetries(db, {
+          provider: failsRetryably,
+          now: new Date(nowMs() + pass * A_DAY),
+        }),
+      ).resolves.toMatchObject({ queued: 1 });
+    }
+    const [retrying] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    expect(retrying).toMatchObject({ status: "queued", errorCode: "temporary_failure" });
+
+    // And the budget is a budget: the third one retires it, so the separate
+    // counter buys a recovered row its three passes and not an endless supply.
+    await expect(
+      drainNotificationRetries(db, {
+        provider: failsRetryably,
+        now: new Date(nowMs() + 6 * A_DAY),
+      }),
+    ).resolves.toMatchObject({ failed: 1 });
+    const [retired] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    expect(retired).toMatchObject({
+      status: "failed",
+      errorCode: "temporary_failure",
+      payloadSealed: null,
     });
   });
 
@@ -806,6 +900,7 @@ describe("what the retry queue is allowed to hold", () => {
       .set({
         status: "failed",
         errorCode: "sealed_payload_unreadable",
+        recoveryAttempts: UNREADABLE_RETRY_MAX_ATTEMPTS,
         attempts: UNREADABLE_RETRY_MAX_ATTEMPTS,
         nextAttemptAt: new Date(0),
         payloadSealed: null,
@@ -831,21 +926,21 @@ describe("what the retry queue is allowed to hold", () => {
       .where(eq(notificationSendQueue.shopId, shop.id));
     expect(row).toMatchObject({
       status: "failed",
-      attempts: UNREADABLE_RETRY_MAX_ATTEMPTS,
+      recoveryAttempts: UNREADABLE_RETRY_MAX_ATTEMPTS,
     });
   });
 
   it("empties the row on the park that spends its last attempt", async () => {
     const { db, shop } = await seededShopContext();
     await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
-    // One attempt short of the bound, so the pass below is the last one
+    // One recovery pass short of the bound, so the pass below is the last one
     // `drainableStatus()` will ever offer this row.
     await db
       .update(notificationSendQueue)
       .set({
         status: "failed",
         errorCode: "sealed_payload_unreadable",
-        attempts: UNREADABLE_RETRY_MAX_ATTEMPTS - 1,
+        recoveryAttempts: UNREADABLE_RETRY_MAX_ATTEMPTS - 1,
         nextAttemptAt: new Date(0),
         payloadSealed: "v1.not.a.real.seal",
       })
@@ -867,7 +962,7 @@ describe("what the retry queue is allowed to hold", () => {
     expect(row).toMatchObject({
       status: "failed",
       errorCode: "sealed_payload_unreadable",
-      attempts: UNREADABLE_RETRY_MAX_ATTEMPTS,
+      recoveryAttempts: UNREADABLE_RETRY_MAX_ATTEMPTS,
       payloadSealed: null,
       recipientEmail: null,
       subjectEmail: null,
