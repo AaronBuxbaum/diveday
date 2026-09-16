@@ -16,7 +16,6 @@ import {
   listDateRequestsForCalendarDates,
 } from "@/db/course-inquiries";
 import { findSimilarDivers, getBookableDiver, listBookableDivers } from "@/db/divers";
-import { canPersonViewShopReports } from "@/db/reporting";
 import { getTripWithBooked } from "@/db/trips";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -105,12 +104,11 @@ export default async function NewBookingDiverPage({
   if (!uuidParam(tripId)) notFound();
   const { diverq, notice, gate, request, confirmName, confirmEmail, confirmPhone } =
     await searchParams;
-  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop } = await requireShopSurface(shopSlug);
   const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const requestId = request ? uuidParam(request) : null;
-  const canViewReports = await canPersonViewShopReports(db, shop.id, session.user.personId);
 
   // Read by id, not from the picker's page of options: a departure sitting past
   // the first page is still a legitimate place to stand.
@@ -121,12 +119,16 @@ export default async function NewBookingDiverPage({
   const lookupDates = Array.from({ length: FLEXIBLE_WINDOW_DAYS * 2 + 1 }, (_unused, index) =>
     shiftCalendarDate(tripDate, index - FLEXIBLE_WINDOW_DAYS),
   );
-  const [requestRows, relevantRows]: [DateRequestRow[], DateRequestRow[]] = canViewReports
-    ? await Promise.all([
-        requestId ? listDateRequestsByIds(db, shop.id, [requestId]) : Promise.resolve([]),
-        listDateRequestsForCalendarDates(db, shop.id, lookupDates),
-      ])
-    : [[], []];
+  // Read for whoever can open this page, since 2026-09-16 (issue #1679). It
+  // was behind `canPersonViewShopReports` as the downstream half of the gate
+  // on `/requests`; that page is ungated now, so the check protected nothing
+  // and only emptied the hand-off — a captain following "Create booking" from
+  // a request got no prefilled diver and no matching-request cards. Still
+  // scoped to `shop.id`, so a `?request=` id cannot reach another tenant.
+  const [requestRows, relevantRows]: [DateRequestRow[], DateRequestRow[]] = await Promise.all([
+    requestId ? listDateRequestsByIds(db, shop.id, [requestId]) : Promise.resolve([]),
+    listDateRequestsForCalendarDates(db, shop.id, lookupDates),
+  ]);
   const requestContext: DateRequestRow | null = requestRows[0] ?? null;
   const requestSubject = (row: DateRequestRow) =>
     row.courseTitle

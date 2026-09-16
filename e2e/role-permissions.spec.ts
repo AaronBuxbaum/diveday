@@ -222,12 +222,26 @@ test.describe("H-14 role permissions", () => {
       page,
     }) => {
       await page.goto(`/shop/${SHOP}/requests`);
+      const addDeparture = page.getByRole("link", { name: "Add a departure" });
       // The page's own heading, not a bounce to Today carrying a notice.
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/requests`));
       await expect(page.getByRole("heading", { level: 1, name: "Requested dates" })).toBeVisible();
-      // And it is a place they can get to, not only one they can type: the row
-      // is in More rather than hidden by `visibleStaffDestinations`.
-      await expect(page.getByRole("link", { name: "Requests" }).first()).toBeVisible();
+      // That it is also a place a captain can *get to* rather than only type
+      // is a nav question, and it is asserted where the nav is: the More
+      // menu's captain list in `staff-nav.spec.ts`, and the registry three
+      // ways over in `staff-destinations.test.ts`.
+
+      // **And the day group's one act works for them**, which is the half a
+      // gate removal quietly gets wrong. Opening the page was never the point;
+      // turning a request into a departure is. The board read those rows
+      // behind the *same* `canPersonViewShopReports` check, justified in a
+      // comment as "the same live report gate that protects /requests" — so
+      // leaving it would have handed a captain an open page whose only act
+      // led to an empty builder with nothing on screen saying why
+      // (`security-reviewer`, 2026-09-16).
+      const day = page.getByRole("region").filter({ has: addDeparture }).first();
+      await day.getByRole("link", { name: "Add a departure" }).click();
+      await expect(page.getByRole("group", { name: "Starting from requests" })).toBeVisible();
     });
   });
 

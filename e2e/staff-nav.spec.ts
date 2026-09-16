@@ -135,6 +135,13 @@ test.describe("captain", () => {
     // The More menu shows a captain only what their role can open: the
     // ungated cadence rows, and their own calendar feed — never a disabled
     // Waivers, Reports, Team, Promo codes, or Settings row.
+    //
+    // **Requests joined this list on 2026-09-16** (issue #1679, an H-14
+    // amendment), beside the Inbox that joined it on 2026-09-10. Both gates
+    // were deleted rather than relaxed, and for one argument: the inbox shows
+    // this same captain a stranger's address and message and lets them answer
+    // as the shop, so "these rows carry contact details for people who have
+    // not booked" had stopped telling the two surfaces apart.
     await page.locator("header summary").filter({ hasText: "More" }).click();
     const menu = page.locator("header details[open]");
     await expect(menu.getByRole("list", { name: "Run the shop" }).getByRole("link")).toHaveText([
@@ -143,6 +150,7 @@ test.describe("captain", () => {
       "Dive sites",
       "Gear",
       "Reviews",
+      "Requests",
       "Inbox",
       "Orders",
     ]);
@@ -151,14 +159,16 @@ test.describe("captain", () => {
     await expect(menu.getByRole("list", { name: "Set up" }).getByRole("link")).toHaveText([
       "Calendar subscription",
     ]);
-    // Requests is gated with Reports and Promo codes: it holds contact details
-    // for people who have not booked, and choosing which unscheduled day gets a
-    // boat is desk work, not the captain's. Inbox is *not* here any more — it
-    // sat in this loop until 2026-09-10, when #1505/#1518 opened reading and
-    // answering to every live staff role; it is asserted visible in the list
-    // above instead. Each row below is named rather than left to the length of
-    // that list, so a gate is asserted rather than implied.
-    for (const gated of ["Waivers", "Requests", "Reports", "Team", "Promo codes", "Settings"]) {
+    // Neither Inbox nor Requests is in this loop any more, and they left it for
+    // one reason. Inbox went on 2026-09-10 (#1505/#1518) and Requests on
+    // 2026-09-16 (#1679), both H-14 amendments: the moment the inbox began
+    // showing this captain a stranger's address and message — and letting them
+    // answer as the shop — "these rows carry contact details for people who
+    // have not booked" stopped telling the two surfaces apart. Both are
+    // asserted *visible* in the list above instead. Each row below is named
+    // rather than left to the length of that list, so a gate is asserted
+    // rather than implied.
+    for (const gated of ["Waivers", "Reports", "Team", "Promo codes", "Settings"]) {
       await expect(menu.getByRole("link", { name: gated })).toHaveCount(0);
     }
   });

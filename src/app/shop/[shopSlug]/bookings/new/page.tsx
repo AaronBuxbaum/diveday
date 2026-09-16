@@ -17,7 +17,6 @@ import {
   listDateRequestsForCalendarDates,
 } from "@/db/course-inquiries";
 import { PAGE_SIZE } from "@/db/paging";
-import { canPersonViewShopReports } from "@/db/reporting";
 import { offsetUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -86,11 +85,10 @@ export default async function NewBookingPage({
   await connection(); // live seat counts — render per request, never a build-time shell
   const { shopSlug } = await params;
   const { page, request } = await searchParams;
-  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const requestId = request ? uuidParam(request) : null;
-  const canViewReports = await canPersonViewShopReports(db, shop.id, session.user.personId);
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range so a bookmarked page past the end lands on the last real one.
@@ -112,12 +110,16 @@ export default async function NewBookingPage({
       ),
     ),
   ];
-  const [requestContext, relevantRows]: [DateRequestRow[], DateRequestRow[]] = canViewReports
-    ? await Promise.all([
-        requestId ? listDateRequestsByIds(db, shop.id, [requestId]) : Promise.resolve([]),
-        listDateRequestsForCalendarDates(db, shop.id, lookupDates),
-      ])
-    : [[], []];
+  // Read for whoever can open this page, since 2026-09-16 (issue #1679). It
+  // was behind `canPersonViewShopReports` as the downstream half of the gate
+  // on `/requests`; that page is ungated now, so the check protected nothing
+  // and only emptied the hand-off — a captain following "Create booking" from
+  // a request got no prefilled diver and no matching-request cards. Still
+  // scoped to `shop.id`, so a `?request=` id cannot reach another tenant.
+  const [requestContext, relevantRows]: [DateRequestRow[], DateRequestRow[]] = await Promise.all([
+    requestId ? listDateRequestsByIds(db, shop.id, [requestId]) : Promise.resolve([]),
+    listDateRequestsForCalendarDates(db, shop.id, lookupDates),
+  ]);
   const selectedRequest = requestContext[0] ?? null;
   const relevantDateById = new Map<string, string>();
   for (const date of tripDates) {

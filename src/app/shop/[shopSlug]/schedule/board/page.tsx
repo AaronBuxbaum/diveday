@@ -12,7 +12,6 @@ import { listDateRequestsByIds } from "@/db/course-inquiries";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
 import { readFormDraft } from "@/db/form-drafts";
-import { canPersonViewShopReports } from "@/db/reporting";
 import { openAfterDiveRollCalls } from "@/db/today";
 import {
   pagedUpcomingTripsWithCounts,
@@ -213,41 +212,33 @@ export default async function ScheduleBoardPage({
   // they are two queries and a whole catalogue of client props for two selects
   // inside a panel that is closed by default, so they load when it opens
   // (`loadBuilderOptionsAction`).
-  const [
-    range,
-    { trips: upcoming, nextCursor },
-    canConfigure,
-    canViewReports,
-    openRollCalls,
-    shopBoats,
-    weekRows,
-  ] = await Promise.all([
-    upcomingScheduleRange(db, shop.id, now),
-    pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
-    canPersonConfigureTrips(db, shop.id, session.user.personId),
-    canPersonViewShopReports(db, shop.id, session.user.personId),
-    // Departures that already came back with a head count still open (DOM-H3).
-    // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
-    // whose `startsAt` is still ahead of `now` — so this is its own backwards
-    // query, and one batched query for every such boat rather than a per-trip
-    // roll-call lookup.
-    //
-    // Read at every cursor page, not only the first, because the **week** also
-    // needs it and the week has no cursor: it is addressed by `?week=`, so a
-    // board sitting on `?after=` still draws a grid, and gating the read on
-    // the stream's pager is what made the loudest thing the board can say
-    // disappear at desktop. The stream's own placement is unchanged — those
-    // rows lead page one and are not repeated on top of every later page
-    // (`streamRollCalls` below).
-    openAfterDiveRollCalls(db, shop.id, now),
-    listBoats(db, shop.id),
-    // A second, bounded reading of the same departures — one week, not a
-    // cursor page — for the `xl` grid (ADR 20260827-clearwater-surface-language,
-    // decision 5). It reaches backwards, which the stream never does: a week
-    // that has already half-happened is most of what "what does my week look
-    // like" means.
-    weekBoard(db, shop.id, weekStartIso, tz, now),
-  ]);
+  const [range, { trips: upcoming, nextCursor }, canConfigure, openRollCalls, shopBoats, weekRows] =
+    await Promise.all([
+      upcomingScheduleRange(db, shop.id, now),
+      pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
+      canPersonConfigureTrips(db, shop.id, session.user.personId),
+      // Departures that already came back with a head count still open (DOM-H3).
+      // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
+      // whose `startsAt` is still ahead of `now` — so this is its own backwards
+      // query, and one batched query for every such boat rather than a per-trip
+      // roll-call lookup.
+      //
+      // Read at every cursor page, not only the first, because the **week** also
+      // needs it and the week has no cursor: it is addressed by `?week=`, so a
+      // board sitting on `?after=` still draws a grid, and gating the read on
+      // the stream's pager is what made the loudest thing the board can say
+      // disappear at desktop. The stream's own placement is unchanged — those
+      // rows lead page one and are not repeated on top of every later page
+      // (`streamRollCalls` below).
+      openAfterDiveRollCalls(db, shop.id, now),
+      listBoats(db, shop.id),
+      // A second, bounded reading of the same departures — one week, not a
+      // cursor page — for the `xl` grid (ADR 20260827-clearwater-surface-language,
+      // decision 5). It reaches backwards, which the stream never does: a week
+      // that has already half-happened is most of what "what does my week look
+      // like" means.
+      weekBoard(db, shop.id, weekStartIso, tz, now),
+    ]);
   // **Names come from every hull the shop has ever had, not just the live
   // ones.** A departure that sailed on a boat the shop has since deleted must
   // still say which vessel — that is the whole reason deleting one is a stamp
@@ -284,13 +275,16 @@ export default async function ScheduleBoardPage({
     ? ((await listDiveSites(db, shop.id)).find((row) => row.id === site) ?? null)
     : null;
 
-  // Request details are contact information. Only the same live report gate
-  // that protects /requests may carry them onto the builder, even though the
-  // board itself is readable by a wider staff audience.
+  // Read for whoever can open the board, since 2026-09-16 (issue #1679). This
+  // carried the same `canPersonViewShopReports` check as `/requests`, on the
+  // written ground that it was "the same live report gate that protects
+  // /requests" — and that page is ungated now, so the check protected nothing
+  // and only broke the day group's one act: a captain tapping "Add departure"
+  // got a builder with no requests block and no explanation. `shop.id` is
+  // still the scope (`listDateRequestsByIds`), so a shareable URL still cannot
+  // pull another tenant's lead.
   const requestRows =
-    canViewReports && requestIds.length > 0
-      ? await listDateRequestsByIds(db, shop.id, requestIds)
-      : [];
+    requestIds.length > 0 ? await listDateRequestsByIds(db, shop.id, requestIds) : [];
   const requestAdvice = adviseRequests(
     requestRows.map((request) => ({
       id: request.id,
