@@ -52,12 +52,14 @@
   },
   "identity": {
     "trigger": "Confirm this is {name}",
-    "message": "Is the person at the counter {name}? Only do this once you’ve checked it’s the same person, and not someone else with a similar name or a shared email. Confirming hands that diver’s certifications and waiver to this seat, spends any prepaid dives that cover it, and cannot be undone. If it’s someone else, book them under their own email instead.",
+    "message": "Is the person at the counter {name}? Confirming hands that diver’s certifications and waiver to this seat, spends any prepaid dives that cover it, and cannot be undone.",
     "confirm": "Yes, this is them",
     "cancel": "Never mind",
     "confirming": "Confirming…"
   },
   "settledGroup": "Checked in — {count}",
+  "settledAllBoarded": "All boarded",
+  "settledSomeBoarded": "{count} boarded",
   "checkInButton": "Check in",
   "checkInAriaLabel": "Check in {name}",
   "checkingIn": "Checking in…",
@@ -69,7 +71,6 @@
     "release": "Release to sync",
     "refreshing": "Syncing…"
   },
-  "checkedInCheck": "Checked in",
   "undoAriaLabel": "Undo check-in for {name}",
   "undoing": "Undoing…",
   "walkInAction": "Add a walk-in",

@@ -164,6 +164,42 @@ describe("the settled group", () => {
   });
 
   /**
+   * **Boarding is the group's fact** (principle 9). Every receipt in a loaded
+   * boat's group wore an identical "Boarded" pill — the same word five times,
+   * on the one group whose whole point is that there is nothing left to do in
+   * it. It is said once, beside the count, and only when it has something to
+   * say: "0 boarded" is an absence formatted as information, so a group with
+   * nobody aboard yet says nothing at all.
+   */
+  describe("the boat's own fact, said once", () => {
+    const boarded = (name: string) => row(name, { bookingStatus: "checked_in", boarded: true });
+
+    it("says nothing while nobody has boarded", () => {
+      const { container } = renderQueue([settled("Ines Costa"), settled("June Park")]);
+      const summary = container.querySelector("details > summary")?.textContent ?? "";
+      expect(summary).toContain("Checked in — 2");
+      expect(summary).not.toMatch(/boarded/i);
+    });
+
+    it("says it whole when the boat has them all", () => {
+      const { container } = renderQueue([boarded("Ines Costa"), boarded("June Park")]);
+      expect(container.querySelector("details > summary")?.textContent).toContain("All boarded");
+    });
+
+    it("counts them while the boat is still loading", () => {
+      const { container } = renderQueue([boarded("Ines Costa"), settled("June Park")]);
+      expect(container.querySelector("details > summary")?.textContent).toContain("1 boarded");
+    });
+
+    it("leaves the pill off the rows it hoisted it from", () => {
+      renderQueue([boarded("Ines Costa")], true);
+      expect(
+        screen.getByRole("button", { name: "Undo check-in for Ines Costa" }),
+      ).not.toHaveTextContent("Boarded");
+    });
+  });
+
+  /**
    * The group used to slice itself to three and print "and 2 more" as inert
    * text with no control to reveal the rest — so on a boat with twelve aboard,
    * opening the receipts showed three names and a number. Worse, the three it
