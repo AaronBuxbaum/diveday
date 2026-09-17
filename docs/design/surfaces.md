@@ -33,6 +33,9 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ### The shop home — `/shop/[shopSlug]`
 
+**Shipped 2026-09-17, the floor's first row** ([ADR 20260911-clear-the-deck](../architecture/decisions/20260911-clear-the-deck.md) §1, "the door" — the one row of that floor that may start on the ADR alone):
+a row's own tap is its only door. The nine trailing "Open …" verbs are gone from the spine, the desk, the draft row and the first-morning checklist; what is left on a door row is the chevron `LedgerRow` already drew, and the destination is still named on the stretched overlay for a screen reader. A trailing verb survives only where it *is* the fix — a waiver send, a wait-list invite, an invoice resend, "Keep it", the closing block's own link beside a Dismiss demoted to ghost weight. Two tests in `DaySpine.test.tsx` hold it: no row that is itself a link may contain a second link, and a door's name may be spoken but never drawn. Shipped in the same pass: the desk's counting rows are their subject alone (the sentence under "3 messages are waiting on an answer" taught a feature already found); the units row states both guesses and what to do about them; a cancelled departure owes **one** row, not one per seat; the stuck-checkout row no longer prints a Stripe session id; the settled station draws one hairline between its parts instead of two; the plan-change clause is its own sentence on its own line; "Print the day" is the header's one action; and the first-bookable card and the role orientation never render together. The decoration (the band, the tile, the dial, the greeting) and `Badge` are untouched, pending H-77.
+
 **Proposed 2026-09-11, six consolidations** ([ADR 20260911-clear-the-deck](../architecture/decisions/20260911-clear-the-deck.md), [canvas](canvases/20260911-clear-the-deck/README.md)):
 the home loses its doors (a row's own tap is the door), its pills and chips (a state is a word), and — pending H-77 b — its decoration (the band, the tile, the dial, the coral washes); what it is then organised by is the owner's pick among six concepts, each redrawing this surface: three words, the week, the desk and the boat, one field, the shop's card, the storefront itself. Round 2, the same day, redraws the surface beneath any of them — five candidates to replace Reef (Salt, Air, Headline, Their ink, Slate), each on the home and the counter — pending H-77 e–h; round 3, the same day, draws one of them deep on the owner's word — Console, the instrument: the home's one readout is the countdown to the next boat, the day is a ladder of departures with their figures, every need a line with its state in a slot, daylight at the desk and depth after dark — pending H-77 i–l; round 4 puts the countdown on a display, a seat gauge under every boat and a telemetry line at the foot, pending H-77 m–o; round 5, on the owner's word that light must render light, prints the instrument on the app's own paper — Chart: the reading on a lit face, a boat as a sheet on the sand, the night palette as the one dark, glare as the crew's word at the rail — pending H-77 p–r. Nothing ships from it until H-77 is answered.
 
@@ -62,8 +65,9 @@ carries the green turtle; the two horizons are two tideline panels side by side.
 - **The question it arrives with:** "what needs me before the first boat?" — answered on screen, by
   the summary sentence and the first station's rows, without a click.
 - **Controls that dissolved:** the queue's rows *are* their own controls — each row's own link goes
-  to the thing it is about — and the urgency/by-departure view switch is gone with the views it
-  chose between. There is no standing control on this page at all.
+  to the thing it is about, and since 2026-09-17 says so with a chevron rather than a verb — and the
+  urgency/by-departure view switch is gone with the views it chose between. The page's only standing
+  control is "Print the day" in the header, on a day that has boats on it.
 - **Remove first:** nothing currently; the orientation card is already conditional on first-run and
   the good-news lines already render nothing when untrue (see
   [settled-questions.md](settled-questions.md)).
@@ -75,8 +79,10 @@ carries the green turtle; the two horizons are two tideline panels side by side.
   once per card.
 
 Enforced beside the code: `DaySpine.tsx` and `DayStation.tsx` defer to the ADR by name,
-`DaySpine.test.tsx` pins the composition (including its silences), and
-`RoleOrientationCard.test.tsx` fails if the orientation box out-ranks the work.
+`DaySpine.test.tsx` pins the composition (including its silences and, since 2026-09-17, the door
+rule), `FirstRunChecklist.test.tsx` pins the same rule on the first-morning ledger, and
+`RoleOrientationCard.test.tsx` fails if the orientation box out-ranks the work or grows an emoji
+back.
 
 ### The trip page — `/shop/[shopSlug]/trips/[id]`
 

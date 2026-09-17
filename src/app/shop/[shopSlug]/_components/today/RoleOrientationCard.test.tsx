@@ -41,6 +41,10 @@ describe("RoleOrientationCard", () => {
       screen.getByRole("link", { name: "Open Board to see this week’s departures." }),
     ).toHaveAttribute("href", "/shop/blue-mantis/schedule/board");
     expect(screen.getByRole("button", { name: "Got it" })).toBeInTheDocument();
+    // No emoji on a staff surface: the lightbulb that led both forms is
+    // gone and the words carry it (ADR 20260827-clearwater-surface-language,
+    // and the floor of ADR 20260911-clear-the-deck).
+    expect(document.body.textContent).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 });
 
@@ -61,5 +65,9 @@ describe("RoleOrientationLine", () => {
       screen.getByRole("link", { name: "Open Board to see this week’s departures." }),
     ).toHaveAttribute("href", "/shop/blue-mantis/schedule/board");
     expect(screen.getByRole("button", { name: "Got it" })).toBeInTheDocument();
+    // No emoji on a staff surface: the lightbulb that led both forms is
+    // gone and the words carry it (ADR 20260827-clearwater-surface-language,
+    // and the floor of ADR 20260911-clear-the-deck).
+    expect(document.body.textContent).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 });

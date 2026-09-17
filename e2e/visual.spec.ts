@@ -8058,7 +8058,7 @@ for (const scheme of ["light", "dark"] as const) {
       // link would swallow the click this test used to make.
       await page.goto(`/shop/${privateShop.slug}`);
       // The row's own words, not a timing guess.
-      await page.getByText(/currency and depth unit/).waitFor();
+      await page.getByText(/guessed from your timezone/).waitFor();
       await capture(page, "today-units-unconfirmed", scheme);
     });
 

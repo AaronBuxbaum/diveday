@@ -38,16 +38,13 @@ import {
   openUnitsActionText,
   overRatioDetailText,
   overRatioIntroDetailText,
-  owedRefundDetailText,
   rentalFitConfirmDetailText,
-  reviewsPendingDetailText,
   reviewsPendingSubjectText,
   rollCallGapDetailText,
   seasonEventDetailText,
   staffCredentialDueDetailText,
   stuckOperationKindText,
   stuckPaymentOperationDetailText,
-  unansweredMessagesDetailText,
   unansweredMessagesSubjectText,
   uncrewedCourseDetailText,
   uncrewedDepartureDetailText,
@@ -74,7 +71,7 @@ import {
   divemasterRatioGap,
   inWaterDivemasterCount,
 } from "@/lib/divemaster-ratio";
-import { formatDateTimeTz, formatMoneyCents, formatShortDate, formatTime } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
 import {
   type CrewIncompleteReason,
@@ -93,6 +90,7 @@ import { rentalFitCompleteness } from "@/lib/rentals";
 import { seasonEventNeedsReminder } from "@/lib/season-events";
 import {
   collapseDiverActions,
+  collapseOwedRefunds,
   filterActionsForRoles,
   ROLL_CALL_GAP_KINDS,
   type RollCallGapReason,
@@ -1830,7 +1828,9 @@ export async function getTodayWork(
         urgency: "now",
         subject: op.personName ?? op.tripTitle ?? stuckOperationKindText(t, op.intent.kind),
         context: op.personName && op.tripTitle ? op.tripTitle : null,
-        detail: stuckPaymentOperationDetailText(t, op.intent.kind, when, op.intent.stripeObjectId),
+        // No Stripe object id here: it belongs on the Orders queue, where the
+        // object it names is (principle 4 — never surface the implementation).
+        detail: stuckPaymentOperationDetailText(t, op.intent.kind, when),
         // Points at the trip roster when there's one to point at; otherwise
         // Orders, which carries the reconciliation detail (Stripe id, exact
         // timestamp) to act from. That panel used to live on Reports.
@@ -1847,11 +1847,10 @@ export async function getTodayWork(
         urgency: "now",
         subject: mediaDeletionKindText(t, attempt.kind),
         context: null,
-        detail: failedPhotoDeletionDetailText(
-          t,
-          attempt.kind,
-          formatShortDate(attempt.createdAt, locale, timeZone),
-        ),
+        // The kind is this row's own subject and the queued-at date is
+        // bookkeeping, so the sentence carries only what a staffer cannot see
+        // without it: the file outlived the record.
+        detail: failedPhotoDeletionDetailText(t),
         // Settings' "Data & integrations" group — the retry button for a stuck
         // deletion lives there now, at the group anchor this href lands on.
         actionLabel: openDataSettingsActionText(t),
@@ -1868,27 +1867,29 @@ export async function getTodayWork(
     // This is the one platform-health row with a person waiting on the other
     // end of it — every one of these divers has already had an email saying the
     // shop will be in touch.
-    for (const owed of owedRefunds) {
-      actions.push({
-        id: `owed-refund:${owed.bookingId}`,
-        kind: "owed_refund",
-        urgency: "now",
-        subject: owed.diverName,
-        context: owed.tripTitle,
-        detail: owedRefundDetailText(t, {
-          amount:
-            owed.amountCents === null
-              ? null
-              : formatMoneyCents(owed.amountCents, owed.currency, locale),
-          tripTitle: owed.tripTitle,
-          when: formatShortDate(owed.tripStartsAt, locale, timeZone),
-        }),
-        // The departure's Trip surface, which is both where the seat is and where
-        // the payment gets marked refunded once the cash is back in a hand.
-        actionLabel: openTripActionText(t),
-        href: `/shop/${shopSlug}/trips/${owed.tripId}`,
-        dueAt: null,
-      });
+    //
+    // **One row per departure, not per seat.** A shop that pulls a charter owes
+    // every paid seat on it, so five rows would repeat one sentence five times
+    // (principle 9); `collapseOwedRefunds` keeps the lone case exactly as it
+    // was and groups the rest under the boat, naming who is waiting. The
+    // departure's Trip surface is the door either way — it is both where the
+    // seats are and where each payment gets marked refunded once the cash is
+    // back in a hand.
+    for (const owed of collapseOwedRefunds(
+      owedRefunds.map((row) => ({
+        bookingId: row.bookingId,
+        diverName: row.diverName,
+        tripId: row.tripId,
+        tripTitle: row.tripTitle,
+        when: formatShortDate(row.tripStartsAt, locale, timeZone),
+        amountCents: row.amountCents,
+        currency: row.currency,
+      })),
+      shopSlug,
+      locale,
+      t,
+    )) {
+      actions.push(owed);
     }
   }
 
@@ -1912,7 +1913,8 @@ export async function getTodayWork(
       urgency: "later",
       subject: reviewsPendingSubjectText(t, reviewsAwaiting.count),
       context: null,
-      detail: reviewsPendingDetailText(t),
+      // The count is the row (see `reviewsPendingSubjectText`).
+      detail: "",
       actionLabel: openReviewsActionText(t),
       href: reviewsAwaiting.onlyId
         ? `${reviewsHref}#review-${reviewsAwaiting.onlyId}`
@@ -1934,7 +1936,8 @@ export async function getTodayWork(
       urgency: "later",
       subject: unansweredMessagesSubjectText(t, unanswered),
       context: null,
-      detail: unansweredMessagesDetailText(t),
+      // The count is the row (see `unansweredMessagesSubjectText`).
+      detail: "",
       actionLabel: openInboxActionText(t),
       href: `/shop/${shopSlug}/inbox`,
       dueAt: null,
@@ -2002,7 +2005,11 @@ export async function getTodayWork(
   // row permanently, and a shop that answered it during onboarding never sees
   // one at all.
   const [shopUnits] = await db
-    .select({ unitsConfirmedAt: shops.unitsConfirmedAt, currency: shops.currency })
+    .select({
+      unitsConfirmedAt: shops.unitsConfirmedAt,
+      currency: shops.currency,
+      depthUnit: shops.depthUnit,
+    })
     .from(shops)
     .where(eq(shops.id, shopId))
     .limit(1);
@@ -2011,9 +2018,16 @@ export async function getTodayWork(
       id: "units:unconfirmed",
       kind: "units_unconfirmed",
       urgency: "later",
-      subject: unitsUnconfirmedSubjectText(t),
+      // **Both guesses, and what to do about them.** The row used to ask the
+      // question ("Which currency and depth unit does this shop work in?") and
+      // then spend three clauses explaining where the guess came from. The two
+      // derived values *are* the question, so the row states them.
+      subject: unitsUnconfirmedSubjectText(t, {
+        currency: shopUnits.currency.toUpperCase(),
+        depthUnit: shopUnits.depthUnit,
+      }),
       context: null,
-      detail: unitsUnconfirmedDetailText(t, shopUnits.currency.toUpperCase()),
+      detail: unitsUnconfirmedDetailText(t),
       actionLabel: openUnitsActionText(t),
       href: `/shop/${shopSlug}/settings#units`,
       dueAt: null,

@@ -217,6 +217,6 @@ test("a shop with a departure today is not treated as a shop with no departures"
   // reach here. It hangs off no boat, so it files under the desk group, in the
   // open (ADR 20260827-clearwater-surface-language, decision 4).
   await expect(page.getByText("At the desk")).toBeVisible();
-  await expect(page.getByText(/currency and depth unit/)).toBeVisible();
+  await expect(page.getByText(/guessed from your timezone/)).toBeVisible();
   await expect(page.getByRole("link", { name: /Open units/ })).toBeVisible();
 });

@@ -233,28 +233,28 @@
       "shopHero": "Foto de portada del centro",
       "paymentReceipt": "Recibo importado"
     },
-    "stuckDetail": {
-      "withId": "{kind} atascado desde {when} (Stripe: {id}). Revísalo en el panel de Stripe.",
-      "withoutId": "{kind} atascado desde {when}. Revísalo en el panel de Stripe."
-    },
-    "mediaDeletionDetail": "{kind} eliminada de la aplicación pero todavía no borrada del almacenamiento, en cola desde {when}.",
+    "stuckDetail": "{kind} empezó el {when} y nunca terminó. Revísalo en el panel de Stripe.",
+    "mediaDeletionDetail": "Eliminada de la aplicación, pero el archivo sigue guardado.",
     "owedRefundDetail": "{amount} de {tripTitle} del {when}. Cancelaste la salida y el dinero no pudo volver por tarjeta. Devuélvelo y luego marca la plaza como reembolsada.",
-    "owedRefundDetailNoAmount": "Pendiente de {tripTitle} del {when}. Cancelaste la salida y no se registró ningún importe en el pago. Devuelve lo que pagó y luego marca la plaza como reembolsada."
+    "owedRefundDetailNoAmount": "Pendiente de {tripTitle} del {when}. Cancelaste la salida y no se registró ningún importe en el pago. Devuelve lo que pagó y luego marca la plaza como reembolsada.",
+    "owedRefundGroupSubject": "{count, plural, one {# reembolso pendiente} other {# reembolsos pendientes}}",
+    "owedRefundGroupDetail": "{amount} de {tripTitle} del {when}: {names}. Cancelaste la salida y el dinero no pudo volver por tarjeta. Devuélvelo y luego marca cada plaza como reembolsada.",
+    "owedRefundGroupDetailNoAmount": "{tripTitle} del {when}: {names}. Cancelaste la salida y el dinero no pudo volver por tarjeta. Devuélvelo y luego marca cada plaza como reembolsada."
   },
   "reviewsPending": {
-    "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión",
-    "detail": "Los buceadores escribieron sobre sus salidas. Publica las buenas palabras u oculta el resto."
+    "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión"
   },
   "unansweredMessages": {
-    "subject": "{count, plural, one {# mensaje espera} other {# mensajes esperan}} respuesta",
-    "detail": "Los buceadores respondieron. Contesta desde su ficha, por el mismo canal que usaron."
+    "subject": "{count, plural, one {# mensaje espera} other {# mensajes esperan}} respuesta"
   },
   "seasonEvent": {
     "detail": "Empieza el {date}."
   },
   "unitsUnconfirmed": {
-    "subject": "¿En qué moneda y unidad de profundidad trabaja este centro?",
-    "detail": "Supusimos {currency} por tu zona horaria al crear la cuenta y nadie lo ha confirmado. Es lo que se le cobra a la tarjeta de un buceador."
+    "subject": "{currency} y {depth}, deducidos de tu zona horaria",
+    "detail": "Confírmalos.",
+    "feet": "pies",
+    "meters": "metros"
   },
   "gear": {
     "overdueDetail": "{unitLabel} debía devolverse el {dueOn} y sigue fuera.",
