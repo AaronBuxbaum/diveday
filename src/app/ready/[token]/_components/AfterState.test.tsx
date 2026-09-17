@@ -714,12 +714,17 @@ describe("the buddy link", () => {
     expect(screen.getByText("recap.buddyCta")).toBeInTheDocument();
   });
 
-  it("keeps the URL reachable as the control's description", () => {
+  it("keeps the URL reachable as the control's description, hidden at rest", () => {
     render(<AfterState {...props({ buddyLinkUrl: url })} />);
     const button = screen.getByText("recap.buddyCta");
     const describedBy = button.getAttribute("aria-describedby");
     expect(describedBy).toBeTruthy();
-    expect(document.getElementById(describedBy as string)?.textContent).toBe(url);
+    const description = document.getElementById(describedBy as string);
+    expect(description?.textContent).toBe(url);
+    // Hidden from sight, not from assistive technology — and it is the one
+    // element, so the failed state can reveal the very thing the description
+    // already carries.
+    expect(description?.className).toBe("sr-only");
     // The name is the visible words, so it cannot contradict them when the
     // button reports back (WCAG 2.5.3).
     expect(button.getAttribute("aria-label")).toBeNull();
@@ -854,6 +859,13 @@ describe("the private pulse", () => {
   it("opens on arrival to answer a ?pulse= this render has to report", () => {
     const { container } = render(<AfterState {...props({ params: { pulse: "saved" } })} />);
     expect(pulseDoor(container)?.hasAttribute("open")).toBe(true);
+  });
+
+  it("stays shut for a ?pulse= it does not recognise", () => {
+    // The param is attacker-supplied, so `noticeFromParam` decides whether it
+    // is real — and a value that says nothing must open nothing either.
+    const { container } = render(<AfterState {...props({ params: { pulse: "constructor" } })} />);
+    expect(pulseDoor(container)?.hasAttribute("open")).toBe(false);
   });
 
   it("puts its inputs outside the review's own form", () => {

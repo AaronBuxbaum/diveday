@@ -35,7 +35,9 @@ const BUDDY_LINK_ID = "buddy-link";
  * — not its name. A name of "Share your link: https://…" would stop matching
  * the visible words the moment the button reports back ("Link copied"), which
  * is exactly what WCAG's Label in Name forbids; a description carries the same
- * fact and is announced after the name.
+ * fact and is announced after the name. That same element becomes visible on a
+ * refused clipboard, which is the one state where "select the link and copy it
+ * yourself" is advice rather than a dead end.
  *
  * The link is signed and non-secret — it names a booking and authorizes nothing
  * (`src/lib/buddy-tokens.ts`) — so unlike this page's own URL it is safe in a
@@ -85,9 +87,22 @@ export function BuddyShareButton({
       >
         {label}
       </button>
-      <span id={BUDDY_LINK_ID} className="sr-only">
+      {/* One element, two jobs. It is always the button's description, so a
+          screen reader can learn what is about to be sent; and it becomes
+          *visible* exactly when the clipboard refused, because that is the
+          moment `recap.buddyCopyFailed` — "Select the link and copy it
+          yourself" — starts describing something a reader can actually do.
+          Printing it at rest is what this control exists to stop; printing it
+          on a dead end is the one state where the words need a link under
+          them. */}
+      <p
+        id={BUDDY_LINK_ID}
+        className={
+          status === "failed" ? "mt-3 font-mono text-xs break-all text-foreground" : "sr-only"
+        }
+      >
         {url}
-      </span>
+      </p>
     </>
   );
 }

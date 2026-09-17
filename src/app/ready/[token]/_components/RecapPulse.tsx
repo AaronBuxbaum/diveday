@@ -48,6 +48,21 @@ const PULSE_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMess
   error: { tone: "danger", key: "recap.pulseFailed" },
 };
 
+/**
+ * Whether `?pulse=` names an outcome this render has to report — which is the
+ * only reason the door above opens on arrival for a diver who has said nothing
+ * yet. Exported rather than letting the caller test the raw param: the param is
+ * attacker-supplied, and `noticeFromParam` is the one thing that decides
+ * whether a value is real. `?pulse=constructor` opens nothing, the same way it
+ * says nothing.
+ */
+export function hasRecapPulseNotice(notice?: string): boolean {
+  // `undefined`, not `null` — `noticeFromParam` returns `undefined` for both a
+  // missing param and an unrecognised one, and a `!== null` test here is true
+  // for every value on earth, which opened the door on arrival for everybody.
+  return noticeFromParam(notice, PULSE_NOTICES) !== undefined;
+}
+
 export function RecapPulse({
   t,
   shopName,
