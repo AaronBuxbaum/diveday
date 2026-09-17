@@ -3385,6 +3385,7 @@
       "boxEyebrow": "Todo incluido",
       "boxTitle": "Cada función publicada, en una sola lista.",
       "boxDescription": "Sin niveles, sin extras y nada reservado para un plan superior. Cada una de estas {count, plural, one {# línea} other {# líneas}} es algo que puedes hacer ahora mismo en la demo en vivo.",
+      "boxGroupCount": "{count, plural, one {# función} other {# funciones}}",
       "noEyebrow": "Un producto enfocado",
       "noTitle": "Lo que DiveDay no hace.",
       "noDescription": "Todo producto tiene un límite. Mejor que te lo digamos nosotros ahora a que lo descubras en tu segunda semana.",

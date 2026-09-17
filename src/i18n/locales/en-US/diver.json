@@ -3385,6 +3385,7 @@
       "boxEyebrow": "Everything in the box",
       "boxTitle": "Every shipped workflow, in one list.",
       "boxDescription": "No tiers, no add-ons, and nothing held back for a bigger plan. Every one of these {count, plural, one {# line} other {# lines}} is something you can go and do in the live demo right now.",
+      "boxGroupCount": "{count, plural, one {# workflow} other {# workflows}}",
       "noEyebrow": "A focused product",
       "noTitle": "What DiveDay doesn’t do.",
       "noDescription": "Every product has an edge. Better you hear about ours now than find it in your second week.",

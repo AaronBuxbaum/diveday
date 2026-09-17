@@ -310,9 +310,11 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
 - **Show the screen before describing it, and never inventory the same thing twice.** The feature
   claims exist at exactly two densities, and each has one page: `productFeatureGroups` is the
   summary card — four groups, each an eyebrow, a heading and *one paragraph* (`summary`) — rendered
-  by `FeatureGroupsGrid` on `/`; the full inventory is `productCapabilityIndex`, rendered flat on
-  `/product` as a spec sheet: group name on a left rail, terse lines in two columns, hairline
-  rules, no boxes. **The inventory is the whole of [shipped.md](shipped.md), consolidated — never a
+  by `FeatureGroupsGrid` on `/`; the full inventory is `productCapabilityIndex`, rendered on
+  `/product` as a spec sheet: one hairline row per group, each a `<details>` naming the group and
+  counting its lines, opening onto those lines in two columns. Closed at rest since 2026-09-17 —
+  flat it ran 2,900px of a 9,600px page, arriving after the argument had finished, and nine named
+  rows with their counts say the breadth in one screen where the wall said it in eight. **The inventory is the whole of [shipped.md](shipped.md), consolidated — never a
   curated subset.** Until 2026-09-01 it held 49 chosen lines, one per idea per area, and under a
   heading that says "the whole list" a chosen list is a false one: a buyer with an incumbent's
   feature page open beside it counted reminders, buddy teams, the blow-out cascade, close-out,
@@ -329,7 +331,8 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   one. Cutting the middle density left the page announcing "the whole list, plainly" above a
   heading, two lines and a "The full list" link in an otherwise empty band — so the disclosure went
   too, and the list a buyer came for is simply on the page. Pricing had already been cut back for
-  the same reason.
+  the same reason. What came back on 2026-09-17 is a different shape and not that one: the group
+  names *are* the list, so the band at rest is nine rows rather than a heading over nothing.
 
   The middle density's *machinery* outlived it by a day and was removed on 2026-08-14: the grid's
   `featuresPerGroup` prop chose between a `✓` checklist and a paragraph, and with no caller left
