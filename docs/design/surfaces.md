@@ -105,13 +105,36 @@ the roster's actions or deep links.
 - **Controls that dissolved:** the filter chips (the groups do the filtering), the per-row Details
   caret (a row at rest is a name and a mark; open work is simply open), the Overview tab itself
   (a disclosure on this page), and `Add a diver` as a second page section (it is the ledger's
-  terminal group, even when no one is booked yet).
+  terminal group, even when no one is booked yet). The masthead's own `Add diver` went with it in
+  weight: it is a link-weight jump to that band, which keeps the act to one primary.
 - **Remove first:** the Activity and Promote footer rows — kept only because a trip's history has no
   other home yet.
 - **Composition:** one grouped ledger under a masthead, not a card stack — a roster is a list of
   people in states, and the state belongs to the group rather than repeated down every row; arrival
   guidance is authored with the departure details, while invite and add actions are its terminal
   bands, not detached forms.
+
+**Amended 2026-09-17** (design review, "as rendered"). The About panel said every fact twice: five
+label/value rows stating the plan, the conditions, who can book, the boat and crew and the repeat,
+then five headed sections below them restating the same five subjects, each with its own summary
+prose and its own `Edit …` disclosure, then three full-width series buttons and two destructive
+ones, every one of them carrying a standing caption. About fifteen controls and eight captions for
+five facts.
+
+- **One grammar:** a row *is* its own disclosure. The label and the settled value are the summary,
+  the editor opens in place beneath it, and there is no headed duplicate of anything. A row opens
+  itself when its editor has an outcome to show, when the state is fail-closed (no requirements row
+  at all), or when its subject has open work — the crew row does that, which is what keeps the
+  pulse's "needs an instructor" link landing on something.
+- **Controls that dissolved:** the five section headings and their five `Edit …` disclosures (the
+  row carries both), the summary prose above each form (it restated the form directly below it),
+  and the standing captions under the rare acts.
+- **Collapse the rare path:** `Apply this date's details to every upcoming date`, `Stop repeating`,
+  `Cancel every upcoming date`, `Weather blow-out…` and `Cancel this departure` are one closed
+  `More for this departure` list at the foot of the panel — a single column of `link` and
+  `danger-ghost` items with no captions. Each consequence sentence moved into the confirm or the
+  page that item opens; the two irreversible series writes and the departure cancel keep a blocking
+  `InlineConfirm`, and stopping a repeat has none because the control opposite it puts the run back.
 
 ### The boat manifest — `/shop/[shopSlug]/trips/[id]/manifest`
 

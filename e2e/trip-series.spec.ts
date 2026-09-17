@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripAbout, openTripFromBoard } from "./helpers";
+import { daysFromNow, e2eNow, openTripAbout, openTripFromBoard, openTripMore } from "./helpers";
 
 signedInAsOwner();
 
@@ -50,10 +50,10 @@ test("a repeating trip is scheduled on two weekdays, stopped, and cancelled as o
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
   const tripUrl = page.url();
   await openTripAbout(page);
-  const series = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Repeating trip" }) })
-    .filter({ visible: true });
+  // The About panel's "Repeats" row: its label and cadence sentence are the
+  // summary, and its editor is the cadence form. There is no headed "Repeating
+  // trip" card any more — the row is the heading.
+  const series = page.locator("details#series");
   await expect(series).toBeVisible();
   await expect(series).toContainText("keeps going");
   await expect(series).toContainText(startWeekday);
@@ -83,15 +83,22 @@ test("a repeating trip is scheduled on two weekdays, stopped, and cancelled as o
   await expect(series).toContainText("no longer part of this run");
   await expect(series.getByRole("button", { name: /^Cancel those \d+ dates$/ })).toBeVisible();
 
-  // Stopping the repeat keeps every date already on the board and closes the run.
+  // Stopping the repeat keeps every date already on the board and closes the
+  // run. It lives in the About panel's "More for this departure" list now,
+  // with the other series-wide acts — and it is the one of the three that
+  // needs no confirm, because the control opposite it puts the run back.
   await page.goto(tripUrl);
-  await openTripAbout(page);
-  await series.getByRole("button", { name: "Stop repeating" }).click();
+  const more = await openTripMore(page);
+  await more.getByRole("button", { name: "Stop repeating" }).click();
   await expect(page.getByRole("status")).toContainText("Stopped repeating");
 
-  // Reload to clear the notice, then cancel every upcoming date at once.
+  // Reload to clear the notice, then cancel every upcoming date at once —
+  // through its confirm, which is where the sentence about what it takes off
+  // the board now lives.
   await page.goto(tripUrl);
-  await openTripAbout(page);
-  await page.getByRole("button", { name: "Cancel every upcoming date" }).click();
+  const moreAgain = await openTripMore(page);
+  await moreAgain.getByRole("button", { name: "Cancel every upcoming date" }).click();
+  await expect(moreAgain.getByText(/off the public schedule/)).toBeVisible();
+  await moreAgain.getByRole("button", { name: "Yes, cancel every upcoming date" }).click();
   await expect(page.getByText(/Cancelled every upcoming date in this series/)).toBeVisible();
 });

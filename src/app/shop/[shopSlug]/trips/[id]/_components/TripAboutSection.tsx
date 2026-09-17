@@ -177,7 +177,7 @@ export function TripAboutSection({
           )}
         </div>
         {more ? (
-          <details open={moreOpen} className="group/more mt-4">
+          <details id="about-more" open={moreOpen} className="group/more mt-4">
             <summary className="-mx-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
               {moreLabel}
               <DisclosureCaret direction="down" className="size-4 group-open/more:rotate-180" />

@@ -4633,7 +4633,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await openTripFromBoard(page, title);
         await openTripAbout(page);
-        await page.getByRole("heading", { name: "Repeating trip" }).waitFor();
+        // The About panel's "Repeats" row — its label and cadence sentence are
+        // the summary, and the headed "Repeating trip" card is gone.
+        await page.locator("details#series").waitFor();
         await capture(page, "trip-repeating-panel", scheme);
 
         // And the cadence editor open — the weekday chips carrying the run's
@@ -7134,8 +7136,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
         await openTripAbout(page);
         await page
-          .locator("section")
-          .filter({ has: page.getByRole("heading", { name: "Readiness requirements" }) })
+          .locator("details#requirements")
           .getByText(/never blocks? enrolment/)
           .first()
           .waitFor();

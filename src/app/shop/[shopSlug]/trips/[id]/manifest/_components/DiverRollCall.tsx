@@ -673,7 +673,7 @@ export function DiverRollCall({
                         aboard — so a red list here would be worrying about a
                         paperwork state at the checkpoint where the only thing
                         that matters is bodies (decision 4). The count panel
-                        still says the follow-up happens ashore. */}
+                        says nothing about it either, for the same reason. */}
                       {!ready && isDeparture ? (
                         <>
                           <ul className="flex flex-col gap-1 text-base text-danger">
