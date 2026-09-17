@@ -641,9 +641,16 @@ describe("schema coverage", () => {
       if (missing.length > 0) undecided[name] = missing;
     }
     // The table-level test above passes happily when a *new column* on an
-    // already-exported table never reaches the bundle — which is exactly how a
-    // shop exports, re-imports, and silently loses a field. Adding a column
-    // now forces a decision here too.
+    // already-exported table never reaches the bundle — and a column missing
+    // from the bundle is a fact a leaving shop loses, whether or not anything
+    // can read it back. That is the whole reason, and it was stated as a
+    // re-import for a year while only contacts had one (issue #1771). Adding a
+    // column now forces a decision here too.
+    //
+    // For `dive_sites.csv` it is now both: a column that never reaches the
+    // bundle cannot be restored either, and `dive-site-import.test.ts` holds
+    // the other end by asserting the importer knows every column this bundle
+    // writes.
     expect(undecided).toEqual({});
   });
 

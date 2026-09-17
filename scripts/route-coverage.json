@@ -568,6 +568,11 @@
     "visual": ["settings-export"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/shop/[shopSlug]/settings/dive-site-import": {
+    "e2e": ["dive-sites.spec.ts"],
+    "visual": ["settings-dive-site-import"],
+    "a11y": ["a11y.spec.ts"]
+  },
   "/shop/[shopSlug]/settings/gear-import": {
     "e2e": ["gear.spec.ts"],
     "visual": ["settings-gear-import"],
