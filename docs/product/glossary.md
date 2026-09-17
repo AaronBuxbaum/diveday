@@ -295,12 +295,23 @@ new domain concept, define it here in the same PR.
   nothing at all under the intro-session cap, which is the distinction the product was getting wrong
   while `instructor` was the only rung available to file them under (issue #1680, ruled 2026-09-16).
   Adding the rung changed no ratio arithmetic: `inWaterCrewRole` maps it to the thing those rules
-  already count. **It carries no permissions of its own** — DiveDay's authorization gates are
+  already count. The credit assumes a rating **in teaching status** — a lapsed AI is out of teaching
+  status and uninsured, and is not a certified assistant — and DiveDay does not check that, because
+  H-59 made credential status inform-only, permanently.
+  **It carries no permissions of its own** — DiveDay's authorization gates are
   unchanged by it, so a shop that wants their AI to hold a Divemaster's permissions files them as
-  both, which the roles list has always allowed. What the rung *does* change is who is told what:
+  both, which the roles list has always allowed. The one that bites is
+  `canOverrideGearRequest`, which admits a Divemaster and not an AI although an AI outranks one on
+  every agency ladder: the person who finds a student's BCD two sizes too big *is* the assistant in
+  the water with them. Raised on issue #1680 and not decided there. What the rung *does* change is
+  who is told what:
   an AI reads the same Today queue as the rest of the water staff, and is deliberately absent from
   the owner/manager/instructor rows (a medical review, a certification, a waiver) that only those
   three can close.
+  **On a diver's own card it is not a rung at all**: `certification_level` stops at Instructor and
+  has no AI entry, so an Assistant Instructor booking a fun dive is recorded at **Divemaster** — a
+  one-rung under-record, the same shape as Adventure Diver and Master Scuba Diver above — with the
+  staff role carrying the rest.
 - **Requirable level** — the levels a **site or trip may demand**, which since 2026-08-21 is a
   *different and shorter* set than the ladder above: **Open Water, Advanced Open Water, Rescue**, and
   that is the ceiling (`REQUIRABLE_CERTIFICATION_LEVELS`, `src/lib/readiness.ts`; issue #630, ADR

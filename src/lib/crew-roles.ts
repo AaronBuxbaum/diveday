@@ -81,10 +81,17 @@ export function inWaterCrewRole(member: TripCrewAssignment): InWaterCrewRole {
    * nowhere to file them but `instructor`, and this function then returned a
    * full `"instructor"` — a full student allowance under the Open Water cap,
    * and enough on its own to clear a course's "unstaffed" gap. Under PADI an AI
-   * counts as a certified assistant for training-dive ratios and does not
-   * independently conduct a Discover Scuba experience, so the DSD cap (which
-   * grants an assistant nothing) is where the difference bites hardest and is
-   * exactly the distinction the product was getting wrong (issue #1680).
+   * counts as a certified assistant for training-dive ratios and is not the
+   * rated professional of record for the **open-water** dive of a Discover
+   * Scuba experience — which is the only kind of session DiveDay models, since
+   * a trip is one dated open-water outing. So the DSD cap (which grants an
+   * assistant nothing) is where the difference bites hardest, and it is exactly
+   * the distinction the product was getting wrong (issue #1680).
+   *
+   * Scoped to the open-water dive on purpose: PADI grants an AI real
+   * prerogatives around intro-level activity in confined water and on land, and
+   * a comment overstating a standard is how the next reader stops trusting the
+   * rest of them.
    *
    * Mapping the rung here rather than teaching the arithmetic a third rank is
    * the whole of the fix: `countInWaterCrew` and every ratio gate above it are
@@ -144,7 +151,10 @@ export function groupCrewAssignments(
 
 export type InWaterCrewCount = {
   instructorCount: number;
-  /** Divemasters in the water — each buys `assistantBonusPerInstructor` students. */
+  /**
+   * Certified assistants in the water — Divemasters and Assistant Instructors
+   * alike. Each buys `assistantBonusPerInstructor` students.
+   */
   assistantCount: number;
 };
 
