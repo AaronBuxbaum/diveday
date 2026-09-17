@@ -51,11 +51,28 @@ under *What our pipeline does with it* below — never a reason to cut from `mai
 2. **A fix that must merge now** — a red `main`, a hotfix, a race in a spec you did not touch found
    while triaging someone else's diff. It should be able to merge without waiting for the layers
    beneath it.
-3. **The stack is about six layers deep.** Every layer pays lint, typecheck, four unit shards, a
-   build and eight Playwright/visual shards, and pays again above every cascading rebase. Past
-   roughly six the wall-clock cost outweighs the conflicts it saves: start a new stack.
-4. **The branch below belongs to another session.** Stack on your own work. Someone else's
+3. **The branch below belongs to another session.** Stack on your own work. Someone else's
    force-push is your cascading rebase, and their claim is not yours to extend.
+
+**Depth is not on that list.** A stack has no maximum length — fifteen layers is as legitimate as
+three, and a long chain is the shape this repository wants. Every layer already contains the ones
+below it, so the shared files a session keeps re-editing (`AGENTS.md`'s `check:repo` row, a
+baseline, a message bundle) merge once, while the change is being written, instead of once per
+branch later and by hand. That saving *grows* with depth: the thirteen branches cut from one `main`
+conflicted with each other thirteen ways, and the same thirteen stacked conflict zero. The reason
+to cut from `main` never grows the same way.
+
+The CI arithmetic that used to bound depth at "about six" was retired on 2026-08-27 by
+[20260827-stack-ci-skips-the-middle-layers](../../../docs/architecture/decisions/20260827-stack-ci-skips-the-middle-layers.md).
+A middle layer skips `repo-safeguards`, `lint`, `typecheck`, the four unit shards and the four
+Playwright shards; what it still pays is the visual path it owes the layer above — `changes`,
+`build`, the visual shards, `visual-report` and `real-postgres`. So the twentieth layer costs what
+the fourth does, and only the bottom and the top pay the sixteen-job gate. What that costs you is
+attention, not runners: a middle layer's green means "nothing ran", so the layer that actually
+states something about the merged result is the top, and the one whose red blocks everything is the
+bottom. Read those two. The only hard ceiling is GitHub's own — a registered stack holds at most
+100 pull requests, and `scripts/stack-register.mjs` refuses a longer chain rather than truncating
+it (`MAX_LAYERS`).
 
 ## Building the chain
 
@@ -215,8 +232,8 @@ to its own change.
 ## Answering review across layers
 
 Every layer is reviewed on its own — `sourcery-ai` comments on each one as it
-opens, so a six-layer stack collects six reviews while you are still building the top of it. Read
-them per layer, on the same pass that reads each layer's CI:
+opens, so a stack collects one review per layer — twelve layers, twelve reviews — while you are
+still building the top of it. Read them per layer, on the same pass that reads each layer's CI:
 
 ```sh
 gh pr list --author '@me' --state open --json number,title,mergeable,statusCheckRollup

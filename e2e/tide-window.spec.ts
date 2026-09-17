@@ -22,6 +22,8 @@ const TURN = /(Next|Last) (high|low) water at \d{1,2}:\d{2} [AP]M/;
 const STAFF_LINE = new RegExp(`${TURN.source}; this departure reaches the site`);
 const DIVER_LINE = new RegExp(`${TURN.source}; the boat reaches the site`);
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
+/** Whose water the turn came from (issue #1732); the fleet's fixture station. */
+const STATION = "Tide at Carysfort Reef, FL";
 
 test.describe("the tide window", () => {
   test("a stationed site's briefing and departure say where the water is when the boat arrives", async ({
@@ -45,6 +47,10 @@ test.describe("the tide window", () => {
     await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
     await openTripAbout(page);
     await expect(page.getByText(STAFF_LINE).first()).toBeVisible();
+    // And whose water it is (issue #1732). The fleet's fixture station is
+    // Carysfort Reef, FL, whatever id is asked for — which is the station the
+    // demo's Key Largo sites genuinely read.
+    await expect(page.getByText(STATION).first()).toBeVisible();
 
     // An id of the wrong shape is refused by name, and nothing typed is lost.
     await page.goto(siteUrl);
@@ -59,6 +65,7 @@ test.describe("the tide window", () => {
     await page.getByRole("button", { name: "Save dive site" }).click();
     await page.getByText("Dive site saved.").waitFor();
     await expect(page.getByText(STAFF_LINE)).toHaveCount(0);
+    await expect(page.getByText(STATION)).toHaveCount(0);
   });
 
   test("divers read the line only once the shop switches it on", async ({ page, privateShop }) => {
@@ -87,5 +94,6 @@ test.describe("the tide window", () => {
     await page.goto(tripUrl);
     await page.getByRole("heading", { name: "The day" }).waitFor();
     await expect(page.getByText(DIVER_LINE).first()).toBeVisible();
+    await expect(page.getByText(STATION).first()).toBeVisible();
   });
 });

@@ -6,7 +6,8 @@
     "openTheBoard": "Open the board"
   },
   "tide": {
-    "window": "{turn, select, next {Next} other {Last}} {kind, select, high {high} other {low}} water at {time}; this departure reaches the site {phase, select, slack {at the turn of the tide} flood {on the flood} other {on the ebb}}{fit, select, met {, when it dives best} missed {. It dives best {preference, select, slack {at slack water} flood {on the flood} other {on the ebb}}} other {}}."
+    "window": "{turn, select, next {Next} other {Last}} {kind, select, high {high} other {low}} water at {time}; this departure reaches the site {phase, select, slack {at the turn of the tide} flood {on the flood} other {on the ebb}}{fit, select, met {, when it dives best} missed {. It dives best {preference, select, slack {at slack water} flood {on the flood} other {on the ebb}}} other {}}.",
+    "station": "Tide at {station}"
   },
   "imageInput": {
     "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
@@ -18,6 +19,7 @@
   "paperWaiver": {
     "markSignedOnPaper": "Mark signed on paper",
     "medicalAttestationLabel": "I have this diver’s signed release on file, I have reviewed their medical questionnaire, and no answer needs physician sign-off.",
+    "medicalAttestationMinorLabel": "I have this diver’s signed release on file, I have reviewed their medical questionnaire, no answer needs physician sign-off, and the parent or guardian answered the health questions.",
     "recording": "Recording…",
     "recordPaperSignature": "Record paper signature",
     "guardianNameLabel": "Parent or guardian who signed",

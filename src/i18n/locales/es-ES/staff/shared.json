@@ -6,7 +6,8 @@
     "openTheBoard": "Abrir el panel"
   },
   "tide": {
-    "window": "{turn, select, next {Próxima} other {Última}} {kind, select, high {pleamar} other {bajamar}} a las {time}; esta salida llega al sitio {phase, select, slack {en el cambio de marea} flood {con marea entrante} other {con marea saliente}}{fit, select, met {, cuando mejor se bucea} missed {. Se bucea mejor {preference, select, slack {en la estoa} flood {con marea entrante} other {con marea saliente}}} other {}}."
+    "window": "{turn, select, next {Próxima} other {Última}} {kind, select, high {pleamar} other {bajamar}} a las {time}; esta salida llega al sitio {phase, select, slack {en el cambio de marea} flood {con marea entrante} other {con marea saliente}}{fit, select, met {, cuando mejor se bucea} missed {. Se bucea mejor {preference, select, slack {en la estoa} flood {con marea entrante} other {con marea saliente}}} other {}}.",
+    "station": "Marea en {station}"
   },
   "imageInput": {
     "tooMany": "{count, plural, one {Elige hasta # foto por vez.} other {Elige hasta # fotos por vez.}}",
@@ -18,6 +19,7 @@
   "paperWaiver": {
     "markSignedOnPaper": "Marcar como firmado en papel",
     "medicalAttestationLabel": "Tengo la exención firmada de este buceador archivada, he revisado su cuestionario médico y ninguna respuesta necesita el visto bueno de un médico.",
+    "medicalAttestationMinorLabel": "Tengo la exención firmada de este buceador archivada, he revisado su cuestionario médico, ninguna respuesta necesita el visto bueno de un médico y la madre, el padre o el tutor respondió las preguntas de salud.",
     "recording": "Registrando…",
     "recordPaperSignature": "Registrar firma en papel",
     "guardianNameLabel": "Madre, padre o tutor que firmó",

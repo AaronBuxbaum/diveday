@@ -3,7 +3,7 @@ import { hasSailed } from "./trips";
 import { utcToWallTime } from "./zoned";
 
 /**
- * **What the shop already knows about the seats that stayed open** (issue
+ * **What the shop already knows about the seats that never sold** (issue
  * #1207, delight report D47; ADR 20260904-reef-all-the-way-down, slice 16h).
  *
  * A departure that sailed short is the one commercial question a dive shop
@@ -22,7 +22,25 @@ import { utcToWallTime } from "./zoned";
  * Codes and numbers only. `src/i18n/closeout-labels.ts` composes the sentence.
  */
 export type OpenSeatsDebrief = {
-  /** Seats the departure sailed without. Always positive — a full boat is null. */
+  /**
+   * **Seats that never sold** — `capacity - booked`, where `booked` is every
+   * non-cancelled booking. Always positive; a departure that filled is null.
+   *
+   * Not "seats the boat sailed without", which this said until issue #1760.
+   * The two stopped agreeing when #1209 shipped the no-show counter: a
+   * staffer's confirm tap *is* the seat release (ADR
+   * 20260911-the-confirm-tap-is-the-release), so on a twelve-seat boat with
+   * ten sold and one no-show the boat sails with three empty seats while this
+   * number is two.
+   *
+   * **Two is the right answer here, and the reason is the company this number
+   * keeps.** Every other clause on the debrief asks about selling — when the
+   * last booking came in, whether the last-minute deal went out, whether the
+   * same trip filled before. A seat sold and then not turned up for is a
+   * different failure with a different remedy, and #1209's no-show release is
+   * where that one is already answered. `sailed` is on the row beside this
+   * one (`src/lib/closeout.ts`) for anything that does want the rail count.
+   */
   openSeats: number;
   /**
    * Whole shop-local calendar days between the last booking and the departure.

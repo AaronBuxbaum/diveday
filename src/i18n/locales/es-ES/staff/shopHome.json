@@ -158,8 +158,8 @@
       "backSouls": "salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}",
       "backSoulsBy": "salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back} a las {time}",
       "openSeats": {
-        "label": "Plazas libres",
-        "sentence": "{seats, plural, one {Quedó # plaza libre} other {Quedaron # plazas libres}}: {facts}.",
+        "label": "Plazas sin vender",
+        "sentence": "{seats, plural, one {Quedó # plaza sin vender} other {Quedaron # plazas sin vender}}: {facts}.",
         "lastBooking": "{days, plural, =0 {la última reserva entró el mismo día} one {la última reserva entró # día antes} other {la última reserva entró # días antes}}",
         "noDeal": "no salió ninguna oferta de última hora",
         "comparableSamePrice": "{title} del {date} se llenó al mismo precio",

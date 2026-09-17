@@ -27,6 +27,20 @@ describe("openSeatsDebrief", () => {
     expect(openSeatsDebrief(input({ booked: 13 }), now)).toBeNull();
   });
 
+  it("counts seats that never sold, not seats the boat sailed without", () => {
+    // Issue #1760. `booked` is every non-cancelled booking, so a diver who
+    // bought a seat and did not turn up is still counted against capacity —
+    // the seat sold. A twelve-seat boat with ten sold and one no-show sails
+    // with three empty seats and this number is two, on purpose: every other
+    // clause on the debrief asks about selling, and #1209's no-show release is
+    // where the seat-not-turned-up-for failure is answered.
+    //
+    // This is the assertion to change if that reading is ever revisited —
+    // `sailed` is on the row beside this one in src/lib/closeout.ts.
+    const tenSoldOneNoShow = openSeatsDebrief(input({ booked: 10, dealSent: false }), now);
+    expect(tenSoldOneNoShow?.openSeats).toBe(2);
+  });
+
   it("says nothing about a departure that has not sailed", () => {
     // Seats on a boat still ahead of the clock are seats, not a shortfall —
     // and the last-minute deal that has not gone out yet still can.
