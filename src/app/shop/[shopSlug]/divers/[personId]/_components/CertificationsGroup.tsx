@@ -9,6 +9,7 @@ import { InsetGroup } from "@/components/ui/ledger";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
+  type CertificationCardKind,
   certificationCardRowState,
   isImportedCard,
   isShopIssuedCard,
@@ -121,8 +122,23 @@ function CardRow({
  * them one to one. Two questions, two phrasings; they share their **words**
  * (`shared.certificationSummary.*`) so a claim can never be spelled two ways.
  *
- * An unsighted self-declaration takes the shared "— unverified" phrase and
- * turns the whole summary to warning ink — the treatment
+ * **Every card is named through `certificationCardRowState`**, the same
+ * function the rows inside the group render through, so the closed door and
+ * the open one cannot disagree about a card. Three of its four values are
+ * something other than "the shop has seen this":
+ *
+ * - `self_declared` and `pending` take the shared "— unverified" phrase. A
+ *   hand-entered card still `pending` is the glossary's **claimed
+ *   certification** — nobody has looked it up, and it never satisfies
+ *   readiness until staff Mark certified — so a door reading it as a plain
+ *   agency and level is the same failure the self-declared phrase exists to
+ *   stop.
+ * - `imported_unconfirmed` takes "— confirm to clear", the badge's own words
+ *   (`divers.shared.cardStatus.confirmToClear`) in the wrapper this summary's
+ *   list needs: the card came across already checked by the shop's previous
+ *   system, and the dive or the fill waits on one tap.
+ *
+ * Any of the three turns the whole summary to warning ink — the treatment
  * `certificationSummaryUnchecked` earns everywhere else, and the reason the
  * glossary says such a card "must never be scanned as a plain level". The words
  * carry it on their own; the tone only has to stop contradicting them.
@@ -136,31 +152,38 @@ function cardsOnFile(
   t: StaffTranslator,
   noCertificationDeclared: boolean,
 ): { text: string; tone: "muted" | "warning" } {
-  let unsighted = false;
+  let unchecked = false;
   const named = (
+    kind: CertificationCardKind,
     value: string,
-    card: { selfDeclaredAt?: Date | string | null; status: "pending" | "verified" },
+    card: Parameters<typeof certificationCardRowState>[1],
   ) => {
-    if (!isUnsightedSelfDeclaration(card)) return value;
-    unsighted = true;
-    return t("shared.certificationSummary.selfDeclared", { value });
+    const state = certificationCardRowState(kind, card);
+    if (state === "verified") return value;
+    unchecked = true;
+    return state === "imported_unconfirmed"
+      ? t("shared.certificationSummary.confirmToClear", { value })
+      : t("shared.certificationSummary.selfDeclared", { value });
   };
   const cards = [
     ...diver.certifications.map((card) =>
       named(
+        "level",
         card.agency === "other"
           ? t(CERTIFICATION_LEVEL_KEYS[card.level])
           : `${t(AGENCY_KEYS[card.agency])} ${t(CERTIFICATION_LEVEL_KEYS[card.level])}`,
         card,
       ),
     ),
-    ...diver.specialtyCertifications.map((card) => named(t(SPECIALTY_KEYS[card.specialty]), card)),
+    ...diver.specialtyCertifications.map((card) =>
+      named("specialty", t(SPECIALTY_KEYS[card.specialty]), card),
+    ),
     ...diver.nitroxCertifications.map((card) =>
-      named(t("shared.certificationSummary.nitrox"), card),
+      named("nitrox", t("shared.certificationSummary.nitrox"), card),
     ),
   ];
   if (cards.length > 0) {
-    return { text: cards.join(" · "), tone: unsighted ? "warning" : "muted" };
+    return { text: cards.join(" · "), tone: unchecked ? "warning" : "muted" };
   }
   // "Not certified yet" is unverified too, and it is the row a staffer most
   // needs to catch before a two-tank charter goes out to it — the same reading
