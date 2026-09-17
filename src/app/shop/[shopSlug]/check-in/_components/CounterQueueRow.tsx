@@ -102,6 +102,7 @@ function DiverIdentity({
   showEmail,
   showFirstVisit,
   showBoarded = true,
+  showArrived = false,
   t,
 }: {
   row: QueueRow;
@@ -116,9 +117,20 @@ function DiverIdentity({
    * who has to read exactly one of them.
    */
   showBoarded?: boolean;
+  /**
+   * **"They are standing here", on a row whose badge is about paperwork.**
+   * Only the blocked branch passes this, and only because the alternative is a
+   * genuine loss: a diver who came through the counter and went blocked since
+   * and a diver who has not turned up at all render the same row otherwise, and
+   * a staffer working the blocked list has to know which of "chase them down"
+   * and "fix this while they wait" they are looking at. Quiet text rather than
+   * the drawn mark it replaces — the arrival happened, the gate is the work.
+   */
+  showArrived?: boolean;
   t: StaffTranslator;
 }) {
   const meta = [
+    showArrived && row.bookingStatus === "checked_in" ? t("checkIn.row.arrived") : null,
     showEmail && row.email ? row.email : null,
     // The one instruction the gift row needs, in the quiet slot the row already
     // has for a fact rather than as a second control: the diver in front of the
@@ -549,8 +561,11 @@ export function CounterQueueRow({
             row={row}
             showEmail={showEmail}
             showFirstVisit={showFirstVisit}
-            // A blocked row says one state, and it is the gate. See below.
+            // A blocked row says one *state*, and it is the gate — with the
+            // arrival kept as a quiet fact beside the name, where it does not
+            // compete with it. See both props' notes.
             showBoarded={false}
+            showArrived
             t={t}
             name={
               // Only the blocked row keeps a name link — its job is the fix,
@@ -570,11 +585,12 @@ export function CounterQueueRow({
           {/* **One state on a blocked row, and it is the gate.** A diver who
               came through the counter and has been blocked since used to carry
               "Boarded", a drawn "Checked in" mark and "Blocked" side by side —
-              three words at three volumes, two of which describe things that
-              have already happened and one of which is the only thing anybody
-              on this screen can act on. Readiness is why the row is out here in
-              the working list at all; everything else it was saying belonged to
-              the receipts group or to the rail. */}
+              three words at three volumes, only one of which anybody on this
+              screen can act on. Boarding belongs to the rail and the manifest
+              (glossary: check-in is not boarding), so it goes; the arrival
+              drops to the quiet meta line beside the name, because a staffer
+              working this list still has to tell "chase them down" from "fix
+              this while they wait". Readiness is why the row is out here. */}
           {/* The one readiness vocabulary and tone (src/i18n/readiness-labels.ts)
               — for a blocked diver the badge is the state. */}
           <Badge tone={readinessStatusTone(row.readiness.status)}>

@@ -22,6 +22,7 @@
     "notHere": "{count, plural, one {# diver is not here} other {# divers are not here}}"
   },
   "row": {
+    "arrived": "Checked in",
     "firstVisit": "First visit",
     "missingEmergencyContact": "No emergency contact",
     "giftUnclaimed": "A gift from {giver}, not claimed yet",
