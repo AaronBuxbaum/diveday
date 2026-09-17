@@ -488,10 +488,17 @@ export function WeekBoard({
                           exists to answer — which boat is which — was the one
                           thing it clipped. Two lines is the cap; nothing here
                           aligns row-to-row across columns, so a card growing a
-                          line costs its own column's height and no other's. */}
+                          line costs its own column's height and no other's.
+
+                          No `block` beside it: `line-clamp-2` supplies its own
+                          `display: -webkit-box`, and two display utilities on
+                          one element resolve by stylesheet order rather than by
+                          the order they are written — the same trap `px-0` on a
+                          `link` button carries (AGENTS.md). `block` winning
+                          would drop the clamp silently. */}
                       <Link
                         href={`/shop/${shopSlug}/trips/${entry.tripId}`}
-                        className={`mt-0.5 block text-sm leading-snug font-semibold line-clamp-2 hover:text-primary ${
+                        className={`mt-0.5 text-sm leading-snug font-semibold line-clamp-2 hover:text-primary ${
                           entry.status === "sailed" ? "text-muted" : ""
                         }`}
                       >
