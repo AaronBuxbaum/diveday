@@ -11,7 +11,6 @@ import { StageStrip, type StageStripCopy } from "./StageStrip";
  */
 const copy: StageStripCopy = {
   legend: "Where the boat is",
-  consequence: "Each tap shows on divers’ links and on your website.",
   errorRefusal: "That didn’t save. Check your connection and tap again.",
   taps: [
     { stage: "boarding", label: "Boarding" },

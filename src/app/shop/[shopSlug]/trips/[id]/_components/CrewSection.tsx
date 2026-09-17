@@ -7,7 +7,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import type { TripCrewChange } from "@/db/trips";
 import { fill } from "@/i18n/fill";
@@ -90,7 +89,6 @@ export function CrewSection({
   shopSlug,
   updateCrewAction,
   copy,
-  embedded = false,
 }: {
   tripId: string;
   staff: StaffList;
@@ -131,8 +129,6 @@ export function CrewSection({
     change: TripCrewChange,
   ) => Promise<{ ok: boolean; refusal?: "crew_clash" | "refused" }>;
   copy: CrewSectionCopy;
-  /** The Trip surface's About panel supplies the outer section chrome. */
-  embedded?: boolean;
 }) {
   const availableStaff = staff.map((entry) => ({
     id: entry.person.id,
@@ -281,41 +277,39 @@ export function CrewSection({
   };
 
   return (
-    <SectionCard
-      id="crew"
-      padding={embedded ? "none" : "lg"}
-      title={copy.heading}
-      // `scroll-mt-24`, the family convention (DetailsSection, RosterSection):
-      // the shop header is sticky, so anything shallower parks an anchored
-      // heading underneath it — and the pulse's "needs an instructor" fact
-      // links straight to #crew.
-      className={`${embedded ? "!rounded-none !border-0 !bg-transparent" : ""} scroll-mt-24`}
-      actions={
+    /* The About row above is the heading and the disclosure control, so this
+       renders no heading of its own — `copy.heading` is the region's accessible
+       name instead (`TripAboutSection`, design review 2026-09-17).
+
+       Still `id="crew"`, and still `scroll-mt-24`: the shop header is sticky,
+       so anything shallower parks the anchor underneath it, and the pulse's
+       "needs an instructor" fact links straight here. */
+    <section id="crew" aria-label={copy.heading} className="flex flex-col gap-3 pt-1 scroll-mt-24">
+      <div>
         <Link
           href={`/shop/${shopSlug}/staffing`}
           className="text-sm font-medium text-primary hover:underline"
         >
           {copy.manageShifts}
         </Link>
-      }
-    >
+      </div>
       {crewGapCode === "no_instructor" ? (
-        <p className="mb-3 rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
+        <p className="rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
           {copy.courseNeedsInstructor}
         </p>
       ) : null}
       {crewGapCode === "over_ratio" && copy.overRatioWarning ? (
-        <p className="mb-3 rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
+        <p className="rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
           {copy.overRatioWarning}
         </p>
       ) : null}
       {copy.underTargetNote ? (
-        <p className="mb-3 rounded-lg bg-surface-sunken px-4 py-3 text-sm text-muted">
+        <p className="rounded-lg bg-surface-sunken px-4 py-3 text-sm text-muted">
           {copy.underTargetNote}
         </p>
       ) : null}
       {copy.languageGapNote ? (
-        <p className="mb-3 rounded-lg bg-surface-sunken px-4 py-3 text-sm text-muted">
+        <p className="rounded-lg bg-surface-sunken px-4 py-3 text-sm text-muted">
           {copy.languageGapNote}
         </p>
       ) : null}
@@ -511,6 +505,6 @@ export function CrewSection({
           </FormStatus>
         </div>
       )}
-    </SectionCard>
+    </section>
   );
 }

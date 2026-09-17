@@ -7,7 +7,6 @@
     "tapHeadingIn": "De regreso",
     "tapHome": "En puerto",
     "recordedLine": "{name} · {time}",
-    "consequence": "Cada toque aparece en los enlaces de los buceadores y en tu sitio web.",
     "errorRefusal": "No se guardó. Revisa tu conexión y vuelve a tocar."
   },
   "skipToRollCall": "Ir al pase de lista",
@@ -37,8 +36,7 @@
   "crewNoneAboard": "Todos los buceadores están contabilizados y toda la tripulación de esta salida figura en tierra, así que nadie a bordo está en la lista de tripulación. Añade a quienes navegaron.",
   "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto.",
   "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}} Cada persona de la tripulación necesita su propio resultado.",
-  "blockedDeparture": "{count, plural, one {Hay # buceador bloqueado: sigue en esta lista, pero no puede embarcar hasta que se despeje su preparación.} other {Hay # buceadores bloqueados: siguen en esta lista, pero no pueden embarcar hasta que se despeje su preparación.}}",
-  "blockedAfterDive": "{count, plural, one {El seguimiento de preparación de # buceador se hace en tierra y nunca mantiene abierto este recuento.} other {El seguimiento de preparación de # buceadores se hace en tierra y nunca mantiene abierto este recuento.}}",
+  "blockedDeparture": "{count, plural, one {Hay # buceador bloqueado.} other {Hay # buceadores bloqueados.}}",
   "crewHeading": "Tripulación",
   "crewMarkAboard": "Marcar a bordo",
   "crewAboardCheck": "A bordo",

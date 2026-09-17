@@ -19,10 +19,6 @@ import type { PreDepartureCheckResult } from "../actions";
  * deliberately absent here, and `illustration.test.ts` refuses a drawing
  * import under any path containing "manifest" so the ban is structural rather
  * than remembered.
- *
- * One line under the strip says what a tap costs, because it is the only
- * control on this page whose effect is visible outside the shop: it publishes
- * to every diver's link and to the shop's own website.
  */
 export type StageStripAction = (
   prev: PreDepartureCheckResult,
@@ -31,7 +27,6 @@ export type StageStripAction = (
 
 export type StageStripCopy = {
   legend: string;
-  consequence: string;
   errorRefusal: string;
   /** The five taps, in the order the crew works through them. */
   taps: { stage: TripStage; label: string }[];
@@ -74,7 +69,6 @@ export function StageStrip({
       {copy.recordedLine ? (
         <p className="mt-2 text-sm text-muted tabular-nums">{copy.recordedLine}</p>
       ) : null}
-      <p className="mt-2 text-sm text-muted">{copy.consequence}</p>
       {result && !result.ok ? (
         <p role="alert" className="mt-2 text-sm text-danger">
           {copy.errorRefusal}

@@ -7,7 +7,6 @@
     "tapHeadingIn": "Heading in",
     "tapHome": "Home",
     "recordedLine": "{name} · {time}",
-    "consequence": "Each tap shows on divers’ links and on your website.",
     "errorRefusal": "That didn’t save. Check your connection and tap again."
   },
   "skipToRollCall": "Skip to roll call",
@@ -37,8 +36,7 @@
   "crewNoneAboard": "Every diver is counted, and every crew member on this trip is marked ashore, so nobody aboard is on the crew list. Add whoever sailed.",
   "crewNotBackAboard": "{count, plural, one {# crew member is not back aboard.} other {# crew members are not back aboard.}} This checkpoint stays open.",
   "crewAwaiting": "{count, plural, one {# crew member still to call.} other {# crew members still to call.}} Every person on the crew list needs a result of their own.",
-  "blockedDeparture": "{count, plural, one {# diver is blocked: still on this manifest, but cannot board until their readiness clears.} other {# divers are blocked: still on this manifest, but cannot board until their readiness clears.}}",
-  "blockedAfterDive": "{count, plural, one {Readiness follow-up for # diver happens ashore and never holds this count open.} other {Readiness follow-up for # divers happens ashore and never holds this count open.}}",
+  "blockedDeparture": "{count, plural, one {# diver is blocked.} other {# divers are blocked.}}",
   "crewHeading": "Crew",
   "crewMarkAboard": "Mark aboard",
   "crewAboardCheck": "Aboard",

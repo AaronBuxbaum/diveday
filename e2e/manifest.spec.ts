@@ -64,11 +64,12 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await openTripTab(page, "Manifest");
 
   await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
-  // Blocked divers are said once, in the checkpoint panel, as a sentence
-  // about what blocked *means here* — the standalone "Blocked divers" banner
-  // that used to restate the panel's own count is gone. The count itself is
-  // asserted below, on the panel's count row.
-  await expect(page.getByText(/still on this manifest, but cannot board/)).toBeVisible();
+  // Blocked divers are said once, in the checkpoint panel, and only at the
+  // dock — the standalone "Blocked divers" banner that used to restate the
+  // panel's own count is gone, and so is the clause explaining what blocked
+  // means, which every row already carries. The count itself is asserted
+  // below, on the panel's count row.
+  await expect(page.getByText(/^\d+ divers? (is|are) blocked\.$/)).toBeVisible();
   // Scoped to the roster list, not a bare text match: every unteamed diver's
   // name also appears on the buddy-team builder's checkbox below (ADR
   // 20260804-buddy-teams), so `getByText` is a strict-mode violation here.
