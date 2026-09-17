@@ -137,6 +137,9 @@ test("a ready diver checks in with one tap, sinks into the settled group, and a 
   await expect(undo).toBeVisible();
   await expect(undo).toContainText("Diego Alvarez");
   await expect(undo).not.toContainText("Checked in");
+  // Still no sentence teaching the re-tap, which was true before the mark went
+  // and has to stay true now that the row's end is quiet.
+  await expect(undo).not.toContainText("undo");
 
   await undo.click();
   await expect(page.getByRole("button", { name: "Check in Diego Alvarez" })).toBeVisible({
