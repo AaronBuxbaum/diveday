@@ -89,14 +89,30 @@ describe("readTypedPhone", () => {
     ["305.555.0142", "+1 305 555 0142"],
     ["1 305 555 0142", "+1 305 555 0142"],
     ["+1 305 555 0142", "+1 305 555 0142"],
-    ["+44 20 7946 0958", "+44 207 946 0958"],
+    // Grouped only where there is a rule (#1764): the national part of a
+    // non-NANP number is one unbroken run, not a guess at thirds.
+    ["+44 20 7946 0958", "+44 2079460958"],
   ])("reads %j in a US shop as %s", (raw, canonical) => {
     expect(readTypedPhone(raw, "US")).toEqual({ canonical, label: canonical });
   });
 
   it("uses the shop's own country for a national number", () => {
-    expect(readTypedPhone("987 123 4567", "MX")?.canonical).toBe("+52 987 123 4567");
-    expect(readTypedPhone("07700 900123", "GB")?.canonical).toBe("+44 770 090 0123");
+    expect(readTypedPhone("987 123 4567", "MX")?.canonical).toBe("+52 9871234567");
+    expect(readTypedPhone("07700 900123", "GB")?.canonical).toBe("+44 7700900123");
+  });
+
+  it("leaves a non-NANP national part unbroken rather than guessing at threes", () => {
+    // The two readings issue #1764 was filed on, and what each used to print.
+    //
+    // A UK mobile: `+44 770 090 0123` under the old thirds, where a British
+    // staffer reads `+44 7700 900123`. Unbroken is not that grouping either,
+    // but it is not a *wrong* one — and since #1712 this also groups
+    // `people.phone` on staff surfaces, read aloud with the diver at the
+    // counter, where a wrong reading has nowhere to be caught.
+    expect(readTypedPhone("+447700900123", "US")?.canonical).toBe("+44 7700900123");
+    // A Mexican number carrying the historic mobile `1`, which the thirds
+    // printed as four groups and a stray pair: `+52 199 812 345 67`.
+    expect(readTypedPhone("+5219981234567", "US")?.canonical).toBe("+52 19981234567");
   });
 
   it.each(["", "555", "abc", "12345678901234567"])("leaves %j alone", (raw) => {
@@ -121,9 +137,9 @@ describe("displayStoredPhone", () => {
   it.each([
     ["+13055550142", "+1 305 555 0142"],
     ["+12125550142", "+1 212 555 0142"],
-    ["+529871234567", "+52 987 123 4567"],
-    ["+442079460018", "+44 207 946 0018"],
-    ["+34612345678", "+34 612 345 678"],
+    ["+529871234567", "+52 9871234567"],
+    ["+442079460018", "+44 2079460018"],
+    ["+34612345678", "+34 612345678"],
   ])("groups the stored %j as %s", (stored, grouped) => {
     expect(displayStoredPhone(stored)).toBe(grouped);
   });

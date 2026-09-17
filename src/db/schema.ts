@@ -4199,8 +4199,8 @@ export const notificationSendQueue = pgTable(
      * parked row that had dropped its handles would be a row an erasure could
      * no longer find. What does the waiting is the drain's own candidate query
      * (`drainableStatus` in src/db/notifications.ts), which re-offers this one
-     * code on each daily pass until the row's `attempts` reach a fortnight's
-     * worth — long enough for somebody to notice a mis-set
+     * code on each daily pass until the row's `recovery_attempts` reach a
+     * fortnight's worth — long enough for somebody to notice a mis-set
      * `SECRET_ENCRYPTION_KEY` and put it back (issue #1340).
      *
      * **The exception ends with the waiting.** The pass that takes the row's
@@ -4245,7 +4245,22 @@ export const notificationSendQueue = pgTable(
     subjectPhone: text("subject_phone"),
     bookingId: uuid("booking_id"),
     status: notificationQueueStatus("status").notNull().default("queued"),
+    /** Every drain pass that has claimed this row, incremented at the claim. */
     attempts: integer("attempts").notNull().default(0),
+    /**
+     * The subset of those passes that found the payload unreadable and parked
+     * the row again — a counter of its own, because two different bounds used
+     * to read `attempts` and they meant different things by it (issue #1719).
+     *
+     * The fortnight a parked row waits for a restored key is counted here; the
+     * three daily passes an ordinary provider failure is retried for are
+     * counted by `attempts - recovery_attempts`, which is the number of passes
+     * that actually reached a provider. Before this column existed a row that
+     * waited a week for its key had already spent the smaller budget, and met
+     * its first real failure with none of the three retries that bound exists
+     * to give it.
+     */
+    recoveryAttempts: integer("recovery_attempts").notNull().default(0),
     nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull(),
     lockedUntil: timestamp("locked_until", { withTimezone: true }),
     providerMessageId: text("provider_message_id"),
