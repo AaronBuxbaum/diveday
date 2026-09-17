@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { EditorRail } from "@/components/editor/EditorRail";
 import { EditorSection, type EditorSectionRef } from "@/components/editor/EditorSection";
@@ -22,6 +22,7 @@ import {
   PriceField,
   StickyFormActions,
 } from "@/components/ui/form";
+import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getCourseBySlug, getCourseTemplateUpdate, setCourseVisibility } from "@/db/courses";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
@@ -32,7 +33,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath } from "@/lib/public-routes";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { ConflictGuardedForm } from "./_components/ConflictGuardedForm";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
@@ -87,14 +88,37 @@ export default async function EditCoursePage({
    * attacker-supplied id to scope; `setCourseVisibility` still matches on the
    * session's own `shopId` as well, which is the layer that must never be the
    * only one (ADR-0006).
+   *
+   * **"Is this course for sale" is trip-definition work** — what the dive is
+   * and who it admits (H-14, ADR 20260724-role-authorization) — so the closure
+   * re-checks live roles rather than settling for "is staff". The control
+   * below is drawn on the same answer, but the gate is here: a form that is
+   * not rendered is not a form that cannot be posted.
+   *
+   * **The live row decides the flip, not the render's snapshot.** Closing over
+   * `course.isActive` meant a tab left open while a colleague hid the course
+   * posted "make it hidden" a second time and put it back on the catalog. Only
+   * the id is captured; the standing is read inside the action, and a slug
+   * that no longer names that course is refused rather than toggled.
    */
+  const courseId = course.id;
   async function visibilityAction() {
     "use server";
     const staff = await requireStaffSession();
-    await setCourseVisibility(await getDb(), staff.user.shopId, course.id, !course.isActive);
+    const db = await getDb();
+    const refusal = `${shopPath(staff.user.shopSlug, "courses", slug, "edit")}?error=not-authorized`;
+    if (!(await canPersonConfigureTrips(db, staff.user.shopId, staff.user.personId))) {
+      redirect(refusal);
+    }
+    const live = await getCourseBySlug(db, staff.user.shopId, slug);
+    if (!live || live.id !== courseId) notFound();
+    await setCourseVisibility(db, staff.user.shopId, courseId, !live.isActive);
     revalidatePath(`/shop/${staff.user.shopSlug}/courses/${slug}/edit`);
     revalidatePath(`/shop/${staff.user.shopSlug}/courses`);
   }
+  // The same question the closure asks, asked once for the reader: a control
+  // whose only outcome is a refusal is a control that should not be drawn.
+  const canSetVisibility = await canPersonConfigureTrips(db, shop.id, session.user.personId);
   const templateUpdate = await getCourseTemplateUpdate(db, session.user.shopId, course.id);
   const preserveTemplateAction = pullCourseTemplateUpdatesAction.bind(
     null,
@@ -121,6 +145,10 @@ export default async function EditCoursePage({
   };
   const errors: Record<string, string> = {
     invalid: t("courses.edit.errorInvalid"),
+    // The one refusal this page's own controls can produce. It is reachable
+    // even with the visibility form unrendered, because the gate is the
+    // closure's and a stale tab still holds a posting form.
+    "not-authorized": t("courses.edit.errorNotAuthorized"),
     // Specific, because "something was invalid" on an eight-section form is a
     // scavenger hunt — and a half-filled pair is the one thing this editor
     // refuses that the writer cannot see from the boxes.
@@ -732,17 +760,23 @@ export default async function EditCoursePage({
             frequent one. `secondary`, not primary: the editor has exactly one
             obvious next action and this is not it (principles §8). The word on
             screen names what it does to the diver's catalog, since the control
-            no longer sits on a row that carried the course's name. */}
-          <form action={visibilityAction} className="mt-8 border-t border-border pt-6">
-            <SubmitButton
-              pendingLabel="…"
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {course.isActive
-                ? t("courses.edit.hideFromCatalog")
-                : t("courses.edit.showInCatalog")}
-            </SubmitButton>
-          </form>
+            no longer sits on a row that carried the course's name.
+
+            Drawn only for a reader whose roles allow it: for anybody else the
+            button's only outcome is the refusal, and the editor's other work —
+            the prose a diver reads — is still theirs. */}
+          {canSetVisibility ? (
+            <form action={visibilityAction} className="mt-8 border-t border-border pt-6">
+              <SubmitButton
+                pendingLabel="…"
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {course.isActive
+                  ? t("courses.edit.hideFromCatalog")
+                  : t("courses.edit.showInCatalog")}
+              </SubmitButton>
+            </form>
+          ) : null}
         </div>
       </div>
     </main>
