@@ -173,7 +173,9 @@ describe("the waiver group", () => {
 
     const group = screen.getByTestId("diver-file-group-waiver");
     expect(group.querySelector("summary")).not.toHaveTextContent(/not answered/);
-    expect(group.querySelector("summary")?.querySelector("span")?.className).toContain("text-muted");
+    expect(group.querySelector("summary")?.querySelector("span")?.className).toContain(
+      "text-muted",
+    );
     expect(group).not.toHaveAttribute("open");
   });
 

@@ -488,6 +488,7 @@
   },
   "certificationSummary": {
     "selfDeclared": "{value} — unverified",
+    "confirmToClear": "{value} — confirm to clear",
     "levelNotSaid": "Level not said",
     "notCertified": "Not certified yet — unverified",
     "nitrox": "Nitrox",

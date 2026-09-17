@@ -123,6 +123,87 @@ describe("the certification records door", () => {
     );
   });
 
+  /**
+   * **A claimed certification** (glossary): hand-entered by staff, still
+   * `pending`, and never satisfying readiness until somebody looks it up and
+   * marks it certified. It read on the closed door as a plain agency and
+   * level — the exact scan the self-declared phrase exists to stop, on a card
+   * the shop has equally not seen.
+   */
+  it("marks a hand-entered card nobody has looked up as unverified", () => {
+    renderGroup(
+      diver({
+        certifications: [
+          {
+            id: "c1",
+            agency: "padi",
+            level: "rescue",
+            status: "pending",
+            identifier: "9001",
+            selfDeclaredAt: null,
+          },
+        ],
+      } as unknown as Partial<DiverProfile>),
+    );
+
+    expect(door()).toHaveTextContent("PADI Rescue Diver — unverified");
+    expect(screen.getByText(/PADI Rescue Diver — unverified/)).toHaveClass("text-warning-strong");
+  });
+
+  /**
+   * An imported specialty card whose gate is still shut (H-24,
+   * `certificationCardRowState` → `imported_unconfirmed`). It stores
+   * `verified`, so it read as a plain card the shop holds; the dive it
+   * authorizes is waiting on one tap. The phrase is the badge's own words.
+   */
+  it("marks an imported card still waiting on a confirm", () => {
+    renderGroup(
+      diver({
+        specialtyCertifications: [
+          {
+            id: "s1",
+            agency: "padi",
+            specialty: "deep",
+            status: "verified",
+            identifier: "4321",
+            selfDeclaredAt: null,
+            importedAt: new Date("2026-08-01T10:00:00.000Z"),
+            reviewedAt: null,
+          },
+        ],
+      } as unknown as Partial<DiverProfile>),
+    );
+
+    expect(door()).toHaveTextContent("Deep — confirm to clear");
+    expect(screen.getByText(/Deep — confirm to clear/)).toHaveClass("text-warning-strong");
+  });
+
+  /**
+   * The asymmetry `certificationCardRowState` takes `kind` for: an imported
+   * *level* card is genuinely valid on arrival, so its confirm is a nudge and
+   * the door must not invent a gate the readiness engine does not enforce.
+   */
+  it("leaves an imported level card reading as the card the shop holds", () => {
+    renderGroup(
+      diver({
+        certifications: [
+          {
+            id: "c1",
+            agency: "padi",
+            level: "open_water",
+            status: "verified",
+            identifier: "1234",
+            selfDeclaredAt: null,
+            importedAt: new Date("2026-08-01T10:00:00.000Z"),
+            reviewedAt: null,
+          },
+        ],
+      } as unknown as Partial<DiverProfile>),
+    );
+
+    expect(screen.getByText("PADI Open Water")).toHaveClass("text-muted");
+  });
+
   it("says None on file when the record holds nothing", () => {
     renderGroup(diver());
     expect(door()).toHaveTextContent(/Certification records\s*None on file/);
