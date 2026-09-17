@@ -2664,7 +2664,6 @@ export default async function SettingsPage({
                   }
                   sectionId="stripe"
                   activeSection={activeSection}
-                  forceOpen={!account || !ready}
                 >
                   <SectionNotice banner={banner} section="stripe" active={activeSection} />
                   {!account ? (
@@ -2890,20 +2889,18 @@ export default async function SettingsPage({
             </section>
           ) : null}
 
-          {/* The counter's own door (issue #1236): a QR a shop prints and puts
-              on the desk, so a walk-in who has booked nothing can put
-              themselves on file before they reach the front of the queue. It
-              sits here rather than behind a row of its own because there is
-              nothing to configure — the page exists, this is where its address
-              lives. */}
-          <CounterQrCard
-            url={`${publicAppUrl() ?? ""}${publicShopRegisterPath(shopSlug)}`}
-            title={t("settings.main.counterQr.heading")}
-            description={t("settings.main.counterQr.description")}
-            showLabel={t("settings.main.counterQr.show")}
-          />
-
           <InsetGroup>
+            {/* The counter's own door (issue #1236): a QR a shop prints and
+                puts on the desk, so a walk-in who has booked nothing can put
+                themselves on file before they reach the front of the queue.
+                A row of this group rather than a bordered card standing above
+                it — there is nothing here to configure, so it is the one row
+                that states an address instead of changing one. */}
+            <CounterQrCard
+              url={`${publicAppUrl() ?? ""}${publicShopRegisterPath(shopSlug)}`}
+              title={t("settings.main.counterQr.heading")}
+              description={t("settings.main.counterQr.description")}
+            />
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/embed`}
               heading={t("settings.main.embed.heading")}

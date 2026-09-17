@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { SectionCard } from "@/components/ui/card";
-import { CompactDisclosureRow } from "@/components/ui/disclosure";
+import { SettingsRow } from "./_components/SettingsRows";
 
 /**
  * **The QR a shop prints for its counter** (issue #1236).
@@ -13,14 +12,18 @@ import { CompactDisclosureRow } from "@/components/ui/disclosure";
  * this; what they are selling is a piece of card on a desk, so what this has to
  * produce is something a shop can point a phone at and something it can print.
  *
- * The URL is shown in full at rest, because half the time the answer at a busy
- * desk is "just text me the link" — and because a QR nobody can read is a QR
- * nobody can check went to the right place.
+ * **It is a row, not a card.** This was a full bordered `SectionCard` — a
+ * heading, a two-sentence caption, the URL, and a "Show the code" disclosure
+ * inside it — standing between the "Data & integrations" group label and the
+ * ten plain rows that are its siblings. One object in a list of eleven wearing
+ * its own border is the inconsistency the group heading exists to prevent, and
+ * the card's inner disclosure made it a disclosure inside a disclosure. It is
+ * one `SettingsRow` now, in the directory's own grammar: the heading at rest,
+ * and what the shop prints inside it.
  *
- * **The code itself is folded away.** Printing the card is a thing a shop does
- * once, and a 240px block of noise sat permanently open in the middle of a
- * settings page every staffer scrolls past for the rows either side of it. It
- * is one row now, in the same disclosure grammar as the rest of the page.
+ * The URL is shown in full once the row is open, because half the time the
+ * answer at a busy desk is "just text me the link" — and because a QR nobody
+ * can read is a QR nobody can check went to the right place.
  *
  * Folding it also makes `qrcode` genuinely lazy: it was imported dynamically
  * for the reason `EmbedGenerator` does it — ~50 KB of encoder a settings page
@@ -32,13 +35,10 @@ export function CounterQrCard({
   url,
   title,
   description,
-  showLabel,
 }: {
   url: string;
   title: string;
   description: string;
-  /** The disclosure's own row — "Show the code". */
-  showLabel: string;
 }) {
   const [open, setOpen] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
@@ -56,19 +56,16 @@ export function CounterQrCard({
   }, [open, url]);
 
   return (
-    <SectionCard title={title}>
-      <p className="text-muted">{description}</p>
-      <code className="mt-4 block text-sm break-all text-muted">{url}</code>
-      <CompactDisclosureRow id="counter-qr" label={showLabel} className="mt-4" onToggle={setOpen}>
-        {/* Reserved at its final size whether or not the encoder has landed, so
-            the card does not jump under a reader mid-print. */}
-        <div className="size-[240px] rounded-lg bg-surface-sunken p-2">
-          {qr ? (
-            // biome-ignore lint/performance/noImgElement: a data: URL the client just produced.
-            <img src={qr} alt={title} className="size-full" />
-          ) : null}
-        </div>
-      </CompactDisclosureRow>
-    </SectionCard>
+    <SettingsRow heading={title} description={description} onToggle={setOpen}>
+      <code className="mt-3 block text-sm break-all text-muted">{url}</code>
+      {/* Reserved at its final size whether or not the encoder has landed, so
+          the row does not jump under a reader mid-print. */}
+      <div className="mt-4 size-[240px] rounded-lg bg-surface-sunken p-2">
+        {qr ? (
+          // biome-ignore lint/performance/noImgElement: a data: URL the client just produced.
+          <img src={qr} alt={title} className="size-full" />
+        ) : null}
+      </div>
+    </SettingsRow>
   );
 }

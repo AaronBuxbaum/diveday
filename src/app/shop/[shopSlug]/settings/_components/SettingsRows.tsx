@@ -75,7 +75,7 @@ function RowSummary({
 export function SettingsRow({
   sectionId,
   activeSection,
-  forceOpen,
+  onToggle,
   heading,
   value,
   description,
@@ -91,8 +91,14 @@ export function SettingsRow({
   sectionId?: SectionId;
   /** The section `?saved=` named, if any: that row comes back open. */
   activeSection?: SectionId | null;
-  /** A row that opens itself for a reason of its own (Stripe, unconnected). */
-  forceOpen?: boolean;
+  /**
+   * Told whether the row is now open, for the rare body that should not do its
+   * work until somebody asks for it — `CounterQrCard`'s QR encoder is the one
+   * caller, and ~50 KB of it. A row whose body is ordinary markup passes
+   * nothing and stays a plain native disclosure. (The same prop, for the same
+   * reason, as `CompactDisclosureRow`'s.)
+   */
+  onToggle?: (open: boolean) => void;
   heading: string;
   /** The current answer, stated at rest. Pass a `Badge` only for an exceptional state. */
   value?: ReactNode;
@@ -103,7 +109,12 @@ export function SettingsRow({
   children: ReactNode;
 }) {
   const fragment = sectionId ? settingsSectionFragment(sectionId) : undefined;
-  const open = Boolean(forceOpen || (sectionId != null && activeSection === sectionId));
+  // **A row opens for one reason: the reader asked, or the save they just made
+  // landed here.** "Online payments" used to force itself open whenever the
+  // shop had no Stripe account — so the one row on a directory of twenty-seven
+  // arrived expanded, showing a warning box its own summary already states as
+  // "Not connected". A row that shouts is a row the eye learns to skip past.
+  const open = Boolean(sectionId != null && activeSection === sectionId);
   const body = (
     <>
       <RowSummary heading={heading} value={value} anchorId={fragment} />
@@ -122,7 +133,11 @@ export function SettingsRow({
     );
   }
   return (
-    <details open={open} className="group">
+    <details
+      open={open}
+      onToggle={onToggle ? (event) => onToggle(event.currentTarget.open) : undefined}
+      className="group"
+    >
       {body}
     </details>
   );
