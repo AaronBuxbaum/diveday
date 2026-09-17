@@ -22,6 +22,7 @@
     "notHere": "{count, plural, one {# buceador no vino} other {# buceadores no vinieron}}"
   },
   "row": {
+    "arrived": "Registrado",
     "firstVisit": "Primera visita",
     "missingEmergencyContact": "Sin contacto de emergencia",
     "giftUnclaimed": "Un regalo de {giver}, todavía sin reclamar",

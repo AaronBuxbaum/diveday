@@ -108,6 +108,9 @@ describe("a blocked row", () => {
       readiness: { status: "blocked", blockers: [{ code: "waiver_not_sent" }] },
     });
     expect(screen.getByText("Blocked")).toBeInTheDocument();
+    // Not through the counter yet, so no arrival fact — the pairing that makes
+    // the assertion above it about this row rather than about a dead string.
+    expect(screen.queryByText(/Checked in/)).not.toBeInTheDocument();
     expect(screen.getByText("Waiver has not been sent.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Check in / })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Undo check-in / })).not.toBeInTheDocument();
@@ -121,9 +124,13 @@ describe("a blocked row", () => {
    * rule that a blocked row carries no check-in control does not bend here.
    *
    * **And one state, not three.** It used to carry "Boarded", a drawn "Checked
-   * in" mark and "Blocked" on the same line — two of them describing things
-   * that had already happened, beside the only one anybody on this screen can
-   * act on. Readiness is the reason this row is out here at all.
+   * in" mark and "Blocked" on the same line, at three volumes, only one of
+   * which anybody on this screen can act on. Boarding is the rail's fact and
+   * the manifest's (the glossary is explicit that check-in is not boarding), so
+   * it goes. The arrival stays — otherwise this row and one for a diver who
+   * never turned up are the same row, and a staffer working the blocked list
+   * has to tell "chase them down" from "fix this while they wait" — but as a
+   * quiet fact beside the name rather than a second mark at badge volume.
    */
   it("says a checked-in diver has gone blocked, without offering the tap back", () => {
     renderRow({
@@ -132,8 +139,10 @@ describe("a blocked row", () => {
       readiness: { status: "blocked", blockers: [{ code: "payment_due" }] },
     });
     expect(screen.getByText("Blocked")).toBeInTheDocument();
-    expect(screen.queryByText("Checked in")).not.toBeInTheDocument();
     expect(screen.queryByText("Boarded")).not.toBeInTheDocument();
+    // The arrival, in the row's quiet meta line with the other facts about the
+    // person rather than in the badge row with the gate.
+    expect(screen.getByText(/Checked in/)).toBeInTheDocument();
     expect(screen.getByText("Payment is outstanding for this trip.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Undo check-in / })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Check in / })).not.toBeInTheDocument();
