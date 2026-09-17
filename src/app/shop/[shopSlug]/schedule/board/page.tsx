@@ -4,7 +4,6 @@ import { connection } from "next/server";
 import { discardFormDraftAction, saveFormDraftAction } from "@/app/actions/form-drafts";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats, listBoatsForHistory } from "@/db/boats";
@@ -359,10 +358,6 @@ export default async function ScheduleBoardPage({
     crewLabel: st("schedule.builder.crewLabel"),
     crewNobodyYet: st("schedule.builder.crewNobodyYet"),
     windLabel: st("schedule.builder.windLabel"),
-    // `.raw`, like `noPriceSetAria` below: the {names} are the client
-    // component's to interpolate, and `st()` would format the ICU here and
-    // throw on the missing variable.
-    crewMostlyAll: st.raw("schedule.builder.crewMostlyAll"),
     noPriceSet: st("schedule.builder.noPriceSet"),
     noPriceSetAria: st.raw("schedule.builder.noPriceSetAria"),
     noPriceSetAll: st("schedule.builder.noPriceSetAll"),
@@ -951,31 +946,21 @@ export default async function ScheduleBoardPage({
         actions={
           hasUpcoming ? (
             <>
-              {/* Below `sm` the header stacks to full width and three actions
-                is more than 390px holds in either shipped locale (issue
-                #954) — Spanish runs ~25% longer than English on all three
-                labels, so a fix measured against English alone would have
-                shipped a Spanish regression. This is the one door of the
-                three that is not an operational act (`/shop/[shopSlug]`
-                and the embed settings page both carry it too), so it is the
-                one that drops its label rather than crowding the row: the
-                `globe` mark from the shared `DiveDayIcon` family stands in
-                for it, and the translated label survives as the accessible
-                name. */}
+              {/* **The rare door, at the weight of a rare door** (principle 8:
+                collapse the rare path). Three buttons stood here — two of them
+                filled — and this is the only one that is not an operational
+                act: a shop looks at its own public page occasionally, and
+                `/shop/[shopSlug]` and the embed settings page both carry the
+                same link. At `link` weight it keeps its label at every width,
+                which retires the icon-only phone twin issue #954 needed when
+                all three were buttons: what did not fit at 390px in either
+                locale was three *filled* controls, and there are two now. It
+                does not move into `ShopIdentityMenu` — that menu holds the
+                reader's own session and never a place in the shop
+                (`.claude/rules/surfaces.md`). */}
               <Link
                 href={publicSchedulePath(shopSlug)}
-                aria-label={st("schedule.viewPublicPage")}
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "icon",
-                  className: "sm:hidden",
-                })}
-              >
-                <DiveDayIcon name="globe" />
-              </Link>
-              <Link
-                href={publicSchedulePath(shopSlug)}
-                className={buttonClass({ variant: "secondary", className: "max-sm:hidden" })}
+                className={buttonClass({ variant: "link" })}
               >
                 {st("schedule.viewPublicPage")}
               </Link>

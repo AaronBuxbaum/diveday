@@ -202,7 +202,6 @@ export type BuilderCopy = {
   dayCountLabelOther: string;
   crewLabel: string;
   crewNobodyYet: string;
-  crewMostlyAll: string;
   windLabel: string;
   noPriceSet: string;
   noPriceSetAria: string;
@@ -2238,17 +2237,15 @@ export function ScheduleBuilder({
         <AllUnpricedNotice className="xl:hidden">{copy.noPriceSetAll}</AllUnpricedNotice>
       ) : null}
 
-      {/* Not a banner: the usual crew is not a problem to solve, it is the
-          answer the rows below no longer have to repeat. Muted and inline, in
-          the caption voice those rows used to carry. */}
-      {/* `xl:hidden` with the stream it describes: "unless a departure says
-          otherwise" is a promise about rows, and the week's cells carry no
-          crew line for it to be the exception to. */}
-      {usualCrew ? (
-        <p className="mt-4 text-sm text-muted xl:hidden">
-          {fill(copy.crewMostlyAll, { names: usualCrew.join(", ") })}
-        </p>
-      ) : null}
+      {/* **The standing "Usual crew: …" line is gone** — docs/design/surfaces.md
+          listed it under the board's "Remove first" from the day the week grid
+          shipped, and the `20260908-one-hand` canvas deletes it outright. It
+          was a sentence at the top of the phone stream that named two people
+          and was true of most rows, on a surface a manager opens to find the
+          row it is *not* true of. `usualCrew` survives as what it always
+          really was: the predicate that keeps a matching row's crew line off
+          the row (`isUsualCrew` below), so what any row still prints about crew
+          is, by construction, the exception. */}
 
       {/* The week, at `xl` and up. Its own disclosures are keyed `w:` so a
           control in the grid hands focus back to itself rather than to its
