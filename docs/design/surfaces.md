@@ -203,8 +203,11 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
 **Shipped 2026-08-28** (slice 6g) — same ADR and canvas. The phone keeps grouped lists.
 
 - **One idea:** every switch in the shop, findable in one look.
-- **The question it arrives with:** "where do I change X?" — answered by the rail, which shows the
-  whole map at once instead of 42 rows of scroll.
+- **The question it arrives with:** "where do I change X?" — answered by the rail: all three groups
+  in the pane's own order, with the group being read named at the top of the column (its label is
+  sticky inside the rail's scroll area) and the group holding the current row tinted. Forty-two rows
+  do not fit beside the bar on any viewport at a legible row height, so the rail scrolls in its own
+  right; what it must never do is let a reader believe Money and Data & integrations are not there.
 - **Controls that dissolved:** the standing caption under every door row — the row's current value
   is the description.
 - **Remove first:** nothing beyond the captions; the three groups already carve the space

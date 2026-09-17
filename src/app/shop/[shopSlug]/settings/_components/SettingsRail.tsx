@@ -28,6 +28,19 @@ import {
  * pointing at a sub-route selects by pathname; a row pointing at a hub section
  * is a `#fragment` link and selects by the scroll-spy below. The two never
  * blur, and neither ever turns a hub section into a route.
+ *
+ * **Three groups, and the reader can always tell which one they are in.** The
+ * map is 42 rows — about 1,700px at the settings ramp's 36px row — against
+ * roughly 740px of viewport beside the bar, so it has always been a *scrolling*
+ * map and no legible row height changes that. What it was missing is the part
+ * that makes a long map usable: a reader landed on "Your shop" and had no
+ * signal that Money and Data & integrations existed at all below the fold.
+ * Each group label is sticky inside the rail's own scroll area now, so the
+ * group you are reading is named at the top of the column and the next one
+ * announces itself as it arrives, and the group holding the current row wears
+ * the `primary` tone `GroupLabel` keeps for exactly that. The frame is tighter
+ * too (`py-6`, `space-y-5`) — four more rows before the fold, at no cost to
+ * the ramp.
  */
 
 /** How far down the viewport the "current section" reading line sits. */
@@ -75,46 +88,58 @@ export function SettingsRail({
           so the rail hung in a gap on every viewport and its scroll area was
           short by the same amount (ADR
           20260827-clearwater-surface-language, decision 10). */}
-      <div className="sticky top-(--chrome-h) max-h-[calc(100svh-var(--chrome-h))] space-y-6 overflow-y-auto py-10 pe-2">
-        {groups.map((group) => (
-          <div key={group.id}>
-            {/* Prefixed rather than reusing the group's own id: the pane
-                already renders that id on its `<h2>`, and two of them would
-                make the fragment ambiguous. */}
-            <GroupLabel id={`settings-rail-${group.id}`} className="mb-2 px-2">
-              {group.label}
-            </GroupLabel>
-            <ul aria-labelledby={`settings-rail-${group.id}`}>
-              {group.rows.map((row) => {
-                const selected = row.id === currentId;
-                const badge = badges?.[row.id];
-                return (
-                  <li key={row.id}>
-                    <RailLink
-                      href={
-                        row.target.kind === "route"
-                          ? `${shopBasePath}${row.target.path}`
-                          : `${onHub ? "" : hubPath}#${settingsSectionFragment(row.target.id)}`
-                      }
-                      sameDocument={row.target.kind === "section" && onHub}
-                      selected={selected}
-                    >
-                      <span className="truncate">{labels[row.id]}</span>
-                      {/* At most one badge per row, and only for a warning —
-                          the settled states of these rows are quiet text on
-                          the pane, not a pill on the map. */}
-                      {badge ? (
-                        <Badge tone="warning" size="sm" toneMark={false}>
-                          {badge}
-                        </Badge>
-                      ) : null}
-                    </RailLink>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+      <div className="sticky top-(--chrome-h) max-h-[calc(100svh-var(--chrome-h))] space-y-5 overflow-y-auto py-6 pe-2">
+        {groups.map((group) => {
+          const isCurrentGroup = group.rows.some((row) => row.id === currentId);
+          return (
+            <div key={group.id}>
+              {/* Prefixed rather than reusing the group's own id: the pane
+                  already renders that id on its `<h2>`, and two of them would
+                  make the fragment ambiguous.
+
+                  Sticky inside the rail's scroll area, and opaque, so the rows
+                  slide under their own group's name rather than past it. The
+                  background is the page's, because the rail sits directly on
+                  it — there is no card here to borrow a surface from. */}
+              <GroupLabel
+                id={`settings-rail-${group.id}`}
+                tone={isCurrentGroup ? "primary" : "muted"}
+                className="sticky top-0 z-10 mb-2 bg-background px-2 py-1"
+              >
+                {group.label}
+              </GroupLabel>
+              <ul aria-labelledby={`settings-rail-${group.id}`}>
+                {group.rows.map((row) => {
+                  const selected = row.id === currentId;
+                  const badge = badges?.[row.id];
+                  return (
+                    <li key={row.id}>
+                      <RailLink
+                        href={
+                          row.target.kind === "route"
+                            ? `${shopBasePath}${row.target.path}`
+                            : `${onHub ? "" : hubPath}#${settingsSectionFragment(row.target.id)}`
+                        }
+                        sameDocument={row.target.kind === "section" && onHub}
+                        selected={selected}
+                      >
+                        <span className="truncate">{labels[row.id]}</span>
+                        {/* At most one badge per row, and only for a warning —
+                            the settled states of these rows are quiet text on
+                            the pane, not a pill on the map. */}
+                        {badge ? (
+                          <Badge tone="warning" size="sm" toneMark={false}>
+                            {badge}
+                          </Badge>
+                        ) : null}
+                      </RailLink>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          );
+        })}
       </div>
     </nav>
   );
