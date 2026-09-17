@@ -52,12 +52,14 @@
   },
   "identity": {
     "trigger": "Confirmar que es {name}",
-    "message": "¿La persona que está en el mostrador es {name}? Hazlo solo una vez que hayas verificado que es la misma persona y no alguien más con un nombre parecido o un correo compartido. Al confirmar, las certificaciones y la exención de ese buceador pasan a esta plaza, se gasta el paquete de inmersiones que la cubra, y no se puede deshacer. Si es otra persona, resérvale una plaza con su propio correo en lugar de confirmar.",
+    "message": "¿La persona que está en el mostrador es {name}? Al confirmar, las certificaciones y la exención de ese buceador pasan a esta plaza, se gasta el paquete de inmersiones que la cubra, y no se puede deshacer.",
     "confirm": "Sí, es esta persona",
     "cancel": "Mejor no",
     "confirming": "Confirmando…"
   },
   "settledGroup": "Registrados — {count}",
+  "settledAllBoarded": "Todos embarcados",
+  "settledSomeBoarded": "{count, plural, one {# embarcado} other {# embarcados}}",
   "checkInButton": "Registrar",
   "checkInAriaLabel": "Registrar a {name}",
   "checkingIn": "Registrando…",
@@ -69,7 +71,6 @@
     "release": "Suelta para sincronizar",
     "refreshing": "Sincronizando…"
   },
-  "checkedInCheck": "Registrado",
   "undoAriaLabel": "Deshacer el check-in de {name}",
   "undoing": "Deshaciendo…",
   "walkInAction": "Añadir un walk-in",
