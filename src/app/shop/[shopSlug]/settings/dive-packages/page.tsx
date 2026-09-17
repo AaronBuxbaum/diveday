@@ -48,7 +48,11 @@ export default async function DivePackagesSettingsPage({
   const { notice } = await searchParams;
   const { db, session, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonManagePaymentSettings,
-    refusal: { notice: "not-authorized" },
+    // Back to the hub rather than Today, and with the hub's own payment-gate
+    // code: `not-authorized` is the sentence that names payment settings, and
+    // Today's map does not carry it — a refusal that lands somewhere with no
+    // words for it is indistinguishable from a dead link.
+    refusal: { notice: "not-authorized", landing: ["settings"] },
   });
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);

@@ -1,6 +1,5 @@
 {
   "heading": "Temporadas y eventos",
-  "value": "{count, plural, =0 {Nada en el calendario} =1 {1 temporada} other {# temporadas}}",
   "none": "Todavía no hay nada en tu calendario.",
   "live": "En marcha",
   "nameLabel": "Nombre",

@@ -1,6 +1,5 @@
 {
   "heading": "Kinds of day",
-  "value": "{count, plural, =0 {No kinds of day} =1 {1 kind of day} other {# kinds of day}}",
   "nameLabel": "Name",
   "nameHint": "Divers see this word on your schedule and can filter by it.",
   "createTitle": "Add a kind of day",

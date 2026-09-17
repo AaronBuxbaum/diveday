@@ -485,7 +485,6 @@
     },
     "divePackages": {
       "heading": "Dive packages",
-      "value": "{count, plural, =0 {No packages} one {# package} other {# packages}}",
       "description": "Prepaid dives a diver buys once and spends across departures.",
       "summary": "{dives, plural, one {# dive} other {# dives}} · {price} · {scope}",
       "scopeAll": "Any departure",
