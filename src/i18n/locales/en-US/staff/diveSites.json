@@ -290,6 +290,10 @@
     "importUnknownColumns": "That file has a column DiveDay does not recognise, so nothing was read. Import the file your export produced, without added columns.",
     "importNoNameColumn": "That file has no name column, so there is nothing to match a site on.",
     "importFileEmpty": "That file has no rows in it.",
-    "imported": "Updated {updated, plural, one {# site} other {# sites}} and created {created, plural, one {# new one} other {# new ones}}. {deleted, plural, =0 {None came back deleted} one {# came back deleted} other {# came back deleted}}, and {skipped, plural, =0 {no rows were} one {# row was} other {# rows were}} left alone."
+    "imported": "Updated {updated, plural, one {# site} other {# sites}} and created {created, plural, one {# new one} other {# new ones}}. {deleted, plural, =0 {None came back deleted} one {# came back deleted} other {# came back deleted}}, and {skipped, plural, =0 {no rows were} one {# row was} other {# rows were}} left alone.",
+    "importFileTooLarge": "That file is larger than 8 MB. Split it, or export again from this shop.",
+    "importTooManyRows": "That file has more than 20,000 rows, which is more sites than a library holds.",
+    "importTooManyColumns": "That file has more than 64 columns, so it is not a DiveDay export.",
+    "importCellTooLong": "One of that file’s values is longer than 2,000 characters, so nothing was read."
   }
 }

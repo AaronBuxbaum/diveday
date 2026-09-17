@@ -1,7 +1,17 @@
+import { MAX_ENTERED_DEPTH_METERS } from "./depth-units";
 import { DIVE_SITE_DIFFICULTIES, type DiveSiteDifficulty } from "./dive-site-difficulty";
-import { type DiveSiteLandmark, MAX_SITE_LANDMARKS } from "./dive-site-landmarks";
-import type { RoutePoint } from "./dive-site-route";
-import { parseCsv } from "./import";
+import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
+import { parseRoutePoints, parseRouteZoom, type RoutePoint } from "./dive-site-route";
+import { MAX_SITE_IMAGES } from "./dive-sites";
+import { DOCK_DAY_LIMITS } from "./diver-planning";
+import {
+  MAX_IMPORT_BYTES,
+  MAX_IMPORT_CELL_LENGTH,
+  MAX_IMPORT_COLUMNS,
+  MAX_IMPORT_ROWS,
+  parseCsv,
+} from "./import";
+import { isManagedStorageUrl } from "./storage/blob-host";
 import { TIDE_PREFERENCES, type TidePreference } from "./tides";
 
 /**
@@ -86,7 +96,15 @@ export type PreparedDiveSiteImport = {
    * "your file has a column I don't recognise" is not actionable without it.
    */
   unknownColumns: string[];
-  fatal: "file_empty" | "no_name_column" | "unknown_columns" | null;
+  fatal:
+    | "file_empty"
+    | "no_name_column"
+    | "unknown_columns"
+    | "file_too_large"
+    | "too_many_rows"
+    | "too_many_columns"
+    | "cell_too_long"
+    | null;
 };
 
 /**
@@ -201,29 +219,64 @@ function jsonArray(value: string | null): unknown[] | null {
   }
 }
 
-function routePoints(raw: unknown[] | null): RoutePoint[] | null {
-  if (raw === null) return null;
-  const points = raw.filter(
-    (point): point is RoutePoint =>
-      typeof point === "object" &&
-      point !== null &&
-      typeof (point as RoutePoint).x === "number" &&
-      typeof (point as RoutePoint).y === "number",
-  );
-  return points.length === raw.length ? points : null;
+/**
+ * **Every shaped column goes through the normalizer that already owns it**,
+ * and none of them is re-derived here (security review, issue #1771).
+ *
+ * `parseRoutePoints`, `parseRouteZoom` and `parseDiveSiteLandmarks` carry caps
+ * and clamps a local re-implementation quietly dropped, and their own docblocks
+ * name this caller: waypoints "from anywhere untrusted — a form post, a stored
+ * row written by an older build, **an import**", with a cap that "is what keeps
+ * a stuck finger — or a crafted POST — from storing a thousand-point blob on a
+ * row every trip page loads".
+ *
+ * That cap is load-bearing and the row it protects is public. `DiveSiteMap`
+ * reads `site.routePoints` straight off the row, from the diver's trip page,
+ * and `routeFocus` does `Math.min(...xs)` — so a route of a hundred thousand
+ * waypoints is a `RangeError` on an unauthenticated page, on every request,
+ * for as long as the row stands. One cell of one uploaded file.
+ */
+function shapedRoutePoints(raw: string | null): { points: RoutePoint[] | null; kept: boolean } {
+  if (raw === null) return { points: null, kept: true };
+  const parsed = jsonArray(raw);
+  if (parsed === null) return { points: null, kept: false };
+  const points = parseRoutePoints(parsed);
+  // The cap is a silent truncation in the parser, which is right for a form
+  // post and wrong for a restore: a route the file drew and this stored half of
+  // is a line over the wrong water. Refuse the row instead.
+  return { points, kept: points.length === parsed.length };
 }
 
-function landmarks(raw: unknown[] | null): DiveSiteLandmark[] | string[] | null {
-  if (raw === null) return null;
-  if (raw.every((entry) => typeof entry === "string")) return raw as string[];
-  const shaped = raw.filter(
-    (entry): entry is DiveSiteLandmark =>
-      typeof entry === "object" &&
-      entry !== null &&
-      typeof (entry as DiveSiteLandmark).name === "string" &&
-      typeof (entry as DiveSiteLandmark).kind === "string",
-  );
-  return shaped.length === raw.length ? shaped.slice(0, MAX_SITE_LANDMARKS) : null;
+function shapedLandmarks(raw: string | null): {
+  landmarks: DiveSiteLandmark[] | null;
+  kept: boolean;
+} {
+  if (raw === null) return { landmarks: null, kept: true };
+  const parsed = jsonArray(raw);
+  if (parsed === null) return { landmarks: null, kept: false };
+  const landmarks = parseDiveSiteLandmarks(parsed);
+  return { landmarks, kept: landmarks.length === parsed.length };
+}
+
+/**
+ * **A photo URL the app holds is first-party, and this does not become the
+ * exception.**
+ *
+ * `StoredPhoto`'s docblock says every photo URL the app holds is one it
+ * produced and "nothing else can be written"; ADR 20260724-dive-site-media-ingestion
+ * deleted the paste-a-URL form because "a public dive-site page must never make
+ * a live request to a staff-chosen third-party host — which would let that host
+ * watch every visitor's IP and referrer". A CSV column is a paste-a-URL form
+ * with extra steps, so anything that is not ours is dropped.
+ *
+ * A root-relative path is kept because that is what a local dev and e2e
+ * deployment stores; `//host/x` is not root-relative, it is protocol-relative,
+ * and it is exactly the shape this refuses.
+ */
+function managedImageUrl(value: string | null): string | null {
+  if (!value) return null;
+  if (value.startsWith("/") && !value.startsWith("//")) return value;
+  return isManagedStorageUrl(value) ? value : null;
 }
 
 function stringArray(raw: unknown[] | null): string[] | null {
@@ -242,9 +295,31 @@ function specialties(value: string | null): string[] | null {
 }
 
 export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
+  // **The same four caps the contacts importer enforces**, from the module this
+  // one already borrows `parseCsv` from (security review, issue #1771).
+  //
+  // Skipping them was not a smaller file; it was an unbounded one. The server
+  // action's body limit is 16 MB, and `createDiveSite` calls
+  // `availableSiteSlug`, which reads *every* live site in the shop on every
+  // insert — so N created rows is N queries returning up to N rows, against a
+  // database every other tenant shares, inside one server action with no outer
+  // transaction and no statement timeout. A file of bare `name` rows is the
+  // whole attack, and the owner/manager gate does not help against a careless
+  // owner or a file somebody sent them.
+  if (new TextEncoder().encode(csv).length > MAX_IMPORT_BYTES)
+    return { rows: [], unknownColumns: [], fatal: "file_too_large" };
   const grid = parseCsv(csv).filter((row) => row.some((cell) => cell.trim() !== ""));
   const header = grid[0];
   if (!header) return { rows: [], unknownColumns: [], fatal: "file_empty" };
+  if (header.length > MAX_IMPORT_COLUMNS)
+    return { rows: [], unknownColumns: [], fatal: "too_many_columns" };
+  if (grid.length - 1 > MAX_IMPORT_ROWS)
+    return { rows: [], unknownColumns: [], fatal: "too_many_rows" };
+  // Cheaper than the per-field length caps the editor's own schema applies, and
+  // it reaches every free-text column at once — a restore is not the place to
+  // discover that one shop's `dive_plan` is a megabyte.
+  if (grid.some((row) => row.some((cell) => cell.length > MAX_IMPORT_CELL_LENGTH)))
+    return { rows: [], unknownColumns: [], fatal: "cell_too_long" };
 
   const known = new Set<string>(DIVE_SITE_IMPORT_COLUMNS);
   const indexes = new Map<Column, number>();
@@ -278,39 +353,56 @@ export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
     if (longitude !== null && (longitude < -180 || longitude > 180))
       issues.push("invalid_longitude");
 
+    // **The bounds the editor's own schema applies**, so a restore cannot write
+    // a site the form would have refused (security review, issue #1771). Both
+    // drive what a diver reads on a briefing, and the depth one is
+    // safety-adjacent.
     const maxDepthMeters = finiteNumber(read(cells, "max_depth_meters"));
-    if (maxDepthMeters !== null && maxDepthMeters <= 0) issues.push("invalid_max_depth");
+    if (
+      maxDepthMeters !== null &&
+      (maxDepthMeters <= 0 || maxDepthMeters > MAX_ENTERED_DEPTH_METERS)
+    )
+      issues.push("invalid_max_depth");
     const bottomTimeRaw = read(cells, "expected_bottom_time_minutes");
     const expectedBottomTimeMinutes = finiteNumber(bottomTimeRaw);
     if (
       bottomTimeRaw !== null &&
       (expectedBottomTimeMinutes === null ||
         !Number.isInteger(expectedBottomTimeMinutes) ||
-        expectedBottomTimeMinutes <= 0)
+        expectedBottomTimeMinutes < DOCK_DAY_LIMITS.bottomTimeMinutes.min ||
+        expectedBottomTimeMinutes > DOCK_DAY_LIMITS.bottomTimeMinutes.max)
     )
       issues.push("invalid_bottom_time");
 
     const zoomRaw = read(cells, "route_zoom");
-    const routeZoom = finiteNumber(zoomRaw);
-    if (zoomRaw !== null && (routeZoom === null || !Number.isInteger(routeZoom)))
-      issues.push("invalid_route_zoom");
+    // `parseRouteZoom` clamps into the range the map can actually render; a
+    // value outside it is a file describing a frame that does not exist, so the
+    // row says so rather than being quietly moved to the nearest one.
+    const routeZoom = zoomRaw === null ? null : parseRouteZoom(zoomRaw);
+    if (zoomRaw !== null && routeZoom !== Number(zoomRaw)) issues.push("invalid_route_zoom");
 
     // **A drawn route is all four columns or none.** The waypoints are
     // positions on a frame at a zoom, so restoring them without it draws a line
     // over the wrong water — which is a briefing saying something false rather
     // than saying nothing.
-    const points = routePoints(jsonArray(read(cells, "route_points")));
-    const routePointsRaw = read(cells, "route_points");
-    if (routePointsRaw !== null && points === null) issues.push("invalid_route_points");
+    const route = shapedRoutePoints(read(cells, "route_points"));
+    if (!route.kept) issues.push("invalid_route_points");
+    const points = route.points;
     if (points && points.length > 0 && routeZoom === null) issues.push("route_without_zoom");
 
-    const landmarksRaw = read(cells, "landmarks");
-    const parsedLandmarks = landmarks(jsonArray(landmarksRaw));
-    if (landmarksRaw !== null && parsedLandmarks === null) issues.push("invalid_landmarks");
+    const shaped = shapedLandmarks(read(cells, "landmarks"));
+    if (!shaped.kept) issues.push("invalid_landmarks");
+    const parsedLandmarks = shaped.landmarks;
 
     const imagesRaw = read(cells, "image_urls");
-    const imageUrls = stringArray(jsonArray(imagesRaw));
-    if (imagesRaw !== null && imageUrls === null) issues.push("invalid_image_urls");
+    const listed = stringArray(jsonArray(imagesRaw));
+    // Every gallery entry has to be ours, and there is a limit on how many the
+    // editor will hold — a restore that wrote seven would leave a site the form
+    // cannot save.
+    const imageUrls = listed?.map(managedImageUrl).filter((url): url is string => url !== null);
+    if (imagesRaw !== null && (listed === null || imageUrls?.length !== listed.length))
+      issues.push("invalid_image_urls");
+    if (imageUrls && imageUrls.length > MAX_SITE_IMAGES) issues.push("too_many_images");
 
     const difficultyRaw = read(cells, "difficulty_level");
     const difficultyLevel = oneOf(difficultyRaw, DIVE_SITE_DIFFICULTIES);
@@ -319,6 +411,15 @@ export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
     const tideRaw = read(cells, "tide_preference");
     const tidePreference = oneOf(tideRaw, TIDE_PREFERENCES);
     if (tideRaw !== null && tidePreference === null) issues.push("unknown_tide_preference");
+
+    // A photo URL that is not ours is dropped, and the row says so rather than
+    // quietly restoring a briefing with a missing picture.
+    const satelliteRaw = read(cells, "satellite_image_url");
+    const routeImageRaw = read(cells, "route_image_url");
+    if (satelliteRaw !== null && managedImageUrl(satelliteRaw) === null)
+      issues.push("foreign_image_url");
+    if (routeImageRaw !== null && managedImageUrl(routeImageRaw) === null)
+      issues.push("foreign_image_url");
 
     const deletedAt = read(cells, "deleted_at");
     if (deletedAt !== null && Number.isNaN(Date.parse(deletedAt)))
@@ -352,13 +453,13 @@ export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
       tideStationId: read(cells, "tide_station_id"),
       tideStationConfirmed: flag(read(cells, "tide_station_confirmed")),
       tidePreference,
-      satelliteImageUrl: read(cells, "satellite_image_url"),
-      routeImageUrl: read(cells, "route_image_url"),
+      satelliteImageUrl: managedImageUrl(read(cells, "satellite_image_url")),
+      routeImageUrl: managedImageUrl(read(cells, "route_image_url")),
       routePoints: points,
       routeLabel: read(cells, "route_label"),
       routeNote: read(cells, "route_note"),
       routeZoom,
-      imageUrls,
+      imageUrls: imageUrls ?? null,
       planningNote: read(cells, "planning_note"),
       deletedAt,
       issues,

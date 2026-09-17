@@ -30,6 +30,10 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "import-unknown-columns": { tone: "danger", key: "diveSites.notice.importUnknownColumns" },
   "import-no-name-column": { tone: "danger", key: "diveSites.notice.importNoNameColumn" },
   "import-file-empty": { tone: "danger", key: "diveSites.notice.importFileEmpty" },
+  "import-file-too-large": { tone: "danger", key: "diveSites.notice.importFileTooLarge" },
+  "import-too-many-rows": { tone: "danger", key: "diveSites.notice.importTooManyRows" },
+  "import-too-many-columns": { tone: "danger", key: "diveSites.notice.importTooManyColumns" },
+  "import-cell-too-long": { tone: "danger", key: "diveSites.notice.importCellTooLong" },
 };
 
 /**

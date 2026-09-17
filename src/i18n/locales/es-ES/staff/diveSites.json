@@ -290,6 +290,10 @@
     "importUnknownColumns": "Ese archivo tiene una columna que DiveDay no reconoce, así que no se leyó nada. Importa el archivo que produjo tu exportación, sin columnas añadidas.",
     "importNoNameColumn": "Ese archivo no tiene columna de nombre, así que no hay con qué emparejar un sitio.",
     "importFileEmpty": "Ese archivo no tiene filas.",
-    "imported": "Se actualizaron {updated, plural, one {# sitio} other {# sitios}} y se crearon {created, plural, one {# nuevo} other {# nuevos}}. {deleted, plural, =0 {Ninguno volvió eliminado} one {# volvió eliminado} other {# volvieron eliminados}} y {skipped, plural, =0 {no se dejó ninguna fila} one {se dejó # fila} other {se dejaron # filas}} sin tocar."
+    "imported": "Se actualizaron {updated, plural, one {# sitio} other {# sitios}} y se crearon {created, plural, one {# nuevo} other {# nuevos}}. {deleted, plural, =0 {Ninguno volvió eliminado} one {# volvió eliminado} other {# volvieron eliminados}} y {skipped, plural, =0 {no se dejó ninguna fila} one {se dejó # fila} other {se dejaron # filas}} sin tocar.",
+    "importFileTooLarge": "Ese archivo pesa más de 8 MB. Divídelo o vuelve a exportar desde este centro.",
+    "importTooManyRows": "Ese archivo tiene más de 20.000 filas, más sitios de los que cabe una biblioteca.",
+    "importTooManyColumns": "Ese archivo tiene más de 64 columnas, así que no es una exportación de DiveDay.",
+    "importCellTooLong": "Uno de los valores de ese archivo pasa de 2.000 caracteres, así que no se leyó nada."
   }
 }
