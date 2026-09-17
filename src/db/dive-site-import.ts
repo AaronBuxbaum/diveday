@@ -2,7 +2,13 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import type { PreparedDiveSiteImport, PreparedDiveSiteImportRow } from "@/lib/dive-site-import";
 import type { AppDb } from "./client";
-import { createDiveSite, type DiveSiteInput, updateDiveSite } from "./dive-sites";
+import {
+  createDiveSite,
+  type DiveSiteInput,
+  refusingNameClash,
+  SITE_NAME_TAKEN,
+  updateDiveSite,
+} from "./dive-sites";
 import type { DiveSiteFitTone, DiveSpecialty } from "./schema";
 import { certificationLevel, diveSiteFitTone, diveSites, diveSpecialty } from "./schema";
 
@@ -103,13 +109,36 @@ export async function commitDiveSiteImport(
     }
     const input = diveSiteInput(shopId, row, importedByPersonId, Boolean(match));
     if (match) {
-      await updateDiveSite(db, shopId, match.id, input);
+      // **Both refusals the writer can hand back, and neither used to be
+      // read** (security review, issue #1771). `updateDiveSite` carries
+      // `deleted_at is null`, so a row matching a *deleted* site by name
+      // matched nothing and wrote nothing — and this counted it as updated,
+      // then `applyDeletedState` counted it as deleted. "1 updated, 1 deleted"
+      // over a library that had not changed at all, on exactly the scenario
+      // the name match exists for.
+      const updated = await refusingNameClash(() => updateDiveSite(db, shopId, match.id, input));
+      if (updated === SITE_NAME_TAKEN) {
+        summary.skipped.push({ rowNumber: row.rowNumber, issues: ["name_taken"] });
+        continue;
+      }
+      if (!updated) {
+        summary.skipped.push({ rowNumber: row.rowNumber, issues: ["not_written"] });
+        continue;
+      }
       summary.updated += 1;
       claimed.add(match.id);
       await applyDeletedState(db, shopId, match.id, row, summary);
       continue;
     }
-    const created = await createDiveSite(db, input);
+    // A concurrent save can take the name between the read above and this
+    // write. Unhandled that is a 500 out of the server action with N sites
+    // already committed and no summary to show for them, which is the worst
+    // shape this can fail in; `refusingNameClash` turns it into one skipped row.
+    const created = await refusingNameClash(() => createDiveSite(db, input));
+    if (created === SITE_NAME_TAKEN) {
+      summary.skipped.push({ rowNumber: row.rowNumber, issues: ["name_taken"] });
+      continue;
+    }
     if (!created) {
       summary.skipped.push({ rowNumber: row.rowNumber, issues: ["not_written"] });
       continue;

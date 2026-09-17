@@ -1,7 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { DIVE_SITE_IMPORT_COLUMNS, prepareDiveSiteImport } from "@/lib/dive-site-import";
+import { DIVE_SITE_LANDMARK_KINDS, type DiveSiteLandmark } from "@/lib/dive-site-landmarks";
+import { MAX_ROUTE_POINTS } from "@/lib/dive-site-route";
 import { buildCsv } from "@/lib/export";
+import { MAX_IMPORT_BYTES, MAX_IMPORT_CELL_LENGTH, MAX_IMPORT_ROWS } from "@/lib/import";
 import { seededShopContext, unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import { commitDiveSiteImport } from "./dive-site-import";
@@ -197,6 +201,152 @@ describe("the dive-site importer", () => {
     expect(prepared.fatal).toBe("unknown_columns");
     expect(prepared.unknownColumns).toEqual(["house_reef_rating"]);
     expect(prepared.rows).toEqual([]);
+  });
+
+  /**
+   * **The cell that reaches a public page** (security review, issue #1771).
+   *
+   * `DiveSiteMap` reads `routePoints` straight off the row from the diver's
+   * trip page, and `routeFocus` does `Math.min(...xs)` — so a route of a
+   * hundred thousand waypoints is a `RangeError` on an unauthenticated page,
+   * on every request, until somebody notices. `parseRoutePoints` caps at
+   * `MAX_ROUTE_POINTS` and clamps each coordinate, and its own docblock names
+   * the import as a caller; the first draft of this parser re-derived the shape
+   * check and dropped every one of those bounds.
+   *
+   * Refused rather than truncated: a route the file drew and this stored half
+   * of is a line over the wrong water, which is a briefing saying something
+   * false instead of saying nothing.
+   */
+  it("refuses a route with more waypoints than the map can hold", () => {
+    const flood = JSON.stringify(
+      Array.from({ length: MAX_ROUTE_POINTS + 1 }, (_, index) => ({ x: index % 100, y: 5 })),
+    );
+    const row = prepareDiveSiteImport(
+      buildCsv(
+        [...DIVE_SITE_IMPORT_COLUMNS],
+        [
+          DIVE_SITE_IMPORT_COLUMNS.map((column) =>
+            column === "name" ? "Flooded Route" : column === "route_points" ? flood : null,
+          ),
+        ],
+      ),
+    ).rows[0];
+    expect(row?.issues).toContain("invalid_route_points");
+    expect(row?.routePoints ?? []).toHaveLength(MAX_ROUTE_POINTS);
+  });
+
+  /**
+   * The same normalizer one column over. `parseDiveSiteLandmarks` does not drop
+   * a landmark whose `kind` is not a kind — it reads it as a plain point of
+   * interest and bounds the note — which is the right answer and the one the
+   * first draft of this parser did not give: it took any object with two
+   * strings, so the column stored a `kind` the type says cannot exist and a
+   * note with no length at all. Its docblock names "what the CSV import still
+   * accepts" as the caller it was written for.
+   */
+  it("normalizes a landmark the field guide's own parser would not take as written", () => {
+    const row = prepareDiveSiteImport(
+      buildCsv(
+        [...DIVE_SITE_IMPORT_COLUMNS],
+        [
+          DIVE_SITE_IMPORT_COLUMNS.map((column) =>
+            column === "name"
+              ? "Bad Landmark"
+              : column === "landmarks"
+                ? JSON.stringify([
+                    { name: "The Arch", kind: "not-a-kind", note: "x".repeat(1_000) },
+                  ])
+                : null,
+          ),
+        ],
+      ),
+    ).rows[0];
+    const [landmark] = (row?.landmarks ?? []) as DiveSiteLandmark[];
+    expect(row?.issues).toEqual([]);
+    expect(DIVE_SITE_LANDMARK_KINDS).toContain(landmark?.kind);
+    expect(landmark?.note.length).toBeLessThan(1_000);
+  });
+
+  /**
+   * **A photo URL the app holds is first-party.** `StoredPhoto`'s docblock says
+   * nothing else can be written, and ADR 20260724-dive-site-media-ingestion
+   * deleted the paste-a-URL form so a public page would never fetch from a
+   * staff-chosen host and let it watch every visitor. A CSV column is that form
+   * with extra steps.
+   */
+  it("drops a photo URL that is not ours, and says the row lost one", () => {
+    const row = prepareDiveSiteImport(
+      buildCsv(
+        [...DIVE_SITE_IMPORT_COLUMNS],
+        [
+          DIVE_SITE_IMPORT_COLUMNS.map((column) =>
+            column === "name"
+              ? "Borrowed Photos"
+              : column === "satellite_image_url"
+                ? "https://tracker.example.com/pixel.png"
+                : column === "image_urls"
+                  ? JSON.stringify(["//tracker.example.com/a.png", "/uploads/ours.png"])
+                  : null,
+          ),
+        ],
+      ),
+    ).rows[0];
+    expect(row?.satelliteImageUrl).toBeNull();
+    expect(row?.issues).toContain("foreign_image_url");
+    expect(row?.issues).toContain("invalid_image_urls");
+    // Protocol-relative is not root-relative, and it is the shape this refuses.
+    expect(row?.imageUrls).toEqual(["/uploads/ours.png"]);
+  });
+
+  /**
+   * **The caps the contacts importer already enforces**, from the module this
+   * one borrows `parseCsv` from. Without them a 16 MB file of bare names is
+   * hundreds of thousands of `createDiveSite` calls, each of which reads every
+   * live site in the shop — quadratic, in one server action, with no outer
+   * transaction, against a database every other tenant shares.
+   */
+  it("refuses a file that is too large, too long, too wide, or carries a huge cell", () => {
+    const header = "name\n";
+    expect(prepareDiveSiteImport(`${header}${"a".repeat(MAX_IMPORT_BYTES)}`).fatal).toBe(
+      "file_too_large",
+    );
+    expect(
+      prepareDiveSiteImport(
+        header + Array.from({ length: MAX_IMPORT_ROWS + 1 }, (_, i) => `s${i}`).join("\n"),
+      ).fatal,
+    ).toBe("too_many_rows");
+    expect(
+      prepareDiveSiteImport(`name,${"a".repeat(MAX_IMPORT_CELL_LENGTH + 1)}\nx,y\n`).fatal,
+    ).toBe("cell_too_long");
+  });
+
+  /**
+   * A row matching a **deleted** site by name matched nothing, because
+   * `updateDiveSite` carries `deleted_at is null` — and the importer counted it
+   * as updated anyway, then counted it as deleted on top. "1 updated, 1
+   * deleted" over a library that had not changed at all, on exactly the
+   * scenario the name match exists for.
+   */
+  it("says nothing was written when the name it matched belongs to a deleted site", async () => {
+    const { db, shop } = await seededShopContext();
+    const [site] = await listDiveSites(db, shop.id);
+    if (!site) throw new Error("expected a seeded dive site");
+    await db.update(diveSites).set({ deletedAt: nowDate() }).where(eq(diveSites.id, site.id));
+
+    const csv = buildCsv(
+      [...DIVE_SITE_IMPORT_COLUMNS],
+      [DIVE_SITE_IMPORT_COLUMNS.map((column) => (column === "name" ? site.name : null))],
+    );
+    const summary = await commitDiveSiteImport(
+      db,
+      shop.id,
+      prepareDiveSiteImport(csv),
+      await anyStaffPersonId(db, shop.id),
+    );
+    expect(summary.updated).toBe(0);
+    expect(summary.deleted).toBe(0);
+    expect(summary.skipped).toEqual([{ rowNumber: 2, issues: ["not_written"] }]);
   });
 
   it("refuses a file with no name column, and an empty one", () => {
