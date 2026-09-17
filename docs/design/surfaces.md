@@ -162,7 +162,13 @@ below `xl` (1280px), on tablets and phones.
 - **Controls that dissolved:** none new; the row's `⋯` menu and per-day "+ Add" carried over — the
   menu's panels open full width beneath the grid, because a move form is two date/time fields and
   a 160px column is not a form.
-- **Remove first:** the standing crew line above the board, once a station says its own crew.
+- **Removed 2026-09-17:** the standing "Usual crew: …" line above the phone stream (what survives
+  is the rule it carried — a row running the board's usual crew prints no crew line, so any row
+  that does is the exception), and the header's "View public page" button, demoted to link weight
+  beside Add a departure and Add a booking. The week grid's card titles clamp to two lines rather
+  than truncating: the site is the title's second half, so one clipped line hid which boat a cell
+  was about.
+- **Remove first:** nothing left above the board; the row `⋯` menu is the next candidate.
 - **Composition:** a week grid at desktop because the content is a calendar; the phone keeps the
   stream because a seven-column grid has no honest 390px form.
 
@@ -211,7 +217,10 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
 - **The question it arrives with:** "how many are still to come?" — answered by the count figure
   before any list.
 - **Controls that dissolved:** per-row state text — the tap circle *is* the state; settled rows
-  sink into one collapsed group.
+  sink into one collapsed group, and since 2026-09-17 they carry no state of their own at all:
+  the group header says "Checked in — 5 · all boarded" once for every row under it, each row keeps
+  only what singles that person out, and the pass demoted to link weight as the row's one act. A
+  blocked row says one thing, and it is the gate.
 - **Remove first:** the day's other boats from standing view; one departure is in focus, the rest
   one tap away.
 - **Composition:** an instrument over a queue, inheriting the manifest's count-first grammar
@@ -380,7 +389,9 @@ drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
 - **The question it arrives with:** "what's out, and what's coming back?" — answered by the Out
   and Due back groups before any scrolling.
 - **Controls that dissolved:** the three stat tiles and the Returns panel (the groups are the
-  state); per-row acts ride the rows.
+  state); per-row acts ride the rows; and, 2026-09-17, the header's "Add gear" button — the
+  register ends in the "Add a unit" band the way the trip roster ends in "Add a diver", and a
+  header door onto the same disclosure only scrolled the reader back down to it.
 - **Remove first:** the service sentence on healthy units — it already renders only when it has
   something to say.
 - **Composition:** one grouped ledger because reservation state is the register's whole subject,
@@ -394,8 +405,13 @@ drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
 - **The question it arrives with:** "is every boat covered?" — answered by the Needs-crew row's
   day cells, which render nothing when the answer is yes.
 - **Controls that dissolved:** the two standing add-forms (doors now); the inline credential
-  badge stack (one renewal word).
-- **Remove first:** nothing — the week grid is already the minimum that shows coverage.
+  badge stack (one renewal word); and, 2026-09-17, the standing "Name divers see" form — a
+  summary-first row stating the answer ("Shown as Dana" / "Not shown") that opens the form on a
+  tap. A gap cell carries one act, chosen by the reader: "Assign ›" for somebody who can crew the
+  boat, "Ask for this one" for somebody who can only ask.
+- **Remove first:** nothing — the week grid is already the minimum that shows coverage. The
+  Credentials group no longer renders a heading over an orphan door: with nothing on file the door
+  is the group and names itself.
 - **Composition:** people × days, because coverage is a grid question; the gap carries its act in
   the day it lives (H-59 keeps credentials inform-only).
 

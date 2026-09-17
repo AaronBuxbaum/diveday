@@ -11,22 +11,29 @@ import { e2eNow, seededTripId } from "./helpers";
  */
 
 /**
- * Open the "Add a unit" disclosure, once React owns the door.
+ * Open the "Add a unit" disclosure at the foot of the register, once React
+ * owns it.
  *
- * Opening it is a client handler (`AddUnitLink`) talking to a client listener
- * (`AddUnitDetails`), so a click that lands before hydration is swallowed in
- * silence — no error, no open panel, and fifteen seconds later `getByLabel`
- * times out on a field behind a door that never opened. That window used to be
- * closed by accident, because `/shop/**` had no static shell and nothing
- * painted until the server had finished; giving the staff surfaces one (issue
- * 1446) is what made it a window at all, and shard 2/4 found it.
+ * The register has one door onto this form now: the band's own `<summary>`.
+ * The page header used to carry a second (`AddUnitLink`, a client handler
+ * talking to a client listener) — two doors for one act, which is what the
+ * design sweep took out; the empty-register card still uses that link, which
+ * is why it is still here.
  *
- * `data-hydrated` is the same flag the rest of the staff surfaces publish
- * (`CheckInSearch`, `OrdersToolbar`, `CrewSection`) for exactly this.
+ * The wait stays. `AddUnitDetails` owns `open` in React state, so a tap that
+ * lands before hydration is a tap React has not seen, and the next render can
+ * disagree with what the browser did. That window used to be closed by
+ * accident, because `/shop/**` had no static shell and nothing painted until
+ * the server had finished; giving the staff surfaces one (issue 1446) is what
+ * made it a window at all, and shard 2/4 found it. `data-hydrated` is the same
+ * flag the rest of the staff surfaces publish (`CheckInSearch`,
+ * `OrdersToolbar`, `CrewSection`) for exactly this.
  */
 async function openAddGear(page: Page) {
-  const door = page.getByRole("button", { name: "Add gear" });
-  await expect(door).toHaveAttribute("data-hydrated", "true");
+  const panel = page.locator("details:has(> summary#add-unit)");
+  await expect(panel).toHaveAttribute("data-hydrated", "true");
+  const door = page.locator("summary#add-unit");
+  await door.scrollIntoViewIfNeeded();
   await door.click();
 }
 
@@ -36,7 +43,7 @@ test.describe("staff", () => {
   test("adds a unit to the register and finds it in the fleet", async ({ page }) => {
     const tag = `BCD E2E-${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/gear");
-    // "Add a unit" is a closed disclosure at rest; the header's own door opens it.
+    // "Add a unit" is a closed disclosure at rest; its own summary opens it.
     await openAddGear(page);
     await page.getByLabel("Tag").fill(tag);
     await page.getByLabel("Size").first().fill("M");
@@ -49,7 +56,7 @@ test.describe("staff", () => {
   test("refuses a duplicate tag beside the field, not in a page banner", async ({ page }) => {
     const tag = `Reg E2E-${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/gear");
-    // "Add a unit" is a closed disclosure at rest; the header's own door opens it.
+    // "Add a unit" is a closed disclosure at rest; its own summary opens it.
     await openAddGear(page);
     await page.getByLabel("Tag").fill(tag);
     await page.getByRole("button", { name: "Add to the register" }).click();
@@ -57,7 +64,7 @@ test.describe("staff", () => {
     // **The unit's own row, before touching the page again.** The status banner
     // is rendered by the redirect's *destination*, but the register list behind
     // it is what proves the navigation has fully landed — and until it has, the
-    // "Add gear" click below can hit the pre-navigation DOM, open that
+    // add-unit click below can hit the pre-navigation DOM, open that
     // disclosure, and then be thrown away by the remount. The Tag field never
     // appears and `fill` times out fifteen seconds later, which is what shard
     // 2/4 kept reporting under load.

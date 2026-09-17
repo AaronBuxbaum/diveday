@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { openAddUnitDetails } from "./AddUnitDetails";
 
 /**
- * The two "+ Add a unit" doors (the page header, the empty state) into the
- * collapsed form at the bottom of the page. Not a `<a href="#add-unit">`
+ * The empty register's "+ Add a unit" door into the collapsed form at the
+ * bottom of the page — the one remaining caller, now the page header no longer
+ * carries a second door onto the same disclosure. Not a `<a href="#add-unit">`
  * (`lint/a11y/useValidAnchor` refuses an anchor whose href is only a click
  * handler in disguise, and it would be exactly that here): opening it is
  * `AddUnitDetails`'s own React state, asked for via `openAddUnitDetails()`
