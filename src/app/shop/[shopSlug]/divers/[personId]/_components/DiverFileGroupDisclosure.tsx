@@ -99,6 +99,10 @@ export function DiverFileGroupDisclosure({
       if (!target || !detailsRef.current.contains(target)) return;
 
       detailsRef.current.open = true;
+      // …and tell React, so its own idea of `open` cannot disagree with the
+      // element's. The `toggle` this mutation fires is asynchronous, and until
+      // it lands React still believes the group is shut.
+      setIsOpen(true);
       window.requestAnimationFrame(() => {
         target.scrollIntoView({ block: "nearest" });
         const focusTarget =
@@ -129,7 +133,13 @@ export function DiverFileGroupDisclosure({
     <section aria-label={label} className={className || undefined}>
       <details
         ref={detailsRef}
-        open={isOpen}
+        // `|| undefined` rather than a bare `false`: React writes an attribute
+        // it has been given and removes one it has not, so a literal
+        // `open={false}` makes this element React's to drive — and the reveal
+        // a fragment navigation performs on a closed ancestor then has React
+        // holding the opposite opinion. Undefined leaves the element alone,
+        // which is the resting state every reader's own tap lives in.
+        open={isOpen || undefined}
         onToggle={(event) => setIsOpen(event.currentTarget.open)}
         className="group/diver-file"
         data-testid={`diver-file-group-${id}`}
