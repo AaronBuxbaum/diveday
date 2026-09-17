@@ -35,8 +35,36 @@ export function FoldedPageTitle({ title }: { title: string }) {
   // After mount, because the target is in the DOM rather than in this tree.
   // The slot lives in the layout, so it survives a client navigation and this
   // re-finds it anyway — cheap, and correct if a shell ever remounts it.
+  //
+  // **And it waits for a slot that is not there yet**, which a single lookup
+  // did not. `ShopChrome` — which composes `ShopNav`, which renders the slot —
+  // sits behind the staff layout's `<Suspense>` (ADR
+  // 20260804-instant-navigation), and this component is rendered by the *page*
+  // on the other side of that boundary. So there is an ordering where the page
+  // hydrates while the chrome is still its skeleton: the lookup found nothing,
+  // the effect never ran again, and the bar silently lost its folding title for
+  // the life of that page view. Not a paint later than it should be — never.
+  //
+  // Found as a one-in-six flake in `e2e/staff-nav.spec.ts`, where the slot
+  // stayed empty for the whole of the assertion's budget rather than filling
+  // late, which is what said it was an ordering rather than a slow hydration.
   useEffect(() => {
-    setSlot(document.querySelector("[data-chrome-title-slot]"));
+    const find = () => document.querySelector("[data-chrome-title-slot]");
+    const onMount = find();
+    if (onMount) {
+      setSlot(onMount);
+      return;
+    }
+    // Disconnected on the first hit, so this observes only across the gap
+    // between the page hydrating and the chrome resolving.
+    const observer = new MutationObserver(() => {
+      const late = find();
+      if (!late) return;
+      observer.disconnect();
+      setSlot(late);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
   }, []);
 
   return slot ? createPortal(title, slot) : null;
