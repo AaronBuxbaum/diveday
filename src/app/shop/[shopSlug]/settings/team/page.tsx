@@ -108,6 +108,7 @@ function roleLabels(t: StaffTranslator): Record<Role, string> {
     owner: t("settings.team.roleLabels.owner"),
     manager: t("settings.team.roleLabels.manager"),
     instructor: t("settings.team.roleLabels.instructor"),
+    assistant_instructor: t("settings.team.roleLabels.assistant_instructor"),
     divemaster: t("settings.team.roleLabels.divemaster"),
     captain: t("settings.team.roleLabels.captain"),
     crew: t("settings.team.roleLabels.crew"),

@@ -52,6 +52,11 @@
         "desc": "Divers holds every diver’s certification records and specialty history.",
         "tryThis": "Open Divers to check a certification record before class."
       },
+      "assistant_instructor": {
+        "title": "Assisting in the water while divers train",
+        "desc": "Divers holds what each student has on file before you get in the water with them.",
+        "tryThis": "Open Divers to read a student’s record before you get in."
+      },
       "divemaster": {
         "title": "Getting divers ready to board",
         "desc": "Today lists every diver who can’t board yet, with the one tap that fixes each one.",

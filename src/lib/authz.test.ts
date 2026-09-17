@@ -188,6 +188,10 @@ describe("canReadPrivateRecapPulse and the promise on the recap form", () => {
       owner: "owner",
       manager: "manager",
       instructor: "instructor",
+      // Distinct from `instructor`, deliberately: this map is read with
+      // `includes`, so a word that is a substring of another role's word would
+      // make the rung look admitted wherever the longer one is named.
+      assistant_instructor: "assistant instructor",
       divemaster: "divemaster",
       captain: "captain",
       crew: "crew",
@@ -197,6 +201,7 @@ describe("canReadPrivateRecapPulse and the promise on the recap form", () => {
       owner: "propietario",
       manager: "gerente",
       instructor: "instructor",
+      assistant_instructor: "asistente de instructor",
       divemaster: "divemaster",
       captain: "capitán",
       crew: "tripulación",

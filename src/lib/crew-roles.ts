@@ -33,9 +33,9 @@ export type TripCrewRole = (typeof TRIP_CREW_ROLES)[number];
  * What a crew member contributes to the in-water supervision ratio.
  *
  * `certified_assistant` is the concept the ratio rules call an "assistant"
- * (`assistantBonusPerInstructor`, src/lib/course-ratios.ts): a Divemaster in
- * the water, worth extra students per instructor. It had no name in `src/lib`
- * at all before this.
+ * (`assistantBonusPerInstructor`, src/lib/course-ratios.ts): a Divemaster **or
+ * an Assistant Instructor** in the water, worth extra students per instructor.
+ * It had no name in `src/lib` at all before this.
  */
 export type InWaterCrewRole = "instructor" | "certified_assistant" | "none";
 
@@ -74,11 +74,29 @@ export type TripCrewAssignment = {
  */
 export function inWaterCrewRole(member: TripCrewAssignment): InWaterCrewRole {
   const holdsInstructor = member.shopRoles.includes("instructor");
-  const holdsDivemaster = member.shopRoles.includes("divemaster");
+  /**
+   * **The two rungs that are worth an assistant and not an instructor.**
+   *
+   * `assistant_instructor` was added because a shop with an AI on staff had
+   * nowhere to file them but `instructor`, and this function then returned a
+   * full `"instructor"` — a full student allowance under the Open Water cap,
+   * and enough on its own to clear a course's "unstaffed" gap. Under PADI an AI
+   * counts as a certified assistant for training-dive ratios and does not
+   * independently conduct a Discover Scuba experience, so the DSD cap (which
+   * grants an assistant nothing) is where the difference bites hardest and is
+   * exactly the distinction the product was getting wrong (issue #1680).
+   *
+   * Mapping the rung here rather than teaching the arithmetic a third rank is
+   * the whole of the fix: `countInWaterCrew` and every ratio gate above it are
+   * unchanged, because an AI *is* the thing those rules already call an
+   * assistant.
+   */
+  const holdsCertifiedAssistant =
+    member.shopRoles.includes("divemaster") || member.shopRoles.includes("assistant_instructor");
   // No per-trip role: exactly the shop-wide inference, unchanged.
   if (!member.tripRole) {
     if (holdsInstructor) return "instructor";
-    return holdsDivemaster ? "certified_assistant" : "none";
+    return holdsCertifiedAssistant ? "certified_assistant" : "none";
   }
   // Rostered off the ratio entirely. The captain is driving the boat and the
   // deckhand is handling lines; neither is supervising students in the water,
@@ -88,11 +106,13 @@ export function inWaterCrewRole(member: TripCrewAssignment): InWaterCrewRole {
   if (member.tripRole === "instructor") {
     if (holdsInstructor) return "instructor";
     // Rostered as the instructor without holding the qualification: fall back
-    // to what they *are* qualified for rather than honouring the roster.
-    return holdsDivemaster ? "certified_assistant" : "none";
+    // to what they *are* qualified for rather than honouring the roster. An
+    // Assistant Instructor rostered in the instructor slot lands here, which is
+    // property 2 doing its job — the roster cannot promote them.
+    return holdsCertifiedAssistant ? "certified_assistant" : "none";
   }
   // `divemaster`: an assistant, and an instructor working as one is one.
-  return holdsInstructor || holdsDivemaster ? "certified_assistant" : "none";
+  return holdsInstructor || holdsCertifiedAssistant ? "certified_assistant" : "none";
 }
 
 /**

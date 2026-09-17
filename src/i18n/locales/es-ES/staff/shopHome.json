@@ -52,6 +52,11 @@
         "desc": "Buceadores guarda los registros de certificación y el historial de especialidades de cada uno.",
         "tryThis": "Abre Buceadores para revisar un registro de certificación antes de clase."
       },
+      "assistant_instructor": {
+        "title": "Asistiendo en el agua mientras los alumnos se forman",
+        "desc": "Buceadores guarda lo que cada alumno tiene registrado antes de que entres al agua con él.",
+        "tryThis": "Abre Buceadores para leer el registro de un alumno antes de entrar."
+      },
       "divemaster": {
         "title": "Preparando a los buceadores para embarcar",
         "desc": "Hoy enumera a todos los buceadores que aún no pueden embarcar, con el único toque que resuelve cada caso.",

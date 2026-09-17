@@ -286,6 +286,21 @@ new domain concept, define it here in the same PR.
   about a *sale*, never about boarding — readiness still clears on a sighted card and nothing else.
 - **Levels** (recreational ladder, roughly): **Open Water (OW)** → **Advanced Open Water
   (AOW)** → **Rescue** → **Divemaster (DM)** → **Instructor**. Names vary slightly by agency.
+- **Assistant Instructor (AI)** — a professional rung between Divemaster and Instructor, and one of
+  the **staff roles** a shop files a person under (`assistant_instructor` in `person_role`), never a
+  level a diver is admitted on. It is a rung, not a job on a boat, which is why it is deliberately
+  **not** a per-trip crew role: what an AI does on one sailing is assist, which the roster already
+  spells `divemaster`, and the per-trip role may only narrow. To the in-water ratios an AI is a
+  **certified assistant** — they add two students per instructor under the entry-level cap and add
+  nothing at all under the intro-session cap, which is the distinction the product was getting wrong
+  while `instructor` was the only rung available to file them under (issue #1680, ruled 2026-09-16).
+  Adding the rung changed no ratio arithmetic: `inWaterCrewRole` maps it to the thing those rules
+  already count. **It carries no permissions of its own** — DiveDay's authorization gates are
+  unchanged by it, so a shop that wants their AI to hold a Divemaster's permissions files them as
+  both, which the roles list has always allowed. What the rung *does* change is who is told what:
+  an AI reads the same Today queue as the rest of the water staff, and is deliberately absent from
+  the owner/manager/instructor rows (a medical review, a certification, a waiver) that only those
+  three can close.
 - **Requirable level** — the levels a **site or trip may demand**, which since 2026-08-21 is a
   *different and shorter* set than the ladder above: **Open Water, Advanced Open Water, Rescue**, and
   that is the ceiling (`REQUIRABLE_CERTIFICATION_LEVELS`, `src/lib/readiness.ts`; issue #630, ADR
@@ -519,8 +534,8 @@ new domain concept, define it here in the same PR.
   and [20260724-course-admission-standards](../architecture/decisions/20260724-course-admission-standards.md).
   Before HD-6 resolved, DSD was mistakenly held to the looser 8→12:1 Open Water figure.
 - **Entry-level in-water ratio** — PADI's published maximum for **Open Water Diver training
-  dives**: **8 students per instructor**, extendable by **2 per certified assistant** (a
-  Divemaster, in DiveDay's role model) to a ceiling of **12 per instructor**. Enforced as a
+  dives**: **8 students per instructor**, extendable by **2 per certified assistant** (a Divemaster
+  or an Assistant Instructor, in DiveDay's role model) to a ceiling of **12 per instructor**. Enforced as a
   booking gate (`src/lib/course-ratios.ts`, H-08) on a **PADI** course session that carries no
   `minimum_certification_level` **and is not an intro course** — intro sessions take the tighter,
   agency-independent DSD rule above. The PADI scoping belongs to this figure only: 8/+2/12 is
@@ -1252,7 +1267,9 @@ new domain concept, define it here in the same PR.
   belongs to the live roll call — a saved snapshot cannot know who came back.
   See [ADR 20260804-buddy-teams](../architecture/decisions/20260804-buddy-teams.md).
 - **Per-trip crew role** — what a crew member is rostered to *do on one sailing*
-  (`instructor`/`divemaster`/`captain`/`crew`), as opposed to the shop-wide roles they hold. Unset
+  (`instructor`/`divemaster`/`captain`/`crew`), as opposed to the shop-wide roles they hold. There
+  is deliberately no `assistant_instructor` here: that is a rung a person holds, and the job an AI
+  does on the day is the one this list already calls `divemaster`. Unset
   means **not specified**, which counts exactly as it always did, by shop-wide inference — never a
   claim that anyone is or is not in the water. It can only ever *narrow* what someone is worth to
   the in-water ratio: the roster says which job they are doing, `person_roles` stays the evidence of
@@ -1264,10 +1281,11 @@ new domain concept, define it here in the same PR.
   instructor onto the deck is refused exactly as removing them is — the two say the same thing about
   the session. Unassign-then-reassign does not preserve it: the row and its role go together, and
   the picker is how it is set again.
-- **In-water certified assistant** — a Divemaster actually supervising students in the water on this
-  trip; each one extends the **entry-level in-water ratio** by two students per instructor. A
-  person holding both instructor and divemaster roles is counted as the instructor, never as their
-  own assistant. One definition, `countInWaterCrew` in `src/lib/crew-roles.ts`, shared by the
+- **In-water certified assistant** — a Divemaster **or an Assistant Instructor** actually
+  supervising students in the water on this trip; each one extends the **entry-level in-water
+  ratio** by two students per instructor. A person holding both instructor and divemaster roles is
+  counted as the instructor, never as their own assistant; an Assistant Instructor is counted here
+  and never as an instructor, whatever the roster says. One definition, `countInWaterCrew` in `src/lib/crew-roles.ts`, shared by the
   booking gate, the trip page, the Today queue, and — through Today's own reader — the shift
   roster's crew-gap count.
 - **Roll-call checkpoint** — one independent head count: before departure or after a numbered dive.

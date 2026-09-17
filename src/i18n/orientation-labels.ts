@@ -12,6 +12,7 @@ export type OrientationRole =
   | "owner"
   | "manager"
   | "instructor"
+  | "assistant_instructor"
   | "divemaster"
   | "captain"
   | "crew";
@@ -26,6 +27,7 @@ const ROLE_PRECEDENCE: readonly OrientationRole[] = [
   "owner",
   "manager",
   "instructor",
+  "assistant_instructor",
   "divemaster",
   "captain",
   "crew",
@@ -79,6 +81,11 @@ export function orientationTourHref(
     case "manager":
       return hrefFor("reviews");
     case "instructor":
+      return hrefFor("divers");
+    case "assistant_instructor":
+      // The students they are assisting, and the records they need before a
+      // training dive — the same door as the instructor they work under,
+      // because that is the reading their morning starts with (issue #1680).
       return hrefFor("divers");
     case "divemaster":
       return hrefFor("today");

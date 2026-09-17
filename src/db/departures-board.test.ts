@@ -75,7 +75,7 @@ describe("getDeparturesBoard", () => {
    * `show_names` is the owner's decision that a screen may carry names; it is
    * not anybody's decision that theirs is one of them. That second one lives in
    * `people.crew_public_consent_at`, which `setCrewPublicConsent` refuses to
-   * record for anybody but its own subject, and the seeded cast has two of five
+   * record for anybody but its own subject, and the seeded cast has two of six
    * who agreed. A board link is read by everyone in the room and by anyone the
    * URL reaches afterwards, so somebody who declined has to read exactly like
    * somebody who was never rostered.

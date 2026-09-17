@@ -520,10 +520,24 @@ export const shops = pgTable(
 
 export type MedicalJurisdiction = (typeof medicalJurisdiction.enumValues)[number];
 
+/**
+ * The standing roles a person holds in a shop. Keep aligned with `ALL_ROLES`
+ * in src/lib/authz.ts.
+ *
+ * `assistant_instructor` is a **rung**, not a job on a boat, which is why it is
+ * here and deliberately not in `trip_assignment_role` below. It was added
+ * because a shop with an AI on staff had nowhere to file them but `instructor`,
+ * and the in-water ratio then credited them a full instructor's student
+ * allowance and cleared a course's "needs an instructor" gap — a claim about
+ * the water that is not true of an AI, who is a certified assistant for
+ * training-dive ratios and does not independently conduct a Discover Scuba
+ * experience (issue #1680, ruled 2026-09-16).
+ */
 export const personRole = pgEnum("person_role", [
   "owner",
   "manager",
   "instructor",
+  "assistant_instructor",
   "divemaster",
   "captain",
   "crew",

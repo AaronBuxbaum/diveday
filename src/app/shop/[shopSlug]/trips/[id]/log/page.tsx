@@ -122,6 +122,7 @@ export default async function IncidentExportPage({
     owner: "settings.team.roleLabels.owner",
     manager: "settings.team.roleLabels.manager",
     instructor: "settings.team.roleLabels.instructor",
+    assistant_instructor: "settings.team.roleLabels.assistant_instructor",
     divemaster: "settings.team.roleLabels.divemaster",
     captain: "settings.team.roleLabels.captain",
     crew: "settings.team.roleLabels.crew",

@@ -1,0 +1,1 @@
+ALTER TYPE "person_role" ADD VALUE 'assistant_instructor' BEFORE 'divemaster';
