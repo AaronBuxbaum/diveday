@@ -20,6 +20,9 @@ export type MedicalClearanceCopy = {
   evidenceHint: string;
   documentLabel: string;
   documentHint: string;
+  /** The picker's own words — a bare `<input type="file">` says "Choose File" in the *device's* language. */
+  documentChoose: string;
+  documentChooseAnother: string;
   recording: string;
   confirm: string;
   neverMind: string;
@@ -36,6 +39,8 @@ export function medicalClearanceCopy(t: StaffTranslator): MedicalClearanceCopy {
     evidenceHint: t("shared.medicalClearance.evidenceHint"),
     documentLabel: t("shared.medicalClearance.documentLabel"),
     documentHint: t("shared.medicalClearance.documentHint"),
+    documentChoose: t("shared.medicalClearance.documentChoose"),
+    documentChooseAnother: t("shared.medicalClearance.documentChooseAnother"),
     recording: t("shared.medicalClearance.recording"),
     confirm: t("shared.medicalClearance.confirm"),
     neverMind: t("shared.waiverSend.neverMind"),
