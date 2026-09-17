@@ -699,7 +699,13 @@ new domain concept, define it here in the same PR.
   get there second, **both** statements take the released seat straight back rather than refusing a
   body somebody is looking at (`reclaimReleasedSeat`, `src/db/manifests.ts`): for one slice only
   the boarding did, which left a mark standing over a diver in the water on the ordering the
-  offline manifest makes ordinary — after-dive taps are made with no signal and sync hours later. It is never a **dive day**, in any of the four readers that count them.
+  offline manifest makes ordinary — after-dive taps are made with no signal and sync hours later.
+  **From both halves of the head count, because the refusal reads both.** `recordCrewRollCall`
+  takes the seat back the same way `recordRollCall` does; while it did not, the sentence above was
+  a promise the reader made and the writer did not keep, and the seat it was broken on is the one
+  that most needs it — a staffer's own seat is the one readiness refuses at the dock, so the crew
+  list is often the only place a boarding for them can be written at all (issue #1686). It is never
+  a **dive day**, in any of the four readers that count them.
 - **Seat release** — the confirm tap on a **no-show** *is* the release. There is no second tap, no
   timer, no evening sweep and no `seat_released_at` column: `no_show` leaves the statuses that hold
   a seat (**seat held**), so the boat reads one seat lighter the moment the mark lands and the next

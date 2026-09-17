@@ -76,6 +76,9 @@ const GATE_PURPOSE = "diveday-trip-admission-gate:v1";
 /** Separates the readable codes from the signature. In no code, and unreserved in a URI. */
 const SIGNATURE_SEPARATOR = ".";
 
+/** Base64url of a SHA-256 digest, unpadded: 43 single-byte characters. */
+const SIGNATURE_SHAPE = /^[A-Za-z0-9_-]{43}$/;
+
 function gateSecret(): string {
   // In production Auth.js refuses to boot without AUTH_SECRET; this is only
   // ever null in dev/e2e, where auth-secret.ts supplies a fixed fallback. Fail
@@ -119,8 +122,16 @@ export function verifyTripAdmissionGate(
   if (separator <= 0) return null;
   const codes = value.slice(0, separator);
   const signature = value.slice(separator + 1);
+  // **Shape before bytes**, and a charset test rather than a length one.
+  // `timingSafeEqual` throws on buffers of unequal length; `signature.length`
+  // counts UTF-16 code units while `Buffer.from` encodes UTF-8, so a
+  // 43-*character* signature carrying one multibyte character is 44 *bytes* —
+  // the guard passed and the compare raised. Here that is a 500 on a staff page
+  // rather than an admission, which is why it stood; it is the same defect the
+  // security review of `course-preview-gate.ts` found failing open one module
+  // over, and the fix is two lines in both (issue #1735).
+  if (!SIGNATURE_SHAPE.test(signature)) return null;
   const expected = sign(scope, codes);
-  // Length-guard before timingSafeEqual, which throws on unequal buffers.
   if (signature.length !== expected.length) return null;
   if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
   // Signed by us, for this page — but still only as trustworthy as the codec

@@ -24,6 +24,7 @@
     "depthMarkersHint": "<marker>'{depth18}'</marker> prints as “18 meters” or “60 feet” in the diver’s unit. Also <marker>'{depth12}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> and <marker>'{depth40}'</marker>; add <marker>n</marker> for a bare number in a range. Delete a marker to write the depth yourself.",
     "liveAt": "Live at",
     "hiddenFromDivers": "Hidden from divers and the session picker.",
+    "previewHidden": "Preview",
     "noticeSaved": "Course page saved.",
     "errorInvalid": "That didn’t save. Check the fields and try again.",
     "errorFaqIncomplete": "Every question needs an answer, and every answer a question.",

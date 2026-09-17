@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { FoldedPageTitle } from "./FoldedPageTitle";
 
@@ -41,6 +41,23 @@ describe("FoldedPageTitle", () => {
     const { container } = render(<FoldedPageTitle title="Two-Tank Reef" />);
     expect(container).toBeEmptyDOMElement();
     expect(document.body.textContent).toBe("");
+  });
+
+  /**
+   * **The slot arrives after this component does.** `ShopChrome`, which renders
+   * it, sits behind the staff layout's `<Suspense>`; this is rendered by the
+   * *page*, on the other side of that boundary. So there is an ordering where
+   * the page hydrates against a chrome skeleton, and a single lookup on mount
+   * finds nothing and never looks again — the bar loses its folding title for
+   * the life of that page view, which is what `e2e/staff-nav.spec.ts` was
+   * catching one run in six.
+   */
+  it("fills a slot that only appears after it has mounted", async () => {
+    render(<FoldedPageTitle title="Check-in" />);
+    expect(document.body.textContent).toBe("");
+
+    const slot = withSlot();
+    await waitFor(() => expect(slot.textContent).toBe("Check-in"));
   });
 
   /**

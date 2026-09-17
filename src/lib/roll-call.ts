@@ -164,10 +164,14 @@ export function rollCallNoteAllowed(
  * face value. `cleared` answers false, which is what makes a checkpoint whose
  * newest row is an undo drop out rather than fall back to an older one.
  *
- * The four callers, each of which said this in its own words before a
+ * The five callers, each of which said this in its own words before a
  * dive-domain-expert review found two of them disagreeing (issue #1704):
- * `onTheWaterByRollCall` and `recordRollCall`'s seat reclaim (src/db/manifests.ts),
- * `inAfterDivePopulation` (src/db/today.ts), and `seatSailed` (src/lib/closeout.ts).
+ * `onTheWaterByRollCall` and the seat reclaim in **both** `recordRollCall` and
+ * `recordCrewRollCall` (src/db/manifests.ts), `inAfterDivePopulation`
+ * (src/db/today.ts), and `seatSailed` (src/lib/closeout.ts). The two reclaims
+ * are one predicate for one reason: the reader that refuses the desk consults
+ * both trails, so a mirror act on only one of them is a promise the reader
+ * makes and the writer does not keep (issue #1686).
  */
 export function standingResultMeansSailed(
   checkpoint: string,

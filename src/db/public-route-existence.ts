@@ -50,7 +50,9 @@
  * deliberately left where it already lives, in the page:
  *
  * - a course is looked up without `isActive`, because
- *   `courses/[slug]/page.tsx` serves an inactive course to a staff previewer;
+ *   `courses/[slug]/page.tsx` serves an inactive course to a staff previewer —
+ *   the flag is *reported* rather than applied, and who may see past it is
+ *   settled one layer up (see "The one predicate the edge applies" below);
  * - a departure is looked up without status and without `isPrivate`, because a
  *   cancelled one gets its own soft landing at 200 and a shop with the boat
  *   line switched off answers `notFound()` on purpose — but *with* `liveTrip()`,
@@ -63,15 +65,19 @@
  * Every row this file finds still meets its page's own `notFound()` a moment
  * later. It only removes the cases where there was never a row at all.
  *
- * ## What the course bullet costs, and why that is the price
+ * ## The one predicate the edge applies, and what it cost to get there
  *
- * Leaving `isActive` to the page means the status line separates a course a
- * shop has hidden (200, with the page's refusal streamed under the shell) from
- * one that never existed (404, decided here). Course slugs are minted from a
- * shared template catalogue, so a stranger sweeps a shop's namespace with a
- * dozen guesses and learns which unpublished drafts it holds — and `is_active`
- * is the shop's own "not yet". That is a real disclosure, accepted rather than
- * missed, because every way to close it at this layer costs more than it buys:
+ * A hidden course is the exception to the paragraph above, and it is worth
+ * reading as an exception rather than as a second rule. Course slugs are minted
+ * from a shared template catalogue, so leaving `is_active` entirely to the page
+ * put the two cases on different status lines — 200 with the shop's refusal
+ * streamed under it for a draft, 404 for a slug that never existed — and a
+ * stranger swept a shop's namespace with a dozen guesses to learn which
+ * unpublished drafts it held. `is_active` is the shop's own "not yet", and
+ * nobody outside the shop is owed it.
+ *
+ * Every *cheap* way to close that is worse than the disclosure, which is why it
+ * stood as an accepted cost for a while (issue #1735):
  *
  * - a refusal keyed on "no session cookie" is undone by one forged `Cookie:`
  *   header — better-auth's `getSessionCookie` returns whatever string sits under
@@ -86,10 +92,26 @@
  *   (`loadActiveStaffRoles`), so even a warm one is not a sound "not staff
  *   here" either.
  *
- * The page's check is live and per-shop (`isLiveShopStaff`, issue #966) and the
- * edge has no honest way to be both. Closing this wants the previewer to arrive
- * carrying something the edge can verify, not a cheaper guess at who is reading
- * (issue #1735).
+ * All three are the edge *guessing* who is reading. What closed it instead is
+ * the previewer arriving carrying something the edge can check: the editor
+ * mints a short-lived signed parameter where it already knows the reader is
+ * this shop's live staff, and `coursePreviewIsValid`
+ * (`src/lib/course-preview-gate.ts`) verifies it in `src/proxy.ts` with no
+ * database read and no opinion about sessions at all. The capability is the
+ * same grammar the waiver, recap and ready links use.
+ *
+ * So this file reports `hidden` and decides nothing. The proxy applies it, the
+ * page keeps its own live per-shop `isLiveShopStaff` check, and a token in a
+ * stranger's hands still renders them `notFound()` — the parameter buys one
+ * thing, which is not being refused before the page is asked.
+ *
+ * **What it costs, stated plainly.** A staffer who bookmarked a hidden course's
+ * public URL now meets a 404 there, because a bare URL carries no capability
+ * and the edge cannot tell them from the reader who was guessing. They reach it
+ * from the editor, which is where the Preview link lives. That is a real
+ * narrowing of the rule this block opens with, and the only one: for this one
+ * flag the edge does refuse what the page would have served, to a reader who
+ * arrives without the thing that makes them legible.
  *
  * The departure bullet has the same shape and not the same cost: a trip id is a
  * random uuid, so there is no namespace to sweep, and `trips/[id]/page.tsx`
@@ -114,9 +136,15 @@ export type PublicRouteLookup = {
    * this, and only to frame the 404 as that shop's (issue #765).
    */
   readonly shopExists: boolean;
+  /**
+   * The row is there, and the shop has it off its public site. Only a course
+   * can answer true — it is `courses.is_active`, reported and not applied, so
+   * the caller holding the capability decides (issue #1735).
+   */
+  readonly hidden: boolean;
 };
 
-const NOTHING: PublicRouteLookup = { exists: false, shopExists: false };
+const NOTHING: PublicRouteLookup = { exists: false, shopExists: false, hidden: false };
 
 export async function publicRouteLookup(
   db: AppDb,
@@ -125,7 +153,7 @@ export async function publicRouteLookup(
   // The one shape with no shop over it, so the one that skips the shop read:
   // `/dive/<town>` is DiveDay's own page and its refusal is DiveDay's own.
   if (shape.kind === "region")
-    return { exists: await regionIsListed(db, shape.regionSlug), shopExists: false };
+    return { exists: await regionIsListed(db, shape.regionSlug), shopExists: false, hidden: false };
   const shopId = await shopIdBySlug(db, shape.shopSlug);
   if (!shopId) return NOTHING;
   switch (shape.kind) {
@@ -134,20 +162,32 @@ export async function publicRouteLookup(
     // read above is still made, and made first: it is what decides whose
     // refusal this is.
     case "malformed":
-      return { exists: false, shopExists: true };
+      return { exists: false, shopExists: true, hidden: false };
     case "shop":
-      return { exists: true, shopExists: true };
-    case "course":
+      return { exists: true, shopExists: true, hidden: false };
+    case "course": {
+      // The page's own reader, unchanged and still carrying no `isActive`
+      // predicate. The flag rides back beside the row rather than filtering it
+      // out, because the reader who may see past it is the one holding a
+      // capability this file knows nothing about.
+      const course = await getCourseBySlug(db, shopId, shape.courseSlug);
       return {
-        exists: (await getCourseBySlug(db, shopId, shape.courseSlug)) !== null,
+        exists: course !== null,
         shopExists: true,
+        hidden: course ? !course.isActive : false,
       };
+    }
     case "site":
       return {
         exists: (await getDiveSiteBySlug(db, shopId, shape.siteSlug)) !== null,
         shopExists: true,
+        hidden: false,
       };
     case "trip":
-      return { exists: await tripExistsForShop(db, shopId, shape.tripId), shopExists: true };
+      return {
+        exists: await tripExistsForShop(db, shopId, shape.tripId),
+        shopExists: true,
+        hidden: false,
+      };
   }
 }

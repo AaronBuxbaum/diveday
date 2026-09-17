@@ -477,8 +477,26 @@ test.describe("the folding title", () => {
 
     // **At rest the bar is exactly what it has always been.** The label is
     // present in the DOM and costs the row nothing: no width, no opacity.
+    //
+    // Polled, for the same reason the folded state below is: the fold is a
+    // scroll progress timeline, and a timeline attaches when the animation
+    // does rather than when the markup parses. Read once, between hydration
+    // and that attach, the shop name computes at the *other* keyframe — 0 at a
+    // scroll offset of zero, which is the one thing this pair says cannot
+    // happen. Both spellings of it were seen: `[data-chrome-title-slot]` empty
+    // because the portal had not mounted, and both opacities 0 because it had
+    // and the timeline had not. One in six locally, on main, and once on CI.
+    //
+    // Not a timeout widened — there is still no duration anywhere in this
+    // test. The end state is the assertion, here as below; what changed is
+    // that the at-rest end state is now waited for rather than assumed to be
+    // the first thing rendered.
+    await expect
+      .poll(() => opacityOf(page, "[data-chrome-shop-name]"), {
+        message: "the shop’s name never settled at rest",
+      })
+      .toBe(1);
     expect(await opacityOf(page, "[data-chrome-title-slot]")).toBe(0);
-    expect(await opacityOf(page, "[data-chrome-shop-name]")).toBe(1);
 
     await page.evaluate(() => window.scrollTo(0, 240));
     // Waiting on the end state itself, not on a duration — the scroll is the

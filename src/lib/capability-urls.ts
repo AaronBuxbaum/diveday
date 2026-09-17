@@ -125,6 +125,25 @@ const CAPABILITY_QUERY_PARAMS = [
    * cannot drift.
    */
   "handoff",
+  /**
+   * The hidden-course preview (issue #1735): a ten-minute signature over one
+   * shop's one draft course, carried on the public course page as `?preview=`.
+   *
+   * Redacted for what it *says*, like `?gate=` above, rather than for what it
+   * opens — possession still meets the page's own live per-shop staff check and
+   * still renders `notFound()`. But the one fact the token carries is *this
+   * shop is holding this draft*, which is the entire disclosure the capability
+   * exists to prevent, and an unredacted URL hands it to CloudWatch RUM, the
+   * web-vitals beacon and Sentry breadcrumbs — every one of which runs on
+   * `/s/**` through the root layout's `<Observability />`. Closing an oracle at
+   * the edge and then posting the answer to three telemetry pipelines is not
+   * closing it (security review, issue #1735).
+   *
+   * `course-preview-gate.test.ts` imports `COURSE_PREVIEW_PARAM` and asserts
+   * this list blanks it, so the two cannot drift — the pattern `handoff` above
+   * already uses.
+   */
+  "preview",
 ] as const;
 
 function decodeSegment(segment: string): string {

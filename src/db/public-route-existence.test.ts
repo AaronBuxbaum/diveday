@@ -96,7 +96,7 @@ describe("publicRouteLookup", () => {
     const counting = countingDb(ctx.db);
     await expect(
       publicRouteLookup(counting.db, { kind: "malformed", shopSlug: ctx.shop.slug }),
-    ).resolves.toEqual({ exists: false, shopExists: true });
+    ).resolves.toEqual({ exists: false, shopExists: true, hidden: false });
     expect(counting.reads()).toBe(1);
   });
 
@@ -115,7 +115,7 @@ describe("publicRouteLookup", () => {
         shopSlug: ctx.shop.slug,
         courseSlug: "never-minted-course",
       }),
-    ).resolves.toEqual({ exists: false, shopExists: true });
+    ).resolves.toEqual({ exists: false, shopExists: true, hidden: false });
     expect(counting.reads()).toBe(2);
 
     // No shop, so nothing under it is looked up and nothing frames the 404.
@@ -126,7 +126,7 @@ describe("publicRouteLookup", () => {
         shopSlug: "no-such-shop",
         courseSlug: "never-minted-course",
       }),
-    ).resolves.toEqual({ exists: false, shopExists: false });
+    ).resolves.toEqual({ exists: false, shopExists: false, hidden: false });
     expect(missing.reads()).toBe(1);
   });
 
@@ -142,32 +142,54 @@ describe("publicRouteLookup", () => {
   /**
    * **The accepted disclosure, pinned.** A course a shop has hidden answers
    * `true` here and a slug it never minted answers `false`, so from outside the
-   * two are one status apart — the price of leaving `isActive` to the page,
-   * weighed in this module's header rather than overlooked (issue #1735). The
-   * flip is what this assertion guards: an edge that applied `isActive` would
-   * hard-404 the staff previewer, whose own check is live and per-shop and who
-   * arrives here carrying nothing the edge can verify.
+   * two were one status apart, and course slugs come from a shared template
+   * catalogue, so a dozen guesses read a shop's drafts off the status line.
+   * That is closed now, one layer up: this module still does not *apply*
+   * `isActive` — the row exists either way and the page is the one that decides
+   * who may read it — it **reports** the flag, and `src/proxy.ts` refuses a
+   * reader carrying no signed preview (issue #1735). The header on this module
+   * has the three cheaper mechanisms and why each is worse than the disclosure
+   * was.
    */
-  it("finds a course a shop has hidden, and refuses a slug it never minted", async () => {
+  it("finds a course a shop has hidden, and says it is hidden", async () => {
     const courseSlug = await aCourseSlug();
     const shape = { kind: "course", shopSlug: ctx.shop.slug, courseSlug } as const;
-    await expect(routeExists(ctx.db, shape)).resolves.toBe(true);
+    await expect(publicRouteLookup(ctx.db, shape)).resolves.toEqual({
+      exists: true,
+      shopExists: true,
+      hidden: false,
+    });
     await expect(
-      routeExists(ctx.db, {
+      publicRouteLookup(ctx.db, {
         kind: "course",
         shopSlug: ctx.shop.slug,
         courseSlug: "never-minted-course",
       }),
-    ).resolves.toBe(false);
+    ).resolves.toEqual({ exists: false, shopExists: true, hidden: false });
 
-    // `courses/[slug]/page.tsx` serves an inactive course to a staff previewer
-    // and 404s it for everyone else. That decision is the page's; an edge that
-    // made it first would refuse a URL the previewer is meant to reach.
+    // Hidden is still `exists`, because the row is still there and the page
+    // still serves it to this shop's live staff. What changes is the third
+    // fact, which is the one the proxy reads.
     await ctx.db
       .update(courses)
       .set({ isActive: false })
       .where(and(eq(courses.shopId, ctx.shop.id), eq(courses.slug, courseSlug)));
-    await expect(routeExists(ctx.db, shape)).resolves.toBe(true);
+    await expect(publicRouteLookup(ctx.db, shape)).resolves.toEqual({
+      exists: true,
+      shopExists: true,
+      hidden: true,
+    });
+
+    // And a slug that names nothing is never "hidden" — there is nothing to
+    // hide, and a proxy that read the two the same way would hand every dead
+    // course link back its soft 404.
+    await expect(
+      publicRouteLookup(ctx.db, {
+        kind: "course",
+        shopSlug: ctx.shop.slug,
+        courseSlug: "never-minted-course",
+      }),
+    ).resolves.toEqual({ exists: false, shopExists: true, hidden: false });
   });
 
   it("finds a dive site, and refuses a slug the shop never minted", async () => {
@@ -238,7 +260,7 @@ describe("publicRouteLookup", () => {
     const counting = countingDb(ctx.db);
     await expect(
       publicRouteLookup(counting.db, { kind: "region", regionSlug: "key-largo" }),
-    ).resolves.toEqual({ exists: true, shopExists: false });
+    ).resolves.toEqual({ exists: true, shopExists: false, hidden: false });
     // Two `db.select()` calls, one statement: `listedShopScope` composes an
     // `exists(...)` subquery that never leaves on its own, and reading the
     // scope through the page's own fragment rather than hand-writing the join
@@ -249,7 +271,7 @@ describe("publicRouteLookup", () => {
 
     await expect(
       publicRouteLookup(ctx.db, { kind: "region", regionSlug: "not-a-town" }),
-    ).resolves.toEqual({ exists: false, shopExists: false });
+    ).resolves.toEqual({ exists: false, shopExists: false, hidden: false });
   });
 
   it("refuses a departure the shop took off the board", async () => {
