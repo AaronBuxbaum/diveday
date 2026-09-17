@@ -111,26 +111,40 @@ function CardRow({
  *
  * Every card on file in render order — level rungs first, then specialties,
  * then nitrox — joined the way a staffer reads a stack of cards at the desk.
- * An unsighted self-declaration takes the shared "— unverified" phrase rather
- * than a word of its own, so the summary can never let a claim pass for a card
- * the shop has seen; the row inside still carries the badge and the control.
+ *
+ * **Not the Certification summary** (`certificationSummaryText`, glossary), and
+ * deliberately not: that phrase answers "what may this person dive" from one
+ * rung plus a nitrox tick, for a row on the wait list or the deal list where it
+ * is *all* the reader gets. This is the diver's own record, where the question
+ * is which cards the shop holds — specialties included, and the agency named,
+ * because a staffer standing at the desk with a stack of plastic is matching
+ * them one to one. Two questions, two phrasings; they share their **words**
+ * (`shared.certificationSummary.*`) so a claim can never be spelled two ways.
+ *
+ * An unsighted self-declaration takes the shared "— unverified" phrase and
+ * turns the whole summary to warning ink — the treatment
+ * `certificationSummaryUnchecked` earns everywhere else, and the reason the
+ * glossary says such a card "must never be scanned as a plain level". The words
+ * carry it on their own; the tone only has to stop contradicting them.
  *
  * A diver who has told the shop they hold nothing gets that sentence instead of
  * "None on file" — it is their own statement, and it is a different fact from
  * silence.
  */
-function certificationSummary(
+function cardsOnFile(
   diver: DiverProfile,
   t: StaffTranslator,
   noCertificationDeclared: boolean,
-): string {
+): { text: string; tone: "muted" | "warning" } {
+  let unsighted = false;
   const named = (
     value: string,
     card: { selfDeclaredAt?: Date | string | null; status: "pending" | "verified" },
-  ) =>
-    isUnsightedSelfDeclaration(card)
-      ? t("shared.certificationSummary.selfDeclared", { value })
-      : value;
+  ) => {
+    if (!isUnsightedSelfDeclaration(card)) return value;
+    unsighted = true;
+    return t("shared.certificationSummary.selfDeclared", { value });
+  };
   const cards = [
     ...diver.certifications.map((card) =>
       named(
@@ -145,9 +159,16 @@ function certificationSummary(
       named(t("shared.certificationSummary.nitrox"), card),
     ),
   ];
-  if (cards.length > 0) return cards.join(" · ");
-  if (noCertificationDeclared) return t("shared.certificationSummary.notCertified");
-  return t("divers.file.certificationsNone");
+  if (cards.length > 0) {
+    return { text: cards.join(" · "), tone: unsighted ? "warning" : "muted" };
+  }
+  // "Not certified yet" is unverified too, and it is the row a staffer most
+  // needs to catch before a two-tank charter goes out to it — the same reading
+  // `certificationSummaryUnchecked` gives it.
+  if (noCertificationDeclared) {
+    return { text: t("shared.certificationSummary.notCertified"), tone: "warning" };
+  }
+  return { text: t("divers.file.certificationsNone"), tone: "muted" };
 }
 
 export function CertificationsGroup({
@@ -195,6 +216,8 @@ export function CertificationsGroup({
     !diver.certifications.some((card) => !isUnsightedSelfDeclaration(card)) &&
     !diver.nitroxCertifications.some((card) => !isUnsightedSelfDeclaration(card)) &&
     diver.specialtyCertifications.length === 0;
+
+  const onFile = cardsOnFile(diver, t, noCertificationDeclared);
 
   // The first row anybody has to act on takes the ledger's anchor. Counted the
   // way the roster's badge and the status ledger count it, in render order, so
@@ -419,7 +442,8 @@ export function CertificationsGroup({
       // it. What a staffer wants off this row is what this diver is certified
       // to do. An unsighted claim wears the shared "— unverified" phrase, so
       // the door cannot read as though the shop has seen a card it has not.
-      summary={certificationSummary(diver, t, noCertificationDeclared)}
+      summary={onFile.text}
+      summaryTone={onFile.tone}
       open={Boolean(status)}
       stacked
       className="mt-10"
