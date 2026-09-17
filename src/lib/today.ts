@@ -233,28 +233,132 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
 /**
  * Audience per TodayActionKind (issue #715).
  * Declares which roles act on each kind:
- * - In-water, roll call, dock gear, and prep rows are for all staff.
- * - Instructional staffing, requirements, certs, and waivers are for instructors, owners, and managers.
+ * - In-water, roll call, dock gear, and prep rows are for all staff — including
+ *   the `assistant_instructor` rung, who is in the water with students and
+ *   reads this queue at the rail (issue #1680).
+ * - Instructional staffing, requirements, certs, and waivers are for instructors, owners, and
+ *   managers. An Assistant Instructor is deliberately **not** in those: they are a certified
+ *   assistant, and clearing a medical review or a certification is not theirs to do.
  * - Front-desk, commercial, financial, and back-office rows are for owners and managers.
  */
 export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
-  roll_call_missing_diver: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
-  roll_call_missing_crew: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
-  roll_call_unfinished: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
-  roll_call_crew_unfinished: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
-  roll_call_departure_open: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
-  roll_call_not_started: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
-  dive_prep: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
-  help_request: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
-  nitrox_gate: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
-  high_wind_alert: ["owner", "manager", "instructor", "divemaster", "captain"],
-  uncrewed_departure: ["owner", "manager", "instructor", "divemaster", "captain"],
+  roll_call_missing_diver: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  roll_call_missing_crew: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  roll_call_unfinished: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  roll_call_crew_unfinished: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  roll_call_departure_open: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  roll_call_not_started: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  dive_prep: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  help_request: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  nitrox_gate: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  high_wind_alert: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+  ],
+  uncrewed_departure: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+  ],
   // The wider of its two parents' audiences. `instructor_missing` is
   // owner/manager/instructor because only they can close it; this row says the
   // boat has nobody in the water, which the divemaster and captain reading the
   // queue at the rail are exactly the people to notice.
-  uncrewed_course: ["owner", "manager", "instructor", "divemaster", "captain"],
-  crew_below_target: ["owner", "manager", "instructor", "divemaster", "captain"],
+  uncrewed_course: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+  ],
+  crew_below_target: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+  ],
   instructor_missing: ["owner", "manager", "instructor"],
   medical_review: ["owner", "manager", "instructor"],
   medical_not_cleared: ["owner", "manager", "instructor"],
@@ -276,18 +380,66 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   // 2026-09-10 (issues #1505/#1518). A row pointing at a page its reader
   // cannot open is a dead end — and the other way round, a role that may
   // answer a waiting diver is a role that has to be told one is waiting.
-  unanswered_messages: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
-  gear_overdue: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
-  gear_due_back: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
-  gear_service_due: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  unanswered_messages: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  gear_overdue: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  gear_due_back: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  gear_service_due: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
   staff_credential_due: ["owner", "manager"],
   units_unconfirmed: ["owner", "manager"],
   // Every staff role: the person who says hello is whoever is at the dock when
   // the diver walks up, which is as often the captain as the owner.
-  say_hello: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  say_hello: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
   // The same audience the other gear rows have, and for the same reason: the
   // person who handed the diver a different BCD is whoever was at the counter.
-  rental_fit_confirm: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  rental_fit_confirm: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
   // Whoever puts departures on the board. A captain reading the queue at the
   // rail cannot schedule three boats for mini-season, and a row they can do
   // nothing about is a row that teaches them to skim the queue.
@@ -847,14 +999,22 @@ export type RoleLens = "boat" | "sessions" | null;
 /**
  * Which lens Today leads with for the signed-in staffer
  * (20260721-role-aware-landing). Owners and managers triage the whole shop, so
- * they get no lens; instructors lead with their sessions; divemasters and
- * captains lead with their boat. Instructor wins for people holding both,
- * matching the demo switcher's precedence.
+ * they get no lens; instructors lead with their sessions; assistant instructors,
+ * divemasters and captains lead with their boat. Instructor wins for people
+ * holding both, matching the demo switcher's precedence — an Assistant
+ * Instructor is a certified assistant in the water, not the person whose
+ * sessions these are (issue #1680).
  */
 export function roleLensFor(roles: readonly Role[]): RoleLens {
   if (roles.includes("owner") || roles.includes("manager")) return null;
   if (roles.includes("instructor")) return "sessions";
-  if (roles.includes("divemaster") || roles.includes("captain")) return "boat";
+  if (
+    roles.includes("assistant_instructor") ||
+    roles.includes("divemaster") ||
+    roles.includes("captain")
+  ) {
+    return "boat";
+  }
   return null;
 }
 

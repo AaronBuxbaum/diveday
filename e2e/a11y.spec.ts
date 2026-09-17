@@ -566,6 +566,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
         heading: "Pre-departure checklist",
       },
       { path: "/shop/blue-mantis/settings/gear-import", heading: "Import gear history" },
+      { path: "/shop/blue-mantis/settings/dive-site-import", heading: "Import dive sites" },
     ]);
   });
 });

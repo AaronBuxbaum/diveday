@@ -415,6 +415,13 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     gate: "import",
   },
   {
+    id: "diveSiteImport",
+    labelKey: "diveSites.import.title",
+    group: "data-integrations",
+    target: { kind: "route", path: "/settings/dive-site-import" },
+    gate: "import",
+  },
+  {
     id: "dataExport",
     labelKey: "settings.export.title",
     group: "data-integrations",

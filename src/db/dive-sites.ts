@@ -395,7 +395,7 @@ export type DiveSiteWrite<T> = T | typeof SITE_NAME_TAKEN;
  * with it. Note the index does not exclude archived sites, so the name can be
  * held by a row the staffer cannot see — which is why the wording names them.
  */
-async function refusingNameClash<T>(write: () => Promise<T>): Promise<DiveSiteWrite<T>> {
+export async function refusingNameClash<T>(write: () => Promise<T>): Promise<DiveSiteWrite<T>> {
   try {
     return await write();
   } catch (error) {

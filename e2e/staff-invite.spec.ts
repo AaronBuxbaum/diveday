@@ -24,7 +24,13 @@ test.describe("as owner", () => {
     const inviteSection = page.locator("section").filter({ hasText: "Invite someone" });
     await inviteSection.getByLabel("Full name").fill("Priya Nair");
     await inviteSection.getByLabel("Email").fill(email);
-    await inviteSection.getByLabel("Instructor").check();
+    // `exact`, and every role checkbox in this file takes it: `getByLabel`
+    // matches on substring, so the moment the role list gained **Assistant
+    // Instructor** a bare "Instructor" resolved to two checkboxes and three
+    // tests in here died on a strict-mode violation (issue #1680). The
+    // ambiguity is the vocabulary's, not the markup's — one role name properly
+    // contains another — so the locator is what has to say which it means.
+    await inviteSection.getByLabel("Instructor", { exact: true }).check();
     await inviteSection.getByRole("button", { name: "Send invite" }).click();
 
     // Not a URL assertion: FlashParams strips `?notice=invited` via
@@ -73,7 +79,7 @@ test.describe("as owner", () => {
     const inviteSection = page.locator("section").filter({ hasText: "Invite someone" });
     await inviteSection.getByLabel("Full name").fill("Talia Reyes");
     await inviteSection.getByLabel("Email").fill(email);
-    await inviteSection.getByLabel("Instructor").check();
+    await inviteSection.getByLabel("Instructor", { exact: true }).check();
     await inviteSection.getByRole("button", { name: "Send invite" }).click();
     await expect(page.getByText("Invite sent.")).toBeVisible();
 
@@ -134,7 +140,7 @@ test.describe("as owner", () => {
     const inviteSection = page.locator("section").filter({ hasText: "Invite someone" });
     await inviteSection.getByLabel("Full name").fill("Rosa Delgado");
     await inviteSection.getByLabel("Email").fill(email);
-    await inviteSection.getByLabel("Instructor").check();
+    await inviteSection.getByLabel("Instructor", { exact: true }).check();
     await inviteSection.getByRole("button", { name: "Send invite" }).click();
     await expect(page.getByText("Invite sent.")).toBeVisible();
 
@@ -166,7 +172,7 @@ test.describe("as owner", () => {
     // A refusal reopens the row and says so beside the checkboxes. Exactly one
     // rendering, and it is inside this person's row — never a page banner.
     await roles.click();
-    await row.getByLabel("Instructor").uncheck();
+    await row.getByLabel("Instructor", { exact: true }).uncheck();
     await roles.click();
     await expect(row.getByText("Check at least one role before saving.")).toBeVisible();
     await expect(page.getByText("Check at least one role before saving.")).toHaveCount(1);
