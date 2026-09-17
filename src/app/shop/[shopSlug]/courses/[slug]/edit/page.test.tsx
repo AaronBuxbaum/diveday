@@ -26,6 +26,10 @@ vi.mock("./actions", () => ({
   saveCourseContentAction: vi.fn(),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
+// The page asks live roles whether to draw the visibility toggle; this suite is
+// about the template panel and the editor rail, so the answer is stubbed rather
+// than seeded. The gate itself is pinned in `page.authz.test.tsx`.
+vi.mock("@/db/authz", () => ({ canPersonConfigureTrips: vi.fn(async () => true) }));
 vi.mock("@/db/courses", () => ({
   getCourseBySlug: vi.fn(),
   getCourseTemplateUpdate: vi.fn(),

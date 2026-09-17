@@ -129,6 +129,41 @@ describe("what earns a row", () => {
     expect(rows[0]?.action).toBeUndefined();
   });
 
+  /**
+   * A current release that *ended* a physician referral rather than answering
+   * it (issue #1282). Nothing is blocked — the signature is real and today's —
+   * so this is a warning, and there is no act because the fix is a
+   * conversation and then a recorded clearance, not another link.
+   */
+  it("raises a referral a clean re-signature ended without answering", () => {
+    const rows = buildDiverStatus(
+      diver({
+        waiver: {
+          state: "current",
+          medical: { overriddenReferralAt: new Date("2026-06-02T15:00:00.000Z") },
+        } as never,
+      }),
+      null,
+      { now: NOW },
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: "waiver",
+      tone: "warning",
+      sentence: { key: "divers.status.waiverReferralOpen" },
+    });
+    expect(rows[0]?.action).toBeUndefined();
+  });
+
+  it("says nothing about a current release with no referral behind it", () => {
+    const rows = buildDiverStatus(
+      diver({ waiver: { state: "current", medical: { overriddenReferralAt: null } } as never }),
+      null,
+      { now: NOW },
+    );
+    expect(rows.filter((row) => row.kind === "waiver")).toHaveLength(0);
+  });
+
   it("counts money owed and points at the invoice that owes it", () => {
     const rows = buildDiverStatus(
       diver({

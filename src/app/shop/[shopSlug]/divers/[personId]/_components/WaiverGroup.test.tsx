@@ -117,6 +117,68 @@ describe("the waiver group", () => {
     expect(screen.getByRole("button", { name: /Record the physician’s answer/ })).toBeTruthy();
   });
 
+  /**
+   * **A referral the current signature replaced instead of answering** (issue
+   * #1282). The standing is "Signed · Good until …" and the record is, on its
+   * face, a clean one — so a closed muted door is the one way a staffer never
+   * learns a physician was asked and never answered. The door says it, in
+   * warning ink, and opens on it the way a held review does.
+   */
+  it("carries an unanswered referral on the closed door, and opens on it", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiver: {
+          state: "current",
+          signedAt: new Date("2026-07-21T15:00:00.000Z"),
+          expiresAt: new Date("2027-07-21T15:00:00.000Z"),
+          medical: {
+            at: new Date("2026-07-21T15:00:00.000Z"),
+            source: "cleared",
+            overriddenReferralAt: new Date("2026-06-02T15:00:00.000Z"),
+            clearance: null,
+          },
+        } as DiverProfile["waiver"],
+      }),
+    );
+
+    const group = screen.getByTestId("diver-file-group-waiver");
+    const door = group.querySelector("summary");
+    expect(door).toHaveTextContent(
+      /Signed · Good until Jul 21, 2027 · Referral on Jun 2, 2026 not answered/,
+    );
+    // Warning ink, because the summary stands on the diver's own second answer
+    // rather than on anything the shop has seen.
+    expect(door?.querySelector("span")?.className).toContain("text-warning-strong");
+    expect(group).toHaveAttribute("open");
+  });
+
+  it("leaves a clean current release muted and shut", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiver: {
+          state: "current",
+          signedAt: new Date("2026-07-21T15:00:00.000Z"),
+          expiresAt: new Date("2027-07-21T15:00:00.000Z"),
+          medical: {
+            at: new Date("2026-07-21T15:00:00.000Z"),
+            source: "cleared",
+            overriddenReferralAt: null,
+            clearance: null,
+          },
+        } as DiverProfile["waiver"],
+      }),
+    );
+
+    const group = screen.getByTestId("diver-file-group-waiver");
+    expect(group.querySelector("summary")).not.toHaveTextContent(/not answered/);
+    expect(group.querySelector("summary")?.querySelector("span")?.className).toContain(
+      "text-muted",
+    );
+    expect(group).not.toHaveAttribute("open");
+  });
+
   it("offers every route a staffer could take, and only the ones the record supports", () => {
     renderCard(diver({ email: "priya@dive.day", phone: "+13055550142" }));
 

@@ -183,6 +183,17 @@ export function buildDiverStatus(
       },
       action: { labelKey: "divers.status.acts.sendWaiver", target: "send_waiver" },
     });
+  } else if (diver.waiver.medical?.overriddenReferralAt) {
+    // A current release that *ended* a physician referral rather than
+    // answering it (issue #1282). Sign-once is symmetric, so a diver who was
+    // referred can be sent a fresh link and answer "no" to everything; nothing
+    // is blocked, which is why this is a warning and not danger, and there is
+    // no act because the fix is a conversation and then a recorded clearance.
+    rows.push({
+      kind: "waiver",
+      tone: "warning",
+      sentence: { key: "divers.status.waiverReferralOpen" },
+    });
   }
 
   // --- Certifications.

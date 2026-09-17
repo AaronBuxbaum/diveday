@@ -24,6 +24,7 @@
     "showInCatalog": "Mostrar en el catálogo",
     "noticeSaved": "Página del curso guardada.",
     "errorInvalid": "Eso no se guardó. Revisa los campos e inténtalo de nuevo.",
+    "errorNotAuthorized": "Solo los propietarios, gerentes e instructores pueden ocultar o mostrar un curso.",
     "errorFaqIncomplete": "Cada pregunta necesita una respuesta, y cada respuesta una pregunta.",
     "errorImages": "Puedes mantener hasta ocho fotos en la galería. Elimina una antes de añadir más.",
     "errorUpload": "Esa foto no se subió. Prueba un JPG, PNG o WebP de menos de 5 MB.",
