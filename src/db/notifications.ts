@@ -81,14 +81,28 @@ const LOCK_GRACE_MS = 5 * 60 * 1_000;
  *
  * Three days is a deliberate figure, not the old one re-derived. A diver-
  * facing message that has not gone out after three daily passes does not need
- * a fourth silent attempt; it needs the staff-visible parked-failure surface,
- * while the trip it concerns is still ahead of the shop. Widen this if a real
- * provider outage ever outlasts it — and widen it here, in days, so the code
- * keeps saying how long it actually waits.
+ * a fourth silent attempt, while the trip it concerns is still ahead of the
+ * shop.
+ *
+ * That last clause used to read "it needs the staff-visible parked-failure
+ * surface", and **there is no such surface**. It was expected when this was
+ * written and never built: `listNotificationDeliveryIssues` feeds the Today
+ * panel from `notification_deliveries` and never reads this queue, so a row
+ * that gives up here is invisible on every staff screen. What actually
+ * happens to it is what the terminal write below does — payload and all four
+ * handles cleared, `error_code` kept — and nothing tells anybody (issue
+ * #1719). Widen this if a real provider outage ever outlasts it — and widen it
+ * here, in days, so the code keeps saying how long it actually waits.
  */
 const RETRY_WINDOW_MS = 3 * DAILY_TICK_INTERVAL_MS;
 
-/** Derived, never hand-tuned: one attempt per drain pass inside the window. */
+/**
+ * Derived, never hand-tuned: one attempt per drain pass inside the window.
+ *
+ * Bounds `sendAttemptsOf()` — the passes that reached a provider — and not the
+ * raw `attempts` column, which also counts the passes that never got the
+ * payload open. See that helper for why the difference matters.
+ */
 const RETRY_QUEUE_MAX_ATTEMPTS = dailyPassesWithin(RETRY_WINDOW_MS);
 
 /**
@@ -107,8 +121,33 @@ const RETRY_QUEUE_MAX_ATTEMPTS = dailyPassesWithin(RETRY_WINDOW_MS);
  * the way every other finished write does: payload and all four handles
  * cleared. Why that is the right end for a row nothing will offer again is
  * argued where it happens, at the park in `drainNotificationRetries` below.
+ *
+ * Counted in `recovery_attempts`, its own column since issue #1719. It used to
+ * share `attempts` with the three-pass bound above, which is how a row that
+ * waited a week for its key arrived at its first real send with its transient
+ * budget already spent.
  */
 export const UNREADABLE_RETRY_MAX_ATTEMPTS = dailyPassesWithin(14 * DAILY_TICK_INTERVAL_MS);
+
+/**
+ * The passes that actually reached, or tried to reach, a provider.
+ *
+ * `attempts` counts every pass that claimed the row — it is incremented once,
+ * at the claim, so a worker that dies mid-send still spends one. Some of those
+ * passes never got as far as a provider: the payload would not open and the
+ * row was parked again, and each of those is counted a second time in
+ * `recovery_attempts`. The difference is what the three-day transient bound is
+ * about, and subtracting is what keeps a fortnight of recovery passes from
+ * spending a budget they never used (issue #1719).
+ *
+ * **A pass that died between the claim and the park counts as a send**, since
+ * only `attempts` moved. That is the conservative reading and it is deliberate:
+ * nothing in the row can say whether the dead worker had reached SES or not, so
+ * the tighter of the two budgets absorbs it.
+ */
+function sendAttemptsOf(row: { attempts: number; recoveryAttempts: number }) {
+  return row.attempts - row.recoveryAttempts;
+}
 
 /** Use the environment-configured SES provider by default; tests may inject a fake. */
 export function notificationProviderForDb(provider?: NotificationProvider): NotificationProvider {
@@ -485,6 +524,11 @@ export type NotificationRetrySummary = {
  * `missing_payload` branch immediately re-fails, which is churn dressed as
  * recovery.
  *
+ * **The bound is on `recovery_attempts`, not on `attempts`** — the passes this
+ * arm has already spent looking for a key, rather than every pass that ever
+ * claimed the row. Sharing one column with the transient bound is what issue
+ * #1719 was filed on.
+ *
  * **The attempts bound is in the predicate, not in the loop**, for the reason
  * `retryPendingProcessorErasures` (src/db/processor-erasure.ts) writes down: a
  * parked row keeps a `next_attempt_at` and sits near the head of this
@@ -497,7 +541,7 @@ function drainableStatus() {
     and(
       eq(notificationSendQueue.status, "failed"),
       eq(notificationSendQueue.errorCode, "sealed_payload_unreadable"),
-      lt(notificationSendQueue.attempts, UNREADABLE_RETRY_MAX_ATTEMPTS),
+      lt(notificationSendQueue.recoveryAttempts, UNREADABLE_RETRY_MAX_ATTEMPTS),
     ),
   );
 }
@@ -568,6 +612,11 @@ export async function drainNotificationRetries(
     // already expired — handing a live worker's row to the reclaim above and
     // sending the same message twice.
     const lockedUntil = new Date(nowMs() + LOCK_MS);
+    // `attempts` counts *passes*, and it is incremented here rather than at the
+    // outcome so a worker that dies mid-send still spends one. Which budget
+    // this pass ends up costing is not knowable yet — a claim off the parked
+    // arm may still open on this pass and reach a provider — so the second
+    // counter is written where the answer is known, at the park below.
     const [claimed] = await db
       .update(notificationSendQueue)
       .set({
@@ -634,8 +683,8 @@ export async function drainNotificationRetries(
     //
     // **The park that crosses the bound is the row's last write, so it is the
     // one that finishes the row off.** `drainableStatus()` offers this code
-    // only while `attempts` is below the bound and `claimed` carries the
-    // incremented count, so a row leaving here at or past it is never claimed
+    // only while `recovery_attempts` is below the bound and this write is what
+    // increments it, so a row leaving here at or past it is never claimed
     // again by anything. Past that point the payload buys no recovery — no
     // code path would ever open it — and what it costs is a rendered outbound
     // message, a name and an address kept for good in a table nothing prunes
@@ -651,7 +700,13 @@ export async function drainNotificationRetries(
     // above counts in wall-clock days.
     const opened = openQueuedPayload(candidate.payloadSealed, key);
     if (!opened) {
-      const parkIsFinal = claimed.attempts >= UNREADABLE_RETRY_MAX_ATTEMPTS;
+      // This pass is now known to be a recovery pass that got nowhere, so it is
+      // counted here and nowhere else. `attempts` moved at the claim, and the
+      // two increments cancel in `sendAttemptsOf()` — which is the whole of
+      // what issue #1719 asked for: a fortnight of these costs the transient
+      // budget nothing.
+      const recoveryAttempts = claimed.recoveryAttempts + 1;
+      const parkIsFinal = recoveryAttempts >= UNREADABLE_RETRY_MAX_ATTEMPTS;
       await db
         .update(notificationSendQueue)
         .set({
@@ -660,6 +715,7 @@ export async function drainNotificationRetries(
           nextAttemptAt: nextDailyTickAtOrAfter(nowDate()),
           errorCode: "sealed_payload_unreadable",
           lastError: null,
+          recoveryAttempts,
           ...(parkIsFinal
             ? {
                 payloadSealed: null,
@@ -728,6 +784,17 @@ export async function drainNotificationRetries(
           bookingId: null,
           lockedUntil: null,
           providerMessageId: delivery.providerMessageId,
+          // A `sent` row says nothing about why it once failed. It used to keep
+          // whichever code the last failure wrote — most conspicuously
+          // `sealed_payload_unreadable`, so a row that recovered exactly as
+          // #1340 intended ended its life looking like one that never did.
+          // Nothing reads `error_code` off a sent row today, which made this a
+          // trap for the first reader who does rather than a live defect
+          // (issue #1719). Cleared here with the rest of the failure state, so
+          // the only shape a sent row has is the one this write gives it.
+          httpStatus: null,
+          errorCode: null,
+          lastError: null,
           updatedAt: nowDate(),
         })
         .where(eq(notificationSendQueue.id, claimed.id));
@@ -735,7 +802,7 @@ export async function drainNotificationRetries(
     } else if (
       delivery.status === "failed" &&
       delivery.retryable &&
-      claimed.attempts < RETRY_QUEUE_MAX_ATTEMPTS
+      sendAttemptsOf(claimed) < RETRY_QUEUE_MAX_ATTEMPTS
     ) {
       await db
         .update(notificationSendQueue)

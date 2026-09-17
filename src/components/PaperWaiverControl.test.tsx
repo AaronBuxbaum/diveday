@@ -27,6 +27,7 @@ import type { PaperWaiverFormState, PaperWaiverRefusal } from "@/lib/paper-waive
 const COPY: PaperWaiverCopy = {
   markSignedOnPaper: "Signed on paper",
   medicalAttestationLabel: "I reviewed the medical questionnaire",
+  medicalAttestationMinorLabel: "I reviewed it and the parent answered the health questions",
   recording: "Recording",
   recordPaperSignature: "Record paper signature",
   neverMind: "Never mind",
@@ -82,13 +83,14 @@ function refusingOnce(refusal: PaperWaiverRefusal) {
 /** Opens the form for a minor and fills in all three fields. */
 async function fillInAMinorsRelease(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: COPY.markSignedOnPaper }));
-  await user.click(screen.getByLabelText(COPY.medicalAttestationLabel));
+  await user.click(screen.getByLabelText(COPY.medicalAttestationMinorLabel));
   await user.type(screen.getByLabelText(COPY.guardian.nameLabel), "Ama Boateng");
   await user.selectOptions(screen.getByLabelText(COPY.guardian.relationshipLabel), "parent");
 }
 
+/** The one tick on a minor’s form, which is the only shape these tests render. */
 function medicalBox() {
-  return screen.getByLabelText(COPY.medicalAttestationLabel) as HTMLInputElement;
+  return screen.getByLabelText(COPY.medicalAttestationMinorLabel) as HTMLInputElement;
 }
 
 afterEach(cleanup);
@@ -254,5 +256,59 @@ describe("a refused paper release", () => {
     await waitFor(() => expect(submitted).toHaveLength(2));
     expect(screen.queryByText(COPY.refusals.error.text)).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+/**
+ * **Who answered the health questions** (issue #1668, owner decision
+ * 2026-09-16). #1452 widened the *online* guardian consent on 2026-09-10 to
+ * name the health questions, for the reason every agency form is built around:
+ * a twelve-year-old answers "No" to the lungs question because nobody told
+ * them they were treated for asthma at six. The paper path kept the narrower
+ * sentence, which says the staffer read the questionnaire and nothing about
+ * who filled it in — and on a minor's record that was the only medical
+ * assertion there was.
+ *
+ * One boolean, two sentences, one tick either way. The adult half is asserted
+ * too, because the failure that would matter is the minor's clause leaking
+ * onto every ordinary release.
+ */
+describe("the medical attestation on a minor's release", () => {
+  it("names the parent or guardian as the one who answered, and stays one tick", async () => {
+    const user = userEvent.setup();
+    const { action, submitted } = refusingOnce("error");
+    render(<PaperWaiverControl action={action} copy={COPY} requiresGuardian />);
+
+    await user.click(screen.getByRole("button", { name: COPY.markSignedOnPaper }));
+
+    expect(screen.getByLabelText(COPY.medicalAttestationMinorLabel)).toBeInTheDocument();
+    expect(screen.queryByLabelText(COPY.medicalAttestationLabel)).toBeNull();
+    // Still the one tick the writer refuses without. A second checkbox beside
+    // it is the shape this deliberately is not (option 3 on the issue).
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    expect(medicalBox()).toBeRequired();
+    expect(medicalBox()).toHaveAttribute("name", "medicalAttested");
+
+    await user.click(medicalBox());
+    await user.type(screen.getByLabelText(COPY.guardian.nameLabel), "Ama Boateng");
+    await user.selectOptions(screen.getByLabelText(COPY.guardian.relationshipLabel), "parent");
+    await user.click(screen.getByRole("button", { name: COPY.recordPaperSignature }));
+
+    // And it posts exactly what it always posted: the clause is what the
+    // staffer asserts, not a new field for `recordInPersonWaiver` to read.
+    await waitFor(() => expect(submitted).toHaveLength(1));
+    expect(submitted[0]?.get("medicalAttested")).toBe("on");
+    expect(submitted[0]?.get("medicalAnsweredBy")).toBeNull();
+  });
+
+  it("leaves an adult's release saying what it said before", async () => {
+    const user = userEvent.setup();
+    const { action } = refusingOnce("error");
+    render(<PaperWaiverControl action={action} copy={COPY} />);
+
+    await user.click(screen.getByRole("button", { name: COPY.markSignedOnPaper }));
+
+    expect(screen.getByLabelText(COPY.medicalAttestationLabel)).toBeInTheDocument();
+    expect(screen.queryByLabelText(COPY.medicalAttestationMinorLabel)).toBeNull();
   });
 });

@@ -19,6 +19,23 @@ import type { NoticeTone } from "@/lib/staff-notices";
 export type PaperWaiverCopy = {
   markSignedOnPaper: string;
   medicalAttestationLabel: string;
+  /**
+   * The same attestation with one clause more, for a diver who is a minor
+   * today (issue #1668, owner decision 2026-09-16).
+   *
+   * #1452 widened the *online* guardian consent on 2026-09-10 to name the
+   * health questions, for the reason every agency form is built around: a
+   * twelve-year-old answers "No" to the lungs question because nobody told
+   * them they were treated for asthma at six. The paper path did not move, and
+   * so said something narrower — that the *staffer* read the questionnaire,
+   * with nothing anywhere saying who answered it. On a minor's record that was
+   * the only medical assertion there was.
+   *
+   * Resolved unconditionally like the guardian block below it; the surface
+   * decides which one to draw, from the `requiresGuardian` boolean it already
+   * takes.
+   */
+  medicalAttestationMinorLabel: string;
   recording: string;
   recordPaperSignature: string;
   neverMind: string;
@@ -103,6 +120,7 @@ export function paperWaiverCopy(t: StaffTranslator, surface: PaperWaiverSurface)
   return {
     markSignedOnPaper: t("shared.paperWaiver.markSignedOnPaper"),
     medicalAttestationLabel: t("shared.paperWaiver.medicalAttestationLabel"),
+    medicalAttestationMinorLabel: t("shared.paperWaiver.medicalAttestationMinorLabel"),
     recording: t("shared.paperWaiver.recording"),
     recordPaperSignature: t("shared.paperWaiver.recordPaperSignature"),
     neverMind: t("shared.waiverSend.neverMind"),

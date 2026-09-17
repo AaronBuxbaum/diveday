@@ -75,3 +75,25 @@ export function diverTideWindowText(
 ): string {
   return t("trip.tideWindow", params(window, preference, time));
 }
+
+/**
+ * **Whose water the sentence above is** (issue #1732).
+ *
+ * Three words and a place, because the turn it names is a height turn rather
+ * than slack and a captain who knows the water applies their own lag to it —
+ * which they cannot do without knowing the station. NOAA's own name for the
+ * station, never the seven-digit id: translating away from those digits is the
+ * whole point of the editor's echo, and putting them back on the line a crew
+ * reads would undo it.
+ *
+ * Both surfaces call the same shape and each bundle owns its own words, the
+ * way the sentence above does. A `null` station means no call: the sentence
+ * stands and the footnote is simply absent.
+ */
+export function staffTideStationText(t: StaffTranslator, station: string): string {
+  return t("shared.tide.station", { station });
+}
+
+export function diverTideStationText(t: DiverTranslator, station: string): string {
+  return t("trip.tideStation", { station });
+}
