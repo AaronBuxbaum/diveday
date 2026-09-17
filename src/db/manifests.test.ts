@@ -897,6 +897,140 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     expect(await statusOf(db, seat.id)).toBe("no_show");
   });
 
+  /**
+   * **Where the seat read sits, not merely that it is there**
+   * (dive-domain-expert review of the fix above).
+   *
+   * The reclaim hangs off the insert rather than off the seat read, and that is
+   * the part worth pinning: an edit that moves it onto any path returning
+   * without writing looks like a tidy-up and is a bug. An older `boarded`
+   * arriving after a standing `cleared` loses newest-wins and writes nothing,
+   * so nothing stands that means the person sailed; taking their seat back
+   * anyway would leave the booking out of `no_show` with
+   * `onTheWaterByRollCall` still answering null about the same human, and a
+   * walk-in possibly already holding it. Every other assertion in this file
+   * stays green through that edit. This one does not.
+   */
+  it("does not reclaim on a stale boarding that loses to a standing retraction", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id })
+      .onConflictDoNothing();
+    const [seat] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: reef.id, personId: staff.id, status: "booked" })
+      .returning({ id: bookings.id });
+    if (!seat) throw new Error("expected the crew member's own seat");
+    const now = nowMs();
+
+    expect(
+      await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: seat.id,
+        recordedByPersonId: staff.id,
+        now: reef.startsAt,
+      }),
+    ).toMatchObject({ ok: true });
+
+    // The retraction the crew made last, and therefore the one that stands.
+    await expect(
+      recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        recordedByPersonId: staff.id,
+        status: "cleared",
+        occurredAt: new Date(now - 20 * 60 * 1000),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    // A device that had been offline since before it, syncing the tap the
+    // retraction was undoing.
+    await expect(
+      recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+        source: "offline",
+        clientEventId: "cccccccc-1111-4111-8111-cccccccccccc",
+        offlineSnapshotSavedAt: new Date(now - 2 * 60 * 60 * 1000),
+        occurredAt: new Date(now - 35 * 60 * 1000),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "newer_event_exists" });
+
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, seat.id)).toBeNull();
+    expect(await statusOf(db, seat.id)).toBe("no_show");
+    expect(await activityCodesFor(db, seat.id)).not.toContain("booking_no_show_boarded");
+  });
+
+  /**
+   * A seat given up is never re-seated by a boarding, on either trail: the
+   * lookup carries the same cancelled-booking guard `onTheWaterByRollCall`
+   * does, so the two halves cannot disagree about whether the seat is still
+   * this person's to hold.
+   */
+  it("leaves a cancelled seat cancelled when the crew board its holder", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id })
+      .onConflictDoNothing();
+    const [seat] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: reef.id, personId: staff.id, status: "cancelled" })
+      .returning({ id: bookings.id });
+    if (!seat) throw new Error("expected the crew member's cancelled seat");
+
+    await expect(
+      recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    expect(await statusOf(db, seat.id)).toBe("cancelled");
+  });
+
+  /**
+   * **The ordinary dock shape: a divemaster crews the morning boat and has
+   * paid for a seat on the afternoon one.** The lookup is filtered on this
+   * trip, so counting them onto the 08:00 must not touch the 14:00 — and
+   * `bookings_trip_person_unique` is per departure, so both seats coexist.
+   */
+  it("reclaims only the seat on the departure the crew counted them onto", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const other = trips.find((trip) => trip.id !== reef.id);
+    if (!other) throw new Error("expected a second demo departure");
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id })
+      .onConflictDoNothing();
+    const [elsewhere] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: other.id, personId: staff.id, status: "no_show" })
+      .returning({ id: bookings.id });
+    if (!elsewhere) throw new Error("expected the staffer's seat on the other departure");
+
+    await expect(
+      recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    expect(await statusOf(db, elsewhere.id)).toBe("no_show");
+  });
+
   it("carries the counter check-in status onto the manifest, independent of roll call (task 149)", async () => {
     // Counter check-in and boat roll call are two different questions —
     // arrived vs. aboard. `checked_in` used to have exactly one reader in

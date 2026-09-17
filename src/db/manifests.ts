@@ -1695,16 +1695,34 @@ export async function recordCrewRollCall(
     // counts a **dive day**, which hands a divemaster diving five days running
     // the single-day flying wait.
     //
-    // **Read here, before the insert, and unconditionally.** Not because the
-    // reclaim needs it early — it does not — but because nothing else on this
-    // path touches a booking row at all, so without this read the desk and the
-    // rail share no lock object and decide against the same pre-state *every*
-    // time rather than under a race. Both halves matter: narrowing the `where`
-    // to `no_show` locks nothing until the desk's mark is already visible,
-    // which is the same gap wearing a `FOR UPDATE`. So the row is taken
-    // whenever this result means the person sailed, and the status it read
-    // decides whether there is anything to undo. `roll-call.postgres.test.ts`
-    // is red on either shortcut, at the gate rather than at the assertions.
+    // **Read here, before the insert, and with a `where` that does not narrow
+    // to `no_show`.** Not because the reclaim needs the row early — it does not
+    // — but because nothing else on this path touches a booking at all, so
+    // without this read the desk and the rail share no lock object and decide
+    // against the same pre-state *every* time rather than under a race. The
+    // `where` is the other half: narrowing it to `no_show` locks nothing until
+    // the desk's mark is already visible, which is the same gap wearing a
+    // `FOR UPDATE`. So the row is taken whole and the status it read decides
+    // whether there is anything to undo. `roll-call.postgres.test.ts` is red on
+    // either shortcut, at the gate rather than at the assertions.
+    //
+    // The branch that does *not* mean the person sailed — a dock `not_boarded`,
+    // a `cleared` — takes no lock, and needs none: it can only ever leave a
+    // release standing, never create one. Racing the desk there, the desk
+    // either still sees the boarding this event is superseding and refuses, or
+    // sees it gone and marks; what it cannot do is release a seat over a
+    // standing sailed result, because that is the read it makes under its own
+    // lock.
+    //
+    // **The reclaim hangs off the insert, not off this read**, which is why the
+    // two are apart. Moving the read earlier is harmless; moving the *reclaim*
+    // to any path that returns without writing is not. An older `boarded`
+    // losing newest-wins to a standing `cleared` answers `newer_event_exists`,
+    // so nothing stands that means the person sailed — taking their seat back
+    // there would leave the booking out of `no_show` with
+    // `onTheWaterByRollCall` still answering null about the same human, and a
+    // walk-in possibly already holding it. `manifests.test.ts` pins that
+    // ordering; nothing else in the file does.
     //
     // The lookup is a probe of `bookings_trip_person_unique`, so the ordinary
     // crew member — who holds no seat — pays one index miss and locks nothing.
