@@ -309,6 +309,10 @@ test.describe("H-14 role permissions", () => {
 
     test("the owner reaches every gated surface", { tag: READ_ONLY }, async ({ page }) => {
       await page.goto(`/shop/${SHOP}/waivers`);
+      // The signed-record ledger leads and the release editor is one control
+      // at rest (slice E3): editing the release happens a handful of times in
+      // a shop's life, reading who signed is daily.
+      await page.getByText("Edit the release").click();
       await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toBeVisible();
 
       await page.goto(`/shop/${SHOP}/waivers/signatures`);
