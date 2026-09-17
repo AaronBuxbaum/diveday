@@ -45,7 +45,7 @@ import { BuddyShareButton } from "./BuddyShareButton";
 import { CourseAfterState } from "./CourseAfterState";
 import { NextDiveCard } from "./NextDiveCard";
 import { PrintRecordButton } from "./PrintRecordButton";
-import { RecapPulse } from "./RecapPulse";
+import { hasRecapPulseNotice, RecapPulse } from "./RecapPulse";
 import { SavePostcard } from "./SavePostcard";
 import { ShareReviewButton } from "./ShareReviewButton";
 import { TipAmountPicker } from "./TipAmountPicker";
@@ -553,7 +553,7 @@ export function AfterState({
         <Door
           id="pulse"
           summary={t("recap.pulseHeading")}
-          open={Boolean(params.pulse) || ownPulse !== null}
+          open={hasRecapPulseNotice(params.pulse) || ownPulse !== null}
         >
           <RecapPulse
             t={t}
