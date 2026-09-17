@@ -6632,17 +6632,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staff-diver-conversation", scheme);
       });
 
-      // Shop-wide discount codes: the create form, then the codes as one
-      // ledger shelved live / scheduled / ended, with the trip deals as their
-      // own ledger beneath (slice 9g of ADR 20260827-the-shops-shelves; codes
-      // themselves are ADR 20260729-shop-promo-codes). The seed holds a live
-      // code and an expired one, so two shelves render and the windows and
-      // redemption counts sit on the rows.
+      // Shop-wide discount codes: the codes as one ledger shelved live /
+      // scheduled / ended, with the trip deals as their own ledger beneath
+      // (slice 9g of ADR 20260827-the-shops-shelves; codes themselves are ADR
+      // 20260729-shop-promo-codes). The seed holds a live code and an expired
+      // one, so two shelves render and the windows and redemption counts sit on
+      // the rows. The seeded shop has no Stripe account, so what stands above
+      // the ledger is the one-line notice and *not* the seven-field composer —
+      // a form that cannot submit does not stand open, and with an account
+      // behind it the composer is a "New code" door rather than a standing card.
       test(`the discount codes page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/promos");
         await page.getByRole("heading", { level: 1, name: "Discounts a diver can type" }).waitFor();
         // The shelves are what changed; wait for one rather than for the
-        // create card, which paints with the static shell.
+        // header, which paints with the static shell.
         await page.getByRole("heading", { level: 2, name: "Live" }).waitFor();
         await capture(page, "staff-promos", scheme);
       });
