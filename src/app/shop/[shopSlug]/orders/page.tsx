@@ -520,7 +520,7 @@ export default async function OrdersIndexPage({
                       a string to be transcribed character for character. */}
                   {intent.stripeObjectId ? (
                     <details className="mt-1">
-                      <summary className="inline-flex min-h-8 cursor-pointer list-none items-center text-xs text-muted underline underline-offset-2 [&::-webkit-details-marker]:hidden">
+                      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-xs text-muted underline underline-offset-2 [&::-webkit-details-marker]:hidden">
                         {t("orders.index.paymentOps.reference")}
                       </summary>
                       <code className="mt-1 block font-mono text-xs break-all text-muted">
