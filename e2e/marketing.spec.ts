@@ -1,5 +1,5 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
-import { earlyAccessPrice } from "../src/lib/marketing";
+import { earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
 import { expect, test } from "./fixtures";
 
 test("the homepage hero offers one demo door, and the diver preview lives on its daily-moment row", async ({
@@ -328,6 +328,22 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Every shipped workflow, in one list." }) });
   await expect(indexBand.locator('input[name="source"][value="product-index"]')).toHaveCount(1);
+
+  // The index is a reference, not the page's argument, so it is closed at rest
+  // (2026-09-17): one row per group naming the group and counting its lines,
+  // with the lines themselves one keystroke away. Flat it ran ~2,900px of a
+  // 9,600px page, arriving after the argument had already finished.
+  const indexGroups = indexBand.locator("details");
+  await expect(indexGroups).toHaveCount(productCapabilityIndex.length);
+  const firstGroup = indexGroups.first();
+  const firstLine = firstGroup.locator("li").first();
+  await expect(firstLine).toBeHidden();
+  // Opened with the keyboard, because that is the half a disclosure can lose:
+  // `<summary>` is focusable and Enter toggles it natively, and `e2e/a11y.spec.ts`
+  // scans this page.
+  await firstGroup.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(firstLine).toBeVisible();
 
   // The money band states the figure instead of parking it behind its own
   // link. It read "What DiveDay itself costs →" until 2026-08-28 — an
