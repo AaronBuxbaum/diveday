@@ -1190,6 +1190,14 @@ async function acceptedRollCallNote(
  * person aboard whom the manifest does not carry, which is the worse of the two
  * states by a distance.
  *
+ * **Two halves of the head count reach here, not one.** `recordRollCall`
+ * calls it for the diver trail and `recordCrewRollCall` for the crew trail,
+ * because `onTheWaterByRollCall` refuses the desk from *both* and a mirror act
+ * that reads only one leaves the desk-first ordering open on the other. The
+ * crew half is not the exotic case: a staffer's own seat is the one readiness
+ * refuses at the dock, so their crew-list result is often the only boarding
+ * that can be written about them (issue #1686).
+ *
  * **Two statements reach here, not one.** A boarding at any checkpoint, and a
  * `not_boarded` at an **after-dive** checkpoint — which does not mean "never
  * came" but "did not come back from the dive", and is therefore a diver who
@@ -1511,6 +1519,12 @@ export type RecordCrewRollCallOutcome =
  * gates a diver at departure — waiver, payment, certification — is not a
  * question anyone asks of the divemaster.
  *
+ * Crew hold no booking *as crew*, but a staffer on a shop where staff dive too
+ * can hold a seat on the trip they are rostered to. A result here that means
+ * they sailed takes back a seat the counter released, exactly as the diver
+ * path does (`reclaimReleasedSeat`) — the rail never refuses; it overrules,
+ * whichever half of the head count is speaking.
+ *
  * **The `source === "offline"` branch is `recordRollCall`'s, mirrored.** Read
  * the two side by side: dedup on `clientEventId` before any other work, the
  * shared `offlineEventOutOfBounds` staleness bound, then newest-wins against
@@ -1665,6 +1679,56 @@ export async function recordCrewRollCall(
       }
     }
 
+    // **The other half of the head count takes the seat back too**
+    // (dive-domain-expert review, issue #1686).
+    //
+    // `onTheWaterByRollCall` answers from two tables — the diver trail and,
+    // for a staffer who holds a seat on a trip they crew, this one — so the
+    // desk is refused when the crew get there first whichever table spoke. The
+    // mirror act was the diver table's alone, which left the desk-first
+    // ordering open on exactly the seat the diver path cannot cover: a
+    // staffer's own seat is the one that fails readiness, so the crew list is
+    // often the only place a boarding for them can be written at all. Marked
+    // absent at 08:20 because they went straight to the boat, boarded at the
+    // rail at 08:25, and the release stood — the seat sellable to a walk-in
+    // while its holder was on the water, and struck from every reader that
+    // counts a **dive day**, which hands a divemaster diving five days running
+    // the single-day flying wait.
+    //
+    // **Read here, before the insert, and unconditionally.** Not because the
+    // reclaim needs it early — it does not — but because nothing else on this
+    // path touches a booking row at all, so without this read the desk and the
+    // rail share no lock object and decide against the same pre-state *every*
+    // time rather than under a race. Both halves matter: narrowing the `where`
+    // to `no_show` locks nothing until the desk's mark is already visible,
+    // which is the same gap wearing a `FOR UPDATE`. So the row is taken
+    // whenever this result means the person sailed, and the status it read
+    // decides whether there is anything to undo. `roll-call.postgres.test.ts`
+    // is red on either shortcut, at the gate rather than at the assertions.
+    //
+    // The lookup is a probe of `bookings_trip_person_unique`, so the ordinary
+    // crew member — who holds no seat — pays one index miss and locks nothing.
+    // Ahead of the insert, the locks this transaction takes stay in the order
+    // the counter takes them (the booking, then the trip through the event's
+    // foreign key), which is what keeps the pair out of a deadlock.
+    const seat = standingResultMeansSailed(checkpoint, input.status)
+      ? ((
+          await tx
+            .select({ id: bookings.id, status: bookings.status })
+            .from(bookings)
+            .where(
+              and(
+                eq(bookings.shopId, input.shopId),
+                eq(bookings.tripId, input.tripId),
+                eq(bookings.personId, assigned.personId),
+                ne(bookings.status, "cancelled"),
+              ),
+            )
+            .limit(1)
+            .for("update")
+        )[0] ?? null)
+      : null;
+
     const [event] = await tx
       .insert(rollCallCrewEvents)
       .values({
@@ -1692,6 +1756,20 @@ export async function recordCrewRollCall(
       })
       .returning({ id: rollCallCrewEvents.id });
     if (!event) throw new Error("recordCrewRollCall: insert returned no row");
+    // The seat was released and the rail has now said the person sailed, so it
+    // comes back with them — the same consequence, the same trail lines and the
+    // same one-direction rule as the diver path's (`reclaimReleasedSeat`).
+    if (seat?.status === "no_show") {
+      await reclaimReleasedSeat(tx, {
+        shopId: input.shopId,
+        tripId: input.tripId,
+        bookingId: seat.id,
+        personId: assigned.personId,
+        recordedByPersonId: staffId,
+        occurredAt,
+        missingAfterDive: input.status === "not_boarded",
+      });
+    }
     return { ok: true, eventId: event.id };
   });
   // Same push signal the other head-count writes raise: this changes whether
