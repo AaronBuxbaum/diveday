@@ -128,9 +128,19 @@ function Row({ row }: { row: OrderLedgerRow }) {
         <span className="truncate text-base font-medium sm:w-56 sm:shrink-0">{row.diver}</span>
         {/* 16px on a phone and 14px from `sm` up: what a diver bought is how a
             staffer identifies the record, so it is critical text at the width
-            where the row has least room (`scripts/check-critical-text.mjs`). */}
+            where the row has least room (`scripts/check-critical-text.mjs`).
+
+            **And on a phone it wraps rather than truncating.** Departure titles
+            share a prefix — a day of reef trips is eight rows of
+            "Two-Tank Reef — Molasses & F…", clipped at the same character, so
+            the one column that says which record this is said the same thing
+            eight times. A second line costs 20px on the rows that need it and
+            nothing on the rows that do not. From `sm` up the row is one flex
+            line and the ellipsis is what keeps its height stable. */}
         {row.detail ? (
-          <span className="truncate text-base text-muted sm:text-sm">{row.detail}</span>
+          <span className="text-base text-muted text-pretty sm:truncate sm:text-sm">
+            {row.detail}
+          </span>
         ) : null}
       </div>
     </LedgerRow>

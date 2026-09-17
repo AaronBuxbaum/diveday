@@ -164,15 +164,14 @@
     "paymentOps": {
       "sectionLabel": "Pagos que necesitan revisión",
       "heading": "{count, plural, one {# pago} other {# pagos}} que no pudimos confirmar. Revísalos en Stripe.",
-      "detail": "Se le pidió algo a Stripe y la aplicación nunca confirmó cómo salió. Revisa cada uno en el panel de Stripe y termínalo a mano.",
-      "started": "iniciado {date}",
-      "stripeId": "Stripe: {id}",
-      "openTrip": "Abrir salida",
-      "kind": {
-        "checkout_session": "Pago",
-        "invoice": "Factura",
-        "refund": "Reembolso"
-      }
+      "unfinished": {
+        "checkout_session": "Un pago empezó el {date} y nunca terminó.",
+        "invoice": "Una factura empezó el {date} y nunca terminó.",
+        "refund": "Un reembolso empezó el {date} y nunca terminó.",
+        "other": "Un cobro empezó el {date} y nunca terminó."
+      },
+      "reference": "Referencia de Stripe",
+      "openTrip": "Abrir salida"
     },
     "owedRefunds": {
       "sectionLabel": "Reembolsos que aún debes",
