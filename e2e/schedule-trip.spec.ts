@@ -4,6 +4,7 @@ import {
   daysFromNow,
   e2eNow,
   openTripAbout,
+  openTripMore,
   signInAsOwner,
   tripPathByTitle,
 } from "./helpers";
@@ -90,8 +91,11 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   // overview's own "View booking page" button impossible to use.
   await page.getByRole("link", { name: "Manage this trip" }).click();
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
-  await openTripAbout(page);
-  await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+  // Cancelling is one of the rare acts in the About panel's "More for this
+  // departure" list, behind a blocking confirm.
+  const more = await openTripMore(page);
+  await more.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+  await more.getByRole("button", { name: "Yes, cancel this departure" }).click();
   await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
 });
 
