@@ -519,9 +519,10 @@ test("/product holds one primary per screen across all four of its doors", async
   await expect(main.locator("button:not([disabled])")).toHaveCount(4);
 
   // …and no band holds two of them. Every `<section>` is checked, nested ones
-  // included: the capability index's eight group sections sit inside the band
-  // that carries the new door, so a door that drifted into a group row would
-  // read as two primaries in one screen and fail here.
+  // included, so a door that drifted inside another band would read as two
+  // primaries in one screen and fail here. The capability index's groups are
+  // `<details>` rows rather than nested sections since 2026-09-17, so the
+  // count is the page's own bands now.
   const sections = main.locator("section");
   const sectionCount = await sections.count();
   expect(sectionCount).toBeGreaterThan(8);

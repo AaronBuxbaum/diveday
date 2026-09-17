@@ -310,7 +310,10 @@ town, and the shops that dive out of it.
 - **Remove first:** any repeated price story above the capability proof; the source-backed hero
   sentence answers the comparison question without competing with the page's argument.
 - **Composition:** claim, price, proof, then door — not a sales dashboard. The page earns a trial
-  by showing a shop's day, then gives the interested visitor one place to continue.
+  by showing a shop's day, then gives the interested visitor one place to continue. The reference
+  index that follows the argument is closed at rest (2026-09-17): nine hairline rows, each a
+  `<details>` naming its group and counting its lines, so the page ends where its argument does
+  instead of running on through ninety-odd bullets.
 
 ### The thread — `/ready/[token]` (and every state after booking)
 
