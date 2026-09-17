@@ -242,7 +242,7 @@
     "conditionsLanguages": "{languages} aboard",
     "questionsContact": "Questions?",
     "arrivalHeading": "Where to go",
-    "arrivalBody": "Your meeting point, what to look for, and how to find a person when you arrive.",
+    "arrivalMapTitle": "Map of {place}",
     "arrivalAtShop": "Meet here",
     "arrivalAddress": "Address",
     "arrivalLandmark": "Landmark",
@@ -936,8 +936,6 @@
       "paymentDone": "Paid up. Thank you.",
       "certificationMultipleNeeded": "This dive needs more than one certification on file. Share the details for each one it calls for, and your shop will confirm you’re set."
     },
-    "shopHeading": "Your dive shop",
-    "shopMapTitle": "Map of {shop}",
     "gearAndSetup": "Gear and setup",
     "dockCallLine": "Aim to be at the dock by {time}, {dock} before we sail.",
     "fitUnavailable": "We couldn’t save your gear and setup just now. Try again in a moment.",

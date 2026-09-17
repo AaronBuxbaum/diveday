@@ -320,7 +320,11 @@ one line beside Add to calendar, *Add to Wallet*, on every state after booking; 
   change ledger, party status and one small help request.
 - **Controls that dissolved:** the receipt panel, the emails line and the per-row Done chips (the
   steps' settled lines say it once); the four inline forms at rest (one open step at a time); help
-  is a controlled choice, never a free-text support inbox.
+  is a controlled choice, never a free-text support inbox; the trailing "Your dive shop" card
+  (2026-09-17), whose address, phone, email and map link the arrival card two screens above had
+  already given — the embedded map moved into "Where to go", where the shop's own arrival photo
+  outranks it, and the shop's first-visit welcome moved to the top of the thread, since a greeting
+  that arrives below the button releasing your seat is not greeting anybody.
 - **Remove first:** nothing after the fold — the after-state already absorbed the recap page.
 - **Composition:** a step spine, because getting ready is a sequence, followed by the reusable
   arrival/change reading and the party hand-off; the same spine grammar the staff home speaks makes
@@ -360,6 +364,11 @@ H-01/H-03's.
   expiry line); three bespoke banners (one notice grammar).
 - **Remove first:** nothing — the release must stay fully presented.
 - **Composition:** three steps under a quiet rail; the sign card is the page's one worked-in card.
+  Each medical question is a bordered `<fieldset>` whose `<legend>` **floats** (2026-09-17), so the
+  question flows inside the box instead of straddling the top border a browser draws its rendered
+  legend in — eleven questions cut through their own boxes, which on a legal surface reads as a
+  rendering fault. Presentation only: the semantics that name each radio group, and every word of
+  the release and the questionnaire, are untouched (H-01/H-03).
 
 ### The gear register — `/shop/[shopSlug]/gear`
 
