@@ -379,7 +379,7 @@ test("the certification hint opens beside the mark, not beside its tap target", 
   const dealList = page.locator("#last-minute-list");
   await dealList.locator("summary").click();
   // By its accessible name, never "the first disclosure in here" — a
-  // `<summary>` and an `EditDisclosure` wear the same attributes.
+  // `<summary>` and a disclosure trigger wear the same attributes.
   const trigger = dealList.getByRole("button", { name: "Why we ask about certification" });
   await trigger.waitFor();
   // Read the id *before* the hover. The panel is placed by measurement and is

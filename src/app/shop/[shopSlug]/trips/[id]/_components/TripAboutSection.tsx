@@ -66,8 +66,8 @@ export type TripAboutRow = {
   /**
    * Server-decided: this editor has an outcome to show, or its subject has open
    * work. A refusal that hides inside a closed row is a form the staffer cannot
-   * see failed — the rule `EditDisclosure` used to carry for the panels this
-   * replaced.
+   * see failed — the rule the `Edit …` disclosures inside the old headed
+   * sections used to carry.
    */
   editorOpen?: boolean;
 };

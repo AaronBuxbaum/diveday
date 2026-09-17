@@ -186,10 +186,11 @@ test("staff moves a departure to a different boat after it is on the board", asy
   const tripPath = await tripPathByTitle(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
   await page.goto(tripPath);
 
-  // The Details form lives behind `EditDisclosure` — the card states the
-  // settled facts and opens to edit them, as a `<details>`/`<summary>` rather
-  // than a button (a focusable descendant of a summary fails axe's
-  // nested-interactive rule). Every field below is inside it.
+  // The Details form lives behind the About panel's "The plan" row — the row
+  // states the settled facts and opens to edit them, as a
+  // `<details>`/`<summary>` rather than a button (a focusable descendant of a
+  // summary fails axe's nested-interactive rule). Every field below is inside
+  // it.
   await openTripAbout(page);
   await page.getByText("Edit details", { exact: true }).click();
   // Located by its form name, the same shape `visual.spec.ts` uses for the
