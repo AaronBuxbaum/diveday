@@ -394,6 +394,55 @@ describe("staffing view", () => {
   });
 
   /**
+   * **Departures sharing a start time come back in the same order every time,
+   * on every database** (issue #1844).
+   *
+   * The query ordered by `starts_at` alone, `tripMap` preserves the order the
+   * rows arrived in, and every in-memory sort over it compares the same single
+   * key with a *stable* sort — so a tie kept whatever the server returned.
+   *
+   * It never failed a build. It surfaced as the `staffing-week-crew-clash`
+   * visual capture reporting the same two "Needs crew" cards as changed on one
+   * pull request and changed *back* on another, with nothing between them
+   * touching this file. `trips.id` is `defaultRandom()`, so a freshly seeded
+   * capture run draws new ids and the pair lands the other way round. On a real
+   * shop's screen the same thing reads as the captain's queue reordering itself
+   * between loads.
+   *
+   * The titles below are deliberately inserted out of alphabetical order, so a
+   * pass means the title key is doing the work rather than the rows happening
+   * to arrive sorted.
+   */
+  it("orders departures sharing a start time by title, not by arrival", async () => {
+    const { db, shop } = await seededShopContext();
+    const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
+    const endsAt = new Date(startsAt.getTime() + 4 * HOUR_MS);
+    const titles = ["Sunset drift", "Afternoon wall", "Reef two-tank", "Blue hole"];
+    for (const title of titles) {
+      const trip = await createTrip(db, {
+        shopId: shop.id,
+        title,
+        startsAt,
+        endsAt,
+        capacity: 10,
+        plannedDives: 2,
+      });
+      if (!trip) throw new Error("failed to create same-minute fixture");
+      // Divers aboard and nobody in the water, so each one is a gap row.
+      await seatDiver(db, shop.id, trip.id, `same-minute-${trip.id}`);
+    }
+
+    const view = await getStaffingView(
+      db,
+      shop.id,
+      new Date(startsAt.getTime() - HOUR_MS),
+      new Date(endsAt.getTime() + HOUR_MS),
+    );
+    const ours = view.gapTrips.filter((gap) => titles.includes(gap.title)).map((gap) => gap.title);
+    expect(ours).toEqual([...titles].sort());
+  });
+
+  /**
    * **Which of two true facts a course session shows when both hold.**
    *
    * A course session with nobody in the water satisfies `courseCrewGap` (no
