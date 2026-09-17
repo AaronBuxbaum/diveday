@@ -504,8 +504,12 @@ export default async function OrdersIndexPage({
                         date: formatShortDate(intent.startedAt, locale, shop.timezone),
                       })}
                     </span>
-                    {tripTitle ? <span>{tripTitle}</span> : null}
-                    {personName ? <span>· {personName}</span> : null}
+                    {/* Whose money and which boat, joined here rather than
+                        each carrying its own separator — a row with a name and
+                        no departure used to open on a stray bullet. */}
+                    {tripTitle || personName ? (
+                      <span>{[tripTitle, personName].filter(Boolean).join(" · ")}</span>
+                    ) : null}
                     {opTripId ? (
                       <Link
                         href={`/shop/${shopSlug}/trips/${opTripId}`}
