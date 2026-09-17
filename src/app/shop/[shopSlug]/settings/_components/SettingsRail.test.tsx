@@ -213,6 +213,36 @@ describe("the rail as it renders", () => {
     expect(badges[0]?.textContent).toBe("Not connected");
   });
 
+  it("draws every group, each under its own label", () => {
+    // The whole reason the rail exists: Money and Data & integrations are not
+    // a second page. A regression that dropped them would still look right on
+    // the hub, where the pane repeats the map below the fold.
+    renderRail();
+    const nav = screen.getByRole("navigation", { name: "Settings sections" });
+    for (const group of SETTINGS_GROUPS) {
+      const label = nav.querySelector(`#settings-rail-${group.id}`);
+      expect(label, `${group.id} has no label on the rail`).toBeTruthy();
+      // Sticky inside the rail's own scroll area and opaque: 42 rows do not
+      // fit beside a bar on any viewport, so the group being read has to stay
+      // named at the top of the column.
+      expect(label?.className).toContain("sticky top-0");
+      expect(label?.className).toContain("bg-background");
+    }
+    expect(nav.querySelectorAll("ul")).toHaveLength(SETTINGS_GROUPS.length);
+  });
+
+  it("tints the label of the group the current row is in, and no other", () => {
+    pathname = `${BASE}/settings/team`;
+    renderRail();
+    const nav = screen.getByRole("navigation", { name: "Settings sections" });
+    // "team" is a Your shop row; the other two groups stay quiet.
+    expect(nav.querySelector("#settings-rail-your-shop")?.className).toContain("text-primary");
+    expect(nav.querySelector("#settings-rail-money")?.className).not.toContain("text-primary");
+    expect(nav.querySelector("#settings-rail-data-integrations")?.className).not.toContain(
+      "text-primary",
+    );
+  });
+
   it("renders no badge at all when nothing is wrong", () => {
     // The calm state, which is nearly always: the map is words, not pills.
     const { container } = renderRail();

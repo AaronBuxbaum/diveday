@@ -33,6 +33,9 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ### The shop home — `/shop/[shopSlug]`
 
+**Shipped 2026-09-17, the floor's first row** ([ADR 20260911-clear-the-deck](../architecture/decisions/20260911-clear-the-deck.md) §1, "the door" — the one row of that floor that may start on the ADR alone):
+a row's own tap is its only door. The nine trailing "Open …" verbs are gone from the spine, the desk, the draft row and the first-morning checklist; what is left on a door row is the chevron `LedgerRow` already drew, and the destination is still named on the stretched overlay for a screen reader. A trailing verb survives only where it *is* the fix — a waiver send, a wait-list invite, an invoice resend, "Keep it", the closing block's own link beside a Dismiss demoted to ghost weight. Two tests in `DaySpine.test.tsx` hold it: no row that is itself a link may contain a second link, and a door's name may be spoken but never drawn. Shipped in the same pass: the desk's counting rows are their subject alone (the sentence under "3 messages are waiting on an answer" taught a feature already found); the units row states both guesses and what to do about them; a cancelled departure owes **one** row, not one per seat; the stuck-checkout row no longer prints a Stripe session id; the settled station draws one hairline between its parts instead of two; the plan-change clause is its own sentence on its own line; "Print the day" is the header's one action; and the first-bookable card and the role orientation never render together. The decoration (the band, the tile, the dial, the greeting) and `Badge` are untouched, pending H-77.
+
 **Proposed 2026-09-11, six consolidations** ([ADR 20260911-clear-the-deck](../architecture/decisions/20260911-clear-the-deck.md), [canvas](canvases/20260911-clear-the-deck/README.md)):
 the home loses its doors (a row's own tap is the door), its pills and chips (a state is a word), and — pending H-77 b — its decoration (the band, the tile, the dial, the coral washes); what it is then organised by is the owner's pick among six concepts, each redrawing this surface: three words, the week, the desk and the boat, one field, the shop's card, the storefront itself. Round 2, the same day, redraws the surface beneath any of them — five candidates to replace Reef (Salt, Air, Headline, Their ink, Slate), each on the home and the counter — pending H-77 e–h; round 3, the same day, draws one of them deep on the owner's word — Console, the instrument: the home's one readout is the countdown to the next boat, the day is a ladder of departures with their figures, every need a line with its state in a slot, daylight at the desk and depth after dark — pending H-77 i–l; round 4 puts the countdown on a display, a seat gauge under every boat and a telemetry line at the foot, pending H-77 m–o; round 5, on the owner's word that light must render light, prints the instrument on the app's own paper — Chart: the reading on a lit face, a boat as a sheet on the sand, the night palette as the one dark, glare as the crew's word at the rail — pending H-77 p–r. Nothing ships from it until H-77 is answered.
 
@@ -62,8 +65,9 @@ carries the green turtle; the two horizons are two tideline panels side by side.
 - **The question it arrives with:** "what needs me before the first boat?" — answered on screen, by
   the summary sentence and the first station's rows, without a click.
 - **Controls that dissolved:** the queue's rows *are* their own controls — each row's own link goes
-  to the thing it is about — and the urgency/by-departure view switch is gone with the views it
-  chose between. There is no standing control on this page at all.
+  to the thing it is about, and since 2026-09-17 says so with a chevron rather than a verb — and the
+  urgency/by-departure view switch is gone with the views it chose between. The page's only standing
+  control is "Print the day" in the header, on a day that has boats on it.
 - **Remove first:** nothing currently; the orientation card is already conditional on first-run and
   the good-news lines already render nothing when untrue (see
   [settled-questions.md](settled-questions.md)).
@@ -75,8 +79,10 @@ carries the green turtle; the two horizons are two tideline panels side by side.
   once per card.
 
 Enforced beside the code: `DaySpine.tsx` and `DayStation.tsx` defer to the ADR by name,
-`DaySpine.test.tsx` pins the composition (including its silences), and
-`RoleOrientationCard.test.tsx` fails if the orientation box out-ranks the work.
+`DaySpine.test.tsx` pins the composition (including its silences and, since 2026-09-17, the door
+rule), `FirstRunChecklist.test.tsx` pins the same rule on the first-morning ledger, and
+`RoleOrientationCard.test.tsx` fails if the orientation box out-ranks the work or grows an emoji
+back.
 
 ### The trip page — `/shop/[shopSlug]/trips/[id]`
 
@@ -99,13 +105,36 @@ the roster's actions or deep links.
 - **Controls that dissolved:** the filter chips (the groups do the filtering), the per-row Details
   caret (a row at rest is a name and a mark; open work is simply open), the Overview tab itself
   (a disclosure on this page), and `Add a diver` as a second page section (it is the ledger's
-  terminal group, even when no one is booked yet).
+  terminal group, even when no one is booked yet). The masthead's own `Add diver` went with it in
+  weight: it is a link-weight jump to that band, which keeps the act to one primary.
 - **Remove first:** the Activity and Promote footer rows — kept only because a trip's history has no
   other home yet.
 - **Composition:** one grouped ledger under a masthead, not a card stack — a roster is a list of
   people in states, and the state belongs to the group rather than repeated down every row; arrival
   guidance is authored with the departure details, while invite and add actions are its terminal
   bands, not detached forms.
+
+**Amended 2026-09-17** (design review, "as rendered"). The About panel said every fact twice: five
+label/value rows stating the plan, the conditions, who can book, the boat and crew and the repeat,
+then five headed sections below them restating the same five subjects, each with its own summary
+prose and its own `Edit …` disclosure, then three full-width series buttons and two destructive
+ones, every one of them carrying a standing caption. About fifteen controls and eight captions for
+five facts.
+
+- **One grammar:** a row *is* its own disclosure. The label and the settled value are the summary,
+  the editor opens in place beneath it, and there is no headed duplicate of anything. A row opens
+  itself when its editor has an outcome to show, when the state is fail-closed (no requirements row
+  at all), or when its subject has open work — the crew row does that, which is what keeps the
+  pulse's "needs an instructor" link landing on something.
+- **Controls that dissolved:** the five section headings and their five `Edit …` disclosures (the
+  row carries both), the summary prose above each form (it restated the form directly below it),
+  and the standing captions under the rare acts.
+- **Collapse the rare path:** `Apply this date's details to every upcoming date`, `Stop repeating`,
+  `Cancel every upcoming date`, `Weather blow-out…` and `Cancel this departure` are one closed
+  `More for this departure` list at the foot of the panel — a single column of `link` and
+  `danger-ghost` items with no captions. Each consequence sentence moved into the confirm or the
+  page that item opens; the two irreversible series writes and the departure cancel keep a blocking
+  `InlineConfirm`, and stopping a repeat has none because the control opposite it puts the run back.
 
 ### The boat manifest — `/shop/[shopSlug]/trips/[id]/manifest`
 
@@ -156,7 +185,13 @@ below `xl` (1280px), on tablets and phones.
 - **Controls that dissolved:** none new; the row's `⋯` menu and per-day "+ Add" carried over — the
   menu's panels open full width beneath the grid, because a move form is two date/time fields and
   a 160px column is not a form.
-- **Remove first:** the standing crew line above the board, once a station says its own crew.
+- **Removed 2026-09-17:** the standing "Usual crew: …" line above the phone stream (what survives
+  is the rule it carried — a row running the board's usual crew prints no crew line, so any row
+  that does is the exception), and the header's "View public page" button, demoted to link weight
+  beside Add a departure and Add a booking. The week grid's card titles clamp to two lines rather
+  than truncating: the site is the title's second half, so one clipped line hid which boat a cell
+  was about.
+- **Remove first:** nothing left above the board; the row `⋯` menu is the next candidate.
 - **Composition:** a week grid at desktop because the content is a calendar; the phone keeps the
   stream because a seven-column grid has no honest 390px form.
 
@@ -168,8 +203,11 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
 **Shipped 2026-08-28** (slice 6g) — same ADR and canvas. The phone keeps grouped lists.
 
 - **One idea:** every switch in the shop, findable in one look.
-- **The question it arrives with:** "where do I change X?" — answered by the rail, which shows the
-  whole map at once instead of 42 rows of scroll.
+- **The question it arrives with:** "where do I change X?" — answered by the rail: all three groups
+  in the pane's own order, with the group being read named at the top of the column (its label is
+  sticky inside the rail's scroll area) and the group holding the current row tinted. Forty-two rows
+  do not fit beside the bar on any viewport at a legible row height, so the rail scrolls in its own
+  right; what it must never do is let a reader believe Money and Data & integrations are not there.
 - **Controls that dissolved:** the standing caption under every door row — the row's current value
   is the description.
 - **Remove first:** nothing beyond the captions; the three groups already carve the space
@@ -205,13 +243,18 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
 - **The question it arrives with:** "how many are still to come?" — answered by the count figure
   before any list.
 - **Controls that dissolved:** per-row state text — the tap circle *is* the state; settled rows
-  sink into one collapsed group.
+  sink into one collapsed group, and since 2026-09-17 they carry no state of their own at all:
+  the group header says "Checked in — 5 · all boarded" once for every row under it, each row keeps
+  only what singles that person out, and the pass demoted to link weight as the row's one act. A
+  blocked row says one thing, and it is the gate.
 - **Remove first:** the day's other boats from standing view; one departure is in focus, the rest
   one tap away.
 - **Composition:** an instrument over a queue, inheriting the manifest's count-first grammar
   ashore.
 
 ### The public schedule — `/s/[shopSlug]`
+
+**Tidied 2026-09-17** (the "as rendered" sweep, slice F1). Three things, all layout and disclosure — no feature left the page. The identity band's panels — the off-season card, the boat that is out, the next boat with space, the season band — each held `max-w-md` and stacked down the left third of a 1152px page, three unrelated boxes with two-thirds of the width beside them empty; they are one row now (`grid-flow-col` with `auto-cols-fr` at `md` and up, the stack on a phone), which reads at one panel or at four. The lens rail met a diver with ten or eleven controls at rest — seven chips, two selects, one or two checkboxes and a counted sentence — so the four filters moved behind one quiet "Filter" disclosure inside their own `<form>`, open on first paint whenever the URL already carries one of them, and the rail at rest is the shop's own chips. The sentence above the list ("3 departures ask for more than Open Water. They are still bookable: ask the shop.") was deleted: the rows already say "Above your level" and the shorter list is one tap away in the same panel.
 
 **Proposed 2026-09-04** (same ADR and canvas): a live panel when a boat is out, "next with space", and a lens rail of the shop's own words.
 
@@ -235,6 +278,8 @@ routes took the display-scale h1 only.
   because a diver is choosing a shop before they are choosing a time slot.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
+
+**Tidied 2026-09-17** (the "as rendered" sweep, slice F1). "What the crew logged, and when. It says what was seen, not what you will see." closed every "Seen here this month" block, so a two-tank day printed it twice, twelve lines apart. It is the **day's** sentence now — once, under the plan, whenever any site in the day has a month to show. And the embed's booking confirmation stopped offering three link-blue lines at one weight: the readiness page is the button, the way back into the widget is quiet text (and the readiness door demotes to `secondary` when there is a balance to pay, which is then the section's one primary).
 
 **Shipped 2026-09-06** ([ADR 20260906-before-you-ask](../architecture/decisions/20260906-before-you-ask.md), [canvas](canvases/20260906-before-you-ask/README.md)):
 reached from the thread's next-dive link, the page arrives knowing her: the verified card, the waiver that still covers this trip, her gear and her emergency contact folded into one panel, each naming the day it was kept, with her name, email and phone prefilled into the fields that are the doors to change them; "Not Yara? Start with a blank form" stands beneath. A cold visitor gets the form that ships, and the page reveals nothing to anyone who did not arrive through the handoff. A matching cold email may receive one link an hour (H-68 b); nothing on the page says whether it went.
@@ -295,7 +340,10 @@ town, and the shops that dive out of it.
 - **Remove first:** any repeated price story above the capability proof; the source-backed hero
   sentence answers the comparison question without competing with the page's argument.
 - **Composition:** claim, price, proof, then door — not a sales dashboard. The page earns a trial
-  by showing a shop's day, then gives the interested visitor one place to continue.
+  by showing a shop's day, then gives the interested visitor one place to continue. The reference
+  index that follows the argument is closed at rest (2026-09-17): nine hairline rows, each a
+  `<details>` naming its group and counting its lines, so the page ends where its argument does
+  instead of running on through ninety-odd bullets.
 
 ### The thread — `/ready/[token]` (and every state after booking)
 
@@ -314,7 +362,11 @@ one line beside Add to calendar, *Add to Wallet*, on every state after booking; 
   change ledger, party status and one small help request.
 - **Controls that dissolved:** the receipt panel, the emails line and the per-row Done chips (the
   steps' settled lines say it once); the four inline forms at rest (one open step at a time); help
-  is a controlled choice, never a free-text support inbox.
+  is a controlled choice, never a free-text support inbox; the trailing "Your dive shop" card
+  (2026-09-17), whose address, phone, email and map link the arrival card two screens above had
+  already given — the embedded map moved into "Where to go", where the shop's own arrival photo
+  outranks it, and the shop's first-visit welcome moved to the top of the thread, since a greeting
+  that arrives below the button releasing your seat is not greeting anybody.
 - **Remove first:** nothing after the fold — the after-state already absorbed the recap page.
 - **Composition:** a step spine, because getting ready is a sequence, followed by the reusable
   arrival/change reading and the party hand-off; the same spine grammar the staff home speaks makes
@@ -354,6 +406,11 @@ H-01/H-03's.
   expiry line); three bespoke banners (one notice grammar).
 - **Remove first:** nothing — the release must stay fully presented.
 - **Composition:** three steps under a quiet rail; the sign card is the page's one worked-in card.
+  Each medical question is a bordered `<fieldset>` whose `<legend>` **floats** (2026-09-17), so the
+  question flows inside the box instead of straddling the top border a browser draws its rendered
+  legend in — eleven questions cut through their own boxes, which on a legal surface reads as a
+  rendering fault. Presentation only: the semantics that name each radio group, and every word of
+  the release and the questionnaire, are untouched (H-01/H-03).
 
 ### The gear register — `/shop/[shopSlug]/gear`
 
@@ -365,7 +422,9 @@ drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
 - **The question it arrives with:** "what's out, and what's coming back?" — answered by the Out
   and Due back groups before any scrolling.
 - **Controls that dissolved:** the three stat tiles and the Returns panel (the groups are the
-  state); per-row acts ride the rows.
+  state); per-row acts ride the rows; and, 2026-09-17, the header's "Add gear" button — the
+  register ends in the "Add a unit" band the way the trip roster ends in "Add a diver", and a
+  header door onto the same disclosure only scrolled the reader back down to it.
 - **Remove first:** the service sentence on healthy units — it already renders only when it has
   something to say.
 - **Composition:** one grouped ledger because reservation state is the register's whole subject,
@@ -379,8 +438,13 @@ drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
 - **The question it arrives with:** "is every boat covered?" — answered by the Needs-crew row's
   day cells, which render nothing when the answer is yes.
 - **Controls that dissolved:** the two standing add-forms (doors now); the inline credential
-  badge stack (one renewal word).
-- **Remove first:** nothing — the week grid is already the minimum that shows coverage.
+  badge stack (one renewal word); and, 2026-09-17, the standing "Name divers see" form — a
+  summary-first row stating the answer ("Shown as Dana" / "Not shown") that opens the form on a
+  tap. A gap cell carries one act, chosen by the reader: "Assign ›" for somebody who can crew the
+  boat, "Ask for this one" for somebody who can only ask.
+- **Remove first:** nothing — the week grid is already the minimum that shows coverage. The
+  Credentials group no longer renders a heading over an orphan door: with nothing on file the door
+  is the group and names itself.
 - **Composition:** people × days, because coverage is a grid question; the gap carries its act in
   the day it lives (H-59 keeps credentials inform-only).
 
@@ -421,6 +485,26 @@ primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
   exist, and the redesign keeps it conditional.
 - **Composition:** status, story, file — a person is a readiness question, a history, and a set of
   facts, in that order; ten co-equal sections answered no question first.
+
+**Amended 2026-09-17, the file is one door grammar.** The 8b build shipped two: "legacy" groups
+(certification records, waiver, gear and sizes, diver notes, conversation) hid their summary above
+`sm` and rendered open as `InsetGroup` cards under a second, uppercase copy of their own label,
+while the newer groups (shelf, dive support) stayed doors at every width. Down one page they
+interleaved — an open bordered card, a closed row, another open card — and the phone, which had
+only ever had the doors, was the cleaner page. Every group is now a door at every width, its row
+label is its `<h2>` and its fragment target, and its summary is its one **useful** fact rather than
+a queue state: the levels on file rather than "None waiting", the release's standing **and its
+date**, "{n} notes", "{n} unanswered". A group opens itself only for work the staffer came for — a
+notice aimed at it, an unanswered message, a held medical review, a standing can't-fill flag, notes
+somebody wrote. The activity trail joined the same grammar; it was the last `LedgerGroup` on the
+page. Pinned by `page.composition.test.ts` (no second heading inside a group, no group that opens
+itself at a breakpoint) and `_components/DiverFileGroupDisclosure.test.tsx`.
+
+Two controls went quiet with it: the certification row's `Delete`, a bordered `danger` button
+standing on every row of a safety-critical group, is `danger-ghost`; and "Can't fill one of these
+sizes?" — a heading, a two-line caption, an input and a button under the gear facts on every diver
+who rents anything — is one link-weight door, its caption deleted (it described what the flag does
+to the packing list, which is the mechanism, not the outcome).
 
 ### The departures board — `/board/[token]`
 

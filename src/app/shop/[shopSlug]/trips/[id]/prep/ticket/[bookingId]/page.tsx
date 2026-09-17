@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PrintButton } from "@/components/PrintButton";
-import { buttonClass } from "@/components/ui/button";
+import { EYEBROW_CLASS, EyebrowBackLink } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { listTripGearAssignments } from "@/db/gear";
@@ -85,9 +84,16 @@ export default async function RentalTicketPage({
     <div id="rental-ticket">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
         <div>
-          <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
-            {t("gear.ticket.eyebrow")}
-          </p>
+          {/* On screen the eyebrow is the way back to the departure's prep
+              page, in the word its own tab uses — this page carried the only
+              link up as a ghost button beside Print, at the same weight as the
+              act the page exists for (principle 10, issue #823). On paper it
+              is the slip's own name instead: the sheet a diver walks off with
+              has to say what it is, and it has no navigation. */}
+          <EyebrowBackLink href={backTo} className="print:hidden">
+            {t("trips.subNav.prep")}
+          </EyebrowBackLink>
+          <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("gear.ticket.eyebrow")}</p>
           <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{diver.fullName}</h1>
           <p className="mt-1 text-muted">
             {trip.title} · {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
@@ -95,9 +101,6 @@ export default async function RentalTicketPage({
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-3 print:hidden">
-          <Link href={backTo} className={buttonClass({ variant: "ghost" })}>
-            {t("gear.ticket.backToPrep")}
-          </Link>
           <PrintButton label={t("shared.printButton.label")} />
         </div>
       </header>

@@ -1,14 +1,76 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
+import { AboutRowDetails } from "./AboutRowDetails";
+
+/**
+ * Label, settled value, and the row's own control, on one grid at every width —
+ * the same three columns whether the row opens or only states a fact, so a
+ * column of them keeps one left edge.
+ */
+const ROW_GRID =
+  "grid w-full gap-1 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-start sm:gap-4";
+
+/**
+ * One beat of the departure's definition: the label, the settled value, and —
+ * when there is something to change — the control that opens its editor in
+ * place. A row with no editor is the same grid without the third column, so a
+ * staffer who cannot configure the trip reads the same table.
+ */
+function AboutRow({ row }: { row: TripAboutRow }) {
+  const beat = (
+    <>
+      <span className={groupLabelClass()}>{row.label}</span>
+      <span className="min-w-0 text-sm">{row.value}</span>
+    </>
+  );
+  if (!row.editor) {
+    return (
+      <div id={row.id} className={`${ROW_GRID} scroll-mt-24`}>
+        {beat}
+      </div>
+    );
+  }
+  return (
+    <AboutRowDetails id={row.id} open={row.editorOpen} className="group/row scroll-mt-24">
+      <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary">
+        <span className={ROW_GRID}>
+          {beat}
+          <span className="inline-flex min-h-11 w-fit items-center gap-1 self-start text-sm font-semibold text-primary sm:justify-self-end">
+            {row.editLabel}
+            <DisclosureCaret direction="down" className="size-4 group-open/row:rotate-180" />
+          </span>
+        </span>
+      </summary>
+      {/* The editor sits on the text column the value above it sits on, and
+          the space below it is what keeps the next row's label off the last
+          field of this one. */}
+      <div className="pb-5">{row.editor}</div>
+    </AboutRowDetails>
+  );
+}
 
 export type TripAboutRow = {
+  /**
+   * The row's fragment target, so the board's "Set a price for …" link and the
+   * pulse's crew facts still land on the beat they name.
+   */
+  id: string;
   label: string;
   value: ReactNode;
-  editHref?: string;
+  /** The word on this row's own control — "Edit details", "Change the days it runs". */
+  editLabel?: string;
+  /** The editor this row opens beneath itself. Without one the row is a fact and nothing else. */
+  editor?: ReactNode;
+  /**
+   * Server-decided: this editor has an outcome to show, or its subject has open
+   * work. A refusal that hides inside a closed row is a form the staffer cannot
+   * see failed — the rule the `Edit …` disclosures inside the old headed
+   * sections used to carry.
+   */
+  editorOpen?: boolean;
 };
 
 /**
@@ -17,8 +79,34 @@ export type TripAboutRow = {
  * ADR 20260827-the-departure-is-two-working-surfaces, slice 5e, keeps the
  * departure's definition available without making it the first thing a crew
  * member has to work through. At rest this is one compact summary; on intent
- * it opens into the old, complete editors and the five label/value beats from
- * the design. The roster remains below it as the page's main working surface.
+ * it opens into five label/value beats. The roster remains below it as the
+ * page's main working surface.
+ *
+ * ## One grammar: the fact rows *are* the surface
+ *
+ * The panel used to say everything twice. Five rows stated the plan, the
+ * conditions, who can book, the boat and crew, and the repeat — and then five
+ * headed sections below them stated the same five subjects again, each with its
+ * own heading, its own summary prose and its own "Edit …" disclosure, followed
+ * by three full-width series buttons and two more destructive ones, every one
+ * of them carrying a standing caption. About fifteen controls and eight
+ * captions for five facts (design review 2026-09-17).
+ *
+ * Now a row *is* its own disclosure: the label and the settled value are the
+ * summary, the editor opens in place beneath it, and there is no second copy of
+ * anything. That is the grammar `SettingsRows` and `DisclosureRowList` already
+ * use, arrived at here from the opposite direction.
+ *
+ * The rare and destructive acts — apply to every date, stop repeating, cancel
+ * every upcoming date, the weather blow-out, cancelling this departure — sit in
+ * one closed disclosure at the foot (`more`), as a single column of quiet
+ * items with no standing captions: each one's consequence sentence lives in the
+ * confirm or the page it opens, where somebody is about to act on it
+ * (docs/design/principles.md §8, "collapse the rare path").
+ *
+ * A row's `<summary>` carries no focusable descendants — an interactive element
+ * nested in a `<summary>` fails axe's nested-interactive rule, which is why the
+ * "Edit …" affordance is a `<span>` and the whole row is the control.
  */
 export function TripAboutSection({
   heading,
@@ -27,10 +115,11 @@ export function TripAboutSection({
   summary,
   conditionsSummary,
   rows,
-  editLabel,
+  openOnHash = [],
   actions,
-  children,
-  cancelAction,
+  more,
+  moreLabel,
+  moreOpen = false,
   open = false,
 }: {
   heading: string;
@@ -39,19 +128,20 @@ export function TripAboutSection({
   summary: ReactNode;
   conditionsSummary?: ReactNode;
   rows: TripAboutRow[];
-  editLabel: string;
+  /** Fragments that open the panel itself — every row anchor a deep link uses. */
+  openOnHash?: string[];
   actions?: ReactNode;
-  children?: ReactNode;
-  cancelAction?: ReactNode;
+  /** The rare and destructive acts, as a column of quiet items. */
+  more?: ReactNode;
+  moreLabel?: string;
+  /** One of the acts in `more` just ran and its outcome is inside. */
+  moreOpen?: boolean;
   open?: boolean;
 }) {
   return (
     <AutoOpenDetails
       id="about"
-      openOnHash={[
-        "about",
-        ...rows.flatMap((row) => (row.editHref ? [row.editHref.slice(1)] : [])),
-      ]}
+      openOnHash={["about", ...openOnHash]}
       open={open}
       className={sectionCardClass({
         padding: "none",
@@ -93,26 +183,18 @@ export function TripAboutSection({
         {actions ? <div className="flex flex-wrap gap-2 py-3">{actions}</div> : null}
         <div className="divide-y divide-border border-y border-border">
           {rows.map((row) => (
-            <div
-              key={row.label}
-              className="grid gap-1 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-start sm:gap-4"
-            >
-              <span className={groupLabelClass()}>{row.label}</span>
-              <div className="min-w-0 text-sm">{row.value}</div>
-              {row.editHref ? (
-                <Link
-                  href={row.editHref}
-                  className="-mx-2 inline-flex min-h-11 w-fit self-start items-center rounded-lg px-2 text-start text-sm font-semibold text-primary transition-colors hover:bg-surface-sunken hover:underline sm:mx-0 sm:justify-self-end sm:text-end"
-                >
-                  {editLabel}
-                </Link>
-              ) : null}
-            </div>
+            <AboutRow key={row.id} row={row} />
           ))}
         </div>
-        {children ? <div className="space-y-6 pt-6">{children}</div> : null}
-        {cancelAction ? (
-          <div className="flex justify-end border-t border-border pt-4">{cancelAction}</div>
+        {more ? (
+          <details id="about-more" open={moreOpen} className="group/more mt-4">
+            <summary className="-mx-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+              {moreLabel}
+              <DisclosureCaret direction="down" className="size-4 group-open/more:rotate-180" />
+            </summary>
+            {/* One column, one item per line, no captions. */}
+            <div className="mt-1 flex flex-col items-start">{more}</div>
+          </details>
         ) : null}
       </div>
     </AutoOpenDetails>

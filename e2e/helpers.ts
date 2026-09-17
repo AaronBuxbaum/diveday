@@ -311,6 +311,34 @@ export async function openTripAbout(page: Page): Promise<Locator> {
   return about;
 }
 
+/**
+ * Open the About panel's "More for this departure" list — where the rare and
+ * destructive acts live (the weather blow-out, cancelling the departure, the
+ * series-wide writes). Opens the panel itself first.
+ */
+export async function openTripMore(page: Page): Promise<Locator> {
+  await openTripAbout(page);
+  const list = page.locator("details#about-more");
+  if ((await list.getAttribute("open")) === null) {
+    await list.locator(":scope > summary").click();
+  }
+  await expect(list).toHaveAttribute("open", "");
+  return list;
+}
+
+/**
+ * Open one About row's editor — the departure's crew, its price, the days it
+ * runs. A row opens itself only while its subject has open work, so a settled
+ * one (a boat with crew on it) takes a tap. Opens the panel itself first.
+ */
+export async function openTripAboutRow(page: Page, id: string): Promise<Locator> {
+  await openTripAbout(page);
+  const row = page.locator(`details#${id}`);
+  await expect(row).toBeVisible();
+  await openIfClosed(row);
+  return row;
+}
+
 /** Navigate to the create-diver form from an add-diver section or panel. */
 export async function openHandEntry(container: Locator): Promise<void> {
   const addLink = container.getByRole("link", { name: /Add (diver|to wait list)/i });
@@ -710,6 +738,43 @@ export async function openTripActivity(page: Page): Promise<void> {
       .filter({ visible: true })
       .first(),
   );
+}
+
+/**
+ * Open one file group on a diver's record (`/shop/<slug>/divers/<personId>`).
+ *
+ * Every group there — Certification records, Waiver, Gear and sizes, Diver
+ * notes, Conversation, Dive support, Activity — is a closed `<details>` door at
+ * every width, and opens itself only for open work (a `?notice=` aimed at it,
+ * an unanswered message, a held medical review, a standing can't-fill flag,
+ * existing notes). A spec that reaches for a control inside one therefore opens
+ * the group first.
+ *
+ * Idempotent, like every opener here: a group the page already rendered open is
+ * left alone rather than toggled shut. The group is found by its accessible
+ * name because the label is the `<section aria-label>` and the group's own
+ * heading — one string, whichever end you come at it from.
+ */
+export async function openDiverFileGroup(page: Page, label: string): Promise<Locator> {
+  const group = page.getByRole("region", { name: label, exact: true });
+  const details = group.locator("details").first();
+  await expect(details).toBeVisible();
+  await openIfClosed(details);
+  return details;
+}
+
+/**
+ * Open the Gear and sizes group's "Can’t fill a size?" disclosure — the H-06
+ * flag, which is a link-weight door inside the group now rather than a standing
+ * form under the facts. Opens the group itself first, so a caller needs one
+ * call for the two doors between it and the flag.
+ *
+ * Absent once a flag is up: a raised flag states itself and its way out in the
+ * open, so there is nothing to disclose.
+ */
+export async function openCantFillASize(page: Page): Promise<void> {
+  const gear = await openDiverFileGroup(page, "Gear and sizes");
+  await openIfClosed(gear.locator("details").filter({ hasText: "Can’t fill a size?" }).first());
 }
 
 /**

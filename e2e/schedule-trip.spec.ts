@@ -4,6 +4,7 @@ import {
   daysFromNow,
   e2eNow,
   openTripAbout,
+  openTripMore,
   signInAsOwner,
   tripPathByTitle,
 } from "./helpers";
@@ -90,8 +91,11 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   // overview's own "View booking page" button impossible to use.
   await page.getByRole("link", { name: "Manage this trip" }).click();
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
-  await openTripAbout(page);
-  await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+  // Cancelling is one of the rare acts in the About panel's "More for this
+  // departure" list, behind a blocking confirm.
+  const more = await openTripMore(page);
+  await more.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+  await more.getByRole("button", { name: "Yes, cancel this departure" }).click();
   await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
 });
 
@@ -186,10 +190,11 @@ test("staff moves a departure to a different boat after it is on the board", asy
   const tripPath = await tripPathByTitle(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
   await page.goto(tripPath);
 
-  // The Details form lives behind `EditDisclosure` — the card states the
-  // settled facts and opens to edit them, as a `<details>`/`<summary>` rather
-  // than a button (a focusable descendant of a summary fails axe's
-  // nested-interactive rule). Every field below is inside it.
+  // The Details form lives behind the About panel's "The plan" row — the row
+  // states the settled facts and opens to edit them, as a
+  // `<details>`/`<summary>` rather than a button (a focusable descendant of a
+  // summary fails axe's nested-interactive rule). Every field below is inside
+  // it.
   await openTripAbout(page);
   await page.getByText("Edit details", { exact: true }).click();
   // Located by its form name, the same shape `visual.spec.ts` uses for the

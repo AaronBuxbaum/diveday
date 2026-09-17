@@ -6,7 +6,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DIVER_MESSAGES } from "@/i18n/messages";
 import { DIVER_LOCALES } from "@/i18n/settings";
-import { DOOR_GLYPH_IDS, type DoorGlyphId, EntryDone } from "./EntryShell";
+import { DOOR_GLYPH_IDS, type DoorGlyphId, EntryDone, entryPanelClass } from "./EntryShell";
 
 /**
  * **Slice 10a of ADR 20260827-first-light: the door speaks Clearwater.**
@@ -149,6 +149,35 @@ describe("a door renders one primary", () => {
     const signIn = read("app/sign-in/page.tsx");
     expect(signIn).toContain('variant: "link"');
     expect(buttonCalls(signIn)).toHaveLength(2);
+  });
+});
+
+/**
+ * **The panel is a phone-width nothing** (2026-09-17 design review).
+ *
+ * Every door shares one constant, so the rule can be stated once. The bug it
+ * closes is one unscoped utility among five scoped ones: `shadow-bed` drew a
+ * soft box below `sm` where there was no border, no ground and no padding to
+ * justify it, so the fields on sign-in, forgot-password, the staff invite and
+ * set-password all sat inside a faint edge-to-edge rectangle — loudest in dark
+ * mode, where the bed is `rgba(0, 0, 0, 0.35)`.
+ *
+ * Asserted as a fact about the class string rather than a computed style,
+ * because jsdom resolves no media queries and this *is* a media-query rule.
+ */
+describe("the door's panel", () => {
+  it("draws nothing below sm — every surface utility is breakpoint-scoped", () => {
+    const panel = entryPanelClass.split(/\s+/).filter(Boolean);
+    const unscoped = panel.filter((utility) => !utility.startsWith("sm:"));
+    // The margin above the panel is the one thing that is not the surface.
+    expect(unscoped).toEqual(["mt-8"]);
+    for (const utility of ["sm:border", "sm:bg-surface", "sm:p-8", "sm:shadow-bed"]) {
+      expect(panel).toContain(utility);
+    }
+  });
+
+  it("hands the skeleton the same frame, so neither can drift", () => {
+    expect(read("components/account/EntryShellSkeleton.tsx")).toContain("entryPanelClass");
   });
 });
 

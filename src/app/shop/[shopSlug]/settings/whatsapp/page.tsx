@@ -115,15 +115,6 @@ export default async function WhatsAppSettingsPage({
         description={t("whatsapp.description")}
       />
 
-      {/* Top of the page, before anything else: a shop should learn this is not
-          yet switchable on before reading how it works. */}
-      {!canConnect ? (
-        <section className="mb-6 rounded-lg border border-warning/40 bg-warning/10 p-4">
-          <h2 className="font-medium">{t("whatsapp.comingSoon.heading")}</h2>
-          <p className="mt-1 text-sm">{t("whatsapp.comingSoon.body")}</p>
-        </section>
-      ) : null}
-
       {banner ? (
         <p
           className={`mb-6 rounded-lg border p-3 text-sm ${
@@ -145,6 +136,13 @@ export default async function WhatsAppSettingsPage({
           `space-y-10` here, and no `mt-*` on any card
           (docs/design/forms-and-controls.md). */}
       <div className="space-y-10">
+        {/* **One card for the state, not three.** Until Meta approves DiveDay
+            there is nothing here to do, and the surface used to say so three
+            times over — a "Coming soon" banner, this card, and a "How
+            connecting works" card whose Connect button was inert. The state
+            line and the (disabled) act are the whole surface in that state;
+            the how-to renders when following it would actually get a shop
+            somewhere (principle 9). */}
         <SectionCard
           padding="lg"
           title={
@@ -178,19 +176,33 @@ export default async function WhatsAppSettingsPage({
               </div>
             </dl>
           ) : (
-            <p className="text-sm text-muted">{t("whatsapp.status.notConnectedDescription")}</p>
+            <p className="text-sm text-muted">
+              {canConnect
+                ? t("whatsapp.status.notConnectedDescription")
+                : t("whatsapp.status.unavailableDescription")}
+            </p>
           )}
+          {!canConnect && !account ? (
+            <div className="mt-5">
+              {/* Inert on purpose, and the only control on the card: a shop
+                  can see what is coming and cannot start a flow Meta would
+                  refuse. */}
+              <button type="button" disabled className={buttonClass()}>
+                {t("whatsapp.signup.connect")}
+              </button>
+            </div>
+          ) : null}
         </SectionCard>
 
-        <SectionCard padding="lg" title={t("whatsapp.setup.heading")}>
-          <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
-            <li>{t("whatsapp.setup.step1")}</li>
-            <li>{t("whatsapp.setup.step2")}</li>
-            <li>{t("whatsapp.setup.step3")}</li>
-          </ol>
+        {canConnect && signupConfig ? (
+          <SectionCard padding="lg" title={t("whatsapp.setup.heading")}>
+            <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
+              <li>{t("whatsapp.setup.step1")}</li>
+              <li>{t("whatsapp.setup.step2")}</li>
+              <li>{t("whatsapp.setup.step3")}</li>
+            </ol>
 
-          <div className="mt-5">
-            {canConnect && signupConfig ? (
+            <div className="mt-5">
               <EmbeddedSignupButton
                 appId={signupConfig.appId}
                 configId={signupConfig.configId}
@@ -202,13 +214,9 @@ export default async function WhatsAppSettingsPage({
                   blocked: t("whatsapp.signup.blocked"),
                 }}
               />
-            ) : (
-              <button type="button" disabled className={buttonClass()}>
-                {t("whatsapp.signup.connect")}
-              </button>
-            )}
-          </div>
-        </SectionCard>
+            </div>
+          </SectionCard>
+        ) : null}
 
         {account ? (
           <>

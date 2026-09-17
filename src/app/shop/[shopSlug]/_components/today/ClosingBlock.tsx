@@ -181,10 +181,17 @@ export function ClosingBlock({
                         {action.actionLabel}
                       </Link>
                     )}
+                    {/* **Ghost weight, under the row's own fix.** Dismiss
+                        stood at `secondary` beside a `link`-weight fix, so on
+                        four leftovers the heaviest thing in the band was the
+                        four ways to make a row go away — the act a staffer
+                        reaches for least. It is the quieter of the two answers
+                        now, and "Close the day" below is the section's one
+                        primary (principle 8). */}
                     <form action={setLeftoverDecisionAction.bind(null, action.id, "dismiss")}>
                       <SubmitButton
                         pendingLabel={t("closeout.leftovers.saving")}
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
+                        className={buttonClass({ variant: "ghost", size: "sm" })}
                         observabilityAction="closeout-leftover-decision"
                       >
                         {t("closeout.leftovers.dismiss")}
@@ -195,7 +202,9 @@ export function ClosingBlock({
               >
                 <div className="min-w-0 py-2">
                   <p className="text-sm font-medium">{action.subject}</p>
-                  <p className="text-sm text-muted">{action.detail}</p>
+                  {/* A row whose subject is the whole fact renders no second
+                      line rather than an empty one. */}
+                  {action.detail ? <p className="text-sm text-muted">{action.detail}</p> : null}
                 </div>
               </LedgerRow>
             ))}

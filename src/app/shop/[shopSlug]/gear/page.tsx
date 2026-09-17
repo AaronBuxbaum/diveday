@@ -252,16 +252,13 @@ export default async function GearRegisterPage({
       <ShopPageHeader
         eyebrow={t("gear.eyebrow")}
         title={t("gear.title")}
-        // An empty register gets no header action: the empty card below is
-        // the whole page and owns the one door (principle 8).
-        actions={
-          fleetTotal === 0 ? undefined : (
-            // Secondary: the form below carries the page's one primary.
-            <AddUnitLink className={buttonClass({ variant: "secondary" })}>
-              {t("gear.addUnit.door")}
-            </AddUnitLink>
-          )
-        }
+        // **No header action at all** (principle 8: two doors for one act is
+        // one too many). The register ends in the "Add a unit" band the way the
+        // trip roster ends in "Add a diver" — the ledger's own terminal row,
+        // where a person who has just finished reading the wall is already
+        // standing — and a secondary button in the header was a second door
+        // onto that same disclosure, scrolling the reader back down to it. The
+        // empty register keeps its one door in the empty card below.
       />
 
       {notice === "deleted" && search.undoId ? (

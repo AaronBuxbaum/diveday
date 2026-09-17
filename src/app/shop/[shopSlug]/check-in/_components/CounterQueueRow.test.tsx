@@ -108,6 +108,9 @@ describe("a blocked row", () => {
       readiness: { status: "blocked", blockers: [{ code: "waiver_not_sent" }] },
     });
     expect(screen.getByText("Blocked")).toBeInTheDocument();
+    // Not through the counter yet, so no arrival fact — the pairing that makes
+    // the assertion above it about this row rather than about a dead string.
+    expect(screen.queryByText(/Checked in/)).not.toBeInTheDocument();
     expect(screen.getByText("Waiver has not been sent.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Check in / })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Undo check-in / })).not.toBeInTheDocument();
@@ -115,22 +118,53 @@ describe("a blocked row", () => {
 
   /**
    * A diver who came through the counter and has been blocked since — a refund
-   * landing, a card corrected — is not a receipt. The row says both facts in
-   * the vocabulary the surface already speaks: the drawn mark for the arrival
-   * that happened, the badge and the reasons for the gate that has closed. No
-   * undo: un-checking somebody does not clear a blocker, and the rule that a
-   * blocked row carries no check-in control does not bend for this case.
+   * landing, a card corrected — is not a receipt, so the row stays out here in
+   * the working list with the badge and the reasons for the gate that has
+   * closed. No undo: un-checking somebody does not clear a blocker, and the
+   * rule that a blocked row carries no check-in control does not bend here.
+   *
+   * **And one state, not three.** It used to carry "Boarded", a drawn "Checked
+   * in" mark and "Blocked" on the same line, at three volumes, only one of
+   * which anybody on this screen can act on. Boarding is the rail's fact and
+   * the manifest's (the glossary is explicit that check-in is not boarding), so
+   * it goes. How far the diver got stays — otherwise this row and one for a
+   * diver who never turned up are the same row — but as a quiet fact beside
+   * the name rather than a second mark at badge volume, and it says *which* of
+   * the two: a diver already on the boat is a radio call to the rail, not work
+   * to do while they wait at the desk.
    */
-  it("says a checked-in diver has gone blocked, without offering the tap back", () => {
+  it("says a boarded diver has gone blocked, without offering the tap back", () => {
     renderRow({
       bookingStatus: "checked_in",
+      boarded: true,
       readiness: { status: "blocked", blockers: [{ code: "payment_due" }] },
     });
     expect(screen.getByText("Blocked")).toBeInTheDocument();
-    expect(screen.getByText("Checked in")).toBeInTheDocument();
+    // The word, in the row's quiet meta line with the other facts about the
+    // person rather than in the badge row with the gate — and it is "Boarded",
+    // because "Checked in" would send the staffer to the counter for somebody
+    // who is already at the rail.
+    const boarded = screen.getByText(/Boarded/);
+    expect(boarded).toHaveClass("text-muted");
+    expect(screen.queryByText(/Checked in/)).not.toBeInTheDocument();
     expect(screen.getByText("Payment is outstanding for this trip.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Undo check-in / })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Check in / })).not.toBeInTheDocument();
+  });
+
+  /**
+   * The second of the three, kept beside the first: a diver standing at the
+   * counter who has gone blocked is work to do while they wait, and the row
+   * must not promote them to the boat.
+   */
+  it("says a diver who only reached the counter is checked in", () => {
+    renderRow({
+      bookingStatus: "checked_in",
+      boarded: false,
+      readiness: { status: "blocked", blockers: [{ code: "payment_due" }] },
+    });
+    expect(screen.getByText(/Checked in/)).toHaveClass("text-muted");
+    expect(screen.queryByText(/Boarded/)).not.toBeInTheDocument();
   });
 
   it("keeps the diver's record as a door and shows every reason it has", () => {
@@ -250,25 +284,31 @@ describe("an unblocked row", () => {
     expect(screen.getByRole("button", { name: "Check in Nadia Petrov" })).toBeInTheDocument();
   });
 
-  it("wears the drawn check and the state in words once settled", () => {
+  /**
+   * **A settled row restates nothing the group above it already says.** It is
+   * one receipt inside "Checked in — 5 · all boarded", so the drawn mark and
+   * its two words were the same statement printed once per row (principle 9).
+   * The tap is untouched and still names itself — that accessible name is what
+   * a screen reader and `e2e/check-in.spec.ts` read, and the trailing slot was
+   * `aria-hidden` even when it drew.
+   */
+  it("keeps the undo as the row's own tap, without restating the group's state", () => {
     const { container } = renderRow({ bookingStatus: "checked_in" });
     expect(screen.getByRole("button", { name: "Undo check-in for Nadia Petrov" })).toBeVisible();
-    expect(screen.getByText("Checked in")).toBeInTheDocument();
-    // Drawn, never an emoji — the mark is an SVG the shared component draws.
-    expect(container.querySelector("svg")).not.toBeNull();
+    expect(screen.queryByText("Checked in")).not.toBeInTheDocument();
+    // No emoji arrived in the drawn mark's place either.
     expect(container.textContent).not.toMatch(/[☑✅\uD83C-\uDBFF]/u);
   });
 
   /**
-   * **A settled row still says who this is.** It carried the bare name for one
-   * release, which dropped the Boarded badge from the case that actually
-   * happens — boarding is recorded at the rail *after* counter check-in, so
-   * `boarded && checked_in` is the ordinary path (task 149) — along with the
-   * contact gap and the first visit. At the rail that also left the undo
-   * sitting on a row that no longer said the diver was aboard, which is the one
-   * fact a crew member correcting a mis-tap needs.
+   * **A settled row still says who this is** — everything that singles this
+   * person out from the four receipts around them. What it no longer repeats is
+   * the fact they all share: boarding is recorded at the rail *after* counter
+   * check-in, so `boarded && checked_in` is the ordinary path (task 149) and
+   * the pill printed identically on every line. It is stated once in the
+   * group's header now (`CounterQueue`).
    */
-  it("keeps the badges and the quiet facts once the row has settled", () => {
+  it("keeps the quiet facts once the row has settled, and drops the shared one", () => {
     renderRow({
       bookingStatus: "checked_in",
       boarded: true,
@@ -276,7 +316,7 @@ describe("an unblocked row", () => {
       firstVisit: true,
     });
     const undo = screen.getByRole("button", { name: "Undo check-in for Nadia Petrov" });
-    expect(undo).toHaveTextContent("Boarded");
+    expect(undo).not.toHaveTextContent("Boarded");
     expect(undo).toHaveTextContent("No emergency contact");
     expect(undo).toHaveTextContent("First visit");
   });

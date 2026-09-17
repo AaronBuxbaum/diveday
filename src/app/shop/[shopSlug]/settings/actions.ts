@@ -120,6 +120,14 @@ import { uuidParam } from "@/lib/uuid";
  *
  * The notice codes are matched by `noticeMessages()` in `SettingsPage.tsx` and
  * the section ids by its `SECTION_IDS` — a new action here needs a row in both.
+ *
+ * **Four editors answer on a page of their own**, not in a hub row: boats,
+ * kinds of day, seasons and events, and dive packages. Their actions still live
+ * here, beside the ones they share validation and vocabulary with, but they
+ * name `page` rather than `settings` and carry no `?saved=` — there is no row
+ * to reopen, and the page's own banner renders the code
+ * (`./sub-page-notices.ts`). A refusal from `settingsBlock` still lands on the
+ * hub, which is where a staffer who may not manage the shop can read why.
  * -------------------------------------------------------------------------- */
 
 /**
@@ -463,7 +471,7 @@ export async function saveFlySafeHoursAction(formData: FormData) {
  */
 export async function createDivePackageAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "dive-packages");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
   const db = await getDb();
@@ -482,14 +490,14 @@ export async function createDivePackageAction(formData: FormData) {
     validUntil: validUntilRaw === "" ? null : validUntilRaw,
   });
   if (!validated.ok) {
-    redirect(noticeUrl(settings, "package-invalid", { saved: "divePackages" }));
+    redirect(noticeUrl(page, "package-invalid"));
   }
   await createDivePackage(db, {
     shopId: session.user.shopId,
     createdByPersonId: session.user.personId,
     ...validated.value,
   });
-  revalidateAndRedirect(settings, noticeUrl(settings, "package-saved", { saved: "divePackages" }));
+  revalidateAndRedirect(page, noticeUrl(page, "package-saved"));
 }
 
 /**
@@ -499,7 +507,7 @@ export async function createDivePackageAction(formData: FormData) {
  */
 export async function deleteDivePackageAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "dive-packages");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
   // `uuidParam`, like `deleteBoatAction` two hundred lines down: a malformed id
@@ -508,15 +516,12 @@ export async function deleteDivePackageAction(formData: FormData) {
   // (`security-reviewer`, issue #706).
   const packageId = uuidParam(String(formData.get("packageId") ?? ""));
   if (!packageId) {
-    redirect(noticeUrl(settings, "package-invalid", { saved: "divePackages" }));
+    redirect(noticeUrl(page, "package-invalid"));
   }
   // Deliberately the same notice whether or not a row matched: a cross-tenant
   // id must not be distinguishable from a real one.
   await deleteDivePackage(await getDb(), session.user.shopId, packageId);
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "package-deleted", { saved: "divePackages" }),
-  );
+  revalidateAndRedirect(page, noticeUrl(page, "package-deleted"));
 }
 
 /** Which gear the shop rents. Unchecked kinds simply drop out of the catalog. */
@@ -1247,7 +1252,7 @@ function boatDescription(formData: FormData): string | null {
 /** Creates a new boat for the shop. */
 export async function createBoatAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "boats");
   await settingsBlock(session);
 
   const name = String(formData.get("name") ?? "").trim();
@@ -1255,19 +1260,19 @@ export async function createBoatAction(formData: FormData) {
   const description = boatDescription(formData);
 
   if (!name || Number.isNaN(capacity) || capacity <= 0) {
-    redirect(noticeUrl(settings, "boat-invalid", { saved: "boats" }));
+    redirect(noticeUrl(page, "boat-invalid"));
   }
 
   const db = await getDb();
   await createBoat(db, session.user.shopId, name, capacity, description);
 
-  revalidateAndRedirect(settings, noticeUrl(settings, "boat-created", { saved: "boats" }));
+  revalidateAndRedirect(page, noticeUrl(page, "boat-created"));
 }
 
 /** Updates an existing boat's name and capacity. */
 export async function updateBoatAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "boats");
   await settingsBlock(session);
 
   const rawBoatId = formData.get("boatId");
@@ -1277,31 +1282,31 @@ export async function updateBoatAction(formData: FormData) {
   const description = boatDescription(formData);
 
   if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0) {
-    redirect(noticeUrl(settings, "boat-invalid", { saved: "boats" }));
+    redirect(noticeUrl(page, "boat-invalid"));
   }
 
   const db = await getDb();
   await updateBoat(db, session.user.shopId, boatId, name, capacity, description);
 
-  revalidateAndRedirect(settings, noticeUrl(settings, "boat-updated", { saved: "boats" }));
+  revalidateAndRedirect(page, noticeUrl(page, "boat-updated"));
 }
 
 /** Deletes a boat from the shop. */
 export async function deleteBoatAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "boats");
   await settingsBlock(session);
 
   const rawBoatId = formData.get("boatId");
   const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
   if (!boatId) {
-    redirect(noticeUrl(settings, "boat-invalid", { saved: "boats" }));
+    redirect(noticeUrl(page, "boat-invalid"));
   }
 
   const db = await getDb();
   await deleteBoat(db, session.user.shopId, boatId);
 
-  revalidateAndRedirect(settings, noticeUrl(settings, "boat-deleted", { saved: "boats" }));
+  revalidateAndRedirect(page, noticeUrl(page, "boat-deleted"));
 }
 
 /**
@@ -1314,26 +1319,26 @@ export async function deleteBoatAction(formData: FormData) {
  */
 export async function createTripLensAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "kinds-of-day");
   await settingsBlock(session);
 
   const name = String(formData.get("name") ?? "")
     .trim()
     .slice(0, LENS_NAME_MAX);
   if (!name) {
-    redirect(noticeUrl(settings, "lens-invalid", { saved: "lenses" }));
+    redirect(noticeUrl(page, "lens-invalid"));
   }
 
   const db = await getDb();
   await createTripLens(db, session.user.shopId, name);
 
-  revalidateAndRedirect(settings, noticeUrl(settings, "lens-created", { saved: "lenses" }));
+  revalidateAndRedirect(page, noticeUrl(page, "lens-created"));
 }
 
 /** Corrects the word a shop wrote. The slug it was published under does not move. */
 export async function updateTripLensAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "kinds-of-day");
   await settingsBlock(session);
 
   const rawLensId = formData.get("lensId");
@@ -1342,31 +1347,31 @@ export async function updateTripLensAction(formData: FormData) {
     .trim()
     .slice(0, LENS_NAME_MAX);
   if (!lensId || !name) {
-    redirect(noticeUrl(settings, "lens-invalid", { saved: "lenses" }));
+    redirect(noticeUrl(page, "lens-invalid"));
   }
 
   const db = await getDb();
   await renameTripLens(db, session.user.shopId, lensId, name);
 
-  revalidateAndRedirect(settings, noticeUrl(settings, "lens-updated", { saved: "lenses" }));
+  revalidateAndRedirect(page, noticeUrl(page, "lens-updated"));
 }
 
 /** Stamps the word and leaves every departure that wore it saying so. */
 export async function deleteTripLensAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "kinds-of-day");
   await settingsBlock(session);
 
   const rawLensId = formData.get("lensId");
   const lensId = typeof rawLensId === "string" ? uuidParam(rawLensId) : null;
   if (!lensId) {
-    redirect(noticeUrl(settings, "lens-invalid", { saved: "lenses" }));
+    redirect(noticeUrl(page, "lens-invalid"));
   }
 
   const db = await getDb();
   await deleteTripLens(db, session.user.shopId, lensId);
 
-  revalidateAndRedirect(settings, noticeUrl(settings, "lens-deleted", { saved: "lenses" }));
+  revalidateAndRedirect(page, noticeUrl(page, "lens-deleted"));
 }
 
 /**
@@ -1400,12 +1405,12 @@ function seasonEventFields(formData: FormData) {
 
 export async function createSeasonEventAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "seasons");
   await settingsBlock(session);
 
   const fields = seasonEventFields(formData);
   if (seasonEventIssues(fields).length > 0) {
-    redirect(noticeUrl(settings, "season-event-invalid", { saved: "seasonEvents" }));
+    redirect(noticeUrl(page, "season-event-invalid"));
   }
 
   const db = await getDb();
@@ -1416,22 +1421,19 @@ export async function createSeasonEventAction(formData: FormData) {
     : null;
   await createSeasonEvent(db, session.user.shopId, { ...fields, lensId });
 
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "season-event-created", { saved: "seasonEvents" }),
-  );
+  revalidateAndRedirect(page, noticeUrl(page, "season-event-created"));
 }
 
 export async function updateSeasonEventAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "seasons");
   await settingsBlock(session);
 
   const rawEventId = formData.get("eventId");
   const eventId = typeof rawEventId === "string" ? uuidParam(rawEventId) : null;
   const fields = seasonEventFields(formData);
   if (!eventId || seasonEventIssues(fields).length > 0) {
-    redirect(noticeUrl(settings, "season-event-invalid", { saved: "seasonEvents" }));
+    redirect(noticeUrl(page, "season-event-invalid"));
   }
 
   const db = await getDb();
@@ -1440,31 +1442,25 @@ export async function updateSeasonEventAction(formData: FormData) {
     : null;
   await updateSeasonEvent(db, session.user.shopId, eventId, { ...fields, lensId });
 
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "season-event-updated", { saved: "seasonEvents" }),
-  );
+  revalidateAndRedirect(page, noticeUrl(page, "season-event-updated"));
 }
 
 /** Stamps the season and leaves the row (ADR 20260820-every-delete-is-soft). */
 export async function deleteSeasonEventAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "seasons");
   await settingsBlock(session);
 
   const rawEventId = formData.get("eventId");
   const eventId = typeof rawEventId === "string" ? uuidParam(rawEventId) : null;
   if (!eventId) {
-    redirect(noticeUrl(settings, "season-event-invalid", { saved: "seasonEvents" }));
+    redirect(noticeUrl(page, "season-event-invalid"));
   }
 
   const db = await getDb();
   await deleteSeasonEvent(db, session.user.shopId, eventId);
 
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "season-event-deleted", { saved: "seasonEvents" }),
-  );
+  revalidateAndRedirect(page, noticeUrl(page, "season-event-deleted"));
 }
 
 /**

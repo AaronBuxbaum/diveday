@@ -21,11 +21,17 @@ import { noticeFromParam } from "@/lib/staff-notices";
  * private field in a public form is a trap, and a diver who has already
  * submitted a review must still be able to reach this.
  *
- * **It is never a quiet door of its own.** The doors below are places to go;
- * this is a second thing to say, and it belongs beside the first one.
+ * **It is the first quiet door, and it renders the door's body only.** The
+ * heading, the disclosure and the closed-at-rest default belong to `Door` in
+ * `AfterState.tsx`. This was a standing section at the review's own weight
+ * until 2026-09-17 — five chips, a textarea and a send button all open beside
+ * the review's five stars, a textarea and a send button, so one page asked one
+ * question twice at equal weight. A complaint is a minority act at a minority
+ * moment, which is what disclosure is for (principle 8).
  *
- * `print:hidden` in full. The record is a logbook page a divemaster signs, and
- * what a diver privately asked the shop to fix is not a fact of the day.
+ * `print:hidden` is the door's. The record is a logbook page a divemaster
+ * signs, and what a diver privately asked the shop to fix is not a fact of the
+ * day.
  *
  * Words come from the bundle and codes from `src/db/recap-pulses.ts`; the five
  * chips are `RECAP_PULSE_CATEGORIES` in the enum's own order, so a sixth
@@ -41,6 +47,21 @@ const PULSE_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMess
   did_not_dive: { tone: "danger", key: "recap.pulseFailed" },
   error: { tone: "danger", key: "recap.pulseFailed" },
 };
+
+/**
+ * Whether `?pulse=` names an outcome this render has to report — which is the
+ * only reason the door above opens on arrival for a diver who has said nothing
+ * yet. Exported rather than letting the caller test the raw param: the param is
+ * attacker-supplied, and `noticeFromParam` is the one thing that decides
+ * whether a value is real. `?pulse=constructor` opens nothing, the same way it
+ * says nothing.
+ */
+export function hasRecapPulseNotice(notice?: string): boolean {
+  // `undefined`, not `null` — `noticeFromParam` returns `undefined` for both a
+  // missing param and an unrecognised one, and a `!== null` test here is true
+  // for every value on earth, which opened the door on arrival for everybody.
+  return noticeFromParam(notice, PULSE_NOTICES) !== undefined;
+}
 
 export function RecapPulse({
   t,
@@ -63,15 +84,16 @@ export function RecapPulse({
   const chosen = new Set(ownPulse?.categories ?? []);
 
   return (
-    <section className="mt-10 print:hidden" aria-labelledby="recap-pulse-heading">
-      <h2 id="recap-pulse-heading" className="text-base font-semibold">
-        {t("recap.pulseHeading")}
-      </h2>
-      {/* Audience and exposure, which is what a person deciding whether to type
-          this actually needs to know (Budget rule 6). The way back is the
-          button below, and it is visible whenever there is something to take
-          back — a sentence describing a button in view earns nothing. */}
-      <p className="mt-1 text-sm text-muted">{t("recap.pulseAudience", { shop: shopName })}</p>
+    <>
+      {/* Who reads it, which is what a person deciding whether to type this
+          actually needs to know (Budget rule 6) and the one thing the door's
+          own summary does not say. It used to carry "Never on your review, and
+          never public" too; the summary says "privately" two lines above, and a
+          sentence restating the heading it sits under is the first deletion
+          (copy-restraint #1). The way back is the button below, and it is
+          visible whenever there is something to take back — a sentence
+          describing a button in view earns nothing. */}
+      <p className="text-base text-muted">{t("recap.pulseAudience", { shop: shopName })}</p>
 
       <form action={action} className="mt-4 flex flex-col gap-3">
         <fieldset className="flex flex-wrap gap-2">
@@ -138,6 +160,6 @@ export function RecapPulse({
           </SubmitButton>
         </form>
       ) : null}
-    </section>
+    </>
   );
 }

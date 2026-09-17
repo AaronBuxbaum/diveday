@@ -169,7 +169,6 @@ export default async function LobbyDisplayPage({
           heading: t("display.world.heading"),
           rowHeading: t("display.world.boatLine.heading"),
           detail: t("display.world.boatLine.detail"),
-          label: t("display.world.boatLine.label"),
           valueOn: t("display.world.boatLine.valueOn"),
           valueOff: t("display.world.boatLine.valueOff"),
           submit: t("display.world.boatLine.submit"),
@@ -195,7 +194,10 @@ export default async function LobbyDisplayPage({
         <h2 id={YEAR_SECTION_ID} className={SECTION_TITLE_CLASS}>
           {t("display.year.heading")}
         </h2>
-        <p className="mt-1 text-sm text-muted">{t("display.year.description")}</p>
+        {/* One caption, naming exactly what leaves — the "The year card, no
+            money on it." line above it restated the heading and then this
+            said it properly. */}
+        <p className="mt-1 text-sm text-muted">{t("display.year.detail")}</p>
         {yearNotice ? (
           <ShopNotice tone={yearNotice.tone} className="mt-4">
             {t(yearNotice.text)}
@@ -217,7 +219,6 @@ export default async function LobbyDisplayPage({
             />
             {t("display.year.label")}
           </label>
-          <p className="text-sm text-muted">{t("display.year.detail")}</p>
           <FieldActions>
             <SubmitButton
               pendingLabel={t("display.year.submitting")}

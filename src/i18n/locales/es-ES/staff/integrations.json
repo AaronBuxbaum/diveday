@@ -1,5 +1,5 @@
 {
-  "eyebrow": "Ajustes / integraciones",
+  "eyebrow": "Ajustes",
   "title": "Integraciones del centro",
   "description": "Conecta los sistemas que deben compartir el catálogo, los registros de dinero o los eventos automáticos de tu centro.",
   "notice": {
@@ -9,7 +9,7 @@
     "sync-complete": "Catálogo de Shopify sincronizado: {count, plural, =0 {nada listo para publicar} one {# producto} other {# productos}}.",
     "test-sent": "Prueba de Zapier entregada.",
     "invalid": "Revisa los datos y elige al menos un evento.",
-    "not-configured": "Esta integración aún no está configurada para esta instancia de DiveDay.",
+    "not-configured": "Esa integración todavía no está disponible.",
     "not-authorized": "Solo un propietario o gerente puede cambiar las integraciones.",
     "failed": "La integración no pudo completar esa solicitud. Inténtalo de nuevo o vuelve a conectarla.",
     "encryption-key-unset": "Esta instancia de DiveDay aún no está preparada para guardar credenciales de forma segura, así que no se guardó nada.",
@@ -31,16 +31,15 @@
     "disconnecting": "Desconectando…",
     "save": "Guardar ajustes",
     "saving": "Guardando…",
-    "notConfigured": "Sin configurar",
-    "comingSoon": "Añade las credenciales del proveedor a esta implementación de DiveDay para activar la conexión.",
     "selectedEvents": "Eventos que enviar",
     "orderCreated": "Se crea un pedido",
     "orderPaid": "Se paga un pedido",
-    "orderRefunded": "Se reembolsa un pedido"
+    "orderRefunded": "Se reembolsa un pedido",
+    "notAvailable": "Todavía no está disponible. Escribe a {email} y la activamos."
   },
   "shopify": {
     "name": "Shopify",
-    "description": "Publica tus alquileres y paquetes con precio de DiveDay como productos de Shopify.",
+    "description": "Publica tus alquileres y paquetes con precio como productos de Shopify.",
     "domainLabel": "Dominio de Shopify",
     "domainPlaceholder": "tu-centro.myshopify.com",
     "domainDescription": "Usa el dominio myshopify.com de tu cuenta. DiveDay solo solicita permiso para escribir productos.",
@@ -52,7 +51,7 @@
   },
   "quickbooks": {
     "name": "QuickBooks Online",
-    "description": "Escribe pedidos pagados y reembolsos como SalesReceipts y RefundReceipts idempotentes.",
+    "description": "Envía los pedidos pagados y los reembolsos a QuickBooks como recibos de venta.",
     "connect": "Conectar QuickBooks",
     "incomeAccountLabel": "ID de cuenta de ingresos",
     "incomeAccountPlaceholder": "p. ej., 79",
@@ -62,7 +61,7 @@
   },
   "xero": {
     "name": "Xero",
-    "description": "Escribe pedidos pagados y reembolsos como transacciones bancarias en tu organización de Xero.",
+    "description": "Envía los pedidos pagados y los reembolsos a Xero como movimientos bancarios.",
     "connect": "Conectar Xero",
     "salesAccountLabel": "Código de cuenta de ventas",
     "salesAccountPlaceholder": "p. ej., 200",
@@ -74,7 +73,7 @@
   },
   "zapier": {
     "name": "Zapier",
-    "description": "Envía eventos de pedidos seleccionados a un Catch Hook de Webhooks by Zapier.",
+    "description": "Envía a un Catch Hook de Zapier los eventos de pedidos que elijas.",
     "webhookLabel": "URL del Catch Hook",
     "webhookPlaceholder": "https://hooks.zapier.com/hooks/catch/…",
     "webhookDescription": "Trata esta URL como una contraseña. DiveDay la cifra y no vuelve a mostrarla después de guardarla.",

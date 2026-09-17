@@ -1,6 +1,5 @@
 {
   "heading": "Seasons and events",
-  "value": "{count, plural, =0 {Nothing on the calendar} =1 {1 season} other {# seasons}}",
   "none": "Nothing on your calendar yet.",
   "live": "Running now",
   "nameLabel": "Name",

@@ -34,34 +34,55 @@ function countOf(marker: string): number {
 }
 
 describe("the thread page's order", () => {
-  it("runs status, spine, party, packing, the rare acts, then the shop", () => {
+  it("runs status, spine, where to go, party, packing, then the rare acts", () => {
     const status = positionOf("<ThreadStatus");
     const spine = positionOf("<ThreadSpine");
+    const arrival = positionOf("<TripArrivalCard");
     const party = positionOf("<PartyClaimPanel");
     const packing = positionOf("<PackingSection");
     const cancel = positionOf("<InlineConfirm");
-    const shop = positionOf("<ShopCard");
 
-    for (const marker of [status, spine, party, packing, cancel, shop]) {
+    for (const marker of [status, spine, arrival, party, packing, cancel]) {
       expect(marker).toBeGreaterThan(-1);
     }
     expect(status).toBeLessThan(spine);
-    expect(spine).toBeLessThan(party);
+    expect(spine).toBeLessThan(arrival);
+    expect(arrival).toBeLessThan(party);
     expect(party).toBeLessThan(packing);
     expect(packing).toBeLessThan(cancel);
-    expect(cancel).toBeLessThan(shop);
   });
 
   /**
-   * **The shop's welcome is said once, at the foot** (issue #1212).
+   * **The shop is said once, in "Where to go"** (2026-09-17 design review).
    *
-   * It rides the shop card the page already ends with rather than opening a
-   * block of its own, and it is passed exactly once — a second `welcome=`
-   * would be the same sentence twice on one thread.
+   * The page used to end on a "Your dive shop" card carrying the address, the
+   * phone, the email and a map link that `TripArrivalCard` had already given
+   * further up — the same four facts twice on one scroll. One card carries
+   * them now, and it is the one the diver opens the page for.
    */
-  it("hands the shop's welcome to the one card that says it", () => {
-    expect(countOf("welcome={")).toBe(1);
-    expect(positionOf("welcome={")).toBeGreaterThan(positionOf("<ShopCard"));
+  it("states the shop's address, contact and map in one card", () => {
+    expect(SOURCE).not.toContain("<ShopCard");
+    expect(countOf("<TripArrivalCard")).toBe(1);
+    // The one map on the page rides that card rather than a second panel.
+    expect(countOf("googleMapEmbedUrl")).toBe(0);
+    expect(countOf("showMap")).toBe(1);
+  });
+
+  /**
+   * **The shop's welcome is said once, and it greets** (issue #1212).
+   *
+   * It used to ride the trailing shop card, which put a first-timer's welcome
+   * *after* the button that releases their seat. It opens the thread now, near
+   * the booked moment, and it is rendered exactly once — a second copy would
+   * be the same sentence twice on one thread.
+   */
+  it("says the shop's welcome once, above the status", () => {
+    expect(countOf("{welcomeNote ?")).toBe(1);
+    expect(countOf("welcomeNote}</p>")).toBe(1);
+    expect(positionOf("{welcomeNote ?")).toBeLessThan(positionOf("<ThreadStatus"));
+    // Only to somebody who has not dived with this shop before: a welcome read
+    // on every thread stops being a welcome.
+    expect(SOURCE).toContain("const welcomeNote = data.firstVisit ?");
   });
 });
 

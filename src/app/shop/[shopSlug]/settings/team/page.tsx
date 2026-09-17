@@ -88,12 +88,19 @@ function noticeMessages(t: StaffTranslator): Record<string, NoticeMessage> {
   };
 }
 
+/**
+ * **Only the exceptional state wears a badge.** Four rows each carrying a green
+ * "Active" is the expected state formatted as information, which is principle
+ * 9's whole subject — the roster's answer to "is this person on?" is that they
+ * are on the roster. An account that is waiting on its invite or switched off
+ * is the fact a reader came for, and `active` is deliberately absent from this
+ * record so a future state has to decide rather than default into a pill.
+ */
 function statusBadge(
   t: StaffTranslator,
-): Record<StaffMember["accountStatus"], { label: string; tone: BadgeTone }> {
+): Record<Exclude<StaffMember["accountStatus"], "active">, { label: string; tone: BadgeTone }> {
   return {
     invited: { label: t("settings.team.statusBadge.invited"), tone: "warning" },
-    active: { label: t("settings.team.statusBadge.active"), tone: "success" },
     disabled: { label: t("settings.team.statusBadge.disabled"), tone: "neutral" },
   };
 }
@@ -222,8 +229,8 @@ function StaffRow({
   timezone: string;
   t: StaffTranslator;
 }) {
-  const status = statusBadge(t)[member.accountStatus];
   const isDisabled = member.accountStatus === "disabled";
+  const status = member.accountStatus === "active" ? null : statusBadge(t)[member.accountStatus];
   const labels = roleLabels(t);
   const held = STAFF_ROLES.filter((role) => member.roles.includes(role));
   const rolesNotice = noticeForForm(notice, TEAM_FORMS.roles(member.personId));
@@ -253,7 +260,7 @@ function StaffRow({
             </p>
           ) : null}
         </div>
-        <Badge tone={status.tone}>{status.label}</Badge>
+        {status ? <Badge tone={status.tone}>{status.label}</Badge> : null}
       </div>
 
       {/* Roles read as words at rest and open in place to be edited; closing
@@ -359,11 +366,13 @@ function StaffRow({
       <div className="mt-4">
         <CompactDisclosureRow
           id={`emergency-contact-${member.personId}`}
-          label={t("settings.team.emergencyContact.summaryEmpty")}
+          label={t("settings.team.emergencyContact.label")}
+          // The label names the fact, the value answers it — the row used to
+          // say "Add an emergency contact" beside "Marisol Reyes (wife)".
           value={
             member.emergencyContactName && member.emergencyContactPhone
               ? member.emergencyContactName
-              : undefined
+              : t("settings.team.emergencyContact.addValue")
           }
           open={Boolean(contactStatus)}
         >
@@ -439,7 +448,17 @@ function StaffRow({
                     ? t("settings.team.staffRow.enableAriaLabel", { name: member.fullName })
                     : t("settings.team.staffRow.disableAriaLabel", { name: member.fullName })
                 }
-                className={buttonClass({ variant: "secondary", size: "sm" })}
+                // Disable is demoted from a standing `secondary`: switching a
+                // colleague off is rare and consequential, and a bordered
+                // button on every one of four cards read as one of the row's
+                // ordinary moves. Ghost weight in the danger hue is the pair
+                // `button.ts` documents for a rare destructive act sitting
+                // among quiet ones. Enable is the recovery from it and keeps
+                // ordinary secondary weight.
+                className={buttonClass({
+                  variant: isDisabled ? "secondary" : "danger-ghost",
+                  size: "sm",
+                })}
               >
                 {isDisabled
                   ? t("settings.team.staffRow.enable")

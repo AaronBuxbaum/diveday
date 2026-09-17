@@ -1,6 +1,5 @@
 {
   "new": {
-    "eyebrow": "Front desk",
     "title": "New order",
     "cancel": "Cancel",
     "notice": {
@@ -47,10 +46,8 @@
     }
   },
   "detail": {
-    "eyebrow": "Front desk",
     "fallbackDescription": "Order",
-    "backToDiver": "Back to diver",
-    "backToOrders": "Back to orders",
+    "diverRecord": "Diver record",
     "raisedOn": "Raised {date}",
     "createdBy": "by {name}",
     "status": {
@@ -167,15 +164,14 @@
     "paymentOps": {
       "sectionLabel": "Payments that need a check",
       "heading": "{count, plural, one {# payment} other {# payments}} we couldn’t confirm. Check them in Stripe.",
-      "detail": "Stripe was asked to do something and the app never confirmed how it went. Check each against the Stripe dashboard and finish it by hand.",
-      "started": "started {date}",
-      "stripeId": "Stripe: {id}",
-      "openTrip": "Open trip",
-      "kind": {
-        "checkout_session": "Checkout",
-        "invoice": "Invoice",
-        "refund": "Refund"
-      }
+      "unfinished": {
+        "checkout_session": "A checkout started {date} and never finished.",
+        "invoice": "An invoice started {date} and never finished.",
+        "refund": "A refund started {date} and never finished.",
+        "other": "A payment started {date} and never finished."
+      },
+      "reference": "Stripe reference",
+      "openTrip": "Open trip"
     },
     "owedRefunds": {
       "sectionLabel": "Refunds you still owe",

@@ -30,7 +30,6 @@ import { FlashParams } from "@/components/FlashParams";
 import { PartyClaimPanel } from "@/components/PartyClaimPanel";
 import { RememberBooker } from "@/components/RememberBooker";
 import { ShelfDoor } from "@/components/ShelfDoor";
-import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripArrivalCard } from "@/components/TripArrivalCard";
@@ -38,7 +37,6 @@ import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { ThreadShell } from "@/components/thread/ThreadShell";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
@@ -94,7 +92,6 @@ import {
   formatTime,
   formatTimeRangeTz,
 } from "@/lib/format";
-import { googleMapEmbedUrl, googleMapsUrl } from "@/lib/maps";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import {
@@ -109,7 +106,6 @@ import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readin
 import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
 import { signRecapToken } from "@/lib/recap-links";
 import { nitroxAvailableOn, nitroxCardWanted, sizeForRentalItem } from "@/lib/rentals";
-import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
   buildThreadSteps,
@@ -786,88 +782,6 @@ function verifiedCancelNotice(paymentStatus: string | null | undefined): DiverMe
   if (paymentStatus === "refunded") return "ready.refundIssued";
   if (paymentStatus === "paid" || paymentStatus === "deposit_paid") return "ready.refundManual";
   return null;
-}
-
-/**
- * Where the diver is actually going, and how to reach the people who will be
- * there — name, street, phone, email, and a map of the front door.
- *
- * This replaces the page's old one-line "Questions? Reach out to {shop}"
- * footer, which named the shop and then left a diver on the morning of a trip
- * to go hunting for the address themselves. Everything is conditional and
- * nothing is guessed: a shop with no address on file renders the contact rows
- * alone, and the map only appears once `shopMapQuery` can build a query that
- * points at a real place (`src/lib/shop-address.ts`).
- */
-function ShopCard({
-  name,
-  contactPhone,
-  contactEmail,
-  address,
-  welcome,
-  t,
-}: {
-  name: string;
-  contactPhone: string | null;
-  contactEmail: string | null;
-  address: ReadyPageData["shop"]["address"];
-  /**
-   * The shop's own welcome to somebody diving with them for the first time
-   * (issue #1212), or nothing. Rendered exactly as typed and uncaptioned, the
-   * way a dive-site briefing renders — never through ICU, never with a label
-   * over it explaining that the shop wrote it.
-   */
-  welcome: string | null;
-  t: DiverTranslator;
-}) {
-  const lines = shopAddressLines(address);
-  const mapQuery = shopMapQuery(name, address);
-  if (lines.length === 0 && !contactPhone && !contactEmail && !welcome) return null;
-  return (
-    // A shell: the map bleeds to the card's edge and the block under it pads
-    // itself, so the card contributes only its chrome.
-    <SectionCard padding="none" className="mt-10 overflow-hidden">
-      {mapQuery ? (
-        <iframe
-          title={t("ready.shopMapTitle", { shop: name })}
-          src={googleMapEmbedUrl(mapQuery)}
-          loading="lazy"
-          referrerPolicy="strict-origin-when-cross-origin"
-          className="block h-48 w-full border-0 bg-surface-sunken sm:h-56"
-        />
-      ) : null}
-      <div className="p-5 sm:p-6">
-        <h2 className={SECTION_TITLE_CLASS}>{t("ready.shopHeading")}</h2>
-        <p className="mt-2 text-base font-medium">{name}</p>
-        {welcome ? <p className="mt-2 text-base">{welcome}</p> : null}
-        {lines.length > 0 ? (
-          <address className="mt-1 text-base text-muted not-italic">
-            {lines.map((line) => (
-              <span key={line} className="block">
-                {line}
-              </span>
-            ))}
-          </address>
-        ) : null}
-        <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-base">
-          {/* gap-y-1 rides in on the className: when a long email wraps under
-              the phone number inside the component's own span, the lines keep
-              the same breathing room the surrounding row declares. */}
-          <ShopContactLinks phone={contactPhone} email={contactEmail} className="gap-y-1" />
-          {mapQuery ? (
-            <a
-              href={googleMapsUrl(mapQuery)}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-primary hover:underline"
-            >
-              {t("site.openMap")}
-            </a>
-          ) : null}
-        </div>
-      </div>
-    </SectionCard>
-  );
 }
 
 /**
@@ -1614,6 +1528,7 @@ export default async function DiverReadinessPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
   const firstName = detail.person.fullName.split(" ")[0] || t("ready.namelessFallback");
+  const welcomeNote = data.firstVisit ? shop.welcomeNote?.trim() || null : null;
   // Every date, time, and relative phrase on this page formats for `locale` —
   // the *negotiated* one. These four used to pass `shop.defaultLocale`
   // straight into the formatter, so a diver reading Spanish prose got the
@@ -2351,6 +2266,19 @@ export default async function DiverReadinessPage({
             title={t("booking.confirmedHeading", { name: firstName })}
           />
         ) : null}
+        {/* **The shop's own welcome** (issue #1212), to somebody who has not
+            dived with them before — a welcome read on every thread stops being
+            a welcome. Rendered exactly as typed and uncaptioned, the way a
+            dive-site briefing renders: never through ICU, never with a label
+            over it explaining that the shop wrote it.
+
+            It greets at the top of the thread now rather than closing it. It
+            used to be the one thing worth keeping in a trailing "Your dive
+            shop" card whose address, phone, email and map link all restated
+            "Where to go" further up the page; that card is gone, and a
+            greeting arriving after the cancel button was never where a welcome
+            belonged. */}
+        {welcomeNote ? <p className="mt-8 text-base">{welcomeNote}</p> : null}
         {spine.setupItem ? (
           // Nothing on this booking is the diver's until the shop finishes its
           // own configuration, so there is no spine and no figure — one
@@ -2432,6 +2360,10 @@ export default async function DiverReadinessPage({
             // — the arrival code itself is never held here, and there is
             // nothing to hand it.
             stopCodeAction={hasArrivalCode ? stopArrivalCodesFromReady.bind(null, token) : null}
+            // The thread's one map, in the one card about where to go. It used
+            // to sit in a trailing "Your dive shop" card that said this card's
+            // address, phone, email and map link over again.
+            showMap
             className="mt-8"
           />
         ) : null}
@@ -2504,16 +2436,6 @@ export default async function DiverReadinessPage({
             </form>
           </section>
         ) : null}
-        <ShopCard
-          name={detail.shop.name}
-          contactPhone={shop.contactPhone}
-          contactEmail={shop.contactEmail}
-          address={shop.address}
-          // Only to somebody who has not dived with this shop before: a
-          // welcome read on every thread stops being a welcome.
-          welcome={data.firstVisit ? shop.welcomeNote?.trim() || null : null}
-          t={t}
-        />
       </ThreadShell>
     </DiverIntlProvider>
   );

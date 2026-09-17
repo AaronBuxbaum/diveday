@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
-import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { pagedCourses, setCourseVisibility } from "@/db/courses";
+import { pagedCourses } from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -37,9 +35,11 @@ export const metadata: Metadata = {
 /**
  * The staff course roster: every course including the hidden ones, as one
  * ledger grouped by agency (ADR 20260827-the-shops-shelves, decision 1 — the
- * library pattern). Each row opens its course's editor; the two list-level
- * acts (Schedule, Hide/Show) ride the row, and the header holds the one door
- * to the diver-facing catalog. Staff-only, like everything else under
+ * library pattern). Each row opens its course's editor; Schedule is the row's
+ * one quiet act, and the header holds the one door to the diver-facing
+ * catalog. Hiding a course from that catalog lives on the course's own editor,
+ * beside Save: it is a rare act, and 55 standing Hide buttons were 55 controls
+ * nobody was reaching for. Staff-only, like everything else under
  * `/shop/**` — that catalog is `/s/[shopSlug]/courses`, which this page used
  * to render as its other half behind a session check (ADR
  * 20260803-public-shop-namespace).
@@ -75,18 +75,6 @@ export default async function CoursesPage({
 
   const locale = await requestLocale(shop.defaultLocale);
   const st = staffTranslator(locale);
-
-  // No redirect: the badge and the act's own verb already show the new state
-  // in place, and a same-page redirect after a form submit resets scroll to
-  // the top, which reads as the page jumping for a one-click toggle.
-  async function visibilityAction(formData: FormData) {
-    "use server";
-    const staff = await requireStaffSession();
-    const courseId = String(formData.get("courseId") ?? "");
-    const visible = formData.get("visible") === "true";
-    if (courseId) await setCourseVisibility(await getDb(), staff.user.shopId, courseId, visible);
-    revalidatePath(`/shop/${staff.user.shopSlug}/courses`);
-  }
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range so a bookmarked page past the end lands on the last real one. The
@@ -135,38 +123,26 @@ export default async function CoursesPage({
     linkLabel: st("courses.list.editSrLabel", { title: course.title }),
     meta: <span className="tabular-nums">{metaLine(course)}</span>,
     ...(course.isActive ? {} : { hiddenLabel: st("courses.list.hidden") }),
-    actions: (
-      <div className="flex max-w-full flex-wrap items-center gap-1">
-        {/* The catalog's whole point is that a course gets taught. This hands
-            the board's add panel (`?course=` opens it with the course
-            preselected and shapes the title) the one fact staff would
-            otherwise re-pick from a dropdown — never a second trip-creation
-            path of its own. */}
-        {canSchedule ? (
-          <Link
-            href={`/shop/${shopSlug}/schedule/board?course=${course.id}`}
-            aria-label={st("courses.list.scheduleSrLabel", { title: course.title })}
-            className={buttonClass({ variant: "ghost", size: "sm" })}
-          >
-            {st("courses.list.schedule")}
-          </Link>
-        ) : null}
-        <form action={visibilityAction}>
-          <input type="hidden" name="courseId" value={course.id} />
-          <input type="hidden" name="visible" value={course.isActive ? "false" : "true"} />
-          <SubmitButton
-            pendingLabel="…"
-            ariaLabel={st("courses.list.hideShowSrLabel", {
-              action: course.isActive ? st("courses.list.hide") : st("courses.list.show"),
-              title: course.title,
-            })}
-            className={buttonClass({ variant: "ghost", size: "sm" })}
-          >
-            {course.isActive ? st("courses.list.hide") : st("courses.list.show")}
-          </SubmitButton>
-        </form>
-      </div>
-    ),
+    // The catalog's whole point is that a course gets taught. This hands the
+    // board's add panel (`?course=` opens it with the course preselected and
+    // shapes the title) the one fact staff would otherwise re-pick from a
+    // dropdown — never a second trip-creation path of its own. It is `link`
+    // weight rather than a button: the row is already a door, and a second
+    // filled control on every one of 20 rows reads as a toolbar the reader has
+    // to map back to its targets (principles §8, §10).
+    ...(canSchedule
+      ? {
+          actions: (
+            <Link
+              href={`/shop/${shopSlug}/schedule/board?course=${course.id}`}
+              aria-label={st("courses.list.scheduleSrLabel", { title: course.title })}
+              className={buttonClass({ variant: "link", size: "sm" })}
+            >
+              {st("courses.list.schedule")}
+            </Link>
+          ),
+        }
+      : {}),
   }));
 
   return (

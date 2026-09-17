@@ -22,6 +22,7 @@
     "notHere": "{count, plural, one {# diver is not here} other {# divers are not here}}"
   },
   "row": {
+    "arrived": "Checked in",
     "firstVisit": "First visit",
     "missingEmergencyContact": "No emergency contact",
     "giftUnclaimed": "A gift from {giver}, not claimed yet",
@@ -52,12 +53,14 @@
   },
   "identity": {
     "trigger": "Confirm this is {name}",
-    "message": "Is the person at the counter {name}? Only do this once you’ve checked it’s the same person, and not someone else with a similar name or a shared email. Confirming hands that diver’s certifications and waiver to this seat, spends any prepaid dives that cover it, and cannot be undone. If it’s someone else, book them under their own email instead.",
+    "message": "Is the person at the counter {name}? Confirming hands that diver’s certifications and waiver to this seat, spends any prepaid dives that cover it, and cannot be undone.",
     "confirm": "Yes, this is them",
     "cancel": "Never mind",
     "confirming": "Confirming…"
   },
   "settledGroup": "Checked in — {count}",
+  "settledAllBoarded": "All boarded",
+  "settledSomeBoarded": "{count} boarded",
   "checkInButton": "Check in",
   "checkInAriaLabel": "Check in {name}",
   "checkingIn": "Checking in…",
@@ -69,7 +72,6 @@
     "release": "Release to sync",
     "refreshing": "Syncing…"
   },
-  "checkedInCheck": "Checked in",
   "undoAriaLabel": "Undo check-in for {name}",
   "undoing": "Undoing…",
   "walkInAction": "Add a walk-in",
@@ -118,10 +120,8 @@
     "noShowCourseRatioFull": "That session is at its instructor-to-student ratio, so that diver can’t go back on it. Assign another instructor first."
   },
   "walkIn": {
-    "eyebrow": "Counter mode",
     "title": "Walk-in",
     "description": "No email required at the counter.",
-    "backToQueue": "Back to check-in",
     "tripLabel": "Which boat?",
     "tripEmpty": "No boats sail in the next day and a half.",
     "tripEmptyAction": "View the schedule",

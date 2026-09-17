@@ -10,7 +10,6 @@ import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { LedgerRow } from "@/components/ui/ledger";
-import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { CheckInQueueRow as QueueRow } from "@/db/check-in";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
@@ -49,8 +48,8 @@ export type CounterWaiverNotice = FormNotice & {
  * **One diver at the counter** — ADR 20260827-clearwater-surface-language,
  * decision 9. The counter inherits the manifest's instrument language ashore:
  * a row at rest is a name and one large tap, a blocked row is a name and its
- * one fix, and a settled row is a drawn mark that has already sunk out of the
- * working list.
+ * one fix, and a settled row is a name that has already sunk out of the
+ * working list under a group header carrying every fact those rows share.
  *
  * Three rules this file exists to hold, all of which a hand-rolled row has
  * broken before:
@@ -58,8 +57,7 @@ export type CounterWaiverNotice = FormNotice & {
  * - **A blocked row never carries a check-in control.** Readiness is the gate;
  *   offering the tap beside the reasons would be offering an act the server
  *   will refuse. The fix is the only control on the row. That holds for a diver
- *   who has *already* checked in and gone blocked since: the row keeps its
- *   drawn mark so nobody re-asks them for a card they handed over, wears the
+ *   who has *already* checked in and gone blocked since: the row wears the
  *   Blocked badge and every reason, and offers the fix rather than an undo —
  *   un-checking somebody does not clear a blocker, and their arrival is a fact
  *   that happened.
@@ -69,10 +67,12 @@ export type CounterWaiverNotice = FormNotice & {
  *   sinking row's `fade-out` rides `has-[button:disabled]` — a CSS reading of
  *   the pending state the button already publishes — so the motion is added
  *   without the mutation learning about it.
- * - **A colour-carried state also carries a word.** The blocked badge says
- *   "Blocked", the settled mark says "Checked in", the contact gap says so in
- *   a neutral badge. The tinted row fills the counter used to wear retire with
- *   the card stack (decision 2): hairlines and ink, not eight fills.
+ * - **A colour-carried state also carries a word, and a row carries one state.**
+ *   The blocked badge says "Blocked", the contact gap says so in a neutral
+ *   badge, and the receipts group's own header says "Checked in — 5 · all
+ *   boarded" once for every row beneath it rather than five times. The tinted
+ *   row fills the counter used to wear retire with the card stack (decision 2):
+ *   hairlines and ink, not eight fills.
  */
 
 /**
@@ -101,15 +101,46 @@ function DiverIdentity({
   name,
   showEmail,
   showFirstVisit,
+  showBoarded = true,
+  showArrived = false,
   t,
 }: {
   row: QueueRow;
   name: React.ReactNode;
   showEmail: boolean;
   showFirstVisit: boolean;
+  /**
+   * **Off wherever something above the row already said it** (principle 9).
+   * The settled group states boarding once in its own header, and a blocked
+   * row's one job is the gate that has closed — "Boarded", "Checked in" and
+   * "Blocked" stacked on one line was three states competing for the staffer
+   * who has to read exactly one of them.
+   */
+  showBoarded?: boolean;
+  /**
+   * **"They are standing here", on a row whose badge is about paperwork.**
+   * Only the blocked branch passes this, and only because the alternative is a
+   * genuine loss: a diver who came through the counter and went blocked since
+   * and a diver who has not turned up at all render the same row otherwise, and
+   * a staffer working the blocked list has to know which of "chase them down",
+   * "fix this while they wait" and "radio the rail" they are looking at. Quiet
+   * text rather than the drawn mark it replaces — how far the diver got
+   * happened, the gate is the work.
+   */
+  showArrived?: boolean;
   t: StaffTranslator;
 }) {
   const meta = [
+    // **Three cases, not two.** A diver who never turned up, one standing at
+    // the counter, and one who already tapped Boarded at the rail and went
+    // blocked since — and the third is a different job from the second: radio
+    // the rail, not work it while they wait. Saying "Checked in" about
+    // somebody who is on the boat sends the staffer to the wrong place.
+    // Still the quiet meta word, never the badge: the gate is what this row
+    // is out here for.
+    showArrived && (row.boarded || row.bookingStatus === "checked_in")
+      ? t(row.boarded ? "checkIn.boardedBadge" : "checkIn.row.arrived")
+      : null,
     showEmail && row.email ? row.email : null,
     // The one instruction the gift row needs, in the quiet slot the row already
     // has for a fact rather than as a second control: the diver in front of the
@@ -130,7 +161,9 @@ function DiverIdentity({
         {name}
         {/* The check-in queue's own description promises this split — check-in
             is arrival, boarding is confirmed on the manifest. */}
-        {row.boarded ? <Badge tone="primary">{t("checkIn.boardedBadge")}</Badge> : null}
+        {row.boarded && showBoarded ? (
+          <Badge tone="primary">{t("checkIn.boardedBadge")}</Badge>
+        ) : null}
         {/* Never a boarding blocker, and worded as the gap rather than as an
             instruction: the diver is standing right there, which is the one
             moment in the day when asking costs nothing. */}
@@ -286,33 +319,34 @@ export function CounterQueueRow({
           sendFailedLabel={t("checkIn.sendFailed")}
           ariaLabel={t("checkIn.undoAriaLabel", { name: row.personName })}
           className="hover:bg-surface-sunken/60"
-          trailing={
-            // The drawn mark, not an emoji (ADR 20260827's accessibility
-            // commitments). Its own `settle-in` deliberately stays silent
-            // here: the row arrives newly mounted in the settled group, so
-            // `SettledCheck`'s first-paint guard sees a mark that was always
-            // settled. The motion of this moment is the row's fade-out sink.
-            <SettledCheck settled label={t("checkIn.checkedInCheck")} className="text-sm" />
-          }
+          // **Nothing in the state slot**, because the group this row lives in
+          // is called "Checked in — 5" and every row under it repeated the
+          // same mark and the same two words (principle 9). The tap is still
+          // the undo and still names itself — `ariaLabel` is "Undo check-in
+          // for …", the accessible name a screen reader and the e2e suite both
+          // read, and the trailing slot was `aria-hidden` even when it drew.
+          // What is left on the row's end is the one act it still has: the
+          // pass.
+          trailing={null}
           pendingTrailing={
             <span className="text-sm font-medium whitespace-nowrap text-muted">
               {t("checkIn.undoing")}
             </span>
           }
         >
-          {/* **A settled row still says who this is.** It carried the bare name
-              for one release, which quietly dropped the Boarded badge from the
-              case that actually happens — boarding is recorded at the rail
-              *after* the counter, so `boarded && checked_in` is the ordinary
-              path (task 149) — along with the contact gap and the first visit.
-              At the rail it also left the undo sitting on a row that no longer
-              said the diver was aboard, which is the one fact a crew member
-              correcting a mis-tap needs. Muted name: the row has sunk, it has
-              not gone silent. */}
+          {/* **A settled row still says who this is** — the contact gap, the
+              first visit, the unclaimed gift, everything that singles this
+              person out from the four receipts around them. What it no longer
+              repeats is the one fact every row in the group shares: boarding
+              is stated once in the group's own header, because `boarded &&
+              checked_in` is the ordinary path after the rail (task 149) and so
+              the pill printed identically on every line. Muted name: the row
+              has sunk, it has not gone silent. */}
           <DiverIdentity
             row={row}
             showEmail={showEmail}
             showFirstVisit={showFirstVisit}
+            showBoarded={false}
             t={t}
             name={<span className="block truncate text-base text-muted">{row.personName}</span>}
           />
@@ -537,6 +571,11 @@ export function CounterQueueRow({
             row={row}
             showEmail={showEmail}
             showFirstVisit={showFirstVisit}
+            // A blocked row says one *state*, and it is the gate — with the
+            // arrival kept as a quiet fact beside the name, where it does not
+            // compete with it. See both props' notes.
+            showBoarded={false}
+            showArrived
             t={t}
             name={
               // Only the blocked row keeps a name link — its job is the fix,
@@ -553,13 +592,15 @@ export function CounterQueueRow({
           />
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          {/* Already through the counter, and blocked since. The mark is the
-              same one the settled group wears, so the row says both facts in
-              the vocabulary the surface already speaks: this diver arrived,
-              and they still cannot board. */}
-          {checkedIn ? (
-            <SettledCheck settled label={t("checkIn.checkedInCheck")} className="text-sm" />
-          ) : null}
+          {/* **One state on a blocked row, and it is the gate.** A diver who
+              came through the counter and has been blocked since used to carry
+              "Boarded", a drawn "Checked in" mark and "Blocked" side by side —
+              three words at three volumes, only one of which anybody on this
+              screen can act on. Boarding belongs to the rail and the manifest
+              (glossary: check-in is not boarding), so it goes; the arrival
+              drops to the quiet meta line beside the name, because a staffer
+              working this list still has to tell "chase them down" from "fix
+              this while they wait". Readiness is why the row is out here. */}
           {/* The one readiness vocabulary and tone (src/i18n/readiness-labels.ts)
               — for a blocked diver the badge is the state. */}
           <Badge tone={readinessStatusTone(row.readiness.status)}>
@@ -621,10 +662,14 @@ function PassDoor({ shopSlug, row, t }: { shopSlug: string; row: QueueRow; t: St
     <RowActionForm action={printPassAction} sendFailedLabel={t("checkIn.sendFailedButton")}>
       <input type="hidden" name="shopSlug" value={shopSlug} />
       <input type="hidden" name="bookingId" value={row.bookingId} />
+      {/* `link` weight, not `ghost`: it is the settled row's one remaining act
+          and the row beside it is a receipt. A filled-looking control repeated
+          down five finished rows is the loudest thing in a group whose whole
+          point is that there is nothing left to do in it. */}
       <SubmitButton
         pendingLabel={t("print.counter.passDoor")}
         ariaLabel={t("print.counter.passDoor")}
-        className={buttonClass({ variant: "ghost", size: "sm" })}
+        className={buttonClass({ variant: "link", size: "sm" })}
       >
         {t("print.counter.passDoor")}
       </SubmitButton>

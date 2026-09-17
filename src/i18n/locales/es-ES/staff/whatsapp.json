@@ -10,7 +10,8 @@
     "untested": "Sin probar todavía",
     "number": "Número emisor",
     "template": "Plantilla de mensaje",
-    "connectedAt": "Conectado"
+    "connectedAt": "Conectado",
+    "unavailableDescription": "Meta todavía está aprobando DiveDay para esto, así que los recordatorios seguirán saliendo por SMS."
   },
   "setup": {
     "heading": "Cómo funciona la conexión",
@@ -47,10 +48,6 @@
     "signup-failed-subscribe": "Tu número se conectó, pero DiveDay no pudo suscribirse a sus actualizaciones de entrega. Presiona Conectar para intentarlo de nuevo.",
     "signup-failed-template": "Tu número se conectó, pero no se pudo enviar la plantilla de mensaje a revisión. Presiona Conectar para intentarlo de nuevo.",
     "waba-already-connected": "Esa cuenta de WhatsApp Business ya está conectada a otro centro de DiveDay, y una cuenta sirve a un solo centro. Desconectarla allí la libera para este."
-  },
-  "comingSoon": {
-    "heading": "Próximamente",
-    "body": "Conectar tu número de WhatsApp pasa por la aprobación de DiveDay por parte de Meta, que está en curso. Nada que hacer todavía: los recordatorios seguirán saliendo por SMS hasta que se apruebe."
   },
   "signup": {
     "connect": "Conectar WhatsApp",

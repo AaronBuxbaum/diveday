@@ -44,8 +44,22 @@ function RadioQuestion({
   // dynamic Boxes and the outcome line learn the same answer.
   return (
     <fieldset className="rounded-lg border border-border bg-surface p-4">
-      <legend className="px-1 text-base font-medium">{question.prompt}</legend>
-      <div className="mt-3 flex gap-3">
+      {/*
+       * Floated on purpose. A `<legend>` that is the first child of a
+       * `<fieldset>` is the *rendered legend*, which the browser draws
+       * straddling the box's top border — on a legal surface that reads as a
+       * rendering bug, and at 390 the question wraps across the border line
+       * twice. The HTML rendering spec exempts a legend whose `float` is not
+       * `none` from that treatment, so it lays out as an ordinary block inside
+       * the box while `<fieldset>`/`<legend>` keep naming the radio group for
+       * assistive technology (`MedicalQuestionnaireFields.test.tsx` asks for
+       * the group by its prompt). The sibling below clears the float so the
+       * fieldset still wraps its own height.
+       */}
+      <legend className="float-left mb-3 w-full p-0 text-base font-medium">
+        {question.prompt}
+      </legend>
+      <div className="clear-both flex gap-3">
         <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
           <input
             type="radio"

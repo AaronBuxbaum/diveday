@@ -1,6 +1,12 @@
 import type { Page } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { acceptAgeAttestation, e2eNow, openSettingsRow, openThreadStep } from "./helpers";
+import {
+  acceptAgeAttestation,
+  e2eNow,
+  openDiverFileGroup,
+  openSettingsRow,
+  openThreadStep,
+} from "./helpers";
 
 async function openWreckTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -24,6 +30,8 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/divers");
     await page.getByRole("searchbox", { name: "Search divers" }).fill("June Park");
     await page.getByRole("link", { name: /June Park/ }).click();
+    // The cards group is a closed door at every width (slice A).
+    await openDiverFileGroup(page, "Certification records");
     await page.getByText("Add certification", { exact: true }).click();
     // One capture form for every card kind now (ADR 20260827-people-not-lists);
     // the card itself is the question, and nitrox is its own option because it

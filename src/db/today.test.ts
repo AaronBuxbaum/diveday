@@ -202,9 +202,12 @@ describe("today's work queue (in-memory PGlite)", () => {
     // blocks no departure.
     expect(row?.urgency).toBe("later");
     expect(row?.href).toBe(`/shop/${shop.slug}/settings#units`);
-    // It names the money, because that is what makes it worth a row — the
-    // currency a diver's card is charged in, not "confirm your units".
-    expect(row?.detail).toContain(shop.currency.toUpperCase());
+    // It names both derived values, because those *are* the question — the
+    // currency a diver's card is charged in and the unit a depth was typed
+    // under, not "confirm your units". They lead the row; the detail is the
+    // one thing left to do about them.
+    expect(row?.subject).toContain(shop.currency.toUpperCase());
+    expect(row?.subject).toMatch(/feet|meters/);
 
     // **Answering it empties the row for good.** The row is derived from the
     // column, not from a dismissal, so there is no state to get stuck.
@@ -830,7 +833,11 @@ describe("today's work queue (in-memory PGlite)", () => {
     for (const action of work.actions) {
       expect(action.href.startsWith(`/shop/${shop.slug}/`)).toBe(true);
       expect(action.actionLabel).toBeTruthy();
-      expect(action.detail).toBeTruthy();
+      // A row's words are its subject plus, where it has one, its detail: the
+      // desk's two counting rows ("3 messages are waiting on an answer") are
+      // their subject alone, so an empty detail is a state rather than a gap
+      // (`TodayAction.detail`, src/lib/today.ts).
+      expect(action.subject).toBeTruthy();
     }
   });
 });
@@ -1415,7 +1422,12 @@ describe("role lens raw material", () => {
       });
       await setTripStatus(db, shop.id, reef.id, "cancelled");
       const t = staffTranslator("en-US");
-      const id = `owed-refund:${seat.booking.id}`;
+      // By kind, not by `owed-refund:<booking>`: a cancelled departure that
+      // owes more than one seat collapses to a single `owed-refunds:<trip>`
+      // row (`collapseOwedRefunds`), and which of the two this fixture
+      // produces depends on how many seats the seeded boat had paid for.
+      const owedRow = (work: Awaited<ReturnType<typeof getTodayWork>>) =>
+        work.actions.find((a) => a.kind === "owed_refund");
 
       // Money that only just changed hands is on the panel but not yet in the
       // queue — Today waits a day so a seat settled minutes before the sweep
@@ -1431,7 +1443,7 @@ describe("role lens raw material", () => {
         "en-US",
         true,
       );
-      expect(sameDay.actions.find((a) => a.id === id)).toBeUndefined();
+      expect(owedRow(sameDay)).toBeUndefined();
 
       // A day later it is in the queue.
       const tomorrow = new Date(nowMs() + 25 * 60 * 60 * 1000);
@@ -1446,21 +1458,22 @@ describe("role lens raw material", () => {
         "en-US",
         true,
       );
-      const row = withFlag.actions.find((a) => a.id === id);
+      const row = owedRow(withFlag);
       expect(row).toBeDefined();
-      expect(row?.kind).toBe("owed_refund");
       expect(row?.urgency).toBe("now");
       expect(row?.dueAt).toBeNull();
-      // The diver is the subject — this is the one platform-health row with a
-      // person waiting on the other end of it.
-      expect(row?.subject).toBe(seat.person.fullName);
+      // The person waiting is named either way — this is the one
+      // platform-health row with somebody on the other end of it. A lone owed
+      // seat makes them the subject; a departure owing several names all of
+      // them in the sentence.
+      expect(`${row?.subject} ${row?.detail}`).toContain(seat.person.fullName);
       // The Guests tab is both where the seat is and where staff mark it
       // refunded once the cash is back in a hand.
       expect(row?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}`);
 
       // And it is opt-in like every other ops alert.
       const withoutFlag = await getTodayWork(db, shop.id, shop.slug, shop.timezone, tomorrow);
-      expect(withoutFlag.actions.find((a) => a.id === id)).toBeUndefined();
+      expect(owedRow(withoutFlag)).toBeUndefined();
     });
 
     it("is tenant-safe: another shop's queue never surfaces this shop's ops alerts", async () => {

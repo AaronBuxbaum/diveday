@@ -127,6 +127,21 @@ export function CounterQueue({
   const settled = rows.filter(isSettledAtCounter);
   const notHere = rows.filter(isNoShowAtCounter);
   const waiting = rows.filter((row) => !counterIsDone(row));
+  /**
+   * **Boarding is the group's fact, not the row's** (principle 9). Five
+   * receipts each wearing an identical "Boarded" pill is the same word printed
+   * five times; what a staffer wants to know is whether the boat has them all.
+   * So it is said once, in the group's own quiet meta slot — and only when it
+   * has something to say: nobody boarded yet renders nothing at all, because
+   * "0 boarded" is an absence formatted as information.
+   */
+  const settledBoarded = settled.filter((row) => row.boarded).length;
+  const boardedMeta =
+    settledBoarded === 0
+      ? undefined
+      : settledBoarded === settled.length
+        ? t("checkIn.settledAllBoarded")
+        : t("checkIn.settledSomeBoarded", { count: settledBoarded });
 
   return (
     <>
@@ -205,6 +220,8 @@ export function CounterQueue({
           as={settledHeadingLevel}
           className="mt-6"
           folded={!settledOpen}
+          // The boat's fact, once, beside the count it belongs to.
+          meta={boardedMeta}
           label={
             // The count rolls on increment, and only its digits do — the words
             // around it are the same statement (ADR

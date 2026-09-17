@@ -1,6 +1,5 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { compassText } from "@/i18n/compass-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -19,7 +18,6 @@ import {
   type TemperatureUnit,
   temperatureInUnit,
 } from "@/lib/temperature-units";
-import { EditDisclosure } from "./EditDisclosure";
 import type { Trip } from "./types";
 
 export function ConditionsSection({
@@ -33,7 +31,6 @@ export function ConditionsSection({
   depthUnit,
   automatedForecast,
   tideLines,
-  embedded = false,
 }: {
   saveAction: (formData: FormData) => void;
   /** This form's own outcome, rendered beside its Publish button. */
@@ -57,8 +54,6 @@ export function ConditionsSection({
    * (issue #1732).
    */
   tideLines?: { site: string; text: string; station?: string | null }[];
-  /** The Trip surface's About panel supplies the outer section chrome. */
-  embedded?: boolean;
 }) {
   const t = staffTranslator(locale);
   // The unit belongs in the label, not as a hint beside it: a crew member
@@ -100,19 +95,13 @@ export function ConditionsSection({
     trip.surfaceConditions,
   ].filter((part): part is string => Boolean(part));
   return (
-    <SectionCard
-      id="conditions"
-      padding={embedded ? "none" : "lg"}
-      title={t("trips.conditions.heading")}
-      className={`${embedded ? "!rounded-none !border-0 !bg-transparent" : ""} scroll-mt-24`}
-    >
-      {/* A hold pauses real bookings, so it must be readable without opening
-          anything — warning ink, not a fact that waits behind the form. */}
-      {trip.conditionsHold ? (
-        <p className="mb-1 text-sm font-medium text-warning-strong">
-          {t("trips.conditions.holdOnSummary")}
-        </p>
-      ) : null}
+    /* The About row above is the heading and the disclosure control, and its
+       value is the crew's own read — including the hold, which used to be
+       restated here in warning ink one line below the row that already said it
+       (`TripAboutSection`, design review 2026-09-17). What is left is what the
+       row's one line cannot hold: the water temperature, when it was published,
+       the model's own outlook and the tide. */
+    <div className="pt-1">
       {published ? (
         <div className="text-sm text-muted">
           {/* No bold lead-in label: it restated the heading one line up at
@@ -227,97 +216,90 @@ export function ConditionsSection({
           ))}
         </ul>
       ) : null}
-      <EditDisclosure
-        label={published ? t("trips.conditions.editPublished") : t("trips.conditions.editEmpty")}
-        open={Boolean(status)}
-      >
-        <form action={saveAction} className="mt-3 flex flex-col gap-5">
-          <label className="flex min-h-11 max-w-2xl items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
-            <input
-              id="conditions-hold"
-              type="checkbox"
-              name="conditionsHold"
-              defaultChecked={trip.conditionsHold}
-              className="mt-1 size-5 accent-current"
-            />
-            <span>
-              <span className="font-semibold">{t("trips.conditions.holdLabel")}</span>
-              <span className="mt-0.5 block text-sm text-muted">
-                {t("trips.conditions.holdDescription")}
-              </span>
+      <form action={saveAction} className="mt-3 flex flex-col gap-5">
+        <label className="flex min-h-11 max-w-2xl items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
+          <input
+            id="conditions-hold"
+            type="checkbox"
+            name="conditionsHold"
+            defaultChecked={trip.conditionsHold}
+            className="mt-1 size-5 accent-current"
+          />
+          <span>
+            <span className="font-semibold">{t("trips.conditions.holdLabel")}</span>
+            <span className="mt-0.5 block text-sm text-muted">
+              {t("trips.conditions.holdDescription")}
             </span>
-          </label>
-          <FieldGrid columns={1} className="max-w-2xl">
-            <Field label={t("trips.conditions.overviewLabel")}>
-              <textarea
-                name="conditionsSummary"
-                rows={2}
-                maxLength={600}
-                defaultValue={trip.conditionsSummary ?? ""}
-                placeholder={t("trips.conditions.overviewPlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-          <FieldGrid columns={3} className="gap-x-5 gap-y-5">
-            <Field label={t("trips.conditions.waterTempLabel", { unit: temperatureUnitLabel })}>
-              <input
-                name="waterTemperature"
-                type="number"
-                min={minEnteredTemperature(temperatureUnit)}
-                max={maxEnteredTemperature(temperatureUnit)}
-                defaultValue={
-                  trip.waterTemperatureC === null
-                    ? ""
-                    : temperatureInUnit(trip.waterTemperatureC, temperatureUnit)
-                }
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("trips.conditions.visibilityLabel", { unit: depthUnitLabel })}>
-              <input
-                name="visibility"
-                type="number"
-                min={0}
-                max={maxEnteredVisibility(depthUnit)}
-                defaultValue={
-                  trip.visibilityMeters === null
-                    ? ""
-                    : depthInUnit(trip.visibilityMeters, depthUnit)
-                }
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("trips.conditions.surfaceNotesLabel")}>
-              <input
-                name="surfaceConditions"
-                maxLength={300}
-                defaultValue={trip.surfaceConditions ?? ""}
-                placeholder={t("trips.conditions.surfaceNotesPlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-          <div className="flex flex-wrap items-center gap-3">
-            <SubmitButton pendingLabel={t("trips.conditions.publishing")} className={buttonClass()}>
-              {t("trips.conditions.publish")}
-            </SubmitButton>
-            <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
-          </div>
-        </form>
-        {published ? (
-          <form action={clearAction} className="mt-1">
-            {/* The rare escape hatch, not a second action of equal weight:
+          </span>
+        </label>
+        <FieldGrid columns={1} className="max-w-2xl">
+          <Field label={t("trips.conditions.overviewLabel")}>
+            <textarea
+              name="conditionsSummary"
+              rows={2}
+              maxLength={600}
+              defaultValue={trip.conditionsSummary ?? ""}
+              placeholder={t("trips.conditions.overviewPlaceholder")}
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
+        <FieldGrid columns={3} className="gap-x-5 gap-y-5">
+          <Field label={t("trips.conditions.waterTempLabel", { unit: temperatureUnitLabel })}>
+            <input
+              name="waterTemperature"
+              type="number"
+              min={minEnteredTemperature(temperatureUnit)}
+              max={maxEnteredTemperature(temperatureUnit)}
+              defaultValue={
+                trip.waterTemperatureC === null
+                  ? ""
+                  : temperatureInUnit(trip.waterTemperatureC, temperatureUnit)
+              }
+              className={controlClass}
+            />
+          </Field>
+          <Field label={t("trips.conditions.visibilityLabel", { unit: depthUnitLabel })}>
+            <input
+              name="visibility"
+              type="number"
+              min={0}
+              max={maxEnteredVisibility(depthUnit)}
+              defaultValue={
+                trip.visibilityMeters === null ? "" : depthInUnit(trip.visibilityMeters, depthUnit)
+              }
+              className={controlClass}
+            />
+          </Field>
+          <Field label={t("trips.conditions.surfaceNotesLabel")}>
+            <input
+              name="surfaceConditions"
+              maxLength={300}
+              defaultValue={trip.surfaceConditions ?? ""}
+              placeholder={t("trips.conditions.surfaceNotesPlaceholder")}
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
+        <div className="flex flex-wrap items-center gap-3">
+          <SubmitButton pendingLabel={t("trips.conditions.publishing")} className={buttonClass()}>
+            {t("trips.conditions.publish")}
+          </SubmitButton>
+          <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
+        </div>
+      </form>
+      {published ? (
+        <form action={clearAction} className="mt-1">
+          {/* The rare escape hatch, not a second action of equal weight:
                 link-weight beside the section's one primary (principle 8). */}
-            <SubmitButton
-              pendingLabel={t("trips.conditions.clearing")}
-              className={buttonClass({ variant: "link" })}
-            >
-              {t("trips.conditions.returnToAutomated")}
-            </SubmitButton>
-          </form>
-        ) : null}
-      </EditDisclosure>
-    </SectionCard>
+          <SubmitButton
+            pendingLabel={t("trips.conditions.clearing")}
+            className={buttonClass({ variant: "link" })}
+          >
+            {t("trips.conditions.returnToAutomated")}
+          </SubmitButton>
+        </form>
+      ) : null}
+    </div>
   );
 }

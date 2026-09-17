@@ -233,28 +233,28 @@
       "shopHero": "Shop cover photo",
       "paymentReceipt": "Imported receipt"
     },
-    "stuckDetail": {
-      "withId": "{kind} stuck since {when} (Stripe: {id}). Check it against the Stripe dashboard.",
-      "withoutId": "{kind} stuck since {when}. Check it against the Stripe dashboard."
-    },
-    "mediaDeletionDetail": "{kind} removed from the app but not yet deleted from storage, queued {when}.",
+    "stuckDetail": "{kind} started {when} and never finished. Check it in the Stripe dashboard.",
+    "mediaDeletionDetail": "Removed from the app, but the file is still stored.",
     "owedRefundDetail": "{amount} for {tripTitle} on {when}. You cancelled the departure and the money couldn’t go back by card. Return it, then mark the seat refunded.",
-    "owedRefundDetailNoAmount": "Owed for {tripTitle} on {when}. You cancelled the departure and no amount was recorded against the payment. Return what they paid, then mark the seat refunded."
+    "owedRefundDetailNoAmount": "Owed for {tripTitle} on {when}. You cancelled the departure and no amount was recorded against the payment. Return what they paid, then mark the seat refunded.",
+    "owedRefundGroupSubject": "{count, plural, one {# refund owed} other {# refunds owed}}",
+    "owedRefundGroupDetail": "{amount} for {tripTitle} on {when}: {names}. You cancelled the departure and the money couldn’t go back by card. Return it, then mark each seat refunded.",
+    "owedRefundGroupDetailNoAmount": "{tripTitle} on {when}: {names}. You cancelled the departure and the money couldn’t go back by card. Return it, then mark each seat refunded."
   },
   "reviewsPending": {
-    "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you",
-    "detail": "Divers wrote about their trips. Publish the good words or hide the rest."
+    "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you"
   },
   "unansweredMessages": {
-    "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer",
-    "detail": "Divers wrote back. Answer from their record, in the channel they used."
+    "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer"
   },
   "seasonEvent": {
     "detail": "Opens {date}."
   },
   "unitsUnconfirmed": {
-    "subject": "Which currency and depth unit does this shop work in?",
-    "detail": "We guessed {currency} from your timezone when you signed up, and nobody has confirmed it. It is what a diver’s card gets charged in."
+    "subject": "{currency} and {depth}, guessed from your timezone",
+    "detail": "Confirm them.",
+    "feet": "feet",
+    "meters": "meters"
   },
   "gear": {
     "overdueDetail": "{unitLabel} was due back {dueOn} and is still out.",

@@ -646,6 +646,97 @@ describe("a course session's recap", () => {
   });
 });
 
+/**
+ * **A door shows only the controls that can do something** (2026-09-17 design
+ * review). The photo door rested on three standing controls — "Add a photo", a
+ * caption box and "Add to my recap" — and two of them could do nothing until a
+ * file existed.
+ *
+ * The reveal is CSS rather than state, so this asserts the wiring the CSS needs
+ * rather than a computed style jsdom does not produce: the file input carries
+ * `required` (which is what makes `:valid` mean "a file is picked"), the
+ * picker sits in the `peer`, and the caption and the submit sit in a `hidden`
+ * sibling that the `peer-has-[input:valid]` variant opens. Doing it without
+ * JavaScript is the point — this picker is deliberately built to work before it
+ * hydrates.
+ */
+describe("the photo door's second and third controls", () => {
+  const photoForm = (container: HTMLElement) =>
+    [...container.querySelectorAll("form")].find((form) =>
+      form.querySelector('input[type="file"]'),
+    );
+
+  it("hides the caption and the submit until a file is picked", () => {
+    const { container } = render(<AfterState {...props()} />);
+    const form = photoForm(container);
+    expect(form).toBeTruthy();
+
+    const file = form?.querySelector('input[type="file"]');
+    expect(file).toBeRequired();
+    // The picker is the peer; the revealed block is its following sibling,
+    // which is the shape `peer-has-*` compiles to (`~ *`).
+    const peer = form?.querySelector(".peer");
+    expect(peer?.contains(file ?? null)).toBe(true);
+
+    const revealed = peer?.nextElementSibling;
+    expect(revealed?.className).toContain("hidden");
+    expect(revealed?.className).toContain("peer-has-[input:valid]:flex");
+    expect(revealed?.querySelector('input[name="caption"]')).toBeTruthy();
+    expect(revealed?.textContent).toContain("recap.addToMyRecap");
+  });
+
+  it("leaves one standing control in the door", () => {
+    const { container } = render(<AfterState {...props()} />);
+    const peer = photoForm(container)?.querySelector(".peer");
+    // Everything else the form offers is behind the pick.
+    expect(peer?.querySelectorAll("input")).toHaveLength(1);
+    expect(peer?.textContent).toContain("recap.addAPhoto");
+  });
+});
+
+/**
+ * **Bring a buddy: the control is the affordance** (2026-09-17 design review).
+ *
+ * The link used to print in full, mono, under a "Your link" caption — the
+ * loudest thing in a block of prose and the one thing nobody reads. It reaches
+ * assistive technology as the button's *description* instead, which is a place
+ * that does not go stale when the button reports "Link copied" back.
+ */
+describe("the buddy link", () => {
+  const url = "https://diveday.test/s/blue-mantis?buddy=abc123";
+
+  it("never prints the URL as page text", () => {
+    const { container } = render(<AfterState {...props({ buddyLinkUrl: url })} />);
+    const visible = [...container.querySelectorAll("*")].filter(
+      (node) => node.children.length === 0 && !node.className.toString().includes("sr-only"),
+    );
+    expect(visible.some((node) => node.textContent?.includes(url))).toBe(false);
+    expect(screen.getByText("recap.buddyCta")).toBeInTheDocument();
+  });
+
+  it("keeps the URL reachable as the control's description, hidden at rest", () => {
+    render(<AfterState {...props({ buddyLinkUrl: url })} />);
+    const button = screen.getByText("recap.buddyCta");
+    const describedBy = button.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    const description = document.getElementById(describedBy as string);
+    expect(description?.textContent).toBe(url);
+    // Hidden from sight, not from assistive technology — and it is the one
+    // element, so the failed state can reveal the very thing the description
+    // already carries.
+    expect(description?.className).toBe("sr-only");
+    // The name is the visible words, so it cannot contradict them when the
+    // button reports back (WCAG 2.5.3).
+    expect(button.getAttribute("aria-label")).toBeNull();
+  });
+
+  it("renders nothing at all without a link to send", () => {
+    render(<AfterState {...props({ buddyLinkUrl: null })} />);
+    expect(screen.queryByText("recap.buddyCta")).toBeNull();
+    expect(screen.queryByText("recap.buddyHeading")).toBeNull();
+  });
+});
+
 describe("the doors stay quiet", () => {
   it("renders no tip door for a shop that cannot take one and has none to report", () => {
     render(<AfterState {...props({ canTip: false, tip: null })} />);
@@ -732,12 +823,50 @@ describe("the dive-day number", () => {
  * #1200). A private field inside a public form is a trap: the diver has no way
  * to tell which half of what they typed the shop will publish. The nesting
  * assertion below is the whole of that rule.
+ *
+ * **And it is shut at rest** (2026-09-17 design review). It stood open at the
+ * review's own weight — five chips, a box and a send button under five stars, a
+ * box and a send button — so one page asked one question twice and the diver
+ * did the triage. It is the first quiet door now, and opens on arrival only
+ * when it already holds something.
  */
 describe("the private pulse", () => {
   const pulseForm = (container: HTMLElement) =>
     [...container.querySelectorAll("form")].find((form) =>
       form.querySelector('input[name="category"]'),
     );
+  const pulseDoor = (container: HTMLElement) =>
+    container.querySelector("[data-recap-door='pulse'] details");
+
+  it("is a door, shut, and the first one under the review", () => {
+    const { container } = render(<AfterState {...props()} />);
+    const door = pulseDoor(container);
+    expect(door).toBeTruthy();
+    expect(door?.hasAttribute("open")).toBe(false);
+    // First of the run: the ask it belongs to is directly above it.
+    expect(container.querySelector("[data-recap-door]")?.getAttribute("data-recap-door")).toBe(
+      "pulse",
+    );
+  });
+
+  it("opens on arrival when the diver already said something", () => {
+    const { container } = render(
+      <AfterState {...props({ ownPulse: { categories: ["boat"], note: null } })} />,
+    );
+    expect(pulseDoor(container)?.hasAttribute("open")).toBe(true);
+  });
+
+  it("opens on arrival to answer a ?pulse= this render has to report", () => {
+    const { container } = render(<AfterState {...props({ params: { pulse: "saved" } })} />);
+    expect(pulseDoor(container)?.hasAttribute("open")).toBe(true);
+  });
+
+  it("stays shut for a ?pulse= it does not recognise", () => {
+    // The param is attacker-supplied, so `noticeFromParam` decides whether it
+    // is real — and a value that says nothing must open nothing either.
+    const { container } = render(<AfterState {...props({ params: { pulse: "constructor" } })} />);
+    expect(pulseDoor(container)?.hasAttribute("open")).toBe(false);
+  });
 
   it("puts its inputs outside the review's own form", () => {
     const { container } = render(<AfterState {...props()} />);

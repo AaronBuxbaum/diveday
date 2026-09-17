@@ -48,9 +48,9 @@ test("a shop's target ratio reaches the departure, and refuses nothing", async (
   await page.goto(`/shop/${SHOP}/trips/${tripId}`);
   await openTripAbout(page);
 
-  // `#crew`, not a heading filter: the conditions panel further down is also a
-  // `<section>` whose text starts "Crew prediction", and a name filter matches
-  // both.
+  // `#crew` by id: the crew region inside the About panel's "Boat & crew" row,
+  // which opens itself while the departure is under target (there is work to
+  // do) and has no heading of its own — the row above it is the heading.
   const crew = page.locator("section#crew");
   await expect(crew).toContainText("Your 1:1 target wants 9 divemasters");
 

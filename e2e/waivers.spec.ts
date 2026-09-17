@@ -1,6 +1,7 @@
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   HELD_SEND_TIMEOUT_MS,
+  openDiverFileGroup,
   openTripFromBoard,
   openTripTab,
   sendWaiverForFirstDiver,
@@ -757,6 +758,9 @@ test("a paper release is recorded from the diver's own record, not just from a d
   // signature are its one row's actions, disclosed together as peers rather
   // than one send button with the rest ranked behind it.
   await expect(page.getByText("Not signed")).toBeVisible();
+  // Every file group is a closed door at every width (slice A), and an unsent
+  // release is not open work.
+  await openDiverFileGroup(page, "Waiver");
   const waiverGroup = page.getByRole("region", { name: "Waiver" });
   await waiverGroup.getByText("Send options", { exact: true }).click();
   await expect(waiverGroup.getByRole("button", { name: "Email waiver" })).toBeVisible();
@@ -777,8 +781,10 @@ test("a paper release is recorded from the diver's own record, not just from a d
     page.getByText("Confirm you reviewed the medical questionnaire", { exact: false }),
   ).toBeVisible();
   // Beside the form that earned it, never a banner at the top of a record this
-  // long (docs/design/forms-and-controls.md).
-  await expect(page.getByText("Not signed")).toBeVisible();
+  // long (docs/design/forms-and-controls.md). Scoped to the group's body: the
+  // door above it carries the same word as its one settled fact, so an
+  // unscoped query now names two elements that both say the truth.
+  await expect(page.locator("#waiver-content").getByText("Not signed")).toBeVisible();
 
   // The refused attestation left the form standing rather than collapsing over
   // its own error: the box is right there to tick.
@@ -789,7 +795,7 @@ test("a paper release is recorded from the diver's own record, not just from a d
   // person-wide: the row's state word flips, and every send route retires
   // because there is nothing left for it to do.
   await expect(page.getByText("Not signed")).toHaveCount(0);
-  await expect(page.getByText(/Good until/)).toBeVisible();
+  await expect(page.locator("#waiver-content").getByText(/Good until/)).toBeVisible();
   await expect(page.getByText("Mark signed on paper")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Email waiver" })).toHaveCount(0);
 
@@ -823,6 +829,7 @@ test("a diver without a booking can receive an independent waiver from their rec
   // The four routes are one row behind the waiver group's "Send options"
   // disclosure (ADR 20260827-people-not-lists): what a record leads with is
   // where the release stands, not four ways to chase it.
+  await openDiverFileGroup(page, "Waiver");
   await page.getByText("Send options", { exact: true }).click();
   // A diver with both an address and a textable number is offered both, beside
   // the link every record always carries.
@@ -861,12 +868,17 @@ test("a diver without a booking can receive an independent waiver from their rec
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {
   await page.goto("/shop/blue-mantis/waivers");
 
-  // The current version is shown under the title, and the release text is
-  // directly editable. The demo shop ships with two superseded wordings
-  // already on file (src/db/seed-waiver-versions.ts), the way a trading shop's
-  // paperwork looks, so its live release is version 3 rather than a bare
-  // version 1.
+  // The current version is shown under the title. The demo shop ships with two
+  // superseded wordings already on file (src/db/seed-waiver-versions.ts), the
+  // way a trading shop's paperwork looks, so its live release is version 3
+  // rather than a bare version 1.
   await expect(page.getByText(/Version 3 ·/)).toBeVisible();
+
+  // The editor is a door, not a standing form: the signed-record log leads the
+  // page and the release opens in place from one control (slice E3-7). Nothing
+  // it does changed — only whether it is open before anybody asked.
+  await expect(page.getByRole("textbox", { name: "Release text" })).toHaveCount(0);
+  await page.getByText("Edit the release").click();
 
   // Editing pre-fills the current text and saves a new version rather than
   // mutating the one divers may already have signed. Title is immutable.
@@ -945,7 +957,9 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
  * one. The version number below is what catches it either way.
  */
 test("saving the release unchanged publishes nothing and says so", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/waivers");
+  // `#release` opens the editor on arrival — the fragment the Settings door
+  // and any bounced-back notice both use.
+  await page.goto("/shop/blue-mantis/waivers#release");
 
   await expect(page.getByText(/Version 3 ·/)).toBeVisible();
 

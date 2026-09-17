@@ -1,5 +1,4 @@
 {
-  "eyebrow": "Cancelación por mal tiempo",
   "confirm": {
     "title": "¿Cancelar por mal tiempo?",
     "lead": "Esto cancela {tripTitle} y envía a cada buceador reservado un solo mensaje: qué pasó, cómo queda su pago y las próximas salidas que ya cumplen sus certificaciones, con enlaces para reservar.",
@@ -9,8 +8,7 @@
     "noDivers": "No hay nadie reservado en esta salida. Llamarla cancela la salida.",
     "departed": "Esta salida ya zarpó, así que no hay nada que cancelar.",
     "button": "Cancelar por mal tiempo",
-    "calling": "Cancelando…",
-    "backToTrip": "Volver a la salida"
+    "calling": "Cancelando…"
   },
   "record": {
     "title": "Cascada de la cancelación",

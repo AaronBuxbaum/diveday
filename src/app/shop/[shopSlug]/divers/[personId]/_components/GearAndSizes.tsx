@@ -152,17 +152,13 @@ export function GearAndSizes({
       id="gear"
       label={t("divers.file.gearHeading")}
       summary={gearSummary}
-      open={Boolean(status)}
+      // A standing can't-fill flag is open work — the crew has to fit this
+      // diver by hand — so the group that carries it opens with the record.
+      open={Boolean(status) || flagged}
       stacked
       className="mt-8"
     >
-      <InsetGroup
-        as="h2"
-        id="gear"
-        label={t("divers.file.gearHeading")}
-        labelClassName="max-sm:hidden"
-        className="scroll-mt-24"
-      >
+      <InsetGroup>
         <FactRow label={t("divers.file.rentsFromUs")}>
           {line.state === "rents"
             ? list.format(line.items.map((item) => rentalItemLabel(t, item.kind)))
@@ -186,10 +182,14 @@ export function GearAndSizes({
             // to `open={false}` cannot be opened by the reader's own tap.
             open={editorOutcome || undefined}
           >
+            {/* Link weight, like the can't-fill door below it: both are forms
+                this group opens on request, and a filled button beside a link
+                would say one of them is the group's action when neither is. */}
             <summary
               className={buttonClass({
-                variant: "secondary",
+                variant: "link",
                 size: "sm",
+                flush: true,
                 className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
               })}
             >
@@ -235,40 +235,65 @@ export function GearAndSizes({
         {/* The H-06 safe fallback: when the shop can't fill a requested size,
             flag the diver for hands-on fitting instead of packing a size they
             never chose. Only ever offered once a fit exists — there is nothing
-            to fall back *from* otherwise. */}
+            to fall back *from* otherwise.
+
+            **Raised on request, answered in the open.** Asking for a hands-on
+            fit is a thing that happens to a minority of divers on the morning
+            the rack is empty, so at rest it is one link-weight control and
+            nothing else; the caption that explained what the flag does to the
+            packing list went with the standing form, because a staffer who has
+            not raised it does not need the mechanism. A flag that *is* up is
+            the opposite — open work the crew has to act on — so it states
+            itself, its note and its one way out. */}
         {profile ? (
-          <form
-            action={setNeedsStaffFitAction.bind(null, shopSlug, personId)}
-            className="px-5 py-4 sm:px-6"
-          >
-            <p className={`font-medium ${flagged ? "text-warning-strong" : ""}`.trim()}>
-              {flagged
-                ? t("divers.rentalFit.flaggedHeading")
-                : t("divers.rentalFit.cantFillHeading")}
-            </p>
-            <p className="mt-1 text-sm text-muted">
-              {flagged ? t("divers.rentalFit.flaggedBody") : t("divers.rentalFit.cantFillBody")}
-            </p>
-            {flagged ? (
-              <>
-                {profile.needsStaffFitNote ? (
-                  <p className="mt-2 text-sm font-medium">{profile.needsStaffFitNote}</p>
-                ) : null}
-                {canOverride ? (
-                  <SubmitButton
-                    pendingLabel={t("divers.rentalFit.clearing")}
-                    className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
-                  >
-                    {t("divers.rentalFit.fitResolved")}
-                  </SubmitButton>
-                ) : (
-                  <p className="mt-3 text-sm text-muted">
-                    {t("divers.rentalFit.clearingRestricted")}
-                  </p>
-                )}
-              </>
-            ) : (
-              <FieldGrid columns={1} className="mt-3">
+          flagged ? (
+            <form
+              action={setNeedsStaffFitAction.bind(null, shopSlug, personId)}
+              className="px-5 py-4 sm:px-6"
+            >
+              <p className="font-medium text-warning-strong">
+                {t("divers.rentalFit.flaggedHeading")}
+              </p>
+              <p className="mt-1 text-sm text-muted">{t("divers.rentalFit.flaggedBody")}</p>
+              {profile.needsStaffFitNote ? (
+                <p className="mt-2 text-sm font-medium">{profile.needsStaffFitNote}</p>
+              ) : null}
+              {canOverride ? (
+                <SubmitButton
+                  pendingLabel={t("divers.rentalFit.clearing")}
+                  className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+                >
+                  {t("divers.rentalFit.fitResolved")}
+                </SubmitButton>
+              ) : (
+                <p className="mt-3 text-sm text-muted">
+                  {t("divers.rentalFit.clearingRestricted")}
+                </p>
+              )}
+              {/* Beside the control that produced it. Flagging and resolving both
+                  answer here rather than inside the size editor's disclosure,
+                  which is a different form and had nothing to do with the tap. */}
+              <DiverFormStatus status={flagOutcome ? status : undefined} className="mt-3" />
+            </form>
+          ) : (
+            <details className="group px-5 py-3 sm:px-6" open={flagOutcome || undefined}>
+              <summary
+                className={buttonClass({
+                  variant: "link",
+                  size: "sm",
+                  flush: true,
+                  className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+                })}
+              >
+                {t("divers.rentalFit.cantFillHeading")}
+                <DisclosureCaret direction="down" className="group-open:rotate-180" />
+              </summary>
+              <FieldGrid
+                as="form"
+                action={setNeedsStaffFitAction.bind(null, shopSlug, personId)}
+                columns={1}
+                className="mt-3"
+              >
                 <Field
                   label={t("divers.rentalFit.whatsShortLabel")}
                   hint={t("divers.rentalFit.optionalHint")}
@@ -289,14 +314,11 @@ export function GearAndSizes({
                   >
                     {t("divers.rentalFit.flagForStaffFit")}
                   </SubmitButton>
+                  <DiverFormStatus status={flagOutcome ? status : undefined} />
                 </FieldActions>
               </FieldGrid>
-            )}
-            {/* Beside the control that produced it. Flagging and resolving both
-                answer here rather than inside the size editor's disclosure,
-                which is a different form and had nothing to do with the tap. */}
-            <DiverFormStatus status={flagOutcome ? status : undefined} className="mt-3" />
-          </form>
+            </details>
+          )
         ) : null}
       </InsetGroup>
     </DiverFileGroupDisclosure>

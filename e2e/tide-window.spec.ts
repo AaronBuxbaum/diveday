@@ -42,10 +42,12 @@ test.describe("the tide window", () => {
     await expect(page.getByText(STAFF_LINE).first()).toBeVisible();
 
     // The departure page carries it beside the crew's own read of the water,
-    // in About's conditions block rather than in the strip that summarises it.
+    // inside About's Conditions row rather than in the one line that
+    // summarises it.
     await page.getByRole("link", { name: REEF_TRIP }).first().click();
     await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
     await openTripAbout(page);
+    await page.getByText(/Write a crew prediction|Edit crew prediction/).click();
     await expect(page.getByText(STAFF_LINE).first()).toBeVisible();
     // And whose water it is (issue #1732). The fleet's fixture station is
     // Carysfort Reef, FL, whatever id is asked for — which is the station the

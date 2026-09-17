@@ -1740,29 +1740,6 @@ details[open]::details-content {
 }
 
 /*
- * Legacy diver-file groups are phone-only disclosures. At the desktop
- * breakpoint their summary disappears and the record's groups must stay in the
- * reading flow even though the native `<details>` element remains closed.
- * Chromium's `::details-content` pseudo-element can keep a closed body
- * content-hidden after the child receives `display: block`, so open the
- * pseudo-element here as well. The child utility above handles the older
- * display-only behavior.
- *
- * `DiverFileGroupDisclosure` marks a group that is meant to stay collapsible on
- * desktop with `diver-file-group--desktop-collapsible`. It keeps the native
- * closed state intact here: the visible summary is its desktop door, and the
- * pseudo-element must not turn the body back on behind it.
- */
-@media (min-width: 40rem) {
-  .diver-file-group:not(.diver-file-group--desktop-collapsible)::details-content {
-    /* biome-ignore lint/complexity/noImportantStyles: desktop must override the UA closed-details rule */
-    content-visibility: visible !important;
-    opacity: 1;
-    translate: 0 0;
-  }
-}
-
-/*
  * **The title folds into the bar** — ADR 20260907-nothing-from-nowhere,
  * decision 5, slice 18e (issue #1422).
  *

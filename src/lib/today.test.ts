@@ -4,11 +4,13 @@ import {
   ACTION_KIND_META,
   assembleDaySpine,
   collapseDiverActions,
+  collapseOwedRefunds,
   diverBlockerAction,
   factOfScaleFor,
   filterActionsForRoles,
   getSeasonalBriefing,
   getTimeOfDayGreeting,
+  type OwedRefundInput,
   primaryBlocker,
   roleLensFor,
   rollCallGapUrgency,
@@ -1013,5 +1015,87 @@ describe("one fact of scale", () => {
         firstBoatOfSeason: true,
       }),
     ).toEqual({ kind: "first_boat", seasonStart: season });
+  });
+});
+/**
+ * **Five refunds owed on one cancelled boat is one job, not five** (ADR
+ * 20260911-clear-the-deck; principle 9). Each row used to repeat "You
+ * cancelled the departure and the money couldn’t go back by card" at equal
+ * weight, so a staffer read one fact five times and the five names were the
+ * only thing that differed.
+ */
+describe("collapseOwedRefunds", () => {
+  const seat = (overrides: Partial<OwedRefundInput> = {}): OwedRefundInput => ({
+    bookingId: "b1",
+    diverName: "Ana Ruiz",
+    tripId: "t1",
+    tripTitle: "Wreck Trip — Spiegel Grove",
+    when: "Tue, Jul 21",
+    amountCents: 13_200,
+    currency: "usd",
+    ...overrides,
+  });
+
+  it("leaves one owed seat exactly as it was: the diver is the row", () => {
+    const [row, ...rest] = collapseOwedRefunds([seat()], "blue-reef", "en-US");
+    expect(rest).toHaveLength(0);
+    expect(row?.id).toBe("owed-refund:b1");
+    expect(row?.subject).toBe("Ana Ruiz");
+    expect(row?.detail).toContain("$132.00");
+    expect(row?.href).toBe("/shop/blue-reef/trips/t1");
+  });
+
+  it("collapses a departure that owes several seats into one row that names them", () => {
+    const rows = collapseOwedRefunds(
+      [
+        seat({ bookingId: "b1", diverName: "Ana Ruiz" }),
+        seat({ bookingId: "b2", diverName: "Ben Cole" }),
+        seat({ bookingId: "b3", diverName: "Cara Diaz" }),
+      ],
+      "blue-reef",
+      "en-US",
+    );
+
+    expect(rows).toHaveLength(1);
+    const row = rows[0];
+    expect(row?.id).toBe("owed-refunds:t1");
+    expect(row?.subject).toBe("3 refunds owed");
+    // The money, the boat and everyone waiting — and the sentence about why it
+    // is owed exactly once.
+    expect(row?.detail).toContain("$396.00");
+    expect(row?.detail).toContain("Ana Ruiz, Ben Cole and Cara Diaz");
+    expect(row?.detail?.match(/You cancelled the departure/g)).toHaveLength(1);
+    expect(row?.href).toBe("/shop/blue-reef/trips/t1");
+  });
+
+  it("keeps one row per departure, never one across boats", () => {
+    const rows = collapseOwedRefunds(
+      [
+        seat({ bookingId: "b1" }),
+        seat({ bookingId: "b2", diverName: "Ben Cole" }),
+        seat({ bookingId: "b3", tripId: "t2", tripTitle: "Night Dive", diverName: "Cara Diaz" }),
+      ],
+      "blue-reef",
+      "en-US",
+    );
+    expect(rows.map((row) => row.id)).toEqual(["owed-refunds:t1", "owed-refund:b3"]);
+  });
+
+  it("states no total when one seat has no amount, or the currencies differ", () => {
+    // A money figure that is quietly short is the one thing this row may never
+    // print: a missing amount is a real recorded state, not a zero.
+    const missing = collapseOwedRefunds(
+      [seat({ bookingId: "b1" }), seat({ bookingId: "b2", amountCents: null })],
+      "blue-reef",
+      "en-US",
+    );
+    expect(missing[0]?.detail).not.toContain("$");
+
+    const mixed = collapseOwedRefunds(
+      [seat({ bookingId: "b1" }), seat({ bookingId: "b2", currency: "eur" })],
+      "blue-reef",
+      "en-US",
+    );
+    expect(mixed[0]?.detail).not.toContain("$");
   });
 });

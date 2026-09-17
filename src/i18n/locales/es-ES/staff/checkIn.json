@@ -22,6 +22,7 @@
     "notHere": "{count, plural, one {# buceador no vino} other {# buceadores no vinieron}}"
   },
   "row": {
+    "arrived": "Registrado",
     "firstVisit": "Primera visita",
     "missingEmergencyContact": "Sin contacto de emergencia",
     "giftUnclaimed": "Un regalo de {giver}, todavía sin reclamar",
@@ -52,12 +53,14 @@
   },
   "identity": {
     "trigger": "Confirmar que es {name}",
-    "message": "¿La persona que está en el mostrador es {name}? Hazlo solo una vez que hayas verificado que es la misma persona y no alguien más con un nombre parecido o un correo compartido. Al confirmar, las certificaciones y la exención de ese buceador pasan a esta plaza, se gasta el paquete de inmersiones que la cubra, y no se puede deshacer. Si es otra persona, resérvale una plaza con su propio correo en lugar de confirmar.",
+    "message": "¿La persona que está en el mostrador es {name}? Al confirmar, las certificaciones y la exención de ese buceador pasan a esta plaza, se gasta el paquete de inmersiones que la cubra, y no se puede deshacer.",
     "confirm": "Sí, es esta persona",
     "cancel": "Mejor no",
     "confirming": "Confirmando…"
   },
   "settledGroup": "Registrados — {count}",
+  "settledAllBoarded": "Todos embarcados",
+  "settledSomeBoarded": "{count, plural, one {# embarcado} other {# embarcados}}",
   "checkInButton": "Registrar",
   "checkInAriaLabel": "Registrar a {name}",
   "checkingIn": "Registrando…",
@@ -69,7 +72,6 @@
     "release": "Suelta para sincronizar",
     "refreshing": "Sincronizando…"
   },
-  "checkedInCheck": "Registrado",
   "undoAriaLabel": "Deshacer el check-in de {name}",
   "undoing": "Deshaciendo…",
   "walkInAction": "Añadir un walk-in",
@@ -118,10 +120,8 @@
     "noShowCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno, así que ese buceador no puede volver a ella. Asigna otro instructor primero."
   },
   "walkIn": {
-    "eyebrow": "Modo mostrador",
     "title": "Walk-in",
     "description": "No hace falta correo en el mostrador.",
-    "backToQueue": "Volver al check-in",
     "tripLabel": "¿Qué barco?",
     "tripEmpty": "No sale ningún barco en el próximo día y medio.",
     "tripEmptyAction": "Ver el calendario",

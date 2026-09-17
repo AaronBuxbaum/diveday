@@ -41,10 +41,12 @@ test("an empty board says when the shop is next doing something, and opens the c
   await expect(page.getByRole("heading", { level: 2, name: "Schedule" })).toHaveCount(0);
 
   // The composer is the page's one primary and it is already open — no
-  // disclosure to find, no chevron to guess at.
+  // disclosure to find, no chevron to guess at. The row's own summary, by the
+  // child combinator: the composer inside it carries a "More details"
+  // disclosure of its own now, and this claim is about the row, not about it.
   const dateRequest = page.locator("#request-a-date");
   await expect(dateRequest.getByRole("heading", { name: "Ask us for a day" })).toBeVisible();
-  await expect(dateRequest.locator("summary")).toHaveCount(0);
+  await expect(page.locator("details#request-a-date > summary")).toHaveCount(0);
 
   // Exactly one composer on the page: the collapsed row in "Other ways we can
   // help" stands down while this one is up, or the same id would render twice.
@@ -84,6 +86,8 @@ test("a board with departures this week says nothing about the off-season", asyn
   await page.goto("/s/blue-mantis");
 
   await expect(page.getByText("Nothing on the water for a while")).toHaveCount(0);
-  // And the ask is back where it belongs: one collapsed row among three.
-  await expect(page.locator("#request-a-date summary")).toBeVisible();
+  // And the ask is back where it belongs: one collapsed row among three. The
+  // row's own summary, by the child combinator: the composer inside it carries
+  // a "More details" disclosure of its own now.
+  await expect(page.locator("details#request-a-date > summary")).toBeVisible();
 });

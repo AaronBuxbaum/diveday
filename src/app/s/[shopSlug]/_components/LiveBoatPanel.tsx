@@ -42,7 +42,7 @@ export function LiveBoatPanel({
   follow?: { href: string; label: string };
 }) {
   return (
-    <SectionCard className="mt-6 max-w-md">
+    <SectionCard className="h-full">
       <div className="flex items-start gap-4">
         <BoatDrift stage={stage}>
           <SiteMark mark="boat" size="sm" ground="tint" coral={false} />

@@ -130,6 +130,84 @@ describe("the Sites row", () => {
 });
 
 /**
+ * **The thread's one map** (2026-09-17 design review).
+ *
+ * It used to sit in a trailing "Your dive shop" card that also restated this
+ * card's address, phone, email and map link. The frame moved here; the card it
+ * came from is gone. It stays opt-in, because `src/lib/maps.ts` deliberately
+ * decides nothing about *whether* a surface should draw a map and this frame is
+ * a third party's — and it yields to the shop's own arrival photo, since two
+ * 16:9 blocks stacked is the card shouting and a photo of the dock answers
+ * "did I find it?" better than a street map does.
+ */
+describe("the map", () => {
+  function mapFrame() {
+    return document.querySelector("iframe");
+  }
+
+  it("draws nothing unless the caller asks", () => {
+    render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" />);
+    expect(mapFrame()).toBeNull();
+  });
+
+  it("draws the meeting point, titled by the place rather than the shop", () => {
+    render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" showMap />);
+    const frame = mapFrame();
+    expect(frame).not.toBeNull();
+    expect(frame?.getAttribute("title")).toBe("Map of Blue Mantis Divers");
+    // The query is the shop's own address, never a guess.
+    expect(frame?.getAttribute("src")).toContain("100%20Ocean%20Drive");
+    // An element's own policy overrides the document's, and the one caller is
+    // `/ready/[token]` — a `TOKEN_ROUTE_PREFIXES` route served under
+    // `Referrer-Policy: no-referrer` because a bearer-token page has no
+    // legitimate cross-origin use for a referrer, origin-only included. A map
+    // embed needs none, so it asks for none.
+    expect(frame?.getAttribute("referrerpolicy")).toBe("no-referrer");
+  });
+
+  it("names a custom meeting point, not the shop behind it", () => {
+    render(
+      <TripArrivalCard
+        shop={shop}
+        trip={{ ...trip, meetingPointLabel: "North Jetty", meetingPointAddress: "12 Dock Road" }}
+        locale="en-US"
+        showMap
+      />,
+    );
+    expect(mapFrame()?.getAttribute("title")).toBe("Map of North Jetty");
+  });
+
+  it("yields to the shop's own arrival photo", () => {
+    render(
+      <TripArrivalCard
+        shop={shop}
+        trip={{ ...trip, arrivalPhotoUrl: "/uploads/dock.jpg" }}
+        locale="en-US"
+        showMap
+      />,
+    );
+    expect(mapFrame()).toBeNull();
+    expect(screen.getByAltText(/Blue Mantis Divers/)).toBeInTheDocument();
+  });
+
+  it("draws nothing where no honest query can be built", () => {
+    render(
+      <TripArrivalCard
+        shop={{
+          ...shop,
+          name: "",
+          address: { street: null, locality: null, region: null, postalCode: null, country: null },
+        }}
+        trip={{ ...trip, meetingPointLabel: null, meetingPointAddress: null }}
+        locale="en-US"
+        showMap
+      />,
+    );
+    expect(mapFrame()).toBeNull();
+  });
+});
+
+/**
  * **The way out of a lost printout** — `stopArrivalCodesFromReady`, issue #1729.
  *
  * The page never shows the code, so the control has to say what it is about on

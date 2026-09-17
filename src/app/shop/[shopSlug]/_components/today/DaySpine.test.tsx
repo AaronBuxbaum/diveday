@@ -1139,7 +1139,12 @@ describe("the evening reading", () => {
     expect(screen.queryByText("0 of 0 back")).toBeNull();
   });
 
-  it("says the plan changed on the station's own meta line, and nothing when it did not", () => {
+  it("says the plan changed as its own sentence on its own line, and nothing when it did not", () => {
+    // **Its own line, and a capital letter.** It used to ride the status line
+    // as a lower-case fragment, which on a station whose status detail is a
+    // full sentence read as one run-on: "No roll call was run… the plan
+    // changed: dive 2 moved to Benwood". The framing is said once, by the
+    // sentence, with the clauses inside it (principle 9).
     renderSpine({
       departures: [],
       evening: evening([
@@ -1150,12 +1155,12 @@ describe("the evening reading", () => {
       ]),
     });
     expect(
-      screen.getByText("the plan changed: dive 2 moved to Benwood, current"),
+      screen.getByText("The plan changed: dive 2 moved to Benwood, current."),
     ).toBeInTheDocument();
 
     cleanup();
     renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
-    expect(screen.queryByText(/the plan changed/)).toBeNull();
+    expect(screen.queryByText(/plan changed/)).toBeNull();
   });
 
   it("renders the open-seats debrief as one row, and nothing at all when the boat filled", () => {
@@ -1597,3 +1602,98 @@ function stationStage(stage: "boarding" | "underway" | "surface" | "heading_in" 
     recordedByName: "Keiko Tanaka",
   };
 }
+
+/**
+ * **The door** — ADR 20260911-clear-the-deck §1, the floor's first row: *a
+ * row's own tap is its only door; a trailing verb, where one exists, is the fix
+ * and nothing else.*
+ *
+ * The home used to end nine rows in "Open crew ›", "Open prep list ›", "Open
+ * guests ›" and six more, each beside the chevron `LedgerRow` already draws for
+ * any row carrying an `href` — nine verbs for nine taps the row itself answers,
+ * on a screen the owner's own read called "way too many buttons". These two
+ * tests are what keeps them from coming back one surface at a time.
+ *
+ * The destination is still *spoken*: it is the stretched overlay's
+ * `aria-label`, which is why each case below looks the row up by that name and
+ * then proves the same words are nowhere on screen.
+ */
+describe("a row that is only a door", () => {
+  /** One of each shape the spine draws: on a station, and at the desk. */
+  const doorRows = [
+    action({
+      id: "crew",
+      kind: "uncrewed_departure",
+      subject: "Two-Tank Reef",
+      aboutDeparture: true,
+      detail: "8 divers are booked and nobody is assigned to supervise this departure.",
+      actionLabel: "Open crew",
+      href: "/shop/blue-mantis/trips/t1#crew",
+      departure: boat("t1"),
+    }),
+    action({
+      id: "prep",
+      kind: "dive_prep",
+      subject: "Two-Tank Reef",
+      aboutDeparture: true,
+      detail: "3 divers still need rental sizes.",
+      actionLabel: "Open prep list",
+      href: "/shop/blue-mantis/trips/t1/prep",
+      departure: boat("t1"),
+    }),
+    action({
+      id: "inbox:unanswered",
+      kind: "unanswered_messages",
+      subject: "3 messages are waiting on an answer",
+      // The desk's counting rows are their subject alone.
+      detail: "",
+      actionLabel: "Open inbox",
+      href: "/shop/blue-mantis/inbox",
+    }),
+  ];
+
+  it("never renders a second link inside a row that is itself a link", () => {
+    // The guard the ADR names. `LedgerRow`'s stretched overlay is the row's
+    // one `<a>`; anything else inside it is a target a finger cannot aim at,
+    // sitting on top of the one it can.
+    const { container } = renderSpine({ actions: doorRows });
+    const overlays = container.querySelectorAll("a.absolute");
+    expect(overlays.length).toBe(doorRows.length);
+    for (const overlay of overlays) {
+      const row = overlay.parentElement;
+      expect(row).not.toBeNull();
+      expect(row?.querySelectorAll("a")).toHaveLength(1);
+      expect(row?.querySelectorAll("button")).toHaveLength(0);
+    }
+  });
+
+  it("ends in its chevron, never in the destination as a word", () => {
+    renderSpine({ actions: doorRows });
+    for (const row of doorRows) {
+      // Spoken, so a reader tabbing through still hears where the row goes…
+      expect(screen.getByRole("link", { name: row.actionLabel })).toHaveAttribute("href", row.href);
+      // …and never drawn, because the row and its chevron already said it.
+      expect(screen.queryByText(row.actionLabel)).toBeNull();
+    }
+  });
+
+  it("keeps the verb where the verb is the fix", () => {
+    // The other half of the rule: a tap with a consequence keeps a real
+    // control, and its words stay on screen.
+    renderSpine({
+      actions: [
+        action({
+          id: "blocker:b1:waiver_not_sent",
+          kind: "waiver",
+          subject: "Priya Sharma",
+          detail: "Waiver not sent.",
+          actionLabel: "Send waiver",
+          href: "/shop/blue-mantis/trips/t1",
+          waiver: { bookingIds: ["b1"] },
+          departure: boat("t1"),
+        }),
+      ],
+    });
+    expect(screen.getByRole("button", { name: "Send waiver" })).toBeInTheDocument();
+  });
+});

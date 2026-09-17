@@ -80,20 +80,16 @@ export type FirstRunChecklistCopy = {
 };
 
 /**
- * The fix on an open step that is not the next one: the destination's name and
- * a chevron, in the row's own type — the same trailing a day-spine row that
- * merely navigates carries.
+ * The fix on the **one** step that cannot be the row itself: Stripe's, whose
+ * anchor has to do a full navigation (see its row below). The destination's
+ * name and a chevron, in the row's own type.
  *
- * `hidden` for a row whose whole surface is the link: the stretched overlay
- * already carries the destination's name, so repeating it here would read it
- * twice.
+ * Every other open step ends in nothing at all — the row is the door, and
+ * `LedgerRow` draws that chevron itself (ADR 20260911-clear-the-deck).
  */
-function StepDoorLabel({ label, hidden = false }: { label: string; hidden?: boolean }) {
+function StepDoorLabel({ label }: { label: string }) {
   return (
-    <span
-      aria-hidden={hidden || undefined}
-      className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary"
-    >
+    <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
       {label}
       <DiveDayIcon name="chevron-right" className="size-4" />
     </span>
@@ -142,9 +138,13 @@ function ChecklistStep({
           >
             {actionLabel}
           </Link>
-        ) : (
-          <StepDoorLabel label={actionLabel} hidden />
-        )
+        ) : // **Nothing: the row is the door** (ADR 20260911-clear-the-deck,
+        // the floor's first row). This step used to end in its own verb and
+        // its own chevron, beside the chevron `LedgerRow` draws for any row
+        // carrying an `href` — the same verb the stretched overlay below
+        // already names for a screen reader. The one filled control above is
+        // the group's one primary; the rest are rows you press.
+        null
       }
       {...door}
     >

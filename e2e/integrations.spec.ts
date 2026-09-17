@@ -21,7 +21,13 @@ test.describe("shop integrations settings", () => {
     await expect(page.getByRole("heading", { name: "QuickBooks Online" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Xero" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Zapier" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Not configured", exact: true })).toHaveCount(3);
+    // One muted line per provider this deployment has no credentials for, and
+    // no control at all: a pale "Not configured" button read as a disabled
+    // primary a shop could fix by clicking, and nothing here can fix it
+    // (principle 8).
+    await expect(
+      page.getByText(/Not available yet\. Email .+ and we’ll switch it on\./),
+    ).toHaveCount(3);
     await expect(page.getByRole("button", { name: "Connect Zapier" })).toBeVisible();
   });
 

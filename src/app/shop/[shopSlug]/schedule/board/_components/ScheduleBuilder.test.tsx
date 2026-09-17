@@ -71,7 +71,6 @@ const COPY: BuilderCopy = {
   impactBlockedNotScheduled: "A cancelled trip can’t be moved.",
   crewLabel: "Crew:",
   crewNobodyYet: "nobody yet",
-  crewMostlyAll: "Usual crew: {names}.",
   windLabel: "Wind:",
   noPriceSet: "No price set",
   noPriceSetAria: "Set a price for {ref}",
@@ -257,11 +256,18 @@ afterEach(() => {
 });
 
 /**
- * **The crew line, said once** (issue #757). A shop rosters the same two or
- * three people onto nearly everything, so this line printed the identical
- * names on ten of fourteen rows of the seeded board. What is asserted here is
- * both halves: the usual crew moves up, and the rows that differ — above all
- * the one with nobody on it — keep theirs.
+ * **The crew line is printed only where it is the exception** (issue #757). A
+ * shop rosters the same two or three people onto nearly everything, so this
+ * line used to print the identical names on ten of fourteen rows of the seeded
+ * board.
+ *
+ * The standing "Usual crew: …" sentence that once stated those names above the
+ * stream is gone — docs/design/surfaces.md listed it under the board's "Remove
+ * first" from the day the week grid shipped, and the `20260908-one-hand` canvas
+ * deletes it. What survives is the half that does the work: a row running the
+ * board's usual crew says nothing about crew, and every row that still prints
+ * one — above all the one with nobody on it — is by construction the exception
+ * a manager is scanning for.
  */
 describe("ScheduleBuilder crew line", () => {
   function board(trips: { id: string; crew: string[] }[]) {
@@ -294,7 +300,7 @@ describe("ScheduleBuilder crew line", () => {
 
   const USUAL = ["Keiko Tanaka", "Sal Moretti"];
 
-  it("states the usual crew once and drops it from the rows that run with it", () => {
+  it("drops the crew line from the rows that run with the board's usual crew", () => {
     board([
       { id: "t1", crew: USUAL },
       { id: "t2", crew: USUAL },
@@ -302,9 +308,11 @@ describe("ScheduleBuilder crew line", () => {
       { id: "t4", crew: ["Marcus Webb", "Sal Moretti"] },
     ]);
 
-    expect(screen.getByText("Usual crew: Keiko Tanaka, Sal Moretti.")).toBeInTheDocument();
-    // Once, above the list — and nowhere on the three rows it speaks for.
+    // Nowhere on the three rows it speaks for — and, since the standing
+    // "Usual crew: …" sentence went, nowhere above them either: Keiko crews
+    // three of these four departures and her name is not on the screen at all.
     expect(screen.queryByText("Crew: Keiko Tanaka, Sal Moretti")).toBeNull();
+    expect(screen.queryByText(/Keiko Tanaka/)).toBeNull();
     // The one that differs still says who is on it.
     expect(screen.getByText("Crew: Marcus Webb, Sal Moretti")).toBeInTheDocument();
   });
@@ -325,9 +333,9 @@ describe("ScheduleBuilder crew line", () => {
     expect(screen.getByText("nobody yet")).toBeInTheDocument();
   });
 
-  it("hoists nothing when two crews split the board evenly", () => {
-    // 3/3 is not a majority, so there is no "usual" to state — and a header
-    // claiming one would be wrong on half the rows.
+  it("suppresses nothing when two crews split the board evenly", () => {
+    // 3/3 is not a majority, so there is no "usual" — and treating one of them
+    // as the default would silence half the rows.
     board([
       { id: "t1", crew: USUAL },
       { id: "t2", crew: USUAL },
@@ -337,8 +345,8 @@ describe("ScheduleBuilder crew line", () => {
       { id: "t6", crew: ["Marcus Webb", "Sal Moretti"] },
     ]);
 
-    expect(screen.queryByText(/Usual crew/)).toBeNull();
     expect(screen.getAllByText("Crew: Keiko Tanaka, Sal Moretti")).toHaveLength(3);
+    expect(screen.getAllByText("Crew: Marcus Webb, Sal Moretti")).toHaveLength(3);
   });
 
   it("leaves a short board alone, where a per-row line is still the exception", () => {
@@ -347,7 +355,6 @@ describe("ScheduleBuilder crew line", () => {
       { id: "t2", crew: USUAL },
     ]);
 
-    expect(screen.queryByText(/Usual crew/)).toBeNull();
     expect(screen.getAllByText("Crew: Keiko Tanaka, Sal Moretti")).toHaveLength(2);
   });
 });

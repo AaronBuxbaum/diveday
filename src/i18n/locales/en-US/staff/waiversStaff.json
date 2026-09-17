@@ -1,5 +1,6 @@
 {
   "title": "The release",
+  "editRelease": "Edit the release",
   "banner": {
     "savedNew": "Saved as a new version.",
     "savedFirst": "Your waiver is saved.",

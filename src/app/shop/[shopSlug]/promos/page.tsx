@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
@@ -11,6 +12,7 @@ import { UndoToast } from "@/components/UndoToast";
 import type { BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/ledger";
@@ -236,10 +238,18 @@ export default async function PromosPage({
    */
   const codeRows: PromoCodeRow[] = promos.map((promo) => {
     const badge = STATUS_BADGES[promo.status];
-    const switchable = promo.status === "active" || promo.status === "disabled";
+    const group = promoLedgerGroup(promo, now);
+    // **Nothing to switch on a code that is over.** "Switch off" stood on every
+    // row of the Ended shelf, offering to stop something the heading directly
+    // above had already said had stopped — a code past its window, or with its
+    // last redemption spent, is not redeemable whatever this flag says. An
+    // ended code is a record; the shelf it sits on is the whole of what there
+    // is to know about it.
+    const switchable =
+      (promo.status === "active" || promo.status === "disabled") && group !== "ended";
     return {
       id: promo.id,
-      group: promoLedgerGroup(promo, now),
+      group,
       code: promo.code,
       discount: t("promos.discountOff", { percent: promo.discountPercent }),
       ...(badge ? { badge: { tone: badge.tone, word: t(badge.key) } } : {}),
@@ -263,43 +273,47 @@ export default async function PromosPage({
               max: promo.maxRedemptions,
             }),
       ].join(" · "),
-      actions: switchable ? (
-        <form action={setPromoEnabledAction}>
-          <input type="hidden" name="promoId" value={promo.id} />
-          <input type="hidden" name="enable" value={String(promo.status !== "active")} />
-          <SubmitButton
-            pendingLabel={t("promos.saving")}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {promo.status === "active" ? t("promos.switchOff") : t("promos.switchOn")}
-          </SubmitButton>
-        </form>
-      ) : (
-        // `pending` and `failed` are the two states with no Stripe objects
-        // behind them: there is nothing to switch, only to retry or clear.
-        <div className="flex flex-wrap items-center gap-2">
-          {promo.status === "failed" ? (
-            <form action={retryPromoAction}>
-              <input type="hidden" name="promoId" value={promo.id} />
-              <SubmitButton
-                pendingLabel={t("promos.retrying")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("promos.retry")}
-              </SubmitButton>
-            </form>
-          ) : null}
-          <form action={deletePromoAction}>
-            <input type="hidden" name="promoId" value={promo.id} />
-            <SubmitButton
-              pendingLabel={t("promos.deleting")}
-              className={buttonClass({ variant: "danger", size: "sm" })}
-            >
-              {t("promos.delete")}
-            </SubmitButton>
-          </form>
-        </div>
-      ),
+      ...(switchable || promo.status === "pending" || promo.status === "failed"
+        ? {
+            actions: switchable ? (
+              <form action={setPromoEnabledAction}>
+                <input type="hidden" name="promoId" value={promo.id} />
+                <input type="hidden" name="enable" value={String(promo.status !== "active")} />
+                <SubmitButton
+                  pendingLabel={t("promos.saving")}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {promo.status === "active" ? t("promos.switchOff") : t("promos.switchOn")}
+                </SubmitButton>
+              </form>
+            ) : (
+              // `pending` and `failed` are the two states with no Stripe objects
+              // behind them: there is nothing to switch, only to retry or clear.
+              <div className="flex flex-wrap items-center gap-2">
+                {promo.status === "failed" ? (
+                  <form action={retryPromoAction}>
+                    <input type="hidden" name="promoId" value={promo.id} />
+                    <SubmitButton
+                      pendingLabel={t("promos.retrying")}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {t("promos.retry")}
+                    </SubmitButton>
+                  </form>
+                ) : null}
+                <form action={deletePromoAction}>
+                  <input type="hidden" name="promoId" value={promo.id} />
+                  <SubmitButton
+                    pendingLabel={t("promos.deleting")}
+                    className={buttonClass({ variant: "danger", size: "sm" })}
+                  >
+                    {t("promos.delete")}
+                  </SubmitButton>
+                </form>
+              </div>
+            ),
+          }
+        : {}),
     };
   });
 
@@ -357,6 +371,10 @@ export default async function PromosPage({
         <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>
       ) : null}
 
+      {/* **A form that cannot submit does not stand open.** Seven fields sat at
+          rest under a banner saying no code could be created until Stripe was
+          connected — a whole composer for an act the page had just refused. The
+          notice is the only thing here until there is an account behind it. */}
       {connected ? null : (
         <PaymentsConnectCta
           variant="banner"
@@ -370,112 +388,139 @@ export default async function PromosPage({
         />
       )}
 
-      {/* The target the empty state below jumps to — a plain in-page anchor,
-          so nothing re-renders and the form keeps whatever is typed in it. */}
-      <SectionCard
-        id="new-code"
-        className="scroll-mt-24"
-        padding="lg"
-        title={t("promos.newCode.heading")}
-        description={t("promos.newCode.detail")}
-      >
-        <FieldGrid as="form" action={createPromoAction} columns={2}>
-          <Field
-            label={t("promos.fields.code")}
-            hint={t("promos.fields.codeHint")}
-            error={fieldError("code")}
+      {/* **And when it can submit, it is a door rather than a standing form.**
+          Reading the ledger is daily; writing a code is a few times a season,
+          so the seven fields wait behind one `secondary` control and the list
+          leads the page (principle 8, "collapse the rare path").
+
+          `AutoOpenDetails` because the anchor has to keep working from three
+          places: the empty state's own button, a `?notice=` the create action
+          bounced back with a refusal on one of these boxes, and any bookmark of
+          `#new-code`. A client navigation to a fragment never runs the
+          browser's own reveal, so a plain `<details>` would arrive collapsed
+          with the refusal inside it. */}
+      {connected ? (
+        <AutoOpenDetails
+          id="new-code"
+          openOnHash="new-code"
+          open={Boolean(createStatus || noticeField)}
+          className="group/new-code mt-8 scroll-mt-24"
+        >
+          <summary
+            className={`${buttonClass({ variant: "secondary" })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
           >
-            <input
-              name="code"
-              required
-              maxLength={40}
-              placeholder={t("promos.fields.codePlaceholder")}
-              autoComplete="off"
-              className={`${controlClass} uppercase`}
-            />
-          </Field>
-          <Field
-            label={t("promos.fields.discount")}
-            hint={t("promos.fields.discountHint")}
-            error={fieldError("discountPercent")}
-          >
-            <input
-              name="discountPercent"
-              type="number"
-              required
-              min={PROMO_DISCOUNT_MIN}
-              max={PROMO_DISCOUNT_MAX}
-              defaultValue={10}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("promos.fields.goodFor")}>
-            <select name="scope" defaultValue="all" className={controlClass}>
-              {Object.entries(SCOPE_KEYS).map(([value, key]) => (
-                <option key={value} value={value}>
-                  {t(key)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field
-            label={t("promos.fields.redemptionCap")}
-            hint={t("promos.fields.redemptionCapHint")}
-          >
-            <input
-              name="maxRedemptions"
-              type="number"
-              min={1}
-              placeholder={t("promos.fields.redemptionCapPlaceholder")}
-              className={controlClass}
-            />
-          </Field>
-          <Field
-            label={t("promos.fields.starts")}
-            hint={t("promos.fields.startsHint")}
-            error={fieldError("startsAt")}
-          >
-            <input name="startsAt" type="datetime-local" className={controlClass} />
-          </Field>
-          <Field label={t("promos.fields.expires")} hint={t("promos.fields.expiresHint")}>
-            <input name="expiresAt" type="datetime-local" className={controlClass} />
-          </Field>
-          {/* The human zone name, never the raw IANA id — "America/New_York"
+            {t("promos.newCode.heading")}
+            {/* The disclosure caret, not the navigate chevron: which way it
+                points is what says "this opens here" rather than "this leaves"
+                (docs/design/settled-questions.md). */}
+            <DisclosureCaret className="group-open/new-code:rotate-90" />
+          </summary>
+          <SectionCard className="mt-4" padding="lg" description={t("promos.newCode.detail")}>
+            <FieldGrid as="form" action={createPromoAction} columns={2}>
+              <Field
+                label={t("promos.fields.code")}
+                hint={t("promos.fields.codeHint")}
+                error={fieldError("code")}
+              >
+                <input
+                  name="code"
+                  required
+                  maxLength={40}
+                  placeholder={t("promos.fields.codePlaceholder")}
+                  autoComplete="off"
+                  className={`${controlClass} uppercase`}
+                />
+              </Field>
+              <Field
+                label={t("promos.fields.discount")}
+                hint={t("promos.fields.discountHint")}
+                error={fieldError("discountPercent")}
+              >
+                <input
+                  name="discountPercent"
+                  type="number"
+                  required
+                  min={PROMO_DISCOUNT_MIN}
+                  max={PROMO_DISCOUNT_MAX}
+                  defaultValue={10}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("promos.fields.goodFor")}>
+                <select name="scope" defaultValue="all" className={controlClass}>
+                  {Object.entries(SCOPE_KEYS).map(([value, key]) => (
+                    <option key={value} value={value}>
+                      {t(key)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field
+                label={t("promos.fields.redemptionCap")}
+                hint={t("promos.fields.redemptionCapHint")}
+              >
+                <input
+                  name="maxRedemptions"
+                  type="number"
+                  min={1}
+                  placeholder={t("promos.fields.redemptionCapPlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+              <Field
+                label={t("promos.fields.starts")}
+                hint={t("promos.fields.startsHint")}
+                error={fieldError("startsAt")}
+              >
+                <input name="startsAt" type="datetime-local" className={controlClass} />
+              </Field>
+              <Field label={t("promos.fields.expires")} hint={t("promos.fields.expiresHint")}>
+                <input name="expiresAt" type="datetime-local" className={controlClass} />
+              </Field>
+              {/* The human zone name, never the raw IANA id — "America/New_York"
               with its underscore is implementation surfacing (principle 4). */}
-          <p className="-mt-2 text-xs text-muted sm:col-span-2">
-            {t("promos.fields.timezoneHint", { timezone: timeZoneLabel(now, locale, timezone) })}
-          </p>
-          <Field label={t("promos.fields.whatFor")} hint={t("promos.fields.whatForHint")}>
-            <input
-              name="description"
-              maxLength={200}
-              placeholder={t("promos.fields.whatForPlaceholder")}
-              className={controlClass}
-            />
-          </Field>
-          <FieldActions>
-            <SubmitButton pendingLabel={t("promos.creating")} className={buttonClass()}>
-              {t("promos.createCode")}
-            </SubmitButton>
-            <FormStatus tone={createStatus?.tone}>
-              {createStatus ? t(createStatus.key) : undefined}
-            </FormStatus>
-          </FieldActions>
-          {/* Keyed on the notice so an identical repeat refusal still re-fires
+              <p className="-mt-2 text-xs text-muted sm:col-span-2">
+                {t("promos.fields.timezoneHint", {
+                  timezone: timeZoneLabel(now, locale, timezone),
+                })}
+              </p>
+              <Field label={t("promos.fields.whatFor")} hint={t("promos.fields.whatForHint")}>
+                <input
+                  name="description"
+                  maxLength={200}
+                  placeholder={t("promos.fields.whatForPlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+              <FieldActions>
+                <SubmitButton pendingLabel={t("promos.creating")} className={buttonClass()}>
+                  {t("promos.createCode")}
+                </SubmitButton>
+                <FormStatus tone={createStatus?.tone}>
+                  {createStatus ? t(createStatus.key) : undefined}
+                </FormStatus>
+              </FieldActions>
+              {/* Keyed on the notice so an identical repeat refusal still re-fires
               the focus move — the effect is otherwise skipped on a re-render
               that changed nothing it depends on. */}
-          <FieldErrorFocus key={notice} scope="new-code" />
-        </FieldGrid>
-      </SectionCard>
+              <FieldErrorFocus key={notice} scope="new-code" />
+            </FieldGrid>
+          </SectionCard>
+        </AutoOpenDetails>
+      ) : null}
 
       {promos.length === 0 ? (
         <EmptyState
           title={t("promos.empty.heading")}
           body={t("promos.empty.detail")}
+          /* No door to a composer that is not on the page: with Stripe
+             unconnected the banner above is the only next move there is. */
           action={
-            <a href="#new-code" className={buttonClass({ className: "mt-4" })}>
-              {t("promos.empty.action")}
-            </a>
+            connected ? (
+              <a href="#new-code" className={buttonClass({ className: "mt-4" })}>
+                {t("promos.empty.action")}
+              </a>
+            ) : null
           }
           className="mt-8"
         />

@@ -1,5 +1,21 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
+
+/**
+ * **The three rarely-answered asks sit behind "More details"** (2026-09-17):
+ * an alternative date, where the diver is up to, and anything else. Closed at
+ * rest and still part of the form — a `<details>` hides its content without
+ * taking it out of the submission — so a spec that fills one opens it first.
+ *
+ * `page.locator("summary")` rather than a role query: Playwright gives
+ * `<summary>` no implicit role, and the schedule page carries several of them.
+ */
+const openMoreDetails = (page: Page) =>
+  page.locator("summary").filter({ hasText: "More details" }).click();
+
+/** The request row's own disclosure, never the "More details" one inside it. */
+const requestRow = (page: Page) => page.locator("details#request-a-date > summary");
 
 /**
  * Asking for a day that is not on the board, end to end: a diver sends the
@@ -8,8 +24,9 @@ import { signInAsOwner } from "./helpers";
  *
  * The dates are the point of the flow. A request that names one lands in that
  * day's group; the second diver here names the same day as their *alternate*,
- * which keeps both requests in the group while the individual rows retain
- * their preferred/alternate explanation.
+ * which keeps both requests in the group's count — but the record is printed
+ * whole only under the day the diver named first, and the other group holds a
+ * one-line reference linking up to it.
  *
  * The day group owns the count and the act (ADR 20260827-people-not-lists,
  * decision 5), so "how many groups could make the 6th?" is read off that
@@ -32,7 +49,8 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   await expect(
     dateRequest.getByRole("heading", { name: "Nothing on a date that works?" }),
   ).toBeVisible();
-  await dateRequest.locator("summary").click();
+  await requestRow(page).click();
+  await openMoreDetails(page);
 
   // The request is about *something*: with no course in the URL, the form asks,
   // and refuses to send until it is answered.
@@ -50,7 +68,8 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   // A second diver whose *first* choice is the later day — so the earlier
   // group holds them only as a fallback, and the later one as a firm ask.
   await page.goto("/s/blue-mantis");
-  await page.locator("#request-a-date summary").click();
+  await requestRow(page).click();
+  await openMoreDetails(page);
   await page.getByLabel("What would you like to dive?").fill("A shallow reef morning");
   await page.getByLabel("Your email").fill("reef.fan.e2e@example.com");
   await page.getByLabel("Where you are up to").selectOption("lapsed");
@@ -75,13 +94,22 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   // and roughly how many divers that is. No row repeats them.
   await expect(firstDay.getByRole("heading", { level: 2 })).toHaveText(/2 groups · 2 divers/i);
   await expect(firstDay.getByText("Wants to dive: Two dives on the Duane")).toBeVisible();
-  // The group that named the 13th first is here as a fallback, and says so — in
-  // the row's own words rather than in a badge on a tinted card.
-  await expect(firstDay.getByText("Wants to dive: A shallow reef morning")).toBeVisible();
-  await expect(firstDay.getByText(/First choice Mar 13, 2027/)).toBeVisible();
+
+  // The diver who named the 13th first is in this day's count, but their record
+  // is not printed here a second time: the group holds one line pointing at the
+  // day they did name. Printing it whole under both is how five divers came to
+  // appear twice each on one screen, identical down to the phone number.
+  await expect(firstDay.getByText("Wants to dive: A shallow reef morning")).toHaveCount(0);
+  await expect(firstDay.getByRole("link", { name: /First choice Mar 13, 2027/ })).toHaveAttribute(
+    "href",
+    "#date-2027-03-13",
+  );
 
   const secondDay = dayGroup("Mar 13, 2027");
   await expect(secondDay.getByRole("heading", { level: 2 })).toHaveText(/2 groups · 2 divers/i);
+  // And that is where it is printed whole.
+  await expect(secondDay.getByText("Wants to dive: A shallow reef morning")).toBeVisible();
+  await expect(secondDay.getByText("reef.fan.e2e@example.com")).toBeVisible();
 
   // The act the count exists for: the schedule builder, opened on that day.
   await expect(firstDay.getByRole("link", { name: "Add a departure" })).toHaveAttribute(
@@ -92,7 +120,8 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
 
 test("a request with no date at all sits in its own group at the foot", async ({ page }) => {
   await page.goto("/s/blue-mantis");
-  await page.locator("#request-a-date summary").click();
+  await requestRow(page).click();
+  await openMoreDetails(page);
   await page.getByLabel("What would you like to dive?").fill("Whatever runs in October");
   await page.getByLabel("Your phone").fill("+1 305 555 0777");
   await page.getByLabel("Where you are up to").selectOption("never");
@@ -113,6 +142,7 @@ test("a request with no date at all sits in its own group at the foot", async ({
 
 test("a course page's request names the course, and reaches the same list", async ({ page }) => {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
+  await openMoreDetails(page);
   await page.getByLabel("Your email").fill("course.date.e2e@example.com");
   await page.getByLabel("Where you are up to").selectOption("never");
   await page.getByLabel("Preferred date").fill(PREFERRED);
@@ -137,7 +167,8 @@ test("the builder opened from a day's requests reads as finished sentences", asy
   test.setTimeout(45_000);
 
   await page.goto("/s/blue-mantis");
-  await page.locator("#request-a-date summary").click();
+  await requestRow(page).click();
+  await openMoreDetails(page);
   await page.getByLabel("What would you like to dive?").fill("A drift along the wall");
   await page.getByLabel("Your name").fill("Nadia Okonkwo");
   await page.getByLabel("Your email").fill("drift.fan.e2e@example.com");

@@ -11,8 +11,8 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
-  openTripAbout,
   openTripFromBoard,
+  openTripMore,
   openTripTab,
   signOut,
   threadStatus,
@@ -75,7 +75,8 @@ async function expectNoA11yViolations(page: Page) {
   //
   // **What was in flight, from the trace of run 32441820119: nothing.** The
   // page's last network event was the shop-location Google Maps iframe on
-  // `/ready` (`ShopCard`, src/app/ready/[token]/page.tsx) — `GET
+  // `/ready` (`TripArrivalCard`, src/components/TripArrivalCard.tsx; it sat in
+  // a trailing `ShopCard` on the page itself until 2026-09-17) — `GET
   // https://maps.google.com/maps?…&output=embed`, which *this suite's own*
   // `context.route` abort in e2e/fixtures.ts failed 137ms before the wait even
   // started, leaving that child frame committed on `chrome-error://chromewebdata/`.
@@ -109,14 +110,31 @@ async function expectNoA11yViolations(page: Page) {
   // is exact and cannot be a timing guess. Infinite ones are skipped
   // deliberately: `animate-pulse` skeletons and spinners never finish, and
   // waiting on one would hang the scan rather than settle it.
+  //
+  // **So is anything the renderer is not drawing.** An animation on an element
+  // inside a skipped subtree — the body of a closed `<details>`, which
+  // `globals.css` holds at `content-visibility: hidden` — is never ticked to
+  // its end, so its `finished` promise stays pending for the life of the page
+  // even once its play state reads "finished". Measured on the settings hub
+  // the day its rows started landing closed (CI run 35203133939, and 1 in 4
+  // locally under load): the Online-payments row's `rise-in` warning callout,
+  // 200ms long, held this scan for the whole 85s budget. `color-contrast`
+  // never reads an unrendered element either, so nothing is traded away by
+  // not waiting on it. `checkVisibility()` is the one call that answers
+  // "would this be painted" for a skipped subtree as well as for
+  // `display: none`.
   await page.evaluate(() =>
     Promise.all(
       document
         .getAnimations()
-        .filter(
-          (animation) =>
-            animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY,
-        )
+        .filter((animation) => {
+          if (animation.effect?.getComputedTiming().iterations === Number.POSITIVE_INFINITY) {
+            return false;
+          }
+          const target =
+            animation.effect instanceof KeyframeEffect ? animation.effect.target : null;
+          return !(target instanceof Element) || target.checkVisibility();
+        })
         .map((animation) => animation.finished.catch(() => undefined)),
     ).then(() => undefined),
   );
@@ -805,7 +823,7 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     // every booked diver, and the cascade record they work from afterwards.
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, REEF_TRIP);
-    await openTripAbout(page);
+    await openTripMore(page);
     await page.getByRole("link", { name: "Weather blow-out…" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
     await expectNoA11yViolations(page);

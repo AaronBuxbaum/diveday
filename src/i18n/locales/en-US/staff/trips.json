@@ -20,7 +20,6 @@
     "whoCanBook": "Who can book",
     "boatAndCrew": "Boat & crew",
     "repeats": "Repeats",
-    "edit": "Edit",
     "noneSet": "Not set yet",
     "noConditions": "No crew prediction published",
     "noRequirements": "No admission requirements set",
@@ -31,7 +30,8 @@
     "perSeat": "per seat",
     "seatsLabel": "of {capacity, plural, one {# seat} other {# seats}}",
     "openLabel": "open",
-    "cancel": "Cancel this departure"
+    "cancel": "Cancel this departure",
+    "more": "More for this departure"
   },
   "notices": {
     "nextStepSaved": "Next step saved.",
@@ -146,12 +146,11 @@
     "cancelTrip": "Cancel trip",
     "cancelling": "Cancelling…",
     "cancelHint": "Takes it off the public schedule and notifies booked divers.",
+    "cancelConfirm": "Yes, cancel this departure",
     "weatherBlowout": "Weather blow-out…",
-    "weatherBlowoutHint": "Cancel for weather and message every diver their rebooking options.",
     "viewBlowout": "View the blow-out cascade"
   },
   "details": {
-    "heading": "Details",
     "titleLabel": "Title",
     "descriptionLabel": "Description",
     "meetingPointLabelLabel": "Meeting point",
@@ -174,10 +173,7 @@
     "saving": "Saving…",
     "saveChanges": "Save changes",
     "edit": "Edit details",
-    "summaryPrice": "{price} per diver",
     "summaryNoPrice": "No price set, so the booking page shows no fare",
-    "summaryDeposit": "{amount} deposit at booking",
-    "summaryCancellation": "{hours}-hour free cancellation window",
     "arrivalGuidanceLegend": "Arrival guidance",
     "arrivalGuidanceDescription": "Divers read all of this on their trip page.",
     "arrivalLandmarkLabel": "Landmark",
@@ -201,7 +197,6 @@
     "hoursBeforeSuffix": "hours before"
   },
   "conditions": {
-    "heading": "Crew prediction",
     "description": "Replaces the automated marine outlook for divers.",
     "holdLabel": "Conditions hold",
     "holdDescription": "Pause new bookings, publish the final-call state, and email booked divers when delivery is configured.",
@@ -235,6 +230,7 @@
     "noCrew": "No crew to assign yet. Your instructors and divemasters show up here once they’re on the team.",
     "notAssignedYet": "Not yet assigned.",
     "manageShifts": "Manage shifts",
+    "edit": "Edit crew",
     "onShift": "On shift",
     "notOnShift": "Not on a shift",
     "roleAria": "Job {name} is doing on this trip",
@@ -259,7 +255,6 @@
     "emptySummary": "No note yet. Recaps go out without one."
   },
   "requirements": {
-    "heading": "Readiness requirements",
     "courseDescription": "This session keeps the admission rules it was created with. Editing the course later won’t change what enrolled students need.",
     "certOrHigher": "{level} or higher",
     "requireWaiver": "Require a signed waiver",

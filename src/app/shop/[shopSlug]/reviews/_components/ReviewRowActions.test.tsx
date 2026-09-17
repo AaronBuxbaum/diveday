@@ -62,6 +62,7 @@ function bar(reviewId: string, isPublished: boolean) {
       canStandout={false}
       reasons={[{ value: "spam", label: "Spam or a test" }]}
       copy={copy}
+      moreLabel="More for Yara’s review"
     />
   );
 }
@@ -77,6 +78,7 @@ function moderatedBar(isStandout = false) {
         canStandout
         reasons={[{ value: "spam", label: "Spam or a test" }]}
         copy={copy}
+        moreLabel="More for Yara’s review"
       />
     </ReviewRowProvider>
   );
@@ -159,6 +161,46 @@ describe("the review row's responsive actions", () => {
       "whitespace-nowrap",
     );
   });
+
+  /**
+   * **Nothing rare stands on the row.** Hide and the standout toggle used to
+   * sit on every one of twenty published rows; they live behind one disclosure
+   * per row now, and only Publish — the act a waiting row is on the page for —
+   * keeps its own place outside it.
+   */
+  it("keeps Hide and the standout toggle behind one per-row disclosure", () => {
+    const { container } = render(moderatedBar());
+    const details = container.querySelectorAll("details");
+    // The outer disclosure, and the reason picker nested inside it.
+    expect(details).toHaveLength(2);
+    const outer = details[0];
+    if (!outer) throw new Error("the row's disclosure did not render");
+    expect(outer.open).toBe(false);
+    expect(outer.querySelector("summary")).toHaveAttribute("aria-label", "More for Yara’s review");
+    // Both rare acts are inside it; nothing else in the slot is a control.
+    expect(outer.contains(screen.getByRole("button", { name: copy.markStandout }))).toBe(true);
+    expect(outer.contains(screen.getByText(copy.hide))).toBe(true);
+  });
+
+  /** A review the shop already took down offers neither, so it draws no disclosure. */
+  it("draws no disclosure on a hidden row", () => {
+    const { container } = render(
+      <ReviewRowProvider>
+        <ReviewRowActions
+          reviewId={A}
+          isPublished={false}
+          isHidden
+          isStandout={false}
+          canStandout={false}
+          reasons={[{ value: "spam", label: "Spam or a test" }]}
+          copy={copy}
+          moreLabel="More for Yara’s review"
+        />
+      </ReviewRowProvider>,
+    );
+    expect(container.querySelectorAll("details")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: copy.republish })).toBeInTheDocument();
+  });
 });
 
 /**
@@ -169,8 +211,10 @@ describe("the review row's responsive actions", () => {
 describe("the hide's undo toast", () => {
   it("renders above the lists, where the hidden row no longer is", async () => {
     const { rerender } = render(page({ waiting: [], published: [A] }));
-    // The reason picker waits behind a disclosure; the act is the button inside
-    // it (ADR 20260813-review-moderation-has-a-floor).
+    // The rare acts wait behind the row's own disclosure, and the reason picker
+    // behind its own inside that; the act is the button inside them (ADR
+    // 20260813-review-moderation-has-a-floor).
+    await userEvent.click(screen.getByLabelText("More for Yara’s review"));
     await userEvent.click(screen.getByText(copy.hide));
     await userEvent.selectOptions(screen.getByLabelText(copy.hideReasonLabel), "spam");
     await userEvent.click(screen.getByRole("button", { name: copy.hideConfirm }));

@@ -16,6 +16,7 @@ import {
 import { CaptainPhoneFrame, MarketingMockup } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
 import {
   BANNER_TITLE_CLASS,
@@ -473,18 +474,28 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       </section>
 
       {/* The reference index: every shipped capability, set like a spec sheet
-          — group name on the left, terse lines flowing in two columns on the
-          right, hairline rules between groups. No cards, no check marks, and
-          no disclosure: a section headed "the whole list, plainly" that showed
-          a heading, two lines, and a "The full list" link in 350px of empty
-          band was the emptiest thing on the page. Rendering it flat also puts
-          it in find-in-page and in the accessibility tree. It was once out of
-          reach of the localized-body swap that snapped the disclosure shut
-          mid-click as well; that swap is gone (see `ProductPage`), so a
-          disclosure here would be safe again — it is still flat because the
-          band read better this way. */}
+          — one hairline row per group, each row a native disclosure holding
+          that group's terse lines in two columns. No cards and no check marks:
+          the borders that survive are the ones that separate.
+
+          **Closed at rest, since 2026-09-17.** Rendered flat it was ninety-odd
+          one-line claims stacked nine groups deep — 2,900px of the page's
+          9,600, landing after the argument (claim → price → proof → demo door,
+          docs/design/surfaces.md) had already finished. Nobody reads a wall;
+          what a buyer actually does here is look for their own job and count
+          the breadth, and nine named rows carrying their own counts say the
+          breadth in one screen where the wall said it in eight. Every line is
+          still one keystroke away, still in the accessibility tree, and still
+          in the page source for find-in-page (Chromium and Firefox open a
+          closed `<details>` to reveal a match).
+
+          The earlier objection to a disclosure here was a *different* shape:
+          one link reading "The full list" under a heading and two lines, which
+          left 350px of empty band. The group names are the list. It was also
+          once out of reach of the localized-body swap that snapped a
+          disclosure shut mid-click; that swap is gone (see `ProductPage`). */}
       <section className="border-y border-border bg-surface">
-        <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+        <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
               {t("marketing.product.boxEyebrow")}
@@ -493,28 +504,42 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.product.boxTitle")}
             </h2>
             {/* Counted off the registry rather than written down, so the
-                number can never drift from the list printed under it. */}
+                number can never drift from the list under it. */}
             <p className="mt-4 text-lg leading-8 text-muted">
               {t("marketing.product.boxDescription", { count: capabilityCount })}
             </p>
           </div>
           <div className="mt-14">
             {productCapabilityIndex.map((group) => (
-              <section
-                key={group.title}
-                className="grid gap-x-12 gap-y-3 border-t border-border py-8 md:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]"
-              >
-                <h3 className="text-base font-semibold tracking-tight text-balance">
-                  {t(group.title)}
-                </h3>
-                <ul className="gap-x-12 text-sm leading-6 text-muted sm:columns-2">
+              // The row's own count, off the same registry as the lede's total
+              // — it is what a closed row owes the reader, and the one thing
+              // that cannot drift from what opening the row shows.
+              <details key={group.title} className="group border-t border-border">
+                <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-4 sm:gap-6 [&::-webkit-details-marker]:hidden">
+                  {/* A heading inside a `<summary>` (implicit `button` role) is
+                      flattened by some screen readers' heading navigation — the
+                      trade `src/components/ui/disclosure.tsx` documents, taken
+                      here for the same reason: the whole row has to be the
+                      control, and the band still needs its groups in the
+                      outline. */}
+                  <h3 className="text-base font-semibold tracking-tight text-balance">
+                    {t(group.title)}
+                  </h3>
+                  <span className="flex shrink-0 items-center gap-3 text-sm text-muted">
+                    <span className="tabular-nums">
+                      {t("marketing.product.boxGroupCount", { count: group.items.length })}
+                    </span>
+                    <DisclosureCaret direction="down" className="group-open:rotate-180" />
+                  </span>
+                </summary>
+                <ul className="gap-x-12 pb-8 text-sm leading-6 text-muted sm:columns-2">
                   {group.items.map((item) => (
                     <li key={item} className="break-inside-avoid py-1">
                       {t(item)}
                     </li>
                   ))}
                 </ul>
-              </section>
+              </details>
             ))}
             {/* The dare gets a door. This band's lede makes the page's most
                 explicit promise — every one of these lines is something you
@@ -534,7 +559,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
                 closing band names the roles). So the door reads as the list's footer,
                 the way the homepage records band's closing link does: a rule
                 that terminates the hairlines above it, then the pair, at the
-                same left margin as the group rail. No card either — this band
+                same left margin as the group rows. No card either — this band
                 is a spec sheet, and a rounded box at the bottom of it would be
                 the one object in the section that isn't a hairline. */}
             <div className="border-t border-border pt-8">

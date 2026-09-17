@@ -64,6 +64,7 @@ import {
   type NoticeTone,
   noticeFromParam,
   noticeRole,
+  shopPath,
 } from "@/lib/staff-notices";
 import {
   ACTION_KIND_META,
@@ -518,10 +519,6 @@ async function TodayBody({
           now,
         )),
       });
-  const showOrientation =
-    orientationRole !== null &&
-    !showFirstRunChecklist &&
-    !(await isOrientationDismissed(db, session.user.personId));
   // The first departure ever landing on the board is the moment this shop
   // became bookable — and the moment the setup ledger above leaves the page.
   // Exactly then, the created notice grows into a share card so the link worth
@@ -533,6 +530,19 @@ async function TodayBody({
     Boolean(created) &&
     !shop.isDemo &&
     (totalTrips ?? (await countShopTrips(db, shop.id))) === Math.max(seriesCount, 1);
+  // **One orientation moment at a time.** The shop's first-bookable card and
+  // the role orientation are both "you are new here, look at this", and they
+  // used to render one directly beneath the other — a tinted panel with a URL
+  // box and a copy button, and then a tip line under it. The bookable card
+  // happens once in a shop's life and is the better moment, so it wins and the
+  // orientation waits for the next visit (it is dismissed per account, not per
+  // render, so nothing is lost). Placed after `firstBookableMoment` so the
+  // dismissal read is skipped outright on the morning the card is up.
+  const showOrientation =
+    orientationRole !== null &&
+    !showFirstRunChecklist &&
+    !(Boolean(created) && firstBookableMoment) &&
+    !(await isOrientationDismissed(db, session.user.personId));
   const shareOrigin = showFirstRunChecklist || firstBookableMoment ? publicAppUrl() : null;
   const publicScheduleUrl = shareOrigin
     ? new URL(publicSchedulePath(shopSlug), `${shareOrigin}/`).toString()
@@ -673,6 +683,34 @@ async function TodayBody({
         // thing on this page that could confirm you had arrived, and it named
         // a *when* rather than a *where* (issue #824).
         eyebrow={`${t(STAFF_DESTINATION_LABEL_KEYS.today)} · ${formatShortDate(now, locale, shop.timezone)}`}
+        // **The paper day** (N-54). One document holding every departure of
+        // today — manifest, emergency card, waiver state, packing list — so a
+        // dead tablet costs a printer rather than the day. It is the header's
+        // one action rather than a lone link floating right above the first
+        // station with nothing beside it, which is where it read as a stray
+        // (principle 10: chrome defers, and a control belongs with the page it
+        // is about). Only on a day that has boats on it, and never on paper.
+        //
+        // A link rather than `PrintTripBundleButton`'s form: that one records
+        // the click server-side and so has to `window.open`, which a popup
+        // blocker can refuse silently — the reason it carries a "your browser
+        // blocked it" line. A tap on a real link is a navigation no blocker
+        // touches, so there is no refusal here to explain.
+        actions={
+          spine.stations.length > 0 || eveningClose.stations.length > 0 ? (
+            <Link
+              // `shopPath`, not a template literal: it escapes each segment, so
+              // nobody reading this line has to re-derive that `shopSlug` was
+              // already narrowed by `requireShopSurface` upstream.
+              href={shopPath(shopSlug, "print")}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonClass({ variant: "ghost", size: "sm", className: "print:hidden" })}
+            >
+              {t("shared.printPacket.dayDoor")}
+            </Link>
+          ) : null
+        }
         // The greeting is the one staff title that is a display moment rather
         // than a name (the board draws it at 44/700); the first-run and
         // quiet-day headings are names and take the title rung.

@@ -88,6 +88,52 @@ function waiverDetail(
   return t("divers.stats.waiverNotSent");
 }
 
+/**
+ * **The closed door's one fact: where the release stands, and until when.**
+ *
+ * The standing on its own — "Signed" — leaves the reader with the question they
+ * opened the record to answer, so each state that has a date carries it. The
+ * ones that do not are already whole sentences: "Not signed" needs no "· Not
+ * sent" after it, and a minor's solo signature states its own problem.
+ */
+function waiverSummary(
+  diver: DiverProfile,
+  t: StaffTranslator,
+  locale: string,
+  timezone: string,
+  state: WaiverRowState,
+  overriddenReferralAt: Date | null,
+): string {
+  const text = waiverRowStateText(t, state);
+  const date = (value: Date) => formatCalendarDate(calendarDateInTimezone(value, timezone), locale);
+  if (diver.waiver.state === "current") {
+    const goodUntil = `${text} · ${t("divers.stats.waiverGoodUntil", { date: date(diver.waiver.expiresAt) })}`;
+    // **A referral the current signature replaced instead of answering**
+    // (issue #1282). "Signed · Good until …" is true and, on its own, the
+    // wrong thing to read across a counter: the release standing today stands
+    // on a questionnaire the diver re-answered clean after a physician was
+    // asked. The closed door is where a staffer decides whether to open it at
+    // all, so the door has to carry it.
+    return overriddenReferralAt
+      ? `${goodUntil} · ${t("divers.stats.waiverReferralOpen", { date: date(overriddenReferralAt) })}`
+      : goodUntil;
+  }
+  if (diver.waiver.state === "medical_review") {
+    return `${text} · ${t("divers.stats.waiverHeldSince", { date: date(diver.waiver.at) })}`;
+  }
+  if (diver.waiver.state === "medical_not_cleared") {
+    return `${text} · ${t("divers.stats.waiverNotClearedOn", { date: date(diver.waiver.declinedAt) })}`;
+  }
+  if (diver.waiver.state === "expired") {
+    return `${text} · ${t("divers.stats.waiverLastSigned", { date: date(diver.waiver.signedAt) })}`;
+  }
+  if (state === "failed") return `${text} · ${t("divers.stats.waiverFailed")}`;
+  if (diver.waiver.state === "guardian_missing") return text;
+  if (diver.waiverRequest === "link_copied") return t("divers.stats.waiverLinkCopied");
+  if (diver.waiverRequest === "not_signed") return t("divers.stats.waiverSent");
+  return text;
+}
+
 export function WaiverGroup({
   diver,
   shopSlug,
@@ -162,17 +208,20 @@ export function WaiverGroup({
     <DiverFileGroupDisclosure
       id="waiver"
       label={t("divers.stats.waiver")}
-      summary={waiverRowStateText(t, state)}
-      open={Boolean(status)}
+      summary={waiverSummary(diver, t, locale, timezone, state, overriddenReferralAt)}
+      // The two facts a closed "Signed" door would hide are the two that stand
+      // on somebody's word rather than on a document: a signature that ended a
+      // referral without answering it is the second (issue #1282).
+      summaryTone={overriddenReferralAt ? "warning" : "muted"}
+      // A hold is the one waiver state with work that only this group can take:
+      // the physician's answer goes in here, and nowhere else in the product.
+      // An unanswered referral is the other: the sentence naming it, and the
+      // clearance door that resolves it, are both inside.
+      open={Boolean(status) || heldForMedical || Boolean(overriddenReferralAt)}
+      stacked
       className="mt-8"
     >
-      <InsetGroup
-        as="h2"
-        id="waiver"
-        label={t("divers.stats.waiver")}
-        labelClassName="max-sm:hidden"
-        className="scroll-mt-24"
-      >
+      <InsetGroup>
         <WaiverStateRow
           as="div"
           t={t}

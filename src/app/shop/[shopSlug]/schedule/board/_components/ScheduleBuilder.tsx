@@ -202,7 +202,6 @@ export type BuilderCopy = {
   dayCountLabelOther: string;
   crewLabel: string;
   crewNobodyYet: string;
-  crewMostlyAll: string;
   windLabel: string;
   noPriceSet: string;
   noPriceSetAria: string;
@@ -1838,6 +1837,12 @@ const MENU_CLOSE_MS = motionMs("unfold") + MOTION_STAGGER_MS * 2 + 10;
 /**
  * The crew signature this board mostly runs with, or `null` when it has none.
  *
+ * **It is never printed.** The standing "Usual crew: …" sentence it used to
+ * feed is gone (surfaces.md's "Remove first" for this board, and the
+ * `20260908-one-hand` canvas); what it answers now is only which rows may keep
+ * quiet about their crew, so that every row that does print one is the
+ * exception a manager is scanning for.
+ *
  * A signature is the assignment in the order the row already prints it, so two
  * departures crewed by the same two people in a different order count as two
  * different answers — which is the honest reading, since that ordering is the
@@ -1974,16 +1979,17 @@ export function ScheduleBuilder({
   // people onto nearly everything, so the full crew list was
   // printing on ten of fourteen rows in the same grey — a third of the board's
   // ink, saying nothing that distinguishes one departure from another (issue
-  // #757). The usual crew is stated once above the list and dropped from the
-  // rows that match it; what is left on the rows is, by construction, the
-  // exception a manager is scanning for.
+  // #757). The crew line is dropped from every row that runs the usual crew,
+  // so what is left on the rows is, by construction, the exception a manager is
+  // scanning for. It is no longer *stated* anywhere: the standing sentence that
+  // named those people above the stream is gone (`mostCommonCrew`'s note).
   //
   // **The gate is stricter than the price banner's, and has to be.** Three
   // rows is the same floor, but this also demands a strict *majority* of the
-  // window: on a board split 7/7 between two crews there is no "usual", and a
-  // header claiming one would be a sentence about who is on which boat that is
-  // wrong half the time. An unstaffed departure can never become the default —
-  // it is not a crew, it is the gap this whole line exists to show.
+  // window: on a board split 7/7 between two crews there is no "usual", and
+  // silencing either half would be hiding who is on which boat on half the
+  // rows. An unstaffed departure can never become the default — it is not a
+  // crew, it is the gap this whole line exists to show.
   const usualCrew = mostCommonCrew(windowTrips);
 
   // The week grid's own disclosures, read back out of the one `open` key.
@@ -2238,17 +2244,15 @@ export function ScheduleBuilder({
         <AllUnpricedNotice className="xl:hidden">{copy.noPriceSetAll}</AllUnpricedNotice>
       ) : null}
 
-      {/* Not a banner: the usual crew is not a problem to solve, it is the
-          answer the rows below no longer have to repeat. Muted and inline, in
-          the caption voice those rows used to carry. */}
-      {/* `xl:hidden` with the stream it describes: "unless a departure says
-          otherwise" is a promise about rows, and the week's cells carry no
-          crew line for it to be the exception to. */}
-      {usualCrew ? (
-        <p className="mt-4 text-sm text-muted xl:hidden">
-          {fill(copy.crewMostlyAll, { names: usualCrew.join(", ") })}
-        </p>
-      ) : null}
+      {/* **The standing "Usual crew: …" line is gone** — docs/design/surfaces.md
+          listed it under the board's "Remove first" from the day the week grid
+          shipped, and the `20260908-one-hand` canvas deletes it outright. It
+          was a sentence at the top of the phone stream that named two people
+          and was true of most rows, on a surface a manager opens to find the
+          row it is *not* true of. `usualCrew` survives as what it always
+          really was: the predicate that keeps a matching row's crew line off
+          the row (`isUsualCrew` below), so what any row still prints about crew
+          is, by construction, the exception. */}
 
       {/* The week, at `xl` and up. Its own disclosures are keyed `w:` so a
           control in the grid hands focus back to itself rather than to its
@@ -2549,12 +2553,11 @@ export function ScheduleBuilder({
                               .join(" · ") || copy.noSiteSetYet}
                           </p>
                           {/* Dropped entirely when this departure runs with the
-                              board's usual crew, which is stated once above the
-                              list (principle 9). What survives is an exception,
-                              so it sheds the muted class in that case — a line
-                              that is only printed when it differs should not
-                              read like the caption it replaced. With no usual
-                              crew to hoist, every row keeps its line in the old
+                              board's usual crew (principle 9). What survives is
+                              an exception, so it sheds the muted class in that
+                              case — a line that is only printed when it differs
+                              should not read like the caption it replaced. With
+                              no usual crew, every row keeps its line in the old
                               caption grey. "Nobody yet" is warning ink either
                               way: that is the gap this line exists to show. */}
                           {isUsualCrew(trip.crew, usualCrew) ? null : (

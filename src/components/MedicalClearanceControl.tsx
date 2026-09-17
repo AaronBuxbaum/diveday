@@ -67,6 +67,7 @@ export function MedicalClearanceControl({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [picked, setPicked] = useState<string | null>(null);
 
   useEffect(() => {
     if (defaultOpen) setOpen(true);
@@ -153,13 +154,39 @@ export function MedicalClearanceControl({
           description={copy.documentHint}
           htmlFor="medicalClearanceDocument"
         >
-          <input
-            id="medicalClearanceDocument"
-            type="file"
-            name="medicalClearanceDocument"
-            accept="image/*,application/pdf"
-            className="text-sm"
-          />
+          {/* `ImageFileInput`'s treatment, by hand because that component is
+              image-only (`ALLOWED_IMAGE_CONTENT_TYPES`) and a physician's
+              evaluation arrives as a PDF as often as a photo. Same anatomy, and
+              the same reason: a bare `<input type="file">` paints the operating
+              system's grey "Choose File / No file chosen" in the *device's*
+              language whatever the reader's is. The input is `sr-only` inside
+              the `<label>` — never `hidden`, which makes Chrome refuse a submit
+              it cannot focus — so what looks like a button *is* the control,
+              and the ring is drawn with `focus-within`. */}
+          <div className="flex flex-wrap items-center gap-3">
+            <label
+              className={buttonClass({
+                variant: "secondary",
+                size: "sm",
+                className:
+                  "cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary",
+              })}
+            >
+              {picked ? copy.documentChooseAnother : copy.documentChoose}
+              <input
+                id="medicalClearanceDocument"
+                type="file"
+                name="medicalClearanceDocument"
+                accept="image/*,application/pdf"
+                onChange={(event) => setPicked(event.target.files?.[0]?.name ?? null)}
+                className="sr-only"
+              />
+            </label>
+            {/* The filename, which is the only half of the native control that
+                was ever in the reader's favour — and needs no words of its
+                own, so no locale. */}
+            {picked ? <span className="min-w-0 truncate text-sm text-muted">{picked}</span> : null}
+          </div>
         </Field>
       </FieldGrid>
       <div className="mt-4 flex flex-wrap gap-2">

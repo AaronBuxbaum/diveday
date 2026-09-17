@@ -15,7 +15,8 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
-import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
+import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { isCallOutcome } from "@/lib/took-a-call";
 import { spotsRemaining } from "@/lib/trips";
 import { type CallDeparture, TookACallFields } from "./_components/TookACallFields";
@@ -121,7 +122,14 @@ export default async function TookACallPage({
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
-      <ShopPageHeader eyebrow={t("calls.eyebrow")} title={t("calls.title")} />
+      {/* The eyebrow was "Counter" — the nav group, which principle 10 forbids
+          — and the page had no way up at all. It is a mode the front desk
+          enters from the queue, so the queue is what it names. */}
+      <ShopPageHeader
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.checkIn)}
+        eyebrowHref={shopPath(shopSlug, "check-in")}
+        title={t("calls.title")}
+      />
       <SectionCard className="mt-8" padding="lg" title={t("calls.callerHeading")}>
         <form action={tookACallAction.bind(null, shopSlug)}>
           <FormDraft

@@ -9,35 +9,23 @@ import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneO
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
-import {
-  controlClass,
-  DateField,
-  Field,
-  FieldActions,
-  FieldGrid,
-  PriceField,
-} from "@/components/ui/form";
-import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import { controlClass, Field, FieldActions, FieldGrid, PriceField } from "@/components/ui/form";
 import { GroupLabel, InsetGroup } from "@/components/ui/ledger";
 import {
   canPersonErasePersonalData,
   canPersonManagePaymentSettings,
   canPersonManageShopSettings,
 } from "@/db/authz";
-import { countBoatDepartures, listBoats } from "@/db/boats";
-import { listDivePackages } from "@/db/dive-packages";
 import { listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listOwedProcessorErasures } from "@/db/processor-erasure";
 import type { MediaDeletionKind, ProcessorErasureTarget } from "@/db/schema";
-import { listSeasonEvents } from "@/db/season-events";
 import { shopHasPricedRecords } from "@/db/shops";
 import {
   canAcceptPayments,
   getShopStripeAccount,
   stripeCurrencyMismatch,
 } from "@/db/stripe-accounts";
-import { countTripLensDepartures, listTripLenses } from "@/db/trip-lenses";
 import { currencyOptions } from "@/i18n/currency-labels";
 import { catalogItemLabel, rentableItemLabel } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
@@ -59,11 +47,9 @@ import {
   deriveBrandTheme,
   deriveDarkBrandTheme,
 } from "@/lib/brand";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { configuredValue } from "@/lib/configured";
 import { CONSERVATION_COMMITMENT_CODES } from "@/lib/conservation-commitments";
-import { MAX_PACKAGE_DIVE_COUNT } from "@/lib/dive-packages";
 import { MAX_DIVERS_PER_DIVEMASTER, MIN_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import {
   DOCK_DAY_FIELDS,
@@ -87,11 +73,6 @@ import { CONNECT_CLIENT_ID } from "@/lib/payments/connect";
 import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
 import { publicShopRegisterPath } from "@/lib/public-routes";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
-import {
-  isSeasonEventLive,
-  SEASON_EVENT_NAME_MAX,
-  SEASON_EVENT_NOTE_MAX,
-} from "@/lib/season-events";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
@@ -100,20 +81,11 @@ import {
   DEFAULT_TIMEZONE,
 } from "@/lib/timezones";
 import { isTrialExpired, trialDaysRemaining, trialEndsAt } from "@/lib/trial";
-import { LENS_NAME_MAX } from "@/lib/trip-lenses";
 import { BrandColorField } from "./_components/BrandColorField";
 import { BrandPreview } from "./_components/BrandPreview";
 import { SettingsDoorRow, SettingsRow } from "./_components/SettingsRows";
 import { AddressSearch } from "./AddressSearch";
 import {
-  createBoatAction,
-  createDivePackageAction,
-  createSeasonEventAction,
-  createTripLensAction,
-  deleteBoatAction,
-  deleteDivePackageAction,
-  deleteSeasonEventAction,
-  deleteTripLensAction,
   dischargeProcessorErasureAction,
   disconnectAction,
   refreshAction,
@@ -140,9 +112,6 @@ import {
   saveTideWindowAction,
   saveTimezoneAction,
   saveUnitsAction,
-  updateBoatAction,
-  updateSeasonEventAction,
-  updateTripLensAction,
 } from "./actions";
 import { CounterQrCard } from "./CounterQrCard";
 import { SECTION_IDS, SETTINGS_GROUPS, type SectionId } from "./settings-groups";
@@ -516,10 +485,6 @@ export default async function SettingsPage({
   );
   // Only asked when the select that needs it will render — the warning below is
   // about what changing the currency would do, and most staff never see it.
-  // Only for shops that sell them — an empty list plus the add form is what a
-  // shop that has never used packages sees, and nothing else in the app changes
-  // until the first one exists.
-  const shopPackages = canPayments ? await listDivePackages(db, session.user.shopId) : [];
   const hasPricedRecords = canPayments
     ? await shopHasPricedRecords(db, session.user.shopId)
     : false;
@@ -548,44 +513,18 @@ export default async function SettingsPage({
   // that visits it, and the preview is drawn from the shop-wide figure alone.
   // Empty for a shop that has overridden nothing, and then the preview says
   // nothing extra.
-  const [
-    pendingMediaDeletions,
-    owedProcessorErasures,
-    siteBottomTimeOverrides,
-    shopBoats,
-    shopLenses,
-    shopSeasons,
-  ] = await Promise.all([
-    listPendingMediaDeletions(db, session.user.shopId),
-    listOwedProcessorErasures(db, session.user.shopId),
-    listSiteBottomTimeOverrides(db, session.user.shopId),
-    listBoats(db, session.user.shopId),
-    // The shop's own words for its kinds of day (ADR
-    // 20260904-reef-all-the-way-down, decision 2).
-    listTripLenses(db, session.user.shopId),
-    // The shop's own year, read beside the words a season may name (issue #1485).
-    listSeasonEvents(db, session.user.shopId),
-  ]);
-  // **How much history each hull carries**, so the confirm can say so before a
-  // shop taps Delete. Sequential rather than a fan-out: this reads through the
-  // same executor and a shop's fleet is a handful of rows
-  // (`scripts/check-db-concurrency.mjs` is about transactions, but the shape is
-  // the same argument — there is nothing to win here).
-  const boatDepartures = new Map<string, number>();
-  for (const boat of shopBoats) {
-    boatDepartures.set(boat.id, await countBoatDepartures(db, session.user.shopId, boat.id));
-  }
-  // The same count for the same reason, one word at a time: a shop's vocabulary
-  // is a handful of rows and there is nothing to win by fanning out.
-  const lensDepartures = new Map<string, number>();
-  for (const lens of shopLenses) {
-    lensDepartures.set(lens.id, await countTripLensDepartures(db, session.user.shopId, lens.id));
-  }
-  // Owner-only, and tighter than the gate this panel is *read* behind: a retry
-  // fires a destructive call at the shop's Stripe account and a discharge signs
-  // an attestation that a diver's data is gone from the processor. The actions
-  // enforce it themselves and return silently on refusal — this only keeps a
-  // manager from being shown a button they would be bounced from
+  const [pendingMediaDeletions, owedProcessorErasures, siteBottomTimeOverrides] = await Promise.all(
+    [
+      listPendingMediaDeletions(db, session.user.shopId),
+      listOwedProcessorErasures(db, session.user.shopId),
+      listSiteBottomTimeOverrides(db, session.user.shopId),
+    ],
+  );
+  // Owner-only, and tighter than the gate those panels are *read* behind: a
+  // retry fires a destructive call at the shop's Stripe account and a discharge
+  // signs an attestation that a diver's data is gone from the processor. The
+  // actions enforce it themselves and return silently on refusal — this only
+  // keeps a manager from being shown a button they would be bounced from
   // (ADR 20260724-role-gated-surfaces-hide-not-explain).
   const canErase = await canPersonErasePersonalData(db, session.user.shopId, session.user.personId);
   // The same two gates the nav registry hangs Team and Promo codes off
@@ -604,7 +543,6 @@ export default async function SettingsPage({
   const addressLookupEnabled = isAddressLookupConfigured();
   const currencyMismatch = stripeCurrencyMismatch(shopCurrency, account);
   const t = staffTranslator(locale);
-  const divePackagesValue = t("settings.main.divePackages.value", { count: shopPackages.length });
   const trialDaysLeft = trialDaysRemaining(shop.createdAt, nowDate());
   const trialExpired = isTrialExpired(shop.createdAt, nowDate());
   const trialEndLabel = formatShortDate(trialEndsAt(shop.createdAt), locale, shop.timezone);
@@ -702,16 +640,6 @@ export default async function SettingsPage({
     // opening the row is a target nobody remembers they set.
     t("boats.diversPerDivemasterValue", { ratio: shop.diversPerDivemaster }),
   ].join(" · ");
-  const boatsValue =
-    shopBoats.length > 0 ? t("boats.value", { count: shopBoats.length }) : t("boats.noBoats");
-  const lensesValue = t("lenses.value", { count: shopLenses.length });
-  const seasonsValue = t("seasonEvents.value", { count: shopSeasons.length });
-  /**
-   * Today at the shop, for the one badge in this inset: which season is running
-   * right now. The shop's own calendar day, never the server's — a Key Largo
-   * mini-season closes at midnight in Key Largo (`src/lib/season-events.ts`).
-   */
-  const shopCalendarToday = calendarDateInTimezone(nowDate(), shop.timezone);
   // A count, not the numbers themselves: this row is read on the hub and the
   // numbers belong on the boat, not on a settings list somebody is scrolling.
   const emergencyValue = hasEmergencyReference(shop.emergencyReference)
@@ -1902,419 +1830,30 @@ export default async function SettingsPage({
               </form>
             </SettingsRow>
             {shop.hasBoatDiving ? (
-              <SettingsRow
+              <SettingsDoorRow
+                href={`/shop/${shopSlug}/settings/boats`}
                 heading={t("boats.heading")}
-                value={boatsValue}
-                sectionId="boats"
-                activeSection={activeSection}
-              >
-                <SectionNotice banner={banner} section="boats" active={activeSection} />
-                <div className="space-y-4 mt-4">
-                  {shopBoats.length === 0 ? (
-                    <p className="text-sm text-muted italic">{t("boats.noBoats")}</p>
-                  ) : (
-                    <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
-                      {shopBoats.map((boat) => (
-                        <div
-                          key={boat.id}
-                          className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-surface"
-                        >
-                          <form
-                            action={updateBoatAction}
-                            className="flex flex-1 flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3 w-full"
-                          >
-                            <input type="hidden" name="boatId" value={boat.id} />
-                            <div className="flex-1 w-full">
-                              <input
-                                name="name"
-                                type="text"
-                                required
-                                defaultValue={boat.name}
-                                placeholder={t("boats.nameLabel")}
-                                className={controlClass}
-                              />
-                            </div>
-                            <div className="w-full sm:w-32 flex items-center gap-2">
-                              <input
-                                name="capacity"
-                                type="number"
-                                required
-                                min={1}
-                                defaultValue={boat.capacity}
-                                placeholder={t("boats.capacityLabel")}
-                                className={`${controlClass} tabular-nums`}
-                              />
-                            </div>
-                            <div className="w-full sm:basis-full">
-                              <input
-                                name="description"
-                                type="text"
-                                maxLength={200}
-                                defaultValue={boat.description ?? ""}
-                                placeholder={t("boats.descriptionLabel")}
-                                aria-label={t("boats.descriptionLabel")}
-                                className={controlClass}
-                              />
-                            </div>
-                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                              <SubmitButton
-                                pendingLabel={t("boats.submitting")}
-                                className={buttonClass({ variant: "secondary", size: "sm" })}
-                              >
-                                {t("boats.submit")}
-                              </SubmitButton>
-                            </div>
-                          </form>
-                          {/* Its own form, beside the update rather than inside
-                            it: `InlineConfirm` submits the form it sits in, and
-                            forms cannot nest. */}
-                          <form action={deleteBoatAction} className="shrink-0">
-                            <input type="hidden" name="boatId" value={boat.id} />
-                            {/* **The confirm says what the delete touches.** A
-                              hull that has carried departures is history an
-                              insurer asks about — the count is the fact a shop
-                              cannot get from this row, and it is why this is a
-                              blocking confirm rather than a bare button. A boat
-                              that never sailed goes quietly, with no message to
-                              read. Nothing is destroyed either way; the word is
-                              still "Delete" and the shop is never told about a
-                              column (ADR 20260820-every-delete-is-soft). */}
-                            {boatDepartures.get(boat.id) ? (
-                              <InlineConfirm
-                                triggerLabel={t("boats.deleteBoat")}
-                                message={t("boats.deleteBoatDepartures", {
-                                  count: boatDepartures.get(boat.id) ?? 0,
-                                })}
-                                cancelLabel={t("boats.deleteBoatCancel")}
-                                confirmLabel={t("boats.deleteBoatConfirm")}
-                                pendingLabel={t("boats.deleteBoatPending")}
-                                triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
-                              />
-                            ) : (
-                              <InlineConfirm
-                                triggerLabel={t("boats.deleteBoat")}
-                                confirmLabel={t("boats.deleteBoatConfirm")}
-                                pendingLabel={t("boats.deleteBoatPending")}
-                                triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
-                              />
-                            )}
-                          </form>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="border border-dashed border-border rounded-lg p-4 bg-surface-sunken">
-                    <h4 className="text-sm font-medium mb-3">{t("boats.createTitle")}</h4>
-                    <form
-                      action={createBoatAction}
-                      className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3"
-                    >
-                      <div className="flex-1 w-full">
-                        <input
-                          name="name"
-                          type="text"
-                          required
-                          placeholder={t("boats.nameLabel")}
-                          className={controlClass}
-                        />
-                      </div>
-                      <div className="w-full sm:w-32">
-                        <input
-                          name="capacity"
-                          type="number"
-                          required
-                          min={1}
-                          placeholder={t("boats.capacityLabel")}
-                          className={`${controlClass} tabular-nums`}
-                        />
-                      </div>
-                      <div className="w-full sm:basis-full">
-                        <input
-                          name="description"
-                          type="text"
-                          maxLength={200}
-                          placeholder={t("boats.descriptionLabel")}
-                          aria-label={t("boats.descriptionLabel")}
-                          className={controlClass}
-                        />
-                      </div>
-                      <SubmitButton
-                        pendingLabel={t("boats.submitting")}
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
-                      >
-                        {t("boats.addBoat")}
-                      </SubmitButton>
-                    </form>
-                  </div>
-                </div>
-              </SettingsRow>
+              />
             ) : null}
             {/* **Kinds of day** — ADR 20260904-reef-all-the-way-down, decision 2
               (issue #1162). The shop's own words for its departures, which a
               diver then filters the public schedule by. Unconditional: a
               shore-diving shop with no hull still names its kinds of day, so
               this row carries no `hasBoatDiving` gate. */}
-            <SettingsRow
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/kinds-of-day`}
               heading={t("lenses.heading")}
-              value={lensesValue}
-              sectionId="lenses"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="lenses" active={activeSection} />
-              <div className="space-y-4 mt-4">
-                {shopLenses.length === 0 ? (
-                  <p className="text-sm text-muted italic">{t("lenses.noLenses")}</p>
-                ) : (
-                  <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
-                    {shopLenses.map((lens) => (
-                      <div
-                        key={lens.id}
-                        className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-surface"
-                      >
-                        <form
-                          action={updateTripLensAction}
-                          className="flex flex-1 flex-col sm:flex-row sm:items-center gap-3 w-full"
-                        >
-                          <input type="hidden" name="lensId" value={lens.id} />
-                          <div className="flex-1 w-full">
-                            <input
-                              name="name"
-                              type="text"
-                              required
-                              maxLength={LENS_NAME_MAX}
-                              defaultValue={lens.name}
-                              aria-label={t("lenses.nameLabel")}
-                              placeholder={t("lenses.nameLabel")}
-                              className={controlClass}
-                            />
-                          </div>
-                          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                            <SubmitButton
-                              pendingLabel={t("lenses.submitting")}
-                              className={buttonClass({ variant: "secondary", size: "sm" })}
-                            >
-                              {t("lenses.submit")}
-                            </SubmitButton>
-                          </div>
-                        </form>
-                        {/* Its own form beside the rename, never inside it:
-                          `InlineConfirm` submits the form it sits in, and forms
-                          cannot nest. */}
-                        <form action={deleteTripLensAction} className="shrink-0">
-                          <input type="hidden" name="lensId" value={lens.id} />
-                          {/* The confirm says what the delete touches. A word
-                            nothing carries goes quietly, with no message to
-                            read. Nothing is destroyed either way; the word on
-                            screen is still "Delete" (ADR
-                            20260820-every-delete-is-soft). */}
-                          {lensDepartures.get(lens.id) ? (
-                            <InlineConfirm
-                              triggerLabel={t("lenses.delete")}
-                              message={t("lenses.deleteDepartures", {
-                                count: lensDepartures.get(lens.id) ?? 0,
-                              })}
-                              cancelLabel={t("lenses.deleteCancel")}
-                              confirmLabel={t("lenses.deleteConfirm")}
-                              pendingLabel={t("lenses.deletePending")}
-                              triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
-                            />
-                          ) : (
-                            <InlineConfirm
-                              triggerLabel={t("lenses.delete")}
-                              confirmLabel={t("lenses.deleteConfirm")}
-                              pendingLabel={t("lenses.deletePending")}
-                              triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
-                            />
-                          )}
-                        </form>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="border border-dashed border-border rounded-lg p-4 bg-surface-sunken">
-                  <h4 className="text-sm font-medium mb-3">{t("lenses.createTitle")}</h4>
-                  <form
-                    action={createTripLensAction}
-                    className="flex flex-col sm:flex-row sm:items-start gap-3"
-                  >
-                    <div className="flex-1 w-full">
-                      <input
-                        name="name"
-                        type="text"
-                        required
-                        maxLength={LENS_NAME_MAX}
-                        aria-label={t("lenses.nameLabel")}
-                        placeholder={t("lenses.nameLabel")}
-                        className={controlClass}
-                      />
-                      {/* The one line that earns its place here: it names the
-                        consequence a shop cannot see from this form, which is
-                        that the word is public and divers filter by it. */}
-                      <p className="mt-1 text-xs text-muted">{t("lenses.nameHint")}</p>
-                    </div>
-                    <SubmitButton
-                      pendingLabel={t("lenses.adding")}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {t("lenses.add")}
-                    </SubmitButton>
-                  </form>
-                </div>
-              </div>
-            </SettingsRow>
+            />
             {/* **The reef's calendar** (issue #1485). Beside the words above it,
               because a season is written the same way and often names one: the
               shop types mini-season, its two days and what it wants divers to
               know, and the storefront shows exactly that while the week is on.
               Ungated like the row above — a shore-diving shop still has a
               mini-season. */}
-            <SettingsRow
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/seasons`}
               heading={t("seasonEvents.heading")}
-              value={seasonsValue}
-              sectionId="seasonEvents"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="seasonEvents" active={activeSection} />
-              <div className="space-y-4 mt-4">
-                {shopSeasons.length === 0 ? (
-                  <p className="text-sm text-muted italic">{t("seasonEvents.none")}</p>
-                ) : (
-                  <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
-                    {shopSeasons.map((season) => (
-                      <div key={season.id} className="space-y-3 p-3 bg-surface">
-                        {/* The one badge in this inset, and it marks the
-                          exceptional state (principle 9): most of a shop's
-                          calendar is months away, and the one week that is
-                          actually on the storefront right now is the one worth
-                          finding at a glance. */}
-                        {isSeasonEventLive(season, shopCalendarToday) ? (
-                          <Badge tone="success">{t("seasonEvents.live")}</Badge>
-                        ) : null}
-                        <FieldGrid as="form" columns={2} action={updateSeasonEventAction}>
-                          <input type="hidden" name="eventId" value={season.id} />
-                          <Field label={t("seasonEvents.nameLabel")}>
-                            <input
-                              name="name"
-                              type="text"
-                              required
-                              maxLength={SEASON_EVENT_NAME_MAX}
-                              defaultValue={season.name}
-                              className={controlClass}
-                            />
-                          </Field>
-                          <Field label={t("seasonEvents.lensLabel")}>
-                            <select
-                              name="lensId"
-                              defaultValue={season.lensId ?? ""}
-                              className={controlClass}
-                            >
-                              <option value="">{t("seasonEvents.lensNone")}</option>
-                              {shopLenses.map((lens) => (
-                                <option key={lens.id} value={lens.id}>
-                                  {lens.name}
-                                </option>
-                              ))}
-                            </select>
-                          </Field>
-                          <Field label={t("seasonEvents.startLabel")}>
-                            <DateField name="startsOn" required defaultValue={season.startsOn} />
-                          </Field>
-                          <Field label={t("seasonEvents.endLabel")}>
-                            <DateField name="endsOn" required defaultValue={season.endsOn} />
-                          </Field>
-                          <Field label={t("seasonEvents.noteLabel")} className="sm:col-span-2">
-                            <textarea
-                              name="note"
-                              rows={2}
-                              maxLength={SEASON_EVENT_NOTE_MAX}
-                              defaultValue={season.note ?? ""}
-                              className={controlClass}
-                            />
-                          </Field>
-                          <FieldActions>
-                            <SubmitButton
-                              pendingLabel={t("seasonEvents.submitting")}
-                              className={buttonClass({ variant: "secondary", size: "sm" })}
-                            >
-                              {t("seasonEvents.submit")}
-                            </SubmitButton>
-                          </FieldActions>
-                        </FieldGrid>
-                        {/* Its own form beside the edit, never inside it:
-                          `InlineConfirm` submits the form it sits in, and forms
-                          cannot nest. */}
-                        <form action={deleteSeasonEventAction}>
-                          <input type="hidden" name="eventId" value={season.id} />
-                          <InlineConfirm
-                            triggerLabel={t("seasonEvents.delete")}
-                            confirmLabel={t("seasonEvents.deleteConfirm")}
-                            pendingLabel={t("seasonEvents.deletePending")}
-                            triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
-                          />
-                        </form>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="border border-dashed border-border rounded-lg p-4 bg-surface-sunken">
-                  <h4 className="text-sm font-medium mb-3">{t("seasonEvents.createTitle")}</h4>
-                  <FieldGrid as="form" columns={2} action={createSeasonEventAction}>
-                    <Field label={t("seasonEvents.nameLabel")}>
-                      <input
-                        name="name"
-                        type="text"
-                        required
-                        maxLength={SEASON_EVENT_NAME_MAX}
-                        className={controlClass}
-                      />
-                    </Field>
-                    <Field label={t("seasonEvents.lensLabel")}>
-                      <select name="lensId" defaultValue="" className={controlClass}>
-                        <option value="">{t("seasonEvents.lensNone")}</option>
-                        {shopLenses.map((lens) => (
-                          <option key={lens.id} value={lens.id}>
-                            {lens.name}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label={t("seasonEvents.startLabel")}>
-                      <DateField name="startsOn" required />
-                    </Field>
-                    <Field label={t("seasonEvents.endLabel")}>
-                      <DateField name="endsOn" required />
-                    </Field>
-                    {/* The one line that earns its place here, for the same
-                      reason the vocabulary's hint does: it names the consequence
-                      a shop cannot see from this form, which is that these words
-                      go out to divers. */}
-                    <Field
-                      label={t("seasonEvents.noteLabel")}
-                      description={t("seasonEvents.hint")}
-                      className="sm:col-span-2"
-                    >
-                      <textarea
-                        name="note"
-                        rows={2}
-                        maxLength={SEASON_EVENT_NOTE_MAX}
-                        className={controlClass}
-                      />
-                    </Field>
-                    <FieldActions>
-                      <SubmitButton
-                        pendingLabel={t("seasonEvents.adding")}
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
-                      >
-                        {t("seasonEvents.add")}
-                      </SubmitButton>
-                    </FieldActions>
-                  </FieldGrid>
-                </div>
-              </div>
-            </SettingsRow>
+            />
           </InsetGroup>
         </SettingsGroup>
 
@@ -2467,110 +2006,10 @@ export default async function SettingsPage({
                     list and an add form, and nothing anywhere else in the app
                     changes until the first one exists (ADR
                     20260822-a-package-is-entitlements-not-money). */}
-                <SettingsRow
+                <SettingsDoorRow
+                  href={`/shop/${shopSlug}/settings/dive-packages`}
                   heading={t("settings.main.divePackages.heading")}
-                  value={divePackagesValue}
-                  description={t("settings.main.divePackages.description")}
-                  sectionId="divePackages"
-                  activeSection={activeSection}
-                >
-                  <SectionNotice banner={banner} section="divePackages" active={activeSection} />
-                  {shopPackages.length > 0 ? (
-                    <ul className="mt-4 flex flex-col gap-2">
-                      {shopPackages.map((pkg) => (
-                        <li
-                          key={pkg.id}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-inset border border-border bg-surface p-3"
-                        >
-                          <span className="min-w-0">
-                            <span className="font-medium">{pkg.name}</span>{" "}
-                            <span className="text-sm text-muted">
-                              {t("settings.main.divePackages.summary", {
-                                dives: pkg.diveCount,
-                                price: formatMoneyScanned(pkg.priceCents, shop.currency, locale),
-                                scope: t(
-                                  pkg.scope === "fun_dives"
-                                    ? "settings.main.divePackages.scopeFunDives"
-                                    : "settings.main.divePackages.scopeAll",
-                                ),
-                              })}
-                            </span>
-                          </span>
-                          {/* Says "Delete", and is soft underneath (ADR
-                              20260820-every-delete-is-soft). No sentence
-                              explains that the dives somebody already bought
-                              survive: reversibility is a promise we keep, not a
-                              concept the reader holds — and here the softness
-                              is load-bearing rather than conventional, because
-                              the entitlements reference this row. */}
-                          <form action={deleteDivePackageAction}>
-                            <input type="hidden" name="packageId" value={pkg.id} />
-                            <SubmitButton
-                              pendingLabel={t("settings.main.divePackages.deleting")}
-                              className={buttonClass({ variant: "secondary", size: "sm" })}
-                            >
-                              {t("settings.main.divePackages.delete")}
-                            </SubmitButton>
-                          </form>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  <FieldGrid
-                    as="form"
-                    action={createDivePackageAction}
-                    columns={2}
-                    className="mt-4 gap-x-5 gap-y-5"
-                  >
-                    <Field label={t("settings.main.divePackages.nameLabel")}>
-                      <input name="name" required maxLength={80} className={controlClass} />
-                    </Field>
-                    <Field label={t("settings.main.divePackages.diveCountLabel")}>
-                      <input
-                        name="diveCount"
-                        type="number"
-                        inputMode="numeric"
-                        required
-                        min={1}
-                        max={MAX_PACKAGE_DIVE_COUNT}
-                        className={`${controlClass} tabular-nums`}
-                      />
-                    </Field>
-                    <Field label={t("settings.main.divePackages.priceLabel")}>
-                      <input
-                        name="priceDollars"
-                        type="number"
-                        inputMode="decimal"
-                        required
-                        min={1}
-                        step="0.01"
-                        className={`${controlClass} tabular-nums`}
-                      />
-                    </Field>
-                    <Field
-                      label={t("settings.main.divePackages.validityLabel")}
-                      description={t("settings.main.divePackages.validityDescription")}
-                    >
-                      <DateField name="validUntil" className="tabular-nums" />
-                    </Field>
-                    <Field label={t("settings.main.divePackages.scopeLabel")}>
-                      <select name="scope" defaultValue="fun_dives" className={controlClass}>
-                        <option value="all">{t("settings.main.divePackages.scopeAll")}</option>
-                        <option value="fun_dives">
-                          {t("settings.main.divePackages.scopeFunDives")}
-                        </option>
-                      </select>
-                    </Field>
-                    <FieldActions>
-                      <SubmitButton
-                        pendingLabel={t("settings.main.divePackages.submitting")}
-                        className={buttonClass({ variant: "secondary" })}
-                      >
-                        {t("settings.main.divePackages.submit")}
-                      </SubmitButton>
-                    </FieldActions>
-                  </FieldGrid>
-                </SettingsRow>
+                />
 
                 <SettingsRow
                   heading={t("settings.main.tax.heading")}
@@ -2664,7 +2103,6 @@ export default async function SettingsPage({
                   }
                   sectionId="stripe"
                   activeSection={activeSection}
-                  forceOpen={!account || !ready}
                 >
                   <SectionNotice banner={banner} section="stripe" active={activeSection} />
                   {!account ? (
@@ -2793,6 +2231,12 @@ export default async function SettingsPage({
                 <p className="mt-1 text-sm">{t("settings.main.dataJobs.mediaDeletions.detail")}</p>
                 <ul className="mt-3 space-y-2 text-sm">
                   {pendingMediaDeletions.map((attempt) => (
+                    // The provider's own words are deliberately not here. A
+                    // shop read "Blob storage returned 503" beside a photo and
+                    // learned nothing it could act on; the two sentences above
+                    // already say what happened and what to do, and tonight's
+                    // retry is what actually fixes it. The reason stays on the
+                    // row in the database for whoever is on call.
                     <li key={attempt.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="font-medium">{t(MEDIA_KIND_KEYS[attempt.kind])}</span>
                       <span className="text-muted">
@@ -2800,7 +2244,6 @@ export default async function SettingsPage({
                         {t("settings.main.dataJobs.mediaDeletions.queued", {
                           date: formatShortDate(attempt.createdAt, locale, shop.timezone),
                         })}
-                        {attempt.lastError ? ` · ${attempt.lastError}` : ""}
                       </span>
                       <form action={retryMediaDeletionAction}>
                         <input type="hidden" name="attemptId" value={attempt.id} />
@@ -2885,20 +2328,18 @@ export default async function SettingsPage({
             </section>
           ) : null}
 
-          {/* The counter's own door (issue #1236): a QR a shop prints and puts
-              on the desk, so a walk-in who has booked nothing can put
-              themselves on file before they reach the front of the queue. It
-              sits here rather than behind a row of its own because there is
-              nothing to configure — the page exists, this is where its address
-              lives. */}
-          <CounterQrCard
-            url={`${publicAppUrl() ?? ""}${publicShopRegisterPath(shopSlug)}`}
-            title={t("settings.main.counterQr.heading")}
-            description={t("settings.main.counterQr.description")}
-            showLabel={t("settings.main.counterQr.show")}
-          />
-
           <InsetGroup>
+            {/* The counter's own door (issue #1236): a QR a shop prints and
+                puts on the desk, so a walk-in who has booked nothing can put
+                themselves on file before they reach the front of the queue.
+                A row of this group rather than a bordered card standing above
+                it — there is nothing here to configure, so it is the one row
+                that states an address instead of changing one. */}
+            <CounterQrCard
+              url={`${publicAppUrl() ?? ""}${publicShopRegisterPath(shopSlug)}`}
+              title={t("settings.main.counterQr.heading")}
+              description={t("settings.main.counterQr.description")}
+            />
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/embed`}
               heading={t("settings.main.embed.heading")}

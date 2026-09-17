@@ -277,7 +277,7 @@ describe("one primary, and the rest are the rows themselves", () => {
   it("gives the next step the only button-shaped thing on the group", () => {
     const { container } = renderFresh();
     // `buttonClass`'s primary variant is the one filled control here; every
-    // other open step's fix is a link with a chevron.
+    // other open step is a door and ends in nothing but its chevron.
     const filled = container.querySelectorAll('[data-first-run-primary="true"]');
     expect(filled).toHaveLength(1);
     expect(filled[0]).toHaveTextContent("Add contact details");
@@ -287,6 +287,11 @@ describe("one primary, and the rest are the rows themselves", () => {
     renderFresh();
     // The stretched overlay carries the name — so the row *is* the link, and a
     // reader tabbing through hears where it goes.
+    //
+    // **And that name is never also drawn** (ADR 20260911-clear-the-deck §1,
+    // "the door"). Each of these steps used to end in its own verb and its own
+    // chevron, beside the chevron `LedgerRow` draws for any row with an
+    // `href` — a second affordance for the tap the row already is.
     for (const [name, href] of [
       ["Set up profile", "/shop/blue-mantis/settings#profile"],
       ["Check units", "/shop/blue-mantis/settings#units"],
@@ -294,7 +299,11 @@ describe("one primary, and the rest are the rows themselves", () => {
       ["Schedule a trip", "/shop/blue-mantis/schedule/board?add=1"],
     ] as const) {
       expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
+      expect(screen.queryByText(name)).toBeNull();
     }
+    // Stripe is the one exception and keeps its words: its anchor has to do a
+    // full navigation, so it sits beside the row rather than being it.
+    expect(screen.getByText("Connect Stripe")).toBeInTheDocument();
   });
 
   it("keeps Stripe's fix a plain anchor beside the row, never the row itself", () => {

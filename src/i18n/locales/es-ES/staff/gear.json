@@ -146,9 +146,10 @@
     "description": "Trae tu flota y sus registros de mantenimiento desde otro sistema.",
     "help": "Una fila por unidad o evento. Las unidades coinciden primero por etiqueta y luego por número de serie; las reimportaciones se deduplican.",
     "downloadTemplate": "Descargar plantilla CSV del equipo",
-    "file": "Archivo CSV",
     "submit": "Importar historial",
-    "pending": "Importando…"
+    "pending": "Importando…",
+    "chooseFile": "Elegir archivo CSV",
+    "chooseDifferentFile": "Elegir otro archivo"
   },
   "unit": {
     "deleted": {
@@ -167,7 +168,8 @@
       "title": "Mantenimiento",
       "clock": "último {servicedOn} · vence el {dueOn}",
       "clockNoDue": "último {servicedOn}",
-      "noClocks": "Aún no hay mantenimiento registrado. Anota el primero abajo y los plazos corren desde ahí.",
+      "noClocks": "Aún no hay mantenimiento registrado.",
+      "logDoor": "Registrar un mantenimiento",
       "kind": "Qué se hizo",
       "servicedOn": "Hecho el",
       "nextDueOn": "Próximo vencimiento",
@@ -201,7 +203,7 @@
     },
     "details": {
       "title": "Detalles",
-      "description": "La etiqueta, talla y número de serie con los que el registro lista esta unidad.",
+      "edit": "Editar los datos",
       "save": "Guardar cambios",
       "saving": "Guardando…"
     },
@@ -257,7 +259,6 @@
   },
   "ticket": {
     "eyebrow": "Alquiler",
-    "backToPrep": "Volver a preparación",
     "unitsHeading": "Lo que llevas",
     "dueBack": "Devolver antes del {date}."
   }

@@ -2,6 +2,7 @@
 "use client";
 
 import { createContext, useActionState, useContext } from "react";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
@@ -146,6 +147,7 @@ export function ReviewRowActions({
   canStandout,
   reasons,
   copy,
+  moreLabel,
 }: {
   reviewId: string;
   isPublished: boolean;
@@ -155,9 +157,19 @@ export function ReviewRowActions({
   canStandout: boolean;
   reasons: readonly { value: string; label: string }[];
   copy: ReviewRowCopy;
+  /**
+   * The disclosure's accessible name, naming the reviewer — twenty rows of
+   * "More" is twenty identical links to anybody reading the page by its
+   * landmarks. Per-row, so it arrives beside the row rather than in `copy`.
+   */
+  moreLabel: string;
 }) {
   const { result, run: formAction } = useReviewRow();
   const status = statusOf(result, reviewId, copy);
+  // Hiding a review, and featuring one, are both rare. Neither is offered at
+  // all on a row the shop has already taken down, so such a row draws no
+  // disclosure either.
+  const hasQuietActs = !isHidden || canStandout;
 
   return (
     <>
@@ -167,33 +179,6 @@ export function ReviewRowActions({
           slot the same full phone line and inline desktop line as the other
           responsive list surfaces; the disclosure still gets its own width. */}
       <ListItemActions>
-        {!isHidden ? (
-          /* Hiding states a case, so it cannot be a bare button (ADR
-             20260813-review-moderation-has-a-floor). The picker waits behind a
-             disclosure: the shop that opens this is already sure, and the
-             reason list is the whole point — a shop that finds none of them
-             true is telling itself something. Available before publication as
-             well: hiding a waiting review records the decision and keeps it out
-             of the public set. */
-          <details className="shrink-0">
-            <summary
-              className={`${REVIEW_GHOST_ACTION_CLASS} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
-            >
-              {copy.hide}
-            </summary>
-            <ReviewHideForm
-              reviewId={reviewId}
-              action={formAction}
-              className="mt-3 w-64 max-w-[70vw]"
-              reasons={reasons}
-              reasonLabel={copy.hideReasonLabel}
-              reasonPlaceholder={copy.hideReasonPlaceholder}
-              noteLabel={copy.hideNoteLabel}
-              hideLabel={copy.hideConfirm}
-              savingLabel={copy.saving}
-            />
-          </details>
-        ) : null}
         {!isPublished ? (
           <form action={formAction} className="shrink-0">
             <input type="hidden" name="reviewId" value={reviewId} />
@@ -207,15 +192,63 @@ export function ReviewRowActions({
             </SubmitButton>
           </form>
         ) : null}
-        {canStandout ? (
-          <form action={formAction} className="shrink-0">
-            <input type="hidden" name="intent" value="standout" />
-            <input type="hidden" name="reviewId" value={reviewId} />
-            <input type="hidden" name="standout" value={isStandout ? "false" : "true"} />
-            <SubmitButton pendingLabel={copy.saving} className={REVIEW_GHOST_ACTION_CLASS}>
-              {isStandout ? copy.removeStandout : copy.markStandout}
-            </SubmitButton>
-          </form>
+        {hasQuietActs ? (
+          /* **The rare acts are revealed, not standing.** Hide and the standout
+             toggle used to sit on every row: twenty-four links down a page
+             whose job is reading what divers wrote, for two acts a shop
+             performs a handful of times a month. They live behind one small
+             disclosure per row now — the same `<details>` grammar the reason
+             picker inside it already used, so it needs no JavaScript and the
+             keyboard reaches it the same way the mouse does (principles §8,
+             §10). Publish keeps its own place outside: it is the one act a
+             waiting row is on the page for. */
+          <details className="shrink-0">
+            <summary
+              aria-label={moreLabel}
+              className={`${REVIEW_GHOST_ACTION_CLASS} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+            >
+              <DiveDayIcon name="more" className="size-4" />
+            </summary>
+            <div className="mt-3 flex flex-col items-end gap-2">
+              {canStandout ? (
+                <form action={formAction}>
+                  <input type="hidden" name="intent" value="standout" />
+                  <input type="hidden" name="reviewId" value={reviewId} />
+                  <input type="hidden" name="standout" value={isStandout ? "false" : "true"} />
+                  <SubmitButton pendingLabel={copy.saving} className={REVIEW_GHOST_ACTION_CLASS}>
+                    {isStandout ? copy.removeStandout : copy.markStandout}
+                  </SubmitButton>
+                </form>
+              ) : null}
+              {!isHidden ? (
+                /* Hiding states a case, so it cannot be a bare button (ADR
+                   20260813-review-moderation-has-a-floor). The picker waits
+                   behind its own disclosure: the shop that opens this is
+                   already sure, and the reason list is the whole point — a shop
+                   that finds none of them true is telling itself something.
+                   Available before publication as well: hiding a waiting review
+                   records the decision and keeps it out of the public set. */
+                <details>
+                  <summary
+                    className={`${REVIEW_GHOST_ACTION_CLASS} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+                  >
+                    {copy.hide}
+                  </summary>
+                  <ReviewHideForm
+                    reviewId={reviewId}
+                    action={formAction}
+                    className="mt-3 w-64 max-w-[70vw]"
+                    reasons={reasons}
+                    reasonLabel={copy.hideReasonLabel}
+                    reasonPlaceholder={copy.hideReasonPlaceholder}
+                    noteLabel={copy.hideNoteLabel}
+                    hideLabel={copy.hideConfirm}
+                    savingLabel={copy.saving}
+                  />
+                </details>
+              ) : null}
+            </div>
+          </details>
         ) : null}
         {/* `basis-full` drops it onto its own line of the wrapping slot, so a
             refusal never squeezes the controls it is about off the row. */}

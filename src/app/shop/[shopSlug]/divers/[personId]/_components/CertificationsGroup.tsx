@@ -9,6 +9,7 @@ import { InsetGroup } from "@/components/ui/ledger";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
+  type CertificationCardKind,
   certificationCardRowState,
   isImportedCard,
   isShopIssuedCard,
@@ -106,6 +107,93 @@ function CardRow({
   );
 }
 
+/**
+ * **The one fact the closed door carries: what this diver is certified to do.**
+ *
+ * Every card on file in render order — level rungs first, then specialties,
+ * then nitrox — joined the way a staffer reads a stack of cards at the desk.
+ *
+ * **Not the Certification summary** (`certificationSummaryText`, glossary), and
+ * deliberately not: that phrase answers "what may this person dive" from one
+ * rung plus a nitrox tick, for a row on the wait list or the deal list where it
+ * is *all* the reader gets. This is the diver's own record, where the question
+ * is which cards the shop holds — specialties included, and the agency named,
+ * because a staffer standing at the desk with a stack of plastic is matching
+ * them one to one. Two questions, two phrasings; they share their **words**
+ * (`shared.certificationSummary.*`) so a claim can never be spelled two ways.
+ *
+ * **Every card is named through `certificationCardRowState`**, the same
+ * function the rows inside the group render through, so the closed door and
+ * the open one cannot disagree about a card. Three of its four values are
+ * something other than "the shop has seen this":
+ *
+ * - `self_declared` and `pending` take the shared "— unverified" phrase. A
+ *   hand-entered card still `pending` is the glossary's **claimed
+ *   certification** — nobody has looked it up, and it never satisfies
+ *   readiness until staff Mark certified — so a door reading it as a plain
+ *   agency and level is the same failure the self-declared phrase exists to
+ *   stop.
+ * - `imported_unconfirmed` takes "— confirm to clear", the badge's own words
+ *   (`divers.shared.cardStatus.confirmToClear`) in the wrapper this summary's
+ *   list needs: the card came across already checked by the shop's previous
+ *   system, and the dive or the fill waits on one tap.
+ *
+ * Any of the three turns the whole summary to warning ink — the treatment
+ * `certificationSummaryUnchecked` earns everywhere else, and the reason the
+ * glossary says such a card "must never be scanned as a plain level". The words
+ * carry it on their own; the tone only has to stop contradicting them.
+ *
+ * A diver who has told the shop they hold nothing gets that sentence instead of
+ * "None on file" — it is their own statement, and it is a different fact from
+ * silence.
+ */
+function cardsOnFile(
+  diver: DiverProfile,
+  t: StaffTranslator,
+  noCertificationDeclared: boolean,
+): { text: string; tone: "muted" | "warning" } {
+  let unchecked = false;
+  const named = (
+    kind: CertificationCardKind,
+    value: string,
+    card: Parameters<typeof certificationCardRowState>[1],
+  ) => {
+    const state = certificationCardRowState(kind, card);
+    if (state === "verified") return value;
+    unchecked = true;
+    return state === "imported_unconfirmed"
+      ? t("shared.certificationSummary.confirmToClear", { value })
+      : t("shared.certificationSummary.selfDeclared", { value });
+  };
+  const cards = [
+    ...diver.certifications.map((card) =>
+      named(
+        "level",
+        card.agency === "other"
+          ? t(CERTIFICATION_LEVEL_KEYS[card.level])
+          : `${t(AGENCY_KEYS[card.agency])} ${t(CERTIFICATION_LEVEL_KEYS[card.level])}`,
+        card,
+      ),
+    ),
+    ...diver.specialtyCertifications.map((card) =>
+      named("specialty", t(SPECIALTY_KEYS[card.specialty]), card),
+    ),
+    ...diver.nitroxCertifications.map((card) =>
+      named("nitrox", t("shared.certificationSummary.nitrox"), card),
+    ),
+  ];
+  if (cards.length > 0) {
+    return { text: cards.join(" · "), tone: unchecked ? "warning" : "muted" };
+  }
+  // "Not certified yet" is unverified too, and it is the row a staffer most
+  // needs to catch before a two-tank charter goes out to it — the same reading
+  // `certificationSummaryUnchecked` gives it.
+  if (noCertificationDeclared) {
+    return { text: t("shared.certificationSummary.notCertified"), tone: "warning" };
+  }
+  return { text: t("divers.file.certificationsNone"), tone: "muted" };
+}
+
 export function CertificationsGroup({
   diver,
   shop,
@@ -138,14 +226,6 @@ export function CertificationsGroup({
   const numberErrorFor = (cardId: string) =>
     numberError && status?.cardId === cardId ? numberError : undefined;
   const groupStatus = numberError && status?.cardId ? undefined : status;
-  const waitingCount = [
-    ...diver.certifications,
-    ...diver.specialtyCertifications,
-    ...diver.nitroxCertifications,
-  ].filter(
-    (card) =>
-      isUnsightedSelfDeclaration(card) || card.status === "pending" || needsImportConfirm(card),
-  ).length;
 
   const markCertified = markCertifiedCopy(t);
   const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
@@ -160,6 +240,8 @@ export function CertificationsGroup({
     !diver.nitroxCertifications.some((card) => !isUnsightedSelfDeclaration(card)) &&
     diver.specialtyCertifications.length === 0;
 
+  const onFile = cardsOnFile(diver, t, noCertificationDeclared);
+
   // The first row anybody has to act on takes the ledger's anchor. Counted the
   // way the roster's badge and the status ledger count it, in render order, so
   // "Verify it" always lands on a row that has a control.
@@ -170,15 +252,24 @@ export function CertificationsGroup({
     return true;
   };
 
+  /**
+   * **Quiet ink, not a bordered button.** A filled `danger` control stood on
+   * every card row at rest — the loudest thing in the group a staffer reads to
+   * decide whether somebody dives, and the one act on the row that is never the
+   * reason they opened it. `danger-ghost` keeps the warning colour the rule
+   * requires for a destructive control while dropping the border and the fill,
+   * which is the same weight the record's note rows already use.
+   *
+   * No confirm dialog: the delete lands and a toast offers a one-tap undo.
+   */
   function deleteButton(action: (formData: FormData) => void, id: string, nitrox: boolean) {
     return (
       <form action={action}>
         <input type="hidden" name="certificationId" value={id} />
         {nitrox ? <input type="hidden" name="cardType" value="nitrox" /> : null}
-        {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
         <SubmitButton
           pendingLabel={t("divers.certifications.deleting")}
-          className={buttonClass({ variant: "danger", size: "sm" })}
+          className={buttonClass({ variant: "danger-ghost", size: "sm" })}
         >
           {t("divers.certifications.delete")}
         </SubmitButton>
@@ -368,25 +459,24 @@ export function CertificationsGroup({
     <DiverFileGroupDisclosure
       id="certifications"
       label={t("divers.certifications.heading")}
-      summary={
-        waitingCount > 0
-          ? t("divers.file.certificationsWaiting", { count: waitingCount })
-          : t("divers.file.certificationsClear")
-      }
+      // **The levels on file, not the queue state.** "None waiting" answered a
+      // question nobody asked of a closed door: whether anything is waiting is
+      // already the status ledger's job two sections above, with the fix beside
+      // it. What a staffer wants off this row is what this diver is certified
+      // to do. An unsighted claim wears the shared "— unverified" phrase, so
+      // the door cannot read as though the shop has seen a card it has not.
+      summary={onFile.text}
+      summaryTone={onFile.tone}
       open={Boolean(status)}
+      stacked
       className="mt-10"
     >
       <InsetGroup
-        as="h2"
         // A list of cards is a list: each row is one record a staffer can act
         // on, so the shell is a `<ul>` and every row a real `<li>`. A screen
         // reader gets the count before it starts reading, which a run of
         // `<div>`s cannot give it.
         bodyAs="ul"
-        id="certifications"
-        label={t("divers.certifications.heading")}
-        labelClassName="max-sm:hidden"
-        className="scroll-mt-24"
       >
         {rows}
         {noCertificationDeclared ? (

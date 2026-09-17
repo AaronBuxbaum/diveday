@@ -256,10 +256,16 @@ describe("StaffingWeek", () => {
    * learns to skim the warning channel. The siblings had it right all along
    * (`trips.pulse.overRatioWarningIntro`, `today.overRatioIntro`): what is
    * true of the cap is that a non-instructor adds no seats to it.
+   *
+   * **`canManage: false` in every fixture here**, which is what a divemaster
+   * actually reads: the ask is the cell's act only for somebody who has no
+   * assignment to make (`gapAct`). A managing viewer gets "Assign ›" and
+   * nothing else.
    */
   it("tells a divemaster their ask adds no seats to an intro-ratio gap", () => {
     const dm = renderWeek({
       gaps: [{ ...GAP, gap: "over_intro_ratio" }],
+      canManage: false,
       viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: false },
     });
 
@@ -281,6 +287,7 @@ describe("StaffingWeek", () => {
     // The reader who can close it is told nothing.
     const instructor = renderWeek({
       gaps: [{ ...GAP, gap: "over_intro_ratio" }],
+      canManage: false,
       viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: true },
     });
     expect(screen.queryByText(WORDS.askWontClose)).toBeNull();
@@ -290,9 +297,30 @@ describe("StaffingWeek", () => {
     // Neither is the entry-level cap, which a certified assistant does raise.
     renderWeek({
       gaps: [{ ...GAP, gap: "over_ratio" }],
+      canManage: false,
       viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: false },
     });
     expect(screen.queryByText(WORDS.askWontClose)).toBeNull();
+  });
+
+  /**
+   * **One act per gap cell, and which one is a fact about the reader**
+   * (principle 8; the `20260908-one-hand` canvas). A ~120px cell used to draw
+   * "Assign ›" and "Ask for this one" beside each other at link weight on
+   * every gap, in both layouts — two doors onto the same short-handed
+   * departure with nothing saying which one was the reader's to press.
+   */
+  it("gives a manager the assignment and a crew member the ask, never both", () => {
+    const crewViewer = { personId: "person-1", isCrew: true, holdsInstructorRole: false };
+
+    const manager = renderWeek({ gaps: [GAP], canManage: true, viewer: crewViewer });
+    expect(screen.getAllByRole("link", { name: "Assign crew to Spiegel Grove" }).length).toBe(2);
+    expect(screen.queryByRole("button", { name: "Ask to work Spiegel Grove" })).toBeNull();
+    manager.unmount();
+
+    renderWeek({ gaps: [GAP], canManage: false, viewer: crewViewer });
+    expect(screen.getAllByRole("button", { name: "Ask to work Spiegel Grove" }).length).toBe(2);
+    expect(screen.queryByRole("link", { name: "Assign crew to Spiegel Grove" })).toBeNull();
   });
 
   /**

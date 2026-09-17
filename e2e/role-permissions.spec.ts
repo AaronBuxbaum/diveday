@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, READ_ONLY, signedInAs, test } from "./fixtures";
-import { openSettingsRow, openTripAbout } from "./helpers";
+import { openSettingsRow, openTripAbout, openTripMore } from "./helpers";
 
 /**
  * H-14 (ADR 20260724-role-authorization) draws real boundaries on five staff
@@ -121,15 +121,18 @@ test.describe("H-14 role permissions", () => {
       await page.goto(await firstTripManageHref(page));
       await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
       await openTripAbout(page);
-      // The conditions form sits behind its disclosure now; the visible half
-      // for a captain is the section's own toggle (Publish or Edit, depending
-      // on whether a prediction is live).
+      // Each About row is its own disclosure, so the visible half for a captain
+      // is the row's control — "Write a crew prediction" or "Edit crew
+      // prediction", depending on whether one is live.
       await expect(page.getByText(/Write a crew prediction|Edit crew prediction/)).toBeVisible();
       // Crew editing is unconditional (no config-gated form around it), so its
-      // presence for a captain is the heading itself, not a submit button.
-      await expect(page.getByRole("heading", { name: "Crew", exact: true })).toBeVisible();
+      // presence for a captain is the row's own control, not a submit button.
+      await expect(page.getByText("Edit crew", { exact: true })).toBeVisible();
+      // Cancelling the departure is one of the rare acts, in the panel's "More"
+      // list — still a captain's to reach.
+      const more = await openTripMore(page);
       await expect(
-        page.getByRole("button", { name: /Cancel (trip|this departure)/ }),
+        more.getByRole("button", { name: /Cancel (trip|this departure)/ }),
       ).toBeVisible();
     });
 
@@ -306,6 +309,10 @@ test.describe("H-14 role permissions", () => {
 
     test("the owner reaches every gated surface", { tag: READ_ONLY }, async ({ page }) => {
       await page.goto(`/shop/${SHOP}/waivers`);
+      // The signed-record ledger leads and the release editor is one control
+      // at rest (slice E3): editing the release happens a handful of times in
+      // a shop's life, reading who signed is daily.
+      await page.getByText("Edit the release").click();
       await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toBeVisible();
 
       await page.goto(`/shop/${SHOP}/waivers/signatures`);

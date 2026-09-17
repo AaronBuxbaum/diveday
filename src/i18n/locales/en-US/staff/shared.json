@@ -48,6 +48,8 @@
     "evidenceHint": "Their name, or attach the evaluation below. One or the other.",
     "documentLabel": "Physician’s evaluation form",
     "documentHint": "An image or PDF of the signed form.",
+    "documentChoose": "Choose a file",
+    "documentChooseAnother": "Choose a different file",
     "recording": "Recording…",
     "confirm": "Record the answer"
   },
@@ -486,6 +488,7 @@
   },
   "certificationSummary": {
     "selfDeclared": "{value} — unverified",
+    "confirmToClear": "{value} — confirm to clear",
     "levelNotSaid": "Level not said",
     "notCertified": "Not certified yet — unverified",
     "nitrox": "Nitrox",

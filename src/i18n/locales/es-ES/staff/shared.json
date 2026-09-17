@@ -48,6 +48,8 @@
     "evidenceHint": "Su nombre, o adjunta la evaluación abajo. Una de las dos.",
     "documentLabel": "Formulario de evaluación médica",
     "documentHint": "Una imagen o un PDF del formulario firmado.",
+    "documentChoose": "Elige un archivo",
+    "documentChooseAnother": "Elige otro archivo",
     "recording": "Registrando…",
     "confirm": "Registrar la respuesta"
   },
@@ -486,6 +488,7 @@
   },
   "certificationSummary": {
     "selfDeclared": "{value} — sin verificar",
+    "confirmToClear": "{value} — confirmar para liberar",
     "levelNotSaid": "Nivel no indicado",
     "notCertified": "Todavía sin certificación — sin verificar",
     "nitrox": "Nitrox",

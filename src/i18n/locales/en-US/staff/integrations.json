@@ -1,5 +1,5 @@
 {
-  "eyebrow": "Settings / integrations",
+  "eyebrow": "Settings",
   "title": "Shop integrations",
   "description": "Connect the systems that should share your shop’s catalog, money records, or automation events.",
   "notice": {
@@ -9,7 +9,7 @@
     "sync-complete": "Shopify catalog synced: {count, plural, =0 {nothing was ready to publish} one {# product} other {# products}}.",
     "test-sent": "Zapier test hook delivered.",
     "invalid": "Check the details and choose at least one event.",
-    "not-configured": "This integration is not configured for this DiveDay instance yet.",
+    "not-configured": "That integration isn’t available yet.",
     "not-authorized": "Only an owner or manager can change integrations.",
     "failed": "The integration could not complete that request. Try again, or reconnect it.",
     "encryption-key-unset": "This DiveDay instance is not set up to store credentials securely yet, so nothing was saved.",
@@ -31,16 +31,15 @@
     "disconnecting": "Disconnecting…",
     "save": "Save settings",
     "saving": "Saving…",
-    "notConfigured": "Not configured",
-    "comingSoon": "Add the provider credentials to this DiveDay deployment to enable this connection.",
     "selectedEvents": "Events to send",
     "orderCreated": "An order is created",
     "orderPaid": "An order is paid",
-    "orderRefunded": "An order is refunded"
+    "orderRefunded": "An order is refunded",
+    "notAvailable": "Not available yet. Email {email} and we’ll switch it on."
   },
   "shopify": {
     "name": "Shopify",
-    "description": "Publish your priced DiveDay rental and package catalog as Shopify products.",
+    "description": "Publishes your priced rentals and dive packages as Shopify products.",
     "domainLabel": "Shopify store domain",
     "domainPlaceholder": "your-shop.myshopify.com",
     "domainDescription": "Use the store’s myshopify.com domain. DiveDay only asks for product write access.",
@@ -52,7 +51,7 @@
   },
   "quickbooks": {
     "name": "QuickBooks Online",
-    "description": "Write paid orders and refunds as idempotent SalesReceipts and RefundReceipts.",
+    "description": "Sends paid orders and refunds to QuickBooks as sales receipts.",
     "connect": "Connect QuickBooks",
     "incomeAccountLabel": "Income account ID",
     "incomeAccountPlaceholder": "e.g. 79",
@@ -62,7 +61,7 @@
   },
   "xero": {
     "name": "Xero",
-    "description": "Write paid orders and refunds as bank transactions in your Xero organization.",
+    "description": "Sends paid orders and refunds to Xero as bank transactions.",
     "connect": "Connect Xero",
     "salesAccountLabel": "Sales account code",
     "salesAccountPlaceholder": "e.g. 200",
@@ -74,7 +73,7 @@
   },
   "zapier": {
     "name": "Zapier",
-    "description": "Send selected order events to a Zapier Webhooks by Zapier Catch Hook.",
+    "description": "Sends the order events you pick to a Zapier Catch Hook.",
     "webhookLabel": "Catch Hook URL",
     "webhookPlaceholder": "https://hooks.zapier.com/hooks/catch/…",
     "webhookDescription": "Treat this URL like a password. It is sealed in DiveDay and never shown again after saving.",

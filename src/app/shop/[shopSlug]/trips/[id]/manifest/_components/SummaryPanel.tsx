@@ -471,21 +471,16 @@ export function SummaryPanel({
             clears AA at this size on a plain surface, which is what
             `text-warning-strong` was reaching for.
 
-            **At the dock only.** After a dive this same sentence says the
-            readiness follow-up happens ashore and never holds the count open —
-            calm information about work for later, at a checkpoint where nothing
-            has been recorded about anybody. Rendering it in danger there put
-            red on the screen with no fact behind it, which is exactly what an
-            alarm has to be earned against (ADR
+            **At the dock only.** Blocked is a boarding gate, so after a dive
+            it has nothing left to say about this count — the follow-up is
+            ashore, and the rows carry it. Saying so here put a sentence on the
+            screen with no fact behind it, which is exactly what an alarm has to
+            be earned against (ADR
             20260827-the-departure-is-two-working-surfaces, decision 4), and it
             competed with the one red that means somebody is in the water. */}
-        {summary.blocked > 0 ? (
-          <p
-            className={`mt-1 text-base font-semibold ${isDeparture ? "text-danger" : "text-muted"}`}
-          >
-            {isDeparture
-              ? t("manifest.blockedDeparture", { count: summary.blocked })
-              : t("manifest.blockedAfterDive", { count: summary.blocked })}
+        {isDeparture && summary.blocked > 0 ? (
+          <p className="mt-1 text-base font-semibold text-danger">
+            {t("manifest.blockedDeparture", { count: summary.blocked })}
           </p>
         ) : null}
       </div>

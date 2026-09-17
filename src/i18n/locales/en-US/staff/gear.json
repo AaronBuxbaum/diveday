@@ -146,9 +146,10 @@
     "description": "Bring your fleet and its dated service records across from another system.",
     "help": "One row per unit, service event, or historical rental. Units match by tag first, then serial number; assignments match an existing diver by email or exact name, stay display-only, and never affect current availability.",
     "downloadTemplate": "Download gear CSV template",
-    "file": "CSV file",
     "submit": "Import gear history",
-    "pending": "Importing…"
+    "pending": "Importing…",
+    "chooseFile": "Choose CSV file",
+    "chooseDifferentFile": "Choose a different file"
   },
   "unit": {
     "deleted": {
@@ -167,7 +168,8 @@
       "title": "Service",
       "clock": "last {servicedOn} · next due {dueOn}",
       "clockNoDue": "last {servicedOn}",
-      "noClocks": "No service on record yet. Log the first one below and the clocks start from there.",
+      "noClocks": "No service on record yet.",
+      "logDoor": "Log a service",
       "kind": "What was done",
       "servicedOn": "Done on",
       "nextDueOn": "Next due",
@@ -201,7 +203,7 @@
     },
     "details": {
       "title": "Details",
-      "description": "The tag, size, and serial the register lists this unit by.",
+      "edit": "Edit details",
       "save": "Save changes",
       "saving": "Saving…"
     },
@@ -257,7 +259,6 @@
   },
   "ticket": {
     "eyebrow": "Rental",
-    "backToPrep": "Back to prep",
     "unitsHeading": "What you have",
     "dueBack": "Back by {date}."
   }

@@ -131,12 +131,12 @@ test.describe("the switch on Settings", () => {
     }
 
     await page.goto(`/shop/${privateShop.slug}/settings/display`);
-    await expect(
-      page.getByRole("heading", { name: "Where each boat is in its day", exact: true }),
-    ).toBeVisible();
+    // The control wears the row's name: there is no second heading saying the
+    // same words a line above it.
+    const toggle = page.getByLabel("Where each boat is in its day");
+    await expect(toggle).toBeVisible();
     // The sentence beside the switch says exactly what leaves the shop.
     await expect(page.getByText(/A stage word and a time, never who is aboard\./)).toBeVisible();
-    const toggle = page.getByLabel("Say where each boat is in its day");
     await toggle.uncheck();
     await page
       .locator("form")

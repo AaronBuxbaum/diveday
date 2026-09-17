@@ -17,6 +17,7 @@ import {
   disclosureSettled,
   manifestRow,
   offlineCopySaved,
+  openDiverFileGroup,
   openManifestPerson,
   openOnThisPhone,
   openRosterDetails,
@@ -2098,9 +2099,13 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * The whole design decision is visual and lives nowhere else: the
        * departures above the stated level are **dimmed and marked**, not
-       * removed, with the count said once in the filter row and a two-word chip
-       * on each card (issue #696). A capture is the only thing that can tell a
-       * dimmed-and-still-there card from a missing one.
+       * removed, with a two-word chip on each card (issue #696). A capture is
+       * the only thing that can tell a dimmed-and-still-there card from a
+       * missing one.
+       *
+       * The counted sentence that used to sit in the filter row beside it was
+       * deleted on 2026-09-17; a URL carrying `canDive` still paints the
+       * "Filter" disclosure open, so the row itself is in this shot.
        */
       test(`the public schedule marks what a diver cannot dive (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis?canDive=open_water");
@@ -2824,6 +2829,9 @@ for (const scheme of ["light", "dark"] as const) {
         // whose banner is a second `role="status"` beside the copy toast
         // `waiverLinkFromToast` reads.
         await staffPage.goto(new URL(staffPage.url()).pathname);
+        // Every file group on the record is a closed door at every width, and
+        // an unsent release is not open work (slice A).
+        await openDiverFileGroup(staffPage, "Waiver");
         await staffPage.getByText("Send options", { exact: true }).click();
         await staffPage.getByRole("button", { name: "Copy link" }).click();
         const waiverHref = await waiverLinkFromToast(staffPage);
@@ -3483,7 +3491,7 @@ for (const scheme of ["light", "dark"] as const) {
         // up already open, so there is no disclosure left to click — the shot
         // above now carries the form rather than a collapsed row. Assert it is
         // reachable without one, which is the promotion N-45 makes.
-        await expect(page.locator("#request-a-date summary")).toHaveCount(0);
+        await expect(page.locator("details#request-a-date > summary")).toHaveCount(0);
         await expect(page.getByRole("button", { name: "Send", exact: true })).toBeVisible();
 
         // **The board before anything is on it.** The `schedule-builder`
@@ -4633,7 +4641,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await openTripFromBoard(page, title);
         await openTripAbout(page);
-        await page.getByRole("heading", { name: "Repeating trip" }).waitFor();
+        // The About panel's "Repeats" row — its label and cadence sentence are
+        // the summary, and the headed "Repeating trip" card is gone.
+        await page.locator("details#series").waitFor();
         await capture(page, "trip-repeating-panel", scheme);
 
         // And the cadence editor open — the weekday chips carrying the run's
@@ -4846,6 +4856,7 @@ for (const scheme of ["light", "dark"] as const) {
         // nothing. Waiting on the summary instead of clicking it is the older
         // trap: it proves the disclosure exists while the paper-waiver control
         // inside stays hidden, and the capture then times out on the button.
+        await openDiverFileGroup(page, "Waiver");
         await page
           .getByRole("region", { name: "Waiver" })
           .getByText("Send options", { exact: true })
@@ -4986,6 +4997,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await openDiverProfile(page, "Priya", "Priya Sharma");
+        await openDiverFileGroup(page, "Waiver");
         await page.getByRole("region", { name: "Waiver" }).getByText("Send options").click();
         await page.getByRole("button", { name: "Mark signed on paper" }).click();
         // The panel itself, not the trigger that opened it — so the capture can
@@ -5011,6 +5023,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await request.post("/api/test/seed-trouble-states");
         await openDiverProfile(page, "Priya", "Priya Sharma");
+        await openDiverFileGroup(page, "Waiver");
         await page.getByRole("region", { name: "Waiver" }).getByText("Send options").click();
         // The ringed button itself, so the capture can never land before the
         // server data that rings it has arrived.
@@ -5860,19 +5873,42 @@ for (const scheme of ["light", "dark"] as const) {
        * shop writes mini-season and the sentence a diver reads on the
        * storefront while it is running.
        *
-       * Its own capture for the reason the two rows above have one: it is
-       * closed in `settings-payments`, and this is the only place the form is
-       * looked at. The seeded calendar carries a window that is live, so the
-       * "Running now" badge — the one badge in the inset, and the whole reason
-       * a shop can find the week that is on its storefront at a glance — is in
-       * frame rather than theoretical.
+       * Its own page rather than a hub row since three season forms and an add
+       * form turned out to be a page wearing a disclosure. The seeded calendar
+       * carries a window that is live, so the "Running now" badge — the one
+       * badge on the page, and the whole reason a shop can find the week that
+       * is on its storefront at a glance — is in frame rather than theoretical.
        */
-      test(`the seasons card renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Seasons and events" }).waitFor();
-        await openSettingsRow(page, "Seasons and events");
+      test(`the seasons page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/seasons");
+        await page.getByRole("heading", { level: 1, name: "Seasons and events" }).waitFor();
         await page.getByRole("button", { name: "Add" }).last().waitFor();
         await capture(page, "settings-seasons", scheme);
+      });
+
+      /**
+       * The shop's fleet — a name, a capacity and a line of description per
+       * hull, with the delete confirm that names how many departures one has
+       * carried. Off the hub for the same reason the seasons page is.
+       */
+      test(`the boats page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/boats");
+        await page.getByRole("heading", { level: 1, name: "Boats" }).waitFor();
+        // The submit on the add-a-boat row, which is what this page's own
+        // editor ends in now that it is a page rather than a settings row.
+        await page.getByRole("button", { name: "Add a boat" }).waitFor();
+        await capture(page, "settings-boats", scheme);
+      });
+
+      /**
+       * The shop's own words for its kinds of day (ADR
+       * 20260904-reef-all-the-way-down, decision 2) — the list a diver then
+       * filters the public schedule by.
+       */
+      test(`the kinds-of-day page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/kinds-of-day");
+        await page.getByRole("heading", { level: 1, name: "Kinds of day" }).waitFor();
+        await capture(page, "settings-kinds-of-day", scheme);
       });
 
       /**
@@ -5952,18 +5988,16 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * The shop's prepaid dive packages — the price list, and the form that
-       * adds one (issue #706). Its own capture for the same reason as the rows
-       * above: it is closed in `settings-payments`, and this is the only place
-       * a shop states what "ten dives" costs.
+       * adds one (issue #706). Its own page since that list plus a five-field
+       * add form stopped fitting inside a directory row.
        *
        * The seeded shop sells none, so this photographs the empty state plus
        * the add form — which is exactly what a shop meets before the feature
        * turns itself on.
        */
-      test(`the dive-packages card renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Dive packages" }).waitFor();
-        await openSettingsRow(page, "Dive packages");
+      test(`the dive-packages page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/dive-packages");
+        await page.getByRole("heading", { level: 1, name: "Dive packages" }).waitFor();
         await page.getByRole("button", { name: "Add package" }).waitFor();
         await capture(page, "settings-dive-packages", scheme);
       });
@@ -5999,14 +6033,15 @@ for (const scheme of ["light", "dark"] as const) {
       // every shop sees today, and where all of this surface's copy lives.
       test(`WhatsApp settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/whatsapp");
-        await page.getByRole("heading", { name: "How connecting works" }).waitFor();
+        await page.getByRole("heading", { name: "No WhatsApp number connected" }).waitFor();
         await capture(page, "settings-whatsapp", scheme);
       });
 
       // Provider connections are disabled in the browser fleet because their
       // OAuth client secrets are not configured. The useful visual contract is
-      // the three-card coming-soon state, which should stay understandable as
-      // more providers join the registry.
+      // what a shop sees for a provider DiveDay has not switched on: one muted
+      // line and no control, which should stay understandable as more providers
+      // join the registry.
       test(`integrations settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/integrations");
         await page.getByRole("heading", { level: 1, name: "Shop integrations" }).waitFor();
@@ -6086,10 +6121,10 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ visible: true })
           .first()
           .click();
-        // "Back to diver" for the reason the sibling capture below gives: the
+        // "Diver record" for the reason the sibling capture below gives: the
         // eyebrow text is identical on the list this came from, so waiting on
         // it resolves instantly against the old page.
-        await page.getByRole("link", { name: "Back to diver" }).waitFor();
+        await page.getByRole("link", { name: "Diver record" }).waitFor();
         // The refund control is the point of the capture, so the capture waits
         // for it rather than for the heading that arrives before it.
         await page.getByRole("button", { name: "Refund payment" }).waitFor();
@@ -6103,12 +6138,12 @@ for (const scheme of ["light", "dark"] as const) {
         const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
         await ledgerRow.filter({ visible: true }).first().waitFor();
         await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
-        // Not "Front desk": the orders list this just navigated from carries
-        // the identical eyebrow text, already on screen, so waiting on it
-        // resolves instantly against the *old* page instead of the new one —
-        // capture() then fires while orders/[id] is still behind its own
-        // loading.tsx skeleton. "Back to diver" only exists on the detail page.
-        await page.getByRole("link", { name: "Back to diver" }).waitFor();
+        // Not "Orders": the index this just navigated from wears that word as
+        // its own `<h1>`, already on screen, so waiting on it resolves
+        // instantly against the *old* page instead of the new one — capture()
+        // then fires while orders/[id] is still behind its own loading.tsx
+        // skeleton. "Diver record" only exists on the detail page.
+        await page.getByRole("link", { name: "Diver record" }).waitFor();
         await capture(page, "order-detail", scheme);
       });
 
@@ -6318,8 +6353,10 @@ for (const scheme of ["light", "dark"] as const) {
       // 20260827-the-shops-shelves): agency as the group heading that replaced
       // the tab strip, the list in progression order rather than alphabetical,
       // and the dissolved row — the row's own tap opens the course's editor,
-      // with only the two worded list-level acts (Schedule, Hide/Show) beside
-      // it and the public-catalog door up in the header.
+      // with Schedule as the row's one quiet act beside it and the
+      // public-catalog door up in the header. Hide/Show moved to the course's
+      // own editor: 55 rows carrying a rare act was a toolbar, not an
+      // affordance.
       test(`the staff course catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses");
         await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
@@ -6345,8 +6382,9 @@ for (const scheme of ["light", "dark"] as const) {
       // 1280 and the same list as a jump-row at 390, eight unboxed sections
       // separated by hairlines rather than eight bordered fieldsets, the depth
       // marker hint beside the prose it governs, and the single Save at the
-      // foot — no Hide/Show or Preview beside it (ADR
-      // 20260805-remove-certification-paths shipped alongside that trim).
+      // foot — no Preview beside it (ADR 20260805-remove-certification-paths
+      // shipped alongside that trim). "Hide from the catalog" sits below the
+      // save bar as the page's one rare act.
       test(`the course editor renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
         // The rail is the frame of this composition, and it is client-rendered;
@@ -6436,15 +6474,18 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * The waiver surface as one page (ADR 20260827-people-not-lists,
-       * decision 4): the release editor, then the signature log as a
-       * day-grouped ledger beneath it. The log is paginated
+       * decision 4): the signature log as a day-grouped ledger, under one
+       * "Edit the release" door. The editor used to stand open above it — a
+       * full-height textarea of the legal text, a radio pair and a Publish, on
+       * top of 519 signed records — and editing a release is rare where reading
+       * who signed is daily (slice E3-7). The log is paginated
        * (`listWaiverIntegrityAudit`, `WAIVER_INTEGRITY_PAGE_SIZE`) so the demo
        * shop's 150+ signed records are one bounded page under the shared pager
        * rather than a 17,000px capture — the page is what is bounded, not the
        * photograph.
        *
        * Waits for the pager, not just the heading: the log renders below the
-       * editor, and a capture taken before it lands photographs half a page.
+       * door, and a capture taken before it lands photographs half a page.
        */
       test(`the waiver surface renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/waivers");
@@ -6473,7 +6514,10 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the waiver's materiality choice renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/waivers");
+        // Straight to the open editor: `#release` is the fragment the door
+        // answers to, and `AutoOpenDetails` opens it on a hard load as well as
+        // on a client transition.
+        await page.goto("/shop/blue-mantis/waivers#release");
         await page.getByRole("heading", { level: 1, name: "The release" }).waitFor();
         await page.getByRole("radio", { name: /A material change/ }).check();
         await page.getByRole("button", { name: "Publish", exact: true }).click();
@@ -6572,8 +6616,9 @@ for (const scheme of ["light", "dark"] as const) {
       // Divers asking for a day the board has nothing on, grouped by that day:
       // the seeded requests put two people on one date (one of them by their
       // alternate, one of them flexible into it), which is the whole reason the
-      // group header carries a count and the soft matches say which day they
-      // did ask for (ADR 20260827-people-not-lists, decision 5). Waiting on the
+      // group header carries a count and a request reached by two days is
+      // printed whole under one of them and referenced by a single line under
+      // the other (ADR 20260827-people-not-lists, decision 5). Waiting on the
       // day's own act rather than only the heading — the groups render below
       // it, so a capture taken before one lands photographs a half-built list.
       test(`the date requests list renders true to the design (${scheme})`, async ({ page }) => {
@@ -6614,17 +6659,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staff-diver-conversation", scheme);
       });
 
-      // Shop-wide discount codes: the create form, then the codes as one
-      // ledger shelved live / scheduled / ended, with the trip deals as their
-      // own ledger beneath (slice 9g of ADR 20260827-the-shops-shelves; codes
-      // themselves are ADR 20260729-shop-promo-codes). The seed holds a live
-      // code and an expired one, so two shelves render and the windows and
-      // redemption counts sit on the rows.
+      // Shop-wide discount codes: the codes as one ledger shelved live /
+      // scheduled / ended, with the trip deals as their own ledger beneath
+      // (slice 9g of ADR 20260827-the-shops-shelves; codes themselves are ADR
+      // 20260729-shop-promo-codes). The seed holds a live code and an expired
+      // one, so two shelves render and the windows and redemption counts sit on
+      // the rows. The seeded shop has no Stripe account, so what stands above
+      // the ledger is the one-line notice and *not* the seven-field composer —
+      // a form that cannot submit does not stand open, and with an account
+      // behind it the composer is a "New code" door rather than a standing card.
       test(`the discount codes page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/promos");
         await page.getByRole("heading", { level: 1, name: "Discounts a diver can type" }).waitFor();
         // The shelves are what changed; wait for one rather than for the
-        // create card, which paints with the static shell.
+        // header, which paints with the static shell.
         await page.getByRole("heading", { level: 2, name: "Live" }).waitFor();
         await capture(page, "staff-promos", scheme);
       });
@@ -7142,8 +7190,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
         await openTripAbout(page);
         await page
-          .locator("section")
-          .filter({ has: page.getByRole("heading", { name: "Readiness requirements" }) })
+          .locator("details#requirements")
           .getByText(/never blocks? enrolment/)
           .first()
           .waitFor();
@@ -8058,7 +8105,7 @@ for (const scheme of ["light", "dark"] as const) {
       // link would swallow the click this test used to make.
       await page.goto(`/shop/${privateShop.slug}`);
       // The row's own words, not a timing guess.
-      await page.getByText(/currency and depth unit/).waitFor();
+      await page.getByText(/guessed from your timezone/).waitFor();
       await capture(page, "today-units-unconfirmed", scheme);
     });
 

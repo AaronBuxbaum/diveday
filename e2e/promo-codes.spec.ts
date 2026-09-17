@@ -3,6 +3,17 @@ import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, findTripOnBoard } from "./helpers";
 
 /**
+ * The seven-field composer is a door now, not a standing form: reading the
+ * ledger is daily and writing a code is a few times a season, so the fields
+ * wait behind one control (slice E3-4). It opens itself on `#new-code` and on
+ * a refusal bounced back onto one of its boxes; everywhere a spec *types* a
+ * new code, it opens it first.
+ */
+async function openNewCodeForm(page: Page) {
+  await page.locator("summary").filter({ hasText: "New code" }).click();
+}
+
+/**
  * Shop-wide promo codes (docs ADR 20260729-shop-promo-codes). The fleet has no
  * real `STRIPE_SECRET_KEY`, so a *create* here always fails at the Stripe step
  * — which is itself the behaviour worth pinning: the row survives as visible
@@ -86,6 +97,7 @@ test.describe("as owner", () => {
     // Unlocks the "not_connected" gate without ever calling real Stripe.
     await request.post("/api/test/seed-stripe-account");
     await page.goto("/shop/blue-mantis/promos");
+    await openNewCodeForm(page);
 
     await page.getByRole("textbox", { name: "Code" }).fill("E2ETEST");
     await page.getByRole("spinbutton", { name: "Discount" }).fill("15");
@@ -111,7 +123,10 @@ test.describe("as owner", () => {
     await request.post("/api/test/seed-stripe-account");
     await page.goto("/shop/blue-mantis/promos");
 
-    // REEF10 is seeded, so this is a genuine duplicate.
+    // REEF10 is seeded, so this is a genuine duplicate. The composer is a door:
+    // nothing to type into until it is opened.
+    await expect(page.getByRole("textbox", { name: "Code" })).toHaveCount(0);
+    await openNewCodeForm(page);
     await page.getByRole("textbox", { name: "Code" }).fill("REEF10");
     await page.getByRole("spinbutton", { name: "Discount" }).fill("15");
     await page.getByRole("button", { name: "Create code" }).click();
@@ -136,6 +151,7 @@ test.describe("as owner", () => {
     await request.post("/api/test/seed-stripe-account");
     await page.goto("/shop/blue-mantis/promos");
 
+    await openNewCodeForm(page);
     await page.getByRole("textbox", { name: "Code" }).fill("E2EUNDO");
     await page.getByRole("spinbutton", { name: "Discount" }).fill("15");
     await page.getByRole("button", { name: "Create code" }).click();

@@ -128,9 +128,17 @@ test("a ready diver checks in with one tap, sinks into the settled group, and a 
   // to correct — folding it away put the correction one more tap behind exactly
   // the gesture this surface is built around.
   await expect(settled).toHaveJSProperty("open", true);
+  // **The row itself says nothing about its state, and that is the point.**
+  // The group header two lines above it already says "Checked in — 1"; the
+  // drawn mark and its two words on every row under it were that statement
+  // repeated per receipt (principle 9). What still names the act is the tap's
+  // accessible name, which is also what a screen reader reads.
   const undo = page.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
   await expect(undo).toBeVisible();
-  await expect(undo).toContainText("Checked in");
+  await expect(undo).toContainText("Diego Alvarez");
+  await expect(undo).not.toContainText("Checked in");
+  // Still no sentence teaching the re-tap, which was true before the mark went
+  // and has to stay true now that the row's end is quiet.
   await expect(undo).not.toContainText("undo");
 
   await undo.click();

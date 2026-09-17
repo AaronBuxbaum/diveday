@@ -176,10 +176,14 @@ describe("a review row", () => {
     expect(container.querySelector(".truncate")).toBeNull();
   });
 
-  /** A rating with no words says so rather than rendering an empty line. */
-  it("names a bare rating", () => {
+  /**
+   * A rating with no words renders nothing where the words would be. "Rating
+   * only." stood on fifteen of twenty rows — the absence formatted as
+   * information that principle 9 refuses.
+   */
+  it("says nothing at all about a bare rating", () => {
     row({ comment: null, isPublished: true }, "published");
-    expect(screen.getByText("Rating only.")).toBeInTheDocument();
+    expect(screen.queryByText("Rating only.")).toBeNull();
     // Nothing to feature, so nothing offers to feature it.
     expect(screen.queryByRole("button", { name: "Mark as standout" })).toBeNull();
   });

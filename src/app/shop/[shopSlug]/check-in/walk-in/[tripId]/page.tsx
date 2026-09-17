@@ -10,6 +10,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
@@ -112,8 +113,13 @@ export default async function WalkInDiverPage({
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+      {/* The way up is the queue, not the picker one step behind: the
+          departure this seats into is already on screen below, and
+          `SelectedTripCard` carries the change-of-mind door on the object it
+          is about. Principle 10 wants one link up, never a trail. */}
       <ShopPageHeader
-        eyebrow={t("checkIn.walkIn.eyebrow")}
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.checkIn)}
+        eyebrowHref={shopPath(shopSlug, "check-in")}
         title={t("checkIn.walkIn.title")}
         description={t("checkIn.walkIn.description")}
       />

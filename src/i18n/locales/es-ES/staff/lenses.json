@@ -1,6 +1,5 @@
 {
   "heading": "Tipos de día",
-  "value": "{count, plural, =0 {Sin tipos de día} =1 {1 tipo de día} other {# tipos de día}}",
   "nameLabel": "Nombre",
   "nameHint": "Los buceadores ven esta palabra en tu calendario y pueden filtrar por ella.",
   "createTitle": "Añadir un tipo de día",

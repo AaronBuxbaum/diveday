@@ -417,9 +417,23 @@ export function LedgerRow({
         // The door's glyph, last on the line at every width. It sits below
         // the overlay link (static, so the absolutely positioned link paints
         // over it) — a tap on it is a tap on the row.
+        //
+        // `max-sm:ms-auto` only when a stacked row has a kind and nothing
+        // trailing: the sentence has dropped to its own full-width line, so
+        // the first line holds the kind word and the chevron alone, and
+        // without the push the glyph floats a `gap-3` away from the word
+        // instead of marking the row's own right edge. With a `trailing` it
+        // is that element that carries the push (below) and the chevron
+        // follows it, as it always has.
         <DiveDayIcon
           name="chevron-right"
-          className={`size-4 shrink-0 text-muted ${stacked ? "max-sm:order-2" : ""}`.trim()}
+          className={`size-4 shrink-0 text-muted ${
+            stacked
+              ? kind && trailing == null
+                ? "max-sm:order-2 max-sm:ms-auto"
+                : "max-sm:order-2"
+              : ""
+          }`.trim()}
         />
       ) : null}
       {href ? (
