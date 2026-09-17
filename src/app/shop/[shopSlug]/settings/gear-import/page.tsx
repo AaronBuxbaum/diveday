@@ -5,12 +5,12 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass } from "@/components/ui/form";
 import { canPersonImportShopData } from "@/db/import";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { CsvFileInput } from "../_components/CsvFileInput";
 import { importGearServiceHistoryAction } from "./actions";
 
 // See the gear register's copy of this comment (ADR 20260804-instant-navigation).
@@ -91,16 +91,17 @@ export default async function GearImportPage({
           encType="multipart/form-data"
           className="mt-5 flex flex-wrap items-end gap-3"
         >
-          <label className="grid gap-1 text-sm font-medium">
-            {t("gear.import.file")}
-            <input
-              name="file"
-              type="file"
-              accept=".csv,text/csv"
-              required
-              className={controlClass}
-            />
-          </label>
+          {/* The same control Import contacts uses, one row above this page in
+              the same Settings group — not the operating system's grey
+              "Choose File / No file chosen" it rendered before. */}
+          <CsvFileInput
+            name="file"
+            required
+            copy={{
+              choose: t("gear.import.chooseFile"),
+              chooseAnother: t("gear.import.chooseDifferentFile"),
+            }}
+          />
           <SubmitButton
             pendingLabel={t("gear.import.pending")}
             className={buttonClass({ variant: "secondary" })}

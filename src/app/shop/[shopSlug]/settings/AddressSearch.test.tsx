@@ -21,7 +21,7 @@ const copy = {
   noMatches: "No matches",
   lookupFailed: "Address lookup isn’t available right now.",
   lookupResting: "That’s a lot of lookups for one hour, so searching pauses for a bit.",
-  notConfigured: "Address lookup isn’t set up on this DiveDay instance.",
+  notConfigured: "Address search isn’t available here yet.",
   suggestionsLabel: "Address suggestions",
   currentLabel: "Saved address",
   noneSet: "No address saved yet.",

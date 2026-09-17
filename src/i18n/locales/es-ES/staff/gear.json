@@ -146,9 +146,10 @@
     "description": "Trae tu flota y sus registros de mantenimiento desde otro sistema.",
     "help": "Una fila por unidad o evento. Las unidades coinciden primero por etiqueta y luego por número de serie; las reimportaciones se deduplican.",
     "downloadTemplate": "Descargar plantilla CSV del equipo",
-    "file": "Archivo CSV",
     "submit": "Importar historial",
-    "pending": "Importando…"
+    "pending": "Importando…",
+    "chooseFile": "Elegir archivo CSV",
+    "chooseDifferentFile": "Elegir otro archivo"
   },
   "unit": {
     "deleted": {

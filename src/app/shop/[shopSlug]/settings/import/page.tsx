@@ -299,26 +299,24 @@ const SCOPE_ROW_KEYS: Record<ImportScopeRowId, { what: StaffMessageKey; detail: 
   };
 
 /**
+ * **Only the exception wears a chip.** The card is headed "What comes across"
+ * and fourteen of its fifteen rows do, so a green "Comes across" pill on each
+ * was the group's own fact reprinted fifteen times — the surface saying once
+ * what it then repeats (principle 9). The one row that does *not* come across
+ * is the fact a shop is reading this table for, and it is the only row marked.
+ *
  * Built inside the request, not at module scope, so the chip text tracks the
  * negotiated locale rather than freezing to whichever locale first imported
  * this file.
  */
-function scopeChip(
-  t: StaffTranslator,
-): Record<(typeof IMPORT_HONESTY_TABLE)[number]["scope"], { label: string; className: string }> {
+function staysBehindChip(t: StaffTranslator): { label: string; className: string } {
   return {
-    included: {
-      label: t("settings.import.scopeChip.included"),
-      className: "bg-success-tint text-success-strong",
-    },
-    "stays-behind": {
-      label: t("settings.import.scopeChip.staysBehind"),
-      // `bg-surface`, not the `bg-surface-sunken` the /switching guides use for
-      // this same chip: the rows here are themselves sunken, so a sunken chip
-      // was drawn in the exact colour of the row behind it and every
-      // "Stays behind" pill read as bare grey text next to a filled green one.
-      className: "bg-surface text-muted",
-    },
+    label: t("settings.import.scopeChip.staysBehind"),
+    // `bg-surface`, not the `bg-surface-sunken` the /switching guides use for
+    // this same chip: the rows here are themselves sunken, so a sunken chip
+    // was drawn in the exact colour of the row behind it and read as bare grey
+    // text.
+    className: "bg-surface text-muted",
   };
 }
 
@@ -342,7 +340,7 @@ export default async function ImportContactsPage({
   });
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const chips = scopeChip(t);
+  const staysBehind = staysBehindChip(t);
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -387,12 +385,16 @@ export default async function ImportContactsPage({
                 <span className="font-medium text-foreground">
                   {t(SCOPE_ROW_KEYS[row.id].what)}
                 </span>
+                {/* The cell stays even when empty, so the detail column keeps
+                    its start edge down the whole list. */}
                 <span>
-                  <span
-                    className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${chips[row.scope].className}`}
-                  >
-                    {chips[row.scope].label}
-                  </span>
+                  {row.scope === "stays-behind" ? (
+                    <span
+                      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${staysBehind.className}`}
+                    >
+                      {staysBehind.label}
+                    </span>
+                  ) : null}
                 </span>
                 <span className="text-sm text-muted">{t(SCOPE_ROW_KEYS[row.id].detail)}</span>
               </li>

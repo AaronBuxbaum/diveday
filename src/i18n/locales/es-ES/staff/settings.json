@@ -171,7 +171,7 @@
     },
     "address": {
       "heading": "Dirección del centro",
-      "detail": "La dirección comercial del centro, no la de alguien del equipo. Se publica para que los buscadores te ubiquen como un lugar real. Busca tu centro por nombre o dirección y elígelo: con eso queda guardado.",
+      "detail": "Se muestra a los buceadores y a los buscadores.",
       "searchLabel": "Busca tu centro",
       "searchPlaceholder": "Nombre o dirección de tu centro…",
       "searching": "Buscando…",
@@ -179,7 +179,7 @@
       "noMatches": "Sin coincidencias. Prueba con el nombre de tu centro o con una dirección cercana.",
       "lookupFailed": "La búsqueda de direcciones no está disponible ahora. Inténtalo en un momento.",
       "lookupResting": "Son muchas búsquedas en una hora: se pausa un rato. Inténtalo más tarde.",
-      "notConfigured": "La búsqueda de direcciones no está configurada en esta instancia de DiveDay, así que la dirección de abajo no se puede cambiar aquí.",
+      "notConfigured": "La búsqueda de direcciones todavía no está disponible aquí.",
       "suggestionsLabel": "Sugerencias de dirección",
       "currentLabel": "Dirección guardada",
       "noneSet": "Todavía no hay ninguna dirección guardada.",
@@ -530,7 +530,6 @@
     },
     "statusBadge": {
       "invited": "Invitado",
-      "active": "Activo",
       "disabled": "Deshabilitado"
     },
     "rolesLegend": "Roles",
@@ -549,7 +548,7 @@
       "diver": "Buceador"
     },
     "languagesLegend": "Idiomas",
-    "languagesLabel": "Idiomas que habla esta persona",
+    "languagesLabel": "Idiomas",
     "languagesSave": "Guardar",
     "languagesSaving": "Guardando…",
     "invite": {
@@ -580,12 +579,12 @@
       "deletedToast": "Se eliminó a {name}."
     },
     "emergencyContact": {
-      "summaryOnFile": "Contacto de emergencia: {name}",
-      "summaryEmpty": "Añadir un contacto de emergencia",
       "nameLabel": "Nombre del contacto de emergencia",
       "phoneLabel": "Teléfono del contacto de emergencia",
       "save": "Guardar contacto",
-      "saving": "Guardando…"
+      "saving": "Guardando…",
+      "label": "Contacto de emergencia",
+      "addValue": "Añadir"
     },
     "languagesEmpty": "No indicado",
     "publicNameSeen": "Los buceadores ven “{name}”, aceptado el {date}"
@@ -661,7 +660,6 @@
       "heading": "Qué se importa"
     },
     "scopeChip": {
-      "included": "Se importa",
       "staysBehind": "Se queda fuera"
     },
     "scopeTable": {
