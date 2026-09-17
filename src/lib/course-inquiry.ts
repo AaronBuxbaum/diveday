@@ -74,8 +74,6 @@ export interface DateRequestCopy {
   yourPhone: string;
   phonePlaceholder: string;
   howManyDivers: string;
-  optional: string;
-  required: string;
   orPhone: string;
   orEmail: string;
   dateOptionsHeading: string;
@@ -83,6 +81,8 @@ export interface DateRequestCopy {
   alternateDate: string;
   whenSuits: string;
   whenSuitsPlaceholder: string;
+  /** The one word on the disclosure that holds the three rarely-answered asks. */
+  moreDetails: string;
   whereYouAreUpTo: string;
   chooseOne: string;
   anythingElse: string;

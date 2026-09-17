@@ -97,8 +97,8 @@ export function NextBoatCard({
     filtered ? "schedule.nextWithSpace.eyebrowFiltered" : "schedule.nextWithSpace.eyebrow",
   );
   return (
-    <SectionCard as="section" ariaLabel={eyebrow} className="flex flex-col gap-4">
-      <div className="min-w-0">
+    <SectionCard as="section" ariaLabel={eyebrow} className="flex h-full flex-col gap-4">
+      <div className="min-w-0 flex-1">
         <p className={EYEBROW_CLASS}>{eyebrow}</p>
         {/* The departure time is the figure a returning diver came to check,
             with the day reading as its caption (decision 3: numbers that lead

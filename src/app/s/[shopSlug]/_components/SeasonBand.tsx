@@ -47,9 +47,9 @@ export function SeasonBand({
 }) {
   if (entries.length === 0) return null;
   return (
-    // `max-w-md`, the same column the live-boat panel and the next-boat card
-    // hold: three stacked cards at three widths read as three unrelated things.
-    <SectionCard className="mt-6 max-w-md">
+    // No width and no margin of its own: the identity band's row owns both, so
+    // the four panels share one column width however many of them render.
+    <SectionCard className="h-full">
       <p className={groupLabelClass()}>{eyebrow}</p>
       <ul className="mt-1 space-y-4">
         {entries.map((entry) => (

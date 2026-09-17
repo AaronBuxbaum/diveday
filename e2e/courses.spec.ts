@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, makeActivitySafe, READ_ONLY, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
@@ -10,6 +11,18 @@ import {
   openTripAbout,
   publicTripUrl,
 } from "./helpers";
+
+/**
+ * **"More details" on the date-request composer** (2026-09-17). An alternative
+ * date, where the diver is up to and anything else sit behind one disclosure —
+ * closed at rest, and still inside the form, because a `<details>` hides its
+ * content without taking it out of the submission.
+ *
+ * `page.locator("summary")` rather than a role query: Playwright gives
+ * `<summary>` no implicit role.
+ */
+const openMoreDetails = (page: Page) =>
+  page.locator("summary").filter({ hasText: "More details" }).click();
 
 test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba session and save rental preferences", async ({
   page,
@@ -661,9 +674,14 @@ test("a diver with no workable date reaches the shop, and is offered flexible ti
   await page.getByLabel("Your name").fill("Mira Delgado");
   await page.getByLabel("Your email").fill("mira.delgado.e2e@example.com");
   await page.getByLabel("How many divers").fill("3");
-  // The flexible option accepts an exact or loose answer; the two date fields
-  // above it are optional first and alternative choices, never a hold.
+  // The flexible option accepts an exact or loose answer; the date field
+  // beside it is a first choice, never a hold.
   await page.getByLabel("Flexible timing").fill("the week of 12 August");
+  // "Where you are up to", the alternative date and "Anything else" moved
+  // behind one "More details" disclosure on 2026-09-17 — three answers a diver
+  // almost never has, against a composer that met them with ten boxes. Closed,
+  // they still submit; a spec that fills one opens it first.
+  await openMoreDetails(page);
   // The option's value is now the code ("never"), not its rendered label —
   // src/lib/course-inquiry.ts returns codes, and the diver bundle supplies
   // the sentence.
@@ -702,6 +720,7 @@ test("a blank inquiry is rejected, not defaulted — a way to reply is required"
 
   // Experience is useful context, but a lead with no address and no number is
   // still a question nobody can answer.
+  await openMoreDetails(page);
   await page.getByLabel("Where you are up to").selectOption("never");
   await inquiry.getByRole("button", { name: "Send", exact: true }).click();
   await expect(
@@ -728,6 +747,7 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
   // obvious.
   await expect(page.getByLabel("How many divers")).toHaveValue("1");
   await page.getByLabel("Flexible timing").fill("any weekend this autumn");
+  await openMoreDetails(page);
   await page.getByLabel("Where you are up to").selectOption("certified");
 
   await inquiry.getByRole("button", { name: "Send", exact: true }).click();
