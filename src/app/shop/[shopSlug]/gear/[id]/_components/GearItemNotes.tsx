@@ -1,7 +1,8 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
-import { controlClass, Field, FieldActions } from "@/components/ui/form";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { controlClass, FieldActions } from "@/components/ui/form";
 import type { GearServiceEventRow } from "@/db/gear";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
@@ -26,6 +27,7 @@ export function GearItemNotes({
   locale,
   t,
   readOnly,
+  formOpen,
 }: {
   gearItemId: string;
   notes: GearServiceEventRow[];
@@ -33,6 +35,8 @@ export function GearItemNotes({
   locale: string;
   t: StaffTranslator;
   readOnly: boolean;
+  /** A note just landed and the page came back — bring the box back standing. */
+  formOpen: boolean;
 }) {
   return (
     <SectionCard padding="lg" title={t("gear.unit.notes.title")}>
@@ -62,33 +66,50 @@ export function GearItemNotes({
         <p className="text-sm text-muted">{t("gear.unit.notes.empty")}</p>
       )}
 
+      {/* **The box opens on request.** An empty textarea and an "Add note"
+          button stood under "No notes yet." on every unit in the fleet — a form
+          asking to be filled in, on a section whose job is to tell a technician
+          what somebody already noticed. The door carries the act's own words,
+          so the box inside needs no second label of its own. */}
       {readOnly ? null : (
-        <form
-          action={recordGearServiceAction}
-          className={`grid gap-3 ${notes.length > 0 ? "mt-5 border-t border-border pt-5" : "mt-4"}`}
+        <details
+          open={formOpen || undefined}
+          className={`group ${notes.length > 0 ? "mt-5 border-t border-border pt-5" : "mt-4"}`}
         >
-          <input type="hidden" name="gearItemId" value={gearItemId} />
-          <input type="hidden" name="kind" value="note" />
-          <input type="hidden" name="servicedOn" value={todayLocal} />
-          <Field label={t("gear.unit.notes.addLabel")}>
+          <summary
+            className={buttonClass({
+              variant: "link",
+              size: "sm",
+              flush: true,
+              className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+            })}
+          >
+            {t("gear.unit.notes.addLabel")}
+            <DisclosureCaret direction="down" className="group-open:rotate-180" />
+          </summary>
+          <form action={recordGearServiceAction} className="mt-3 grid gap-3">
+            <input type="hidden" name="gearItemId" value={gearItemId} />
+            <input type="hidden" name="kind" value="note" />
+            <input type="hidden" name="servicedOn" value={todayLocal} />
             <textarea
               name="note"
               required
               maxLength={500}
               rows={3}
+              aria-label={t("gear.unit.notes.addLabel")}
               placeholder={t("gear.unit.notes.placeholder")}
               className={controlClass}
             />
-          </Field>
-          <FieldActions>
-            <SubmitButton
-              pendingLabel={t("gear.unit.notes.adding")}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("gear.unit.notes.add")}
-            </SubmitButton>
-          </FieldActions>
-        </form>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("gear.unit.notes.adding")}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("gear.unit.notes.add")}
+              </SubmitButton>
+            </FieldActions>
+          </form>
+        </details>
       )}
     </SectionCard>
   );

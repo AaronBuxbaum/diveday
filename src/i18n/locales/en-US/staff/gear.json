@@ -167,7 +167,8 @@
       "title": "Service",
       "clock": "last {servicedOn} · next due {dueOn}",
       "clockNoDue": "last {servicedOn}",
-      "noClocks": "No service on record yet. Log the first one below and the clocks start from there.",
+      "noClocks": "No service on record yet.",
+      "logDoor": "Log a service",
       "kind": "What was done",
       "servicedOn": "Done on",
       "nextDueOn": "Next due",
@@ -201,7 +202,7 @@
     },
     "details": {
       "title": "Details",
-      "description": "The tag, size, and serial the register lists this unit by.",
+      "edit": "Edit details",
       "save": "Save changes",
       "saving": "Saving…"
     },
