@@ -9,7 +9,6 @@ import { listActiveCourses } from "@/db/courses";
 import { getDiveSite, listDiveSites } from "@/db/dive-sites";
 import { discardFormDraft } from "@/db/form-drafts";
 import { getMovePreflight } from "@/db/move-preflight";
-import { canPersonViewShopReports } from "@/db/reporting";
 import { listSeasonEvents } from "@/db/season-events";
 import { getShopById } from "@/db/shops";
 import { createTripRequestInvitations } from "@/db/trip-invitations";
@@ -411,15 +410,15 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   if (!parsed.success) return await invalid();
   const requestIds = z.array(z.uuid()).safeParse(formData.getAll("inquiryId"));
   if (!requestIds.success) return await invalid();
-  // The request ids arrive from a client form and the builder URL is shareable.
-  // A staffer who can create a departure is not automatically allowed to read
-  // the private lead details that would be attached to it.
-  if (
-    requestIds.data.length > 0 &&
-    !(await canPersonViewShopReports(db, shop.id, session.user.personId))
-  ) {
-    return await invalid();
-  }
+  // No role check on the ids beyond the shape above, since 2026-09-16 (issue
+  // #1679). This refused a submit carrying `inquiryId`s unless the staffer
+  // passed `canPersonViewShopReports`, on the ground that "a staffer who can
+  // create a departure is not automatically allowed to read the private lead
+  // details" — which stopped being true when `/requests` was opened to every
+  // live staff role, and would now turn the day group's own hand-off into an
+  // unexplained `?builder=invalid`. What still contains these ids is the
+  // scope, not the role: every read of them is `and(eq(shopId), inArray(id))`,
+  // so a shareable URL or a hand-built POST reaches nothing outside this shop.
   const {
     title,
     description,

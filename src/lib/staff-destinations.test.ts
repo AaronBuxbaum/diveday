@@ -151,13 +151,14 @@ describe("permission gating", () => {
     const gated = STAFF_DESTINATIONS.filter((destination) => destination.gate !== undefined).map(
       (destination) => destination.id,
     );
-    // Requests carries the `reports` gate rather than none: it is a pile of
-    // contact details for people who have not booked, and deciding which
-    // unscheduled day is worth a boat is the same commercial work Reports and
-    // Promo codes sit behind. The inbox is *not* on this list — it carried a
-    // gate of its own until 2026-09-10, when the owner opened reading and
-    // answering to every live staff role (issues #1505/#1518).
-    expect(gated).toEqual(["waivers", "requests", "reports", "team", "promoCodes", "settings"]);
+    // Neither the inbox nor Requests is on this list, and that pairing is the
+    // point. The inbox's gate went on 2026-09-10 (issues #1505/#1518) and
+    // Requests' on 2026-09-16 (issue #1679), both as H-14 amendments and both
+    // *deleted* rather than relaxed. The reason Requests carried one — a pile
+    // of contact details for people who have not booked — stopped
+    // distinguishing it the day the inbox began showing a stranger's address
+    // and message to every live staff role.
+    expect(gated).toEqual(["waivers", "reports", "team", "promoCodes", "settings"]);
 
     const visible = visibleStaffDestinations(crew).map((destination) => destination.id);
     const palette = staffPaletteDestinations(crew).map((destination) => destination.id);
@@ -249,6 +250,26 @@ describe("what each consumer derives", () => {
   it("puts Inbox in More for the daily crew, not only for owners", () => {
     expect(staffNavDestinations("daily", crew).map((d) => d.id)).toContain("inbox");
     expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("inbox");
+  });
+
+  /**
+   * And Requests beside it, since 2026-09-16 (issue #1679, the same H-14 row).
+   * Asserted on its own for the same reason Inbox is: the gated-ids list above
+   * would still pass if Requests were dropped from the registry outright.
+   *
+   * The pairing is the whole argument. While Requests was gated and the inbox
+   * was not, a captain was refused a page of people who asked for a Tuesday and
+   * admitted, one tab across, to a page of strangers' addresses and messages
+   * they could answer in the shop's name — so the privacy reason written on
+   * this gate had stopped describing where DiveDay draws its lines.
+   */
+  it("puts Requests in More for the daily crew, beside Inbox", () => {
+    expect(staffNavDestinations("daily", crew).map((d) => d.id)).toContain("requests");
+    expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("requests");
+    // The one that is not a nav question: `/calls` is ungated and its
+    // date-request outcome redirects here, so a captain who wrote a caller down
+    // used to be sent straight into a refusal for the row they had just made.
+    expect(visibleStaffDestinations(crew).map((d) => d.id)).toContain("requests");
   });
 
   it("keeps only non-places out of the nav", () => {

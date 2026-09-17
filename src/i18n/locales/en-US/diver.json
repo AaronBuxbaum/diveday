@@ -2710,7 +2710,7 @@
       "welcome": {
         "eyebrow": "Welcome divers well",
         "title": "From first click to confirmed place on the boat",
-        "summary": "Divers book and pay themselves, from your website or ours, and you can see that the confirmation arrived. No phone tag, and no \"did you get my email?\""
+        "summary": "Divers book and pay themselves, from your website or ours, and you can see that the confirmation arrived. No phone tag, and no “did you get my email?”"
       },
       "ready": {
         "eyebrow": "Get ready before the dock",
@@ -2851,7 +2851,7 @@
         "item3": "A night-before brief: conditions, dock time, what to bring, who to text",
         "item4": "WhatsApp from the shop’s own number, connected in Settings",
         "item5": "A recap page after the dive: sites, photos, a crew shout-out, and a bring-a-buddy nudge",
-        "item6": "A \"leave a review\" link on the recap, pointed wherever you collect reviews",
+        "item6": "A “leave a review” link on the recap, pointed wherever you collect reviews",
         "item7": "Readable delivery history for every message, with a resend"
       },
       "records": {
@@ -3127,12 +3127,12 @@
         "heroLede": "FareHarbor takes the online booking and puts you in front of its hotel and reseller network. Then the dive day still runs on a clipboard, because a general booking engine was never built for certification checks, waivers, or a roll call on the water. Keep FareHarbor for the storefront, or leave the per-booking fee behind and take the booking here too.",
         "context": {
           "item1": "FareHarbor is an online booking platform for tours, activities, and rentals, owned by Booking Holdings, the company behind Booking.com, and plenty of dive shops run their storefront on it. It is good at that job: guests book and pay online, and its distribution network puts your trips in front of hotels, concierges, and resellers you would never reach on your own.",
-          "item2": "It is not dive software. FareHarbor makes no claim to certification gating, medical waivers that block a diver, rental-gear fit, or a boat manifest built for a roll call. Its \"manifest\" is a passenger list you can download, and it has no concept of a certification record.",
+          "item2": "It is not dive software. FareHarbor makes no claim to certification gating, medical waivers that block a diver, rental-gear fit, or a boat manifest built for a roll call. Its “manifest” is a passenger list you can download, and it has no concept of a certification record.",
           "item3": "The storefront is not free. FareHarbor charges nothing monthly, but takes a fee on every booking, added to your guest’s checkout price, for as long as you use it. It does not publish the rate; you hear it on a sales call, and third parties report around 6%. A growing shop feels a cut of every booking."
         },
         "coexist": {
           "heading": "Keep FareHarbor. Add the day it can’t run.",
-          "intro": "DiveDay runs the water side, everything between \"booked\" and \"back at the dock\" that a booking engine was never built to touch. Point for point, this is what FareHarbor leaves to your clipboard:",
+          "intro": "DiveDay runs the water side, everything between “booked” and “back at the dock” that a booking engine was never built to touch. Point for point, this is what FareHarbor leaves to your clipboard:",
           "bridgeNote": "FareHarbor keeps doing what it is good at: taking the online booking and putting you in front of its hotel and reseller network, which DiveDay has no equivalent for. There is no wire between the two. You bring your divers in with the CSV export below, and re-import as your roster grows.",
           "replaceHeading": "Or leave the per-booking fee behind.",
           "replaceBody": "If FareHarbor is only your booking button and you are not leaning on its distribution network, you do not need to keep paying on every booking to keep it. DiveDay takes the booking itself: a public schedule anyone can book without an account, checkout through your own Stripe account, native waivers. Bring your divers across once, point your booking link here, and the per-booking fee stops."
@@ -3183,7 +3183,7 @@
           "offerBody": "Ask, and a person at DiveDay builds it with you: your photos, your words, the booking already in it. It is in the price."
         },
         "exportHeading": "Get your data out of FareHarbor",
-        "exportIntro": "FareHarbor runs in a browser, and your data comes out of the Dashboard’s reports. There is no single \"export everything\" button. The goal is your people as a CSV. Menu labels shift over time, so treat these as the shape of the path rather than word-for-word buttons.",
+        "exportIntro": "FareHarbor runs in a browser, and your data comes out of the Dashboard’s reports. There is no single “export everything” button. The goal is your people as a CSV. Menu labels shift over time, so treat these as the shape of the path rather than word-for-word buttons.",
         "exportSteps": {
           "step1": {
             "title": "Sign into your FareHarbor Dashboard as an owner or admin",
@@ -3207,7 +3207,7 @@
           }
         },
         "exportNotes": {
-          "note1": "The Contacts report is date-scoped rather than a one-click \"everything\" export, so set the range as wide as FareHarbor allows and seasonal and lapsed customers come along.",
+          "note1": "The Contacts report is date-scoped rather than a one-click “everything” export, so set the range as wide as FareHarbor allows and seasonal and lapsed customers come along.",
           "note2": "Your column headings do not have to match anything. DiveDay recognizes the common names FareHarbor and every other system use, and shows you how each column mapped before you commit.",
           "note3": "Certification records and rental sizes are not in a FareHarbor export, because a booking engine does not hold them (see the scope table below). Expect people and their contact details. Certs and sizes you build in DiveDay as divers arrive.",
           "note4": "What FareHarbor does hold is bookings, and those come across. Run the Bookings report over the same wide date range and your regulars arrive with their visit history rather than as new names."
@@ -3228,7 +3228,7 @@
         },
         "coexist": {
           "heading": "Keep Rezdy. Add the day it can’t run.",
-          "intro": "DiveDay runs the water side, everything between \"booked\" and \"back at the dock\" that a booking engine was never built to touch. Point for point, this is what Rezdy leaves to your clipboard:",
+          "intro": "DiveDay runs the water side, everything between “booked” and “back at the dock” that a booking engine was never built to touch. Point for point, this is what Rezdy leaves to your clipboard:",
           "bridgeNote": "Rezdy keeps doing what it is good at: taking the online booking and pushing your trips to its reseller marketplace and the OTAs, which DiveDay has no equivalent for. There is no wire between the two. You bring your divers in with the CSV export below, and re-import as your roster grows.",
           "replaceHeading": "Or leave the monthly fee and the per-booking cut behind.",
           "replaceBody": "If you are not leaning on Rezdy’s marketplace, you are paying a monthly subscription and a slice of every booking for a storefront you could run here: a public schedule anyone can book without an account, checkout through your own Stripe account, native waivers. Rezdy makes going easy, with no lock-in contract, a self-serve CSV export, and an API you can turn on yourself."
@@ -3449,7 +3449,7 @@
           "answer": "No. The price is per location, whoever is on the schedule. Front desk, instructors, divemasters, captains and crew all get their own login at no extra cost. Divers never need an account at all: they book on your shop’s pages and open their own trip from a link."
         },
         "trialMeaning": {
-          "question": "What does \"trial\" mean right now?",
+          "question": "What does “trial” mean right now?",
           "answer": "What you set up keeps working when the window ends, so if your season is months out, nothing is lost by building the board now. Starting a shop is free for 3 weeks with no card required. When you are ready to move to paid, email {email}."
         },
         "seeBefore": {

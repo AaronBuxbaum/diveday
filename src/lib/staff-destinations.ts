@@ -269,11 +269,11 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // 20260813-more-is-the-shops-other-door). It is *here* because the registry is
   // the only place a destination may be declared at all.
   //
-  // Ungated, deliberately, though the Requests page one of its three outcomes
-  // writes to is behind `reports`: gating this would take the phone away from
-  // the person most likely to answer it. A caller's own details, given on the
-  // line to the staffer typing them, are not the same disclosure as a page
-  // listing every stranger who ever asked.
+  // Ungated, deliberately: gating this would take the phone away from the
+  // person most likely to answer it. It used to be the odd one out — the
+  // Requests page one of its three outcomes writes to, and redirects to, sat
+  // behind `reports` — and since 2026-09-16 that page is ungated too, so the
+  // call and the row it becomes are now reachable by the same people.
   { id: "tookACall", suffix: "/calls", navGroup: null, inPalette: true },
   { id: "staffing", suffix: "/staffing", navGroup: "daily", inPalette: true },
   { id: "courses", suffix: "/courses", navGroup: "daily", inPalette: true },
@@ -310,18 +310,28 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // deliberately *not* a sixth primary tab: the dock holds five and the sixth
   // slot is More (ADR 20260813-more-is-the-shops-other-door).
   //
-  // Gated with Reports and Promo codes rather than left open like Reviews
-  // beside it. Two reasons, and they point the same way. The rows are a pile of
-  // *prospects* — names, email addresses and phone numbers of people who have
-  // not booked anything, and who reached a public form rather than the shop's
-  // roster — so this is the one "Run the shop" surface that hands contact
-  // details for strangers to whoever opens it. And what a shop *does* with it
-  // is commercial: decide which unscheduled day is worth a boat. That is the
-  // work Reports and Promo codes already sit behind, not the work a captain
-  // does. A captain runs the water; demand that has not become a departure yet
-  // is the desk's. Absent for them, never shown and refused (ADR
-  // 20260724-role-gated-surfaces-hide-not-explain).
-  { id: "requests", suffix: "/requests", navGroup: "daily", inPalette: true, gate: "reports" },
+  // **Ungated since 2026-09-16**, and the gate was *deleted* rather than
+  // relaxed, the way the inbox's was (issue #1679, an H-14 amendment).
+  //
+  // It carried the `reports` gate on two grounds. The privacy one stopped being
+  // true on 2026-09-10: the inbox one row below renders the same thing for a
+  // message from an address with no diver record — a stranger's address or
+  // number, their subject and their message — to every live staff role, and
+  // lets them answer it in the shop's name. A rule that refuses a captain here
+  // and admits them one tab across is not drawing a line, it is describing
+  // where two features happened to ship.
+  //
+  // The commercial one — deciding which unscheduled day is worth a boat is the
+  // desk's work, not the water's — survived longer and lost on the same
+  // argument that opened the inbox: the person best placed to answer a diver
+  // asking for a Tuesday is whoever is at the counter on Tuesday. Putting a
+  // departure on the board is still the board's own work and unchanged by this.
+  //
+  // One thing this repairs rather than widens: `/calls` (the desk phone's door)
+  // has always been ungated, and its `date-request` outcome *redirects* to this
+  // page. A captain who took a call and wrote down a request was sent straight
+  // into a refusal for the row they had just written.
+  { id: "requests", suffix: "/requests", navGroup: "daily", inPalette: true },
   // What divers wrote back (ADR 20260907-two-way-inbox). "Run the shop" work
   // beside Requests and Reviews: a shop reads it on its own rhythm and empties
   // it by answering, and it is deliberately not a sixth primary tab — the dock

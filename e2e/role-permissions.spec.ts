@@ -149,8 +149,10 @@ test.describe("H-14 role permissions", () => {
     test("a refused surface lands somewhere that says why", { tag: READ_ONLY }, async ({
       page,
     }) => {
-      // Four sequential refusal round trips now, not three; the suite default
-      // is sized for a single flow.
+      // Three sequential refusal round trips; the suite default is sized for a
+      // single flow. It was four until Date requests was opened to every live
+      // staff role on 2026-09-16 (issue #1679) — that surface is asserted
+      // positively in the test below, beside the inbox it now matches.
       test.setTimeout(40_000);
 
       // Revenue is owner/manager work — Today explains, rather than dumping
@@ -158,13 +160,6 @@ test.describe("H-14 role permissions", () => {
       await page.goto(`/shop/${SHOP}/reports`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
       await expect(page.getByText(/Reports read the shop’s revenue/i)).toBeVisible();
-
-      // Date requests carry contact details for people who have not booked, and
-      // choosing which unscheduled day gets a boat is desk work — the same
-      // owner/manager gate revenue takes, with the row absent from the nav.
-      await page.goto(`/shop/${SHOP}/requests`);
-      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
-      await expect(page.getByText(/Date requests carry contact details/i)).toBeVisible();
 
       // Team and Import are Settings sub-pages, and they used to land their
       // refusal on Settings — the nearest parent that could explain it. Now
@@ -211,6 +206,42 @@ test.describe("H-14 role permissions", () => {
         page.getByLabel("Reply by email to priya.sharma@example.com", { exact: true }),
       ).toBeVisible();
     });
+
+    /**
+     * **Nor is Date requests, since 2026-09-16** (issue #1679, the same H-14
+     * row). It was owner/manager on the written ground that the rows carry
+     * contact details for people who have not booked — which is what the inbox
+     * above shows this same captain, for a stranger with no diver record, and
+     * lets them answer in the shop's name. Asserted in this file for the same
+     * reason the inbox is: the captain lens is where a gate would come back.
+     *
+     * The refusal it used to land is gone from the test above, so this is the
+     * only place either behaviour is stated.
+     */
+    test("the daily crew may read the days divers asked for", { tag: READ_ONLY }, async ({
+      page,
+    }) => {
+      await page.goto(`/shop/${SHOP}/requests`);
+      // The page's own heading, not a bounce to Today carrying a notice.
+      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/requests`));
+      await expect(page.getByRole("heading", { level: 1, name: "Requested dates" })).toBeVisible();
+      // That it is also a place a captain can *get to* rather than only type
+      // is a nav question, and it is asserted where the nav is: the More
+      // menu's captain list in `staff-nav.spec.ts`, and the registry three
+      // ways over in `staff-destinations.test.ts`.
+
+      // The rows themselves, not only the chrome — a page that renders its
+      // heading and no leads would pass a URL assertion and help nobody.
+      await expect(page.getByRole("link", { name: "Add a departure" }).first()).toBeVisible();
+
+      // **Turning one into a departure is not this role's** — and that is
+      // `canConfigureTrips` (owner, manager, instructor), a different gate
+      // this change does not touch. The instructor lens below is where the
+      // hand-off is asserted, because an instructor is the role that can
+      // configure a trip *and* fails `canViewShopReports`, which is exactly
+      // who the removed downstream check was emptying the builder for. Filed
+      // as #1831: the link is drawn for a captain who cannot complete it.
+    });
   });
 
   test.describe("instructor", () => {
@@ -237,6 +268,36 @@ test.describe("H-14 role permissions", () => {
       await page.goto(`/shop/${SHOP}/settings`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
       await expect(page.getByRole("button", { name: "Save rental catalog" })).toHaveCount(0);
+    });
+
+    /**
+     * **The hand-off a date request exists for** (issue #1679, 2026-09-16).
+     *
+     * An instructor is the role this turns on: they pass `canConfigureTrips`,
+     * so the builder is theirs, and they fail `canViewShopReports`, which is
+     * owner/manager only. The board read the request rows behind that second
+     * check — justified in a comment as "the same live report gate that
+     * protects /requests", which stopped being true the moment that page was
+     * opened. So an instructor got the builder with no "Starting from
+     * requests" block and nothing on screen saying why (`security-reviewer`).
+     *
+     * Asserted through the link rather than by typing the URL, because the
+     * href is half of what broke: it carries the ids the block is built from.
+     */
+    test("an instructor opens the builder on a day's requests", { tag: READ_ONLY }, async ({
+      page,
+    }) => {
+      await page.goto(`/shop/${SHOP}/requests`);
+      const addDeparture = page.getByRole("link", { name: "Add a departure" });
+      await expect(addDeparture.first()).toBeVisible();
+      await page
+        .getByRole("region")
+        .filter({ has: addDeparture })
+        .first()
+        .getByRole("link", { name: "Add a departure" })
+        .click();
+
+      await expect(page.getByRole("group", { name: "Starting from requests" })).toBeVisible();
     });
   });
 

@@ -178,11 +178,52 @@ export function straightApostrophes(value) {
   return found;
 }
 
+/**
+ * A straight double quote in prose a person reads.
+ *
+ * The house quotation marks are `“ ”`, and the bundles were already mostly
+ * spelling them that way: 238 curly against 54 straight when this was swept
+ * (issue #1664). The collision is the apostrophe's, at a fifth of the volume
+ * — both spellings render fine and no reader notices, and Playwright matches
+ * them as different strings while every e2e spec here hard-codes its English.
+ * `marketing.guides.fareharbor.coexist.intro` and `…eve.coexist.intro` made the
+ * same rhetorical move one scroll apart, in two different characters.
+ *
+ * **No ICU exemption, unlike the apostrophe above.** A straight `'` is what
+ * makes an ICU span a literal, so `'{depth18}'` has to keep it; `"` carries no
+ * meaning in ICU at all, so there is no span where the straight character is
+ * required and nothing to strip before scanning. It landed at zero with no
+ * exemption list.
+ *
+ * Spanish sweeps the same way: `es-ES/README.md` settles it as `“ ”` rather
+ * than the peninsular `« »`, so this sits beside `proseDashes` rather than
+ * inside `RULES` — typography a third locale inherits without naming it.
+ */
+export function straightDoubleQuotes(value) {
+  const found = [];
+  for (let index = value.indexOf('"'); index !== -1; index = value.indexOf('"', index + 1)) {
+    // The quote's own word plus one either side, the same shape the apostrophe
+    // rule reports in, so `--report` output greps back to its string.
+    const before = value.slice(0, index).split(/\s+/).filter(Boolean).slice(-2);
+    const after = value
+      .slice(index + 1)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2);
+    found.push({ rule: "quote", text: `${before.join(" ")}"${after.join(" ")}`.trim() });
+  }
+  return found;
+}
+
 /** Every tell in one bundle value, for one locale. */
 export function findTells(value, locale) {
   const rules = RULES[locale];
   if (!rules) throw new Error(`no voice rules for locale ${locale}`);
-  const found = [...proseDashes(value), ...straightApostrophes(value)];
+  const found = [
+    ...proseDashes(value),
+    ...straightApostrophes(value),
+    ...straightDoubleQuotes(value),
+  ];
   for (const [rule, pattern] of Object.entries(rules)) {
     pattern.lastIndex = 0;
     for (const match of value.matchAll(pattern)) found.push({ rule, text: match[0] });
@@ -411,7 +452,7 @@ async function main() {
       for (const file of added) console.warn(`- ${file}: new file with ${counts.get(file)}`);
     }
     const next = {
-      "//": "Voice tells — a machine-written mannerism, or a straight apostrophe where the house ’ belongs — still in a message bundle or a route's metadata block, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs.",
+      "//": "Voice tells — a machine-written mannerism, or a straight apostrophe or double quote where the house ’ and “ ” belong — still in a message bundle or a route's metadata block, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs.",
       ...Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b))),
     };
     await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
@@ -461,7 +502,7 @@ async function main() {
   if (violations.length > 0) {
     console.error(`Voice violations:\n${violations.map((v) => `- ${v}`).join("\n")}`);
     console.error(
-      "A prose em-dash becomes a full stop, a comma or a colon; an intensifier is deleted; a lead-in is deleted; a 'not just X' contrast states the thing; an apostrophe is ’ (U+2019), never ' — the ICU-quoted `'{depth18}'` markers are the only exception. The full list and the reasoning: docs/design/brand.md, \"What gives us away\". `node scripts/check-voice.mjs --report <file>` lists every hit.",
+      "A prose em-dash becomes a full stop, a comma or a colon; an intensifier is deleted; a lead-in is deleted; a 'not just X' contrast states the thing; an apostrophe is ’ (U+2019), never ' — the ICU-quoted `'{depth18}'` markers are the only exception; quotation marks are “ ”, never \", with no exception, since \" means nothing to ICU. The full list and the reasoning: docs/design/brand.md, \"What gives us away\". `node scripts/check-voice.mjs --report <file>` lists every hit.",
     );
     process.exit(1);
   }
