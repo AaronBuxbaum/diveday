@@ -8,8 +8,9 @@ import { signInAsOwner } from "./helpers";
  *
  * The dates are the point of the flow. A request that names one lands in that
  * day's group; the second diver here names the same day as their *alternate*,
- * which keeps both requests in the group while the individual rows retain
- * their preferred/alternate explanation.
+ * which keeps both requests in the group's count — but the record is printed
+ * whole only under the day the diver named first, and the other group holds a
+ * one-line reference linking up to it.
  *
  * The day group owns the count and the act (ADR 20260827-people-not-lists,
  * decision 5), so "how many groups could make the 6th?" is read off that
@@ -75,13 +76,22 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   // and roughly how many divers that is. No row repeats them.
   await expect(firstDay.getByRole("heading", { level: 2 })).toHaveText(/2 groups · 2 divers/i);
   await expect(firstDay.getByText("Wants to dive: Two dives on the Duane")).toBeVisible();
-  // The group that named the 13th first is here as a fallback, and says so — in
-  // the row's own words rather than in a badge on a tinted card.
-  await expect(firstDay.getByText("Wants to dive: A shallow reef morning")).toBeVisible();
-  await expect(firstDay.getByText(/First choice Mar 13, 2027/)).toBeVisible();
+
+  // The diver who named the 13th first is in this day's count, but their record
+  // is not printed here a second time: the group holds one line pointing at the
+  // day they did name. Printing it whole under both is how five divers came to
+  // appear twice each on one screen, identical down to the phone number.
+  await expect(firstDay.getByText("Wants to dive: A shallow reef morning")).toHaveCount(0);
+  await expect(firstDay.getByRole("link", { name: /First choice Mar 13, 2027/ })).toHaveAttribute(
+    "href",
+    "#date-2027-03-13",
+  );
 
   const secondDay = dayGroup("Mar 13, 2027");
   await expect(secondDay.getByRole("heading", { level: 2 })).toHaveText(/2 groups · 2 divers/i);
+  // And that is where it is printed whole.
+  await expect(secondDay.getByText("Wants to dive: A shallow reef morning")).toBeVisible();
+  await expect(secondDay.getByText("reef.fan.e2e@example.com")).toBeVisible();
 
   // The act the count exists for: the schedule builder, opened on that day.
   await expect(firstDay.getByRole("link", { name: "Add a departure" })).toHaveAttribute(

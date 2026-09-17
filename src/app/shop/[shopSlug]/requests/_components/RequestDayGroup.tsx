@@ -90,6 +90,10 @@ export function addDepartureHref(
  * The same component renders the "no date named" tail, which has a count and no
  * day, so no advice and no act: prose a date field could not hold is still a
  * lead, but it is not a day anyone can put a boat on.
+ *
+ * `advice` is empty on a day whose planner sentence is word for word the one
+ * above it — the page decides that, because only the page can see the group
+ * before this one.
  */
 export function RequestDayGroup({
   id,
@@ -102,8 +106,13 @@ export function RequestDayGroup({
   /** The date and the counts, as one line — the group owns them, not the rows. */
   label: string;
   advice?: readonly RequestAdviceLine[];
-  /** The day's one secondary act. Omitted for the undated tail. */
-  add?: { href: string; label: string };
+  /**
+   * The day's one act. Omitted for the undated tail. `prominent` is the first
+   * group's, and only the first group's: every day on the page offers the same
+   * act, and a column of filled buttons is the reader doing triage the design
+   * should have done (principle 8). The rest are link weight.
+   */
+  add?: { href: string; label: string; prominent?: boolean };
   children: ReactNode;
 }) {
   return (
@@ -117,7 +126,14 @@ export function RequestDayGroup({
           // control (`schedule.builder.addDeparture`): one act, one name,
           // wherever a staffer meets it. The `+` is aria-hidden decoration —
           // it never enters a translated string.
-          <Link href={add.href} className={buttonClass({ variant: "secondary", size: "sm" })}>
+          <Link
+            href={add.href}
+            className={buttonClass(
+              add.prominent
+                ? { variant: "secondary", size: "sm" }
+                : { variant: "link", size: "sm", flush: true },
+            )}
+          >
             {add.label}
           </Link>
         ) : null}

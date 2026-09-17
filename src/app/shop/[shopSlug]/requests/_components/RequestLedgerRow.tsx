@@ -4,9 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { DateRequestRow } from "@/db/course-inquiries";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import { formatCalendarDate } from "@/lib/calendar-date";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
-import type { DateRequestMatch } from "@/lib/date-requests";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { formatShortDate } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
@@ -32,15 +30,21 @@ const EXPERIENCE_KEYS: Record<CourseInquiryExperience, StaffMessageKey> = {
  * who asked, what for, how many of them, and why it is filed under the day it
  * is filed under; the act that answers it belongs to the day group above.
  *
- * Two things this row deliberately does not do any more:
+ * **This is the request's one full rendering.** A request lands in every group
+ * it could make — first choice, fallback, and every day a flexible one can
+ * travel to — and it used to be printed whole under each of them; five divers
+ * each appeared twice on one screen with identical four-line bodies. The full
+ * record renders under `homeDate` (`src/lib/date-requests.ts`) and every other
+ * group gets a one-line `RequestReferenceRow` pointing here, which is why this
+ * row no longer has a soft state: it is only ever the day the diver named.
  *
- * - **A soft match is ink, not a tint.** A second choice and a flexible
- *   neighbour used to arrive as a `bg-surface-sunken` card wearing a neutral
- *   `Badge`. Both are gone: the row says *in words* which date the diver
- *   actually named ("First choice Mar 13") and sets its ask in muted ink. A
- *   tinted fill is a second pill grammar by the back door, and a badge on a row
- *   that is only ever soft-or-firm is a state word where the group header
- *   already owns the day. `RequestLedgerRow.test.tsx` pins the absence.
+ * Two things this row deliberately does not do:
+ *
+ * - **No tint and no pill.** A second choice used to arrive as a
+ *   `bg-surface-sunken` card wearing a neutral `Badge`. A tinted fill is a
+ *   second pill grammar by the back door, and a badge on a row that is only
+ *   ever a lead is a state word where the group header already owns the day.
+ *   `RequestLedgerRow.test.tsx` pins the absence.
  * - **It carries no status.** Nothing about a request has a state — it is a
  *   lead, and the only question is whether the shop puts a boat on that day.
  *
@@ -53,33 +57,17 @@ const EXPERIENCE_KEYS: Record<CourseInquiryExperience, StaffMessageKey> = {
  */
 export function RequestLedgerRow({
   request,
-  match,
   locale,
   timezone,
   shopSlug,
   t,
 }: {
   request: DateRequestRow;
-  /**
-   * What this request says about *this* day — a first choice, a fallback, or a
-   * flexible neighbour. Null in the "no date named" group, where there is no
-   * day to relate to. Decided by `groupDateRequests` (src/lib/date-requests.ts)
-   * and never re-derived here.
-   */
-  match: DateRequestMatch | null;
   locale: string;
   timezone: string;
   shopSlug: string;
   t: StaffTranslator;
 }) {
-  // A second choice and a flexible neighbour are in this group because they
-  // *can* make the day, not because they asked for it — so their ask sits in
-  // muted ink under the firm ones.
-  const soft = match === "alternate" || match === "nearby";
-  // What this request *did* name, for the words that explain why it is in a
-  // group it did not ask for. A request can carry an alternate and no first
-  // choice, so this is the first date it holds rather than `preferredDate`.
-  const namedDate = request.preferredDate ?? request.alternateDate;
   const name = request.name ?? t("requests.anonymous");
   const ask = request.courseTitle
     ? t("requests.aboutCourse", { course: request.courseTitle })
@@ -93,15 +81,7 @@ export function RequestLedgerRow({
   const facts = [
     request.divers ? t("requests.divers", { count: request.divers }) : null,
     experienceFact,
-    match === "alternate" && namedDate
-      ? t("requests.alternateOf", { date: formatCalendarDate(namedDate, locale) })
-      : null,
-    match === "nearby" && namedDate
-      ? t("requests.flexibleAround", { date: formatCalendarDate(namedDate, locale) })
-      : null,
-    // A request that travelled into this group already said it can move, so it
-    // does not also say "Flexible".
-    match !== "nearby" && request.dateFlexible ? t("requests.flexible") : null,
+    request.dateFlexible ? t("requests.flexible") : null,
     t("requests.askedOn", { date: formatShortDate(request.createdAt, locale, timezone) }),
   ].filter((fact): fact is string => Boolean(fact));
 
@@ -133,7 +113,7 @@ export function RequestLedgerRow({
           )}
         </p>
         <div className="min-w-0 flex-1">
-          <p className={soft ? "text-muted" : "font-medium"}>{ask}</p>
+          <p className="font-medium">{ask}</p>
           <p className="mt-0.5 text-sm text-muted tabular-nums">{facts.join(" · ")}</p>
           {request.email || request.phone ? (
             <p className="mt-0.5 text-sm text-muted">

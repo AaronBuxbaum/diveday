@@ -27,12 +27,17 @@ function party(...sizes: number[]) {
 /**
  * **The act the count exists for** (ADR 20260827-people-not-lists, decision 5).
  *
- * The group's one secondary opens the schedule builder on that day with the
+ * The group's one act opens the schedule builder on that day with the
  * full add form disclosed (ADR 20260806-one-trip-create-form) and the day's
  * leads carried forward as invitations. Losing any one of those three
  * parameters turns "four groups could make the 12th" back into a note
  * somewhere, and the loss is silent — the link still works, it just lands on
  * an empty form.
+ *
+ * **Only the first day on the page wears it filled.** Every group offers the
+ * same act, and a column of `secondary` buttons down a page is the reader doing
+ * triage the design should have done (principle 8), so the page passes
+ * `prominent` to its first group and nothing else.
  */
 describe("the add-a-departure link", () => {
   it("carries the day, the disclosed form and every lead in the group", () => {
@@ -60,6 +65,25 @@ describe("the add-a-departure link", () => {
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(1);
     expect(links[0]?.getAttribute("href")).toContain("date=2027-03-06");
+  });
+
+  it("is filled only where the page says so, and link weight everywhere else", () => {
+    const add = { href: addDepartureHref("blue-mantis", "2027-03-06", ["r1"]), label: "Add" };
+    const { rerender } = render(
+      <RequestDayGroup id="d1" label="Mar 6" add={{ ...add, prominent: true }}>
+        <li>a request</li>
+      </RequestDayGroup>,
+    );
+    expect(screen.getByRole("link", { name: "Add" }).className).toContain("bg-surface");
+
+    rerender(
+      <RequestDayGroup id="d1" label="Mar 6" add={add}>
+        <li>a request</li>
+      </RequestDayGroup>,
+    );
+    const quiet = screen.getByRole("link", { name: "Add" }).className;
+    expect(quiet).not.toContain("bg-surface");
+    expect(quiet).toContain("text-primary");
   });
 
   it("does not render on the undated tail — there is no day to put a boat on", () => {
