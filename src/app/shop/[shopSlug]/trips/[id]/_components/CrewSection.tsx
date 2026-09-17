@@ -285,14 +285,6 @@ export function CrewSection({
        so anything shallower parks the anchor underneath it, and the pulse's
        "needs an instructor" fact links straight here. */
     <section id="crew" aria-label={copy.heading} className="flex flex-col gap-3 pt-1 scroll-mt-24">
-      <div>
-        <Link
-          href={`/shop/${shopSlug}/staffing`}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          {copy.manageShifts}
-        </Link>
-      </div>
       {crewGapCode === "no_instructor" ? (
         <p className="rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
           {copy.courseNeedsInstructor}
@@ -505,6 +497,17 @@ export function CrewSection({
           </FormStatus>
         </div>
       )}
+      {/* The door out, at the end rather than over the warnings: who is on
+          shift this week is a different subject, and a staffer reaches for it
+          after reading this departure's crew rather than instead of it
+          (principles.md §10, "actions ride on their objects"). It wears
+          `buttonClass` for the 44px floor the header slot used to give it. */}
+      <Link
+        href={`/shop/${shopSlug}/staffing`}
+        className={buttonClass({ variant: "link", size: "sm", flush: true })}
+      >
+        {copy.manageShifts}
+      </Link>
     </section>
   );
 }
