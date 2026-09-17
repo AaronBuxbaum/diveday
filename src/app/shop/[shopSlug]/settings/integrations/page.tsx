@@ -16,6 +16,7 @@ import {
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
@@ -134,6 +135,20 @@ function ConnectedMeta({
   );
 }
 
+/**
+ * A provider this deployment carries no credentials for. One muted line and
+ * **no control**: the three pale "Not configured" buttons that stood here read
+ * as disabled primaries a shop could fix by clicking, and nothing on this page
+ * can fix them (principle 8 — a control that cannot act is not a control).
+ */
+function NotAvailable({ t }: { t: StaffTranslator }) {
+  return (
+    <p className="text-sm text-muted">
+      {t("integrations.common.notAvailable", { email: SUPPORT_EMAIL })}
+    </p>
+  );
+}
+
 function DisconnectForm({
   provider,
   t,
@@ -230,7 +245,7 @@ export default async function IntegrationsSettingsPage({
                 <DisconnectForm provider="shopify" t={t} />
               </div>
             </div>
-          ) : (
+          ) : shopifyConfigured ? (
             <FieldGrid as="form" action={startShopifyConnectionAction}>
               <Field
                 label={t("integrations.shopify.domainLabel")}
@@ -247,17 +262,13 @@ export default async function IntegrationsSettingsPage({
                 <SubmitButton
                   pendingLabel={t("integrations.common.connect")}
                   className={buttonClass()}
-                  disabled={!shopifyConfigured}
                 >
-                  {shopifyConfigured
-                    ? t("integrations.shopify.connect")
-                    : t("integrations.common.notConfigured")}
+                  {t("integrations.shopify.connect")}
                 </SubmitButton>
               </FieldActions>
-              {!shopifyConfigured ? (
-                <p className="text-sm text-muted">{t("integrations.common.comingSoon")}</p>
-              ) : null}
             </FieldGrid>
+          ) : (
+            <NotAvailable t={t} />
           )}
         </SectionCard>
 
@@ -307,21 +318,17 @@ export default async function IntegrationsSettingsPage({
                 <DisconnectForm provider="quickbooks" t={t} />
               </div>
             </div>
-          ) : (
+          ) : quickbooksConfigured ? (
             <form action={startQuickBooksConnectionAction}>
               <SubmitButton
                 pendingLabel={t("integrations.common.connect")}
                 className={buttonClass()}
-                disabled={!quickbooksConfigured}
               >
-                {quickbooksConfigured
-                  ? t("integrations.quickbooks.connect")
-                  : t("integrations.common.notConfigured")}
+                {t("integrations.quickbooks.connect")}
               </SubmitButton>
-              {!quickbooksConfigured ? (
-                <p className="mt-3 text-sm text-muted">{t("integrations.common.comingSoon")}</p>
-              ) : null}
             </form>
+          ) : (
+            <NotAvailable t={t} />
           )}
         </SectionCard>
 
@@ -382,21 +389,17 @@ export default async function IntegrationsSettingsPage({
                 <DisconnectForm provider="xero" t={t} />
               </div>
             </div>
-          ) : (
+          ) : xeroConfigured ? (
             <form action={startXeroConnectionAction}>
               <SubmitButton
                 pendingLabel={t("integrations.common.connect")}
                 className={buttonClass()}
-                disabled={!xeroConfigured}
               >
-                {xeroConfigured
-                  ? t("integrations.xero.connect")
-                  : t("integrations.common.notConfigured")}
+                {t("integrations.xero.connect")}
               </SubmitButton>
-              {!xeroConfigured ? (
-                <p className="mt-3 text-sm text-muted">{t("integrations.common.comingSoon")}</p>
-              ) : null}
             </form>
+          ) : (
+            <NotAvailable t={t} />
           )}
         </SectionCard>
 
@@ -433,7 +436,7 @@ export default async function IntegrationsSettingsPage({
                 <DisconnectForm provider="zapier" t={t} />
               </div>
             </div>
-          ) : (
+          ) : zapierConfigured ? (
             <FieldGrid as="form" action={saveZapierIntegrationAction}>
               <Field
                 label={t("integrations.zapier.webhookLabel")}
@@ -451,17 +454,13 @@ export default async function IntegrationsSettingsPage({
                 <SubmitButton
                   pendingLabel={t("integrations.common.connect")}
                   className={buttonClass()}
-                  disabled={!zapierConfigured}
                 >
-                  {zapierConfigured
-                    ? t("integrations.zapier.connect")
-                    : t("integrations.common.notConfigured")}
+                  {t("integrations.zapier.connect")}
                 </SubmitButton>
               </FieldActions>
-              {!zapierConfigured ? (
-                <p className="text-sm text-muted">{t("integrations.common.comingSoon")}</p>
-              ) : null}
             </FieldGrid>
+          ) : (
+            <NotAvailable t={t} />
           )}
         </SectionCard>
       </div>

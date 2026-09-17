@@ -10,7 +10,8 @@
     "untested": "Not tested yet",
     "number": "Sending number",
     "template": "Message template",
-    "connectedAt": "Connected"
+    "connectedAt": "Connected",
+    "unavailableDescription": "Meta is still approving DiveDay for this, so reminders keep going out as SMS."
   },
   "setup": {
     "heading": "How connecting works",
@@ -47,10 +48,6 @@
     "signup-failed-subscribe": "Your number connected, but DiveDay couldn’t subscribe to its delivery updates. Press Connect to try again.",
     "signup-failed-template": "Your number connected, but the message template couldn’t be submitted for approval. Press Connect to try again.",
     "waba-already-connected": "That WhatsApp Business account is already connected to another DiveDay shop, and one account serves one shop. Disconnecting it there frees it for this one."
-  },
-  "comingSoon": {
-    "heading": "Coming soon",
-    "body": "Connecting your WhatsApp number goes through Meta’s approval of DiveDay, which is in progress. There is nothing to do yet, and trip reminders keep going out as SMS until it clears."
   },
   "signup": {
     "connect": "Connect WhatsApp",
