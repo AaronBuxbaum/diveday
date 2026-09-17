@@ -7,6 +7,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import {
   controlClass,
   DateField,
@@ -601,51 +602,64 @@ export default async function StaffingPage({
               on. Which languages the shop can field stays a manager's to
               curate; who gets named does not.
 
-              No door and no disclosure: it is one line and one checkbox, and
-              burying a consent behind a chevron is how nobody ever finds it. */}
-          <form
-            action={saveCrewConsent}
-            className="mt-6 flex flex-col gap-3 rounded-inset border border-border bg-surface p-4"
+              **Summary-first, not a standing form.** It used to render its
+              checkbox, its text field and its Save button open at the foot of
+              every visit — a bordered personal form beneath the shop's whole
+              week, for a switch a person flips once and then never again.
+              What the reader needs at rest is the answer, so the row states it
+              ("Shown as Dana" / "Not shown") and opens the form on a tap. The
+              answer is still on the glass, which is the thing burying a consent
+              behind a chevron would cost; what is gone is the form. */}
+          <CompactDisclosureRow
+            className="mt-6"
+            label={t("staffing.crewConsent.rowLabel")}
+            value={
+              crewConsented
+                ? t("staffing.crewConsent.shownAs", { name: crewPublicName })
+                : t("staffing.crewConsent.notShown")
+            }
           >
-            <input type="hidden" name="personId" value={session.user.personId} />
-            <label className="flex items-start gap-3 text-sm">
-              <input
-                type="checkbox"
-                name="consented"
-                defaultChecked={crewConsented}
-                className="mt-0.5 size-4 accent-primary"
-              />
-              <span>{t("staffing.crewConsent.label")}</span>
-            </label>
-            {/* **The box is the disclosure.** Before this, the published name
-                was `full_name.split(/\s+/)[0]` computed at render time, so a
-                person typed into the shop's records as "Tanaka Keiko" agreed to
-                a first name and got their surname on an indexed page (issue
-                #1351). What is in this field is character-for-character what
-                divers see, so the sentence above it is now true.
+            <form action={saveCrewConsent} className="flex flex-col gap-3">
+              <input type="hidden" name="personId" value={session.user.personId} />
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  name="consented"
+                  defaultChecked={crewConsented}
+                  className="mt-0.5 size-4 accent-primary"
+                />
+                <span>{t("staffing.crewConsent.label")}</span>
+              </label>
+              {/* **The box is the disclosure.** Before this, the published name
+                  was `full_name.split(/\s+/)[0]` computed at render time, so a
+                  person typed into the shop's records as "Tanaka Keiko" agreed
+                  to a first name and got their surname on an indexed page
+                  (issue #1351). What is in this field is character-for-character
+                  what divers see, so the sentence above it is now true.
 
-                No caption under it saying so. The value *is* the claim, and a
-                line explaining that the box means what it shows is the kind of
-                sentence AGENTS.md deletes. The per-trip role is not previewed
-                for a different reason: it is a different word on every
-                departure, so any single one shown here would be a lie. */}
-            <Field label={t("staffing.crewConsent.nameLabel")}>
-              <input
-                name="publicName"
-                defaultValue={crewPublicName}
-                maxLength={CREW_PUBLIC_NAME_MAX}
-                className={controlClass}
-              />
-            </Field>
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("staffing.crewConsent.saving")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("staffing.crewConsent.save")}
-              </SubmitButton>
-            </FieldActions>
-          </form>
+                  No caption under it saying so. The value *is* the claim, and a
+                  line explaining that the box means what it shows is the kind of
+                  sentence AGENTS.md deletes. The per-trip role is not previewed
+                  for a different reason: it is a different word on every
+                  departure, so any single one shown here would be a lie. */}
+              <Field label={t("staffing.crewConsent.nameLabel")}>
+                <input
+                  name="publicName"
+                  defaultValue={crewPublicName}
+                  maxLength={CREW_PUBLIC_NAME_MAX}
+                  className={controlClass}
+                />
+              </Field>
+              <FieldActions>
+                <SubmitButton
+                  pendingLabel={t("staffing.crewConsent.saving")}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {t("staffing.crewConsent.save")}
+                </SubmitButton>
+              </FieldActions>
+            </form>
+          </CompactDisclosureRow>
 
           {/* Owner/manager work, as it was before this slice — the
               recomposition moved the furniture, not who may see it. The group
@@ -664,7 +678,18 @@ export default async function StaffingPage({
               reviewAction={reviewCredential}
               deleteAction={deleteCredential}
               door={
-                <AddDoor id="add-credential" as="li" label={t("staffing.credentials.add")}>
+                <AddDoor
+                  id="add-credential"
+                  as="li"
+                  // With nothing on file the door *is* the group, so it names
+                  // the group and its state rather than standing anonymously
+                  // under a heading with no members (`StaffCredentials`).
+                  label={
+                    credentialRows.length === 0
+                      ? t("staffing.credentials.emptyDoor")
+                      : t("staffing.credentials.add")
+                  }
+                >
                   <FieldGrid as="form" action={saveCredential} columns={2}>
                     <Field label={t("staffing.credentials.person")}>
                       <select name="personId" required className={controlClass}>
