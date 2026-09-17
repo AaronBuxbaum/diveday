@@ -127,25 +127,44 @@ describe("a blocked row", () => {
    * in" mark and "Blocked" on the same line, at three volumes, only one of
    * which anybody on this screen can act on. Boarding is the rail's fact and
    * the manifest's (the glossary is explicit that check-in is not boarding), so
-   * it goes. The arrival stays — otherwise this row and one for a diver who
-   * never turned up are the same row, and a staffer working the blocked list
-   * has to tell "chase them down" from "fix this while they wait" — but as a
-   * quiet fact beside the name rather than a second mark at badge volume.
+   * it goes. How far the diver got stays — otherwise this row and one for a
+   * diver who never turned up are the same row — but as a quiet fact beside
+   * the name rather than a second mark at badge volume, and it says *which* of
+   * the two: a diver already on the boat is a radio call to the rail, not work
+   * to do while they wait at the desk.
    */
-  it("says a checked-in diver has gone blocked, without offering the tap back", () => {
+  it("says a boarded diver has gone blocked, without offering the tap back", () => {
     renderRow({
       bookingStatus: "checked_in",
       boarded: true,
       readiness: { status: "blocked", blockers: [{ code: "payment_due" }] },
     });
     expect(screen.getByText("Blocked")).toBeInTheDocument();
-    expect(screen.queryByText("Boarded")).not.toBeInTheDocument();
-    // The arrival, in the row's quiet meta line with the other facts about the
-    // person rather than in the badge row with the gate.
-    expect(screen.getByText(/Checked in/)).toBeInTheDocument();
+    // The word, in the row's quiet meta line with the other facts about the
+    // person rather than in the badge row with the gate — and it is "Boarded",
+    // because "Checked in" would send the staffer to the counter for somebody
+    // who is already at the rail.
+    const boarded = screen.getByText(/Boarded/);
+    expect(boarded).toHaveClass("text-muted");
+    expect(screen.queryByText(/Checked in/)).not.toBeInTheDocument();
     expect(screen.getByText("Payment is outstanding for this trip.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Undo check-in / })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Check in / })).not.toBeInTheDocument();
+  });
+
+  /**
+   * The second of the three, kept beside the first: a diver standing at the
+   * counter who has gone blocked is work to do while they wait, and the row
+   * must not promote them to the boat.
+   */
+  it("says a diver who only reached the counter is checked in", () => {
+    renderRow({
+      bookingStatus: "checked_in",
+      boarded: false,
+      readiness: { status: "blocked", blockers: [{ code: "payment_due" }] },
+    });
+    expect(screen.getByText(/Checked in/)).toHaveClass("text-muted");
+    expect(screen.queryByText(/Boarded/)).not.toBeInTheDocument();
   });
 
   it("keeps the diver's record as a door and shows every reason it has", () => {
