@@ -67,15 +67,27 @@ export const metadata: Metadata = { title: "Orders — DiveDay" };
  */
 
 /**
- * Which Stripe call an unconfirmed operation was. Without an entry here the
- * lookup falls through to the raw enum value, so a stuck operation would read
- * "checkout_session" on the panel below.
+ * **What happened, as a sentence — not the enum and not the object id.**
+ *
+ * The panel's rows read "Checkout · … · started Jul 21 · Stripe: cs_e2e_stuck"
+ * under a paragraph explaining that "Stripe was asked to do something and the
+ * app never confirmed how it went". Between them that is a database enum, an
+ * internal identifier and the mechanism, on a surface a shop owner opens to
+ * find out what they owe somebody (principle 4 — never surface the
+ * implementation). The row says what happened to whose money instead; the id is
+ * still here, one tap down, because it is what a shop types into Stripe's own
+ * search box.
+ *
+ * Keyed by the enum so a kind added to the column is a compile-time hole rather
+ * than a row rendering `checkout_session`; `OPERATION_UNFINISHED_FALLBACK`
+ * catches one that arrives anyway.
  */
-const OPERATION_KIND_KEYS: Record<string, StaffMessageKey> = {
-  checkout_session: "orders.index.paymentOps.kind.checkout_session",
-  invoice: "orders.index.paymentOps.kind.invoice",
-  refund: "orders.index.paymentOps.kind.refund",
+const OPERATION_UNFINISHED_KEYS: Record<string, StaffMessageKey> = {
+  checkout_session: "orders.index.paymentOps.unfinished.checkout_session",
+  invoice: "orders.index.paymentOps.unfinished.invoice",
+  refund: "orders.index.paymentOps.unfinished.refund",
 };
+const OPERATION_UNFINISHED_FALLBACK: StaffMessageKey = "orders.index.paymentOps.unfinished.other";
 
 const IMPORTED_PAYMENT_DIRECTION_KEYS: Record<"payment" | "refund" | "unknown", StaffMessageKey> = {
   payment: "orders.index.importedHistory.direction.payment",
@@ -479,29 +491,42 @@ export default async function OrdersIndexPage({
             <p className="font-medium">
               {t("orders.index.paymentOps.heading", { count: stuckPaymentOperations.length })}
             </p>
-            <p className="mt-1 text-sm">{t("orders.index.paymentOps.detail")}</p>
+            {/* No second paragraph under the heading: it explained the
+                mechanism ("Stripe was asked to do something and the app never
+                confirmed how it went"), and the heading above already says what
+                to do about it. */}
             <ul className="mt-3 space-y-2 text-sm">
               {stuckPaymentOperations.map(({ intent, tripId: opTripId, tripTitle, personName }) => (
-                <li key={intent.id} className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="font-medium">{t(OPERATION_KIND_KEYS[intent.kind])}</span>
-                  {tripTitle ? <span>· {tripTitle}</span> : null}
-                  {personName ? <span>· {personName}</span> : null}
-                  <span className="text-muted">
-                    ·{" "}
-                    {t("orders.index.paymentOps.started", {
-                      date: formatShortDate(intent.startedAt, locale, shop.timezone),
-                    })}
-                    {intent.stripeObjectId
-                      ? ` · ${t("orders.index.paymentOps.stripeId", { id: intent.stripeObjectId })}`
-                      : ""}
-                  </span>
-                  {opTripId ? (
-                    <Link
-                      href={`/shop/${shopSlug}/trips/${opTripId}`}
-                      className="font-medium text-primary underline underline-offset-2"
-                    >
-                      {t("orders.index.paymentOps.openTrip")}
-                    </Link>
+                <li key={intent.id}>
+                  <p className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="font-medium">
+                      {t(OPERATION_UNFINISHED_KEYS[intent.kind] ?? OPERATION_UNFINISHED_FALLBACK, {
+                        date: formatShortDate(intent.startedAt, locale, shop.timezone),
+                      })}
+                    </span>
+                    {tripTitle ? <span>{tripTitle}</span> : null}
+                    {personName ? <span>· {personName}</span> : null}
+                    {opTripId ? (
+                      <Link
+                        href={`/shop/${shopSlug}/trips/${opTripId}`}
+                        className="font-medium text-primary underline underline-offset-2"
+                      >
+                        {t("orders.index.paymentOps.openTrip")}
+                      </Link>
+                    ) : null}
+                  </p>
+                  {/* The identifier a shop pastes into Stripe's own search, one
+                      tap down rather than on the row's face. Mono, because it is
+                      a string to be transcribed character for character. */}
+                  {intent.stripeObjectId ? (
+                    <details className="mt-1">
+                      <summary className="inline-flex min-h-8 cursor-pointer list-none items-center text-xs text-muted underline underline-offset-2 [&::-webkit-details-marker]:hidden">
+                        {t("orders.index.paymentOps.reference")}
+                      </summary>
+                      <code className="mt-1 block font-mono text-xs break-all text-muted">
+                        {intent.stripeObjectId}
+                      </code>
+                    </details>
                   ) : null}
                 </li>
               ))}

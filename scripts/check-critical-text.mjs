@@ -41,7 +41,10 @@ if (/const linkClass =\s*\n?\s*"[^"]*\btext-sm\b/.test(publicNav)) {
 const orders = read("src/app/shop/[shopSlug]/orders/_components/OrdersLedger.tsx");
 for (const [needle, label] of [
   ["truncate text-base font-medium sm:w-56 sm:shrink-0", "orders person names"],
-  ["truncate text-base text-muted sm:text-sm", "orders phone trip titles"],
+  // Wraps on a phone rather than truncating (slice E3-6): eight reef trips in
+  // one day clipped at the same character said the same thing eight times. The
+  // 16px floor is what this guard is about and it did not move.
+  ["text-base text-muted text-pretty sm:truncate sm:text-sm", "orders phone trip titles"],
   ["min-w-20 text-end text-base font-semibold tabular-nums", "orders amounts"],
 ]) {
   if (!orders.includes(needle)) failures.push(`${label} must be 16px on phones`);
