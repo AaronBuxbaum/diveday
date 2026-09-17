@@ -117,6 +117,15 @@ export function EmbedBookedNotice({
       {/* The two ways onward, in the order they matter: out to everything this
           seat still needs, then back into the widget itself.
 
+          **One of them is the act.** Both used to render at link weight, a
+          semibold blue line above a medium blue line, with the shop's own
+          "Questions? phone · email" in blue beneath them — three same-coloured
+          offers where there is one thing to do next (principle 8). The
+          readiness page is a button; the way back into the widget is quiet
+          text. It demotes again to `secondary` when there is a balance to pay,
+          because that door is then the section's one primary and two solid
+          buttons stacked would put the diver back where they started.
+
           `_top`, always, on the first: `/ready/[token]` isn't in the embed
           framing allowlist (ADR 20260726-schedule-embed), so a same-frame click
           would swap the working widget for a frame Content-Security-Policy
@@ -127,17 +136,17 @@ export function EmbedBookedNotice({
           either way, and `next/link` would *prefetch* the route — which mints a
           capability, putting us straight back to the per-render minting this
           route exists to stop. */}
-      <div className="mt-4 flex flex-col items-start gap-2">
+      <div className="mt-4 flex flex-col items-start gap-1">
         <a
           href={readinessLink}
           target="_top"
-          className="inline-flex min-h-11 items-center text-base font-semibold text-primary hover:underline"
+          className={buttonClass(paymentUrl ? { variant: "secondary" } : undefined)}
         >
           {t("booking.trackReadiness")}
         </a>
         <Link
           href={`${publicSchedulePath(shopSlug)}?embed=1`}
-          className="inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
+          className="inline-flex min-h-11 items-center text-sm text-muted hover:underline"
         >
           {t("common.backToSchedule")}
         </Link>

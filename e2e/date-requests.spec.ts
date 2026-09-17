@@ -1,5 +1,21 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
+
+/**
+ * **The three rarely-answered asks sit behind "More details"** (2026-09-17):
+ * an alternative date, where the diver is up to, and anything else. Closed at
+ * rest and still part of the form — a `<details>` hides its content without
+ * taking it out of the submission — so a spec that fills one opens it first.
+ *
+ * `page.locator("summary")` rather than a role query: Playwright gives
+ * `<summary>` no implicit role, and the schedule page carries several of them.
+ */
+const openMoreDetails = (page: Page) =>
+  page.locator("summary").filter({ hasText: "More details" }).click();
+
+/** The request row's own disclosure, never the "More details" one inside it. */
+const requestRow = (page: Page) => page.locator("details#request-a-date > summary");
 
 /**
  * Asking for a day that is not on the board, end to end: a diver sends the
@@ -33,7 +49,8 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   await expect(
     dateRequest.getByRole("heading", { name: "Nothing on a date that works?" }),
   ).toBeVisible();
-  await dateRequest.locator("summary").click();
+  await requestRow(page).click();
+  await openMoreDetails(page);
 
   // The request is about *something*: with no course in the URL, the form asks,
   // and refuses to send until it is answered.
@@ -51,7 +68,8 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   // A second diver whose *first* choice is the later day — so the earlier
   // group holds them only as a fallback, and the later one as a firm ask.
   await page.goto("/s/blue-mantis");
-  await page.locator("#request-a-date summary").click();
+  await requestRow(page).click();
+  await openMoreDetails(page);
   await page.getByLabel("What would you like to dive?").fill("A shallow reef morning");
   await page.getByLabel("Your email").fill("reef.fan.e2e@example.com");
   await page.getByLabel("Where you are up to").selectOption("lapsed");
@@ -102,7 +120,8 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
 
 test("a request with no date at all sits in its own group at the foot", async ({ page }) => {
   await page.goto("/s/blue-mantis");
-  await page.locator("#request-a-date summary").click();
+  await requestRow(page).click();
+  await openMoreDetails(page);
   await page.getByLabel("What would you like to dive?").fill("Whatever runs in October");
   await page.getByLabel("Your phone").fill("+1 305 555 0777");
   await page.getByLabel("Where you are up to").selectOption("never");
@@ -123,6 +142,7 @@ test("a request with no date at all sits in its own group at the foot", async ({
 
 test("a course page's request names the course, and reaches the same list", async ({ page }) => {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
+  await openMoreDetails(page);
   await page.getByLabel("Your email").fill("course.date.e2e@example.com");
   await page.getByLabel("Where you are up to").selectOption("never");
   await page.getByLabel("Preferred date").fill(PREFERRED);
@@ -147,7 +167,8 @@ test("the builder opened from a day's requests reads as finished sentences", asy
   test.setTimeout(45_000);
 
   await page.goto("/s/blue-mantis");
-  await page.locator("#request-a-date summary").click();
+  await requestRow(page).click();
+  await openMoreDetails(page);
   await page.getByLabel("What would you like to dive?").fill("A drift along the wall");
   await page.getByLabel("Your name").fill("Nadia Okonkwo");
   await page.getByLabel("Your email").fill("drift.fan.e2e@example.com");

@@ -1,4 +1,29 @@
+import type { Page } from "@playwright/test";
 import { expect, READ_ONLY, test } from "./fixtures";
+
+/**
+ * **The filters live behind one quiet "Filter" disclosure** (2026-09-17). The
+ * rail at rest is the shop's own lens chips; the trip-type select, the
+ * "what can you dive?" select and the two checkboxes are the advanced ask and
+ * sit inside the form's own `<details>`. A URL that already carries one of
+ * those four parameters paints it open, so this opens it only when it is shut.
+ *
+ * Addressed by `page.locator`, not `getByLabel`/`getByRole`: `e2e/fixtures.ts`
+ * filters those three to visible elements, and the point here is the control
+ * that is not visible yet. `<summary>` has no implicit role for `getByRole` to
+ * find either.
+ */
+async function openFilters(page: Page) {
+  const tripType = page.locator('select[name="tripType"]');
+  // The deterministic signal that change-to-submit is live, waited on before
+  // the panel is opened rather than after — it is an attribute, so it does not
+  // need the control on screen.
+  await expect(tripType).toHaveAttribute("data-hydrated", "true");
+  if (!(await tripType.isVisible())) {
+    await page.locator('form:has(select[name="tripType"]) summary').click();
+  }
+  await expect(page.getByLabel("Trip type")).toBeVisible();
+}
 
 /**
  * READ_ONLY holds here: the trip-type, has-space, paging and month controls all read
@@ -25,7 +50,7 @@ test("the schedule's trip-type and has-space filters narrow the list, server-ren
   // Course-only: every visible row now names a course session, and the fun
   // dives are gone. Changing a filter applies itself once hydrated; there is
   // no Apply button for anyone (ADR 20260812-javascript-is-required).
-  await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
+  await openFilters(page);
   await page.getByLabel("Trip type").selectOption("course");
   await expect(page).toHaveURL(/tripType=course/);
   const courseRows = list.getByRole("listitem");
@@ -45,7 +70,7 @@ test("the schedule's trip-type and has-space filters narrow the list, server-ren
 
   // Combine with "has space": the seed has a sold-out course session, so this
   // narrows further still.
-  await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
+  await openFilters(page);
   await page.getByLabel("Has space").check();
   await expect(page).toHaveURL(/tripType=course/);
   await expect(page).toHaveURL(/hasSpace=1/);
@@ -126,8 +151,10 @@ test("no control comes or goes from the filter row while it hydrates", { tag: RE
   await page.goto("/s/blue-mantis");
 
   // The filters are live, so the hydration window has closed and the sampler
-  // above ran across all of it.
-  await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
+  // above ran across all of it. `page.locator` rather than `getByLabel`: the
+  // row is inside its closed "Filter" disclosure on a URL carrying none of the
+  // four parameters, and the fixture's visible-only wrapper would find nothing.
+  await expect(page.locator('select[name="tripType"]')).toHaveAttribute("data-hydrated", "true");
   const samples = await page.evaluate(
     () => (window as unknown as { __filterSamples: Array<[number, boolean]> }).__filterSamples,
   );
@@ -213,7 +240,7 @@ test("stating a certification level marks the departures above it without removi
   // Unsaid by default: nothing is marked until the reader answers.
   await expect(page.getByText("Above your level")).toHaveCount(0);
 
-  await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
+  await openFilters(page);
   await page.getByLabel("What can you dive?").selectOption("open_water");
   await expect(page).toHaveURL(/canDive=open_water/);
 
@@ -222,8 +249,12 @@ test("stating a certification level marks the departures above it without removi
   await expect(advanced).toHaveCount(1);
   await expect(advanced.getByText("Above your level")).toBeVisible();
   await expect(reef.getByText("Above your level")).toHaveCount(0);
-  // Said once above the list, with its count, rather than repeated per card.
-  await expect(page.getByText(/asks? for more than Open Water/)).toBeVisible();
+  // And nothing says it a second time above the list. The counted sentence
+  // that stood in the filter row ("3 departures ask for more than Open Water.
+  // They are still bookable: ask the shop.") was deleted on 2026-09-17: the
+  // rows carry "Above your level" already, and the shorter list is one tap
+  // away in the same panel.
+  await expect(page.getByText(/asks? for more than Open Water/)).toHaveCount(0);
 
   // Saying a higher level opens them: the same page, nothing marked.
   await page.getByLabel("What can you dive?").selectOption("advanced_open_water");
@@ -266,7 +297,7 @@ test("stating a certification level marks the departures above it without removi
  */
 test("the stated level never reaches the booking form", { tag: READ_ONLY }, async ({ page }) => {
   await page.goto("/s/blue-mantis");
-  await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
+  await openFilters(page);
   await page.getByLabel("What can you dive?").selectOption("rescue");
   await expect(page).toHaveURL(/canDive=rescue/);
 

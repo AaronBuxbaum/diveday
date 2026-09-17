@@ -3487,7 +3487,7 @@ for (const scheme of ["light", "dark"] as const) {
         // up already open, so there is no disclosure left to click — the shot
         // above now carries the form rather than a collapsed row. Assert it is
         // reachable without one, which is the promotion N-45 makes.
-        await expect(page.locator("#request-a-date summary")).toHaveCount(0);
+        await expect(page.locator("details#request-a-date > summary")).toHaveCount(0);
         await expect(page.getByRole("button", { name: "Send", exact: true })).toBeVisible();
 
         // **The board before anything is on it.** The `schedule-builder`

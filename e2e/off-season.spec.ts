@@ -84,6 +84,8 @@ test("a board with departures this week says nothing about the off-season", asyn
   await page.goto("/s/blue-mantis");
 
   await expect(page.getByText("Nothing on the water for a while")).toHaveCount(0);
-  // And the ask is back where it belongs: one collapsed row among three.
-  await expect(page.locator("#request-a-date summary")).toBeVisible();
+  // And the ask is back where it belongs: one collapsed row among three. The
+  // row's own summary, by the child combinator: the composer inside it carries
+  // a "More details" disclosure of its own now.
+  await expect(page.locator("details#request-a-date > summary")).toBeVisible();
 });

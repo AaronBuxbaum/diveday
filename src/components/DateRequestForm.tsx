@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
 import { controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
 import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -32,11 +33,23 @@ import {
  *
  * The dates are real `<input type="date">` fields, grouped with the free-text
  * flexible-timing answer: "any weekend in the autumn" is still a true answer,
- * and a date field cannot hold it. A preferred date with an alternate beside
- * it is a diver stating a range rather than booking a slot — nothing is held,
- * and the staff list at /shop/<shop>/requests is what makes the dates worth
- * collecting at all (it groups by them: "four people could make the 12th" is a
- * departure waiting to be scheduled).
+ * and a date field cannot hold it. A date the diver names is a request rather
+ * than a slot — nothing is held — and the staff list at /shop/<shop>/requests
+ * is what makes it worth collecting at all (it groups by them: "four people
+ * could make the 12th" is a departure waiting to be scheduled).
+ *
+ * **Four asks at rest, three more behind a word.** This form met a diver with
+ * ten boxes, seven of them captioned "(optional)" and one "(required)" — the
+ * app's only such suffix, against a house convention where a required field
+ * wears `Field`'s asterisk and nothing else says anything
+ * (docs/design/forms-and-controls.md, "Required fields"). So: the asterisk on
+ * the one thing a request cannot be sent without, no "(optional)" anywhere,
+ * and the three answers a diver almost never fills in — an alternative date,
+ * where they are up to, anything else — behind a "More details" disclosure
+ * (principle 8, "collapse the rare path"). Every one of them still submits
+ * from inside the closed disclosure: a `<details>` hides its content, it does
+ * not take it out of the form, so nothing about what the shop receives
+ * changes.
  *
  * Submitting records the request server-side (a `course_inquiries` row, via
  * `submitRequest`) and best-effort notifies the shop's own inbox, so a diver on
@@ -208,12 +221,17 @@ export function DateRequestForm({
           {askInterest ? (
             <Field
               label={copy.whatToDive}
-              hint={copy.required}
               className="sm:col-span-2"
               error={interestMissing ? t("inquiry.errors.interestRequired") : null}
             >
+              {/* `required` is the native attribute, which is what `Field`
+                  reads to draw the asterisk and what a screen reader announces.
+                  It never blocks a submit here — the send is a `type="button"`
+                  click, so `requireAnswerable` is still the gate and still the
+                  one that says why. */}
               <input
                 name="interest"
+                required
                 maxLength={200}
                 value={interest}
                 onChange={(event) => {
@@ -225,7 +243,52 @@ export function DateRequestForm({
               />
             </Field>
           ) : null}
-          <Field label={copy.yourName} hint={copy.optional}>
+          {/* **One question, two ways to answer it**: a day, or a window in
+              words. The fieldset is what makes it one question to a screen
+              reader; what it was missing is the half a sighted reader gets,
+              because the legend was set at exactly a `Field` label's size and
+              weight and read as a fourth field name in a flat list of nine
+              (issue #1314). It leads at the section size now, so the answers
+              below it are visibly *its* answers.
+
+              The hint under it is gone rather than reworded: "Choose a
+              preferred date, an alternative, or tell us when your timing is
+              flexible" restated the labels directly beneath it word for word,
+              which is the caption AGENTS.md's copy-restraint rule deletes.
+              Nothing about how the shop uses the dates was in it.
+
+              The alternative date left this group for "More details" below: a
+              second day is a refinement of an answer, and asking for it beside
+              the first made a two-box question out of a one-box one on the
+              surface a diver meets first.
+
+              `FieldGrid` rather than a hand-rolled `grid sm:grid-cols-2`: it is
+              the wrapper the hard rule names, and its subgrid is what puts
+              captions and boxes on shared rows so a pair reads as a pair rather
+              than as two boxes that happen to be adjacent. */}
+          <fieldset className="sm:col-span-2">
+            <legend className={SECTION_TITLE_CLASS}>{copy.dateOptionsHeading}</legend>
+            <FieldGrid columns={2} className="mt-3 gap-y-5">
+              <Field label={copy.preferredDate}>
+                <DateField
+                  name="preferredDate"
+                  value={preferredDate}
+                  onChange={(event) => setPreferredDate(event.target.value)}
+                />
+              </Field>
+              <Field label={copy.whenSuits}>
+                <input
+                  name="timing"
+                  maxLength={200}
+                  value={timing}
+                  onChange={(event) => setTiming(event.target.value)}
+                  placeholder={copy.whenSuitsPlaceholder}
+                  className={controlClass}
+                />
+              </Field>
+            </FieldGrid>
+          </fieldset>
+          <Field label={copy.yourName}>
             <input
               name="name"
               autoComplete="name"
@@ -236,9 +299,10 @@ export function DateRequestForm({
               className={controlClass}
             />
           </Field>
-          {/* Email and phone read as "(or phone)" / "(or email)" rather than
-              "(optional)": neither is required on its own, but the pair is —
-              the refusal below says so in words when both are left blank. */}
+          {/* The only two hints left on the form, and they are not
+              "(optional)": neither box is required on its own, but the pair is,
+              and "(or phone)" / "(or email)" is the only way a caption can say
+              that. The refusal below says it in words when both are blank. */}
           <Field
             label={copy.yourEmail}
             hint={copy.orPhone}
@@ -275,9 +339,6 @@ export function DateRequestForm({
               className={controlClass}
             />
           </Field>
-          {/* No `(optional)` on this one: the box opens holding **1** and that
-              value is submitted whatever the diver does, so a qualifier saying
-              it may be left blank describes a state the form cannot be in. */}
           <Field label={copy.howManyDivers}>
             <input
               name="divers"
@@ -289,82 +350,56 @@ export function DateRequestForm({
               className={controlClass}
             />
           </Field>
-          {/* **One question, three ways to answer it**: a first choice, an
-              alternative, or a flexible window. The fieldset is what makes it
-              one question to a screen reader; what it was missing is the half a
-              sighted reader gets, because the legend was set at exactly a
-              `Field` label's size and weight and read as a fourth field name in
-              a flat list of nine (issue #1314). It leads at the section size
-              now, so the three answers below it are visibly *its* answers.
-
-              The hint under it is gone rather than reworded: "Choose a
-              preferred date, an alternative, or tell us when your timing is
-              flexible" restated the three labels directly beneath it word for
-              word, which is the caption AGENTS.md's copy-restraint rule
-              deletes. Nothing about how the shop uses the dates was in it.
-
-              `FieldGrid` rather than a hand-rolled `grid sm:grid-cols-2`: it is
-              the wrapper the hard rule names, and its subgrid is what puts the
-              two dates' captions and boxes on shared rows so the pair reads as
-              a pair rather than as two boxes that happen to be adjacent. */}
-          <fieldset className="sm:col-span-2">
-            <legend className={SECTION_TITLE_CLASS}>{copy.dateOptionsHeading}</legend>
-            <FieldGrid columns={2} className="mt-3 gap-y-5">
-              <Field label={copy.preferredDate} hint={copy.optional}>
-                <DateField
-                  name="preferredDate"
-                  value={preferredDate}
-                  onChange={(event) => setPreferredDate(event.target.value)}
-                />
-              </Field>
-              <Field label={copy.alternateDate} hint={copy.optional}>
-                <DateField
-                  name="alternateDate"
-                  value={alternateDate}
-                  onChange={(event) => setAlternateDate(event.target.value)}
-                />
-              </Field>
-              <Field label={copy.whenSuits} hint={copy.optional} className="sm:col-span-2">
-                <input
-                  name="timing"
-                  maxLength={200}
-                  value={timing}
-                  onChange={(event) => setTiming(event.target.value)}
-                  placeholder={copy.whenSuitsPlaceholder}
-                  className={controlClass}
-                />
-              </Field>
-            </FieldGrid>
-          </fieldset>
-          <Field label={copy.whereYouAreUpTo} hint={copy.optional} className="sm:col-span-2">
-            <select
-              name="experience"
-              value={experience}
-              onChange={(event) =>
-                setExperience(event.target.value as CourseInquiryExperience | "")
-              }
-              className={controlClass}
-            >
-              <option value="">{copy.chooseOne}</option>
-              {COURSE_INQUIRY_EXPERIENCE.map((option) => (
-                <option key={option} value={option}>
-                  {t(COURSE_INQUIRY_EXPERIENCE_KEYS[option])}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={copy.anythingElse} hint={copy.optional} className="sm:col-span-2">
-            <textarea
-              name="message"
-              rows={4}
-              maxLength={1500}
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              placeholder={copy.messagePlaceholder}
-              className={controlClass}
-            />
-          </Field>
         </FieldGrid>
+
+        {/* **The rare path, collapsed** (principle 8). Three answers a diver
+            almost never has: a second day, where they are up to, and whatever
+            the boxes above have no room for. They are real fields inside the
+            form — closed, they still submit — so the shop loses nothing and
+            the diver meets four asks instead of seven. */}
+        <details className="group/more mt-6">
+          <summary className="-mx-2 inline-flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-sm font-medium text-muted select-none transition-brand [&::-webkit-details-marker]:hidden hover:text-primary">
+            <DisclosureCaret className="group-open/more:rotate-90" />
+            {copy.moreDetails}
+          </summary>
+          <FieldGrid columns={2} className="mt-4 content-start gap-y-5">
+            <Field label={copy.alternateDate}>
+              <DateField
+                name="alternateDate"
+                value={alternateDate}
+                onChange={(event) => setAlternateDate(event.target.value)}
+              />
+            </Field>
+            <Field label={copy.whereYouAreUpTo}>
+              <select
+                name="experience"
+                value={experience}
+                onChange={(event) =>
+                  setExperience(event.target.value as CourseInquiryExperience | "")
+                }
+                className={controlClass}
+              >
+                <option value="">{copy.chooseOne}</option>
+                {COURSE_INQUIRY_EXPERIENCE.map((option) => (
+                  <option key={option} value={option}>
+                    {t(COURSE_INQUIRY_EXPERIENCE_KEYS[option])}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label={copy.anythingElse} className="sm:col-span-2">
+              <textarea
+                name="message"
+                rows={4}
+                maxLength={1500}
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                placeholder={copy.messagePlaceholder}
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
+        </details>
 
         {/* One button, and then the shop's own details.
             "Open in your email app" and "Copy message" used to stand beside

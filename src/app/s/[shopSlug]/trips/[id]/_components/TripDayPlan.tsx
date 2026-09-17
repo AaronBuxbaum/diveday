@@ -105,12 +105,15 @@ function ceilingOptions(
  * sentence and the half no dive shop's website has ever carried: how often the
  * thing has actually turned up lately, with a date on the last one.
  *
- * **It is a record, and it says so.** "Seen" is past tense on purpose, every
- * line is a frequency rather than an expectation, and the closing sentence
- * states the boundary outright — because a page that prints "turtles on 14 of
- * the last 16 dives" without it is one glance away from being read as a
- * promise, and the crew who wrote those rows would be the ones asked about it
- * on the boat.
+ * **It is a record, and it says so.** "Seen" is past tense on purpose and every
+ * line is a frequency rather than an expectation — because a page that prints
+ * "turtles on 14 of the last 16 dives" without saying so is one glance away
+ * from being read as a promise, and the crew who wrote those rows would be the
+ * ones asked about it on the boat. The sentence that states the boundary
+ * outright is `trip.seen.honest`, and it belongs to the **day**, not to this
+ * block: a two-tank day printed it under each of its two dives, which is a
+ * caption repeated word for word twelve lines apart. `TripDayPlan` renders it
+ * once, below the plan, whenever any site in the day has a month to show.
  *
  * A site whose crew logged nothing this month renders nothing at all. Most
  * sites, most months, on most shops.
@@ -160,7 +163,6 @@ function SiteSeen({
           </li>
         ))}
       </ul>
-      <p className="mt-1 text-sm leading-relaxed text-muted">{t("trip.seen.honest")}</p>
     </div>
   );
 }
@@ -292,7 +294,20 @@ export function TripDayPlan({
   // One beat per *site*, not per tank: a two-tank day on one mooring would
   // otherwise print the same month twice, the way the route and the site prose
   // used to before they were deduplicated.
+  //
+  // Resolved before the render rather than by mutating a `Set` inside the map,
+  // because the caption below the list has to know whether any of these beats
+  // rendered at all, and a set filled during JSX evaluation is a fact the code
+  // after `</ul>` can only read by accident of argument order.
   const seenShown = new Set<string>();
+  const seenByDive = new Map<string, SiteSightings>();
+  for (const { dive, diveSite } of briefings) {
+    if (!diveSite || seenShown.has(diveSite.id)) continue;
+    const found = sightings?.get(diveSite.id);
+    if (!found) continue;
+    seenShown.add(diveSite.id);
+    seenByDive.set(dive.id, found);
+  }
   // A day where nothing is decided yet says so once. Two rows both reading
   // "Site to be confirmed" opened the sparse course session's pitch with the
   // one thing the shop has not decided, stated twice (principle 9; 2026-08-28
@@ -321,12 +336,8 @@ export function TripDayPlan({
           // maximum where it did not. Without the fallback a day could name a
           // depth in the ceiling sentence below that appears nowhere in the
           // list the sentence is about.
-          // The crew's month for this site, once. `seenShown` is mutated during
-          // the render of a list this component builds itself, in order, on the
-          // server — the same shape `fieldGuideCardsFor` and `routeSitesFor`
-          // use one beat below.
-          const seen = diveSite && !seenShown.has(diveSite.id) ? sightings?.get(diveSite.id) : null;
-          if (seen && diveSite) seenShown.add(diveSite.id);
+          // The crew's month for this site, once — decided above, in plan order.
+          const seen = seenByDive.get(dive.id) ?? null;
           const depth =
             diveSite?.depthRange ??
             (profile && diveSite?.maxDepthMeters
@@ -417,6 +428,15 @@ export function TripDayPlan({
           );
         })}
       </ul>
+      {/* **What the logged months are and are not**, once for the day. It used
+          to close each `SiteSeen` block, so a two-tank day carried the same
+          two sentences under both dives — a caption restating itself, which is
+          the copy-restraint rule's first deletion. The boundary still has to
+          be stated: these are counts of what a crew wrote down, and a page
+          that prints them bare reads as a promise about Saturday. */}
+      {seenByDive.size > 0 ? (
+        <p className="mt-3 text-sm leading-relaxed text-muted">{t("trip.seen.honest")}</p>
+      ) : null}
       {/* Nothing is submitted and nothing is gated: the reader names a card,
           and the day answers back (H-08). */}
       {options.length > 0 ? (

@@ -183,6 +183,7 @@
       "requestHeading": "Ask us for a day"
     },
     "filters": {
+      "disclosure": "Filter",
       "tripType": "Trip type",
       "allTrips": "All trips",
       "funDive": "Fun dive",
@@ -192,8 +193,7 @@
       "canDive": "What can you dive?",
       "canDiveUnsaid": "Rather not say",
       "hideAboveLevel": "Hide what needs more",
-      "aboveLevelChip": "Above your level",
-      "aboveLevelCount": "{count, plural, one {# departure asks for more than {level}. It is still bookable: ask the shop.} other {# departures ask for more than {level}. They are still bookable: ask the shop.}}"
+      "aboveLevelChip": "Above your level"
     },
     "showLater": "Show later departures",
     "showEarlier": "Show earlier departures",
@@ -2088,6 +2088,7 @@
     "orEmail": "(or email)",
     "dateOptionsHeading": "When would you like to dive?",
     "whenSuits": "Flexible timing",
+    "moreDetails": "More details",
     "whereYouAreUpTo": "Where you are up to",
     "chooseOne": "Choose one",
     "anythingElse": "Anything else",
@@ -2102,7 +2103,6 @@
     "callLabel": "call",
     "orCall": "Or call",
     "notSaid": "Not said",
-    "required": "(required)",
     "send": "Send",
     "sending": "Sending…",
     "sentHeading": "Sent",

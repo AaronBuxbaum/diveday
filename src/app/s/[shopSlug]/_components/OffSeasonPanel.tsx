@@ -34,10 +34,8 @@ export function OffSeasonPanel({
   line: string | null;
 }) {
   return (
-    // `max-w-md`, the column the live-boat panel, the next-boat card and the
-    // season band all hold: stacked cards at three widths read as three
-    // unrelated things.
-    <SectionCard as="section" title={heading} className="mt-6 max-w-md">
+    // No width and no margin of its own: the identity band's row owns both.
+    <SectionCard as="section" title={heading} className="h-full">
       {line ? <p className="text-sm text-muted">{line}</p> : null}
     </SectionCard>
   );
