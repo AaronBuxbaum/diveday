@@ -345,7 +345,10 @@ test.describe("staff", () => {
 
     // The editor is a save form and nothing else: visibility lives on the
     // roster's eye toggle, and the "Live at" link above already opens the page
-    // the removed Preview button opened.
+    // the removed Preview button opened. A *hidden* course is the one exception
+    // and grows a Preview link of its own, because its public URL answers 404
+    // to anyone carrying no signed capability (issue #1735) — Rescue Diver is
+    // live here, so there is still nothing to find.
     await expect(page.getByRole("button", { name: /^Hide$|^Show$/ })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Preview" })).toHaveCount(0);
 
@@ -820,6 +823,66 @@ test.describe("the public header nav", () => {
     await expect(header.locator('a[href^="tel:"]')).toHaveCount(0);
     await expect(header.locator('a[href^="mailto:"]')).toHaveCount(0);
   });
+});
+
+/**
+ * **A hidden course is a 404, and the editor is the door that still opens it**
+ * (issue #1735).
+ *
+ * Course slugs are minted from a shared template catalogue, so while the edge
+ * refused only slugs that named nothing, the status line separated a draft
+ * (200, with the shop's refusal streamed under it) from a slug that never
+ * existed (404) — and a stranger with a dozen guesses read a shop's
+ * unpublished drafts off it. The previewer is told apart by what they carry.
+ *
+ * A shop of its own: this flips `courses.is_active`, which the per-test reset
+ * does not put back.
+ */
+test("a hidden course answers 404 to a bare URL, and opens from the editor's Preview", async ({
+  page,
+  privateShop,
+}) => {
+  // Several sequential navigations; same aggregate-cost reasoning as the
+  // toggle-live test above.
+  test.setTimeout(30_000);
+  const publicUrl = `/s/${privateShop.slug}/courses/discover-scuba-diving`;
+  await page.goto(`/shop/${privateShop.slug}/courses`);
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: "Discover Scuba Diving" })
+    .getByRole("button", { name: "Hide Discover Scuba Diving" })
+    .click();
+  // The toggle re-renders in place, so this is the wait — never a navigation
+  // straight off the click.
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" }).getByText("Hidden"),
+  ).toBeVisible();
+
+  // The shop's own owner, at a bare URL, carrying nothing. The refusal is
+  // decided above the streaming boundary, so this is a real 404 rather than a
+  // 200 with a refusal in the payload — which is the whole point of the
+  // status line, and what a `curl` was reading.
+  expect((await page.goto(publicUrl))?.status()).toBe(404);
+
+  // The door that works, and the only one: minted on the tap by a route that
+  // has just proved this reader is this shop's live staff.
+  await page.goto(`/shop/${privateShop.slug}/courses/discover-scuba-diving/edit`);
+  await page.getByRole("link", { name: "Preview" }).click();
+  await expect(page).toHaveURL(/\/courses\/discover-scuba-diving\?preview=/);
+  await expect(
+    page.getByRole("heading", { name: "Discover Scuba Diving", level: 1 }),
+  ).toBeVisible();
+
+  // And the capability is not an authorisation. A stranger handed that exact
+  // link gets past the edge and meets the page's own live per-shop check,
+  // which is the one that decides — so they read no course either way.
+  const previewed = page.url();
+  await page.context().clearCookies();
+  await page.goto(previewed);
+  await expect(page.getByRole("heading", { name: "Discover Scuba Diving", level: 1 })).toHaveCount(
+    0,
+  );
+  expect((await page.goto(publicUrl))?.status()).toBe(404);
 });
 
 test("the course editor exposes private-session pricing alongside standard pricing", async ({

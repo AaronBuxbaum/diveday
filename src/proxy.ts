@@ -19,6 +19,7 @@ import {
   reportingEndpointsHeader,
   reportOnlyPolicy,
 } from "@/lib/content-security-policy";
+import { COURSE_PREVIEW_PARAM, coursePreviewIsValid } from "@/lib/course-preview-gate";
 import { classifyDatabaseFailure } from "@/lib/db-failure";
 import {
   EMBED_BRAND_HEADER,
@@ -493,7 +494,31 @@ async function refusedPublicRoute(
   if (shape.kind === "absent") return { liveShopSlug: null };
   try {
     const db = await getDb();
-    const { exists, shopExists } = await publicRouteLookup(db, shape);
+    const { exists, shopExists, hidden } = await publicRouteLookup(db, shape);
+    // **The one flag this layer applies rather than reports.** A course the
+    // shop has taken off its public site is a real row, so `exists` is true and
+    // the page would serve it — to the shop's own live staff, and to nobody
+    // else. Leaving that entirely to the page put a draft on 200 and a slug
+    // that never existed on 404, and course slugs come from a shared template
+    // catalogue, so a dozen guesses read a shop's unpublished drafts off the
+    // status line (issue #1735).
+    //
+    // The previewer is told apart by what they carry, never by a guess at who
+    // they are: the editor mints the parameter where it already knows the
+    // reader is this shop's live staff, and the check here is one HMAC over the
+    // two segments the route resolved — no database, no session, no cookie
+    // cache. `src/db/public-route-existence.ts`'s invariant block has the three
+    // cheaper mechanisms and why each of them is worse than the disclosure was.
+    //
+    // The parameter is not an authorisation and is not treated as one. The page
+    // still runs `isLiveShopStaff`, live and per-shop, so a token in a
+    // stranger's hands buys them the same `notFound()` they get today — it buys
+    // being asked rather than being refused first.
+    if (exists && hidden && shape.kind === "course") {
+      const token = req.nextUrl.searchParams.get(COURSE_PREVIEW_PARAM);
+      if (coursePreviewIsValid(token, shape.shopSlug, shape.courseSlug)) return null;
+      return { liveShopSlug: shape.shopSlug };
+    }
     if (exists) return null;
     // The slug the refusal is framed by is the one `shape` carries — the same
     // string the lookup just resolved — and no longer a second parse of the

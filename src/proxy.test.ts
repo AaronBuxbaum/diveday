@@ -35,6 +35,12 @@ const existence = vi.hoisted(() => ({
    * departure under it is not. One question, two facts back.
    */
   liveShops: null as Set<string> | null,
+  /**
+   * Course slugs the stub reports as `hidden` — the row is there and the shop
+   * has taken it off its public site. The one flag the proxy applies rather
+   * than reports (issue #1735).
+   */
+  hiddenCourses: null as Set<string> | null,
 }));
 
 vi.mock("@/db/client", () => ({ getDb: async () => ({}) }));
@@ -45,7 +51,8 @@ vi.mock("@/db/public-route-existence", () => ({
     // A town names no shop, so the real module never resolves one and answers
     // `shopExists: false` whatever it finds — the refusal is DiveDay's own
     // (issue #1734).
-    if (shape.kind === "region") return { exists: existence.answer, shopExists: false };
+    if (shape.kind === "region")
+      return { exists: existence.answer, shopExists: false, hidden: false };
     const shopExists = existence.liveShops
       ? existence.liveShops.has(shape.shopSlug)
       : existence.answer;
@@ -53,8 +60,10 @@ vi.mock("@/db/public-route-existence", () => ({
     // have said, kept here so the stub cannot disagree with it: a segment that
     // could never have been minted names nothing, and nothing at all exists
     // under a shop that does not.
-    if (shape.kind === "malformed") return { exists: false, shopExists };
-    return { exists: shopExists && existence.answer, shopExists };
+    if (shape.kind === "malformed") return { exists: false, shopExists, hidden: false };
+    const hidden =
+      shape.kind === "course" && (existence.hiddenCourses?.has(shape.courseSlug) ?? false);
+    return { exists: shopExists && existence.answer, shopExists, hidden };
   },
 }));
 
@@ -76,6 +85,12 @@ vi.mock("better-auth/cookies", () => ({
   }),
 }));
 
+import { nowMs } from "@/lib/clock";
+import {
+  COURSE_PREVIEW_PARAM,
+  COURSE_PREVIEW_TTL_MS,
+  signCoursePreview,
+} from "@/lib/course-preview-gate";
 import { proxy } from "@/proxy";
 
 function request(url: string, headers?: Record<string, string>): NextRequest {
@@ -206,6 +221,7 @@ describe("the public namespace's edge refusal", () => {
     existence.throwsWith = null;
     existence.asked = [];
     existence.liveShops = null;
+    existence.hiddenCourses = null;
   });
 
   /**
@@ -777,6 +793,85 @@ describe("the public namespace's edge refusal", () => {
         event: "public_route.existence_unavailable",
       });
     }
+  });
+});
+
+/**
+ * **A hidden course is the one flag the edge applies** (issue #1735).
+ *
+ * Course slugs are minted from a shared template catalogue, so leaving
+ * `is_active` entirely to the page put a draft on 200 and a slug that never
+ * existed on 404, and a dozen guesses read a shop's unpublished drafts off the
+ * status line. The previewer is told apart by what they carry, never by a guess
+ * at who they are — the three cheaper mechanisms and why each is worse than the
+ * disclosure are in `src/db/public-route-existence.ts`'s invariant block.
+ */
+describe("a hidden course at the edge", () => {
+  const SHOP = "blue-mantis";
+  const COURSE = "open-water";
+
+  beforeEach(() => {
+    existence.answer = true;
+    existence.throws = false;
+    existence.throwsWith = null;
+    existence.asked = [];
+    existence.liveShops = null;
+    existence.hiddenCourses = new Set([COURSE]);
+  });
+
+  function rewriteTarget(res: Response): string | null {
+    const value = res.headers.get("x-middleware-rewrite");
+    return value ? new URL(value).pathname : null;
+  }
+
+  function previewUrl(token: string, course = COURSE): string {
+    return `/s/${SHOP}/courses/${course}?${COURSE_PREVIEW_PARAM}=${encodeURIComponent(token)}`;
+  }
+
+  it("refuses it to a reader carrying nothing", async () => {
+    const res = await run(request(`/s/${SHOP}/courses/${COURSE}`));
+    expect(rewriteTarget(res)).toBe("/_not-found");
+  });
+
+  it("frames that refusal as the shop's own, because the shop is alive", async () => {
+    // Issue #765's rule, unchanged by this: a diver whose link died is owed the
+    // shop's own 404 and not DiveDay's sales page. The course is the dead half,
+    // never the shop.
+    const res = await run(request(`/s/${SHOP}/courses/${COURSE}`));
+    expect(res.headers.get(`x-middleware-request-${REFUSED_SHOP_SLUG_HEADER}`)).toBe(SHOP);
+  });
+
+  it("serves it to a reader carrying a preview this deployment minted for it", async () => {
+    const res = await run(request(previewUrl(signCoursePreview(SHOP, COURSE))));
+    expect(rewriteTarget(res)).toBeNull();
+  });
+
+  it("refuses a preview minted for another course on the same shop", async () => {
+    // The scope is the two segments the route resolved, so one draft's link is
+    // not a skeleton key for the shop's namespace — which is the thing being
+    // protected.
+    const res = await run(request(previewUrl(signCoursePreview(SHOP, "rescue-diver"))));
+    expect(rewriteTarget(res)).toBe("/_not-found");
+  });
+
+  it("refuses a preview whose ten minutes are up", async () => {
+    const stale = signCoursePreview(SHOP, COURSE, nowMs() - COURSE_PREVIEW_TTL_MS - 1);
+    const res = await run(request(previewUrl(stale)));
+    expect(rewriteTarget(res)).toBe("/_not-found");
+  });
+
+  it("refuses an unsigned parameter that merely looks like one", async () => {
+    const res = await run(request(previewUrl(`${nowMs() + 60_000}.not-a-signature`)));
+    expect(rewriteTarget(res)).toBe("/_not-found");
+  });
+
+  it("leaves a course the shop has not hidden completely alone", async () => {
+    existence.hiddenCourses = new Set();
+    const res = await run(request(`/s/${SHOP}/courses/${COURSE}`));
+    expect(rewriteTarget(res)).toBeNull();
+    // And the parameter buys nothing anywhere else: a published course was
+    // never going to be refused, so nothing about it depends on the token.
+    expect(existence.asked).toEqual([{ kind: "course", shopSlug: SHOP, courseSlug: COURSE }]);
   });
 });
 
