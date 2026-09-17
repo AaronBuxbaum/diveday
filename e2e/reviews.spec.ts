@@ -142,6 +142,10 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
       .filter({ hasText: comment }),
   ).toHaveCount(0);
 
+  // Featuring a review is rare, so it waits behind the row's own disclosure
+  // rather than standing on every published row.
+  await expect(card.getByRole("button", { name: "Mark as standout" })).toHaveCount(0);
+  await card.locator("summary").first().click();
   await expect(card.getByRole("button", { name: "Mark as standout" })).toBeVisible();
   await card.getByRole("button", { name: "Mark as standout" }).click();
   await expect(page.getByText("Review marked as standout.")).toBeVisible();
@@ -173,10 +177,12 @@ test.describe("as owner, reviews list", () => {
     ).toHaveCount(1);
     await expect(published.getByRole("button", { name: "Hide this review" })).toHaveCount(0);
     // Hiding states a case (ADR 20260813-review-moderation-has-a-floor): the
-    // reason picker waits behind the Hide disclosure, and the act is recorded
-    // with whichever reason the shop chose. Still no confirm dialog — it is one
-    // of DiveDay's land-then-undo actions (docs/design/principles.md #7) and
-    // offers Undo from a toast.
+    // rare acts wait behind the row's own disclosure and the reason picker
+    // behind the Hide one inside it, and the act is recorded with whichever
+    // reason the shop chose. Still no confirm dialog — it is one of DiveDay's
+    // land-then-undo actions (docs/design/principles.md #7) and offers Undo
+    // from a toast.
+    await published.locator("summary").first().click();
     await published.getByText("Hide", { exact: true }).click();
     await expect(published.getByLabel("What happened")).toHaveCount(0);
     await published.getByLabel("Why are you taking it down?").selectOption("spam");
@@ -210,7 +216,11 @@ test.describe("as owner, reviews list", () => {
       .locator("li")
       .filter({ hasText: "A warm, patient crew and a brilliant final drift over the reef." })
       .filter({ visible: true });
+    // Publish is the one act a waiting row is on the page for, and it is the
+    // only one standing on the row; Hide waits behind the row's disclosure.
     await expect(waiting.getByRole("button", { name: "Publish" })).toBeVisible();
+    await expect(waiting.getByText("Hide", { exact: true })).toHaveCount(0);
+    await waiting.locator("summary").first().click();
     await expect(waiting.getByText("Hide", { exact: true })).toBeVisible();
   });
 
@@ -219,6 +229,7 @@ test.describe("as owner, reviews list", () => {
 
     const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
     const published = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
+    await published.locator("summary").first().click();
     await published.getByText("Hide", { exact: true }).click();
     await published.getByLabel("Why are you taking it down?").selectOption("wrong_subject");
     await published.getByRole("button", { name: "Hide this review" }).click();
