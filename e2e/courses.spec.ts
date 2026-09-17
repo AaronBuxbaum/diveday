@@ -147,23 +147,30 @@ test.describe("staff", () => {
     await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
     await expect(page.getByText("$249")).toBeVisible();
 
-    // Back on the roster, the worded Hide toggle takes the course off
-    // scheduling lists. No banner and no navigation — the toggle's own word
-    // and the "Hidden" badge update in place, which is also what keeps the
-    // click from jumping the page.
+    // Taking the course off the diver's catalog is the editor's own rare act,
+    // below the save bar — not a standing button on all 55 roster rows. No
+    // banner and no navigation: the button's own word and the header's
+    // "Hidden from divers" line both flip in place.
+    await page.goto("/shop/blue-mantis/courses/discover-scuba-diving/edit");
+    await page.getByRole("button", { name: "Hide from the catalog" }).click();
+    await expect(page.getByText("Hidden from divers")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Show in the catalog" })).toBeVisible();
+
+    // And the roster says so, where the badge is the one exceptional state it
+    // marks. The per-row Preview icon is gone too: the roster's one door to
+    // the diver's catalog is the header action, and a single course's live
+    // page is named on its own editor ("Live at …").
     await page.goto("/shop/blue-mantis/courses");
-    // The per-row Preview icon is gone: the roster's one door to the diver's
-    // catalog is the header action, and a single course's live page is named
-    // on its own editor ("Live at …").
+    const row2 = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
+    await expect(row2.getByText("Hidden")).toBeVisible();
     await expect(row.getByRole("link", { name: "Preview Discover Scuba Diving" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "View public page" })).toHaveAttribute(
       "href",
       "/s/blue-mantis/courses",
     );
-    await row.getByRole("button", { name: "Hide Discover Scuba Diving" }).click();
-    const row2 = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
-    await expect(row2.getByText("Hidden")).toBeVisible();
-    await expect(row2.getByRole("button", { name: "Show Discover Scuba Diving" })).toBeVisible();
+    // Nothing on the row changes visibility any more — the row carries no
+    // standing control at all.
+    await expect(row2.getByRole("button")).toHaveCount(0);
   });
 
   test("the roster reads as one ledger, agency by agency, in progression order", async ({
@@ -343,10 +350,10 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Save course page" }).click();
     await expect(page.getByRole("status")).toContainText("Course page saved");
 
-    // The editor is a save form and nothing else: visibility lives on the
-    // roster's eye toggle, and the "Live at" link above already opens the page
-    // the removed Preview button opened.
-    await expect(page.getByRole("button", { name: /^Hide$|^Show$/ })).toHaveCount(0);
+    // The editor's one primary is Save; visibility is a quiet `secondary`
+    // beneath it, and the "Live at" link above already opens the page the
+    // removed Preview button opened.
+    await expect(page.getByRole("button", { name: "Hide from the catalog" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Preview" })).toHaveCount(0);
 
     // A diver arrives with no session at all.
