@@ -326,6 +326,19 @@ export async function openTripMore(page: Page): Promise<Locator> {
   return list;
 }
 
+/**
+ * Open one About row's editor — the departure's crew, its price, the days it
+ * runs. A row opens itself only while its subject has open work, so a settled
+ * one (a boat with crew on it) takes a tap. Opens the panel itself first.
+ */
+export async function openTripAboutRow(page: Page, id: string): Promise<Locator> {
+  await openTripAbout(page);
+  const row = page.locator(`details#${id}`);
+  await expect(row).toBeVisible();
+  await openIfClosed(row);
+  return row;
+}
+
 /** Navigate to the create-diver form from an add-diver section or panel. */
 export async function openHandEntry(container: Locator): Promise<void> {
   const addLink = container.getByRole("link", { name: /Add (diver|to wait list)/i });

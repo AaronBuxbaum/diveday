@@ -3,6 +3,7 @@ import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
+import { AboutRowDetails } from "./AboutRowDetails";
 
 /**
  * Label, settled value, and the row's own control, on one grid at every width —
@@ -33,7 +34,7 @@ function AboutRow({ row }: { row: TripAboutRow }) {
     );
   }
   return (
-    <details id={row.id} open={row.editorOpen} className="group/row scroll-mt-24">
+    <AboutRowDetails id={row.id} open={row.editorOpen} className="group/row scroll-mt-24">
       <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary">
         <span className={ROW_GRID}>
           {beat}
@@ -47,7 +48,7 @@ function AboutRow({ row }: { row: TripAboutRow }) {
           the space below it is what keeps the next row's label off the last
           field of this one. */}
       <div className="pb-5">{row.editor}</div>
-    </details>
+    </AboutRowDetails>
   );
 }
 
