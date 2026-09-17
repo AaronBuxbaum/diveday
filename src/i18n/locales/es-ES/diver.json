@@ -183,6 +183,7 @@
       "requestHeading": "Pídenos un día"
     },
     "filters": {
+      "disclosure": "Filtrar",
       "tripType": "Tipo de salida",
       "allTrips": "Todas las salidas",
       "funDive": "Inmersión recreativa",
@@ -192,8 +193,7 @@
       "canDive": "¿Qué puedes bucear?",
       "canDiveUnsaid": "Prefiero no decirlo",
       "hideAboveLevel": "Ocultar las que piden más",
-      "aboveLevelChip": "Por encima de tu nivel",
-      "aboveLevelCount": "{count, plural, one {# salida pide más que {level}. Se puede reservar igualmente: pregunta al centro.} other {# salidas piden más que {level}. Se pueden reservar igualmente: pregunta al centro.}}"
+      "aboveLevelChip": "Por encima de tu nivel"
     },
     "showLater": "Ver salidas posteriores",
     "showEarlier": "Ver salidas anteriores",
@@ -2088,6 +2088,7 @@
     "orEmail": "(o correo)",
     "dateOptionsHeading": "¿Cuándo te gustaría bucear?",
     "whenSuits": "Fechas flexibles",
+    "moreDetails": "Más detalles",
     "whereYouAreUpTo": "Por dónde vas",
     "chooseOne": "Elige una opción",
     "anythingElse": "Algo más",
@@ -2102,7 +2103,6 @@
     "callLabel": "llama",
     "orCall": "O llama a",
     "notSaid": "No indicado",
-    "required": "(obligatorio)",
     "send": "Enviar",
     "sending": "Enviando…",
     "sentHeading": "Enviado",

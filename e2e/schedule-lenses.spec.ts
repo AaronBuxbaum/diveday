@@ -28,6 +28,30 @@ const nextBoat = (page: Page) => page.getByRole("region", { name: "Next boat wit
  */
 const list = (page: Page) => page.locator("form + ul");
 
+/**
+ * **The filters live behind one quiet "Filter" disclosure** (2026-09-17). The
+ * rail at rest is the shop's own lens chips; the trip-type select, the
+ * "what can you dive?" select and the two checkboxes are the advanced ask and
+ * sit inside the form's own `<details>`. A URL that already carries one of
+ * those four parameters paints it open, so this opens it only when it is shut.
+ *
+ * Addressed by `page.locator`, not `getByLabel`/`getByRole`: `e2e/fixtures.ts`
+ * filters those three to visible elements, and the point here is the control
+ * that is not visible yet. `<summary>` has no implicit role for `getByRole` to
+ * find either.
+ */
+async function openFilters(page: Page) {
+  const tripType = page.locator('select[name="tripType"]');
+  // The deterministic signal that change-to-submit is live, waited on before
+  // the panel is opened rather than after — it is an attribute, so it does not
+  // need the control on screen.
+  await expect(tripType).toHaveAttribute("data-hydrated", "true");
+  if (!(await tripType.isVisible())) {
+    await page.locator('form:has(select[name="tripType"]) summary').click();
+  }
+  await expect(page.getByLabel("Trip type")).toBeVisible();
+}
+
 test("a lens narrows the board, and every row left wears its word", {
   tag: READ_ONLY,
 }, async ({ page }) => {
@@ -115,7 +139,7 @@ test("the lens survives a month step and a 'Has space' tap", { tag: READ_ONLY },
 
   // The filter row is a GET form: without the hidden `lens` input, one tap of
   // "Has space" erases the reader's view with nothing saying why.
-  await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
+  await openFilters(page);
   await page.getByLabel("Has space").check();
   await expect(page).toHaveURL(/hasSpace=1/);
   await expect(page).toHaveURL(/[?&]lens=after-dark/);

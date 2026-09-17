@@ -254,6 +254,8 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
 
 ### The public schedule — `/s/[shopSlug]`
 
+**Tidied 2026-09-17** (the "as rendered" sweep, slice F1). Three things, all layout and disclosure — no feature left the page. The identity band's panels — the off-season card, the boat that is out, the next boat with space, the season band — each held `max-w-md` and stacked down the left third of a 1152px page, three unrelated boxes with two-thirds of the width beside them empty; they are one row now (`grid-flow-col` with `auto-cols-fr` at `md` and up, the stack on a phone), which reads at one panel or at four. The lens rail met a diver with ten or eleven controls at rest — seven chips, two selects, one or two checkboxes and a counted sentence — so the four filters moved behind one quiet "Filter" disclosure inside their own `<form>`, open on first paint whenever the URL already carries one of them, and the rail at rest is the shop's own chips. The sentence above the list ("3 departures ask for more than Open Water. They are still bookable: ask the shop.") was deleted: the rows already say "Above your level" and the shorter list is one tap away in the same panel.
+
 **Proposed 2026-09-04** (same ADR and canvas): a live panel when a boat is out, "next with space", and a lens rail of the shop's own words.
 
 **Harbor, 2026-09-02:** every heading the diver meets is in the shop's face — the name in the bar,
@@ -276,6 +278,8 @@ routes took the display-scale h1 only.
   because a diver is choosing a shop before they are choosing a time slot.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
+
+**Tidied 2026-09-17** (the "as rendered" sweep, slice F1). "What the crew logged, and when. It says what was seen, not what you will see." closed every "Seen here this month" block, so a two-tank day printed it twice, twelve lines apart. It is the **day's** sentence now — once, under the plan, whenever any site in the day has a month to show. And the embed's booking confirmation stopped offering three link-blue lines at one weight: the readiness page is the button, the way back into the widget is quiet text (and the readiness door demotes to `secondary` when there is a balance to pay, which is then the section's one primary).
 
 **Shipped 2026-09-06** ([ADR 20260906-before-you-ask](../architecture/decisions/20260906-before-you-ask.md), [canvas](canvases/20260906-before-you-ask/README.md)):
 reached from the thread's next-dive link, the page arrives knowing her: the verified card, the waiver that still covers this trip, her gear and her emergency contact folded into one panel, each naming the day it was kept, with her name, email and phone prefilled into the fields that are the doors to change them; "Not Yara? Start with a blank form" stands beneath. A cold visitor gets the form that ships, and the page reveals nothing to anyone who did not arrive through the handoff. A matching cold email may receive one link an hour (H-68 b); nothing on the page says whether it went.

@@ -2099,9 +2099,13 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * The whole design decision is visual and lives nowhere else: the
        * departures above the stated level are **dimmed and marked**, not
-       * removed, with the count said once in the filter row and a two-word chip
-       * on each card (issue #696). A capture is the only thing that can tell a
-       * dimmed-and-still-there card from a missing one.
+       * removed, with a two-word chip on each card (issue #696). A capture is
+       * the only thing that can tell a dimmed-and-still-there card from a
+       * missing one.
+       *
+       * The counted sentence that used to sit in the filter row beside it was
+       * deleted on 2026-09-17; a URL carrying `canDive` still paints the
+       * "Filter" disclosure open, so the row itself is in this shot.
        */
       test(`the public schedule marks what a diver cannot dive (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis?canDive=open_water");
@@ -3487,7 +3491,7 @@ for (const scheme of ["light", "dark"] as const) {
         // up already open, so there is no disclosure left to click — the shot
         // above now carries the form rather than a collapsed row. Assert it is
         // reachable without one, which is the promotion N-45 makes.
-        await expect(page.locator("#request-a-date summary")).toHaveCount(0);
+        await expect(page.locator("details#request-a-date > summary")).toHaveCount(0);
         await expect(page.getByRole("button", { name: "Send", exact: true })).toBeVisible();
 
         // **The board before anything is on it.** The `schedule-builder`

@@ -602,6 +602,18 @@ export default async function SchedulePage({
    */
   const skippedBoats = nextBoat ? visibleUpcoming.indexOf(nextBoat) : 0;
   const firstSkippedBoat = skippedBoats > 0 ? visibleUpcoming[0] : null;
+  /**
+   * How many panels the identity band has to lay out. Counted rather than
+   * inferred from the rendered children, because a grid wrapper around four
+   * conditionals still draws its own top margin when every one of them is
+   * false — an empty 24px band above the schedule on the commonest shop of
+   * all, the one with no live boat and no season written down.
+   */
+  const identityPanels =
+    (quiet.quiet ? 1 : 0) +
+    (liveStage ? 1 : 0) +
+    (nextBoat ? 1 : 0) +
+    (seasonEntries.length > 0 ? 1 : 0);
 
   // The month rail: one row of "where am I / step a month" instead of the
   // full month grid this page used to open with. The grid duplicated every
@@ -879,69 +891,83 @@ export default async function SchedulePage({
               locale={locale}
               t={t}
             />
-            {/* **The quiet, before the boat** (N-45). A shop with nothing on
-                the water for a month leads with that fact rather than with a
-                departure seven weeks out, which a visitor would otherwise have
-                to date-subtract for themselves. It replaces the schedule's
-                terminal empty state below rather than joining it, and the
-                page's one primary becomes the composer's own submit — the
-                arrangement `NextBoatCard` has always promised for a page with
-                no bookable boat. */}
-            {quiet.quiet ? (
-              <OffSeasonPanel heading={t("schedule.offSeason.heading")} line={quietLine} />
-            ) : null}
-            {/* **The boat that is out** — ADR 20260904-reef-all-the-way-down,
-                decision 2, Budget rule 4. Above the next departure, because a
-                visitor who can see a boat leave from the dock is asking about
-                today before they are asking about Saturday. Never in embed
-                mode: `?embed=1` is a window onto the schedule, and a live
-                panel would spend a third of a widget on a fact the host page
-                did not ask for. */}
-            {liveStage ? (
-              <LiveBoatPanel
-                stage={liveStage.stage}
-                eyebrow={t("tripStage.liveEyebrow")}
-                sentence={liveStageSentence}
-                meta={liveStageMeta}
-                // The door to that boat's own day (ADR 20260908-one-hand,
-                // decision 6, lever U). Reached only when the switch is on,
-                // because `liveStage` is null without it.
-                follow={{
-                  href: publicBoatPath(shopSlug, liveStage.tripId),
-                  label: t("boatLine.follow"),
-                }}
-              />
-            ) : null}
-            {nextBoat ? (
-              <div className="mt-6 max-w-md">
-                <NextBoatCard
-                  href={`${publicTripPath(shopSlug, nextBoat.id)}#book`}
-                  when={whenWord(nextBoat.startsAt)}
-                  time={formatTime(nextBoat.startsAt, locale, shop.timezone)}
-                  title={nextBoat.title}
-                  description={nextBoat.description}
-                  spots={seatState(nextBoat).text}
-                  price={
-                    nextBoat.priceCents !== null
-                      ? formatMoneyScanned(nextBoat.priceCents, currency, locale)
-                      : null
-                  }
-                  skipped={skippedBoats}
-                  firstSkippedTime={
-                    firstSkippedBoat
-                      ? formatTime(firstSkippedBoat.startsAt, locale, shop.timezone)
-                      : undefined
-                  }
-                  filtered={filteredView}
-                  t={t}
-                />
+            {/* **One row, not a column of narrow cards.** Each of these panels
+                held `max-w-md` of its own, so on a 1152px page they stacked
+                down the left third and left the other two-thirds empty — three
+                boxes reading as three unrelated things with nothing beside
+                them. They are one band: the same four facts, laid out as a row
+                at `md` and up and as the old stack on a phone. `grid-flow-col`
+                with `auto-cols-fr` rather than a fixed `grid-cols-3`, because
+                how many of them render is a fact about the shop's day — no
+                live boat, no season — and the row has to read at one, two,
+                three or four. Order is the reading order it has always been:
+                the quiet, the boat that is out, the next one with space, the
+                season. */}
+            {identityPanels > 0 ? (
+              <div className="mt-6 grid gap-4 md:auto-cols-fr md:grid-flow-col">
+                {/* **The quiet, before the boat** (N-45). A shop with nothing on
+                    the water for a month leads with that fact rather than with a
+                    departure seven weeks out, which a visitor would otherwise have
+                    to date-subtract for themselves. It replaces the schedule's
+                    terminal empty state below rather than joining it, and the
+                    page's one primary becomes the composer's own submit — the
+                    arrangement `NextBoatCard` has always promised for a page with
+                    no bookable boat. */}
+                {quiet.quiet ? (
+                  <OffSeasonPanel heading={t("schedule.offSeason.heading")} line={quietLine} />
+                ) : null}
+                {/* **The boat that is out** — ADR 20260904-reef-all-the-way-down,
+                    decision 2, Budget rule 4. Before the next departure, because a
+                    visitor who can see a boat leave from the dock is asking about
+                    today before they are asking about Saturday. Never in embed
+                    mode: `?embed=1` is a window onto the schedule, and a live
+                    panel would spend a third of a widget on a fact the host page
+                    did not ask for. */}
+                {liveStage ? (
+                  <LiveBoatPanel
+                    stage={liveStage.stage}
+                    eyebrow={t("tripStage.liveEyebrow")}
+                    sentence={liveStageSentence}
+                    meta={liveStageMeta}
+                    // The door to that boat's own day (ADR 20260908-one-hand,
+                    // decision 6, lever U). Reached only when the switch is on,
+                    // because `liveStage` is null without it.
+                    follow={{
+                      href: publicBoatPath(shopSlug, liveStage.tripId),
+                      label: t("boatLine.follow"),
+                    }}
+                  />
+                ) : null}
+                {nextBoat ? (
+                  <NextBoatCard
+                    href={`${publicTripPath(shopSlug, nextBoat.id)}#book`}
+                    when={whenWord(nextBoat.startsAt)}
+                    time={formatTime(nextBoat.startsAt, locale, shop.timezone)}
+                    title={nextBoat.title}
+                    description={nextBoat.description}
+                    spots={seatState(nextBoat).text}
+                    price={
+                      nextBoat.priceCents !== null
+                        ? formatMoneyScanned(nextBoat.priceCents, currency, locale)
+                        : null
+                    }
+                    skipped={skippedBoats}
+                    firstSkippedTime={
+                      firstSkippedBoat
+                        ? formatTime(firstSkippedBoat.startsAt, locale, shop.timezone)
+                        : undefined
+                    }
+                    filtered={filteredView}
+                    t={t}
+                  />
+                ) : null}
+                {/* **The reef's calendar** (issue #1485). After the next boat,
+                    because the page's one primary is still the bookable object —
+                    but above the schedule, because a week that changes what the
+                    diving is like changes which day somebody picks out of it. */}
+                <SeasonBand eyebrow={t("season.eyebrow")} entries={seasonEntries} />
               </div>
             ) : null}
-            {/* **The reef's calendar** (issue #1485). Below the next boat,
-                because the page's one primary is still the bookable object —
-                but above the schedule, because a week that changes what the
-                diving is like changes which day somebody picks out of it. */}
-            <SeasonBand eyebrow={t("season.eyebrow")} entries={seasonEntries} />
           </div>
         </div>
       )}
@@ -1094,19 +1120,8 @@ export default async function SchedulePage({
               hasSpaceFilter={hasSpaceFilter}
               canDiveFilter={canDiveFilter ?? null}
               hideAboveFilter={hideAboveFilter}
-              aboveLevelNotice={
-                canDiveFilter && !hideAboveFilter && aboveStatedLevel.size > 0
-                  ? // It says the trips are still bookable, because they are: this
-                    // is a stated preference, and a shop will take an Open Water
-                    // diver on an Advanced charter as a guided dive or sell them the
-                    // specialty.
-                    t("schedule.filters.aboveLevelCount", {
-                      count: aboveStatedLevel.size,
-                      level: t(DIVER_CERTIFICATION_LEVEL_KEYS[canDiveFilter]),
-                    })
-                  : null
-              }
               copy={{
+                disclosure: t("schedule.filters.disclosure"),
                 tripType: t("schedule.filters.tripType"),
                 allTrips: t("schedule.filters.allTrips"),
                 funDive: t("schedule.filters.funDive"),

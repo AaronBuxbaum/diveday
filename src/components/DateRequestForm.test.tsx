@@ -20,12 +20,11 @@ const copy: DateRequestCopy = {
   yourPhone: "Your phone",
   phonePlaceholder: "+1 305 555 0134",
   howManyDivers: "How many divers",
-  optional: "(optional)",
-  required: "(required)",
   orPhone: "(or phone)",
   orEmail: "(or email)",
   whenSuits: "Flexible timing",
   whenSuitsPlaceholder: "Any weekend in August",
+  moreDetails: "More details",
   whereYouAreUpTo: "Where you are up to",
   chooseOne: "Choose one",
   anythingElse: "Anything else",
@@ -157,10 +156,15 @@ describe("DateRequestForm — server-recorded submission", () => {
 
     await waitFor(() => expect(screen.getByText("Inquiry sent")).toBeInTheDocument());
     expect(container.querySelector("details")).toBeNull();
-    // ...and the section surface keeps its own anatomy: no disclosure to drop.
+    // ...and the section surface keeps its own anatomy: the row-level
+    // disclosure is what drops, and it never had one. Asked by the row's
+    // heading rather than by `querySelector("details")`, because the composer
+    // itself now carries a "More details" disclosure over its three rare
+    // fields — a `<details>` on the page is no longer evidence of the row.
     cleanup();
     renderInquiry(succeeds(), { contactEmail: null });
-    expect(document.querySelector("details")).toBeNull();
+    expect(screen.queryByRole("group", { name: "Get in touch" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Get in touch" })).toBeInTheDocument();
   });
 
   it("shows the server's error and keeps the form on screen (failure path)", async () => {
@@ -411,6 +415,61 @@ describe("DateRequestForm — asking for a date", () => {
     expect(formData.get("preferredDate")).toBeNull();
     expect(formData.get("alternateDate")).toBeNull();
     expect(formData.get("dateFlexible")).toBeNull();
+  });
+});
+
+describe("DateRequestForm — four asks at rest", () => {
+  /**
+   * The composer met a diver with ten boxes, seven captioned "(optional)" and
+   * one "(required)" — the app's only such suffix, against a house convention
+   * where the required field wears `Field`'s asterisk and nothing else says
+   * anything (docs/design/forms-and-controls.md, "Required fields").
+   */
+  it("marks the one required field and qualifies none of the others", () => {
+    renderInquiry(vi.fn(), { askInterest: true });
+
+    expect(screen.getByLabelText(/What would you like to dive/)).toBeRequired();
+    expect(screen.queryByText("(required)")).toBeNull();
+    expect(screen.queryByText("(optional)")).toBeNull();
+  });
+
+  /**
+   * The three answers a diver almost never has sit behind "More details" —
+   * closed at rest, and still part of the form, because a `<details>` hides
+   * its content without taking it out of the submission.
+   */
+  it("keeps the three rare answers behind one closed disclosure", async () => {
+    const submitInquiry = succeeds();
+    const { container } = renderInquiry(submitInquiry);
+
+    const more = container.querySelector("details");
+    expect(more).not.toBeNull();
+    expect(more).not.toHaveAttribute("open");
+    for (const label of [/Alternative date/, /Where you are up to/, /Anything else/]) {
+      expect(more?.contains(screen.getByLabelText(label))).toBe(true);
+    }
+
+    fillEmail();
+    fireEvent.change(screen.getByLabelText(/Anything else/), {
+      target: { value: "We are ashore only on the Tuesday." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+
+    await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
+    expect(submitInquiry.mock.calls[0]?.[1].get("message")).toBe(
+      "We are ashore only on the Tuesday.",
+    );
+  });
+
+  // The date a diver is most likely to name, and the window in words a date
+  // box cannot hold, stay where they are met.
+  it("asks for the preferred date and the flexible window in the open", () => {
+    const { container } = renderInquiry(vi.fn());
+    const more = container.querySelector("details");
+
+    for (const label of [/Preferred date/, /Flexible timing/, /Your email/, /How many divers/]) {
+      expect(more?.contains(screen.getByLabelText(label))).toBe(false);
+    }
   });
 });
 
