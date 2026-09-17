@@ -58,6 +58,7 @@ export function ConversationSection({
   if (entries.length === 0) return null;
 
   const inbound = entries.filter((entry) => entry.direction === "inbound");
+  const unanswered = inbound.filter((entry) => entry.message.answeredAt === null).length;
   const latest = inbound.at(-1);
   const latestWhatsApp = inbound.filter((entry) => entry.message.channel === "whatsapp").at(-1);
   // A typed WhatsApp reply is only accepted for 24 hours after the diver's own
@@ -82,17 +83,17 @@ export function ConversationSection({
     <DiverFileGroupDisclosure
       id="conversation"
       label={t("inbox.thread.heading")}
-      summary={t("inbox.thread.summary", { count: entries.length })}
-      open={Boolean(status) || inbound.some((entry) => entry.message.answeredAt === null)}
+      // A diver waiting on an answer is the fact worth the door; the tally is
+      // what is left to say once nobody is.
+      summary={
+        unanswered > 0
+          ? t("divers.file.conversationUnanswered", { count: unanswered })
+          : t("inbox.thread.summary", { count: entries.length })
+      }
+      open={Boolean(status) || unanswered > 0}
       className="mt-8"
     >
-      <InsetGroup
-        as="h2"
-        id="conversation"
-        label={t("inbox.thread.heading")}
-        labelClassName="max-sm:hidden"
-        className="scroll-mt-24"
-      >
+      <InsetGroup>
         {entries.map((entry) => {
           const key = entry.direction === "inbound" ? entry.message.id : `reply-${entry.reply.id}`;
           const meta =

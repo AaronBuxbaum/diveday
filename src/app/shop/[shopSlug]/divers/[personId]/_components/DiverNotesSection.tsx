@@ -51,16 +51,14 @@ export function DiverNotesSection({
       id="notes"
       label={t("divers.notes.heading")}
       summary={noteSummary}
-      open={Boolean(status)}
+      // Notes a colleague wrote are content, not a form, and the crew reads
+      // them off the manifest — so a record that has them opens on them. A
+      // record that has none opens on an empty box asking to be filled, which
+      // is the thing the door exists to keep shut.
+      open={Boolean(status) || notes.length > 0}
       className="mt-8"
     >
-      <InsetGroup
-        as="h2"
-        id="notes"
-        label={t("divers.notes.heading")}
-        labelClassName="max-sm:hidden"
-        className="scroll-mt-24"
-      >
+      <InsetGroup>
         {notes.map(({ note, authorName, tripId, tripTitle, tripStartsAt }) => (
           <div key={note.id} className="flex items-start justify-between gap-3 px-5 py-4 sm:px-6">
             <div className="min-w-0">

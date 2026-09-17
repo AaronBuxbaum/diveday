@@ -55,15 +55,15 @@ describe("the disclosure body's motion", () => {
     expect(rule("details::details-content")).toContain("var(--ease-in-soft)");
   });
 
-  it("force-opens only legacy diver-file groups at desktop", () => {
-    const desktop = rule(
-      ".diver-file-group:not(.diver-file-group--desktop-collapsible)::details-content",
-    );
-    expect(desktop).toContain("content-visibility: visible !important");
-
-    const mediaStart = CSS.indexOf("@media (min-width: 40rem) {");
-    const mediaBlock = CSS.slice(mediaStart, CSS.indexOf("\n}", mediaStart));
-    expect(mediaBlock).not.toContain(".diver-file-group::details-content {");
+  /**
+   * The diver record's file groups are doors at every width now, so nothing
+   * force-opens a closed `<details>` at a breakpoint. The rule that did —
+   * `.diver-file-group:not(.diver-file-group--desktop-collapsible)` inside a
+   * `min-width: 40rem` query — went with the legacy branch it existed for.
+   */
+  it("never re-opens a closed disclosure at a breakpoint", () => {
+    expect(CSS).not.toContain("content-visibility: visible !important");
+    expect(CSS).not.toContain(".diver-file-group");
   });
 
   /**

@@ -9,7 +9,10 @@ import { WaiverGroup } from "./WaiverGroup";
 // Both server actions this group reaches for drag better-auth (and with it the
 // whole Next server runtime) in behind them; this suite is about which controls
 // the group offers, so they are stubbed rather than booted.
-vi.mock("../actions", () => ({ markWaiverInPersonAction: vi.fn() }));
+vi.mock("../actions", () => ({
+  markWaiverInPersonAction: vi.fn(),
+  recordMedicalClearanceAction: vi.fn(),
+}));
 vi.mock("@/app/actions/held-sends", () => ({
   holdSendAction: vi.fn(),
   undoHeldSendAction: vi.fn(),
@@ -63,6 +66,57 @@ function renderCard(
 afterEach(cleanup);
 
 describe("the waiver group", () => {
+  /**
+   * The door's one fact is where the release stands **and until when** — the
+   * standing alone left the reader with the question they opened the record to
+   * answer. A state that has no date is already a whole sentence.
+   */
+  it("carries the standing and its date in the closed door", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiver: {
+          state: "current",
+          signedAt: new Date("2026-07-21T15:00:00.000Z"),
+          expiresAt: new Date("2027-07-21T15:00:00.000Z"),
+        } as DiverProfile["waiver"],
+      }),
+    );
+
+    const door = screen.getByTestId("diver-file-group-waiver").querySelector("summary");
+    expect(door).toHaveTextContent(/Signed · Good until Jul 21, 2027/);
+    expect(screen.getByTestId("diver-file-group-waiver")).not.toHaveAttribute("open");
+  });
+
+  it("says only Not signed when nothing has been sent", () => {
+    renderCard(diver({ email: "priya@dive.day" }));
+    const door = screen.getByTestId("diver-file-group-waiver").querySelector("summary");
+    expect(door).toHaveTextContent(/Waiver\s*Not signed$/);
+  });
+
+  /**
+   * A medical hold is the one waiver state with an act only this group can
+   * take — the physician's answer goes in here and nowhere else in the product
+   * — so it is open work, and the record lands with the door open on it.
+   */
+  it("opens itself on a held medical review", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiver: {
+          state: "medical_review",
+          at: new Date("2026-09-02T15:00:00.000Z"),
+        } as DiverProfile["waiver"],
+      }),
+    );
+
+    expect(screen.getByTestId("diver-file-group-waiver")).toHaveAttribute("open");
+    expect(
+      screen.getByTestId("diver-file-group-waiver").querySelector("summary"),
+    ).toHaveTextContent(/Medical review · Held since Sep 2, 2026/);
+    expect(screen.getByRole("button", { name: /Record the physician’s answer/ })).toBeTruthy();
+  });
+
   it("offers every route a staffer could take, and only the ones the record supports", () => {
     renderCard(diver({ email: "priya@dive.day", phone: "+13055550142" }));
 
@@ -246,15 +300,18 @@ describe("the waiver group", () => {
    * DiveDay never made and cannot see. Copying is its own outcome, and the two
    * must not share a sentence.
    */
+  // `getAllByText`: the group's closed door carries the same sentence as the
+  // row inside it, which is what a door's summary *is* (the group's one useful
+  // fact). What must not appear anywhere is the other sentence.
   it("does not call a copied link a sent one", () => {
     renderCard(diver({ email: "priya@dive.day", waiverRequest: "link_copied" }));
-    expect(screen.getByText("Link copied; not sent from here")).toBeTruthy();
+    expect(screen.getAllByText("Link copied; not sent from here").length).toBeGreaterThan(0);
     expect(screen.queryByText("Link sent; awaiting signature")).toBeNull();
   });
 
   it("still says sent when a message actually went out", () => {
     renderCard(diver({ email: "priya@dive.day", waiverRequest: "not_signed" }));
-    expect(screen.getByText("Link sent; awaiting signature")).toBeTruthy();
+    expect(screen.getAllByText("Link sent; awaiting signature").length).toBeGreaterThan(0);
   });
 
   it("leaves the form closed once the paper release has been recorded", () => {

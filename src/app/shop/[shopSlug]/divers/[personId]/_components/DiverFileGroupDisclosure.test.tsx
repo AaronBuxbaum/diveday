@@ -7,7 +7,7 @@ import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 afterEach(cleanup);
 
 describe("DiverFileGroupDisclosure", () => {
-  it("starts closed on a phone with the group's fact in the door", () => {
+  it("starts closed with the group's fact in the door", () => {
     render(
       <DiverFileGroupDisclosure id="gear" label="Gear and sizes" summary="BCD M · ML long · 38">
         <p>Gear rows</p>
@@ -23,7 +23,7 @@ describe("DiverFileGroupDisclosure", () => {
 
   it("opens a group when its own outcome needs to be seen", () => {
     render(
-      <DiverFileGroupDisclosure id="notes" label="Notes" summary="1" open>
+      <DiverFileGroupDisclosure id="notes" label="Diver notes" summary="1 note" open>
         <p>Note body</p>
       </DiverFileGroupDisclosure>,
     );
@@ -31,60 +31,36 @@ describe("DiverFileGroupDisclosure", () => {
     const details = screen.getByTestId("diver-file-group-notes");
     expect(details).toHaveAttribute("open");
     const summary = details.querySelector("summary");
-    expect(summary).toHaveTextContent(/notes\s*1/i);
+    expect(summary).toHaveTextContent(/diver notes\s*1 note/i);
     expect(summary).toHaveClass("border-y", "group-open/diver-file:border-b-0");
-    expect(summary).not.toHaveClass("max-sm:border-b-0");
   });
 
-  it("keeps the lower phone border closed and only removes it while open", () => {
-    const { rerender } = render(
-      <DiverFileGroupDisclosure id="notes" label="Notes" summary="1">
-        <p>Note body</p>
-      </DiverFileGroupDisclosure>,
-    );
-
-    const getSummary = () => screen.getByTestId("diver-file-group-notes").querySelector("summary");
-
-    expect(screen.getByTestId("diver-file-group-notes")).not.toHaveAttribute("open");
-    expect(getSummary()).toHaveClass("border-y", "group-open/diver-file:border-b-0");
-    expect(getSummary()).not.toHaveClass("max-sm:border-b-0");
-
-    rerender(
-      <DiverFileGroupDisclosure id="notes" label="Notes" summary="1" open>
-        <p>Note body</p>
-      </DiverFileGroupDisclosure>,
-    );
-
-    expect(screen.getByTestId("diver-file-group-notes")).toHaveAttribute("open");
-    expect(getSummary()).toHaveClass("border-y", "group-open/diver-file:border-b-0");
-    expect(getSummary()).not.toHaveClass("max-sm:border-b-0");
-  });
-
-  it("uses the same open-state border rule for every disclosure variant", () => {
+  /**
+   * The whole point of this sweep: one grammar. A group is a door at every
+   * width, so nothing here may reach for a breakpoint to hide the summary or
+   * force the body open — the two classes the retired "legacy" branch used.
+   */
+  it("is the same door at every width, in every variant", () => {
     render(
       <>
-        <DiverFileGroupDisclosure id="notes" label="Notes" summary="1">
+        <DiverFileGroupDisclosure id="notes" label="Diver notes" summary="None">
           <p>Note body</p>
         </DiverFileGroupDisclosure>
         <DiverFileGroupDisclosure id="gear" label="Gear and sizes" summary="Gear details" stacked>
           <p>Gear rows</p>
         </DiverFileGroupDisclosure>
-        <DiverFileGroupDisclosure
-          id="support"
-          label="Dive support"
-          summary="None stated"
-          desktopCollapsible
-          open
-        >
+        <DiverFileGroupDisclosure id="support" label="Dive support" summary="None stated" open>
           <p>Support facts</p>
         </DiverFileGroupDisclosure>
       </>,
     );
 
     for (const id of ["notes", "gear", "support"]) {
-      const summary = screen.getByTestId(`diver-file-group-${id}`).querySelector("summary");
+      const details = screen.getByTestId(`diver-file-group-${id}`);
+      const summary = details.querySelector("summary");
       expect(summary).toHaveClass("border-y", "group-open/diver-file:border-b-0");
-      expect(summary).not.toHaveClass("max-sm:border-b-0");
+      expect(summary).not.toHaveClass("sm:hidden");
+      expect(details.querySelector(`#${id}-content`)).not.toHaveClass("sm:!block");
     }
 
     expect(screen.getByTestId("diver-file-group-notes")).not.toHaveAttribute("open");
@@ -94,21 +70,42 @@ describe("DiverFileGroupDisclosure", () => {
 
   it("gives the summary a touch floor and one content region", () => {
     render(
-      <DiverFileGroupDisclosure id="certifications" label="Certifications" summary="1 waiting">
+      <DiverFileGroupDisclosure
+        id="certifications"
+        label="Certification records"
+        summary="PADI Open Water"
+      >
         <p>Certification rows</p>
       </DiverFileGroupDisclosure>,
     );
 
     const details = screen.getByTestId("diver-file-group-certifications");
     const summary = details.querySelector("summary");
-    const summaryFact = screen.getByText("1 waiting");
-    expect(summary).toHaveTextContent(/certifications\s*1\s*waiting/i);
-    expect(summary).not.toBeNull();
-    expect(summary).toHaveClass("min-h-11", "sm:hidden");
-    expect(summary).not.toHaveClass("max-sm:flex-col", "max-sm:border-b-0");
-    expect(summaryFact).toHaveClass("shrink-0");
+    expect(summary).toHaveTextContent(/certification records\s*padi open water/i);
+    expect(summary).toHaveClass("min-h-11");
+    expect(summary).not.toHaveClass("max-sm:flex-wrap");
+    expect(screen.getByText("PADI Open Water")).toHaveClass("shrink-0");
     expect(summary).toHaveAttribute("aria-controls", "certifications-content");
-    expect(screen.getByTestId("diver-file-group-certifications")).toHaveClass("group/diver-file");
+    expect(details).toHaveClass("group/diver-file");
+  });
+
+  /**
+   * The row's own label is the group's heading, and it carries the fragment the
+   * `?notice=` redirects and the prep panel's `#support` link land on. A second
+   * uppercase copy of it inside the body was what made the desktop record read
+   * as two headings per group.
+   */
+  it("makes the row label the group's heading and its fragment target", () => {
+    render(
+      <DiverFileGroupDisclosure id="waiver" label="Waiver" summary="Signed · Good until Jul 21">
+        <p>Waiver rows</p>
+      </DiverFileGroupDisclosure>,
+    );
+
+    const heading = screen.getByRole("heading", { level: 2, name: "Waiver" });
+    expect(heading).toHaveAttribute("id", "waiver");
+    expect(heading.closest("summary")).not.toBeNull();
+    expect(screen.getByRole("region", { name: "Waiver" })).toBeInTheDocument();
   });
 
   it("puts a long phone summary on its own wrapped line", () => {
@@ -124,12 +121,11 @@ describe("DiverFileGroupDisclosure", () => {
     );
 
     const summary = screen.getByTestId("diver-file-group-gear").querySelector("summary");
-    const label = summary?.querySelector("span.text-base");
+    const label = summary?.querySelector("h2");
     const value = summary?.querySelector("span.text-sm");
 
     expect(summary).toHaveClass(
-      "max-sm:flex-col",
-      "max-sm:items-stretch",
+      "max-sm:flex-wrap",
       "max-sm:py-2",
       "group-open/diver-file:border-b-0",
     );
@@ -138,45 +134,10 @@ describe("DiverFileGroupDisclosure", () => {
       "min-w-0",
       "max-w-full",
       "max-sm:ms-6",
+      "max-sm:basis-full",
       "max-sm:whitespace-normal",
       "max-sm:break-words",
     );
     expect(value).not.toHaveClass("shrink-0");
-  });
-
-  it("keeps legacy Notes expanded on larger screens", () => {
-    render(
-      <DiverFileGroupDisclosure id="notes" label="Notes" summary="1">
-        <p>Note body</p>
-      </DiverFileGroupDisclosure>,
-    );
-
-    const details = screen.getByTestId("diver-file-group-notes");
-    expect(details.querySelector("summary")).toHaveClass("sm:hidden");
-    expect(details.querySelector(".diver-file-group-content")).toHaveClass("sm:!block");
-    expect(details).not.toHaveClass("diver-file-group--desktop-collapsible");
-  });
-
-  it("keeps a desktop-collapsible group's door and body governed by native details", () => {
-    render(
-      <DiverFileGroupDisclosure
-        id="support"
-        label="Dive support"
-        summary="6 arrangements"
-        desktopCollapsible
-      >
-        <p>Support facts</p>
-      </DiverFileGroupDisclosure>,
-    );
-
-    const details = screen.getByTestId("diver-file-group-support");
-    const summary = details.querySelector("summary");
-    const content = details.querySelector(".diver-file-group-content");
-
-    expect(details).not.toHaveAttribute("open");
-    expect(details).toHaveClass("diver-file-group--desktop-collapsible");
-    expect(summary).not.toHaveClass("sm:hidden");
-    expect(content).not.toHaveClass("sm:!block");
-    expect(summary).toHaveAttribute("aria-controls", "support-content");
   });
 });

@@ -47,16 +47,7 @@ export function ShelfGroup({
         : t("divers.shelf.summaryNotSent");
 
   return (
-    <DiverFileGroupDisclosure
-      id="shelf"
-      label={t("divers.shelf.label")}
-      summary={summary}
-      // A door at every width, not only on a phone. The summary **is** the row
-      // — how the diver's link is doing — and a legacy group hides its summary
-      // above `sm` and opens itself, which would put the one fact this row
-      // exists to carry on the phone alone. Same call `SupportNeedsPanel` makes.
-      desktopCollapsible
-    >
+    <DiverFileGroupDisclosure id="shelf" label={t("divers.shelf.label")} summary={summary}>
       <InsetGroup>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-1 py-3">
           <p className="text-sm text-muted">
