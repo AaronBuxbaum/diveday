@@ -12,6 +12,45 @@ import { groupLabelClass } from "@/components/ui/ledger";
 const ROW_GRID =
   "grid w-full gap-1 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-start sm:gap-4";
 
+/**
+ * One beat of the departure's definition: the label, the settled value, and —
+ * when there is something to change — the control that opens its editor in
+ * place. A row with no editor is the same grid without the third column, so a
+ * staffer who cannot configure the trip reads the same table.
+ */
+function AboutRow({ row }: { row: TripAboutRow }) {
+  const beat = (
+    <>
+      <span className={groupLabelClass()}>{row.label}</span>
+      <span className="min-w-0 text-sm">{row.value}</span>
+    </>
+  );
+  if (!row.editor) {
+    return (
+      <div id={row.id} className={`${ROW_GRID} scroll-mt-24`}>
+        {beat}
+      </div>
+    );
+  }
+  return (
+    <details id={row.id} open={row.editorOpen} className="group/row scroll-mt-24">
+      <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary">
+        <span className={ROW_GRID}>
+          {beat}
+          <span className="inline-flex min-h-11 w-fit items-center gap-1 self-start text-sm font-semibold text-primary sm:justify-self-end">
+            {row.editLabel}
+            <DisclosureCaret direction="down" className="size-4 group-open/row:rotate-180" />
+          </span>
+        </span>
+      </summary>
+      {/* The editor sits on the text column the value above it sits on, and
+          the space below it is what keeps the next row's label off the last
+          field of this one. */}
+      <div className="pb-5">{row.editor}</div>
+    </details>
+  );
+}
+
 export type TripAboutRow = {
   /**
    * The row's fragment target, so the board's "Set a price for …" link and the
@@ -142,39 +181,9 @@ export function TripAboutSection({
       <div className="border-t border-border px-4 pb-4 sm:px-5 sm:pb-5">
         {actions ? <div className="flex flex-wrap gap-2 py-3">{actions}</div> : null}
         <div className="divide-y divide-border border-y border-border">
-          {rows.map((row) =>
-            row.editor ? (
-              <details
-                key={row.id}
-                id={row.id}
-                open={row.editorOpen}
-                className="group/row scroll-mt-24"
-              >
-                <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary">
-                  <span className={ROW_GRID}>
-                    <span className={groupLabelClass()}>{row.label}</span>
-                    <span className="min-w-0 text-sm">{row.value}</span>
-                    <span className="inline-flex min-h-11 w-fit items-center gap-1 self-start text-sm font-semibold text-primary sm:justify-self-end">
-                      {row.editLabel}
-                      <DisclosureCaret
-                        direction="down"
-                        className="size-4 group-open/row:rotate-180"
-                      />
-                    </span>
-                  </span>
-                </summary>
-                {/* The editor sits on the text column the value above it sits
-                    on, and the space below it is what keeps the next row's
-                    label off the last field of this one. */}
-                <div className="pb-5">{row.editor}</div>
-              </details>
-            ) : (
-              <div key={row.id} id={row.id} className={`${ROW_GRID} scroll-mt-24`}>
-                <span className={groupLabelClass()}>{row.label}</span>
-                <span className="min-w-0 text-sm">{row.value}</span>
-              </div>
-            ),
-          )}
+          {rows.map((row) => (
+            <AboutRow key={row.id} row={row} />
+          ))}
         </div>
         {more ? (
           <details id="about-more" open={moreOpen} className="group/more mt-4">
