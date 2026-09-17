@@ -1,5 +1,5 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripAbout, signInAsOwner } from "./helpers";
+import { daysFromNow, e2eNow, openTripAbout, openTripMore, signInAsOwner } from "./helpers";
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -130,8 +130,12 @@ test.describe("staff", () => {
     // Cancel the trip — this leg exercises the cancel/reinstate controls
     // themselves; test isolation is already handled by the per-test demo
     // reset in fixtures.ts.
-    await openTripAbout(page);
-    await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+    // Cancelling is one of the rare acts in the About panel's "More for this
+    // departure" list, behind a blocking confirm: it takes the departure off
+    // the public schedule and messages everybody booked on it.
+    const more = await openTripMore(page);
+    await more.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+    await more.getByRole("button", { name: "Yes, cancel this departure" }).click();
     await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
   });
 
