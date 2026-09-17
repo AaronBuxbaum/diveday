@@ -1,5 +1,12 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripAbout, openTripFromBoard } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openDiverFileGroup,
+  openTripAbout,
+  openTripFromBoard,
+} from "./helpers";
 
 /**
  * The contact importer (ADR 20260723-contact-importer, ADR
@@ -80,6 +87,8 @@ test.describe("contact import", () => {
     // one-tap Confirm card (a level card and a nitrox card); confirming one
     // clears its nudge but keeps the imported flag.
     await page.getByRole("link", { name: /Imported Ingrid/ }).click();
+    // The cards are behind the record's Certification records door (slice A).
+    await openDiverFileGroup(page, "Certification records");
     await expect(page.getByText("Old Blue Reef Divers").first()).toBeVisible();
     // A level card's confirm stays one tap: it clears a soft nudge, not a gate —
     // that card already satisfied readiness on arrival (H-24 scopes the
@@ -193,6 +202,7 @@ test.describe("contact import — specialty cards", () => {
     // One tap on the diver's record clears it.
     await page.goto("/shop/blue-mantis/divers?q=deep.dana@example.com");
     await page.getByRole("link", { name: /Deep Dana/ }).click();
+    await openDiverFileGroup(page, "Certification records");
     await expect(page.getByText("imported · Old Blue Reef Divers").first()).toBeVisible();
     // Both cards came across on one diver — row 2 added to row 1's diver rather
     // than being dropped — and the specialty badge does not read like a

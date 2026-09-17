@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
@@ -57,6 +58,45 @@ function fixHref(row: DiverStatusRow, shopSlug: string): string {
   return target ? STATUS_TARGET_ANCHORS[target] : "";
 }
 
+/**
+ * **A fragment on this page is not a route change.**
+ *
+ * Three of the four fixes land on a control further down the diver's own
+ * record, and every file group down there is a closed `<details>` that opens
+ * itself when the hash names something inside it
+ * (`DiverFileGroupDisclosure`'s `openHashTarget`). That listener hears
+ * `hashchange`, which is what a real fragment navigation fires — and what
+ * `next/link` does not: it pushes the URL through `history.pushState`, so the
+ * hash changed, nothing was told, and "Verify it" scrolled to a door it had
+ * left shut. A plain `<a>` also gives the native scroll and focus the anchor
+ * comment above promises "with no JavaScript at all".
+ *
+ * `collect` still goes through `next/link`, because an order really is another
+ * page.
+ */
+function FixLink({
+  href,
+  className,
+  children,
+}: {
+  href: string;
+  className: string;
+  children: ReactNode;
+}) {
+  if (href.startsWith("#")) {
+    return (
+      <a href={href} className={className}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  );
+}
+
 export function DiverStatusLedger({
   rows,
   t,
@@ -85,7 +125,7 @@ export function DiverStatusLedger({
             className="py-3"
             trailing={
               row.action ? (
-                <Link
+                <FixLink
                   href={fixHref(row, shopSlug)}
                   // Through `buttonClass` so the 44px target is structural
                   // rather than a remembered `min-h-11` — this is the one tap
@@ -93,7 +133,7 @@ export function DiverStatusLedger({
                   className={buttonClass({ variant: "link", size: "sm" })}
                 >
                   {t(row.action.labelKey)}
-                </Link>
+                </FixLink>
               ) : null
             }
           >

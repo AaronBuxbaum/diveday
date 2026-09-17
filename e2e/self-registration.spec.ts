@@ -1,6 +1,6 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { waiverLinkFromToast } from "./helpers";
+import { openDiverFileGroup, waiverLinkFromToast } from "./helpers";
 
 /**
  * **The counter's QR door** (issue #1236): a diver who has booked nothing puts
@@ -105,6 +105,7 @@ test.describe("a diver whose release already stands", () => {
     await page.goto(`/shop/${DEMO_SHOP_SLUG}/divers`);
     await page.getByRole("searchbox", { name: "Search divers" }).fill(name);
     await page.getByRole("link", { name, exact: true }).click();
+    await openDiverFileGroup(page, "Waiver");
     const waiverGroup = page.getByRole("region", { name: "Waiver" });
     await waiverGroup.getByText("Send options", { exact: true }).click();
     await waiverGroup.getByRole("button", { name: "Copy link" }).click();

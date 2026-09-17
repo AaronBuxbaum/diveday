@@ -17,6 +17,7 @@ import {
   disclosureSettled,
   manifestRow,
   offlineCopySaved,
+  openDiverFileGroup,
   openManifestPerson,
   openOnThisPhone,
   openRosterDetails,
@@ -2824,6 +2825,9 @@ for (const scheme of ["light", "dark"] as const) {
         // whose banner is a second `role="status"` beside the copy toast
         // `waiverLinkFromToast` reads.
         await staffPage.goto(new URL(staffPage.url()).pathname);
+        // Every file group on the record is a closed door at every width, and
+        // an unsent release is not open work (slice A).
+        await openDiverFileGroup(staffPage, "Waiver");
         await staffPage.getByText("Send options", { exact: true }).click();
         await staffPage.getByRole("button", { name: "Copy link" }).click();
         const waiverHref = await waiverLinkFromToast(staffPage);
@@ -4846,6 +4850,7 @@ for (const scheme of ["light", "dark"] as const) {
         // nothing. Waiting on the summary instead of clicking it is the older
         // trap: it proves the disclosure exists while the paper-waiver control
         // inside stays hidden, and the capture then times out on the button.
+        await openDiverFileGroup(page, "Waiver");
         await page
           .getByRole("region", { name: "Waiver" })
           .getByText("Send options", { exact: true })
@@ -4986,6 +4991,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await openDiverProfile(page, "Priya", "Priya Sharma");
+        await openDiverFileGroup(page, "Waiver");
         await page.getByRole("region", { name: "Waiver" }).getByText("Send options").click();
         await page.getByRole("button", { name: "Mark signed on paper" }).click();
         // The panel itself, not the trigger that opened it — so the capture can
@@ -5011,6 +5017,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await request.post("/api/test/seed-trouble-states");
         await openDiverProfile(page, "Priya", "Priya Sharma");
+        await openDiverFileGroup(page, "Waiver");
         await page.getByRole("region", { name: "Waiver" }).getByText("Send options").click();
         // The ringed button itself, so the capture can never land before the
         // server data that rings it has arrived.

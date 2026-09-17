@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { HELD_SEND_TIMEOUT_MS, seededTripId, signInAsOwner } from "./helpers";
+import { HELD_SEND_TIMEOUT_MS, openDiverFileGroup, seededTripId, signInAsOwner } from "./helpers";
 
 /**
  * Fill-the-boat: a diver opts into the shop-wide last-minute list, staff see
@@ -296,6 +296,8 @@ test("a self-declared card cannot be certified without verified evidence", async
   // signed up seconds ago is not on page 1 of a seeded shop.
   await page.goto("/shop/blue-mantis/divers?q=Milo+Vance");
   await page.getByRole("link", { name: "Milo Vance" }).click();
+  // The cards are behind the record's Certification records door (slice A).
+  await openDiverFileGroup(page, "Certification records");
   const card = page.locator("li").filter({ hasText: "Rescue" }).filter({ visible: true }).first();
   await expect(card).toContainText("Self-declared — certification card not sighted yet");
   // The one-tap control every staff-captured pending card wears is absent here.

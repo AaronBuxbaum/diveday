@@ -6,6 +6,7 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  openCantFillASize,
   openTripAbout,
   signInAs,
   signOut,
@@ -133,6 +134,9 @@ test.describe("staff", () => {
     await expect(page.getByRole("status")).toContainText("Rental fit profile saved");
 
     // Flagging is a separate control, and open to any staff member.
+    // Raising a flag is one link-weight door inside the group now (slice A):
+    // the standing form went with the caption that explained the mechanism.
+    await openCantFillASize(page);
     await page.getByLabel("What’s short").fill("No M BCD today");
     await page.getByRole("button", { name: "Flag for staff fit" }).click();
     await expect(page.getByRole("status")).toContainText("Flagged for hands-on fitting");
@@ -164,6 +168,7 @@ test.describe("deck crew", () => {
     // and the safe fallback the captain actually needs at the dock is right
     // there — a flag is an escalation, not an override.
     await goToDiver(page, DIVER_WITH_UNFLAGGED_FIT);
+    await openCantFillASize(page);
     await expect(page.getByRole("button", { name: "Save rental fit" })).toHaveCount(0);
     await expect(page.getByText("limited to owners, managers, instructors, and")).toBeVisible();
     await expect(page.getByRole("button", { name: "Flag for staff fit" })).toBeEnabled();
@@ -172,6 +177,7 @@ test.describe("deck crew", () => {
     // size after all", which is the judgement call, so the captain doesn't get
     // it.
     await goToDiver(page, DIVER_WITH_FIT);
+    // A standing flag opens its own group, so this one needs no tap.
     await expect(page.getByRole("button", { name: /Fit resolved/ })).toHaveCount(0);
     await expect(page.getByText("Clearing this is limited to")).toBeVisible();
   });

@@ -713,6 +713,43 @@ export async function openTripActivity(page: Page): Promise<void> {
 }
 
 /**
+ * Open one file group on a diver's record (`/shop/<slug>/divers/<personId>`).
+ *
+ * Every group there — Certification records, Waiver, Gear and sizes, Diver
+ * notes, Conversation, Dive support, Activity — is a closed `<details>` door at
+ * every width, and opens itself only for open work (a `?notice=` aimed at it,
+ * an unanswered message, a held medical review, a standing can't-fill flag,
+ * existing notes). A spec that reaches for a control inside one therefore opens
+ * the group first.
+ *
+ * Idempotent, like every opener here: a group the page already rendered open is
+ * left alone rather than toggled shut. The group is found by its accessible
+ * name because the label is the `<section aria-label>` and the group's own
+ * heading — one string, whichever end you come at it from.
+ */
+export async function openDiverFileGroup(page: Page, label: string): Promise<Locator> {
+  const group = page.getByRole("region", { name: label, exact: true });
+  const details = group.locator("details").first();
+  await expect(details).toBeVisible();
+  await openIfClosed(details);
+  return details;
+}
+
+/**
+ * Open the Gear and sizes group's "Can’t fill a size?" disclosure — the H-06
+ * flag, which is a link-weight door inside the group now rather than a standing
+ * form under the facts. Opens the group itself first, so a caller needs one
+ * call for the two doors between it and the flag.
+ *
+ * Absent once a flag is up: a raised flag states itself and its way out in the
+ * open, so there is nothing to disclose.
+ */
+export async function openCantFillASize(page: Page): Promise<void> {
+  const gear = await openDiverFileGroup(page, "Gear and sizes");
+  await openIfClosed(gear.locator("details").filter({ hasText: "Can’t fill a size?" }).first());
+}
+
+/**
  * Native `open` is DOM state React never touches, so check before toggling.
  *
  * `> summary`, not `summary`: these panels contain other disclosures (the
