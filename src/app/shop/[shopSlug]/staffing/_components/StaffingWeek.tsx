@@ -430,33 +430,36 @@ function GapChip({
           ) : null}
         </span>
       ))}
-      {/* The cell's one act, whichever one belongs to this reader (`gapAct`). */}
-      <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        {act === "assign" ? (
-          <Link
-            href={tripHref(shopSlug, gap.tripId)}
-            aria-label={fill(words.assignAria, { trip: gap.title })}
-            className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
-          >
-            {words.assign}
-            <DiveDayIcon name="chevron-right" className="size-3" />
-          </Link>
-        ) : null}
-        {/* Offered only when the write would accept it — same rule, evaluated
-            twice, rather than a button that produces a refusal. */}
-        {act === "request" ? (
-          <form action={requestAction}>
-            <input type="hidden" name="tripId" value={gap.tripId} />
-            <SubmitButton
-              pendingLabel={words.requesting}
-              ariaLabel={fill(words.requestAria, { trip: gap.title })}
-              className={buttonClass({ variant: "link", size: "sm", flush: true })}
+      {/* The cell's one act, whichever one belongs to this reader (`gapAct`) —
+          and no row at all for a reader with neither, rather than an empty
+          flex child holding a gap open under the gap's own word. */}
+      {act === "none" ? null : (
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {act === "assign" ? (
+            <Link
+              href={tripHref(shopSlug, gap.tripId)}
+              aria-label={fill(words.assignAria, { trip: gap.title })}
+              className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
             >
-              {words.request}
-            </SubmitButton>
-          </form>
-        ) : null}
-      </span>
+              {words.assign}
+              <DiveDayIcon name="chevron-right" className="size-3" />
+            </Link>
+          ) : (
+            // Offered only when the write would accept it — same rule,
+            // evaluated twice, rather than a button that produces a refusal.
+            <form action={requestAction}>
+              <input type="hidden" name="tripId" value={gap.tripId} />
+              <SubmitButton
+                pendingLabel={words.requesting}
+                ariaLabel={fill(words.requestAria, { trip: gap.title })}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
+              >
+                {words.request}
+              </SubmitButton>
+            </form>
+          )}
+        </span>
+      )}
       {/* A note on the ask, not a refusal of it (issue #1339). It sits after
           the form so it reads as the consequence of pressing the control above
           it: a divemaster may still ask onto an intro session, but the ratio
