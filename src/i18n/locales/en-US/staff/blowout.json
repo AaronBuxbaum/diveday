@@ -1,5 +1,4 @@
 {
-  "eyebrow": "Weather blow-out",
   "confirm": {
     "title": "Call a blow-out?",
     "lead": "This cancels {tripTitle} and sends every booked diver one message: what happened, where their money stands, and the upcoming departures they already qualify for, as booking links.",
@@ -9,8 +8,7 @@
     "noDivers": "Nobody is booked on this departure. Calling it cancels the trip.",
     "departed": "This departure has already left, so there is nothing to blow out.",
     "button": "Call the blow-out",
-    "calling": "Calling…",
-    "backToTrip": "Back to the trip"
+    "calling": "Calling…"
   },
   "record": {
     "title": "Blow-out cascade",
