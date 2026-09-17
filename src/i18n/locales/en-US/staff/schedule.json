@@ -32,7 +32,6 @@
     "dayCountLabelOther": "{count} days",
     "crewLabel": "Crew:",
     "crewNobodyYet": "nobody yet",
-    "crewMostlyAll": "Usual crew: {names}.",
     "windLabel": "Wind:",
     "noPriceSet": "No price set",
     "noPriceSetAria": "Set a price for {ref}",

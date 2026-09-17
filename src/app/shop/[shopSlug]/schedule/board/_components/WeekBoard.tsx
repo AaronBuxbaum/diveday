@@ -477,15 +477,21 @@ export function WeekBoard({
                           />
                         ) : null}
                       </div>
-                      {/* One line, clipped from the end. Every title in a
-                          column shares its prefix ("Dawn Two-Tank — …",
-                          "Morning Two-Tank — …"), so two clamped lines spent
-                          the cell's height on the half that is the same on
-                          every row; the site below is what actually differs
-                          and it is stated in full. */}
+                      {/* **Two lines, not one clipped one.** The argument for
+                          `truncate` was that a column's titles share a prefix
+                          and the site below states the difference in full — but
+                          the site *is* the title's second half ("Two-Tank Reef
+                          — Molasses & French"), and `entry.meta` underneath is
+                          the head count and the price. At 160px that left every
+                          card reading "Dawn Two-Tank …", "Morning Two-Tan…",
+                          "Two-Tank Reef …", so the one thing the week grid
+                          exists to answer — which boat is which — was the one
+                          thing it clipped. Two lines is the cap; nothing here
+                          aligns row-to-row across columns, so a card growing a
+                          line costs its own column's height and no other's. */}
                       <Link
                         href={`/shop/${shopSlug}/trips/${entry.tripId}`}
-                        className={`mt-0.5 block truncate text-sm leading-snug font-semibold hover:text-primary ${
+                        className={`mt-0.5 block text-sm leading-snug font-semibold line-clamp-2 hover:text-primary ${
                           entry.status === "sailed" ? "text-muted" : ""
                         }`}
                       >

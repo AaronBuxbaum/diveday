@@ -32,7 +32,6 @@
     "dayCountLabelOther": "{count} días",
     "crewLabel": "Tripulación:",
     "crewNobodyYet": "nadie todavía",
-    "crewMostlyAll": "Tripulación habitual: {names}.",
     "windLabel": "Viento:",
     "noPriceSet": "Sin precio definido",
     "noPriceSetAria": "Definir un precio para {ref}",
