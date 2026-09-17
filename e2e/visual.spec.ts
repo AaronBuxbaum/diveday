@@ -6470,15 +6470,18 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * The waiver surface as one page (ADR 20260827-people-not-lists,
-       * decision 4): the release editor, then the signature log as a
-       * day-grouped ledger beneath it. The log is paginated
+       * decision 4): the signature log as a day-grouped ledger, under one
+       * "Edit the release" door. The editor used to stand open above it — a
+       * full-height textarea of the legal text, a radio pair and a Publish, on
+       * top of 519 signed records — and editing a release is rare where reading
+       * who signed is daily (slice E3-7). The log is paginated
        * (`listWaiverIntegrityAudit`, `WAIVER_INTEGRITY_PAGE_SIZE`) so the demo
        * shop's 150+ signed records are one bounded page under the shared pager
        * rather than a 17,000px capture — the page is what is bounded, not the
        * photograph.
        *
        * Waits for the pager, not just the heading: the log renders below the
-       * editor, and a capture taken before it lands photographs half a page.
+       * door, and a capture taken before it lands photographs half a page.
        */
       test(`the waiver surface renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/waivers");
@@ -6507,7 +6510,10 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the waiver's materiality choice renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/waivers");
+        // Straight to the open editor: `#release` is the fragment the door
+        // answers to, and `AutoOpenDetails` opens it on a hard load as well as
+        // on a client transition.
+        await page.goto("/shop/blue-mantis/waivers#release");
         await page.getByRole("heading", { level: 1, name: "The release" }).waitFor();
         await page.getByRole("radio", { name: /A material change/ }).check();
         await page.getByRole("button", { name: "Publish", exact: true }).click();

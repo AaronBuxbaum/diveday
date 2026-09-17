@@ -868,12 +868,17 @@ test("a diver without a booking can receive an independent waiver from their rec
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {
   await page.goto("/shop/blue-mantis/waivers");
 
-  // The current version is shown under the title, and the release text is
-  // directly editable. The demo shop ships with two superseded wordings
-  // already on file (src/db/seed-waiver-versions.ts), the way a trading shop's
-  // paperwork looks, so its live release is version 3 rather than a bare
-  // version 1.
+  // The current version is shown under the title. The demo shop ships with two
+  // superseded wordings already on file (src/db/seed-waiver-versions.ts), the
+  // way a trading shop's paperwork looks, so its live release is version 3
+  // rather than a bare version 1.
   await expect(page.getByText(/Version 3 ·/)).toBeVisible();
+
+  // The editor is a door, not a standing form: the signed-record log leads the
+  // page and the release opens in place from one control (slice E3-7). Nothing
+  // it does changed — only whether it is open before anybody asked.
+  await expect(page.getByRole("textbox", { name: "Release text" })).toHaveCount(0);
+  await page.getByText("Edit the release").click();
 
   // Editing pre-fills the current text and saves a new version rather than
   // mutating the one divers may already have signed. Title is immutable.
@@ -952,7 +957,9 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
  * one. The version number below is what catches it either way.
  */
 test("saving the release unchanged publishes nothing and says so", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/waivers");
+  // `#release` opens the editor on arrival — the fragment the Settings door
+  // and any bounced-back notice both use.
+  await page.goto("/shop/blue-mantis/waivers#release");
 
   await expect(page.getByText(/Version 3 ·/)).toBeVisible();
 
