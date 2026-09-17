@@ -177,7 +177,14 @@ export function planChangeText(
           site: change.siteName,
         }),
   );
-  return cachedListFormat(locale, { style: "long", type: "conjunction" }).format(clauses);
+  // **One sentence, and the framing said once.** Each clause used to open with
+  // "the plan changed:" in lower case, which put a second sentence-fragment on
+  // the end of a station line that had already finished a sentence — and two
+  // moved dives said it twice, joined by "and". The framing belongs to the
+  // sentence; the clauses are what differ (principle 9).
+  return t("shopHome.spine.close.planChange.sentence", {
+    changes: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(clauses),
+  });
 }
 
 /** The recorded decision's word on a snapshot leftover. */

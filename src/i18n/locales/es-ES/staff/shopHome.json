@@ -130,7 +130,7 @@
     "aboardCount": "{count, plural, one {# buceador está a bordo y {reason}} other {# buceadores están a bordo y {reason}}}",
     "aboardReasonMedical": "hay una respuesta médica que un médico tiene que autorizar; nadie a bordo puede darla por buena.",
     "aboardReasonCertification": "falta una certificación que esta inmersión pide y que no hemos visto.",
-    "aboardReasonUnknown": "no hay nada en la ficha que lo autorice. Sin exención firmada no hay declaración médica.",
+    "aboardReasonUnknown": "no hay nada en la ficha que lo autorice.",
     "aboardReasonPayment": "queda un pago pendiente. Está en la lista de abajo.",
     "crewRollCallOpen": "Todos los buceadores están a bordo y falta pasar lista a la tripulación.",
     "allHome": "Todos los barcos están en puerto: salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
@@ -165,8 +165,9 @@
         "comparableOtherPrice": "{title} del {date} se llenó a otro precio"
       },
       "planChange": {
-        "moved": "el plan cambió: la inmersión {dive} se trasladó a {site}",
-        "movedWithReason": "el plan cambió: la inmersión {dive} se trasladó a {site}, {reason}"
+        "sentence": "El plan cambió: {changes}.",
+        "moved": "la inmersión {dive} se trasladó a {site}",
+        "movedWithReason": "la inmersión {dive} se trasladó a {site}, {reason}"
       }
     },
     "firstBookingPaid": "pagado {amount}",

@@ -21,7 +21,6 @@ import type { EveningClose } from "@/lib/closeout";
 import { FORM_DRAFT_LABEL_KEYS, type FormDraftKind } from "@/lib/form-drafts";
 import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
-import { shopPath } from "@/lib/staff-notices";
 import {
   ACTION_KIND_META,
   type DaySpine as DaySpineData,
@@ -180,17 +179,25 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
   // in it. Each half keeps its own element so a reader (and a test) can find
   // either by its own words.
   const tone = ACTION_KIND_META[action.kind].tone;
+  // A row whose subject already is the whole fact carries no detail at all
+  // (the desk's two counting rows), so neither the separator nor the second
+  // span renders — a dangling " · " is the shape of a sentence that was
+  // deleted rather than one that never existed.
   const body = (
     <p className="min-w-0 py-2 text-base leading-snug">
       {action.aboutDeparture ? null : (
         <>
           <span className="font-medium">{action.subject}</span>
-          <span aria-hidden="true" className="text-muted">
-            {" · "}
-          </span>
+          {action.detail ? (
+            <span aria-hidden="true" className="text-muted">
+              {" · "}
+            </span>
+          ) : null}
         </>
       )}
-      <span className={tone === "neutral" ? "text-muted" : undefined}>{action.detail}</span>
+      {action.detail ? (
+        <span className={tone === "neutral" ? "text-muted" : undefined}>{action.detail}</span>
+      ) : null}
     </p>
   );
   const control = action.waiver ? (
@@ -243,13 +250,17 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
         {action.actionLabel}
       </SubmitButton>
     </form>
-  ) : (
-    // The word only: this row is a door, and `LedgerRow` draws the door's
-    // chevron itself — a second one here read as "Open crew › ›".
-    <span aria-hidden="true" className="shrink-0 text-sm font-medium text-primary">
-      {action.actionLabel}
-    </span>
-  );
+  ) : // **Nothing at all: the row's own tap is its only door** (ADR
+  // 20260911-clear-the-deck, the floor's first row). This branch used to
+  // render the destination as a word — "Open crew", "Open prep list", "Open
+  // guests" — beside a chevron `LedgerRow` was already drawing, which put
+  // nine verbs on one screen for nine taps the row itself already answers.
+  // The word survives only where it *is* the fix: a waiver send, a wait-list
+  // invite, an invoice resend, a help-request hand-off. The name of the
+  // destination is still spoken — it is the stretched overlay's `linkLabel`
+  // below — so nothing was traded away from a reader who cannot see the
+  // chevron.
+  null;
 
   // One object, not two props. `LedgerRow`'s door is a union — a row carries
   // both `href` and a `linkLabel` or neither, so a link can never reach a
@@ -732,36 +743,6 @@ export function DaySpine({
         </section>
       ) : null}
 
-      {/* **The paper day, at the morning end of the spine** (N-54). One
-          document holding every departure of today — manifest, emergency card,
-          waiver state, packing list — so a dead tablet costs a printer rather
-          than the day. It sits here because the evening's ritual already lives
-          at the bottom of this column and printing the morning is the same kind
-          of act at the other end of it; a page in the "More" menu is not
-          somewhere anyone goes at 5 am. It appears only on a day that has boats
-          on it, and never on paper. */}
-      {entries.length > 0 ? (
-        <div className="-mb-4 flex justify-end print:hidden">
-          <Link
-            // `shopPath`, not a template literal: it escapes each segment, so
-            // nobody reading this line has to re-derive that `shopSlug` was
-            // already narrowed by `requireShopSurface` upstream.
-            href={shopPath(shopSlug, "print")}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonClass({ variant: "ghost", size: "sm" })}
-          >
-            {/* A link rather than `PrintTripBundleButton`'s form: that one
-                exists to record the click server-side and so has to
-                `window.open`, which a popup blocker can refuse silently — the
-                reason it carries a "your browser blocked it" line. A tap on a
-                real link is a navigation no blocker touches, so there is no
-                refusal here to explain. */}
-            {t("shared.printPacket.dayDoor")}
-          </Link>
-        </div>
-      ) : null}
-
       {entries.length > 0 ? (
         // Panels, not a rail: each station is a `SectionCard` on the bed and
         // the column spaces them (ADR 20260904-reef-all-the-way-down, 16a).
@@ -846,14 +827,6 @@ export function DaySpine({
                 kind={{ word: t("today.unfinished.label"), tone: "neutral" }}
                 href={draft.href}
                 linkLabel={t("today.unfinished.resume")}
-                trailing={
-                  <span
-                    aria-hidden="true"
-                    className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary"
-                  >
-                    {t("today.unfinished.resume")}
-                  </span>
-                }
               >
                 <p className="py-2 text-sm text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</p>
               </LedgerRow>
@@ -863,14 +836,6 @@ export function DaySpine({
                 className="-mx-2 px-2"
                 href={`/shop/${shopSlug}/settings#stripe`}
                 linkLabel={t("shopHome.spine.deskPaymentsAction")}
-                trailing={
-                  <span
-                    aria-hidden="true"
-                    className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary"
-                  >
-                    {t("shopHome.spine.deskPaymentsAction")}
-                  </span>
-                }
               >
                 <p className="py-2 text-sm text-muted">{t("shopHome.spine.deskPaymentsRow")}</p>
               </LedgerRow>

@@ -160,13 +160,14 @@ export function ClosingStation({
             {t("shopHome.spine.close.closedBy", { name: headCountClose.closedBy })}
           </span>
         ) : null}
-        {/* **What the boat actually dived** (issue #1184, D24). One more span
-            in the row that already carries who closed the count, because a
-            changed site is a fact about the same finished departure rather
-            than a second subject. Absent on a day that went to plan, which is
-            most days. */}
-        {planChanged ? <span className="text-muted">{planChanged}</span> : null}
       </p>
+      {/* **What the boat actually dived** (issue #1184, D24). Its own line,
+          and its own sentence: it rode inside the status line above until the
+          status detail became a full sentence of its own, and the two then
+          read as one run-on with a lower-case second half ("No roll call was
+          recorded on this trip. the plan changed: dive 1 moved to Benwood
+          Wreck"). Absent on a day that went to plan, which is most days. */}
+      {planChanged ? <p className="mt-1 text-sm text-muted">{planChanged}</p> : null}
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
         {/* A boat still out is exactly the row you would chase, so it gets
             the manifest door too — not only the rows with a recorded gap
@@ -209,7 +210,16 @@ export function ClosingStation({
           </LedgerRow>
         </ul>
       ) : null}
-      {children}
+      {/* **One hairline between the parts of a settled station, never two.**
+          The recap draws no rule of its own, so this is the only place the
+          separator is decided: after the unsold-seats row that row's own
+          closing hairline already is it, and a second one twelve pixels below
+          drew an empty band with nothing at all in it. And nothing renders
+          when there is no recap to write — a rule under thin air is the same
+          defect from the other side. */}
+      {children ? (
+        <div className={openSeats ? "pt-3" : "mt-3 border-t border-border pt-3"}>{children}</div>
+      ) : null}
     </SectionCard>
   );
 }

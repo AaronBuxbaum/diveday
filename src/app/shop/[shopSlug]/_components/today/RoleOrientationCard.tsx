@@ -27,6 +27,15 @@ export type RoleOrientationCardCopy = {
  * pushed the work below the fold on a phone — so a busy Today gets
  * `RoleOrientationLine` instead: the same pointer and the same dismissal in
  * one quiet line the reader can take or leave without scrolling past a card.
+ *
+ * **Neither form renders while the shop's first-bookable card is up.** Two
+ * onboarding moments on one screen is neither of them being the moment; the
+ * page decides that (`src/app/shop/[shopSlug]/page.tsx`), and the bookable
+ * card — which happens once per shop, ever — wins.
+ *
+ * **No emoji.** The 💡 that led both forms is a glyph the Clearwater ADRs
+ * refuse on a staff surface; the words carry it (ADR
+ * 20260827-clearwater-surface-language).
  */
 export function RoleOrientationCard({
   tourHref,
@@ -50,7 +59,7 @@ export function RoleOrientationCard({
           <p className="mt-4 font-medium">{copy.title}</p>
           <p className="mt-1 text-sm text-muted">{copy.desc}</p>
           <p className="mt-3 text-sm">
-            <span className="font-semibold text-foreground">💡 {copy.tryLabel}</span>{" "}
+            <span className="font-semibold text-foreground">{copy.tryLabel}</span>{" "}
             <Link href={tourHref} className="font-medium text-primary hover:underline">
               {copy.tryThis}
             </Link>
@@ -91,7 +100,6 @@ export function RoleOrientationLine({
   return (
     <div className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
       <p className="min-w-0">
-        <span aria-hidden="true">💡 </span>
         {copy.heading}{" "}
         <Link href={tourHref} className="font-medium text-primary hover:underline">
           {copy.tryThis}

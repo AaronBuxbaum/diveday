@@ -1,5 +1,6 @@
 import type { MediaDeletionKind, PaymentOperationKind } from "@/db/schema";
 import { DSD_RATIO } from "@/lib/course-ratios";
+import type { DepthUnit } from "@/lib/depth-units";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlockerCode } from "@/lib/readiness";
 import type {
@@ -474,34 +475,34 @@ export function mediaDeletionKindText(t: StaffTranslator, mediaKind: MediaDeleti
 }
 
 /**
- * A stuck Stripe operation's detail line (task 157) — the same "check it
- * against the Stripe dashboard" chore Reports' payment-ops panel already
- * explains, now also surfaced on Today as an `urgency: "now"` row. Two whole
- * ICU messages, not one stitched from a fragment (task 34's rule), because the
- * Stripe-id clause only exists on one branch.
+ * A stuck Stripe operation's detail line (task 157) — the chore the Orders
+ * index's payment-ops panel owns, surfaced here as an `urgency: "now"` row.
+ *
+ * **No Stripe object id.** It used to end in "(Stripe: cs_e2e_stuck)", which
+ * is the machinery wearing a staff sentence (principle 4, "never surface the
+ * implementation"): nobody types a session id into anything from this page.
+ * The id still rides the Orders queue, where the object it names is, and where
+ * a reconciliation actually happens.
  */
 export function stuckPaymentOperationDetailText(
   t: StaffTranslator,
   operationKind: PaymentOperationKind,
   when: string,
-  stripeObjectId: string | null,
 ): string {
-  const kind = stuckOperationKindText(t, operationKind);
-  return stripeObjectId
-    ? t("today.opsAlert.stuckDetail.withId", { kind, when, id: stripeObjectId })
-    : t("today.opsAlert.stuckDetail.withoutId", { kind, when });
-}
-
-/** A failed/stuck photo-deletion's detail line (task 157), mirroring Reports' media-deletions panel. */
-export function failedPhotoDeletionDetailText(
-  t: StaffTranslator,
-  mediaKind: MediaDeletionKind,
-  when: string,
-): string {
-  return t("today.opsAlert.mediaDeletionDetail", {
-    kind: mediaDeletionKindText(t, mediaKind),
+  return t("today.opsAlert.stuckDetail", {
+    kind: stuckOperationKindText(t, operationKind),
     when,
   });
+}
+
+/**
+ * A failed/stuck photo-deletion's detail line (task 157), mirroring Settings'
+ * media-deletions queue. The media kind is the row's own `subject` and the
+ * queued-at date is bookkeeping, so neither is repeated here: what a staffer
+ * cannot see without the sentence is that the file outlived the record.
+ */
+export function failedPhotoDeletionDetailText(t: StaffTranslator): string {
+  return t("today.opsAlert.mediaDeletionDetail");
 }
 
 /**
@@ -525,18 +526,49 @@ export function owedRefundDetailText(
 }
 
 /**
+ * The same money, for a departure that owes several divers at once (principle
+ * 9). Five consecutive rows each repeating "You cancelled the departure and
+ * the money couldn’t go back by card" is one fact said five times; the group
+ * says it once and names who is waiting.
+ */
+export function owedRefundGroupSubjectText(t: StaffTranslator, count: number): string {
+  return t("today.opsAlert.owedRefundGroupSubject", { count });
+}
+
+export function owedRefundGroupDetailText(
+  t: StaffTranslator,
+  input: { amount: string | null; tripTitle: string; when: string; names: string },
+): string {
+  return input.amount === null
+    ? t("today.opsAlert.owedRefundGroupDetailNoAmount", {
+        tripTitle: input.tripTitle,
+        when: input.when,
+        names: input.names,
+      })
+    : t("today.opsAlert.owedRefundGroupDetail", {
+        amount: input.amount,
+        tripTitle: input.tripTitle,
+        when: input.when,
+        names: input.names,
+      });
+}
+
+/**
  * A stuck payment operation's action label when there's no trip to point at
  * instead — the Orders index, which carries the reconciliation panel these rows
  * mirror. (It used to say "Reports"; the queue moved when the monthly report
  * became only a report.)
  */
-/** The pending-reviews queue row: how many divers are waiting to be heard. */
+/**
+ * The pending-reviews queue row: how many divers are waiting to be heard.
+ *
+ * The count *is* the row. The line under it ("Divers wrote about their trips.
+ * Publish the good words or hide the rest.") taught the feature to somebody
+ * who had already found it, every morning, forever — copy-restraint's fifth
+ * deletion.
+ */
 export function reviewsPendingSubjectText(t: StaffTranslator, count: number): string {
   return t("today.reviewsPending.subject", { count });
-}
-
-export function reviewsPendingDetailText(t: StaffTranslator): string {
-  return t("today.reviewsPending.detail");
 }
 
 export function openReviewsActionText(t: StaffTranslator): string {
@@ -546,14 +578,12 @@ export function openReviewsActionText(t: StaffTranslator): string {
 /**
  * The unanswered-inbox row (ADR 20260907-two-way-inbox): how many divers wrote
  * and are still waiting. One row for the whole inbox, never one per message —
- * the same shape the reviews queue above takes, and for the same reason.
+ * the same shape the reviews queue above takes, and for the same reason. And,
+ * for the same reason as the reviews row, the count is the whole row: the
+ * second sentence named the surface the tap already opens.
  */
 export function unansweredMessagesSubjectText(t: StaffTranslator, count: number): string {
   return t("today.unansweredMessages.subject", { count });
-}
-
-export function unansweredMessagesDetailText(t: StaffTranslator): string {
-  return t("today.unansweredMessages.detail");
 }
 
 export function openInboxActionText(t: StaffTranslator): string {
@@ -580,12 +610,20 @@ export function openScheduleActionText(t: StaffTranslator): string {
  * "confirm your units" says nothing a reader could act on, while the currency a
  * card is charged in is the fact that makes this worth a row at all (#835).
  */
-export function unitsUnconfirmedSubjectText(t: StaffTranslator): string {
-  return t("today.unitsUnconfirmed.subject");
+export function unitsUnconfirmedSubjectText(
+  t: StaffTranslator,
+  input: { currency: string; depthUnit: DepthUnit },
+): string {
+  return t("today.unitsUnconfirmed.subject", {
+    currency: input.currency,
+    depth: t(
+      input.depthUnit === "feet" ? "today.unitsUnconfirmed.feet" : "today.unitsUnconfirmed.meters",
+    ),
+  });
 }
 
-export function unitsUnconfirmedDetailText(t: StaffTranslator, currency: string): string {
-  return t("today.unitsUnconfirmed.detail", { currency });
+export function unitsUnconfirmedDetailText(t: StaffTranslator): string {
+  return t("today.unitsUnconfirmed.detail");
 }
 
 export function openUnitsActionText(t: StaffTranslator): string {

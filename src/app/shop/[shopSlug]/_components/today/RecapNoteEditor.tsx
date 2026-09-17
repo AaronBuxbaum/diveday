@@ -101,7 +101,12 @@ export function RecapNoteEditor({
       ? t("closeout.recap.sent", { time: recapSentAtLabel })
       : t("trips.recapNote.emptySummary"));
   return (
-    <details open={saved} className="group/recap mt-3 border-t border-border pt-3">
+    // No rule of its own: the station that mounts this owns the hairline above
+    // it (`ClosingStation`), because on a departure that also carries the
+    // unsold-seats row a `border-t` here landed a second hairline twelve
+    // pixels under that row's own closing one, with nothing at all between
+    // them.
+    <details open={saved} className="group/recap">
       {/* Stacked below `sm`, one line from there. Inline at phone width the
           label and the note fought over ~340px and the three-word heading
           broke across three lines beside a single line of note. */}

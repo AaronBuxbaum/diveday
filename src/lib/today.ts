@@ -6,9 +6,14 @@ import {
   blockerDetailWithRemainingText,
   diverGroupSubjectText,
   nameListText,
+  openTripActionText,
+  owedRefundDetailText,
+  owedRefundGroupDetailText,
+  owedRefundGroupSubjectText,
   pointingLabelText,
 } from "@/i18n/today-labels";
 import { HOUR_MS } from "@/lib/clock";
+import { formatMoneyCents } from "@/lib/format";
 import type { Role } from "./authz";
 import type { DiveIntentCount } from "./dive-intent";
 import type { CrewIncompleteReason } from "./manifests";
@@ -487,7 +492,17 @@ export type TodayAction = {
    * repeating the header as the row's subject says the boat twice.
    */
   aboutDeparture?: boolean;
-  /** What is wrong, in staff language. */
+  /**
+   * What is wrong, in staff language.
+   *
+   * **Empty when the subject already is the whole row.** The desk's two
+   * counting rows — "3 messages are waiting on an answer", "1 review is
+   * waiting on you" — carried a second sentence that taught the feature to
+   * somebody who had already found it, and the surfaces render no separator
+   * and no paragraph for an empty one. It is not optional, because a closed
+   * day's snapshot round-trips this field through JSON and its parser demands
+   * a string (`src/lib/closeout.ts`).
+   */
   detail: string;
   /**
    * The button label. A verb *only* when the tap performs that verb (waiver
@@ -819,6 +834,103 @@ export function collapseDiverActions(
       href: `/shop/${shopSlug}/trips/${first.tripId}`,
       ...(waiver ? { waiver: { bookingIds: rows.map((row) => row.bookingId) } } : {}),
       dueAt: first.startsAt,
+    });
+  }
+  return actions;
+}
+
+/** One diver owed money for a departure the shop cancelled. Dates already formatted by the caller. */
+export type OwedRefundInput = {
+  bookingId: string;
+  diverName: string;
+  tripId: string;
+  tripTitle: string;
+  /** The departure’s date, formatted in the shop’s own zone by the caller. */
+  when: string;
+  amountCents: number | null;
+  currency: string;
+};
+
+/**
+ * **Five refunds owed on one cancelled boat is one job, not five.**
+ *
+ * The same rule {@link collapseDiverActions} applies to blocked divers, applied
+ * to the money a cancelled departure owes: a shop that pulls a charter off the
+ * board owes every seat on it, so the queue drew one row per diver and each one
+ * repeated "You cancelled the departure and the money couldn’t go back by
+ * card" — one fact at equal weight, five times (principle 9, and the
+ * cross-out test it ends on).
+ *
+ * A lone owed seat keeps the row it always had, down to its `owed-refund:<id>`
+ * and the diver as its subject: a named person is more useful than "1 refund",
+ * and there is nothing to say twice.
+ *
+ * The total is only stated when every seat in the group carries an amount **in
+ * one currency**. A missing amount is a real state here — `owedRefundDetailText`
+ * has a whole message for it — so summing around one would print a total that
+ * is quietly short, which is the one thing a money figure may never be.
+ */
+export function collapseOwedRefunds(
+  rows: readonly OwedRefundInput[],
+  shopSlug: string,
+  locale: string,
+  t: StaffTranslator = staffTranslator("en-US"),
+): TodayAction[] {
+  const byTrip = new Map<string, OwedRefundInput[]>();
+  for (const row of rows) {
+    const bucket = byTrip.get(row.tripId);
+    if (bucket) bucket.push(row);
+    else byTrip.set(row.tripId, [row]);
+  }
+
+  const actions: TodayAction[] = [];
+  for (const [tripId, seats] of byTrip) {
+    const first = seats[0];
+    if (!first) continue;
+    const href = `/shop/${shopSlug}/trips/${tripId}`;
+    if (seats.length === 1) {
+      actions.push({
+        id: `owed-refund:${first.bookingId}`,
+        kind: "owed_refund",
+        urgency: "now",
+        subject: first.diverName,
+        context: first.tripTitle,
+        detail: owedRefundDetailText(t, {
+          amount:
+            first.amountCents === null
+              ? null
+              : formatMoneyCents(first.amountCents, first.currency, locale),
+          tripTitle: first.tripTitle,
+          when: first.when,
+        }),
+        // The departure it was cancelled from: where the seat is, and where
+        // the payment gets marked refunded once the cash is back in a hand.
+        actionLabel: openTripActionText(t),
+        href,
+        dueAt: null,
+      });
+      continue;
+    }
+    const currency = first.currency;
+    const total = seats.every((seat) => seat.amountCents !== null && seat.currency === currency)
+      ? seats.reduce((sum, seat) => sum + (seat.amountCents ?? 0), 0)
+      : null;
+    const names = seats.map((seat) => seat.diverName).sort((a, b) => a.localeCompare(b));
+    actions.push({
+      id: `owed-refunds:${tripId}`,
+      kind: "owed_refund",
+      urgency: "now",
+      subject: owedRefundGroupSubjectText(t, seats.length),
+      context: first.tripTitle,
+      detail: owedRefundGroupDetailText(t, {
+        amount: total === null ? null : formatMoneyCents(total, currency, locale),
+        tripTitle: first.tripTitle,
+        when: first.when,
+        names: nameListText(t, names, names.length),
+      }),
+      actionLabel: openTripActionText(t),
+      href,
+      dueAt: null,
     });
   }
   return actions;
