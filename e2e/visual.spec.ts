@@ -6186,6 +6186,14 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-gear-import", scheme);
       });
 
+      // The other half of `dive_sites.csv`: the bundle carried the shop's whole
+      // library for a year while nothing could read one back (issue #1771).
+      test(`the dive-site import page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/dive-site-import");
+        await page.getByRole("button", { name: "Import dive sites" }).waitFor();
+        await capture(page, "settings-dive-site-import", scheme);
+      });
+
       /**
        * Settings' "Data & integrations" group when the shop owes work it has
        * not finished: photos removed from the app but still in storage, and an
@@ -6277,7 +6285,7 @@ for (const scheme of ["light", "dark"] as const) {
         const inviteSection = page.locator("section").filter({ hasText: "Invite someone" });
         await inviteSection.getByLabel("Full name").fill("Priya Nair");
         await inviteSection.getByLabel("Email").fill(email);
-        await inviteSection.getByLabel("Instructor").check();
+        await inviteSection.getByLabel("Instructor", { exact: true }).check();
         await inviteSection.getByRole("button", { name: "Send invite" }).click();
         await expect(page.getByText("Invite sent.")).toBeVisible();
 

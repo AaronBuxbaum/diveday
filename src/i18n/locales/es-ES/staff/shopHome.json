@@ -25,6 +25,7 @@
     "teamNotAuthorized": "La gestión del equipo está limitada a propietarios y gerentes.",
     "importNotAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes.",
     "gearImportNotAuthorized": "Importar el historial del equipo está limitado a propietarios y gerentes.",
+    "diveSiteImportNotAuthorized": "Importar sitios de buceo está limitado a propietarios y gerentes.",
     "backupNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo.",
     "whatsappNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
     "promosNotAuthorized": "Los códigos promocionales están limitados a propietarios y gerentes.",
@@ -50,6 +51,11 @@
         "title": "Enseñando y certificando buceadores",
         "desc": "Buceadores guarda los registros de certificación y el historial de especialidades de cada uno.",
         "tryThis": "Abre Buceadores para revisar un registro de certificación antes de clase."
+      },
+      "assistant_instructor": {
+        "title": "Asistiendo en el agua mientras los alumnos se forman",
+        "desc": "Buceadores guarda lo que cada alumno tiene registrado antes de que entres al agua con él.",
+        "tryThis": "Abre Buceadores para leer el registro de un alumno antes de entrar."
       },
       "divemaster": {
         "title": "Preparando a los buceadores para embarcar",

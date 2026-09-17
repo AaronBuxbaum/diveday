@@ -365,7 +365,10 @@ test.describe("staff", () => {
 
     // The editor's one primary is Save; visibility is a quiet `secondary`
     // beneath it, and the "Live at" link above already opens the page the
-    // removed Preview button opened.
+    // removed Preview button opened. A *hidden* course is the one exception
+    // and grows a Preview link of its own, because its public URL answers 404
+    // to anyone carrying no signed capability (issue #1735) — Rescue Diver is
+    // live here, so there is still nothing to find.
     await expect(page.getByRole("button", { name: "Hide from the catalog" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Preview" })).toHaveCount(0);
 
@@ -859,6 +862,94 @@ test.describe("the public header nav", () => {
     await expect(header.locator('a[href^="tel:"]')).toHaveCount(0);
     await expect(header.locator('a[href^="mailto:"]')).toHaveCount(0);
   });
+});
+
+/**
+ * **A hidden course is a 404, and the editor is the door that still opens it**
+ * (issue #1735).
+ *
+ * Course slugs are minted from a shared template catalogue, so while the edge
+ * refused only slugs that named nothing, the status line separated a draft
+ * (200, with the shop's refusal streamed under it) from a slug that never
+ * existed (404) — and a stranger with a dozen guesses read a shop's
+ * unpublished drafts off it. The previewer is told apart by what they carry.
+ *
+ * A shop of its own: this flips `courses.is_active`, which the per-test reset
+ * does not put back.
+ */
+test("a hidden course answers 404 to a bare URL, and opens from the editor's Preview", async ({
+  page,
+  privateShop,
+}) => {
+  // Several sequential navigations; same aggregate-cost reasoning as the
+  // toggle-live test above.
+  test.setTimeout(30_000);
+  const publicUrl = `/s/${privateShop.slug}/courses/discover-scuba-diving`;
+  // Hiding is the editor's own rare act, below the save bar — the roster has
+  // no per-row toggle. The button's word and the header's "Hidden from
+  // divers" line flip in place, so that is the wait — never a navigation
+  // straight off the click.
+  await page.goto(`/shop/${privateShop.slug}/courses/discover-scuba-diving/edit`);
+  await page.getByRole("button", { name: "Hide from the catalog" }).click();
+  await expect(page.getByText("Hidden from divers")).toBeVisible();
+
+  // The shop's own owner, at a bare URL, carrying nothing. The refusal is
+  // decided above the streaming boundary, so this is a real 404 rather than a
+  // 200 with a refusal in the payload — which is the whole point of the
+  // status line, and what a `curl` was reading.
+  expect((await page.goto(publicUrl))?.status()).toBe(404);
+
+  // The door that works, and the only one: minted on the tap by a route that
+  // has just proved this reader is this shop's live staff.
+  await page.goto(`/shop/${privateShop.slug}/courses/discover-scuba-diving/edit`);
+  await page.getByRole("link", { name: "Preview" }).click();
+  await expect(page).toHaveURL(/\/courses\/discover-scuba-diving\?preview=/);
+  await expect(
+    page.getByRole("heading", { name: "Discover Scuba Diving", level: 1 }),
+  ).toBeVisible();
+
+  // And the capability is not an authorisation. A stranger handed that exact
+  // link gets past the edge and meets the page's own live per-shop check,
+  // which is the one that decides — so they read no course either way.
+  const previewed = page.url();
+  await page.context().clearCookies();
+  await page.goto(previewed);
+  await expect(page.getByRole("heading", { name: "Discover Scuba Diving", level: 1 })).toHaveCount(
+    0,
+  );
+  expect((await page.goto(publicUrl))?.status()).toBe(404);
+});
+
+/**
+ * The mint route is a `/shop/**` surface and carries that namespace's rules:
+ * `requireShopSurface` reads the shop off the session and refuses a URL naming
+ * any other, so a live staffer of one shop cannot mint a capability for
+ * another's draft. That is the scope binding asserted at the door rather than
+ * only in the signature (security review, issue #1735).
+ */
+test("the preview route refuses to mint for a shop the staffer is not in", async ({
+  page,
+  privateShop,
+}) => {
+  // `page.request` rather than `page.goto`: it carries this context's session
+  // cookies and reads the status without rendering, and the refusals below are
+  // body-less 404s that Chromium declines to paint at all.
+  const mint = (path: string) => page.request.get(path);
+
+  // Signed in as this private shop's owner, so its own course mints and the hop
+  // lands on the public page.
+  expect(
+    (await mint(`/shop/${privateShop.slug}/courses/discover-scuba-diving/preview`)).status(),
+  ).toBe(200);
+  // blue-mantis is somebody else's shop, whatever this session is.
+  expect((await mint("/shop/blue-mantis/courses/discover-scuba-diving/preview")).status()).toBe(
+    404,
+  );
+  // And a course this shop does not hold is refused here rather than redirected
+  // to a URL the edge would refuse one hop later.
+  expect(
+    (await mint(`/shop/${privateShop.slug}/courses/never-minted-course/preview`)).status(),
+  ).toBe(404);
 });
 
 test("the course editor exposes private-session pricing alongside standard pricing", async ({

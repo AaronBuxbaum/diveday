@@ -84,11 +84,15 @@ export async function getTripPrep(
 
   // Only the crew who actually dive the trip need their own tank — a captain
   // or deckhand assigned for the boat stays dry and is not part of the plan.
+  // `assistant_instructor` is in the water with students by definition, so it
+  // belongs beside the other two rather than with the dry roles (issue #1680).
   const divingCrew = staff
     .filter(
       (entry) =>
         crewIds.includes(entry.person.id) &&
-        (entry.roles.includes("instructor") || entry.roles.includes("divemaster")),
+        (entry.roles.includes("instructor") ||
+          entry.roles.includes("assistant_instructor") ||
+          entry.roles.includes("divemaster")),
     )
     .map((entry) => entry.person.fullName);
 

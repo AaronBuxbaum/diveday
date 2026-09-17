@@ -22,6 +22,7 @@
     "hiddenFromDivers": "Oculto para los buceadores y el selector de sesiones.",
     "hideFromCatalog": "Ocultar del catálogo",
     "showInCatalog": "Mostrar en el catálogo",
+    "previewHidden": "Vista previa",
     "noticeSaved": "Página del curso guardada.",
     "errorInvalid": "Eso no se guardó. Revisa los campos e inténtalo de nuevo.",
     "errorNotAuthorized": "Solo los propietarios, gerentes e instructores pueden ocultar o mostrar un curso.",

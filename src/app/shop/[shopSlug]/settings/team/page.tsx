@@ -18,6 +18,7 @@ import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
 import { languageNameIn } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { staffRoleLabelRecord } from "@/i18n/staff-role-labels";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
 import { formatDateWithYear } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -110,17 +111,7 @@ function statusBadge(
  * (used by the invite email in `./actions.ts`) — out of this batch's scope,
  * flagged in the extraction report rather than changed here.
  */
-function roleLabels(t: StaffTranslator): Record<Role, string> {
-  return {
-    owner: t("settings.team.roleLabels.owner"),
-    manager: t("settings.team.roleLabels.manager"),
-    instructor: t("settings.team.roleLabels.instructor"),
-    divemaster: t("settings.team.roleLabels.divemaster"),
-    captain: t("settings.team.roleLabels.captain"),
-    crew: t("settings.team.roleLabels.crew"),
-    diver: t("settings.team.roleLabels.diver"),
-  };
-}
+const roleLabels = staffRoleLabelRecord;
 
 /**
  * The invite form's role picker. A roster row's is `StaffRolesDisclosure` —

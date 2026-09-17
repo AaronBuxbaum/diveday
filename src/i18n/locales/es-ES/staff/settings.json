@@ -539,6 +539,7 @@
       "owner": "Propietario",
       "manager": "Gerente",
       "instructor": "Instructor",
+      "assistant_instructor": "Asistente de instructor",
       "divemaster": "Divemaster",
       "captain": "Patrón",
       "crew": "Tripulación",

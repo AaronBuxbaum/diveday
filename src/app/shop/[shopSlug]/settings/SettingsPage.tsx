@@ -2399,6 +2399,12 @@ export default async function SettingsPage({
                 heading={t("gear.import.title")}
               />
             ) : null}
+            {canImport ? (
+              <SettingsDoorRow
+                href={`/shop/${shopSlug}/settings/dive-site-import`}
+                heading={t("diveSites.import.title")}
+              />
+            ) : null}
             {canExport ? (
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/settings/export`}

@@ -241,7 +241,21 @@ export default async function EditCoursePage({
                 </Link>
               </p>
             ) : (
-              <p className="text-sm text-muted">{t("courses.edit.hiddenFromDivers")}</p>
+              /* The hidden course's public URL now answers 404 to anyone the
+                 edge cannot verify as this shop's staff, which is the whole
+                 point of hiding it (issue #1735) — so this is the only door
+                 left to it, and it has to be here. The link mints its
+                 capability on the tap rather than carrying one in this HTML;
+                 the route handler says why. */
+              <p className="text-sm text-muted">
+                {t("courses.edit.hiddenFromDivers")}{" "}
+                <Link
+                  href={shopPath(shopSlug, "courses", slug, "preview")}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {t("courses.edit.previewHidden")}
+                </Link>
+              </p>
             )
           }
         />

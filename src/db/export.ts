@@ -3301,10 +3301,14 @@ export async function loadShopExportBundleInput(
             row.tidePreference,
             row.satelliteImageUrl,
             row.routeImageUrl,
-            // The drawn route travels with the site, so a shop that exports
-            // and re-imports keeps the line it drew — the waypoints are only
-            // meaningful next to the coordinates and zoom two columns over, so
-            // all four go together or none of them do.
+            // The drawn route travels with the site, and since issue #1771 a
+            // shop that exports and re-imports really does keep the line it
+            // drew (`src/db/dive-site-import.ts`). The four columns go together
+            // or not at all: the waypoints are positions on a frame at a zoom,
+            // so restoring them without the coordinates and zoom two columns
+            // over draws a line over the wrong water, which is a briefing
+            // saying something false rather than saying nothing. The importer
+            // refuses the row on exactly that pairing.
             JSON.stringify(row.routePoints),
             row.routeLabel,
             row.routeNote,

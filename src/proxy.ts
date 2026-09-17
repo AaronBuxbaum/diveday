@@ -19,6 +19,7 @@ import {
   reportingEndpointsHeader,
   reportOnlyPolicy,
 } from "@/lib/content-security-policy";
+import { COURSE_PREVIEW_PARAM, coursePreviewIsValid } from "@/lib/course-preview-gate";
 import { classifyDatabaseFailure } from "@/lib/db-failure";
 import {
   EMBED_BRAND_HEADER,
@@ -34,7 +35,11 @@ import {
   REQUEST_PATH_HEADER,
 } from "@/lib/embed-routes";
 import { log } from "@/lib/log";
-import { type PublicRouteShape, publicRouteShape } from "@/lib/public-route-shape";
+import {
+  type PublicRouteQuery,
+  type PublicRouteShape,
+  publicRouteShape,
+} from "@/lib/public-route-shape";
 import { shopSlugFromPublicPath } from "@/lib/public-routes";
 import {
   encodeReferralCookie,
@@ -491,9 +496,49 @@ async function refusedPublicRoute(
   // storefront. `PublicRouteQuery` is what makes this branch mandatory rather
   // than remembered — the lookup below does not accept an `absent` shape.
   if (shape.kind === "absent") return { liveShopSlug: null };
+  // **The `try` holds the database read and nothing else.** Its `catch` below
+  // fails *open* — "serve the page" — and that is a decision made about
+  // Postgres: a 404 fired by a database outage would take every live shop off
+  // the internet to fix a soft 404 on dead links. Nothing else inherits it. A
+  // security review of the course branch below found the cost of the wider
+  // shape: a throw from the capability check, which is not a database failure
+  // at all, landed in that `catch` and served a hidden course 200 to anybody
+  // who sent a parameter that made the verifier raise. So the read is fenced
+  // here and every judgement about what it returned is made after it, where a
+  // throw is a 500 rather than a silent admission (issue #1735).
+  let lookup: Awaited<ReturnType<typeof publicRouteLookup>>;
   try {
     const db = await getDb();
-    const { exists, shopExists } = await publicRouteLookup(db, shape);
+    lookup = await publicRouteLookup(db, shape);
+  } catch (error) {
+    return databaseUnavailable(error, shape);
+  }
+  {
+    const { exists, shopExists, hidden } = lookup;
+    // **The one flag this layer applies rather than reports.** A course the
+    // shop has taken off its public site is a real row, so `exists` is true and
+    // the page would serve it — to the shop's own live staff, and to nobody
+    // else. Leaving that entirely to the page put a draft on 200 and a slug
+    // that never existed on 404, and course slugs come from a shared template
+    // catalogue, so a dozen guesses read a shop's unpublished drafts off the
+    // status line (issue #1735).
+    //
+    // The previewer is told apart by what they carry, never by a guess at who
+    // they are: the editor mints the parameter where it already knows the
+    // reader is this shop's live staff, and the check here is one HMAC over the
+    // two segments the route resolved — no database, no session, no cookie
+    // cache. `src/db/public-route-existence.ts`'s invariant block has the three
+    // cheaper mechanisms and why each of them is worse than the disclosure was.
+    //
+    // The parameter is not an authorisation and is not treated as one. The page
+    // still runs `isLiveShopStaff`, live and per-shop, so a token in a
+    // stranger's hands buys them the same `notFound()` they get today — it buys
+    // being asked rather than being refused first.
+    if (exists && hidden && shape.kind === "course") {
+      const token = req.nextUrl.searchParams.get(COURSE_PREVIEW_PARAM);
+      if (coursePreviewIsValid(token, shape.shopSlug, shape.courseSlug)) return null;
+      return { liveShopSlug: shape.shopSlug };
+    }
     if (exists) return null;
     // The slug the refusal is framed by is the one `shape` carries — the same
     // string the lookup just resolved — and no longer a second parse of the
@@ -509,38 +554,46 @@ async function refusedPublicRoute(
     // this says it in the one way the compiler can check.
     if (shape.kind === "region") return { liveShopSlug: null };
     return { liveShopSlug: shopExists ? shape.shopSlug : null };
-  } catch (error) {
-    // Two kinds of failure land here and only one of them is the caller's
-    // doing. The slugs above reach Postgres unfiltered and length-unbounded on
-    // purpose, so `/s/%00` is a statement the server refuses over the bytes
-    // sent to it — once per request, for as long as it is sent, and free for
-    // whoever is sending it. Everything else is ours: the database gone, our
-    // credentials rejected, a grant revoked, a table the schema does not have.
-    // Each of those stops this check for every diver at once, which is the line
-    // worth an alarm, and it has one (`DatabaseUnavailable` in
-    // `infra/lib/observability.ts`). `classifyDatabaseFailure` splits them on
-    // SQLSTATE class 22 and states there what makes that safe — that a stranger
-    // can reach no other class through these four constant statements.
-    //
-    // Neither branch logs the caught message or the pathname. Drizzle's
-    // wrapper message is the SQL followed by the bound parameters verbatim,
-    // which is the attacker's own string, and so was the `path` this used to
-    // ship to CloudWatch unauthenticated — and, until `reportRefusedQuery`
-    // above, once per request for as long as it was sent. `shape.kind` says
-    // which lookup failed out of a closed set of five, and
-    // `classifyDatabaseFailure` reports a SQLSTATE, a Node errno, or
-    // `"unknown"` — closed vocabularies, never a string off the wire.
-    //
-    // Both codes are written out as literals at their own `log(` call rather
-    // than chosen in an argument: `infra/lib/observability.test.ts` reads the
-    // codes the app emits straight off the source, and a metric filter
-    // matching a code nothing writes counts zero forever without erroring.
-    const failure = classifyDatabaseFailure(error);
-    if (failure.alarming)
-      log("public_route.existence_unavailable", "error", { shape: shape.kind, code: failure.code });
-    else reportRefusedQuery(shape.kind, failure.code, nowMs());
-    return null;
   }
+}
+
+/**
+ * The refusal check's own outage path, lifted out of
+ * {@link refusedPublicRoute} so the `try` above it can hold the database read
+ * alone. Every word of the reasoning is the one it had inline; what changed is
+ * what can reach it.
+ */
+function databaseUnavailable(error: unknown, shape: PublicRouteQuery): null {
+  // Two kinds of failure land here and only one of them is the caller's
+  // doing. The slugs above reach Postgres unfiltered and length-unbounded on
+  // purpose, so `/s/%00` is a statement the server refuses over the bytes
+  // sent to it — once per request, for as long as it is sent, and free for
+  // whoever is sending it. Everything else is ours: the database gone, our
+  // credentials rejected, a grant revoked, a table the schema does not have.
+  // Each of those stops this check for every diver at once, which is the line
+  // worth an alarm, and it has one (`DatabaseUnavailable` in
+  // `infra/lib/observability.ts`). `classifyDatabaseFailure` splits them on
+  // SQLSTATE class 22 and states there what makes that safe — that a stranger
+  // can reach no other class through these four constant statements.
+  //
+  // Neither branch logs the caught message or the pathname. Drizzle's
+  // wrapper message is the SQL followed by the bound parameters verbatim,
+  // which is the attacker's own string, and so was the `path` this used to
+  // ship to CloudWatch unauthenticated — and, until `reportRefusedQuery`
+  // above, once per request for as long as it was sent. `shape.kind` says
+  // which lookup failed out of a closed set of five, and
+  // `classifyDatabaseFailure` reports a SQLSTATE, a Node errno, or
+  // `"unknown"` — closed vocabularies, never a string off the wire.
+  //
+  // Both codes are written out as literals at their own `log(` call rather
+  // than chosen in an argument: `infra/lib/observability.test.ts` reads the
+  // codes the app emits straight off the source, and a metric filter
+  // matching a code nothing writes counts zero forever without erroring.
+  const failure = classifyDatabaseFailure(error);
+  if (failure.alarming)
+    log("public_route.existence_unavailable", "error", { shape: shape.kind, code: failure.code });
+  else reportRefusedQuery(shape.kind, failure.code, nowMs());
+  return null;
 }
 
 export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response | undefined> {

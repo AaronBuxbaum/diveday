@@ -4,10 +4,15 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seatIsHeld } from "@/lib/no-show";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import type { AppDb } from "./client";
-import { departureRollCallForBooking, recordRollCall } from "./manifests";
+import {
+  departureRollCallForBooking,
+  onTheWaterByRollCall,
+  recordCrewRollCall,
+  recordRollCall,
+} from "./manifests";
 import { markBookingNoShow } from "./no-show";
 import { getBookingReadiness } from "./readiness";
-import { bookings } from "./schema";
+import { bookings, tripAssignments } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -153,6 +158,104 @@ describePostgres("the counter's mark and the crew's tap, racing for one booking"
     // mark stands in the trail and the boarding took the seat back; if the
     // rail did, the mark is refused as `already_boarded`. Only the combination
     // of the two facts above is a boat nobody can account for.
+    if (!deskResult.ok) expect(deskResult.reason).toBe("already_boarded");
+  });
+});
+
+/**
+ * The same seat, held by somebody who is also on the crew list: a shop where
+ * staff dive too, which the demo roster and `manifests.test.ts` both treat as
+ * ordinary. No readiness work, because the crew path has no readiness gate —
+ * which is itself why this ordering matters, since a staffer's own seat is
+ * exactly the one the dock would refuse a diver-side boarding on.
+ */
+async function crewMemberWithASeat(db: AppDb) {
+  await seedDemo(db);
+  const shop = await getShopBySlug(db, "blue-mantis");
+  if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
+  const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+  const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+  if (!reef) throw new Error("demo reef trip missing");
+  // `bookings_trip_person_unique` allows one seat per person per departure, so
+  // the subject is a staffer the demo roster has not already seated here.
+  const seated = new Set((await getTripRoster(db, shop.id, reef.id)).map((s) => s.person.id));
+  const crew = (await listStaff(db, shop.id)).find((s) => !seated.has(s.person.id));
+  if (!crew) throw new Error("every demo staffer already holds a seat on the reef trip");
+  await db
+    .insert(tripAssignments)
+    .values({ tripId: reef.id, personId: crew.person.id })
+    .onConflictDoNothing();
+  const [seat] = await db
+    .insert(bookings)
+    .values({ shopId: shop.id, tripId: reef.id, personId: crew.person.id, status: "booked" })
+    .returning({ id: bookings.id });
+  if (!seat) throw new Error("expected the crew member's own seat");
+  return {
+    shopId: shop.id,
+    tripId: reef.id,
+    startsAt: reef.startsAt,
+    bookingId: seat.id,
+    staffId: crew.person.id,
+  };
+}
+
+/**
+ * **The same race, on the other half of the head count** (dive-domain-expert
+ * review, issue #1686).
+ *
+ * `noShowGate` reads `onTheWaterByRollCall`, which answers from the diver trail
+ * *and* the crew trail. The act that undoes a release read only the diver
+ * trail, so `recordCrewRollCall` touched no booking row at all — and a path
+ * that touches no booking row shares no lock with the desk by construction.
+ * The two then decide against the same pre-state every time rather than under a
+ * race: the desk sees no boarding and releases, the rail sees a seat that is
+ * not `no_show` and takes nothing back, and both commit.
+ *
+ * Which makes the guard here the *whole* fix rather than a hardening of one:
+ * this is not a window that is usually closed, it was a window that was always
+ * open. The `.for("update")` on the reclaim's booking read is what makes the
+ * crew tap and the desk tap meet, and the gate below proves they meet.
+ *
+ * **Measured the same way as its sibling above.** Deleting that `.for("update")`
+ * and rerunning: red, at `waitForLockWaiters` — "1 of 2 backends blocked" —
+ * because the rail's whole transaction fits inside the gate and never parks on
+ * anything. So the failure a future reader gets is the contenders never having
+ * met, which is exactly what is wrong, rather than a quiet pass.
+ */
+describePostgres("the counter's mark and the crew's tap, racing for a staffer's own seat", () => {
+  it("never leaves a boarded crew member sitting on a released seat", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, tripId, startsAt, bookingId, staffId } = await crewMemberWithASeat(pg.db);
+
+    const gate = await holdRowLock(
+      pg,
+      sql`select id from bookings where id = ${bookingId} for update`,
+    );
+    const desk = markBookingNoShow(pg.connect(), {
+      shopId,
+      bookingId,
+      recordedByPersonId: staffId,
+      now: startsAt,
+    });
+    const rail = recordCrewRollCall(pg.connect(), {
+      shopId,
+      tripId,
+      personId: staffId,
+      recordedByPersonId: staffId,
+      status: "boarded",
+    });
+    await waitForLockWaiters(pg.db, 2);
+    await gate.release();
+    const [deskResult, railResult] = await Promise.all([desk, rail]);
+
+    // The rail never refuses, on either trail.
+    expect(railResult).toMatchObject({ ok: true });
+    expect(await onTheWaterByRollCall(pg.db, shopId, tripId, bookingId)).toBe("boarded");
+    // And the seat is somebody's — the half that used to be silently false.
+    expect(seatIsHeld(await statusOf(pg.db, bookingId))).toBe(true);
+    // Which of them won is not asserted, for the sibling's reason: both orders
+    // are legitimate. Desk first and the boarding takes the seat back; rail
+    // first and the mark is refused.
     if (!deskResult.ok) expect(deskResult.reason).toBe("already_boarded");
   });
 });

@@ -139,6 +139,24 @@ export type StaffingView = {
   gapTrips: StaffingGapTrip[];
 };
 
+/**
+ * The tiebreak both in-memory sorts below take, so neither depends on the order
+ * its source happened to arrive in — the same `(title, id)` pair the query
+ * above orders by, restated here because a stable sort over an unordered source
+ * is still unordered (issue #1844).
+ *
+ * Code-unit comparison rather than `localeCompare`: half of this key is a uuid
+ * nobody reads, and a collation that varies by host is the failure this exists
+ * to close.
+ */
+function compareByTitleThenId(
+  a: { title: string; tripId: string },
+  b: { title: string; tripId: string },
+): number {
+  if (a.title !== b.title) return a.title < b.title ? -1 : 1;
+  return a.tripId < b.tripId ? -1 : a.tripId > b.tripId ? 1 : 0;
+}
+
 export async function getStaffingView(
   db: AppDb,
   shopId: string,
@@ -189,8 +207,25 @@ export async function getStaffingView(
           gt(trips.endsAt, from),
         ),
       )
+      // **Departure, then the name the reader sees, then id** (issue #1844).
+      // `starts_at` alone left two departures at the same minute in whatever
+      // order the server returned, and `tripMap` below preserves this order
+      // while every in-memory sort over it is a *stable* sort — so that order
+      // reached the screen, and the staffing week's "Needs crew" cards traded
+      // places between loads with nothing underneath them changing.
+      //
+      // **Title before id, unlike the schedule board's keyset page**
+      // (`src/db/trips-queries.ts`, departure-then-id because a cursor needs a
+      // unique key). `trips.id` is `defaultRandom()`, so an id tiebreak is
+      // stable within one database and *random across reseeds* — which is
+      // exactly the shape the `staffing-week-crew-clash` capture was showing:
+      // its fixture starts two trips at 2:30 PM, and they came back one way on
+      // one CI run and the other way on the next, with no diff between them
+      // touching this file. Ordering by the title fixes the screen and the
+      // capture at once; the id stays as the third key because two departures
+      // may share a name.
       .groupBy(trips.id, courses.id)
-      .orderBy(asc(trips.startsAt)),
+      .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id)),
     // Crew assignments, queried separately from the trip/course row above so
     // this join's fan-out never multiplies the booked count computed alongside
     // it. Who is rostered, not what they are qualified for: the ratio inputs
@@ -266,7 +301,9 @@ export async function getStaffingView(
   }
   for (const trips of crewingByPerson.values()) {
     trips.sort(
-      (a, b) => (a.meetings[0]?.startsAt.getTime() ?? 0) - (b.meetings[0]?.startsAt.getTime() ?? 0),
+      (a, b) =>
+        (a.meetings[0]?.startsAt.getTime() ?? 0) - (b.meetings[0]?.startsAt.getTime() ?? 0) ||
+        compareByTitleThenId(a, b),
     );
   }
 
@@ -378,7 +415,9 @@ export async function getStaffingView(
     // so this is Today's quieter of the two words by construction.
     place("crew_below_target");
   }
-  gapTrips.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+  gapTrips.sort(
+    (a, b) => a.startsAt.getTime() - b.startsAt.getTime() || compareByTitleThenId(a, b),
+  );
 
   return {
     from,

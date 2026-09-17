@@ -22,6 +22,7 @@
     "hiddenFromDivers": "Hidden from divers and the session picker.",
     "hideFromCatalog": "Hide from the catalog",
     "showInCatalog": "Show in the catalog",
+    "previewHidden": "Preview",
     "noticeSaved": "Course page saved.",
     "errorInvalid": "That didn’t save. Check the fields and try again.",
     "errorNotAuthorized": "Hiding or showing a course is limited to owners, managers, and instructors.",

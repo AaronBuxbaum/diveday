@@ -274,5 +274,26 @@
     "errorInvalid": "That didn’t save. Check the required name and links, then try again.",
     "certificationDescription": "These requirements travel with the site into every new trip that uses it.",
     "saveSiteBriefing": "Save dive site"
+  },
+  "import": {
+    "eyebrow": "Settings",
+    "title": "Import dive sites",
+    "description": "Read a dive_sites.csv from your DiveDay export back into this shop’s library.",
+    "help": "This reads DiveDay’s own export rather than another system’s file, so it expects the columns the bundle wrote and refuses one it does not recognise. Sites match by id first, then by name: importing into the shop the bundle came from rewrites the sites it names, and importing into a new one creates them. A site that was deleted when the bundle was made comes back deleted.",
+    "notRestored": "Two things do not come back. The field guide’s species travel in dive_site_creatures.csv and are left exactly as they are. And a tide-station acknowledgement lands only on a site this shop already holds that station for; anywhere else the distance prompt asks again, which is what it is for.",
+    "file": "CSV file",
+    "submit": "Import dive sites",
+    "pending": "Importing…"
+  },
+  "notice": {
+    "importEmpty": "Choose a dive_sites.csv to import.",
+    "importUnknownColumns": "That file has a column DiveDay does not recognise, so nothing was read. Import the file your export produced, without added columns.",
+    "importNoNameColumn": "That file has no name column, so there is nothing to match a site on.",
+    "importFileEmpty": "That file has no rows in it.",
+    "imported": "Updated {updated, plural, one {# site} other {# sites}} and created {created, plural, one {# new one} other {# new ones}}. {deleted, plural, =0 {None came back deleted} one {# came back deleted} other {# came back deleted}}, and {skipped, plural, =0 {no rows were} one {# row was} other {# rows were}} left alone.",
+    "importFileTooLarge": "That file is larger than 8 MB. Split it, or export again from this shop.",
+    "importTooManyRows": "That file has more than 20,000 rows, which is more sites than a library holds.",
+    "importTooManyColumns": "That file has more than 64 columns, so it is not a DiveDay export.",
+    "importCellTooLong": "One of that file’s values is longer than 2,000 characters, so nothing was read."
   }
 }

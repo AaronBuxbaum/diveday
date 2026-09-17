@@ -205,7 +205,7 @@ export async function getDeparturesBoard(
               // for anybody but its own subject. A board link is read by
               // everyone in the room and by anyone the URL reaches after that,
               // so it owes the rule `tripPublicCrew` keeps for the departure
-              // page. `staffDefs` seeds two of five consenting on purpose, and
+              // page. `staffDefs` seeds two of six consenting on purpose, and
               // says why: somebody who declined has to read as somebody who was
               // never rostered.
               isNotNull(people.crewPublicConsentAt),

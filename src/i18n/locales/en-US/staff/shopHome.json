@@ -25,6 +25,7 @@
     "teamNotAuthorized": "Team management is limited to owners and managers.",
     "importNotAuthorized": "Importing writes divers’ personal and medical records, so it’s limited to owners and managers.",
     "gearImportNotAuthorized": "Importing gear service history is limited to owners and managers.",
+    "diveSiteImportNotAuthorized": "Importing dive sites is limited to owners and managers.",
     "backupNotAuthorized": "Only an owner or manager can change backup settings.",
     "whatsappNotAuthorized": "Only an owner or manager can change WhatsApp settings.",
     "promosNotAuthorized": "Promo codes are limited to owners and managers.",
@@ -50,6 +51,11 @@
         "title": "Teaching and certifying divers",
         "desc": "Divers holds every diver’s certification records and specialty history.",
         "tryThis": "Open Divers to check a certification record before class."
+      },
+      "assistant_instructor": {
+        "title": "Assisting in the water while divers train",
+        "desc": "Divers holds what each student has on file before you get in the water with them.",
+        "tryThis": "Open Divers to read a student’s record before you get in."
       },
       "divemaster": {
         "title": "Getting divers ready to board",

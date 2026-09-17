@@ -12,20 +12,29 @@ export type OrientationRole =
   | "owner"
   | "manager"
   | "instructor"
+  | "assistant_instructor"
   | "divemaster"
   | "captain"
   | "crew";
 
 /**
- * Precedence when a person holds more than one staff role — the same order
- * `shop/[shopSlug]/layout.tsx` uses for the demo role switcher's "current
- * role" pill, so a person who is both an instructor and a divemaster sees a
- * consistent "who am I" answer across the demo banner and this card.
+ * Precedence when a person holds more than one staff role.
+ *
+ * It used to claim to match the demo role switcher's "current role" pill
+ * exactly. It no longer does: that pill (`ShopChrome.tsx`, `PublicShopShell.tsx`)
+ * enumerates `instructor | divemaster | captain` and falls through to `diver`,
+ * and `assistant_instructor` was added here and not there — deliberately, since
+ * `DEMO_ROLE_IDS` is a curated five personas a visitor can *be*, not the role
+ * vocabulary. So in a demo shop an AI's pill reads "Diver" while this card
+ * greets them as an assistant instructor. Demo-only, and the honest reading of
+ * the pill is "which demo persona am I" rather than "which role do I hold"
+ * (issue #1680, dive-domain review).
  */
 const ROLE_PRECEDENCE: readonly OrientationRole[] = [
   "owner",
   "manager",
   "instructor",
+  "assistant_instructor",
   "divemaster",
   "captain",
   "crew",
@@ -79,6 +88,11 @@ export function orientationTourHref(
     case "manager":
       return hrefFor("reviews");
     case "instructor":
+      return hrefFor("divers");
+    case "assistant_instructor":
+      // The students they are assisting, and the records they need before a
+      // training dive — the same door as the instructor they work under,
+      // because that is the reading their morning starts with (issue #1680).
       return hrefFor("divers");
     case "divemaster":
       return hrefFor("today");
