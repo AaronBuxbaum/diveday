@@ -27,7 +27,7 @@ export const staffDefs = [
     local: "marcus",
     roles: ["instructor"],
     emergencyContact: ["Yvonne Webb (mother)", "+1-305-555-0102"],
-    // **Two of five, on purpose** (issue #1181, D21). The public "who you're
+    // **Two of six, on purpose** (issue #1181, D21). The public "who you're
     // diving with" line renders only the crew who switched it on for
     // themselves, so a demo where everybody had would show a feature with no
     // shape: what a shop actually sees is some of its people named and some
@@ -77,6 +77,27 @@ export const staffDefs = [
     local: "talia",
     roles: ["instructor"],
     emergencyContact: ["Chidi Okonkwo (husband)", "+234-1-555-0105"],
+    namedToDivers: false,
+  },
+  /**
+   * The shop's Assistant Instructor (issue #1680, ruled 2026-09-16). A shop
+   * this size usually has one — somebody working through their instructor
+   * development, in the water with students every week — and until the
+   * `assistant_instructor` rung existed the only place to file them was
+   * `instructor`, which credited them a full instructor's student allowance and
+   * cleared a course's "needs an instructor" gap.
+   *
+   * She is seeded because the rung is only visible where a person holds it: the
+   * staffing week's intro-session gap, the crew line on a course session, and
+   * the ratio arithmetic all say the same thing about an empty role. Crew, not
+   * a demo persona — she has no entry in `dev-credentials.ts`, for Talia's
+   * reason.
+   */
+  {
+    fullName: "Yusra Idrissi",
+    local: "yusra",
+    roles: ["assistant_instructor"],
+    emergencyContact: ["Karim Idrissi (brother)", "+212-5-555-0106"],
     namedToDivers: false,
   },
 ] as const satisfies ReadonlyArray<{

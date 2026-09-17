@@ -72,6 +72,55 @@ describe("inWaterCrewRole", () => {
   });
 
   /**
+   * Issue #1680, ruled 2026-09-16. A shop with an Assistant Instructor on staff
+   * had nowhere to file them but `instructor`, so this function returned a full
+   * `"instructor"`: eight students' worth of allowance under the entry-level
+   * cap, and enough on its own to clear a course's "needs an instructor" gap.
+   * Under PADI an AI is a certified assistant for training-dive ratios and does
+   * not independently conduct a Discover Scuba experience, where an assistant
+   * buys no seats at all — so the intro cap is where the old answer was most
+   * wrong, and these are the cases that pin the new one.
+   */
+  describe("the assistant_instructor rung", () => {
+    it("counts as a certified assistant, never as an instructor", () => {
+      expect(inWaterCrewRole({ tripRole: null, shopRoles: ["assistant_instructor"] })).toBe(
+        "certified_assistant",
+      );
+      expect(inWaterCrewRole({ shopRoles: ["assistant_instructor"] })).toBe("certified_assistant");
+      expect(inWaterCrewRole({ tripRole: "divemaster", shopRoles: ["assistant_instructor"] })).toBe(
+        "certified_assistant",
+      );
+    });
+
+    it("cannot be promoted by the roster", () => {
+      // Property 2, on the rung the roster is most likely to be optimistic
+      // about: the shop needs an instructor on the session and puts the AI in
+      // the slot. The count takes the qualification, not the roster line.
+      expect(inWaterCrewRole({ tripRole: "instructor", shopRoles: ["assistant_instructor"] })).toBe(
+        "certified_assistant",
+      );
+    });
+
+    it("leaves the water with the rest of them when rostered dry", () => {
+      expect(inWaterCrewRole({ tripRole: "captain", shopRoles: ["assistant_instructor"] })).toBe(
+        "none",
+      );
+      expect(inWaterCrewRole({ tripRole: "crew", shopRoles: ["assistant_instructor"] })).toBe(
+        "none",
+      );
+    });
+
+    it("loses to a full instructor rating held by the same person", () => {
+      // A shop that promoted somebody and left the old rung ticked. Both roles
+      // stand, and the higher one answers — the same rule `instructor` +
+      // `divemaster` has always followed.
+      expect(
+        inWaterCrewRole({ tripRole: null, shopRoles: ["assistant_instructor", "instructor"] }),
+      ).toBe("instructor");
+    });
+  });
+
+  /**
    * The invariant that makes this migration safe to ship: adding a per-trip
    * role can only ever *lower* what a person is worth to the ratio, never raise
    * it. So no existing session can silently gain capacity because somebody
@@ -87,6 +136,9 @@ describe("inWaterCrewRole", () => {
       ["instructor"],
       ["instructor", "divemaster"],
       ["owner", "divemaster"],
+      ["assistant_instructor"],
+      ["assistant_instructor", "divemaster"],
+      ["assistant_instructor", "instructor"],
     ];
     for (const shopRoles of roleSets) {
       const baseline = weight[inWaterCrewRole({ tripRole: null, shopRoles })];
@@ -128,6 +180,19 @@ describe("countInWaterCrew", () => {
     });
   });
 
+  it("counts an assistant instructor beside the instructor, not as one", () => {
+    // The shape #1680 is about: one instructor and one AI on a course session.
+    // Before the rung existed the shop filed the AI as `instructor` and this
+    // read `{ instructorCount: 2 }` — which clears an intro session's 2:1 cap
+    // for four participants and clears the "needs an instructor" gap twice.
+    expect(
+      countInWaterCrew([
+        { tripRole: null, shopRoles: ["instructor"] },
+        { tripRole: null, shopRoles: ["assistant_instructor"] },
+      ]),
+    ).toEqual({ instructorCount: 1, assistantCount: 1 });
+  });
+
   it("is empty-safe", () => {
     expect(countInWaterCrew([])).toEqual({ instructorCount: 0, assistantCount: 0 });
   });
@@ -144,6 +209,17 @@ describe("groupCrewAssignments", () => {
     ]);
     expect(grouped).toHaveLength(2);
     expect(countInWaterCrew(grouped)).toEqual({ instructorCount: 1, assistantCount: 0 });
+  });
+
+  it("counts an assistant instructor who is also a divemaster exactly once", () => {
+    // The fan-out, on the rung that adds a second way to be an assistant: two
+    // join rows for one person, and `assistantCount` is 1 rather than 2.
+    const grouped = groupCrewAssignments([
+      { personId: "p1", tripRole: null, role: "assistant_instructor" },
+      { personId: "p1", tripRole: null, role: "divemaster" },
+    ]);
+    expect(grouped).toHaveLength(1);
+    expect(countInWaterCrew(grouped)).toEqual({ instructorCount: 0, assistantCount: 1 });
   });
 
   it("keeps a person with no shop-wide role at all — a left join hands back a null role", () => {

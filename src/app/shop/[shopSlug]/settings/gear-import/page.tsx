@@ -20,7 +20,11 @@ export const metadata: Metadata = { title: "Import gear history — DiveDay" };
 
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "import-empty": { tone: "danger", key: "gear.notice.importEmpty" },
-  "import-no_gear_column": { tone: "danger", key: "gear.notice.importNoGearColumn" },
+  // Kebab, because `noticeUrl` writes kebab — `noticeCode` replaces every `_`,
+  // so this key spelled `import-no_gear_column` matched nothing and a shop
+  // whose CSV had no gear-tag column saw no banner at all. Found while giving
+  // the dive-site importer beside this one the same map (issue #1771).
+  "import-no-gear-column": { tone: "danger", key: "gear.notice.importNoGearColumn" },
 };
 
 /**

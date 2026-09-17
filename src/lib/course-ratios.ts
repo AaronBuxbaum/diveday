@@ -2,7 +2,11 @@
 export type CourseRatioRule = {
   /** Students one instructor may supervise before any assistant is counted. */
   baseStudentsPerInstructor: number;
-  /** Extra students each certified assistant (a Divemaster) adds. Zero means assistants buy nothing. */
+  /**
+   * Extra students each certified assistant adds — a Divemaster **or an
+   * Assistant Instructor**, in DiveDay's role model (`inWaterCrewRole`,
+   * src/lib/crew-roles.ts). Zero means assistants buy nothing.
+   */
   assistantBonusPerInstructor: number;
   /** Hard per-instructor ceiling, whatever the assistant count. */
   maxStudentsPerInstructor: number;
@@ -11,8 +15,8 @@ export type CourseRatioRule = {
 /**
  * PADI's published in-water ratio for Open Water Diver open-water training
  * dives: up to 8 students per instructor, extendable by 2 per certified
- * assistant (a Divemaster aboard, in DiveDay's role model) to a hard ceiling
- * of 12 — see H-08 (docs/product/human-decisions.md) and
+ * assistant (a Divemaster or an Assistant Instructor aboard, in DiveDay's role
+ * model) to a hard ceiling of 12 — see H-08 (docs/product/human-decisions.md) and
  * docs/architecture/decisions/20260724-course-admission-standards.md for the
  * PADI/SSI sourcing. Continuing-education courses (Advanced Open Water,
  * Rescue, specialties) are not modeled here — they already require a verified

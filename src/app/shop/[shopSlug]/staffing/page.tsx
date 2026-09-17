@@ -23,7 +23,7 @@ import { getStaffingView } from "@/db/staffing";
 import { listStaff } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import type { Role } from "@/lib/authz";
+import { staffRoleLabels } from "@/i18n/staff-role-labels";
 import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { CREW_PUBLIC_NAME_MAX, defaultCrewPublicName } from "@/lib/crew-public-name";
@@ -138,23 +138,6 @@ const CREDENTIAL_KIND_KEYS: Record<
   other: "staffing.credentials.kinds.other",
 };
 
-/**
- * A person's roles, in the words Team already gave them. The roster used to
- * render the raw enum values (`instructor · captain`) beside three derived
- * capability pills — English leaking out of the domain layer onto a Spanish
- * reader's screen, and the same fact stated twice. These are the seven labels
- * the Team page shows, single-sourced.
- */
-const ROLE_LABEL_KEYS: Record<Role, StaffMessageKey> = {
-  owner: "settings.team.roleLabels.owner",
-  manager: "settings.team.roleLabels.manager",
-  instructor: "settings.team.roleLabels.instructor",
-  divemaster: "settings.team.roleLabels.divemaster",
-  captain: "settings.team.roleLabels.captain",
-  crew: "settings.team.roleLabels.crew",
-  diver: "settings.team.roleLabels.diver",
-};
-
 /** How far ahead a renewal counts as due soon. H-59: a word, never a gate. */
 const RENEWAL_WINDOW_DAYS = 30;
 
@@ -259,10 +242,7 @@ export default async function StaffingPage({
     people: view.staff.map((member) => ({
       personId: member.person.id,
       name: member.person.fullName,
-      roles: member.roles
-        .map((role) => ROLE_LABEL_KEYS[role as Role])
-        .filter((key): key is StaffMessageKey => Boolean(key))
-        .map((key) => t(key)),
+      roles: staffRoleLabels(t, member.roles),
       shifts: member.shifts.map((shift) => ({
         id: shift.id,
         startsAt: shift.startsAt,

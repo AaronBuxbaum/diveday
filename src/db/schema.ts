@@ -520,10 +520,25 @@ export const shops = pgTable(
 
 export type MedicalJurisdiction = (typeof medicalJurisdiction.enumValues)[number];
 
+/**
+ * The standing roles a person holds in a shop. Keep aligned with `ALL_ROLES`
+ * in src/lib/authz.ts.
+ *
+ * `assistant_instructor` is a **rung**, not a job on a boat, which is why it is
+ * here and deliberately not in `trip_assignment_role` below. It was added
+ * because a shop with an AI on staff had nowhere to file them but `instructor`,
+ * and the in-water ratio then credited them a full instructor's student
+ * allowance and cleared a course's "needs an instructor" gap — a claim about
+ * the water that is not true of an AI, who is a certified assistant for
+ * training-dive ratios and is not the rated professional of record for the
+ * open-water dive of a Discover Scuba experience (issue #1680, ruled
+ * 2026-09-16).
+ */
 export const personRole = pgEnum("person_role", [
   "owner",
   "manager",
   "instructor",
+  "assistant_instructor",
   "divemaster",
   "captain",
   "crew",
@@ -5419,6 +5434,12 @@ export const paymentOperationIntents = pgTable(
  * `person_role` — `owner`, `manager`, and `diver` are standing facts about a
  * person, never a job on a boat. Keep aligned with `TRIP_CREW_ROLES` in
  * src/lib/crew-roles.ts.
+ *
+ * `assistant_instructor` is deliberately **not** here either, and for a
+ * different reason than those three: it is a *rating* rather than a job, and
+ * the job an AI does on a sailing is the one this list already calls
+ * `divemaster`. A rating in a list of jobs would also have nothing to narrow,
+ * which is the property the whole column exists to hold (issue #1680).
  */
 export const tripAssignmentRole = pgEnum("trip_assignment_role", [
   "instructor",

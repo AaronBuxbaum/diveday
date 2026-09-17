@@ -274,5 +274,26 @@
     "errorInvalid": "Eso no se guardó. Revisa el nombre obligatorio y los enlaces e inténtalo de nuevo.",
     "certificationDescription": "Estos requisitos viajan con el sitio a cada nueva salida que lo use.",
     "saveSiteBriefing": "Guardar sitio de buceo"
+  },
+  "import": {
+    "eyebrow": "Ajustes",
+    "title": "Importar sitios de buceo",
+    "description": "Vuelve a leer un dive_sites.csv de tu exportación de DiveDay en la biblioteca de este centro.",
+    "help": "Esto lee la propia exportación de DiveDay, no el archivo de otro sistema, así que espera las columnas que escribió el paquete y rechaza una que no reconozca. Los sitios se emparejan primero por id y luego por nombre: importar en el centro del que salió el paquete reescribe los sitios que nombra, e importar en otro los crea. Un sitio eliminado cuando se hizo el paquete vuelve eliminado.",
+    "notRestored": "Dos cosas no vuelven. Las especies de la guía de campo viajan en dive_site_creatures.csv y se quedan tal cual. Y la confirmación de una estación de mareas solo se aplica a un sitio para el que este centro ya tiene esa estación; en cualquier otro caso el aviso de distancia vuelve a preguntar, que es para lo que está.",
+    "file": "Archivo CSV",
+    "submit": "Importar sitios de buceo",
+    "pending": "Importando…"
+  },
+  "notice": {
+    "importEmpty": "Elige un dive_sites.csv para importar.",
+    "importUnknownColumns": "Ese archivo tiene una columna que DiveDay no reconoce, así que no se leyó nada. Importa el archivo que produjo tu exportación, sin columnas añadidas.",
+    "importNoNameColumn": "Ese archivo no tiene columna de nombre, así que no hay con qué emparejar un sitio.",
+    "importFileEmpty": "Ese archivo no tiene filas.",
+    "imported": "Se actualizaron {updated, plural, one {# sitio} other {# sitios}} y se crearon {created, plural, one {# nuevo} other {# nuevos}}. {deleted, plural, =0 {Ninguno volvió eliminado} one {# volvió eliminado} other {# volvieron eliminados}} y {skipped, plural, =0 {no se dejó ninguna fila} one {se dejó # fila} other {se dejaron # filas}} sin tocar.",
+    "importFileTooLarge": "Ese archivo pesa más de 8 MB. Divídelo o vuelve a exportar desde este centro.",
+    "importTooManyRows": "Ese archivo tiene más de 20.000 filas, más sitios de los que cabe una biblioteca.",
+    "importTooManyColumns": "Ese archivo tiene más de 64 columnas, así que no es una exportación de DiveDay.",
+    "importCellTooLong": "Uno de los valores de ese archivo pasa de 2.000 caracteres, así que no se leyó nada."
   }
 }
