@@ -26,6 +26,10 @@ import { ReviewRowActions, type ReviewRowCopy } from "./ReviewRowActions";
  * genuinely exceptional thing — a shop's own standout pick — which is what a
  * pill is for.
  *
+ * **The rare acts are revealed, not standing.** Hide and the standout toggle
+ * live behind one small disclosure per row (`ReviewRowActions`); Publish keeps
+ * its own place, because it is the one act a waiting row is on the page for.
+ *
  * The `#review-<id>` fragment is a contract with two callers, not decoration:
  * Today's row and the close-out both deep-link a single waiting review by it
  * (`src/db/today.ts`). It sits on the row's content block rather than on the
@@ -76,6 +80,7 @@ export function ReviewLedgerRow({
           canStandout={review.isPublished && Boolean(review.comment)}
           reasons={reasons}
           copy={copy}
+          moreLabel={t("reviews.rowMoreSrLabel", { name: review.diverName })}
         />
       }
     >
@@ -92,6 +97,9 @@ export function ReviewLedgerRow({
             </Badge>
           ) : null}
         </div>
+        {/* A rating with no words renders no line at all. "Rating only." stood
+            on fifteen of twenty rows — an absence formatted as information
+            (principle 9), and the missing quote already says it. */}
         {review.comment ? (
           <p
             className={
@@ -102,9 +110,7 @@ export function ReviewLedgerRow({
           >
             {review.comment}
           </p>
-        ) : (
-          <p className="mt-1 text-sm text-muted italic">{t("reviews.ratingOnly")}</p>
-        )}
+        ) : null}
         <p className="mt-1 text-xs text-muted">
           {t.rich("reviews.reviewMeta", {
             diverName: review.diverName,
