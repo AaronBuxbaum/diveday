@@ -56,6 +56,39 @@ export const COURSE_PREVIEW_TTL_MS = 10 * 60 * 1000;
 /** Separates the readable expiry from the signature. Unreserved in a URI. */
 const SEPARATOR = ".";
 
+/**
+ * **The shape a signature must have before any byte of it is compared**, and
+ * the reason it is a charset test rather than a length one.
+ *
+ * `timingSafeEqual` throws on buffers of unequal length, so the guard in front
+ * of it used to compare `signature.length` — and that is UTF-16 code units,
+ * while `Buffer.from` encodes UTF-8. A 43-*character* signature carrying one
+ * multibyte character is 44 *bytes*: the guard passed, `timingSafeEqual` raised
+ * `ERR_CRYPTO_TIMING_SAFE_EQUAL_LENGTH`, and the throw landed in
+ * `refusedPublicRoute`'s database `catch`, which fails open. One unauthenticated
+ * request per guess then told a hidden course (200, verifier raised) from a
+ * slug that never existed (404, verifier never called) — the exact oracle this
+ * module closes, reopened by the module itself, with no token needed
+ * (security review, issue #1735).
+ *
+ * Base64url of a SHA-256 digest, unpadded: 43 characters from a 64-character
+ * alphabet, every one of them a single byte. So this makes the 43 explicit and
+ * makes bytes and characters the same number by construction. The proxy no
+ * longer runs this inside that `catch` either; both halves are the fix, because
+ * either alone leaves a way for the next raise to be admission.
+ */
+const SIGNATURE_SHAPE = /^[A-Za-z0-9_-]{43}$/;
+
+/**
+ * Digits only, and bounded. `Number` is forgiving in ways a signed payload
+ * should not be — `" 123"`, `"+123"` and `"0x7b"` all parse — and `sign()`
+ * re-normalises through a template string, so several spellings of one expiry
+ * would verify identically. Harmless, since the signature still binds the
+ * normalised value and the scope, but signature malleability is not a property
+ * to leave lying around in a capability.
+ */
+const EXPIRY_SHAPE = /^[0-9]{1,15}$/;
+
 function previewKey(): string | null {
   // Production refuses to boot without `AUTH_SECRET`; `auth-secret.ts` supplies
   // a fixed fallback in dev and e2e. So this is null only in a deployment that
@@ -114,13 +147,15 @@ export function coursePreviewIsValid(
   if (!key) return false;
   const separator = value.indexOf(SEPARATOR);
   if (separator <= 0) return false;
-  const expiresAt = Number(value.slice(0, separator));
-  // `Number("")` is 0 and `Number("1e400")` is Infinity, so the integer test is
-  // the one that has to hold rather than the parse succeeding.
+  const digits = value.slice(0, separator);
+  if (!EXPIRY_SHAPE.test(digits)) return false;
+  const expiresAt = Number(digits);
   if (!Number.isSafeInteger(expiresAt)) return false;
   const signature = value.slice(separator + 1);
+  // Shape before bytes. `timingSafeEqual` throws on unequal buffers and a
+  // character count is not a byte count; see {@link SIGNATURE_SHAPE}.
+  if (!SIGNATURE_SHAPE.test(signature)) return false;
   const expected = sign(key, shopSlug, courseSlug, expiresAt);
-  // Length-guard before timingSafeEqual, which throws on unequal buffers.
   if (signature.length !== expected.length) return false;
   if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return false;
   // Expiry last, and only over a signature we minted: an attacker learns

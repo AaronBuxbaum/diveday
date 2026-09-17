@@ -43,6 +43,27 @@ const existence = vi.hoisted(() => ({
   hiddenCourses: null as Set<string> | null,
 }));
 
+/**
+ * The capability verifier, with a switch for "what if this raises?".
+ *
+ * The multibyte signature below is one way to make it raise and is fixed at
+ * its source; this is the class. `refusedPublicRoute`'s `catch` serves the page
+ * on purpose — a database outage must not take every live shop off the internet
+ * — and while the verifier ran inside that `try`, *any* raise from it was an
+ * admission rather than a refusal (security review, issue #1735).
+ */
+const preview = vi.hoisted(() => ({ throws: false }));
+vi.mock("@/lib/course-preview-gate", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/course-preview-gate")>();
+  return {
+    ...actual,
+    coursePreviewIsValid: (...args: Parameters<typeof actual.coursePreviewIsValid>) => {
+      if (preview.throws) throw new Error("verifier raised");
+      return actual.coursePreviewIsValid(...args);
+    },
+  };
+});
+
 vi.mock("@/db/client", () => ({ getDb: async () => ({}) }));
 vi.mock("@/db/public-route-existence", () => ({
   publicRouteLookup: async (_db: unknown, shape: PublicRouteQuery) => {
@@ -817,6 +838,7 @@ describe("a hidden course at the edge", () => {
     existence.asked = [];
     existence.liveShops = null;
     existence.hiddenCourses = new Set([COURSE]);
+    preview.throws = false;
   });
 
   function rewriteTarget(res: Response): string | null {
@@ -863,6 +885,39 @@ describe("a hidden course at the edge", () => {
   it("refuses an unsigned parameter that merely looks like one", async () => {
     const res = await run(request(previewUrl(`${nowMs() + 60_000}.not-a-signature`)));
     expect(rewriteTarget(res)).toBe("/_not-found");
+  });
+
+  /**
+   * **The end-to-end shape of the fail-open** (security review, issue #1735).
+   *
+   * The gate's own test pins that a 43-character, 44-byte signature returns
+   * false instead of raising. This pins what a raise would have *cost*: the
+   * verifier ran inside the database `try`, whose `catch` serves the page, so
+   * one unauthenticated request per guess answered 200 for a hidden course and
+   * 404 for a slug that never existed — the oracle, reopened, with no token.
+   * Both halves are the fix and this is the half that says why: the `try` now
+   * holds the read alone, so nothing but a database failure can reach the
+   * decision that fails open.
+   */
+  it("refuses a hidden course to a parameter built to make the verifier raise", async () => {
+    const signature = `${"a".repeat(42)}\u00e9`;
+    expect(signature.length).toBe(43);
+    expect(Buffer.from(signature).length).toBe(44);
+    const res = await run(request(previewUrl(`${nowMs() + 60_000}.${signature}`)));
+    expect(rewriteTarget(res)).toBe("/_not-found");
+  });
+
+  /**
+   * And the class rather than the instance: whatever makes the verifier raise
+   * next, the answer is a refusal. The `try` around the lookup holds the
+   * database read alone, so the decision that fails open is reachable only by
+   * the failure it was reasoned about.
+   */
+  it("refuses a hidden course when the verifier raises for any reason at all", async () => {
+    preview.throws = true;
+    await expect(run(request(previewUrl(signCoursePreview(SHOP, COURSE))))).rejects.toThrow(
+      "verifier raised",
+    );
   });
 
   it("leaves a course the shop has not hidden completely alone", async () => {

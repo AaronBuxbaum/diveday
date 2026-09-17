@@ -885,6 +885,38 @@ test("a hidden course answers 404 to a bare URL, and opens from the editor's Pre
   expect((await page.goto(publicUrl))?.status()).toBe(404);
 });
 
+/**
+ * The mint route is a `/shop/**` surface and carries that namespace's rules:
+ * `requireShopSurface` reads the shop off the session and refuses a URL naming
+ * any other, so a live staffer of one shop cannot mint a capability for
+ * another's draft. That is the scope binding asserted at the door rather than
+ * only in the signature (security review, issue #1735).
+ */
+test("the preview route refuses to mint for a shop the staffer is not in", async ({
+  page,
+  privateShop,
+}) => {
+  // `page.request` rather than `page.goto`: it carries this context's session
+  // cookies and reads the status without rendering, and the refusals below are
+  // body-less 404s that Chromium declines to paint at all.
+  const mint = (path: string) => page.request.get(path);
+
+  // Signed in as this private shop's owner, so its own course mints and the hop
+  // lands on the public page.
+  expect(
+    (await mint(`/shop/${privateShop.slug}/courses/discover-scuba-diving/preview`)).status(),
+  ).toBe(200);
+  // blue-mantis is somebody else's shop, whatever this session is.
+  expect((await mint("/shop/blue-mantis/courses/discover-scuba-diving/preview")).status()).toBe(
+    404,
+  );
+  // And a course this shop does not hold is refused here rather than redirected
+  // to a URL the edge would refuse one hop later.
+  expect(
+    (await mint(`/shop/${privateShop.slug}/courses/never-minted-course/preview`)).status(),
+  ).toBe(404);
+});
+
 test("the course editor exposes private-session pricing alongside standard pricing", async ({
   privateShop,
   page,
