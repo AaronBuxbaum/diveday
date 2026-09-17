@@ -167,3 +167,42 @@ describe("ConditionsLine — with no forecast at all", () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+/**
+ * **Whose water the tide line is** (issue #1732). The turn it names is a
+ * height turn rather than slack (ADR 20260907's 2026-09-07 amendment), so the
+ * station is what lets anyone who knows the water apply their own lag to it.
+ * Until this the name reached one surface, the dive-site editor — the page the
+ * shop that typed a wrong id never opens again.
+ */
+describe("ConditionsLine — whose tide", () => {
+  const TIDE = "Next high water at 1:19 PM; the boat reaches the site on the flood.";
+
+  function renderTide(station: string | null) {
+    return render(
+      <ConditionsLine
+        shop={shop}
+        trip={{} as Trip}
+        crewPrediction={false}
+        automatedForecast={null}
+        crewLanguages={null}
+        tideLines={[{ site: "Molasses Reef", text: TIDE, station }]}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+  }
+
+  it("names the station under the sentence it came from", () => {
+    renderTide("Tide at Carysfort Reef, FL");
+    expect(screen.getByText(TIDE, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("Tide at Carysfort Reef, FL")).toBeInTheDocument();
+  });
+
+  it("leaves the sentence exactly as it is when the lookup answered nothing", () => {
+    renderTide(null);
+    // The same string queried positively above, so this absence is about the
+    // station and not about a line that stopped rendering.
+    expect(screen.getByText(TIDE, { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText(/Carysfort/)).not.toBeInTheDocument();
+  });
+});

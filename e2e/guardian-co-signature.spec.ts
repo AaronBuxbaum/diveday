@@ -163,6 +163,17 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
   };
 
   await row.getByText("Mark signed on paper").click();
+  // **A minor's attestation names who answered the health questions** (issue
+  // #1668). The adult sentence stops at "no answer needs physician sign-off",
+  // and on a minor's record that was the only medical assertion there was —
+  // saying the staffer read the questionnaire and nothing about who filled it
+  // in. The online consent has named the questions since #1452; this is the
+  // paper path saying the same thing. That the adult sentence is *unchanged*
+  // is pinned in `PaperWaiverControl.test.tsx`; the other specs that open this
+  // form match its opening clause loosely, which both sentences share.
+  await expect(
+    row.getByText("the parent or guardian answered the health questions", { exact: false }).first(),
+  ).toBeVisible();
   await fillPaperForm();
   // **The refusal is still the default.** Nothing about this submission says
   // the staffer watched two people sign, so the shop is told what happened and

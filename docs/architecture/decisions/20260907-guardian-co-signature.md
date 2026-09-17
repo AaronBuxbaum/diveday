@@ -223,3 +223,23 @@ model, the six columns stay (they are the evidence) and the *rule* moves —
 majority it reads is `src/lib/age.ts`'s single constant. If the co-signature turns out to be wrong
 for a jurisdiction, deleting the readiness arm and the page's second card is a day's work; the
 columns would be left in place rather than dropped, because they hold signed evidence.
+
+## Amendment 2026-09-16 — the paper attestation says who answered the health questions
+
+Decision 7's medical attestation is the staffer's own sentence, and until now it read the same for a twelve-year-old as for an adult:
+
+> I have this diver's signed release on file, I have reviewed their medical questionnaire, and no answer needs physician sign-off.
+
+For an adult that is exactly right. For a minor it was the **only** medical assertion on the record, and it named the wrong person: it says the *staffer* reviewed the questionnaire, and nothing anywhere said whether the parent standing at the counter answered the ten health questions or the child did. The guardian fields beside it capture a name and a relationship and no medical assertion at all.
+
+On 2026-09-10 the **online** consent moved for exactly this (issue #1452): a parent now ticks a box naming the waiver *and the health questions answered above*. The reason given there is the one every agency form is built around — a twelve-year-old answers "No" to the lungs question because nobody told them they were treated for asthma at six, and the only adult signature on the page attested to the liability text alone. The paper path did not move, and so said something narrower than the online one on the same fact.
+
+So it moves. A minor's form draws a second sentence, selected by the `requiresGuardian` boolean `PaperWaiverControl` already takes:
+
+> …no answer needs physician sign-off, **and the parent or guardian answered the health questions.**
+
+**It stays the staffer's voice, not the guardian's**, and that is the part worth arguing. A checkbox worded as the guardian's own assertion (option 3 on issue #1668) is closer to the online shape and more honest about who is asserting what. It was not taken, because the paper form is the **shop's own sheet, whose questions DiveDay never sees**. An assertion by a guardian about a document the product holds no copy of is weaker evidence than the online tick, not stronger, and a second checkbox teaches a counter to tick two boxes where it used to tick one. What DiveDay can honestly record is what the named staffer says they saw, which is what every other clause in this sentence already is.
+
+**One clause, nothing else.** No `medical_answered_by` column: the assertion is the staffer's, it is already carried by `in_person_attested` and `recorded_by_person_id`, and a column would imply DiveDay can distinguish the two cases when nothing on the paper reaches it. No guardian-answered questionnaire inside the app — that is H-01/H-03's. And no change to what `recordInPersonWaiver` refuses: the writer's rules are identical, so a hand-built request is neither newly allowed nor newly refused.
+
+**Escape hatch.** One key per locale and one ternary. If H-01/H-03 returns a minor-specific template, this sentence is replaced by whatever that template asserts and nothing else has to move.

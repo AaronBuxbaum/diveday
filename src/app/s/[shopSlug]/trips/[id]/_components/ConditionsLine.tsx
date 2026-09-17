@@ -62,8 +62,12 @@ export function ConditionsLine({
    * The tide at each stationed site, worded by the page — present only when
    * the shop switched `tide_window_public` on (ADR
    * 20260907-noaa-tide-predictions). One line per site on a two-station day.
+   *
+   * `station` is whose water it is, already worded — absent when the station
+   * lookup answered nothing, which leaves the sentence exactly as it was
+   * (issue #1732).
    */
-  tideLines?: { site: string; text: string }[];
+  tideLines?: { site: string; text: string; station?: string | null }[];
   locale: string;
 }) {
   const t = diverTranslator(locale);
@@ -136,6 +140,11 @@ export function ConditionsLine({
       {tide.map((line) => (
         <p key={line.site} className="mt-2 text-sm text-muted">
           {line.text}
+          {/* Whose water. The turn named above is a height turn rather than
+              slack, so a diver who knows the water — or the captain they ask —
+              needs the station to apply their own lag to it (issue #1732).
+              Absent when the lookup answered nothing. */}
+          {line.station ? <span className="block text-xs">{line.station}</span> : null}
         </p>
       ))}
       {crewPrediction && trip.conditionsSummary ? (

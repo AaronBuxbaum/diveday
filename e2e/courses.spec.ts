@@ -561,6 +561,13 @@ test.describe("staff", () => {
     // meters" on its own page. `{depth18}` resolves at render instead
     // (ADR 20260814-course-depth-markers).
     await page.goto("/shop/blue-mantis/courses/wreck-diver/edit");
+    // Wait for hydration before typing, the same signal and the same reason as
+    // the save-bar test below (#1717) — this one typed blind on both of its
+    // visits. React re-applies a `defaultValue` while it hydrates, so a `fill`
+    // that lands first is thrown away and the box goes back to the row's own
+    // text. Here that is silent: the save succeeds on the text the writer did
+    // not type, and the assertion that fails is the *next* one.
+    await expect(page.locator("[data-hydrated]")).toBeVisible();
     await page.getByLabel("Subhead").fill("Plan every dive to {depth18}");
     await page.getByRole("button", { name: "Save course page" }).click();
     await expect(page.getByRole("status")).toContainText("Course page saved");
@@ -577,6 +584,11 @@ test.describe("staff", () => {
     // — the whole point of validating here is that nothing reaches a diver
     // with its own braces showing.
     await page.goto("/shop/blue-mantis/courses/wreck-diver/edit");
+    // The visit that actually failed on CI (2026-09-16, shard 1/4): the broken
+    // marker was thrown away by hydration, the *valid* text from the save above
+    // was posted instead, and the refusal this asserts never happened — so the
+    // wait burned its eight seconds and reported the alert as simply absent.
+    await expect(page.locator("[data-hydrated]")).toBeVisible();
     await page.getByLabel("Subhead").fill("Plan every dive to {depth 18}");
     await page.getByRole("button", { name: "Save course page" }).click();
     // Filtered, not bare: Next's own route announcer is a `role="alert"` too.

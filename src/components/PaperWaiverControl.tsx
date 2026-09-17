@@ -197,7 +197,21 @@ export function PaperWaiverControl({
           defaultChecked={refused?.typed.medicalAttested ?? false}
           className="mt-0.5 size-4 shrink-0"
         />
-        <span>{copy.medicalAttestationLabel}</span>
+        {/* **A minor's version says who answered the questions.** For an adult
+            the sentence above is exactly right. For a minor it was the only
+            medical assertion on the record and it named the wrong person: it
+            says the *staffer* reviewed the questionnaire, and nothing anywhere
+            said whether the parent standing at the counter answered the ten
+            health questions or the child did. Online, since #1452, the
+            guardian ticks a box that names them. This is that same assertion
+            on the paper path, in the staffer's voice because the paper form is
+            the shop's own sheet and the staffer is the only person here whose
+            signature DiveDay holds (issue #1668). Selected by the boolean the
+            control already takes — no new prop, no `medical_answered_by`
+            column, no change to what `recordInPersonWaiver` refuses. */}
+        <span>
+          {requiresGuardian ? copy.medicalAttestationMinorLabel : copy.medicalAttestationLabel}
+        </span>
       </label>
       {/* A minor's paper release was signed twice, so the record names both
           (ADR 20260907-guardian-co-signature). The staffer attests to the
