@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { BrandStyle } from "@/components/BrandStyle";
-import { Copyable } from "@/components/Copyable";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { SiteMark } from "@/components/illustration/SiteMark";
@@ -42,6 +41,7 @@ import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { visitMilestone } from "@/lib/visit-milestones";
+import { BuddyShareButton } from "./BuddyShareButton";
 import { CourseAfterState } from "./CourseAfterState";
 import { NextDiveCard } from "./NextDiveCard";
 import { PrintRecordButton } from "./PrintRecordButton";
@@ -77,13 +77,18 @@ import { TipAmountPicker } from "./TipAmountPicker";
  *    carry-it-to-Google door is the one thing that may take that weight off
  *    it — after a strong rating has just landed, never beside it.
  * 5. **The other thing worth saying, privately** — the pulse (D40, issue
- *    #1200). Beside the review and outside its `<form>`, because a private
- *    field inside a public one is a trap and a diver who has already left a
- *    review must still be able to reach it. Not a door: the doors are places
- *    to go, and this is a second thing to say.
- * 6. **Quiet doors** — photos and the tip, each a hairline row that opens its
- *    existing form in place, in the same grammar the prep state's spine uses
- *    one screen earlier.
+ *    #1200). Outside the review's `<form>`, because a private field inside a
+ *    public one is a trap and a diver who has already left a review must still
+ *    be able to reach it. It is the **first quiet door** and shut at rest: it
+ *    stood open at the review's own weight until 2026-09-17, so one page asked
+ *    one question twice — five stars, a box and a send button, then five chips,
+ *    a box and a send button. A complaint is a minority act at a minority
+ *    moment, which is what disclosure is for.
+ * 6. **The rest of the quiet doors** — photos and the tip, each a hairline row
+ *    that opens its existing form in place, in the same grammar the prep
+ *    state's spine uses one screen earlier. A door shows only the controls
+ *    that can do something: the photo form's caption and submit appear with
+ *    the file, not before it.
  * 7. **One next dive, and one reason it is that one** (D35, issue #1195) —
  *    over candidates `decideTripAdmission` has already cleared, so the card
  *    never points at a boat this diver could not board.
@@ -485,12 +490,7 @@ export function AfterState({
 
       {/* ——— The one ask. It is the page's single primary in every variant: a
           sparse keepsake never promotes a door to fill the space above it. */}
-      <SectionCard
-        padding="lg"
-        className="mt-10 print:hidden"
-        title={t("reviews.askHeading")}
-        description={t("reviews.askBody")}
-      >
+      <SectionCard padding="lg" className="mt-10 print:hidden" title={t("reviews.askHeading")}>
         {reviewNotice ? (
           <FormStatus tone={reviewNotice.tone}>{t(reviewNotice.key)}</FormStatus>
         ) : null}
@@ -510,9 +510,6 @@ export function AfterState({
           <label htmlFor="review-comment" className="text-sm font-medium">
             {t("reviews.commentLabel")}
           </label>
-          <p id="review-comment-hint" className="text-xs text-muted">
-            {t("reviews.commentModerationHint")}
-          </p>
           <textarea
             id="review-comment"
             name="comment"
@@ -520,7 +517,6 @@ export function AfterState({
             maxLength={MAX_REVIEW_COMMENT_LENGTH}
             defaultValue={ownReview?.comment ?? ""}
             placeholder={t("reviews.commentPlaceholder")}
-            aria-describedby="review-comment-hint"
             className={controlClass}
           />
           <div>
@@ -536,23 +532,38 @@ export function AfterState({
         </form>
       </SectionCard>
 
-      {/* ——— The other thing worth saying, and it is private. Beside the review
-          above and deliberately *outside* its `<form>` — a private field inside
-          a public one is a trap, and a diver who has already left a review must
-          still be able to reach this. Never a quiet door of its own: the doors
-          below are places to go, and this is a second thing to say. */}
-      <RecapPulse
-        t={t}
-        shopName={shop.name}
-        ownPulse={ownPulse}
-        notice={params.pulse}
-        action={actions.submitPulse}
-      />
-
       {/* ——— The quiet doors: hairline rows on the page background, each one a
           tap away from the form it already had. Same grammar as the prep
           state's spine, one screen earlier in the same thread. */}
       <ul className="mt-10 print:hidden">
+        {/* ——— The other thing worth saying, and it is private. It stands
+            **outside the review's `<form>`** — a private field inside a public
+            one is a trap, and a diver who has already left a review must still
+            be able to reach this.
+
+            It used to be a standing section at the review's own weight: five
+            chips, a textarea and a "Send it to the shop" button, all open, so
+            the page asked one question twice and a diver had to work out which
+            one the page wanted (2026-09-17 design review). It is the first
+            quiet door now, directly under the review, shut at rest — a
+            complaint is a minority act at a minority moment, which is exactly
+            what disclosure is for (principle 8). It opens on arrival only when
+            there is something in it already: a diver's own standing pulse, or
+            a `?pulse=` this render has to answer. */}
+        <Door
+          id="pulse"
+          summary={t("recap.pulseHeading")}
+          open={Boolean(params.pulse) || ownPulse !== null}
+        >
+          <RecapPulse
+            t={t}
+            shopName={shop.name}
+            ownPulse={ownPulse}
+            notice={params.pulse}
+            action={actions.submitPulse}
+          />
+        </Door>
+
         <Door
           id="photos"
           summary={t("recap.yourPhotos")}
@@ -592,37 +603,58 @@ export function AfterState({
           {photos.length >= maxPhotos ? (
             <p className="mt-4 text-sm text-muted">{t("recap.photoLimitReached")}</p>
           ) : (
-            <form action={actions.uploadPhoto} className="mt-4 flex flex-col gap-3">
+            <form action={actions.uploadPhoto} className="mt-4">
               {/* No separate caption: the control's own button *is* "Add a
                   photo", so a label above it saying the same thing was a second
                   reading of one instruction. */}
-              <ImageFileInput
-                name="photo"
-                required
-                multiple
-                maxFiles={Math.max(0, maxPhotos - photos.length)}
-                copy={{
-                  choose: t("recap.addAPhoto"),
-                  chooseAnother: t("recap.addAnotherPhoto"),
-                  wrongTypeSuffix: t("recap.photoWrongTypeSuffix"),
-                  tooBigSuffix: t("recap.photoTooBigSuffix", { maxMb: MAX_IMAGE_MB }),
-                  tooMany: t("recap.photoTooMany", { max: Math.max(0, maxPhotos - photos.length) }),
-                }}
-              />
-              <input
-                type="text"
-                name="caption"
-                maxLength={140}
-                placeholder={t("recap.captionLabel")}
-                className={controlClass}
-              />
-              <div>
-                <SubmitButton
-                  pendingLabel={t("recap.addingPhoto")}
-                  className={buttonClass({ variant: "secondary", className: "self-start" })}
-                >
-                  {t("recap.addToMyRecap")}
-                </SubmitButton>
+              <div className="peer">
+                <ImageFileInput
+                  name="photo"
+                  required
+                  multiple
+                  maxFiles={Math.max(0, maxPhotos - photos.length)}
+                  copy={{
+                    choose: t("recap.addAPhoto"),
+                    chooseAnother: t("recap.addAnotherPhoto"),
+                    wrongTypeSuffix: t("recap.photoWrongTypeSuffix"),
+                    tooBigSuffix: t("recap.photoTooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                    tooMany: t("recap.photoTooMany", {
+                      max: Math.max(0, maxPhotos - photos.length),
+                    }),
+                  }}
+                />
+              </div>
+              {/* **One standing control, not three.** Nothing here can be used
+                  before a file exists, so nothing here is shown before one is
+                  picked: the caption and the submit were two of the door's
+                  three resting controls and neither could do anything
+                  (2026-09-17 design review).
+
+                  The reveal is **CSS, not state**, and that is the point. The
+                  file input carries `required`, so `:valid` is exactly "a file
+                  is selected" — and `ImageFileInput` clears the input when it
+                  refuses a file, which collapses this again with no wiring
+                  between the two. A `useState` here would have cost the form
+                  its no-JavaScript path, which is the one this page's picker is
+                  deliberately built to keep. `peer` is the wrapper above and
+                  `~ *` is how Tailwind compiles the variant, so this must stay
+                  its following sibling. */}
+              <div className="hidden flex-col gap-3 pt-3 peer-has-[input:valid]:flex">
+                <input
+                  type="text"
+                  name="caption"
+                  maxLength={140}
+                  placeholder={t("recap.captionLabel")}
+                  className={controlClass}
+                />
+                <div>
+                  <SubmitButton
+                    pendingLabel={t("recap.addingPhoto")}
+                    className={buttonClass({ variant: "secondary", className: "self-start" })}
+                  >
+                    {t("recap.addToMyRecap")}
+                  </SubmitButton>
+                </div>
               </div>
             </form>
           )}
@@ -735,20 +767,16 @@ export function AfterState({
         <section className="mt-10 rounded-panel bg-surface-sunken p-5 print:hidden sm:p-6">
           <h2 className={SECTION_TITLE_CLASS}>{t("recap.buddyHeading")}</h2>
           <p className="mt-1 text-muted">{t("recap.buddyBody")}</p>
-          {/* **The link is printed, not hidden.** Every other copyable URL in
-              this app is a bearer token behind a disclosure; this one is not a
-              credential at all — it names a booking and authorizes nothing
-              (`src/lib/buddy-tokens.ts`) — and a diver reading a recap on a
-              phone is about to paste it into a message, which is easier when
-              they can see and select it. It is stable per booking, so printing
-              it costs this page's baseline nothing either. */}
-          <Copyable
-            className="mt-3"
-            value={buddyLinkUrl}
-            label={t("recap.buddyLinkLabel")}
-            copyLabel={t("recap.buddyCta")}
-            copiedLabel={t("recap.buddyCopied")}
-            failedLabel={t("recap.buddyCopyFailed")}
+          {/* The control is the affordance; the URL is not page furniture. It
+              used to print in full, mono, under a "Your link" caption — the
+              loudest thing in the block and the one thing nobody reads. It
+              reaches a screen reader as the button's description instead
+              (`BuddyShareButton`). */}
+          <BuddyShareButton
+            url={buddyLinkUrl}
+            action={t("recap.buddyCta")}
+            copied={t("recap.buddyCopied")}
+            copyFailed={t("recap.buddyCopyFailed")}
           />
         </section>
       ) : null}

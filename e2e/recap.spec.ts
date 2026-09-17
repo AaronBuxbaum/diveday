@@ -136,12 +136,35 @@ test("the recap link hands out no share affordance, and its unfurl card reveals 
   expect((await res.body()).length).toBeGreaterThan(1000);
 });
 
-test("comment moderation is disclosed before submitting, not discovered only after (task 54)", async ({
+/**
+ * **Comment moderation is disclosed at the moment it becomes true** (task 54,
+ * rewritten 2026-09-17).
+ *
+ * A standing hint above the box — "Ratings post right away; the shop reads
+ * written words first." — said the mechanism before anything had happened, to
+ * every diver, forever (copy-restraint #2 and #5). The outcome is what a
+ * reader needs and `reviews.savedPending` already carries it, in the same
+ * words, on the render that follows the submit. So this pins the sentence that
+ * does the work rather than the one that described the rule.
+ */
+test("comment moderation is disclosed when the words land, not as a standing hint (task 54)", async ({
   page,
 }) => {
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  // Nothing explains the rule before there is anything to apply it to.
   await expect(
     page.getByText("Ratings post right away; the shop reads written words first."),
+  ).toHaveCount(0);
+
+  await page.getByRole("radio", { name: "5 out of 5 stars" }).check();
+  await page
+    .getByLabel("Anything you’d tell another diver?")
+    .fill("Third time out with this crew and the best one yet.");
+  await page.getByRole("button", { name: "Leave my review" }).click();
+
+  // A rating alone posts; written words wait, and the diver is told so here.
+  await expect(
+    page.getByText("Thanks. The shop will read your words before they go up."),
   ).toBeVisible();
 });
 
@@ -228,6 +251,13 @@ test("a whole pick of photos submits in one request, not one page reload per pho
   const photoInput = page.locator('input[name="photo"]').filter({ visible: true });
   await expect(photoInput).toHaveAttribute("multiple", "");
 
+  // **One standing control in the door** (2026-09-17 design review). The
+  // caption and the submit can do nothing until a file exists, so they are not
+  // on screen until one does. The reveal is CSS off the input's own `:valid`,
+  // which is why only a real browser can prove it.
+  await expect(page.getByRole("button", { name: "Add to my recap" })).toBeHidden();
+  await expect(page.getByPlaceholder("Add a caption (optional)")).toBeHidden();
+
   // Real, decodable JPEGs — the server validates content, not just the
   // declared mime type (certifications.spec.ts's CR-012), so a fake/zero
   // buffer never reaches the "no blob storage configured" branch this test
@@ -240,6 +270,8 @@ test("a whole pick of photos submits in one request, not one page reload per pho
     { name: "one.jpg", mimeType: "image/jpeg", buffer: await jpeg({ r: 20, g: 90, b: 160 }) },
     { name: "two.jpg", mimeType: "image/jpeg", buffer: await jpeg({ r: 160, g: 90, b: 20 }) },
   ]);
+  // The pick is what brings the rest of the form out.
+  await expect(page.getByPlaceholder("Add a caption (optional)")).toBeVisible();
   await page.getByRole("button", { name: "Add to my recap" }).click();
   // The e2e fleet has no blob storage configured (see certifications.spec.ts's
   // CR-012 test) — even a real photo lands here rather than "added". The
@@ -380,6 +412,10 @@ test("a private pulse reaches the shop, appears nowhere public, and can be taken
   try {
     await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
     await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
+    // Shut at rest since 2026-09-17: a complaint is a minority act at a
+    // minority moment, so it is the first quiet door under the review rather
+    // than a standing section at the review's own weight.
+    await openRecapDoor(page, "pulse");
     // The chips wrap a visually-hidden checkbox, so the label is what a person
     // taps and what this taps (`e2e/fixtures.ts` filters to visible nodes).
     await page.getByText("The gear", { exact: true }).click();

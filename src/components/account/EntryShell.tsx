@@ -18,11 +18,12 @@ import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
  *     already render `MarketingNav` above pass neither.
  *  2. **The question** — a centered title, with an optional one-line muted
  *     description under it.
- *  3. **The action** — `children`. Forms sit in a panel that is borderless on
- *     a phone (one centered column needs no box inside the viewport's box)
- *     and becomes a `rounded-2xl` surface from `sm` up. A page whose whole
- *     action is a single button (`panel={false}`) skips the panel entirely —
- *     a border around one control is chrome.
+ *  3. **The action** — `children`. Forms sit in a panel that is *nothing at
+ *     all* on a phone (one centered column needs no box inside the viewport's
+ *     box — not a border, not a ground, and not the shadow that used to
+ *     survive the breakpoint alone) and becomes a `rounded-2xl` surface from
+ *     `sm` up. A page whose whole action is a single button (`panel={false}`)
+ *     skips the panel entirely — a border around one control is chrome.
  *  4. **The way out** — `footer`, one quiet centered row of small links below
  *     the panel, never inside it.
  *
@@ -106,9 +107,24 @@ export function entryMainClass(width: "sm" | "lg") {
   return `mx-auto flex w-full ${width === "lg" ? "max-w-xl" : "max-w-md"} flex-1 flex-col justify-center px-6 py-12 sm:py-16`;
 }
 
-/** The form panel: borderless on a phone, a bordered surface from `sm` up. */
+/**
+ * The form panel: **nothing at all** on a phone, a bordered surface from `sm`
+ * up.
+ *
+ * Every other class here has always been `sm:`-scoped, and `shadow-bed` was
+ * not — so below `sm` the panel drew a soft shadow with no border, no ground
+ * and no padding under it, and the fields sat inside a faint box that ran edge
+ * to edge of the viewport (2026-09-17 design review; it reads as a rendering
+ * fault in dark mode, where the bed is `rgba(0, 0, 0, 0.35)`). A shadow is the
+ * lift of a surface off the page, so it belongs exactly where the surface does:
+ * one centered column inside the viewport's own box needs no box of its own,
+ * which is what the anatomy above already said.
+ *
+ * `EntryShellSkeleton` wears this same constant, so the door and the skeleton
+ * that stands in for it cannot drift apart.
+ */
 export const entryPanelClass =
-  "mt-8 sm:rounded-panel sm:border sm:border-border sm:bg-surface shadow-bed sm:p-8";
+  "mt-8 sm:rounded-panel sm:border sm:border-border sm:bg-surface sm:p-8 sm:shadow-bed";
 
 /**
  * **The closed set of marks a terminal door may wear** (ADR

@@ -161,9 +161,14 @@ test.describe("give a dive", () => {
     test.setTimeout(60_000);
     await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
     await expect(page.getByRole("heading", { name: "Bring a buddy next time" })).toBeVisible();
-    // Printed rather than hidden: this id names a booking and authorizes
-    // nothing, and a diver about to paste it into a message needs to see it.
-    const link = (await page.getByText(/\/s\/blue-mantis\?via=/).textContent()) ?? "";
+    // **The control is the affordance; the URL is not page furniture.** It used
+    // to print in full, mono, under a "Your link" caption — the loudest thing
+    // in the block and the one thing nobody reads (2026-09-17 design review).
+    // The id names a booking and authorizes nothing, so it is still safe to
+    // carry in the accessible tree, where it is the share button's description.
+    await expect(page.getByRole("button", { name: "Share your link" })).toBeVisible();
+    await expect(page.getByText(/\/s\/blue-mantis\?via=/)).toHaveCount(0);
+    const link = (await page.locator("#buddy-link").textContent()) ?? "";
     const via = new URL(link, workerBaseURL).searchParams.get("via");
     expect(via).toBeTruthy();
 
