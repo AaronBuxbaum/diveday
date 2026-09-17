@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/ledger";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
@@ -50,6 +53,10 @@ export const metadata: Metadata = {
  * the shell layout that held it, and `waivers/signatures/page.tsx` are gone
  * (H-49); the old URL is a 308 Route Handler that keeps `?record=` and
  * `?page=`.
+ *
+ * **The release is a door and the signed records are the page.** The editor
+ * opens in place from one control, and on the `#release` fragment or any
+ * `?notice=` a publish bounced back with; everything it does is unchanged.
  *
  * Two decisions live in the parts below, each with its own doc comment and its
  * own rule test:
@@ -228,50 +235,82 @@ export default async function WaiversPage({
         }
       />
 
-      <SectionCard padding="lg">
-        <form action={saveWaiverAction} className="flex flex-col gap-5">
-          <FieldGrid columns={1} className="gap-y-5">
-            <Field
-              label={t("waiversStaff.fieldLabel")}
-              // Only for a shop that has never published one: a starting text
-              // nobody's counsel has read is the one thing about this box a
-              // reader could get wrong.
-              description={current ? undefined : t("waiversStaff.releaseDescription.sample")}
-            >
-              <textarea
-                name="body"
-                required
-                rows={14}
-                maxLength={12_000}
-                defaultValue={current?.body ?? DEFAULT_WAIVER_BODY}
-                placeholder={t("waiversStaff.placeholder")}
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-          <PublishRelease copy={publishCopy} standingSignatures={atRisk.divers > 0} />
-          {/* Beside the form, never a banner at the top of the page: the
+      {/* **The ledger leads; the editor is a door.** A full-height textarea of
+          the legal text, a materiality radio pair and a Publish stood at the
+          top of a page holding 519 signed records. Editing the release happens
+          a handful of times in a shop's life; reading who signed is daily, so
+          the release is one control at rest and the log starts a screen
+          higher.
+
+          `AutoOpenDetails`, not a bare `<details>`, for the two arrivals that
+          have to land *inside* it: the `#release` fragment (a client
+          navigation never runs the browser's own reveal, so the target would
+          come back collapsed), and any `?notice=` the publish bounced back
+          with — the refusal and the confirmation both render on `FormStatus`
+          beside the button, which is the right place for them and no place at
+          all if the form is shut. Nothing here changes what publishing does:
+          `saveWaiverAction` writes the same decision from the same `material`
+          field, and `standingWaiverExposure` is still counted before the save
+          so the cost is stated before the tap (H-54, issue #720). */}
+      <AutoOpenDetails
+        id="release"
+        openOnHash="release"
+        open={Boolean(banner)}
+        className="group/release mt-6 scroll-mt-24"
+      >
+        <summary
+          className={`${buttonClass({ variant: "secondary" })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+        >
+          {t("waiversStaff.editRelease")}
+          {/* The disclosure caret rather than the navigate chevron: which way
+              it points is what says the release opens here (settled-questions). */}
+          <DisclosureCaret className="group-open/release:rotate-90" />
+        </summary>
+        <SectionCard padding="lg" className="mt-4">
+          <form action={saveWaiverAction} className="flex flex-col gap-5">
+            <FieldGrid columns={1} className="gap-y-5">
+              <Field
+                label={t("waiversStaff.fieldLabel")}
+                // Only for a shop that has never published one: a starting text
+                // nobody's counsel has read is the one thing about this box a
+                // reader could get wrong.
+                description={current ? undefined : t("waiversStaff.releaseDescription.sample")}
+              >
+                <textarea
+                  name="body"
+                  required
+                  rows={14}
+                  maxLength={12_000}
+                  defaultValue={current?.body ?? DEFAULT_WAIVER_BODY}
+                  placeholder={t("waiversStaff.placeholder")}
+                  className={controlClass}
+                />
+              </Field>
+            </FieldGrid>
+            <PublishRelease copy={publishCopy} standingSignatures={atRisk.divers > 0} />
+            {/* Beside the form, never a banner at the top of the page: the
               release is a fourteen-row textarea, so the top of this page is a
               screen and a half away from the control that was pressed. */}
-          <FormStatus tone={bannerTone}>
-            {banner}
-            {/* The shop now owes those divers a link, and every one of them is
+            <FormStatus tone={bannerTone}>
+              {banner}
+              {/* The shop now owes those divers a link, and every one of them is
                 a waiver row on their boat's station on the home. A door,
                 rather than leaving them to hunt for it (issue #790). */}
-            {notice === "waiver-resigning" && Number.isFinite(resigning) && resigning > 0 ? (
-              <>
-                {" "}
-                <Link
-                  href={`/shop/${shopSlug}`}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {t("waiversStaff.banner.resigningSendLink")}
-                </Link>
-              </>
-            ) : null}
-          </FormStatus>
-        </form>
-      </SectionCard>
+              {notice === "waiver-resigning" && Number.isFinite(resigning) && resigning > 0 ? (
+                <>
+                  {" "}
+                  <Link
+                    href={`/shop/${shopSlug}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {t("waiversStaff.banner.resigningSendLink")}
+                  </Link>
+                </>
+              ) : null}
+            </FormStatus>
+          </form>
+        </SectionCard>
+      </AutoOpenDetails>
 
       <section className="mt-10" aria-labelledby="signed-records-heading">
         <GroupLabel as="h2" id="signed-records-heading" className="scroll-mt-24">
