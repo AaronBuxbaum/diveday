@@ -6008,14 +6008,15 @@ for (const scheme of ["light", "dark"] as const) {
       // every shop sees today, and where all of this surface's copy lives.
       test(`WhatsApp settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/whatsapp");
-        await page.getByRole("heading", { name: "How connecting works" }).waitFor();
+        await page.getByRole("heading", { name: "No WhatsApp number connected" }).waitFor();
         await capture(page, "settings-whatsapp", scheme);
       });
 
       // Provider connections are disabled in the browser fleet because their
       // OAuth client secrets are not configured. The useful visual contract is
-      // the three-card coming-soon state, which should stay understandable as
-      // more providers join the registry.
+      // what a shop sees for a provider DiveDay has not switched on: one muted
+      // line and no control, which should stay understandable as more providers
+      // join the registry.
       test(`integrations settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/integrations");
         await page.getByRole("heading", { level: 1, name: "Shop integrations" }).waitFor();
