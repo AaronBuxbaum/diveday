@@ -92,7 +92,7 @@ test.describe("the switch, on a shop of the test's own", () => {
 
     await page.goto(`/shop/${privateShop.slug}/settings/display`);
     await expect(page.getByRole("heading", { name: "Our year on DiveDay’s pages" })).toBeVisible();
-    await page.getByLabel("Show our year on DiveDay’s pages").check();
+    await page.getByLabel("Show our year").check();
     await yearForm(page).getByRole("button", { name: "Save" }).click();
     await expect(page).toHaveURL(/notice=year-on-diveday/);
     await expect(page.getByText("Your year is on DiveDay’s pages.")).toBeVisible();
@@ -107,7 +107,7 @@ test.describe("the switch, on a shop of the test's own", () => {
     await expect(page.getByText("A real shop’s year")).toHaveCount(0);
 
     await page.goto(`/shop/${privateShop.slug}/settings/display`);
-    await page.getByLabel("Show our year on DiveDay’s pages").uncheck();
+    await page.getByLabel("Show our year").uncheck();
     await yearForm(page).getByRole("button", { name: "Save" }).click();
     await expect(page).toHaveURL(/notice=year-off-diveday/);
     await expect(page.getByText("Your year is off DiveDay’s pages.")).toBeVisible();

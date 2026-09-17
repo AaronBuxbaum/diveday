@@ -56,7 +56,6 @@
     "boatLine": {
       "heading": "Where each boat is in its day",
       "detail": "On the storefront, and on the link a diver shares. A stage word and a time, never who is aboard.",
-      "label": "Say where each boat is in its day",
       "valueOn": "On",
       "valueOff": "Off",
       "submit": "Save",
@@ -65,8 +64,7 @@
   },
   "year": {
     "heading": "Our year on DiveDay’s pages",
-    "description": "The year card, no money on it.",
-    "label": "Show our year on DiveDay’s pages",
+    "label": "Show our year",
     "detail": "Divers, boats out, sites, your busiest day and the strip of days. Never money, never a diver’s name.",
     "submit": "Save",
     "submitting": "Saving…",

@@ -56,7 +56,6 @@
     "boatLine": {
       "heading": "En qué punto de su día va cada barco",
       "detail": "En la página pública y en el enlace que comparte un buceador. Una palabra de estado y una hora, nunca quién va a bordo.",
-      "label": "Decir en qué punto de su día va cada barco",
       "valueOn": "Activado",
       "valueOff": "Desactivado",
       "submit": "Guardar",
@@ -65,8 +64,7 @@
   },
   "year": {
     "heading": "Nuestro año en las páginas de DiveDay",
-    "description": "La tarjeta del año, sin dinero en ella.",
-    "label": "Mostrar nuestro año en las páginas de DiveDay",
+    "label": "Mostrar nuestro año",
     "detail": "Buceadores, salidas, sitios, tu día más movido y la franja de días. Nunca dinero, nunca el nombre de un buceador.",
     "submit": "Guardar",
     "submitting": "Guardando…",

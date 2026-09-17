@@ -122,9 +122,14 @@ export default async function SafetyChecklistPage({
                   </form>
                   <form action={deleteChecklistItemAction.bind(null, shopSlug)}>
                     <input type="hidden" name="itemId" value={item.id} />
+                    {/* Ghost weight, not the bordered `danger`: five bordered
+                        red buttons down a five-row list shout at a shop
+                        editing its own words, and the two arrows beside each
+                        are already ghosts. The word stays "Delete"
+                        (ADR 20260820-every-delete-is-soft). */}
                     <button
                       type="submit"
-                      className={buttonClass({ variant: "danger", size: "sm" })}
+                      className={buttonClass({ variant: "danger-ghost", size: "sm" })}
                     >
                       {t("settings.safetyChecklist.delete")}
                     </button>

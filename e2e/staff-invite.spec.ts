@@ -110,7 +110,11 @@ test.describe("as owner", () => {
       .locator("li")
       .filter({ hasText: "Talia Reyes" })
       .filter({ visible: true });
-    await expect(restoredRow.getByText("Active")).toBeVisible();
+    // Back on, and the roster says so by saying nothing: only the exceptional
+    // states wear a badge, so "no Disabled pill and no Delete" is what an
+    // active account looks like.
+    await expect(restoredRow.getByText("Disabled")).toHaveCount(0);
+    await expect(restoredRow.getByRole("button", { name: /^Delete/ })).toHaveCount(0);
     // The row reads its roles as words now that they are a per-row disclosure
     // (ADR 20260827-the-shops-shelves, slice 9h).
     await expect(
@@ -192,13 +196,15 @@ test.describe("as owner", () => {
     await expect(ownerRow.getByText("the shop needs at least one owner")).toBeVisible();
     await expect(page.getByText("the shop needs at least one owner")).toHaveCount(1);
     await expect(ownerRoles).toHaveAttribute("aria-expanded", "true");
+    // Still on: the refusal changed nothing, and an untouched account carries
+    // no badge at all.
     await expect(
       page
         .locator("li")
         .filter({ hasText: DEV_STAFF_LOGINS.owner.email })
         .filter({ visible: true })
-        .getByText("Active"),
-    ).toBeVisible();
+        .getByText("Disabled"),
+    ).toHaveCount(0);
   });
 });
 

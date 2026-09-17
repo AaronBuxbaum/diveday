@@ -2793,6 +2793,12 @@ export default async function SettingsPage({
                 <p className="mt-1 text-sm">{t("settings.main.dataJobs.mediaDeletions.detail")}</p>
                 <ul className="mt-3 space-y-2 text-sm">
                   {pendingMediaDeletions.map((attempt) => (
+                    // The provider's own words are deliberately not here. A
+                    // shop read "Blob storage returned 503" beside a photo and
+                    // learned nothing it could act on; the two sentences above
+                    // already say what happened and what to do, and tonight's
+                    // retry is what actually fixes it. The reason stays on the
+                    // row in the database for whoever is on call.
                     <li key={attempt.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="font-medium">{t(MEDIA_KIND_KEYS[attempt.kind])}</span>
                       <span className="text-muted">
@@ -2800,7 +2806,6 @@ export default async function SettingsPage({
                         {t("settings.main.dataJobs.mediaDeletions.queued", {
                           date: formatShortDate(attempt.createdAt, locale, shop.timezone),
                         })}
-                        {attempt.lastError ? ` · ${attempt.lastError}` : ""}
                       </span>
                       <form action={retryMediaDeletionAction}>
                         <input type="hidden" name="attemptId" value={attempt.id} />

@@ -146,9 +146,10 @@
     "description": "Bring your fleet and its dated service records across from another system.",
     "help": "One row per unit, service event, or historical rental. Units match by tag first, then serial number; assignments match an existing diver by email or exact name, stay display-only, and never affect current availability.",
     "downloadTemplate": "Download gear CSV template",
-    "file": "CSV file",
     "submit": "Import gear history",
-    "pending": "Importing…"
+    "pending": "Importing…",
+    "chooseFile": "Choose CSV file",
+    "chooseDifferentFile": "Choose a different file"
   },
   "unit": {
     "deleted": {
