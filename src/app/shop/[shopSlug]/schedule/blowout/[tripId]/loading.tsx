@@ -5,8 +5,11 @@ import { sectionCardClass } from "@/components/ui/card";
  * Body-shaped skeleton for the blow-out page (ADR 20260804-instant-navigation):
  * header, then the confirm card — the lead, the money note, the roster of
  * divers who will be messaged, and the one danger button. Mirrors the page's
- * own markup — like the page, no `<main>` of its own; the shop layout's
- * `#shop-main-content` wrapper is the landmark.
+ * own markup, including its `<main>`: the page had none, so at desktop widths
+ * its eyebrow, `<h1>` and meta started at x=0 and the header's own control was
+ * clipped at the right edge of the viewport. The container is the trip
+ * family's — the staff work-surface tier, `max-w-5xl` — because this page is a
+ * departure's own surface (docs/design/principles.md §10).
  *
  * **The confirm state, not the record state.** One URL renders two quite
  * different bodies (`if (!blowout)` in `page.tsx`): the confirm card at
@@ -28,7 +31,7 @@ import { sectionCardClass } from "@/components/ui/card";
  */
 export default function BlowoutLoading() {
   return (
-    <div className="animate-pulse">
+    <main className="mx-auto w-full max-w-5xl flex-1 animate-pulse px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeaderSkeleton
         titleWidth="w-64 max-w-full"
         // The header carries `meta`, never a description: the trip's name and
@@ -67,6 +70,6 @@ export default function BlowoutLoading() {
         {/* The danger submit — `min-h-11`, like every button in the app. */}
         <div className="mt-6 h-11 w-44 rounded-lg bg-surface-sunken" />
       </div>
-    </div>
+    </main>
   );
 }

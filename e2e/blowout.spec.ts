@@ -72,7 +72,7 @@ test.describe("weather blow-out cascade", () => {
 
     // The trip record now reads cancelled and keeps the way back to the
     // cascade; the quiet per-trip cancel control is gone with it.
-    await page.getByRole("link", { name: "Back to the trip" }).click();
+    await page.getByRole("main").getByRole("link", { name: "Trip", exact: true }).click();
     await openTripAbout(page);
     // The cancellation badge lives in the shared masthead; the About panel is
     // open here so the trip's lifecycle controls remain in the same reading.

@@ -97,7 +97,14 @@ export default async function BlowoutPage({
 
   const header = (
     <ShopPageHeader
-      eyebrow={t("blowout.eyebrow")}
+      // The way up is the departure this is about, in the word its own tab
+      // uses — the page used to spend its eyebrow on a second copy of its own
+      // name ("Weather blow-out", above an `<h1>` already reading "Call a
+      // blow-out?") and put the only link back to the trip in the actions slot
+      // as a secondary button, where it competed with the one act on the page
+      // (principle 10, issue #823).
+      eyebrow={t("trips.subNav.trip")}
+      eyebrowHref={tripPath}
       title={blowout ? t("blowout.record.title") : t("blowout.confirm.title")}
       meta={
         <div className="flex flex-col gap-1 text-sm text-muted">
@@ -116,11 +123,6 @@ export default async function BlowoutPage({
           ) : null}
         </div>
       }
-      actions={
-        <Link href={tripPath} className={buttonClass({ variant: "secondary" })}>
-          {t("blowout.confirm.backToTrip")}
-        </Link>
-      }
     />
   );
 
@@ -128,7 +130,7 @@ export default async function BlowoutPage({
     const departed = trip.startsAt <= nowDate();
     const roster = await getTripRoster(db, shop.id, tripId);
     return (
-      <>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         <FlashParams params={["notice"]} />
         {header}
         <div className="mt-6">
@@ -174,7 +176,7 @@ export default async function BlowoutPage({
             </form>
           )}
         </SectionCard>
-      </>
+      </main>
     );
   }
 
@@ -192,7 +194,7 @@ export default async function BlowoutPage({
   );
 
   return (
-    <>
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       {header}
       <div className="mt-6">
@@ -301,6 +303,6 @@ export default async function BlowoutPage({
           </SubmitButton>
         </form>
       ) : null}
-    </>
+    </main>
   );
 }
