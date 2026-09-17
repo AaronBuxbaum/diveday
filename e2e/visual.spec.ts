@@ -6250,7 +6250,7 @@ for (const scheme of ["light", "dark"] as const) {
         const inviteSection = page.locator("section").filter({ hasText: "Invite someone" });
         await inviteSection.getByLabel("Full name").fill("Priya Nair");
         await inviteSection.getByLabel("Email").fill(email);
-        await inviteSection.getByLabel("Instructor").check();
+        await inviteSection.getByLabel("Instructor", { exact: true }).check();
         await inviteSection.getByRole("button", { name: "Send invite" }).click();
         await expect(page.getByText("Invite sent.")).toBeVisible();
 
