@@ -24,11 +24,20 @@ export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number]["id"];
 export type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
 
 /**
- * The twenty forms on the hub each carry their own section id through
- * `?saved=<id>` (set by the action that redirects back here), so the row that
- * changed comes back *open*, with the notice rendered inside it — a closed
+ * The forms that are still **rows on the hub** each carry their own section id
+ * through `?saved=<id>` (set by the action that redirects back here), so the row
+ * that changed comes back *open*, with the notice rendered inside it — a closed
  * disclosure hiding a refusal would be a form the staffer cannot see failed
  * (the same rule the trip About panel's rows state).
+ *
+ * **A row whose editor is a list, or more than about three fields, is not on
+ * this list — it has a page.** Boats, kinds of day, seasons and events, and
+ * dive packages each opened onto a run of forms with a Save and a Delete on
+ * every line; "Seasons and events" alone held six of them inside one `⌄`. The
+ * hub is a directory, and a directory row states an answer and opens the form
+ * that changes it (ADR 20260827-clearwater-surface-language, decision 6). Those
+ * four are `route` rows below and `SettingsDoorRow`s on the hub; their actions
+ * redirect to their own page with a plain `?notice=`.
  *
  * It lives here rather than in `SettingsPage.tsx` because the rail below needs
  * the same vocabulary, and two lists of section ids is exactly the drift ADR
@@ -52,12 +61,8 @@ export const SECTION_IDS = [
   "units",
   "divingOptions",
   "emergency",
-  "boats",
-  "lenses",
-  "seasonEvents",
   "rentals",
   "rentalPricing",
-  "divePackages",
   "tax",
   "passThrough",
   "stripe",
@@ -80,7 +85,6 @@ const SECTION_FRAGMENTS: Partial<Record<SectionId, string>> = {
   sendWindow: "send-window",
   flySafe: "fly-safe",
   rentalPricing: "rental-pricing",
-  divePackages: "dive-packages",
   passThrough: "pass-through",
 };
 
@@ -285,7 +289,7 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "boats",
     labelKey: "boats.heading",
     group: "your-shop",
-    target: { kind: "section", id: "boats" },
+    target: { kind: "route", path: "/settings/boats" },
     gate: "boats",
   },
   // No gate: a shore-diving shop with no hull still names its kinds of day
@@ -294,7 +298,7 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "lenses",
     labelKey: "lenses.heading",
     group: "your-shop",
-    target: { kind: "section", id: "lenses" },
+    target: { kind: "route", path: "/settings/kinds-of-day" },
   },
   // The shop's own year (issue #1485). Beside the words above it, and ungated
   // for the same reason: a shore-diving shop still has a mini-season.
@@ -302,7 +306,7 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "seasonEvents",
     labelKey: "seasonEvents.heading",
     group: "your-shop",
-    target: { kind: "section", id: "seasonEvents" },
+    target: { kind: "route", path: "/settings/seasons" },
   },
   // Money.
   {
@@ -330,7 +334,7 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "divePackages",
     labelKey: "settings.main.divePackages.heading",
     group: "money",
-    target: { kind: "section", id: "divePackages" },
+    target: { kind: "route", path: "/settings/dive-packages" },
     gate: "payments",
   },
   {

@@ -335,14 +335,16 @@ describe("the data-compliance queues in the Data group", () => {
 });
 
 describe("the diving options a shop runs", () => {
-  it("offers boat alongside shore and pool, and the boat list with it", async () => {
+  it("offers boat alongside shore and pool, and the door to the fleet with it", async () => {
     const element = await renderSettings("owner");
     const names = inputNamesIn(element);
     expect(names).toContain("hasBoatDiving");
     expect(names).toContain("hasShoreDiving");
     expect(names).toContain("hasPoolDiving");
-    // The seeded shop runs boats, so the fleet editor is reachable.
-    expect(names).toContain("capacity");
+    // The seeded shop runs boats, so the fleet editor is reachable — as a door
+    // now, not a form in a row: a list of hulls each carrying a Save and a
+    // Delete is a page, and the hub is a directory.
+    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/settings/boats`);
   });
 
   it("asks a boat shop for its divemaster target too", async () => {
@@ -363,12 +365,27 @@ describe("the diving options a shop runs", () => {
     });
     const names = inputNamesIn(element);
     // No hull to name, so the whole Boats row is gone rather than sitting there
-    // empty.
-    expect(names).not.toContain("boatId");
+    // empty. (The page it opens refuses the same way, with `notFound()`.)
+    expect(hrefsIn(element)).not.toContain(`/shop/${SHOP_SLUG}/settings/boats`);
     // The target survives losing the fleet — it never depended on one.
     expect(names).toContain("diversPerDivemaster");
     // The option itself stays on offer, so the shop can turn boats back on.
     expect(names).toContain("hasBoatDiving");
+  });
+
+  it("keeps the four editors that outgrew a row as doors, not forms", async () => {
+    // A row states an answer and opens the form that changes it (ADR
+    // 20260827-clearwater-surface-language, decision 6). These four opened onto
+    // lists of forms, so they are pages; the hub renders no control of theirs.
+    const element = await renderSettings("owner");
+    const hrefs = hrefsIn(element);
+    for (const segment of ["boats", "kinds-of-day", "seasons", "dive-packages"]) {
+      expect(hrefs).toContain(`/shop/${SHOP_SLUG}/settings/${segment}`);
+    }
+    const names = inputNamesIn(element);
+    for (const name of ["boatId", "lensId", "eventId", "packageId", "capacity", "diveCount"]) {
+      expect(names, `${name} is still on the hub`).not.toContain(name);
+    }
   });
 });
 
