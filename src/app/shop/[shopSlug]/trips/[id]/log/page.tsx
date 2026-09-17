@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
 import { PrintButton } from "@/components/PrintButton";
-import { ShopStat } from "@/components/ShopPageHeader";
-import { buttonClass } from "@/components/ui/button";
+import { EYEBROW_CLASS, EyebrowBackLink, ShopStat } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
-import { groupLabelClass } from "@/components/ui/ledger";
 import { Table, type TableMinWidth, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportIncidentRecord } from "@/db/authz";
@@ -140,7 +137,16 @@ export default async function IncidentExportPage({
       <header className="border-b border-border pb-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className={groupLabelClass("primary")}>{t("incidentExport.title")}</p>
+            {/* On screen the eyebrow is the way back to the departure this
+                documents, in the word its own tab uses; the only link up used
+                to be a ghost button beside Print, and it went to Today rather
+                than to the departure (principle 10, issue #823). On paper the
+                same line names the document instead: a record handed to an
+                insurer has to say what it is, and it has no navigation. */}
+            <EyebrowBackLink href={shopPath(shopSlug, "trips", tripId)} className="print:hidden">
+              {t("trips.subNav.trip")}
+            </EyebrowBackLink>
+            <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("incidentExport.title")}</p>
             <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{doc.meta.tripTitle}</h1>
             <p className="mt-1 text-muted">
               {formatShortDate(new Date(doc.meta.tripStartsAt), locale, doc.meta.timezone)} ·{" "}
@@ -154,9 +160,6 @@ export default async function IncidentExportPage({
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3 print:hidden">
-            <Link href={shopPath(shopSlug)} className={buttonClass({ variant: "ghost" })}>
-              {t("incidentExport.backToToday")}
-            </Link>
             <PrintButton label={t("shared.printButton.label")} />
           </div>
         </div>

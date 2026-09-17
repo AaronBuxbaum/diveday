@@ -1,8 +1,6 @@
 {
   "new": {
-    "eyebrow": "Reservas",
     "title": "Añadir una reserva",
-    "backToBoard": "Volver al tablero",
     "tripHeading": "¿Qué salida?",
     "fullExcluded": "Las salidas completas no aparecen en esta lista. Cambia las plazas de un barco, o programa otra salida ese día, desde el tablero.",
     "tripEmpty": "No queda ninguna plaza en las próximas salidas.",
@@ -13,7 +11,6 @@
     "addPersonAriaLabel": "Añadir a {name} a esta salida",
     "handEntryDescription": "El correo es opcional. Con el nombre basta para guardar la plaza y el resto puede llegar después.",
     "noticeInvalid": "Introduce un nombre para añadir a un buceador. El correo y el teléfono son opcionales aquí.",
-    "backToPicker": "Volver a la lista de salidas",
     "fromRequest": "Reserva desde una petición",
     "viewRequests": "Ver todas las peticiones",
     "relevantRequests": "Peticiones relevantes",

@@ -6086,10 +6086,10 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ visible: true })
           .first()
           .click();
-        // "Back to diver" for the reason the sibling capture below gives: the
+        // "Diver record" for the reason the sibling capture below gives: the
         // eyebrow text is identical on the list this came from, so waiting on
         // it resolves instantly against the old page.
-        await page.getByRole("link", { name: "Back to diver" }).waitFor();
+        await page.getByRole("link", { name: "Diver record" }).waitFor();
         // The refund control is the point of the capture, so the capture waits
         // for it rather than for the heading that arrives before it.
         await page.getByRole("button", { name: "Refund payment" }).waitFor();
@@ -6103,12 +6103,12 @@ for (const scheme of ["light", "dark"] as const) {
         const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
         await ledgerRow.filter({ visible: true }).first().waitFor();
         await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
-        // Not "Front desk": the orders list this just navigated from carries
-        // the identical eyebrow text, already on screen, so waiting on it
-        // resolves instantly against the *old* page instead of the new one —
-        // capture() then fires while orders/[id] is still behind its own
-        // loading.tsx skeleton. "Back to diver" only exists on the detail page.
-        await page.getByRole("link", { name: "Back to diver" }).waitFor();
+        // Not "Orders": the index this just navigated from wears that word as
+        // its own `<h1>`, already on screen, so waiting on it resolves
+        // instantly against the *old* page instead of the new one — capture()
+        // then fires while orders/[id] is still behind its own loading.tsx
+        // skeleton. "Diver record" only exists on the detail page.
+        await page.getByRole("link", { name: "Diver record" }).waitFor();
         await capture(page, "order-detail", scheme);
       });
 

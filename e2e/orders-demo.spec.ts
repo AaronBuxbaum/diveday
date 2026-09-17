@@ -74,9 +74,11 @@ test.describe("demo billing history", () => {
     await expect(page.getByText(`Raised ${rowDate}`)).toBeVisible();
     await expect(page.getByText(/Raised .+ · by .+/)).toBeVisible();
 
-    // Both journeys home, neither of them the browser's back button.
-    await expect(page.getByRole("link", { name: "Back to diver" })).toBeVisible();
-    await page.getByRole("link", { name: "Back to orders" }).click();
+    // Both journeys home, neither of them the browser's back button: the
+    // diver's record rides in the header's meta line as a quiet link, and the
+    // eyebrow is the way back to the index (principle 10).
+    await expect(page.getByRole("link", { name: "Diver record" })).toBeVisible();
+    await page.getByRole("main").getByRole("link", { name: "Orders", exact: true }).click();
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/orders$/);
   });
 

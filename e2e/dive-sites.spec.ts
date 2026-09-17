@@ -501,7 +501,7 @@ test.describe("staff", () => {
       page.getByRole("heading", { level: 1, name: "Molasses Reef 2", exact: true }),
     ).toBeVisible();
 
-    await page.getByRole("link", { name: "Dive-site library" }).click();
+    await page.getByRole("main").getByRole("link", { name: "Dive sites", exact: true }).click();
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/dive-sites$/);
     // Both sites now: the new one states the version it came from, while the
     // shop's own tailored v1 copy is untouched and still offered the update.
@@ -834,7 +834,7 @@ test("a template can be read in full before it is imported", async ({ page }) =>
 
   // L5's last step: the site is now a row in her own ledger, filed under the
   // difficulty the template published, and its words are hers to edit.
-  await page.getByRole("link", { name: "Dive-site library" }).click();
+  await page.getByRole("main").getByRole("link", { name: "Dive sites", exact: true }).click();
   await expect(page).toHaveURL(/\/dive-sites$/);
   const row = page.getByRole("link", { name: "Eagle Wreck", exact: true });
   await expect(row).toHaveCount(1);

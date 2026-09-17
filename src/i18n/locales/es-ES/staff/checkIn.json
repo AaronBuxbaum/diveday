@@ -118,10 +118,8 @@
     "noShowCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno, así que ese buceador no puede volver a ella. Asigna otro instructor primero."
   },
   "walkIn": {
-    "eyebrow": "Modo mostrador",
     "title": "Walk-in",
     "description": "No hace falta correo en el mostrador.",
-    "backToQueue": "Volver al check-in",
     "tripLabel": "¿Qué barco?",
     "tripEmpty": "No sale ningún barco en el próximo día y medio.",
     "tripEmptyAction": "Ver el calendario",

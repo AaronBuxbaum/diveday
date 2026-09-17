@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { TripPickerList } from "@/components/seat-diver/TripPickerList";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -14,6 +13,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, noticeRole, noticeUrl, shopPath } from "@/lib/staff-notices";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -114,18 +114,16 @@ export default async function WalkInPage({
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+      {/* The eyebrow is the way up, in the queue's own word. This page used to
+          spend it on "Counter mode" — the nav *group*, which principle 10
+          forbids — and carry a second back link underneath the header. Two
+          lines of chrome for one destination; now one. */}
       <ShopPageHeader
-        eyebrow={t("checkIn.walkIn.eyebrow")}
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.checkIn)}
+        eyebrowHref={shopPath(shopSlug, "check-in")}
         title={t("checkIn.walkIn.title")}
         description={t("checkIn.walkIn.description")}
       />
-      <Link
-        href={`/shop/${shopSlug}/check-in`}
-        className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline"
-      >
-        <DiveDayIcon name="arrow-left" className="size-4" />
-        {t("checkIn.walkIn.backToQueue")}
-      </Link>
 
       {banner ? (
         <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)} className="mt-6">

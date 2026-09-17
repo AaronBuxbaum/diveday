@@ -482,9 +482,15 @@ to *look for* anything. Content leads; chrome defers. Concretely:
 - **A surface below depth 1 names its parent and links to it.** Through the page's eyebrow where it
   has one — `ShopPageHeader`'s `eyebrowHref`, or `EyebrowBackLink` for a header that is not that
   component — and through an explicit "← Parent" link only where the page has no eyebrow to spend
-  (the diver record's "← All divers", the course editor's "← Courses"). Two forms, chosen by whether
+  (the printed sheets under `print/**`, whose `SheetDocument` shell wears a band rather than a
+  header and carries a `print:hidden` link to the print register). Two forms, chosen by whether
   the header has an eyebrow, and never a third: three ways up existed before this rule and which one
   a page got was a function of when it was written (issue #823).
+  A "Back to …" **button** in the header's actions slot is a third form, and so is a "← Back to …"
+  link stranded under the header. Both put navigation at the weight of the act the page is for —
+  the order detail spent two secondary buttons on it, the blow-out one, beside the danger button
+  that cancels a boat. `src/app/shop/eyebrow-way-up.test.ts` walks the staff tree and fails on a
+  page below depth 1 carrying neither form.
   The four trip surfaces were the case that named it. They are the deepest pages in the staff app,
   and their first header link was the Overview/Guests/Manifest/Prep strip — which moves you
   *sideways* between one departure's own pages and never back to the board. A crew member finishing

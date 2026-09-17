@@ -14,6 +14,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { routeEditorCopy } from "../_components/route-editor-copy";
 import { SiteFields } from "../_components/SiteFields";
@@ -158,7 +159,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
       <div>
         <ShopPageHeader
-          eyebrow={t("diveSites.backToLibrary")}
+          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
           eyebrowHref={back}
           title={t("diveSites.new.title")}
           description={t("diveSites.new.description")}
