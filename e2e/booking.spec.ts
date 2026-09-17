@@ -8,6 +8,7 @@ import {
   openThreadStep,
   openTripAbout,
   openTripActivity,
+  openTripMore,
   saveDiveIntent,
   signInAsOwner,
   signOut,
@@ -235,7 +236,9 @@ test.describe("staff", () => {
     const manageUrl = page.url();
 
     // Cancel: gone from public schedule; reinstate: back.
-    await openTripAbout(page);
+    // Standing a departure down is a rare act, so it lives in the About
+    // panel's "More for this departure" list now (slice B).
+    await openTripMore(page);
     await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
     // The cancellation badge is in the shared masthead and keeps the state
     // visible after the redirect; match the word rather than the lifecycle

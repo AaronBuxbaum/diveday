@@ -5,6 +5,7 @@ import {
   daysFromNow,
   e2eNow,
   manifestRow,
+  openDiverFileGroup,
   openManifestPerson,
   openRosterDetails,
   openTripFromBoard,
@@ -120,6 +121,9 @@ test("a diver note is shared with the live boat manifest", async ({ page }) => {
   await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
+  // Every file group is a closed door at every width; the notes group opens
+  // itself only for a diver who already has notes (slice A).
+  await openDiverFileGroup(page, "Diver notes");
   const notes = page.getByRole("region", { name: "Diver notes" });
   await notes.getByLabel("Add a note").fill(note);
   await notes.getByRole("button", { name: "Add note" }).click();
@@ -555,6 +559,7 @@ test("a section's outcome renders inside that section, not in a banner at the to
   await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
+  await openDiverFileGroup(page, "Gear and sizes");
   const gear = page.getByRole("region", { name: "Gear and sizes" });
   await gear.scrollIntoViewIfNeeded();
   // The two facts lead; the nine-control form is behind the group's one

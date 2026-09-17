@@ -348,6 +348,10 @@ test.describe("staff", () => {
     // (an unrelated field whose own label happens to contain "note" too), so
     // an unscoped getByLabel("Note") is ambiguous between the two.
     const service = page.getByRole("region", { name: "Service" });
+    // The clocks are the card and the five-field log form opens on request
+    // (slice A): logging bench work happens the day the work is done, not
+    // every time somebody looks the unit up.
+    await service.locator("summary").filter({ hasText: "Log a service" }).click();
     // Substring on purpose: the accessible name is "Note (optional)" — the
     // Field hint rides inside the label element.
     await service.getByLabel("Note").fill("Second stage rebuilt on the bench");
@@ -501,6 +505,9 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Reg #1" })).toBeVisible();
 
     const notes = page.getByRole("region", { name: "Notes" });
+    // The box opens on request too — the door carries the act's own words, so
+    // the textarea inside wears them as its label.
+    await notes.locator("summary").filter({ hasText: "Add a note" }).click();
     await notes.getByLabel("Add a note").fill("Diver mentioned the mouthpiece tastes off");
     await notes.getByRole("button", { name: "Add note" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Logged." })).toBeVisible();

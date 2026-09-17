@@ -1,6 +1,6 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, waiverLinkFromToast } from "./helpers";
+import { daysFromNow, openDiverFileGroup, waiverLinkFromToast } from "./helpers";
 
 /**
  * **A minor's release is signed twice** (ADR 20260907-guardian-co-signature).
@@ -44,6 +44,9 @@ test("a minor's release asks for a parent, refuses without one, and names who co
   // banner is a second `role="status"` beside the copy toast that
   // `waiverLinkFromToast` reads.
   await page.goto(record);
+  // The waiver group is a closed door at every width (slice A), and an unsent
+  // release is not open work, so it does not open itself.
+  await openDiverFileGroup(page, "Waiver");
   await page.getByText("Send options", { exact: true }).click();
   await page.getByRole("button", { name: "Copy link" }).click();
   await page.goto(await waiverLinkFromToast(page));
@@ -255,6 +258,7 @@ test("the diver record refuses a namesake co-signer and offers no tick", async (
 
   const waiverCard = page.getByRole("region", { name: "Waiver" });
   await page.goto(record);
+  await openDiverFileGroup(page, "Waiver");
   await waiverCard.getByText("Send options", { exact: true }).click();
   await waiverCard.getByRole("button", { name: "Mark signed on paper" }).click();
   await page.getByLabel("I have this diver’s signed release on file", { exact: false }).check();

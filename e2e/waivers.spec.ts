@@ -1,6 +1,7 @@
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   HELD_SEND_TIMEOUT_MS,
+  openDiverFileGroup,
   openTripFromBoard,
   openTripTab,
   sendWaiverForFirstDiver,
@@ -757,6 +758,9 @@ test("a paper release is recorded from the diver's own record, not just from a d
   // signature are its one row's actions, disclosed together as peers rather
   // than one send button with the rest ranked behind it.
   await expect(page.getByText("Not signed")).toBeVisible();
+  // Every file group is a closed door at every width (slice A), and an unsent
+  // release is not open work.
+  await openDiverFileGroup(page, "Waiver");
   const waiverGroup = page.getByRole("region", { name: "Waiver" });
   await waiverGroup.getByText("Send options", { exact: true }).click();
   await expect(waiverGroup.getByRole("button", { name: "Email waiver" })).toBeVisible();
@@ -823,6 +827,7 @@ test("a diver without a booking can receive an independent waiver from their rec
   // The four routes are one row behind the waiver group's "Send options"
   // disclosure (ADR 20260827-people-not-lists): what a record leads with is
   // where the release stands, not four ways to chase it.
+  await openDiverFileGroup(page, "Waiver");
   await page.getByText("Send options", { exact: true }).click();
   // A diver with both an address and a textable number is offered both, beside
   // the link every record always carries.

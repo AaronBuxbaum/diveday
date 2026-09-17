@@ -167,7 +167,13 @@ test.describe("give a dive", () => {
     // The id names a booking and authorizes nothing, so it is still safe to
     // carry in the accessible tree, where it is the share button's description.
     await expect(page.getByRole("button", { name: "Share your link" })).toBeVisible();
-    await expect(page.getByText(/\/s\/blue-mantis\?via=/)).toHaveCount(0);
+    // One element carries the URL, it is the one the button points at, and it
+    // is screen-reader-only until a refused clipboard makes "select the link
+    // and copy it yourself" advice rather than a dead end.
+    const printed = page.getByText(/\/s\/blue-mantis\?via=/);
+    await expect(printed).toHaveCount(1);
+    await expect(printed).toHaveAttribute("id", "buddy-link");
+    await expect(printed).toHaveClass("sr-only");
     const link = (await page.locator("#buddy-link").textContent()) ?? "";
     const via = new URL(link, workerBaseURL).searchParams.get("via");
     expect(via).toBeTruthy();

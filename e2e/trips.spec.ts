@@ -6,6 +6,7 @@ import {
   findTripOnBoard,
   openRosterDetails,
   openTripAbout,
+  openTripMore,
   seededTripId,
 } from "./helpers";
 
@@ -388,7 +389,9 @@ test.describe("undoing a removal after the trip is cancelled", () => {
     const other = makeActivitySafe(await page.context().newPage());
     try {
       await other.goto(tripPath);
-      await openTripAbout(other);
+      // Standing a departure down is a rare act, so it lives in the About
+      // panel's "More for this departure" list now (slice B).
+      await openTripMore(other);
       await other.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
       await expect(other.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
     } finally {

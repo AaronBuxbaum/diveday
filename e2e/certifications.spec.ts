@@ -6,6 +6,7 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
+  openDiverFileGroup,
   openThreadStep,
   openTripAbout,
   signInAsOwner,
@@ -40,6 +41,9 @@ test("staff captures and verifies level and specialty certifications before eith
   await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await page.getByRole("link", { name: /Priya Sharma/ }).click();
 
+  // Every file group is a closed door at every width (slice A); the cards
+  // group opens itself only for work aimed at it.
+  await openDiverFileGroup(page, "Certification records");
   // Level certification: capture lands as pending, only an explicit verify trusts it.
   await page.getByText("Add certification", { exact: true }).click(); // open the collapsed capture form
   const form = captureForm(page);
@@ -243,6 +247,7 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
   await page.goto("/shop/blue-mantis/divers?q=Rowan");
   await page.getByRole("link", { name: /Rowan Feld/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Rowan Feld" })).toBeVisible();
+  await openDiverFileGroup(page, "Certification records");
   const cards = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Certification records" }) })
@@ -395,6 +400,7 @@ test("a diver types their card in from the readiness page, and staff verify it t
   await page.goto("/shop/blue-mantis/divers");
   await page.getByRole("searchbox", { name: "Search divers" }).fill("Nadia Okonkwo");
   await page.getByRole("link", { name: /Nadia Okonkwo/ }).click();
+  await openDiverFileGroup(page, "Certification records");
   // The number the diver typed is on the row, where a staffer checking it
   // against the plastic can read it. This is the only place a diver can file
   // one: the booking form asked for a rung and a card between 2026-08-20 and
