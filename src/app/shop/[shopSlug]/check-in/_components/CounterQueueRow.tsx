@@ -122,15 +122,25 @@ function DiverIdentity({
    * Only the blocked branch passes this, and only because the alternative is a
    * genuine loss: a diver who came through the counter and went blocked since
    * and a diver who has not turned up at all render the same row otherwise, and
-   * a staffer working the blocked list has to know which of "chase them down"
-   * and "fix this while they wait" they are looking at. Quiet text rather than
-   * the drawn mark it replaces — the arrival happened, the gate is the work.
+   * a staffer working the blocked list has to know which of "chase them down",
+   * "fix this while they wait" and "radio the rail" they are looking at. Quiet
+   * text rather than the drawn mark it replaces — how far the diver got
+   * happened, the gate is the work.
    */
   showArrived?: boolean;
   t: StaffTranslator;
 }) {
   const meta = [
-    showArrived && row.bookingStatus === "checked_in" ? t("checkIn.row.arrived") : null,
+    // **Three cases, not two.** A diver who never turned up, one standing at
+    // the counter, and one who already tapped Boarded at the rail and went
+    // blocked since — and the third is a different job from the second: radio
+    // the rail, not work it while they wait. Saying "Checked in" about
+    // somebody who is on the boat sends the staffer to the wrong place.
+    // Still the quiet meta word, never the badge: the gate is what this row
+    // is out here for.
+    showArrived && (row.boarded || row.bookingStatus === "checked_in")
+      ? t(row.boarded ? "checkIn.boardedBadge" : "checkIn.row.arrived")
+      : null,
     showEmail && row.email ? row.email : null,
     // The one instruction the gift row needs, in the quiet slot the row already
     // has for a fact rather than as a second control: the diver in front of the
