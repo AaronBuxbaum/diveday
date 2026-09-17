@@ -16,6 +16,7 @@ import { bookingInvoiceLines } from "@/lib/courses";
 import { formatShortDate } from "@/lib/format";
 import { currencyFractionDigits, minorToMajor, toShopCurrency } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { createOrderAction } from "./actions";
@@ -159,7 +160,8 @@ export default async function NewOrderPage({
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={t("orders.new.eyebrow")}
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.orders)}
+        eyebrowHref={shopPath(shopSlug, "orders")}
         title={t("orders.new.title")}
         actions={
           <Link

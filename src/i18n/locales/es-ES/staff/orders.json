@@ -1,6 +1,5 @@
 {
   "new": {
-    "eyebrow": "Recepción",
     "title": "Nuevo pedido",
     "cancel": "Cancelar",
     "notice": {
@@ -47,10 +46,8 @@
     }
   },
   "detail": {
-    "eyebrow": "Recepción",
     "fallbackDescription": "Pedido",
-    "backToDiver": "Volver al buceador",
-    "backToOrders": "Volver a pedidos",
+    "diverRecord": "Ficha del buceador",
     "raisedOn": "Emitido el {date}",
     "createdBy": "por {name}",
     "status": {

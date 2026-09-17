@@ -1,6 +1,5 @@
 {
   "new": {
-    "eyebrow": "Front desk",
     "title": "New order",
     "cancel": "Cancel",
     "notice": {
@@ -47,10 +46,8 @@
     }
   },
   "detail": {
-    "eyebrow": "Front desk",
     "fallbackDescription": "Order",
-    "backToDiver": "Back to diver",
-    "backToOrders": "Back to orders",
+    "diverRecord": "Diver record",
     "raisedOn": "Raised {date}",
     "createdBy": "by {name}",
     "status": {

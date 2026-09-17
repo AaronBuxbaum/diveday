@@ -23,6 +23,7 @@ import { currencySymbol, majorToMinor, minorToMajor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 
@@ -289,7 +290,8 @@ export default async function OrderDetailPage({
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={t("orders.detail.eyebrow")}
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.orders)}
+        eyebrowHref={shopPath(shopSlug, "orders")}
         title={order.person.fullName}
         description={order.order.description || t("orders.detail.fallbackDescription")}
         meta={
@@ -297,6 +299,13 @@ export default async function OrderDetailPage({
           // orders index shows a date column, and losing it on the way into the
           // one order you opened is exactly the detail a refund argument turns
           // on. `created_by_person_id` was already stored — nothing new is kept.
+          //
+          // The diver's record rides here rather than in `actions`, as a
+          // `link`-weight control: an order has two parents — the Orders index
+          // staff arrive from, and the person whose money it is — and the
+          // eyebrow can only spend one. Two secondary buttons in the header
+          // said the second one at the same weight as the first and left the
+          // page's real act, Refund, competing with navigation.
           <p className="text-sm text-muted">
             {t("orders.detail.raisedOn", {
               date: formatShortDate(order.order.createdAt, locale, timezone),
@@ -304,27 +313,14 @@ export default async function OrderDetailPage({
             {order.createdBy
               ? ` · ${t("orders.detail.createdBy", { name: order.createdBy.fullName })}`
               : ""}
+            {" · "}
+            <Link
+              href={shopPath(shopSlug, "divers", order.person.id)}
+              className="font-medium text-primary hover:underline"
+            >
+              {t("orders.detail.diverRecord")}
+            </Link>
           </p>
-        }
-        actions={
-          // Two different journeys, so two doors rather than one guess: staff
-          // arrive here from the diver's record *and* from the Orders index,
-          // Reports' revenue card, and the command palette. Whichever way you
-          // came, the other is one click, not browser-back.
-          <>
-            <Link
-              href={`/shop/${shopSlug}/orders`}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("orders.detail.backToOrders")}
-            </Link>
-            <Link
-              href={`/shop/${shopSlug}/divers/${order.person.id}`}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("orders.detail.backToDiver")}
-            </Link>
-          </>
         }
       />
 

@@ -29,6 +29,7 @@ import type { CourseTemplateField } from "@/lib/course-template-sync";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { ConflictGuardedForm } from "./_components/ConflictGuardedForm";
@@ -167,7 +168,7 @@ export default async function EditCoursePage({
       <FlashParams params={["notice", "error", "field"]} />
       <div>
         <ShopPageHeader
-          eyebrow={t("courses.edit.backToCourses")}
+          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.courses)}
           eyebrowHref={back}
           title={course.title}
           meta={

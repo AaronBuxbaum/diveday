@@ -257,7 +257,6 @@
   },
   "ticket": {
     "eyebrow": "Rental",
-    "backToPrep": "Back to prep",
     "unitsHeading": "What you have",
     "dueBack": "Back by {date}."
   }

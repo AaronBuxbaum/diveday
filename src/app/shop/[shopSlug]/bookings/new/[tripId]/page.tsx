@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import {
   type BookingRequestCardItem,
   BookingRequestContext,
@@ -24,7 +22,8 @@ import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@
 import { dateRequestMatchFor, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
-import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
+import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
 import { SeatDiverPanel } from "../../../_components/SeatDiverPanel";
@@ -169,18 +168,17 @@ export default async function NewBookingDiverPage({
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
-      <ShopPageHeader eyebrow={t("bookings.new.eyebrow")} title={t("bookings.new.title")} />
-      {/* R9: step two used to point back at the board, exactly like step one —
-          so a staffer who picked the wrong departure had to leave the flow and
-          re-enter it. Back, here, means back one step: the departure picker.
-          Step one keeps the board link, because that is what is behind it. */}
-      <Link
-        href={`/shop/${shopSlug}/bookings/new${requestQuery}`}
-        className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline"
-      >
-        <DiveDayIcon name="arrow-left" className="size-4" />
-        {t("bookings.new.backToPicker")}
-      </Link>
+      {/* R9 put a second link under this header pointing back one step, to the
+          departure picker, because pointing at the board stranded a staffer
+          who had picked the wrong boat. `SelectedTripCard` below now carries
+          that door on the departure itself, which is where principle 10 wants
+          it, so the header spends its one way up on the board — the same word
+          step one names. */}
+      <ShopPageHeader
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.board)}
+        eyebrowHref={shopPath(shopSlug, "schedule", "board")}
+        title={t("bookings.new.title")}
+      />
 
       {banner ? (
         <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)} className="mt-6">

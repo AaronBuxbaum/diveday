@@ -118,10 +118,8 @@
     "noShowCourseRatioFull": "That session is at its instructor-to-student ratio, so that diver can’t go back on it. Assign another instructor first."
   },
   "walkIn": {
-    "eyebrow": "Counter mode",
     "title": "Walk-in",
     "description": "No email required at the counter.",
-    "backToQueue": "Back to check-in",
     "tripLabel": "Which boat?",
     "tripEmpty": "No boats sail in the next day and a half.",
     "tripEmptyAction": "View the schedule",

@@ -257,7 +257,6 @@
   },
   "ticket": {
     "eyebrow": "Alquiler",
-    "backToPrep": "Volver a preparación",
     "unitsHeading": "Lo que llevas",
     "dueBack": "Devolver antes del {date}."
   }

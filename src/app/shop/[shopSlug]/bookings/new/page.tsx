@@ -4,7 +4,6 @@ import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import {
   type BookingRequestCardItem,
   BookingRequestContext,
@@ -29,6 +28,8 @@ import {
 import { dateRequestMatchFor, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
 import { formatTimeRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
+import { shopPath } from "@/lib/staff-notices";
 import { spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { DeparturePicker, type DeparturePickerDay } from "./_components/DeparturePicker";
@@ -204,14 +205,14 @@ export default async function NewBookingPage({
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
-      <ShopPageHeader eyebrow={t("bookings.new.eyebrow")} title={t("bookings.new.title")} />
-      <Link
-        href={`/shop/${shopSlug}/schedule/board`}
-        className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline"
-      >
-        <DiveDayIcon name="arrow-left" className="size-4" />
-        {t("bookings.new.backToBoard")}
-      </Link>
+      {/* The eyebrow is the way up, in the board's own word. It used to read
+          "Bookings" — a nav group with no page behind it, which principle 10
+          forbids — with a second back link to the board underneath it. */}
+      <ShopPageHeader
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.board)}
+        eyebrowHref={shopPath(shopSlug, "schedule", "board")}
+        title={t("bookings.new.title")}
+      />
 
       {selectedRequest ? (
         <BookingRequestContext

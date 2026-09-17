@@ -16,7 +16,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import { openSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { isStepUpPurpose, type StepUpPurpose, safeStepUpReturnPath } from "@/lib/security-step-up";
 import { requireShopSurface } from "@/lib/session";
-import { type NoticeTone, noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
 import {
   beginTotpEnrollmentAction,
   disableTotpAction,
@@ -113,6 +113,8 @@ export default async function SecurityPage({
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.security.eyebrow")}
+        // The one settings sub-page whose eyebrow was not also its way up.
+        eyebrowHref={shopPath(shopSlug, "settings")}
         title={t("settings.security.title")}
       />
       {notice ? (

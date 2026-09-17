@@ -41,6 +41,7 @@ import { parseDockDayRhythm } from "@/lib/diver-planning";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { fetchTideStation, tideStationEcho } from "@/lib/tide-stations";
@@ -424,7 +425,7 @@ export default async function EditDiveSitePage({
       <FlashParams params={["notice", "error", "undo"]} />
       <div>
         <ShopPageHeader
-          eyebrow={t("diveSites.backToLibrary")}
+          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
           eyebrowHref={back}
           title={site.name}
           description={t("diveSites.edit.description")}
