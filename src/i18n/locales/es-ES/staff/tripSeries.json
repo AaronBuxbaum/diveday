@@ -1,6 +1,5 @@
 {
   "panel": {
-    "heading": "Salida repetida",
     "cadenceDaily": "todos los días",
     "cadenceUnset": "sin días fijos",
     "cadenceWeekly": "cada semana los {days}",
@@ -11,12 +10,11 @@
     "summaryAllDone": "{summary} · todas las fechas ya zarparon o se cancelaron.",
     "applying": "Aplicando…",
     "applyToSeries": "Aplicar los detalles de esta fecha a todas las fechas próximas",
+    "applyConfirm": "Sí, aplicar a todas las fechas",
     "applyDescription": "Copia el título, la descripción, la capacidad, los precios y el plan de inmersión de esta fecha a todas las próximas. Cada fecha conserva su hora, tripulación, listado y condiciones.",
     "saving": "Guardando…",
     "stopRepeating": "Dejar de repetir",
-    "stopRepeatingDescription": "Mantiene todas las fechas que ya están en el calendario y deja de añadir nuevas.",
     "startRepeating": "Volver a repetir",
-    "startRepeatingDescription": "Devuelve al calendario {days, plural, one {el próximo # día} other {los próximos # días}} de esta salida, y los mantiene ahí.",
     "editCadence": "Cambiar los días en que sale",
     "editCadenceDescription": "Añadir un día lo pone en el calendario al momento. Quitar uno no toca las fechas ya programadas: te las mostramos, con quién tiene reserva, y te preguntamos.",
     "saveCadence": "Guardar los días",
@@ -28,6 +26,8 @@
     "offCadenceDescriptionBooked": "{count, plural, one {# de ellas lleva buceadores con reserva. Conservan su reserva y su historial, y te conviene avisarles.} other {# de ellas llevan buceadores con reserva. Conservan su reserva y su historial, y te conviene avisarles.}}",
     "cancelling": "Cancelando…",
     "cancelAllUpcoming": "Cancelar todas las fechas próximas",
+    "cancelAllConfirm": "Sí, cancelar todas las fechas próximas",
+    "neverMind": "Mejor no",
     "cancelDescription": "{count, plural, one {Quita del calendario público la # fecha restante.} other {Quita del calendario público las # fechas restantes.}} También detiene la repetición. Puedes reactivar cualquier fecha desde su propia página."
   },
   "notices": {

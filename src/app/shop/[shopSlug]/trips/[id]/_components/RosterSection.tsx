@@ -536,8 +536,8 @@ export function RosterSection({
     const notes = notesByBooking.get(booking.id) ?? [];
     // This row's blockers, split against the group's shared lines above: the
     // sentences the group already states for much of the boat shrink to a
-    // one-line count here, the ones particular to this diver keep their full
-    // sentence, and the complete per-diver list waits in the reference panel.
+    // one-line count here, and the ones particular to this diver keep their
+    // full sentence.
     const blockerTexts =
       readiness && readiness.status !== "ready"
         ? readiness.blockers.map((blocker) => ({
@@ -549,7 +549,18 @@ export function RosterSection({
       ({ blocker, text }) =>
         UNGROUPABLE_BLOCKER_CODES.has(blocker.code) || !sharedBlockerTexts.has(text),
     );
-    const sharedBlockerCount = blockerTexts.length - uniqueBlockers.length;
+    // **The reference panel says only what the row does not** (design review
+    // 2026-09-17). It used to re-list `blockerTexts` whole, so an expanded row
+    // carried every sentence three times: once in the group band above, once
+    // in the row's own red alert, and once more here, word for word. What the
+    // row genuinely cannot show is the *shared* half — the alert compresses
+    // those to "1 blocker shared with other divers, listed above" — so that is
+    // what this panel spells out, and it renders nothing when there are none.
+    const sharedBlockers = blockerTexts.filter(
+      ({ blocker, text }) =>
+        !UNGROUPABLE_BLOCKER_CODES.has(blocker.code) && sharedBlockerTexts.has(text),
+    );
+    const sharedBlockerCount = sharedBlockers.length;
     const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
     const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
     // The suit goes out to a diver the shop has no drysuit card for. Behind
@@ -1263,11 +1274,11 @@ export function RosterSection({
             </div>
           ) : null}
 
-          {sharedBlockerCount > 0 ? (
+          {sharedBlockers.length > 0 ? (
             <div>
               <GroupLabel as="p">{t("trips.roster.blockersReferenceHeading")}</GroupLabel>
               <ul className="mt-1 grid gap-1 text-sm text-muted">
-                {blockerTexts.map(({ text }) => (
+                {sharedBlockers.map(({ text }) => (
                   <li key={text}>{text}</li>
                 ))}
               </ul>
@@ -1361,7 +1372,13 @@ export function RosterSection({
                 confirmLabel={t("trips.roster.removeBookingConfirmButton")}
                 cancelLabel={t("trips.roster.neverMind")}
                 pendingLabel={t("trips.roster.removing")}
-                triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
+                // `danger-ghost`, which is this variant's own stated case: a
+                // destructive choice among quiet siblings. On `ghost` the
+                // trigger rendered as muted body text at the foot of the
+                // panel, indistinguishable from the sentences above it, so
+                // the one irreversible act on the row was the only thing
+                // there that did not read as a control.
+                triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
                 confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
               />
             </form>

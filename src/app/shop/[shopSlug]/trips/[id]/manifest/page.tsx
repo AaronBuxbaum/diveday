@@ -812,7 +812,6 @@ export default async function TripManifestPage({
         current={stage?.stage ?? null}
         copy={{
           legend: t("manifest.stage.legend"),
-          consequence: t("manifest.stage.consequence"),
           errorRefusal: t("manifest.stage.errorRefusal"),
           taps: TRIP_STAGES.map((value) => ({
             stage: value,

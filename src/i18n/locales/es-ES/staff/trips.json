@@ -20,7 +20,6 @@
     "whoCanBook": "Quién puede reservar",
     "boatAndCrew": "Barco y tripulación",
     "repeats": "Repetición",
-    "edit": "Editar",
     "noneSet": "Aún no configurado",
     "noConditions": "No hay previsión de la tripulación publicada",
     "noRequirements": "No hay requisitos de admisión configurados",
@@ -31,7 +30,8 @@
     "perSeat": "por plaza",
     "seatsLabel": "de {capacity, plural, one {# plaza} other {# plazas}}",
     "openLabel": "libres",
-    "cancel": "Cancelar esta salida"
+    "cancel": "Cancelar esta salida",
+    "more": "Más para esta salida"
   },
   "notices": {
     "nextStepSaved": "Siguiente paso guardado.",
@@ -146,12 +146,11 @@
     "cancelTrip": "Cancelar salida",
     "cancelling": "Cancelando…",
     "cancelHint": "La quita del calendario público y notifica a los buceadores con reserva.",
+    "cancelConfirm": "Sí, cancelar esta salida",
     "weatherBlowout": "Cancelación por mal tiempo…",
-    "weatherBlowoutHint": "Cancela por mal tiempo y envía a cada buceador sus opciones para reservar de nuevo.",
     "viewBlowout": "Ver la cascada de la cancelación"
   },
   "details": {
-    "heading": "Detalles",
     "titleLabel": "Título",
     "descriptionLabel": "Descripción",
     "meetingPointLabelLabel": "Punto de encuentro",
@@ -174,10 +173,7 @@
     "saving": "Guardando…",
     "saveChanges": "Guardar cambios",
     "edit": "Editar detalles",
-    "summaryPrice": "{price} por buceador",
     "summaryNoPrice": "Sin precio establecido, así que la página de reservas no muestra tarifa",
-    "summaryDeposit": "Depósito de {amount} al reservar",
-    "summaryCancellation": "Ventana de cancelación gratuita de {hours, plural, one {# hora} other {# horas}}",
     "arrivalGuidanceLegend": "Indicaciones para llegar",
     "arrivalGuidanceDescription": "Los buceadores leen todo esto en la página de su salida.",
     "arrivalLandmarkLabel": "Referencia",
@@ -201,7 +197,6 @@
     "hoursBeforeSuffix": "horas de antelación"
   },
   "conditions": {
-    "heading": "Previsión de la tripulación",
     "description": "Se muestra a los buceadores en lugar del pronóstico marino automático.",
     "holdLabel": "Suspensión por condiciones",
     "holdDescription": "Pausa nuevas reservas, publica el estado de decisión final y avisa por correo a los buceadores con reserva cuando el envío esté configurado.",
@@ -235,6 +230,7 @@
     "noCrew": "Todavía no hay tripulación que asignar. Tus instructores y divemasters aparecerán aquí en cuanto se unan al equipo.",
     "notAssignedYet": "Todavía no asignado.",
     "manageShifts": "Gestionar turnos",
+    "edit": "Editar tripulación",
     "onShift": "De turno",
     "notOnShift": "Sin turno",
     "roleAria": "Puesto que ocupa {name} en esta salida",
@@ -259,7 +255,6 @@
     "emptySummary": "Aún no hay nota. Los resúmenes se envían sin ella."
   },
   "requirements": {
-    "heading": "Requisitos de preparación",
     "courseDescription": "Esta sesión mantiene las reglas de admisión con las que se creó. Editar el curso más tarde no cambiará lo que necesitan los alumnos ya inscritos.",
     "certOrHigher": "{level} o superior",
     "requireWaiver": "Exigir una exención de responsabilidad firmada",

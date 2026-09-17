@@ -1,6 +1,5 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import {
   CERTIFICATION_LEVEL_KEYS,
@@ -10,7 +9,6 @@ import {
 import { staffTranslator } from "@/i18n/staff-messages";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { FormNotice } from "@/lib/staff-notices";
-import { EditDisclosure } from "./EditDisclosure";
 import type { Requirement, SiteRequirement, Trip } from "./types";
 
 /**
@@ -37,7 +35,6 @@ export function RequirementsSection({
   siteRequirement,
   siteNames,
   locale,
-  embedded = false,
 }: {
   action: (formData: FormData) => void;
   /** This form's own outcome, rendered beside its Save button. */
@@ -53,8 +50,6 @@ export function RequirementsSection({
    */
   siteNames: string[];
   locale: string;
-  /** The Trip surface's About panel supplies the outer section chrome. */
-  embedded?: boolean;
 }) {
   const t = staffTranslator(locale);
   // The site's extra rules read as one locale-appropriate list ("X, Y and Z"),
@@ -105,67 +100,18 @@ export function RequirementsSection({
       })}
     </p>
   );
-  // The gate as the list of things a diver must actually bring — and only
-  // those. "Payment: not required" and "Specialties: None required" rendered
-  // the absence of a rule as a rule (design/principles.md #9); what the gate
-  // does not ask for simply isn't on it, and a trip that asks for nothing says
-  // so in one quiet sentence. Exact words, never color alone: these lines are
-  // what admission and readiness will enforce (principle 6).
-  const requirementLines =
-    requirement === null
-      ? []
-      : [
-          requirement.requiresWaiver ? t("trips.requirements.summaryWaiver") : null,
-          !trip.course && requirement.requiresPayment
-            ? t("trips.requirements.summaryPayment")
-            : null,
-          requirement.minimumCertificationLevel
-            ? t("trips.requirements.summaryCert", {
-                level: t(CERTIFICATION_LEVEL_KEYS[requirement.minimumCertificationLevel]),
-              })
-            : null,
-          ...(trip.course
-            ? []
-            : requirement.requiredSpecialties.map((specialty) =>
-                t("trips.requirements.summarySpecialtyCard", {
-                  specialty: t(SPECIALTY_KEYS[specialty]),
-                }),
-              )),
-          !trip.course && requirement.requiresNitrox
-            ? t("trips.requirements.summaryNitroxCard")
-            : null,
-        ].filter((line): line is string => Boolean(line));
-  const requirementSummary =
-    requirementLines.length > 0 ? (
-      <ul className="grid gap-2 text-sm">
-        {requirementLines.map((line) => (
-          <li key={line} className="flex gap-2">
-            <span aria-hidden="true" className="text-muted">
-              •
-            </span>
-            <span className="font-medium">{line}</span>
-          </li>
-        ))}
-      </ul>
-    ) : (
-      <p className="text-sm text-muted">{t("trips.requirements.summaryNoneRequired")}</p>
-    );
   return (
-    <SectionCard
-      id="requirements"
-      padding={embedded ? "none" : "lg"}
-      title={t("trips.requirements.heading")}
-      // A course session keeps the rules it was created with, which is a fact
-      // about *this* session that nothing else on screen carries. An ordinary
-      // trip's subtitle used to sit here too, restating the heading as a
-      // sentence ("A diver stays blocked until every one of them checks out"),
-      // and it is gone — the list below is the answer.
-      description={trip.course ? t("trips.requirements.courseDescription") : undefined}
-      className={`${embedded ? "!rounded-none !border-0 !bg-transparent" : ""} scroll-mt-24`}
-    >
+    /* The About row above is this section's heading, its summary and its
+       disclosure control all at once, so what is left here is the part the row
+       cannot carry: the site's own extra gate, the fail-closed warning, and the
+       form (`TripAboutSection`, design review 2026-09-17). */
+    <div className="flex flex-col gap-2 pt-1">
       {trip.course ? (
         <>
-          {requirementSummary}
+          {/* A course session keeps the rules it was created with, which is a
+              fact about *this* session that nothing else on screen carries.
+              The rules themselves are the row's own value, one line up. */}
+          <p className="text-sm text-muted">{t("trips.requirements.courseDescription")}</p>
           {hasSiteRequirement ? siteNote("course") : null}
         </>
       ) : (
@@ -178,105 +124,93 @@ export function RequirementsSection({
             <p className="text-sm font-medium text-warning-strong">
               {t("trips.requirements.notConfigured")}
             </p>
-          ) : (
-            requirementSummary
-          )}
+          ) : null}
           {hasSiteRequirement ? siteNote("trip") : null}
-          <EditDisclosure
-            label={t("trips.requirements.edit")}
-            open={Boolean(status) || requirement === null}
-          >
-            {/* Flush inside the card, like the Details form — the card is the
-                container, so the editor needs no chrome of its own. */}
-            <form action={action} className="mt-2">
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-end">
-                <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
-                  <input
-                    name="requiresWaiver"
-                    type="checkbox"
-                    defaultChecked={requirement?.requiresWaiver ?? true}
-                    className="size-4 accent-primary"
-                  />
-                  {t("trips.requirements.requireWaiver")}
-                </label>
-                <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
-                  <input
-                    name="requiresPayment"
-                    type="checkbox"
-                    defaultChecked={requirement?.requiresPayment ?? false}
-                    className="size-4 accent-primary"
-                  />
-                  {t("trips.requirements.requirePayment")}
-                </label>
-                <FieldGrid columns={1}>
-                  <Field label={t("trips.requirements.minimumCertificationLabel")}>
-                    <select
-                      name="minimumCertificationLevel"
-                      defaultValue={requirement?.minimumCertificationLevel ?? "open_water"}
-                      className={controlClass}
-                    >
-                      <option value="">{t("trips.requirements.noCardRequired")}</option>
-                      {/* Recreational rungs only — a departure may not demand a
+          <form action={action}>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-end">
+              <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
+                <input
+                  name="requiresWaiver"
+                  type="checkbox"
+                  defaultChecked={requirement?.requiresWaiver ?? true}
+                  className="size-4 accent-primary"
+                />
+                {t("trips.requirements.requireWaiver")}
+              </label>
+              <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
+                <input
+                  name="requiresPayment"
+                  type="checkbox"
+                  defaultChecked={requirement?.requiresPayment ?? false}
+                  className="size-4 accent-primary"
+                />
+                {t("trips.requirements.requirePayment")}
+              </label>
+              <FieldGrid columns={1}>
+                <Field label={t("trips.requirements.minimumCertificationLabel")}>
+                  <select
+                    name="minimumCertificationLevel"
+                    defaultValue={requirement?.minimumCertificationLevel ?? "open_water"}
+                    className={controlClass}
+                  >
+                    <option value="">{t("trips.requirements.noCardRequired")}</option>
+                    {/* Recreational rungs only — a departure may not demand a
                           working rating of a paying diver (issue #630). */}
-                      {REQUIRABLE_CERTIFICATION_LEVEL_KEYS.map(([value, key]) => (
-                        <option key={value} value={value}>
-                          {t(key)}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                </FieldGrid>
-              </div>
-              <fieldset className="mt-5">
-                <legend className="text-sm font-medium">
-                  {t("trips.requirements.requiredSpecialtiesLegend")}
-                </legend>
-                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
-                    <label
-                      key={value}
-                      className="flex min-h-11 items-center gap-2 text-sm font-medium"
-                    >
-                      <input
-                        name="specialty"
-                        type="checkbox"
-                        value={value}
-                        defaultChecked={requirement?.requiredSpecialties?.includes(
-                          value as keyof typeof SPECIALTY_KEYS,
-                        )}
-                        className="size-4 accent-primary"
-                      />
-                      {t(key)}
-                    </label>
-                  ))}
-                  <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+                    {REQUIRABLE_CERTIFICATION_LEVEL_KEYS.map(([value, key]) => (
+                      <option key={value} value={value}>
+                        {t(key)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </FieldGrid>
+            </div>
+            <fieldset className="mt-5">
+              <legend className="text-sm font-medium">
+                {t("trips.requirements.requiredSpecialtiesLegend")}
+              </legend>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
+                  <label
+                    key={value}
+                    className="flex min-h-11 items-center gap-2 text-sm font-medium"
+                  >
                     <input
-                      name="requiresNitrox"
+                      name="specialty"
                       type="checkbox"
-                      defaultChecked={requirement?.requiresNitrox ?? false}
+                      value={value}
+                      defaultChecked={requirement?.requiredSpecialties?.includes(
+                        value as keyof typeof SPECIALTY_KEYS,
+                      )}
                       className="size-4 accent-primary"
                     />
-                    {t("trips.requirements.nitrox")}
+                    {t(key)}
                   </label>
-                </div>
-              </fieldset>
-              <div className="mt-5 flex flex-wrap items-center gap-3">
-                {/* One weight for a section's Save — the default primary the
+                ))}
+                <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+                  <input
+                    name="requiresNitrox"
+                    type="checkbox"
+                    defaultChecked={requirement?.requiresNitrox ?? false}
+                    className="size-4 accent-primary"
+                  />
+                  {t("trips.requirements.nitrox")}
+                </label>
+              </div>
+            </fieldset>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              {/* One weight for a section's Save — the default primary the
                     other Overview forms share (DetailsSection's comment states
                     the rule). Only one disclosure is open at a time, so the
                     primaries never compete. */}
-                <SubmitButton
-                  pendingLabel={t("trips.requirements.saving")}
-                  className={buttonClass()}
-                >
-                  {t("trips.requirements.save")}
-                </SubmitButton>
-                <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
-              </div>
-            </form>
-          </EditDisclosure>
+              <SubmitButton pendingLabel={t("trips.requirements.saving")} className={buttonClass()}>
+                {t("trips.requirements.save")}
+              </SubmitButton>
+              <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
+            </div>
+          </form>
         </>
       )}
-    </SectionCard>
+    </div>
   );
 }

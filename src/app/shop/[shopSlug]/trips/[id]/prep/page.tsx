@@ -11,7 +11,7 @@ import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
-import { FIGURE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { FIGURE_CLASS, LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getTripPrep } from "@/db/trips-prep";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { diveRecencyText } from "@/i18n/readiness-labels";
@@ -362,11 +362,15 @@ export default async function TripPrepPage({
             <section
               aria-labelledby={scopedId(idPrefix, "nitrox-blocked-heading")}
               // Warning tone, canonical geometry: this and its two neighbours
-              // below are the same card as everything else on the page, and
-              // only the border and fill say which of them is a problem.
-              className="mt-6 rounded-panel border border-warning/40 bg-warning/10 p-4 sm:p-5"
+              // below are the same card as everything else on the page — the
+              // panel radius, the bed shadow, `SectionCard`'s own padding and
+              // its heading rung — and only the border and fill say which of
+              // them is a problem. `SectionCard` has no tone prop on purpose
+              // (see its docblock), so a tone-carrying panel spells the chrome
+              // here and matches it rung for rung.
+              className="mt-8 rounded-panel border border-warning/40 bg-warning/10 p-4 shadow-bed sm:p-5"
             >
-              <h2 id={scopedId(idPrefix, "nitrox-blocked-heading")} className={SECTION_TITLE_CLASS}>
+              <h2 id={scopedId(idPrefix, "nitrox-blocked-heading")} className={LEAD_TITLE_CLASS}>
                 {t("trips.prep.nitroxBlockedHeading")}
               </h2>
               <p className="mt-1 text-sm">{t("trips.prep.nitroxBlockedDescription")}</p>
@@ -394,7 +398,7 @@ export default async function TripPrepPage({
               question that already has half an answer. */}
           {checklist.diversWithIncompleteFit.length > 0 ? (
             <SectionCard
-              className="mt-6"
+              className="mt-8"
               title={t("trips.prep.missingSizesHeading")}
               description={t("trips.prep.missingSizesDescription")}
             >
@@ -452,9 +456,9 @@ export default async function TripPrepPage({
           {checklist.diversNeedingStaffFit.length > 0 ? (
             <section
               aria-labelledby={scopedId(idPrefix, "staff-fit-heading")}
-              className="mt-6 rounded-panel border border-warning/40 bg-warning/5 p-4 sm:p-5"
+              className="mt-8 rounded-panel border border-warning/40 bg-warning/5 p-4 shadow-bed sm:p-5"
             >
-              <h2 id={scopedId(idPrefix, "staff-fit-heading")} className={SECTION_TITLE_CLASS}>
+              <h2 id={scopedId(idPrefix, "staff-fit-heading")} className={LEAD_TITLE_CLASS}>
                 {t("trips.prep.staffFitHeading")}
               </h2>
               <p className="mt-1 text-sm text-muted">{t("trips.prep.staffFitDescription")}</p>
