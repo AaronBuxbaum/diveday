@@ -102,11 +102,21 @@ function waiverSummary(
   locale: string,
   timezone: string,
   state: WaiverRowState,
+  overriddenReferralAt: Date | null,
 ): string {
   const text = waiverRowStateText(t, state);
   const date = (value: Date) => formatCalendarDate(calendarDateInTimezone(value, timezone), locale);
   if (diver.waiver.state === "current") {
-    return `${text} · ${t("divers.stats.waiverGoodUntil", { date: date(diver.waiver.expiresAt) })}`;
+    const goodUntil = `${text} · ${t("divers.stats.waiverGoodUntil", { date: date(diver.waiver.expiresAt) })}`;
+    // **A referral the current signature replaced instead of answering**
+    // (issue #1282). "Signed · Good until …" is true and, on its own, the
+    // wrong thing to read across a counter: the release standing today stands
+    // on a questionnaire the diver re-answered clean after a physician was
+    // asked. The closed door is where a staffer decides whether to open it at
+    // all, so the door has to carry it.
+    return overriddenReferralAt
+      ? `${goodUntil} · ${t("divers.stats.waiverReferralOpen", { date: date(overriddenReferralAt) })}`
+      : goodUntil;
   }
   if (diver.waiver.state === "medical_review") {
     return `${text} · ${t("divers.stats.waiverHeldSince", { date: date(diver.waiver.at) })}`;
@@ -198,10 +208,16 @@ export function WaiverGroup({
     <DiverFileGroupDisclosure
       id="waiver"
       label={t("divers.stats.waiver")}
-      summary={waiverSummary(diver, t, locale, timezone, state)}
+      summary={waiverSummary(diver, t, locale, timezone, state, overriddenReferralAt)}
+      // The two facts a closed "Signed" door would hide are the two that stand
+      // on somebody's word rather than on a document: a signature that ended a
+      // referral without answering it is the second (issue #1282).
+      summaryTone={overriddenReferralAt ? "warning" : "muted"}
       // A hold is the one waiver state with work that only this group can take:
       // the physician's answer goes in here, and nowhere else in the product.
-      open={Boolean(status) || heldForMedical}
+      // An unanswered referral is the other: the sentence naming it, and the
+      // clearance door that resolves it, are both inside.
+      open={Boolean(status) || heldForMedical || Boolean(overriddenReferralAt)}
       stacked
       className="mt-8"
     >
