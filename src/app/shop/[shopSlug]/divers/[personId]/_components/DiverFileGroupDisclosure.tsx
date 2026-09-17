@@ -103,7 +103,29 @@ export function DiverFileGroupDisclosure({
       // element's. The `toggle` this mutation fires is asynchronous, and until
       // it lands React still believes the group is shut.
       setIsOpen(true);
-      window.requestAnimationFrame(() => {
+      // **The scroll waits for the body to be there.** `open` lands at once,
+      // but the group's body arrives on a transition: `::details-content` goes
+      // from `content-visibility: hidden` to visible a frame or so later
+      // (globals.css, "the disclosure's body arrives"), and a `scrollIntoView`
+      // aimed into a subtree the renderer is still skipping moves nothing at
+      // all — no scroll, no error, and the control the fix promised sits one
+      // line below the fold. Measured, not guessed: a single
+      // `requestAnimationFrame` won three runs in five under a full-suite load
+      // (`e2e/divers.spec.ts`, "the status ledger's fix lands on the control
+      // that clears it"), and the probe showed the target's chain reading
+      // `open=true cv=hidden` at the moment of the losing call. So the scroll
+      // is deferred, frame by frame, until `checkVisibility()` says the target
+      // is rendered — bounded, so a target that is hidden for some other
+      // reason cannot hold a frame loop open.
+      let framesWaited = 0;
+      const scrollOnceRendered = () => {
+        const rendered =
+          typeof target.checkVisibility === "function" ? target.checkVisibility() : true;
+        if (!rendered && framesWaited < 60) {
+          framesWaited += 1;
+          window.requestAnimationFrame(scrollOnceRendered);
+          return;
+        }
         target.scrollIntoView({ block: "nearest" });
         const focusTarget =
           target instanceof HTMLElement && target.tabIndex >= 0
@@ -112,7 +134,8 @@ export function DiverFileGroupDisclosure({
                 "button, a, input, select, textarea, [tabindex]:not([tabindex='-1'])",
               );
         focusTarget?.focus({ preventScroll: true });
-      });
+      };
+      window.requestAnimationFrame(scrollOnceRendered);
     };
 
     openHashTarget();
