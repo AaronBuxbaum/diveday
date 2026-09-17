@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, makeActivitySafe, READ_ONLY, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
@@ -10,6 +11,18 @@ import {
   openTripAbout,
   publicTripUrl,
 } from "./helpers";
+
+/**
+ * **"More details" on the date-request composer** (2026-09-17). An alternative
+ * date, where the diver is up to and anything else sit behind one disclosure —
+ * closed at rest, and still inside the form, because a `<details>` hides its
+ * content without taking it out of the submission.
+ *
+ * `page.locator("summary")` rather than a role query: Playwright gives
+ * `<summary>` no implicit role.
+ */
+const openMoreDetails = (page: Page) =>
+  page.locator("summary").filter({ hasText: "More details" }).click();
 
 test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba session and save rental preferences", async ({
   page,
@@ -147,23 +160,30 @@ test.describe("staff", () => {
     await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
     await expect(page.getByText("$249")).toBeVisible();
 
-    // Back on the roster, the worded Hide toggle takes the course off
-    // scheduling lists. No banner and no navigation — the toggle's own word
-    // and the "Hidden" badge update in place, which is also what keeps the
-    // click from jumping the page.
+    // Taking the course off the diver's catalog is the editor's own rare act,
+    // below the save bar — not a standing button on all 55 roster rows. No
+    // banner and no navigation: the button's own word and the header's
+    // "Hidden from divers" line both flip in place.
+    await page.goto("/shop/blue-mantis/courses/discover-scuba-diving/edit");
+    await page.getByRole("button", { name: "Hide from the catalog" }).click();
+    await expect(page.getByText("Hidden from divers")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Show in the catalog" })).toBeVisible();
+
+    // And the roster says so, where the badge is the one exceptional state it
+    // marks. The per-row Preview icon is gone too: the roster's one door to
+    // the diver's catalog is the header action, and a single course's live
+    // page is named on its own editor ("Live at …").
     await page.goto("/shop/blue-mantis/courses");
-    // The per-row Preview icon is gone: the roster's one door to the diver's
-    // catalog is the header action, and a single course's live page is named
-    // on its own editor ("Live at …").
+    const row2 = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
+    await expect(row2.getByText("Hidden")).toBeVisible();
     await expect(row.getByRole("link", { name: "Preview Discover Scuba Diving" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "View public page" })).toHaveAttribute(
       "href",
       "/s/blue-mantis/courses",
     );
-    await row.getByRole("button", { name: "Hide Discover Scuba Diving" }).click();
-    const row2 = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
-    await expect(row2.getByText("Hidden")).toBeVisible();
-    await expect(row2.getByRole("button", { name: "Show Discover Scuba Diving" })).toBeVisible();
+    // Nothing on the row changes visibility any more — the row carries no
+    // standing control at all.
+    await expect(row2.getByRole("button")).toHaveCount(0);
   });
 
   test("the roster reads as one ledger, agency by agency, in progression order", async ({
@@ -343,13 +363,13 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Save course page" }).click();
     await expect(page.getByRole("status")).toContainText("Course page saved");
 
-    // The editor is a save form and nothing else: visibility lives on the
-    // roster's eye toggle, and the "Live at" link above already opens the page
-    // the removed Preview button opened. A *hidden* course is the one exception
+    // The editor's one primary is Save; visibility is a quiet `secondary`
+    // beneath it, and the "Live at" link above already opens the page the
+    // removed Preview button opened. A *hidden* course is the one exception
     // and grows a Preview link of its own, because its public URL answers 404
     // to anyone carrying no signed capability (issue #1735) — Rescue Diver is
     // live here, so there is still nothing to find.
-    await expect(page.getByRole("button", { name: /^Hide$|^Show$/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Hide from the catalog" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Preview" })).toHaveCount(0);
 
     // A diver arrives with no session at all.
@@ -657,9 +677,14 @@ test("a diver with no workable date reaches the shop, and is offered flexible ti
   await page.getByLabel("Your name").fill("Mira Delgado");
   await page.getByLabel("Your email").fill("mira.delgado.e2e@example.com");
   await page.getByLabel("How many divers").fill("3");
-  // The flexible option accepts an exact or loose answer; the two date fields
-  // above it are optional first and alternative choices, never a hold.
+  // The flexible option accepts an exact or loose answer; the date field
+  // beside it is a first choice, never a hold.
   await page.getByLabel("Flexible timing").fill("the week of 12 August");
+  // "Where you are up to", the alternative date and "Anything else" moved
+  // behind one "More details" disclosure on 2026-09-17 — three answers a diver
+  // almost never has, against a composer that met them with ten boxes. Closed,
+  // they still submit; a spec that fills one opens it first.
+  await openMoreDetails(page);
   // The option's value is now the code ("never"), not its rendered label —
   // src/lib/course-inquiry.ts returns codes, and the diver bundle supplies
   // the sentence.
@@ -698,6 +723,7 @@ test("a blank inquiry is rejected, not defaulted — a way to reply is required"
 
   // Experience is useful context, but a lead with no address and no number is
   // still a question nobody can answer.
+  await openMoreDetails(page);
   await page.getByLabel("Where you are up to").selectOption("never");
   await inquiry.getByRole("button", { name: "Send", exact: true }).click();
   await expect(
@@ -724,6 +750,7 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
   // obvious.
   await expect(page.getByLabel("How many divers")).toHaveValue("1");
   await page.getByLabel("Flexible timing").fill("any weekend this autumn");
+  await openMoreDetails(page);
   await page.getByLabel("Where you are up to").selectOption("certified");
 
   await inquiry.getByRole("button", { name: "Send", exact: true }).click();
@@ -858,17 +885,13 @@ test("a hidden course answers 404 to a bare URL, and opens from the editor's Pre
   // toggle-live test above.
   test.setTimeout(30_000);
   const publicUrl = `/s/${privateShop.slug}/courses/discover-scuba-diving`;
-  await page.goto(`/shop/${privateShop.slug}/courses`);
-  await page
-    .getByRole("listitem")
-    .filter({ hasText: "Discover Scuba Diving" })
-    .getByRole("button", { name: "Hide Discover Scuba Diving" })
-    .click();
-  // The toggle re-renders in place, so this is the wait — never a navigation
+  // Hiding is the editor's own rare act, below the save bar — the roster has
+  // no per-row toggle. The button's word and the header's "Hidden from
+  // divers" line flip in place, so that is the wait — never a navigation
   // straight off the click.
-  await expect(
-    page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" }).getByText("Hidden"),
-  ).toBeVisible();
+  await page.goto(`/shop/${privateShop.slug}/courses/discover-scuba-diving/edit`);
+  await page.getByRole("button", { name: "Hide from the catalog" }).click();
+  await expect(page.getByText("Hidden from divers")).toBeVisible();
 
   // The shop's own owner, at a bare URL, carrying nothing. The refusal is
   // decided above the streaming boundary, so this is a real 404 rather than a

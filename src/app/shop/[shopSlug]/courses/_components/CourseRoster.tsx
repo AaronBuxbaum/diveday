@@ -33,8 +33,11 @@ import { canonicalAgency } from "@/lib/courses";
  *
  * Hidden is the roster's one exceptional state, so it is the roster's one
  * Badge (decision 3 — a badge marks the exception, never the expected). The
- * row is the door to the course's editor; the two list-level acts, Schedule
- * and Hide/Show, ride above the stretched link in the trailing slot.
+ * row is the door to the course's editor, and Schedule is the one act that
+ * rides above the stretched link in the trailing slot. Hide/Show used to ride
+ * there too; it moved to the course's own editor, because a rare act standing
+ * on every row of a list that exists to be read is a toolbar, not an
+ * affordance (principles §8, §10).
  */
 
 /** One course, already worded by the page — this file formats nothing. */
@@ -55,7 +58,7 @@ export type CourseRosterRow = {
   meta: ReactNode;
   /** Set for a course the shop has taken off its public catalog. */
   hiddenLabel?: string;
-  /** Schedule, and Hide/Show — the caller's forms, per its permissions. */
+  /** Schedule — the caller's one quiet act, rendered per its permissions. */
   actions?: ReactNode;
 };
 

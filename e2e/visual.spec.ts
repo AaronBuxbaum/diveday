@@ -6349,8 +6349,10 @@ for (const scheme of ["light", "dark"] as const) {
       // 20260827-the-shops-shelves): agency as the group heading that replaced
       // the tab strip, the list in progression order rather than alphabetical,
       // and the dissolved row — the row's own tap opens the course's editor,
-      // with only the two worded list-level acts (Schedule, Hide/Show) beside
-      // it and the public-catalog door up in the header.
+      // with Schedule as the row's one quiet act beside it and the
+      // public-catalog door up in the header. Hide/Show moved to the course's
+      // own editor: 55 rows carrying a rare act was a toolbar, not an
+      // affordance.
       test(`the staff course catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses");
         await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
@@ -6376,8 +6378,9 @@ for (const scheme of ["light", "dark"] as const) {
       // 1280 and the same list as a jump-row at 390, eight unboxed sections
       // separated by hairlines rather than eight bordered fieldsets, the depth
       // marker hint beside the prose it governs, and the single Save at the
-      // foot — no Hide/Show or Preview beside it (ADR
-      // 20260805-remove-certification-paths shipped alongside that trim).
+      // foot — no Preview beside it (ADR 20260805-remove-certification-paths
+      // shipped alongside that trim). "Hide from the catalog" sits below the
+      // save bar as the page's one rare act.
       test(`the course editor renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
         // The rail is the frame of this composition, and it is client-rendered;
