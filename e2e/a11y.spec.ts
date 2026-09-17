@@ -75,7 +75,8 @@ async function expectNoA11yViolations(page: Page) {
   //
   // **What was in flight, from the trace of run 32441820119: nothing.** The
   // page's last network event was the shop-location Google Maps iframe on
-  // `/ready` (`ShopCard`, src/app/ready/[token]/page.tsx) — `GET
+  // `/ready` (`TripArrivalCard`, src/components/TripArrivalCard.tsx; it sat in
+  // a trailing `ShopCard` on the page itself until 2026-09-17) — `GET
   // https://maps.google.com/maps?…&output=embed`, which *this suite's own*
   // `context.route` abort in e2e/fixtures.ts failed 137ms before the wait even
   // started, leaving that child frame committed on `chrome-error://chromewebdata/`.

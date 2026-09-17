@@ -242,7 +242,7 @@
     "conditionsLanguages": "{languages} a bordo",
     "questionsContact": "¿Dudas?",
     "arrivalHeading": "Adónde ir",
-    "arrivalBody": "Tu punto de encuentro, qué buscar y cómo encontrar a una persona al llegar.",
+    "arrivalMapTitle": "Mapa de {place}",
     "arrivalAtShop": "Lugar de encuentro",
     "arrivalAddress": "Dirección",
     "arrivalLandmark": "Referencia",
@@ -936,8 +936,6 @@
       "paymentDone": "Pagado. Gracias.",
       "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada. Comparte los datos de cada una y tu centro confirmará que estás listo."
     },
-    "shopHeading": "Tu centro de buceo",
-    "shopMapTitle": "Mapa de {shop}",
     "gearAndSetup": "Equipo y ajuste",
     "dockCallLine": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
     "fitUnavailable": "No hemos podido guardar tu equipo y ajuste ahora mismo. Inténtalo de nuevo en un momento.",

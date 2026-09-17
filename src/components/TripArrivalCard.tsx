@@ -8,7 +8,7 @@ import { DIVER_FACT_SOURCE_KEYS } from "@/i18n/fact-source-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { googleMapsUrl } from "@/lib/maps";
+import { googleMapEmbedUrl, googleMapsUrl } from "@/lib/maps";
 import { type ShopAddressParts, shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 
 export type ArrivalCardShop = {
@@ -89,6 +89,7 @@ export function TripArrivalCard({
   sites,
   downloadHref,
   stopCodeAction,
+  showMap = false,
   className = "",
 }: {
   shop: ArrivalCardShop;
@@ -118,6 +119,21 @@ export function TripArrivalCard({
    * this.
    */
   stopCodeAction?: (() => Promise<void>) | null;
+  /**
+   * Draw the meeting point on a map at the head of the card.
+   *
+   * Opt-in, because `src/lib/maps.ts` is deliberately URL-only and nothing in
+   * it decides *whether* a caller should draw a map — and because this frame
+   * is a third party's, which only a caller can say is acceptable on its
+   * surface. The diver's thread passes it: this is the one map that page has,
+   * and it used to sit in a trailing "Your dive shop" card that restated this
+   * card's address, phone, email and map link a second time.
+   *
+   * It yields to the shop's own arrival photo below. Two 16:9 blocks stacked
+   * is the card shouting, and a photo of the dock answers "did I find it?"
+   * better than a street map does; a shop that uploaded none gets the map.
+   */
+  showMap?: boolean;
   className?: string;
 }) {
   const t = diverTranslator(locale);
@@ -125,7 +141,6 @@ export function TripArrivalCard({
   return (
     <SectionCard
       title={t("trip.arrivalHeading")}
-      description={t("trip.arrivalBody")}
       className={className}
       actions={
         downloadHref ? (
@@ -145,6 +160,19 @@ export function TripArrivalCard({
           alt={t("trip.arrivalImageAlt", { place: facts.label })}
           className="mb-5 aspect-[16/9] rounded-inset"
           sizes="(max-width: 640px) calc(100vw - 56px), 576px"
+        />
+      ) : showMap && facts.mapQuery ? (
+        /* Inset to the card's own rhythm rather than bled to its edge, so it
+           stands in exactly where the shop's photo would. `strict-origin-when-
+           cross-origin` is load-bearing on a bearer-token page: the full path
+           *is* the capability, and only this page's origin may cross to Google
+           (docs/engineering/capability-telemetry-runbook.md). */
+        <iframe
+          title={t("trip.arrivalMapTitle", { place: facts.label })}
+          src={googleMapEmbedUrl(facts.mapQuery)}
+          loading="lazy"
+          referrerPolicy="strict-origin-when-cross-origin"
+          className="mb-5 block aspect-[16/9] w-full rounded-inset border-0 bg-surface-sunken"
         />
       ) : null}
       <div className="flex flex-col gap-3">
