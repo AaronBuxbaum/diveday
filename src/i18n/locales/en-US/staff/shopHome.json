@@ -157,8 +157,8 @@
       "backSouls": "{divers, plural, one {# diver} other {# divers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back",
       "backSoulsBy": "{divers, plural, one {# diver} other {# divers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back by {time}",
       "openSeats": {
-        "label": "Open seats",
-        "sentence": "{seats, plural, one {# seat stayed open} other {# seats stayed open}}: {facts}.",
+        "label": "Unsold seats",
+        "sentence": "{seats, plural, one {# seat went unsold} other {# seats went unsold}}: {facts}.",
         "lastBooking": "{days, plural, =0 {the last booking came in on the day} one {the last booking came in # day out} other {the last booking came in # days out}}",
         "noDeal": "no last-minute deal went out",
         "comparableSamePrice": "{title} on {date} filled at the same price",

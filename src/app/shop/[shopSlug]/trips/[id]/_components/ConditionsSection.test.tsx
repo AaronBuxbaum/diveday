@@ -92,3 +92,49 @@ describe("ConditionsSection — the automated outlook", () => {
     expect(screen.queryByText("Automated outlook")).not.toBeInTheDocument();
   });
 });
+
+/**
+ * **Whose water the tide line is** (issue #1732). The turn it names is a
+ * height turn rather than slack (ADR 20260907's 2026-09-07 amendment), so a
+ * captain who knows the water applies their own site lag to it — and cannot
+ * without knowing the station. Until this the name reached one surface, the
+ * dive-site editor, which is the page the shop that typed a wrong id never
+ * opens again.
+ */
+describe("ConditionsSection — whose tide", () => {
+  const TIDE = "Next high water at 1:19 PM; this departure reaches the site on the flood.";
+
+  function renderTide(station: string | null) {
+    render(
+      <ConditionsSection
+        saveAction={noop}
+        clearAction={noop}
+        trip={tripRow()}
+        locale="en-US"
+        timezone="America/New_York"
+        temperatureUnit="celsius"
+        depthUnit="meters"
+        automatedForecast={null}
+        tideLines={[{ site: "Molasses Reef", text: TIDE, station }]}
+      />,
+    );
+  }
+
+  it("names the station under the site's own sentence", () => {
+    renderTide("Tide at Carysfort Reef, FL");
+
+    expect(screen.getByText("Molasses Reef")).toBeInTheDocument();
+    expect(screen.getByText(TIDE, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("Tide at Carysfort Reef, FL")).toBeInTheDocument();
+  });
+
+  it("leaves the sentence exactly as it is when the lookup answered nothing", () => {
+    renderTide(null);
+
+    // The same strings queried positively above, so this absence is about the
+    // station and not about a line that stopped rendering.
+    expect(screen.getByText("Molasses Reef")).toBeInTheDocument();
+    expect(screen.getByText(TIDE, { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText(/Carysfort/)).not.toBeInTheDocument();
+  });
+});

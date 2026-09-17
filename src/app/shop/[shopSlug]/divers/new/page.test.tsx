@@ -130,11 +130,16 @@ describe("NewDiverPage name-match prompt", () => {
    * The stored column is E.164 (#1547). The line the staffer reads is grouped,
    * and the form beside it still posts the stored value the action matches on —
    * a display concern that must not reach the write (#1712).
+   *
+   * The candidate is a Mexican number, so since #1764 the national part reads
+   * unbroken: DiveDay groups only where it knows the rule, which is North
+   * America. The calling code still stands in front of it, which is the part a
+   * staffer needs to see separated.
    */
   it("groups the candidate's stored number without changing what the form posts", async () => {
     await renderPage(seatingArm);
 
-    expect(screen.getByText(`(${MATCH.email}, +52 998 555 0100)`)).toBeInTheDocument();
+    expect(screen.getByText(`(${MATCH.email}, +52 9985550100)`)).toBeInTheDocument();
     const form = screen.getByRole("button", { name: MATCH.fullName }).closest("form");
     expect(form?.querySelector('input[name="phone"]')).toHaveValue("+529985550100");
   });

@@ -137,6 +137,10 @@ roughly nine full runs. That cost is what bounds a stack's *depth* (about six la
 its *subject* — see the amendment below; it was originally written as an argument for stacking only
 genuinely dependent work.
 
+**Amended 2026-09-16 (see "Reversed: a stack has no maximum depth" below):** the arithmetic in that
+paragraph stopped being true on 2026-08-27, when a middle layer began skipping the expensive half of
+the gate. Depth is no longer bounded at all.
+
 Commits us to: bottom-up merge order (there is no merging layer 2 alone), per-layer branch
 protection, and keeping the chained-base convention legible in pull request bodies so a reader who
 finds layer 3 first can walk down.
@@ -405,6 +409,8 @@ cut from `main`, and they are the whole of the exception list:
    else's diff. It must not wait for the layers beneath it.
 3. **About six layers deep** — the per-layer CI cost in *Consequences* is real, and past roughly six
    layers the wall-clock cost outweighs the conflicts saved. Start a new stack.
+   **Reversed 2026-09-16 (see "Reversed: a stack has no maximum depth" below):** this case is
+   deleted; the exception list is the other three.
 4. **The branch below belongs to another session** — a stack is built on the session's own work;
    another session's force-push would otherwise be this session's cascading rebase, and its claim
    covers its own layers only (`docs/agents/issue-tracker.md`, "Claiming an issue").
@@ -413,3 +419,47 @@ Consequences unchanged: bottom-up merge order, per-layer CI, per-layer branch pr
 reading discipline for visual reports. The escape hatch is unchanged too — `gh stack unstack` leaves
 ordinary chained-base pull requests behind, so a session that stacked something it should not have
 has one command to undo it.
+
+
+### Reversed: a stack has no maximum depth (2026-09-16, Aaron's call)
+
+Case 3 of the exception list above — *about six layers deep* — is **deleted**, and with it every
+number anywhere in this repository that claimed a stack should stop growing. There is no maximum
+stack length. A long chain is not a stack that got away from someone; it is the shape this
+repository is trying to produce, and the guidance now says so rather than tolerating it.
+
+The case rested entirely on one measurement, recorded in *Consequences*: sixteen jobs per layer,
+paid again above every cascading rebase, which made a deep stack an arithmetic problem about
+runners. That measurement was correct when it was written and was obsolete nine days later.
+[20260827-stack-ci-skips-the-middle-layers](20260827-stack-ci-skips-the-middle-layers.md) made a
+middle layer skip `repo-safeguards`, `lint`, `typecheck`, the four unit shards and the four
+Playwright shards, leaving it the visual path it owes the layer above (`changes`, `build`, the
+visual shards, `visual-report`, `real-postgres`). Only the bottom and the top pay the full gate, and
+they pay it once each whatever sits between them — so the marginal cost of layer twenty is the
+marginal cost of layer four, and the curve the "about six" rule was drawn against is flat. The
+number outlived the reason for it in three places (this ADR, AGENTS.md's *Parallel work*, the
+**stacked-prs** and **backlog-routine** skills), which is the ordinary way a retired measurement
+keeps giving orders.
+
+The argument on the other side, meanwhile, gets *stronger* with depth rather than weaker. The
+thirteen-branch measurement in *Widened: stack by default* is a count of pairs: thirteen branches
+cut from one `main` produce conflicts between every pair of them, and the same thirteen stacked
+produce none, because each layer already contains the ones below it and the shared file merges once,
+while the change is being written. Halving a stack at layer six does not halve that cost — it
+re-creates it between the two stacks.
+
+What bounds a stack now: nothing this repository chooses. Three cases still cut from `main`
+(nothing of the session's own open, a fix that must merge now, another session's branch), and one
+hard ceiling belongs to GitHub rather than to us — a registered stack holds at most 100 pull
+requests, which `scripts/stack-register.mjs` already refuses past rather than truncating
+(`MAX_LAYERS`), because silently registering the bottom hundred of a longer chain would invent a
+merge order nobody wrote.
+
+What this does **not** relax is the reading discipline, which is what the skipped jobs cost. A
+middle layer's green says "nothing ran" and says it more often on a long stack than a short one, so
+the two layers worth reading are the bottom (the only red that blocks the whole chain) and the top
+(the only statement about the merged result). The visual rule underneath that is unchanged and is
+the one that actually punishes a careless deep stack: a layer's baseline is the head commit of the
+layer directly below, so `visual` and `visual-report` run on **every** layer for a reason, and
+*Never merge a layer whose pixels were never compared* applies to layer nineteen exactly as it
+applies to layer two.

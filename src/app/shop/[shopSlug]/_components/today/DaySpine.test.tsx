@@ -1173,10 +1173,10 @@ describe("the evening reading", () => {
         }),
       ]),
     });
-    expect(screen.getByText("Open seats")).toBeInTheDocument();
+    expect(screen.getByText("Unsold seats")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "4 seats stayed open: the last booking came in 3 days out and no last-minute deal went out.",
+        "4 seats went unsold: the last booking came in 3 days out and no last-minute deal went out.",
       ),
     ).toBeInTheDocument();
     // No trailing door: the station's own title already opens this departure,
@@ -1185,7 +1185,7 @@ describe("the evening reading", () => {
 
     cleanup();
     renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
-    expect(screen.queryByText("Open seats")).toBeNull();
+    expect(screen.queryByText("Unsold seats")).toBeNull();
   });
 
   it("gives the rental-fit leftover a control that saves, with Dismiss still beside it", () => {

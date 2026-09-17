@@ -2,6 +2,7 @@ import { calendarDateInTimezone } from "./calendar-date";
 import { nowDate } from "./clock";
 import type { DiveMode, DockDayRhythm } from "./diver-planning";
 import { fetchTidePredictions } from "./tide-predictions";
+import { fetchTideStation, stationLabel } from "./tide-stations";
 import { diveArrivalAt, type TidePreference, type TideWindow, tideWindowAt } from "./tides";
 import { hasSailed } from "./trips";
 
@@ -31,6 +32,22 @@ export type DepartureTideDive = {
 export type DepartureTideWindow = {
   diveNumber: number;
   siteName: string;
+  /**
+   * **Whose water this is** — NOAA's own name for the station, or `null`.
+   *
+   * The number beside it is a height turn rather than slack (ADR
+   * 20260907's 2026-09-07 amendment), so a captain who knows the water applies
+   * their own lag to it — and cannot, without knowing which station it came
+   * from. Until issue #1732 the station's name reached exactly one surface,
+   * the dive-site editor, which is the page the shop that typed a wrong id
+   * never opens again; the divemaster reading a turn on the morning of the
+   * trip had no way to ask whose tide it was.
+   *
+   * `null` is an ordinary answer here, as it is everywhere in this feature: a
+   * station lookup that fails leaves the tide sentence exactly as it was. The
+   * sentence is the product; this is the footnote.
+   */
+  stationLabel: string | null;
   arrival: Date;
   window: TideWindow;
   preference: TidePreference;
@@ -105,9 +122,17 @@ export async function tideWindowsForDeparture(input: {
   // and a four-dive itinerary across four stations therefore cost four
   // *serial* four-second timeouts whenever NOAA was unreachable, on the
   // unauthenticated page a diver books from. `Promise.all` keeps the order.
-  const tables = await Promise.all(
-    planned.map((entry) => fetchTidePredictions(entry.stationId, day, input.fetcher)),
-  );
+  //
+  // **The station lookups go in the same breath, never after** (issue #1732).
+  // They are a second four-second bound per station, so a serial pass would
+  // double that page's worst case rather than leaving it where it is: started
+  // together, the slowest of the two is the whole cost. Both seams share an
+  // in-flight promise per key, so a two-tank day on one station still asks
+  // once for each.
+  const [tables, stations] = await Promise.all([
+    Promise.all(planned.map((entry) => fetchTidePredictions(entry.stationId, day, input.fetcher))),
+    Promise.all(planned.map((entry) => fetchTideStation(entry.stationId, input.fetcher))),
+  ]);
 
   const results: DepartureTideWindow[] = [];
   planned.forEach((entry, index) => {
@@ -115,9 +140,15 @@ export async function tideWindowsForDeparture(input: {
     if (!predictions) return;
     const window = tideWindowAt(predictions, entry.arrival);
     if (!window) return;
+    // Read after the two refusals above, deliberately: a station that answered
+    // while the predictions did not still gets no entry, because there is no
+    // sentence for the footnote to sit under. The converse — predictions
+    // without a station — is the one this field exists to answer `null` for.
+    const station = stations[index];
     results.push({
       diveNumber: entry.dive.diveNumber,
       siteName: entry.dive.site.name,
+      stationLabel: station ? stationLabel(station) : null,
       arrival: entry.arrival,
       window,
       preference: entry.dive.site.tidePreference,
