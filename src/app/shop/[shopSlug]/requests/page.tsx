@@ -19,6 +19,7 @@ import {
   requestAdviceLines,
 } from "./_components/RequestDayGroup";
 import { RequestLedgerRow } from "./_components/RequestLedgerRow";
+import { RequestReferenceRow } from "./_components/RequestReferenceRow";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — it is this segment's `loading.tsx` that stands in while the
@@ -47,6 +48,19 @@ export const metadata: Metadata = {
  * beneath are hairline ledger rows saying only who asked and what for; the
  * tinted "Planning suggestion" card and the per-row match badges went with it
  * (`RequestLedgerRow`).
+ *
+ * **Three things that repeated down the page, and no longer do:**
+ *
+ * - A request reached by two groups was printed whole under both. It renders in
+ *   full under `homeDate` and as a one-line reference everywhere else
+ *   (`RequestReferenceRow`).
+ * - The planner's advice was restated under every group heading, word for word,
+ *   because most days advise the same hull and the same crew. It renders when
+ *   it changes — and always when it carries the warning, which is a state
+ *   rather than a shared fact.
+ * - Every group carried a `secondary` "Add a departure". The first one keeps
+ *   it; the rest are `link` weight, because a column of filled buttons down a
+ *   page is the reader doing triage the design should have done (principle 8).
  *
  * These are **course inquiries** (ADR
  * 20260814-a-date-request-is-a-course-inquiry): a request for a departure to
@@ -96,6 +110,9 @@ export default async function RequestsPage({
   // and arrived here, where the lead now lives (`?notice=` via `noticeFromParam`,
   // never a bare index — the param is attacker-supplied).
   const logged = noticeFromParam(notice, { "call-logged": true as const });
+  // The advice the group above printed, so a day that would say the same thing
+  // says nothing. Reassigned while mapping the groups, in their render order.
+  let previousAdvice = "";
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
 
   return (
@@ -118,7 +135,7 @@ export default async function RequestsPage({
         // One rhythm between groups, the page-section spacing every staff
         // surface uses — never a per-section `mt-*` that drifts.
         <div className="space-y-10">
-          {groups.map((group) => {
+          {groups.map((group, index) => {
             const advice = adviseRequests(
               group.entries.map(({ request }) => ({
                 id: request.id,
@@ -128,6 +145,18 @@ export default async function RequestsPage({
               })),
               departureShape,
             );
+            const lines = requestAdviceLines(advice, shop.diversPerDivemaster, t);
+            // **The advice is a shared fact between days, not only within one.**
+            // A shop with one hull and one ratio advises the same hull and the
+            // same crew on every day that fits it, so the sentence stood
+            // verbatim under every group heading. It renders when it says
+            // something the group above did not — and always when it carries
+            // the warning, because "more divers than any hull you own" is a
+            // state rather than a repeated fact (principle 9, and the colour
+            // rule in ADR 20260827-clearwater-surface-language).
+            const joined = lines.map((line) => line.text).join("§");
+            const repeats = joined === previousAdvice && !lines.some((l) => l.tone === "warning");
+            previousAdvice = joined;
             return (
               <RequestDayGroup
                 key={group.date}
@@ -137,7 +166,7 @@ export default async function RequestsPage({
                   groups: group.groupCount,
                   divers: advice.estimatedDivers,
                 })}
-                advice={requestAdviceLines(advice, shop.diversPerDivemaster, t)}
+                advice={repeats ? [] : lines}
                 add={{
                   href: addDepartureHref(
                     shopSlug,
@@ -145,19 +174,39 @@ export default async function RequestsPage({
                     group.entries.map(({ request }) => request.id),
                   ),
                   label: t("requests.addDeparture"),
+                  // One visible act on the page, at the first day a staffer
+                  // meets; every day after it offers the same act at link
+                  // weight.
+                  prominent: index === 0,
                 }}
               >
-                {group.entries.map((entry) => (
-                  <RequestLedgerRow
-                    key={`${group.date}-${entry.request.id}`}
-                    request={entry.request}
-                    match={entry.match}
-                    locale={locale}
-                    timezone={timezone}
-                    shopSlug={shopSlug}
-                    t={t}
-                  />
-                ))}
+                {group.entries.map((entry) =>
+                  // The full record belongs to one group — the first date this
+                  // request named. Everywhere else it reaches, it is a line
+                  // pointing there (`src/lib/date-requests.ts`).
+                  // The two halves of one fact: a first choice is always its
+                  // request's home, and naming it that way is also what lets
+                  // the reference row's prop exclude `preferred`.
+                  entry.match === "preferred" || entry.homeDate === group.date ? (
+                    <RequestLedgerRow
+                      key={`${group.date}-${entry.request.id}`}
+                      request={entry.request}
+                      locale={locale}
+                      timezone={timezone}
+                      shopSlug={shopSlug}
+                      t={t}
+                    />
+                  ) : (
+                    <RequestReferenceRow
+                      key={`${group.date}-${entry.request.id}`}
+                      request={entry.request}
+                      match={entry.match}
+                      homeDate={entry.homeDate}
+                      locale={locale}
+                      t={t}
+                    />
+                  ),
+                )}
               </RequestDayGroup>
             );
           })}
@@ -174,7 +223,6 @@ export default async function RequestsPage({
                 <RequestLedgerRow
                   key={request.id}
                   request={request}
-                  match={null}
                   locale={locale}
                   timezone={timezone}
                   shopSlug={shopSlug}

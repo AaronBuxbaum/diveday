@@ -17,6 +17,11 @@ import { type CalendarDate, calendarDaysBetween } from "./calendar-date";
  *   still carry their match so a second choice or flexible neighbour can be
  *   rendered differently, without turning the group summary into a diver
  *   capacity estimate or a count of first choices.
+ * - **It is printed whole in exactly one of them.** Every entry carries
+ *   `homeDate`, the first date its request named; the staff list renders the
+ *   full record there and a one-line reference in every other group it reaches.
+ *   Five identical four-line bodies for one diver is the same lead five times,
+ *   not five leads.
  * - **A flexible request joins every group near one of its own dates** rather
  *   than getting a bucket of its own. A bucket labelled "flexible" is a list
  *   nobody schedules from.
@@ -51,6 +56,18 @@ export type DateRequestMatch = "preferred" | "alternate" | "nearby";
 export type DateRequestEntry<T> = {
   request: T;
   match: DateRequestMatch;
+  /**
+   * The one group this request's **full record** belongs under: the first date
+   * it named (`preferredDate ?? alternateDate`).
+   *
+   * A request lands in every group it could make, which is the whole point of
+   * the grouping — but printing it whole in each of them is the same lead said
+   * five times. Every group where `homeDate` is not the group's own date shows
+   * a one-line reference pointing here instead. Recorded rather than derived by
+   * the page, because "which date does this request belong to" is the same
+   * question `matchFor` already answers and it may only have one answer.
+   */
+  homeDate: CalendarDate;
 };
 
 export type DateRequestGroup<T> = {
@@ -133,7 +150,10 @@ export function groupDateRequests<T>(
     const entries: DateRequestEntry<T>[] = [];
     for (const { request, dates } of dated) {
       const match = matchFor(dates, date);
-      if (match) entries.push({ request, match });
+      // `namedDates` is non-empty for everything in `dated`, so the first named
+      // date always exists and always has a group of its own.
+      const homeDate = namedDates(dates)[0];
+      if (match && homeDate) entries.push({ request, match, homeDate });
     }
     // Firm asks first, then fallbacks, then the flexible neighbours — stable
     // within each, so the order rows arrived in survives.

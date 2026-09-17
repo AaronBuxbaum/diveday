@@ -33,6 +33,53 @@ function shape(entries: { request: Row; match: string }[]): string[] {
   return entries.map((entry) => `${entry.request.id}:${entry.match}`);
 }
 
+/**
+ * **One full rendering per request.** A request is counted on every day it
+ * could make — that is the point of the grouping — but the staff list prints
+ * its body under `homeDate` alone and a one-line reference everywhere else, so
+ * five days' worth of identical four-line bodies stop being five leads.
+ */
+describe("homeDate", () => {
+  it("is the date a request named first, in every group it reaches", () => {
+    const rows = [request("pat", { preferredDate: "2026-09-12", alternateDate: "2026-09-19" })];
+    expect(groupOn(rows, "2026-09-12").entries[0]?.homeDate).toBe("2026-09-12");
+    expect(groupOn(rows, "2026-09-19").entries[0]?.homeDate).toBe("2026-09-12");
+  });
+
+  it("falls to the alternate when that is the only date a request named", () => {
+    const rows = [request("sam", { preferredDate: null, alternateDate: "2026-09-19" })];
+    const entry = groupOn(rows, "2026-09-19").entries[0];
+    expect(entry?.match).toBe("alternate");
+    // The group it renders in full under is its own, so the row never explains
+    // itself away from the day it is standing on.
+    expect(entry?.homeDate).toBe("2026-09-19");
+  });
+
+  it("points a flexible neighbour back at the day it did name", () => {
+    const rows = [
+      request("flo", { preferredDate: september(12), dateFlexible: true }),
+      request("anchor", { preferredDate: september(14) }),
+    ];
+    const entry = groupOn(rows, september(14)).entries.find((e) => e.request.id === "flo");
+    expect(entry?.match).toBe("nearby");
+    expect(entry?.homeDate).toBe(september(12));
+  });
+
+  it("names exactly one home group per request across the whole page", () => {
+    const rows = [
+      request("pat", { preferredDate: september(12), alternateDate: september(19) }),
+      request("flo", { preferredDate: september(12), dateFlexible: true }),
+      request("sam", { preferredDate: september(14) }),
+    ];
+    for (const id of ["pat", "flo", "sam"]) {
+      const homes = group(rows).groups.flatMap((g) =>
+        g.entries.filter((e) => e.request.id === id && e.homeDate === g.date),
+      ).length;
+      expect(homes).toBe(1);
+    }
+  });
+});
+
 describe("groupDateRequests", () => {
   it("puts one group on each date a request named, earliest first", () => {
     const { groups } = group([

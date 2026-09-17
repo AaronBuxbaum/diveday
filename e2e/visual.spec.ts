@@ -6606,8 +6606,9 @@ for (const scheme of ["light", "dark"] as const) {
       // Divers asking for a day the board has nothing on, grouped by that day:
       // the seeded requests put two people on one date (one of them by their
       // alternate, one of them flexible into it), which is the whole reason the
-      // group header carries a count and the soft matches say which day they
-      // did ask for (ADR 20260827-people-not-lists, decision 5). Waiting on the
+      // group header carries a count and a request reached by two days is
+      // printed whole under one of them and referenced by a single line under
+      // the other (ADR 20260827-people-not-lists, decision 5). Waiting on the
       // day's own act rather than only the heading — the groups render below
       // it, so a capture taken before one lands photographs a half-built list.
       test(`the date requests list renders true to the design (${scheme})`, async ({ page }) => {

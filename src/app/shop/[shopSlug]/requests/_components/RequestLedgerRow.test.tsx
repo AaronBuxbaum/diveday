@@ -3,7 +3,6 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { DateRequestRow } from "@/db/course-inquiries";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { DateRequestMatch } from "@/lib/date-requests";
 import { RequestLedgerRow } from "./RequestLedgerRow";
 
 afterEach(cleanup);
@@ -29,12 +28,11 @@ const BASE: DateRequestRow = {
   createdAt: new Date("2027-02-20T14:00:00.000Z"),
 };
 
-function row(request: Partial<DateRequestRow>, match: DateRequestMatch | null = "preferred") {
+function row(request: Partial<DateRequestRow> = {}) {
   const { container } = render(
     <ul>
       <RequestLedgerRow
         request={{ ...BASE, ...request }}
-        match={match}
         locale="en-US"
         timezone="America/Cancun"
         shopSlug="blue-mantis"
@@ -48,48 +46,36 @@ function row(request: Partial<DateRequestRow>, match: DateRequestMatch | null = 
 }
 
 /**
- * **A soft match is ink, not tint** (ADR 20260827-people-not-lists, decision 5).
+ * **Neither a tint nor a pill** (ADR 20260827-people-not-lists, decision 5).
  *
- * A second choice and a flexible neighbour are in a day's group because they
- * *can* make it, and the surface has to say so — but it used to say it with a
- * `bg-surface-sunken` card wearing a neutral `Badge`, which is a second pill
- * grammar and a filled panel at rest, both of which the Clearwater language
- * spends its rules closing (20260827-clearwater-surface-language, decisions 1
- * and 3). The words carry it now, so this asserts the *absence* as hard as the
- * presence: nothing in a request row wears a fill or a pill, in any match.
+ * A request in a day's group because it *can* make that day used to arrive as a
+ * `bg-surface-sunken` card wearing a neutral `Badge` — a second pill grammar
+ * and a filled panel at rest, both of which the Clearwater language spends its
+ * rules closing (20260827-clearwater-surface-language, decisions 1 and 3).
+ *
+ * Since this row renders only under the day the diver actually named
+ * (`RequestReferenceRow` carries the rest), there is no longer a soft state to
+ * mark at all — so this asserts the absence, which is the whole contract.
  */
-describe("a soft match renders in ink, never in a tint or a pill", () => {
+describe("a request row renders flat, in one shape", () => {
   const FILL = /\bbg-(surface-sunken|[a-z-]+-tint)\b/;
   const PILL = /\brounded-full\b/;
 
-  it("states the date a fallback actually asked for, with no fill and no pill", () => {
-    // Rendered in the Mar 13 group, which this request named second — so what
-    // it says is the day it *did* ask for first.
-    const item = row({}, "alternate");
-    expect(screen.getByText(/First choice Mar 6, 2027/)).toBeTruthy();
+  it("carries no fill and no pill", () => {
+    const item = row();
     expect(item.outerHTML).not.toMatch(FILL);
     expect(item.outerHTML).not.toMatch(PILL);
   });
 
-  it("says a flexible neighbour can move, with no fill and no pill", () => {
-    const item = row(
-      { preferredDate: "2027-03-04", alternateDate: null, dateFlexible: true },
-      "nearby",
-    );
-    expect(screen.getByText(/can move a few days/)).toBeTruthy();
-    expect(item.outerHTML).not.toMatch(FILL);
-    expect(item.outerHTML).not.toMatch(PILL);
+  it("never explains why it is filed here — it is only ever filed where it asked", () => {
+    row();
+    expect(screen.queryByText(/First choice/)).toBeNull();
+    expect(screen.queryByText(/can move a few days/)).toBeNull();
   });
 
-  it("carries no fill on a firm ask either — the row shape is the same in every group", () => {
-    const item = row({}, "preferred");
-    expect(item.outerHTML).not.toMatch(FILL);
-    expect(item.outerHTML).not.toMatch(PILL);
-  });
-
-  it("does not also say Flexible when the request travelled here on its flexibility", () => {
-    row({ preferredDate: "2027-03-04", alternateDate: null, dateFlexible: true }, "nearby");
-    expect(screen.queryByText(/·\s*Flexible\s*·/)).toBeNull();
+  it("still says a request can move, when the diver said so", () => {
+    row({ dateFlexible: true });
+    expect(screen.getByText(/·\s*Flexible\s*·/)).toBeTruthy();
   });
 });
 
