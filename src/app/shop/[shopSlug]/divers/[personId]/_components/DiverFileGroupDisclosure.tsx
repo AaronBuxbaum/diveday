@@ -32,6 +32,7 @@ export function DiverFileGroupDisclosure({
   id,
   label,
   summary,
+  summaryTone = "muted",
   open = false,
   stacked = false,
   className = "",
@@ -40,6 +41,19 @@ export function DiverFileGroupDisclosure({
   id: string;
   label: string;
   summary: string;
+  /**
+   * `warning` for a summary standing on somebody's *word* rather than on
+   * anything the shop has seen — the treatment `certificationSummaryUnchecked`
+   * already earns on the wait list and the deal list, and the reason the
+   * glossary says a self-declared card "must never be scanned as a plain
+   * level". The words carry the fact on their own (principle 6); the ink only
+   * has to stop contradicting them.
+   *
+   * `-strong` because this component cannot know what it is mounted on, and
+   * raw `text-warning` fails AA on `bg-surface-sunken` — the same call
+   * `ledger.tsx` documents at length.
+   */
+  summaryTone?: "muted" | "warning";
   open?: boolean;
   /** Put a long summary on its own, label-aligned line below `sm`. */
   stacked?: boolean;
@@ -85,9 +99,10 @@ export function DiverFileGroupDisclosure({
   // the first line and only the fact drops beneath them, which a `flex-col`
   // would have put the caret on a line of its own to achieve.
   const summaryLayoutClass = stacked ? "max-sm:flex-wrap max-sm:py-2" : "";
+  const toneClass = summaryTone === "warning" ? "font-medium text-warning-strong" : "text-muted";
   const summaryFactClass = stacked
-    ? "min-w-0 max-w-full text-sm text-muted tabular-nums max-sm:ms-6 max-sm:basis-full max-sm:whitespace-normal max-sm:break-words sm:shrink-0 sm:text-end"
-    : "shrink-0 text-sm text-muted tabular-nums";
+    ? `min-w-0 max-w-full text-sm ${toneClass} tabular-nums max-sm:ms-6 max-sm:basis-full max-sm:whitespace-normal max-sm:break-words sm:shrink-0 sm:text-end`
+    : `shrink-0 text-sm ${toneClass} tabular-nums`;
 
   return (
     <section aria-label={label} className={className || undefined}>

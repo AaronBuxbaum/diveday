@@ -59,7 +59,9 @@ describe("the diver record file order", () => {
   it("keeps every group a door at every width", () => {
     const offenders = readdirSync(COMPONENTS)
       .filter((name) => name.endsWith(".tsx"))
-      .filter((name) => readFileSync(join(COMPONENTS, name), "utf8").includes("desktopCollapsible"));
+      .filter((name) =>
+        readFileSync(join(COMPONENTS, name), "utf8").includes("desktopCollapsible"),
+      );
     expect(offenders).toEqual([]);
   });
 });

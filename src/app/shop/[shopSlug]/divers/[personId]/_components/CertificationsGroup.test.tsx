@@ -79,7 +79,13 @@ describe("the certification records door", () => {
           },
         ],
         nitroxCertifications: [
-          { id: "n1", agency: "padi", status: "verified", identifier: "5678", selfDeclaredAt: null },
+          {
+            id: "n1",
+            agency: "padi",
+            status: "verified",
+            identifier: "5678",
+            selfDeclaredAt: null,
+          },
         ],
       } as unknown as Partial<DiverProfile>),
     );
@@ -110,6 +116,11 @@ describe("the certification records door", () => {
     );
 
     expect(door()).toHaveTextContent("SSI Advanced Open Water — unverified");
+    // Words first, tone second — the treatment `certificationSummaryUnchecked`
+    // earns on every other surface that renders somebody's word for it.
+    expect(screen.getByText(/SSI Advanced Open Water — unverified/)).toHaveClass(
+      "text-warning-strong",
+    );
   });
 
   it("says None on file when the record holds nothing", () => {
@@ -135,6 +146,28 @@ describe("the certification records door", () => {
     );
 
     expect(door()).toHaveTextContent("Not certified yet — unverified");
+    expect(screen.getAllByText("Not certified yet — unverified")[0]).toHaveClass(
+      "text-warning-strong",
+    );
+  });
+
+  it("leaves a door made only of cards the shop holds in quiet ink", () => {
+    renderGroup(
+      diver({
+        certifications: [
+          {
+            id: "c1",
+            agency: "padi",
+            level: "open_water",
+            status: "verified",
+            identifier: "1234",
+            selfDeclaredAt: null,
+          },
+        ],
+      } as unknown as Partial<DiverProfile>),
+    );
+
+    expect(screen.getByText("PADI Open Water")).toHaveClass("text-muted");
   });
 
   /**
