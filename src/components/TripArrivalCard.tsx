@@ -163,15 +163,23 @@ export function TripArrivalCard({
         />
       ) : showMap && facts.mapQuery ? (
         /* Inset to the card's own rhythm rather than bled to its edge, so it
-           stands in exactly where the shop's photo would. `strict-origin-when-
-           cross-origin` is load-bearing on a bearer-token page: the full path
-           *is* the capability, and only this page's origin may cross to Google
+           stands in exactly where the shop's photo would.
+
+           **`no-referrer`, not `strict-origin-when-cross-origin`.** An
+           element's own `referrerpolicy` overrides the document's, and the one
+           caller is `/ready/[token]`, which `TOKEN_ROUTE_PREFIXES`
+           (`src/lib/security-headers.ts`) serves under `Referrer-Policy:
+           no-referrer` precisely because a bearer-token route has "no
+           legitimate cross-origin use" for a referrer at all — not even the
+           origin-only form. The weaker attribute rode along when this frame
+           moved here from the page's trailing shop card; a map embed needs no
+           referrer, so it now asks for none
            (docs/engineering/capability-telemetry-runbook.md). */
         <iframe
           title={t("trip.arrivalMapTitle", { place: facts.label })}
           src={googleMapEmbedUrl(facts.mapQuery)}
           loading="lazy"
-          referrerPolicy="strict-origin-when-cross-origin"
+          referrerPolicy="no-referrer"
           className="mb-5 block aspect-[16/9] w-full rounded-inset border-0 bg-surface-sunken"
         />
       ) : null}

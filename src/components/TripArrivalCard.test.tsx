@@ -157,9 +157,12 @@ describe("the map", () => {
     expect(frame?.getAttribute("title")).toBe("Map of Blue Mantis Divers");
     // The query is the shop's own address, never a guess.
     expect(frame?.getAttribute("src")).toContain("100%20Ocean%20Drive");
-    // Load-bearing on a bearer-token page: the path *is* the capability, so
-    // only this page's origin may cross to Google.
-    expect(frame?.getAttribute("referrerpolicy")).toBe("strict-origin-when-cross-origin");
+    // An element's own policy overrides the document's, and the one caller is
+    // `/ready/[token]` — a `TOKEN_ROUTE_PREFIXES` route served under
+    // `Referrer-Policy: no-referrer` because a bearer-token page has no
+    // legitimate cross-origin use for a referrer, origin-only included. A map
+    // embed needs none, so it asks for none.
+    expect(frame?.getAttribute("referrerpolicy")).toBe("no-referrer");
   });
 
   it("names a custom meeting point, not the shop behind it", () => {
@@ -190,7 +193,11 @@ describe("the map", () => {
   it("draws nothing where no honest query can be built", () => {
     render(
       <TripArrivalCard
-        shop={{ ...shop, name: "", address: {} }}
+        shop={{
+          ...shop,
+          name: "",
+          address: { street: null, locality: null, region: null, postalCode: null, country: null },
+        }}
         trip={{ ...trip, meetingPointLabel: null, meetingPointAddress: null }}
         locale="en-US"
         showMap
