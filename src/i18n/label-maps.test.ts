@@ -86,6 +86,7 @@ import { rentalItemLabel } from "./rental-labels";
 import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES, type DiverLocale } from "./settings";
 import { nightSkyLine } from "./sky-labels";
 import { staffTranslator } from "./staff-messages";
+import { STAFF_ROLE_LABEL_KEYS, staffRoleLabel } from "./staff-role-labels";
 import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "./thread-labels";
 import {
   ACTION_KIND_KEYS,
@@ -701,6 +702,13 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
+    module: "staff-role-labels.ts",
+    map: "STAFF_ROLE_LABEL_KEYS",
+    rows: codeRows(keysOf(STAFF_ROLE_LABEL_KEYS), (locale, role) =>
+      staffRoleLabel(staffTranslator(locale), role),
+    ),
+  },
+  {
     module: "thread-labels.ts",
     map: "THREAD_STEP_TITLE_KEYS",
     rows: codeRows(keysOf(THREAD_STEP_TITLE_KEYS), (locale, step) =>
@@ -886,6 +894,13 @@ const SAME_IN_BOTH_LOCALES = new Map<string, string>([
   ["DIVER_CERT_LEVEL_KEYS.advanced_open_water", "course name, used untranslated"],
   ["DIVER_CERT_LEVEL_KEYS.divemaster", "course name, used untranslated"],
   ["DIVER_CERT_LEVEL_KEYS.instructor", "course name, used untranslated"],
+  // The two staff rungs whose Spanish is the English. "Instructor" is the
+  // Spanish word, and `es-ES/README.md` settled "Divemaster" untranslated the
+  // way the certification ladder above is. The rung added beside them, on the
+  // other hand, is genuinely translated — "Asistente de instructor" — so it is
+  // deliberately absent here and asserted as different (issue #1680).
+  ["STAFF_ROLE_LABEL_KEYS.instructor", "the same word in both languages"],
+  ["STAFF_ROLE_LABEL_KEYS.divemaster", "rating name, used untranslated"],
   // The diver's own chip for the same category *is* translated ("La sesión
   // informativa"); the staff panel's one-word version keeps the loanword a
   // crew says out loud.
