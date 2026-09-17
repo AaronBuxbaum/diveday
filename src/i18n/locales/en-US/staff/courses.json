@@ -25,6 +25,7 @@
     "previewHidden": "Preview",
     "noticeSaved": "Course page saved.",
     "errorInvalid": "That didn’t save. Check the fields and try again.",
+    "errorNotAuthorized": "Hiding or showing a course is limited to owners, managers, and instructors.",
     "errorFaqIncomplete": "Every question needs an answer, and every answer a question.",
     "errorImages": "You can keep up to eight gallery photos. Remove one before adding more.",
     "errorUpload": "That photo didn’t upload. Try a JPG, PNG, or WebP under 5 MB.",
