@@ -428,6 +428,26 @@ primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
 - **Composition:** status, story, file — a person is a readiness question, a history, and a set of
   facts, in that order; ten co-equal sections answered no question first.
 
+**Amended 2026-09-17, the file is one door grammar.** The 8b build shipped two: "legacy" groups
+(certification records, waiver, gear and sizes, diver notes, conversation) hid their summary above
+`sm` and rendered open as `InsetGroup` cards under a second, uppercase copy of their own label,
+while the newer groups (shelf, dive support) stayed doors at every width. Down one page they
+interleaved — an open bordered card, a closed row, another open card — and the phone, which had
+only ever had the doors, was the cleaner page. Every group is now a door at every width, its row
+label is its `<h2>` and its fragment target, and its summary is its one **useful** fact rather than
+a queue state: the levels on file rather than "None waiting", the release's standing **and its
+date**, "{n} notes", "{n} unanswered". A group opens itself only for work the staffer came for — a
+notice aimed at it, an unanswered message, a held medical review, a standing can't-fill flag, notes
+somebody wrote. The activity trail joined the same grammar; it was the last `LedgerGroup` on the
+page. Pinned by `page.composition.test.ts` (no second heading inside a group, no group that opens
+itself at a breakpoint) and `_components/DiverFileGroupDisclosure.test.tsx`.
+
+Two controls went quiet with it: the certification row's `Delete`, a bordered `danger` button
+standing on every row of a safety-critical group, is `danger-ghost`; and "Can't fill one of these
+sizes?" — a heading, a two-line caption, an input and a button under the gear facts on every diver
+who rents anything — is one link-weight door, its caption deleted (it described what the flag does
+to the packing list, which is the mechanism, not the outcome).
+
 ### The departures board — `/board/[token]`
 
 **Built 2026-09-07** — N-23 (owner decision 2026-09-07, issue #1426), the shop's day on a screen

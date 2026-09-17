@@ -106,6 +106,50 @@ function CardRow({
   );
 }
 
+/**
+ * **The one fact the closed door carries: what this diver is certified to do.**
+ *
+ * Every card on file in render order — level rungs first, then specialties,
+ * then nitrox — joined the way a staffer reads a stack of cards at the desk.
+ * An unsighted self-declaration takes the shared "— unverified" phrase rather
+ * than a word of its own, so the summary can never let a claim pass for a card
+ * the shop has seen; the row inside still carries the badge and the control.
+ *
+ * A diver who has told the shop they hold nothing gets that sentence instead of
+ * "None on file" — it is their own statement, and it is a different fact from
+ * silence.
+ */
+function certificationSummary(
+  diver: DiverProfile,
+  t: StaffTranslator,
+  noCertificationDeclared: boolean,
+): string {
+  const named = (
+    value: string,
+    card: { selfDeclaredAt?: Date | string | null; status: "pending" | "verified" },
+  ) =>
+    isUnsightedSelfDeclaration(card)
+      ? t("shared.certificationSummary.selfDeclared", { value })
+      : value;
+  const cards = [
+    ...diver.certifications.map((card) =>
+      named(
+        card.agency === "other"
+          ? t(CERTIFICATION_LEVEL_KEYS[card.level])
+          : `${t(AGENCY_KEYS[card.agency])} ${t(CERTIFICATION_LEVEL_KEYS[card.level])}`,
+        card,
+      ),
+    ),
+    ...diver.specialtyCertifications.map((card) => named(t(SPECIALTY_KEYS[card.specialty]), card)),
+    ...diver.nitroxCertifications.map((card) =>
+      named(t("shared.certificationSummary.nitrox"), card),
+    ),
+  ];
+  if (cards.length > 0) return cards.join(" · ");
+  if (noCertificationDeclared) return t("shared.certificationSummary.notCertified");
+  return t("divers.file.certificationsNone");
+}
+
 export function CertificationsGroup({
   diver,
   shop,
@@ -138,14 +182,6 @@ export function CertificationsGroup({
   const numberErrorFor = (cardId: string) =>
     numberError && status?.cardId === cardId ? numberError : undefined;
   const groupStatus = numberError && status?.cardId ? undefined : status;
-  const waitingCount = [
-    ...diver.certifications,
-    ...diver.specialtyCertifications,
-    ...diver.nitroxCertifications,
-  ].filter(
-    (card) =>
-      isUnsightedSelfDeclaration(card) || card.status === "pending" || needsImportConfirm(card),
-  ).length;
 
   const markCertified = markCertifiedCopy(t);
   const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
@@ -170,15 +206,24 @@ export function CertificationsGroup({
     return true;
   };
 
+  /**
+   * **Quiet ink, not a bordered button.** A filled `danger` control stood on
+   * every card row at rest — the loudest thing in the group a staffer reads to
+   * decide whether somebody dives, and the one act on the row that is never the
+   * reason they opened it. `danger-ghost` keeps the warning colour the rule
+   * requires for a destructive control while dropping the border and the fill,
+   * which is the same weight the record's note rows already use.
+   *
+   * No confirm dialog: the delete lands and a toast offers a one-tap undo.
+   */
   function deleteButton(action: (formData: FormData) => void, id: string, nitrox: boolean) {
     return (
       <form action={action}>
         <input type="hidden" name="certificationId" value={id} />
         {nitrox ? <input type="hidden" name="cardType" value="nitrox" /> : null}
-        {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
         <SubmitButton
           pendingLabel={t("divers.certifications.deleting")}
-          className={buttonClass({ variant: "danger", size: "sm" })}
+          className={buttonClass({ variant: "danger-ghost", size: "sm" })}
         >
           {t("divers.certifications.delete")}
         </SubmitButton>
@@ -368,25 +413,23 @@ export function CertificationsGroup({
     <DiverFileGroupDisclosure
       id="certifications"
       label={t("divers.certifications.heading")}
-      summary={
-        waitingCount > 0
-          ? t("divers.file.certificationsWaiting", { count: waitingCount })
-          : t("divers.file.certificationsClear")
-      }
+      // **The levels on file, not the queue state.** "None waiting" answered a
+      // question nobody asked of a closed door: whether anything is waiting is
+      // already the status ledger's job two sections above, with the fix beside
+      // it. What a staffer wants off this row is what this diver is certified
+      // to do. An unsighted claim wears the shared "— unverified" phrase, so
+      // the door cannot read as though the shop has seen a card it has not.
+      summary={certificationSummary(diver, t, noCertificationDeclared)}
       open={Boolean(status)}
+      stacked
       className="mt-10"
     >
       <InsetGroup
-        as="h2"
         // A list of cards is a list: each row is one record a staffer can act
         // on, so the shell is a `<ul>` and every row a real `<li>`. A screen
         // reader gets the count before it starts reading, which a run of
         // `<div>`s cannot give it.
         bodyAs="ul"
-        id="certifications"
-        label={t("divers.certifications.heading")}
-        labelClassName="max-sm:hidden"
-        className="scroll-mt-24"
       >
         {rows}
         {noCertificationDeclared ? (

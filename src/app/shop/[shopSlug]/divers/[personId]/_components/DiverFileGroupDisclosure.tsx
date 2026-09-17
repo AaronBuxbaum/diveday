@@ -4,18 +4,35 @@ import { type ReactNode, useEffect, useRef } from "react";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 
 /**
- * Diver record file groups use one native disclosure tree at every viewport.
- * Legacy groups become doors on a phone, while `desktopCollapsible` groups
- * retain their door on larger screens too. A group's summary is its one useful
- * fact, not a second version of the group. Long facts can opt into `stacked`
- * so they get a full-width line beneath the group label on a phone.
+ * **One door per file group, at every width.**
+ *
+ * Every group in the diver's file — certification records, waiver, gear and
+ * sizes, shelf, notes, dive support, conversation, activity — is a row that
+ * states its one useful fact and opens on request. There is no second mode.
+ *
+ * It had one until this sweep: "legacy" groups hid their summary above `sm`
+ * and rendered open as cards under a second, uppercase copy of the row's own
+ * label, while the newer groups stayed doors at every width. Two grammars
+ * interleaved down one page, so the desktop record read as a stack of open
+ * forms with closed rows wedged between them — and the phone, which had only
+ * ever had the doors, was the cleaner page. The doors won.
+ *
+ * A group's summary is its one useful fact, not a second version of the group,
+ * and `open` is spent only on work the staffer came for (a notice aimed at the
+ * group, an unanswered message, a held medical review, a refused fit). Long
+ * facts opt into `stacked` so they take a full-width line beneath the label on
+ * a phone.
+ *
+ * The label is the group's heading and carries the group's fragment id, so the
+ * `?notice=` redirects (`#gear`, `#waiver`, `#notes`, …) and the prep panel's
+ * `#support` land on it — and `openHashTarget` below opens whichever group
+ * holds the target, which is what makes a deep link into a closed door work.
  */
 export function DiverFileGroupDisclosure({
   id,
   label,
   summary,
   open = false,
-  desktopCollapsible = false,
   stacked = false,
   className = "",
   children,
@@ -24,8 +41,6 @@ export function DiverFileGroupDisclosure({
   label: string;
   summary: string;
   open?: boolean;
-  /** Keep the native door on larger screens too; legacy file groups stay open there. */
-  desktopCollapsible?: boolean;
   /** Put a long summary on its own, label-aligned line below `sm`. */
   stacked?: boolean;
   className?: string;
@@ -66,15 +81,12 @@ export function DiverFileGroupDisclosure({
     return () => window.removeEventListener("hashchange", openHashTarget);
   }, []);
 
-  const summaryVisibility = desktopCollapsible ? "" : "sm:hidden";
-  const contentVisibility = desktopCollapsible ? "" : "sm:!block";
-  const desktopModeClass = desktopCollapsible ? "diver-file-group--desktop-collapsible" : "";
-  const summaryLayoutClass = stacked
-    ? "max-sm:flex-col max-sm:items-stretch max-sm:gap-1 max-sm:py-2"
-    : "";
-  const summaryGroupClass = stacked ? "max-sm:w-full" : "";
+  // `flex-wrap` rather than a phone-only column: the caret and the label keep
+  // the first line and only the fact drops beneath them, which a `flex-col`
+  // would have put the caret on a line of its own to achieve.
+  const summaryLayoutClass = stacked ? "max-sm:flex-wrap max-sm:py-2" : "";
   const summaryFactClass = stacked
-    ? "min-w-0 max-w-full text-sm text-muted tabular-nums max-sm:ms-6 max-sm:whitespace-normal max-sm:break-words sm:shrink-0 sm:text-end"
+    ? "min-w-0 max-w-full text-sm text-muted tabular-nums max-sm:ms-6 max-sm:basis-full max-sm:whitespace-normal max-sm:break-words sm:shrink-0 sm:text-end"
     : "shrink-0 text-sm text-muted tabular-nums";
 
   return (
@@ -82,25 +94,24 @@ export function DiverFileGroupDisclosure({
       <details
         ref={detailsRef}
         open={open || undefined}
-        className={`group/diver-file diver-file-group ${desktopModeClass}`.trim()}
+        className="group/diver-file"
         data-testid={`diver-file-group-${id}`}
       >
+        {/* `<summary>` takes phrasing content intermixed with heading content,
+            which is what lets the row's own label be the group's `<h2>` — one
+            heading per group rather than the row label plus a second, uppercase
+            copy of it inside. */}
         <summary
           aria-controls={`${id}-content`}
-          className={`flex min-h-11 cursor-pointer items-center gap-3 border-y border-border px-1 py-3 group-open/diver-file:border-b-0 ${summaryLayoutClass} ${summaryVisibility}`.trim()}
+          className={`flex min-h-11 cursor-pointer items-center gap-3 border-y border-border px-1 py-3 group-open/diver-file:border-b-0 ${summaryLayoutClass}`.trim()}
         >
-          <span className={`flex min-w-0 items-center gap-3 ${summaryGroupClass} sm:flex-1`.trim()}>
-            <DisclosureCaret className="shrink-0 text-muted group-open/diver-file:rotate-90" />
-            <span className="min-w-0 flex-1 text-base font-medium">{label}</span>
-          </span>
+          <DisclosureCaret className="shrink-0 text-muted group-open/diver-file:rotate-90" />
+          <h2 id={id} className="min-w-0 flex-1 scroll-mt-24 text-base font-medium">
+            {label}
+          </h2>
           <span className={summaryFactClass}>{summary}</span>
         </summary>
-        <div
-          id={`${id}-content`}
-          className={`diver-file-group-content ${contentVisibility}`.trim()}
-        >
-          {children}
-        </div>
+        <div id={`${id}-content`}>{children}</div>
       </details>
     </section>
   );

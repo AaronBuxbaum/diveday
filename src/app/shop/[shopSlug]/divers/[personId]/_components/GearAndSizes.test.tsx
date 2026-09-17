@@ -129,4 +129,45 @@ describe("GearAndSizes", () => {
     renderGear(makeRentalFit({ rentsBcd: true, bcdSize: "M" }), ["bcd"]);
     expect(screen.queryByRole("button", { name: /^About / })).not.toBeInTheDocument();
   });
+
+  /**
+   * A heading, a two-line caption, an input and a button stood under the facts
+   * on every diver who rents anything — a form for the morning the rack is
+   * empty, open on the four hundred mornings it is not. It is one control now,
+   * and the caption that described what the flag does to the packing list went
+   * with it (copy-restraint #2).
+   */
+  it("keeps the can’t-fill form behind one control, with no caption standing", () => {
+    renderGear(makeRentalFit({ rentsBcd: true, bcdSize: "M" }), ["bcd"]);
+
+    const door = screen.getByText("Can’t fill a size?");
+    expect(door.tagName).toBe("SUMMARY");
+    expect(door.closest("details")).not.toHaveAttribute("open");
+    expect(screen.queryByText(/nobody lays out a size the shop is short of/)).toBeNull();
+    // Still reachable, and still the same act.
+    expect(screen.getByRole("button", { name: "Flag for staff fit" })).toBeInTheDocument();
+  });
+
+  /**
+   * A flag that is up is open work the crew has to act on, so it is the one
+   * state of this group that states itself and opens the door with the record.
+   */
+  it("stands the flagged state open, with its note and its one way out", () => {
+    renderGear(
+      makeRentalFit({
+        rentsBcd: true,
+        needsStaffFitAt: new Date("2026-08-21T10:00:00.000Z"),
+        needsStaffFitNote: "No M BCD today",
+      }),
+      ["bcd"],
+    );
+
+    expect(screen.getByTestId("diver-file-group-gear")).toHaveAttribute("open");
+    expect(screen.getByText("Flagged for hands-on fitting")).toHaveClass("text-warning-strong");
+    expect(screen.getByText("No M BCD today")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Fit resolved — pack their sizes again" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Can’t fill a size?")).toBeNull();
+  });
 });

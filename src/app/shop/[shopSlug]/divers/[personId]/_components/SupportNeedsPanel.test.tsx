@@ -53,7 +53,7 @@ describe("the diver record's Dive support group", () => {
 
     expect(details).not.toHaveAttribute("open");
     expect(summary).not.toHaveClass("sm:hidden");
-    expect(details.querySelector(".diver-file-group-content")).not.toHaveClass("sm:!block");
+    expect(details.querySelector("#support-content")).not.toHaveClass("sm:!block");
     expect(summary).toHaveTextContent(/Dive support\s*6 arrangements/);
 
     for (const fact of [

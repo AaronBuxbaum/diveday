@@ -67,16 +67,9 @@ export function SupportNeedsPanel({
       label={t("divers.support.heading")}
       summary={supportSummary}
       open={Boolean(status)}
-      desktopCollapsible
       className="mt-8"
     >
-      <InsetGroup
-        as="h2"
-        id="support"
-        label={t("divers.support.heading")}
-        labelClassName="max-sm:hidden"
-        className="scroll-mt-24"
-      >
+      <InsetGroup>
         <div className="px-5 py-4 sm:px-6">
           <p className="text-sm text-muted">{t("divers.support.description")}</p>
         </div>
