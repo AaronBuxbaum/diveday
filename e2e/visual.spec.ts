@@ -5862,19 +5862,40 @@ for (const scheme of ["light", "dark"] as const) {
        * shop writes mini-season and the sentence a diver reads on the
        * storefront while it is running.
        *
-       * Its own capture for the reason the two rows above have one: it is
-       * closed in `settings-payments`, and this is the only place the form is
-       * looked at. The seeded calendar carries a window that is live, so the
-       * "Running now" badge — the one badge in the inset, and the whole reason
-       * a shop can find the week that is on its storefront at a glance — is in
-       * frame rather than theoretical.
+       * Its own page rather than a hub row since three season forms and an add
+       * form turned out to be a page wearing a disclosure. The seeded calendar
+       * carries a window that is live, so the "Running now" badge — the one
+       * badge on the page, and the whole reason a shop can find the week that
+       * is on its storefront at a glance — is in frame rather than theoretical.
        */
-      test(`the seasons card renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Seasons and events" }).waitFor();
-        await openSettingsRow(page, "Seasons and events");
+      test(`the seasons page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/seasons");
+        await page.getByRole("heading", { level: 1, name: "Seasons and events" }).waitFor();
         await page.getByRole("button", { name: "Add" }).last().waitFor();
         await capture(page, "settings-seasons", scheme);
+      });
+
+      /**
+       * The shop's fleet — a name, a capacity and a line of description per
+       * hull, with the delete confirm that names how many departures one has
+       * carried. Off the hub for the same reason the seasons page is.
+       */
+      test(`the boats page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/boats");
+        await page.getByRole("heading", { level: 1, name: "Boats" }).waitFor();
+        await page.getByRole("button", { name: "Add boat" }).waitFor();
+        await capture(page, "settings-boats", scheme);
+      });
+
+      /**
+       * The shop's own words for its kinds of day (ADR
+       * 20260904-reef-all-the-way-down, decision 2) — the list a diver then
+       * filters the public schedule by.
+       */
+      test(`the kinds-of-day page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/kinds-of-day");
+        await page.getByRole("heading", { level: 1, name: "Kinds of day" }).waitFor();
+        await capture(page, "settings-kinds-of-day", scheme);
       });
 
       /**
@@ -5954,18 +5975,16 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * The shop's prepaid dive packages — the price list, and the form that
-       * adds one (issue #706). Its own capture for the same reason as the rows
-       * above: it is closed in `settings-payments`, and this is the only place
-       * a shop states what "ten dives" costs.
+       * adds one (issue #706). Its own page since that list plus a five-field
+       * add form stopped fitting inside a directory row.
        *
        * The seeded shop sells none, so this photographs the empty state plus
        * the add form — which is exactly what a shop meets before the feature
        * turns itself on.
        */
-      test(`the dive-packages card renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Dive packages" }).waitFor();
-        await openSettingsRow(page, "Dive packages");
+      test(`the dive-packages page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/dive-packages");
+        await page.getByRole("heading", { level: 1, name: "Dive packages" }).waitFor();
         await page.getByRole("button", { name: "Add package" }).waitFor();
         await capture(page, "settings-dive-packages", scheme);
       });

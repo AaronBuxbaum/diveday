@@ -1,11 +1,15 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { openSettingsRow } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
  * **The reef's calendar** (issue #1485): a shop writes its own week, and a
  * diver reads it on the storefront while it is running.
+ *
+ * The editor is `/settings/seasons`, a page of its own: three full season forms
+ * and an add form behind one hub row was a page wearing a disclosure, and the
+ * settings directory's rule is that a row states an answer and opens the form
+ * that changes it (ADR 20260827-clearwater-surface-language, decision 6).
  *
  * Every test here takes a **shop of its own**. `season_events` is one of the
  * tables `resetDemoSchedule` deliberately leaves standing — a season is shop
@@ -26,22 +30,15 @@ const frozenDay = (offsetDays: number) =>
     .toISOString()
     .slice(0, 10);
 
-/**
- * The Settings row itself. Scoped, because the vocabulary row above it carries
- * an "Add" button of its own and a bare role lookup would answer from whichever
- * one the DOM reached first — a closed `<details>` still has its children.
- */
-function seasonRow(page: Page) {
-  return page
-    .locator("details")
-    .filter({
-      has: page.getByRole("heading", { level: 3, name: "Seasons and events", exact: true }),
-    })
-    .first();
+const seasonsPath = (slug: string) => `/shop/${slug}/settings/seasons`;
+
+/** The page's own body, so an assertion never answers from the settings rail. */
+function seasonsMain(page: Page) {
+  return page.getByRole("main");
 }
 
 function addForm(page: Page) {
-  return seasonRow(page)
+  return seasonsMain(page)
     .locator("form")
     .filter({ has: page.getByRole("button", { name: "Add", exact: true }) });
 }
@@ -50,7 +47,6 @@ async function fillSeason(
   page: Page,
   season: { name: string; note?: string; startsOn: string; endsOn: string },
 ) {
-  await openSettingsRow(page, "Seasons and events");
   const form = addForm(page);
   await form.getByLabel("Name").fill(season.name);
   await form.getByLabel("First day").fill(season.startsOn);
@@ -66,8 +62,8 @@ test.describe("the shop's own year", () => {
   }) => {
     // The live sign-in the fixture pays for comes out of this test's budget.
     test.setTimeout(60_000);
-    await page.goto(`/shop/${privateShop.slug}/settings`);
-    await expect(page.getByRole("heading", { level: 3, name: "Seasons and events" })).toBeVisible();
+    await page.goto(seasonsPath(privateShop.slug));
+    await expect(page.getByRole("heading", { level: 1, name: "Seasons and events" })).toBeVisible();
 
     await fillSeason(page, {
       name: "Grouper aggregation",
@@ -77,9 +73,8 @@ test.describe("the shop's own year", () => {
     });
     await expect(page.getByText("Season added.")).toBeVisible();
 
-    // The one badge in the inset marks the week that is on the storefront now.
-    await openSettingsRow(page, "Seasons and events");
-    await expect(seasonRow(page).getByText("Running now").first()).toBeVisible();
+    // The one badge on the page marks the week that is on the storefront now.
+    await expect(seasonsMain(page).getByText("Running now").first()).toBeVisible();
 
     // The diver's side, with no session at all — the storefront is anonymous.
     await page.context().clearCookies();
@@ -97,8 +92,8 @@ test.describe("the shop's own year", () => {
     privateShop,
   }) => {
     test.setTimeout(60_000);
-    await page.goto(`/shop/${privateShop.slug}/settings`);
-    await expect(page.getByRole("heading", { level: 3, name: "Seasons and events" })).toBeVisible();
+    await page.goto(seasonsPath(privateShop.slug));
+    await expect(page.getByRole("heading", { level: 1, name: "Seasons and events" })).toBeVisible();
 
     await fillSeason(page, {
       name: "Lionfish derby",
@@ -119,8 +114,8 @@ test.describe("the shop's own year", () => {
     privateShop,
   }) => {
     test.setTimeout(60_000);
-    await page.goto(`/shop/${privateShop.slug}/settings`);
-    await expect(page.getByRole("heading", { level: 3, name: "Seasons and events" })).toBeVisible();
+    await page.goto(seasonsPath(privateShop.slug));
+    await expect(page.getByRole("heading", { level: 1, name: "Seasons and events" })).toBeVisible();
 
     await fillSeason(page, {
       name: "Backwards week",
@@ -128,11 +123,26 @@ test.describe("the shop's own year", () => {
       endsOn: frozenDay(2),
     });
 
-    await openSettingsRow(page, "Seasons and events");
     await expect(
       page.getByText("Give the season a name and two days, ending on or after it starts."),
     ).toBeVisible();
     // The refusal is not cosmetic: nothing by that name reached the calendar.
-    await expect(seasonRow(page).locator('input[value="Backwards week"]')).toHaveCount(0);
+    await expect(seasonsMain(page).locator('input[value="Backwards week"]')).toHaveCount(0);
+  });
+
+  test("the hub lists it as a door rather than opening the editor in a row", async ({
+    page,
+    privateShop,
+  }) => {
+    test.setTimeout(60_000);
+    await page.goto(`/shop/${privateShop.slug}/settings`);
+    const door = page.getByRole("main").getByRole("link", { name: "Seasons and events" });
+    await expect(door).toBeVisible();
+    // A directory row, so no Save or Delete anywhere behind it.
+    await expect(
+      page.getByRole("main").getByRole("button", { name: "Add", exact: true }),
+    ).toHaveCount(0);
+    await door.click();
+    await expect(page).toHaveURL(new RegExp(`${privateShop.slug}/settings/seasons$`));
   });
 });

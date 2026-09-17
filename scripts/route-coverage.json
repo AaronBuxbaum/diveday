@@ -533,6 +533,7 @@
       "recap.spec.ts",
       "role-permissions.spec.ts",
       "season-events.spec.ts",
+      "settings-editor-pages.spec.ts",
       "settings-findability.spec.ts",
       "tax.spec.ts",
       "tide-window.spec.ts",
@@ -543,11 +544,30 @@
       "settings-data-unfinished",
       "settings-hospitality",
       "settings-payments",
-      "settings-seasons",
       "settings-tax",
       "settings-trial"
     ],
     "a11y": ["a11y.spec.ts"]
+  },
+  "/shop/[shopSlug]/settings/boats": {
+    "e2e": ["settings-editor-pages.spec.ts"],
+    "visual": ["settings-boats"],
+    "a11y": []
+  },
+  "/shop/[shopSlug]/settings/dive-packages": {
+    "e2e": ["settings-editor-pages.spec.ts"],
+    "visual": ["settings-dive-packages"],
+    "a11y": []
+  },
+  "/shop/[shopSlug]/settings/kinds-of-day": {
+    "e2e": ["schedule-lenses.spec.ts", "settings-editor-pages.spec.ts"],
+    "visual": ["settings-kinds-of-day"],
+    "a11y": []
+  },
+  "/shop/[shopSlug]/settings/seasons": {
+    "e2e": ["season-events.spec.ts", "settings-editor-pages.spec.ts"],
+    "visual": ["settings-seasons"],
+    "a11y": []
   },
   "/shop/[shopSlug]/settings/calendar": {
     "e2e": ["calendar-sync.spec.ts"],
