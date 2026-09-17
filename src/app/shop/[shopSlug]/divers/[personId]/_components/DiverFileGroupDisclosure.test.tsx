@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 
 afterEach(cleanup);
@@ -139,5 +139,92 @@ describe("DiverFileGroupDisclosure", () => {
       "max-sm:break-words",
     );
     expect(value).not.toHaveClass("shrink-0");
+  });
+});
+
+/**
+ * A deep link into a group (`#card-awaiting` from the status ledger's "Verify
+ * it") opens the door and lands the viewport on the target. The landing is
+ * the part that raced: `open` is immediate, the body's `content-visibility`
+ * flips a frame later, and a `scrollIntoView` into a still-skipped subtree is
+ * a silent no-op. So the scroll defers until the target reports rendered.
+ */
+describe("a deep link into a group", () => {
+  const originalHash = window.location.hash;
+  const frames: FrameRequestCallback[] = [];
+
+  beforeEach(() => {
+    frames.length = 0;
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+      frames.push(cb);
+      return frames.length;
+    });
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    window.location.hash = originalHash;
+  });
+
+  const runFrame = () => {
+    const next = frames.shift();
+    if (!next) throw new Error("no frame queued");
+    next(performance.now());
+  };
+
+  it("opens the group and scrolls only once the target is rendered", () => {
+    window.location.hash = "#card-awaiting";
+    const checkVisibility = vi
+      .fn<() => boolean>()
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(false)
+      .mockReturnValue(true);
+    Element.prototype.checkVisibility = checkVisibility;
+
+    render(
+      <DiverFileGroupDisclosure id="certifications" label="Certification records" summary="1 card">
+        <div id="card-awaiting" tabIndex={-1}>
+          <button type="button">Verify certification record</button>
+        </div>
+      </DiverFileGroupDisclosure>,
+    );
+
+    const details = screen.getByTestId("diver-file-group-certifications") as HTMLDetailsElement;
+    expect(details.open).toBe(true);
+    const target = document.getElementById("card-awaiting") as HTMLElement;
+
+    // Two frames with the body still skipped: no scroll yet, another frame asked for.
+    runFrame();
+    runFrame();
+    expect(target.scrollIntoView).not.toHaveBeenCalled();
+    expect(frames).toHaveLength(1);
+
+    // The frame where the body is rendered: one scroll, and focus on the first
+    // control inside the target (a `tabindex="-1"` landing is a region, not a
+    // control).
+    runFrame();
+    expect(target.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(target.scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Verify certification record" }),
+    );
+    expect(frames).toHaveLength(0);
+  });
+
+  it("gives up waiting on a target that never renders, without scrolling to it", () => {
+    window.location.hash = "#card-awaiting";
+    Element.prototype.checkVisibility = vi.fn(() => false);
+
+    render(
+      <DiverFileGroupDisclosure id="certifications" label="Certification records" summary="1 card">
+        <div id="card-awaiting" tabIndex={-1} />
+      </DiverFileGroupDisclosure>,
+    );
+
+    for (let i = 0; i < 61; i += 1) runFrame();
+    expect(frames).toHaveLength(0);
+    // Bounded: the loop ends by scrolling on the last try rather than spinning.
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
   });
 });
