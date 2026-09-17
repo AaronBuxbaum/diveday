@@ -11,30 +11,39 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
-import { importGearServiceHistoryAction } from "./actions";
+import { restoreDiveSitesAction } from "./actions";
 
 // See the gear register's copy of this comment (ADR 20260804-instant-navigation).
 export const instant = true;
 
-export const metadata: Metadata = { title: "Import gear history — DiveDay" };
+export const metadata: Metadata = { title: "Restore dive sites — DiveDay" };
 
+/**
+ * Kebab, because `noticeUrl` writes kebab: `noticeCode` lowercases the value
+ * and replaces every `_`, so a map keyed on the parser's own `unknown_columns`
+ * matches nothing and renders no banner at all — which looks exactly like the
+ * import having silently worked. `noticeCode`'s own docblock names that as the
+ * failure it cannot grep for, and the sibling gear importer was carrying it.
+ */
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
-  "import-empty": { tone: "danger", key: "gear.notice.importEmpty" },
-  // Kebab, because `noticeUrl` writes kebab — `noticeCode` replaces every `_`,
-  // so this key spelled `import-no_gear_column` matched nothing and a shop
-  // whose CSV had no gear-tag column saw no banner at all. Found while giving
-  // the dive-site importer beside this one the same map (issue #1771).
-  "import-no-gear-column": { tone: "danger", key: "gear.notice.importNoGearColumn" },
+  "import-empty": { tone: "danger", key: "diveSites.notice.importEmpty" },
+  "import-unknown-columns": { tone: "danger", key: "diveSites.notice.importUnknownColumns" },
+  "import-no-name-column": { tone: "danger", key: "diveSites.notice.importNoNameColumn" },
+  "import-file-empty": { tone: "danger", key: "diveSites.notice.importFileEmpty" },
 };
 
 /**
- * Bulk CSV import for the fleet and its dated service records — moved out of
- * the gear register (where it sat beside the day-to-day fleet, unrelated to
- * anything a shop does there most days) and into Settings, beside the
- * sibling contacts importer it mirrors in shape (ADR 20260723-contact-importer).
- * Gated owner/manager, like every other bulk-write door in this group.
+ * **The other half of `dive_sites.csv`** (issue #1771). The bundle carried the
+ * shop's whole library and three comments around it described a shop exporting
+ * and re-importing, while nothing could read one back.
+ *
+ * In Settings' "Data & integrations" group beside the contacts and gear
+ * importers, gated owner/manager like every other bulk-write door there. No
+ * template to download, unlike its two neighbours: those read a competitor's
+ * file and a template is how a shop knows what to put in it, while the only
+ * file this accepts is one DiveDay wrote.
  */
-export default async function GearImportPage({
+export default async function DiveSiteImportPage({
   params,
   searchParams,
 }: {
@@ -45,32 +54,31 @@ export default async function GearImportPage({
   const { notice } = await searchParams;
   const { shop } = await requireShopSurface(shopSlug, {
     allow: canPersonImportShopData,
-    refusal: { notice: "gear-import-not-authorized" },
+    refusal: { notice: "dive-site-import-not-authorized" },
   });
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
-  const importedMatch = notice?.match(/^imported-(\d+)-(\d+)-(\d+)-(\d+)-(\d+)$/);
+  const imported = notice?.match(/^imported-(\d+)-(\d+)-(\d+)-(\d+)$/);
   const banner = noticeFromParam(notice, NOTICES);
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={t("gear.import.eyebrow")}
+        eyebrow={t("diveSites.import.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
-        title={t("gear.import.title")}
-        description={t("gear.import.description")}
+        title={t("diveSites.import.title")}
+        description={t("diveSites.import.description")}
       />
 
-      {importedMatch ? (
+      {imported ? (
         <StaffNoticeBanner tone="success">
-          {t("gear.notice.imported", {
-            events: importedMatch[1],
-            units: importedMatch[2],
-            skipped: importedMatch[3],
-            assignments: importedMatch[4],
-            assignmentSkipped: importedMatch[5],
+          {t("diveSites.notice.imported", {
+            updated: imported[1],
+            created: imported[2],
+            deleted: imported[3],
+            skipped: imported[4],
           })}
         </StaffNoticeBanner>
       ) : banner ? (
@@ -78,21 +86,15 @@ export default async function GearImportPage({
       ) : null}
 
       <SectionCard padding="lg" className="mt-8">
-        <p className="text-sm text-muted">{t("gear.import.help")}</p>
-        <a
-          className={buttonClass({ variant: "secondary", className: "mt-4" })}
-          href="/diveday-gear-service-import-template.csv"
-          download
-        >
-          {t("gear.import.downloadTemplate")}
-        </a>
+        <p className="text-sm text-muted">{t("diveSites.import.help")}</p>
+        <p className="mt-3 text-sm text-muted">{t("diveSites.import.notRestored")}</p>
         <form
-          action={importGearServiceHistoryAction}
+          action={restoreDiveSitesAction}
           encType="multipart/form-data"
           className="mt-5 flex flex-wrap items-end gap-3"
         >
           <label className="grid gap-1 text-sm font-medium">
-            {t("gear.import.file")}
+            {t("diveSites.import.file")}
             <input
               name="file"
               type="file"
@@ -102,10 +104,10 @@ export default async function GearImportPage({
             />
           </label>
           <SubmitButton
-            pendingLabel={t("gear.import.pending")}
+            pendingLabel={t("diveSites.import.pending")}
             className={buttonClass({ variant: "secondary" })}
           >
-            {t("gear.import.submit")}
+            {t("diveSites.import.submit")}
           </SubmitButton>
         </form>
       </SectionCard>
