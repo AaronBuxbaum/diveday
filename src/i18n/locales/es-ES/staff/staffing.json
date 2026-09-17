@@ -45,6 +45,7 @@
     "removing": "Quitando…",
     "saving": "Guardando…",
     "add": "Añadir una credencial",
+    "emptyDoor": "Credenciales · ninguna registrada · Añadir una",
     "kinds": {
       "instructor_rating": "Titulación de instructor",
       "divemaster_rating": "Titulación de divemaster",
@@ -122,6 +123,9 @@
   "crewConsent": {
     "label": "Que los buceadores vean mi nombre, mi función y mis idiomas en las páginas públicas del centro.",
     "nameLabel": "Nombre que ven los buceadores",
+    "rowLabel": "En las páginas públicas",
+    "shownAs": "Se muestra como {name}",
+    "notShown": "No se muestra",
     "save": "Guardar",
     "saving": "Guardando…"
   }

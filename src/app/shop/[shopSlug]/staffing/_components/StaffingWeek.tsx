@@ -126,6 +126,25 @@ function tripHref(shopSlug: string, tripId: string) {
 }
 
 /**
+ * **One act per gap, chosen by who is reading it** (principle 8; the
+ * `20260908-one-hand` canvas: "crew without the right to assign see 'Ask for
+ * it ›' in the same cell").
+ *
+ * A ~120px cell used to carry both "Assign ›" and "Ask for this one" side by
+ * side at link weight, on every gap, in both layouts — two doors onto the same
+ * short-handed departure with nothing saying which one is the reader's. They
+ * are not peers: assigning crews the boat, asking is a request somebody else
+ * then answers, and which of the two a person can actually do is settled
+ * before the cell is drawn. So a manager gets the assignment and nobody else
+ * does; a crew member gets the ask, which is also the only door the crew
+ * request has anywhere in the app.
+ */
+function gapAct(gap: PlacedGap, canManage: boolean): "assign" | "request" | "none" {
+  if (canManage) return "assign";
+  return gap.viewerMayRequest ? "request" : "none";
+}
+
+/**
  * A shift at rest: the range, and the note if there is one. `text-muted` on a
  * day already behind the shop sets the past down without dimming the fill
  * underneath it — an `opacity` on the whole cell would take the warning ink in
@@ -327,6 +346,7 @@ function GapChip({
   timeZone,
   gapWords,
   words,
+  canManage,
   canDecide,
   requestAction,
   decideRequestAction,
@@ -337,12 +357,15 @@ function GapChip({
   timeZone: string;
   gapWords: GapWords;
   words: StaffingWeekWords;
+  /** Whose act this cell offers — see {@link gapAct}. */
+  canManage: boolean;
   canDecide: boolean;
   requestAction: (formData: FormData) => void;
   decideRequestAction: (formData: FormData) => void;
 }) {
   const loud = GAP_TONE[gap.gap] === "warning";
   const ink = loud ? "text-warning-strong" : "text-muted";
+  const act = gapAct(gap, canManage);
   return (
     <div
       className={`flex w-full flex-col gap-1 rounded-lg px-2 py-1.5 text-xs ${loud ? "bg-warning-tint" : "bg-surface-sunken"}`}
@@ -407,26 +430,26 @@ function GapChip({
           ) : null}
         </span>
       ))}
+      {/* The cell's one act, whichever one belongs to this reader (`gapAct`). */}
       <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <Link
-          href={tripHref(shopSlug, gap.tripId)}
-          aria-label={fill(words.assignAria, { trip: gap.title })}
-          className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
-        >
-          {words.assign}
-          <DiveDayIcon name="chevron-right" className="size-3" />
-        </Link>
+        {act === "assign" ? (
+          <Link
+            href={tripHref(shopSlug, gap.tripId)}
+            aria-label={fill(words.assignAria, { trip: gap.title })}
+            className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+          >
+            {words.assign}
+            <DiveDayIcon name="chevron-right" className="size-3" />
+          </Link>
+        ) : null}
         {/* Offered only when the write would accept it — same rule, evaluated
             twice, rather than a button that produces a refusal. */}
-        {gap.viewerMayRequest ? (
+        {act === "request" ? (
           <form action={requestAction}>
             <input type="hidden" name="tripId" value={gap.tripId} />
             <SubmitButton
               pendingLabel={words.requesting}
               ariaLabel={fill(words.requestAria, { trip: gap.title })}
-              // A peer of Assign beside it, not a button under it: they are two
-              // ways the same short-handed departure gets crewed, and a filled
-              // control would read as the louder of the two.
               className={buttonClass({ variant: "link", size: "sm", flush: true })}
             >
               {words.request}
@@ -596,6 +619,7 @@ export function StaffingWeek({
                     timeZone={timeZone}
                     gapWords={gapWords}
                     words={words}
+                    canManage={canManage}
                     canDecide={canDecide}
                     requestAction={requestAction}
                     decideRequestAction={decideRequestAction}
@@ -708,14 +732,19 @@ export function StaffingWeek({
                     key={gap.tripId}
                     kind={{ word: words.needsCrew, tone: GAP_TONE[gap.gap] }}
                     stacked
+                    // The same one act the grid draws (`gapAct`): the phone
+                    // loses the columns, never the work — and never gains a
+                    // second door the grid does not have either.
                     trailing={
-                      <Link
-                        href={tripHref(shopSlug, gap.tripId)}
-                        aria-label={fill(words.assignAria, { trip: gap.title })}
-                        className={buttonClass({ variant: "link", size: "sm" })}
-                      >
-                        {words.assign}
-                      </Link>
+                      gapAct(gap, canManage) === "assign" ? (
+                        <Link
+                          href={tripHref(shopSlug, gap.tripId)}
+                          aria-label={fill(words.assignAria, { trip: gap.title })}
+                          className={buttonClass({ variant: "link", size: "sm" })}
+                        >
+                          {words.assign}
+                        </Link>
+                      ) : null
                     }
                   >
                     <p className="text-sm">
@@ -775,7 +804,7 @@ export function StaffingWeek({
                         ) : null}
                       </p>
                     ))}
-                    {gap.viewerMayRequest ? (
+                    {gapAct(gap, canManage) === "request" ? (
                       <form action={requestAction} className="mt-1">
                         <input type="hidden" name="tripId" value={gap.tripId} />
                         <SubmitButton

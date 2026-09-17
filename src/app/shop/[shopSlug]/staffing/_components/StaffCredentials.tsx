@@ -66,9 +66,29 @@ export function StaffCredentials({
   words: { saving: string; remove: string; removing: string };
   reviewAction: (formData: FormData) => void;
   deleteAction: (formData: FormData) => void;
-  /** "+ Add a credential" — the group's own tail row, and its only door. */
+  /**
+   * "+ Add a credential" — the group's own tail row, and its only door. On an
+   * empty register it is the whole group, so the page labels it with the
+   * group's name there (see below).
+   */
   door: ReactNode;
 }) {
+  /**
+   * **Never a heading over an orphan link.** A shop that has recorded nothing
+   * rendered a small-caps "CREDENTIALS" section heading whose entire contents
+   * was one "Add a credential" door — a group label announcing a group with no
+   * members, which is the empty-column problem in a typeface. The door carries
+   * the group's own name in that state instead (`credentials.emptyDoor`), and
+   * the section keeps its accessible name so a screen reader's landmark walk
+   * loses nothing.
+   */
+  if (rows.length === 0) {
+    return (
+      <section className="mt-10" aria-label={label}>
+        <ul>{door}</ul>
+      </section>
+    );
+  }
   return (
     <section className="mt-10" aria-labelledby="credentials-heading">
       <GroupLabel as="h2" id="credentials-heading">
