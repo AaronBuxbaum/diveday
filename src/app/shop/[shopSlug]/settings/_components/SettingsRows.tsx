@@ -6,7 +6,7 @@ import { type SectionId, settingsSectionFragment } from "../settings-groups";
 
 /**
  * The settings directory's row vocabulary — the same "summary first, form on
- * intent" grammar the trip Overview's `EditDisclosure` established, pushed to
+ * intent" grammar the trip About panel established, pushed to
  * its conclusion: the whole row is the disclosure control, and at rest the row
  * *states its current value* instead of showing the form that would change it.
  *
@@ -27,7 +27,7 @@ import { type SectionId, settingsSectionFragment } from "../settings-groups";
  *
  * The `<summary>` carries no focusable descendants — an interactive element
  * nested in a `<summary>` fails axe's nested-interactive rule (see
- * `EditDisclosure`); detail prose that used to hide behind an `InfoHint`
+ * `TripAboutSection`); detail prose that used to hide behind an `InfoHint`
  * button renders as plain text inside the open state instead, where the
  * reader has already asked for more.
  */

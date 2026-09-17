@@ -46,7 +46,7 @@ describe("the settled station's post-trip recap note", () => {
   });
 
   it("re-opens with its confirmation after a save, so the outcome is never hidden behind a caret", () => {
-    // The same rule `EditDisclosure` records: a form whose result lands inside
+    // The same rule the trip About panel's rows carry: a form whose result lands inside
     // a closed disclosure is a form the staffer cannot see worked.
     const { container } = render(
       <RecapNoteEditor action={vi.fn()} shoutout="Thanks for diving with us." saved t={t} />,

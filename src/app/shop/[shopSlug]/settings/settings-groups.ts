@@ -28,7 +28,7 @@ export type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
  * `?saved=<id>` (set by the action that redirects back here), so the row that
  * changed comes back *open*, with the notice rendered inside it — a closed
  * disclosure hiding a refusal would be a form the staffer cannot see failed
- * (the same rule `EditDisclosure` states on the trip Overview).
+ * (the same rule the trip About panel's rows state).
  *
  * It lives here rather than in `SettingsPage.tsx` because the rail below needs
  * the same vocabulary, and two lists of section ids is exactly the drift ADR
