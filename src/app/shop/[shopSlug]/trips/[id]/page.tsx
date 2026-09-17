@@ -740,10 +740,16 @@ export default async function ManageTripPage({
             id: "requirements",
             label: t("trips.about.whoCanBook"),
             value: requirementsSummary,
-            editLabel: t("trips.requirements.edit"),
+            // A course session's gate is frozen — `saveRequirementsAction`
+            // refuses to edit it — so its row opens onto where the rules come
+            // from rather than onto a form, and says so in the word on the
+            // control.
+            editLabel: trip.course ? t("trips.about.details") : t("trips.requirements.edit"),
             // Fail-closed, open: with no requirements row readiness blocks
-            // every diver, so that state may never wait behind a tap.
-            editorOpen: Boolean(requirementsStatus) || requirement === null,
+            // every diver, so that state may never wait behind a tap. A frozen
+            // course gate opens for the opposite reason — one read-only
+            // sentence has nothing worth folding away.
+            editorOpen: Boolean(requirementsStatus) || requirement === null || Boolean(trip.course),
             editor: canConfigure ? (
               <RequirementsSection
                 action={saveRequirementsAction.bind(null, shopSlug, tripId)}

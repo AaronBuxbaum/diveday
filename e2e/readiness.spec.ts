@@ -45,10 +45,9 @@ test.describe("staff-prepared trip", () => {
     // that gates on it.
     await (await findTripOnBoard(page, "blue-mantis", title)).click();
     await openTripAbout(page);
-    await page.getByRole("heading", { name: "Readiness requirements" }).waitFor();
-    const requirements = page
-      .locator("section")
-      .filter({ has: page.getByRole("heading", { name: "Readiness requirements" }) });
+    // The About panel's "Who can book" row: its own control opens the gate's
+    // editor beneath it, and there is no headed card restating the row.
+    const requirements = page.locator("details#requirements");
     await requirements.getByText("Edit requirements").click();
     await requirements.getByLabel("Require payment to board").check();
     await requirements.getByRole("button", { name: "Save requirements" }).click();

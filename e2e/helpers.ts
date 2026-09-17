@@ -311,6 +311,21 @@ export async function openTripAbout(page: Page): Promise<Locator> {
   return about;
 }
 
+/**
+ * Open the About panel's "More for this departure" list — where the rare and
+ * destructive acts live (the weather blow-out, cancelling the departure, the
+ * series-wide writes). Opens the panel itself first.
+ */
+export async function openTripMore(page: Page): Promise<Locator> {
+  await openTripAbout(page);
+  const list = page.locator("details#about-more");
+  if ((await list.getAttribute("open")) === null) {
+    await list.locator(":scope > summary").click();
+  }
+  await expect(list).toHaveAttribute("open", "");
+  return list;
+}
+
 /** Navigate to the create-diver form from an add-diver section or panel. */
 export async function openHandEntry(container: Locator): Promise<void> {
   const addLink = container.getByRole("link", { name: /Add (diver|to wait list)/i });

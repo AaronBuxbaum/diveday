@@ -5,8 +5,8 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
-  openTripAbout,
   openTripFromBoard,
+  openTripMore,
   signInAsOwner,
   signOut,
 } from "./helpers";
@@ -131,7 +131,7 @@ test.describe("give a dive", () => {
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
-    await openTripAbout(page);
+    await openTripMore(page);
     await page.getByRole("link", { name: "Weather blow-out…" }).click();
     await page.getByRole("button", { name: "Call the blow-out" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
