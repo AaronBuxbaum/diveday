@@ -240,6 +240,9 @@ test.describe("staff", () => {
     // panel's "More for this departure" list now (slice B).
     await openTripMore(page);
     await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+    // Standing a departure down states its cost and takes a second tap
+    // (`InlineConfirm`) — no dialog, and the door is the sentence.
+    await page.getByRole("button", { name: "Yes, cancel this departure" }).click();
     // The cancellation badge is in the shared masthead and keeps the state
     // visible after the redirect; match the word rather than the lifecycle
     // notice, which is also present on this page.

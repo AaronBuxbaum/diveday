@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 
 /**
@@ -61,6 +61,27 @@ export function DiverFileGroupDisclosure({
   children: ReactNode;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
+  /**
+   * **The server's `open` is a floor, not a state.**
+   *
+   * `open` says this group carries work the staffer came for, and a plain
+   * `<details open={…}>` would drive the element both ways: a capture form
+   * redirects with a `?notice=` that opens the group, the one-tap review beside
+   * it then re-renders the record without one, and React takes the attribute
+   * back off — shutting the group on somebody who is still working in it
+   * (`e2e/certifications.spec.ts`'s capture-then-verify flow). Held here, the
+   * server can open the group and never close it, which is the same rule
+   * `openHashTarget` below already follows and `AutoOpenDetails` states for the
+   * hash: "the hash check can only ever open, never close, so the two compose".
+   *
+   * `onToggle` keeps the reader's own tap, in either direction: the state is
+   * theirs once the page has told them what it had to.
+   */
+  const [isOpen, setIsOpen] = useState(open);
+
+  useEffect(() => {
+    if (open) setIsOpen(true);
+  }, [open]);
 
   useEffect(() => {
     const openHashTarget = () => {
@@ -108,7 +129,8 @@ export function DiverFileGroupDisclosure({
     <section aria-label={label} className={className || undefined}>
       <details
         ref={detailsRef}
-        open={open || undefined}
+        open={isOpen}
+        onToggle={(event) => setIsOpen(event.currentTarget.open)}
         className="group/diver-file"
         data-testid={`diver-file-group-${id}`}
       >

@@ -5883,7 +5883,9 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the boats page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/boats");
         await page.getByRole("heading", { level: 1, name: "Boats" }).waitFor();
-        await page.getByRole("button", { name: "Add boat" }).waitFor();
+        // The submit on the add-a-boat row, which is what this page's own
+        // editor ends in now that it is a page rather than a settings row.
+        await page.getByRole("button", { name: "Add a boat" }).waitFor();
         await capture(page, "settings-boats", scheme);
       });
 

@@ -107,7 +107,10 @@ test("a minor's release asks for a parent, refuses without one, and names who co
 
   // What staff read back: not "Signed" and a date, but who signed it with them.
   await page.goto(record);
+  // The standing and its date are the closed door's own fact; who signed it
+  // with them is inside the group.
   await expect(page.getByText(/Good until/)).toBeVisible();
+  await openDiverFileGroup(page, "Waiver");
   await expect(page.getByText(`Co-signed by Jordan Guardian ${stamp} (parent)`)).toBeVisible();
 });
 

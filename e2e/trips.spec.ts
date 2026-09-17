@@ -6,6 +6,7 @@ import {
   findTripOnBoard,
   openRosterDetails,
   openTripAbout,
+  openTripAboutRow,
   openTripMore,
   seededTripId,
 } from "./helpers";
@@ -158,7 +159,9 @@ test.describe("per-trip crew role", () => {
 
     // The crew picker is controlled: a pick before hydration silently no-ops
     // (the DOM changes, no action fires), so wait for the marker first.
-    await openTripAbout(page);
+    // The crew row opens itself while the boat has nobody on it and settles
+    // once it does, so every visit after the first assign takes a tap.
+    await openTripAboutRow(page, "about-crew");
     await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: "Keiko Tanaka" });
     await expect(page.getByRole("button", { name: "Unassign Keiko Tanaka" })).toBeVisible();
@@ -169,7 +172,7 @@ test.describe("per-trip crew role", () => {
 
     // It is a write, not a client-side toggle: the ratio reads this column.
     await page.reload();
-    await openTripAbout(page);
+    await openTripAboutRow(page, "about-crew");
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("captain");
 
     // And "not specified" is reachable again — it is the honest default, not a
@@ -181,7 +184,7 @@ test.describe("per-trip crew role", () => {
     // the old role back — the captain step above already waits the same way.
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("");
     await page.reload();
-    await openTripAbout(page);
+    await openTripAboutRow(page, "about-crew");
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("");
   });
 });
@@ -393,6 +396,9 @@ test.describe("undoing a removal after the trip is cancelled", () => {
       // panel's "More for this departure" list now (slice B).
       await openTripMore(other);
       await other.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+      // Standing a departure down states its cost and takes a second tap
+      // (`InlineConfirm`) — no dialog, and the door is the sentence.
+      await other.getByRole("button", { name: "Yes, cancel this departure" }).click();
       await expect(other.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
     } finally {
       await other.close();

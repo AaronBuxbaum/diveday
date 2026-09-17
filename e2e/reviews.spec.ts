@@ -146,10 +146,18 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   // rather than standing on every published row.
   await expect(card.getByRole("button", { name: "Mark as standout" })).toHaveCount(0);
   await card.locator("summary").first().click();
-  await expect(card.getByRole("button", { name: "Mark as standout" })).toBeVisible();
-  await card.getByRole("button", { name: "Mark as standout" }).click();
+  const standout = card.getByRole("button", { name: "Mark as standout" });
+  await expect(standout).toBeVisible();
+  // Read **after** the control is in view, for the same reason the publish tap
+  // above is: reaching for a control that arrived with the disclosure is itself
+  // a scroll, for a staffer as for Playwright. The claim is about what the act
+  // does, not about what reaching for it does.
+  await standout.scrollIntoViewIfNeeded();
+  const scrolledToStandout = await page.evaluate(() => window.scrollY);
+  expect(scrolledToStandout).toBeGreaterThan(0);
+  await standout.click();
   await expect(page.getByText("Review marked as standout.")).toBeVisible();
-  expect(await page.evaluate(() => window.scrollY)).toBe(scrolledTo);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrolledToStandout);
 
   // Signed out again, the diver-facing schedule now carries it.
   await page.context().clearCookies();
@@ -386,6 +394,9 @@ test.describe("as owner, the worklist leads", () => {
         .locator("li")
         .filter({ hasText: comment }),
     ).toHaveCount(1);
+    // Hide is a rare act behind the row's own disclosure now, not a link
+    // standing on every published row.
+    await published.locator("summary").first().click();
     await expect(published.getByText("Hide", { exact: true })).toBeVisible();
   });
 });

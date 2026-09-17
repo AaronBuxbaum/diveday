@@ -300,7 +300,9 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
   await page.goto("/shop/blue-mantis/divers?q=Nadia");
   await page.getByRole("link", { name: /Nadia Petrov/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Nadia Petrov" })).toBeVisible();
+  // The door's own fact; the way to clear it is inside the group.
   await expect(page.getByText("Not certified yet — unverified", { exact: true })).toBeVisible();
+  await openDiverFileGroup(page, "Certification records");
   await page.getByRole("button", { name: "They didn’t tell us that" }).click();
   await expect(page.getByRole("status")).toContainText(
     "Cleared. This diver’s record no longer says anything about certification",

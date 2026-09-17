@@ -781,8 +781,10 @@ test("a paper release is recorded from the diver's own record, not just from a d
     page.getByText("Confirm you reviewed the medical questionnaire", { exact: false }),
   ).toBeVisible();
   // Beside the form that earned it, never a banner at the top of a record this
-  // long (docs/design/forms-and-controls.md).
-  await expect(page.getByText("Not signed")).toBeVisible();
+  // long (docs/design/forms-and-controls.md). Scoped to the group's body: the
+  // door above it carries the same word as its one settled fact, so an
+  // unscoped query now names two elements that both say the truth.
+  await expect(page.locator("#waiver-content").getByText("Not signed")).toBeVisible();
 
   // The refused attestation left the form standing rather than collapsing over
   // its own error: the box is right there to tick.
@@ -793,7 +795,7 @@ test("a paper release is recorded from the diver's own record, not just from a d
   // person-wide: the row's state word flips, and every send route retires
   // because there is nothing left for it to do.
   await expect(page.getByText("Not signed")).toHaveCount(0);
-  await expect(page.getByText(/Good until/)).toBeVisible();
+  await expect(page.locator("#waiver-content").getByText(/Good until/)).toBeVisible();
   await expect(page.getByText("Mark signed on paper")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Email waiver" })).toHaveCount(0);
 
