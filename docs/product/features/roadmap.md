@@ -613,10 +613,13 @@ only call. Each slice runs the `design-implementation` skill: the component name
 pins the rule, the canvas README's slice table moves, and the visual diffs are explained. 22a–22c may
 start on the ADR alone; 22d–22h start on the pick.
 
-- **22a** — one ramp: six sizes, tabular figures, no capitals, no eyebrow, no greeting;
-  `check:type-ramp` rewritten to six rungs; `ShopPageHeader` loses `display` and the eyebrow.
-- **22b** — two inks, one tint, two signals: the shop's colour as the staff tint (lagoon when unset),
-  red and amber always beside a word, no green and no pill on a staff surface; `Badge` deleted.
+- **22a** — one ramp on the device's face (round 2): `-apple-system` with Inter then Geist as the
+  fallback, six sizes, figures in the rounded face with tabular digits, no capitals, no eyebrow, no
+  greeting; `check:type-ramp` rewritten to six rungs; `ShopPageHeader` loses `display` and the eyebrow.
+- **22b** — the surface (round 2): cool neutrals and pure white, near-black ink, one vivid DiveDay blue
+  in two strengths with its bed, red and amber always beside a word, green only as the aboard fill,
+  no pill on a staff surface, two concentric radii, capsules, no outline and no bed, black at night;
+  the shop's colour stays on the storefront; `Badge` deleted; the token set rewritten.
 - **22c** — nothing drawn on `/shop/**`: the water band, the site tile, the dial, the hand and the
   coral leave; `WaterBandStyle` and the illustration set render nothing under `/shop`.
 - **22d** — one shell (H-87): Today · Boats · Divers · Shop and Search; a sidebar at `lg`, a five-slot
@@ -629,6 +632,8 @@ start on the ADR alone; 22d–22h start on the pick.
   roll call, the counter, the people, the shop, the storefront.
 - **22h** — the night and glare on the picked direction: the night palette held by its test; glare as
   a word in the roll call's and the counter's bar.
+- **22i** — the icons (round 2): `DiveDayIcon` re-cut on the 26px, 1.6-stroke grid, filled when
+  current in a tab bar.
 
 ## Concept-model simplification (proposed — each row needs an owner decision)
 

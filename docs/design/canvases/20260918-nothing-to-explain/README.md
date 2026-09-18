@@ -1,6 +1,6 @@
 # Nothing to explain — three ways to make DiveDay look designed
 
-- **Status:** Live (its ADR is Proposed, pending H-87; nothing has shipped from it)
+- **Status:** Live (its ADR is Proposed, pending H-87; round 2 drawn 2026-09-18 on the owner's read of round 1; nothing has shipped from it)
 - **Date:** 2026-09-18
 - **ADR:** [20260918-nothing-to-explain](../../../architecture/decisions/20260918-nothing-to-explain.md)
 - **Published:** https://claude.ai/artifact/NDrtPgYPW4zDyeT7w8BCe2
@@ -23,8 +23,9 @@ code obeys the ADR.
 
 ## Artboards
 
-One page: the cover on the left, the three directions in a row beside it, so the same screen can be
-compared across the three by scrolling sideways.
+Two pages. On the first, round 1: the cover on the left, the three directions in a row beside it, so
+the same screen can be compared across the three by scrolling sideways. On the second, round 2: its
+cover, then the same three directions redrawn frame for frame on the corrected surface.
 
 | File | What it shows |
 | --- | --- |
@@ -33,10 +34,35 @@ compared across the three by scrolling sideways.
 | `Glass.dc.html` | **B · Glass** — content edge to edge with nothing around it; every control in one floating layer of frosted glass that shrinks on scroll; one capsule for the page's act; a solid twin under glare. The same six screens, with the phone's rows running under the bar |
 | `Figures.dc.html` | **C · Figures** — every surface opens with the one figure it exists to show, large and in the page's own type, with a ring where a count fills; Inset's groups and shell beneath; tiles on the home only. The same six screens, with the ring closing on the roll call |
 
+### Round 2 — the visuals themselves
+
+The owner's read of round 1, 2026-09-18: "I think my problem is that the core of this design is
+kind of ugly. Can we evaluate the visuals themselves? I think there's nicer solutions that feel more
+Apple-like." So the second page keeps the three directions and the one call where they are and
+redraws the surface: an evaluation of round 1's own pixels — the muddy triad of deep-sea ink, the
+shop's green and warm grey; a webfont's voice; hand-cut icons; outlined cards; cramped rows;
+Bootstrap pills; no device; navy at night — each with what replaces it; a system sheet (cool
+neutrals and pure white, near-black ink, one vivid lagoon-blue in two strengths, the device's own
+face with the rounded face for figures, two concentric radii, capsules, re-cut icons, an iPhone
+around every pocket frame, black at night), the same boat before and after in the three hands, and
+the three directions redrawn on it.
+
+| File | What it shows |
+| --- | --- |
+| `Round2.dc.html` | The page's cover: the owner's read, the eight-row evaluation with the fix for each, the sheet (colour by day and at night with measured contrast, type, shape and icons and controls), the same boat before and after in three hands, what changes in code, where the recommendation stands, the one call |
+| `Inset2.dc.html` | **A · Inset, redrawn** — the same six screens on the corrected surface |
+| `Glass2.dc.html` | **B · Glass, redrawn** — the same six screens; the glass floats over a white page |
+| `Figures2.dc.html` | **C · Figures, redrawn** — the same six screens; the ring in the tint on white |
+
+Round 2 reverses two rows of round 1's floor and says so: the face becomes the device's own with
+Geist as the fallback (H-64 had settled Geist as the only face), and the staff tint becomes one
+DiveDay blue rather than the shop's colour, which stays on the storefront. Both are decided on the
+page, not asked; refusing either is one sentence in a session.
+
 `today-home.jpg`, `today-manifest.jpg`, `today-phone.jpg` and `today-counter.jpg` are captures from
 `pnpm dev` at `a8c16fb` on 2026-09-18 (`scripts/screenshot.mjs`, the demo shop, light, 1280 and
 390), downsampled. The cover reads the first two. They are evidence, dated like the rest of the
-canvas, and are never refreshed. `canvas.json` lays the four boards on one page and pins two notes.
+canvas, and are never refreshed. `canvas.json` lays the eight boards on two pages, pins three notes, and opens on round 2.
 
 ## The fiction every board holds to
 
@@ -93,12 +119,13 @@ comment, a test pins the rule, and this table moves.
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 22a — the floor: one ramp — six sizes, tabular figures, no capitals, no eyebrow, no greeting; the page's name is its title | open | — | — |
-| 22b — the floor: two inks, one tint, two signals — the shop's colour as the staff tint (lagoon when unset), red and amber always beside a word, no green and no pill on a staff surface | open | — | — |
+| 22a — the floor: one ramp on the device's face (round 2) — `-apple-system` with Inter then Geist as the fallback, six sizes, figures in the rounded face with tabular digits, no capitals, no eyebrow, no greeting; the page's name is its title | open | — | — |
+| 22b — the floor: the surface (round 2) — cool neutrals and pure white, near-black ink, one vivid lagoon-blue in two strengths with its bed, red and amber always beside a word, green only as the aboard fill, no pill on a staff surface, two concentric radii, capsules, no outline and no bed, black at night; the shop's colour stays on the storefront | open | — | — |
 | 22c — the floor: nothing drawn on `/shop/**` — the water band, the site tile, the dial, the hand and the coral leave; `WaterBandStyle` and the illustration set render nothing under `/shop` | open | — | — |
 | 22d — the floor: one shell — Today · Boats · Divers · Shop and Search, a sidebar at `lg` and a five-slot tab bar below, the twenty-one destinations regrouped under Shop and Search, the departure's four tabs one page (H-87) | open | — | — |
 | 22e — the floor: one row and one group — `SectionCard` and `LedgerRow` become the picked direction's group and row, two radii, no bed; creation as a sheet (H-87) | open | — | — |
 | 22f — the picked direction's own parts (H-87): A adds nothing beyond 22a–22e; B adds the glass layer, its solid twin under `.boat-mode` and the capsule; C adds `Figure`, `Ring`, the home's tiles and the one-figure guard | open | — | — |
+| 22i — the icons (round 2): `DiveDayIcon` re-cut on the 26px, 1.6-stroke grid, filled when current in a tab bar | open | — | — |
 | 22g — every surface on the picked direction, one family per session: the home, a boat and its roll call, the counter, the people, the shop, the storefront (H-87) | open | — | — |
 | 22h — the night and glare on the picked direction: the night palette held by its test, glare as a word in the roll call's and the counter's bar (H-87) | open | — | — |
 
@@ -111,5 +138,8 @@ output and is never committed ([design-artifacts.md](../../design-artifacts.md))
 share one prose stylesheet, pasted verbatim into each between `/* kit:start */` and `/* kit:end */`,
 and one app stylesheet between `/* app:start */` and `/* app:end */`; each direction's own sheet sits
 between `/* inset:start */`, `/* glass:start */` or `/* figures:start */` and its `:end`, and the
-cover carries all three because it draws the same boat in three hands. Change a block in one board
+cover carries all three because it draws the same boat in three hands. Round 2's boards carry the
+corrected surface between `/* app2:start */` and `/* app2:end */` and their direction's sheet between
+`/* inset2:start */`, `/* glass2:start */` or `/* figures2:start */` and its `:end`; the round-2 cover
+carries both rounds' sheets because it draws the same boat before and after. Change a block in one board
 and copy it into the others with a scripted replace, never by hand and never as a divergent copy.

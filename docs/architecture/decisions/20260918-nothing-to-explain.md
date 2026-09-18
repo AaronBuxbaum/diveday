@@ -1,14 +1,20 @@
 # 20260918-nothing-to-explain — One floor decided from the owner's own reads, three directions drawn as finished products, and one call
 
-- **Status:** Proposed — pending H-87, one call: A · Inset, B · Glass or C · Figures. The floor's
+- **Status:** Proposed — pending H-87, one call: A · Inset, B · Glass or C · Figures. **Round 1 read
+  2026-09-18 (Aaron Buxbaum, in session):** the core of the design is kind of ugly; evaluate the
+  visuals themselves; there are nicer, more Apple-like solutions. Round 2 (§7, below) evaluates round
+  1's own pixels, decides the surface, and redraws the three directions on it the same day; the call
+  is unchanged. The floor's
   first three rows (22a–22c) may start on this ADR alone, because each is one of the owner's own
   sentences from H-77's four reads taken at its word; every row from the shell onward waits on the
   pick
 - **Date:** 2026-09-18
-- **Design:** [the canvas](../../design/canvases/20260918-nothing-to-explain/README.md) — four
-  boards on one page: the cover, then each direction redrawing the same six screens (the home and a
-  boat on a desk; the home, the roll call, the night roll call and the storefront in a pocket) for
-  Blue Mantis Divers on Thursday, August 27, 2026, at 6:40 AM
+- **Design:** [the canvas](../../design/canvases/20260918-nothing-to-explain/README.md) — eight
+  boards on two pages. Round 1: the cover, then each direction redrawing the same six screens (the
+  home and a boat on a desk; the home, the roll call, the night roll call and the storefront in a
+  pocket) for Blue Mantis Divers on Thursday, August 27, 2026, at 6:40 AM. Round 2: its cover with
+  the evaluation and the sheet, then the same three directions redrawn frame for frame on the
+  corrected surface
 - **Scope:** every staff surface under `src/app/shop/**`, the primitives in `src/components/ui/`,
   the staff shell (`ShopNav`, `StaffTabBar`, `ShopPageHeader`, the trip layout's tab strip), the
   destination registry `src/lib/staff-destinations.ts`, the tokens in `src/app/globals.css`; the
@@ -137,6 +143,37 @@ Console or Chart — and H-87's pick replaces (a); **(c) and (d) stay open on H-
 are consolidations this canvas does not draw. One hand's ADR stays Proposed; its floor (20a–20e) is
 this floor's floor and its open slices 20f–20m stay paused, because each adds a thing.
 
+### 7. Round 2 — the surface, evaluated and decided (H-87 unchanged)
+
+**The owner's read of round 1 (2026-09-18):** "I think my problem is that the core of this design
+is kind of ugly. Can we evaluate the visuals themselves? I think there's nicer solutions that feel
+more Apple-like."
+
+The read is right and the fault is round 1's own: it kept DiveDay's deep-sea ink as the text, put
+the shop's forest green on every control, set everything on a warm grey, cut its own icons at
+tab-bar size, outlined every group, and framed no device. None of that is how Apple's software gets
+its look, and all of it was on every frame at once. Round 2 evaluates eight things on the canvas's
+second page and decides the surface, which is the same under any pick:
+
+| Rule | Round 1 | Round 2 | Held by |
+| --- | --- | --- | --- |
+| Neutrals | warm grey `#f2f1ec`, deep-sea ink, a 1px ring on every group | ground `#f2f2f7`, groups `#ffffff`, separators `#e3e3e8`, ink `#1d1d1f`, secondary `#6e6e73`; at night `#000000`, `#1c1c1e`, `#2c2c2e`, `#f5f5f7`, `#98989d`; no outline, no bed | the token set in `globals.css`; `night-palette.test.ts` rewritten to these pairs |
+| The tint | the shop's colour on every staff control | **one DiveDay blue**: `#0a7aff` for symbols, rings and figures at 20px and up (4.0:1 on white, where 3:1 applies), `#0064d2` for text and the one filled control (5.6:1 on white, 4.6:1 on its bed `#e6f0ff`); at night `#0a84ff`, `#6cb4ff` for text, `#102a47` the bed. The shop's colour stays on the storefront | a guard that no staff surface reads `shops.brand_color`; the contrast pairs in a test |
+| Signals | red and amber words | `#d70015` and `#b35900` by day (5.4 and 4.8 on white), `#ff453a` and `#ff9f0a` at night, always beside a word; green `#34c759` / `#30d158` only as the aboard circle's fill under a white check, never as text | unchanged rule, new values |
+| The face | Geist only (H-64) | **the device's own**: `-apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Helvetica Neue", Geist`, so every iPhone, iPad and Mac renders SF Pro; figures in `ui-rounded` (SF Pro Rounded) at 700 with tabular digits; Inter then Geist off Apple hardware. **Reverses H-64's one-face pick**; keeping Geist is deleting the first entries of the stack | `next/font` stops loading Geist on Apple hardware; `check:type-ramp` to six sizes |
+| The ramp | six sizes at 500/600/700 | 34 · 28 · 22 · 20 · 17 · 15 · 13; names regular, section titles and figures bold, no capitals | `check:type-ramp` |
+| Shape | 12px groups, 8px controls, rectangles for buttons | 20px groups and tiles, 12px controls, capsules for buttons, 46px for the screen; nothing lifted at rest; a floating bar or capsule casts `0 8px 28px` at 10% | `card.test.tsx` rewritten to two rungs |
+| Density | 14px padding, 52px two-line rows | 16px insets, 50px rows, about 60px for name-and-why rows, 28px above a section title | the Row and Group primitives |
+| Controls | small tinted rectangles | tinted capsules for every secondary act; one filled capsule per page; a grey capsule for the rare neutral act; the 44px circle whose fill is the state | `buttonClass` variants become three capsules |
+| Icons | hand-cut strokes | re-cut at 26px with a 1.6 stroke on one geometry, the tint when current | `DiveDayIcon` re-cut (slice 22i) |
+| The device | a bordered column | every pocket frame inside an iPhone with the island, the status bar and the home indicator; at night the same bezel on black | the canvas only; the app renders inside a real one |
+
+The recommendation stands: **C · Figures**, and the redrawn boards argue it better than the words
+did — a blue ring on white is the one picture of a boat filling that a shop owner remembers, and
+under this surface it is no longer a dashboard because nothing around it is coloured. The call is
+unchanged: **H-87, A, B or C.** The surface is slice 22b under any pick and can start the day the
+letter is said; the face is inside 22a; the icons are 22i.
+
 ## Alternatives considered
 
 - **A sixth round on Clear the deck** — declined: a canvas whose five pages argue eighteen calls is
@@ -153,9 +190,13 @@ this floor's floor and its open slices 20f–20m stay paused, because each adds 
   pick; three that differ on one axis is the number a person can hold at once.
 - **Apple's own type (the system face)** — declined for now: Geist is H-64's settled face and is
   close to it; a `system-ui` stack is a one-token change if a pilot shop's iPad says otherwise.
-- **The tint as lagoon everywhere rather than the shop's colour** — declined but cheap to reverse:
-  "in our colours" is the one thing a shop repeats to a friend, and it removes DiveDay's palette from
-  the staff app, which was the owner's "overbearing"; lagoon stays as the unset default.
+- **The tint as the shop's colour on staff surfaces** — round 1's choice, reversed by round 2: Blue
+  Mantis's green showed that a shop's colour is whatever it is and half of them are dull, and a staff
+  tool that changes its one accent per shop cannot be tuned for contrast once. The storefront keeps
+  the shop's colour; the staff app wears one DiveDay blue.
+- **Keeping Geist as the only face (H-64)** — reversed by round 2 for the surface, not the brand:
+  the device's face is what makes Apple's software look like Apple's, and Geist stays as the fallback
+  off Apple hardware and on DiveDay's own marketing pages until #1881 decides otherwise.
 
 ## Consequences
 

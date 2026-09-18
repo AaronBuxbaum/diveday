@@ -35,6 +35,42 @@
       "w": 1180,
       "h": 6440,
       "page": "page-1"
+    },
+    {
+      "file": "Round2.dc.html",
+      "title": "Round 2 — the visuals themselves",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 3540,
+      "page": "page-2"
+    },
+    {
+      "file": "Inset2.dc.html",
+      "title": "A · Inset, redrawn on the corrected surface",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 6580,
+      "page": "page-2"
+    },
+    {
+      "file": "Glass2.dc.html",
+      "title": "B · Glass, redrawn on the corrected surface",
+      "x": 2600,
+      "y": 0,
+      "w": 1180,
+      "h": 5360,
+      "page": "page-2"
+    },
+    {
+      "file": "Figures2.dc.html",
+      "title": "C · Figures, redrawn on the corrected surface",
+      "x": 3900,
+      "y": 0,
+      "w": 1180,
+      "h": 6440,
+      "page": "page-2"
     }
   ],
   "annotations": [
@@ -44,7 +80,7 @@
       "y": -140,
       "w": 1180,
       "page": "page-1",
-      "text": "Start with the cover: why nine rounds produced no pick, the floor decided from the owner's own reads, the three directions, the same boat in three hands, the side-by-side, the recommendation and the one call (H-87). Then the three boards in a row — each redraws the same six screens for Blue Mantis on Thursday, August 27 at 6:40 AM: the home and a boat on a desk; the home, the roll call, the night roll call and the storefront in a pocket. Compare the same screen across the three before reading any prose."
+      "text": "Round 1. Start with the cover: why nine rounds produced no pick, the floor decided from the owner's own reads, the three directions, the same boat in three hands, the side-by-side, the recommendation and the one call (H-87). Then the three boards in a row — each redraws the same six screens for Blue Mantis on Thursday, August 27 at 6:40 AM."
     },
     {
       "id": "compare",
@@ -52,17 +88,29 @@
       "y": -140,
       "w": 3780,
       "page": "page-1",
-      "text": "A · Inset: the group carries the page (Settings, Reminders, Health). B · Glass: the material carries the page (Photos, Maps, Safari). C · Figures: the number carries the page (Weather, Fitness, Health), on Inset's lists and shell. Recommended: C."
+      "text": "A · Inset: the group carries the page. B · Glass: the material carries the page. C · Figures: the number carries the page, on Inset's lists and shell. Recommended: C."
+    },
+    {
+      "id": "round-2",
+      "x": 0,
+      "y": -140,
+      "w": 5080,
+      "page": "page-2",
+      "text": "Round 2, drawn on the owner's read of round 1 (\"the core of this design is kind of ugly; evaluate the visuals themselves; nicer, more Apple-like solutions\"): the cover evaluates round 1's own pixels and decides the surface — cool neutrals, one DiveDay blue, the device's face, capsules, re-cut icons, an iPhone around every pocket frame, black at night — and the three boards beside it are round 1's three redrawn frame for frame on it. The call is unchanged: H-87, A, B or C."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-1"
+    "page": "page-2"
   },
   "pages": [
     {
       "id": "page-1",
-      "name": "Nothing to explain — three directions"
+      "name": "Round 1 — three directions on one floor"
+    },
+    {
+      "id": "page-2",
+      "name": "Round 2 — the visuals themselves"
     }
   ]
 }
