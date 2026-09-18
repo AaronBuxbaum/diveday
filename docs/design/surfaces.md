@@ -33,6 +33,8 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ### The shop home — `/shop/[shopSlug]`
 
+**Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): on a floor with no decoration, no eyebrow, no greeting and one shell, the home is a large title over the day's boats — each a group whose first row is the boat (A), a title with its count at the end over hairline rows (B), or four figures in tiles over A's groups (C). Pending H-87, one call: A · Inset, B · Glass or C · Figures.
+
 **Shipped 2026-09-17, the floor's first row** ([ADR 20260911-clear-the-deck](../architecture/decisions/20260911-clear-the-deck.md) §1, "the door" — the one row of that floor that may start on the ADR alone):
 a row's own tap is its only door. The nine trailing "Open …" verbs are gone from the spine, the desk, the draft row and the first-morning checklist; what is left on a door row is the chevron `LedgerRow` already drew, and the destination is still named on the stretched overlay for a screen reader. A trailing verb survives only where it *is* the fix — a waiver send, a wait-list invite, an invoice resend, "Keep it", the closing block's own link beside a Dismiss demoted to ghost weight. Two tests in `DaySpine.test.tsx` hold it: no row that is itself a link may contain a second link, and a door's name may be spoken but never drawn. Shipped in the same pass: the desk's counting rows are their subject alone (the sentence under "3 messages are waiting on an answer" taught a feature already found); the units row states both guesses and what to do about them; a cancelled departure owes **one** row, not one per seat; the stuck-checkout row no longer prints a Stripe session id; the settled station draws one hairline between its parts instead of two; the plan-change clause is its own sentence on its own line; "Print the day" is the header's one action; and the first-bookable card and the role orientation never render together. The decoration (the band, the tile, the dial, the greeting) and `Badge` are untouched, pending H-77.
 
@@ -86,6 +88,8 @@ back.
 
 ### The trip page — `/shop/[shopSlug]/trips/[id]`
 
+**Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): the four tabs become one page — the boat's facts, the needs and the roster as groups (A) or sections (B), or a ring of here of booked with five facts beside it over A's groups (C) — and Roll call is the page's one filled control or its floating capsule. Pending H-87, one call: A · Inset, B · Glass or C · Figures.
+
 **Reef, 2026-09-02:** the water band sits behind this header too — a wash, not a drawing. The
 manifest beneath it keeps neither drawing nor coral (`illustration.test.ts`).
 
@@ -137,6 +141,8 @@ five facts.
   `InlineConfirm`, and stopping a repeat has none because the control opposite it puts the run back.
 
 ### The boat manifest — `/shop/[shopSlug]/trips/[id]/manifest`
+
+**Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): the checkpoint card, the five stage chips, the three-way switch and the disclosure above the first name become the count and one line — at 34px in a group (A), at 44px under a floating bar (B), or as a ring that closes when everyone is aboard (C) — then the one still to call, then everyone aboard, one circle per name; glare is a word in the bar. Pending H-87, one call: A · Inset, B · Glass or C · Figures.
 
 **Proposed 2026-09-04** (same ADR and canvas): a catch-up strip and a five-word stage strip at the top, the blocked word on the row, no drawing, coral or motion.
 
@@ -253,6 +259,8 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
   ashore.
 
 ### The public schedule — `/s/[shopSlug]`
+
+**Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): Harbor's face on the headings and the shop's colour on the one filled control, over the picked direction's rows: the boat that is out, the next boat with space and Book, the week, the courses — as groups (A), as the page with one floating capsule that books the next boat (B), or with two tiles for spots and the boat that is out (C). Pending H-87, one call: A · Inset, B · Glass or C · Figures.
 
 **Tidied 2026-09-17** (the "as rendered" sweep, slice F1). Three things, all layout and disclosure — no feature left the page. The identity band's panels — the off-season card, the boat that is out, the next boat with space, the season band — each held `max-w-md` and stacked down the left third of a 1152px page, three unrelated boxes with two-thirds of the width beside them empty; they are one row now (`grid-flow-col` with `auto-cols-fr` at `md` and up, the stack on a phone), which reads at one panel or at four. The lens rail met a diver with ten or eleven controls at rest — seven chips, two selects, one or two checkboxes and a counted sentence — so the four filters moved behind one quiet "Filter" disclosure inside their own `<form>`, open on first paint whenever the URL already carries one of them, and the rail at rest is the shop's own chips. The sentence above the list ("3 departures ask for more than Open Water. They are still bookable: ask the shop.") was deleted: the rows already say "Above your level" and the shorter list is one tap away in the same panel.
 

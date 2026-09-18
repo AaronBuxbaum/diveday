@@ -1,0 +1,465 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>C · Figures — the number carries the page</title>
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Bricolage+Grotesque:wght@600;700&display=swap">
+  <style>
+    body { margin: 0; background: #fbfaf7; }
+/* kit:start — the canvas's own prose. Pasted verbatim into every board; edit once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --cbg: var(--kit-bg, #fbfaf7); --csurf: var(--kit-surface, #ffffff); --cline: var(--kit-line, #e4e2dc); --cink: var(--kit-ink, #14232b); --cmute: var(--kit-mute, #5f6b71); --caccent: var(--kit-accent, #1d7a5f);
+  width: 1180px; margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: var(--cink); background: var(--cbg); -webkit-font-smoothing: antialiased; padding-bottom: 56px; }
+.board a { color: var(--caccent); }
+.bh { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px; border-bottom: 1px solid var(--cline); background: var(--csurf); }
+.bh .lab { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--caccent); }
+.bh .lab span { color: var(--cmute); font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 13px; margin-left: 12px; }
+.bh h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+.bh .lede { margin: 0; max-width: 940px; font-size: 17px; line-height: 27px; }
+.strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.strip h3 { margin: 0; font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmute); }
+.strip p { margin: 6px 0 0; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.strip p b, .sec p b, .beside p b, .foot p b, .tbl td b { color: var(--cink); font-weight: 600; }
+.cap { display: flex; align-items: baseline; gap: 12px; padding: 30px 48px 10px; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmute); }
+.cap b { color: var(--cink); }
+.frames { display: flex; gap: 28px; align-items: flex-start; padding: 0 48px; }
+.beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.beside h3 { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); }
+.beside p { margin: 0 0 12px; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.beside ul { margin: 0 0 16px; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.beside li b { color: var(--cink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--cline); }
+.sec h2 { margin: 0; font-size: 20px; line-height: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 960px; }
+.sec ul { margin: 0; padding-left: 20px; font-size: 15px; line-height: 23px; max-width: 960px; }
+.sec li b { font-weight: 600; }
+.foot { margin: 40px 48px 0; padding-top: 20px; border-top: 1px solid var(--cline); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); }
+.foot p { margin: 6px 0 0; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.foot ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.foot li b { color: var(--cink); font-weight: 600; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmute); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--cink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--cline); vertical-align: top; color: var(--cmute); }
+.tbl td:first-child { color: var(--cink); font-weight: 600; width: 160px; }
+.cards3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--csurf); border: 1px solid var(--cline); border-radius: 12px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card h3 small { display: block; font-size: 13px; font-weight: 500; color: var(--cmute); letter-spacing: 0; margin-top: 4px; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; }
+.card p.m { color: var(--cmute); }
+.card .k { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--caccent); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.shots { display: flex; gap: 20px; align-items: flex-start; padding: 0 48px; }
+.shots img { display: block; border: 1px solid var(--cline); border-radius: 10px; }
+.shots .note { flex: 1 1 auto; min-width: 0; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.shots .note b { color: var(--cink); font-weight: 600; }
+.shots .note ol { margin: 0; padding-left: 20px; }
+.frame { border: 1px solid var(--cline); border-radius: 12px; overflow: hidden; position: relative; }
+.frame.desktop { width: 1084px; flex: 0 0 1084px; }
+.phone { width: 390px; flex: 0 0 390px; min-height: 800px; border-radius: 44px; border: 1px solid var(--cline); overflow: hidden; position: relative; display: flex; flex-direction: column; }
+.phone > .app { flex: 1 1 auto; display: flex; flex-direction: column; }
+.phone .sb { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 6px 28px 0; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.phone .sb .sig { display: flex; align-items: center; gap: 6px; }
+.phone .sb .sig i { display: block; width: 18px; height: 10px; border: 1.5px solid currentColor; border-radius: 3px; opacity: .8; position: relative; }
+.phone .sb .sig i::after { content: ""; position: absolute; left: 2px; top: 2px; bottom: 2px; width: 10px; background: currentColor; border-radius: 1px; }
+.phone .sb .sig b { display: block; width: 14px; height: 10px; background: linear-gradient(to top, currentColor 0, currentColor 100%); clip-path: polygon(0 60%, 25% 60%, 25% 40%, 50% 40%, 50% 20%, 75% 20%, 75% 0, 100% 0, 100% 100%, 0 100%); opacity: .8; }
+.hand { display: flex; gap: 16px; padding: 0 48px; }
+.hand > div { flex: 1 1 0; min-width: 0; }
+.hand .who { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); margin-bottom: 8px; }
+/* kit:end */
+
+/* app:start — the type ramp, the icons and the phone chrome every direction shares. */
+.app { font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; font-size: 17px; line-height: 24px; text-align: left; }
+.app * { box-sizing: border-box; }
+.app p, .app h1, .app h2, .app h3 { margin: 0; }
+.app .lt { font-size: 34px; line-height: 40px; font-weight: 700; letter-spacing: -0.022em; }
+.app .t1 { font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.02em; }
+.app .t2 { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.012em; }
+.app .hl { font-size: 17px; line-height: 22px; font-weight: 600; }
+.app .bd { font-size: 17px; line-height: 24px; }
+.app .sh { font-size: 15px; line-height: 20px; }
+.app .fn { font-size: 13px; line-height: 18px; }
+.app .cp { font-size: 12px; line-height: 16px; }
+.app .sec2 { color: var(--sec); }
+.app .ter { color: var(--ter); }
+.app .num { font-variant-numeric: tabular-nums; }
+.app .red { color: var(--red); }
+.app .amb { color: var(--amber); }
+.app .tint { color: var(--tint); }
+.app .w5 { font-weight: 500; } .app .w6 { font-weight: 600; } .app .w7 { font-weight: 700; }
+.app .fig { font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.app .ic { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; display: block; }
+.app .ic.s { width: 18px; height: 18px; }
+.app .ic.xs { width: 14px; height: 14px; stroke-width: 2.2; }
+.app .dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 8px; }
+.app .dot.red { background: var(--red); } .app .dot.amb { background: var(--amber); } .app .dot.tint { background: var(--tint); } .app .dot.none { background: transparent; }
+.app .row { display: flex; align-items: center; gap: 12px; }
+.app .lead { flex: 1 1 auto; min-width: 0; }
+.app .trail { margin-left: auto; display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.app .avatar { width: 28px; height: 28px; border-radius: 50%; background: #d8d3c6; color: #4f4a40; font-size: 12px; font-weight: 600; line-height: 28px; text-align: center; flex: 0 0 auto; }
+.app .mark { width: 28px; height: 28px; border-radius: 8px; background: var(--tint); color: #fff; font-size: 12px; font-weight: 700; line-height: 28px; text-align: center; flex: 0 0 auto; }
+/* a big tap for the roll call: one circle whose fill is the state */
+.app .tap { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ter); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; color: #fff; }
+.app .tap.on { background: var(--tint); border-color: var(--tint); }
+.app .tap.off { border-color: var(--red); }
+/* a ring for a count that fills */
+.app .ring { position: relative; width: 72px; height: 72px; flex: 0 0 auto; }
+.app .ring svg { width: 72px; height: 72px; transform: rotate(-90deg); display: block; }
+.app .ring .track { stroke: var(--track); } .app .ring .arc { stroke: var(--tint); }
+.app .ring .in { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+/* the storefront wears the shop's face on its headings only */
+.app .harbor { font-family: "Bricolage Grotesque", Geist, "Helvetica Neue", Arial, sans-serif; font-weight: 700; letter-spacing: -0.015em; }
+/* app:end */
+/* app:more — a phone with no bar keeps its last line clear of the corner radius */
+.app.ph > .body:last-child { padding-bottom: 52px; }
+
+/* figures:start — C · Figures. The number carries the structure. Lists and chrome are Inset's. */
+.app.figures { --bg: #f3f3ef; --grp: #ffffff; --line: #e2e0d9; --sep: #ecebe6; --ink: #0c2a35; --sec: #6b787e; --ter: #a3adb2; --tint: #1d7a5f; --tint-soft: #e2efe9; --track: #e2efe9; --red: #c8362b; --amber: #b8700c; --r: 20px; --rg: 14px; --rc: 10px; }
+.app.figures.night { --bg: #071720; --grp: #0d222d; --line: #1c3a47; --sep: #163038; --ink: #e9f3f4; --sec: #8fa8b0; --ter: #4f6a75; --tint: #5cc8a0; --tint-soft: #113b31; --track: #113b31; --red: #f87171; --amber: #fbbf24; }
+.figures .shell { display: flex; min-height: 880px; }
+.figures .side { width: 236px; flex: 0 0 236px; padding: 18px 12px 16px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--line); }
+.figures .who { display: flex; align-items: center; gap: 10px; padding: 6px 8px 14px; font-size: 15px; font-weight: 600; }
+.figures .search { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; border-radius: var(--rc); background: rgba(12,42,53,.06); color: var(--sec); font-size: 15px; margin: 0 0 12px; }
+.figures .nav a { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border-radius: var(--rc); font-size: 15px; font-weight: 500; color: var(--ink); text-decoration: none; }
+.figures .nav a.cur { background: var(--tint-soft); color: var(--tint); font-weight: 600; }
+.figures .me { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 8px 10px; font-size: 15px; font-weight: 500; }
+.figures .main { flex: 1 1 auto; min-width: 0; padding: 36px 40px 48px; }
+.figures .col { max-width: 800px; margin: 0 auto; }
+.figures .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.figures .head .sub { font-size: 17px; color: var(--sec); margin-top: 2px; }
+.figures .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.figures .tiles.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.figures .tile { background: var(--grp); border-radius: var(--r); padding: 18px 20px 16px; min-height: 150px; display: flex; flex-direction: column; box-shadow: 0 0 0 1px rgba(12,42,53,.05); position: relative; }
+.figures.night .tile, .figures.night .grp { box-shadow: 0 0 0 1px rgba(255,255,255,.04); }
+.figures .tile .k { font-size: 13px; font-weight: 600; color: var(--sec); }
+.figures .tile .v { margin-top: auto; font-size: 44px; line-height: 48px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.figures .tile .v small { font-size: 17px; font-weight: 500; color: var(--sec); letter-spacing: 0; margin-left: 5px; }
+.figures .tile .s { font-size: 13px; line-height: 18px; color: var(--sec); margin-top: 2px; }
+.figures .tile .ring { position: absolute; right: 16px; top: 16px; }
+.figures .tile .bar { height: 6px; border-radius: 3px; background: var(--track); margin-top: 10px; overflow: hidden; }
+.figures .tile .bar i { display: block; height: 100%; background: var(--tint); border-radius: 3px; }
+.figures .gh { display: flex; align-items: baseline; justify-content: space-between; padding: 26px 4px 8px; }
+.figures .gh .ttl { font-size: 17px; font-weight: 600; }
+.figures .gh .meta { font-size: 15px; color: var(--sec); font-variant-numeric: tabular-nums; }
+.figures .grp { background: var(--grp); border-radius: var(--rg); box-shadow: 0 0 0 1px rgba(12,42,53,.05); overflow: hidden; }
+.figures .grp .row { min-height: 52px; padding: 8px 16px; border-top: 1px solid var(--sep); }
+.figures .grp .row:first-child { border-top: 0; }
+.figures .row .name { font-size: 17px; font-weight: 500; }
+.figures .row .why { font-size: 15px; color: var(--sec); }
+.figures .row .state { font-size: 15px; font-weight: 500; color: var(--sec); white-space: nowrap; }
+.figures .row .state.red { color: var(--red); font-weight: 600; }
+.figures .row .state.amb { color: var(--amber); font-weight: 600; }
+.figures .chev { color: var(--ter); }
+.figures .btn { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px; border-radius: var(--rc); background: var(--tint-soft); color: var(--tint); font-size: 15px; font-weight: 600; white-space: nowrap; }
+.figures .btn.fill { background: var(--tint); color: #fff; }
+.figures .btn.lg { height: 44px; padding: 0 20px; font-size: 17px; }
+.figures .hero { display: flex; align-items: center; gap: 22px; background: var(--grp); border-radius: var(--r); padding: 22px 24px; box-shadow: 0 0 0 1px rgba(12,42,53,.05); }
+.figures .hero .big { font-size: 56px; line-height: 60px; font-weight: 700; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; }
+.figures .hero .big small { font-size: 20px; font-weight: 500; color: var(--sec); letter-spacing: 0; margin-left: 6px; }
+.figures .hero .ring { width: 96px; height: 96px; } .figures .hero .ring svg { width: 96px; height: 96px; } .figures .hero .ring .in { font-size: 24px; }
+.figures .hero .facts { display: flex; gap: 22px; margin-top: 8px; }
+.figures .hero .facts div b { display: block; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.figures .hero .facts div span { font-size: 13px; color: var(--sec); }
+/* phone */
+.figures.ph { display: flex; flex-direction: column; min-height: 800px; height: 100%; }
+.figures.ph .body { padding: 0 16px 20px; flex: 1 1 auto; }
+.figures.ph .lt { padding: 6px 0 12px; }
+.figures.ph .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.figures.ph .tile { min-height: 132px; padding: 14px 16px 14px; }
+.figures.ph .tile .v { font-size: 36px; line-height: 40px; }
+.figures .navbar { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 12px; }
+.figures .navbar .back { display: flex; align-items: center; gap: 2px; color: var(--tint); font-size: 17px; }
+.figures .navbar .ttl { font-size: 17px; font-weight: 600; }
+.figures .tabbar { display: flex; border-top: 1px solid var(--line); background: var(--grp); padding: 8px 6px 24px; margin-top: auto; }
+.figures .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 500; color: var(--sec); text-decoration: none; }
+.figures .tabbar a.cur { color: var(--tint); }
+.figures.ph .gh { padding: 22px 4px 8px; }
+.figures.ph .grp .row { padding: 8px 14px; }
+.figures.ph .hero { padding: 18px 18px; gap: 16px; border-radius: 18px; }
+.figures.ph .hero .big { font-size: 44px; line-height: 48px; }
+/* figures:end */
+
+  </style>
+</helmet>
+<div class="board">
+  <div class="bh">
+    <div class="lab">C · Figures <span>Design canvas · 2026-09-18 · Nothing to explain</span></div>
+    <h1>The number carries the page</h1>
+    <p class="lede">Every surface opens with the one figure it exists to show — minutes to lines off, here of booked, aboard of expected, seats left, the month — large, rounded and in the same face as the words, with a ring or a bar where a count fills. Under the figure, the lists are Inset's groups and the chrome is Inset's shell. This is the instrument you asked for three times, drawn the only way Apple has ever shipped one: light, soft, one tint, and never a console.</p>
+    <div class="strip">
+      <div><h3>Feels like</h3><p><b>Weather, Fitness, Health.</b> A summary of big figures you read in a glance, then the detail as lists. A shop owner shows it to a friend and the friend understands the morning before a word is said.</p></div>
+      <div><h3>What leads</h3><p><b>The figure.</b> One per surface, in the page's own type at 44–56px; tiles only on the home. A ring for a count that fills, a bar for seats sold; the words beside them carry the fact, so the shape is never the only carrier.</p></div>
+      <div><h3>Cost · risk</h3><p><b>3–4 sessions.</b> Inset's deletions plus two primitives (a <code>Figure</code> and a <code>Ring</code>) and the home's tiles. The risk is the dashboard: two figures on one surface, or a tile that reports rather than leads, and the brand's own words rule it out — so the rule is one figure per surface and tiles on the home alone.</p></div>
+    </div>
+  </div>
+
+  <div class="cap"><b>The home</b> · Thursday, August 27, 6:40 AM · desktop · light</div>
+  <div class="frames">
+  <div class="frame desktop"><div class="app figures"><div class="shell">
+    <aside class="side">
+      <div class="who"><span class="mark">BM</span>Blue Mantis Divers</div>
+      <div class="search"><svg class="ic s" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>Search</div>
+      <nav class="nav">
+        <a class="cur"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>Today</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><path d="M3.5 14.5h17l-2 5h-13zM6 14.5V9h12v5.5M12 9V4.5h4.5"/></svg>Boats</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c0-4 3.4-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg>Divers</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><path d="M4 9.5l1.2-4.5h13.6L20 9.5M4 9.5v10h16v-10M4 9.5a2.7 2.7 0 005.3 0 2.7 2.7 0 005.4 0 2.7 2.7 0 005.3 0M10 19.5v-5.5h4v5.5"/></svg>Shop</a>
+      </nav>
+      <div class="me"><span class="avatar">DR</span>Dana Reyes</div>
+    </aside>
+    <main class="main"><div class="col">
+      <div class="head"><div><h1 class="lt">Today</h1><p class="sub">Thursday, August 27 · 3 boats · 23 divers</p></div><span class="btn">Print the day</span></div>
+      <div class="tiles">
+        <div class="tile"><span class="k">Lines off</span><div class="v">20<small>min</small></div><span class="s">7:00 AM · Two-Tank Reef · Mantis II</span></div>
+        <div class="tile"><span class="k">Here</span><span class="ring"><svg viewBox="0 0 72 72"><circle class="track" cx="36" cy="36" r="30" fill="none" stroke-width="8"/><circle class="arc" cx="36" cy="36" r="30" fill="none" stroke-width="8" stroke-linecap="round" stroke-dasharray="113 188.5"/></svg><span class="in">6</span></span><div class="v">6<small>of 10</small></div><span class="s">2 to come · 2 can't board yet</span></div>
+        <div class="tile"><span class="k">Can't board</span><div class="v red">2</div><span class="s">Grace Mensah · Priya Sharma</span></div>
+        <div class="tile"><span class="k">This week</span><div class="v">62<small>of 84 seats</small></div><div class="bar"><i style="width:74%"></i></div><span class="s">Saturday's 11:00 sold out, 2 waiting</span></div>
+      </div>
+
+      <div class="gh"><span class="ttl">Before lines off</span><span class="meta">7:00 AM · Two-Tank Reef — Molasses &amp; French</span></div>
+      <div class="grp">
+        <div class="row"><span class="dot red"></span><div class="lead"><div class="name">Grace Mensah</div><div class="why">Advanced card needs a look</div></div><span class="state red">Can't board</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><span class="dot red"></span><div class="lead"><div class="name">Priya Sharma</div><div class="why">Waiver not sent</div></div><span class="btn">Send waiver</span></div>
+        <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Nadia Petrov</div><div class="why">No emergency contact · ask at the counter</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Hannah Liu, Ben Carter, Emma Fischer</div><div class="why">No rental sizes yet</div></div><span class="state">Prep list</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><span class="dot none"></span><div class="lead"><div class="name">Hugo Marsh, Ben Okafor</div><div class="why">Not here yet</div></div><span class="state">2 to come</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+      </div>
+
+      <div class="gh"><span class="ttl">Later today</span><span class="meta">2 boats</span></div>
+      <div class="grp">
+        <div class="row"><div class="lead"><div class="name">1:00 PM · Wreck Trip — Spiegel Grove</div><div class="why">Mantis II · deep wreck · Advanced</div></div><span class="state num w6" style="color:var(--ink)">12 of 12</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><span class="dot red"></span><div class="lead"><div class="name">No crew assigned</div><div class="why">12 divers and nobody in the water</div></div><span class="btn">Assign crew</span></div>
+        <div class="row"><span class="dot red"></span><div class="lead"><div class="name">Tomás Ferreira</div><div class="why">No card on file for a deep wreck</div></div><span class="state red">Can't board</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+      </div>
+      <div class="grp" style="margin-top:14px">
+        <div class="row"><div class="lead"><div class="name">7:30 PM · Night Dive — City of Washington</div><div class="why">Skiff · Keiko Tanaka · sunset 7:44 PM</div></div><span class="state num w6" style="color:var(--ink)">3 of 8</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">5 seats open</div><div class="why">No last-minute deal sent</div></div><span class="btn">Send a deal</span></div>
+        <div class="row"><span class="dot none"></span><div class="lead"><div class="name">Jonas Berg</div><div class="why">First dive since 2019 — say hello</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+      </div>
+
+      <div class="gh"><span class="ttl">At the desk</span><span class="meta">4</span></div>
+      <div class="grp">
+        <div class="row"><div class="lead"><div class="name">3 messages waiting</div><div class="why">Grace Mensah, Priya Sharma, Ravi Nair wrote back</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><div class="lead"><div class="name">1 review waiting</div><div class="why">Lars P. · Wreck Trip — Duane · five stars</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><div class="lead"><div class="name">Priya Sharma's $95</div><div class="why">Paid at 6:02, not yet confirmed by Stripe</div></div><span class="state amb">Unconfirmed</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><div class="lead"><div class="name">Emmet O'Brien, Friday 7:00</div><div class="why">Booking unfinished · started 6:02 at this desk</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+      </div>
+    </div></main>
+  </div></div></div>
+  </div>
+  <p class="aside" style="padding:12px 48px 0;max-width:960px;font-size:14px;line-height:22px;color:var(--cmute)"><b style="color:var(--cink)">What you are looking at.</b> Four tiles say the morning before a sentence does: twenty minutes, six of ten, two who can't board, the week's seats. Everything under them is Inset's list. The ring's arc is the shop's colour and its words say "2 to come", so the ring is never the only carrier; the red figure carries the word beside it. Later boats are one row each with their count at the end — the figure leads only where it is the reason the page exists.</p>
+
+  <div class="cap"><b>A boat</b> · the 7:00 · desktop · light</div>
+  <div class="frames">
+  <div class="frame desktop"><div class="app figures"><div class="shell">
+    <aside class="side">
+      <div class="who"><span class="mark">BM</span>Blue Mantis Divers</div>
+      <div class="search"><svg class="ic s" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>Search</div>
+      <nav class="nav">
+        <a><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>Today</a>
+        <a class="cur"><svg class="ic" viewBox="0 0 24 24"><path d="M3.5 14.5h17l-2 5h-13zM6 14.5V9h12v5.5M12 9V4.5h4.5"/></svg>Boats</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c0-4 3.4-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg>Divers</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><path d="M4 9.5l1.2-4.5h13.6L20 9.5M4 9.5v10h16v-10M4 9.5a2.7 2.7 0 005.3 0 2.7 2.7 0 005.4 0 2.7 2.7 0 005.3 0M10 19.5v-5.5h4v5.5"/></svg>Shop</a>
+      </nav>
+      <div class="me"><span class="avatar">DR</span>Dana Reyes</div>
+    </aside>
+    <main class="main"><div class="col">
+      <p class="sh tint w5" style="margin-bottom:6px">‹ Boats</p>
+      <div class="head"><div><h1 class="lt">Two-Tank Reef — Molasses &amp; French</h1><p class="sub">Thursday 7:00–10:30 AM · Mantis II · Molasses Reef, then French Reef · Keiko Tanaka, Sal Moretti</p></div><span class="btn fill lg">Roll call</span></div>
+      <div class="hero">
+        <span class="ring"><svg viewBox="0 0 96 96"><circle class="track" cx="48" cy="48" r="40" fill="none" stroke-width="10"/><circle class="arc" cx="48" cy="48" r="40" fill="none" stroke-width="10" stroke-linecap="round" stroke-dasharray="150.8 251.3"/></svg><span class="in">6</span></span>
+        <div><div class="big">6<small>of 10 here</small></div><div class="facts"><div><b>2</b><span>can't board</span></div><div><b>2</b><span>to come</span></div><div><b>2</b><span>seats open</span></div><div><b>6:45</b><span>check-in closes</span></div><div><b>$95</b><span>2 open orders</span></div></div></div>
+      </div>
+      <div class="gh"><span class="ttl">Before lines off</span><span class="meta">4 things</span></div>
+      <div class="grp">
+        <div class="row"><span class="dot red"></span><div class="lead"><div class="name">Grace Mensah</div><div class="why">Advanced card needs a look</div></div><span class="state red">Can't board</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><span class="dot red"></span><div class="lead"><div class="name">Priya Sharma</div><div class="why">Waiver not sent</div></div><span class="btn">Send waiver</span></div>
+        <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Nadia Petrov</div><div class="why">No emergency contact · ask at the counter</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Hannah Liu, Ben Carter, Emma Fischer</div><div class="why">No rental sizes yet</div></div><span class="state">Prep list</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+      </div>
+      <div class="gh"><span class="ttl">Divers</span><span class="meta">10</span></div>
+      <div class="grp">
+        <div class="row"><div class="lead"><div class="name">Ravi Nair</div><div class="why">Advanced · 12th dive with us</div></div><span class="state">Here</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><div class="lead"><div class="name">Hannah Liu</div><div class="why">Open Water · buddy Ben Carter</div></div><span class="state">Here</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><div class="lead"><div class="name">Ben Carter</div><div class="why">Open Water · buddy Hannah Liu</div></div><span class="state">Here</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><div class="lead"><div class="name">Emma Fischer</div><div class="why">Advanced · nitrox 32%</div></div><span class="state">Here</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><div class="lead"><div class="name">Ines Costa</div><div class="why">Rescue</div></div><span class="state">Here</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><div class="lead"><div class="name">Nadia Petrov</div><div class="why">Open Water · no emergency contact</div></div><span class="state">Here</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><div class="lead"><div class="name">Grace Mensah</div><div class="why">Advanced · card needs a look</div></div><span class="state red">Can't board</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><div class="lead"><div class="name">Priya Sharma</div><div class="why">Open Water · first time with us</div></div><span class="state red">Can't board</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><div class="lead"><div class="name">Hugo Marsh</div><div class="why">Advanced</div></div><span class="state">Not here yet</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><div class="lead"><div class="name">Ben Okafor</div><div class="why">Open Water · first time with us</div></div><span class="state">Not here yet</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="row"><span class="tint" style="display:flex"><svg class="ic s" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><div class="lead"><div class="name tint">Seat a diver</div></div></div>
+      </div>
+    </div></main>
+  </div></div></div>
+  </div>
+  <p class="aside" style="padding:12px 48px 0;max-width:960px;font-size:14px;line-height:22px;color:var(--cmute)"><b style="color:var(--cink)">What changed.</b> The boat's one figure is here of booked, in a ring, with the five facts a desk asks for beside it in one line; the four trip tabs are two groups beneath. The roll call is the one filled button. At the rail the same ring becomes aboard of expected, and after the second dive, back of aboard.</p>
+
+  <div class="cap"><b>In a pocket</b> · the home at 6:40 and the roll call at 6:58 · 390 · light</div>
+  <div class="frames">
+    <div class="phone"><div class="app figures ph">
+      <div class="sb"><span>6:40</span><span class="sig"><b></b><i></i></span></div>
+      <div class="body">
+        <h1 class="lt">Today</h1>
+        <div class="tiles">
+          <div class="tile"><span class="k">Lines off</span><div class="v">20<small>min</small></div><span class="s">7:00 · Mantis II</span></div>
+          <div class="tile"><span class="k">Here</span><div class="v">6<small>of 10</small></div><span class="s">2 to come · 2 can't board</span></div>
+        </div>
+        <div class="gh"><span class="ttl">Before lines off</span><span class="meta">4</span></div>
+        <div class="grp">
+          <div class="row"><span class="dot red"></span><div class="lead"><div class="name">Grace Mensah</div><div class="why">Card needs a look</div></div><span class="state red">Can't board</span></div>
+          <div class="row"><span class="dot red"></span><div class="lead"><div class="name">Priya Sharma</div><div class="why">Waiver not sent</div></div><span class="btn">Send</span></div>
+          <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Nadia Petrov</div><div class="why">No emergency contact</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+          <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">3 divers</div><div class="why">No rental sizes yet</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        </div>
+        <div class="gh"><span class="ttl">Later today</span><span class="meta">2 boats</span></div>
+        <div class="grp">
+          <div class="row"><div class="lead"><div class="name">1:00 PM · Wreck Trip</div><div class="why">No crew · Tomás can't board</div></div><span class="state num w6" style="color:var(--ink)">12 of 12</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+          <div class="row"><div class="lead"><div class="name">7:30 PM · Night Dive</div><div class="why">No deal sent · Jonas's first since 2019</div></div><span class="state num w6" style="color:var(--ink)">3 of 8</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        </div>
+        <div class="gh"><span class="ttl">At the desk</span><span class="meta">4</span></div>
+        <div class="grp">
+          <div class="row"><div class="lead"><div class="name">3 messages waiting</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+          <div class="row"><div class="lead"><div class="name">Priya Sharma's $95</div><div class="why">Not yet confirmed</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        </div>
+      </div>
+      <div class="tabbar">
+        <a class="cur"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>Today</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><path d="M3.5 14.5h17l-2 5h-13zM6 14.5V9h12v5.5M12 9V4.5h4.5"/></svg>Boats</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c0-4 3.4-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg>Divers</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><path d="M4 9.5l1.2-4.5h13.6L20 9.5M4 9.5v10h16v-10M4 9.5a2.7 2.7 0 005.3 0 2.7 2.7 0 005.4 0 2.7 2.7 0 005.3 0M10 19.5v-5.5h4v5.5"/></svg>Shop</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>Search</a>
+      </div>
+    </div></div>
+
+    <div class="phone"><div class="app figures ph">
+      <div class="sb"><span>6:58</span><span class="sig"><b></b><i></i></span></div>
+      <div class="navbar"><span class="back"><svg class="ic" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Boat</span><span class="ttl">Roll call</span><span class="sh tint w5">Glare</span></div>
+      <div class="body">
+        <div class="hero">
+          <span class="ring"><svg viewBox="0 0 96 96"><circle class="track" cx="48" cy="48" r="40" fill="none" stroke-width="10"/><circle class="arc" cx="48" cy="48" r="40" fill="none" stroke-width="10" stroke-linecap="round" stroke-dasharray="226.2 251.3"/></svg><span class="in">9</span></span>
+          <div><div class="big">9<small>of 10</small></div><p class="sh sec2">aboard · lines off 7:00 · 2 min</p></div>
+        </div>
+        <div class="gh"><span class="ttl">Still to call</span><span class="meta">1</span></div>
+        <div class="grp">
+          <div class="row"><div class="lead"><div class="name">Hugo Marsh</div><div class="why red">Not aboard</div></div><span class="tap off"></span></div>
+        </div>
+        <div class="gh"><span class="ttl">Aboard</span><span class="meta">9</span></div>
+        <div class="grp">
+          <div class="row"><div class="lead"><div class="name">Ravi Nair</div></div><span class="tap on"><svg class="ic s" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+          <div class="row"><div class="lead"><div class="name">Hannah Liu</div><div class="why">buddy · Ben Carter</div></div><span class="tap on"><svg class="ic s" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+          <div class="row"><div class="lead"><div class="name">Ben Carter</div><div class="why">buddy · Hannah Liu</div></div><span class="tap on"><svg class="ic s" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+          <div class="row"><div class="lead"><div class="name">Emma Fischer</div><div class="why">nitrox 32%</div></div><span class="tap on"><svg class="ic s" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+          <div class="row"><div class="lead"><div class="name">Ines Costa</div></div><span class="tap on"><svg class="ic s" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+          <div class="row"><div class="lead"><div class="name">Nadia Petrov</div></div><span class="tap on"><svg class="ic s" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+          <div class="row"><div class="lead"><div class="name">Ben Okafor</div><div class="why">first time with us</div></div><span class="tap on"><svg class="ic s" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+          <div class="row"><div class="lead"><div class="name">Grace Mensah</div></div><span class="tap on"><svg class="ic s" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+          <div class="row"><div class="lead"><div class="name">Priya Sharma</div></div><span class="tap on"><svg class="ic s" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+        </div>
+        <p class="fn sec2" style="padding:10px 4px 0">Saved on this phone at 6:58. Sends when there's signal.</p>
+      </div>
+      <div class="tabbar">
+        <a><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>Today</a>
+        <a class="cur"><svg class="ic" viewBox="0 0 24 24"><path d="M3.5 14.5h17l-2 5h-13zM6 14.5V9h12v5.5M12 9V4.5h4.5"/></svg>Boats</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c0-4 3.4-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg>Divers</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><path d="M4 9.5l1.2-4.5h13.6L20 9.5M4 9.5v10h16v-10M4 9.5a2.7 2.7 0 005.3 0 2.7 2.7 0 005.4 0 2.7 2.7 0 005.3 0M10 19.5v-5.5h4v5.5"/></svg>Shop</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>Search</a>
+      </div>
+    </div></div>
+
+    <div class="beside">
+      <h3>The roll call</h3>
+      <p><b>The ring fills as the boat fills.</b> Nine of ten aboard reads from across the deck; a tap on Hugo's circle closes the ring and rolls the figure to 10 — the one moment of joy this surface has, and it fires once, when everyone is aboard. The count commits before it renders.</p>
+      <p><b>Glare</b> is the same word as on the other two directions, and under it the ring goes to black on white with the boat skin.</p>
+      <h3>The pocket home</h3>
+      <p>Two tiles, not four: lines off and here; the week's figure waits for the desk. Then Inset's groups and tab bar.</p>
+    </div>
+  </div>
+
+  <div class="cap"><b>After dark, and outside</b> · the night roll call on Skiff at 7:26 PM · the storefront in the shop's own face · 390</div>
+  <div class="frames">
+    <div class="phone" style="border-color:#1c3a47"><div class="app figures night ph">
+      <div class="sb"><span>7:26</span><span class="sig"><b></b><i></i></span></div>
+      <div class="navbar"><span class="back"><svg class="ic" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Boat</span><span class="ttl">Roll call</span><span class="sh tint w5">Glare</span></div>
+      <div class="body">
+        <div class="hero">
+          <span class="ring"><svg viewBox="0 0 96 96"><circle class="track" cx="48" cy="48" r="40" fill="none" stroke-width="10"/><circle class="arc" cx="48" cy="48" r="40" fill="none" stroke-width="10" stroke-linecap="round" stroke-dasharray="167.6 251.3"/></svg><span class="in">2</span></span>
+          <div><div class="big">2<small>of 3</small></div><p class="sh sec2">aboard · Skiff · lines off 7:30 · 4 min</p></div>
+        </div>
+        <div class="gh"><span class="ttl">Still to call</span><span class="meta">1</span></div>
+        <div class="grp">
+          <div class="row"><div class="lead"><div class="name">Jonas Berg</div><div class="why red">Not aboard · first dive since 2019</div></div><span class="tap off"></span></div>
+        </div>
+        <div class="gh"><span class="ttl">Aboard</span><span class="meta">2</span></div>
+        <div class="grp">
+          <div class="row"><div class="lead"><div class="name">Amira Khan</div><div class="why">Advanced · nitrox 32%</div></div><span class="tap on"><svg class="ic s" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+          <div class="row"><div class="lead"><div class="name">Lars Petersen</div><div class="why">Rescue · own light</div></div><span class="tap on"><svg class="ic s" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+        </div>
+        <div class="gh"><span class="ttl">Crew</span><span class="meta">1</span></div>
+        <div class="grp">
+          <div class="row"><div class="lead"><div class="name">Keiko Tanaka</div><div class="why">Divemaster</div></div><span class="tap on"><svg class="ic s" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+        </div>
+        <p class="fn sec2" style="padding:10px 4px 0">Saved on this phone at 7:26. Sends when there's signal.</p>
+      </div>
+      <div class="tabbar">
+        <a><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>Today</a>
+        <a class="cur"><svg class="ic" viewBox="0 0 24 24"><path d="M3.5 14.5h17l-2 5h-13zM6 14.5V9h12v5.5M12 9V4.5h4.5"/></svg>Boats</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c0-4 3.4-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg>Divers</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><path d="M4 9.5l1.2-4.5h13.6L20 9.5M4 9.5v10h16v-10M4 9.5a2.7 2.7 0 005.3 0 2.7 2.7 0 005.4 0 2.7 2.7 0 005.3 0M10 19.5v-5.5h4v5.5"/></svg>Shop</a>
+        <a><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>Search</a>
+      </div>
+    </div></div>
+
+    <div class="phone"><div class="app figures ph">
+      <div class="sb"><span>6:40</span><span class="sig"><b></b><i></i></span></div>
+      <div class="body">
+        <div class="row" style="padding:6px 0 18px"><span class="mark">BM</span><span class="hl harbor">Blue Mantis Divers</span><span class="trail sh tint w5">Courses</span></div>
+        <h1 class="t1 harbor">Small-boat reef and wreck diving out of Key Largo.</h1>
+        <p class="sh sec2" style="padding:6px 0 14px">★ 4.3 · 83 reviews · PADI 5 Star · since 1998</p>
+        <div class="tiles">
+          <div class="tile"><span class="k">Next boat with space</span><div class="v">3<small>spots</small></div><span class="s">Fri 7:00 AM · Morning Two-Tank · $95</span></div>
+          <div class="tile" style="justify-content:flex-end"><span class="k">Right now</span><div class="v" style="font-size:20px;line-height:26px;letter-spacing:-0.01em">Two-Tank Reef is boarding</div><span class="s">Back around 10:30 AM</span></div>
+        </div>
+        <div class="gh"><span class="ttl harbor" style="font-size:19px">This week</span><span class="meta">September</span></div>
+        <div class="grp">
+          <div class="row"><div class="lead"><div class="name">Fri 7:00 AM · Morning Two-Tank</div><div class="why">Molasses Reef · Open Water or higher</div></div><span class="btn fill">Book · $95</span></div>
+          <div class="row"><div class="lead"><div class="name">Fri 8:00 AM · Deep Wreck — the Duane</div><div class="why">7 spots · Advanced, nitrox</div></div><span class="state num">$195</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+          <div class="row"><div class="lead"><div class="name">Sat 11:00 AM · Two-Tank — French Reef</div><div class="why">Sold out · join the wait list</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+          <div class="row"><div class="lead"><div class="name">Sat 7:30 PM · Night Dive — City of Washington</div><div class="why">5 spots</div></div><span class="state num">$120</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+          <div class="row"><div class="lead"><div class="name">Sun 11:30 AM · Two-Tank — Benwood</div><div class="why">9 spots</div></div><span class="state num">$90</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+          <div class="row"><div class="lead"><div class="name tint">Later departures</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        </div>
+        <div class="gh"><span class="ttl harbor" style="font-size:19px">Courses</span></div>
+        <div class="grp">
+          <div class="row"><div class="lead"><div class="name">Open Water Diver</div><div class="why">3 days · next Sun, Sep 27</div></div><span class="state num">$709</span><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        </div>
+        <p class="fn sec2" style="padding:18px 4px 0">100 Ocean Drive, Key Largo · +1 305 555 0142 · Bookings by DiveDay</p>
+      </div>
+    </div></div>
+
+    <div class="beside">
+      <h3>The night</h3>
+      <p><b>The night palette is the app's own</b>; the ring's track is the lifted tint's wash and the arc the lifted green. A count that fills reads at depth as it reads by day.</p>
+      <h3>The storefront</h3>
+      <p><b>The diver gets a figure too:</b> three spots on the next boat with space, and the boat that is out right now. Harbor's face on the headings, the shop's colour on the arc and the one filled button; the week is Inset's list.</p>
+      <p>Nothing below the fold changes shape: boats, reviews and the date request are groups.</p>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div><h3>What it deletes</h3><ul><li>everything Inset deletes: the band, the tile, the dial, the greeting, the eyebrow, the glyphs, the chips, three radii, the bed</li><li>the roll call's checkpoint card, its five stage chips and three-way switch above the first name — the ring and one line carry them</li><li>the counter's meter and the report's bars in favour of the one ring and one bar</li></ul></div>
+    <div><h3>What it keeps</h3><ul><li>Inset's shell, groups, rows and tab bar underneath — picking C builds A first</li><li>Geist, the deep-sea ink, the night palette; boat mode as a word</li><li>the count-first grammar the manifest and the counter already have, now shared by the home, a boat and the storefront</li></ul></div>
+    <div><h3>In code</h3><ul><li>Inset's list, plus <b>Figure</b> (a number, its unit, its sentence) and <b>Ring</b> (an SVG arc on <code>--track</code>, scaled not resized, with the words beside it); <b>Tile</b> for the home only, held by a test that no other route renders one</li><li><b>RollingFigure</b> stays and drives the figure; the ring's arc follows it on <code>--motion-base</code></li><li>one guard: one <code>Figure</code> per route at rest, or the surface is a dashboard</li></ul></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

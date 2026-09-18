@@ -1,0 +1,68 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Nothing to explain — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 4930,
+      "page": "page-1"
+    },
+    {
+      "file": "Inset.dc.html",
+      "title": "A · Inset — the group carries the page",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 6580,
+      "page": "page-1"
+    },
+    {
+      "file": "Glass.dc.html",
+      "title": "B · Glass — the material carries the page",
+      "x": 2600,
+      "y": 0,
+      "w": 1180,
+      "h": 5360,
+      "page": "page-1"
+    },
+    {
+      "file": "Figures.dc.html",
+      "title": "C · Figures — the number carries the page",
+      "x": 3900,
+      "y": 0,
+      "w": 1180,
+      "h": 6440,
+      "page": "page-1"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "read-first",
+      "x": 0,
+      "y": -140,
+      "w": 1180,
+      "page": "page-1",
+      "text": "Start with the cover: why nine rounds produced no pick, the floor decided from the owner's own reads, the three directions, the same boat in three hands, the side-by-side, the recommendation and the one call (H-87). Then the three boards in a row — each redraws the same six screens for Blue Mantis on Thursday, August 27 at 6:40 AM: the home and a boat on a desk; the home, the roll call, the night roll call and the storefront in a pocket. Compare the same screen across the three before reading any prose."
+    },
+    {
+      "id": "compare",
+      "x": 1300,
+      "y": -140,
+      "w": 3780,
+      "page": "page-1",
+      "text": "A · Inset: the group carries the page (Settings, Reminders, Health). B · Glass: the material carries the page (Photos, Maps, Safari). C · Figures: the number carries the page (Weather, Fitness, Health), on Inset's lists and shell. Recommended: C."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Nothing to explain — three directions"
+    }
+  ]
+}

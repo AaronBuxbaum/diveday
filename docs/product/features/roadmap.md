@@ -597,6 +597,39 @@ recommendation recorded beside its call. What each landed in is the canvas READM
   greeting for a known phone, the sizes write, "Forget this phone", the row on the diver record.
   Waits on 20i, 20k and H-71 m.
 
+### 22. Nothing to explain (design complete; H-87 pending)
+
+The 2026-09-18 loop over the whole app as an Apple designer would read it, argued on
+[the canvas](../../design/canvases/20260918-nothing-to-explain/README.md) and proposed in ADR
+[20260918-nothing-to-explain](../../architecture/decisions/20260918-nothing-to-explain.md). Its
+diagnosis: nine rounds on One hand (20) and Clear the deck (21, canvas-only) produced no pick because
+each answered a sentence with more until eighteen calls were open, the instrument was drawn as a
+console for engineers, and the app has nine voices on one screen. The ADR decides a **floor** from the
+owner's own reads (one ramp, two inks and one tint, nothing drawn, one shell, one row, two radii, dark
+by the device and glare by a word, creation as a sheet) and draws **three directions** as finished
+products on the same six screens — A · Inset (the group carries the page), B · Glass (the material),
+C · Figures (the number, on A's lists) — recommending C. The pick is the owner's (H-87), and it is the
+only call. Each slice runs the `design-implementation` skill: the component names the ADR, a test
+pins the rule, the canvas README's slice table moves, and the visual diffs are explained. 22a–22c may
+start on the ADR alone; 22d–22h start on the pick.
+
+- **22a** — one ramp: six sizes, tabular figures, no capitals, no eyebrow, no greeting;
+  `check:type-ramp` rewritten to six rungs; `ShopPageHeader` loses `display` and the eyebrow.
+- **22b** — two inks, one tint, two signals: the shop's colour as the staff tint (lagoon when unset),
+  red and amber always beside a word, no green and no pill on a staff surface; `Badge` deleted.
+- **22c** — nothing drawn on `/shop/**`: the water band, the site tile, the dial, the hand and the
+  coral leave; `WaterBandStyle` and the illustration set render nothing under `/shop`.
+- **22d** — one shell (H-87): Today · Boats · Divers · Shop and Search; a sidebar at `lg`, a five-slot
+  tab bar below; the twenty-one destinations regrouped; the departure's four tabs one page.
+- **22e** — one row and one group (H-87): `SectionCard` and `LedgerRow` become the picked direction's
+  Group and Row; two radii; no bed; creation as a sheet.
+- **22f** — the picked direction's own parts (H-87): A nothing more; B the glass layer, its solid twin
+  under `.boat-mode` and the capsule; C `Figure`, `Ring`, the home's tiles and the one-figure guard.
+- **22g** — every surface on the picked direction, one family per session: the home, a boat and its
+  roll call, the counter, the people, the shop, the storefront.
+- **22h** — the night and glare on the picked direction: the night palette held by its test; glare as
+  a word in the roll call's and the counter's bar.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)
