@@ -69,8 +69,8 @@ const SEAT_FILL: Record<SeatState, string> = {
   open: "none",
   booked: "var(--surface)",
   blocked: "var(--danger-tint)",
-  /** Nobody read their readiness: a held seat with nothing said about it. */
-  unknown: "var(--surface)",
+  /** Nothing said about this person yet — the slate the rows give `awaiting`. */
+  awaiting: "var(--surface-sunken)",
   aboard: "var(--success)",
   ashore: "var(--warning)",
   /** The tint, not the fill — an inference does not get the stated colour. */
@@ -93,11 +93,22 @@ const SEAT_LINE: Record<SeatState, { stroke: string | null; opacity: number; das
   booked: { stroke: null, opacity: 1, dashed: false },
   blocked: { stroke: "var(--danger)", opacity: 1, dashed: false },
   /**
-   * Dashed like an open place, because both are the picture declining to
-   * claim something: one has nobody in it, the other has nobody's word on it
-   * (§3b.5). The initials are what tell them apart — an open seat has none.
+   * **Solid, and that is not a detail.** A first pass drew this dashed, on the
+   * reasoning that an unread seat and an empty one are both the picture
+   * declining to claim something, with the initials to tell them apart. Two
+   * things were wrong with that. A dashed near-white seat on an unpainted
+   * hull's `--surface-sunken` body is the 1.2:1 this file measures above, so
+   * the only real difference left was the lettering — and `hullGeometry` drops
+   * the lettering above eight columns, which is *every* boat over a six-pack.
+   * A booked diver nobody had vetted rendered as an empty seat, on exactly the
+   * boats where a crew most needs to know the difference.
+   *
+   * So the rule this file already had stands: a line at full weight means a
+   * body is in this seat. The doubt is carried by the slate fill and by the
+   * inner mark below, both of which survive the print flattening that eats
+   * hue — and neither of which needs two letters to be legible.
    */
-  unknown: { stroke: "var(--border-strong)", opacity: 1, dashed: true },
+  awaiting: { stroke: "var(--border-strong)", opacity: 1, dashed: false },
   aboard: { stroke: "var(--success)", opacity: 1, dashed: false },
   ashore: { stroke: "var(--warning)", opacity: 1, dashed: false },
   /**
@@ -122,8 +133,8 @@ const SEAT_INK: Record<SeatState, string> = {
   booked: "var(--foreground)",
   /** Danger on its own tint — 5.45:1, the number `globals.css` measured. */
   blocked: "var(--danger)",
-  /** Muted on `--surface`: legible, and visibly not a claim. */
-  unknown: "var(--muted)",
+  /** Foreground on the slate, exactly as the `awaiting` row letters it. */
+  awaiting: "var(--foreground)",
   aboard: "var(--surface)",
   ashore: "var(--surface)",
   /** Warning on its own tint, the pairing `blocked` already uses. */
@@ -205,7 +216,7 @@ export function Hull({
         /* A place the roster does not reach: nobody has taken it, nothing was
            recorded, and there is no holder whose readiness could be read. */
         const content: HullSeatContent = seats[seat.index] ?? {
-          reading: { state: "open", recordedAt: null, readiness: null },
+          reading: { state: "open", checkpoint: null, readiness: null },
         };
         const edge = SEAT_LINE[content.reading.state];
         return (
@@ -240,6 +251,27 @@ export function Hull({
                 fill="none"
                 stroke={SEAT_FILL.missing}
                 strokeWidth={2.5}
+              />
+            ) : null}
+            {/* **The mark that says nobody has said anything.** A dashed inset,
+                *inside* a seat whose own line stays solid, so the seat still
+                reads as occupied while the inside of it reads as unsettled.
+                It is geometry rather than hue on purpose: the print palette
+                flattens `--surface` and `--surface-sunken` to the same white,
+                so the slate fill alone would not survive paper — and it does
+                not need the two letters, which `hullGeometry` drops above
+                eight columns on every boat larger than a six-pack. */}
+            {content.reading.state === "awaiting" ? (
+              <rect
+                x={seat.x + 4}
+                y={seat.y + 4}
+                width={seat.width - 8}
+                height={seat.height - 8}
+                rx={Math.max(2, seat.rx - 3)}
+                fill="none"
+                stroke="var(--border-strong)"
+                strokeDasharray="3 3"
+                strokeWidth={1}
               />
             ) : null}
             {geometry.showsInitials && content.initials ? (

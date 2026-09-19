@@ -43,11 +43,11 @@ export function seatHoldersOf(roster: readonly RosterEntry[]): readonly RosterEn
  * facts in words.
  *
  * **This is the dock's question, not the deck's.** Nothing here reads a roll
- * call: a seat is open, booked, or blocked, and the recorded outcomes
- * (`aboard`, `ashore`, `missing`) belong to the manifest, where a human is
- * actually calling names. `seatStateFor` is the one derivation either way, so
- * the two surfaces cannot disagree about what a colour means — this one simply
- * has nothing recorded to hand it.
+ * call: a seat is open, booked, blocked or awaiting, and the recorded outcomes
+ * belong to the manifest, where a human is actually calling names.
+ * `seatReadingFor` is the one derivation either way, so the two surfaces
+ * cannot disagree about what a colour means — this one passes no `at` at all,
+ * which is how it says it has no head count to draw.
  *
  * **It adds no fact and gates nothing.** Every seat is a row below it; the
  * capacity, the counts and the blockers are the page's, unchanged. Take the
@@ -76,9 +76,9 @@ export function seatHoldersOf(roster: readonly RosterEntry[]): readonly RosterEn
  * for this seat. Asked in this order, the fail-open predicate only ever sees a
  * readiness that exists.
  */
-function readinessOf(byBooking: ReadinessByBooking, bookingId: string): SeatReadiness {
+export function readinessOf(byBooking: ReadinessByBooking, bookingId: string): SeatReadiness {
   const readiness = byBooking.get(bookingId)?.readiness;
-  if (readiness === undefined) return "unknown";
+  if (readiness === undefined) return "unread";
   return rosterRowIsBlocked(readiness) ? "blocked" : "ready";
 }
 
@@ -124,7 +124,9 @@ export function TripHull({
          */
         readiness: readinessOf(readinessByBooking, entry.booking.id),
       },
-      recorded: null,
+      // No `at` and no `recorded`: this page has no roll call in it, so the
+      // seat answers the dock's question and `SeatPlace` will not let a
+      // recorded tone in without the head count it came from.
     }),
     initials: initialsOf(entry.person.fullName),
   }));

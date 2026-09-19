@@ -129,24 +129,23 @@ describe("the hull", () => {
 describe("what a seat is wearing", () => {
   const booked = { readiness: "ready" } as const;
   const blocked = { readiness: "blocked" } as const;
+  const unread = { readiness: "unread" } as const;
   const dock = "departure" as const;
   const afterTwo = "after_dive_2" as const;
 
   it("is open where nobody has taken the place", () => {
-    expect(seatReadingFor({ booking: null, recorded: null })).toEqual({
+    expect(seatReadingFor({ booking: null })).toEqual({
       state: "open",
-      recordedAt: null,
+      checkpoint: null,
       readiness: null,
     });
-    // Even after a roll call: an untaken place is not a person who stayed ashore.
-    expect(
-      seatReadingFor({ booking: null, recorded: { tone: "notBoarded", at: dock } }).state,
-    ).toBe("open");
+    // Even during a roll call: an untaken place is not a person who stayed ashore.
+    expect(seatReadingFor({ booking: null, at: dock, recorded: "notBoarded" }).state).toBe("open");
   });
 
-  it("reads the dock's question until a human answers the deck's", () => {
-    expect(seatReadingFor({ booking: booked, recorded: null }).state).toBe("booked");
-    expect(seatReadingFor({ booking: blocked, recorded: null }).state).toBe("blocked");
+  it("reads the dock's question on a surface with no roll call in it", () => {
+    expect(seatReadingFor({ booking: booked }).state).toBe("booked");
+    expect(seatReadingFor({ booking: blocked }).state).toBe("blocked");
   });
 
   /**
@@ -155,8 +154,8 @@ describe("what a seat is wearing", () => {
    * is the roll call's own order and the only one a crew can act on.
    */
   it("lets a recorded result outrank readiness, every tone", () => {
-    const at = (tone: "boarded" | "notBoarded" | "notBoardedImplied" | "notBackAboard") =>
-      seatReadingFor({ booking: blocked, recorded: { tone, at: afterTwo } }).state;
+    const at = (recorded: "boarded" | "notBoarded" | "notBoardedImplied" | "notBackAboard") =>
+      seatReadingFor({ booking: blocked, at: afterTwo, recorded }).state;
     expect(at("boarded")).toBe("aboard");
     expect(at("notBoarded")).toBe("ashore");
     expect(at("notBoardedImplied")).toBe("ashoreImplied");
@@ -171,26 +170,24 @@ describe("what a seat is wearing", () => {
    * roll-call row carries it in words and the hull is what gets photographed.
    */
   it("keeps what readiness said even where a recorded fact outranks it", () => {
-    expect(seatReadingFor({ booking: blocked, recorded: { tone: "boarded", at: dock } })).toEqual({
+    expect(seatReadingFor({ booking: blocked, at: dock, recorded: "boarded" })).toEqual({
       state: "aboard",
-      recordedAt: "departure",
+      checkpoint: "departure",
       readiness: "blocked",
     });
   });
 
   /**
-   * **§3b.1 — which head count produced this.** Green at the dock is "got on
-   * the boat"; green after dive two is "came back". The state is the same and
-   * the sentence is not, so the reading carries where it was counted. The
-   * checkpoint travels *with* the tone in one object, which is what stops a
-   * caller drawing a recorded fact without saying where it came from.
+   * **§3b.1 — which head count this is.** Green at the dock is "got on the
+   * boat"; green after dive two is "came back". The state is the same and the
+   * sentence is not, so the reading carries the count it is being drawn at.
    */
-  it("carries the head count a recorded fact was taken at", () => {
-    const early = seatReadingFor({ booking: booked, recorded: { tone: "boarded", at: dock } });
-    const late = seatReadingFor({ booking: booked, recorded: { tone: "boarded", at: afterTwo } });
+  it("carries the head count it is being drawn at", () => {
+    const early = seatReadingFor({ booking: booked, at: dock, recorded: "boarded" });
+    const late = seatReadingFor({ booking: booked, at: afterTwo, recorded: "boarded" });
     expect(early.state).toBe(late.state);
-    expect(early.recordedAt).toBe("departure");
-    expect(late.recordedAt).toBe("after_dive_2");
+    expect(early.checkpoint).toBe("departure");
+    expect(late.checkpoint).toBe("after_dive_2");
   });
 
   /**
@@ -199,25 +196,46 @@ describe("what a seat is wearing", () => {
    * already read these two differently; the picture used to paint them alike.
    */
   it("tells a stated ashore from one carried forward", () => {
-    const stated = seatReadingFor({ booking: booked, recorded: { tone: "notBoarded", at: dock } });
-    const inferred = seatReadingFor({
-      booking: booked,
-      recorded: { tone: "notBoardedImplied", at: dock },
-    });
+    const stated = seatReadingFor({ booking: booked, at: dock, recorded: "notBoarded" });
+    const inferred = seatReadingFor({ booking: booked, at: dock, recorded: "notBoardedImplied" });
     expect(stated.state).toBe("ashore");
     expect(inferred.state).toBe("ashoreImplied");
-    expect(stated.state).not.toBe(inferred.state);
   });
 
   /**
-   * **§3b.5 — there is a seat for "not known".** `rosterRowIsBlocked` fails
-   * open, so a booking nobody read used to paint as an ordinary held seat: the
-   * picture saying "fine" where the truth was "nobody looked".
+   * **§3b.5 — "nobody looked" is not "fine."** `rosterRowIsBlocked` fails open,
+   * so a booking nobody read used to paint as an ordinary held seat.
    */
   it("gives a booking nobody has read its own seat, not a clear one", () => {
-    const unread = seatReadingFor({ booking: { readiness: "unknown" }, recorded: null });
-    expect(unread.state).toBe("unknown");
-    expect(unread.state).not.toBe("booked");
-    expect(unread.readiness).toBe("unknown");
+    const seat = seatReadingFor({ booking: unread });
+    expect(seat.state).toBe("awaiting");
+    expect(seat.state).not.toBe("booked");
+    expect(seat.readiness).toBe("unread");
+  });
+
+  /**
+   * **The hole the first pass left, and the reason there is a second one.**
+   *
+   * The checkpoint used to arrive only *inside* the recorded half, so on the
+   * one path where it matters most — nothing recorded — the derivation had no
+   * checkpoint and fell through to the dock's question. An ordinary two-tank
+   * morning reaches it: aboard at the dock, nobody tapped yet after dive one,
+   * no tone, and the seat painted `booked` — "nothing stopping them boarding"
+   * — over a diver who may still be in the water. That is DOM-H3's shape
+   * again, and the glossary ranks it *unaccounted for, unfinished head count*.
+   *
+   * Readiness is not consulted after a dive at all: **Held** says it "exists
+   * only at the dock", and a blocked diver counts back aboard like anyone
+   * else.
+   */
+  it("will not answer the dock's question at a head count after a dive", () => {
+    for (const booking of [booked, blocked, unread]) {
+      const seat = seatReadingFor({ booking, at: afterTwo, recorded: null });
+      expect(seat.state).toBe("awaiting");
+      expect(seat.checkpoint).toBe("after_dive_2");
+    }
+    // At the dock, readiness *is* the question, and still answers it.
+    expect(seatReadingFor({ booking: booked, at: dock, recorded: null }).state).toBe("booked");
+    expect(seatReadingFor({ booking: blocked, at: dock, recorded: null }).state).toBe("blocked");
   });
 });

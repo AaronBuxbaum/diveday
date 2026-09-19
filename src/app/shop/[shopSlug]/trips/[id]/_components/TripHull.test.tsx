@@ -24,7 +24,13 @@ function entry(input: { id: string; name: string; status: Booking["status"] }): 
   };
 }
 
-const ready: ReadinessByBooking = new Map();
+/**
+ * An empty readiness map is **not** a cleared boat — after §3b.5 it is a boat
+ * nobody has read, and every seat on it draws `awaiting`. Named for what it
+ * is, because a fixture called `ready` that means the opposite is how the next
+ * reader gets the fail direction backwards.
+ */
+const unread: ReadinessByBooking = new Map();
 
 function seatsOf(container: HTMLElement): Element[] {
   return [...container.querySelectorAll("rect")].filter((node) => node.getAttribute("rx") === "9");
@@ -87,7 +93,7 @@ describe("TripHull", () => {
     const { container } = render(
       <TripHull
         roster={roster}
-        readinessByBooking={ready}
+        readinessByBooking={unread}
         capacity={6}
         color={null}
         label="Mantis I, drawn as its seats."
@@ -135,13 +141,12 @@ describe("TripHull", () => {
     expect(seats.map((node) => node.getAttribute("fill"))).toEqual([
       "var(--danger-tint)",
       "var(--surface)",
-      "var(--surface)",
+      "var(--surface-sunken)",
     ]);
-    // The fill is shared with a cleared seat on purpose — nobody has refused
-    // this diver either. The line is what carries the doubt, and it has to,
-    // because the fill cannot without claiming something nobody said.
-    expect(seats[1]?.getAttribute("stroke-dasharray")).toBeNull();
-    expect(seats[2]?.getAttribute("stroke-dasharray")).toBe("3 3");
+    // All three lines stay solid: there is a body in every one of these seats,
+    // and dashed on this picture means nobody is. The unread seat carries its
+    // doubt on the slate and on the inset inside its own outline.
+    for (const node of seats) expect(node.getAttribute("stroke-dasharray")).toBeNull();
   });
 
   /**
@@ -159,7 +164,7 @@ describe("TripHull", () => {
     const { container } = render(
       <TripHull
         roster={roster}
-        readinessByBooking={ready}
+        readinessByBooking={unread}
         capacity={3}
         color={null}
         label="Mantis I, drawn as its seats."
@@ -172,7 +177,7 @@ describe("TripHull", () => {
     const { container } = render(
       <TripHull
         roster={[entry({ id: "1", name: "Hannah Liu", status: "booked" })]}
-        readinessByBooking={ready}
+        readinessByBooking={unread}
         capacity={4}
         color={null}
         crew={["Keiko Tanaka"]}
