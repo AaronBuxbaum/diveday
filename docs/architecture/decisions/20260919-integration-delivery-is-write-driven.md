@@ -38,6 +38,16 @@ The row is already durable and already due the moment it is written — `next_at
 - **The write-path drain takes at most `WRITE_PATH_DISPATCH_LIMIT` (10) deliveries**, against the
   cron's 50. Its job is "get the event I just enqueued out", not "work the backlog"; a request that
   wandered into draining fifty would be holding a function open on somebody else's arrears.
+- **It takes the *newest* end of the due set, and that is a correctness property rather than a
+  preference.** A limit plus the dispatcher's original `oldest-first` ordering meant a shop already
+  holding ten waiting deliveries drained those and left the order just written for the cron — the
+  latency this ADR exists to remove, vanishing precisely when the queue is deepest and somebody is
+  most likely watching for it. `sourcery-ai` caught it on the pull request. A freshly enqueued
+  delivery is due `now()` and every other due row is due because its own `next_attempt_at` already
+  passed, so among due rows the new one is always the maximum: `newest-first` makes "the thing I
+  just wrote is in this batch" true by construction. The cron keeps `oldest-first`, which is the
+  order a backlog pass owes the rows in it, and `dispatcher.test.ts` pins all three — the fix, the
+  bug it replaces, and the cron's default.
 - **`/api/cron/integrations` keeps its `0,30` cadence, unchanged.** This is the half of the
   decision most easily got wrong. Write-path dispatch shortens the *first* attempt; it does nothing
   for the *retry* path, because a failed delivery is only re-read when something drains again, and

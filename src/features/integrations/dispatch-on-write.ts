@@ -59,6 +59,14 @@ export function dispatchIntegrationsAfterResponse(): void {
       try {
         const summary = await dispatchDueIntegrationDeliveries(await getDb(), {
           limit: WRITE_PATH_DISPATCH_LIMIT,
+          // The delivery this request just wrote is the newest due row by
+          // construction, so this is what guarantees it is in the batch. With
+          // the default `oldest-first`, a shop already holding
+          // `WRITE_PATH_DISPATCH_LIMIT` waiting deliveries would drain those
+          // and leave the new one for the cron -- the exact latency this
+          // function exists to remove, disappearing precisely when the queue
+          // is deepest.
+          order: "newest-first",
         });
         // Silent when there was nothing to do, which is the common case on a
         // shop with no integration connected: one indexed read of an empty

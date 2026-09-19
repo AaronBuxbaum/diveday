@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
 import {
@@ -230,7 +230,33 @@ export async function hydrateIntegrationEventPayload(
   };
 }
 
-export async function listDueIntegrationDeliveries(db: DbExecutor, limit = 25) {
+/**
+ * Which end of the due set to take when `limit` bites.
+ *
+ * `oldest-first` is the drain's own fairness: the row that has waited longest
+ * goes next, which is what a backlog pass owes the rows in it.
+ *
+ * `newest-first` exists for the write path, and the difference is not a
+ * preference but a correctness property. A freshly enqueued delivery gets
+ * `next_attempt_at = now()`, and every *other* due row is due precisely because
+ * its own `next_attempt_at` already passed — so among due rows the new one is
+ * always the maximum. Taking the oldest end meant a shop with `limit` or more
+ * waiting deliveries drained those and left the order just written for the
+ * cron, which is exactly the latency the write path exists to remove, failing
+ * silently at the moment a shop is most likely watching for it
+ * (`sourcery-ai` on #1905). Taking the newest end makes "the thing I just
+ * wrote is in this batch" true by construction rather than by luck.
+ *
+ * The backlog is not starved by this: the cron still runs `oldest-first` every
+ * half hour and is the pass that owes old rows their turn.
+ */
+export type DueDeliveryOrder = "oldest-first" | "newest-first";
+
+export async function listDueIntegrationDeliveries(
+  db: DbExecutor,
+  limit = 25,
+  order: DueDeliveryOrder = "oldest-first",
+) {
   const current = nowDate();
   const staleProcessingBefore = new Date(current.getTime() - 15 * 60 * 1000);
   return db
@@ -259,7 +285,11 @@ export async function listDueIntegrationDeliveries(db: DbExecutor, limit = 25) {
         isNull(shopIntegrations.deletedAt),
       ),
     )
-    .orderBy(asc(integrationDeliveries.nextAttemptAt), asc(integrationDeliveries.createdAt))
+    .orderBy(
+      ...(order === "newest-first"
+        ? [desc(integrationDeliveries.nextAttemptAt), desc(integrationDeliveries.createdAt)]
+        : [asc(integrationDeliveries.nextAttemptAt), asc(integrationDeliveries.createdAt)]),
+    )
     .limit(limit);
 }
 
