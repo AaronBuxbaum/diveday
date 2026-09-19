@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Mocked although the route no longer imports it — that is the point. A future
+// edit that reintroduces a database read here would reintroduce the cost ADR
+// 20260919-health-check-does-not-wake-the-database removed, silently and with
+// every test still green. Asserting `getDb` is never called is what makes that
+// edit fail instead.
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
@@ -18,10 +23,6 @@ const { GET } = await import("./route");
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
 
-function fakeDb(execute: () => Promise<unknown>) {
-  return { execute: vi.fn(execute) };
-}
-
 beforeEach(() => {
   vi.mocked(connection).mockClear();
   vi.mocked(getDb).mockReset();
@@ -34,57 +35,49 @@ afterEach(() => {
 });
 
 describe("GET /api/health", () => {
-  it("reports ok and the short commit SHA when the database answers", async () => {
+  it("reports ok and the short commit SHA", async () => {
     vi.stubEnv("VERCEL_GIT_COMMIT_SHA", SHA);
-    const db = fakeDb(async () => [{ "?column?": 1 }]);
-    vi.mocked(getDb).mockResolvedValue(db as never);
 
     const response = await GET();
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ status: "ok", commit: "0123456" });
-    expect(db.execute).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * The load-bearing assertion of the whole route.
+   *
+   * Route 53's 30-second interval delivers a request about every two seconds
+   * once every checker region is counted, and Neon's compute scales to zero
+   * only after five idle minutes. One `select 1` in this handler is therefore
+   * not one query — it is a compute that is never allowed to sleep, and a
+   * database bill set by the monitor's cadence rather than by anybody using
+   * the product.
+   */
+  it("never touches the database, so the probe cannot pin the compute awake", async () => {
+    await GET();
+    expect(getDb).not.toHaveBeenCalled();
   });
 
   it("waits for a connection so the probe is never prerendered at build time", async () => {
-    vi.mocked(getDb).mockResolvedValue(fakeDb(async () => []) as never);
     await GET();
     expect(connection).toHaveBeenCalledTimes(1);
   });
 
-  it("answers 503 when the database query throws, so a monitor sees a bad status code", async () => {
-    vi.mocked(getDb).mockResolvedValue(
-      fakeDb(async () => {
-        throw new Error("connection to server at db.internal.example (10.0.0.4) failed");
-      }) as never,
-    );
-
+  it("reports an unknown commit off-platform rather than failing", async () => {
     const response = await GET();
 
-    expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toEqual({ status: "error", commit: "unknown" });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ status: "ok", commit: "unknown" });
   });
 
-  it("answers 503 when the database is unreachable at connect time", async () => {
-    vi.mocked(getDb).mockRejectedValue(new Error("ECONNREFUSED 10.0.0.4:5432"));
-
-    const response = await GET();
-
-    expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toEqual({ status: "error", commit: "unknown" });
-  });
-
-  it("never leaks the driver's error text, hostnames or env values in the body", async () => {
+  it("never leaks env values in the body", async () => {
     vi.stubEnv("DATABASE_URL", "postgres://app:hunter2@db.internal.example:5432/diveday");
-    vi.mocked(getDb).mockRejectedValue(
-      new Error("connect ECONNREFUSED db.internal.example:5432 (user=app password=hunter2)"),
-    );
 
     const body = await (await GET()).text();
 
     expect(body).not.toContain("db.internal.example");
     expect(body).not.toContain("hunter2");
-    expect(body).not.toContain("ECONNREFUSED");
     expect(body).not.toContain("5432");
     // Exactly two fields, so a future edit can't quietly widen the disclosure.
     expect(Object.keys(JSON.parse(body))).toEqual(["status", "commit"]);
@@ -92,7 +85,6 @@ describe("GET /api/health", () => {
 
   it("discloses only the short SHA, never the full commit", async () => {
     vi.stubEnv("VERCEL_GIT_COMMIT_SHA", SHA);
-    vi.mocked(getDb).mockResolvedValue(fakeDb(async () => []) as never);
 
     const body = (await (await GET()).json()) as { commit: string };
 
@@ -101,7 +93,6 @@ describe("GET /api/health", () => {
   });
 
   it("forbids caching so no edge can answer 'ok' on a dead deployment's behalf", async () => {
-    vi.mocked(getDb).mockResolvedValue(fakeDb(async () => []) as never);
     const response = await GET();
     expect(response.headers.get("cache-control")).toBe("no-store");
   });

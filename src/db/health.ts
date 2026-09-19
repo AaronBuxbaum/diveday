@@ -9,10 +9,16 @@ import { getDb } from "./client";
  * answer is liveness of the pool the app actually books seats through rather
  * than of a connection opened for the occasion.
  *
- * Two callers, deliberately one function: `/api/health` (the external monitor's
- * target) and `/status` (the page a shop owner opens). They agreed by
- * coincidence until this module existed, which is the state in which a probe
- * and the page reporting on it drift apart and only the shop notices.
+ * One caller today — `/status`, the page a shop owner opens — and the dev
+ * server's warm reaches it through that page. `/api/health` was the second
+ * until ADR 20260919-health-check-does-not-wake-the-database: a Route 53 check
+ * lands on that route about every two seconds once every checker region is
+ * counted, and a `select 1` at that cadence means a serverless compute that
+ * never reaches its five-minute idle timeout and never scales to zero. The
+ * function stays shared rather than being inlined into the page, because the
+ * moment a second caller wants this question it must get the same answer: a
+ * probe and the page reporting on it drifting apart is the state in which only
+ * the shop notices.
  *
  * Never throws, and never returns the driver's error text. The failure of a
  * database check is a *state*, not an exception, for a caller whose whole job

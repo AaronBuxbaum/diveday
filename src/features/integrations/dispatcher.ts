@@ -11,6 +11,32 @@ import { deliverQuickBooksEvent, quickBooksConfigFromEnvironment } from "./quick
 import { deliverXeroEvent, xeroConfigFromEnvironment } from "./xero";
 import { deliverZapierEvent } from "./zapier";
 
+/**
+ * **The outbox drain's cadence: twice an hour, on `:00` and `:30`.**
+ *
+ * It shipped as a ten-minute poll, which was the single largest consumer of
+ * database compute in the product and had nothing to do with how much work
+ * there was to do. A serverless Postgres compute sleeps after five idle minutes and is
+ * billed for the time it spends awake, so a pass every ten minutes is a
+ * compute that is awake all month whether or not one delivery is due — and
+ * with no shop connected yet, every one of those 144 daily passes drained an
+ * empty outbox.
+ *
+ * Half-hourly rather than hourly because the retry ladder in
+ * `markIntegrationDeliveryFailed` (`src/db/integration-events.ts`) is
+ * `min(60, 2 ** (attempt - 1))` minutes. A cron cadence is the real floor on
+ * every rung below it, so hourly would flatten the first six of eight attempts
+ * into "next tick" and stretch the dead-letter horizon from roughly two hours
+ * to eight. `:00`/`:30` keeps the top of the ladder meaningful and still cuts
+ * the wake-ups by two thirds, and `:00` is shared with the three hourly passes
+ * so the cheaper of the two ticks costs nothing extra.
+ *
+ * Mirrors `vercel.json`, and `src/lib/cron-schedule.test.ts` fails if the two
+ * drift. The cadence stops mattering entirely once delivery is dispatched on
+ * write instead of polled for.
+ */
+export const INTEGRATIONS_CRON_CRONTAB = "0,30 * * * *";
+
 export type IntegrationDispatchSummary = {
   scanned: number;
   delivered: number;

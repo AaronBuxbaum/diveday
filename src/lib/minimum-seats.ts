@@ -111,3 +111,24 @@ export function isValidDecisionHours(hours: number): boolean {
 export function isValidMinimumBookings(minimum: number): boolean {
   return Number.isInteger(minimum) && minimum >= 1 && minimum <= MAX_MINIMUM_BOOKINGS;
 }
+
+/**
+ * **The sweep's cadence, hourly.** The deadline is printed on the booking page
+ * to the minute ("we'll confirm by Thu 14 Aug, 7:30 AM"), and an hourly pass
+ * makes that promise true to within an hour, which is the resolution a shop
+ * states its window in. A nightly pass would make it true to within about a
+ * day (ADR 20260813-minimum-head-count-departures).
+ *
+ * `:00` rather than the `:20` it shipped with, sharing the minute with the
+ * recap and trip-reminder passes. The stagger was protecting nothing — each
+ * hourly pass reads its own rows — and it cost three separate database
+ * wake-ups an hour instead of one, which on a compute that sleeps after five
+ * idle minutes and bills for the time it is awake is the whole difference
+ * between a duty cycle set by the clock and one set by use. Moving it forward
+ * twenty minutes also narrows the worst-case lag behind a deadline rather than
+ * widening it.
+ *
+ * Mirrors `vercel.json`, and `src/lib/cron-schedule.test.ts` fails if the two
+ * drift.
+ */
+export const MINIMUM_SEATS_CRON_CRONTAB = "0 * * * *";

@@ -5,6 +5,7 @@ import { recordNotificationDelivery, shopSenderFor } from "@/db/notifications";
 import { refundBookingsForShopCancelledTrip, shopCancellationPaymentStory } from "@/db/refunds";
 import { cancelDeparturesBelowMinimum, listMinimumNotMetRecipients } from "@/db/trips";
 import { log } from "@/lib/log";
+import { MINIMUM_SEATS_CRON_CRONTAB } from "@/lib/minimum-seats";
 import { notify, publicAppUrl } from "@/lib/notifications";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { flushLogs } from "@/lib/observability";
@@ -29,7 +30,7 @@ const CRON_MONITOR_SLUG =
 
 /** Must stay in lockstep with the `crons` entry in vercel.json. */
 const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: "20 * * * *" },
+  schedule: { type: "crontab", value: MINIMUM_SEATS_CRON_CRONTAB },
   checkinMargin: 20,
   maxRuntime: 5,
   timezone: "Etc/UTC",
@@ -40,12 +41,11 @@ const CRON_MONITOR_CONFIG = {
  * reached the moment it said it would decide (ADR
  * 20260813-minimum-head-count-departures).
  *
- * **Hourly, not nightly.** The deadline is a promise printed on the booking
- * page — "we'll confirm by Thu 14 Aug, 7:30 AM" — and a nightly pass would
- * make that promise true to within about a day. An hourly one makes it true to
- * within an hour, which is the resolution a shop states its window in. The pass
- * is cheap: the query is an index scan over scheduled trips in a window, and on
- * the great majority of ticks it cancels nothing at all.
+ * **Hourly, not nightly**, and on the hour: the cadence and the reason for the
+ * minute both live with the policy, at `MINIMUM_SEATS_CRON_CRONTAB` in
+ * `src/lib/minimum-seats.ts`. The pass is cheap either way — the query is an
+ * index scan over scheduled trips in a window, and on the great majority of
+ * ticks it cancels nothing at all.
  *
  * Idempotent by construction. Cancelling is conditional on the departure still
  * being `scheduled`, and reinstating one clears its minimum

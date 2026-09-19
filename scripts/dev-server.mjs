@@ -58,8 +58,15 @@
  * "Ready" and then watches `curl` hang for 26s has every reason to conclude the
  * server is wedged, and the cheapest thing it can do about that is kill it and
  * start again, which buys another cold start. So after each start this script
- * warms `/api/health` — one request that proves the process *and* its database
- * — and prints one line, with the real port, when the answer comes back.
+ * warms `/status` — one request that proves the process *and* its database —
+ * and prints one line, with the real port, when the answer comes back.
+ *
+ * `/status` rather than `/api/health`, which it used to warm: as of ADR
+ * 20260919-health-check-does-not-wake-the-database the health route deliberately
+ * does not query the database, so warming it would report `warmed in 0.4s` and
+ * leave the migrate-and-seed for the first real page — exactly the 26-second
+ * surprise this whole mechanism exists to spend up front. `/status` renders a
+ * page *and* calls `checkDatabase()`, so it still pays for both halves.
  *
  * It also owns the handful of environment defaults local development wants and
  * production does not — see {@link applyDevDefaults} — because this is now the
@@ -184,7 +191,7 @@ export function lineSplitter() {
   };
 }
 
-/** How long to wait for `/api/health` after a start before giving up on warming. */
+/** How long to wait for `/status` after a start before giving up on warming. */
 const READY_TIMEOUT_MS = 180_000;
 const READY_POLL_MS = 1_000;
 
@@ -592,7 +599,7 @@ function processRows() {
 }
 
 /**
- * Poll `/api/health` until it answers, then report how long the warm took.
+ * Poll `/status` until it answers, then report how long the warm took.
  *
  * Every attempt carries its own timeout and the loop carries a deadline, so
  * this cannot become the wait-with-no-exit that AGENTS.md's hard rules are
@@ -633,7 +640,7 @@ async function warm(currentPort, childPid, signal) {
     // against a port nothing is listening on.
     const port = currentPort();
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/api/health`, {
+      const response = await fetch(`http://127.0.0.1:${port}/status`, {
         signal: AbortSignal.timeout(READY_TIMEOUT_MS),
       });
       if (response.ok && answeringServerIsOurs(childPid)) {
