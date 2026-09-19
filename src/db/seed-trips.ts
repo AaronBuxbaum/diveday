@@ -42,9 +42,12 @@ export async function seedTrips(
     benwood: typeof diveSites.$inferSelect | undefined;
     french: typeof diveSites.$inferSelect | undefined;
     courseIdByTitle: Map<string, string>;
+    /** The shop's fleet by name, so a boat departure sails on an actual hull. */
+    boatByName: Map<string, string>;
   },
 ) {
   const {
+    boatByName,
     instructor,
     reliefInstructor,
     courseRows,
@@ -82,6 +85,7 @@ export async function seedTrips(
     .values([
       {
         shopId,
+        boatId: boatByName.get("Mantis I"),
         diveSiteId: siteByName.get("Molasses Reef")?.id,
         title: "Two-Tank Reef — Molasses & French",
         // Time-neutral copy: this trip sails at whatever hour keeps it on
@@ -94,6 +98,7 @@ export async function seedTrips(
       },
       {
         shopId,
+        boatId: boatByName.get("Mantis I"),
         title: "Night Dive — City of Washington",
         description: "Torches, tarpon, and bioluminescence.",
         // A twilight double: depart ~7:30 PM Eastern, dive 1 at dusk (matching
@@ -106,6 +111,8 @@ export async function seedTrips(
       },
       {
         shopId,
+        // The big boat for the deep wreck: two hulls a crew tells apart.
+        boatId: boatByName.get("Mantis II"),
         diveSiteId: siteByName.get("Spiegel Grove")?.id,
         title: "Wreck Trip — Spiegel Grove",
         description: "The big one.",
