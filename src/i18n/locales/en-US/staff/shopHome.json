@@ -116,7 +116,6 @@
     "summaryBoats": "{count, plural, one {# boat today.} other {# boats today.}}",
     "summaryNext": "{count, plural, =0 {Nothing needs you before the {time} leaves the dock.} one {# thing needs you before the {time} leaves the dock.} other {# things need you before the {time} leaves the dock.}}",
     "summaryAfter": "{count, plural, =0 {Nothing is waiting on you.} one {# thing still needs you.} other {# things still need you.}}",
-    "quietHeading": "A quiet day at the dock.",
     "quietSentence": "No boats today, and nothing is waiting on you.",
     "deskLabel": "At the desk",
     "deskPaymentsRow": "Payments aren’t connected, so divers can book and pay at the counter.",
@@ -185,5 +184,11 @@
     "firstThing": "First thing · {kind}"
   },
   "quietAddDeparture": "Add a departure",
-  "quietNextDepartureLabel": "Next departure"
+  "quietNextDepartureLabel": "Next departure",
+  "day": {
+    "stripLabel": "The day at a glance: the sun’s arc, the tide, and every departure on the hour it leaves.",
+    "stripLabelNoBoats": "The day at a glance: the sun’s arc over the shop.",
+    "sunriseAndSunset": "Sunrise {sunrise} · sunset {sunset}",
+    "noPlace": "Add the shop’s address in Settings and this reads the real sunrise."
+  }
 }

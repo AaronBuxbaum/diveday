@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { offlineCopySaved, signInAsOwner } from "./helpers";
+import { offlineCopySaved, STAFF_DAY_HEADING, signInAsOwner } from "./helpers";
 
 /**
  * **Closing the day, on the shop home** — ADR
@@ -24,9 +24,7 @@ test.describe("the day closes on the home", () => {
     // offers to close a day that is not over.
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis");
-    await expect(
-      page.getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
 
     await expect(page.getByRole("button", { name: /^Close the day/ })).toHaveCount(0);
     await expect(page.getByText("Still open — carries to tomorrow")).toHaveCount(0);
@@ -112,9 +110,7 @@ test.describe("the day closes on the home", () => {
     // tied up five minutes ago — so the clock still says she is out, and
     // nothing on the page offers to close a day she is on.
     await page.goto("/shop/blue-mantis");
-    await expect(
-      page.getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
     await expect(page.getByRole("button", { name: /^Close the day/ })).toHaveCount(0);
 
     await page.goto(`/shop/blue-mantis/trips/${justIn.id}/manifest`);

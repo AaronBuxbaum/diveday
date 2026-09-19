@@ -134,6 +134,43 @@ export function shopDayBounds(now: Date, timeZone: string): { from: Date; to: Da
 }
 
 /**
+ * Every top-of-the-hour inside a shop's own day, as the instant *and* the hour
+ * a clock on the wall reads at it.
+ *
+ * **A day does not always have 24 hours in it.** On the day a zone springs
+ * forward it has 23, and the hour that vanished has no instant at all:
+ * {@link wallTimeToUtc} resolves 2 AM forward, so asking it for hours 0-23 in
+ * New York on 2026-03-08 answers `… 1, 3, 3, 4 …` — the third and fourth
+ * requests are the *same instant*, and the entry at position two is three
+ * o'clock. A caller that treats position as the hour is wrong from there to
+ * midnight, and a caller that keys a list by the instant has two identical
+ * keys. On the day it falls back there are 25, and the repeated hour resolves
+ * to whichever of the two `wallTimeToUtc` picks; one boundary per clock hour is
+ * what a reader wants either way.
+ *
+ * So the hour is read back *from the instant* rather than assumed, and a
+ * repeated instant is dropped. The result is in order, and every entry's `hour`
+ * is what a person standing in the shop would say it is.
+ */
+export function dayHourBoundaries(
+  bounds: { from: Date; to: Date },
+  timeZone: string,
+): { at: Date; hour: number }[] {
+  const openWall = utcToWallTime(bounds.from, timeZone);
+  const seen = new Set<number>();
+  const boundaries: { at: Date; hour: number }[] = [];
+  for (let hour = 0; hour < 24; hour += 1) {
+    const at = wallTimeToUtc({ ...openWall, hour, minute: 0 }, timeZone);
+    const instant = at.getTime();
+    if (instant < bounds.from.getTime() || instant >= bounds.to.getTime()) continue;
+    if (seen.has(instant)) continue;
+    seen.add(instant);
+    boundaries.push({ at, hour: utcToWallTime(at, timeZone).hour });
+  }
+  return boundaries.sort((a, b) => a.at.getTime() - b.at.getTime());
+}
+
+/**
  * The exact UTC instants that bracket the shop's own calendar *month* —
  * `from` inclusive, `to` exclusive. The monthly sibling of
  * {@link shopDayBounds}, on the same wall-clock conversion.

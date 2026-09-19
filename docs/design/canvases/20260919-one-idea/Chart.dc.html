@@ -1,0 +1,419 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>III · Chart — the app is the sea</title>
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Bricolage+Grotesque:wght@600;700&display=swap">
+  <style>
+    body { margin: 0; background: #fbfaf7; }
+/* kit:start — the canvas's own prose. Pasted verbatim into every board; edit once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --cbg: var(--kit-bg, #fbfaf7); --csurf: var(--kit-surface, #ffffff); --cline: var(--kit-line, #e4e2dc); --cink: var(--kit-ink, #14232b); --cmute: var(--kit-mute, #5f6b71); --caccent: var(--kit-accent, #1d7a5f);
+  width: 1180px; margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: var(--cink); background: var(--cbg); -webkit-font-smoothing: antialiased; padding-bottom: 56px; }
+.board a { color: var(--caccent); }
+.bh { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px; border-bottom: 1px solid var(--cline); background: var(--csurf); }
+.bh .lab { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--caccent); }
+.bh .lab span { color: var(--cmute); font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 13px; margin-left: 12px; }
+.bh h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+.bh .lede { margin: 0; max-width: 940px; font-size: 17px; line-height: 27px; }
+.strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.strip h3 { margin: 0; font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmute); }
+.strip p { margin: 6px 0 0; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.strip p b, .sec p b, .beside p b, .foot p b, .tbl td b { color: var(--cink); font-weight: 600; }
+.cap { display: flex; align-items: baseline; gap: 12px; padding: 30px 48px 10px; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmute); }
+.cap b { color: var(--cink); }
+.frames { display: flex; gap: 28px; align-items: flex-start; padding: 0 48px; }
+.beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.beside h3 { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); }
+.beside p { margin: 0 0 12px; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.beside ul { margin: 0 0 16px; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.beside li b { color: var(--cink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--cline); }
+.sec h2 { margin: 0; font-size: 20px; line-height: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 960px; }
+.sec ul { margin: 0; padding-left: 20px; font-size: 15px; line-height: 23px; max-width: 960px; }
+.sec li b { font-weight: 600; }
+.foot { margin: 40px 48px 0; padding-top: 20px; border-top: 1px solid var(--cline); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); }
+.foot p { margin: 6px 0 0; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.foot ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.foot li b { color: var(--cink); font-weight: 600; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmute); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--cink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--cline); vertical-align: top; color: var(--cmute); }
+.tbl td:first-child { color: var(--cink); font-weight: 600; width: 160px; }
+.cards3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--csurf); border: 1px solid var(--cline); border-radius: 12px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card h3 small { display: block; font-size: 13px; font-weight: 500; color: var(--cmute); letter-spacing: 0; margin-top: 4px; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; }
+.card p.m { color: var(--cmute); }
+.card .k { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--caccent); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.shots { display: flex; gap: 20px; align-items: flex-start; padding: 0 48px; }
+.shots img { display: block; border: 1px solid var(--cline); border-radius: 10px; }
+.shots .note { flex: 1 1 auto; min-width: 0; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.shots .note b { color: var(--cink); font-weight: 600; }
+.shots .note ol { margin: 0; padding-left: 20px; }
+.frame { border: 1px solid var(--cline); border-radius: 12px; overflow: hidden; position: relative; }
+.frame.desktop { width: 1084px; flex: 0 0 1084px; }
+.phone { width: 390px; flex: 0 0 390px; min-height: 800px; border-radius: 44px; border: 1px solid var(--cline); overflow: hidden; position: relative; display: flex; flex-direction: column; }
+.phone > .app { flex: 1 1 auto; display: flex; flex-direction: column; }
+.phone .sb { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 6px 28px 0; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.phone .sb .sig { display: flex; align-items: center; gap: 6px; }
+.phone .sb .sig i { display: block; width: 18px; height: 10px; border: 1.5px solid currentColor; border-radius: 3px; opacity: .8; position: relative; }
+.phone .sb .sig i::after { content: ""; position: absolute; left: 2px; top: 2px; bottom: 2px; width: 10px; background: currentColor; border-radius: 1px; }
+.phone .sb .sig b { display: block; width: 14px; height: 10px; background: linear-gradient(to top, currentColor 0, currentColor 100%); clip-path: polygon(0 60%, 25% 60%, 25% 40%, 50% 40%, 50% 20%, 75% 20%, 75% 0, 100% 0, 100% 100%, 0 100%); opacity: .8; }
+.hand { display: flex; gap: 16px; padding: 0 48px; }
+.hand > div { flex: 1 1 0; min-width: 0; }
+.hand .who { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); margin-bottom: 8px; }
+/* kit:end */
+/* kit:more — round 2's sheet */
+.sheet { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 0 48px; }
+.sheet h3 { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); }
+.sheet p { margin: 8px 0 0; font-size: 13px; line-height: 20px; color: var(--cmute); }
+.sheet p b { color: var(--cink); font-weight: 600; }
+.sw { display: flex; gap: 10px; flex-wrap: wrap; }
+.sw div { width: 64px; }
+.sw i { display: block; width: 64px; height: 48px; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+.sw span { display: block; margin-top: 4px; font-size: 11px; line-height: 14px; color: var(--cmute); }
+.sw span b { display: block; color: var(--cink); font-weight: 600; }
+.spec { border: 1px solid var(--cline); border-radius: 12px; overflow: hidden; }
+.ba { display: flex; flex-direction: column; gap: 10px; }
+.ba .tag { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); }
+.ba .frame { background: #fff; }
+.eval td:nth-child(2) { color: var(--cmute); }
+
+/* app3:start — round 3's shared mechanics: the device, the status bar, the ramp, icons, the pocket's bars. No material here: each idea sets its own variables. */
+.app3 { --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, "Helvetica Neue", Geist, system-ui, sans-serif; --rounded: ui-rounded, "SF Pro Rounded", var(--font);
+  --bg: #ffffff; --ink: #1d1d1f; --sec: #6e6e73; --ter: #c4c4c8; --line: rgba(0,0,0,.08); --grp: #ffffff; --tint: #0a7aff; --tint-text: #0064d2; --fill: #0064d2; --red: #d70015; --amber: #b35900; --green: #34c759; --field: rgba(0,0,0,.06); --bar: rgba(255,255,255,.72);
+  font-family: var(--font); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; font-size: 17px; line-height: 22px; text-align: left; letter-spacing: -0.01em; }
+.app3 * { box-sizing: border-box; }
+.app3 p, .app3 h1, .app3 h2, .app3 h3 { margin: 0; }
+.app3 .lt { font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: -0.015em; }
+.app3 .t1 { font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.015em; }
+.app3 .t2 { font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.012em; }
+.app3 .hl { font-size: 17px; line-height: 22px; font-weight: 600; }
+.app3 .bd { font-size: 17px; line-height: 22px; }
+.app3 .sh { font-size: 15px; line-height: 20px; letter-spacing: -0.005em; }
+.app3 .fn { font-size: 13px; line-height: 18px; letter-spacing: 0; }
+.app3 .cp { font-size: 12px; line-height: 16px; letter-spacing: 0; }
+.app3 .sec2 { color: var(--sec); } .app3 .ter { color: var(--ter); }
+.app3 .num { font-variant-numeric: tabular-nums; }
+.app3 .red { color: var(--red); } .app3 .amb { color: var(--amber); } .app3 .tint { color: var(--tint-text); } .app3 .grn { color: var(--green); }
+.app3 .w4 { font-weight: 400; } .app3 .w5 { font-weight: 500; } .app3 .w6 { font-weight: 600; } .app3 .w7 { font-weight: 700; }
+.app3 .fig { font-family: var(--rounded); font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.app3 .ic { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; display: block; }
+.app3 .ic.s { width: 18px; height: 18px; stroke-width: 2; }
+.app3 .ic.xs { width: 14px; height: 14px; stroke-width: 2.4; }
+.app3 .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; }
+.app3 .dot.red { background: var(--red); } .app3 .dot.amb { background: var(--amber); } .app3 .dot.grn { background: var(--green); } .app3 .dot.tint { background: var(--tint); }
+.app3 .row { display: flex; align-items: center; gap: 12px; }
+.app3 .lead { flex: 1 1 auto; min-width: 0; }
+.app3 .trail { margin-left: auto; display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.app3 .avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(160deg, #cfd3da, #a9afba); color: #2b2f36; font-size: 12px; font-weight: 600; line-height: 30px; text-align: center; flex: 0 0 auto; letter-spacing: 0; }
+.app3 .chev { color: var(--ter); }
+.app3 .btn { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px; border-radius: 999px; background: var(--field); color: var(--tint-text); font-size: 15px; font-weight: 600; white-space: nowrap; letter-spacing: -0.005em; }
+.app3 .btn.fill { background: var(--fill); color: #fff; }
+.app3 .btn.lg { height: 50px; padding: 0 22px; font-size: 17px; border-radius: 16px; }
+.app3 .btn.ink { background: var(--ink); color: var(--bg); }
+/* the pocket: an iPhone */
+.phone.device { width: 390px; flex: 0 0 390px; min-height: 0; border: 0; border-radius: 0; overflow: visible; background: none; padding: 0; }
+.phone.device > .app3 { border-radius: 46px; overflow: hidden; box-shadow: 0 0 0 11px #17171a, 0 0 0 12px #3a3a3f, 0 18px 40px rgba(0,0,0,.18); position: relative; min-height: 812px; display: flex; flex-direction: column; }
+.phone.device > .app3::after { content: ""; position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: currentColor; opacity: .85; z-index: 7; }
+.app3 .island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 122px; height: 36px; border-radius: 20px; background: #000; z-index: 6; }
+.app3 .sb { display: flex; align-items: center; justify-content: space-between; height: 58px; padding: 12px 34px 0 36px; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0; flex: 0 0 auto; }
+.app3 .sb .sig { display: flex; align-items: center; gap: 7px; }
+.app3 .sb .sig b { display: block; width: 18px; height: 11px; background: linear-gradient(to right, currentColor 0 3px, transparent 3px 5px, currentColor 5px 8px, transparent 8px 10px, currentColor 10px 13px, transparent 13px 15px, currentColor 15px 18px); clip-path: polygon(0 70%, 5px 70%, 5px 45%, 10px 45%, 10px 22%, 15px 22%, 15px 0, 18px 0, 18px 100%, 0 100%); opacity: .95; }
+.app3 .sb .sig i { display: block; width: 25px; height: 12px; border: 1.5px solid currentColor; border-radius: 4px; opacity: .45; position: relative; }
+.app3 .sb .sig i::after { content: ""; position: absolute; left: 2px; top: 2px; bottom: 2px; width: 17px; background: currentColor; border-radius: 2px; opacity: 1; }
+.app3 .navbar { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 16px; flex: 0 0 auto; }
+.app3 .navbar .back { display: flex; align-items: center; gap: 2px; color: var(--tint-text); font-size: 17px; margin-left: -6px; }
+.app3 .navbar .ttl { font-size: 17px; font-weight: 600; }
+.app3 .body { padding: 0 16px 24px; flex: 1 1 auto; }
+.app3 .body:last-child { padding-bottom: 60px; }
+.app3 .tabbar { display: flex; border-top: 1px solid var(--line); background: var(--bar); backdrop-filter: blur(20px) saturate(180%); padding: 8px 4px 28px; margin-top: auto; flex: 0 0 auto; }
+.app3 .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; font-weight: 500; color: var(--sec); text-decoration: none; letter-spacing: 0; }
+.app3 .tabbar a .ic { width: 26px; height: 26px; stroke-width: 1.6; }
+.app3 .tabbar a.cur { color: var(--tint-text); }
+/* the desk */
+.app3 .shell { display: flex; min-height: 880px; }
+.app3 .main { flex: 1 1 auto; min-width: 0; }
+/* the roll call's one tap */
+.app3 .tap { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ter); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; color: #fff; }
+.app3 .tap.on { background: var(--green); border-color: var(--green); }
+.app3 .tap.off { border-color: var(--red); }
+.app3 .harbor { font-family: "Bricolage Grotesque", var(--font); font-weight: 700; letter-spacing: -0.015em; }
+/* app3:end */
+
+/* chart:start — the app is the sea. The shop's own water, north up; the sites where they are; the boats on their tracks. */
+.chartapp { --bg: #f5f8fb; --paper: #f5f8fb; --ink: #1d1d1f; --sec: #6e6e73; --ter: #c7c7cc; --line: rgba(0,0,0,.08); --grp: #ffffff; --tint: #0a7aff; --tint-text: #0064d2; --fill: #1d1d1f; --field: rgba(0,0,0,.05); --bar: rgba(255,255,255,.86);
+  --cland: #ece9e1; --cring: #c9d6e2; --creef: #9fb8cc; --csite: #1d1d1f; --ctrack: #8aa4bb; --cnext: #0a7aff; }
+.chartapp.night { --bg: #04080f; --paper: #04080f; --ink: #f5f5f7; --sec: #98989d; --ter: #48484a; --line: rgba(255,255,255,.12); --grp: #10161f; --tint: #4da3ff; --tint-text: #8ec4ff; --fill: #f5f5f7; --field: rgba(255,255,255,.1); --bar: rgba(10,16,24,.82);
+  --cland: #101820; --cring: #1f3042; --creef: #2c4560; --csite: #f5f5f7; --ctrack: #4b6a8a; --cnext: #4da3ff; }
+.chartapp.night .btn.ink { color: #000; }
+.chartapp .chart { display: block; background: var(--paper); }
+.chartapp .chart text { font-family: var(--font); font-weight: 600; fill: var(--ink); letter-spacing: 0; }
+.chartapp .chart .land { fill: var(--cland); }
+.chartapp .chart .ring { fill: none; stroke: var(--cring); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.chartapp .chart .rlbl { fill: var(--sec); font-weight: 500; }
+.chartapp .chart .reef { fill: none; stroke: var(--creef); stroke-width: 1.2; stroke-dasharray: 3 5; vector-effect: non-scaling-stroke; }
+.chartapp .chart .site { fill: var(--paper); stroke: var(--csite); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.chartapp .chart .site.today { fill: var(--cnext); stroke: var(--cnext); }
+.chartapp .chart .lbl.today { fill: var(--ink); }
+.chartapp .chart .sub { fill: var(--sec); font-weight: 500; }
+.chartapp .chart .track { fill: none; stroke: var(--ctrack); stroke-width: 1.5; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
+.chartapp .chart .track.next { stroke: var(--cnext); stroke-width: 2.2; stroke-dasharray: none; vector-effect: non-scaling-stroke; }
+.chartapp .chart .arrow { fill: var(--ctrack); } .chartapp .chart .arrow.next { fill: var(--cnext); }
+.chartapp .chart .tlbl { fill: var(--sec); font-weight: 600; } .chartapp .chart .tlbl.next { fill: var(--tint-text); }
+.chartapp .chart .dock { fill: var(--ink); }
+.chartapp .chart .boatdot { fill: var(--cnext); stroke: var(--paper); stroke-width: 2; vector-effect: non-scaling-stroke; }
+/* the pocket: the chart, then a sheet over it */
+.chartapp .over { position: absolute; left: 0; right: 0; top: 0; z-index: 3; color: var(--ink); }
+.chartapp .over .top { display: flex; align-items: center; gap: 10px; padding: 0 20px; }
+.chartapp .over .top .shop { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
+.chartapp .over .top .mark { width: 26px; height: 26px; border-radius: 8px; background: var(--ink); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; letter-spacing: 0; }
+.chartapp .over .top .ic { color: var(--tint-text); margin-left: auto; } .chartapp .over .top .ic + .ic { margin-left: 0; }
+.chartapp .over .navbar .back { color: var(--tint-text); }
+.chartapp .mapwrap { position: relative; }
+.chartapp .pane { position: relative; z-index: 2; margin-top: -26px; background: var(--grp); border-radius: 24px 24px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,.12); padding: 8px 20px 24px; flex: 1 1 auto; }
+.chartapp .pane .grab { width: 36px; height: 5px; border-radius: 3px; background: var(--ter); margin: 0 auto 10px; }
+.chartapp .pane .hd { display: flex; align-items: baseline; justify-content: space-between; padding: 4px 0 4px; }
+.chartapp .pane .hd .ttl { font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.012em; }
+.chartapp .pane .hd .meta { font-size: 15px; color: var(--sec); }
+.chartapp .voy { padding: 12px 0; border-top: 1px solid var(--line); }
+.chartapp .voy:first-of-type { border-top: 0; }
+.chartapp .voy .when { display: flex; align-items: baseline; gap: 10px; }
+.chartapp .voy .when .t { font-family: var(--rounded); font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.chartapp .voy .when .t small { font-size: 14px; font-weight: 600; letter-spacing: 0; margin-left: 2px; }
+.chartapp .voy .when .boat { font-size: 15px; color: var(--sec); font-weight: 500; }
+.chartapp .voy .when .count { margin-left: auto; font-family: var(--rounded); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chartapp .voy .when .count small { font-family: var(--font); font-size: 13px; font-weight: 500; color: var(--sec); letter-spacing: 0; margin-left: 4px; }
+.chartapp .voy .to { font-size: 17px; font-weight: 600; margin-top: 2px; }
+.chartapp .voy .to i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--cnext); margin: 0 6px 1px 0; }
+.chartapp .voy .why { font-size: 14px; color: var(--sec); line-height: 18px; margin-top: 2px; }
+.chartapp .voy .flag { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 14px; font-weight: 600; }
+.chartapp .voy .flag.red { color: var(--red); } .chartapp .voy .flag.amb { color: var(--amber); }
+.chartapp .voy .flag .btn { margin-left: auto; height: 30px; padding: 0 12px; font-size: 14px; }
+.chartapp .gh { display: flex; align-items: baseline; justify-content: space-between; padding: 18px 0 6px; }
+.chartapp .gh .ttl { font-size: 20px; line-height: 25px; font-weight: 700; letter-spacing: -0.012em; }
+.chartapp .gh .meta { font-size: 15px; color: var(--sec); font-variant-numeric: tabular-nums; }
+.chartapp .list .row { min-height: 48px; padding: 8px 0; border-top: 1px solid var(--line); }
+.chartapp .list .row:first-child { border-top: 0; }
+.chartapp .list .name { font-size: 17px; }
+.chartapp .list .why { font-size: 14px; line-height: 18px; color: var(--sec); }
+.chartapp .list .state { margin-left: auto; font-size: 15px; color: var(--sec); white-space: nowrap; }
+.chartapp .list .state.red { color: var(--red); font-weight: 600; } .chartapp .list .state.amb { color: var(--amber); font-weight: 600; }
+.chartapp .leg { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+.chartapp .leg:first-child { border-top: 0; }
+.chartapp .leg .t { font-family: var(--rounded); font-weight: 700; font-size: 17px; min-width: 64px; font-variant-numeric: tabular-nums; }
+.chartapp .leg .what { font-size: 16px; }
+.chartapp .leg .why { font-size: 13px; line-height: 17px; color: var(--sec); }
+.chartapp .leg .cnt { margin-left: auto; font-size: 14px; color: var(--sec); white-space: nowrap; }
+.chartapp .stick { position: sticky; bottom: 0; padding: 12px 20px 40px; background: var(--bar); backdrop-filter: blur(20px) saturate(180%); border-top: 1px solid var(--line); margin-top: auto; }
+.chartapp .stick .btn.lg { width: 100%; }
+/* the desk: the chart on the left, the day beside it */
+.chartapp .deskbar { display: flex; align-items: center; gap: 16px; padding: 14px 28px; border-bottom: 1px solid var(--line); background: var(--grp); }
+.chartapp .deskbar .shop { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; }
+.chartapp .deskbar .mark { width: 28px; height: 28px; border-radius: 8px; background: var(--ink); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; letter-spacing: 0; }
+.chartapp .deskbar .nav { display: flex; gap: 4px; margin-left: 12px; }
+.chartapp .deskbar .nav a { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--sec); text-decoration: none; }
+.chartapp .deskbar .nav a.cur { background: var(--field); color: var(--ink); }
+.chartapp .deskbar .search { margin-left: auto; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 9px; background: var(--field); color: var(--sec); font-size: 14px; width: 220px; }
+.chartapp .deskbar .me { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
+.chartapp .deskbar .me .avatar { width: 28px; height: 28px; line-height: 28px; font-size: 11px; }
+.chartapp .desk { display: grid; grid-template-columns: 640px minmax(0, 1fr); min-height: 800px; }
+.chartapp .desk .map { position: relative; }
+.chartapp .desk .map .chart { width: 100%; height: 100%; }
+.chartapp .desk .map .cond { position: absolute; left: 20px; top: 16px; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--sec); background: var(--bar); padding: 8px 12px; border-radius: 12px; backdrop-filter: blur(12px); }
+.chartapp .desk .map .cond b { color: var(--ink); font-weight: 600; }
+.chartapp .desk .side { padding: 20px 28px 40px; background: var(--grp); border-left: 1px solid var(--line); }
+.chartapp .desk .side .hd { display: flex; align-items: baseline; justify-content: space-between; }
+.chartapp .desk .side .hd .lt { font-size: 28px; line-height: 34px; }
+.chartapp .desk .side .hd .meta { font-size: 15px; color: var(--sec); }
+.chartapp .desk .side .sub { font-size: 15px; color: var(--sec); margin: 2px 0 8px; }
+/* the storefront in the shop's own face */
+.chartapp.front .over .shopname { font-family: "Bricolage Grotesque", var(--font); font-size: 26px; font-weight: 700; letter-spacing: -0.015em; padding: 6px 20px 0; }
+.chartapp.front .over .shoptag { font-size: 14px; color: var(--sec); padding: 2px 20px 0; }
+.chartapp.front .pane .go .row { align-items: center; padding: 11px 0; border-top: 1px solid var(--line); }
+.chartapp.front .pane .go .row:first-child { border-top: 0; }
+.chartapp.front .pane .go .t { font-family: var(--rounded); font-weight: 700; font-size: 20px; min-width: 84px; font-variant-numeric: tabular-nums; }
+.chartapp.front .pane .go .t small { display: block; font-family: var(--font); font-size: 12px; font-weight: 500; color: var(--sec); letter-spacing: 0; }
+.chartapp.front .pane .go .what { font-size: 16px; font-weight: 600; }
+.chartapp.front .pane .go .why { font-size: 13px; color: var(--sec); line-height: 17px; margin-top: 1px; }
+.chartapp.front .pane .go .btn { margin-left: auto; }
+/* chart:end */
+
+  </style>
+</helmet>
+<div class="board">
+  <div class="bh">
+    <div class="lab">III · Chart <span>Design canvas · 2026-09-19 · One idea · the app is the sea</span></div>
+    <h1>The app is the sea</h1>
+    <p class="lede">A dive shop's territory is its water: a handful of sites a few miles out, each with its own depth, its own character, its own tide. DiveDay already holds every site's coordinates, its satellite frame, the route the shop drew over it, its briefing, its creatures and its tide station — and shows them one site at a time, on a page nobody opens on a dive day. Chart makes the shop's own water the surface. The home is a chart, north up: the dock at the bottom, the reef line, the sites where they are, and today's boats on their tracks. Tap a site for its briefing and today's water; tap a track for the boat. The diver sees the same chart on the storefront: where we go, and which boat has a seat.</p>
+    <div class="strip">
+      <div><h3>Feels like</h3><p><b>Maps, Find My, a chartplotter at the helm.</b> Things are where they are. A new deckhand learns the shop's water from the home screen; a diver books the reef, not a row in a table.</p></div>
+      <div><h3>What organises it</h3><p><b>Place.</b> Dives happen at sites; roll call at the dock; walk-ins, orders and waivers at the counter; courses at the pool and the classroom. Each is a place on the chart or a room behind the dock. Time is the sheet's order, and the week is the same chart with more tracks.</p></div>
+      <div><h3>Cost · risk</h3><p><b>6–7 sessions, one decision.</b> The chart is drawn from coordinates the rows already hold — a site without them lines up in a tray until someone drops it on the water. The land is the decision: v1 ships the dock, the rings and the sites with no coastline; a public-domain coastline (Natural Earth 1:10m, bundled as one SVG per shop) is a follow-up ADR. The risk is a shop with one site, whose home is an empty sea.</p></div>
+    </div>
+  </div>
+
+  <div class="cap"><b>In a pocket</b> · the home at 6:40 AM, and Mantis II's voyage at 6:58 · 390</div>
+  <div class="frames">
+    <!--home:start--><div class="phone device"><div class="app3 chartapp ph"><i class="island"></i>
+      <div class="mapwrap"><svg class="chart" viewBox="0 0 358 420" width="358" height="430" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="land" d="M0,190 C40,240 44,300 72,352 C88,382 112,402 140,420 L0,420 Z"/><circle class="ring" cx="60" cy="380" r="125"/><text class="rlbl" x="154" y="292.5" font-size="10.0">3 nm</text><circle class="ring" cx="60" cy="380" r="250"/><text class="rlbl" x="244" y="205" font-size="10.0">6 nm</text><path class="reef" d="M118,10 C200,110 268,215 322,370"/><path class="track next" d="M60,380 L300,330 L290,290"/><path class="arrow next" d="M297.6071845331492,303.1557910836836 L290.727606875109,292.910427500436 L289.47873886307235,305.1879025012028 Z"/><text class="tlbl next" x="166.8" y="373" font-size="11.0">7:00 Mantis II</text><path class="track " d="M60,380 L280,200"/><path class="arrow " d="M271.3468539108717,212.4926841919228 L277.67812810239,201.8997133707718 L266.04120141799086,206.00799781173512 Z"/><text class="tlbl " x="165" y="313" font-size="11.0">1:00 Mantis II</text><path class="track " d="M60,380 L240,150"/><path class="arrow " d="M234.29606428694262,164.0857805229324 L238.15107521502566,152.36251500302274 L227.69786699670425,158.92197394796324 Z"/><text class="tlbl " x="120" y="305" font-size="11.0">7:30 Skiff</text><circle class="site" cx="150" cy="100" r="5.0"/><text class="lbl" x="140" y="104" text-anchor="end" font-size="12.0">Carysfort Reef</text><circle class="site today" cx="240" cy="150" r="5.0"/><text class="lbl today" x="230" y="154" text-anchor="end" font-size="12.0">City of Washington</text><text class="sub" x="230" y="168" text-anchor="end" font-size="11.0">7:50 PM · night</text><circle class="site today" cx="280" cy="200" r="5.0"/><text class="lbl today" x="270" y="204" text-anchor="end" font-size="12.0">Spiegel Grove</text><text class="sub" x="270" y="218" text-anchor="end" font-size="11.0">1:45 PM · 12 divers</text><circle class="site" cx="250" cy="270" r="5.0"/><text class="lbl" x="240" y="274" text-anchor="end" font-size="12.0">Benwood</text><circle class="site today" cx="290" cy="290" r="5.0"/><text class="lbl today" x="280" y="294" text-anchor="end" font-size="12.0">French Reef</text><text class="sub" x="280" y="308" text-anchor="end" font-size="11.0">10:20 · slack</text><circle class="site today" cx="300" cy="330" r="5.0"/><text class="lbl today" x="290" y="334" text-anchor="end" font-size="12.0">Molasses Reef</text><text class="sub" x="290" y="348" text-anchor="end" font-size="11.0">8:05 · flood</text><circle class="dock" cx="60" cy="380" r="7.0"/><text class="lbl" x="72" y="384" font-size="12.0">Blue Mantis</text><text class="rlbl" x="342" y="380" text-anchor="middle" font-size="11.0">N ↑</text></svg><div class="over"><div class="sb"><span>6:40</span><span class="sig"><b></b><i></i></span></div><div class="top"><span class="shop"><span class="mark">BM</span>Blue Mantis</span><svg class="ic" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg><svg class="ic" viewBox="0 0 24 24"><circle cx="10.6" cy="10.6" r="6.3"/><path d="M15.3 15.3 20 20"/></svg></div></div></div>
+      <div class="pane"><div class="grab"></div>
+        <div class="hd"><span class="ttl">Thursday, August 27</span><span class="meta">3 boats</span></div>
+        <div class="voy">
+          <div class="when"><span class="t">7:00</span><span class="boat">Mantis II</span><span class="count">10<small>of 12</small></span></div>
+          <div class="to"><i></i>Molasses Reef, then French Reef</div>
+          <div class="why">Lines off in 20 min · 6 here, 2 to come · flood at Molasses, slack at French</div>
+          <div class="flag red"><span class="dot red"></span>Grace's card, Priya's waiver — 2 can't board<span class="btn">Fix</span></div>
+        </div>
+        <div class="voy">
+          <div class="when"><span class="t">1:00<small>PM</small></span><span class="boat">Mantis II</span><span class="count">12<small>of 12</small></span></div>
+          <div class="to"><i></i>Spiegel Grove</div>
+          <div class="why">Deep wreck · Advanced · full</div>
+          <div class="flag red"><span class="dot red"></span>No crew assigned · Tomás has no deep card<span class="btn">Assign</span></div>
+        </div>
+        <div class="voy">
+          <div class="when"><span class="t">7:30<small>PM</small></span><span class="boat">Skiff</span><span class="count">3<small>of 8</small></span></div>
+          <div class="to"><i></i>City of Washington</div>
+          <div class="why">Night dive · sunset 7:44 · moon up till 1:20</div>
+          <div class="flag amb"><span class="dot amb"></span>5 seats open · no deal sent<span class="btn">Send a deal</span></div>
+        </div>
+        <div class="gh"><span class="ttl">At the dock</span><span class="meta">4</span></div>
+        <div class="list">
+          <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Priya Sharma's $95</div><div class="why">Paid at 6:02 · Stripe hasn't confirmed</div></div><span class="btn">Check</span></div>
+          <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Emmet O'Brien, Friday 7:00</div><div class="why">Booking left unfinished</div></div><span class="btn">Finish</span></div>
+          <div class="row"><span class="dot tint"></span><div class="lead"><div class="name">3 messages · 1 review</div><div class="why">Grace, Priya and Ravi wrote back · Lars P., five stars</div></div><span class="btn">Read</span></div>
+        </div>
+      </div>
+    </div></div><!--home:end-->
+
+    <div class="phone device"><div class="app3 chartapp ph"><i class="island"></i>
+      <div class="mapwrap"><svg class="chart" viewBox="40 200 300 260" width="358" height="300" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="land" d="M0,190 C40,240 44,300 72,352 C88,382 112,402 140,420 L0,420 Z"/><circle class="ring" cx="60" cy="380" r="125"/><text class="rlbl" x="154" y="292.5" font-size="8.3">3 nm</text><circle class="ring" cx="60" cy="380" r="250"/><text class="rlbl" x="244" y="205" font-size="8.3">6 nm</text><path class="reef" d="M118,10 C200,110 268,215 322,370"/><path class="track next" d="M60,380 L300,330 L290,290"/><path class="arrow next" d="M296.33932044429105,300.963159236403 L290.60633906259085,292.42535625036334 L289.56561571922697,302.656585417669 Z"/><circle class="site" cx="150" cy="100" r="4.2"/><text class="lbl" x="141.66666666666666" y="103.33333333333333" text-anchor="end" font-size="10.0">Carysfort Reef</text><circle class="site" cx="240" cy="150" r="4.2"/><text class="lbl" x="231.66666666666666" y="153.33333333333334" text-anchor="end" font-size="10.0">City of Washington</text><circle class="site" cx="280" cy="200" r="4.2"/><text class="lbl" x="271.6666666666667" y="203.33333333333334" text-anchor="end" font-size="10.0">Spiegel Grove</text><circle class="site" cx="250" cy="270" r="4.2"/><text class="lbl" x="241.66666666666666" y="273.3333333333333" text-anchor="end" font-size="10.0">Benwood</text><circle class="site today" cx="290" cy="290" r="4.2"/><text class="lbl today" x="281.6666666666667" y="293.3333333333333" text-anchor="end" font-size="10.0">French Reef</text><text class="sub" x="281.6666666666667" y="305" text-anchor="end" font-size="9.2">10:20 · slack</text><circle class="site today" cx="300" cy="330" r="4.2"/><text class="lbl today" x="291.6666666666667" y="333.3333333333333" text-anchor="end" font-size="10.0">Molasses Reef</text><text class="sub" x="291.6666666666667" y="345" text-anchor="end" font-size="9.2">8:05 · flood, high 9:12</text><circle class="dock" cx="60" cy="380" r="5.8"/><text class="lbl" x="70" y="383.3333333333333" font-size="10.0">Blue Mantis</text><circle class="boatdot" cx="60" cy="380" r="5.0"/><text class="tlbl next" x="68.33333333333333" y="383.3333333333333" font-size="9.2">Mantis II · at the dock</text><text class="rlbl" x="326.6666666666667" y="426.6666666666667" text-anchor="middle" font-size="9.2">N ↑</text></svg><div class="over"><div class="sb"><span>6:58</span><span class="sig"><b></b><i></i></span></div><div class="navbar"><span class="back"><svg class="ic" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>Thursday</span><span class="ttl">2 min to lines off</span><svg class="ic" viewBox="0 0 24 24" style="color:var(--tint-text)"><circle cx="12" cy="6" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="18" r="1.4"/></svg></div></div></div>
+      <div class="pane"><div class="grab"></div>
+        <div class="hd"><span class="ttl">7:00 · Two-Tank Reef</span><span class="meta">10 of 12</span></div>
+        <div class="fn sec2" style="padding-bottom:6px">Mantis II · Keiko Tanaka, Sal Moretti · seas 1 ft, wind E 6</div>
+        <div class="leg"><span class="t">7:00</span><div class="lead"><div class="what">Lines off</div><div class="why">The dock · 6 here, 2 to come, 2 can't board</div></div></div>
+        <div class="leg"><span class="t">8:05</span><div class="lead"><div class="what">Molasses Reef</div><div class="why">Flood, high at 9:12 · 25–40 ft · mooring balls 4–6</div></div><span class="cnt">40 min</span></div>
+        <div class="leg"><span class="t">10:20</span><div class="lead"><div class="what">French Reef</div><div class="why">Slack · 20–35 ft · the swim-throughs</div></div><span class="cnt">40 min</span></div>
+        <div class="leg"><span class="t">11:45</span><div class="lead"><div class="what">Back at the dock</div><div class="why">Count on the surface after each dive</div></div></div>
+        <div class="gh"><span class="ttl">Before lines off</span><span class="meta">2</span></div>
+        <div class="list">
+          <div class="row"><span class="dot red"></span><div class="lead"><div class="name">Grace Mensah</div><div class="why">Advanced card needs a look · she's here</div></div><span class="btn">Look</span></div>
+          <div class="row"><span class="dot red"></span><div class="lead"><div class="name">Priya Sharma</div><div class="why">Waiver not signed · she's here</div></div><span class="btn">Sign here</span></div>
+        </div>
+        <div class="gh"><span class="ttl">Aboard</span><span class="meta">6 of 10</span></div>
+        <div class="list">
+          <div class="row"><span class="avatar">RN</span><div class="lead"><div class="name">Ravi Nair</div><div class="why">Rescue · own gear</div></div><span class="state">Here</span></div>
+          <div class="row"><span class="avatar">HL</span><div class="lead"><div class="name">Hannah Liu</div><div class="why">Open Water · rental, no size yet</div></div><span class="state amb">Size</span></div>
+          <div class="row"><span class="avatar">BC</span><div class="lead"><div class="name">Ben Carter</div><div class="why">Advanced · rental, no size yet</div></div><span class="state amb">Size</span></div>
+          <div class="row"><span class="avatar">EF</span><div class="lead"><div class="name">Emma Fischer · Ines Costa</div><div class="why">Buddies · both here</div></div><span class="state">Here</span></div>
+          <div class="row"><span class="avatar">NP</span><div class="lead"><div class="name">Nadia Petrov</div><div class="why">Open Water · no emergency contact</div></div><span class="state amb">Ask</span></div>
+          <div class="row"><span class="avatar">HM</span><div class="lead"><div class="name">Hugo Marsh · Ben Okafor</div><div class="why">Not here yet</div></div><span class="state">2 to come</span></div>
+        </div>
+      </div>
+      <div class="stick"><span class="btn lg ink">Roll call</span></div>
+    </div></div>
+  </div>
+
+  <div class="cap"><b>On a desk</b> · the home at 6:40 AM — the chart and the day · 1280 · light</div>
+  <div class="frames">
+  <div class="frame desktop"><div class="app3 chartapp">
+    <div class="deskbar"><span class="shop"><span class="mark">BM</span>Blue Mantis Divers</span><nav class="nav"><a class="cur">Today</a><a>Week</a><a>Sites</a></nav><span class="search"><svg class="ic s" viewBox="0 0 24 24"><circle cx="10.6" cy="10.6" r="6.3"/><path d="M15.3 15.3 20 20"/></svg>Search anyone, any site</span><span class="me"><span class="avatar">DR</span>Dana</span></div>
+    <div class="desk">
+      <div class="map"><svg class="chart" viewBox="0 0 358 420" width="640" height="750" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="land" d="M0,190 C40,240 44,300 72,352 C88,382 112,402 140,420 L0,420 Z"/><circle class="ring" cx="60" cy="380" r="125"/><text class="rlbl" x="154" y="292.5" font-size="5.6">3 nm</text><circle class="ring" cx="60" cy="380" r="250"/><text class="rlbl" x="244" y="205" font-size="5.6">6 nm</text><path class="reef" d="M118,10 C200,110 268,215 322,370"/><path class="track next" d="M60,380 L300,330 L290,290"/><path class="arrow next" d="M294.25526884823034,297.3590206374355 L290.4070050957641,291.62802038305637 L289.7084195515311,298.4957329616103 Z"/><text class="tlbl next" x="164.15625" y="366.83125" font-size="6.2">7:00 Mantis II</text><path class="track " d="M60,380 L280,200"/><path class="arrow " d="M275.15964640639385,206.9880952198568 L278.7012029072744,201.06265216677548 L272.1917970431886,203.36072377593933 Z"/><text class="tlbl " x="162.35625" y="306.83125" font-size="6.2">1:00 Mantis II</text><path class="track " d="M60,380 L240,150"/><path class="arrow " d="M236.80936096050854,157.87923348001533 L238.96575769840499,151.32153182981585 L233.11849435128144,154.99072917714193 Z"/><text class="tlbl " x="117.35625" y="307.64375" font-size="6.2">7:30 Skiff</text><circle class="site" cx="150" cy="100" r="2.8"/><text class="lbl" x="144.40625" y="102.2375" text-anchor="end" font-size="6.7">Carysfort Reef</text><circle class="site today" cx="240" cy="150" r="2.8"/><text class="lbl today" x="234.40625" y="152.2375" text-anchor="end" font-size="6.7">City of Washington</text><text class="sub" x="234.40625" y="160.06875" text-anchor="end" font-size="6.2">7:50 PM · night</text><circle class="site today" cx="280" cy="200" r="2.8"/><text class="lbl today" x="274.40625" y="202.2375" text-anchor="end" font-size="6.7">Spiegel Grove</text><text class="sub" x="274.40625" y="210.06875" text-anchor="end" font-size="6.2">1:45 PM · 12 divers</text><circle class="site" cx="250" cy="270" r="2.8"/><text class="lbl" x="244.40625" y="272.2375" text-anchor="end" font-size="6.7">Benwood</text><circle class="site today" cx="290" cy="290" r="2.8"/><text class="lbl today" x="284.40625" y="292.2375" text-anchor="end" font-size="6.7">French Reef</text><text class="sub" x="284.40625" y="300.06875" text-anchor="end" font-size="6.2">10:20 · slack</text><circle class="site today" cx="300" cy="330" r="2.8"/><text class="lbl today" x="294.40625" y="332.2375" text-anchor="end" font-size="6.7">Molasses Reef</text><text class="sub" x="294.40625" y="340.06875" text-anchor="end" font-size="6.2">8:05 · flood</text><circle class="dock" cx="60" cy="380" r="3.9"/><text class="lbl" x="66.7125" y="382.2375" font-size="6.7">Blue Mantis</text><text class="rlbl" x="349.05" y="14.543749999999989" text-anchor="middle" font-size="6.2">N ↑</text></svg><div class="cond"><span><b>Seas</b> 1 ft from the east</span><span><b>Wind</b> E 6 kn, gusts 9</span><span><b>High</b> 9:12 AM at Molasses</span><span><b>Low</b> 3:31 PM</span><span><b>Water</b> 84°</span><span><b>Sunset</b> 7:44</span></div></div>
+      <div class="side">
+        <div class="hd"><h1 class="lt">Thursday, August 27</h1><span class="meta">6:40 AM</span></div>
+        <p class="sub">3 boats · 23 divers · sunrise 7:02</p>
+        <div class="voy">
+          <div class="when"><span class="t">7:00</span><span class="boat">Mantis II · Keiko, Sal</span><span class="count">10<small>of 12</small></span></div>
+          <div class="to"><i></i>Molasses Reef, then French Reef</div>
+          <div class="why">Lines off in 20 min · 6 here, 2 to come · flood at Molasses, slack at French</div>
+          <div class="flag red"><span class="dot red"></span>Grace's card, Priya's waiver — 2 can't board<span class="btn">Fix</span></div>
+          <div class="flag amb"><span class="dot amb"></span>Nadia's contact · three rental sizes<span class="btn">Prep list</span></div>
+        </div>
+        <div class="voy">
+          <div class="when"><span class="t">1:00<small>PM</small></span><span class="boat">Mantis II</span><span class="count">12<small>of 12</small></span></div>
+          <div class="to"><i></i>Spiegel Grove</div>
+          <div class="why">Deep wreck · Advanced · full</div>
+          <div class="flag red"><span class="dot red"></span>No crew assigned · Tomás has no deep card<span class="btn">Assign crew</span></div>
+        </div>
+        <div class="voy">
+          <div class="when"><span class="t">7:30<small>PM</small></span><span class="boat">Skiff · Keiko</span><span class="count">3<small>of 8</small></span></div>
+          <div class="to"><i></i>City of Washington</div>
+          <div class="why">Night dive · sunset 7:44 · moon up till 1:20 · slack till 8:40</div>
+          <div class="flag amb"><span class="dot amb"></span>5 seats open · no deal sent<span class="btn">Send a deal</span></div>
+        </div>
+        <div class="gh"><span class="ttl">At the dock</span><span class="meta">4</span></div>
+        <div class="list">
+          <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Priya Sharma's $95</div><div class="why">Paid at 6:02 · Stripe hasn't confirmed</div></div><span class="btn">Check</span></div>
+          <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Emmet O'Brien, Friday 7:00</div><div class="why">Booking left unfinished</div></div><span class="btn">Finish</span></div>
+          <div class="row"><span class="dot tint"></span><div class="lead"><div class="name">3 messages</div><div class="why">Grace, Priya and Ravi wrote back</div></div><span class="btn">Read</span></div>
+          <div class="row"><span class="dot tint"></span><div class="lead"><div class="name">1 review</div><div class="why">Lars P. · Wreck Trip — Duane · five stars</div></div><span class="btn">Read</span></div>
+        </div>
+        <div class="gh"><span class="ttl">Asked for</span><span class="meta">2 days</span></div>
+        <div class="list">
+          <div class="row"><div class="lead"><div class="name">Wed, Sep 2 · four people</div><div class="why">"could make the 2nd if there's a boat"</div></div><span class="btn">Open a boat</span></div>
+          <div class="row"><div class="lead"><div class="name">Sat, Sep 5 · Lars P.</div><div class="why">asks for a Duane wreck day</div></div><span class="state">Waiting</span></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  </div>
+
+  <div class="cap"><b>After dark, and outside</b> · the night roll call on Skiff at 7:26 PM — the chartplotter · the storefront: where we go · 390</div>
+  <div class="frames">
+    <div class="phone device"><div class="app3 chartapp night ph"><i class="island"></i>
+      <div class="mapwrap"><svg class="chart" viewBox="40 44 300 270" width="358" height="320" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="land" d="M0,190 C40,240 44,300 72,352 C88,382 112,402 140,420 L0,420 Z"/><circle class="ring" cx="60" cy="380" r="125"/><text class="rlbl" x="154" y="292.5" font-size="8.3">3 nm</text><circle class="ring" cx="60" cy="380" r="250"/><text class="rlbl" x="244" y="205" font-size="8.3">6 nm</text><path class="reef" d="M118,10 C200,110 268,215 322,370"/><path class="track next" d="M60,380 L240,150"/><path class="arrow next" d="M235.24672023911884,161.73815043577702 L238.4592293458547,151.96876250251896 L229.74822249725352,157.4349782899694 Z"/><text class="tlbl next" x="164" y="248.5" font-size="9.2">lines off 7:50</text><circle class="site today" cx="240" cy="150" r="4.2"/><text class="lbl today" x="231.66666666666666" y="153.33333333333334" text-anchor="end" font-size="10.0">City of Washington</text><text class="sub" x="231.66666666666666" y="165" text-anchor="end" font-size="9.2">slack till 8:40 · 24 ft</text><circle class="site" cx="280" cy="200" r="4.2"/><text class="lbl" x="271.6666666666667" y="203.33333333333334" text-anchor="end" font-size="10.0">Spiegel Grove</text><circle class="site" cx="250" cy="270" r="4.2"/><text class="lbl" x="241.66666666666666" y="273.3333333333333" text-anchor="end" font-size="10.0">Benwood</text><circle class="site" cx="290" cy="290" r="4.2"/><text class="lbl" x="281.6666666666667" y="293.3333333333333" text-anchor="end" font-size="10.0">French Reef</text><circle class="site" cx="300" cy="330" r="4.2"/><text class="lbl" x="291.6666666666667" y="333.3333333333333" text-anchor="end" font-size="10.0">Molasses Reef</text><circle class="dock" cx="60" cy="380" r="5.8"/><text class="lbl" x="70" y="383.3333333333333" font-size="10.0">Blue Mantis</text><circle class="boatdot" cx="60" cy="380" r="5.0"/><text class="tlbl next" x="68.33333333333333" y="383.3333333333333" font-size="9.2">Skiff · at the dock</text><text class="rlbl" x="326.6666666666667" y="280.6666666666667" text-anchor="middle" font-size="9.2">N ↑</text></svg><div class="over"><div class="sb"><span>7:26</span><span class="sig"><b></b><i></i></span></div><div class="navbar"><span class="back"><svg class="ic" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>Today</span><span class="ttl">Roll call</span><span class="fn w6" style="color:var(--tint-text)">Glare</span></div></div></div>
+      <div class="pane"><div class="grab"></div>
+        <div class="hd"><span class="ttl">7:30 PM · Night Dive</span><span class="meta fig" style="font-size:22px;color:var(--ink)">2 <span class="sec2" style="font-family:var(--font);font-size:15px;font-weight:500">of 3</span></span></div>
+        <div class="fn sec2" style="padding-bottom:6px">Skiff · Keiko Tanaka · City of Washington · sunset in 18 min</div>
+        <div class="list">
+          <div class="row"><span class="tap on"><svg class="ic s" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><div class="lead"><div class="name">Mia Rossi</div><div class="why">Advanced · torch, backup torch</div></div></div>
+          <div class="row"><span class="tap on"><svg class="ic s" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><div class="lead"><div class="name">Jonas Berg</div><div class="why">Open Water · first dive since 2019 · with Keiko</div></div></div>
+          <div class="row"><span class="tap"></span><div class="lead"><div class="name">Owen Park</div><div class="why">Advanced · not seen yet</div></div><span class="state">Call</span></div>
+        </div>
+        <div class="gh"><span class="ttl">Tonight</span><span class="meta">12 min out</span></div>
+        <div class="leg"><span class="t">7:50</span><div class="lead"><div class="what">Lines off</div><div class="why">The dock</div></div></div>
+        <div class="leg"><span class="t">8:10</span><div class="lead"><div class="what">City of Washington</div><div class="why">Slack till 8:40, then flood · 24 ft · the moon is up</div></div><span class="cnt">45 min</span></div>
+        <div class="leg"><span class="t">9:05</span><div class="lead"><div class="what">Count on the surface</div><div class="why">The same three names, once more</div></div></div>
+      </div>
+      <div class="stick"><span class="btn lg ink">Everyone aboard · lines off</span></div>
+    </div></div>
+
+    <div class="phone device"><div class="app3 chartapp front ph"><i class="island"></i>
+      <div class="mapwrap"><svg class="chart" viewBox="0 0 358 420" width="358" height="400" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="land" d="M0,190 C40,240 44,300 72,352 C88,382 112,402 140,420 L0,420 Z"/><circle class="ring" cx="60" cy="380" r="125"/><text class="rlbl" x="154" y="292.5" font-size="10.0">3 nm</text><circle class="ring" cx="60" cy="380" r="250"/><text class="rlbl" x="244" y="205" font-size="10.0">6 nm</text><path class="reef" d="M118,10 C200,110 268,215 322,370"/><path class="track next" d="M60,380 L240,150"/><path class="arrow next" d="M234.29606428694262,164.0857805229324 L238.15107521502566,152.36251500302274 L227.69786699670425,158.92197394796324 Z"/><text class="tlbl next" x="156" y="259" font-size="11.0">Tonight 7:30 · 5 seats</text><path class="track " d="M60,380 L300,330 L290,290"/><path class="arrow " d="M297.6071845331492,303.1557910836836 L290.727606875109,292.910427500436 L289.47873886307235,305.1879025012028 Z"/><text class="tlbl " x="198" y="366.5" font-size="11.0">Tomorrow 7:00</text><path class="track " d="M60,380 L250,270"/><path class="arrow " d="M239.45684198502656,280.94467517243953 L247.40372114355662,271.5031088116251 L235.25885446955735,273.6936058275382 Z"/><text class="tlbl " x="123" y="341" font-size="11.0">Tomorrow 1:00</text><circle class="site today" cx="240" cy="150" r="5.0"/><text class="lbl today" x="230" y="154" text-anchor="end" font-size="12.0">City of Washington</text><circle class="site" cx="280" cy="200" r="5.0"/><text class="lbl" x="270" y="204" text-anchor="end" font-size="12.0">Spiegel Grove</text><circle class="site today" cx="250" cy="270" r="5.0"/><text class="lbl today" x="240" y="274" text-anchor="end" font-size="12.0">Benwood</text><circle class="site today" cx="290" cy="290" r="5.0"/><text class="lbl today" x="280" y="294" text-anchor="end" font-size="12.0">French Reef</text><circle class="site today" cx="300" cy="330" r="5.0"/><text class="lbl today" x="290" y="334" text-anchor="end" font-size="12.0">Molasses Reef</text><circle class="dock" cx="60" cy="380" r="7.0"/><text class="lbl" x="72" y="384" font-size="12.0">Blue Mantis</text><text class="rlbl" x="342" y="380" text-anchor="middle" font-size="11.0">N ↑</text></svg><div class="over"><div class="sb"><span>6:40</span><span class="sig"><b></b><i></i></span></div><div class="shopname">Blue Mantis Divers</div><div class="shoptag">Key Largo · two boats, six reefs · seas 1 ft today</div></div></div>
+      <div class="pane"><div class="grab"></div>
+        <div class="hd"><span class="ttl">Where we go</span><span class="meta">this week</span></div>
+        <div class="go">
+          <div class="row"><span class="t">7:30<small>tonight</small></span><div class="lead"><div class="what">City of Washington</div><div class="why">Night dive · 5 seats · Advanced or with a guide · $95</div></div><span class="btn fill" style="background:#1d7a5f">Book</span></div>
+          <div class="row"><span class="t">7:00<small>tomorrow</small></span><div class="lead"><div class="what">Molasses &amp; French</div><div class="why">Two tanks · 4 seats · Open Water · $120</div></div><span class="btn fill" style="background:#1d7a5f">Book</span></div>
+          <div class="row"><span class="t">1:00<small>tomorrow</small></span><div class="lead"><div class="what">Benwood</div><div class="why">Reef &amp; wreck · 7 seats · Open Water · $120</div></div><span class="btn fill" style="background:#1d7a5f">Book</span></div>
+        </div>
+        <div class="gh"><span class="ttl">Learn</span><span class="meta">3 courses</span></div>
+        <div class="list">
+          <div class="row"><div class="lead"><div class="name">Open Water</div><div class="why">Next class Tuesday 9:00 · 2 places</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg></div>
+          <div class="row"><div class="lead"><div class="name">Advanced</div><div class="why">Weekends in September</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="foot">
+    <div><h3>What it deletes</h3><ul><li><b>The site library as a list, the trip page's Conditions tab, the storefront's site pages.</b> One chart, tapped.</li><li><b>The four tabs and More.</b> A chart, a search, the dock.</li><li><b>Every "where" sentence</b> — the meeting point, the site name in a row, the travel time — is a place you can see.</li></ul></div>
+    <div><h3>What it keeps</h3><ul><li><b>The route a shop draws</b> over a site (<code>dive-site-route.ts</code>) becomes the zoomed chart's own line.</li><li><b>The tide at every site</b> is the label under it; the forecast is the corner of the chart.</li><li><b>The roll call, the manifest, readiness:</b> untouched, reached through the track.</li></ul></div>
+    <div><h3>Where it is weakest</h3><ul><li><b>A shop with one site, or a pool:</b> an empty sea. The sheet carries the day and the chart is a picture.</li><li><b>A site without coordinates</b> sits in a tray until placed — honest, and a chore.</li><li><b>Money, messages, courses</b> are rooms behind the dock: the same list every concept has, one tap further from the water.</li></ul></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

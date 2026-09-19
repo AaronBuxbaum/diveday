@@ -1,13 +1,12 @@
 import { expect, test } from "./fixtures";
+import { STAFF_DAY_HEADING } from "./helpers";
 
 test("landing demo CTA drops a visitor into the staff shop", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Try the live demo" }).first().click();
 
   await expect(page).toHaveURL(/\/shop/);
-  await expect(
-    page.getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
   // The demo banner rides above every /shop surface.
   await expect(page.getByText("Demo shop")).toBeVisible();
 

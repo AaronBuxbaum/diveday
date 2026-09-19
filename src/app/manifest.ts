@@ -44,8 +44,12 @@ export default function manifest(): MetadataRoute.Manifest {
     // a crew member to go and do.
     start_url: "/shop",
     display: "standalone",
-    background_color: "#faf9f6",
-    theme_color: "#0e7490",
+    // The light ground, `--background` — the colour the splash screen paints
+    // behind the mark while an installed launch warms up. It moved with Tide's
+    // surface, and a splash still wearing the old warm ground is the one frame
+    // a crew member sees before the app they installed.
+    background_color: "#f2f2f7",
+    theme_color: "#0064d2",
     icons: [
       { src: "/icon.png", sizes: "32x32", type: "image/png" },
       { src: "/apple-icon.png", sizes: "180x180", type: "image/png" },

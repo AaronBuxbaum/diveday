@@ -90,10 +90,15 @@ describe.each(["light", "dark"] as const)("the water band's washes (%s)", (schem
   it.each(WASHES)("--water-%s is water or sand, never coral", (wash) => {
     const stop = hue(palette[`water-${wash}`] as string);
     const toAccent = hueDistance(stop, hue(palette.accent as string));
-    const toWater = Math.min(
-      hueDistance(stop, hue(palette.primary as string)),
-      hueDistance(stop, hue(palette.background as string)),
-    );
+    // The ground is the second yardstick only while it *has* a hue. Round 2's
+    // night ground is pure black (#000000), where `hue()` is NaN by definition
+    // and `Math.min` would carry that NaN into the comparison — so a wash that
+    // is plainly water would fail for want of a second opinion. Water alone
+    // answers it there.
+    const groundHue = hue(palette.background as string);
+    const toWater = Number.isNaN(groundHue)
+      ? hueDistance(stop, hue(palette.primary as string))
+      : Math.min(hueDistance(stop, hue(palette.primary as string)), hueDistance(stop, groundHue));
     expect(toWater, `--water-${wash} sits ${toAccent.toFixed(0)}° from --accent`).toBeLessThan(
       toAccent,
     );

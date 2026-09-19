@@ -67,8 +67,13 @@ describe("display faces", () => {
  */
 describe("deriveBrandTheme", () => {
   it("keeps a colour white reads on, with white as its ink", () => {
-    const theme = deriveBrandTheme("#0E7490");
-    expect(theme.primary).toBe("#0e7490");
+    // Deep lagoon rather than DiveDay's own former `#0e7490`: this branch is
+    // "already reads on the ground, so nothing moves", and the ground is now
+    // Round 2's cool `#f2f2f7` (ADR 20260919-one-idea §1), on which `#0e7490`
+    // measures 4.37:1 and is correctly nudged by the rule below. A fixture for
+    // the *unadjusted* branch has to clear the ground it is measured against.
+    const theme = deriveBrandTheme("#0A5A6E");
+    expect(theme.primary).toBe("#0a5a6e");
     expect(theme.primaryForeground).toBe("#ffffff");
     expect(theme.adjusted).toBe(false);
   });

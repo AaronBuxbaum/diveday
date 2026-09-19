@@ -1,0 +1,156 @@
+// @vitest-environment jsdom
+
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import { dayStripGeometry } from "@/lib/day-strip";
+import { DayStrip } from "./DayStrip";
+
+afterEach(cleanup);
+
+/** How many rows the mark labels are spread over — one, or two when they would touch. */
+const labelRows = (container: HTMLElement): number =>
+  new Set(
+    [...container.querySelectorAll("span")]
+      .filter((node) => node.textContent)
+      .map((node) => /-translate-y-\[[^\]]+\]/.exec(node.className)?.[0]),
+  ).size;
+
+const at = (hour: number, minute = 0): Date => new Date(Date.UTC(2026, 7, 27, hour, minute));
+
+const geometry = dayStripGeometry({
+  from: at(6),
+  to: at(22),
+  now: at(10, 40),
+  sunriseAt: at(7),
+  sunsetAt: at(19, 45),
+  daylightProgress: 0.29,
+  marks: [
+    { id: "morning", at: at(7) },
+    { id: "afternoon", at: at(13) },
+    { id: "night", at: at(19, 30) },
+  ],
+  ticks: [at(6), at(12), at(18)],
+  tideTurns: [
+    { at: at(9), kind: "high" },
+    { at: at(15), kind: "low" },
+  ],
+});
+
+describe("DayStrip", () => {
+  it("is one image with the caller's sentence for a reader who cannot see it", () => {
+    const { container } = render(
+      <DayStrip geometry={geometry} label="Three boats today, under a rising sun." />,
+    );
+    const image = screen.getByRole("img", { name: "Three boats today, under a rising sun." });
+    expect(image).toBe(container.firstElementChild);
+    // The curves are decoration inside that one image, never a second one.
+    expect(container.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  /**
+   * Every word on the strip is a real element at a real size, not glyphs in a
+   * stretched viewBox: the same 11-unit `<text>` renders at four pixels on a
+   * phone and eleven on a desk, and the phone is where a crew reads it.
+   */
+  const words = (container: HTMLElement): (string | null)[] =>
+    [...container.querySelectorAll("span")]
+      .map((node) => node.textContent)
+      .filter((text) => text !== "");
+
+  /**
+   * The component says no word of its own: a staff surface's copy comes from
+   * the message bundle and a rendered time is in the shop's zone, and neither
+   * of those is knowable here.
+   */
+  it("prints only the words it was handed", () => {
+    const { container } = render(
+      <DayStrip
+        geometry={geometry}
+        label="the day"
+        markLabels={{ morning: "7:00", afternoon: "1:00 PM", night: "7:30 PM" }}
+        tickLabels={["6 AM", "12", "6 PM"]}
+        nowLabel="10:40"
+      />,
+    );
+    // No `<text>` at all — every label is an element the browser sizes.
+    expect(container.querySelectorAll("text")).toHaveLength(0);
+    expect(words(container)).toEqual(
+      expect.arrayContaining(["7:00", "1:00 PM", "7:30 PM", "6 AM", "12", "6 PM", "10:40"]),
+    );
+    // Nothing else: no month, no "today", no unit it invented.
+    expect(words(container)).toHaveLength(7);
+  });
+
+  /**
+   * A dot has to be round at 390 and at 976, which a circle in a
+   * `preserveAspectRatio="none"` viewBox is not — it is an egg standing on end
+   * at one width and lying down at the other.
+   */
+  it("draws every mark and the sun round rather than as a stretched circle", () => {
+    const { container } = render(<DayStrip geometry={geometry} label="the day" />);
+    expect(container.querySelectorAll("circle")).toHaveLength(0);
+    // Three marks and the sun, which is the fourth.
+    expect(container.querySelectorAll("span.rounded-full")).toHaveLength(4);
+  });
+
+  it("raises a label that would touch the one before it", () => {
+    const crowded = dayStripGeometry({
+      from: at(6),
+      to: at(22),
+      now: at(10),
+      sunriseAt: at(7),
+      sunsetAt: at(19, 45),
+      daylightProgress: 0.2,
+      marks: [
+        { id: "first", at: at(7) },
+        { id: "second", at: at(7, 30) },
+      ],
+    });
+    const { container } = render(
+      <DayStrip
+        geometry={crowded}
+        label="the day"
+        markLabels={{ first: "7:00", second: "7:30" }}
+      />,
+    );
+    expect(labelRows(container)).toBe(2);
+  });
+
+  it("leaves both labels on one line when they do not touch", () => {
+    const { container } = render(
+      <DayStrip
+        geometry={geometry}
+        label="the day"
+        markLabels={{ morning: "7:00", afternoon: "1:00 PM", night: "7:30 PM" }}
+      />,
+    );
+    expect(labelRows(container)).toBe(1);
+  });
+
+  it("draws no now line on a day that does not contain now", () => {
+    const past = dayStripGeometry({
+      from: at(6),
+      to: at(22),
+      now: at(23),
+      sunriseAt: at(7),
+      sunsetAt: at(19, 45),
+      daylightProgress: null,
+    });
+    const { container } = render(
+      <DayStrip geometry={past} label="yesterday" nowLabel="11:00 PM" />,
+    );
+    expect(words(container)).not.toContain("11:00 PM");
+  });
+
+  /**
+   * Every colour is a token. A hex here would be invisible to the night palette
+   * and to the crew's glare mode, which is exactly the failure `check:tokens`
+   * exists to refuse.
+   */
+  it("reaches for tokens and never a colour of its own", () => {
+    const { container } = render(<DayStrip geometry={geometry} label="the day" />);
+    const markup = container.innerHTML;
+    expect(markup).not.toMatch(/#[0-9a-f]{3,8}/i);
+    expect(markup).toContain("(--sky-ink)");
+  });
+});

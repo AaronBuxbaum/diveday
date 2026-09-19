@@ -597,6 +597,92 @@ recommendation recorded beside its call. What each landed in is the canvas READM
   greeting for a known phone, the sizes write, "Forget this phone", the row on the diver record.
   Waits on 20i, 20k and H-71 m.
 
+### 22. Nothing to explain (superseded 2026-09-19 by 23; 22a–22c and 22i stand, 22d–22h dropped)
+
+The 2026-09-18 loop over the whole app as an Apple designer would read it, argued on
+[the canvas](../../design/canvases/20260918-nothing-to-explain/README.md) and proposed in ADR
+[20260918-nothing-to-explain](../../architecture/decisions/20260918-nothing-to-explain.md). Its
+diagnosis: nine rounds on One hand (20) and Clear the deck (21, canvas-only) produced no pick because
+each answered a sentence with more until eighteen calls were open, the instrument was drawn as a
+console for engineers, and the app has nine voices on one screen. The ADR decides a **floor** from the
+owner's own reads (one ramp, two inks and one tint, nothing drawn, one shell, one row, two radii, dark
+by the device and glare by a word, creation as a sheet) and draws **three directions** as finished
+products on the same six screens — A · Inset (the group carries the page), B · Glass (the material),
+C · Figures (the number, on A's lists) — recommending C. The pick is the owner's (H-87), and it is the
+only call. **Superseded 2026-09-19 by 23 (H-88)** on the owner's read of round 2: A, B and C were
+three skins on one skeleton, and H-87 is withdrawn. 22a, 22b, 22c and 22i stand and land first under
+any pick in 23; 22d–22h are dropped — 23a–23h replace them.
+
+- **22a** — one ramp on the device's face (round 2): `-apple-system` with Inter then Geist as the
+  fallback, six sizes, figures in the rounded face with tabular digits, no capitals, no eyebrow, no
+  greeting; `check:type-ramp` rewritten to six rungs; `ShopPageHeader` loses `display` and the eyebrow.
+- **22b** — the surface (round 2): cool neutrals and pure white, near-black ink, one vivid DiveDay blue
+  in two strengths with its bed, red and amber always beside a word, green only as the aboard fill,
+  no pill on a staff surface, two concentric radii, capsules, no outline and no bed, black at night;
+  the shop's colour stays on the storefront; `Badge` deleted; the token set rewritten.
+- **22c** — nothing drawn on `/shop/**`: the water band, the site tile, the dial, the hand and the
+  coral leave; `WaterBandStyle` and the illustration set render nothing under `/shop`.
+- **22d** — one shell (H-87): Today · Boats · Divers · Shop and Search; a sidebar at `lg`, a five-slot
+  tab bar below; the twenty-one destinations regrouped; the departure's four tabs one page.
+- **22e** — one row and one group (H-87): `SectionCard` and `LedgerRow` become the picked direction's
+  Group and Row; two radii; no bed; creation as a sheet.
+- **22f** — the picked direction's own parts (H-87): A nothing more; B the glass layer, its solid twin
+  under `.boat-mode` and the capsule; C `Figure`, `Ring`, the home's tiles and the one-figure guard.
+- **22g** — every surface on the picked direction, one family per session: the home, a boat and its
+  roll call, the counter, the people, the shop, the storefront.
+- **22h** — the night and glare on the picked direction: the night palette held by its test; glare as
+  a word in the roll call's and the counter's bar.
+- **22i** — the icons (round 2): `DiveDayIcon` re-cut on the 26px, 1.6-stroke grid, filled when
+  current in a tab bar.
+
+### 23. One idea — Tide, the app is the day (H-88 chosen 2026-09-19; in build)
+
+The 2026-09-19 loop, round 3 of the 2026-09-18 brief, argued on
+[the canvas](../../design/canvases/20260919-one-idea/README.md) and proposed in ADR
+[20260919-one-idea](../../architecture/decisions/20260919-one-idea.md). The owner's read of round 2:
+still not thinking big enough; the whole thing, top-down, needs complete rethinking. The ADR's answer:
+every canvas so far kept the app's skeleton — pages of rows under a nav of nouns — and argued about
+its clothes; an Apple product is one idea about the thing itself, and the test is to name the
+physical thing the app is. Three whole products are drawn on the same fiction and the same six
+screens: **I · Tide** (the app is the day), **II · Deck** (the app is the boat), **III · Chart** (the
+app is the sea); recommended I, with Deck's hull as the departure and Chart's chart as the site inside
+it. **H-88 chose I · Tide with both compositions on 2026-09-19**, so every slice below is Tide's and
+the parenthesised alternatives are the record of what was not picked. Round 2's surface rows (22a,
+22b, 22i) and 22c land first; everything below builds on them. Each slice runs the
+`design-implementation` skill: the component names the ADR, a test pins the rule, the canvas README's
+slice table moves, and the visual diffs are explained. The build is one stack, bottom-up: the record,
+then the day's own domain and components (23i), then the home, the departure and the storefront.
+
+- **23i** — **shipped 2026-09-19** — the day itself, before any surface reads it:
+  `src/lib/sky-scheme.ts` turns an instant and a place into one of four flat gradients from the
+  almanac (never a painting, never a gate), and `src/lib/day-strip.ts` turns the day's sun, tide,
+  departures and now into pure geometry — plus `dayStripWindow`, which frames the part of the day
+  worth drawing rather than midnight to midnight, and `dayStripTicks`, which picks one even clock
+  stride across it. `SkyBand` and `DayStrip` render them. Both are prose-free and neither informs a
+  rule.
+- **23a** — the picked idea's home: `/shop/[shopSlug]` becomes the day (I), the stack (II) or the
+  chart (III), on round 2's surface; the Today spine's actions become the idea's own things — hours,
+  seats or tracks. **The top of it shipped 2026-09-19**: the greeting and the eyebrow are deleted
+  and what stands where they were is the day — the sky at the shop's own hour bleeding to both
+  edges, the date as the page's one name, the strip with every boat on the hour it leaves, and
+  sunrise and sunset under it. The spine's own actions are still the queue's; they move with 23c.
+- **23b** — the shell: the nav of nouns leaves (no tabs, no More, no dock); a date, a search and the
+  shop's name (I), the shop's card (II), the dock (III); `staff-destinations.ts` becomes the idea's
+  registry of places with two consumers; ⌘K stays as the search.
+- **23c** — the departure: the hour page with the strip (I), the hull with its seats (II), the voyage
+  on the chart (III); the four trip tabs one page; the roll call's one tap untouched beneath. Deck's
+  hull needs `boats.hull_color` (the **schema-change** skill).
+- **23d** — the storefront's front page on the idea, in Harbor's face and the shop's colour: the day
+  and the week (I), the boat you are about to book (II), where we go (III).
+- **23e** — the diver, the counter and the walk-in reached through the idea: search and a sheet over
+  the home; the person's record unchanged inside it.
+- **23f** — the week, the requests and the season on the idea: the Board becomes the week; a request
+  is a ghost day (I), a boat to put out (II), a track to add (III).
+- **23g** — the rest, one family per session: courses, gear, money, reviews, staffing, and Settings
+  behind the shop's name. Chart's coastline is its own ADR here.
+- **23h** — night and glare on the idea: by the hour (I) or by the device (II, III); glare as the
+  crew's word in the roll call's bar; the black-on-white twin held by a test.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)

@@ -25,25 +25,29 @@
 /*
  * Design tokens — the single source of truth for color, motion, and radius.
  * Semantic names only: components never reference raw hex values.
- * Palette story: sunlit sand (light) / open ocean at depth (dark),
- * lagoon teal as the action color, coral as the rare warm accent.
+ * Palette story (Tide's surface, ADR 20260919-one-idea, decision I · Tide):
+ * cool grey ground under white groups (light) / black under near-black groups
+ * (dark), one DiveDay blue as the action color, warm orange as the rare accent.
+ * The names beside each token below say what it *is* on the page, not what it
+ * is made of — the wash tokens keep water and sand as names because the wash
+ * is still water settling into sand.
  * See docs/design/principles.md before adding or changing tokens.
  */
 
 :root {
   /* Surfaces */
-  --background: #fbf7ef; /* sand — Reef's warmer ground (ADR 20260901-diveday-reimagined, 13a) */
-  --surface: #fffdf8; /* shell */
-  --surface-sunken: #f3ecdd; /* tideline */
-  --border: #e6dcc8; /* rope */
+  --background: #f2f2f7; /* the ground everything sits on */
+  --surface: #ffffff; /* a group's own paper */
+  --surface-sunken: #ececf1; /* a well inside a group — a track, a field */
+  --border: #e3e3e8; /* the hairline between two of them */
   /* Form controls only: ≥3:1 against --background (dock test, WCAG 1.4.11) */
-  --border-strong: #8a8065;
+  --border-strong: #86868b;
 
   /* Ink */
-  --foreground: #0c2a35; /* deep-sea ink */
+  --foreground: #1d1d1f; /* deep-sea ink */
   /* 5.05:1 on --surface-sunken, the tightest pair muted ink sits on (a notice
      bar, a segmented track); #5b6f77 measured 4.48 there — axe, 2026-09-02. */
-  --muted: #54676d;
+  --muted: #66666c;
 
   /*
    * Device bezel for the marketing phone mockups. Deliberately NOT
@@ -51,16 +55,16 @@
    * it renders as a glowing white phone — the brightest object on a dark
    * page. A phone frame is dark in both schemes.
    */
-  --device-frame: #0c2a35;
+  --device-frame: #1d1d1f;
   /* Paper on the bezel, and on any scrim drawn in `--device-frame`: the
      storefront hero's name sits on such a scrim over the shop's photograph,
      and `text-surface` there flipped to ink at night — dark words on a dark
      wash. Like the frame itself, this does not follow the scheme. */
-  --device-frame-foreground: #fffdf8;
+  --device-frame-foreground: #ffffff;
 
   /* Action — lagoon */
-  --primary: #0e7490;
-  --primary-hover: #0a4d61; /* lagoon, deep */
+  --primary: #0064d2;
+  --primary-hover: #0050ab; /* lagoon, deep */
   --primary-foreground: #ffffff;
   /* Derived, not redeclared per skin: resolves against whichever --primary is
      in scope (default/dark/boat-mode/glare-mode), same lazy-substitution
@@ -82,21 +86,21 @@
   --focus-ring: var(--primary);
 
   /* Accent — coral, used sparingly for moments of delight */
-  --accent: #ff6f61;
-  --accent-foreground: #3d1410;
+  --accent: #ff9500;
+  --accent-foreground: #331c00;
   /* Coral's two companions (Reef): the deep value is ink *on* the wash, the
      wash is the bed an earned moment sits on. Neither is ever a status. */
-  --accent-deep: #a83a2c;
-  --accent-tint: #ffeee9;
+  --accent-deep: #a85200;
+  --accent-tint: #fff0dc;
   /* Water that carries no fact — a decorative fill behind a count that is
      already spelled out in figures. Never a status, never behind reading text. */
-  --shallows: #7fd0d6;
+  --shallows: #9ecbff;
 
   /* Feedback */
-  --success: #15803d;
-  --warning: #b45309;
-  --danger: #b91c1c;
-  --info: #4338ca;
+  --success: #16794a;
+  --warning: #a85200;
+  --danger: #d70015;
+  --info: #3b42c4;
   /*
    * A small-badge success/warning text on its own `/10`-opacity tinted fill
    * measured ~4.38:1 — just under AA at 12px. Derived like --primary-sunken:
@@ -136,7 +140,7 @@
      own (13j, in the dark block below). */
   /* 4.72:1 under --primary as text (a current nav chip is `bg-primary-tint
      text-primary`); #dceef0 measured 4.47 — axe, 2026-09-02. */
-  --primary-tint: #e6f3f5;
+  --primary-tint: #e6f0ff;
 
   /* **The water band's four washes** — ADR 20260904-reef-all-the-way-down,
      decision 2, Budget rule 1. The page top follows the shop's clock: dawn
@@ -148,29 +152,32 @@
      carries `--primary-tint`'s exact value, because rule 1 says the day wash
      is the one that ships; the test pins that equality so the two cannot
      drift apart in silence. */
-  --water-dawn: #f8eede;
-  --water-day: #e6f3f5;
-  --water-dusk: #e3f1ef;
-  --water-night: #e9f0f7;
-  --success-tint: #e6f0e8;
-  --warning-tint: #f8eee2;
-  --danger-tint: #f8e8e6;
+  --water-dawn: #efeff7;
+  --water-day: #e6f0ff;
+  --water-dusk: #eaeef8;
+  --water-night: #e9edf6;
+  --success-tint: #e3f2ea;
+  --warning-tint: #fdefdf;
+  --danger-tint: #fdeaeb;
 
-  /* Shape — Reef's ladder: control 10 · inset 18 · panel 28 · pill 999
-     (ADR 20260901-diveday-reimagined, 13a). `--radius` is the control rung,
-     which every `rounded-lg` reads; `rounded-inset` is the sunken block a
-     card carves out of itself, `rounded-panel` the card. Nothing on a staff
-     surface is squarer than the control or sits between the rungs — Tailwind's
+  /* Shape — Tide's ladder: control 12 · inset 12 · panel 20 · pill 999 (ADR
+     20260919-one-idea, decision I · Tide). Two radii and a capsule, which is
+     the device's own ladder: `--radius` is the control rung, which every
+     `rounded-lg` reads, and `--radius-panel` the group a page is made of.
+     **Inset now shares the control rung** rather than standing between them —
+     a well carved out of a group is a control-shaped hole, and a third rung
+     between 12 and 20 is a difference nobody can see. Nothing on a staff
+     surface is squarer than the control or sits between the rungs; Tailwind's
      own `rounded-xl`/`rounded-2xl` (12/16) are not on the ladder and
-     `card.test.tsx` refuses them. The control read 12 (`0.75rem`) from
-     Clearwater until 2026-09-02, which both ADRs had already recorded as 10. */
-  --radius: 0.625rem;
-  --radius-inset: 1.125rem;
-  --radius-panel: 1.75rem;
+     `card.test.tsx` refuses them. Reef's ladder was 10 · 18 · 28, and its
+     control read 12 from Clearwater until 2026-09-02. */
+  --radius: 0.75rem;
+  --radius-inset: 0.75rem;
+  --radius-panel: 1.25rem;
   /* The warm bed a resting panel sits on. Reef's one reversal of Clearwater
      decision 1, for the panel alone: menus, sheets and toasts keep their own
      lift, and the header tiles and markers stay flat. */
-  --shadow-bed: 0 2px 10px rgba(88, 66, 30, 0.06);
+  --shadow-bed: 0 1px 2px rgba(0, 0, 0, 0.04), 0 10px 26px rgba(0, 0, 0, 0.05);
 
   /*
    * Tell the browser which way our palette runs, so the parts of a form we do
@@ -188,35 +195,35 @@
     color-scheme: dark;
 
     /* Surfaces */
-    --background: #071720; /* open ocean at depth */
-    --surface: #0d222d;
-    --surface-sunken: #051118;
-    --border: #1c3a47;
-    --border-strong: #4f7285;
+    --background: #000000; /* open ocean at depth */
+    --surface: #1c1c1e;
+    --surface-sunken: #0b0b0d;
+    --border: #2c2c2e;
+    --border-strong: #7c7c80;
 
     /* Ink */
-    --foreground: #e9f3f4;
-    --muted: #8fa8b0;
+    --foreground: #f5f5f7;
+    --muted: #9b9ba1;
 
     /* Bezel stays dark at depth (see the light-scheme note). */
-    --device-frame: #051118;
+    --device-frame: #1c1c1e;
 
     /* Action — lagoon, brightened for contrast at depth */
-    --primary: #22d3ee;
-    --primary-hover: #67e8f9;
-    --primary-foreground: #072a33;
+    --primary: #0a84ff;
+    --primary-hover: #4da3ff;
+    --primary-foreground: #001a33;
 
     /* Accent */
-    --accent: #ff8a7e;
-    --accent-foreground: #3d1410;
+    --accent: #ff9f0a;
+    --accent-foreground: #241400;
 
     /* Feedback */
-    --success: #4ade80;
-    --warning: #fbbf24;
-    --danger: #f87171;
-    --info: #818cf8;
-    --accent-deep: #ffb3aa;
-    --shallows: #1f6f78;
+    --success: #30d158;
+    --warning: #ff9f0a;
+    --danger: #ff453a;
+    --info: #7d88ff;
+    --accent-deep: #ffbe5c;
+    --shallows: #1f5c94;
     /*
      * The night palette, drawn (ADR 20260901-diveday-reimagined, slice 13j).
      * Reef drew no dark scheme, so open ocean stays the ground and the
@@ -232,20 +239,20 @@
      * `src/lib/night-palette.test.ts` reads this block back and holds every
      * pair, and that a wash is a hue and never a mix.
      */
-    --accent-tint: #3f1d19;
-    --primary-tint: #0b3540;
+    --accent-tint: #2e1e05;
+    --primary-tint: #0a1c33;
 
     /* The same four at depth. Contrast rises as a wash darkens here, so the
        night palette's constraint is the opposite of the light one: these stay
        far enough above `--background` to read as water at all. */
-    --water-dawn: #143a3c;
-    --water-day: #0b3540;
-    --water-dusk: #123243;
-    --water-night: #0a2634;
-    --success-tint: #0f3324;
-    --warning-tint: #3a2a0e;
-    --danger-tint: #3d1717;
-    --shadow-bed: 0 2px 10px rgba(0, 0, 0, 0.35);
+    --water-dawn: #15182c;
+    --water-day: #0a1c33;
+    --water-dusk: #191d33;
+    --water-night: #0d1626;
+    --success-tint: #0b2617;
+    --warning-tint: #2b1e08;
+    --danger-tint: #301110;
+    --shadow-bed: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 26px rgba(0, 0, 0, 0.45);
   }
 }
 
@@ -396,8 +403,34 @@
   --radius-inset: var(--radius-inset);
   --radius-panel: var(--radius-panel);
   --shadow-bed: var(--shadow-bed);
-  --font-sans: var(--font-geist-sans);
+  /*
+   * **The device's own face, with Geist behind it** — ADR 20260919-one-idea §1,
+   * carrying 20260918-nothing-to-explain's 22a.
+   *
+   * Round 2 of the 2026-09-18 canvas reversed H-64's "Geist is the only face":
+   * an app that wants to feel like the device it runs on wears the face that
+   * device already reads in. So the stack leads with the system face and keeps
+   * Geist as the fallback — which is what CI, every Linux runner and every
+   * visual baseline resolve to, unchanged. Nothing moves on the pixels we
+   * photograph; an iPhone and a Mac get SF, which is the whole point.
+   */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-geist-sans),
+    system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
+  /*
+   * **Figures**, and only figures: a time, a count, a seat tally. `ui-rounded`
+   * is SF Rounded on Apple devices and falls through to the sans stack
+   * everywhere else, so a figure is never a *different* face — it is the same
+   * face, rounder, where the device has one. Pair it with `tabular-nums`; a
+   * count that reflows as it changes is a count you cannot read at a glance.
+   *
+   * Declared on this layer and first read on the one above it — the staff
+   * home's date (`DayHeader`, ADR 20260919-one-idea slice 23a) — because a
+   * surface has to exist before anything can be drawn on it. It is
+   * `font-rounded` in a class, through Tailwind's `--font-*` namespace.
+   */
+  --font-rounded: ui-rounded, "SF Pro Rounded", var(--font-sans);
   /* The shop's chosen headline face on its own storefront (Harbor, ADR
      20260901-diveday-reimagined). `BrandStyle` sets `--brand-display`; with
      none set the utility resolves to Geist, so a heading wearing it is never
@@ -1094,6 +1127,103 @@ textarea {
 .boat-leaves {
   display: inline-flex;
   animation: boat-leaves 520ms var(--ease-out-soft) both;
+}
+
+/*
+ * **The four skies** — ADR 20260919-one-idea, decision I · Tide.
+ *
+ * Tide's premise is that the app *is* the day, so a day-shaped surface opens
+ * with the sky over the shop at the hour it is being read. `skyReadingFor`
+ * (`src/lib/sky-scheme.ts`) decides which of the four it is, from the almanac
+ * where the shop has coordinates and from its clock where it does not; this is
+ * the only place those four are drawn.
+ *
+ * **One flat gradient per sky, never a painting.** Three or four stops down the
+ * band and nothing else — no photograph, no noise, no drawn cloud. The risk the
+ * canvas named for this idea is kitsch, and the rule that holds it off is that
+ * every sky is the same shape and differs only in its hue.
+ *
+ * **Every stop is dark enough for the ink that sits on it.** Reading ink on the
+ * sky is white, and the secondary line is white at 90% — so the measurement
+ * that matters is the *lightest* stop of each gradient, which is where white
+ * has least to work with. Measured against that stop: white 5.24 (dawn), 7.17
+ * (day), 5.70 (dusk), 16.44 (night); the soft ink 4.61 / 6.14 / 4.97 / 13.43.
+ * A dawn that reached a real sunrise peach would put the secondary line at
+ * 3.1:1, which is why dawn stops at a dusty rose.
+ *
+ * **A wash carries no fact** — the same rule the water band lives under. The
+ * sky says what hour it is and nothing whatever about a booking, a blocker or
+ * a departure.
+ */
+:root {
+  --sky-dawn: linear-gradient(180deg, #0d2452 0%, #2a4a86 52%, #6b4f7a 84%, #8f5f68 100%);
+  --sky-day: linear-gradient(180deg, #0b3f74 0%, #12508f 58%, #15589f 100%);
+  --sky-dusk: linear-gradient(180deg, #14183f 0%, #3b2a63 44%, #7a3f56 78%, #9a5340 100%);
+  --sky-night: linear-gradient(180deg, #04060f 0%, #0a1330 62%, #131c44 100%);
+  /* The sky's own ink, which does not follow the scheme: a sky is dark in both,
+     exactly like `--device-frame`, so ink that flipped would vanish at night. */
+  --sky-ink: #ffffff;
+  --sky-ink-soft: rgba(255, 255, 255, 0.9);
+  /* Lines drawn on the sky rather than read from it: the arc, the ticks, the
+     horizon. A graphical object needs 3:1, and every one of these clears it on
+     every stop by being white. */
+  --sky-rule: rgba(255, 255, 255, 0.45);
+  --sky-rule-faint: rgba(255, 255, 255, 0.28);
+  --sky-sun: #ffd479;
+  /* Now: an amber pill with its own dark ink (6.6:1), because a white pill on a
+     white-inked sky is not an emphasis. The line under it is white — amber on
+     dawn's rose measures 2.9:1, under the 3:1 a line owes. */
+  --sky-now: #ff9500;
+  --sky-now-ink: #331c00;
+}
+
+.sky {
+  background: var(--sky-day);
+  color: var(--sky-ink);
+}
+
+.sky[data-scheme="dawn"] {
+  background: var(--sky-dawn);
+}
+
+.sky[data-scheme="dusk"] {
+  background: var(--sky-dusk);
+}
+
+.sky[data-scheme="night"] {
+  background: var(--sky-night);
+}
+
+/*
+ * Under `prefers-contrast: more`, and in the crew's own glare mode, the sky
+ * flattens to one deep colour. A gradient is a range of contrasts by
+ * definition, and a reader who has asked for more contrast has asked for the
+ * range to stop — the hour is still said in words above it either way.
+ */
+@media (prefers-contrast: more) {
+  .sky,
+  .sky[data-scheme="dawn"],
+  .sky[data-scheme="dusk"],
+  .sky[data-scheme="night"] {
+    background: #0b1c33;
+  }
+}
+
+.glare-mode .sky,
+.glare-mode .sky[data-scheme="dawn"],
+.glare-mode .sky[data-scheme="dusk"],
+.glare-mode .sky[data-scheme="night"] {
+  background: #08182c;
+}
+
+@media print {
+  .sky,
+  .sky[data-scheme="dawn"],
+  .sky[data-scheme="dusk"],
+  .sky[data-scheme="night"] {
+    background: none;
+    color: var(--foreground);
+  }
 }
 
 /*

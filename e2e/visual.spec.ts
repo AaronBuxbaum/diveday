@@ -27,6 +27,7 @@ import {
   openTripAbout,
   openTripFromBoard,
   openTripTab,
+  STAFF_DAY_HEADING,
   saveDiveIntent,
   seededTripId,
   threadStatus,
@@ -3667,9 +3668,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`the day spine renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis");
-        await page
-          .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
-          .waitFor();
+        await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
         await capture(page, "today", scheme);
       });
 
@@ -3731,9 +3730,7 @@ for (const scheme of ["light", "dark"] as const) {
       // deliberately the plain page — the phone door is the dock sheet below.
       test(`the header's More menu renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis");
-        await page
-          .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
-          .waitFor();
+        await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
         await page.locator("header summary").filter({ hasText: "More" }).click();
         await page
           .locator("header details[open]")
@@ -3748,9 +3745,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the dock's More sheet renders true to the design (${scheme})`, async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto("/shop/blue-mantis");
-        await page
-          .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
-          .waitFor();
+        await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
         await page.locator("[data-dock-more]").click();
         await page.getByRole("list", { name: "Run the shop" }).waitFor();
         await capture(page, "nav-more-sheet", scheme);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addCalendarDays,
+  dayHourBoundaries,
   parseWallTime,
   shiftInstantByCalendarDays,
   shiftInstantByWallTimeDelta,
@@ -245,5 +246,61 @@ describe("parseWallTime", () => {
     expect(parseWallTime("2026-13-01", "07:30")).toBeNull();
     expect(parseWallTime("2026-07-18", "24:00")).toBeNull();
     expect(parseWallTime("", "")).toBeNull();
+  });
+});
+
+describe("dayHourBoundaries", () => {
+  const NEW_YORK = "America/New_York";
+  const day = (year: number, month: number, dayOfMonth: number) => ({
+    from: wallTimeToUtc({ year, month, day: dayOfMonth, hour: 0, minute: 0 }, NEW_YORK),
+    to: wallTimeToUtc({ year, month, day: dayOfMonth + 1, hour: 0, minute: 0 }, NEW_YORK),
+  });
+
+  it("gives an ordinary day all twenty-four of its hours, each reading its own", () => {
+    const hours = dayHourBoundaries(day(2026, 7, 17), NEW_YORK);
+    expect(hours).toHaveLength(24);
+    expect(hours.map((hour) => hour.hour)).toEqual([...Array(24).keys()]);
+  });
+
+  /**
+   * **The day a zone springs forward has twenty-three hours in it.** 2 AM never
+   * happens in New York on 2026-03-08, and `wallTimeToUtc` resolves it forward
+   * — so a caller asking for hours 0-23 gets `… 1, 3, 3, 4 …`, with two
+   * requests answering the *same instant* and the entry at position two reading
+   * three o'clock. Position is not the hour from there to midnight, and two
+   * identical instants are two identical React keys.
+   */
+  it("drops the hour a spring-forward day does not have, and never repeats an instant", () => {
+    const hours = dayHourBoundaries(day(2026, 3, 8), NEW_YORK);
+    expect(hours).toHaveLength(23);
+    expect(hours.map((hour) => hour.hour)).toEqual([
+      0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+    ]);
+    expect(new Set(hours.map((hour) => hour.at.getTime())).size).toBe(hours.length);
+  });
+
+  /**
+   * The day it falls back has twenty-five, and 1 AM happens twice. One boundary
+   * per clock hour is what a reader wants, so the second is not invented.
+   */
+  it("gives a fall-back day one boundary per clock hour", () => {
+    const hours = dayHourBoundaries(day(2026, 11, 1), NEW_YORK);
+    expect(hours.map((hour) => hour.hour)).toEqual([...Array(24).keys()]);
+    expect(new Set(hours.map((hour) => hour.at.getTime())).size).toBe(hours.length);
+  });
+
+  it("reads each hour back from its instant rather than trusting the request", () => {
+    for (const hour of dayHourBoundaries(day(2026, 3, 8), NEW_YORK)) {
+      expect(utcToWallTime(hour.at, NEW_YORK).hour).toBe(hour.hour);
+      expect(utcToWallTime(hour.at, NEW_YORK).minute).toBe(0);
+    }
+  });
+
+  it("stays inside the day it was given", () => {
+    const bounds = day(2026, 7, 17);
+    for (const hour of dayHourBoundaries(bounds, NEW_YORK)) {
+      expect(hour.at.getTime()).toBeGreaterThanOrEqual(bounds.from.getTime());
+      expect(hour.at.getTime()).toBeLessThan(bounds.to.getTime());
+    }
   });
 });

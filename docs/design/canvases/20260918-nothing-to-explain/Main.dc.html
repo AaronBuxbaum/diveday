@@ -1,0 +1,427 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Nothing to explain — read me first</title>
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Bricolage+Grotesque:wght@600;700&display=swap">
+  <style>
+    body { margin: 0; background: #fbfaf7; }
+/* kit:start — the canvas's own prose. Pasted verbatim into every board; edit once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --cbg: var(--kit-bg, #fbfaf7); --csurf: var(--kit-surface, #ffffff); --cline: var(--kit-line, #e4e2dc); --cink: var(--kit-ink, #14232b); --cmute: var(--kit-mute, #5f6b71); --caccent: var(--kit-accent, #1d7a5f);
+  width: 1180px; margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: var(--cink); background: var(--cbg); -webkit-font-smoothing: antialiased; padding-bottom: 56px; }
+.board a { color: var(--caccent); }
+.bh { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px; border-bottom: 1px solid var(--cline); background: var(--csurf); }
+.bh .lab { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--caccent); }
+.bh .lab span { color: var(--cmute); font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 13px; margin-left: 12px; }
+.bh h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+.bh .lede { margin: 0; max-width: 940px; font-size: 17px; line-height: 27px; }
+.strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.strip h3 { margin: 0; font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmute); }
+.strip p { margin: 6px 0 0; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.strip p b, .sec p b, .beside p b, .foot p b, .tbl td b { color: var(--cink); font-weight: 600; }
+.cap { display: flex; align-items: baseline; gap: 12px; padding: 30px 48px 10px; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmute); }
+.cap b { color: var(--cink); }
+.frames { display: flex; gap: 28px; align-items: flex-start; padding: 0 48px; }
+.beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.beside h3 { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); }
+.beside p { margin: 0 0 12px; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.beside ul { margin: 0 0 16px; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.beside li b { color: var(--cink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--cline); }
+.sec h2 { margin: 0; font-size: 20px; line-height: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 960px; }
+.sec ul { margin: 0; padding-left: 20px; font-size: 15px; line-height: 23px; max-width: 960px; }
+.sec li b { font-weight: 600; }
+.foot { margin: 40px 48px 0; padding-top: 20px; border-top: 1px solid var(--cline); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); }
+.foot p { margin: 6px 0 0; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.foot ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.foot li b { color: var(--cink); font-weight: 600; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmute); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--cink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--cline); vertical-align: top; color: var(--cmute); }
+.tbl td:first-child { color: var(--cink); font-weight: 600; width: 160px; }
+.cards3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--csurf); border: 1px solid var(--cline); border-radius: 12px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card h3 small { display: block; font-size: 13px; font-weight: 500; color: var(--cmute); letter-spacing: 0; margin-top: 4px; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; }
+.card p.m { color: var(--cmute); }
+.card .k { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--caccent); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.shots { display: flex; gap: 20px; align-items: flex-start; padding: 0 48px; }
+.shots img { display: block; border: 1px solid var(--cline); border-radius: 10px; }
+.shots .note { flex: 1 1 auto; min-width: 0; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.shots .note b { color: var(--cink); font-weight: 600; }
+.shots .note ol { margin: 0; padding-left: 20px; }
+.frame { border: 1px solid var(--cline); border-radius: 12px; overflow: hidden; position: relative; }
+.frame.desktop { width: 1084px; flex: 0 0 1084px; }
+.phone { width: 390px; flex: 0 0 390px; min-height: 800px; border-radius: 44px; border: 1px solid var(--cline); overflow: hidden; position: relative; display: flex; flex-direction: column; }
+.phone > .app { flex: 1 1 auto; display: flex; flex-direction: column; }
+.phone .sb { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 6px 28px 0; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.phone .sb .sig { display: flex; align-items: center; gap: 6px; }
+.phone .sb .sig i { display: block; width: 18px; height: 10px; border: 1.5px solid currentColor; border-radius: 3px; opacity: .8; position: relative; }
+.phone .sb .sig i::after { content: ""; position: absolute; left: 2px; top: 2px; bottom: 2px; width: 10px; background: currentColor; border-radius: 1px; }
+.phone .sb .sig b { display: block; width: 14px; height: 10px; background: linear-gradient(to top, currentColor 0, currentColor 100%); clip-path: polygon(0 60%, 25% 60%, 25% 40%, 50% 40%, 50% 20%, 75% 20%, 75% 0, 100% 0, 100% 100%, 0 100%); opacity: .8; }
+.hand { display: flex; gap: 16px; padding: 0 48px; }
+.hand > div { flex: 1 1 0; min-width: 0; }
+.hand .who { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); margin-bottom: 8px; }
+/* kit:end */
+
+/* app:start — the type ramp, the icons and the phone chrome every direction shares. */
+.app { font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; font-size: 17px; line-height: 24px; text-align: left; }
+.app * { box-sizing: border-box; }
+.app p, .app h1, .app h2, .app h3 { margin: 0; }
+.app .lt { font-size: 34px; line-height: 40px; font-weight: 700; letter-spacing: -0.022em; }
+.app .t1 { font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.02em; }
+.app .t2 { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.012em; }
+.app .hl { font-size: 17px; line-height: 22px; font-weight: 600; }
+.app .bd { font-size: 17px; line-height: 24px; }
+.app .sh { font-size: 15px; line-height: 20px; }
+.app .fn { font-size: 13px; line-height: 18px; }
+.app .cp { font-size: 12px; line-height: 16px; }
+.app .sec2 { color: var(--sec); }
+.app .ter { color: var(--ter); }
+.app .num { font-variant-numeric: tabular-nums; }
+.app .red { color: var(--red); }
+.app .amb { color: var(--amber); }
+.app .tint { color: var(--tint); }
+.app .w5 { font-weight: 500; } .app .w6 { font-weight: 600; } .app .w7 { font-weight: 700; }
+.app .fig { font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.app .ic { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; display: block; }
+.app .ic.s { width: 18px; height: 18px; }
+.app .ic.xs { width: 14px; height: 14px; stroke-width: 2.2; }
+.app .dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 8px; }
+.app .dot.red { background: var(--red); } .app .dot.amb { background: var(--amber); } .app .dot.tint { background: var(--tint); } .app .dot.none { background: transparent; }
+.app .row { display: flex; align-items: center; gap: 12px; }
+.app .lead { flex: 1 1 auto; min-width: 0; }
+.app .trail { margin-left: auto; display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.app .avatar { width: 28px; height: 28px; border-radius: 50%; background: #d8d3c6; color: #4f4a40; font-size: 12px; font-weight: 600; line-height: 28px; text-align: center; flex: 0 0 auto; }
+.app .mark { width: 28px; height: 28px; border-radius: 8px; background: var(--tint); color: #fff; font-size: 12px; font-weight: 700; line-height: 28px; text-align: center; flex: 0 0 auto; }
+/* a big tap for the roll call: one circle whose fill is the state */
+.app .tap { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ter); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; color: #fff; }
+.app .tap.on { background: var(--tint); border-color: var(--tint); }
+.app .tap.off { border-color: var(--red); }
+/* a ring for a count that fills */
+.app .ring { position: relative; width: 72px; height: 72px; flex: 0 0 auto; }
+.app .ring svg { width: 72px; height: 72px; transform: rotate(-90deg); display: block; }
+.app .ring .track { stroke: var(--track); } .app .ring .arc { stroke: var(--tint); }
+.app .ring .in { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+/* the storefront wears the shop's face on its headings only */
+.app .harbor { font-family: "Bricolage Grotesque", Geist, "Helvetica Neue", Arial, sans-serif; font-weight: 700; letter-spacing: -0.015em; }
+/* app:end */
+/* app:more — a phone with no bar keeps its last line clear of the corner radius */
+.app.ph > .body:last-child { padding-bottom: 52px; }
+
+/* inset:start — A · Inset. The group carries the structure. */
+.app.inset { --bg: #f2f1ec; --grp: #ffffff; --line: #e2e0d9; --sep: #ecebe6; --ink: #0c2a35; --sec: #6b787e; --ter: #a3adb2; --tint: #1d7a5f; --tint-soft: #e2efe9; --track: #e2efe9; --red: #c8362b; --amber: #b8700c; --r: 12px; --rc: 8px; }
+.app.inset.night { --bg: #071720; --grp: #0d222d; --line: #1c3a47; --sep: #163038; --ink: #e9f3f4; --sec: #8fa8b0; --ter: #4f6a75; --tint: #5cc8a0; --tint-soft: #113b31; --track: #113b31; --red: #f87171; --amber: #fbbf24; }
+.inset .shell { display: flex; min-height: 880px; }
+.inset .side { width: 236px; flex: 0 0 236px; padding: 18px 12px 16px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--line); }
+.inset .who { display: flex; align-items: center; gap: 10px; padding: 6px 8px 14px; font-size: 15px; font-weight: 600; }
+.inset .search { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; border-radius: var(--rc); background: rgba(12,42,53,.06); color: var(--sec); font-size: 15px; margin: 0 0 12px; }
+.inset .nav a { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border-radius: var(--rc); font-size: 15px; font-weight: 500; color: var(--ink); text-decoration: none; }
+.inset .nav a.cur { background: var(--tint-soft); color: var(--tint); font-weight: 600; }
+.inset .me { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 8px 10px; font-size: 15px; font-weight: 500; }
+.inset .main { flex: 1 1 auto; min-width: 0; padding: 36px 40px 48px; }
+.inset .col { max-width: 760px; margin: 0 auto; }
+.inset .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
+.inset .head .sub { font-size: 17px; color: var(--sec); margin-top: 2px; }
+.inset .gh { display: flex; align-items: baseline; justify-content: space-between; padding: 26px 4px 8px; }
+.inset .gh .ttl { font-size: 17px; font-weight: 600; }
+.inset .gh .meta { font-size: 15px; color: var(--sec); font-variant-numeric: tabular-nums; }
+.inset .grp { background: var(--grp); border-radius: var(--r); box-shadow: 0 0 0 1px rgba(12,42,53,.05); overflow: hidden; }
+.inset.night .grp { box-shadow: 0 0 0 1px rgba(255,255,255,.04); }
+.inset .grp .row { min-height: 52px; padding: 8px 16px; border-top: 1px solid var(--sep); }
+.inset .grp .row:first-child { border-top: 0; }
+.inset .row .name { font-size: 17px; font-weight: 500; }
+.inset .row .why { font-size: 15px; color: var(--sec); }
+.inset .row .state { font-size: 15px; font-weight: 500; color: var(--sec); white-space: nowrap; }
+.inset .row .state.red { color: var(--red); font-weight: 600; }
+.inset .row .state.amb { color: var(--amber); font-weight: 600; }
+.inset .chev { color: var(--ter); }
+.inset .btn { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px; border-radius: var(--rc); background: var(--tint-soft); color: var(--tint); font-size: 15px; font-weight: 600; white-space: nowrap; }
+.inset .btn.fill { background: var(--tint); color: #fff; }
+.inset .btn.lg { height: 44px; padding: 0 20px; font-size: 17px; border-radius: 10px; }
+.inset .boat { display: flex; align-items: center; gap: 16px; padding: 14px 16px; }
+.inset .boat .time { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; min-width: 92px; }
+.inset .boat .ttl { font-size: 17px; font-weight: 600; }
+.inset .boat .facts { font-size: 15px; color: var(--sec); }
+.inset .boat .count { margin-left: auto; text-align: right; flex: 0 0 auto; }
+.inset .boat .count b { display: block; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 26px; }
+.inset .boat .count span { font-size: 13px; color: var(--sec); }
+.inset .foot2 { display: flex; gap: 12px; margin-top: 26px; }
+.inset .foot2 .grp { flex: 1 1 0; }
+/* phone */
+.inset.ph { display: flex; flex-direction: column; min-height: 800px; height: 100%; }
+.inset.ph .body { padding: 0 16px 20px; flex: 1 1 auto; }
+.inset.ph .lt { padding: 6px 0 2px; }
+.inset .navbar { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 12px; }
+.inset .navbar .back { display: flex; align-items: center; gap: 2px; color: var(--tint); font-size: 17px; }
+.inset .navbar .ttl { font-size: 17px; font-weight: 600; }
+.inset .tabbar { display: flex; border-top: 1px solid var(--line); background: var(--grp); padding: 8px 6px 24px; margin-top: auto; }
+.inset .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 500; color: var(--sec); text-decoration: none; }
+.inset .tabbar a.cur { color: var(--tint); }
+.inset.ph .gh { padding: 22px 4px 8px; }
+.inset.ph .boat { padding: 12px 14px; gap: 12px; }
+.inset.ph .boat .time { min-width: 0; font-size: 20px; }
+.inset.ph .grp .row { padding: 8px 14px; }
+.inset .sum { padding: 16px 16px 14px; }
+.inset .sum .big { font-size: 34px; line-height: 38px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.inset .sum .big small { font-size: 17px; font-weight: 500; color: var(--sec); letter-spacing: 0; margin-left: 6px; }
+/* inset:end */
+
+/* glass:start — B · Glass. The material carries the structure. */
+.app.glass { --bg: #fafaf8; --grp: #ffffff; --ink: #0c2a35; --sec: #6b787e; --ter: #a3adb2; --line: #e8e7e1; --tint: #1d7a5f; --tint-soft: #e2efe9; --track: #e2efe9; --red: #c8362b; --amber: #b8700c; --glass: rgba(255,255,255,.62); --glass-edge: rgba(12,42,53,.08); --glass-hi: rgba(255,255,255,.9); --r: 26px; --rc: 12px; }
+.app.glass.night { --bg: #071720; --grp: #0d222d; --ink: #e9f3f4; --sec: #8fa8b0; --ter: #4f6a75; --line: #1c3a47; --tint: #5cc8a0; --tint-soft: #113b31; --track: #113b31; --red: #f87171; --amber: #fbbf24; --glass: rgba(13,34,45,.58); --glass-edge: rgba(255,255,255,.10); --glass-hi: rgba(255,255,255,.14); }
+.glass .pane { position: relative; overflow: hidden; }
+.glass .bar { position: absolute; left: 50%; transform: translateX(-50%); top: 14px; z-index: 3; display: flex; align-items: center; gap: 4px; height: 54px; padding: 5px 6px 5px 10px; border-radius: 999px; background: var(--glass); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); box-shadow: 0 10px 30px rgba(12,42,53,.10), 0 0 0 1px var(--glass-edge), inset 0 1px 0 var(--glass-hi); }
+.glass .bar .who { display: flex; align-items: center; gap: 8px; padding: 0 10px 0 2px; font-size: 15px; font-weight: 600; white-space: nowrap; }
+.glass .bar .tabs { display: flex; align-items: center; gap: 2px; }
+.glass .bar .tabs a { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 999px; font-size: 15px; font-weight: 500; color: var(--ink); text-decoration: none; }
+.glass .bar .tabs a.cur { background: var(--ink); color: var(--bg); font-weight: 600; }
+.glass.night .bar .tabs a.cur { background: var(--ink); color: var(--bg); }
+.glass .bar .find { display: flex; align-items: center; gap: 8px; height: 40px; width: 250px; white-space: nowrap; overflow: hidden; padding: 0 12px; margin-left: 6px; border-radius: 999px; background: rgba(12,42,53,.06); color: var(--sec); font-size: 15px; }
+.glass .bar .avatar { margin-left: 6px; width: 40px; height: 40px; line-height: 40px; font-size: 14px; }
+.glass .scroll { padding: 96px 0 40px; }
+.glass .col { max-width: 700px; margin: 0 auto; }
+.glass .head { padding: 8px 0 6px; }
+.glass .head .sub { font-size: 17px; color: var(--sec); margin-top: 4px; }
+.glass .sect { padding-top: 30px; }
+.glass .sect .st { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding-bottom: 8px; }
+.glass .sect .st .t2 { flex: 1 1 auto; min-width: 0; }
+.glass .sect .st .f { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.glass .sect .st .f small { font-size: 15px; font-weight: 500; color: var(--sec); letter-spacing: 0; margin-left: 4px; }
+.glass .sect .facts { font-size: 15px; color: var(--sec); padding-bottom: 6px; }
+.glass .row { min-height: 56px; padding: 10px 2px; border-top: 1px solid var(--line); gap: 14px; }
+.glass .row .name { font-size: 17px; font-weight: 500; }
+.glass .row .why { font-size: 15px; color: var(--sec); }
+.glass .row .state { font-size: 15px; font-weight: 500; color: var(--sec); white-space: nowrap; }
+.glass .row .state.red { color: var(--red); font-weight: 600; }
+.glass .row .state.amb { color: var(--amber); font-weight: 600; }
+.glass .chev { color: var(--ter); }
+.glass .fab { position: absolute; right: 24px; bottom: 26px; z-index: 3; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 22px 0 18px; border-radius: 999px; background: var(--tint); color: #fff; font-size: 17px; font-weight: 600; box-shadow: 0 12px 30px rgba(29,122,95,.32), inset 0 1px 0 rgba(255,255,255,.28); }
+.glass .pill { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 999px; background: var(--tint-soft); color: var(--tint); font-size: 15px; font-weight: 600; white-space: nowrap; }
+/* phone */
+.glass.ph { position: relative; display: flex; flex-direction: column; min-height: 800px; height: 100%; }
+.glass.ph .body { padding: 0 20px 20px; flex: 1 1 auto; }
+.glass.ph .lt { padding: 6px 0 0; }
+.glass.ph .sect { padding-top: 24px; }
+.glass.ph .row { padding: 9px 0; }
+.glass .tabbar { position: absolute; left: 14px; right: 74px; bottom: 16px; z-index: 3; height: 64px; display: flex; align-items: center; padding: 6px; border-radius: 999px; background: var(--glass); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); box-shadow: 0 10px 30px rgba(12,42,53,.14), 0 0 0 1px var(--glass-edge), inset 0 1px 0 var(--glass-hi); }
+.glass .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; height: 52px; justify-content: center; border-radius: 999px; font-size: 10px; font-weight: 500; color: var(--sec); text-decoration: none; }
+.glass .tabbar a.cur { background: var(--ink); color: var(--bg); }
+.glass .findbtn { position: absolute; right: 14px; bottom: 16px; z-index: 3; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--ink); background: var(--glass); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); box-shadow: 0 10px 30px rgba(12,42,53,.14), 0 0 0 1px var(--glass-edge), inset 0 1px 0 var(--glass-hi); }
+.glass .topbar { position: absolute; left: 14px; right: 14px; top: 54px; z-index: 3; height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 6px; border-radius: 999px; background: var(--glass); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); box-shadow: 0 10px 30px rgba(12,42,53,.12), 0 0 0 1px var(--glass-edge), inset 0 1px 0 var(--glass-hi); }
+.glass .topbar .back { display: flex; align-items: center; gap: 2px; color: var(--tint); font-size: 17px; padding-right: 8px; }
+.glass .topbar .ttl { font-size: 17px; font-weight: 600; }
+.glass .topbar .word { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 999px; box-shadow: 0 0 0 1px var(--glass-edge); font-size: 15px; font-weight: 600; }
+.glass .sum { padding: 116px 0 0; }
+.glass .sum .big { font-size: 44px; line-height: 48px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.glass .sum .big small { font-size: 17px; font-weight: 500; color: var(--sec); letter-spacing: 0; margin-left: 6px; }
+.glass .under { height: 100px; }
+/* glass:end */
+
+/* figures:start — C · Figures. The number carries the structure. Lists and chrome are Inset's. */
+.app.figures { --bg: #f3f3ef; --grp: #ffffff; --line: #e2e0d9; --sep: #ecebe6; --ink: #0c2a35; --sec: #6b787e; --ter: #a3adb2; --tint: #1d7a5f; --tint-soft: #e2efe9; --track: #e2efe9; --red: #c8362b; --amber: #b8700c; --r: 20px; --rg: 14px; --rc: 10px; }
+.app.figures.night { --bg: #071720; --grp: #0d222d; --line: #1c3a47; --sep: #163038; --ink: #e9f3f4; --sec: #8fa8b0; --ter: #4f6a75; --tint: #5cc8a0; --tint-soft: #113b31; --track: #113b31; --red: #f87171; --amber: #fbbf24; }
+.figures .shell { display: flex; min-height: 880px; }
+.figures .side { width: 236px; flex: 0 0 236px; padding: 18px 12px 16px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--line); }
+.figures .who { display: flex; align-items: center; gap: 10px; padding: 6px 8px 14px; font-size: 15px; font-weight: 600; }
+.figures .search { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; border-radius: var(--rc); background: rgba(12,42,53,.06); color: var(--sec); font-size: 15px; margin: 0 0 12px; }
+.figures .nav a { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border-radius: var(--rc); font-size: 15px; font-weight: 500; color: var(--ink); text-decoration: none; }
+.figures .nav a.cur { background: var(--tint-soft); color: var(--tint); font-weight: 600; }
+.figures .me { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 8px 10px; font-size: 15px; font-weight: 500; }
+.figures .main { flex: 1 1 auto; min-width: 0; padding: 36px 40px 48px; }
+.figures .col { max-width: 800px; margin: 0 auto; }
+.figures .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.figures .head .sub { font-size: 17px; color: var(--sec); margin-top: 2px; }
+.figures .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.figures .tiles.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.figures .tile { background: var(--grp); border-radius: var(--r); padding: 18px 20px 16px; min-height: 150px; display: flex; flex-direction: column; box-shadow: 0 0 0 1px rgba(12,42,53,.05); position: relative; }
+.figures.night .tile, .figures.night .grp { box-shadow: 0 0 0 1px rgba(255,255,255,.04); }
+.figures .tile .k { font-size: 13px; font-weight: 600; color: var(--sec); }
+.figures .tile .v { margin-top: auto; font-size: 44px; line-height: 48px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.figures .tile .v small { font-size: 17px; font-weight: 500; color: var(--sec); letter-spacing: 0; margin-left: 5px; }
+.figures .tile .s { font-size: 13px; line-height: 18px; color: var(--sec); margin-top: 2px; }
+.figures .tile .ring { position: absolute; right: 16px; top: 16px; }
+.figures .tile .bar { height: 6px; border-radius: 3px; background: var(--track); margin-top: 10px; overflow: hidden; }
+.figures .tile .bar i { display: block; height: 100%; background: var(--tint); border-radius: 3px; }
+.figures .gh { display: flex; align-items: baseline; justify-content: space-between; padding: 26px 4px 8px; }
+.figures .gh .ttl { font-size: 17px; font-weight: 600; }
+.figures .gh .meta { font-size: 15px; color: var(--sec); font-variant-numeric: tabular-nums; }
+.figures .grp { background: var(--grp); border-radius: var(--rg); box-shadow: 0 0 0 1px rgba(12,42,53,.05); overflow: hidden; }
+.figures .grp .row { min-height: 52px; padding: 8px 16px; border-top: 1px solid var(--sep); }
+.figures .grp .row:first-child { border-top: 0; }
+.figures .row .name { font-size: 17px; font-weight: 500; }
+.figures .row .why { font-size: 15px; color: var(--sec); }
+.figures .row .state { font-size: 15px; font-weight: 500; color: var(--sec); white-space: nowrap; }
+.figures .row .state.red { color: var(--red); font-weight: 600; }
+.figures .row .state.amb { color: var(--amber); font-weight: 600; }
+.figures .chev { color: var(--ter); }
+.figures .btn { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px; border-radius: var(--rc); background: var(--tint-soft); color: var(--tint); font-size: 15px; font-weight: 600; white-space: nowrap; }
+.figures .btn.fill { background: var(--tint); color: #fff; }
+.figures .btn.lg { height: 44px; padding: 0 20px; font-size: 17px; }
+.figures .hero { display: flex; align-items: center; gap: 22px; background: var(--grp); border-radius: var(--r); padding: 22px 24px; box-shadow: 0 0 0 1px rgba(12,42,53,.05); }
+.figures .hero .big { font-size: 56px; line-height: 60px; font-weight: 700; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; }
+.figures .hero .big small { font-size: 20px; font-weight: 500; color: var(--sec); letter-spacing: 0; margin-left: 6px; }
+.figures .hero .ring { width: 96px; height: 96px; } .figures .hero .ring svg { width: 96px; height: 96px; } .figures .hero .ring .in { font-size: 24px; }
+.figures .hero .facts { display: flex; gap: 22px; margin-top: 8px; }
+.figures .hero .facts div b { display: block; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.figures .hero .facts div span { font-size: 13px; color: var(--sec); }
+/* phone */
+.figures.ph { display: flex; flex-direction: column; min-height: 800px; height: 100%; }
+.figures.ph .body { padding: 0 16px 20px; flex: 1 1 auto; }
+.figures.ph .lt { padding: 6px 0 12px; }
+.figures.ph .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.figures.ph .tile { min-height: 132px; padding: 14px 16px 14px; }
+.figures.ph .tile .v { font-size: 36px; line-height: 40px; }
+.figures .navbar { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 12px; }
+.figures .navbar .back { display: flex; align-items: center; gap: 2px; color: var(--tint); font-size: 17px; }
+.figures .navbar .ttl { font-size: 17px; font-weight: 600; }
+.figures .tabbar { display: flex; border-top: 1px solid var(--line); background: var(--grp); padding: 8px 6px 24px; margin-top: auto; }
+.figures .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 500; color: var(--sec); text-decoration: none; }
+.figures .tabbar a.cur { color: var(--tint); }
+.figures.ph .gh { padding: 22px 4px 8px; }
+.figures.ph .grp .row { padding: 8px 14px; }
+.figures.ph .hero { padding: 18px 18px; gap: 16px; border-radius: 18px; }
+.figures.ph .hero .big { font-size: 44px; line-height: 48px; }
+/* figures:end */
+
+  </style>
+</helmet>
+<div class="board">
+  <div class="bh">
+    <div class="lab">Nothing to explain <span>Design canvas · 2026-09-18 · read me first</span></div>
+    <h1>Three ways to make DiveDay look designed</h1>
+    <p class="lede">The brief: re-evaluate the whole app top-down the way an Apple designer would; very clean, elegant and delightful; a few options to pick from. This canvas answers with one diagnosis, one floor decided from what you have already said, and three directions drawn as finished products — the same six screens for the same shop on the same morning, so they compare by eye. There is exactly one call to make: which of the three.</p>
+    <div class="strip">
+      <div><h3>Read in three seconds</h3><p><b>The floor deletes every decoration and every second spelling.</b> The three differ only in what carries the page: the <b>group</b> (A · Inset), the <b>material</b> (B · Glass) or the <b>number</b> (C · Figures).</p></div>
+      <div><h3>The recommendation</h3><p><b>C · Figures.</b> It is the instrument you have asked for three times, in the only form Apple has ever shipped one — light, rounded, one tint — and it is built on A, so nothing of the list grammar is lost. A is the safe pick; B is the pitch.</p></div>
+      <div><h3>What is not a call</h3><p><b>The floor.</b> Every row of it is a consequence of a sentence you said between 09-08 and 09-11: overbearing, ugly, too many controls, light renders light, farther from the cutesy. It lands first under any pick, and it is drawn into every frame here.</p></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>Why nine rounds produced no pick</h2>
+    <ul>
+      <li><b>Every round answered a sentence with more.</b> Six concepts, then five surfaces, then a direction with three more parts, then a dial — and eighteen lettered calls, (a) through (r), still open. A design that needs eighteen decisions to accept is not finished; it is a menu. An Apple designer decides almost everything and leaves you one.</li>
+      <li><b>The instrument was drawn as a console for engineers.</b> Monospace capitals, twelve-segment gauges, a telemetry line, a black display by day. That is what a cockpit looks like, and you rightly found it cold. It is not what an instrument looks like when Apple ships one: Weather, Fitness and Health are light, rounded, one tint, the number in the same face as the words. The last two rounds moved toward that in prose and not in pixels.</li>
+      <li><b>The app's own pixels.</b> On the home at rest: twelve colours, four radii, nine sizes of type; a row carries a glyph, a label, a name, a sentence, a verb and a chevron. The chrome is a website's — a bar of four tabs, More with fifteen under it, a ⌘K box, a six-slot dock. On the roll call a captain scrolls past a checkpoint card, five stage chips, a three-way switch and a disclosure before the first name. None of it is ugly on its own; together it is a page with nine voices.</li>
+    </ul>
+  </div>
+
+  <div class="cap"><b>Today, as it renders</b> · 2026-09-18 at HEAD a8c16fb · the home on a desk, the roll call in a pocket · the demo shop</div>
+  <div class="shots">
+    <img src="./today-home.jpg" width="760" alt="The shop home today: a water band, a greeting, a drawn fish tile, a dial, chips, labelled rows with glyphs and chevrons">
+    <img src="./today-manifest.jpg" width="290" alt="The roll call today on a phone: a checkpoint card, five stage chips, a three-way switch and a disclosure before the first name">
+  </div>
+  <p class="aside" style="padding:12px 48px 0;max-width:1000px;font-size:14px;line-height:22px;color:var(--cmute)"><b style="color:var(--cink)">What to see.</b> Count the kinds of thing between the top of the home and the first diver's name: a banner, a bar, a wash, an eyebrow, a greeting, a sentence, a link, a panel on a bed, a time, a chip, a title, a facts line, a drawn tile, a dial, then a glyph and a label before "Priya Sharma". Every one was added for a reason and none was taken away. Apple's test is simpler than any rule in <code>principles.md</code>: if a screen needs a label to explain what a thing is, the thing is not designed yet.</p>
+
+  <div class="sec">
+    <h2>The floor — decided, not asked</h2>
+    <p>Every direction stands on these. Each is what one of your own sentences already implies, so none is a call; a pick is a pick of a direction on top of them.</p>
+    <table class="tbl">
+      <tr><th>Rule</th><th>Today</th><th>Under every direction</th></tr>
+      <tr><td>One face, one ramp</td><td>Geist at nine sizes, a 44px greeting, 11px capitals for eyebrows and labels</td><td>Geist at six: 34 · 28 · 22 · 17 · 15 · 13, tabular figures. No capitals, no eyebrow, no greeting; the page's name is its title and the date is its subtitle</td></tr>
+      <tr><td>Two inks, one tint, two signals</td><td>Twelve colours on the home; lagoon, coral, shallows, sand, tideline, three washes</td><td>Ink and a secondary; the shop's colour on the current word and the one filled control (lagoon for a shop that set none); red is "can't board" and delete, amber is "needs a person", each always beside a word. No green on a staff surface — "Ready" is never shown</td></tr>
+      <tr><td>Nothing drawn</td><td>The water band, the site tile, the dial's water, the hand, coral in three places</td><td>All of it leaves every <code>/shop/**</code> page. The hand and the coral stay on the diver's recap only. This is H-77 b, answered by your own read</td></tr>
+      <tr><td>One shell</td><td>Four tabs, More with fifteen, ⌘K, a six-slot dock; twenty-one destinations</td><td><b>Today · Boats · Divers · Shop</b>, and Search — a sidebar on a desk, a tab bar in a pocket. The twenty-one live under Shop and behind Search. A departure's four tabs are one page</td></tr>
+      <tr><td>One row</td><td>Eight anatomies; a glyph, a kind label, a sentence, a verb, a chevron</td><td>Name · why · a state word or its fix · chevron. The row's own tap is the door (shipped 09-17); a state is a word, never a pill</td></tr>
+      <tr><td>Two radii, concentric</td><td>10 · 18 · 28 · pill, and a bed under every panel</td><td>Two rungs per direction, the inner set from the outer; nothing between them; nothing lifted at rest</td></tr>
+      <tr><td>Dark and glare</td><td>Light, the night palette, and boat mode by decree on the manifest</td><td>The device's scheme everywhere; the night palette is the one dark. Glare is a word in the roll call's and the counter's bar that turns the boat skin on for that phone</td></tr>
+      <tr><td>Creation is a sheet</td><td>Full-page forms behind "Add a departure", "Add diver", the walk-in</td><td>A sheet rises over the page you were on and leaves you there; a page is never a form</td></tr>
+      <tr><td>Safety, untouched</td><td>—</td><td>44px targets, 16px critical text, AA, never colour alone; the roll call commits before it renders; the coral bans are moot because there is no coral</td></tr>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2>Three directions</h2>
+    <div class="cards3">
+      <div class="card"><span class="k">A · Inset</span><h3>The group carries the page<small>feels like Settings, Reminders, Health</small></h3><p>Rounded white groups on a soft ground; a boat is a group whose first row is the boat; a need is a row; a large title, a sidebar, a tab bar.</p><p class="m"><b>For:</b> the most learned grammar on any phone; the densest; the cheapest. <b>Against:</b> calm rather than striking — a demo says "that's nice". <b>2–3 sessions.</b></p></div>
+      <div class="card"><span class="k">B · Glass</span><h3>The material carries the page<small>feels like Photos, Maps, Safari</small></h3><p>Content edge to edge with nothing around it; every control in one floating layer of frosted glass that shrinks as you scroll; one capsule for the page's act.</p><p class="m"><b>For:</b> the most current thing on any phone this year, and no dive software has it. <b>Against:</b> glass is the least legible material in sun, so the rail needs its solid twin; the dearest. <b>4–5 sessions.</b></p></div>
+      <div class="card"><span class="k">C · Figures</span><h3>The number carries the page<small>feels like Weather, Fitness, Health</small></h3><p>Every surface opens with the one figure it exists to show — large, rounded, in the page's own type, with a ring where a count fills — over Inset's groups and shell.</p><p class="m"><b>For:</b> the morning read in a glance; the instrument, warm; built on A. <b>Against:</b> the dashboard is one bad decision away, so the rule is one figure per surface. <b>3–4 sessions.</b></p></div>
+    </div>
+  </div>
+
+  <div class="cap"><b>The same boat in three hands</b> · the 7:00 at 6:40 AM, as the home shows it</div>
+  <div class="hand">
+    <div><div class="who">A · Inset</div><div class="frame"><div class="app inset" style="padding:14px">
+      <div class="grp">
+        <div class="boat" style="padding:12px 14px;gap:12px"><div class="lead"><div class="ttl">7:00 AM · Two-Tank Reef</div><div class="facts">Mantis II · closes 6:45</div></div><div class="count"><b>6 of 10</b><span>here</span></div></div>
+        <div class="row" style="padding:8px 14px"><span class="dot red"></span><div class="lead"><div class="name">Grace Mensah</div><div class="why">Card needs a look</div></div><span class="state red">Can't board</span></div>
+        <div class="row" style="padding:8px 14px"><span class="dot red"></span><div class="lead"><div class="name">Priya Sharma</div><div class="why">Waiver not sent</div></div><span class="btn">Send</span></div>
+        <div class="row" style="padding:8px 14px"><span class="dot amb"></span><div class="lead"><div class="name">Nadia Petrov</div><div class="why">No emergency contact</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+      </div>
+    </div></div></div>
+    <div><div class="who">B · Glass</div><div class="frame"><div class="app glass" style="padding:14px 18px 8px">
+      <div class="sect" style="padding-top:2px">
+        <div class="st"><h2 class="t2" style="font-size:19px">7:00 · Two-Tank Reef</h2><span class="f">6 of 10<small>here</small></span></div>
+        <p class="facts">Mantis II · closes 6:45 · 2 seats open</p>
+        <div class="row"><span class="dot red"></span><div class="lead"><div class="name">Grace Mensah</div><div class="why">Card needs a look</div></div><span class="state red">Can't board</span></div>
+        <div class="row"><span class="dot red"></span><div class="lead"><div class="name">Priya Sharma</div><div class="why">Waiver not sent</div></div><span class="pill">Send</span></div>
+        <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Nadia Petrov</div><div class="why">No emergency contact</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+      </div>
+    </div></div></div>
+    <div><div class="who">C · Figures</div><div class="frame"><div class="app figures" style="padding:14px">
+      <div class="tiles" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="tile" style="min-height:112px;padding:12px 14px"><span class="k">Lines off</span><div class="v" style="font-size:34px;line-height:38px">20<small>min</small></div><span class="s">7:00 · Mantis II</span></div>
+        <div class="tile" style="min-height:112px;padding:12px 14px"><span class="k">Here</span><div class="v" style="font-size:34px;line-height:38px">6<small>of 10</small></div><span class="s">2 to come · 2 can't board</span></div>
+      </div>
+      <div class="grp">
+        <div class="row" style="padding:8px 14px"><span class="dot red"></span><div class="lead"><div class="name">Grace Mensah</div><div class="why">Card needs a look</div></div><span class="state red">Can't board</span></div>
+        <div class="row" style="padding:8px 14px"><span class="dot red"></span><div class="lead"><div class="name">Priya Sharma</div><div class="why">Waiver not sent</div></div><span class="btn">Send</span></div>
+      </div>
+    </div></div></div>
+  </div>
+
+  <div class="sec">
+    <h2>Side by side</h2>
+    <table class="tbl">
+      <tr><th></th><th>A · Inset</th><th>B · Glass</th><th>C · Figures</th></tr>
+      <tr><td>What leads</td><td>the list</td><td>the layer</td><td>the number</td></tr>
+      <tr><td>Chrome</td><td>a sidebar on a desk, an opaque tab bar in a pocket</td><td>a floating glass capsule on a desk; a floating tab bar and a search button in a pocket, shrinking on scroll</td><td>Inset's</td></tr>
+      <tr><td>A boat on the home</td><td>a group whose first row is the boat, its count at the right</td><td>a title with its count at the end, a line of facts, hairline rows</td><td>a row with its count at the end; the next boat's figures are the tiles above</td></tr>
+      <tr><td>A boat's page</td><td>groups: the boat's facts, the needs, the roster; Roll call filled</td><td>a title, one facts line, sections; Roll call as the capsule</td><td>a ring of here of booked with five facts beside it, then Inset's groups</td></tr>
+      <tr><td>A state</td><td colspan="3">a word at the row's end, red for can't board, amber for needs a person; a dot before the name; never a pill — the same in all three</td></tr>
+      <tr><td>The roll call</td><td>the count at 34px, one circle per name</td><td>the count at 44px under a floating bar; the tab bar shrunk to one word</td><td>a ring that closes when everyone is aboard, one circle per name</td></tr>
+      <tr><td>At the rail, in sun</td><td>Glare turns the boat skin on</td><td>Glare turns every glass surface solid and the boat skin on</td><td>Glare: black on white, the ring included</td></tr>
+      <tr><td>At night</td><td colspan="3">the app's own night palette, the shop's colour lifted — the same in all three; the glass goes dark and keeps its edge</td></tr>
+      <tr><td>The storefront</td><td>Harbor's face on the headings, the shop's colour on Book; groups</td><td>no chrome but the one capsule that books the next boat</td><td>two tiles — spots on the next boat, the boat that is out — then groups</td></tr>
+      <tr><td>Density on a desk</td><td>highest</td><td>middle</td><td>middle; the home spends its first 150px on tiles</td></tr>
+      <tr><td>Wow in a demo</td><td>low — it looks right</td><td>high — it looks new</td><td>high — it reads the morning for you</td></tr>
+      <tr><td>Cost</td><td>2–3 sessions</td><td>4–5</td><td>3–4, and A is its first slice</td></tr>
+      <tr><td>Honest risk</td><td>calm rather than striking</td><td>legibility in sun; dates with the fashion; backdrop blur on an old counter iPad</td><td>a second figure on a surface turns it into a dashboard</td></tr>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2>The recommendation, and the one call</h2>
+    <p><b>C · Figures.</b> Three reasons, in order. The product's own truth is counts — here of booked, aboard of expected, seats left, the month — and the manifest and the counter already lead with one; Figures makes the rest of the app agree with its best two surfaces. You have named the instrument three times and each time declined the drawing for its cold; this is the instrument without the console, and it is light because the page is light. And it composes: its lists, shell and rows are A's, so a session that builds C ships A on the way, and if the tiles ever prove too much the floor and the lists stand on their own.</p>
+    <p><b>A · Inset</b> if the priority is the least risk for the most calm: it is two sessions of deletion, and every dive shop's front desk already knows how to read it. <b>B · Glass</b> if the demo matters more than the dock this season: it is the most striking page in the field, and it is honest about the price — a solid twin for every glass surface under glare, and a week more.</p>
+    <p><b>The one call (H-87):</b> A, B or C. Nothing else waits on you: the floor is decided, the fiction is fixed, the storefront and the night are drawn for each, and the slices are in the ADR. A pick is one word in a session, and the first slice starts the same day.</p>
+  </div>
+
+  <div class="sec">
+    <div class="two">
+      <div><h2>What no direction changes</h2><p style="margin-top:10px">The name and the mark. Harbor: a diver-facing page wears the shop's colour and face on the picked direction's rows. The dock test and the roll call's commit-before-render. Every message bundle, the clock, the timezone, the skeletons and <code>instant = true</code>. The claims policy. H-02. Every row of <code>settled-questions.md</code>. DiveDay's own marketing pages, which are another canvas's (#1881) and take the picked surface only when it lands.</p></div>
+      <div><h2>How it lands</h2><p style="margin-top:10px">The floor is one slice per row, in the order of the table above, and the first three (the ramp, the colours, the decoration) are a day. Then the shell, then the row and the group, then the picked direction's own parts — the glass layer, or the figure and the ring — one surface family per session: the home, a boat and its roll call, the counter, the people, the shop, the storefront. Each slice runs the <b>design-implementation</b> skill: the component names the ADR, a test pins the rule, the visual diffs are explained, and this README's slice table moves.</p></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div><h3>How to read this canvas</h3><p>This cover, then the three boards in a row: each redraws the same six screens — the home and a boat on a desk; the home, the roll call, the night roll call and the storefront in a pocket. Compare the same screen across the three before reading any prose. <b>Nothing here is normative.</b> The ADR decides; code obeys the ADR.</p></div>
+    <div><h3>The fiction</h3><p>Blue Mantis Divers, Key Largo, Thursday, August 27, 2026, 6:40 AM — the same shop and morning as every canvas since Clearwater, so these boards compare with last week's. Every name and number is demo-seed fiction; nothing is real customer data.</p></div>
+    <div><h3>Where the pieces are</h3><p>The canvas README carries the artboard table, the fiction and the slice table; ADR <b>20260918-nothing-to-explain</b> carries the floor, the three directions and the call; <b>H-87</b> in human-decisions.md is where the pick is recorded. The captures on this cover were taken from <code>pnpm dev</code> on 2026-09-18 and are never refreshed.</p></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

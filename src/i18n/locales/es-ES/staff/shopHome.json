@@ -116,7 +116,6 @@
     "summaryBoats": "{count, plural, one {# salida hoy.} other {# salidas hoy.}}",
     "summaryNext": "{count, plural, =0 {Nada te espera antes de que la de las {time} zarpe.} one {# cosa te espera antes de que la de las {time} zarpe.} other {# cosas te esperan antes de que la de las {time} zarpe.}}",
     "summaryAfter": "{count, plural, =0 {No hay nada pendiente para ti.} one {Todavía te espera # cosa.} other {Todavía te esperan # cosas.}}",
-    "quietHeading": "Un día tranquilo en el muelle.",
     "quietSentence": "Hoy no sale ninguna salida y no hay nada pendiente para ti.",
     "deskLabel": "En recepción",
     "deskPaymentsRow": "Los pagos no están conectados, así que los buceadores pueden reservar y pagar en recepción.",
@@ -185,5 +184,11 @@
     "firstThing": "Lo primero · {kind}"
   },
   "quietAddDeparture": "Añadir una salida",
-  "quietNextDepartureLabel": "Próxima salida"
+  "quietNextDepartureLabel": "Próxima salida",
+  "day": {
+    "stripLabel": "El día de un vistazo: el arco del sol, la marea y cada salida a la hora que zarpa.",
+    "stripLabelNoBoats": "El día de un vistazo: el arco del sol sobre el centro.",
+    "sunriseAndSunset": "Amanecer {sunrise} · atardecer {sunset}",
+    "noPlace": "Añade la dirección del centro en Ajustes y esto leerá el amanecer real."
+  }
 }

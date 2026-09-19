@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { HELD_SEND_TIMEOUT_MS } from "./helpers";
+import { HELD_SEND_TIMEOUT_MS, STAFF_DAY_HEADING } from "./helpers";
 
 signedInAsOwner();
 
@@ -14,9 +14,7 @@ signedInAsOwner();
 
 test("the home is one spine with no view to choose between", async ({ page }) => {
   await page.goto("/shop/blue-mantis");
-  await expect(
-    page.getByRole("heading", { name: /Good (morning|afternoon|evening|night)/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
   // The control that chose between the urgency and by-departure renderings is
   // gone with them — there is nothing on this page asking the shop which part
   // of its own day it is looking at.
@@ -33,6 +31,47 @@ test("the home is one spine with no view to choose between", async ({ page }) =>
     "href",
     /\/shop\/blue-mantis\/trips\/[a-f0-9-]+$/,
   );
+});
+
+/**
+ * **The home is the day** — ADR 20260919-one-idea, decision I · Tide, slice
+ * 23a. The page opens with the sky over the shop at the hour it is being read,
+ * the date as its one name, and the day's own picture: the sun's arc, a dot on
+ * the hour each boat leaves, and a line for now.
+ */
+test("the day stands at the top of its own page, drawn and then said", async ({ page }) => {
+  await page.goto("/shop/blue-mantis");
+
+  // The sky wears the hour it is being read at, and nothing else decides it.
+  const sky = page.locator(".sky").first();
+  await expect(sky).toHaveAttribute("data-scheme", /^(dawn|day|dusk|night)$/);
+
+  // The date is the page's name, with the weekday above it — the greeting and
+  // the eyebrow that stood here are both gone.
+  await expect(sky.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
+  await expect(sky.getByText(/^(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day$/)).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Good (morning|afternoon|evening|night)/ }),
+  ).toHaveCount(0);
+
+  // The day in one line, said once. It used to be printed twice — under the
+  // greeting and again in the body.
+  await expect(page.getByText(/boats? today\./)).toHaveCount(1);
+
+  // The picture is one image to a screen reader, because everything on it is
+  // said again in the stations underneath.
+  const strip = sky.getByRole("img", { name: /The day at a glance/ });
+  await expect(strip).toBeVisible();
+
+  // A boat is drawn on the hour it leaves, worded in the shop's own zone — the
+  // same string the station under it carries, because the picture and the list
+  // are two readings of one day rather than two sources.
+  const firstStationTime = (await page.locator("ol > li time").first().innerText()).trim();
+  expect(firstStationTime).toMatch(/\d{1,2}:\d{2}\s?(AM|PM)/);
+  await expect(strip.getByText(firstStationTime, { exact: true })).toHaveCount(1);
+
+  // Sunrise and sunset, read from the shop's own coordinates.
+  await expect(sky.getByText(/Sunrise .* · sunset /)).toBeVisible();
 });
 
 test("a departure's title is said once — the station owns it, no row repeats it", async ({

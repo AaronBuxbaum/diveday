@@ -15,7 +15,7 @@
  */
 
 /** The mark's ground: `--primary` into `--primary-hover`, light mode. */
-export const MARK_GRADIENT = "linear-gradient(135deg, #0e7490, #155e75)";
+export const MARK_GRADIENT = "linear-gradient(135deg, #0a84ff, #0064d2)";
 
 /** The bubbles rising off it — foam, and the one coral highlight. */
 export const MARK_FOAM = "#eafcff";
@@ -35,5 +35,5 @@ export const MARK_CORAL = "#ff6f61";
  */
 export const THEME_COLORS = [
   { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-  { media: "(prefers-color-scheme: dark)", color: "#0d222d" },
+  { media: "(prefers-color-scheme: dark)", color: "#1c1c1e" },
 ] as const;

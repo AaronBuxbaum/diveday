@@ -464,6 +464,17 @@ export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
  * the hold is a fixed length the client counts down on its own clock — so it
  * is a bound, not a guess.
  */
+/**
+ * **The staff home's one heading** — the date, since ADR 20260919-one-idea's
+ * decision I · Tide, slice 23a. It replaced "Good morning, Dana": the home is
+ * the day, so the day is what the page is called, and a shop's name and a
+ * staffer's own name are both already on the bar above it.
+ *
+ * A pattern rather than a fixed string, because it is today's date and the
+ * suite runs every day.
+ */
+export const STAFF_DAY_HEADING = /^[A-Z][a-z]+ \d{1,2}$/;
+
 export const HELD_SEND_TIMEOUT_MS = 20_000;
 
 export async function waiverLinkFromResult(page: Page, resultNotice: Locator): Promise<string> {
