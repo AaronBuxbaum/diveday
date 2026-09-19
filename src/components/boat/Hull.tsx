@@ -21,26 +21,76 @@ import type { HullGeometry, SeatState } from "@/lib/hull";
  * `--warning`, `--danger` — rather than a second set of hues that could drift
  * from the rows underneath.
  *
- * **Colour never carries a state alone** (design principle 6). Every seat is
- * said again in the roster rows beneath the hull, and the hull as a whole
- * carries one sentence for a reader who cannot see it. It is `role="img"`
- * because a seat is not a control here: the roll call's one tap per name lives
- * on its own surface and is untouched by this.
+ * **Colour never carries a state alone** (design principle 6), and on a
+ * 34×32-unit rectangle that is not a slogan. Every seat is said again in the
+ * roster rows beneath the hull, and the hull as a whole carries one sentence
+ * for a reader who cannot see it; inside the picture, each state is told from
+ * its neighbour by *lightness and outline* as well as by hue, so the boat still
+ * reads in greyscale, through polarized sunglasses, and at arm's length in sun:
  *
- * **No number is ever drawn on a seat.** Seats are never numbered and never
- * assigned (the ADR, and `src/lib/hull.ts`); the whole defence against a reader
- * taking the picture for a seating plan is that there is nothing on it to
- * mistake for one.
+ * - **open** — no fill, a dashed weak line. The hull body shows through.
+ * - **booked** — paper, with a solid line at full weight. The canvas drew it
+ *   exactly so (`.deck .seat`, `background:#fff; border:1.5px solid`), and an
+ *   earlier draft here dropped the border: a white seat on an unpainted hull's
+ *   `--surface-sunken` body is 1.2:1 in light and **1.05:1 in Glare Mode**, the
+ *   one mode built for this surface's weather, which left an open seat more
+ *   visible than a taken one and inverted the picture's whole first reading
+ *   (dive-domain review 20260919).
+ * - **blocked** — the danger *tint* behind a danger line and danger ink
+ *   (5.45:1, measured in `globals.css`). Quiet, like its row.
+ * - **aboard / ashore** — the success and warning fills, solid, white ink.
+ * - **missing** — danger, solid, and the only seat that wears a ring.
+ *
+ * That blocked is an outline where missing is a solid is the whole distinction
+ * between "this diver's paperwork is not done" and "somebody is still in the
+ * water", and it is deliberately the same loudness ordering the roll call's
+ * rows carry (`ROLL_CALL_ROW_TONE`: `bg-danger/5` and no ring against
+ * `bg-danger/15` with one, dive-domain review 20260804). Both were one solid
+ * red separated by a half-transparent 2-unit halo until 20260919's review
+ * called that a rendering artifact rather than a distinction — which it was.
+ *
+ * It is `role="img"` because a seat is not a control here: the roll call's one
+ * tap per name lives on its own surface and is untouched by this.
+ *
+ * **It does not print.** `@media print` repaints the app black-on-white and
+ * flattens `--success`, `--warning` and `--danger` to two near-blacks, so a
+ * printed hull would show aboard and ashore as the same blob and a booked seat
+ * as white on white. The rows print with every name and state in words, which
+ * is what a manifest on a boat is for; a picture that prints a lie is worse
+ * than one that does not print. Giving the hull its own mono treatment is on
+ * the ADR's pre-manifest list.
+ *
+ * **No number is ever drawn on a seat**, and that is not what makes the picture
+ * safe — `src/lib/hull.ts` says what does.
  */
 
 /** What each state paints, in the roll call's own vocabulary. */
 const SEAT_FILL: Record<SeatState, string> = {
   open: "none",
   booked: "var(--surface)",
-  blocked: "var(--danger)",
+  blocked: "var(--danger-tint)",
   aboard: "var(--success)",
   ashore: "var(--warning)",
   missing: "var(--danger)",
+};
+
+/**
+ * The line around each seat, and how heavily it is drawn.
+ *
+ * `null` means the hull's own line — the shop's colour, or the page's ink on a
+ * boat nobody painted — which is what the canvas gave an ordinary taken seat.
+ * A dashed entry is an open place; everything else is solid, because a seat
+ * that differs from its neighbour only in fill has no reading left once the
+ * fill is flattened by print, by glare, or by a reader who cannot separate the
+ * hues.
+ */
+const SEAT_LINE: Record<SeatState, { stroke: string | null; opacity: number; dashed: boolean }> = {
+  open: { stroke: null, opacity: 0.6, dashed: true },
+  booked: { stroke: null, opacity: 1, dashed: false },
+  blocked: { stroke: "var(--danger)", opacity: 1, dashed: false },
+  aboard: { stroke: "var(--success)", opacity: 1, dashed: false },
+  ashore: { stroke: "var(--warning)", opacity: 1, dashed: false },
+  missing: { stroke: "var(--danger)", opacity: 1, dashed: false },
 };
 
 /**
@@ -50,9 +100,11 @@ const SEAT_FILL: Record<SeatState, string> = {
  * which is the one part of the drawing that did not survive contact with AA.
  */
 const SEAT_INK: Record<SeatState, string> = {
+  /** Kept only to hold the map total: nothing ever letters an empty place. */
   open: "var(--muted)",
   booked: "var(--foreground)",
-  blocked: "var(--surface)",
+  /** Danger on its own tint — 5.45:1, the number `globals.css` measured. */
+  blocked: "var(--danger)",
   aboard: "var(--surface)",
   ashore: "var(--surface)",
   missing: "var(--surface)",
@@ -91,7 +143,10 @@ export function Hull({
   return (
     <svg
       viewBox={`0 0 ${geometry.width} ${geometry.height}`}
-      className={className ?? "block h-auto w-full"}
+      // `print:hidden` is not the caller's to opt out of — see the note above:
+      // the print palette flattens four of the six states into two inks, so the
+      // rows carry the paper and the picture stands down.
+      className={`${className ?? "block h-auto w-full"} print:hidden`}
       role="img"
       aria-label={label}
     >
@@ -115,7 +170,7 @@ export function Hull({
 
       {geometry.seats.map((seat) => {
         const content = seats[seat.index] ?? { state: "open" as const };
-        const open = content.state === "open";
+        const edge = SEAT_LINE[content.state];
         return (
           <g key={seat.index}>
             <rect
@@ -123,28 +178,31 @@ export function Hull({
               y={seat.y}
               width={seat.width}
               height={seat.height}
-              rx={9}
+              rx={seat.rx}
               fill={SEAT_FILL[content.state]}
-              stroke={open ? line : "none"}
-              strokeOpacity={open ? 0.6 : 1}
-              strokeDasharray={open ? "3 3" : undefined}
-              strokeWidth={open ? 1.5 : 0}
+              stroke={edge.stroke ?? line}
+              strokeOpacity={edge.opacity}
+              strokeDasharray={edge.dashed ? "3 3" : undefined}
+              strokeWidth={1.5}
             />
             {/* A stated "did not come back" is the loudest thing on the boat and
                 the only seat that wears a ring — the same rule, and the same
                 2026-08-04 dive-domain review, that gives the roll call's rows
-                exactly one ring. */}
+                exactly one ring. Full opacity and a wider line than the seat's
+                own: a half-transparent 2-unit halo at this scale is a rendering
+                artifact, not a distinction (dive-domain review 20260919), and
+                the thing it has to be told apart from means somebody's waiver
+                is unsigned rather than somebody is still in the water. */}
             {content.state === "missing" ? (
               <rect
-                x={seat.x - 3}
-                y={seat.y - 3}
-                width={seat.width + 6}
-                height={seat.height + 6}
-                rx={11}
+                x={seat.x - 3.5}
+                y={seat.y - 3.5}
+                width={seat.width + 7}
+                height={seat.height + 7}
+                rx={seat.rx + 2}
                 fill="none"
                 stroke={SEAT_FILL.missing}
-                strokeOpacity={0.5}
-                strokeWidth={2}
+                strokeWidth={2.5}
               />
             ) : null}
             {geometry.showsInitials && content.initials ? (

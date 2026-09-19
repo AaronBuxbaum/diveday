@@ -36,6 +36,60 @@ describe("Hull", () => {
   });
 
   /**
+   * **A taken seat is not told from an empty one by its fill.**
+   *
+   * The canvas drew an ordinary taken seat as paper inside a solid line
+   * (`.deck .seat`), and the first build here dropped the line: white on an
+   * unpainted hull's `--surface-sunken` body is 1.2:1, and 1.05:1 in the Glare
+   * Mode this surface exists for — so the open seats, which kept their dashed
+   * line, were the *more* visible ones and the picture's first reading was
+   * inverted (dive-domain review 20260919). Every seat carries a line at full
+   * weight now; only an open place's is dashed and faint.
+   */
+  it("outlines a taken seat, so occupancy survives a washed-out fill", () => {
+    const { container } = render(<Hull geometry={geometry} label="the boat" seats={roster} />);
+    const seats = [...container.querySelectorAll("rect")].filter(
+      (node) => node.getAttribute("rx") === "9",
+    );
+    for (const seat of seats) {
+      expect(seat.getAttribute("stroke")).not.toBe("none");
+      expect(seat.getAttribute("stroke-width")).toBe("1.5");
+    }
+    const booked = seats.find((node) => node.getAttribute("fill") === "var(--surface)");
+    expect(booked?.getAttribute("stroke-dasharray")).toBe(null);
+    expect(booked?.getAttribute("stroke-opacity")).toBe("1");
+  });
+
+  /**
+   * "Cannot board" and "did not come back" are the same hue by design — they
+   * are both the roll call's danger — so the thing that has to separate them is
+   * lightness, exactly as it separates their two rows (`bg-danger/5` and no
+   * ring against `bg-danger/15` with one). An outline against a solid survives
+   * greyscale, glare and a reader who cannot tell the hues apart; a
+   * half-transparent halo does not.
+   */
+  it("tells an unsigned waiver from a diver still in the water without using hue", () => {
+    const { container } = render(<Hull geometry={geometry} label="the boat" seats={roster} />);
+    const seats = [...container.querySelectorAll("rect")].filter(
+      (node) => node.getAttribute("rx") === "9",
+    );
+    const fills = seats.map((node) => node.getAttribute("fill"));
+    expect(fills).toContain("var(--danger-tint)");
+    expect(fills).toContain("var(--danger)");
+  });
+
+  /**
+   * The print palette flattens `--success` and `--warning` to one near-black
+   * and `--danger` to black, and repaints `--surface-sunken` white — so a
+   * printed hull would show aboard and ashore as the same blob and a booked
+   * seat as white on white. The rows print the same facts in words.
+   */
+  it("stands down on paper rather than printing a boat it cannot print honestly", () => {
+    const { container } = render(<Hull geometry={geometry} label="the boat" seats={roster} />);
+    expect(container.querySelector("svg")?.getAttribute("class")).toContain("print:hidden");
+  });
+
+  /**
    * The whole defence against a seat map reading as a seating plan is that
    * nothing on a seat is a number. The only words are initials the caller
    * shortened.
