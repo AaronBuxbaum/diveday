@@ -173,20 +173,20 @@ export function mixHex(hex: string, into: string, amount: number): string {
   });
 }
 
-/** DiveDay's own lagoon — what a shop with no brand colour wears, and the picker's resting value. */
-export const DIVEDAY_BRAND_COLOR = "#0e7490";
+/** DiveDay's own blue — what a shop with no brand colour wears, and the picker's resting value. */
+export const DIVEDAY_BRAND_COLOR = "#0064d2";
 
 export const AA_TEXT_CONTRAST = 4.5;
 const WHITE = "#ffffff";
 /** DiveDay's ink, the darker of the two candidate texts on a brand fill. */
-export const BRAND_INK = "#0c2a35";
+export const BRAND_INK = "#1d1d1f";
 /**
  * The ground the storefront paints on (`--background`), not the shell a card
  * paints on: the brand colour is *text* on the ground — a link, a current nav
  * chip, a price — and the ground is the darker of the two, so it is the one
  * the contrast check has to clear.
  */
-export const BRAND_DEFAULT_SURFACE = "#fbf7ef";
+export const BRAND_DEFAULT_SURFACE = "#f2f2f7";
 
 /**
  * One scheme's worth of tokens. The same shop colour yields two of these —
@@ -256,10 +256,10 @@ export function deriveBrandTheme(
  * that file by `brand.test.ts`, because a palette that moved without these
  * moving would leave the derivation checking a ground nothing paints.
  */
-export const BRAND_DARK_GROUND = "#071720";
-export const BRAND_DARK_SURFACE = "#0d222d";
+export const BRAND_DARK_GROUND = "#000000";
+export const BRAND_DARK_SURFACE = "#1c1c1e";
 /** The night palette's reading ink (`--foreground` at depth), for a preview of the brand at night. */
-export const BRAND_DARK_INK = "#e9f3f4";
+export const BRAND_DARK_INK = "#f5f5f7";
 
 /**
  * The same colour, derived for the dark scheme (issue #1265).
