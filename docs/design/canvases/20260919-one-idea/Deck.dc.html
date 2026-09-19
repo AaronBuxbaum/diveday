@@ -1,0 +1,473 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>II · Deck — the app is the boat</title>
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Bricolage+Grotesque:wght@600;700&display=swap">
+  <style>
+    body { margin: 0; background: #fbfaf7; }
+/* kit:start — the canvas's own prose. Pasted verbatim into every board; edit once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --cbg: var(--kit-bg, #fbfaf7); --csurf: var(--kit-surface, #ffffff); --cline: var(--kit-line, #e4e2dc); --cink: var(--kit-ink, #14232b); --cmute: var(--kit-mute, #5f6b71); --caccent: var(--kit-accent, #1d7a5f);
+  width: 1180px; margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: var(--cink); background: var(--cbg); -webkit-font-smoothing: antialiased; padding-bottom: 56px; }
+.board a { color: var(--caccent); }
+.bh { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px; border-bottom: 1px solid var(--cline); background: var(--csurf); }
+.bh .lab { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--caccent); }
+.bh .lab span { color: var(--cmute); font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 13px; margin-left: 12px; }
+.bh h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+.bh .lede { margin: 0; max-width: 940px; font-size: 17px; line-height: 27px; }
+.strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.strip h3 { margin: 0; font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmute); }
+.strip p { margin: 6px 0 0; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.strip p b, .sec p b, .beside p b, .foot p b, .tbl td b { color: var(--cink); font-weight: 600; }
+.cap { display: flex; align-items: baseline; gap: 12px; padding: 30px 48px 10px; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmute); }
+.cap b { color: var(--cink); }
+.frames { display: flex; gap: 28px; align-items: flex-start; padding: 0 48px; }
+.beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.beside h3 { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); }
+.beside p { margin: 0 0 12px; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.beside ul { margin: 0 0 16px; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.beside li b { color: var(--cink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--cline); }
+.sec h2 { margin: 0; font-size: 20px; line-height: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 960px; }
+.sec ul { margin: 0; padding-left: 20px; font-size: 15px; line-height: 23px; max-width: 960px; }
+.sec li b { font-weight: 600; }
+.foot { margin: 40px 48px 0; padding-top: 20px; border-top: 1px solid var(--cline); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); }
+.foot p { margin: 6px 0 0; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.foot ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.foot li b { color: var(--cink); font-weight: 600; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmute); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--cink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--cline); vertical-align: top; color: var(--cmute); }
+.tbl td:first-child { color: var(--cink); font-weight: 600; width: 160px; }
+.cards3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--csurf); border: 1px solid var(--cline); border-radius: 12px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card h3 small { display: block; font-size: 13px; font-weight: 500; color: var(--cmute); letter-spacing: 0; margin-top: 4px; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; }
+.card p.m { color: var(--cmute); }
+.card .k { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--caccent); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.shots { display: flex; gap: 20px; align-items: flex-start; padding: 0 48px; }
+.shots img { display: block; border: 1px solid var(--cline); border-radius: 10px; }
+.shots .note { flex: 1 1 auto; min-width: 0; font-size: 14px; line-height: 22px; color: var(--cmute); }
+.shots .note b { color: var(--cink); font-weight: 600; }
+.shots .note ol { margin: 0; padding-left: 20px; }
+.frame { border: 1px solid var(--cline); border-radius: 12px; overflow: hidden; position: relative; }
+.frame.desktop { width: 1084px; flex: 0 0 1084px; }
+.phone { width: 390px; flex: 0 0 390px; min-height: 800px; border-radius: 44px; border: 1px solid var(--cline); overflow: hidden; position: relative; display: flex; flex-direction: column; }
+.phone > .app { flex: 1 1 auto; display: flex; flex-direction: column; }
+.phone .sb { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 6px 28px 0; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.phone .sb .sig { display: flex; align-items: center; gap: 6px; }
+.phone .sb .sig i { display: block; width: 18px; height: 10px; border: 1.5px solid currentColor; border-radius: 3px; opacity: .8; position: relative; }
+.phone .sb .sig i::after { content: ""; position: absolute; left: 2px; top: 2px; bottom: 2px; width: 10px; background: currentColor; border-radius: 1px; }
+.phone .sb .sig b { display: block; width: 14px; height: 10px; background: linear-gradient(to top, currentColor 0, currentColor 100%); clip-path: polygon(0 60%, 25% 60%, 25% 40%, 50% 40%, 50% 20%, 75% 20%, 75% 0, 100% 0, 100% 100%, 0 100%); opacity: .8; }
+.hand { display: flex; gap: 16px; padding: 0 48px; }
+.hand > div { flex: 1 1 0; min-width: 0; }
+.hand .who { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); margin-bottom: 8px; }
+/* kit:end */
+/* kit:more — round 2's sheet */
+.sheet { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 0 48px; }
+.sheet h3 { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); }
+.sheet p { margin: 8px 0 0; font-size: 13px; line-height: 20px; color: var(--cmute); }
+.sheet p b { color: var(--cink); font-weight: 600; }
+.sw { display: flex; gap: 10px; flex-wrap: wrap; }
+.sw div { width: 64px; }
+.sw i { display: block; width: 64px; height: 48px; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+.sw span { display: block; margin-top: 4px; font-size: 11px; line-height: 14px; color: var(--cmute); }
+.sw span b { display: block; color: var(--cink); font-weight: 600; }
+.spec { border: 1px solid var(--cline); border-radius: 12px; overflow: hidden; }
+.ba { display: flex; flex-direction: column; gap: 10px; }
+.ba .tag { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmute); }
+.ba .frame { background: #fff; }
+.eval td:nth-child(2) { color: var(--cmute); }
+
+/* app3:start — round 3's shared mechanics: the device, the status bar, the ramp, icons, the pocket's bars. No material here: each idea sets its own variables. */
+.app3 { --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, "Helvetica Neue", Geist, system-ui, sans-serif; --rounded: ui-rounded, "SF Pro Rounded", var(--font);
+  --bg: #ffffff; --ink: #1d1d1f; --sec: #6e6e73; --ter: #c4c4c8; --line: rgba(0,0,0,.08); --grp: #ffffff; --tint: #0a7aff; --tint-text: #0064d2; --fill: #0064d2; --red: #d70015; --amber: #b35900; --green: #34c759; --field: rgba(0,0,0,.06); --bar: rgba(255,255,255,.72);
+  font-family: var(--font); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; font-size: 17px; line-height: 22px; text-align: left; letter-spacing: -0.01em; }
+.app3 * { box-sizing: border-box; }
+.app3 p, .app3 h1, .app3 h2, .app3 h3 { margin: 0; }
+.app3 .lt { font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: -0.015em; }
+.app3 .t1 { font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.015em; }
+.app3 .t2 { font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.012em; }
+.app3 .hl { font-size: 17px; line-height: 22px; font-weight: 600; }
+.app3 .bd { font-size: 17px; line-height: 22px; }
+.app3 .sh { font-size: 15px; line-height: 20px; letter-spacing: -0.005em; }
+.app3 .fn { font-size: 13px; line-height: 18px; letter-spacing: 0; }
+.app3 .cp { font-size: 12px; line-height: 16px; letter-spacing: 0; }
+.app3 .sec2 { color: var(--sec); } .app3 .ter { color: var(--ter); }
+.app3 .num { font-variant-numeric: tabular-nums; }
+.app3 .red { color: var(--red); } .app3 .amb { color: var(--amber); } .app3 .tint { color: var(--tint-text); } .app3 .grn { color: var(--green); }
+.app3 .w4 { font-weight: 400; } .app3 .w5 { font-weight: 500; } .app3 .w6 { font-weight: 600; } .app3 .w7 { font-weight: 700; }
+.app3 .fig { font-family: var(--rounded); font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.app3 .ic { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; display: block; }
+.app3 .ic.s { width: 18px; height: 18px; stroke-width: 2; }
+.app3 .ic.xs { width: 14px; height: 14px; stroke-width: 2.4; }
+.app3 .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; }
+.app3 .dot.red { background: var(--red); } .app3 .dot.amb { background: var(--amber); } .app3 .dot.grn { background: var(--green); } .app3 .dot.tint { background: var(--tint); }
+.app3 .row { display: flex; align-items: center; gap: 12px; }
+.app3 .lead { flex: 1 1 auto; min-width: 0; }
+.app3 .trail { margin-left: auto; display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.app3 .avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(160deg, #cfd3da, #a9afba); color: #2b2f36; font-size: 12px; font-weight: 600; line-height: 30px; text-align: center; flex: 0 0 auto; letter-spacing: 0; }
+.app3 .chev { color: var(--ter); }
+.app3 .btn { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px; border-radius: 999px; background: var(--field); color: var(--tint-text); font-size: 15px; font-weight: 600; white-space: nowrap; letter-spacing: -0.005em; }
+.app3 .btn.fill { background: var(--fill); color: #fff; }
+.app3 .btn.lg { height: 50px; padding: 0 22px; font-size: 17px; border-radius: 16px; }
+.app3 .btn.ink { background: var(--ink); color: var(--bg); }
+/* the pocket: an iPhone */
+.phone.device { width: 390px; flex: 0 0 390px; min-height: 0; border: 0; border-radius: 0; overflow: visible; background: none; padding: 0; }
+.phone.device > .app3 { border-radius: 46px; overflow: hidden; box-shadow: 0 0 0 11px #17171a, 0 0 0 12px #3a3a3f, 0 18px 40px rgba(0,0,0,.18); position: relative; min-height: 812px; display: flex; flex-direction: column; }
+.phone.device > .app3::after { content: ""; position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: currentColor; opacity: .85; z-index: 7; }
+.app3 .island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 122px; height: 36px; border-radius: 20px; background: #000; z-index: 6; }
+.app3 .sb { display: flex; align-items: center; justify-content: space-between; height: 58px; padding: 12px 34px 0 36px; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0; flex: 0 0 auto; }
+.app3 .sb .sig { display: flex; align-items: center; gap: 7px; }
+.app3 .sb .sig b { display: block; width: 18px; height: 11px; background: linear-gradient(to right, currentColor 0 3px, transparent 3px 5px, currentColor 5px 8px, transparent 8px 10px, currentColor 10px 13px, transparent 13px 15px, currentColor 15px 18px); clip-path: polygon(0 70%, 5px 70%, 5px 45%, 10px 45%, 10px 22%, 15px 22%, 15px 0, 18px 0, 18px 100%, 0 100%); opacity: .95; }
+.app3 .sb .sig i { display: block; width: 25px; height: 12px; border: 1.5px solid currentColor; border-radius: 4px; opacity: .45; position: relative; }
+.app3 .sb .sig i::after { content: ""; position: absolute; left: 2px; top: 2px; bottom: 2px; width: 17px; background: currentColor; border-radius: 2px; opacity: 1; }
+.app3 .navbar { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 16px; flex: 0 0 auto; }
+.app3 .navbar .back { display: flex; align-items: center; gap: 2px; color: var(--tint-text); font-size: 17px; margin-left: -6px; }
+.app3 .navbar .ttl { font-size: 17px; font-weight: 600; }
+.app3 .body { padding: 0 16px 24px; flex: 1 1 auto; }
+.app3 .body:last-child { padding-bottom: 60px; }
+.app3 .tabbar { display: flex; border-top: 1px solid var(--line); background: var(--bar); backdrop-filter: blur(20px) saturate(180%); padding: 8px 4px 28px; margin-top: auto; flex: 0 0 auto; }
+.app3 .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; font-weight: 500; color: var(--sec); text-decoration: none; letter-spacing: 0; }
+.app3 .tabbar a .ic { width: 26px; height: 26px; stroke-width: 1.6; }
+.app3 .tabbar a.cur { color: var(--tint-text); }
+/* the desk */
+.app3 .shell { display: flex; min-height: 880px; }
+.app3 .main { flex: 1 1 auto; min-width: 0; }
+/* the roll call's one tap */
+.app3 .tap { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ter); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; color: #fff; }
+.app3 .tap.on { background: var(--green); border-color: var(--green); }
+.app3 .tap.off { border-color: var(--red); }
+.app3 .harbor { font-family: "Bricolage Grotesque", var(--font); font-weight: 700; letter-spacing: -0.015em; }
+/* app3:end */
+
+/* deck:start — the app is the boat. Each boat is an object in its own colour; the seats are the record; the home is the stack. */
+.deck { --bg: #f2f3f7; --ink: #1d1d1f; --sec: #6e6e73; --ter: #c7c7cc; --line: rgba(0,0,0,.08); --grp: #ffffff; --tint: #0a7aff; --tint-text: #0064d2; --fill: #1d1d1f; --field: rgba(0,0,0,.05); --bar: rgba(242,243,247,.8);
+  --mantis: linear-gradient(160deg, #0f4c9a 0%, #1668c9 55%, #2a8be6 100%); --skiff: linear-gradient(160deg, #0b6b5f 0%, #12907f 60%, #21ad96 100%); --shopc: #ffffff; }
+.deck.night { --bg: #000000; --ink: #f5f5f7; --sec: #98989d; --ter: #48484a; --line: rgba(255,255,255,.12); --grp: #1c1c1e; --tint: #0a84ff; --tint-text: #6cb4ff; --fill: #f5f5f7; --field: rgba(255,255,255,.1); --bar: rgba(0,0,0,.72); --shopc: #1c1c1e; }
+.deck.night .btn.ink { color: #000; }
+.deck .top { display: flex; align-items: center; gap: 12px; padding: 2px 20px 0; }
+.deck .top .lt { font-size: 30px; line-height: 36px; }
+.deck .top .ic { color: var(--tint-text); margin-left: auto; }
+.deck .top .ic + .ic { margin-left: 0; }
+.deck .sum { padding: 0 20px 14px; font-size: 15px; color: var(--sec); }
+/* the stack: boats as objects */
+.deck .stack { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 56px; }
+.deck .card { position: relative; border-radius: 22px; padding: 16px 18px 14px; color: #fff; box-shadow: 0 10px 26px rgba(0,0,0,.14), 0 1px 2px rgba(0,0,0,.08); }
+.deck .card.mantis { background: var(--mantis); }
+.deck .card.skiff { background: var(--skiff); }
+.deck .card.shop { background: var(--shopc); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 20px rgba(0,0,0,.06); }
+.deck .card .hd { display: flex; align-items: baseline; gap: 10px; }
+.deck .card .hd .t { font-family: var(--rounded); font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.deck .card .hd .t small { font-size: 15px; font-weight: 600; letter-spacing: 0; margin-left: 2px; }
+.deck .card .hd .boat { font-size: 15px; font-weight: 600; opacity: .85; }
+.deck .card .hd .count { margin-left: auto; font-family: var(--rounded); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.deck .card .hd .count small { font-family: var(--font); font-size: 13px; font-weight: 500; opacity: .85; letter-spacing: 0; margin-left: 4px; }
+.deck .card .ttl { font-size: 17px; font-weight: 600; margin-top: 2px; }
+.deck .card .site { font-size: 14px; opacity: .85; margin-top: 1px; }
+.deck .card .hull { display: block; width: 100%; height: auto; margin: 10px 0 4px; }
+.deck .card .hull text { font-family: var(--font); letter-spacing: 0; }
+.deck .card .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; line-height: 16px; opacity: .92; }
+.deck .card .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+.deck .card .legend i.g { background: #34c759; } .deck .card .legend i.w { background: #fff; } .deck .card .legend i.r { background: #ff3b30; } .deck .card .legend i.o { border: 1.5px dashed rgba(255,255,255,.8); box-sizing: border-box; }
+.deck .card.peek { padding-bottom: 14px; }
+.deck .card.peek .hd .t { font-size: 22px; line-height: 26px; }
+.deck .card.peek .ttl { font-size: 15px; }
+.deck .card .flag { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; font-weight: 600; }
+.deck .card .flag .dot { width: 8px; height: 8px; flex-basis: 8px; }
+.deck .card .flag .dot.red { background: #ff6b64; } .deck .card .flag .dot.amb { background: #ffb340; }
+.deck .card.shop .hd .t { font-family: var(--font); font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.deck .card.shop .list .row { min-height: 40px; padding: 6px 0; border-top: 1px solid var(--line); }
+.deck .card.shop .list .row:first-child { border-top: 0; }
+.deck .card.shop .list .name { font-size: 15px; }
+.deck .card.shop .list .why { font-size: 13px; color: var(--sec); line-height: 17px; }
+.deck .card.shop .list .btn { margin-left: auto; height: 28px; padding: 0 11px; font-size: 13px; }
+/* a boat's own page: the hull large, then the seats as rows */
+.deck .boatpage { color: #fff; padding: 0 0 12px; }
+.deck .boatpage.mantis { background: var(--mantis); } .deck .boatpage.skiff { background: var(--skiff); }
+.deck .boatpage .sb, .deck .boatpage .navbar { color: #fff; }
+.deck .boatpage .navbar .back { color: #fff; }
+.deck .boatpage .hero { padding: 4px 20px 0; }
+.deck .boatpage .hero .t { font-family: var(--rounded); font-size: 44px; line-height: 48px; font-weight: 700; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
+.deck .boatpage .hero .t small { font-size: 22px; font-weight: 600; letter-spacing: 0; margin-left: 4px; }
+.deck .boatpage .hero .ttl { font-size: 22px; font-weight: 700; letter-spacing: -0.012em; margin-top: 2px; }
+.deck .boatpage .hero .sub { font-size: 15px; opacity: .9; margin-top: 2px; }
+.deck .boatpage .hull { display: block; width: 100%; height: auto; margin: 8px 0 0; padding: 0 12px; }
+.deck .boatpage .hull text { font-family: var(--font); letter-spacing: 0; }
+.deck .boatpage .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; line-height: 16px; opacity: .92; padding: 0 20px; }
+.deck .boatpage .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+.deck .boatpage .legend i.g { background: #34c759; } .deck .boatpage .legend i.w { background: #fff; } .deck .boatpage .legend i.r { background: #ff3b30; } .deck .boatpage .legend i.o { border: 1.5px dashed rgba(255,255,255,.8); box-sizing: border-box; }
+.deck .boatpage .big { display: flex; align-items: baseline; gap: 8px; padding: 6px 20px 0; }
+.deck .boatpage .big b { font-family: var(--rounded); font-size: 44px; line-height: 48px; font-weight: 700; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
+.deck .boatpage .big span { font-size: 17px; opacity: .9; }
+.deck .gh { display: flex; align-items: baseline; justify-content: space-between; padding: 22px 0 6px; }
+.deck .gh .ttl { font-size: 20px; line-height: 25px; font-weight: 700; letter-spacing: -0.012em; }
+.deck .gh .meta { font-size: 15px; color: var(--sec); font-variant-numeric: tabular-nums; }
+.deck .body { padding: 0 20px 24px; }
+.deck .list .row { min-height: 50px; padding: 8px 0; border-top: 1px solid var(--line); }
+.deck .list .row:first-child { border-top: 0; }
+.deck .list .name { font-size: 17px; }
+.deck .list .why { font-size: 14px; line-height: 18px; color: var(--sec); }
+.deck .list .state { margin-left: auto; font-size: 15px; color: var(--sec); white-space: nowrap; }
+.deck .list .state.red { color: var(--red); font-weight: 600; } .deck .list .state.amb { color: var(--amber); font-weight: 600; }
+.deck .seat { width: 34px; height: 32px; border-radius: 9px; background: #fff; border: 1.5px solid var(--line); color: var(--ink); font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; letter-spacing: 0; }
+.deck .seat.g { background: #34c759; border-color: #34c759; color: #fff; } .deck .seat.r { background: #ff3b30; border-color: #ff3b30; color: #fff; }
+.deck .seat.o { background: transparent; border-style: dashed; border-color: var(--ter); }
+.deck .stick { position: sticky; bottom: 0; padding: 12px 20px 40px; background: var(--bar); backdrop-filter: blur(20px) saturate(180%); border-top: 1px solid var(--line); margin-top: auto; }
+.deck .stick .btn.lg { width: 100%; }
+/* the desk: the boats on a shelf, the week below */
+.deck .deskbar { display: flex; align-items: center; gap: 16px; padding: 16px 28px 8px; }
+.deck .deskbar .shop { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; }
+.deck .deskbar .mark { width: 28px; height: 28px; border-radius: 8px; background: var(--ink); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; letter-spacing: 0; }
+.deck .deskbar .date { font-size: 15px; color: var(--sec); }
+.deck .deskbar .search { margin-left: auto; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 9px; background: var(--field); color: var(--sec); font-size: 14px; width: 220px; }
+.deck .deskbar .me { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
+.deck .deskbar .me .avatar { width: 28px; height: 28px; line-height: 28px; font-size: 11px; }
+.deck .deskhead { padding: 10px 28px 4px; }
+.deck .deskhead .lt { font-size: 34px; }
+.deck .deskhead .sum { padding: 0; font-size: 15px; color: var(--sec); }
+.deck .shelf { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 12px 28px 0; align-items: start; }
+.deck .shelf .card .hd .t { font-size: 24px; line-height: 28px; }
+.deck .below { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 40px; padding: 8px 28px 40px; }
+.deck .week .row { padding: 10px 0; border-top: 1px solid var(--line); gap: 12px; align-items: center; }
+.deck .week .row:first-child { border-top: 0; }
+.deck .week .d { font-family: var(--rounded); font-weight: 700; font-size: 15px; min-width: 42px; }
+.deck .week .d small { display: block; font-family: var(--font); font-size: 12px; font-weight: 500; color: var(--sec); letter-spacing: 0; }
+.deck .week .boats { display: flex; gap: 10px; flex-wrap: wrap; }
+.deck .week .mini { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 6px; border-radius: 999px; color: #fff; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.deck .week .mini.mantis { background: #1668c9; } .deck .week .mini.skiff { background: #12907f; } .deck .week .mini.pool { background: #6e6e73; }
+.deck .week .mini .pips { display: flex; gap: 2px; }
+.deck .week .mini .pips i { display: block; width: 5px; height: 12px; border-radius: 2px; background: rgba(255,255,255,.35); }
+.deck .week .mini .pips i.on { background: #fff; }
+.deck .week .row.today .d { color: var(--tint-text); }
+/* the storefront: the boat you're booking, seats you can see */
+.deck.front .shopname { font-family: "Bricolage Grotesque", var(--font); font-size: 28px; font-weight: 700; letter-spacing: -0.015em; padding: 4px 20px 0; }
+.deck.front .shoptag { font-size: 15px; color: var(--sec); padding: 2px 20px 12px; }
+.deck.front .card .btn.fill { margin-top: 10px; width: 100%; height: 44px; font-size: 17px; border-radius: 14px; }
+.deck.front .card .price { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; }
+.deck.front .card .price b { font-family: var(--rounded); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.deck.front .card .price span { font-size: 13px; opacity: .9; }
+.deck.front .stack { padding-bottom: 10px; }
+/* deck:end */
+
+  </style>
+</helmet>
+<div class="board">
+  <div class="bh">
+    <div class="lab">II · Deck <span>Design canvas · 2026-09-19 · One idea · the app is the boat</span></div>
+    <h1>The app is the boat</h1>
+    <p class="lede">The one document a dive shop cannot get wrong is the manifest: who is aboard, and who is not. The captain signs it; the coast guard asks for it. Deck draws the boat. Each hull is an object in its own colour with its seats laid out from bow to stern; a departure is that boat on that day, and its seats are the record — a seat fills when someone books, turns green when they step aboard, red when they cannot board, and stays open when nobody has taken it. Roll call is tapping seats. The count after the dive is the same picture. The home is today's boats, stacked like cards; the shop itself is the card at the bottom.</p>
+    <div class="strip">
+      <div><h3>Feels like</h3><p><b>Wallet, and a marina chalkboard.</b> Objects you recognise before you read a word. A captain looks at the hull and knows the morning; a diver looks at the storefront and sees the empty seat they are about to take.</p></div>
+      <div><h3>What organises it</h3><p><b>The vessel.</b> A boat has seats and a helm; a shore dive is a beach with a line of divers; a pool session is a pool; a course is the pool and a classroom. A diver is found through a seat or by search; money and messages sit on the shop's own card.</p></div>
+      <div><h3>Cost · risk</h3><p><b>5–6 sessions, one schema row.</b> Each hull takes a colour once in Settings (<code>boats.hull_color</code>); seats are never numbered and never assigned, so no booking changes — the picture is the count made spatial. The risk is implied precision: a seat map that looks like a seating plan. The rule: no numbers on seats, ever.</p></div>
+    </div>
+  </div>
+
+  <div class="cap"><b>In a pocket</b> · the home at 6:40 AM — the stack — and Mantis II's page at 6:58 · 390</div>
+  <div class="frames">
+    <!--home:start--><div class="phone device"><div class="app3 deck ph"><i class="island"></i>
+      <div class="sb"><span>6:40</span><span class="sig"><b></b><i></i></span></div>
+      <div class="top"><h1 class="lt">Thursday</h1><svg class="ic" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg><svg class="ic" viewBox="0 0 24 24"><circle cx="10.6" cy="10.6" r="6.3"/><path d="M15.3 15.3 20 20"/></svg></div>
+      <div class="sum">August 27 · 3 boats · 23 divers · seas 1 ft, wind E 6</div>
+      <div class="stack">
+        <div class="card mantis">
+          <div class="hd"><span class="t">7:00</span><span class="boat">Mantis II</span><span class="count">10<small>of 12</small></span></div>
+          <div class="ttl">Two-Tank Reef</div>
+          <div class="site">Molasses Reef, then French Reef · lines off in 20 min</div>
+          <svg class="hull" viewBox="0 0 382 150" xmlns="http://www.w3.org/2000/svg" aria-label=""><path d="M16,26 L278,26 C330,26 360,52 374,75 C360,98 330,124 278,124 L16,124 Q6,124 6,114 L6,36 Q6,26 16,26 Z" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><line x1="16" x2="298" y1="75" y2="75" stroke="rgba(255,255,255,.25)" stroke-dasharray="2 5"/><rect x="24" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="41" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">RN</text><rect x="66" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="83" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">HL</text><rect x="108" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="125" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">BC</text><rect x="150" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="167" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">EF</text><rect x="192" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="209" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">IC</text><rect x="234" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="251" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">NP</text><rect x="24" y="84" width="34" height="32" rx="9" fill="#ffffff" /><text x="41" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">HM</text><rect x="66" y="84" width="34" height="32" rx="9" fill="#ffffff" /><text x="83" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">BO</text><rect x="108" y="84" width="34" height="32" rx="9" fill="#ff3b30" /><text x="125" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">GM</text><rect x="150" y="84" width="34" height="32" rx="9" fill="#ff3b30" /><text x="167" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">PS</text><rect x="192" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="234" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><circle cx="322" cy="56" r="12" fill="rgba(255,255,255,.22)" stroke="rgba(255,255,255,.8)" stroke-width="1.5"/><text x="322" y="60" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">KT</text><circle cx="322" cy="94" r="12" fill="rgba(255,255,255,.22)" stroke="rgba(255,255,255,.8)" stroke-width="1.5"/><text x="322" y="98" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">SM</text><circle cx="334" cy="75" r="9" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><circle cx="334" cy="75" r="2.5" fill="rgba(255,255,255,.75)"/></svg>
+          <div class="legend"><span><i class="g"></i>6 here</span><span><i class="w"></i>2 to come</span><span><i class="r"></i>2 can't board</span><span><i class="o"></i>2 open</span></div>
+          <div class="flag"><span class="dot red"></span>Grace's card, Priya's waiver — fix before lines off</div>
+        </div>
+        <div class="card mantis peek">
+          <div class="hd"><span class="t">1:00<small>PM</small></span><span class="boat">Mantis II</span><span class="count">12<small>of 12</small></span></div>
+          <div class="ttl">Wreck Trip — Spiegel Grove</div>
+          <div class="flag"><span class="dot red"></span>No crew assigned · Tomás has no card for a deep wreck</div>
+        </div>
+        <div class="card skiff peek">
+          <div class="hd"><span class="t">7:30<small>PM</small></span><span class="boat">Skiff</span><span class="count">3<small>of 8</small></span></div>
+          <div class="ttl">Night Dive — City of Washington</div>
+          <div class="flag"><span class="dot amb"></span>5 seats open · no last-minute deal sent</div>
+        </div>
+        <div class="card shop">
+          <div class="hd"><span class="t">At the desk</span><span class="count" style="font-size:17px">4</span></div>
+          <div class="list">
+            <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Priya Sharma's $95</div><div class="why">Paid at 6:02 · Stripe hasn't confirmed</div></div><span class="btn">Check</span></div>
+            <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Emmet O'Brien, Friday 7:00</div><div class="why">Booking left unfinished</div></div><span class="btn">Finish</span></div>
+            <div class="row"><span class="dot tint"></span><div class="lead"><div class="name">3 messages</div><div class="why">Grace, Priya and Ravi wrote back</div></div><span class="btn">Read</span></div>
+            <div class="row"><span class="dot tint"></span><div class="lead"><div class="name">1 review</div><div class="why">Lars P. · Wreck Trip — Duane · five stars</div></div><span class="btn">Read</span></div>
+          </div>
+        </div>
+        <div class="fn sec2" style="padding:6px 4px 0">Tomorrow · Mantis II twice · 13 of 24 ›</div>
+      </div>
+    </div></div><!--home:end-->
+
+    <div class="phone device"><div class="app3 deck ph"><i class="island"></i>
+      <div class="boatpage mantis">
+        <div class="sb"><span>6:58</span><span class="sig"><b></b><i></i></span></div>
+        <div class="navbar"><span class="back"><svg class="ic" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>Thursday</span><span class="ttl" style="opacity:.85">2 min to lines off</span><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="6" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="18" r="1.4"/></svg></div>
+        <div class="hero"><div class="t">7:00</div><div class="ttl">Two-Tank Reef</div><div class="sub">Mantis II · Keiko Tanaka, Sal Moretti · Molasses, then French</div></div>
+        <svg class="hull" viewBox="0 0 382 150" xmlns="http://www.w3.org/2000/svg" aria-label=""><path d="M16,26 L278,26 C330,26 360,52 374,75 C360,98 330,124 278,124 L16,124 Q6,124 6,114 L6,36 Q6,26 16,26 Z" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><line x1="16" x2="298" y1="75" y2="75" stroke="rgba(255,255,255,.25)" stroke-dasharray="2 5"/><rect x="24" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="41" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">RN</text><rect x="66" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="83" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">HL</text><rect x="108" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="125" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">BC</text><rect x="150" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="167" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">EF</text><rect x="192" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="209" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">IC</text><rect x="234" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="251" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">NP</text><rect x="24" y="84" width="34" height="32" rx="9" fill="#ffffff" /><text x="41" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">HM</text><rect x="66" y="84" width="34" height="32" rx="9" fill="#ffffff" /><text x="83" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">BO</text><rect x="108" y="84" width="34" height="32" rx="9" fill="#ff3b30" /><text x="125" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">GM</text><rect x="150" y="84" width="34" height="32" rx="9" fill="#ff3b30" /><text x="167" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">PS</text><rect x="192" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="234" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><circle cx="322" cy="56" r="12" fill="rgba(255,255,255,.22)" stroke="rgba(255,255,255,.8)" stroke-width="1.5"/><text x="322" y="60" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">KT</text><circle cx="322" cy="94" r="12" fill="rgba(255,255,255,.22)" stroke="rgba(255,255,255,.8)" stroke-width="1.5"/><text x="322" y="98" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">SM</text><circle cx="334" cy="75" r="9" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><circle cx="334" cy="75" r="2.5" fill="rgba(255,255,255,.75)"/></svg>
+        <div class="legend"><span><i class="g"></i>6 here</span><span><i class="w"></i>2 to come</span><span><i class="r"></i>2 can't board</span><span><i class="o"></i>2 open</span></div>
+      </div>
+      <div class="body">
+        <div class="gh"><span class="ttl">Before lines off</span><span class="meta">2</span></div>
+        <div class="list">
+          <div class="row"><span class="seat r">GM</span><div class="lead"><div class="name">Grace Mensah</div><div class="why">Advanced card needs a look · she's here</div></div><span class="btn">Look</span></div>
+          <div class="row"><span class="seat r">PS</span><div class="lead"><div class="name">Priya Sharma</div><div class="why">Waiver not signed · she's here</div></div><span class="btn">Sign here</span></div>
+        </div>
+        <div class="gh"><span class="ttl">Seats</span><span class="meta">10 of 12</span></div>
+        <div class="list">
+          <div class="row"><span class="seat g">RN</span><div class="lead"><div class="name">Ravi Nair</div><div class="why">Rescue · own gear</div></div><span class="state">Here</span></div>
+          <div class="row"><span class="seat g">HL</span><div class="lead"><div class="name">Hannah Liu</div><div class="why">Open Water · rental, no size yet</div></div><span class="state amb">Size</span></div>
+          <div class="row"><span class="seat g">BC</span><div class="lead"><div class="name">Ben Carter</div><div class="why">Advanced · rental, no size yet</div></div><span class="state amb">Size</span></div>
+          <div class="row"><span class="seat g">EF</span><div class="lead"><div class="name">Emma Fischer</div><div class="why">Open Water · buddy of Ines</div></div><span class="state">Here</span></div>
+          <div class="row"><span class="seat g">IC</span><div class="lead"><div class="name">Ines Costa</div><div class="why">Advanced · buddy of Emma</div></div><span class="state">Here</span></div>
+          <div class="row"><span class="seat g">NP</span><div class="lead"><div class="name">Nadia Petrov</div><div class="why">Open Water · no emergency contact</div></div><span class="state amb">Ask</span></div>
+          <div class="row"><span class="seat">HM</span><div class="lead"><div class="name">Hugo Marsh</div><div class="why">Open Water</div></div><span class="state">Not yet</span></div>
+          <div class="row"><span class="seat">BO</span><div class="lead"><div class="name">Ben Okafor</div><div class="why">Advanced</div></div><span class="state">Not yet</span></div>
+          <div class="row"><span class="seat o"></span><div class="lead"><div class="name sec2">Open seat</div></div><span class="btn">Seat a walk-in</span></div>
+        </div>
+      </div>
+      <div class="stick"><span class="btn lg ink">Roll call</span></div>
+    </div></div>
+  </div>
+
+  <div class="cap"><b>On a desk</b> · the home at 6:40 AM — the shelf · 1280 · light</div>
+  <div class="frames">
+  <div class="frame desktop"><div class="app3 deck">
+    <div class="deskbar"><span class="shop"><span class="mark">BM</span>Blue Mantis Divers</span><span class="date">Thursday, August 27</span><span class="search"><svg class="ic s" viewBox="0 0 24 24"><circle cx="10.6" cy="10.6" r="6.3"/><path d="M15.3 15.3 20 20"/></svg>Search anyone, any boat</span><span class="me"><span class="avatar">DR</span>Dana</span></div>
+    <div class="deskhead"><h1 class="lt">Today</h1><p class="sum">3 boats · 23 divers · seas 1 ft, wind E 6 kn · sunrise 7:02, sunset 7:44</p></div>
+    <div class="shelf">
+      <div class="card mantis">
+        <div class="hd"><span class="t">7:00</span><span class="boat">Mantis II</span><span class="count">10<small>of 12</small></span></div>
+        <div class="ttl">Two-Tank Reef</div><div class="site">Molasses, then French · Keiko, Sal · 20 min</div>
+        <svg class="hull" viewBox="0 0 382 150" xmlns="http://www.w3.org/2000/svg" aria-label=""><path d="M16,26 L278,26 C330,26 360,52 374,75 C360,98 330,124 278,124 L16,124 Q6,124 6,114 L6,36 Q6,26 16,26 Z" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><line x1="16" x2="298" y1="75" y2="75" stroke="rgba(255,255,255,.25)" stroke-dasharray="2 5"/><rect x="24" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="41" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">RN</text><rect x="66" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="83" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">HL</text><rect x="108" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="125" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">BC</text><rect x="150" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="167" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">EF</text><rect x="192" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="209" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">IC</text><rect x="234" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="251" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">NP</text><rect x="24" y="84" width="34" height="32" rx="9" fill="#ffffff" /><text x="41" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">HM</text><rect x="66" y="84" width="34" height="32" rx="9" fill="#ffffff" /><text x="83" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">BO</text><rect x="108" y="84" width="34" height="32" rx="9" fill="#ff3b30" /><text x="125" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">GM</text><rect x="150" y="84" width="34" height="32" rx="9" fill="#ff3b30" /><text x="167" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">PS</text><rect x="192" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="234" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><circle cx="322" cy="56" r="12" fill="rgba(255,255,255,.22)" stroke="rgba(255,255,255,.8)" stroke-width="1.5"/><text x="322" y="60" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">KT</text><circle cx="322" cy="94" r="12" fill="rgba(255,255,255,.22)" stroke="rgba(255,255,255,.8)" stroke-width="1.5"/><text x="322" y="98" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">SM</text><circle cx="334" cy="75" r="9" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><circle cx="334" cy="75" r="2.5" fill="rgba(255,255,255,.75)"/></svg>
+        <div class="legend"><span><i class="g"></i>6 here</span><span><i class="w"></i>2 to come</span><span><i class="r"></i>2 can't board</span><span><i class="o"></i>2 open</span></div>
+        <div class="flag"><span class="dot red"></span>Grace's card, Priya's waiver</div>
+      </div>
+      <div class="card mantis">
+        <div class="hd"><span class="t">1:00<small>PM</small></span><span class="boat">Mantis II</span><span class="count">12<small>of 12</small></span></div>
+        <div class="ttl">Wreck Trip</div><div class="site">Spiegel Grove · deep wreck · no crew yet</div>
+        <svg class="hull" viewBox="0 0 382 150" xmlns="http://www.w3.org/2000/svg" aria-label=""><path d="M16,26 L278,26 C330,26 360,52 374,75 C360,98 330,124 278,124 L16,124 Q6,124 6,114 L6,36 Q6,26 16,26 Z" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><line x1="16" x2="298" y1="75" y2="75" stroke="rgba(255,255,255,.25)" stroke-dasharray="2 5"/><rect x="24" y="34" width="34" height="32" rx="9" fill="#ffffff" /><text x="41" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">AK</text><rect x="66" y="34" width="34" height="32" rx="9" fill="#ffffff" /><text x="83" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">LP</text><rect x="108" y="34" width="34" height="32" rx="9" fill="#ffffff" /><text x="125" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">MS</text><rect x="150" y="34" width="34" height="32" rx="9" fill="#ffffff" /><text x="167" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">JW</text><rect x="192" y="34" width="34" height="32" rx="9" fill="#ffffff" /><text x="209" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">CD</text><rect x="234" y="34" width="34" height="32" rx="9" fill="#ffffff" /><text x="251" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">RB</text><rect x="24" y="84" width="34" height="32" rx="9" fill="#ffffff" /><text x="41" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">SY</text><rect x="66" y="84" width="34" height="32" rx="9" fill="#ffffff" /><text x="83" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">OG</text><rect x="108" y="84" width="34" height="32" rx="9" fill="#ffffff" /><text x="125" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">PL</text><rect x="150" y="84" width="34" height="32" rx="9" fill="#ffffff" /><text x="167" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">EH</text><rect x="192" y="84" width="34" height="32" rx="9" fill="#ffffff" /><text x="209" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">DN</text><rect x="234" y="84" width="34" height="32" rx="9" fill="#ff3b30" /><text x="251" y="104" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">TF</text><circle cx="334" cy="75" r="9" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><circle cx="334" cy="75" r="2.5" fill="rgba(255,255,255,.75)"/></svg>
+        <div class="legend"><span><i class="w"></i>12 booked</span><span><i class="r"></i>1 can't board</span></div>
+        <div class="flag"><span class="dot red"></span>No crew assigned · Tomás has no deep card</div>
+      </div>
+      <div class="card skiff">
+        <div class="hd"><span class="t">7:30<small>PM</small></span><span class="boat">Skiff</span><span class="count">3<small>of 8</small></span></div>
+        <div class="ttl">Night Dive</div><div class="site">City of Washington · Keiko · sunset 7:44</div>
+        <svg class="hull" viewBox="0 0 298 150" xmlns="http://www.w3.org/2000/svg" aria-label=""><path d="M16,26 L194,26 C246,26 276,52 290,75 C276,98 246,124 194,124 L16,124 Q6,124 6,114 L6,36 Q6,26 16,26 Z" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><line x1="16" x2="214" y1="75" y2="75" stroke="rgba(255,255,255,.25)" stroke-dasharray="2 5"/><rect x="24" y="34" width="34" height="32" rx="9" fill="#ffffff" /><text x="41" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">MR</text><rect x="66" y="34" width="34" height="32" rx="9" fill="#ffffff" /><text x="83" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">JB</text><rect x="108" y="34" width="34" height="32" rx="9" fill="#ffffff" /><text x="125" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d1d1f">OP</text><rect x="150" y="34" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="24" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="66" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="108" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="150" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><circle cx="238" cy="56" r="12" fill="rgba(255,255,255,.22)" stroke="rgba(255,255,255,.8)" stroke-width="1.5"/><text x="238" y="60" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">KT</text><circle cx="250" cy="75" r="9" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><circle cx="250" cy="75" r="2.5" fill="rgba(255,255,255,.75)"/></svg>
+        <div class="legend"><span><i class="w"></i>3 booked</span><span><i class="o"></i>5 open</span></div>
+        <div class="flag"><span class="dot amb"></span>No last-minute deal sent</div>
+      </div>
+    </div>
+    <div class="below">
+      <div class="week">
+        <div class="gh"><span class="ttl">The week</span><span class="meta">62 of 84 seats</span></div>
+        <div class="row today"><span class="d">Thu<small>27</small></span><div class="boats"><span class="mini mantis"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>7:00 · 10</span><span class="mini mantis"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>1:00 · full</span><span class="mini skiff"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></span>7:30 · 3</span></div></div>
+        <div class="row"><span class="d">Fri<small>28</small></span><div class="boats"><span class="mini mantis"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></span>7:00 · 8</span><span class="mini mantis"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>1:00 · 5</span></div></div>
+        <div class="row"><span class="d">Sat<small>29</small></span><div class="boats"><span class="mini mantis"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>7:00 · 11</span><span class="mini mantis"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>11:00 · full, 2 waiting</span><span class="mini skiff"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></span>3:00 · 4</span></div></div>
+        <div class="row"><span class="d">Sun<small>30</small></span><div class="boats"><span class="mini mantis"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></span>7:00 · 7</span><span class="mini mantis"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>1:00 · 3</span></div></div>
+        <div class="row"><span class="d">Mon<small>31</small></span><div class="boats"><span class="mini mantis"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>7:00 · 4</span></div></div>
+        <div class="row"><span class="d">Tue<small>1</small></span><div class="boats"><span class="mini mantis"><span class="pips"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>7:00 · 2</span><span class="mini pool"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>9:00 · Open Water · 6</span></div></div>
+        <div class="row"><span class="d">Wed<small>2</small></span><div class="boats"><span class="fn sec2">No boats · four people asked for this day</span></div></div>
+      </div>
+      <div>
+        <div class="gh"><span class="ttl">At the desk</span><span class="meta">4</span></div>
+        <div class="card shop" style="padding-top:6px">
+          <div class="list">
+            <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Priya Sharma's $95</div><div class="why">Paid at 6:02 · Stripe hasn't confirmed</div></div><span class="btn">Check</span></div>
+            <div class="row"><span class="dot amb"></span><div class="lead"><div class="name">Emmet O'Brien, Friday 7:00</div><div class="why">Booking left unfinished</div></div><span class="btn">Finish</span></div>
+            <div class="row"><span class="dot tint"></span><div class="lead"><div class="name">3 messages</div><div class="why">Grace, Priya and Ravi wrote back</div></div><span class="btn">Read</span></div>
+            <div class="row"><span class="dot tint"></span><div class="lead"><div class="name">1 review</div><div class="why">Lars P. · Wreck Trip — Duane · five stars</div></div><span class="btn">Read</span></div>
+          </div>
+        </div>
+        <div class="gh"><span class="ttl">Asked for</span><span class="meta">2 days</span></div>
+        <div class="list">
+          <div class="row"><div class="lead"><div class="name">Wed, Sep 2 · four people</div><div class="why">"could make the 2nd if there's a boat"</div></div><span class="btn">Put Mantis II out</span></div>
+          <div class="row"><div class="lead"><div class="name">Sat, Sep 5 · Lars P.</div><div class="why">asks for a Duane wreck day</div></div><span class="state">Waiting</span></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  </div>
+
+  <div class="cap"><b>After dark, and outside</b> · the night roll call on Skiff at 7:26 PM · the storefront: the seat you are about to take · 390</div>
+  <div class="frames">
+    <div class="phone device"><div class="app3 deck night ph"><i class="island"></i>
+      <div class="boatpage skiff">
+        <div class="sb"><span>7:26</span><span class="sig"><b></b><i></i></span></div>
+        <div class="navbar"><span class="back"><svg class="ic" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>Today</span><span class="ttl" style="opacity:.85">Roll call</span><span class="fn w6" style="opacity:.9">Glare</span></div>
+        <div class="hero"><div class="t">7:30<small>PM</small></div><div class="ttl">Night Dive</div><div class="sub">Skiff · Keiko Tanaka · City of Washington · sunset in 18 min</div></div>
+        <svg class="hull" viewBox="0 0 298 150" xmlns="http://www.w3.org/2000/svg" aria-label=""><path d="M16,26 L194,26 C246,26 276,52 290,75 C276,98 246,124 194,124 L16,124 Q6,124 6,114 L6,36 Q6,26 16,26 Z" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><line x1="16" x2="214" y1="75" y2="75" stroke="rgba(255,255,255,.25)" stroke-dasharray="2 5"/><rect x="24" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="41" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">MR</text><rect x="66" y="34" width="34" height="32" rx="9" fill="#34c759" /><text x="83" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">JB</text><rect x="108" y="34" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="2"/><text x="125" y="54" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">OP</text><rect x="150" y="34" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="24" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="66" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="108" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="150" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><circle cx="238" cy="56" r="12" fill="rgba(255,255,255,.22)" stroke="rgba(255,255,255,.8)" stroke-width="1.5"/><text x="238" y="60" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">KT</text><circle cx="250" cy="75" r="9" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><circle cx="250" cy="75" r="2.5" fill="rgba(255,255,255,.75)"/></svg>
+        <div class="big"><b>2</b><span>of 3 aboard · tap a seat as they step on</span></div>
+      </div>
+      <div class="body">
+        <div class="gh"><span class="ttl">Seats</span><span class="meta">3 booked</span></div>
+        <div class="list">
+          <div class="row"><span class="tap on"><svg class="ic s" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><div class="lead"><div class="name">Mia Rossi</div><div class="why">Advanced · torch, backup torch</div></div></div>
+          <div class="row"><span class="tap on"><svg class="ic s" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><div class="lead"><div class="name">Jonas Berg</div><div class="why">Open Water · first dive since 2019 · with Keiko</div></div></div>
+          <div class="row"><span class="tap"></span><div class="lead"><div class="name">Owen Park</div><div class="why">Advanced · not seen yet</div></div><span class="state">Call</span></div>
+        </div>
+        <div class="gh"><span class="ttl">Tonight</span><span class="meta">moon up till 1:20</span></div>
+        <div class="list">
+          <div class="row"><div class="lead"><div class="name">Lines off 7:50 · in the water 8:10</div><div class="why">Slack till 8:40, then flood · count on the surface at 9:05</div></div></div>
+        </div>
+      </div>
+      <div class="stick"><span class="btn lg ink">Everyone aboard · lines off</span></div>
+    </div></div>
+
+    <div class="phone device"><div class="app3 deck front ph"><i class="island"></i>
+      <div class="sb"><span>6:40</span><span class="sig"><b></b><i></i></span></div>
+      <div class="shopname">Blue Mantis Divers</div>
+      <div class="shoptag">Key Largo · two boats, six reefs · today: seas 1 ft, water 84°</div>
+      <div class="stack">
+        <div class="card skiff">
+          <div class="hd"><span class="t">7:30<small>PM</small></span><span class="boat">Tonight · Skiff</span><span class="count">5<small>seats</small></span></div>
+          <div class="ttl">Night Dive — City of Washington</div>
+          <div class="site">Advanced, or with a guide · lines off 7:50 · back by 9:30</div>
+          <svg class="hull" viewBox="0 0 298 150" xmlns="http://www.w3.org/2000/svg" aria-label=""><path d="M16,26 L194,26 C246,26 276,52 290,75 C276,98 246,124 194,124 L16,124 Q6,124 6,114 L6,36 Q6,26 16,26 Z" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><line x1="16" x2="214" y1="75" y2="75" stroke="rgba(255,255,255,.25)" stroke-dasharray="2 5"/><rect x="24" y="34" width="34" height="32" rx="9" fill="rgba(255,255,255,.28)" /><rect x="66" y="34" width="34" height="32" rx="9" fill="rgba(255,255,255,.28)" /><rect x="108" y="34" width="34" height="32" rx="9" fill="rgba(255,255,255,.28)" /><rect x="150" y="34" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="24" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="66" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="108" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="150" y="84" width="34" height="32" rx="9" fill="none" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3" stroke-width="1.5"/><circle cx="238" cy="56" r="12" fill="rgba(255,255,255,.22)" stroke="rgba(255,255,255,.8)" stroke-width="1.5"/><text x="238" y="60" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">KT</text><circle cx="250" cy="75" r="9" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><circle cx="250" cy="75" r="2.5" fill="rgba(255,255,255,.75)"/></svg>
+          <div class="price"><b>$95</b><span>a seat · torch included</span></div>
+          <span class="btn fill" style="background:#fff;color:#0b6b5f">Take a seat</span>
+        </div>
+        <div class="card mantis peek">
+          <div class="hd"><span class="t">7:00</span><span class="boat">Tomorrow · Mantis II</span><span class="count">4<small>seats</small></span></div>
+          <div class="ttl">Two-Tank Reef — Molasses &amp; French</div>
+          <div class="price"><b>$120</b><span>Open Water</span></div>
+        </div>
+        <div class="card mantis peek">
+          <div class="hd"><span class="t">1:00<small>PM</small></span><span class="boat">Tomorrow · Mantis II</span><span class="count">7<small>seats</small></span></div>
+          <div class="ttl">Reef &amp; Wreck — Benwood</div>
+          <div class="price"><b>$120</b><span>Open Water</span></div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="gh"><span class="ttl">Learn</span><span class="meta">3 courses</span></div>
+        <div class="list">
+          <div class="row"><div class="lead"><div class="name">Open Water</div><div class="why">Next class Tuesday 9:00 · 2 places</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg></div>
+          <div class="row"><div class="lead"><div class="name">Advanced</div><div class="why">Weekends in September</div></div><svg class="ic s chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="foot">
+    <div><h3>What it deletes</h3><ul><li><b>The manifest as a table, the roll call as a list, check-in as a page.</b> One picture, three moments.</li><li><b>Capacity as a number.</b> An open seat is a shape you can see from the counter and from the storefront.</li><li><b>The four tabs and More.</b> A date, a search, the shop's card.</li></ul></div>
+    <div><h3>What it keeps</h3><ul><li><b>Every rule in <code>src/lib/readiness.ts</code> and <code>trip-admission.ts</code>:</b> a red seat is the same blocker, drawn.</li><li><b>Buddy pairs</b> sit beside each other; the split-team alert is two seats that stopped touching.</li><li><b>The offline manifest</b> is this boat, cached; it prints exactly as it looks.</li></ul></div>
+    <div><h3>Where it is weakest</h3><ul><li><b>A shore shop</b> gets a beach — honest, less delightful than a hull.</li><li><b>A boat of forty</b> needs seats at 18px; the picture holds, the initials go.</li><li><b>Money, messages and requests</b> are not boat-shaped; they live on the shop's card, which is the one card that reads like a list.</li></ul></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

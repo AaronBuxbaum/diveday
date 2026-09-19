@@ -597,7 +597,7 @@ recommendation recorded beside its call. What each landed in is the canvas READM
   greeting for a known phone, the sizes write, "Forget this phone", the row on the diver record.
   Waits on 20i, 20k and H-71 m.
 
-### 22. Nothing to explain (design complete; H-87 pending)
+### 22. Nothing to explain (superseded 2026-09-19 by 23; 22a–22c and 22i stand, 22d–22h dropped)
 
 The 2026-09-18 loop over the whole app as an Apple designer would read it, argued on
 [the canvas](../../design/canvases/20260918-nothing-to-explain/README.md) and proposed in ADR
@@ -609,9 +609,9 @@ owner's own reads (one ramp, two inks and one tint, nothing drawn, one shell, on
 by the device and glare by a word, creation as a sheet) and draws **three directions** as finished
 products on the same six screens — A · Inset (the group carries the page), B · Glass (the material),
 C · Figures (the number, on A's lists) — recommending C. The pick is the owner's (H-87), and it is the
-only call. Each slice runs the `design-implementation` skill: the component names the ADR, a test
-pins the rule, the canvas README's slice table moves, and the visual diffs are explained. 22a–22c may
-start on the ADR alone; 22d–22h start on the pick.
+only call. **Superseded 2026-09-19 by 23 (H-88)** on the owner's read of round 2: A, B and C were
+three skins on one skeleton, and H-87 is withdrawn. 22a, 22b, 22c and 22i stand and land first under
+any pick in 23; 22d–22h are dropped — 23a–23h replace them.
 
 - **22a** — one ramp on the device's face (round 2): `-apple-system` with Inter then Geist as the
   fallback, six sizes, figures in the rounded face with tabular digits, no capitals, no eyebrow, no
@@ -634,6 +634,42 @@ start on the ADR alone; 22d–22h start on the pick.
   a word in the roll call's and the counter's bar.
 - **22i** — the icons (round 2): `DiveDayIcon` re-cut on the 26px, 1.6-stroke grid, filled when
   current in a tab bar.
+
+### 23. One idea (design complete; H-88 pending)
+
+The 2026-09-19 loop, round 3 of the 2026-09-18 brief, argued on
+[the canvas](../../design/canvases/20260919-one-idea/README.md) and proposed in ADR
+[20260919-one-idea](../../architecture/decisions/20260919-one-idea.md). The owner's read of round 2:
+still not thinking big enough; the whole thing, top-down, needs complete rethinking. The ADR's answer:
+every canvas so far kept the app's skeleton — pages of rows under a nav of nouns — and argued about
+its clothes; an Apple product is one idea about the thing itself, and the test is to name the
+physical thing the app is. Three whole products are drawn on the same fiction and the same six
+screens: **I · Tide** (the app is the day), **II · Deck** (the app is the boat), **III · Chart** (the
+app is the sea); recommended I, with Deck's hull as the departure and Chart's chart as the site inside
+it. The pick is the owner's (H-88) and it is the only call. Round 2's surface rows (22a, 22b, 22i) and
+22c land first under any pick; everything below starts on it. Each slice runs the
+`design-implementation` skill: the component names the ADR, a test pins the rule, the canvas README's
+slice table moves, and the visual diffs are explained.
+
+- **23a** — the picked idea's home: `/shop/[shopSlug]` becomes the day (I), the stack (II) or the
+  chart (III), on round 2's surface; the Today spine's actions become the idea's own things — hours,
+  seats or tracks.
+- **23b** — the shell: the nav of nouns leaves (no tabs, no More, no dock); a date, a search and the
+  shop's name (I), the shop's card (II), the dock (III); `staff-destinations.ts` becomes the idea's
+  registry of places with two consumers; ⌘K stays as the search.
+- **23c** — the departure: the hour page with the strip (I), the hull with its seats (II), the voyage
+  on the chart (III); the four trip tabs one page; the roll call's one tap untouched beneath. Deck's
+  hull needs `boats.hull_color` (the **schema-change** skill).
+- **23d** — the storefront's front page on the idea, in Harbor's face and the shop's colour: the day
+  and the week (I), the boat you are about to book (II), where we go (III).
+- **23e** — the diver, the counter and the walk-in reached through the idea: search and a sheet over
+  the home; the person's record unchanged inside it.
+- **23f** — the week, the requests and the season on the idea: the Board becomes the week; a request
+  is a ghost day (I), a boat to put out (II), a track to add (III).
+- **23g** — the rest, one family per session: courses, gear, money, reviews, staffing, and Settings
+  behind the shop's name. Chart's coastline is its own ADR here.
+- **23h** — night and glare on the idea: by the hour (I) or by the device (II, III); glare as the
+  crew's word in the roll call's bar; the black-on-white twin held by a test.
 
 ## Concept-model simplification (proposed — each row needs an owner decision)
 

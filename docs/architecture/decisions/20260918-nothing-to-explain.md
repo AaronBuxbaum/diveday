@@ -1,13 +1,6 @@
 # 20260918-nothing-to-explain — One floor decided from the owner's own reads, three directions drawn as finished products, and one call
 
-- **Status:** Proposed — pending H-87, one call: A · Inset, B · Glass or C · Figures. **Round 1 read
-  2026-09-18 (Aaron Buxbaum, in session):** the core of the design is kind of ugly; evaluate the
-  visuals themselves; there are nicer, more Apple-like solutions. Round 2 (§7, below) evaluates round
-  1's own pixels, decides the surface, and redraws the three directions on it the same day; the call
-  is unchanged. The floor's
-  first three rows (22a–22c) may start on this ADR alone, because each is one of the owner's own
-  sentences from H-77's four reads taken at its word; every row from the shell onward waits on the
-  pick
+- **Status:** Superseded on 2026-09-19 by [20260919-one-idea](20260919-one-idea.md), on the owner's read of round 2: "You're still not thinking big enough. I think the way that our current design looks in its entirety, top-down, needs complete rethinking." §1's type, colour and decoration rows and §7's surface stand and are carried into the new ADR by reference; §2–§6 (the three directions, the recommendation, the call H-87, and the floor's shell rows) are withdrawn — A · Inset, B · Glass and C · Figures were three skins on the same skeleton. The **round 1 read** and round 2 are kept below as the record
 - **Date:** 2026-09-18
 - **Design:** [the canvas](../../design/canvases/20260918-nothing-to-explain/README.md) — eight
   boards on two pages. Round 1: the cover, then each direction redrawing the same six screens (the
