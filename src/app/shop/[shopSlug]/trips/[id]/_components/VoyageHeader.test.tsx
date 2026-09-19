@@ -2,7 +2,9 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { dayStripGeometry } from "@/lib/day-strip";
+import { TripAddDiverLink } from "./TripPageHeader";
 import { VoyageHeader } from "./VoyageHeader";
 
 afterEach(cleanup);
@@ -116,5 +118,56 @@ describe("VoyageHeader", () => {
     );
     const sky = container.querySelector(".sky");
     expect(sky?.textContent).toContain("Cancelled");
+  });
+
+  /**
+   * **The band's controls wear the band's ink.**
+   *
+   * This shipped with the way back and "Add diver" both in `text-primary`,
+   * which the captured pixels measured at **1.76:1** against `--sky-day` —
+   * the page's door and its primary act, both effectively invisible, with
+   * every component test, page test and repository guard green. So the two
+   * controls the real header passes are rendered here as the real header
+   * passes them, and the accent is what this refuses.
+   */
+  it("gives the way back and the action the sky's ink, never the accent", () => {
+    const { container } = render(
+      <VoyageHeader
+        scheme="day"
+        back={
+          <EyebrowBackLink onSky href="/shop/blue-mantis/schedule/board">
+            Board
+          </EyebrowBackLink>
+        }
+        hour="2:30 PM"
+        title="Two-Tank Reef"
+        line="Mantis I · 9 of 12 seats taken"
+        strip={null}
+        action={<TripAddDiverLink onSky href="#add-diver" label="Add diver" />}
+      />,
+    );
+    const back = container.querySelector('a[href="/shop/blue-mantis/schedule/board"]');
+    const action = container.querySelector('a[href="#add-diver"]');
+    expect(back?.className).toContain("text-(--sky-ink)");
+    expect(back?.className).not.toContain("text-primary");
+    expect(action?.className).toContain("text-(--sky-ink)");
+    expect(action?.className).not.toContain("text-primary");
+  });
+
+  /**
+   * The same two components off the sky keep the accent they have everywhere
+   * else — the fix is a band's ink, not a repaint of the app.
+   */
+  it("leaves both controls on the accent when they are not on a sky", () => {
+    const { container } = render(
+      <>
+        <EyebrowBackLink href="/shop/blue-mantis/schedule/board">Board</EyebrowBackLink>
+        <TripAddDiverLink href="#add-diver" label="Add diver" />
+      </>,
+    );
+    expect(
+      container.querySelector('a[href="/shop/blue-mantis/schedule/board"]')?.className,
+    ).toContain("text-primary");
+    expect(container.querySelector('a[href="#add-diver"]')?.className).toContain("text-primary");
   });
 });

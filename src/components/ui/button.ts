@@ -113,6 +113,22 @@ const variants = {
   /** Reads as inline text, but still claims a full touch target. */
   link: "text-primary hover:underline",
   /**
+   * **A control standing on the sky** — a `SkyBand`'s own chip.
+   *
+   * The band's ink does not follow the reader's colour scheme, because a sky is
+   * dark in both (`--sky-ink` is white at every stop). A control that keeps its
+   * own hue there goes illegible: the trip masthead's "Add diver" shipped in
+   * `link`'s accent and measured **1.76:1** against `--sky-day` in the captured
+   * pixels — under the 3:1 a graphical object owes, let alone the 4.5:1 of the
+   * word it is. A translucent white chip is the answer the day header's print
+   * door already found; this is that decision named once instead of twice.
+   *
+   * White at 18% over every gradient stop keeps the chip itself a visible
+   * object, and the label on it is the band's own ink, so it can never drift
+   * from the sentence beside it.
+   */
+  sky: "bg-white/18 text-(--sky-ink) backdrop-blur-sm hover:bg-white/28",
+  /**
    * Shape and touch target only — no colour of its own.
    *
    * For a control whose fill *is* the state of the row it sits in, so a

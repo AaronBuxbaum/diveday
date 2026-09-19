@@ -28,6 +28,16 @@ import type { SkyScheme } from "@/lib/sky-scheme";
  * props (`staffTranslator` is server-side only), and a rendered time carries
  * the shop's zone or it is hours wrong on the one screen a crew reads to
  * decide when to leave.
+ *
+ * **Everything handed to it wears the sky's ink.** `.sky` sets `color` for
+ * what inherits, and that covers the hour, the title and the line — but a
+ * control that states its own colour keeps it. This band shipped with the way
+ * back and "Add diver" both in the accent, which the captured pixels measured
+ * at **1.76:1** against `--sky-day`: the page's door and its primary act, both
+ * effectively invisible. `EyebrowBackLink` and `TripAddDiverLink` each take an
+ * `onSky` for that reason, and a new control put in `back`, `action` or
+ * `badge` either inherits or brings its own opaque box (the cancelled badge
+ * does, which is why it needs nothing).
  */
 
 export function VoyageHeader({

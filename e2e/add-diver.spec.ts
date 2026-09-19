@@ -85,9 +85,16 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
     "Diver added to the trip, but their waiver wasn’t emailed.",
   );
   await expect(page.getByRole("link", { name: "Walk-in Wanda" })).toBeVisible();
-  // The masthead ring owns the capacity read on the Trip surface now, so a
-  // full boat is stated in its accessible label without a second badge.
-  await expect(page.getByRole("img", { name: "1 of 1 seat, 0 open" })).toBeVisible();
+  // The line under the hour owns the capacity read on the Trip surface now
+  // (ADR 20260919-one-idea, decision I · Tide), so a full boat is stated in
+  // words there rather than in a ring's accessible label. Scoped to the
+  // masthead because the hull below draws the same count into its own
+  // `<title>`: this trip has no boat so no hull renders, but a spec that reads
+  // one sentence should say which one it means.
+  const voyage = page
+    .locator("header")
+    .filter({ has: page.getByRole("heading", { level: 1, name: title }) });
+  await expect(voyage.getByText(/1 of 1 seat taken/)).toBeVisible();
 
   const privateNotes = await openPrivateNotes(page);
   await privateNotes.scrollIntoViewIfNeeded();

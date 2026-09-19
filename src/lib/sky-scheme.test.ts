@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { skyReadingFor } from "./sky-scheme";
+import { daylightProgressAt, skyReadingFor } from "./sky-scheme";
 
 /**
  * Key Largo on the canvas's own morning — the fiction every Tide board is drawn
@@ -117,5 +117,46 @@ describe("skyReadingFor, with no place", () => {
     });
     expect(reading.basis).toBe("clock");
     expect(reading.scheme).toBe("day");
+  });
+});
+
+/**
+ * Pulled out of `skyReadingFor` so a surface can draw one day's arc and mark a
+ * *different* instant on it — which is what the departure page does: the band
+ * wears the sky over the shop now, the strip draws the sun of the day the boat
+ * sails, and the walked part of that arc is where the reader's clock lands on
+ * it. Before the split, the strip fed today's sunrise into a window made of
+ * next month's hours and the arc's ends mapped off the canvas, so a departure
+ * on another day had no sun drawn on it at all.
+ */
+describe("daylightProgressAt", () => {
+  const sunrise = AUGUST_27(7);
+  const sunset = AUGUST_27(19);
+
+  it("is 0 at sunrise, 1 at sunset, and the fraction between", () => {
+    expect(daylightProgressAt(sunrise, sunrise, sunset)).toBe(0);
+    expect(daylightProgressAt(sunset, sunrise, sunset)).toBe(1);
+    expect(daylightProgressAt(AUGUST_27(13), sunrise, sunset)).toBeCloseTo(0.5, 10);
+  });
+
+  it("is null outside that day's daylight, which is what a future departure is", () => {
+    expect(daylightProgressAt(AUGUST_27(6, 59), sunrise, sunset)).toBe(null);
+    expect(daylightProgressAt(AUGUST_27(19, 1), sunrise, sunset)).toBe(null);
+    // A week out: the arc is that departure's day, and the reader has walked
+    // none of it.
+    expect(daylightProgressAt(new Date(Date.UTC(2026, 7, 20, 17)), sunrise, sunset)).toBe(null);
+  });
+
+  it("is null where there is no daylight to be through", () => {
+    expect(daylightProgressAt(sunrise, null, sunset)).toBe(null);
+    expect(daylightProgressAt(sunrise, sunrise, null)).toBe(null);
+    expect(daylightProgressAt(sunrise, sunset, sunrise)).toBe(null);
+  });
+
+  it("still answers for `skyReadingFor`'s own instant, unchanged", () => {
+    const reading = skyReadingFor({ at: AUGUST_27(13), timeZone: ZONE, ...KEY_LARGO });
+    expect(reading.daylightProgress).toBe(
+      daylightProgressAt(AUGUST_27(13), reading.sunriseAt, reading.sunsetAt),
+    );
   });
 });

@@ -42,7 +42,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireShopSurface } from "@/lib/session";
-import { skyReadingFor } from "@/lib/sky-scheme";
+import { daylightProgressAt, skyReadingFor } from "@/lib/sky-scheme";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
@@ -499,6 +499,34 @@ export default async function ManageTripPage({
     longitude: shop.longitude,
   });
   /**
+   * **The sun the strip draws is the sun of the day the boat sails**, and that
+   * is not the sky the band wears.
+   *
+   * The band is the sky over the shop *now* — a departure read at 6:58 opens
+   * in the dawn the reader is standing in. The strip is the voyage, and its
+   * axis is the departure's own hours, so the arc drawn across it has to be
+   * that day's or it is a picture of some other day's sun.
+   *
+   * It was `voyageSky` for both, and the captured pixels are where that shows:
+   * `dayStripGeometry` maps the arc's ends through the window, so today's
+   * sunrise on an August window lands far off the left edge and the sun
+   * vanishes from the strip entirely — the two-day course capture had no arc
+   * at all. Same family as the tick bug on this PR's first review: a helper
+   * answered for "the day" and the caller meant a different one.
+   */
+  const departureSky = skyReadingFor({
+    at: trip.startsAt,
+    timeZone: shop.timezone,
+    latitude: shop.latitude,
+    longitude: shop.longitude,
+  });
+  /**
+   * The walked half of that arc is where the *reader's* clock sits on it, which
+   * is `departureSky`'s own progress only when the departure is today. Reading
+   * next week's charter walks none of it, and null is how the strip says so.
+   */
+  const voyageDaylight = daylightProgressAt(now, departureSky.sunriseAt, departureSky.sunsetAt);
+  /**
    * Each dive on the hour the boat is actually over the site, not the hour it
    * left the dock. `tideWindowsForDeparture` already lays the shop's own dock-day
    * rhythm over `startsAt` to answer exactly that, and a shop that has not set a
@@ -518,8 +546,8 @@ export default async function ManageTripPage({
     dayFrom: trip.startsAt,
     dayTo: trip.endsAt,
     now,
-    sunriseAt: voyageSky.sunriseAt,
-    sunsetAt: voyageSky.sunsetAt,
+    sunriseAt: departureSky.sunriseAt,
+    sunsetAt: departureSky.sunsetAt,
     marks: voyageMarks,
   });
   const voyageTicks = dayStripTicks({
@@ -555,9 +583,9 @@ export default async function ManageTripPage({
       from: voyageWindow.from,
       to: voyageWindow.to,
       now,
-      sunriseAt: voyageSky.sunriseAt,
-      sunsetAt: voyageSky.sunsetAt,
-      daylightProgress: voyageSky.daylightProgress,
+      sunriseAt: departureSky.sunriseAt,
+      sunsetAt: departureSky.sunsetAt,
+      daylightProgress: voyageDaylight,
       marks: [
         { id: "off", at: trip.startsAt },
         ...voyageDiveMarks.map(({ id, at }) => ({ id, at })),
@@ -705,7 +733,7 @@ export default async function ManageTripPage({
       <VoyageHeader
         scheme={voyageSky.scheme}
         back={
-          <EyebrowBackLink href={shopPath(shopSlug, "schedule", "board")}>
+          <EyebrowBackLink onSky href={shopPath(shopSlug, "schedule", "board")}>
             {t(STAFF_DESTINATION_LABEL_KEYS.board)}
           </EyebrowBackLink>
         }
@@ -725,6 +753,7 @@ export default async function ManageTripPage({
         action={
           cancelled ? undefined : (
             <TripAddDiverLink
+              onSky
               href="#add-diver"
               label={t("trips.addDiver.addDiver")}
               compactLabel={t("trips.about.add")}

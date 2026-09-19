@@ -89,15 +89,37 @@ export function skyReadingFor(input: {
   const now = input.at.getTime();
   const sunrise = sun.sunriseAt.getTime();
   const sunset = sun.sunsetAt.getTime();
-  const daylight = sunset - sunrise;
   return {
     scheme: almanacScheme(now, sunrise, sunset),
     basis: "almanac",
     sunriseAt: sun.sunriseAt,
     sunsetAt: sun.sunsetAt,
-    daylightProgress:
-      daylight > 0 && now >= sunrise && now <= sunset ? (now - sunrise) / daylight : null,
+    daylightProgress: daylightProgressAt(input.at, sun.sunriseAt, sun.sunsetAt),
   };
+}
+
+/**
+ * How far an instant sits through a **given** daylight window — 0 at sunrise,
+ * 1 at sunset, null anywhere outside it.
+ *
+ * `skyReadingFor` answers this for its own instant and its own day, which is
+ * all a band needs. A surface that draws one day's arc and marks *now* on it
+ * needs the two pulled apart: the departure page draws the sun of the day the
+ * boat sails, and the walked part of that arc is where the reader's clock sits
+ * on it — the same number only when they happen to be the same day. Reading a
+ * future departure walks none of it, which is what null says.
+ */
+export function daylightProgressAt(
+  at: Date,
+  sunriseAt: Date | null,
+  sunsetAt: Date | null,
+): number | null {
+  if (!sunriseAt || !sunsetAt) return null;
+  const sunrise = sunriseAt.getTime();
+  const daylight = sunsetAt.getTime() - sunrise;
+  if (!(daylight > 0)) return null;
+  const elapsed = at.getTime() - sunrise;
+  return elapsed >= 0 && elapsed <= daylight ? elapsed / daylight : null;
 }
 
 function almanacScheme(now: number, sunrise: number, sunset: number): SkyScheme {
