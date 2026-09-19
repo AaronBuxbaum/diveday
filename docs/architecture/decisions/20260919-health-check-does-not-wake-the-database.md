@@ -58,7 +58,14 @@ monitor that verifies the database and a database that scales to zero cannot bot
 2. Sentry reports the first failing user request immediately. A database that is down while anyone
    is using the product is a Sentry issue within seconds.
 3. Every cron's Sentry Cron Monitor is a dead-man's switch. A pass that cannot reach the database
-   fails its check-in, and the hourly passes make that at most an hour.
+   throws inside its `try`, which sends an `error` check-in rather than a silent 503, and the
+   hourly passes make that at most an hour.
+
+   This ADR is what makes that sentence load-bearing, and it was not true when the sentence was
+   first written: `/api/cron/integrations` was the one route of eleven with no check-in at all —
+   it captured exceptions, so a pass that ran and threw was visible and a pass that never ran was
+   not. `sourcery-ai` caught it on the pull request. The monitor is added in the same change, with
+   the route's first test, so the claim above holds for all eleven.
 
 `scripts/dev-server.mjs` warms `/status` instead of `/api/health`. The warm's whole job is to spend
 Turbopack's compile and PGlite's migrate-and-seed up front so the first real page does not, and a
