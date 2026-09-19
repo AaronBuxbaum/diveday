@@ -20,6 +20,7 @@ export {
 } from "@/db/integrations";
 export {
   dispatchDueIntegrationDeliveries,
+  INTEGRATIONS_CRON_CRONTAB,
   type IntegrationDispatchSummary,
 } from "./dispatcher";
 export {

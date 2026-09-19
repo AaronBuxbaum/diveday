@@ -6,7 +6,6 @@ import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
 
 export const maxDuration = 300;
-export const INTEGRATIONS_CRON_CRONTAB = "*/10 * * * *";
 
 /** Drain the provider-neutral integration outbox. The bearer gate runs first. */
 export async function GET(request: Request) {

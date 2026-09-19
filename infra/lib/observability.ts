@@ -174,10 +174,17 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     metricName: "DatabaseUnavailable",
     title: "Could not reach the database",
     why:
-      "Neon's free-tier compute suspends when its allowance is exhausted, which from inside DiveDay looks " +
-      "exactly like the database going away mid-day. This is the log-side twin of the external uptime check.",
+      "A Neon compute that is suspended, unreachable or refusing our credentials looks from inside DiveDay " +
+      "exactly like the database going away mid-day. This used to be the log-side twin of the external " +
+      "uptime check; since ADR 20260919-health-check-does-not-wake-the-database the uptime check does not " +
+      "read the database at all, so this metric and /status are the two things that report one that has.",
     events: [
-      "health.db_unavailable",
+      // `health.db_unavailable` was the first source here and is gone with the
+      // probe's query (ADR 20260919-health-check-does-not-wake-the-database).
+      // The metric keeps its name, threshold and response: what it means and
+      // what to do about it are unchanged, and the source below was always the
+      // one that catches a database failure nobody is looking at.
+      //
       // Added here rather than given its own metric: a new counted signal is
       // $0.40/month (the pricing note at the top of this file), and "could not
       // reach the database" is already exactly what this alarm means and
@@ -549,9 +556,12 @@ export const UPTIME_TARGETS: readonly UptimeTarget[] = [
     constructId: "HealthProbe",
     title: "DiveDay is unreachable from outside",
     why:
-      "The liveness probe answers 200 only when the process is serving *and* `select 1` round-trips " +
-      "through the same pool every request path uses, so one check separates 'the app is gone' from " +
-      "'the app is up and the database is not' without a second target.",
+      "The liveness probe answers 200 when the process is serving: DNS resolves here, TLS terminates " +
+      "and a route handler ran. It deliberately does not read the database -- Route 53's 30s interval " +
+      "lands about every two seconds once every checker region is counted, and a query at that cadence " +
+      "never lets a scale-to-zero compute reach its five-minute idle timeout (ADR " +
+      "20260919-health-check-does-not-wake-the-database). This target answers 'is the app gone'; " +
+      "/status answers 'is the database gone', on demand and without polling.",
     resourcePath: "/api/health",
     searchString: '"status":"ok"',
     requestIntervalSeconds: 30,
@@ -561,7 +571,7 @@ export const UPTIME_TARGETS: readonly UptimeTarget[] = [
     // flips the status the alarm below watches.
     failureThreshold: 3,
     response:
-      "Open https://dive.day/status and https://dive.day/api/health by hand. A 503 there is the database (Neon status, then docs/engineering/incident-response-runbook.md's restore section); no answer at all is the deployment or DNS, and the first move is a rollback rather than a diagnosis.",
+      "Open https://dive.day/status and https://dive.day/api/health by hand. No answer from either is the deployment or DNS, and the first move is a rollback rather than a diagnosis. /status is the one that reports the database (Neon status, then docs/engineering/incident-response-runbook.md's restore section); /api/health stays 200 through a database outage by design, so it is not the place to look for one.",
   },
 ];
 

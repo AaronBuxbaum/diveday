@@ -60,9 +60,12 @@ Do these in order. Steps 1 and 2 are the ones people skip and regret.
 1. **Write down the time and what you observed**, verbatim, before touching anything. A scratch file
    is fine. You will need this for the write-up and you will not remember it accurately in an hour.
 2. **Check the health probe.** `curl -i https://dive.day/api/health` — it answers
-   `{"status":"ok","commit":"<short sha>"}` with `200`, or `503` when the database check fails. The
-   `commit` field tells you which build is actually live, which is the fastest way to know whether a
-   rollback has landed or whether the bad deploy is still serving.
+   `{"status":"ok","commit":"<short sha>"}` with `200`, or does not answer at all. It does **not**
+   check the database (ADR 20260919-health-check-does-not-wake-the-database), so a `200` here rules
+   out "the deployment is gone" and nothing else. The `commit` field tells you which build is
+   actually live, which is the fastest way to know whether a rollback has landed or whether the bad
+   deploy is still serving. **For the database, open `https://dive.day/status`** — it runs the real
+   check in the request that renders it.
 3. **Set severity** from the ladder above, out loud, and commit to it.
 4. **Check whether a deploy just happened.** Vercel dashboard → the project → **Deployments**. If the
    most recent production deployment landed within the incident window, treat it as the cause until
@@ -145,7 +148,7 @@ Two targets, deliberately different in kind:
 
 | Target | URL | Checks | Alert on |
 | --- | --- | --- | --- |
-| Liveness probe | `https://dive.day/api/health` | The deployment is up **and** `select 1` round-trips through the same `getDb()` every request path uses. Answers `503` (not `200` with a flag) when the database check fails, so status-code alerting is enough | Two consecutive non-`200`s |
+| Liveness probe | `https://dive.day/api/health` | The deployment is up: DNS resolves here, TLS terminates, the server booted and a route handler ran. Deliberately **not** the database — at ~2s effective interval a `select 1` here pinned Neon's compute awake permanently (ADR 20260919-health-check-does-not-wake-the-database). The body must contain `"status":"ok"`, which is what stops a parked domain or CDN error shell reading as green | Two consecutive non-`200`s |
 | Public schedule | A real shop's `https://dive.day/s/<shopSlug>` | A full Server Component render against real data — the page a diver actually lands on. It is public by design (its own namespace, ADR 20260803-public-shop-namespace), so no credential is needed | Two consecutive non-`200`s, or a keyword check failing |
 
 The health probe alone is not enough: it deliberately does almost nothing, so it stays green while a
@@ -249,8 +252,8 @@ down once will let you down again.
 | Symptom | Look at |
 | --- | --- |
 | Site unreachable, no Sentry issues at all | The app isn't running to report anything. Vercel dashboard → deployment status; then DNS; then Vercel's status page. This is exactly the gap the uptime monitor covers |
-| `/api/health` returns 503 | The `select 1` failed. Neon console → project status and connection count; then whether `DATABASE_URL` was changed recently. `log("health.db_unavailable")` in the Vercel logs confirms it reached the handler |
-| `/api/health` is 200 but real pages 500 | Not an infrastructure problem — a rendering or query bug. Sentry issue + `commit` from the health response tells you which build introduced it |
+| `/status` says the database is down | Neon console → project status and connection count; then whether `DATABASE_URL` was changed recently. `/api/health` will still be `200` — it does not check the database, so it is not the place to look for this |
+| `/api/health` is 200 but real pages 500 | Either a rendering or query bug, or the database is down and only `/status` will say so. Check `/status` first, then the Sentry issue + `commit` from the health response for which build introduced it |
 | Health `commit` doesn't match what you deployed | The rollback hasn't propagated, or you rolled back to the wrong build. Re-check the deployment list against SHAs |
 | Reminders or recaps didn't send | Reminders: Sentry Cron Monitor `diveday-daily-tick`; recaps: `diveday-recaps`. A **missed** check-in means the respective endpoint was never called (cron entry, `CRON_SECRET`, platform); an **error** check-in means it ran and its scan threw. The recap scan is hourly and logs `cron_recaps.scan_failed`; the daily tick's per-scan Sentry issue carries a `cron_scan` tag naming which |
 | A repeating trip stopped putting new dates on the board | Sentry Cron Monitor `diveday-trip-series-roll`: a **missed** check-in means `/api/cron/trip-series` was never called, so every open-ended run's far edge has stopped advancing (it takes ~4 months to become visible to a diver). An **error** check-in means some series could not be rolled — the pass logs `cron_trip_series.roll_complete` with `seriesFailed`, and the usual cause is a run whose every instance was deleted or whose course was archived. Staff can always re-open one from its trip page's "Start repeating again" |
