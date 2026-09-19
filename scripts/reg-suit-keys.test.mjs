@@ -29,26 +29,49 @@ describe("resolveRegSuitKeys", () => {
     expect(keys).toMatchObject({ actualKey: HEAD, expectedKey: MAIN_FORK, stacked: false });
   });
 
-  // The property that makes a stack's diffs readable: each layer shows only its
-  // own pixels, because it compares against the layer below rather than main.
-  it("keys a stacked layer to the head of the layer below", () => {
+  // The whole of the change in ADR 20260919-stack-ci-cancels-superseded-layers,
+  // in one assertion. A stacked layer used to be keyed to the layer below's
+  // head, which only the layer below's own run could publish — so the layer
+  // above waited on it, and every middle layer had to spend six jobs to keep
+  // that promise. The fork point from `main` was published by `main`'s own run
+  // long ago, so nothing waits and a middle layer can skip everything.
+  it("keys a stacked layer to the stack's fork point from main, not the layer below", () => {
     const keys = resolveRegSuitKeys({
       env: {
         GITHUB_EVENT_NAME: "pull_request",
         PR_BASE_REF: "claude/thing-1-schema",
         PR_HEAD_SHA: HEAD,
+        DEFAULT_BRANCH: "main",
       },
       git: git({
         "rev-parse HEAD": HEAD,
+        "merge-base origin/main HEAD": MAIN_FORK,
+        // Present, and deliberately never asked for.
         "merge-base origin/claude/thing-1-schema HEAD": LAYER_ONE_HEAD,
       }),
     });
-    expect(keys).toMatchObject({ actualKey: HEAD, expectedKey: LAYER_ONE_HEAD, stacked: true });
+    expect(keys).toMatchObject({ actualKey: HEAD, expectedKey: MAIN_FORK, stacked: true });
   });
 
   // An auto-merged layer deletes its head branch, and this job runs 6-10
-  // minutes after the run starts.
+  // minutes after the run starts. Only for a pull request that targets the
+  // default branch: for a stacked layer `PR_BASE_SHA` *is* the layer below's
+  // head, and falling back to it would key exactly the commit this no longer
+  // wants to depend on.
   it("falls back to the event's base sha when the base branch is gone", () => {
+    const keys = resolveRegSuitKeys({
+      env: {
+        GITHUB_EVENT_NAME: "pull_request",
+        PR_BASE_REF: "main",
+        PR_BASE_SHA: MAIN_FORK,
+        PR_HEAD_SHA: HEAD,
+      },
+      git: git({ "rev-parse HEAD": HEAD, [`merge-base ${MAIN_FORK} HEAD`]: MAIN_FORK }),
+    });
+    expect(keys.expectedKey).toBe(MAIN_FORK);
+  });
+
+  it("refuses the layer below's head as a fallback for a stacked layer", () => {
     const keys = resolveRegSuitKeys({
       env: {
         GITHUB_EVENT_NAME: "pull_request",
@@ -56,9 +79,11 @@ describe("resolveRegSuitKeys", () => {
         PR_BASE_SHA: LAYER_ONE_HEAD,
         PR_HEAD_SHA: HEAD,
       },
-      git: git({ "rev-parse HEAD": HEAD, [`merge-base ${LAYER_ONE_HEAD} HEAD`]: LAYER_ONE_HEAD }),
+      // `origin/main` is not in the checkout, so there is no fork point to find.
+      git: git({ "rev-parse HEAD": HEAD }),
     });
-    expect(keys.expectedKey).toBe(LAYER_ONE_HEAD);
+    expect(keys.expectedKey).toBeNull();
+    expect(keys.source).toBe("nothing to compare against");
   });
 
   it("keys a push to main to the previous commit", () => {

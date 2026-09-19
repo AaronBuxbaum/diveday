@@ -4,42 +4,49 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 /**
- * A stack's middle layers skip the expensive half of CI, and every job in
- * `.github/workflows/ci.yml` says which half it is in.
+ * A stack's middle layers skip CI entirely, and every job in
+ * `.github/workflows/ci.yml` says how it arrives at that.
  *
  * A stacked pull request is an ordered chain, every layer pays the whole gate
  * below, and merging is bottom-up — so a middle layer's run answers a question
  * nobody asks: it lands only inside a group the bottom's run or the top's has
  * already spoken for, and the cascading rebase runs it in full the moment it
- * *becomes* the bottom. So its expensive jobs do not run at all, gated on
+ * *becomes* the bottom. So it runs nothing, gated on
  * `github.event.pull_request.stack`, which GitHub puts in the event payload
- * (ADR 20260827-stack-ci-skips-the-middle-layers).
+ * (ADR 20260919-stack-ci-cancels-superseded-layers).
  *
- * Two things can rot, and neither goes red on its own:
+ * There are two ways a job gets there, and each is a list below:
  *
- * 1. **A condition that drifts.** The expression is repeated verbatim on every
- *    job that carries it, because a job-level `if:` cannot read a workflow-level
- *    `env:` — the `env` context is not available there, so there is nowhere to
- *    factor it to. Six hand-copied predicates is six chances for one to lose a
- *    clause, and a wrong one fails *quietly*: the job runs when it should not
- *    (a wasted runner, invisible) or skips when it should not (a layer merged
- *    without its gate, and GitHub reports a skipped job as **successful**, so
- *    no check goes red either way). Byte-identical is the only version of this
- *    rule a text search can hold.
+ * 1. **It carries the condition itself.** The expression is repeated verbatim,
+ *    because a job-level `if:` cannot read a workflow-level `env:` — the `env`
+ *    context is not available there, so there is nowhere to factor it to. Each
+ *    hand-copied predicate is a chance for one to lose a clause, and a wrong
+ *    one fails *quietly*: the job runs when it should not (a wasted runner,
+ *    invisible) or skips when it should not (a layer merged without its gate,
+ *    and GitHub reports a skipped job as **successful**, so no check goes red
+ *    either way). Byte-identical is the only version of this rule a text search
+ *    can hold.
  *
- * 2. **A new job classified by accident.** Every job must appear in exactly one
- *    of the two lists below, so adding one is a decision rather than a default.
- *    Left out, a new expensive job silently runs on every layer forever; added
- *    to the wrong list, it takes the visual pipeline down with it — which is the
- *    reason the second list is not merely "the cheap ones".
+ * 2. **It reaches `changes` through `needs:`.** `changes` carries the
+ *    condition, and a skipped dependency skips its dependents by propagation,
+ *    so `build`, `visual`, `visual-report` and `real-postgres` state the
+ *    question once rather than five times. This guard walks the `needs:` graph
+ *    and fails if one of them stops reaching `changes` — a job quietly
+ *    re-rooted onto something else would start running on every layer again,
+ *    and nothing else would say so.
  *
- * `build`, `visual` and `visual-report` are in `RUNS_ON_EVERY_LAYER` and that is
- * load bearing: a stacked layer's reg-suit baseline is the head commit of the
- * layer directly below it (`scripts/reg-suit-keys.mjs`) and its report polls S3
- * for that snapshot (`scripts/wait-for-baseline.mjs`). A middle layer that never
- * published one leaves the layer above timing out and reporting every surface as
- * new under a reassuring `Changed: 0` — the pipeline's documented worst failure,
- * and the one AGENTS.md forbids merging on.
+ * Every job must appear in exactly one list, so adding one is a decision rather
+ * than a default. Left out, a new expensive job silently runs on every layer
+ * forever.
+ *
+ * **What changed on 2026-09-19.** `build`, `visual` and `visual-report` used to
+ * be exempt outright, and that exemption was load bearing: a stacked layer's
+ * reg-suit baseline was the head commit of the layer directly below it, so a
+ * middle layer that published no snapshot left the layer above timing out and
+ * reporting every surface as new. Every layer is keyed to the stack's fork
+ * point from the default branch now (`scripts/reg-suit-keys.mjs`), which the
+ * default branch's own run published long ago, so no layer waits on another and
+ * the exemption is gone with the reason for it.
  */
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -52,8 +59,12 @@ export const STACK_CONDITION = `    if: >-
       || github.event.pull_request.stack.base.ref == github.event.pull_request.base.ref
       || github.event.pull_request.stack.position == github.event.pull_request.stack.size)`;
 
-/** Jobs a middle layer skips. Each carries `STACK_CONDITION`, byte for byte. */
-export const SKIPS_A_MIDDLE_LAYER = [
+/** The job every propagating job must reach, and the only one whose skip is load bearing. */
+export const ROOT_JOB = "changes";
+
+/** Jobs that decide for themselves. Each carries `STACK_CONDITION`, byte for byte. */
+export const CARRIES_THE_CONDITION = [
+  ROOT_JOB,
   "repo-safeguards",
   "lint",
   "typecheck",
@@ -61,19 +72,12 @@ export const SKIPS_A_MIDDLE_LAYER = [
   "playwright",
 ];
 
-/** Jobs that run on every layer, and the reason each one has to. */
-export const RUNS_ON_EVERY_LAYER = new Map([
-  [
-    "changes",
-    "`build` needs its `code` output and `build` runs on every layer; a skipped dependency would skip `build` by propagation. It answers the stack question itself, as `middle_layer`",
-  ],
-  ["build", "`visual` needs it, and the visual path runs on every layer"],
-  ["visual", "the layer above is keyed to this layer's published snapshot"],
-  ["visual-report", "publishes the snapshot the layer above waits for"],
-  [
-    "real-postgres",
-    "reads `needs.changes.outputs.middle_layer` — the same question the condition asks, answered once in `changes` — because its dependency runs on every layer and cannot skip it by propagation",
-  ],
+/** Jobs that skip because `changes` did, and the `needs:` edge each one rides. */
+export const SKIPS_BY_PROPAGATION = new Map([
+  ["build", "needs `changes` for its `code` output"],
+  ["visual", "needs `build`, which needs `changes`"],
+  ["visual-report", "needs `visual` and `changes`"],
+  ["real-postgres", "needs `changes` for its `db` output"],
 ]);
 
 /** Every top-level job name in the workflow, in file order, with its block text. */
@@ -95,45 +99,73 @@ export function parseJobs(contents) {
   return jobs;
 }
 
+/**
+ * The jobs one job declares in `needs:`, in either spelling GitHub accepts —
+ * `needs: build` and `needs: [visual, changes]`.
+ */
+export function directNeeds(block) {
+  const line = /^ {4}needs:\s*(.+)$/m.exec(block ?? "");
+  if (!line) return [];
+  const value = line[1].trim();
+  const inner = value.startsWith("[") ? value.replace(/^\[|\]$/g, "") : value;
+  return inner
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+}
+
+/** Whether `job` reaches `ROOT_JOB` by any chain of `needs:` edges. */
+export function reachesRoot(job, jobs, seen = new Set()) {
+  for (const next of directNeeds(jobs.get(job))) {
+    if (next === ROOT_JOB) return true;
+    if (seen.has(next)) continue;
+    seen.add(next);
+    if (reachesRoot(next, jobs, seen)) return true;
+  }
+  return false;
+}
+
 /** Everything wrong with how `contents` classifies its jobs. */
 export function findStackCiSkipViolations(contents) {
   const violations = [];
   const jobs = parseJobs(contents);
 
-  for (const dead of ["needs: stack-priority", "scripts/stack-ci-priority.mjs"]) {
+  for (const dead of ["needs: stack-priority", "scripts/stack-ci-priority.mjs", "middle_layer"]) {
     if (contents.includes(dead)) {
       violations.push(
-        `\`${dead}\` survives. The yield job it belonged to is gone — a middle layer skips now rather than waiting.`,
+        `\`${dead}\` survives. A middle layer now skips \`${ROOT_JOB}\` itself, so every expensive job skips by propagation and none of them reads a separate answer.`,
       );
     }
   }
 
-  for (const job of SKIPS_A_MIDDLE_LAYER) {
+  for (const job of CARRIES_THE_CONDITION) {
     const block = jobs.get(job);
     if (block === undefined) {
       violations.push(
-        `\`${job}\` is listed as skipping a middle layer but is not a job in ${WORKFLOW}.`,
+        `\`${job}\` is listed as carrying the stack condition but is not a job in ${WORKFLOW}.`,
       );
     } else if (!block.includes(STACK_CONDITION)) {
       violations.push(`\`${job}\` does not carry the stack condition, byte for byte.`);
     }
   }
 
-  for (const [job, why] of RUNS_ON_EVERY_LAYER) {
+  for (const [job, edge] of SKIPS_BY_PROPAGATION) {
     const block = jobs.get(job);
     if (block === undefined) {
       violations.push(
-        `\`${job}\` is listed as running on every layer but is not a job in ${WORKFLOW}.`,
+        `\`${job}\` is listed as skipping by propagation but is not a job in ${WORKFLOW}.`,
       );
-    } else if (block.includes(STACK_CONDITION)) {
-      violations.push(`\`${job}\` carries the stack condition and must not: ${why}.`);
+    } else if (!reachesRoot(job, jobs)) {
+      violations.push(
+        `\`${job}\` no longer reaches \`${ROOT_JOB}\` through \`needs:\` (it ${edge}), so a middle layer would run it.`,
+      );
     }
   }
 
   for (const job of jobs.keys()) {
-    if (!SKIPS_A_MIDDLE_LAYER.includes(job) && !RUNS_ON_EVERY_LAYER.has(job)) {
+    if (!CARRIES_THE_CONDITION.includes(job) && !SKIPS_BY_PROPAGATION.has(job)) {
       violations.push(
-        `\`${job}\` is in neither list. Decide whether a stack's middle layer should skip it, and say so in scripts/check-stack-ci-skip.mjs.`,
+        `\`${job}\` is in neither list. Decide whether a stack's middle layer should skip it by carrying the condition or by depending on \`${ROOT_JOB}\`, and say so in scripts/check-stack-ci-skip.mjs.`,
       );
     }
   }
@@ -156,12 +188,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     );
     console.error(`\n${STACK_CONDITION}\n`);
     console.error(
-      "Never put it on `build`, `visual` or `visual-report`: the layer above is keyed to this layer's published snapshot, so a middle layer that skips them leaves the top reporting every surface as new (ADR 20260827-stack-ci-skips-the-middle-layers).",
+      `A job that does not carry it must reach \`${ROOT_JOB}\` through \`needs:\` instead, so it skips by propagation (ADR 20260919-stack-ci-cancels-superseded-layers).`,
     );
     process.exit(1);
   }
 
   console.log(
-    `stack-ci-skip: ${SKIPS_A_MIDDLE_LAYER.length} jobs a middle layer skips, ${RUNS_ON_EVERY_LAYER.size} that run on every layer`,
+    `stack-ci-skip: ${CARRIES_THE_CONDITION.length} jobs carry the stack condition, ${SKIPS_BY_PROPAGATION.size} skip by propagation`,
   );
 }
