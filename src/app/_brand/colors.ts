@@ -35,5 +35,5 @@ export const MARK_CORAL = "#ff6f61";
  */
 export const THEME_COLORS = [
   { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-  { media: "(prefers-color-scheme: dark)", color: "#0d222d" },
+  { media: "(prefers-color-scheme: dark)", color: "#1c1c1e" },
 ] as const;
