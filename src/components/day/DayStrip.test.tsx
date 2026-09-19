@@ -116,6 +116,39 @@ describe("DayStrip", () => {
     expect(labelRows(container)).toBe(2);
   });
 
+  /**
+   * **A long word needs more room than a time.** The clamp that keeps a label
+   * off the strip's edges holds its centre half a word in, and that half used
+   * to be a fixed figure tuned for "11:00 AM". The departure page labels its
+   * first dive with the site — "Molasses Reef" — and at the left end of a
+   * 390px phone it was clipped by the viewport. The room is the label's own now.
+   */
+  it("holds a long label further from the edge than a short one", () => {
+    const edge = dayStripGeometry({
+      from: at(7),
+      to: at(19),
+      now: at(10),
+      sunriseAt: at(7),
+      sunsetAt: at(19, 45),
+      daylightProgress: 0.2,
+      marks: [{ id: "first", at: at(7) }],
+    });
+    const roomOf = (label: string): string => {
+      cleanup();
+      const { container } = render(
+        <DayStrip geometry={edge} label="the day" markLabels={{ first: label }} />,
+      );
+      const node = [...container.querySelectorAll("span")].find(
+        (span) => span.textContent === label,
+      );
+      return node?.getAttribute("style") ?? "";
+    };
+    expect(roomOf("7:00")).toContain("clamp(1.75rem");
+    // Thirteen characters, so the clamp opens past the floor rather than
+    // letting half the word hang outside the picture.
+    expect(roomOf("Molasses Reef")).toContain("clamp(1.82rem");
+  });
+
   it("leaves both labels on one line when they do not touch", () => {
     const { container } = render(
       <DayStrip

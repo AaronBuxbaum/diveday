@@ -75,6 +75,22 @@ export function DayStrip({
   const centred = (x: number, room: string): string =>
     `clamp(${room}, ${px(x)}, calc(100% - ${room}))`;
 
+  /**
+   * How far in a label's centre must stay, for a label of this length.
+   *
+   * The clamp above holds a word off the edges, and the room it needs is half
+   * the word. A fixed figure was tuned for a time — "11:00 AM" is about 3.5rem
+   * at 11px, so 1.75rem — and a mark carrying anything longer hung off the
+   * strip: the departure page's first dive is labelled with its site, and
+   * "Molasses Reef" was clipped at the left edge of a 390px phone.
+   *
+   * 0.28rem per character is a semibold 11px average advance with a little
+   * slack, floored at the old figure so every existing caller places its times
+   * exactly where it did.
+   */
+  const roomFor = (text: string): string =>
+    `${Math.max(1.75, (text.length * 0.28) / 2).toFixed(2)}rem`;
+
   // Marks alternate rows only where they would otherwise collide, so a day with
   // three well-spaced boats reads on one line and a day with two at the same
   // hour still reads at all.
@@ -206,7 +222,7 @@ export function DayStrip({
                     ? "-translate-y-[calc(100%+1.5rem)]"
                     : "-translate-y-[calc(100%+0.625rem)]"
                 }`}
-                style={{ left: centred(mark.x, "1.75rem"), top: horizon }}
+                style={{ left: centred(mark.x, roomFor(markLabels[mark.id])), top: horizon }}
               >
                 {markLabels[mark.id]}
               </span>

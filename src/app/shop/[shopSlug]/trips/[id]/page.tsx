@@ -566,8 +566,13 @@ export default async function ManageTripPage({
       ticks: voyageTicks,
     }),
     label: t("trips.voyage.stripLabel", { title: trip.title }),
+    /**
+     * **Lines off carries a dot and no word.** Its time is the largest thing on
+     * the page, three centimetres above the strip — a label repeating it is the
+     * same fact twice, and on a short voyage it crowds the first dive's site
+     * name off the left edge as well.
+     */
     markLabels: {
-      off: formatTime(trip.startsAt, locale, shop.timezone),
       back: formatTime(trip.endsAt, locale, shop.timezone),
       ...Object.fromEntries(voyageDiveMarks.map(({ id, name }) => [id, name])),
     },
