@@ -73,9 +73,12 @@ describe("the hull", () => {
   });
 
   /**
-   * The whole defence against a seat map reading as a seating plan is that no
-   * number is ever drawn on one. The index exists to fill in booking order and
-   * nothing else, so nothing here may carry a seat's own number.
+   * A seat carries a box, a corner and a middle — geometry, and nothing a
+   * reader could take for a label. The index exists to fill in booking order
+   * and nothing else, so nothing here may carry a seat's own number; the day
+   * something like `station` or `bench` appears in this list is the day the
+   * picture has quietly become a seating plan, and this test is where it is
+   * caught.
    */
   it("numbers nothing a reader could see", () => {
     const geometry = hullGeometry({ capacity: 12, crewCount: 2 });
@@ -85,6 +88,7 @@ describe("the hull", () => {
         "centerY",
         "height",
         "index",
+        "rx",
         "width",
         "x",
         "y",
