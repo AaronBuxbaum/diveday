@@ -1733,6 +1733,21 @@ export const boats = pgTable(
      * listed by name and seats alone, never with DiveDay filler.
      */
     description: text("description"),
+    /**
+     * **The colour this hull is drawn in** (ADR 20260919-one-idea, decision I ·
+     * Tide: "a departure's page is Deck's hull"). A `#rrggbb` the shop picks
+     * once per boat, so a crew recognises the vessel before reading its name —
+     * two morning departures on two boats are two objects rather than two rows
+     * with different text.
+     *
+     * Null until a shop picks one, and null is not a gap to fill with a random
+     * colour: an unpainted hull is drawn in the sky's own ink, which is what
+     * every hull looked like before this column and is a perfectly good boat.
+     *
+     * It informs nothing. No capacity, readiness, admission or manifest rule
+     * reads it, exactly like the sky it is drawn on.
+     */
+    hullColor: text("hull_color"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /**
      * Deleting a hull stamps this and leaves the row (ADR
