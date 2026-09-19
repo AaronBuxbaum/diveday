@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { dayStripGeometry, HORIZON_Y, VIEW_WIDTH } from "./day-strip";
+import {
+  dayStripGeometry,
+  dayStripTicks,
+  dayStripWindow,
+  HORIZON_Y,
+  VIEW_WIDTH,
+} from "./day-strip";
 
 const at = (hour: number, minute = 0): Date => new Date(Date.UTC(2026, 7, 27, hour, minute));
 
@@ -177,5 +183,155 @@ describe("ticks", () => {
     expect(geometry.ticks).toHaveLength(3);
     expect(geometry.ticks[1].x).toBeCloseTo(CENTRE, 0);
     expect(geometry.ticks[0].at).toEqual(at(6));
+  });
+});
+
+const DAY_FROM = new Date(Date.UTC(2026, 7, 27, 0));
+const DAY_TO = new Date(Date.UTC(2026, 7, 28, 0));
+/** Every hour boundary of that day, which is what `dayStripTicks` chooses from. */
+const DAY_HOURS = Array.from({ length: 24 }, (_, hour) => at(hour));
+const hours = (from: Date, to: Date): number => (to.getTime() - from.getTime()) / 3_600_000;
+
+describe("the part of the day worth drawing", () => {
+  const BOUNDS = { dayFrom: DAY_FROM, dayTo: DAY_TO };
+
+  it("frames the sun and the boats rather than midnight to midnight", () => {
+    const window = dayStripWindow({
+      ...BOUNDS,
+      now: at(10),
+      sunriseAt: at(7),
+      sunsetAt: at(19, 45),
+      marks: [at(7), at(8)],
+    });
+    // 45 minutes either side of the earliest thing and the latest.
+    expect(window.from).toEqual(at(6, 15));
+    expect(window.to).toEqual(at(20, 30));
+  });
+
+  it("opens before a boat that leaves before first light", () => {
+    const window = dayStripWindow({
+      ...BOUNDS,
+      now: at(6),
+      sunriseAt: at(7),
+      sunsetAt: at(19, 45),
+      marks: [at(5, 30)],
+    });
+    expect(window.from).toEqual(at(4, 45));
+  });
+
+  /**
+   * A day whose boats are all in the morning should not stretch to 11 PM
+   * because that is when it is being read — but the now line has to be *in* the
+   * picture, or the strip is of some other day.
+   */
+  it("reaches now without being led by it", () => {
+    const morning = dayStripWindow({
+      ...BOUNDS,
+      now: at(21),
+      sunriseAt: null,
+      sunsetAt: null,
+      marks: [at(7)],
+    });
+    expect(morning.from).toEqual(at(6, 15));
+    expect(morning.to).toEqual(at(21));
+
+    const beforeDawn = dayStripWindow({
+      ...BOUNDS,
+      now: at(4),
+      sunriseAt: at(7),
+      sunsetAt: at(19, 45),
+      marks: [],
+    });
+    expect(beforeDawn.from).toEqual(at(4));
+  });
+
+  it("never leaves the shop's own day", () => {
+    const window = dayStripWindow({
+      ...BOUNDS,
+      now: at(12),
+      sunriseAt: at(0, 10),
+      sunsetAt: at(23, 50),
+      marks: [],
+    });
+    expect(window.from).toEqual(DAY_FROM);
+    expect(window.to).toEqual(DAY_TO);
+  });
+
+  /** One boat and four hours of sun is a winter day, not a reason to zoom in. */
+  it("grows a window too narrow to read", () => {
+    const window = dayStripWindow({
+      ...BOUNDS,
+      now: at(12),
+      sunriseAt: at(11),
+      sunsetAt: at(13),
+      marks: [at(12)],
+    });
+    expect(hours(window.from, window.to)).toBe(6);
+    // Grown from the middle, so the sun still sits in the centre of it.
+    expect(window.from).toEqual(at(9));
+    expect(window.to).toEqual(at(15));
+  });
+
+  it("slides a grown window off the day's edge rather than over it", () => {
+    const window = dayStripWindow({
+      ...BOUNDS,
+      now: at(1),
+      sunriseAt: null,
+      sunsetAt: null,
+      marks: [at(0, 30)],
+    });
+    expect(window.from).toEqual(DAY_FROM);
+    expect(hours(window.from, window.to)).toBe(6);
+  });
+
+  it("draws the whole day when there is neither a sun nor a boat", () => {
+    const window = dayStripWindow({
+      ...BOUNDS,
+      now: at(12),
+      sunriseAt: null,
+      sunsetAt: null,
+      marks: [],
+    });
+    expect(window.from).toEqual(DAY_FROM);
+    expect(window.to).toEqual(DAY_TO);
+  });
+});
+
+describe("the ticks", () => {
+  /**
+   * "8 AM · 12 PM · 3 PM · 7 PM" is a picture whose spacing has to be worked
+   * out. Every tick sits a whole number of hours from the last one.
+   */
+  it("picks one even stride across the window", () => {
+    const ticks = dayStripTicks({
+      from: at(6, 15),
+      to: at(20, 30),
+      hours: DAY_HOURS,
+      count: 4,
+    });
+    expect(ticks).toHaveLength(4);
+    const gaps = ticks.slice(1).map((tick, index) => hours(ticks[index], tick));
+    expect(new Set(gaps).size).toBe(1);
+  });
+
+  it("tightens the stride on a short window and loosens it on a long one", () => {
+    const short = dayStripTicks({ from: at(9), to: at(15), hours: DAY_HOURS, count: 4 });
+    const long = dayStripTicks({ from: DAY_FROM, to: DAY_TO, hours: DAY_HOURS, count: 4 });
+    expect(short.length).toBeLessThanOrEqual(4);
+    expect(long.length).toBeLessThanOrEqual(4);
+    expect(hours(short[0], short[1])).toBeLessThan(hours(long[0], long[1]));
+  });
+
+  it("keeps every tick inside the window, off its edges", () => {
+    const from = at(6, 15);
+    const to = at(20, 30);
+    for (const tick of dayStripTicks({ from, to, hours: DAY_HOURS, count: 4 })) {
+      expect(tick.getTime()).toBeGreaterThan(from.getTime());
+      expect(tick.getTime()).toBeLessThan(to.getTime());
+    }
+  });
+
+  it("says nothing rather than guessing when no hour fits", () => {
+    expect(dayStripTicks({ from: at(6, 5), to: at(6, 50), hours: DAY_HOURS })).toEqual([]);
   });
 });

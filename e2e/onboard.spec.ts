@@ -141,7 +141,10 @@ test("a shop outside the curated dive regions can pick its own timezone", async 
   // directly in the settings editor (the same value drives every later Today
   // greeting).
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
-  await expect(page.getByRole("heading", { name: "Your shop is live." })).toBeVisible();
+  // The home's heading is the date now (ADR 20260919-one-idea, decision I ·
+  // Tide), so first-run's "Your shop is live." is the line under it rather than
+  // the page's name.
+  await expect(page.getByText("Your shop is live.")).toBeVisible();
   await page.goto(`/shop/${unique}/settings#timezone`);
   await expect(page.locator('select[name="timezone"]')).toHaveValue("Asia/Jayapura");
 });

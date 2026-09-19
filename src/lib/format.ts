@@ -201,6 +201,23 @@ export function formatHourOfDay(hour: number, locale = "en-US"): string {
   return formatTime(new Date(Date.UTC(2000, 0, 1, hour)), locale, "UTC");
 }
 
+/**
+ * **An hour with no minutes** — "6 AM", never "6:00 AM".
+ *
+ * For a tick on the day strip (ADR 20260919-one-idea, decision I · Tide) and
+ * anywhere else an hour is a *label* rather than a time: four full times side
+ * by side touch at 390, and `:00` under a tick is two digits nobody reads. The
+ * hour is a wall-clock number with no instant in it, so `timeZone: "UTC"` is
+ * the honest answer rather than a shortcut — same reason as
+ * {@link formatHourOfDay}, which this is the short form of.
+ */
+export function formatHourShort(hour: number, locale = "en-US"): string {
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    hour: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(2000, 0, 1, hour)));
+}
+
 export function formatTimeZoneName(locale = "en-US", timeZone: string, now = nowDate()): string {
   const parts = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     timeZone,

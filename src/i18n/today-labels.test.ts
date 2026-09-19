@@ -56,8 +56,10 @@ describe("the shop home's pinned sentences", () => {
     expect(daySpineSummaryText(t, { boats: 0, jobs: 3, nextDepartureTime: null })).toBeNull();
   });
 
-  it("words the quiet day as a heading and one sentence, verbatim", () => {
-    expect(t("shopHome.spine.quietHeading")).toBe("A quiet day at the dock.");
+  it("words the quiet day as one sentence, verbatim", () => {
+    // One sentence, not a heading over it: under Tide the sky already names
+    // the day, so "A quiet day at the dock." was mood captioning its own
+    // picture and left with slice 23a.
     expect(t("shopHome.spine.quietSentence")).toBe(
       "No boats today, and nothing is waiting on you.",
     );
@@ -72,7 +74,6 @@ describe("the shop home's pinned sentences", () => {
     // `raw` rather than `t`, so a message carrying a placeholder is scanned as
     // it ships rather than as one rendering of it.
     for (const key of [
-      "shopHome.spine.quietHeading",
       "shopHome.spine.quietSentence",
       "shopHome.firstBookable.heading",
       "shopHome.firstBookable.headingSeries",

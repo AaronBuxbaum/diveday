@@ -1,6 +1,6 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, READ_ONLY, test } from "./fixtures";
-import { signOut } from "./helpers";
+import { STAFF_DAY_HEADING, signOut } from "./helpers";
 
 /**
  * READ_ONLY holds here: a session is a JWT in a cookie (`session: { strategy: "jwt" }`,
@@ -38,9 +38,7 @@ test("staff sign-in lands on the shop dashboard and sign-out locks it again", {
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(page).toHaveURL(/\/shop/);
-  await expect(
-    page.getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
   // Today leads with the boats that sail today, not a generic trip list: the
   // summary sentence counts them, and the first station carries the head count
   // as a figure rather than as another line of small muted text.

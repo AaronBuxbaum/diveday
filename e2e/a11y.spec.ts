@@ -14,6 +14,7 @@ import {
   openTripFromBoard,
   openTripMore,
   openTripTab,
+  STAFF_DAY_HEADING,
   signOut,
   threadStatus,
   waiverLinkFromResult,
@@ -483,7 +484,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       // scan this list used to carry, of `/blockers`'s by-departure body, is
       // gone with the body. `/blockers` still redirects here, and
       // `day-spine.spec.ts` holds it to a single hop.
-      { path: "/shop/blue-mantis", heading: /Good (morning|afternoon|evening|night), Dana/ },
+      { path: "/shop/blue-mantis", heading: STAFF_DAY_HEADING },
       { path: "/shop/blue-mantis/check-in", heading: "Counter check-in" },
       { path: "/shop/blue-mantis/check-in/walk-in", heading: "Walk-in" },
       // The desk phone's door (N-22), on the branch that renders its extra

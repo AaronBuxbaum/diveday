@@ -4,6 +4,7 @@ import {
   formatDateTimeTz,
   formatDateWithYear,
   formatDayParts,
+  formatHourShort,
   formatOrdinal,
   formatRelativeDay,
   formatShortDate,
@@ -273,5 +274,23 @@ describe("formatOrdinal", () => {
   it("formats Spanish ordinals correctly", () => {
     expect(formatOrdinal(1, "es-ES")).toBe("1.º");
     expect(formatOrdinal(4, "es-ES")).toBe("4.º");
+  });
+});
+
+describe("formatHourShort", () => {
+  /**
+   * The hour under a tick on the day strip. `formatHourOfDay` prints "6:00 AM",
+   * and four of those side by side touch at 390 — the minute on a tick is a
+   * digit nobody reads.
+   */
+  it("says the hour and no minute", () => {
+    expect(formatHourShort(6, "en-US")).toBe("6 AM");
+    expect(formatHourShort(12, "en-US")).toBe("12 PM");
+    expect(formatHourShort(18, "en-US")).toBe("6 PM");
+    expect(formatHourShort(0, "en-US")).toBe("12 AM");
+  });
+
+  it("follows the reader's locale to a 24-hour clock", () => {
+    expect(formatHourShort(18, "es-ES")).toMatch(/^18/);
   });
 });

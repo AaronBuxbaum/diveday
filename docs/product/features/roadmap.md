@@ -653,13 +653,19 @@ the parenthesised alternatives are the record of what was not picked. Round 2's 
 slice table moves, and the visual diffs are explained. The build is one stack, bottom-up: the record,
 then the day's own domain and components (23i), then the home, the departure and the storefront.
 
-- **23i** — the day itself, before any surface reads it: `src/lib/sky-scheme.ts` turns an instant and
-  a place into one of four flat gradients from the almanac (never a painting, never a gate), and
-  `src/lib/day-strip.ts` turns the day's sun, tide, departures and now into pure geometry;
-  `SkyBand` and `DayStrip` render them. Both are prose-free and neither informs a rule.
+- **23i** — **shipped 2026-09-19** — the day itself, before any surface reads it:
+  `src/lib/sky-scheme.ts` turns an instant and a place into one of four flat gradients from the
+  almanac (never a painting, never a gate), and `src/lib/day-strip.ts` turns the day's sun, tide,
+  departures and now into pure geometry — plus `dayStripWindow`, which frames the part of the day
+  worth drawing rather than midnight to midnight, and `dayStripTicks`, which picks one even clock
+  stride across it. `SkyBand` and `DayStrip` render them. Both are prose-free and neither informs a
+  rule.
 - **23a** — the picked idea's home: `/shop/[shopSlug]` becomes the day (I), the stack (II) or the
   chart (III), on round 2's surface; the Today spine's actions become the idea's own things — hours,
-  seats or tracks.
+  seats or tracks. **The top of it shipped 2026-09-19**: the greeting and the eyebrow are deleted
+  and what stands where they were is the day — the sky at the shop's own hour bleeding to both
+  edges, the date as the page's one name, the strip with every boat on the hour it leaves, and
+  sunrise and sunset under it. The spine's own actions are still the queue's; they move with 23c.
 - **23b** — the shell: the nav of nouns leaves (no tabs, no More, no dock); a date, a search and the
   shop's name (I), the shop's card (II), the dock (III); `staff-destinations.ts` becomes the idea's
   registry of places with two consumers; ⌘K stays as the search.

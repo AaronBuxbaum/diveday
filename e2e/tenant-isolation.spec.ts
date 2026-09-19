@@ -175,10 +175,12 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   const spoofedHome = await page.request.get("/shop/blue-mantis");
   const spoofedHomeBody = await spoofedHome.text();
   expect(spoofedHomeBody).toContain("We couldn’t find that page");
-  // The spine's own greeting — "Good morning, <first name>" — is rendered by
-  // the home's body and by nothing else, whichever shop it is for, so its
-  // absence is the page having been refused rather than merely covered.
-  expect(spoofedHomeBody).not.toMatch(/Good (morning|afternoon|evening|night),/);
+  // The home's own `<h1>` — the date it is showing, since ADR
+  // 20260919-one-idea's decision I · Tide — is rendered by the home's body and
+  // by nothing else, whichever shop it is for, so its absence is the page
+  // having been refused rather than merely covered. The refusal's own heading
+  // is a sentence, which this shape does not match.
+  expect(spoofedHomeBody).not.toMatch(/<h1[^>]*>[A-Z][a-z]+ \d{1,2}<\/h1>/);
 
   // Their own console is untouched by any of it.
   await page.goto(`/shop/${unique}/divers`);

@@ -37,6 +37,127 @@ const TIDE_LOW_Y = VIEW_HEIGHT - 6;
 /** Inset so a mark's circle at either end is not clipped by the viewBox. */
 const PAD_X = 10;
 
+/**
+ * How much room the window leaves either side of the first and last thing in
+ * it. Enough that a 7:00 AM departure is not a dot on the left edge, and small
+ * enough that the arc still fills the frame.
+ */
+const WINDOW_PAD_MS = 45 * 60 * 1000;
+/**
+ * The narrowest window worth drawing. Below this the hours are so close
+ * together that the ticks collide and the picture reads as a zoom rather than
+ * as a day — which happens on a winter day with one boat and four hours of sun.
+ */
+const MIN_WINDOW_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * **The part of the day worth drawing.**
+ *
+ * A strip spanning midnight to midnight spends half its width on night: the
+ * arc is a flat wire in the middle and every boat is crowded into the same
+ * third. So the window is the day's *content* — from the sun's rise and the
+ * first departure to its set and the last, with room either side — clamped
+ * inside the shop's own day and always containing now, because a picture of
+ * today with no now in it is a picture of some other day.
+ *
+ * Falls back to the whole day where there is neither a sun nor a boat: nothing
+ * to frame, so frame everything.
+ */
+export function dayStripWindow(input: {
+  /** The shop's own day, midnight to midnight — the widest the window may be. */
+  dayFrom: Date;
+  dayTo: Date;
+  now: Date;
+  sunriseAt: Date | null;
+  sunsetAt: Date | null;
+  /** Every instant that has to be inside the frame — departures, usually. */
+  marks?: readonly Date[];
+}): { from: Date; to: Date } {
+  const dayFrom = input.dayFrom.getTime();
+  const dayTo = input.dayTo.getTime();
+  if (!(dayTo > dayFrom)) return { from: input.dayFrom, to: input.dayTo };
+
+  const wanted: number[] = [];
+  if (input.sunriseAt) wanted.push(input.sunriseAt.getTime() - WINDOW_PAD_MS);
+  if (input.sunsetAt) wanted.push(input.sunsetAt.getTime() + WINDOW_PAD_MS);
+  for (const mark of input.marks ?? []) {
+    wanted.push(mark.getTime() - WINDOW_PAD_MS, mark.getTime() + WINDOW_PAD_MS);
+  }
+  if (wanted.length === 0) return { from: input.dayFrom, to: input.dayTo };
+
+  // Now is not "wanted" in its own right — a day whose boats are all in the
+  // morning should not stretch to 11 PM just because that is when it is being
+  // read — but it must be *inside*, or the now line vanishes from a picture of
+  // today. Widening to reach it is the smallest change that keeps both.
+  const nowAt = Math.min(Math.max(input.now.getTime(), dayFrom), dayTo);
+  wanted.push(nowAt);
+
+  let from = Math.max(dayFrom, Math.min(...wanted));
+  let to = Math.min(dayTo, Math.max(...wanted));
+  // Grow a too-narrow window from its middle, then slide whatever the day's
+  // edges refuse onto the other side, so the result is never under the minimum
+  // while the day itself is over it.
+  if (to - from < MIN_WINDOW_MS) {
+    const middle = (from + to) / 2;
+    from = middle - MIN_WINDOW_MS / 2;
+    to = middle + MIN_WINDOW_MS / 2;
+    if (from < dayFrom) {
+      to += dayFrom - from;
+      from = dayFrom;
+    }
+    if (to > dayTo) {
+      from -= to - dayTo;
+      to = dayTo;
+    }
+    from = Math.max(dayFrom, from);
+    to = Math.min(dayTo, to);
+  }
+  return { from: new Date(from), to: new Date(to) };
+}
+
+/**
+ * The strides a clock is read in. Every hour, every two, every three — never
+ * every five, because "8 AM · 1 PM · 6 PM" is a picture whose spacing has to be
+ * worked out, and the whole point of the ticks is that it does not.
+ */
+const TICK_STRIDES = [1, 2, 3, 4, 6, 8, 12] as const;
+
+/**
+ * The hours to draw a tick under: the day's own hour marks, at the tightest
+ * even stride that fits `count` of them inside the window.
+ *
+ * The caller supplies the hours as instants because "the top of the hour" is a
+ * wall-clock fact in the shop's zone, and this module reads no zone — it reads
+ * only each hour's place in the day, which is its index in the array. What it
+ * decides is the stride: four ticks across a six-hour window and four across a
+ * sixteen-hour one, so the strip's rhythm does not change with the season.
+ */
+export function dayStripTicks(input: {
+  from: Date;
+  to: Date;
+  /** Every hour boundary of the day, in order from its first hour. */
+  hours: readonly Date[];
+  count?: number;
+}): Date[] {
+  const count = input.count ?? 4;
+  const from = input.from.getTime();
+  const to = input.to.getTime();
+  // In from each edge, because a tick under the very first pixel is a label
+  // with nowhere to be centred.
+  const inset = (to - from) * 0.06;
+  const inside = input.hours
+    .map((at, index) => ({ at, index }))
+    .filter(({ at }) => at.getTime() >= from + inset && at.getTime() <= to - inset);
+  if (inside.length <= count) return inside.map((hour) => hour.at);
+  for (const stride of TICK_STRIDES) {
+    const picked = inside.filter(({ index }) => index % stride === 0);
+    if (picked.length > 0 && picked.length <= count) return picked.map((hour) => hour.at);
+  }
+  // Every stride overshot, which takes a window wider than a day: one tick in
+  // the middle says more than none.
+  return [inside[Math.floor(inside.length / 2)].at];
+}
+
 export type StripMark = { id: string; at: Date };
 export type StripBand = { id: string; from: Date; to: Date };
 export type TideTurn = { at: Date; kind: "high" | "low" };

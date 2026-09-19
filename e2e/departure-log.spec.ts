@@ -1,5 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { offlineCopySaved, openTripFromBoard, openTripTab } from "./helpers";
+import { offlineCopySaved, openTripFromBoard, openTripTab, STAFF_DAY_HEADING } from "./helpers";
 
 signedInAsOwner();
 
@@ -180,9 +180,7 @@ test.describe("the log is the owner's to produce", () => {
     // The evening is theirs to run; this one door is not on any of its
     // stations.
     await page.goto("/shop/blue-mantis");
-    await expect(
-      page.getByRole("heading", { name: /Good (morning|afternoon|evening|night)/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
     await expect(page.getByRole("link", { name: "Generate log" })).toHaveCount(0);
 
     // And the route itself refuses, however it was reached — a bookmark, a

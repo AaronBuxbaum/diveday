@@ -1,4 +1,5 @@
 import { expect, READ_ONLY, signedInAs, test } from "./fixtures";
+import { STAFF_DAY_HEADING } from "./helpers";
 
 /**
  * READ_ONLY holds here: all three tests land on Today and read what the lens leads with.
@@ -72,9 +73,7 @@ test.describe("as owner", () => {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      /Good (morning|afternoon|evening|night), Dana/,
-    );
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(STAFF_DAY_HEADING);
     await expect(page.getByRole("heading", { name: "Your sessions" })).toHaveCount(0);
     await expect(page.getByText("You’re crewing")).toHaveCount(0);
     await expect(page.getByText(/jobs? for the front desk/)).toHaveCount(0);
