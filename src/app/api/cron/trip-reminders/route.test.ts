@@ -16,6 +16,7 @@ vi.mock("@sentry/nextjs", () => ({
 const { getDb } = await import("@/db/client");
 const { sendDueReminders } = await import("@/db/reminders");
 const Sentry = await import("@sentry/nextjs");
+const { TRIP_REMINDER_CRON_CRONTAB } = await import("@/lib/reminders");
 const { GET } = await import("./route");
 
 const secret = "cron-test-secret";
@@ -77,8 +78,15 @@ describe("GET /api/cron/trip-reminders", () => {
       1,
       { monitorSlug: "diveday-trip-reminders", status: "in_progress" },
       // The dead-man's switch has to know the real cadence, or a missed pass
-      // never reads as missed.
-      expect.objectContaining({ schedule: { type: "crontab", value: "10 * * * *" } }),
+      // never reads as missed. Read from the constant rather than restated:
+      // this assertion carried the literal `10 * * * *` and went red on main
+      // when the pass moved to `:00` to share a database wake minute with the
+      // recap and minimum-seats passes. A restatement drifts; a reference
+      // cannot, and `src/lib/cron-schedule.test.ts` is what ties the constant
+      // to the deployed vercel.json.
+      expect.objectContaining({
+        schedule: { type: "crontab", value: TRIP_REMINDER_CRON_CRONTAB },
+      }),
     );
     expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(2, {
       checkInId: "check-in-id",
