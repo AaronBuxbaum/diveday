@@ -635,7 +635,7 @@ any pick in 23; 22d–22h are dropped — 23a–23h replace them.
 - **22i** — the icons (round 2): `DiveDayIcon` re-cut on the 26px, 1.6-stroke grid, filled when
   current in a tab bar.
 
-### 23. One idea (design complete; H-88 pending)
+### 23. One idea — Tide, the app is the day (H-88 chosen 2026-09-19; in build)
 
 The 2026-09-19 loop, round 3 of the 2026-09-18 brief, argued on
 [the canvas](../../design/canvases/20260919-one-idea/README.md) and proposed in ADR
@@ -646,11 +646,17 @@ its clothes; an Apple product is one idea about the thing itself, and the test i
 physical thing the app is. Three whole products are drawn on the same fiction and the same six
 screens: **I · Tide** (the app is the day), **II · Deck** (the app is the boat), **III · Chart** (the
 app is the sea); recommended I, with Deck's hull as the departure and Chart's chart as the site inside
-it. The pick is the owner's (H-88) and it is the only call. Round 2's surface rows (22a, 22b, 22i) and
-22c land first under any pick; everything below starts on it. Each slice runs the
+it. **H-88 chose I · Tide with both compositions on 2026-09-19**, so every slice below is Tide's and
+the parenthesised alternatives are the record of what was not picked. Round 2's surface rows (22a,
+22b, 22i) and 22c land first; everything below builds on them. Each slice runs the
 `design-implementation` skill: the component names the ADR, a test pins the rule, the canvas README's
-slice table moves, and the visual diffs are explained.
+slice table moves, and the visual diffs are explained. The build is one stack, bottom-up: the record,
+then the day's own domain and components (23i), then the home, the departure and the storefront.
 
+- **23i** — the day itself, before any surface reads it: `src/lib/sky-scheme.ts` turns an instant and
+  a place into one of four flat gradients from the almanac (never a painting, never a gate), and
+  `src/lib/day-strip.ts` turns the day's sun, tide, departures and now into pure geometry;
+  `SkyBand` and `DayStrip` render them. Both are prose-free and neither informs a rule.
 - **23a** — the picked idea's home: `/shop/[shopSlug]` becomes the day (I), the stack (II) or the
   chart (III), on round 2's surface; the Today spine's actions become the idea's own things — hours,
   seats or tracks.
