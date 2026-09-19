@@ -18,6 +18,7 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "./AddDiverSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { RosterSection } from "./RosterSection";
+import { TripHull } from "./TripHull";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -70,6 +71,7 @@ export function TripRosterContent({
   namesakeRefusedBookingId,
   mayDiscount,
   mayWriteOffPayment,
+  hull,
   compact = false,
   actions,
 }: {
@@ -93,6 +95,12 @@ export function TripRosterContent({
   namesakeRefusedBookingId?: string;
   mayDiscount: boolean;
   mayWriteOffPayment: boolean;
+  /**
+   * The boat this departure sails on, for the hull above the rows. Null where
+   * it has none — a shore dive and a pool session have a roster and no boat,
+   * and an invented hull would be a picture of something that is not there.
+   */
+  hull: { name: string; color: string | null } | null;
   /** The canonical Trip surface already owns the masthead capacity read. */
   compact?: boolean;
   actions: TripRosterActions;
@@ -166,6 +174,32 @@ export function TripRosterContent({
             {t("trips.guests.scheduleAnotherDeparture")}
           </Link>
         </section>
+      ) : null}
+
+      {/* **The departure drawn as its boat** (ADR 20260919-one-idea, decision
+          I · Tide, slice 23c). Above the rows rather than instead of them: a
+          crew sees the shape of the morning — how full, how many cannot board,
+          how much room is left — and then reads every one of those facts in
+          words underneath. Take the picture away and the page says exactly
+          what it said before.
+
+          Only where the departure has a boat. A shore dive and a pool session
+          have a roster and no hull, and an invented one would be a picture of
+          something that is not there. */}
+      {hull ? (
+        <div className="mt-6">
+          <TripHull
+            roster={roster}
+            readinessByBooking={readinessByBooking}
+            capacity={trip.capacity}
+            color={hull.color}
+            label={t("trips.hullLabel", {
+              boat: hull.name,
+              booked: trip.booked,
+              capacity: trip.capacity,
+            })}
+          />
+        </div>
       ) : null}
 
       <RosterSection
