@@ -86,7 +86,7 @@ import {
   type TodayAction,
 } from "@/lib/today";
 import { hasSailed } from "@/lib/trips";
-import { shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { dayHourBoundaries, shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import {
   deleteCrewRecapPhotoAction,
   deleteRecapPhotoAction,
@@ -617,16 +617,15 @@ async function TodayBody({
     sunsetAt: sky.sunsetAt,
     marks: stripMarks,
   });
-  // The day's own hour boundaries in the shop's zone, for the strip to pick
-  // its ticks from — the top of an hour is a wall-clock fact, and `day-strip`
-  // reads no zone.
-  const dayWall = utcToWallTime(now, shop.timezone);
-  const dayHours = Array.from({ length: 24 }, (_, hour) =>
-    wallTimeToUtc({ ...dayWall, hour, minute: 0 }, shop.timezone),
-  );
   // Four ticks, however wide the window turned out. More than four and the
-  // labels touch at 390.
-  const stripTicks = dayStripTicks({ ...stripWindow, hours: dayHours, count: 4 });
+  // labels touch at 390. The top of an hour is a wall-clock fact and
+  // `day-strip` reads no zone, so the boundaries are resolved here — by
+  // `dayHourBoundaries`, which knows that a day is not always 24 hours long.
+  const stripTicks = dayStripTicks({
+    ...stripWindow,
+    hours: dayHourBoundaries(dayBounds, shop.timezone),
+    count: 4,
+  });
   const stripGeometry = dayStripGeometry({
     from: stripWindow.from,
     to: stripWindow.to,
