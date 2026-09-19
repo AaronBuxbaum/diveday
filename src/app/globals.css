@@ -424,11 +424,6 @@
    * everywhere else, so a figure is never a *different* face — it is the same
    * face, rounder, where the device has one. Pair it with `tabular-nums`; a
    * count that reflows as it changes is a count you cannot read at a glance.
-   *
-   * Defined on this layer and first read on the one above it — the staff home's
-   * date (`DayHeader`, ADR 20260919-one-idea slice 23a) — because a surface has
-   * to exist before anything can be drawn on it. It is `font-rounded` in a
-   * class, through Tailwind's `--font-*` namespace.
    */
   --font-rounded: ui-rounded, "SF Pro Rounded", var(--font-sans);
   /* The shop's chosen headline face on its own storefront (Harbor, ADR
