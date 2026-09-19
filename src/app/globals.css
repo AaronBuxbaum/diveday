@@ -1118,6 +1118,103 @@ textarea {
 }
 
 /*
+ * **The four skies** — ADR 20260919-one-idea, decision I · Tide.
+ *
+ * Tide's premise is that the app *is* the day, so a day-shaped surface opens
+ * with the sky over the shop at the hour it is being read. `skyReadingFor`
+ * (`src/lib/sky-scheme.ts`) decides which of the four it is, from the almanac
+ * where the shop has coordinates and from its clock where it does not; this is
+ * the only place those four are drawn.
+ *
+ * **One flat gradient per sky, never a painting.** Three or four stops down the
+ * band and nothing else — no photograph, no noise, no drawn cloud. The risk the
+ * canvas named for this idea is kitsch, and the rule that holds it off is that
+ * every sky is the same shape and differs only in its hue.
+ *
+ * **Every stop is dark enough for the ink that sits on it.** Reading ink on the
+ * sky is white, and the secondary line is white at 90% — so the measurement
+ * that matters is the *lightest* stop of each gradient, which is where white
+ * has least to work with. Measured against that stop: white 5.24 (dawn), 7.17
+ * (day), 5.70 (dusk), 16.44 (night); the soft ink 4.61 / 6.14 / 4.97 / 13.43.
+ * A dawn that reached a real sunrise peach would put the secondary line at
+ * 3.1:1, which is why dawn stops at a dusty rose.
+ *
+ * **A wash carries no fact** — the same rule the water band lives under. The
+ * sky says what hour it is and nothing whatever about a booking, a blocker or
+ * a departure.
+ */
+:root {
+  --sky-dawn: linear-gradient(180deg, #0d2452 0%, #2a4a86 52%, #6b4f7a 84%, #8f5f68 100%);
+  --sky-day: linear-gradient(180deg, #0b3f74 0%, #12508f 58%, #15589f 100%);
+  --sky-dusk: linear-gradient(180deg, #14183f 0%, #3b2a63 44%, #7a3f56 78%, #9a5340 100%);
+  --sky-night: linear-gradient(180deg, #04060f 0%, #0a1330 62%, #131c44 100%);
+  /* The sky's own ink, which does not follow the scheme: a sky is dark in both,
+     exactly like `--device-frame`, so ink that flipped would vanish at night. */
+  --sky-ink: #ffffff;
+  --sky-ink-soft: rgba(255, 255, 255, 0.9);
+  /* Lines drawn on the sky rather than read from it: the arc, the ticks, the
+     horizon. A graphical object needs 3:1, and every one of these clears it on
+     every stop by being white. */
+  --sky-rule: rgba(255, 255, 255, 0.45);
+  --sky-rule-faint: rgba(255, 255, 255, 0.28);
+  --sky-sun: #ffd479;
+  /* Now: an amber pill with its own dark ink (6.6:1), because a white pill on a
+     white-inked sky is not an emphasis. The line under it is white — amber on
+     dawn's rose measures 2.9:1, under the 3:1 a line owes. */
+  --sky-now: #ff9500;
+  --sky-now-ink: #331c00;
+}
+
+.sky {
+  background: var(--sky-day);
+  color: var(--sky-ink);
+}
+
+.sky[data-scheme="dawn"] {
+  background: var(--sky-dawn);
+}
+
+.sky[data-scheme="dusk"] {
+  background: var(--sky-dusk);
+}
+
+.sky[data-scheme="night"] {
+  background: var(--sky-night);
+}
+
+/*
+ * Under `prefers-contrast: more`, and in the crew's own glare mode, the sky
+ * flattens to one deep colour. A gradient is a range of contrasts by
+ * definition, and a reader who has asked for more contrast has asked for the
+ * range to stop — the hour is still said in words above it either way.
+ */
+@media (prefers-contrast: more) {
+  .sky,
+  .sky[data-scheme="dawn"],
+  .sky[data-scheme="dusk"],
+  .sky[data-scheme="night"] {
+    background: #0b1c33;
+  }
+}
+
+.glare-mode .sky,
+.glare-mode .sky[data-scheme="dawn"],
+.glare-mode .sky[data-scheme="dusk"],
+.glare-mode .sky[data-scheme="night"] {
+  background: #08182c;
+}
+
+@media print {
+  .sky,
+  .sky[data-scheme="dawn"],
+  .sky[data-scheme="dusk"],
+  .sky[data-scheme="night"] {
+    background: none;
+    color: var(--foreground);
+  }
+}
+
+/*
  * The water band — Reef's page top (ADR 20260901-diveday-reimagined, decision
  * 1). The lagoon wash settles into the sand over the first 168px of every
  * staff page, behind the header; below that the ground is the ground. Drawn
