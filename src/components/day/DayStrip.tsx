@@ -80,16 +80,17 @@ export function DayStrip({
    *
    * The clamp above holds a word off the edges, and the room it needs is half
    * the word. A fixed figure was tuned for a time — "11:00 AM" is about 3.5rem
-   * at 11px, so 1.75rem — and a mark carrying anything longer hung off the
-   * strip: the departure page's first dive is labelled with its site, and
-   * "Molasses Reef" was clipped at the left edge of a 390px phone.
+   * at 11px, so 1.75rem — and it is too little for anything longer. The
+   * departure page labels its first dive with the site, and "Molasses Reef" at
+   * the left end of a 390px phone clears the edge by about seven pixels: whole,
+   * but only because that mark happens to sit far enough in. A dive arriving at
+   * the very start of the window would lose its first letters.
    *
-   * 0.28rem per character is a semibold 11px average advance with a little
-   * slack, floored at the old figure so every existing caller places its times
-   * exactly where it did.
+   * A semibold 11px character averages about 6.3px, so half a word of `n` is
+   * `n · 0.2rem`. Floored at the old figure, so every caller that labels a mark
+   * with a time places it exactly where it did.
    */
-  const roomFor = (text: string): string =>
-    `${Math.max(1.75, (text.length * 0.28) / 2).toFixed(2)}rem`;
+  const roomFor = (text: string): string => `${Math.max(1.75, text.length * 0.2).toFixed(2)}rem`;
 
   // Marks alternate rows only where they would otherwise collide, so a day with
   // three well-spaced boats reads on one line and a day with two at the same
