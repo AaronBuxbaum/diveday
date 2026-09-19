@@ -133,6 +133,9 @@ export function shopDayBounds(now: Date, timeZone: string): { from: Date; to: Da
   };
 }
 
+/** A day's worth of milliseconds, for stepping a walk rather than measuring one. */
+const MS_PER_DAY = 86_400_000;
+
 /**
  * Every top-of-the-hour inside a shop's own day, as the instant *and* the hour
  * a clock on the wall reads at it.
@@ -151,21 +154,45 @@ export function shopDayBounds(now: Date, timeZone: string): { from: Date; to: Da
  * So the hour is read back *from the instant* rather than assumed, and a
  * repeated instant is dropped. The result is in order, and every entry's `hour`
  * is what a person standing in the shop would say it is.
+ *
+ * **It walks every calendar day the window touches, not just the first.** The
+ * name says "day" because the first caller passed a shop's own day, and the
+ * body took that literally: it built hours on the wall date of `from` alone, so
+ * a window running 10 PM to 10 AM answered `22, 23` and nothing after midnight
+ * (found by review on the departure page, whose voyage strip drew no ticks past
+ * midnight — and the demo shop ships a three-day charter). Bounds that span
+ * several days get several days of boundaries; a caller that wants four of them
+ * across a long window is what `dayStripTicks` is for.
  */
 export function dayHourBoundaries(
   bounds: { from: Date; to: Date },
   timeZone: string,
 ): { at: Date; hour: number }[] {
-  const openWall = utcToWallTime(bounds.from, timeZone);
+  const from = bounds.from.getTime();
+  const to = bounds.to.getTime();
   const seen = new Set<number>();
   const boundaries: { at: Date; hour: number }[] = [];
-  for (let hour = 0; hour < 24; hour += 1) {
-    const at = wallTimeToUtc({ ...openWall, hour, minute: 0 }, timeZone);
-    const instant = at.getTime();
-    if (instant < bounds.from.getTime() || instant >= bounds.to.getTime()) continue;
-    if (seen.has(instant)) continue;
-    seen.add(instant);
-    boundaries.push({ at, hour: utcToWallTime(at, timeZone).hour });
+  let wall = utcToWallTime(bounds.from, timeZone);
+  // One pass per calendar day the window covers, plus one: a window ending at
+  // 00:30 on its last day still has that day's midnight in it, and the `+ 2`
+  // is the cheap way to say "and the day the end falls on" without a second
+  // date comparison. Every hour is clamped to the bounds anyway, so an extra
+  // pass adds nothing but a few discarded candidates.
+  const days = Math.ceil(Math.max(0, to - from) / MS_PER_DAY) + 2;
+  for (let day = 0; day < days; day += 1) {
+    for (let hour = 0; hour < 24; hour += 1) {
+      const at = wallTimeToUtc({ ...wall, hour, minute: 0 }, timeZone);
+      const instant = at.getTime();
+      if (instant < from || instant >= to) continue;
+      if (seen.has(instant)) continue;
+      seen.add(instant);
+      boundaries.push({ at, hour: utcToWallTime(at, timeZone).hour });
+    }
+    // Step a calendar day from **noon**, never from midnight: on a spring-
+    // forward day midnight plus 24 hours lands at 11 PM the same date, and the
+    // walk would repeat a day and never reach the end of the window.
+    const noon = wallTimeToUtc({ ...wall, hour: 12, minute: 0 }, timeZone).getTime();
+    wall = utcToWallTime(new Date(noon + MS_PER_DAY), timeZone);
   }
   return boundaries.sort((a, b) => a.at.getTime() - b.at.getTime());
 }

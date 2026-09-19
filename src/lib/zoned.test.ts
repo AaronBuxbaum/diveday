@@ -289,6 +289,56 @@ describe("dayHourBoundaries", () => {
     expect(new Set(hours.map((hour) => hour.at.getTime())).size).toBe(hours.length);
   });
 
+  /**
+   * **A window that crosses midnight keeps its hours on both sides of it.**
+   * The body used to build hours on the wall date of `from` alone, so a
+   * departure running 10 PM to 10 AM answered `22, 23` and nothing after — and
+   * the demo shop ships a three-day charter, whose voyage strip drew ticks for
+   * the first evening and a bare line for the two days after it (found by
+   * review on PR #1903).
+   */
+  it("covers every calendar day the window touches, not just the first", () => {
+    const overnight = dayHourBoundaries(
+      {
+        from: wallTimeToUtc({ year: 2026, month: 7, day: 17, hour: 22, minute: 0 }, NEW_YORK),
+        to: wallTimeToUtc({ year: 2026, month: 7, day: 18, hour: 10, minute: 0 }, NEW_YORK),
+      },
+      NEW_YORK,
+    );
+    expect(overnight.map((hour) => hour.hour)).toEqual([22, 23, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  });
+
+  it("walks a multi-day charter without repeating or skipping a day", () => {
+    const threeDays = dayHourBoundaries(
+      {
+        from: wallTimeToUtc({ year: 2026, month: 7, day: 17, hour: 0, minute: 0 }, NEW_YORK),
+        to: wallTimeToUtc({ year: 2026, month: 7, day: 20, hour: 0, minute: 0 }, NEW_YORK),
+      },
+      NEW_YORK,
+    );
+    expect(threeDays).toHaveLength(72);
+    expect(new Set(threeDays.map((hour) => hour.at.getTime())).size).toBe(72);
+  });
+
+  /**
+   * Stepping a calendar day from midnight is what breaks on a spring-forward
+   * day: midnight plus twenty-four hours lands at 11 PM the *same* date, so the
+   * walk repeats a day and never reaches the end. It steps from noon.
+   */
+  it("crosses a spring-forward boundary without stalling on the short day", () => {
+    const acrossDst = dayHourBoundaries(
+      {
+        from: wallTimeToUtc({ year: 2026, month: 3, day: 7, hour: 22, minute: 0 }, NEW_YORK),
+        to: wallTimeToUtc({ year: 2026, month: 3, day: 9, hour: 2, minute: 0 }, NEW_YORK),
+      },
+      NEW_YORK,
+    );
+    // 22, 23 on the 7th; the 8th's twenty-three hours; 0 and 1 on the 9th.
+    expect(acrossDst).toHaveLength(27);
+    expect(acrossDst.map((hour) => hour.hour).slice(0, 5)).toEqual([22, 23, 0, 1, 3]);
+    expect(acrossDst.at(-1)?.hour).toBe(1);
+  });
+
   it("reads each hour back from its instant rather than trusting the request", () => {
     for (const hour of dayHourBoundaries(day(2026, 3, 8), NEW_YORK)) {
       expect(utcToWallTime(hour.at, NEW_YORK).hour).toBe(hour.hour);

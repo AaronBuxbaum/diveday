@@ -13,11 +13,11 @@ beforeEach(() => window.sessionStorage.clear());
 
 const KEY = "course-draft:c-1";
 
-function Editor({ subhead = "" }: { subhead?: string }) {
+function Editor({ subhead = "", version = "7" }: { subhead?: string; version?: string }) {
   return (
     <UnsavedChangesGuard storageKey={KEY}>
       <form>
-        <input type="hidden" name="expectedVersion" value="7" readOnly />
+        <input type="hidden" name="expectedVersion" value={version} readOnly />
         <label htmlFor="subhead">Subhead</label>
         <input id="subhead" name="subhead" defaultValue={subhead} />
         <label htmlFor="live">Live</label>
@@ -103,24 +103,78 @@ describe("UnsavedChangesGuard", () => {
    * optimistic-concurrency token, and an old one aims the save at a generation
    * of the row somebody else has since replaced (issue #820).
    */
-  it("never restores the row version, and never stores it either", () => {
-    vi.useFakeTimers();
+  it("never writes the row version back into the form", () => {
     window.sessionStorage.setItem(
       KEY,
       JSON.stringify([
-        { name: "expectedVersion", index: 0, value: "2", checked: false },
+        { name: "expectedVersion", index: 0, value: "7", checked: false },
         { name: "subhead", index: 0, value: "Edited", checked: false },
       ]),
     );
     const { container } = render(<Editor />);
     expect(container.querySelector<HTMLInputElement>("[name=expectedVersion]")?.value).toBe("7");
+    expect(screen.getByLabelText("Subhead")).toHaveValue("Edited");
+  });
 
+  /**
+   * It *is* stored, though, which is the one thing that tells a returning page
+   * whether the save it is coming back from landed. See `liveDraft`.
+   */
+  it("remembers which version of the row the draft was typed against", () => {
+    vi.useFakeTimers();
+    render(<Editor />);
     fireEvent.input(screen.getByLabelText("Subhead"), { target: { value: "More" } });
     vi.advanceTimersByTime(600);
     const stored = JSON.parse(window.sessionStorage.getItem(KEY) ?? "[]") as Array<{
       name: string;
+      value: string;
     }>;
-    expect(stored.some((field) => field.name === "expectedVersion")).toBe(false);
+    expect(stored.find((field) => field.name === "expectedVersion")?.value).toBe("7");
+  });
+
+  /**
+   * **The bug this pair of tests exists for.**
+   *
+   * The draft used to be deleted on submit, which assumed every save lands.
+   * This editor refuses a half-filled FAQ pair and comes straight back to the
+   * same page, so a writer who typed a question, pressed Save and was told it
+   * needed an answer found the question gone — the exact loss the two-box FAQ
+   * was built to prevent. It reached `main` and failed one Playwright shard
+   * roughly one run in two, because `onSubmit` cleared the debounce timer
+   * without nulling the handle and the unmount flush then wrote the draft back
+   * by accident; whether the work survived came down to whether the writer had
+   * paused for half a second before pressing Save.
+   */
+  it("keeps the draft across a submit, so a refused save comes back to it", () => {
+    vi.useFakeTimers();
+    const { unmount } = render(<Editor />);
+    fireEvent.input(screen.getByLabelText("Subhead"), { target: { value: "Half a pair" } });
+    // The debounce has already fired: this is the case that lost the work,
+    // because the unmount flush then had no pending timer to rescue it with.
+    vi.advanceTimersByTime(600);
+    fireEvent.submit(screen.getByLabelText("Subhead").closest("form") as HTMLFormElement);
+    expect(screen.queryByText("Unsaved changes")).toBeNull();
+    unmount();
+
+    // The refusal renders this page again, against the same row version.
+    render(<Editor version="7" />);
+    expect(screen.getByLabelText("Subhead")).toHaveValue("Half a pair");
+    expect(screen.getByText("Put back")).toBeTruthy();
+  });
+
+  it("drops the draft once the row says the save landed", () => {
+    vi.useFakeTimers();
+    const { unmount } = render(<Editor />);
+    fireEvent.input(screen.getByLabelText("Subhead"), { target: { value: "Saved copy" } });
+    vi.advanceTimersByTime(600);
+    fireEvent.submit(screen.getByLabelText("Subhead").closest("form") as HTMLFormElement);
+    unmount();
+
+    // A save that landed moves the row on, and the page comes back holding it.
+    render(<Editor subhead="Saved copy" version="8" />);
+    expect(screen.queryByText("Put back")).toBeNull();
+    expect(screen.queryByText("Unsaved changes")).toBeNull();
+    expect(window.sessionStorage.getItem(KEY)).toBeNull();
   });
 
   it("says nothing, and stores nothing, for a draft that matches what is already there", () => {
@@ -135,15 +189,20 @@ describe("UnsavedChangesGuard", () => {
     expect(screen.queryByText("Unsaved changes")).toBeNull();
   });
 
-  it("drops the draft once the form is submitted", () => {
+  it("flushes what was posted on submit, and stops saying it is unsaved", () => {
     vi.useFakeTimers();
     render(<Editor />);
-    fireEvent.input(screen.getByLabelText("Subhead"), { target: { value: "Saved copy" } });
-    vi.advanceTimersByTime(600);
-    expect(window.sessionStorage.getItem(KEY)).not.toBeNull();
-
+    fireEvent.input(screen.getByLabelText("Subhead"), { target: { value: "First" } });
+    // Typed again inside the debounce, so the only way the second value reaches
+    // storage is the submit flushing it.
+    fireEvent.input(screen.getByLabelText("Subhead"), { target: { value: "Posted" } });
     fireEvent.submit(screen.getByLabelText("Subhead").closest("form") as HTMLFormElement);
-    expect(window.sessionStorage.getItem(KEY)).toBeNull();
+
+    const stored = JSON.parse(window.sessionStorage.getItem(KEY) ?? "[]") as Array<{
+      name: string;
+      value: string;
+    }>;
+    expect(stored.find((field) => field.name === "subhead")?.value).toBe("Posted");
     expect(screen.queryByText("Unsaved changes")).toBeNull();
   });
 

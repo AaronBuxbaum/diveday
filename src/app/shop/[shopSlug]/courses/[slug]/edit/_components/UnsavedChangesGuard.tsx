@@ -15,13 +15,66 @@ type Typed = { name: string; index: number; value: string; checked: boolean };
  */
 const NEVER_RESTORED = new Set(["expectedVersion"]);
 
+/** The row version this page was rendered against, as the form carries it. */
+function versionOnPage(): string | null {
+  const field = document.querySelector('input[name="expectedVersion"]');
+  return field instanceof HTMLInputElement ? field.value : null;
+}
+
+/**
+ * **A submit is an intent; the row version is the outcome.**
+ *
+ * The draft used to be thrown away the moment the form was submitted, which
+ * assumed every save lands. They do not: this editor refuses a half-filled FAQ
+ * pair, a placeholder depth and a stale row, and each refusal comes *back to
+ * this page*. So the writer typed a question, pressed Save, was told it needed
+ * an answer — and the question was gone, which is the exact loss the two-box
+ * FAQ exists to prevent (`e2e/courses.spec.ts`, "writes a FAQ pair"). It
+ * survived in CI only by accident: `onSubmit` cleared the debounce timer
+ * without nulling the handle, so the unmount flush saw a truthy timer and
+ * wrote the draft back. Whether the work survived a refusal came down to
+ * whether the writer had paused for half a second first.
+ *
+ * So the draft is kept across a submit and dropped on the way back in, once
+ * the row says the save landed. A refused save leaves `rowVersion` where it
+ * was; an accepted one moves it. A draft with no version is one written before
+ * this rule existed, and is put back the way it always was.
+ *
+ * Removes a stale draft as it finds one: nothing else would, and it would sit
+ * in the tab shadowing every later visit to this course.
+ */
+function liveDraft(storageKey: string): Typed[] | null {
+  try {
+    const stored = window.sessionStorage.getItem(storageKey);
+    if (!stored) return null;
+    const saved = JSON.parse(stored) as Typed[];
+    if (!Array.isArray(saved)) return null;
+    const typedAgainst = saved.find(
+      (field) => field.name === "expectedVersion" && field.index === 0,
+    )?.value;
+    const now = versionOnPage();
+    if (typedAgainst !== undefined && now !== null && typedAgainst !== now) {
+      window.sessionStorage.removeItem(storageKey);
+      return null;
+    }
+    return saved;
+  } catch {
+    // Unparseable, or storage unavailable (private mode, quota). A draft is a
+    // courtesy; never let one break the editor it is protecting.
+    return null;
+  }
+}
+
 /** Every named control in a form, in document order, with what it holds. */
 function snapshot(form: HTMLFormElement): Typed[] {
   const seen = new Map<string, number>();
   const out: Typed[] = [];
   for (const element of Array.from(form.elements)) {
     const field = element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-    if (!field.name || NEVER_RESTORED.has(field.name)) continue;
+    // `NEVER_RESTORED` is not skipped here: the row version is *stored* and
+    // never written back. Which version a draft was typed against is the only
+    // honest answer to "did my save land?" — see `liveDraft`.
+    if (!field.name) continue;
     // A file input's value cannot be assigned, so restoring one is impossible
     // rather than merely awkward — the writer re-picks the photo.
     if (field instanceof HTMLInputElement && field.type === "file") continue;
@@ -82,15 +135,12 @@ function restore(form: HTMLFormElement, saved: Typed[]): number {
  * courtesy and must not be able to break the editor it protects.
  */
 export function draftFieldValue(storageKey: string, name: string): string | null {
-  try {
-    const stored = window.sessionStorage.getItem(storageKey);
-    if (!stored) return null;
-    const saved = JSON.parse(stored) as Typed[];
-    if (!Array.isArray(saved)) return null;
-    return saved.find((field) => field.name === name && field.index === 0)?.value ?? null;
-  } catch {
-    return null;
-  }
+  // Through `liveDraft`, so a draft the row has moved past is not one. These
+  // editors' effects run *before* the guard's — React runs a child's effects
+  // first — so they cannot rely on the guard having dropped a stale draft.
+  const saved = liveDraft(storageKey);
+  if (!saved) return null;
+  return saved.find((field) => field.name === name && field.index === 0)?.value ?? null;
 }
 
 const DirtyContext = createContext<{ dirty: boolean; restored: boolean }>({
@@ -167,17 +217,8 @@ export function UnsavedChangesGuard({
     const form = wrapper.current?.querySelector("form");
     if (!form) return;
     formEl.current = form;
-    let saved: Typed[];
-    try {
-      const stored = window.sessionStorage.getItem(storageKey);
-      if (!stored) return;
-      saved = JSON.parse(stored) as Typed[];
-      if (!Array.isArray(saved)) return;
-    } catch {
-      // Unparseable, or storage unavailable (private mode, quota). A draft is
-      // a courtesy; never let one break the editor it is protecting.
-      return;
-    }
+    const saved = liveDraft(storageKey);
+    if (!saved) return;
     if (restore(form, saved) > 0) {
       setDirty(true);
       setRestored(true);
@@ -239,14 +280,19 @@ export function UnsavedChangesGuard({
           scheduleSave();
         }}
         onSubmit={() => {
-          if (timer.current) clearTimeout(timer.current);
+          // **Kept, not dropped** — see `liveDraft`. The submitted state is
+          // flushed so a refusal comes back to exactly what was posted, and
+          // the next mount drops it once the row version says the save landed.
+          // The handle is nulled as well as cleared: leaving a spent one
+          // truthy is what made the unmount flush double as an accidental
+          // rescue, and hid this for as long as it hid.
+          if (timer.current) {
+            clearTimeout(timer.current);
+            timer.current = null;
+          }
           setDirty(false);
           setRestored(false);
-          try {
-            window.sessionStorage.removeItem(storageKey);
-          } catch {
-            // See above.
-          }
+          save.current();
         }}
       >
         {children}

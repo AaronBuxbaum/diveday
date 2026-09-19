@@ -75,6 +75,23 @@ export function DayStrip({
   const centred = (x: number, room: string): string =>
     `clamp(${room}, ${px(x)}, calc(100% - ${room}))`;
 
+  /**
+   * How far in a label's centre must stay, for a label of this length.
+   *
+   * The clamp above holds a word off the edges, and the room it needs is half
+   * the word. A fixed figure was tuned for a time — "11:00 AM" is about 3.5rem
+   * at 11px, so 1.75rem — and it is too little for anything longer. The
+   * departure page labels its first dive with the site, and "Molasses Reef" at
+   * the left end of a 390px phone clears the edge by about seven pixels: whole,
+   * but only because that mark happens to sit far enough in. A dive arriving at
+   * the very start of the window would lose its first letters.
+   *
+   * A semibold 11px character averages about 6.3px, so half a word of `n` is
+   * `n · 0.2rem`. Floored at the old figure, so every caller that labels a mark
+   * with a time places it exactly where it did.
+   */
+  const roomFor = (text: string): string => `${Math.max(1.75, text.length * 0.2).toFixed(2)}rem`;
+
   // Marks alternate rows only where they would otherwise collide, so a day with
   // three well-spaced boats reads on one line and a day with two at the same
   // hour still reads at all.
@@ -206,7 +223,7 @@ export function DayStrip({
                     ? "-translate-y-[calc(100%+1.5rem)]"
                     : "-translate-y-[calc(100%+0.625rem)]"
                 }`}
-                style={{ left: centred(mark.x, "1.75rem"), top: horizon }}
+                style={{ left: centred(mark.x, roomFor(markLabels[mark.id])), top: horizon }}
               >
                 {markLabels[mark.id]}
               </span>

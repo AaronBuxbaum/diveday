@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
+import type { DayStripProps } from "@/components/day/DayStrip";
 import { FlashParams } from "@/components/FlashParams";
+import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
@@ -17,11 +19,19 @@ import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-label
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { staffTideStationText, staffTideWindowText } from "@/i18n/tide-labels";
+import { nowDate } from "@/lib/clock";
 import { DSD_RATIO } from "@/lib/course-ratios";
+import { dayStripGeometry, dayStripTicks, dayStripWindow } from "@/lib/day-strip";
 import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { depthInUnit } from "@/lib/depth-units";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
-import { formatMoneyCents, formatShortDate, formatTime, weekdayNames } from "@/lib/format";
+import {
+  formatHourShort,
+  formatMoneyCents,
+  formatShortDate,
+  formatTime,
+  weekdayNames,
+} from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   fetchAutomatedMarineForecast,
@@ -32,10 +42,12 @@ import { toShopCurrency } from "@/lib/money";
 import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireShopSurface } from "@/lib/session";
+import { daylightProgressAt, skyReadingFor } from "@/lib/sky-scheme";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { uuidParam } from "@/lib/uuid";
+import { dayHourBoundaries, utcToWallTime as wallTimeOf } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
@@ -50,14 +62,10 @@ import {
 } from "./_components/SeriesSection";
 import { TripAboutSection } from "./_components/TripAboutSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
-import {
-  TripAddDiverLink,
-  TripCapacityBadge,
-  TripCapacityRing,
-  TripPageHeader,
-} from "./_components/TripPageHeader";
+import { TripAddDiverLink, TripCapacityBadge } from "./_components/TripPageHeader";
 import { TripRosterContent } from "./_components/TripRosterContent";
 import { TripSurfaceNav } from "./_components/TripSurfaceNav";
+import { VoyageHeader } from "./_components/VoyageHeader";
 import {
   addInternalNoteAction,
   addToWaitlistAction,
@@ -469,6 +477,140 @@ export default async function ManageTripPage({
   const boatName = boat?.name;
   const boatCrewSummary =
     [boatName, ...assignedCrew].filter(Boolean).join(" · ") || t("trips.about.noBoat");
+
+  /**
+   * **The voyage, drawn** — ADR 20260919-one-idea, decision I · Tide, slice
+   * 23c. The same picture the home carries, zoomed from the whole day down to
+   * this one departure: lines off, each dive where the water puts it, the way
+   * back, the sun over it and a line for now.
+   *
+   * It reads the same three functions the home does, so the two pictures can
+   * never disagree about where an hour sits, and like every sky in this product
+   * it gates nothing.
+   */
+  // Read once for the whole picture: the sky, the now line and the window all
+  // have to agree about what time it is, and two `nowDate()` calls a few
+  // statements apart do not.
+  const now = nowDate();
+  const voyageSky = skyReadingFor({
+    at: now,
+    timeZone: shop.timezone,
+    latitude: shop.latitude,
+    longitude: shop.longitude,
+  });
+  /**
+   * **The sun the strip draws is the sun of the day the boat sails**, and that
+   * is not the sky the band wears.
+   *
+   * The band is the sky over the shop *now* — a departure read at 6:58 opens
+   * in the dawn the reader is standing in. The strip is the voyage, and its
+   * axis is the departure's own hours, so the arc drawn across it has to be
+   * that day's or it is a picture of some other day's sun.
+   *
+   * It was `voyageSky` for both, and the captured pixels are where that shows:
+   * `dayStripGeometry` maps the arc's ends through the window, so today's
+   * sunrise on an August window lands far off the left edge and the sun
+   * vanishes from the strip entirely — the two-day course capture had no arc
+   * at all. Same family as the tick bug on this PR's first review: a helper
+   * answered for "the day" and the caller meant a different one.
+   */
+  const departureSky = skyReadingFor({
+    at: trip.startsAt,
+    timeZone: shop.timezone,
+    latitude: shop.latitude,
+    longitude: shop.longitude,
+  });
+  /**
+   * The walked half of that arc is where the *reader's* clock sits on it, which
+   * is `departureSky`'s own progress only when the departure is today. Reading
+   * next week's charter walks none of it, and null is how the strip says so.
+   */
+  const voyageDaylight = daylightProgressAt(now, departureSky.sunriseAt, departureSky.sunsetAt);
+  /**
+   * Each dive on the hour the boat is actually over the site, not the hour it
+   * left the dock. `tideWindowsForDeparture` already lays the shop's own dock-day
+   * rhythm over `startsAt` to answer exactly that, and a shop that has not set a
+   * rhythm has no honest answer — so it gets the voyage's two ends and no dives,
+   * rather than a guess drawn to the minute.
+   */
+  const voyageDiveMarks = (tideWindows ?? []).map((entry) => ({
+    id: `dive-${entry.diveNumber}`,
+    at: entry.arrival,
+    name: entry.siteName,
+  }));
+  const voyageMarks = [trip.startsAt, ...voyageDiveMarks.map((mark) => mark.at), trip.endsAt];
+  // The window is the voyage's own content — `dayStripWindow` pads it and holds
+  // a floor, so a 90-minute pool session still gets a readable strip instead of
+  // a wire, and a day-long charter is not padded past its own day.
+  const voyageWindow = dayStripWindow({
+    dayFrom: trip.startsAt,
+    dayTo: trip.endsAt,
+    now,
+    sunriseAt: departureSky.sunriseAt,
+    sunsetAt: departureSky.sunsetAt,
+    marks: voyageMarks,
+  });
+  const voyageTicks = dayStripTicks({
+    ...voyageWindow,
+    hours: dayHourBoundaries(voyageWindow, shop.timezone),
+    count: 4,
+  });
+  /**
+   * The boat, its crew, how full it is, which day it is and what a seat costs —
+   * joined the way `boatCrewSummary` above joins its own parts.
+   *
+   * **The price is here because nothing else on this page says it.** Retiring
+   * the capacity ring from the header was deliberate (the count is in words
+   * beside it), but the price rode the same component, and the only other place
+   * it appears on this page is as an editable field behind About's disclosure.
+   * A staffer quoting a walk-in should not have to open an editor to read it.
+   */
+  const voyageLine = [
+    t("trips.voyage.line", {
+      boat: boatCrewSummary,
+      booked: trip.booked,
+      capacity: trip.capacity,
+    }),
+    formatShortDate(trip.startsAt, locale, shop.timezone),
+    trip.priceCents === null
+      ? null
+      : `${formatMoneyCents(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t("trips.about.perSeat")}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const voyageStrip: DayStripProps = {
+    geometry: dayStripGeometry({
+      from: voyageWindow.from,
+      to: voyageWindow.to,
+      now,
+      sunriseAt: departureSky.sunriseAt,
+      sunsetAt: departureSky.sunsetAt,
+      daylightProgress: voyageDaylight,
+      marks: [
+        { id: "off", at: trip.startsAt },
+        ...voyageDiveMarks.map(({ id, at }) => ({ id, at })),
+        { id: "back", at: trip.endsAt },
+      ],
+      ticks: voyageTicks,
+    }),
+    label: t("trips.voyage.stripLabel", { title: trip.title }),
+    /**
+     * **Lines off carries a dot and no word.** Its time is the largest thing on
+     * the page, three centimetres above the strip — a label repeating it is the
+     * same fact twice, and on a short voyage it crowds the first dive's site
+     * name off the left edge as well.
+     */
+    markLabels: {
+      back: formatTime(trip.endsAt, locale, shop.timezone),
+      ...Object.fromEntries(voyageDiveMarks.map(({ id, name }) => [id, name])),
+    },
+    // The hour alone under a tick — "6 AM", never "6:00 AM"; the minute on a
+    // tick is a digit nobody reads, and four full times touch at 390.
+    tickLabels: voyageTicks.map((at) =>
+      formatHourShort(wallTimeOf(at, shop.timezone).hour, locale),
+    ),
+    nowLabel: formatTime(now, locale, shop.timezone),
+  };
   const repeatsSummary = series
     ? recurrenceSummaryText(
         t,
@@ -577,13 +719,28 @@ export default async function ManageTripPage({
           "confirmPhone",
         ]}
       />
-      <TripPageHeader
-        className="mb-5"
-        boardHref={shopPath(shopSlug, "schedule", "board")}
-        backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
-        trip={trip}
-        locale={locale}
-        timeZone={shop.timezone}
+      {/* **The departure is an hour** (ADR 20260919-one-idea, decision I ·
+          Tide, slice 23c). The hour the boat leaves is the page's one name,
+          over the sky at the hour it is being read, with the voyage drawn
+          beneath it. The capacity ring retires here: "9 of 12" is in the line
+          under the title, in words, and a ring saying it again beside it was
+          the same fact twice.
+
+          Trip only, for now. `TripPageHeader` still dresses Manifest and Prep,
+          and the sky reaching them belongs with the slice that makes the three
+          one page — which touches the roll call, so it gets its own
+          `dive-domain-expert` review rather than riding along with this one. */}
+      <VoyageHeader
+        scheme={voyageSky.scheme}
+        back={
+          <EyebrowBackLink onSky href={shopPath(shopSlug, "schedule", "board")}>
+            {t(STAFF_DESTINATION_LABEL_KEYS.board)}
+          </EyebrowBackLink>
+        }
+        hour={formatTime(trip.startsAt, locale, shop.timezone)}
+        title={trip.title}
+        line={voyageLine}
+        strip={voyageStrip}
         badge={
           cancelled ? (
             <TripCapacityBadge
@@ -593,30 +750,16 @@ export default async function ManageTripPage({
             />
           ) : undefined
         }
-        price={
-          trip.priceCents === null
-            ? undefined
-            : `${formatMoneyCents(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t(
-                "trips.about.perSeat",
-              )}`
-        }
-        headerAside={
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-            <TripCapacityRing
-              booked={trip.booked}
-              capacity={trip.capacity}
-              seatsLabel={t("trips.about.seatsLabel", { capacity: trip.capacity })}
-              openLabel={t("trips.about.openLabel")}
+        action={
+          cancelled ? undefined : (
+            <TripAddDiverLink
+              onSky
+              href="#add-diver"
+              label={t("trips.addDiver.addDiver")}
+              compactLabel={t("trips.about.add")}
+              ariaLabel={t("trips.about.addDiverJump")}
             />
-            {!cancelled ? (
-              <TripAddDiverLink
-                href="#add-diver"
-                label={t("trips.addDiver.addDiver")}
-                compactLabel={t("trips.about.add")}
-                ariaLabel={t("trips.about.addDiverJump")}
-              />
-            ) : null}
-          </div>
+          )
         }
         subNav={<TripSurfaceNav shopSlug={shopSlug} tripId={tripId} locale={locale} />}
       />

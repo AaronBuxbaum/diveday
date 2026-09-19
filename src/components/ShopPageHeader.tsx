@@ -13,8 +13,9 @@ import { GREETING_TITLE_CLASS, PAGE_TITLE_CLASS } from "@/components/ui/typograp
  * `leading-4` pins the line box to 16px so `ShopPageHeaderSkeleton`'s `h-4`
  * bar stands in for it exactly.
  */
-export const EYEBROW_CLASS =
-  "text-[11px] leading-4 font-bold tracking-[0.16em] text-primary uppercase";
+const EYEBROW_SHAPE = "text-[11px] leading-4 font-bold tracking-[0.16em] uppercase";
+
+export const EYEBROW_CLASS = `${EYEBROW_SHAPE} text-primary`;
 
 /**
  * The eyebrow-as-breadcrumb, for a header that is not `ShopPageHeader`.
@@ -30,15 +31,28 @@ export function EyebrowBackLink({
   href,
   children,
   className = "",
+  onSky = false,
 }: {
   href: string;
   children: ReactNode;
   className?: string;
+  /**
+   * This eyebrow is standing on a `SkyBand`, so it wears the band's ink rather
+   * than lagoon. `text-primary` on `--sky-day` measures **1.76:1** in the
+   * captured pixels — the trip masthead shipped it that way and the way back
+   * was effectively invisible. It is a prop rather than a `className`
+   * override because two `text-*` utilities resolve by stylesheet order, not
+   * by the order they are written, so an override here silently does nothing
+   * (the same trap `buttonClass`'s `flush` exists for).
+   */
+  onSky?: boolean;
 }) {
   return (
     <Link
       href={href}
-      className={`${tapTargetLinkClass} ${EYEBROW_CLASS} -my-2 gap-1 py-2 hover:underline ${className}`.trim()}
+      className={`${tapTargetLinkClass} ${EYEBROW_SHAPE} ${
+        onSky ? "text-(--sky-ink)" : "text-primary"
+      } -my-2 gap-1 py-2 hover:underline ${className}`.trim()}
     >
       <svg
         aria-hidden="true"

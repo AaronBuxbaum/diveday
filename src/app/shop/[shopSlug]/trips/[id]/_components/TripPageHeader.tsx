@@ -149,63 +149,6 @@ export function TripPageHeader({
 }
 
 /**
- * Compact capacity read used by the Trip masthead. The ring is a visual
- * summary; the adjacent words keep the exact count available to readers and
- * in high-contrast/forced-colour modes.
- */
-export function TripCapacityRing({
-  booked,
-  capacity,
-  seatsLabel,
-  openLabel,
-}: {
-  booked: number;
-  capacity: number;
-  seatsLabel: string;
-  openLabel: string;
-}) {
-  const radius = 19;
-  const circumference = 2 * Math.PI * radius;
-  const progress = capacity > 0 ? Math.min(1, Math.max(0, booked / capacity)) : 0;
-  const open = Math.max(0, capacity - booked);
-  return (
-    <div
-      className="flex items-center gap-2 sm:gap-2.5"
-      role="img"
-      aria-label={`${booked} ${seatsLabel}, ${open} ${openLabel}`}
-    >
-      <svg className="size-8 shrink-0 sm:size-11" viewBox="0 0 46 46" aria-hidden="true">
-        <circle cx="23" cy="23" r={radius} fill="none" className="stroke-border" strokeWidth="5" />
-        <circle
-          cx="23"
-          cy="23"
-          r={radius}
-          fill="none"
-          className="stroke-primary"
-          strokeWidth="5"
-          strokeLinecap="round"
-          strokeDasharray={`${progress * circumference} ${circumference}`}
-          transform="rotate(-90 23 23)"
-        />
-        <text
-          x="23"
-          y="27"
-          textAnchor="middle"
-          className="fill-foreground text-[13px] font-bold tabular-nums"
-        >
-          {booked}
-        </text>
-      </svg>
-      <span className="text-[11px] leading-tight text-muted sm:text-xs">
-        {seatsLabel}
-        <br />
-        {open} {openLabel}
-      </span>
-    </div>
-  );
-}
-
-/**
  * A masthead door that points at the "Add a diver" band further down the page.
  *
  * **Link weight, not primary.** One act, two primaries: this jump and the
@@ -221,12 +164,21 @@ export function TripAddDiverLink({
   label,
   compactLabel = label,
   ariaLabel,
+  onSky = false,
 }: {
   href: string;
   label: string;
   compactLabel?: string;
   /** Distinguishes the masthead jump from the inline add form for assistive tech. */
   ariaLabel?: string;
+  /**
+   * `VoyageHeader` stands this door on a `SkyBand`, where `link`'s accent
+   * measured 1.76:1 against `--sky-day` — see the `sky` variant. On the sky it
+   * becomes the band's own chip; everywhere else it stays a link, because a
+   * chip on the page's ground would be the second primary this component's
+   * note above exists to prevent.
+   */
+  onSky?: boolean;
 }) {
   return (
     <a
@@ -236,7 +188,11 @@ export function TripAddDiverLink({
       // class string and had drifted to `font-semibold` and a `sm:`
       // re-statement of its own radius. The glyph and the width-forked label
       // are the children.
-      className={buttonClass({ variant: "link", className: "gap-1.5" })}
+      className={
+        onSky
+          ? buttonClass({ variant: "sky", size: "sm", className: "gap-1.5" })
+          : buttonClass({ variant: "link", className: "gap-1.5" })
+      }
     >
       <DiveDayIcon name="addBooking" className="size-4" />
       <span className="sm:hidden">{compactLabel}</span>
