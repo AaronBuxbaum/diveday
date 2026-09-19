@@ -545,6 +545,17 @@ export interface UptimeTarget {
   readonly searchString: string;
   /** Seconds between polls from each checker region. 30 is the standard rate. */
   readonly requestIntervalSeconds: number;
+  /**
+   * Which AWS checker regions poll this target. Three is Route 53's minimum.
+   *
+   * Left unset, Route 53 polls from all of them -- roughly sixteen -- and
+   * `requestIntervalSeconds` is then per region rather than per endpoint: at 30s
+   * the endpoint receives a request about every two seconds, ~1.3M a month, each
+   * one a Vercel function invocation. Naming three makes that about every ten
+   * seconds for the same detection latency, because `failureThreshold` counts
+   * consecutive unhealthy rounds either way (issue #1899).
+   */
+  readonly checkerRegions: readonly string[];
   /** Consecutive failed polls before Route 53 itself calls the target unhealthy. */
   readonly failureThreshold: number;
   /** The first thing to do when it fires. Rendered into the alarm description. */
@@ -565,6 +576,14 @@ export const UPTIME_TARGETS: readonly UptimeTarget[] = [
     resourcePath: "/api/health",
     searchString: '"status":"ok"',
     requestIntervalSeconds: 30,
+    // Three regions, the documented minimum, chosen for spread rather than
+    // proximity: a checker that sits next to the origin tells you least. One
+    // per ocean the shops dive in -- North America and the Caribbean, Europe
+    // and the Mediterranean/Red Sea, and the Asia-Pacific group the signup
+    // picker already has. Fewer regions means a single region's bad day
+    // carries more weight in Route 53's majority, which is what
+    // `failureThreshold: 3` is for.
+    checkerRegions: ["us-east-1", "eu-west-1", "ap-southeast-1"],
     // Three, so a single checker region's blip is not an incident. Route 53
     // polls from several regions at once and takes the majority, then needs
     // this many consecutive unhealthy rounds -- about 90 seconds -- before it

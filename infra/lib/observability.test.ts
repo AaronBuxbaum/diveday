@@ -382,6 +382,7 @@ describe("the synthesized observability stack", () => {
               FailureThreshold?: number;
               EnableSNI?: boolean;
               Port?: number;
+              Regions?: string[];
             };
           };
         }
@@ -408,6 +409,14 @@ describe("the synthesized observability stack", () => {
       expect(config?.EnableSNI).toBe(true);
       expect(config?.RequestInterval).toBe(target.requestIntervalSeconds);
       expect(config?.FailureThreshold).toBe(target.failureThreshold);
+      // Left unset, Route 53 polls from every checker region and the interval
+      // above becomes per region rather than per endpoint -- about a request
+      // every two seconds. Naming the set is what keeps the invocation count
+      // proportional to the monitor rather than to AWS's region list.
+      expect(config?.Regions).toEqual([...target.checkerRegions]);
+      // Three is Route 53's documented minimum; fewer is rejected at deploy
+      // time, which is a slow way to learn it.
+      expect(target.checkerRegions.length).toBeGreaterThanOrEqual(3);
       // The public host, not an internal name: an external check that resolves
       // through the account's own DNS is not an external check.
       expect(config?.FullyQualifiedDomainName).toBe("www.dive.day");

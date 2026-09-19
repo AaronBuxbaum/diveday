@@ -63,6 +63,20 @@ export class GlobalStack extends cdk.Stack {
           searchString: target.searchString,
           requestInterval: target.requestIntervalSeconds,
           failureThreshold: target.failureThreshold,
+          // Named rather than left to Route 53's default of every region.
+          // `requestInterval` is per *checker*, not per endpoint, so the
+          // default set turns 30 seconds into a request about every two --
+          // ~1.3M Vercel invocations a month for a monitor that needs a few
+          // thousand. Detection latency is unchanged: `failureThreshold`
+          // counts consecutive unhealthy rounds, not wall-clock seconds
+          // (issue #1899; the regions and the reasoning are in
+          // `UPTIME_TARGETS`).
+          //
+          // Safe to change on a live check: `Regions` updates with **no
+          // interruption**, unlike `Type`, `RequestInterval` and
+          // `MeasureLatency`, which force a replacement. The health check id
+          // therefore survives, and the alarm below keeps pointing at it.
+          regions: [...target.checkerRegions],
           // The app is served from a shared host behind SNI; without this the
           // checker's TLS handshake reaches the wrong certificate.
           enableSni: true,
