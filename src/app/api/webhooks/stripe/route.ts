@@ -21,6 +21,7 @@ import {
   hasNewerAccountUpdate,
   releaseStripeWebhookEventClaim,
 } from "@/db/webhook-events";
+import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { nowDate } from "@/lib/clock";
 import { type LogContext, log } from "@/lib/log";
 import { verifyStripeWebhook } from "@/lib/payments/webhook";
@@ -251,6 +252,14 @@ export async function POST(request: Request) {
             invoiceTaxCents(invoice.data),
           );
           logOutcome(order ? "order_paid" : "order_not_found");
+          // A paid order enqueues `order.paid` for every connected
+          // integration. Stripe's webhook is the most common way an order
+          // becomes paid, so draining here is what makes the write-driven
+          // path worth having at all (ADR
+          // 20260919-integration-delivery-is-write-driven). After the 200
+          // below, never before it: Stripe retries on a slow response, and a
+          // provider's latency must not become a redelivery.
+          if (order) dispatchIntegrationsAfterResponse();
         } else {
           logOutcome("malformed_payload");
         }

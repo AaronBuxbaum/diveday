@@ -7,6 +7,7 @@ import { getDb } from "@/db/client";
 import { createOrder, type NewOrderLineItem } from "@/db/orders";
 import { orderLineItemKind } from "@/db/schema";
 import { getShopCurrency, getShopTaxEnabled } from "@/db/stripe-accounts";
+import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
@@ -172,5 +173,11 @@ export async function createOrderAction(formData: FormData) {
     // straight through rather than hand-translating it.
     redirect(noticeUrl(newOrder, result.reason));
   }
+  // `createOrder` enqueued an `order.created` event for every connected
+  // integration. Drain it after this response rather than waiting for the
+  // half-hourly cron (ADR 20260919-integration-delivery-is-write-driven).
+  // `after` still runs when the redirect below throws, which is how a Server
+  // Function ends.
+  dispatchIntegrationsAfterResponse();
   revalidateAndRedirect(orders, `${orders}/${result.order.id}`);
 }
