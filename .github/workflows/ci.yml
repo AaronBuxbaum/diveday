@@ -58,13 +58,12 @@ jobs:
   # cascading rebase force-pushes it and it runs the whole gate then, before it
   # is the layer next to merge.
   #
-  # So a middle layer's expensive jobs simply do not run. The condition below is
-  # repeated verbatim on each of them, and it is GitHub's own recommendation for
-  # stacked pull requests: `github.event.pull_request.stack` arrives in the event
-  # payload, so the layer's position costs no API call, no script and no runner
-  # (ADR 20260827-stack-ci-skips-the-middle-layers, superseding
-  # 20260827-stack-ci-priority — whose gate job bought the same thing by holding
-  # a runner idle for up to 40 minutes).
+  # So a middle layer runs **nothing at all**. The condition below is repeated
+  # verbatim on each job that decides for itself, and it is GitHub's own
+  # recommendation for stacked pull requests: `github.event.pull_request.stack`
+  # arrives in the event payload, so the layer's position costs no API call, no
+  # script and no runner (ADR 20260919-stack-ci-cancels-superseded-layers,
+  # superseding 20260827-stack-ci-skips-the-middle-layers).
   #
   #   stack == null                  not stacked, or a push to `main`  -> run
   #   stack.base.ref == base.ref     the lowest unmerged layer         -> run
@@ -75,16 +74,26 @@ jobs:
   # registered in a stack, so a fork's is `null` — which is the *run* branch.
   # Every shape this does not recognise fails open, into the full gate.
   #
-  # `build`, `visual` and `visual-report` are deliberately outside it and run on
-  # every layer. A stacked layer's reg-suit baseline is the head commit of the
-  # layer directly below it (`scripts/reg-suit-keys.mjs`) and its report polls S3
-  # for that snapshot (`scripts/wait-for-baseline.mjs`), so a middle layer that
-  # never published one would leave the top timing out and reporting every
-  # surface as new — the pipeline's documented worst failure.
+  # **The visual half skips too, and that is the new half.** It used to be
+  # exempt, because a stacked layer's reg-suit baseline was the head commit of
+  # the layer directly below it, so a middle layer that published nothing left
+  # the layer above timing out and reporting every surface as new. Every layer
+  # is now keyed to the stack's fork point from `main` instead
+  # (`scripts/reg-suit-keys.mjs`), which `main`'s own run published long ago —
+  # so no layer waits on another and a middle layer has nothing left to do.
+  # `build`, `visual`, `visual-report` and `real-postgres` carry no condition of
+  # their own: they reach `changes` through `needs:`, and a skipped dependency
+  # skips them by propagation.
+  #
+  # Skipping is only half of Graphite's behaviour. The other half is that a
+  # layer which *becomes* a middle layer — the previous top, the moment a new
+  # one opens above it — has a full run already in flight, and an `if:` cannot
+  # reach back into a run that has started. `scripts/stack-cancel.mjs`, from
+  # `.github/workflows/stack.yml`, cancels it.
   #
   # `scripts/check-stack-ci-skip.mjs` (in `pnpm check:repo`) pins both halves:
-  # the condition is byte-identical on every job that carries it, and the three
-  # visual jobs do not carry it.
+  # the condition is byte-identical on every job that carries it, and every job
+  # that does not carry it reaches `changes` through `needs:`.
 
   repo-safeguards:
     name: Repository safeguards
@@ -464,14 +473,17 @@ jobs:
     # The `changes` clause is the same guard for a change that touches no code:
     # `build` skipped, so `visual` skipped, so there is nothing to compare and
     # no snapshot to publish — and the next code commit's baseline resolves
-    # past this one (`scripts/wait-for-baseline.mjs`).
+    # past this one (`scripts/wait-for-baseline.mjs`). It is also what skips
+    # this job on a stack's middle layer, since `changes` skips there
+    # (`jobs:` above).
     if: ${{ !cancelled() && github.event_name != 'schedule' && needs.changes.outputs.code == 'true' }}
     runs-on: ubuntu-latest
-    # Ten minutes for the compare itself, plus the twenty a stacked layer may
-    # spend waiting for the layer below to publish the baseline it is keyed to
-    # (`scripts/wait-for-baseline.mjs`, whose own deadline is what actually
-    # bounds that wait — this is only the backstop above it).
-    timeout-minutes: 35
+    # Ten minutes for the compare, and nothing added on top of it. This used to
+    # be 35, to contain the twenty a stacked layer could spend waiting for the
+    # layer below to publish the baseline it was keyed to. Every layer is now
+    # keyed to the stack's fork point from `main`, which was published long
+    # before this run started, so there is no wait left to contain.
+    timeout-minutes: 15
     # The only job in this workflow that writes anything back to GitHub: the
     # sticky visual-summary comment in the last step. Scoped here rather than at
     # workflow level so no other job's third-party actions inherit write access.
@@ -516,7 +528,7 @@ jobs:
           fetch-depth: 0
       # Name both snapshot keys outright, into this job's environment
       # (`regconfig.json` interpolates them) and into this step's outputs (the
-      # wait below needs the expected one before the compare runs).
+      # resolver below needs the expected one before the compare runs).
       #
       # This replaces three steps whose only job was to arrange the local git
       # graph the way `reg-keygen-git-hash-plugin` wanted to read it: a
@@ -558,42 +570,28 @@ jobs:
           pattern: visual-screenshots-*
           path: e2e/screenshots
           merge-multiple: true
-      # The other half of ADR 20260821-stacked-pull-requests' fix, and the half
-      # that actually removes the race: an explicit key cannot conjure a
-      # snapshot. A stacked layer's baseline is the layer below's head commit,
-      # and the only run that publishes that commit is the layer below's own —
-      # which GitHub's cascading rebase restarts every time something merges
-      # underneath it. So on the run right after a rebase both layers are in
-      # flight at once, and without this the upper one asks S3 for a key that
-      # will exist in four minutes' time and reports all 200 of its surfaces as
-      # *new*, with `Changed: 0` at the top.
+      # An explicit key cannot conjure a snapshot. When the expected key has no
+      # snapshot in S3 — a commit that touched no code and so published
+      # nothing, a main run that was cancelled or lost a capture shard — this
+      # walks that commit's first-parent ancestors and rewrites
+      # `REG_EXPECTED_KEY` to the nearest one that did publish, saying so in a
+      # warning and in the sticky comment. Comparing against a slightly older
+      # baseline reports main's own movement between the two commits as this
+      # run's; comparing against nothing reports every surface as new with
+      # `Changed: 0`, which reads as good news. Only when no ancestor within
+      # reach has a snapshot does it fall through to the compare and to the
+      # summary below, which says "NOTHING WAS COMPARED" in those words.
       #
-      # `needs:` cannot express this: the layer below's jobs are in a different
-      # workflow run on a different pull request, and `needs:` is intra-run
-      # only. So it is a poll, and three things keep it from becoming the
-      # nine-hour wait loop AGENTS.md was written around: it has its own
-      # deadline (20 minutes, inside this job's 35), it exits 0 on every path
-      # including that deadline, and only a stacked layer waits — `REG_STACKED`
-      # is false whenever the base is the default branch, and an ordinary pull
-      # request would otherwise block on a run that never exists.
-      #
-      # The second half of the same step runs for every event: when the
-      # expected key has no snapshot in S3 — a commit that touched no code and
-      # so published nothing, a main run that was cancelled or lost a capture
-      # shard, a layer below that gave up above — it walks that commit's
-      # first-parent ancestors and rewrites `REG_EXPECTED_KEY` to the nearest
-      # one that did publish, saying so in a warning and in the sticky comment.
-      # Comparing against a slightly older baseline reports main's own movement
-      # between the two commits as this run's; comparing against nothing
-      # reports every surface as new with `Changed: 0`, which reads as good
-      # news. Only when no ancestor within reach has a snapshot does it fall
-      # through to the compare and to the summary below, which says "NOTHING WAS
-      # COMPARED" in those words.
+      # It used to poll as well as walk, for up to twenty minutes: a stacked
+      # layer was keyed to the layer below's head, and the only run that
+      # publishes that commit is the layer below's own. That poll is gone with
+      # the key it existed for (ADR 20260919-stack-ci-cancels-superseded-layers)
+      # — every layer is keyed to the stack's fork point from `main` now, and
+      # `main` published it before any of this started.
       - name: Resolve a baseline that actually exists
         if: ${{ needs.visual.result == 'success' && steps.keys.outcome == 'success' }}
         run: node scripts/wait-for-baseline.mjs
         env:
-          REG_STACKED: ${{ steps.keys.outputs.stacked }}
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
       # `steps.keys.outcome` as well as the shards: an `if:` expression replaces
       # the implicit `success()`, so without naming it this step would run after
@@ -796,12 +794,16 @@ jobs:
     # and this repo would rather read those than take a new supply-chain
     # dependency into every CI run to save them.
     #
-    # This job runs on every layer of a stack, deliberately, and carries no
-    # stack condition: `build` needs its `code` output and `build` must run on
-    # every layer (`jobs:` above), and a skipped dependency would skip `build`
-    # by propagation. `real-postgres` reads `middle_layer` instead, which is the
-    # same question the stack condition asks, answered here once.
-    if: github.event_name != 'schedule' # nightly runs `real-postgres` only
+    # This job is also where a stack's middle layer stops (`jobs:` above). It is
+    # the root of the whole expensive half — `build` needs its `code` output,
+    # `visual` needs `build`, `visual-report` needs both, `real-postgres` needs
+    # its `db` output — so the one condition here skips all five by propagation,
+    # and none of them has to state the stack question again.
+    if: >-
+      github.event_name != 'schedule'
+      && (github.event.pull_request.stack == null
+      || github.event.pull_request.stack.base.ref == github.event.pull_request.base.ref
+      || github.event.pull_request.stack.position == github.event.pull_request.stack.size)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -809,20 +811,12 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
       db: ${{ steps.filter.outputs.db }}
-      middle_layer: ${{ steps.layer.outputs.middle_layer }}
     steps:
       - uses: actions/checkout@v7
         with:
           # The diff below reaches back to the base commit, which a depth-1
           # checkout does not contain.
           fetch-depth: 0
-      # The negation of the stack condition every skipping job carries, so the
-      # two cannot drift apart in meaning: a layer is in the middle exactly
-      # when it is stacked, not the bottom, and not the top.
-      - id: layer
-        run: echo "middle_layer=${MIDDLE}" >> "$GITHUB_OUTPUT"
-        env:
-          MIDDLE: ${{ github.event.pull_request.stack != null && github.event.pull_request.stack.base.ref != github.event.pull_request.base.ref && github.event.pull_request.stack.position != github.event.pull_request.stack.size }}
       - id: filter
         env:
           # On a pull_request, the base **branch** and the PR head — never
@@ -918,10 +912,9 @@ jobs:
     # Two independent reasons to run, and the `always()` is what lets the second
     # one work: `needs:` on a skipped job would otherwise skip this one too, and
     # `changes` is deliberately skipped on the nightly. A stack's middle layer
-    # skips this job like every other expensive one (`jobs:` above), and since
-    # `changes` runs on every layer, that decision is read from its output
-    # rather than from a skipped dependency.
-    if: ${{ always() && (github.event_name == 'schedule' || (needs.changes.outputs.db == 'true' && needs.changes.outputs.middle_layer != 'true')) }}
+    # skips `changes` itself (`jobs:` above), which leaves `outputs.db` empty
+    # here — so this job skips with it, and needs no stack clause of its own.
+    if: ${{ always() && (github.event_name == 'schedule' || needs.changes.outputs.db == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

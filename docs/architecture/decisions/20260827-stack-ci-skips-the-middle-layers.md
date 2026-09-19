@@ -1,6 +1,6 @@
 # 20260827-stack-ci-skips-the-middle-layers — A stack's middle layers do not run the expensive gate
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260919-stack-ci-cancels-superseded-layers](20260919-stack-ci-cancels-superseded-layers.md)
 - **Date:** 2026-08-27
 - **Supersedes:** [20260827-stack-ci-priority](20260827-stack-ci-priority.md)
 

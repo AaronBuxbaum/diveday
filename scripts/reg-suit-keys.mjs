@@ -8,14 +8,21 @@
 // walks the local graph with no network call and no configuration
 // (`CommitExplorer.getBaseCommitHash()`): it triangulates merge-bases against
 // every other branch in the working copy and takes the newest commit that is on
-// this branch and on some other one. That inference is correct — for a stacked
-// pull request it lands on the layer below's head, which is exactly what makes
-// a stack's diffs readable — but it is only reproducible if you can predict
-// which refs happen to be in the checkout, which is why `visual-report` grew
-// three steps whose only job was to arrange the graph the way the plugin wanted
-// (ADR 20260821-stacked-pull-requests). This computes the same two answers
-// directly, from the CI event, so the key a run uses is a stated fact rather
-// than a property of a workspace.
+// this branch and on some other one — which for a stacked pull request lands on
+// the layer below's head. That was only reproducible if you could predict which
+// refs happen to be in the checkout, which is why `visual-report` grew three
+// steps whose only job was to arrange the graph the way the plugin wanted (ADR
+// 20260821-stacked-pull-requests). This computes both answers directly, from
+// the CI event, so the key a run uses is a stated fact rather than a property
+// of a workspace.
+//
+// It also no longer agrees with the plugin about a stacked layer. Every pull
+// request, stacked or not, is keyed to its fork point from the **default
+// branch**, because a key on the layer below could only be satisfied by the
+// layer below's own run — and the machinery that bought (a 20-minute poll, a
+// 35-minute timeout, six jobs spent on every middle layer) cost more than the
+// tidier diff was worth. `resolveRegSuitKeys` says the whole of it; ADR
+// 20260919-stack-ci-cancels-superseded-layers is the decision.
 //
 // **The key strings must not change.** Every baseline in the S3 bucket is
 // keyed by full 40-character commit sha — that is what the old plugin's
@@ -26,7 +33,8 @@
 // Consumed by `scripts/visual-compare.mjs` (which puts them in the environment
 // `regconfig.json` reads) and by the `visual-report` job in
 // `.github/workflows/ci.yml` (which also needs the expected key *before* the
-// compare, to wait for a stacked layer's baseline — `scripts/wait-for-baseline.mjs`).
+// compare, to settle it on a commit that actually published —
+// `scripts/wait-for-baseline.mjs`).
 import { appendFileSync } from "node:fs";
 import process from "node:process";
 
@@ -98,19 +106,43 @@ export function resolveRegSuitKeys({ env = process.env, git }) {
 
   if (event === "pull_request") {
     const baseRef = env.PR_BASE_REF;
-    if (baseRef && !REF_NAME.test(baseRef)) {
-      throw new Error(`reg-suit-keys: refusing an implausible base ref "${baseRef}".`);
+    for (const [name, ref] of [
+      ["base ref", baseRef],
+      ["default branch", defaultBranch],
+    ]) {
+      if (ref && !REF_NAME.test(ref)) {
+        throw new Error(`reg-suit-keys: refusing an implausible ${name} "${ref}".`);
+      }
     }
-    // The fork point of this branch from its base — the same commit the graph
-    // walk resolved, and for a stacked layer that is the layer below's head.
-    if (baseRef) {
-      expectedKey = attempt(git, ["merge-base", `origin/${baseRef}`, "HEAD"]);
-      if (expectedKey) source = `merge-base with origin/${baseRef}`;
-    }
-    // The base branch can vanish mid-run: an auto-merged layer deletes its head
-    // branch, and this job runs 6-10 minutes after the run starts. The event
-    // payload still remembers where it pointed.
-    if (!expectedKey && COMMIT_SHA.test(env.PR_BASE_SHA ?? "")) {
+    // The fork point from the **default branch** — the last commit on `main`
+    // this branch and `main` agree on — and not from `base.ref`, which for a
+    // stacked layer is the layer below's branch.
+    //
+    // Keying a layer to the layer below reads better in principle: each diff
+    // is that layer's own delta. It costs more than it is worth. The only run
+    // that publishes the layer below's head is the layer below's own, so the
+    // key named here could not be satisfied until that run finished, and every
+    // consequence of that followed — a 20-minute S3 poll on the layer above, a
+    // 35-minute job timeout to contain it, and a standing rule that a middle
+    // layer must spend six jobs photographing surfaces nobody would look at,
+    // purely so the layer above had something to compare against (ADR
+    // 20260827-stack-ci-skips-the-middle-layers). A `main` commit is published
+    // by `main`'s own run, long before any of this, so the key is always
+    // already there and no layer waits on another.
+    //
+    // What changes in the output: the top layer's diff is now the whole
+    // stack's visual delta rather than its own slice — which is what the top
+    // layer's green is read as anyway, the closest thing a stack has to a
+    // statement about the merged result. The bottom layer is unaffected: its
+    // base *is* the default branch, so this resolves the same commit it always
+    // did (ADR 20260919-stack-ci-cancels-superseded-layers).
+    expectedKey = attempt(git, ["merge-base", `origin/${defaultBranch}`, "HEAD"]);
+    if (expectedKey) source = `merge-base with origin/${defaultBranch}`;
+    // Only for a pull request that targets the default branch directly. For a
+    // stacked layer `PR_BASE_SHA` is the layer below's head, which is the one
+    // answer this no longer wants; falling back to it would reintroduce the
+    // dependency by the back door on the one path nobody watches.
+    if (!expectedKey && baseRef === defaultBranch && COMMIT_SHA.test(env.PR_BASE_SHA ?? "")) {
       expectedKey = attempt(git, ["merge-base", env.PR_BASE_SHA, "HEAD"]) ?? env.PR_BASE_SHA;
       source = "merge-base with the event's base sha (the base branch is gone)";
     }
@@ -168,7 +200,9 @@ function main(argv) {
   console.log(`reg-suit-keys: expected ${expectedKey ?? "(none)"} — ${source}`);
   if (stacked) {
     console.log(
-      "reg-suit-keys: this pull request is stacked on another branch, so its baseline is the layer below's head.",
+      "reg-suit-keys: this pull request is stacked on another branch. Its baseline is still the " +
+        "stack's fork point from the default branch, so this diff covers every layer at or below " +
+        "this one — nothing here waits on the layer below.",
     );
   }
 
@@ -183,7 +217,6 @@ function main(argv) {
     writeLines(process.env.GITHUB_OUTPUT, [
       `actual=${actualKey ?? ""}`,
       `expected=${expectedKey ?? ""}`,
-      `stacked=${stacked}`,
     ]);
     return;
   }
