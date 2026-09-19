@@ -1178,6 +1178,23 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
 test("a refused physician evaluation stops the chase without lifting the hold", async ({
   page,
 }) => {
+  /*
+   * **Measured, not guessed.** Two navigations, a dialog, and three server
+   * actions — a refusal, then the evidenced answer, then the hold's own read.
+   * On an idle machine against a warm build this runs in **6.3s, 9.0s and
+   * 8.6s** across three repeats, against the 15s default: at worst six
+   * seconds of headroom, which a runner sharing itself between two workers
+   * and a Next server spends without anything going wrong.
+   *
+   * It went red on CI (shard 2/4, 2026-09-19) as a *test-budget* timeout, with
+   * the assertion below still waiting rather than having failed. That is the
+   * aggregate cost `e2e/add-diver.spec.ts` already names for its own longest
+   * flow — "every individual step resolving successfully, just past the
+   * default 15s budget in total — not a hang this override would mask" — and
+   * this is the same judgement, on the same evidence, with the numbers above
+   * as its warrant.
+   */
+  test.slow();
   await page.goto("/shop/blue-mantis/divers?q=Morgan");
   await page.getByRole("link", { name: "Morgan Vale" }).click();
   await expect(page.getByRole("heading", { name: "Morgan Vale", level: 1 })).toBeVisible();
