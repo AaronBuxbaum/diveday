@@ -46,6 +46,7 @@ import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import {
   formatDayParts,
   formatMoneyScanned,
+  formatMonthDay,
   formatRelativeDay,
   formatShortDate,
   formatTime,
@@ -75,6 +76,7 @@ import {
 import { liveSeasonEvents } from "@/lib/season-events";
 import { cardClearsDeparture, chooseShelfGreeting } from "@/lib/shelf-greeting";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
+import { skyReadingFor } from "@/lib/sky-scheme";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
 import { resolveLens } from "@/lib/trip-lenses";
 import { STAGE_SENTENCE_KEYS } from "@/lib/trip-stages";
@@ -223,6 +225,17 @@ export default async function SchedulePage({
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);
   const now = nowDate();
+  /**
+   * **The shop's own day, in words** (slice 23d). Not the reader's: a diver in
+   * London opening a Key Largo board has no way to know which day its first row
+   * means, and the whole page is written in a zone they are not standing in.
+   * The weekday leads because that is how a diver picks a dive day.
+   */
+  const shopfrontDay = `${formatWeekday(now, locale, tz)}, ${formatMonthDay(
+    utcToWallTime(now, tz).month,
+    utcToWallTime(now, tz).day,
+    locale,
+  )}`;
 
   /**
    * **Who is reading this, when their phone carries their shelf** (slice 20t).
@@ -888,6 +901,22 @@ export default async function SchedulePage({
               }
               badges={parseBrandBadges(shop.brandBadges)}
               establishedYear={shop.establishedYear}
+              // **The storefront is the day** (ADR 20260919-one-idea, decision
+              // I · Tide, slice 23d). The hour over *this* shop, from its own
+              // coordinates where it has them and from its clock where it does
+              // not, and the shop's own date under it — which is the one thing
+              // a diver reading this board from another timezone cannot work
+              // out for themselves. A shop with a cover photograph ignores
+              // both: it already has a sky.
+              sky={{
+                scheme: skyReadingFor({
+                  at: now,
+                  timeZone: tz,
+                  latitude: shop.latitude,
+                  longitude: shop.longitude,
+                }).scheme,
+                day: shopfrontDay,
+              }}
               locale={locale}
               t={t}
             />
