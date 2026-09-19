@@ -227,7 +227,11 @@ suite("run", () => {
 
   it("writes nothing for a chain of one", async () => {
     const { call, calls } = fake({ pulls: [pr(3, "l3", "main")] });
-    expect(await run(env, call)).toMatch(/chain of one/);
+    // Exactly, not `toMatch`: the summary is echoed into `$GITHUB_STEP_SUMMARY`,
+    // where the trailing space left by an empty cancellation half renders.
+    expect(await run(env, call)).toBe(
+      "Nothing to register: #3 is a chain of one — nothing to register yet.",
+    );
     expect(calls.some((c) => c.method === "POST")).toBe(false);
   });
 

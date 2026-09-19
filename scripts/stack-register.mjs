@@ -340,15 +340,29 @@ export async function run(env, call = request) {
     const second = planRegistration(chain, await call(`/repos/${repo}/stacks`, { token }));
     if (second.op === "none") {
       const quiet = await quieten(second, chain, repo, token, defaultBranch, call);
-      return `${describe(second, chain)} (a concurrent run got there first.) ${quiet}`;
+      return sentences(describe(second, chain), "(a concurrent run got there first.)", quiet);
     }
     if (second.op === plan.op) throw failure;
     await perform(second, repo, token, call);
     settled = second;
   }
 
-  const quiet = await quieten(settled, chain, repo, token, defaultBranch, call);
-  return `${describe(settled, chain)} ${quiet}`;
+  return sentences(
+    describe(settled, chain),
+    await quieten(settled, chain, repo, token, defaultBranch, call),
+  );
+}
+
+/**
+ * Join the halves of the summary, dropping the ones that had nothing to say.
+ *
+ * `quieten` answers with an empty string for a chain it does not act on, and
+ * interpolating that leaves a trailing space — in the job log, and in
+ * `$GITHUB_STEP_SUMMARY`, which renders as Markdown where two of them are a
+ * line break.
+ */
+function sentences(...parts) {
+  return parts.filter(Boolean).join(" ");
 }
 
 /**
