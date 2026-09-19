@@ -41,10 +41,17 @@ export const TRIP_REMINDER_CADENCES: readonly ReminderCadence[] = [
  * so changing its cadence would silently move a retry window this ticket has
  * no business touching.
  *
- * `:10` rather than `:00` so it does not land on the same minute as the recap
- * pass, with the minimum-seats sweep already at `:20`.
+ * `:00`, the same minute as the recap and minimum-seats passes, and
+ * deliberately so. Spreading the hourly passes across `:00`/`:10`/`:20` cost
+ * more than it bought: a serverless Postgres compute sleeps after five idle
+ * minutes, so three passes ten minutes apart is three separate wake-ups an
+ * hour where one shared minute is one, and the compute is billed for the time
+ * it spends awake rather than for the queries it answers. Nothing here needs
+ * the stagger — each pass reads its own rows and none contends with another —
+ * and the concurrency is four small function invocations against a pooled
+ * endpoint.
  */
-export const TRIP_REMINDER_CRON_CRONTAB = "10 * * * *";
+export const TRIP_REMINDER_CRON_CRONTAB = "0 * * * *";
 
 /** The widest lead time any cadence needs — how far ahead a scan must look. */
 export const MAX_REMINDER_LEAD_HOURS = TRIP_REMINDER_CADENCES.reduce(

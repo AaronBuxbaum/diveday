@@ -1,7 +1,18 @@
 # 20260907-external-uptime-monitor — Watch DiveDay with a Route 53 health check, and answer the question in public at `/status`
 
-- **Status:** Accepted
+- **Status:** Accepted, amended 2026-09-19 by
+  [20260919-health-check-does-not-wake-the-database](20260919-health-check-does-not-wake-the-database.md)
+
 - **Date:** 2026-09-07
+
+> **Amended (2026-09-19).** The monitor, the alarm, the string match and `/status` all stand exactly
+> as decided here. One piece did not: point 2 below has `/api/health` sharing its database check
+> with the page, and that check is now **removed**. A Route 53 health check on a 30-second interval
+> reaches the endpoint about every two seconds once every checker region is counted, and a `select 1`
+> at that cadence never lets Neon's compute reach its five-minute idle timeout — the probe alone
+> pinned the database awake 24/7 and set its whole bill. `/api/health` now reports process liveness
+> only; database liveness is covered by `/status`, Sentry, and the cron dead-man's switches. The
+> arithmetic, the alternatives and the detection-latency cost are all in the amending ADR.
 
 ## Context
 

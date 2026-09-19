@@ -1,6 +1,4 @@
 import { connection } from "next/server";
-import { checkDatabase } from "@/db/health";
-import { log } from "@/lib/log";
 
 /**
  * A liveness probe should answer fast or not at all — a slow answer is itself
@@ -26,12 +24,40 @@ const NO_STORE = { "Cache-Control": "no-store" } as const;
  * covers `/api` (its matcher excludes it), so every route here self-gates; this
  * one's gate is that there is nothing worth gating.
  *
- * What that buys is paid for by disclosing the strict minimum an uptime check
- * can act on:
+ * **This route does not touch the database, and that is the whole of ADR
+ * 20260919-health-check-does-not-wake-the-database.** It used to `select 1`
+ * through `getDb()`, which read as strictly better — liveness of the process
+ * *and* its database rather than "a function booted". What that missed is the
+ * arithmetic on the other side of the wire. A Route 53 health check on a
+ * 30-second interval is not one request every thirty seconds: each checker in
+ * every AWS region polls on its own schedule, so the endpoint receives one
+ * about **every two seconds**, roughly 1.3M a month. Neon's compute scales to
+ * zero after **five idle minutes** and is billed for the time it spends awake.
+ * A database query every two seconds means it never gets five idle minutes,
+ * ever, so the probe alone pinned the compute awake 24/7 and set the whole
+ * database bill by the clock rather than by use. No caching or TTL fixes that:
+ * any interval short enough to be a useful monitor is far shorter than the
+ * idle timeout.
  *
- *   `status` — `"ok"` when a `select 1` round-trips through the same `getDb()`
- *     every request path uses, so this is liveness of the process *and* its
- *     database, not just "a function booted".
+ * What is still proven by a 200 here: DNS resolves to this deployment, TLS
+ * terminates, the server booted, a route handler executes, and the build
+ * answering is the one named in `commit`. That is exactly the failure the
+ * external monitor exists for — the one where nothing inside the deployment is
+ * running to report anything, so Sentry, the metric filters and the cron
+ * monitors all go quiet together (ADR 20260907-external-uptime-monitor).
+ *
+ * Database liveness is covered three other ways, none of which polls: `/status`
+ * runs the real check in the request that renders it, Sentry reports the first
+ * failing user request immediately, and every cron's Sentry monitor is a
+ * dead-man's switch that fires within the hour when a pass cannot reach the
+ * database. The cost of the split, stated plainly: a database that fails while
+ * nothing else is happening is noticed in up to an hour instead of ~4 minutes.
+ *
+ * What it discloses, and nothing more:
+ *
+ *   `status` — `"ok"`, always, because a handler that cannot run cannot answer;
+ *     a dead deployment produces Vercel's own 5xx or a timeout, which is what
+ *     the monitor reads.
  *   `commit` — the 7-character short SHA of the deployed build, so an operator
  *     can tell "the bad deploy is still live" from "the rollback landed"
  *     without a dashboard. Short, because a monitor only needs to compare it.
@@ -39,45 +65,28 @@ const NO_STORE = { "Cache-Control": "no-store" } as const;
  * Withheld on purpose, since each is a free gift to someone mapping the app:
  * the database hostname, connection string, driver or dependency versions, any
  * environment-variable value, the region/instance, row counts, and every byte
- * of shop or diver data. The failure branch is symmetric — it reveals *that*
- * the database check failed, never the driver's error text, which routinely
- * carries hostnames and user names.
- *
- * A failed check answers 503, not 200-with-a-flag: an uptime monitor's default
- * configuration watches the status code, and a probe whose alerting depends on
- * the operator having configured body matching is a probe that will not alert.
+ * of shop or diver data.
  *
  * **`"status":"ok"` is a contract, not a detail.** The Route 53 health check in
  * §22 of `infra/lib/infra-stack.ts` matches that literal substring in the body
  * as well as the status code, so a 200 carrying somebody else's page — a CDN
  * error shell, a parked domain, a misrouted deployment — reads as down rather
- * than as up (ADR 20260907-external-uptime-monitor). Renaming the field or its
- * value would leave the check green forever against nothing; `observability.test.ts`
- * reads this file and fails when the string is gone.
+ * than as up. Renaming the field or its value would leave the check green
+ * forever against nothing; `observability.test.ts` reads this file and fails
+ * when the string is gone.
  */
 export async function GET() {
   // The check must observe *this* request, not a build-time snapshot of it.
   // With `cacheComponents` enabled a GET route handler is prerendered unless it
-  // touches runtime data, and a direct Drizzle query is not something Next
-  // tracks as uncached data — so without this the "health" of the deployment
-  // would be whatever the database said at build time, frozen forever.
+  // touches runtime data, and a probe answered from the build output would
+  // report that the deployment was alive at the moment it was compiled — green
+  // forever, including while it is down. This is what keeps the route dynamic
+  // now that no database read does it incidentally.
   await connection();
 
   // Vercel sets this on the deployment; anything else (local, a self-hosted
   // runner) simply has no build identity to report.
   const commit = (process.env.VERCEL_GIT_COMMIT_SHA ?? "unknown").slice(0, 7);
 
-  // The same check `/status` renders from (`src/db/health.ts`), so the page a
-  // shop owner opens and the probe the uptime alarm fires on cannot disagree.
-  if ((await checkDatabase()) === "up") {
-    return Response.json({ status: "ok", commit }, { headers: NO_STORE });
-  }
-
-  // Logged, not sent to Sentry: a monitor polls this on a fixed interval, so a
-  // database outage would mint one Sentry issue per poll for as long as it
-  // lasts. The monitor's own alert is the signal here; the log line is for
-  // whoever then goes looking. The driver's error never reaches this frame at
-  // all — see the disclosure note above, and `checkDatabase`.
-  log("health.db_unavailable", "error", { commit });
-  return Response.json({ status: "error", commit }, { status: 503, headers: NO_STORE });
+  return Response.json({ status: "ok", commit }, { headers: NO_STORE });
 }

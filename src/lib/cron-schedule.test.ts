@@ -7,6 +7,7 @@ import {
   dailyPassesWithin,
   nextDailyTickAtOrAfter,
 } from "./cron-schedule";
+import { MINIMUM_SEATS_CRON_CRONTAB } from "./minimum-seats";
 import { RECAP_CRON_CRONTAB } from "./recap-schedule";
 import { TRIP_REMINDER_CRON_CRONTAB } from "./reminders";
 
@@ -36,6 +37,29 @@ describe("the daily tick", () => {
   it("matches the deployed hourly schedule for /api/cron/trip-reminders", () => {
     const reminders = vercelCrons().find((cron) => cron.path === "/api/cron/trip-reminders");
     expect(reminders?.schedule).toBe(TRIP_REMINDER_CRON_CRONTAB);
+  });
+
+  it("matches the deployed hourly schedule for /api/cron/minimum-seats", () => {
+    const sweep = vercelCrons().find((cron) => cron.path === "/api/cron/minimum-seats");
+    expect(sweep?.schedule).toBe(MINIMUM_SEATS_CRON_CRONTAB);
+  });
+
+  /**
+   * The reason the three hourly passes share `:00` rather than being spread
+   * across the hour. A serverless Postgres compute sleeps after five idle
+   * minutes and bills for the time it is awake, so what the bill tracks is the
+   * number of distinct minutes something wakes it, not the number of passes:
+   * three passes on one minute is one wake-up, and the same three at `:00`,
+   * `:10` and `:20` is three. This is the assertion that stops a future
+   * "stagger them so they don't collide" from quietly restoring a duty cycle
+   * set by the clock instead of by use. A pass that genuinely needs its own
+   * minute may have one — it just has to say so here.
+   */
+  it("wakes the database on as few distinct minutes an hour as the passes allow", () => {
+    const hourlyMinutes = vercelCrons()
+      .filter((cron) => cron.schedule.split(" ")[1] === "*")
+      .flatMap((cron) => cron.schedule.split(" ")[0].split(","));
+    expect(new Set(hourlyMinutes)).toEqual(new Set(["0", "30"]));
   });
 
   it("wakes no *queue-draining* pass more often than daily, so a day is the floor on retry latency", () => {

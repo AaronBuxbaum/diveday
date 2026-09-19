@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
@@ -6,7 +8,7 @@ import { saveShopIntegration } from "@/db/integrations";
 import { integrationDeliveries, orders, shopIntegrations } from "@/db/schema";
 import { nowDate, nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
-import { dispatchDueIntegrationDeliveries } from "./dispatcher";
+import { dispatchDueIntegrationDeliveries, INTEGRATIONS_CRON_CRONTAB } from "./dispatcher";
 
 const HOOK = "https://hooks.zapier.com/hooks/catch/123456/abcdef";
 
@@ -215,5 +217,32 @@ describe("dispatchDueIntegrationDeliveries", () => {
       ?.data.customer;
     expect(delivered?.name).toEqual(expect.any(String));
     expect(String(delivered?.name).length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The cadence lives beside the dispatcher it drives, and `vercel.json` is what
+ * actually runs. Asserted here rather than in `src/lib/cron-schedule.test.ts`
+ * with the other four, because `src/lib` may not import `src/features` —
+ * `pnpm check:architecture` enforces the direction, and a test is not an
+ * exemption from it.
+ */
+describe("the outbox drain's cadence", () => {
+  it("matches the deployed vercel.json schedule for /api/cron/integrations", () => {
+    const raw = readFileSync(path.join(process.cwd(), "vercel.json"), "utf8");
+    const crons: Array<{ path: string; schedule: string }> = JSON.parse(raw).crons;
+    const drain = crons.find((cron) => cron.path === "/api/cron/integrations");
+    expect(drain?.schedule).toBe(INTEGRATIONS_CRON_CRONTAB);
+  });
+
+  it("leaves the retry ladder's upper rungs meaningful", () => {
+    // `markIntegrationDeliveryFailed` backs off min(60, 2 ** (attempt - 1))
+    // minutes. The cron cadence is the real floor under every rung, so a pass
+    // slower than the ladder's top rung would collapse the whole ladder into
+    // "next tick" and stretch the dead-letter horizon. Thirty minutes keeps
+    // the 32- and 60-minute rungs doing what they say.
+    const everyMinutes = 30;
+    expect(INTEGRATIONS_CRON_CRONTAB).toBe("0,30 * * * *");
+    expect(everyMinutes).toBeLessThan(60);
   });
 });
