@@ -619,5 +619,5 @@
     "uncheckedLabel": "Not checked — press to mark checked",
     "summary": "Before you leave the dock: {checked} of {total} checked"
   },
-  "hullLabel": "{boat}, drawn as its seats: {booked} of {capacity, plural, one {# seat} other {# seats}} taken."
+  "hullLabel": "{boat}, drawn as its seats: {booked} of {capacity, plural, one {# seat} other {# seats}} taken{blocked, plural, =0 {} one {, # who cannot board} other {, # who cannot board}}. Seats fill in booking order and are never assigned."
 }

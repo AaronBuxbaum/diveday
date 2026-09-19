@@ -12,13 +12,14 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
 import { formatShortDate } from "@/lib/format";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
+import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "./AddDiverSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { RosterSection } from "./RosterSection";
-import { TripHull } from "./TripHull";
+import { seatHoldersOf, TripHull } from "./TripHull";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -100,7 +101,16 @@ export function TripRosterContent({
    * it has none — a shore dive and a pool session have a roster and no boat,
    * and an invented hull would be a picture of something that is not there.
    */
-  hull: { name: string; color: string | null } | null;
+  hull: {
+    name: string;
+    color: string | null;
+    /**
+     * The guides assigned to this departure, already named. Two fit in the
+     * wheelhouse; the rest are the crew panel's, which is where a crew reads
+     * them in full.
+     */
+    crew: readonly string[];
+  } | null;
   /** The canonical Trip surface already owns the masthead capacity read. */
   compact?: boolean;
   actions: TripRosterActions;
@@ -138,6 +148,26 @@ export function TripRosterContent({
   // check at the page boundary prevents a client-rendered roster from ever
   // deciding whether money controls should exist.
   const showPromote = lastMinute.showPromote && mayDiscount;
+
+  /**
+   * **The hull's sentence counts the rows the hull draws.**
+   *
+   * It used to take `trip.booked` while the seats were drawn from every
+   * non-cancelled booking — two different sets, so a departure with one no-show
+   * showed six filled seats over the words "5 of 6 seats taken" (dive-domain
+   * review 20260919). Both read `seatHoldersOf` now.
+   *
+   * The blocked count is the one fact the picture carries that the masthead
+   * does not, which is why the sentence names it: for a reader who cannot see
+   * the boat, "two who cannot board" *is* the picture.
+   */
+  const hullSeatHolders = hull ? seatHoldersOf(roster) : [];
+  const hullSeatCounts = {
+    booked: hullSeatHolders.length,
+    blocked: hullSeatHolders.filter((entry) =>
+      rosterRowIsBlocked(readinessByBooking.get(entry.booking.id)?.readiness),
+    ).length,
+  };
 
   return (
     <div data-trip-guests-ready className="contents">
@@ -185,18 +215,27 @@ export function TripRosterContent({
 
           Only where the departure has a boat. A shore dive and a pool session
           have a roster and no hull, and an invented one would be a picture of
-          something that is not there. */}
-      {hull ? (
+          something that is not there.
+
+          **And only where it is sailing.** A blow-out cancels the departure and
+          leaves every booking active (the glossary's *Blow-out*), so a
+          cancelled trip's seats are all still held and the hull drew a full,
+          happy boat at the top of a page whose words said the day was off — and
+          the picture is read first. There is no honest hull for a departure
+          that is not going, so there is none (dive-domain review 20260919). */}
+      {hull && !cancelled ? (
         <div className="mt-6">
           <TripHull
             roster={roster}
             readinessByBooking={readinessByBooking}
             capacity={trip.capacity}
             color={hull.color}
+            crew={hull.crew}
             label={t("trips.hullLabel", {
               boat: hull.name,
-              booked: trip.booked,
+              booked: hullSeatCounts.booked,
               capacity: trip.capacity,
+              blocked: hullSeatCounts.blocked,
             })}
           />
         </div>

@@ -22,10 +22,19 @@ import type { WaiverState } from "./waivers";
  * on the roster and absent everywhere else. This is the queue's rule, stated
  * once.
  *
- * Failing *open* here is deliberate and safe: nothing gates boarding on this
- * predicate. It only decides whether a card appears under a filter chip. The
- * manifest and the readiness engine still fail closed on missing evidence
- * (`readiness_unavailable`), which is where a missing row is actually a hazard.
+ * Failing *open* here is deliberate: the manifest and the readiness engine
+ * still fail closed on missing evidence (`readiness_unavailable`), which is
+ * where a missing row is actually a hazard, and nothing gates boarding on this.
+ *
+ * **It no longer only decides whether a card appears under a filter chip**, and
+ * this comment said so until 2026-09-19. `TripHull` reads it to colour a seat
+ * on a drawing of the boat, so a booking whose readiness was never read paints
+ * as an ordinary held seat — an absence of evidence rendered as a clearance.
+ * That is safe only while the two sets agree, which they do because the roster
+ * and the readiness map come out of one `getTripGuests` batch over the same
+ * non-cancelled bookings. Nothing pins that agreement and the hull has no "not
+ * known" seat to draw, so a *third* caller of this predicate on a safety
+ * surface needs one first.
  */
 export function rosterRowIsBlocked(readiness: ReadinessResult | undefined): boolean {
   return readiness?.status === "blocked";

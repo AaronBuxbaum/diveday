@@ -973,7 +973,7 @@ export default async function ManageTripPage({
 
       <TripRosterContent
         guests={guests}
-        hull={boat ? { name: boat.name, color: boat.hullColor } : null}
+        hull={boat ? { name: boat.name, color: boat.hullColor, crew: assignedCrew } : null}
         shopSlug={shopSlug}
         shopName={shop.name}
         locale={locale}
