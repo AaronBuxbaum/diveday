@@ -185,11 +185,10 @@ the next ticket stacks on it, because anything else means resolving the same con
 
 **Nothing argues against depth.** A stack has no length limit, and a routine that runs for hours
 should expect a long one: ticket twelve stacks on ticket eleven exactly the way ticket two stacked
-on ticket one. CI used to be the counter-argument and no longer is — a middle layer skips
-`repo-safeguards`, `lint`, `typecheck` and the unit and Playwright shards, so only the bottom and
-the top pay the full gate however deep the chain runs (ADR
-20260827-stack-ci-skips-the-middle-layers; the **stacked-prs** skill). The stack restarts when the
-one below it **merges**, not at a layer count.
+on ticket one. CI used to be the counter-argument and no longer is — a middle layer runs no jobs at all, and a
+layer that stops being the top has its in-flight run cancelled, so only the bottom and the top cost
+anything however deep the chain runs (ADR 20260919-stack-ci-cancels-superseded-layers; the
+**stacked-prs** skill). The stack restarts when the one below it **merges**, not at a layer count.
 
 **A fix that is not the ticket goes on its own branch off `main`**, not into the stack — an
 unordered crew query found while triaging a diff, a race in a spec you did not touch. It should be

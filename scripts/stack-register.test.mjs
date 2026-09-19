@@ -162,11 +162,15 @@ suite("run", () => {
    * A stand-in for the API. `stacks` is read fresh on every call, so a test can
    * mutate it between calls the way a concurrent run would.
    */
-  const fake = ({ pulls = chain3, stacks = [], refuse = () => false } = {}) => {
+  const fake = ({ pulls = chain3, stacks = [], runs = {}, refuse = () => false } = {}) => {
     const calls = [];
     const call = async (pathname, init = {}) => {
       calls.push({ pathname, method: init.method ?? "GET", body: init.body });
       if (pathname.includes("/pulls?")) return pathname.includes("page=1") ? pulls : [];
+      if (pathname.includes("/actions/workflows/")) {
+        const branch = new URL(`https://x${pathname}`).searchParams.get("branch");
+        return { workflow_runs: runs[branch] ?? [] };
+      }
       if (init.method === "POST" && refuse(calls)) throw new Error("422 Unprocessable Entity");
       if (init.method === "POST") return {};
       return stacks;
@@ -176,15 +180,58 @@ suite("run", () => {
 
   it("registers a chain, bottom to top", async () => {
     const { call, calls } = fake();
-    expect(await run(env, call)).toBe("Registered #1 -> #2 -> #3 as a new stack.");
+    expect(await run(env, call)).toBe(
+      "Registered #1 -> #2 -> #3 as a new stack. Middle layers #2 had no CI run left to cancel.",
+    );
     const post = calls.find((c) => c.method === "POST");
     expect(post.pathname).toBe("/repos/owner/repo/stacks");
     expect(post.body).toEqual({ pull_requests: [1, 2, 3] });
   });
 
+  // The two halves of this workflow in one pass: the chain becomes a stack, and
+  // the layer that became a middle layer in the same instant stops paying for a
+  // gate nobody will read (ADR 20260919-stack-ci-cancels-superseded-layers).
+  it("cancels the CI a newly-middle layer no longer needs", async () => {
+    const { call, calls } = fake({
+      runs: {
+        l2: [
+          {
+            id: 4242,
+            status: "in_progress",
+            head_branch: "l2",
+            path: ".github/workflows/ci.yml",
+          },
+        ],
+      },
+    });
+    expect(await run(env, call)).toBe(
+      "Registered #1 -> #2 -> #3 as a new stack. Cancelled superseded CI on #2 (run 4242).",
+    );
+    expect(calls.map((c) => c.pathname)).toContain("/repos/owner/repo/actions/runs/4242/cancel");
+  });
+
+  // A cancellation is the least important thing this workflow does, and the
+  // registration is the most. A chain that registered must never be reported as
+  // a failure because a run finished a second before the cancel reached it.
+  it("still reports the registration when the cancellation fails outright", async () => {
+    const { call } = fake({
+      runs: {
+        l2: [{ id: 7, status: "queued", head_branch: "l2", path: ".github/workflows/ci.yml" }],
+      },
+      refuse: (calls) => calls.at(-1).pathname.endsWith("/cancel"),
+    });
+    const summary = await run(env, call);
+    expect(summary).toMatch(/^Registered #1 -> #2 -> #3 as a new stack\./);
+    expect(summary).toMatch(/Left alone: #2 run 7/);
+  });
+
   it("writes nothing for a chain of one", async () => {
     const { call, calls } = fake({ pulls: [pr(3, "l3", "main")] });
-    expect(await run(env, call)).toMatch(/chain of one/);
+    // Exactly, not `toMatch`: the summary is echoed into `$GITHUB_STEP_SUMMARY`,
+    // where the trailing space left by an empty cancellation half renders.
+    expect(await run(env, call)).toBe(
+      "Nothing to register: #3 is a chain of one — nothing to register yet.",
+    );
     expect(calls.some((c) => c.method === "POST")).toBe(false);
   });
 
@@ -201,6 +248,7 @@ suite("run", () => {
     const call = async (pathname, init = {}) => {
       calls.push({ pathname, method: init.method ?? "GET" });
       if (pathname.includes("/pulls?")) return pathname.includes("page=1") ? chain3 : [];
+      if (pathname.includes("/actions/workflows/")) return { workflow_runs: [] };
       if (init.method === "POST") {
         // the other run won between our read and our write
         stacks.push({ number: 7, pull_requests: [{ number: 1 }, { number: 2 }, { number: 3 }] });

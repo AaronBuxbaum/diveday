@@ -1,6 +1,7 @@
 name: Stack
 
-# Registers a chain of chained-base pull requests as a GitHub stack.
+# Registers a chain of chained-base pull requests as a GitHub stack, and cancels
+# the CI runs that registration supersedes.
 #
 # The chain itself is built by whoever opens the pull requests — each branch cut
 # from the one below, each `base` set to that branch. That half needs nothing
@@ -31,6 +32,15 @@ name: Stack
 # and getting round to the follow-up step. A pull request event closes the gap by
 # removing the step. The dispatch below is for the cases an event cannot reach:
 # a chain assembled before this workflow existed, or a re-run after a refusal.
+#
+# The second half — cancelling a superseded layer's CI — belongs here for a
+# reason beyond convenience. `ci.yml` decides what a layer runs from the stack
+# metadata in its own event payload, which answers the question at dispatch; a
+# layer does not become a middle layer at dispatch, it becomes one ninety
+# seconds later when the session opens the next layer on top of it, with sixteen
+# jobs already running. This workflow is woken by precisely that event and has
+# just walked precisely that chain (ADR
+# 20260919-stack-ci-cancels-superseded-layers).
 
 on:
   pull_request:
@@ -57,7 +67,7 @@ concurrency:
 
 jobs:
   register:
-    name: Register the chain as a stack
+    name: Register the chain and quiet the middle
     # A fork's pull request is skipped rather than refused: the head branch is
     # not in this repository, so no chain through it can be registered here, and
     # the token this job carries must not act on one either.
@@ -71,6 +81,12 @@ jobs:
       # `pull_requests=write` is exactly what POST .../stacks asks for, per the
       # X-Accepted-Github-Permissions header on the probe's 422.
       pull-requests: write
+      # For `POST /actions/runs/{id}/cancel` on a layer that has just become a
+      # middle layer. It is the one grant in this repository that can destroy
+      # work rather than decline to do it, so `scripts/stack-cancel.mjs` states
+      # its three rails at the top of the file and a test holds each of them:
+      # only the middle of a chain, only `ci.yml`, never the default branch.
+      actions: write
     steps:
       - uses: actions/checkout@v7
       # No `./.github/actions/setup`: this script imports nothing outside Node's

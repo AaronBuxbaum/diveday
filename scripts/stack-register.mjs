@@ -2,6 +2,8 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { cancelMiddleLayerRuns } from "./stack-cancel.mjs";
+
 /**
  * Registers a chain of chained-base pull requests as a GitHub **stack**, from a
  * runner rather than from a session.
@@ -11,9 +13,15 @@ import { fileURLToPath } from "node:url";
  * with nothing but `git push` and `create_pull_request`. Registering that shape
  * is the part that buys the cascading rebase, the bottom-up atomic merge, the
  * stack view, and the `github.event.pull_request.stack` field
- * `.github/workflows/ci.yml` reads to skip a middle layer's gate (ADR
- * 20260821-stacked-pull-requests, ADR 20260827-stack-ci-skips-the-middle-layers).
- * It is one REST call — and that one call is what stopped working.
+ * `.github/workflows/ci.yml` reads to skip a middle layer's jobs (ADR
+ * 20260821-stacked-pull-requests, ADR
+ * 20260919-stack-ci-cancels-superseded-layers). It is one REST call — and that
+ * one call is what stopped working.
+ *
+ * Since 2026-09-19 it does one thing more. Registering the chain is also the
+ * moment a layer *becomes* a middle layer, and an `if:` cannot reach into a run
+ * that has already started — so `scripts/stack-cancel.mjs` runs off the same
+ * walk of the chain and cancels the CI the new top layer just superseded.
  *
  * **Why a runner and not the session.** The ADR's 2026-08-22 amendment recorded
  * that cloud sessions could reach the endpoint themselves: `gh` was preinstalled
@@ -325,18 +333,62 @@ export async function run(env, call = request) {
   if (error) return `Left alone: ${error}.`;
 
   const plan = planRegistration(chain, await call(`/repos/${repo}/stacks`, { token }));
+  let settled = plan;
   try {
     await perform(plan, repo, token, call);
   } catch (failure) {
     const second = planRegistration(chain, await call(`/repos/${repo}/stacks`, { token }));
-    if (second.op === "none")
-      return `${describe(second, chain)} (a concurrent run got there first.)`;
+    if (second.op === "none") {
+      const quiet = await quieten(second, chain, repo, token, defaultBranch, call);
+      return sentences(describe(second, chain), "(a concurrent run got there first.)", quiet);
+    }
     if (second.op === plan.op) throw failure;
     await perform(second, repo, token, call);
-    return describe(second, chain);
+    settled = second;
   }
 
-  return describe(plan, chain);
+  return sentences(
+    describe(settled, chain),
+    await quieten(settled, chain, repo, token, defaultBranch, call),
+  );
+}
+
+/**
+ * Join the halves of the summary, dropping the ones that had nothing to say.
+ *
+ * `quieten` answers with an empty string for a chain it does not act on, and
+ * interpolating that leaves a trailing space — in the job log, and in
+ * `$GITHUB_STEP_SUMMARY`, which renders as Markdown where two of them are a
+ * line break.
+ */
+function sentences(...parts) {
+  return parts.filter(Boolean).join(" ");
+}
+
+/**
+ * The second half of the job, once the chain is a registered stack: stop the CI
+ * runs that were started while a layer was still the top of it.
+ *
+ * Run for every outcome that leaves the chain registered, `none` included, and
+ * not only for the `add` that most often causes it. A layer can become a middle
+ * layer without this workflow writing anything — three pull requests opened in
+ * a row register as one `create`, and the middle one has a full run in flight
+ * from the moment it was opened — and a later event finding "already
+ * registered" is the last chance anything has to notice. `skip` and `refuse`
+ * cancel nothing: a chain this does not fully understand is one whose middle it
+ * cannot name (`planRegistration`).
+ *
+ * Never fatal. The registration is the part that had to happen, and a stack
+ * that registered correctly must not be reported as a failure because a
+ * cancellation raced the run finishing.
+ */
+async function quieten(plan, chain, repo, token, defaultBranch, call) {
+  if (plan.op === "skip" || plan.op === "refuse") return "";
+  try {
+    return await cancelMiddleLayerRuns({ chain, repo, token, defaultBranch, call });
+  } catch (error) {
+    return `Could not cancel the middle layers' CI runs (${error.message}); the stack itself is registered.`;
+  }
 }
 
 // Imported by the test, which must not make a request or exit the process.

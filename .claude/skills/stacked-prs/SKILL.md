@@ -62,17 +62,15 @@ branch later and by hand. That saving *grows* with depth: the thirteen branches 
 conflicted with each other thirteen ways, and the same thirteen stacked conflict zero. The reason
 to cut from `main` never grows the same way.
 
-The CI arithmetic that used to bound depth at "about six" was retired on 2026-08-27 by
-[20260827-stack-ci-skips-the-middle-layers](../../../docs/architecture/decisions/20260827-stack-ci-skips-the-middle-layers.md).
-A middle layer skips `repo-safeguards`, `lint`, `typecheck`, the four unit shards and the four
-Playwright shards; what it still pays is the visual path it owes the layer above — `changes`,
-`build`, the visual shards, `visual-report` and `real-postgres`. So the twentieth layer costs what
-the fourth does, and only the bottom and the top pay the sixteen-job gate. What that costs you is
-attention, not runners: a middle layer's green means "nothing ran", so the layer that actually
-states something about the merged result is the top, and the one whose red blocks everything is the
-bottom. Read those two. The only hard ceiling is GitHub's own — a registered stack holds at most
-100 pull requests, and `scripts/stack-register.mjs` refuses a longer chain rather than truncating
-it (`MAX_LAYERS`).
+The CI arithmetic that used to bound depth at "about six" was retired on 2026-08-27 and finished off
+on 2026-09-19 by [20260919-stack-ci-cancels-superseded-layers](../../../docs/architecture/decisions/20260919-stack-ci-cancels-superseded-layers.md). **A middle layer runs nothing at all** — not the gate, and no longer the
+visual path either, which it used to owe the layer above. So the twentieth layer costs what the
+fourth does: only the bottom and the top run anything. What that costs you is attention, not
+runners: a middle layer's green means "nothing ran", so the layer that actually states something
+about the merged result is the top, and the one whose red blocks everything is the bottom. Read
+those two. The only hard ceiling is GitHub's own — a registered stack holds at most 100 pull
+requests, and `scripts/stack-register.mjs` refuses a longer chain rather than truncating it
+(`MAX_LAYERS`).
 
 ## Building the chain
 
@@ -174,14 +172,12 @@ to its own change.
 
 ## What our pipeline does with it
 
-- **Only the bottom and the top layer run the expensive gate; the middles skip it.**
-  `.github/workflows/ci.yml` triggers on a bare `pull_request:` with no branch filter, so a base of
-  `claude/<slug>-1-schema` gets the identical gate offered to it — but a middle layer skips
-  `check:repo`, lint, typecheck, the unit shards and the Playwright shards, on a condition read
-  straight out of `github.event.pull_request.stack` (ADR
-  [20260827-stack-ci-skips-the-middle-layers](../../../docs/architecture/decisions/20260827-stack-ci-skips-the-middle-layers.md),
-  superseding 20260827-stack-ci-priority's runner-holding yield). Three things follow, and only the
-  first is something to do:
+- **Only the bottom and the top layer run CI; a middle layer runs nothing, and a layer that stops
+  being the top has its run cancelled.** `.github/workflows/ci.yml` triggers on a bare
+  `pull_request:` with no branch filter, so a base of `claude/<slug>-1-schema` gets the identical
+  gate offered to it — but a middle layer skips every job, on a condition read straight out of
+  `github.event.pull_request.stack` (ADR [20260919-stack-ci-cancels-superseded-layers](../../../docs/architecture/decisions/20260919-stack-ci-cancels-superseded-layers.md)). Four things follow, and only the first is something
+  to do:
 
   1. **A middle layer's checks read "Skipped", and GitHub counts a skip as success.** So a green
      middle layer means *nothing ran*, never *nothing is wrong* — read the bottom's and the top's
@@ -189,38 +185,44 @@ to its own change.
      bottom: the cascading rebase force-pushes it, which fires `synchronize`. That only happens if
      you **merge a layer at a time**; one atomic `gh stack merge` from the top lands the middles
      ungated.
-  2. **The visual path never skips.** `build`, `visual` and `visual-report` run on every layer,
-     because the layer above is keyed to this one's published snapshot — skipping them would leave
-     the top with no baseline, reporting every surface as new. So everything under *Rebase a layer
-     before you read its visual report* below is unchanged.
-  3. **A fork's pull request always runs in full.** `stack` is populated only for a pull request
+  2. **Opening a layer cancels the one below's run, and that is working correctly.** The layer you
+     just built on was the top a minute ago, so its full gate started and is now answering nothing.
+     `scripts/stack-cancel.mjs` stops it from the same pull request event that registers the chain.
+     Its checks read "Cancelled" rather than "Skipped" — do not re-run them, and do not read them as
+     a failure of that layer.
+  3. **The visual path skips too, and every layer is keyed to `main`.** It used to be exempt,
+     because a layer's baseline was the layer below's published snapshot. Each layer now compares
+     against the stack's fork point from `main`, so a layer's visual diff is **cumulative** — it
+     shows every layer at or below it, not that layer's own pixels.
+  4. **A fork's pull request always runs in full.** `stack` is populated only for a pull request
      somebody with write access registered in a stack, so an unregistered one reads `null` — which
      is the *run* branch. Every shape the condition does not recognise fails open into the gate.
 - **`pnpm test:changed` and the destructive-migration guard** anchor on
   `git merge-base origin/main HEAD`, which in a stack is the fork point of the whole stack. Upper
   layers re-run lower layers' affected tests and re-check their migrations. Slower, never wrong —
   do not "fix" it by re-anchoring to the layer below.
-- **Visual regression handles a stack on its own, and a stack may move pixels.** Two things make
-  that true. First, the baseline key is *named* rather than inferred: `regconfig.json` uses
-  `reg-simple-keygen-plugin` and `scripts/reg-suit-keys.mjs` resolves a layer's baseline to
-  `git merge-base origin/<base ref> HEAD` — the layer below's head, which is what makes each layer's
-  diff show only its own pixels rather than everything beneath it. Second, an explicit key cannot
-  conjure a snapshot, so a stacked layer's `visual-report` job **waits** for the layer below to
-  finish publishing before it compares (`scripts/wait-for-baseline.mjs`): up to 20 minutes, only
-  when the base is not `main`, and never a reason for a red run. The wait-and-re-run this file used
-  to ask of you is what the pipeline now does (ADR
-  [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md),
-  "the baseline is named rather than inferred"; issue #909).
+- **Visual regression handles a stack on its own, and a stack may move pixels.** The baseline key is
+  *named* rather than inferred: `regconfig.json` uses `reg-simple-keygen-plugin` and
+  `scripts/reg-suit-keys.mjs` resolves **every** layer's baseline to
+  `git merge-base origin/main HEAD` — the stack's fork point, whatever branch the layer targets.
+  `main` published that snapshot long before your run started, so no layer waits on another, which
+  is what lets a middle layer skip the visual jobs it used to owe upward (ADR [20260919-stack-ci-cancels-superseded-layers](../../../docs/architecture/decisions/20260919-stack-ci-cancels-superseded-layers.md), superseding the
+  20-minute poll from
+  [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md)).
 
-  Two of the three obligations that replaced the old restriction still stand, because they are about
-  reading rather than about the race:
+  What that means when you read a report: **the top layer's diff is the whole stack's**, because
+  every layer beneath it is also above the fork point. That is usually what you want from the top —
+  it is the closest thing a stack has to a statement about the merged result — but do not read it as
+  "this layer moved 40 surfaces". Compare it against the bottom layer's report, which is its own
+  delta and nothing else.
+
+  Two obligations stand, because they are about reading rather than about any race:
 
   1. **Read the sticky `diveday:visual-summary` comment on the layer you are triaging.** If it says
      nothing was compared, nothing was compared: that layer's counts mean **unknown**, never "no
-     visual changes" (see the **visual-triage** skill). That is now the exception rather than the
-     expectation — it means the wait gave up, so the layer below's own visual jobs are red or were
-     still running twenty minutes on. Fix those, re-run this layer's `visual-report`, read the
-     refreshed comment.
+     visual changes" (see the **visual-triage** skill). It now means the fork point itself published
+     no snapshot — a `main` run that was cancelled or lost a shard — and the comment names the
+     ancestor it fell back to.
   2. **Never merge a layer whose pixels were never compared** on the grounds that the count was
      zero. Zero-changed with zero baselines is the failure, not the pass.
 - **Rebase a layer before you read its visual report.** A branch whose parent has fallen behind

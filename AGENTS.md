@@ -170,11 +170,12 @@ for anything touching auth, tokens, personal or medical data, or export/import.
   while the change is being written. Pixels are not an exception. Cut each branch from the one
   below, open each PR as a **draft at its first commit** with `base` set to that branch, bottom one
   first, every body naming its position; `.github/workflows/stack.yml` registers the chain. Only the
-  bottom and top layers run the expensive gate, so read a middle layer's green as "nothing ran".
+  bottom and top layers run CI: a middle layer runs nothing, its green means "nothing ran", and
+  opening a layer cancels the superseded run below it.
   What still goes on its own branch off `main` (nothing of yours open, a fix that must merge now,
   another session's branch — never depth: a stack has no cap, and a long one is the point) and the
   mechanics are in the **stacked-prs** skill and ADRs 20260821-stacked-pull-requests,
-  20260827-stack-ci-skips-the-middle-layers and 20260907-a-runner-registers-the-stack.
+  20260919-stack-ci-cancels-superseded-layers and 20260907-a-runner-registers-the-stack.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same spec
   or test name; coordinate in that thread instead of pushing a competing fix.
 
