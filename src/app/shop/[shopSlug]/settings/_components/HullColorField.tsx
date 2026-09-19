@@ -37,11 +37,18 @@ export function HullColorField({
   previewLabel: string;
 }) {
   const [value, setValue] = useState(initial ?? "");
-  const valid = /^#[0-9a-f]{6}$/i.test(value);
+  // The `#` is optional here because it is optional everywhere else: the field's
+  // own `pattern` accepts `abcdef` and `parseBrandColor` stores it as `#abcdef`.
+  // Requiring it for the preview alone made the boat go unpainted while the
+  // shop typed a colour the server would have taken — a picture disagreeing
+  // with the value beside it, which is the one thing a live preview must never
+  // do.
+  const painted = /^#?([0-9a-f]{6})$/i.exec(value);
+  const normalized = painted ? `#${painted[1].toLowerCase()}` : null;
   // The picker needs a colour even when the field is blank; the page's own ink
   // is not a hex it can hold, so it opens on a neutral and the hull stays
   // unpainted until the shop actually picks.
-  const picked = valid ? value : UNPAINTED_HULL_PICKER_COLOR;
+  const picked = normalized ?? UNPAINTED_HULL_PICKER_COLOR;
 
   return (
     // The boat beside the choice on a desk and under it on a phone: a hull is
@@ -74,7 +81,7 @@ export function HullColorField({
       <Hull
         geometry={hullGeometry({ capacity })}
         label={previewLabel}
-        color={valid ? value : null}
+        color={normalized}
         className="block h-auto w-full max-w-64 shrink-0"
       />
     </div>
