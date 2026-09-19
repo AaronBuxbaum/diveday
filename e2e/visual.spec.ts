@@ -8046,9 +8046,16 @@ for (const scheme of ["light", "dark"] as const) {
    * FareHarbor sees. A minted shop has none — which is the ordinary shape for a
    * shop that has just signed up — so its storefront is where the sky renders.
    *
-   * The zone is what picks the hour: the clock is frozen at the harness
-   * boundary, so a shop in the Maldives is reliably reading its own evening
-   * while the suite runs.
+   * **The zone does not pick the hour on this surface**, and the capture is what
+   * showed it. A minted shop carries the canonical demo's *address* — Key Largo,
+   * a real street, so the address path is exercised end to end — while
+   * `privateShopTimezone` moves only its clock. `skyReadingFor` prefers the
+   * almanac wherever a shop has coordinates, so the sky here is the sun over
+   * Florida at the fleet's frozen instant, and the Maldives zone shows up in the
+   * *date line* rather than in the gradient. That is the right precedence (a
+   * whole timezone is far too coarse to derive a sunrise from) and it means this
+   * capture is the day sky; a dusk or night storefront needs a shop whose
+   * coordinates say so, which is a fixture that does not exist yet.
    */
   test.describe(`${scheme} mode — the storefront over its own sky`, () => {
     test.use({
