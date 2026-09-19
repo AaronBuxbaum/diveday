@@ -100,30 +100,48 @@ describe("TripHull", () => {
   });
 
   /**
-   * A blocked seat is the one fact the picture carries that the masthead does
-   * not, so the derivation that produces it is worth pinning: `rosterRowIsBlocked`
-   * fails open, and a booking with no readiness row paints as an ordinary held
-   * seat rather than as a refusal.
+   * **Three readings, because there are three** (ADR 20260919-one-idea §3b.5).
+   *
+   * This test used to be called "paints an unread readiness as no refusal",
+   * and it passed: `rosterRowIsBlocked` fails open, so a booking with no
+   * readiness row painted as an ordinary held seat. That is the picture saying
+   * *fine* where the truth is *nobody looked*, and on the one drawing a crew
+   * reads to decide who gets on a boat it is the wrong way to be wrong.
+   *
+   * A refusal, a clearance and a silence are now three different seats, and
+   * the one that matters is that the third is not the second.
    */
-  it("paints readiness, and paints an unread readiness as no refusal", () => {
+  it("tells a refusal, a clearance and an unread readiness apart", () => {
     const roster = [
       entry({ id: "1", name: "Grace Mensah", status: "booked" }),
       entry({ id: "2", name: "Hannah Liu", status: "booked" }),
+      entry({ id: "3", name: "Noor Rahim", status: "booked" }),
     ];
     const readiness: ReadinessByBooking = new Map([
       ["1", { readiness: { status: "blocked" } } as ReadinessRow],
+      ["2", { readiness: { status: "ready" } } as ReadinessRow],
+      // "3" is absent: the readiness read never happened for that seat.
     ]);
     const { container } = render(
       <TripHull
         roster={roster}
         readinessByBooking={readiness}
-        capacity={2}
+        capacity={3}
         color={null}
         label="Mantis I, drawn as its seats."
       />,
     );
-    const fills = seatsOf(container).map((node) => node.getAttribute("fill"));
-    expect(fills).toEqual(["var(--danger-tint)", "var(--surface)"]);
+    const seats = seatsOf(container);
+    expect(seats.map((node) => node.getAttribute("fill"))).toEqual([
+      "var(--danger-tint)",
+      "var(--surface)",
+      "var(--surface)",
+    ]);
+    // The fill is shared with a cleared seat on purpose — nobody has refused
+    // this diver either. The line is what carries the doubt, and it has to,
+    // because the fill cannot without claiming something nobody said.
+    expect(seats[1]?.getAttribute("stroke-dasharray")).toBeNull();
+    expect(seats[2]?.getAttribute("stroke-dasharray")).toBe("3 3");
   });
 
   /**

@@ -3,20 +3,31 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
-import { hullGeometry } from "@/lib/hull";
+import { hullGeometry, type SeatReadiness, type SeatState } from "@/lib/hull";
 import { Hull } from "./Hull";
 
 afterEach(cleanup);
 
 const geometry = hullGeometry({ capacity: 8, crewCount: 1 });
 
+/**
+ * A seat as the component takes it. The two fields beside the state are what
+ * the derivation refuses to throw away (ADR 20260919-one-idea §3b.1, §3b.2);
+ * nothing paints them yet, so the fixture keeps them at their unrecorded
+ * values and the tests below are about the state exactly as before.
+ */
+const seat = (state: SeatState, initials: string, readiness: SeatReadiness = "ready") => ({
+  reading: { state, recordedAt: null, readiness },
+  initials,
+});
+
 const roster = [
-  { state: "aboard" as const, initials: "RN" },
-  { state: "aboard" as const, initials: "HL" },
-  { state: "booked" as const, initials: "BC" },
-  { state: "blocked" as const, initials: "GM" },
-  { state: "ashore" as const, initials: "PS" },
-  { state: "missing" as const, initials: "TF" },
+  seat("aboard", "RN"),
+  seat("aboard", "HL"),
+  seat("booked", "BC"),
+  seat("blocked", "GM", "blocked"),
+  seat("ashore", "PS"),
+  seat("missing", "TF"),
 ];
 
 describe("Hull", () => {
@@ -76,6 +87,52 @@ describe("Hull", () => {
     const fills = seats.map((node) => node.getAttribute("fill"));
     expect(fills).toContain("var(--danger-tint)");
     expect(fills).toContain("var(--danger)");
+  });
+
+  /**
+   * **§3b.3 — an inference may not wear a statement's weight.** ADR 20260827
+   * decision 4: an alarm is earned by a recorded fact, never by the absence of
+   * one. A crew member saying "she never boarded" and the dock's silence being
+   * carried forward are different claims, and a solid amber ring is what only
+   * the first of them earns.
+   */
+  it("draws a carried-forward ashore more quietly than a stated one", () => {
+    const { container } = render(
+      <Hull
+        geometry={geometry}
+        label="the boat"
+        seats={[seat("ashore", "PS"), seat("ashoreImplied", "MK")]}
+      />,
+    );
+    const [stated, inferred] = [...container.querySelectorAll("rect")].filter(
+      (node) => node.getAttribute("rx") === "9",
+    );
+    expect(stated?.getAttribute("stroke-dasharray")).toBeNull();
+    expect(inferred?.getAttribute("stroke-dasharray")).toBe("3 3");
+    // And not by weight alone: the fill drops to the tint as well.
+    expect(stated?.getAttribute("fill")).toBe("var(--warning)");
+    expect(inferred?.getAttribute("fill")).toBe("var(--warning-tint)");
+  });
+
+  /**
+   * **§3b.5 — "nobody looked" is not "fine".** `rosterRowIsBlocked` fails open,
+   * so a booking whose readiness was never read used to paint as an ordinary
+   * held seat. It has its own drawing now, and the thing it must never be
+   * mistaken for is the one that means nothing is wrong.
+   */
+  it("draws a seat nobody has read unlike a seat somebody cleared", () => {
+    const { container } = render(
+      <Hull
+        geometry={geometry}
+        label="the boat"
+        seats={[seat("booked", "BC"), seat("unknown", "NR", "unknown")]}
+      />,
+    );
+    const [cleared, unread] = [...container.querySelectorAll("rect")].filter(
+      (node) => node.getAttribute("rx") === "9",
+    );
+    expect(cleared?.getAttribute("stroke-dasharray")).toBeNull();
+    expect(unread?.getAttribute("stroke-dasharray")).toBe("3 3");
   });
 
   /**
@@ -146,7 +203,7 @@ describe("Hull", () => {
       <Hull
         geometry={big}
         label="the boat"
-        seats={Array.from({ length: 24 }, () => ({ state: "booked" as const, initials: "AB" }))}
+        seats={Array.from({ length: 24 }, () => seat("booked", "AB"))}
       />,
     );
     // Not one letter drawn, and every one of the twenty-four seats still there:

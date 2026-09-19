@@ -1,4 +1,4 @@
-import type { HullGeometry, SeatState } from "@/lib/hull";
+import type { HullGeometry, SeatReading, SeatState } from "@/lib/hull";
 
 /**
  * **The boat, drawn** — ADR 20260919-one-idea, decision I · Tide: "a
@@ -69,8 +69,12 @@ const SEAT_FILL: Record<SeatState, string> = {
   open: "none",
   booked: "var(--surface)",
   blocked: "var(--danger-tint)",
+  /** Nobody read their readiness: a held seat with nothing said about it. */
+  unknown: "var(--surface)",
   aboard: "var(--success)",
   ashore: "var(--warning)",
+  /** The tint, not the fill — an inference does not get the stated colour. */
+  ashoreImplied: "var(--warning-tint)",
   missing: "var(--danger)",
 };
 
@@ -88,8 +92,21 @@ const SEAT_LINE: Record<SeatState, { stroke: string | null; opacity: number; das
   open: { stroke: null, opacity: 0.6, dashed: true },
   booked: { stroke: null, opacity: 1, dashed: false },
   blocked: { stroke: "var(--danger)", opacity: 1, dashed: false },
+  /**
+   * Dashed like an open place, because both are the picture declining to
+   * claim something: one has nobody in it, the other has nobody's word on it
+   * (§3b.5). The initials are what tell them apart — an open seat has none.
+   */
+  unknown: { stroke: "var(--border-strong)", opacity: 1, dashed: true },
   aboard: { stroke: "var(--success)", opacity: 1, dashed: false },
   ashore: { stroke: "var(--warning)", opacity: 1, dashed: false },
+  /**
+   * **Dashed, and that is the whole point** (§3b.3, ADR 20260827 decision 4).
+   * Nobody said this person stayed ashore; the dock's silence was carried
+   * forward. A solid amber ring is what a crew member's statement earns, and
+   * an inference drawn in the same weight is the picture promoting a guess.
+   */
+  ashoreImplied: { stroke: "var(--warning)", opacity: 1, dashed: true },
   missing: { stroke: "var(--danger)", opacity: 1, dashed: false },
 };
 
@@ -105,13 +122,29 @@ const SEAT_INK: Record<SeatState, string> = {
   booked: "var(--foreground)",
   /** Danger on its own tint — 5.45:1, the number `globals.css` measured. */
   blocked: "var(--danger)",
+  /** Muted on `--surface`: legible, and visibly not a claim. */
+  unknown: "var(--muted)",
   aboard: "var(--surface)",
   ashore: "var(--surface)",
+  /** Warning on its own tint, the pairing `blocked` already uses. */
+  ashoreImplied: "var(--warning)",
   missing: "var(--surface)",
 };
 
 export type HullSeatContent = {
-  state: SeatState;
+  /**
+   * The seat as `seatReadingFor` read it — not the bare state.
+   *
+   * The picture paints `reading.state` and nothing else today. The other two
+   * fields ride along because the derivation may not throw them away (ADR
+   * 20260919-one-idea §3b.1 and §3b.2): `recordedAt` is the head count a green
+   * fill came from, and `readiness` is what was known about the holder *even
+   * where a recorded fact outranked it* — "aboard, and nobody ever cleared
+   * them" is the sentence an investigator asks for, and a hull is what gets
+   * photographed. Drawing either of them is the manifest's own work; §3b says
+   * so, and says which half is left.
+   */
+  reading: SeatReading;
   /** Two letters, already shortened by the caller. Absent for an open seat. */
   initials?: string;
 };
@@ -169,8 +202,12 @@ export function Hull({
       />
 
       {geometry.seats.map((seat) => {
-        const content = seats[seat.index] ?? { state: "open" as const };
-        const edge = SEAT_LINE[content.state];
+        /* A place the roster does not reach: nobody has taken it, nothing was
+           recorded, and there is no holder whose readiness could be read. */
+        const content: HullSeatContent = seats[seat.index] ?? {
+          reading: { state: "open", recordedAt: null, readiness: null },
+        };
+        const edge = SEAT_LINE[content.reading.state];
         return (
           <g key={seat.index}>
             <rect
@@ -179,7 +216,7 @@ export function Hull({
               width={seat.width}
               height={seat.height}
               rx={seat.rx}
-              fill={SEAT_FILL[content.state]}
+              fill={SEAT_FILL[content.reading.state]}
               stroke={edge.stroke ?? line}
               strokeOpacity={edge.opacity}
               strokeDasharray={edge.dashed ? "3 3" : undefined}
@@ -193,7 +230,7 @@ export function Hull({
                 artifact, not a distinction (dive-domain review 20260919), and
                 the thing it has to be told apart from means somebody's waiver
                 is unsigned rather than somebody is still in the water. */}
-            {content.state === "missing" ? (
+            {content.reading.state === "missing" ? (
               <rect
                 x={seat.x - 3.5}
                 y={seat.y - 3.5}
@@ -212,7 +249,7 @@ export function Hull({
                 textAnchor="middle"
                 fontSize={11.5}
                 fontWeight={700}
-                fill={SEAT_INK[content.state]}
+                fill={SEAT_INK[content.reading.state]}
               >
                 {content.initials}
               </text>

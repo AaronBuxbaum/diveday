@@ -36,7 +36,7 @@
  * kept to the unit so the built hull is the drawn one.
  */
 
-import type { RollCallRecordedTone } from "@/lib/manifests";
+import type { RollCallCheckpoint, RollCallRecordedTone } from "@/lib/manifests";
 
 /** A seat's box, and the pitch between two of them. */
 const SEAT_W = 34;
@@ -287,15 +287,75 @@ export type SeatState =
   | "booked"
   /** Booked, and readiness says they cannot board. */
   | "blocked"
+  /**
+   * Booked, and **nobody has read their readiness** — not cleared, not
+   * refused, unknown (ADR 20260919-one-idea §3b.5).
+   *
+   * `rosterRowIsBlocked` fails open, so a booking whose readiness was never
+   * read used to paint as an ordinary held seat: the picture said "fine" where
+   * the truth was "nobody looked". The two sets agree today because the roster
+   * and the readiness map come out of one batch, and nothing pins that. A
+   * picture of a boat may be coarse; it may not be confidently wrong.
+   */
+  | "unknown"
   /** A human recorded them aboard. */
   | "aboard"
-  /**
-   * A human recorded them ashore — stated, or carried forward from the dock.
-   * The rows tell those two apart and this does not; see the note above.
-   */
+  /** A human **said** they are ashore: they never left the dock. */
   | "ashore"
+  /**
+   * Nobody said anything, and the absence was carried forward as "ashore"
+   * (ADR 20260919-one-idea §3b.3).
+   *
+   * Its own state rather than a second spelling of `ashore`, because ADR
+   * 20260827 decision 4 is that an alarm is earned by a recorded fact and
+   * never by the absence of one. The rows already give this the quieter,
+   * dashed reading; painting it identically to a stated `ashore` was the
+   * picture turning an inference into a statement.
+   */
+  | "ashoreImplied"
   /** After the dive, a human said they did not come back (DOM-H3). */
   | "missing";
+
+/**
+ * What readiness said about a seat's holder — including that nobody asked.
+ *
+ * `unknown` is not a third opinion between ready and blocked. It is the
+ * absence of one, and it is here because `rosterRowIsBlocked` fails open and
+ * cannot tell a caller which of those two it just gave them (§3b.5).
+ */
+export type SeatReadiness = "ready" | "blocked" | "unknown";
+
+/**
+ * A seat, read — what it paints, what was recorded and where, and what
+ * readiness said **whether or not the recorded fact outranked it**.
+ *
+ * A record rather than the bare `SeatState` it used to be, for the sentence an
+ * investigator asks for (ADR 20260919-one-idea §3b.2): *"aboard, and nobody
+ * ever cleared them"*. Precedence is unchanged and correct — a body on the
+ * boat is a fact, readiness is a decision, and the picture may not argue with
+ * the row beneath it — but a flat union **discarded** the readiness at the
+ * moment of derivation, and the roll-call row that still carries it in words
+ * is not what gets photographed. The hull is.
+ *
+ * Named for the shape `skyReadingFor` already uses in this codebase: a reading
+ * is what a thing says when you look at it, with everything that went into it
+ * still attached.
+ */
+export type SeatReading = {
+  /** What the picture paints. */
+  state: SeatState;
+  /**
+   * The head count the recorded half came from, or null where nothing is
+   * recorded. Green at the dock means "got on the boat"; green after dive two
+   * means "came back", and no reader can tell those apart from the fill alone.
+   */
+  recordedAt: RollCallCheckpoint | null;
+  /**
+   * What readiness said, kept even where a recorded fact outranks it. Null on
+   * a place nobody has taken — an open seat has no holder to clear.
+   */
+  readiness: SeatReadiness | null;
+};
 
 /**
  * Every recorded tone's seat, as a total map rather than a chain of ifs.
@@ -309,7 +369,7 @@ const SEAT_OF_RECORDED_TONE: Record<RollCallRecordedTone, SeatState> = {
   notBackAboard: "missing",
   boarded: "aboard",
   notBoarded: "ashore",
-  notBoardedImplied: "ashore",
+  notBoardedImplied: "ashoreImplied",
 };
 
 /**
@@ -323,22 +383,53 @@ const SEAT_OF_RECORDED_TONE: Record<RollCallRecordedTone, SeatState> = {
  * decision, and a picture arguing with the row beneath it would be worse than
  * one that is coarser.
  *
- * **It does not yet know which head count it is drawing**, and it must before a
- * hull is ever a roll call: green at the dock means "got on the boat" and green
- * after dive two means "came back", and amber at the dock ("never left") is a
- * different conversation from amber after dive two. Today every caller passes
- * `recorded: null`, so the ambiguity has no instance — the checkpoint belongs
- * in this signature and in the hull's sentence on the day the manifest is
- * wired, and the ADR carries it on that list rather than a parameter nothing
- * reads standing here in the meantime (dive-domain review 20260919).
+ * **It knows which head count it is drawing** (ADR 20260919-one-idea §3b.1).
+ * Green at the dock means "got on the boat" and green after dive two means
+ * "came back"; amber at the dock ("never left") is a different conversation
+ * from amber after dive two. A tone alone cannot say which, so a recorded tone
+ * arrives *with* its checkpoint or it does not arrive: `recorded` is one object
+ * carrying both, which makes "drew a recorded fact without saying where it was
+ * counted" a compile error rather than a comment asking nobody to do it.
+ *
+ * The checkpoint does not move any tone to a different seat — `rollCallRowState`
+ * has already used it, which is how `notBackAboard` exists at all — so it rides
+ * out on the reading rather than changing the mapping. What it is for is the
+ * *sentence*: the hull carries one line for a reader who cannot see it, and
+ * that line has to name the head count before a recorded tone is ever drawn.
+ * Wiring that copy belongs with the manifest itself; §3b records what is left.
  */
-export function seatStateFor(place: {
+export function seatReadingFor(place: {
   /** Null where the boat has this place and nobody has taken it. */
-  booking: { readiness: "ready" | "blocked" } | null;
-  /** What a human recorded at this checkpoint, from `rollCallRecordedTone`. */
-  recorded: RollCallRecordedTone | null;
-}): SeatState {
-  if (!place.booking) return "open";
-  if (place.recorded) return SEAT_OF_RECORDED_TONE[place.recorded];
-  return place.booking.readiness === "blocked" ? "blocked" : "booked";
+  booking: { readiness: SeatReadiness } | null;
+  /**
+   * What a human recorded, and the head count they recorded it at. One object
+   * so neither half can be supplied without the other.
+   */
+  recorded: { tone: RollCallRecordedTone; at: RollCallCheckpoint } | null;
+}): SeatReading {
+  if (!place.booking) return { state: "open", recordedAt: null, readiness: null };
+  const readiness = place.booking.readiness;
+  if (place.recorded) {
+    return {
+      state: SEAT_OF_RECORDED_TONE[place.recorded.tone],
+      recordedAt: place.recorded.at,
+      readiness,
+    };
+  }
+  return { state: SEAT_OF_UNRECORDED[readiness], recordedAt: null, readiness };
 }
+
+/**
+ * The seat a booking wears when nobody has recorded anything — the dock's
+ * question, answered by readiness alone.
+ *
+ * Total rather than a ternary for the reason `SEAT_OF_RECORDED_TONE` is: a
+ * readiness added without a seat here is a compile error, and the alternative
+ * is a new state falling through to `booked` — the one value that means
+ * "nothing is wrong".
+ */
+const SEAT_OF_UNRECORDED: Record<SeatReadiness, SeatState> = {
+  ready: "booked",
+  blocked: "blocked",
+  unknown: "unknown",
+};
