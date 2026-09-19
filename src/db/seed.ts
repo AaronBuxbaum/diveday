@@ -422,12 +422,16 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       name: "Mantis I",
       capacity: 12,
       description: "The small boat — twelve divers, a shaded deck, ten minutes to the reef.",
+      // Two hulls a crew can tell apart across a dock, which is the whole
+      // reason `hull_color` exists (ADR 20260919-one-idea, decision I · Tide).
+      hullColor: "#0a7ea4",
     },
     {
       shopId: shop.id,
       name: "Mantis II",
       capacity: 20,
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+      hullColor: "#c2410c",
     },
   ]);
 
@@ -685,12 +689,16 @@ export async function createDemoShop(
       name: "Mantis I",
       capacity: 12,
       description: "The small boat — twelve divers, a shaded deck, ten minutes to the reef.",
+      // Two hulls a crew can tell apart across a dock, which is the whole
+      // reason `hull_color` exists (ADR 20260919-one-idea, decision I · Tide).
+      hullColor: "#0a7ea4",
     },
     {
       shopId: shop.id,
       name: "Mantis II",
       capacity: 20,
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+      hullColor: "#c2410c",
     },
   ]);
 

@@ -78,6 +78,17 @@ const MAX_COLUMNS_WITH_INITIALS = 8;
 /** A boat has two benches. Everything else about it follows from its capacity. */
 const ROWS = 2;
 
+/**
+ * What the colour picker opens on for a hull nobody has painted.
+ *
+ * `<input type="color">` cannot hold `var(--border-strong)` — it needs a
+ * concrete value — so the picker opens on the neutral that token *is* in light
+ * mode while the hull itself stays unpainted, drawn in the page's own ink,
+ * until the shop actually picks. This is a control's default value rather than
+ * a style, which is why it lives here and not in a component.
+ */
+export const UNPAINTED_HULL_PICKER_COLOR = "#8e8e93";
+
 export type HullSeat = {
   /** The seat's place in booking order, from 0. Never drawn, never assigned. */
   index: number;

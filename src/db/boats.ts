@@ -88,6 +88,7 @@ export async function createBoat(
   name: string,
   capacity: number,
   description: string | null = null,
+  hullColor: string | null = null,
 ): Promise<Boat> {
   const [boat] = await db
     .insert(boats)
@@ -96,6 +97,7 @@ export async function createBoat(
       name,
       capacity,
       description,
+      hullColor,
     })
     .returning();
   if (!boat) {
@@ -111,10 +113,11 @@ export async function updateBoat(
   name: string,
   capacity: number,
   description: string | null = null,
+  hullColor: string | null = null,
 ): Promise<Boat | null> {
   const [boat] = await db
     .update(boats)
-    .set({ name, capacity, description })
+    .set({ name, capacity, description, hullColor })
     .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId), isNull(boats.deletedAt)))
     .returning();
   return boat ?? null;
