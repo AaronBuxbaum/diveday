@@ -28,8 +28,6 @@
     "crewClash": "Crew clash",
     "oneTime": "One-time departure",
     "perSeat": "per seat",
-    "seatsLabel": "of {capacity, plural, one {# seat} other {# seats}}",
-    "openLabel": "open",
     "cancel": "Cancel this departure",
     "more": "More for this departure"
   },
@@ -619,5 +617,9 @@
     "uncheckedLabel": "Not checked — press to mark checked",
     "summary": "Before you leave the dock: {checked} of {total} checked"
   },
-  "hullLabel": "{boat}, drawn as its seats: {booked} of {capacity, plural, one {# seat} other {# seats}} taken{blocked, plural, =0 {} one {, # who cannot board} other {, # who cannot board}}. Seats fill in booking order and are never assigned."
+  "hullLabel": "{boat}, drawn as its seats: {booked} of {capacity, plural, one {# seat} other {# seats}} taken{blocked, plural, =0 {} one {, # who cannot board} other {, # who cannot board}}. Seats fill in booking order and are never assigned.",
+  "voyage": {
+    "line": "{boat} · {booked} of {capacity, plural, one {# seat} other {# seats}} taken",
+    "stripLabel": "{title}, drawn as its voyage: when the boat leaves, where the water puts each dive, and the way back."
+  }
 }
