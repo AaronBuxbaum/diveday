@@ -4,7 +4,9 @@ import {
   cancellableRuns,
   cancelMiddleLayerRuns,
   MAX_CANCELLATIONS,
+  MAX_RUN_PAGES,
   middleLayers,
+  RUNS_PER_PAGE,
 } from "./stack-cancel.mjs";
 
 /**
@@ -43,8 +45,13 @@ function api({ runsByBranch = {}, refuseCancel = [] } = {}) {
   const call = async (pathname, { method = "GET" } = {}) => {
     if (method === "GET") {
       reads.push(pathname);
-      const branch = decodeURIComponent(new URL(`https://x${pathname}`).searchParams.get("branch"));
-      return { workflow_runs: runsByBranch[branch] ?? [] };
+      const params = new URL(`https://x${pathname}`).searchParams;
+      const branch = decodeURIComponent(params.get("branch"));
+      const pages = runsByBranch[branch] ?? [];
+      // `runsByBranch` is either one flat list (the whole first page) or a list
+      // of pages, which is how a paginated branch is expressed.
+      const paged = Array.isArray(pages[0]) ? pages : [pages];
+      return { workflow_runs: paged[Number(params.get("page")) - 1] ?? [] };
     }
     const id = Number(/\/actions\/runs\/(\d+)\/cancel$/.exec(pathname)[1]);
     if (refuseCancel.includes(id)) throw new Error(`POST -> 409: run ${id} has already completed`);
@@ -177,10 +184,62 @@ describe("cancelMiddleLayerRuns", () => {
     );
   });
 
+  // Sourcery's finding on #1892: the first version read one page of 20 and
+  // called it done, against a contract that says every live run.
+  it("follows pagination until a page comes back short", async () => {
+    // A full page carrying one live run, so paging continues without the
+    // cancellation ceiling getting there first.
+    const full = [
+      liveRun(1, "b"),
+      ...Array.from({ length: RUNS_PER_PAGE - 1 }, (_, i) =>
+        liveRun(i + 2, "b", { status: "completed" }),
+      ),
+    ];
+    const fake = api({ runsByBranch: { b: [full, [liveRun(9001, "b")]] } });
+    await run(chainOf("a", "b", "c"), fake);
+    expect(fake.reads).toHaveLength(2);
+    expect(fake.reads[1]).toContain("page=2");
+    expect(fake.cancelled).toEqual([1, 9001]);
+  });
+
+  // Runs come back newest first and `ci.yml` keeps one lane per ref, so a page
+  // with nothing live on it is the end of the live ones — no second request.
+  it("stops at the first page with nothing live on it", async () => {
+    const done = Array.from({ length: RUNS_PER_PAGE }, (_, i) =>
+      liveRun(i + 1, "b", { status: "completed" }),
+    );
+    const fake = api({ runsByBranch: { b: [done, [liveRun(9001, "b")]] } });
+    await run(chainOf("a", "b", "c"), fake);
+    expect(fake.reads).toHaveLength(1);
+    expect(fake.cancelled).toEqual([]);
+  });
+
+  it("asks for a full page and stops after one when the branch is short", async () => {
+    const fake = api({ runsByBranch: { b: [liveRun(1, "b")] } });
+    await run(chainOf("a", "b", "c"), fake);
+    expect(fake.reads).toHaveLength(1);
+    expect(fake.reads[0]).toContain(`per_page=${RUNS_PER_PAGE}`);
+    expect(fake.reads[0]).toContain("page=1");
+  });
+
+  // Unbounded paging is its own sweep. Past this the cancellation ceiling has
+  // already stopped us acting on what the extra reads would find.
+  it("reads no more than its page ceiling", async () => {
+    const full = [
+      liveRun(1, "b"),
+      ...Array.from({ length: RUNS_PER_PAGE - 1 }, (_, i) =>
+        liveRun(i + 2, "b", { status: "completed" }),
+      ),
+    ];
+    const fake = api({ runsByBranch: { b: Array.from({ length: 12 }, () => full) } });
+    await run(chainOf("a", "b", "c"), fake);
+    expect(fake.reads).toHaveLength(MAX_RUN_PAGES);
+  });
+
   // A bug in the chain walk must not become a repository-wide sweep.
   it("stops at its ceiling rather than cancelling without bound", async () => {
     const runs = Array.from({ length: MAX_CANCELLATIONS + 5 }, (_, i) => liveRun(i + 1, "b"));
-    const fake = api({ runsByBranch: { b: runs } });
+    const fake = api({ runsByBranch: { b: [runs] } });
     const summary = await run(chainOf("a", "b", "c"), fake);
     expect(fake.cancelled).toHaveLength(MAX_CANCELLATIONS);
     expect(summary).toContain(`stopped at the ${MAX_CANCELLATIONS}-run ceiling`);

@@ -73,6 +73,10 @@ export const LIVE_STATUSES = new Set([
  */
 export const MAX_CANCELLATIONS = 25;
 
+/** How many runs one read asks for, and how many reads a layer may cost. */
+export const RUNS_PER_PAGE = 100;
+export const MAX_RUN_PAGES = 5;
+
 /**
  * The layers of `chain` that are neither the bottom nor the top.
  *
@@ -104,6 +108,46 @@ export function cancellableRuns(runs, { headRef, defaultBranch }) {
 }
 
 /**
+ * Every live CI run on one layer's head branch, across as many pages as it
+ * takes to be sure there are none left.
+ *
+ * A single page is not enough, even though in practice it always is. `ci.yml`
+ * keeps one concurrency lane per ref with `cancel-in-progress: true`, so a
+ * branch has at most an in-progress run and a queued one at any moment — but
+ * that is a fact about a different file, and a function whose contract is
+ * "every live run" must not quietly depend on it. Reading one page and calling
+ * it done was this function's first version, and Sourcery was right to say so
+ * on #1892.
+ *
+ * Two stopping rules, so the usual case still costs one request:
+ *
+ * - **A short page is the end of the runs.** The same idiom `openPulls` in
+ *   `scripts/stack-register.mjs` uses. A pull request branch that has not run
+ *   CI a hundred times stops here, which is nearly all of them.
+ * - **A page with nothing live on it is the end of the live ones.** Runs come
+ *   back newest first, and a run still going cannot be older than a hundred
+ *   runs that have already finished on the same single-lane branch.
+ *
+ * `MAX_RUN_PAGES` bounds the rest. A branch that somehow has more live runs
+ * than that is already past `MAX_CANCELLATIONS`, so the extra reads would buy
+ * nothing the ceiling would let us act on.
+ */
+async function liveRunsFor(headRef, { repo, token, defaultBranch, call }) {
+  const live = [];
+  for (let page = 1; page <= MAX_RUN_PAGES; page += 1) {
+    const body = await call(
+      `/repos/${repo}/actions/workflows/${CI_WORKFLOW}/runs?branch=${encodeURIComponent(headRef)}&per_page=${RUNS_PER_PAGE}&page=${page}`,
+      { token },
+    );
+    const batch = body?.workflow_runs ?? [];
+    const found = cancellableRuns(batch, { headRef, defaultBranch });
+    live.push(...found);
+    if (found.length === 0 || batch.length < RUNS_PER_PAGE) break;
+  }
+  return live;
+}
+
+/**
  * Cancel every live CI run belonging to a middle layer of `chain`.
  *
  * Returns one sentence for the job log and the run summary, and never throws:
@@ -124,11 +168,7 @@ export async function cancelMiddleLayerRuns({ chain, repo, token, defaultBranch,
     if (!headRef) continue;
     let runs;
     try {
-      const page = await call(
-        `/repos/${repo}/actions/workflows/${CI_WORKFLOW}/runs?branch=${encodeURIComponent(headRef)}&per_page=20`,
-        { token },
-      );
-      runs = cancellableRuns(page?.workflow_runs, { headRef, defaultBranch });
+      runs = await liveRunsFor(headRef, { repo, token, defaultBranch, call });
     } catch (error) {
       failed.push(`#${layer.number} (could not be read: ${error.message})`);
       continue;
