@@ -459,6 +459,12 @@ test.describe("the folding title", () => {
   signedInAsOwner();
 
   const PHONE = { width: 390, height: 844 };
+  /**
+   * Twice the fold's own range. `animation-range: 0 120px` in globals.css, so
+   * anything past 120 is the folded end state; 240 leaves room for the page to
+   * be a few pixels shorter than it was measured at without landing mid-fold.
+   */
+  const FOLD_SCROLL_PX = 240;
   // `.first()`: the attribute marks the shop's name *and* the caret beside it,
   // because a caret with no label is pointing at nothing. They fold together,
   // so reading either one reads the fold.
@@ -498,7 +504,37 @@ test.describe("the folding title", () => {
       .toBe(1);
     expect(await opacityOf(page, "[data-chrome-title-slot]")).toBe(0);
 
-    await page.evaluate(() => window.scrollTo(0, 240));
+    /*
+     * **The page has to be able to scroll before a scroll means anything.**
+     *
+     * This list streams in behind its own `loading.tsx` (`instant = true`),
+     * while the heading and the slot both belong to the shell — so every wait
+     * above is satisfied with the skeleton still standing in for the rows. A
+     * skeleton shorter than the viewport makes `scrollTo` a no-op: the scroll
+     * stays at 0, the timeline stays at progress 0, and the fold never starts.
+     * Eight seconds of opacity 0 then reads exactly like a timeline that never
+     * attached, which is what it looked like on CI (shard 4/4, 2026-09-19) —
+     * green here and on main, six local repeats.
+     *
+     * Not a timeout widened: there is still no duration in this test. This
+     * waits for the *precondition the scroll below spends*, in the same spirit
+     * as the at-rest poll above.
+     */
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight), {
+        message: "the page never grew tall enough for the fold to have a clock",
+      })
+      .toBeGreaterThanOrEqual(FOLD_SCROLL_PX);
+
+    await page.evaluate((y) => window.scrollTo(0, y), FOLD_SCROLL_PX);
+    // The scroll *is* the clock, so a scroll that did not move is the failure
+    // — said here, rather than arriving below as an unexplained opacity.
+    await expect
+      .poll(() => page.evaluate(() => Math.round(window.scrollY)), {
+        message: "the page did not scroll, so the fold had no clock to run on",
+      })
+      .toBe(FOLD_SCROLL_PX);
+
     // Waiting on the end state itself, not on a duration — the scroll is the
     // clock, so there is no duration to wait out.
     await expect
