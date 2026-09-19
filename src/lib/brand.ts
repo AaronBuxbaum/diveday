@@ -282,7 +282,7 @@ export const BRAND_DARK_INK = "#f5f5f7";
  *
  * Both dark surfaces are checked, not just the ground. In the light scheme the
  * ground is the *darker* of the two and so the binding one; at depth that
- * inverts — the shell `#0d222d` is lighter than the ground `#071720`, so a
+ * inverts — the shell `#1c1c1e` is lighter than the ground `#000000`, so a
  * light fill reads worse on it, and it is the shell that decides. Checking
  * both keeps the rule true whichever way a future palette moves it.
  */

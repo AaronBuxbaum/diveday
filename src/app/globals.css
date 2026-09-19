@@ -25,17 +25,21 @@
 /*
  * Design tokens — the single source of truth for color, motion, and radius.
  * Semantic names only: components never reference raw hex values.
- * Palette story: sunlit sand (light) / open ocean at depth (dark),
- * lagoon teal as the action color, coral as the rare warm accent.
+ * Palette story (Tide's surface, ADR 20260919-one-idea, decision I · Tide):
+ * cool grey ground under white groups (light) / black under near-black groups
+ * (dark), one DiveDay blue as the action color, warm orange as the rare accent.
+ * The names beside each token below say what it *is* on the page, not what it
+ * is made of — the wash tokens keep water and sand as names because the wash
+ * is still water settling into sand.
  * See docs/design/principles.md before adding or changing tokens.
  */
 
 :root {
   /* Surfaces */
-  --background: #f2f2f7; /* sand — Reef's warmer ground (ADR 20260901-diveday-reimagined, 13a) */
-  --surface: #ffffff; /* shell */
-  --surface-sunken: #ececf1; /* tideline */
-  --border: #e3e3e8; /* rope */
+  --background: #f2f2f7; /* the ground everything sits on */
+  --surface: #ffffff; /* a group's own paper */
+  --surface-sunken: #ececf1; /* a well inside a group — a track, a field */
+  --border: #e3e3e8; /* the hairline between two of them */
   /* Form controls only: ≥3:1 against --background (dock test, WCAG 1.4.11) */
   --border-strong: #86868b;
 
@@ -156,14 +160,17 @@
   --warning-tint: #fdefdf;
   --danger-tint: #fdeaeb;
 
-  /* Shape — Reef's ladder: control 10 · inset 18 · panel 28 · pill 999
-     (ADR 20260901-diveday-reimagined, 13a). `--radius` is the control rung,
-     which every `rounded-lg` reads; `rounded-inset` is the sunken block a
-     card carves out of itself, `rounded-panel` the card. Nothing on a staff
-     surface is squarer than the control or sits between the rungs — Tailwind's
+  /* Shape — Tide's ladder: control 12 · inset 12 · panel 20 · pill 999 (ADR
+     20260919-one-idea, decision I · Tide). Two radii and a capsule, which is
+     the device's own ladder: `--radius` is the control rung, which every
+     `rounded-lg` reads, and `--radius-panel` the group a page is made of.
+     **Inset now shares the control rung** rather than standing between them —
+     a well carved out of a group is a control-shaped hole, and a third rung
+     between 12 and 20 is a difference nobody can see. Nothing on a staff
+     surface is squarer than the control or sits between the rungs; Tailwind's
      own `rounded-xl`/`rounded-2xl` (12/16) are not on the ladder and
-     `card.test.tsx` refuses them. The control read 12 (`0.75rem`) from
-     Clearwater until 2026-09-02, which both ADRs had already recorded as 10. */
+     `card.test.tsx` refuses them. Reef's ladder was 10 · 18 · 28, and its
+     control read 12 from Clearwater until 2026-09-02. */
   --radius: 0.75rem;
   --radius-inset: 0.75rem;
   --radius-panel: 1.25rem;
