@@ -15,6 +15,7 @@ import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
 import type { OrderStatus } from "@/db/schema";
 import { getShopById } from "@/db/shops";
+import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -106,6 +107,10 @@ async function refreshAction(formData: FormData) {
     revalidateAndRedirect(back, stepUpChallengeUrl(session.user.shopSlug, "money", back));
   }
   const updated = orderId ? await refreshOrderStatus(db, session.user.shopId, orderId) : null;
+  // A refresh can settle the order to paid or refunded, which enqueues an
+  // integration event; drain it now rather than at the next cron tick (ADR
+  // 20260919-integration-delivery-is-write-driven).
+  if (updated) dispatchIntegrationsAfterResponse();
   revalidateAndRedirect(back, noticeUrl(back, updated ? "refreshed" : "refresh-failed"));
 }
 
@@ -197,6 +202,9 @@ async function refundAction(formData: FormData) {
             outcome.status === "needs_reconciliation"
             ? "refund-needs-reconciliation"
             : "refund-failed";
+  // Only a refund that actually moved money enqueues `order.refunded`; the
+  // other outcomes wrote no event and have nothing to drain.
+  if (outcome.status === "refunded") dispatchIntegrationsAfterResponse();
   revalidateAndRedirect(back, noticeUrl(back, notice));
 }
 

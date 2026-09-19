@@ -19,6 +19,10 @@ export {
   updateShopIntegrationSettings,
 } from "@/db/integrations";
 export {
+  dispatchIntegrationsAfterResponse,
+  WRITE_PATH_DISPATCH_LIMIT,
+} from "./dispatch-on-write";
+export {
   dispatchDueIntegrationDeliveries,
   INTEGRATIONS_CRON_CRONTAB,
   type IntegrationDispatchSummary,
