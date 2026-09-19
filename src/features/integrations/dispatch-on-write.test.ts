@@ -49,12 +49,22 @@ describe("dispatchIntegrationsAfterResponse", () => {
     expect(dispatchDueIntegrationDeliveries).not.toHaveBeenCalled();
   });
 
-  it("drains with the write-path limit, not the cron's", async () => {
+  /**
+   * Both arguments carry weight, and the second is the one that was wrong
+   * first: with the dispatcher's default `oldest-first`, a shop already
+   * holding `WRITE_PATH_DISPATCH_LIMIT` waiting deliveries drained those and
+   * left the order just written for the cron (`sourcery-ai` on #1905). The
+   * ordering is exercised for real against the database in
+   * `dispatcher.test.ts`; here it is pinned as the request the write path
+   * makes.
+   */
+  it("drains the newest end, with the write-path limit rather than the cron's", async () => {
     dispatchIntegrationsAfterResponse();
     await runScheduledWork();
 
     expect(dispatchDueIntegrationDeliveries).toHaveBeenCalledWith(FAKE_DB, {
       limit: WRITE_PATH_DISPATCH_LIMIT,
+      order: "newest-first",
     });
     // A request drains what it just wrote, not somebody else's backlog.
     expect(WRITE_PATH_DISPATCH_LIMIT).toBeLessThan(50);

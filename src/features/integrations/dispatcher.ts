@@ -1,6 +1,7 @@
 import type { DbExecutor } from "@/db/client";
 import {
   claimIntegrationDelivery,
+  type DueDeliveryOrder,
   hydrateIntegrationEventPayload,
   listDueIntegrationDeliveries,
   markIntegrationDeliveryDelivered,
@@ -46,9 +47,12 @@ export type IntegrationDispatchSummary = {
 
 export async function dispatchDueIntegrationDeliveries(
   db: DbExecutor,
-  input: { limit?: number; fetchImpl?: typeof fetch } = {},
+  input: { limit?: number; order?: DueDeliveryOrder; fetchImpl?: typeof fetch } = {},
 ): Promise<IntegrationDispatchSummary> {
-  const due = await listDueIntegrationDeliveries(db, input.limit ?? 25);
+  // `oldest-first` by default, which is what a backlog pass owes its rows. The
+  // write path asks for `newest-first` so the delivery it just enqueued is in
+  // the batch however long the queue behind it is -- see `DueDeliveryOrder`.
+  const due = await listDueIntegrationDeliveries(db, input.limit ?? 25, input.order);
   const summary: IntegrationDispatchSummary = {
     scanned: due.length,
     delivered: 0,

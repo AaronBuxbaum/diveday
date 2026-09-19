@@ -26,7 +26,7 @@ async function connectZapier(db: AppDb, shopId: string) {
 }
 
 /** A real seeded order, so the payload is the one production would build. */
-async function queueOrderPaid(db: AppDb, shopId: string, key: string) {
+async function queueOrderPaid(db: AppDb, shopId: string, key: string, dueAtMs?: number) {
   const [order] = await db.select().from(orders).where(eq(orders.shopId, shopId)).limit(1);
   if (!order) throw new Error("expected a seeded order");
   const event = await enqueueOrderIntegrationEvent(db, {
@@ -44,7 +44,7 @@ async function queueOrderPaid(db: AppDb, shopId: string, key: string) {
   // sleep: the comparison is then exact.
   const [delivery] = await db
     .update(integrationDeliveries)
-    .set({ nextAttemptAt: new Date(nowMs() - 1_000) })
+    .set({ nextAttemptAt: new Date(dueAtMs ?? nowMs() - 1_000) })
     .where(eq(integrationDeliveries.eventId, event.id))
     .returning();
   if (!delivery) throw new Error("expected a queued delivery");
@@ -244,5 +244,85 @@ describe("the outbox drain's cadence", () => {
     const everyMinutes = 30;
     expect(INTEGRATIONS_CRON_CRONTAB).toBe("0,30 * * * *");
     expect(everyMinutes).toBeLessThan(60);
+  });
+});
+
+/**
+ * Regression for `sourcery-ai` on #1905.
+ *
+ * The write-path drain reuses this dispatcher with a small limit, so with the
+ * default `oldest-first` ordering a shop already holding that many waiting
+ * deliveries drained those and left the order *just written* for the cron —
+ * write-driven delivery silently falling back to cron latency at exactly the
+ * moment the queue is deepest and somebody is most likely watching for it.
+ *
+ * A freshly enqueued delivery is due `now`, and every other due row is due
+ * because its own `next_attempt_at` already passed, so the new one is always
+ * the maximum among due rows. `newest-first` is what turns "the thing I just
+ * wrote is in this batch" from luck into a property.
+ */
+describe("which end of the due set a drain takes", () => {
+  /** Two stale deliveries ahead of one written just now, with room for two. */
+  async function backlogAheadOfAFreshWrite() {
+    const { db, shop } = await seededShopContext({ history: true });
+    await connectZapier(db, shop.id);
+    const oldest = await queueOrderPaid(db, shop.id, "order:paid:old-1", nowMs() - 600_000);
+    const older = await queueOrderPaid(db, shop.id, "order:paid:old-2", nowMs() - 300_000);
+    const justWritten = await queueOrderPaid(db, shop.id, "order:paid:fresh", nowMs());
+    return { db, oldest, older, justWritten };
+  }
+
+  async function deliveredIds(db: AppDb) {
+    const rows = await db
+      .select()
+      .from(integrationDeliveries)
+      .where(eq(integrationDeliveries.status, "delivered"));
+    return rows.map((row) => row.id);
+  }
+
+  it("takes the just-written delivery first when the write path asks for it", async () => {
+    const { db, justWritten } = await backlogAheadOfAFreshWrite();
+
+    const summary = await dispatchDueIntegrationDeliveries(db, {
+      limit: 2,
+      order: "newest-first",
+      fetchImpl: vi.fn(async () => jsonResponse(200)),
+    });
+
+    expect(summary.delivered).toBe(2);
+    expect(await deliveredIds(db)).toContain(justWritten.delivery.id);
+  });
+
+  /**
+   * The bug, pinned. Not a statement that `oldest-first` is wrong — it is the
+   * right order for the cron, and this is what it does — but a guard that the
+   * write path must not use it, because this is what happens when it does.
+   */
+  it("leaves the just-written delivery behind when it takes the oldest end", async () => {
+    const { db, justWritten, oldest, older } = await backlogAheadOfAFreshWrite();
+
+    const summary = await dispatchDueIntegrationDeliveries(db, {
+      limit: 2,
+      order: "oldest-first",
+      fetchImpl: vi.fn(async () => jsonResponse(200)),
+    });
+
+    expect(summary.delivered).toBe(2);
+    const delivered = await deliveredIds(db);
+    expect(delivered).toEqual(expect.arrayContaining([oldest.delivery.id, older.delivery.id]));
+    expect(delivered).not.toContain(justWritten.delivery.id);
+  });
+
+  it("defaults to the oldest end, so the cron keeps owing the backlog its turn", async () => {
+    const { db, justWritten, oldest } = await backlogAheadOfAFreshWrite();
+
+    await dispatchDueIntegrationDeliveries(db, {
+      limit: 1,
+      fetchImpl: vi.fn(async () => jsonResponse(200)),
+    });
+
+    const delivered = await deliveredIds(db);
+    expect(delivered).toEqual([oldest.delivery.id]);
+    expect(delivered).not.toContain(justWritten.delivery.id);
   });
 });
