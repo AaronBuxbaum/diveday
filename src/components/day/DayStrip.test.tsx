@@ -7,6 +7,14 @@ import { DayStrip } from "./DayStrip";
 
 afterEach(cleanup);
 
+/** How many rows the mark labels are spread over — one, or two when they would touch. */
+const labelRows = (container: HTMLElement): number =>
+  new Set(
+    [...container.querySelectorAll("span")]
+      .filter((node) => node.textContent)
+      .map((node) => /-translate-y-\[[^\]]+\]/.exec(node.className)?.[0]),
+  ).size;
+
 const at = (hour: number, minute = 0): Date => new Date(Date.UTC(2026, 7, 27, hour, minute));
 
 const geometry = dayStripGeometry({
@@ -30,10 +38,24 @@ const geometry = dayStripGeometry({
 
 describe("DayStrip", () => {
   it("is one image with the caller's sentence for a reader who cannot see it", () => {
-    render(<DayStrip geometry={geometry} label="Three boats today, under a rising sun." />);
+    const { container } = render(
+      <DayStrip geometry={geometry} label="Three boats today, under a rising sun." />,
+    );
     const image = screen.getByRole("img", { name: "Three boats today, under a rising sun." });
-    expect(image.tagName.toLowerCase()).toBe("svg");
+    expect(image).toBe(container.firstElementChild);
+    // The curves are decoration inside that one image, never a second one.
+    expect(container.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
   });
+
+  /**
+   * Every word on the strip is a real element at a real size, not glyphs in a
+   * stretched viewBox: the same 11-unit `<text>` renders at four pixels on a
+   * phone and eleven on a desk, and the phone is where a crew reads it.
+   */
+  const words = (container: HTMLElement): (string | null)[] =>
+    [...container.querySelectorAll("span")]
+      .map((node) => node.textContent)
+      .filter((text) => text !== "");
 
   /**
    * The component says no word of its own: a staff surface's copy comes from
@@ -50,18 +72,25 @@ describe("DayStrip", () => {
         nowLabel="10:40"
       />,
     );
-    const words = [...container.querySelectorAll("text")].map((node) => node.textContent);
-    expect(words).toEqual(
+    // No `<text>` at all — every label is an element the browser sizes.
+    expect(container.querySelectorAll("text")).toHaveLength(0);
+    expect(words(container)).toEqual(
       expect.arrayContaining(["7:00", "1:00 PM", "7:30 PM", "6 AM", "12", "6 PM", "10:40"]),
     );
     // Nothing else: no month, no "today", no unit it invented.
-    expect(words).toHaveLength(7);
+    expect(words(container)).toHaveLength(7);
   });
 
-  it("draws a dot for every mark inside the window", () => {
+  /**
+   * A dot has to be round at 390 and at 976, which a circle in a
+   * `preserveAspectRatio="none"` viewBox is not — it is an egg standing on end
+   * at one width and lying down at the other.
+   */
+  it("draws every mark and the sun round rather than as a stretched circle", () => {
     const { container } = render(<DayStrip geometry={geometry} label="the day" />);
-    // Three marks and the sun, which is the fourth circle.
-    expect(container.querySelectorAll("circle")).toHaveLength(4);
+    expect(container.querySelectorAll("circle")).toHaveLength(0);
+    // Three marks and the sun, which is the fourth.
+    expect(container.querySelectorAll("span.rounded-full")).toHaveLength(4);
   });
 
   it("raises a label that would touch the one before it", () => {
@@ -84,10 +113,7 @@ describe("DayStrip", () => {
         markLabels={{ first: "7:00", second: "7:30" }}
       />,
     );
-    const ys = [...container.querySelectorAll("text")].map((node) =>
-      Number(node.getAttribute("y")),
-    );
-    expect(new Set(ys).size).toBe(2);
+    expect(labelRows(container)).toBe(2);
   });
 
   it("leaves both labels on one line when they do not touch", () => {
@@ -98,10 +124,7 @@ describe("DayStrip", () => {
         markLabels={{ morning: "7:00", afternoon: "1:00 PM", night: "7:30 PM" }}
       />,
     );
-    const ys = [...container.querySelectorAll("text")].map((node) =>
-      Number(node.getAttribute("y")),
-    );
-    expect(new Set(ys).size).toBe(1);
+    expect(labelRows(container)).toBe(1);
   });
 
   it("draws no now line on a day that does not contain now", () => {
@@ -116,7 +139,7 @@ describe("DayStrip", () => {
     const { container } = render(
       <DayStrip geometry={past} label="yesterday" nowLabel="11:00 PM" />,
     );
-    expect(container.querySelector("rect")).toBe(null);
+    expect(words(container)).not.toContain("11:00 PM");
   });
 
   /**
@@ -128,6 +151,6 @@ describe("DayStrip", () => {
     const { container } = render(<DayStrip geometry={geometry} label="the day" />);
     const markup = container.innerHTML;
     expect(markup).not.toMatch(/#[0-9a-f]{3,8}/i);
-    expect(markup).toContain("var(--sky-ink)");
+    expect(markup).toContain("(--sky-ink)");
   });
 });
