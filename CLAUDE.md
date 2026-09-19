@@ -13,3 +13,7 @@ Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `read
 ### Domain docs
 
 Single-context: ADRs live at `docs/architecture/decisions/`; `CONTEXT.md` is created lazily by `/domain-modeling`. See `docs/agents/domain.md`.
+
+### Papercuts log
+
+Dev-friction log, one file per entry to avoid merge conflicts. See `docs/agents/papercuts.md`.
