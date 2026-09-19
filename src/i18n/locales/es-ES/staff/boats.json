@@ -54,5 +54,9 @@
   "requestPlanBoatExceeded": "El grupo supera la capacidad de tu embarcación más grande",
   "requestPlanCrewSuggestionOne": "Lleva {divemasters} divemaster para tu objetivo de {ratio}:1.",
   "requestPlanCrewSuggestionOther": "Lleva {divemasters} divemasters para tu objetivo de {ratio}:1.",
-  "descriptionLabel": "Una línea sobre la embarcación, para tu página pública (opcional)"
+  "descriptionLabel": "Una línea sobre la embarcación, para tu página pública (opcional)",
+  "hullColorLabel": "Color del casco",
+  "hullColorPicker": "Elige un color de casco",
+  "hullColorHint": "Tu equipo reconoce el barco antes que el nombre.",
+  "hullPreviewLabel": "{name}, {capacity, plural, one {# plaza} other {# plazas}}, en el color que elegiste."
 }

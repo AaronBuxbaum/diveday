@@ -1,3 +1,4 @@
+import { SkyBand } from "@/components/day/SkyBand";
 import { StarRating } from "@/components/StarRating";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { PAGE_TITLE_CLASS } from "@/components/ui/typography";
@@ -9,6 +10,7 @@ import {
 } from "@/lib/conservation-commitments";
 import { cachedFormatter } from "@/lib/intl-cache";
 import type { ReviewAggregate } from "@/lib/reviews";
+import type { SkyScheme } from "@/lib/sky-scheme";
 import { BadgeWall } from "./BadgeWall";
 
 /**
@@ -37,6 +39,27 @@ import { BadgeWall } from "./BadgeWall";
  * The stars are the page's one accent — decision 11's coral budget, where a
  * filled rating star is data ink, counts as one appearance however many are
  * lit, and never fires beside an earned moment (the storefront has none).
+ *
+ * **The storefront is the day too** — ADR 20260919-one-idea, decision I · Tide,
+ * slice 23d. The band has always been a frame at the top of the page with the
+ * shop's name in it; what fills that frame is now either the shop's own
+ * photograph or, for a shop that has not uploaded one, the sky over the shop at
+ * the hour the page is being read.
+ *
+ * **A shop with a cover photo already has its own sky**, so the photo branch is
+ * untouched: no shop loses its photograph to a gradient, and the alternative —
+ * sky above *and* photograph below — would be two mastheads. The two branches
+ * are one object with a different filling, which is why the sky takes the
+ * photograph's exact frame (`rounded-panel`, the same scrim padding) rather
+ * than the staff home's full-bleed band. `/s/**` is a page inside a public
+ * shell with a header above it; a band walked out to the viewport there would
+ * be a stripe across somebody else's chrome.
+ *
+ * **The day is named because "today" is ambiguous here** and only here. A diver
+ * in London reading a Key Largo shop's board has no way to know which day the
+ * first row means; the staff home never has that problem, because a staffer is
+ * standing in the shop. So the line is the shop's *own* date, in the shop's
+ * zone — one fact the page could not otherwise state.
  */
 export function ShopfrontHero({
   name,
@@ -47,6 +70,7 @@ export function ShopfrontHero({
   heroImage = null,
   badges = [],
   establishedYear = null,
+  sky = null,
   locale,
   t,
 }: {
@@ -68,6 +92,12 @@ export function ShopfrontHero({
   aggregate: ReviewAggregate | null;
   /** Every commitment the shop ticked, in the canonical order. */
   commitments: readonly ConservationCommitmentCode[];
+  /**
+   * The sky over the shop right now, and the shop's own date under it. Null
+   * where the caller has no day to draw — and ignored entirely by a shop with a
+   * cover photograph, which already has a sky of its own.
+   */
+  sky?: { scheme: SkyScheme; day: string } | null;
   /** The negotiated request locale — a 4.3 is "4,3" to half the divers reading it. */
   locale: string;
   t: DiverTranslator;
@@ -99,6 +129,23 @@ export function ShopfrontHero({
             {tagline ? <p className="mt-2 max-w-2xl text-lg text-pretty">{tagline}</p> : null}
           </div>
         </div>
+      ) : sky ? (
+        // The same frame the photograph gets, filled with the hour instead.
+        // `--sky-ink` is white in both colour schemes on purpose (a sky is dark
+        // in both), so the name and the tagline inherit it and the day's line
+        // takes the softer one — the tokens the staff band already measured.
+        <SkyBand
+          scheme={sky.scheme}
+          className="mb-6 rounded-panel px-5 pt-7 pb-6 sm:px-8 sm:pt-9 sm:pb-7"
+        >
+          <p className="text-sm font-semibold text-(--sky-ink-soft)">{sky.day}</p>
+          <h1 className={`font-brand-display ${PAGE_TITLE_CLASS} mt-1 text-balance sm:text-5xl`}>
+            {name}
+          </h1>
+          {tagline ? (
+            <p className="mt-2 max-w-2xl text-lg text-pretty text-(--sky-ink-soft)">{tagline}</p>
+          ) : null}
+        </SkyBand>
       ) : (
         <>
           <h1 className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance sm:text-5xl`}>

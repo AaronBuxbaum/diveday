@@ -618,5 +618,6 @@
     "checkedLabel": "Verificado — presiona para quitar la marca",
     "uncheckedLabel": "Sin verificar — presiona para marcarlo",
     "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}"
-  }
+  },
+  "hullLabel": "{boat}, dibujado como sus plazas: {booked} de {capacity, plural, one {# plaza} other {# plazas}} ocupadas{blocked, plural, =0 {} one {, # que no puede embarcar} other {, # que no pueden embarcar}}. Las plazas se llenan por orden de reserva y nunca se asignan."
 }

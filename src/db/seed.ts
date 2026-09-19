@@ -422,12 +422,16 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       name: "Mantis I",
       capacity: 12,
       description: "The small boat — twelve divers, a shaded deck, ten minutes to the reef.",
+      // Two hulls a crew can tell apart across a dock, which is the whole
+      // reason `hull_color` exists (ADR 20260919-one-idea, decision I · Tide).
+      hullColor: "#0a7ea4",
     },
     {
       shopId: shop.id,
       name: "Mantis II",
       capacity: 20,
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+      hullColor: "#c2410c",
     },
   ]);
 
@@ -685,12 +689,16 @@ export async function createDemoShop(
       name: "Mantis I",
       capacity: 12,
       description: "The small boat — twelve divers, a shaded deck, ten minutes to the reef.",
+      // Two hulls a crew can tell apart across a dock, which is the whole
+      // reason `hull_color` exists (ADR 20260919-one-idea, decision I · Tide).
+      hullColor: "#0a7ea4",
     },
     {
       shopId: shop.id,
       name: "Mantis II",
       capacity: 20,
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+      hullColor: "#c2410c",
     },
   ]);
 
@@ -776,6 +784,19 @@ export async function seedDemoSchedule(
   // `where role = 'instructor' limit 1` would return whichever row Postgres
   // felt like and move the whole seeded demo between runs. `staffDefs` is the
   // single cast both seeders insert from, so these two names always resolve.
+  // The fleet by name, so a boat departure sails on an actual hull. Without it
+  // every seeded trip carries a null `boat_id` and the hull above the roster
+  // (ADR 20260919-one-idea, decision I · Tide) renders nowhere — an unseeded
+  // feature is an untested one. By name for the same reason the instructors
+  // below are: it is the one key the pinned and the minted demo shops share.
+  const boatByName = new Map(
+    (
+      await db
+        .select({ id: boats.id, name: boats.name })
+        .from(boats)
+        .where(eq(boats.shopId, shopId))
+    ).map((row) => [row.name, row.id]),
+  );
   const instructorsByName = new Map(
     (
       await db
@@ -843,6 +864,7 @@ export async function seedDemoSchedule(
   // public toggle rides the history flag (ADR 20260907-noaa-tide-predictions).
   await seedTides(db, shopId, opts.history !== false);
   const { tripRows, captainId, divemasterId } = await seedTrips(db, shopId, {
+    boatByName,
     instructor,
     reliefInstructor,
     courseRows,

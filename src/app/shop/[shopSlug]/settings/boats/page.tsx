@@ -14,6 +14,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
+import { HullColorField } from "../_components/HullColorField";
 import { createBoatAction, deleteBoatAction, updateBoatAction } from "../actions";
 import { boatNoticeMessages } from "../sub-page-notices";
 
@@ -125,6 +126,26 @@ export default async function BoatsSettingsPage({
                         placeholder={t("boats.descriptionLabel")}
                         aria-label={t("boats.descriptionLabel")}
                         className={controlClass}
+                      />
+                    </div>
+                    {/* **The colour, with the boat under it** (ADR
+                        20260919-one-idea, decision I · Tide). A hull is the
+                        object a crew recognises before reading a name, so the
+                        choice is made against the shape rather than against a
+                        swatch — and the hint says why it is worth making at
+                        all, which is the one thing a colour field cannot show
+                        on its own. */}
+                    <div className="w-full sm:basis-full">
+                      <HullColorField
+                        initial={boat.hullColor}
+                        capacity={boat.capacity}
+                        hint={t("boats.hullColorHint")}
+                        pickerLabel={t("boats.hullColorPicker")}
+                        fieldLabel={t("boats.hullColorLabel")}
+                        previewLabel={t("boats.hullPreviewLabel", {
+                          name: boat.name,
+                          capacity: boat.capacity,
+                        })}
                       />
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto justify-end">

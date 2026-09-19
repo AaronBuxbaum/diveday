@@ -86,6 +86,17 @@ test.describe("weather blow-out cascade", () => {
     // trip rather than to any prose containing the word.
     await expect(page.getByText("Cancelled").filter({ visible: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
+    /**
+     * **And the boat is not drawn** (ADR 20260919-one-idea, decision I · Tide;
+     * dive-domain review 20260919). A blow-out cancels the departure and leaves
+     * every booking *active*, so the hull above the roster kept drawing a full,
+     * happy boat at the top of a page whose words say the day is off — and the
+     * picture is read before the words. There is no honest hull for a departure
+     * that is not going. The same hull is asserted present on this trip's
+     * uncancelled twin in `trip-hull.spec.ts`, which is what proves this
+     * absence is the cancellation and not a name that stopped matching.
+     */
+    await expect(page.getByRole("img", { name: /drawn as its seats/ })).toHaveCount(0);
     await page.getByRole("link", { name: "View the blow-out cascade" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
   });

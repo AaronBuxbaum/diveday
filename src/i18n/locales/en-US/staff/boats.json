@@ -54,5 +54,9 @@
   "requestPlanBoatExceeded": "Group exceeds largest boat capacity",
   "requestPlanCrewSuggestionOne": "Bring {divemasters} divemaster for your {ratio}:1 target.",
   "requestPlanCrewSuggestionOther": "Bring {divemasters} divemasters for your {ratio}:1 target.",
-  "descriptionLabel": "One line about the boat, for your public page (optional)"
+  "descriptionLabel": "One line about the boat, for your public page (optional)",
+  "hullColorLabel": "Hull colour",
+  "hullColorPicker": "Pick a hull colour",
+  "hullColorHint": "Your crew reads the boat before the name.",
+  "hullPreviewLabel": "{name}, {capacity, plural, one {# seat} other {# seats}}, in the colour you picked."
 }

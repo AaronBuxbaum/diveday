@@ -461,7 +461,12 @@ export default async function ManageTripPage({
   const assignedCrew = staff
     .filter((entry) => crewIds.includes(entry.person.id))
     .map((entry) => entry.person.fullName);
-  const boatName = shopBoats.find((boat) => boat.id === trip.boatId)?.name;
+  // The fleet's row for this departure's boat: its name for the about line,
+  // and its colour for the hull above the roster (ADR 20260919-one-idea,
+  // decision I · Tide). A shore dive or a pool session finds nothing here and
+  // gets no hull, which is correct — it has a roster and no boat.
+  const boat = shopBoats.find((row) => row.id === trip.boatId);
+  const boatName = boat?.name;
   const boatCrewSummary =
     [boatName, ...assignedCrew].filter(Boolean).join(" · ") || t("trips.about.noBoat");
   const repeatsSummary = series
@@ -968,6 +973,7 @@ export default async function ManageTripPage({
 
       <TripRosterContent
         guests={guests}
+        hull={boat ? { name: boat.name, color: boat.hullColor, crew: assignedCrew } : null}
         shopSlug={shopSlug}
         shopName={shop.name}
         locale={locale}

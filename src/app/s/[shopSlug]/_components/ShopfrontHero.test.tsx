@@ -232,3 +232,77 @@ describe("the shop's face", () => {
     expect(screen.getByText("PADI 5 Star Dive Center")).toBeInTheDocument();
   });
 });
+
+/**
+ * **The storefront is the day** — ADR 20260919-one-idea, decision I · Tide,
+ * slice 23d. The band at the top of the page is one frame with two fillings:
+ * the shop's own photograph, or the sky over the shop at the hour the page is
+ * read. The rule the tests below hold is which of the two wins, because getting
+ * it backwards means a shop loses its photograph to a gradient.
+ */
+describe("the day over the shop's own sky", () => {
+  const SKY = { scheme: "dusk" as const, day: "Saturday, September 19" };
+
+  it("wears the hour, and names the shop's own day above its name", () => {
+    const { container } = render(
+      <ShopfrontHero
+        name="Blue Mantis Divers"
+        tagline="Two tanks before lunch."
+        aggregate={NO_REVIEWS}
+        commitments={[]}
+        sky={SKY}
+        locale="en-US"
+        t={t}
+      />,
+    );
+    const band = container.querySelector(".sky");
+    expect(band).not.toBeNull();
+    expect(band?.getAttribute("data-scheme")).toBe("dusk");
+    // The date is the shop's, not the reader's — a diver in another timezone
+    // has no other way to know which day the board's first row means.
+    expect(screen.getByText("Saturday, September 19")).toBeInTheDocument();
+    expect(band).toContainElement(screen.getByRole("heading", { level: 1 }));
+  });
+
+  /**
+   * **A shop with a cover photo already has its own sky.** Two mastheads is the
+   * failure this guards against, and a shop silently losing the photograph it
+   * uploaded is the worse half of it.
+   */
+  it("leaves a shop's photograph alone, whatever the hour is doing", () => {
+    const { container } = render(
+      <ShopfrontHero
+        name="Blue Mantis Divers"
+        tagline={null}
+        aggregate={NO_REVIEWS}
+        commitments={[]}
+        heroImage={{ url: "/dive-sites/reef.jpg", alt: "Elkhorn coral" }}
+        sky={SKY}
+        locale="en-US"
+        t={t}
+      />,
+    );
+    expect(screen.getByAltText("Elkhorn coral")).toBeInTheDocument();
+    expect(container.querySelector(".sky")).toBeNull();
+    expect(screen.queryByText("Saturday, September 19")).not.toBeInTheDocument();
+  });
+
+  /**
+   * Day zero still ships: a caller with no day to draw gets the bare name it
+   * always got, not an empty band waiting to be filled.
+   */
+  it("falls back to the bare name when there is no day and no photograph", () => {
+    const { container } = render(
+      <ShopfrontHero
+        name="Blue Mantis Divers"
+        tagline={null}
+        aggregate={NO_REVIEWS}
+        commitments={[]}
+        locale="en-US"
+        t={t}
+      />,
+    );
+    expect(container.querySelector(".sky")).toBeNull();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Blue Mantis Divers");
+  });
+});

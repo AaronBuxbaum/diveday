@@ -862,8 +862,13 @@ new domain concept, define it here in the same PR.
   a seat, and `no_show` stopped holding one when the counter gained the power to release it (**seat
   release**). Every seat *count* reads that one predicate — the booking transaction, the restore,
   the walk-in picker, the departure's own record and its capacity floor, the wait-list join, the
-  public dive-site page's departures, and the schedule board — because a call site that spells the
-  rule itself instead shows a shop "Full" over a seat that is free, or oversells a seat that is not.
+  public dive-site page's departures, the schedule board, and the **hull** drawn above a departure's
+  roster — because a call site that spells the rule itself instead shows a shop "Full" over a seat
+  that is free, or oversells a seat that is not. The hull is the newest of them and the one that
+  shows what the looser reading costs on a picture: drawn from every non-cancelled booking it put a
+  filled seat under a diver the desk had marked not coming, read full over a seat the counter could
+  sell, and — six places, one no-show, one walk-up onto the freed seat — silently left the newest
+  booking, the person standing on the dock, off the boat entirely (dive-domain review 20260919).
   It is not the roster: the **manifest**, the gear register and the buddy builder still read every
   non-cancelled booking, and must. A few counts stay deliberately looser and treat a released seat
   as still held — crew sizing, the minimum-decision sweep, blow-out candidates — each conservative
@@ -1055,6 +1060,9 @@ new domain concept, define it here in the same PR.
 - **Print run** — one row of `shop_print_runs`: the day a shop last printed one sheet (and, for the
   boat card, one hull). One row per sheet per subject, replaced in place rather than appended, and
   the whole of what the register keeps. The paper pass records the day and never the diver.
+- **Hull** — the *drawn* boat, above a departure's roster: an outline from transom to bow with one rounded seat per place the vessel has, the wheelhouse and the helm (`src/lib/hull.ts` for the geometry, `src/components/boat/Hull.tsx` for the element; ADR 20260919-one-idea, decision I · Tide). It is the count made spatial — how full, how many cannot board, how much room is left — and it adds no fact: every seat it draws is a row in words beneath it, and taking the picture away leaves the page saying everything it said. It informs and gates nothing, exactly like the sky: no capacity, readiness, admission or manifest rule reads a coordinate from it. **A seat is never numbered and never assigned**, and the absent numeral is not what makes that true — what does is that nothing stores a position and nothing reads one (see **Roll-call order**); seats fill in booking order, so the layout is deliberately unstable, and a released seat resold moves everyone after it. The hull is drawn only for a departure that has a boat *and* is sailing: a shore dive has no vessel to draw, and a **blow-out** leaves every booking active, so a cancelled trip would otherwise draw a full, happy boat over words saying the day is off. It does not print — the print palette flattens four of its six seat states into two inks, and the rows carry the paper.
+- **Seat state** — the six things a place on a **hull** can be wearing, derived once in `seatStateFor`: **open** (nobody has taken it), **booked** (held, nothing recorded, nothing stopping them boarding), **blocked** (held, and readiness says they cannot board), **aboard**, **ashore** and **missing** (the three a human *recorded* at a roll call; see **Roll-call**). A recorded fact outranks readiness, because a body on the boat is a fact and readiness is a decision. The vocabulary is deliberately coarser than the roll call's row tones in one place — `notBoarded` and `notBoardedImplied`, which the rows separate because an alarm is earned by a recorded fact and never by the absence of one, both land on `ashore` — and that is tolerable only while the rows stand under the picture saying both in words. The seats a hull draws are the ones **seat held** counts, so the boat and the sentence beside it can never count different sets.
+- **Hull colour** — `boats.hull_color`, a `#rrggbb` a shop picks once per boat in Settings, so a crew recognises the vessel before reading its name and two morning departures become two objects rather than two rows with different text. Null until a shop picks one, and **null is not a gap to fill with a random colour** — an unpainted hull is drawn in the page's own ink, which is a perfectly good boat. It informs nothing: no capacity, readiness, admission or manifest rule reads it. It leaves with the shop in `boats.csv`.
 - **Boat card** — the laminated A5 card taped to a console: two faces of one lamination, a day side
   and a night side, one per hull. It exists for the minute the app is not there, so it carries the
   roll by name, what to do if someone is missing, the shop's own emergency numbers and vessel, the

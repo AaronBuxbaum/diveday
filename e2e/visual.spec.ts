@@ -8038,6 +8038,47 @@ for (const scheme of ["light", "dark"] as const) {
     });
   });
 
+  /**
+   * **The storefront is the day** — ADR 20260919-one-idea, decision I · Tide,
+   * slice 23d. The band at the top of a shop's public page is one frame with
+   * two fillings, and `blue-mantis` can only ever photograph one of them: it
+   * has a cover photograph, by design, because it is the demo a shop leaving
+   * FareHarbor sees. A minted shop has none — which is the ordinary shape for a
+   * shop that has just signed up — so its storefront is where the sky renders.
+   *
+   * **The zone does not pick the hour on this surface**, and the capture is what
+   * showed it. A minted shop carries the canonical demo's *address* — Key Largo,
+   * a real street, so the address path is exercised end to end — while
+   * `privateShopTimezone` moves only its clock. `skyReadingFor` prefers the
+   * almanac wherever a shop has coordinates, so the sky here is the sun over
+   * Florida at the fleet's frozen instant, and the Maldives zone shows up in the
+   * *date line* rather than in the gradient. That is the right precedence (a
+   * whole timezone is far too coarse to derive a sunrise from) and it means this
+   * capture is the day sky; a dusk or night storefront needs a shop whose
+   * coordinates say so, which is a fixture that does not exist yet.
+   */
+  test.describe(`${scheme} mode — the storefront over its own sky`, () => {
+    test.use({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+      privateShopSlug: "harbour-lantern-divers",
+      privateShopTimezone: "Indian/Maldives",
+    });
+
+    test(`a shop with no cover photo wears the hour (${scheme})`, async ({ page, privateShop }) => {
+      await page.goto(`/s/${privateShop.slug}`);
+      // The band having *chosen* an hour, not merely rendered: `data-scheme` is
+      // server-rendered from the shop's own coordinates or clock, so its
+      // presence is the page having resolved this shop's sky rather than the
+      // shell's. Waiting on the attribute rather than on a timeout.
+      const sky = page.locator(".sky").first();
+      await expect(sky).toHaveAttribute("data-scheme", /^(dawn|day|dusk|night)$/);
+      // The shop's name is inside the band, and no photograph replaced it.
+      await expect(sky.getByRole("heading", { level: 1 })).toBeVisible();
+      await capture(page, "storefront-sky", scheme);
+    });
+  });
+
   test.describe(`${scheme} mode — the water band at night`, () => {
     test.use({
       colorScheme: scheme,
