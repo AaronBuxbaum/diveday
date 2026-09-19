@@ -189,7 +189,7 @@ describe("ticks", () => {
 const DAY_FROM = new Date(Date.UTC(2026, 7, 27, 0));
 const DAY_TO = new Date(Date.UTC(2026, 7, 28, 0));
 /** Every hour boundary of that day, which is what `dayStripTicks` chooses from. */
-const DAY_HOURS = Array.from({ length: 24 }, (_, hour) => at(hour));
+const DAY_HOURS = Array.from({ length: 24 }, (_, hour) => ({ at: at(hour), hour }));
 const hours = (from: Date, to: Date): number => (to.getTime() - from.getTime()) / 3_600_000;
 
 describe("the part of the day worth drawing", () => {
@@ -333,5 +333,41 @@ describe("the ticks", () => {
 
   it("says nothing rather than guessing when no hour fits", () => {
     expect(dayStripTicks({ from: at(6, 5), to: at(6, 50), hours: DAY_HOURS })).toEqual([]);
+  });
+
+  /**
+   * **A day that springs forward has 23 hours in it**, and the one that
+   * vanished leaves a hole: in New York on 2026-03-08 the fourth boundary is
+   * 4 AM, not 3 AM. Striding by position would put the ticks on different
+   * clock hours one day of the year, and the two boundaries either side of the
+   * gap resolve to the same instant — which is one tick drawn twice, at one x,
+   * under one React key.
+   */
+  it("strides over the clock rather than the array on a day that loses an hour", () => {
+    const springForward = [
+      0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+    ].map((hour) => ({ at: at(hour), hour }));
+    const ticks = dayStripTicks({
+      from: at(0),
+      to: at(24),
+      hours: springForward,
+      count: 4,
+    });
+    // Whole, evenly spaced clock hours — six apart, and the same three a day
+    // with all 24 of its hours gets. Striding by position instead would put
+    // them one hour out from 3 AM onward, which is what the hole does.
+    expect(ticks.map((tick) => tick.getUTCHours())).toEqual([6, 12, 18]);
+    // And the repeated instant is dropped rather than drawn twice.
+    expect(new Set(ticks.map((tick) => tick.getTime())).size).toBe(ticks.length);
+  });
+
+  it("drops a repeated instant rather than drawing one tick twice", () => {
+    const repeated = [
+      { at: at(6), hour: 6 },
+      { at: at(6), hour: 6 },
+      { at: at(12), hour: 12 },
+    ];
+    const ticks = dayStripTicks({ from: at(0), to: at(24), hours: repeated, count: 4 });
+    expect(ticks).toHaveLength(2);
   });
 });

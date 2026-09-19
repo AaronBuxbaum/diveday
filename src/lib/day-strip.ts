@@ -122,21 +122,35 @@ export function dayStripWindow(input: {
  */
 const TICK_STRIDES = [1, 2, 3, 4, 6, 8, 12] as const;
 
+/** One top-of-the-hour in the shop's zone: the instant, and the hour it reads. */
+export type HourBoundary = {
+  at: Date;
+  /** What a clock on the wall says at that instant, 0-23. */
+  hour: number;
+};
+
 /**
  * The hours to draw a tick under: the day's own hour marks, at the tightest
  * even stride that fits `count` of them inside the window.
  *
- * The caller supplies the hours as instants because "the top of the hour" is a
- * wall-clock fact in the shop's zone, and this module reads no zone — it reads
- * only each hour's place in the day, which is its index in the array. What it
- * decides is the stride: four ticks across a six-hour window and four across a
- * sixteen-hour one, so the strip's rhythm does not change with the season.
+ * The caller supplies each hour as an instant *and* the hour it reads, because
+ * "the top of the hour" is a wall-clock fact in the shop's zone and this module
+ * reads no zone. What it decides is the stride: four ticks across a six-hour
+ * window and four across a sixteen-hour one, so the strip's rhythm does not
+ * change with the season.
+ *
+ * **The stride is over the clock, never over the array.** A day that springs
+ * forward has 23 hours in it and the one that vanished leaves a hole, so the
+ * fourth entry is not four o'clock — striding by position would put the ticks
+ * on 0 · 3 · 6 · 9 one day of the year and on 0 · 4 · 7 · 10 the next. Striding
+ * by `hour` is right on every day a zone can have; duplicate instants are
+ * dropped so a repeated hour cannot draw two ticks in one place.
  */
 export function dayStripTicks(input: {
   from: Date;
   to: Date;
-  /** Every hour boundary of the day, in order from its first hour. */
-  hours: readonly Date[];
+  /** Every hour boundary of the day, in order. */
+  hours: readonly HourBoundary[];
   count?: number;
 }): Date[] {
   const count = input.count ?? 4;
@@ -145,12 +159,16 @@ export function dayStripTicks(input: {
   // In from each edge, because a tick under the very first pixel is a label
   // with nowhere to be centred.
   const inset = (to - from) * 0.06;
-  const inside = input.hours
-    .map((at, index) => ({ at, index }))
-    .filter(({ at }) => at.getTime() >= from + inset && at.getTime() <= to - inset);
+  const seen = new Set<number>();
+  const inside = input.hours.filter(({ at }) => {
+    const instant = at.getTime();
+    if (instant < from + inset || instant > to - inset || seen.has(instant)) return false;
+    seen.add(instant);
+    return true;
+  });
   if (inside.length <= count) return inside.map((hour) => hour.at);
   for (const stride of TICK_STRIDES) {
-    const picked = inside.filter(({ index }) => index % stride === 0);
+    const picked = inside.filter(({ hour }) => hour % stride === 0);
     if (picked.length > 0 && picked.length <= count) return picked.map((hour) => hour.at);
   }
   // Every stride overshot, which takes a window wider than a day: one tick in
