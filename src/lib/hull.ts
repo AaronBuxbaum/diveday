@@ -11,9 +11,21 @@
  * **Seats are never numbered and never assigned** (the ADR, and Deck's own
  * rule). A seat fills in booking order; which rectangle a diver lands in means
  * nothing, and no booking rule changes because of one. The picture is the count
- * made spatial. The risk this carries is implied precision — a reader taking it
- * for a seating plan — and the whole defence is that no number is ever drawn on
- * a seat, so there is nothing to mistake for an assignment.
+ * made spatial.
+ *
+ * **The absent number is not what makes that true**, and a dive-domain review
+ * on 2026-09-19 was right to say so: two letters inside a rectangle at a fixed
+ * place on a drawing of a real boat is a position whether or not a numeral sits
+ * beside them. What makes it safe is that nothing stores one and nothing reads
+ * one — the glossary closes that door in as many words under **Roll-call
+ * order** ("a number a diver keeps for the day ... is a stored fact about a
+ * person on a departure, not a position in a list"), and the roll is called by
+ * name from `getTripRoster`, in seat-age order, with no bench anywhere in it.
+ * The layout is therefore *unstable on purpose*: a seat released and resold
+ * moves everyone after it, which is harmless for a count and would be a hazard
+ * for a plan. Anything that would make a rectangle mean something — a stored
+ * station, a bench a crew is told to call — needs its own decision, not this
+ * module.
  *
  * **It informs and gates nothing.** No capacity, readiness, admission or
  * manifest rule reads a coordinate from here, exactly like the sky.
@@ -29,7 +41,7 @@ import type { RollCallRecordedTone } from "@/lib/manifests";
 /** A seat's box, and the pitch between two of them. */
 const SEAT_W = 34;
 const SEAT_H = 32;
-export const SEAT_RX = 9;
+const SEAT_RX = 9;
 const COL_PITCH = 42;
 /** The first seat's left edge, inboard of the hull's own line. */
 const FIRST_SEAT_X = 24;
@@ -68,10 +80,19 @@ const CREW_IN_WHEELHOUSE = 2;
  * measure is therefore the *text*, not the seat: 390px of phone across a hull
  * of `42·cols + 106` units renders the canvas's 11.5-unit initials at
  * `390 · 11.5 / (42·cols + 106)` pixels — 10.1 at eight columns, 7.1 at twelve,
- * 4.4 at twenty. Eight columns is a boat of sixteen, which is past the size of
- * an ordinary dive boat; above it the seats stay and the letters go, and the
+ * 4.4 at twenty. Above the threshold the seats stay and the letters go, and the
  * picture is still the count made spatial, which is the whole point of drawing
  * it rather than listing it.
+ *
+ * **The letterless hull is not an edge case.** An earlier draft of this comment
+ * called a boat of sixteen "past the size of an ordinary dive boat"; a
+ * dive-domain review corrected it, and it was wrong about the market this
+ * product is for — Florida and Caribbean day boats routinely run twenty to
+ * thirty divers, and the ADR's own weakness note imagines forty. So every
+ * operator above a six-pack reads the letterless hull as their *normal*, and
+ * the seats must tell one state from another with no lettering to help them:
+ * that is why `Hull` draws a booked seat with an outline rather than a fill
+ * alone.
  */
 const MAX_COLUMNS_WITH_INITIALS = 8;
 
@@ -99,6 +120,13 @@ export type HullSeat = {
   /** The middle of the seat, for a word centred on it. */
   centerX: number;
   centerY: number;
+  /**
+   * The seat's corner, so the one radius the canvas drew travels with the box
+   * rather than being re-typed at the element. It used to be a loose export
+   * with no consumer while `Hull` hard-coded a 9 beside it — two spellings of
+   * one number, which is how a picture stops being the drawn one.
+   */
+  rx: number;
 };
 
 export type HullGeometry = {
@@ -145,7 +173,10 @@ export function hullGeometry(input: { capacity: number; crewCount?: number }): H
   const seats: HullSeat[] = [];
   for (let index = 0; index < capacity; index += 1) {
     // Booking order runs along one bench from the transom forward, then along
-    // the other — the order Deck drew, and the order a crew calls names in.
+    // the other — the order Deck drew. **Not** an order anyone calls: the roll
+    // is read by name from `getTripRoster`, and a sentence here claiming
+    // otherwise is what would persuade the next reader the geometry means
+    // something (dive-domain review 20260919).
     const row = Math.floor(index / columns);
     const column = index % columns;
     const x = FIRST_SEAT_X + COL_PITCH * column;
@@ -158,6 +189,7 @@ export function hullGeometry(input: { capacity: number; crewCount?: number }): H
       height: SEAT_H,
       centerX: x + SEAT_W / 2,
       centerY: y + SEAT_H / 2,
+      rx: SEAT_RX,
     });
   }
 
@@ -230,9 +262,19 @@ function emptyHull(): HullGeometry {
  *
  * One vocabulary for the hull, derived from the two the boat already speaks —
  * `readiness.ts`'s ready-or-blocked at the dock, and `manifests.ts`'s recorded
- * roll-call tone — so a colour on the hull can never disagree with the same
- * person's row in the roll call beneath it. The fills themselves are the row
- * tones' (`src/components/row-tones.ts`); this decides only which one.
+ * roll-call tone. The fills themselves are the row tones'
+ * (`src/components/row-tones.ts`); this decides only which one.
+ *
+ * **It is coarser than the rows, in one place, deliberately.** A seat can never
+ * contradict the row beneath it, but it can say less: `notBoarded` and
+ * `notBoardedImplied` are two row treatments — the rows give the implied one a
+ * quieter, dashed reading, because an alarm is earned by a recorded fact and
+ * never by the absence of one (ADR 20260827, decision 4) — and both land on
+ * `ashore` here. That is a picture declining to distinguish a statement from an
+ * inference, which is tolerable while the only thing under it is the roll call's
+ * own rows saying both in words. It stops being tolerable the moment a hull is
+ * the manifest, and the ADR carries it on the list that must close before
+ * `recorded` is ever non-null on a printed or radioed surface.
  *
  * Colour never carries a state alone here either: every seat is said again in
  * the roster rows under the hull, and the hull as a whole carries one sentence
@@ -247,7 +289,10 @@ export type SeatState =
   | "blocked"
   /** A human recorded them aboard. */
   | "aboard"
-  /** A human recorded them ashore — either flavour, stated or carried forward. */
+  /**
+   * A human recorded them ashore — stated, or carried forward from the dock.
+   * The rows tell those two apart and this does not; see the note above.
+   */
   | "ashore"
   /** After the dive, a human said they did not come back (DOM-H3). */
   | "missing";
@@ -273,7 +318,19 @@ const SEAT_OF_RECORDED_TONE: Record<RollCallRecordedTone, SeatState> = {
  * A place with no booking is open. A booking wears what a human recorded, and
  * where nobody has recorded anything it wears readiness — which is the dock's
  * question ("may they board?") rather than the deck's ("did they?"), and is
- * exactly the order the roll call reads them in.
+ * exactly the order the roll call reads them in. A recorded fact outranking
+ * readiness is the point: a body on the boat is a fact and readiness is a
+ * decision, and a picture arguing with the row beneath it would be worse than
+ * one that is coarser.
+ *
+ * **It does not yet know which head count it is drawing**, and it must before a
+ * hull is ever a roll call: green at the dock means "got on the boat" and green
+ * after dive two means "came back", and amber at the dock ("never left") is a
+ * different conversation from amber after dive two. Today every caller passes
+ * `recorded: null`, so the ambiguity has no instance — the checkpoint belongs
+ * in this signature and in the hull's sentence on the day the manifest is
+ * wired, and the ADR carries it on that list rather than a parameter nothing
+ * reads standing here in the meantime (dive-domain review 20260919).
  */
 export function seatStateFor(place: {
   /** Null where the boat has this place and nobody has taken it. */
