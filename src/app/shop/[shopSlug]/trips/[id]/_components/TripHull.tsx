@@ -1,5 +1,5 @@
 import { Hull, type HullSeatContent } from "@/components/boat/Hull";
-import { hullGeometry, seatStateFor } from "@/lib/hull";
+import { hullGeometry, type SeatReadiness, seatReadingFor } from "@/lib/hull";
 import { seatIsHeld } from "@/lib/no-show";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import type { ReadinessByBooking, RosterEntry } from "./types";
@@ -43,25 +43,45 @@ export function seatHoldersOf(roster: readonly RosterEntry[]): readonly RosterEn
  * facts in words.
  *
  * **This is the dock's question, not the deck's.** Nothing here reads a roll
- * call: a seat is open, booked, or blocked, and the recorded outcomes
- * (`aboard`, `ashore`, `missing`) belong to the manifest, where a human is
- * actually calling names. `seatStateFor` is the one derivation either way, so
- * the two surfaces cannot disagree about what a colour means — this one simply
- * has nothing recorded to hand it.
+ * call: a seat is open, booked, blocked or awaiting, and the recorded outcomes
+ * belong to the manifest, where a human is actually calling names.
+ * `seatReadingFor` is the one derivation either way, so the two surfaces
+ * cannot disagree about what a colour means — this one passes no `at` at all,
+ * which is how it says it has no head count to draw.
  *
  * **It adds no fact and gates nothing.** Every seat is a row below it; the
  * capacity, the counts and the blockers are the page's, unchanged. Take the
  * picture away and the page still says everything it said.
  *
- * **A blocked seat is drawn from a predicate that fails open**, and the caller
- * has to know it: `rosterRowIsBlocked` answers "not blocked" for a booking
- * whose readiness has not been read, so an absence of evidence paints as a
- * clearance. The two sets agree today — the readiness map and the roster come
- * out of one `getTripGuests` batch over the same non-cancelled bookings — and
- * `Hull` has no "not known" seat to draw if they ever stop agreeing. Giving it
- * one is on the ADR's pre-manifest list; until then nothing here may become
- * the reason a person boards.
+ * **A blocked seat is drawn from a predicate that fails open**, so this caller
+ * does not ask it first. `rosterRowIsBlocked` answers "not blocked" both for a
+ * diver somebody cleared and for one nobody has read, and an absence of
+ * evidence painting as a clearance is the one thing a picture of a boat must
+ * not do. The two sets agree today — the readiness map and the roster come out
+ * of one `getTripGuests` batch over the same non-cancelled bookings — but
+ * nothing pins that, so `readinessOf` below checks for the booking's absence
+ * from the map *before* the predicate and hands `seatReadingFor` an honest
+ * `unknown`, which `Hull` now draws as its own dashed seat (ADR
+ * 20260919-one-idea §3b.5, closed).
+ *
+ * Nothing here may become the reason a person boards, either way.
  */
+/**
+ * What readiness says about one booking, including that nobody has said
+ * anything — the three-way answer `rosterRowIsBlocked` cannot give on its own
+ * (ADR 20260919-one-idea §3b.5).
+ *
+ * The map is keyed by booking id over the same batch the roster came from, so
+ * a missing key is not "ready": it is the readiness read never having happened
+ * for this seat. Asked in this order, the fail-open predicate only ever sees a
+ * readiness that exists.
+ */
+export function readinessOf(byBooking: ReadinessByBooking, bookingId: string): SeatReadiness {
+  const readiness = byBooking.get(bookingId)?.readiness;
+  if (readiness === undefined) return "unread";
+  return rosterRowIsBlocked(readiness) ? "blocked" : "ready";
+}
+
 export function TripHull({
   roster,
   readinessByBooking,
@@ -91,13 +111,22 @@ export function TripHull({
     .filter((initials): initials is string => initials !== undefined);
   const geometry = hullGeometry({ capacity, crewCount: crewInitials.length });
   const seats: HullSeatContent[] = seatHoldersOf(roster).map((entry) => ({
-    state: seatStateFor({
+    reading: seatReadingFor({
       booking: {
-        readiness: rosterRowIsBlocked(readinessByBooking.get(entry.booking.id)?.readiness)
-          ? "blocked"
-          : "ready",
+        /*
+         * **Three answers, because there are three** (ADR 20260919-one-idea
+         * §3b.5). `rosterRowIsBlocked` fails open, so it answers "not blocked"
+         * both for a diver somebody cleared and for one nobody has read — and
+         * collapsing those into `ready` here is what made the picture say
+         * "fine" where the truth was "nobody looked". The map missing the
+         * booking entirely is the honest signal for the second case, and it is
+         * read *before* the predicate rather than through it.
+         */
+        readiness: readinessOf(readinessByBooking, entry.booking.id),
       },
-      recorded: null,
+      // No `at` and no `recorded`: this page has no roll call in it, so the
+      // seat answers the dock's question and `SeatPlace` will not let a
+      // recorded tone in without the head count it came from.
     }),
     initials: initialsOf(entry.person.fullName),
   }));

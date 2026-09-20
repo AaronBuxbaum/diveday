@@ -1,4 +1,4 @@
-import type { HullGeometry, SeatState } from "@/lib/hull";
+import type { HullGeometry, SeatReading, SeatState } from "@/lib/hull";
 
 /**
  * **The boat, drawn** — ADR 20260919-one-idea, decision I · Tide: "a
@@ -69,8 +69,12 @@ const SEAT_FILL: Record<SeatState, string> = {
   open: "none",
   booked: "var(--surface)",
   blocked: "var(--danger-tint)",
+  /** Nothing said about this person yet — the slate the rows give `awaiting`. */
+  awaiting: "var(--surface-sunken)",
   aboard: "var(--success)",
   ashore: "var(--warning)",
+  /** The tint, not the fill — an inference does not get the stated colour. */
+  ashoreImplied: "var(--warning-tint)",
   missing: "var(--danger)",
 };
 
@@ -88,8 +92,32 @@ const SEAT_LINE: Record<SeatState, { stroke: string | null; opacity: number; das
   open: { stroke: null, opacity: 0.6, dashed: true },
   booked: { stroke: null, opacity: 1, dashed: false },
   blocked: { stroke: "var(--danger)", opacity: 1, dashed: false },
+  /**
+   * **Solid, and that is not a detail.** A first pass drew this dashed, on the
+   * reasoning that an unread seat and an empty one are both the picture
+   * declining to claim something, with the initials to tell them apart. Two
+   * things were wrong with that. A dashed near-white seat on an unpainted
+   * hull's `--surface-sunken` body is the 1.2:1 this file measures above, so
+   * the only real difference left was the lettering — and `hullGeometry` drops
+   * the lettering above eight columns, which is *every* boat over a six-pack.
+   * A booked diver nobody had vetted rendered as an empty seat, on exactly the
+   * boats where a crew most needs to know the difference.
+   *
+   * So the rule this file already had stands: a line at full weight means a
+   * body is in this seat. The doubt is carried by the slate fill and by the
+   * inner mark below, both of which survive the print flattening that eats
+   * hue — and neither of which needs two letters to be legible.
+   */
+  awaiting: { stroke: "var(--border-strong)", opacity: 1, dashed: false },
   aboard: { stroke: "var(--success)", opacity: 1, dashed: false },
   ashore: { stroke: "var(--warning)", opacity: 1, dashed: false },
+  /**
+   * **Dashed, and that is the whole point** (§3b.3, ADR 20260827 decision 4).
+   * Nobody said this person stayed ashore; the dock's silence was carried
+   * forward. A solid amber ring is what a crew member's statement earns, and
+   * an inference drawn in the same weight is the picture promoting a guess.
+   */
+  ashoreImplied: { stroke: "var(--warning)", opacity: 1, dashed: true },
   missing: { stroke: "var(--danger)", opacity: 1, dashed: false },
 };
 
@@ -105,13 +133,29 @@ const SEAT_INK: Record<SeatState, string> = {
   booked: "var(--foreground)",
   /** Danger on its own tint — 5.45:1, the number `globals.css` measured. */
   blocked: "var(--danger)",
+  /** Foreground on the slate, exactly as the `awaiting` row letters it. */
+  awaiting: "var(--foreground)",
   aboard: "var(--surface)",
   ashore: "var(--surface)",
+  /** Warning on its own tint, the pairing `blocked` already uses. */
+  ashoreImplied: "var(--warning)",
   missing: "var(--surface)",
 };
 
 export type HullSeatContent = {
-  state: SeatState;
+  /**
+   * The seat as `seatReadingFor` read it — not the bare state.
+   *
+   * The picture paints `reading.state` and nothing else today. The other two
+   * fields ride along because the derivation may not throw them away (ADR
+   * 20260919-one-idea §3b.1 and §3b.2): `checkpoint` is the head count a green
+   * fill came from, and `readiness` is what was known about the holder *even
+   * where a recorded fact outranked it* — "aboard, and nobody ever cleared
+   * them" is the sentence an investigator asks for, and a hull is what gets
+   * photographed. Drawing either of them is the manifest's own work; §3b says
+   * so, and says which half is left.
+   */
+  reading: SeatReading;
   /** Two letters, already shortened by the caller. Absent for an open seat. */
   initials?: string;
 };
@@ -144,8 +188,15 @@ export function Hull({
     <svg
       viewBox={`0 0 ${geometry.width} ${geometry.height}`}
       // `print:hidden` is not the caller's to opt out of — see the note above:
-      // the print palette flattens four of the six states into two inks, so the
-      // rows carry the paper and the picture stands down.
+      // the print palette flattens six of the eight states into two inks and
+      // one near-white, so the rows carry the paper and the picture stands
+      // down. It got *worse* with `awaiting` and `ashoreImplied`: the tints are
+      // not redefined for print and `background: transparent !important` does
+      // not reach an SVG `fill`, so `open`, `awaiting` and `ashoreImplied` all
+      // land on "dashed, near-white". The dash is the one channel that survives
+      // the flattening and this component now spends it three times, which is
+      // why ADR 20260919-one-idea §3b.4 says the mono treatment has three
+      // states to re-cut rather than one.
       className={`${className ?? "block h-auto w-full"} print:hidden`}
       role="img"
       aria-label={label}
@@ -169,8 +220,12 @@ export function Hull({
       />
 
       {geometry.seats.map((seat) => {
-        const content = seats[seat.index] ?? { state: "open" as const };
-        const edge = SEAT_LINE[content.state];
+        /* A place the roster does not reach: nobody has taken it, nothing was
+           recorded, and there is no holder whose readiness could be read. */
+        const content: HullSeatContent = seats[seat.index] ?? {
+          reading: { state: "open", checkpoint: null, readiness: null },
+        };
+        const edge = SEAT_LINE[content.reading.state];
         return (
           <g key={seat.index}>
             <rect
@@ -179,7 +234,7 @@ export function Hull({
               width={seat.width}
               height={seat.height}
               rx={seat.rx}
-              fill={SEAT_FILL[content.state]}
+              fill={SEAT_FILL[content.reading.state]}
               stroke={edge.stroke ?? line}
               strokeOpacity={edge.opacity}
               strokeDasharray={edge.dashed ? "3 3" : undefined}
@@ -193,7 +248,7 @@ export function Hull({
                 artifact, not a distinction (dive-domain review 20260919), and
                 the thing it has to be told apart from means somebody's waiver
                 is unsigned rather than somebody is still in the water. */}
-            {content.state === "missing" ? (
+            {content.reading.state === "missing" ? (
               <rect
                 x={seat.x - 3.5}
                 y={seat.y - 3.5}
@@ -205,6 +260,27 @@ export function Hull({
                 strokeWidth={2.5}
               />
             ) : null}
+            {/* **The mark that says nobody has said anything.** A dashed inset,
+                *inside* a seat whose own line stays solid, so the seat still
+                reads as occupied while the inside of it reads as unsettled.
+                It is geometry rather than hue on purpose: the print palette
+                flattens `--surface` and `--surface-sunken` to the same white,
+                so the slate fill alone would not survive paper — and it does
+                not need the two letters, which `hullGeometry` drops above
+                eight columns on every boat larger than a six-pack. */}
+            {content.reading.state === "awaiting" ? (
+              <rect
+                x={seat.x + 4}
+                y={seat.y + 4}
+                width={seat.width - 8}
+                height={seat.height - 8}
+                rx={Math.max(2, seat.rx - 3)}
+                fill="none"
+                stroke="var(--border-strong)"
+                strokeDasharray="3 3"
+                strokeWidth={1}
+              />
+            ) : null}
             {geometry.showsInitials && content.initials ? (
               <text
                 x={seat.centerX}
@@ -212,7 +288,7 @@ export function Hull({
                 textAnchor="middle"
                 fontSize={11.5}
                 fontWeight={700}
-                fill={SEAT_INK[content.state]}
+                fill={SEAT_INK[content.reading.state]}
               >
                 {content.initials}
               </text>

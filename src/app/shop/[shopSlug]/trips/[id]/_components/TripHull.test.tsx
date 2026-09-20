@@ -24,7 +24,13 @@ function entry(input: { id: string; name: string; status: Booking["status"] }): 
   };
 }
 
-const ready: ReadinessByBooking = new Map();
+/**
+ * An empty readiness map is **not** a cleared boat — after §3b.5 it is a boat
+ * nobody has read, and every seat on it draws `awaiting`. Named for what it
+ * is, because a fixture called `ready` that means the opposite is how the next
+ * reader gets the fail direction backwards.
+ */
+const unread: ReadinessByBooking = new Map();
 
 function seatsOf(container: HTMLElement): Element[] {
   return [...container.querySelectorAll("rect")].filter((node) => node.getAttribute("rx") === "9");
@@ -87,7 +93,7 @@ describe("TripHull", () => {
     const { container } = render(
       <TripHull
         roster={roster}
-        readinessByBooking={ready}
+        readinessByBooking={unread}
         capacity={6}
         color={null}
         label="Mantis I, drawn as its seats."
@@ -100,30 +106,47 @@ describe("TripHull", () => {
   });
 
   /**
-   * A blocked seat is the one fact the picture carries that the masthead does
-   * not, so the derivation that produces it is worth pinning: `rosterRowIsBlocked`
-   * fails open, and a booking with no readiness row paints as an ordinary held
-   * seat rather than as a refusal.
+   * **Three readings, because there are three** (ADR 20260919-one-idea §3b.5).
+   *
+   * This test used to be called "paints an unread readiness as no refusal",
+   * and it passed: `rosterRowIsBlocked` fails open, so a booking with no
+   * readiness row painted as an ordinary held seat. That is the picture saying
+   * *fine* where the truth is *nobody looked*, and on the one drawing a crew
+   * reads to decide who gets on a boat it is the wrong way to be wrong.
+   *
+   * A refusal, a clearance and a silence are now three different seats, and
+   * the one that matters is that the third is not the second.
    */
-  it("paints readiness, and paints an unread readiness as no refusal", () => {
+  it("tells a refusal, a clearance and an unread readiness apart", () => {
     const roster = [
       entry({ id: "1", name: "Grace Mensah", status: "booked" }),
       entry({ id: "2", name: "Hannah Liu", status: "booked" }),
+      entry({ id: "3", name: "Noor Rahim", status: "booked" }),
     ];
     const readiness: ReadinessByBooking = new Map([
       ["1", { readiness: { status: "blocked" } } as ReadinessRow],
+      ["2", { readiness: { status: "ready" } } as ReadinessRow],
+      // "3" is absent: the readiness read never happened for that seat.
     ]);
     const { container } = render(
       <TripHull
         roster={roster}
         readinessByBooking={readiness}
-        capacity={2}
+        capacity={3}
         color={null}
         label="Mantis I, drawn as its seats."
       />,
     );
-    const fills = seatsOf(container).map((node) => node.getAttribute("fill"));
-    expect(fills).toEqual(["var(--danger-tint)", "var(--surface)"]);
+    const seats = seatsOf(container);
+    expect(seats.map((node) => node.getAttribute("fill"))).toEqual([
+      "var(--danger-tint)",
+      "var(--surface)",
+      "var(--surface-sunken)",
+    ]);
+    // All three lines stay solid: there is a body in every one of these seats,
+    // and dashed on this picture means nobody is. The unread seat carries its
+    // doubt on the slate and on the inset inside its own outline.
+    for (const node of seats) expect(node.getAttribute("stroke-dasharray")).toBeNull();
   });
 
   /**
@@ -141,7 +164,7 @@ describe("TripHull", () => {
     const { container } = render(
       <TripHull
         roster={roster}
-        readinessByBooking={ready}
+        readinessByBooking={unread}
         capacity={3}
         color={null}
         label="Mantis I, drawn as its seats."
@@ -154,7 +177,7 @@ describe("TripHull", () => {
     const { container } = render(
       <TripHull
         roster={[entry({ id: "1", name: "Hannah Liu", status: "booked" })]}
-        readinessByBooking={ready}
+        readinessByBooking={unread}
         capacity={4}
         color={null}
         crew={["Keiko Tanaka"]}

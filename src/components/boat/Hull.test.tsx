@@ -3,20 +3,48 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
-import { hullGeometry } from "@/lib/hull";
+import { hullGeometry, type SeatReadiness, type SeatState } from "@/lib/hull";
 import { Hull } from "./Hull";
 
 afterEach(cleanup);
 
+/** The seat rects — the ones `hullGeometry` rounds to `SEAT_RX`. */
+function seatsOf(container: HTMLElement): Element[] {
+  return [...container.querySelectorAll("rect")].filter((node) => node.getAttribute("rx") === "9");
+}
+
+/**
+ * The dashed inset an `awaiting` seat wears inside its own solid line. Picked
+ * by its thinner stroke: an *open* seat is also dashed and also unfilled, and
+ * telling those two apart is the entire point of the tests below.
+ */
+function insetsOf(container: HTMLElement): Element[] {
+  return [...container.querySelectorAll("rect")].filter(
+    (node) =>
+      node.getAttribute("stroke-dasharray") === "3 3" && node.getAttribute("stroke-width") === "1",
+  );
+}
+
 const geometry = hullGeometry({ capacity: 8, crewCount: 1 });
 
+/**
+ * A seat as the component takes it. The two fields beside the state are what
+ * the derivation refuses to throw away (ADR 20260919-one-idea §3b.1, §3b.2);
+ * nothing paints them yet, so the fixture keeps them at their unrecorded
+ * values and the tests below are about the state exactly as before.
+ */
+const seat = (state: SeatState, initials: string, readiness: SeatReadiness = "ready") => ({
+  reading: { state, checkpoint: null, readiness },
+  initials,
+});
+
 const roster = [
-  { state: "aboard" as const, initials: "RN" },
-  { state: "aboard" as const, initials: "HL" },
-  { state: "booked" as const, initials: "BC" },
-  { state: "blocked" as const, initials: "GM" },
-  { state: "ashore" as const, initials: "PS" },
-  { state: "missing" as const, initials: "TF" },
+  seat("aboard", "RN"),
+  seat("aboard", "HL"),
+  seat("booked", "BC"),
+  seat("blocked", "GM", "blocked"),
+  seat("ashore", "PS"),
+  seat("missing", "TF"),
 ];
 
 describe("Hull", () => {
@@ -76,6 +104,79 @@ describe("Hull", () => {
     const fills = seats.map((node) => node.getAttribute("fill"));
     expect(fills).toContain("var(--danger-tint)");
     expect(fills).toContain("var(--danger)");
+  });
+
+  /**
+   * **§3b.3 — an inference may not wear a statement's weight.** ADR 20260827
+   * decision 4: an alarm is earned by a recorded fact, never by the absence of
+   * one. A crew member saying "she never boarded" and the dock's silence being
+   * carried forward are different claims, and a solid amber ring is what only
+   * the first of them earns.
+   */
+  it("draws a carried-forward ashore more quietly than a stated one", () => {
+    const { container } = render(
+      <Hull
+        geometry={geometry}
+        label="the boat"
+        seats={[seat("ashore", "PS"), seat("ashoreImplied", "MK")]}
+      />,
+    );
+    const [stated, inferred] = [...container.querySelectorAll("rect")].filter(
+      (node) => node.getAttribute("rx") === "9",
+    );
+    expect(stated?.getAttribute("stroke-dasharray")).toBeNull();
+    expect(inferred?.getAttribute("stroke-dasharray")).toBe("3 3");
+    // And not by weight alone: the fill drops to the tint as well.
+    expect(stated?.getAttribute("fill")).toBe("var(--warning)");
+    expect(inferred?.getAttribute("fill")).toBe("var(--warning-tint)");
+  });
+
+  /**
+   * **§3b.5 — "nobody looked" is not "fine", and it must not read as "nobody
+   * is here" either.**
+   *
+   * A first pass drew this dashed, like an open place, and leaned on the
+   * initials to tell the two apart. `hullGeometry` drops the initials above
+   * eight columns — every boat bigger than a six-pack — so on a 24-place hull
+   * a booked diver nobody had vetted rendered as an empty seat. The rule that
+   * holds instead is the one this component already had: **a line at full
+   * weight means a body is in this seat.** The doubt goes inside it.
+   */
+  it("draws a seat nobody has read as taken, not as empty", () => {
+    const { container } = render(
+      <Hull
+        geometry={geometry}
+        label="the boat"
+        seats={[seat("booked", "BC"), seat("awaiting", "NR", "unread")]}
+      />,
+    );
+    const [cleared, unread] = seatsOf(container);
+    // Neither is dashed: both seats have somebody in them.
+    expect(cleared?.getAttribute("stroke-dasharray")).toBeNull();
+    expect(unread?.getAttribute("stroke-dasharray")).toBeNull();
+    // The doubt is the slate fill and the inset, not the outline.
+    expect(cleared?.getAttribute("fill")).toBe("var(--surface)");
+    expect(unread?.getAttribute("fill")).toBe("var(--surface-sunken)");
+    expect(insetsOf(container)).toHaveLength(1);
+  });
+
+  /**
+   * The case the first pass had no test for, and the one that was wrong: a
+   * hull too big to letter. The distinction has to survive with no initials at
+   * all, because that is the normal boat.
+   */
+  it("keeps an unread seat distinct from an open one on a hull too big to letter", () => {
+    const big = hullGeometry({ capacity: 24 });
+    expect(big.showsInitials).toBe(false);
+    const { container } = render(
+      <Hull geometry={big} label="the boat" seats={[seat("awaiting", "NR", "unread")]} />,
+    );
+    const [unread, ...empty] = seatsOf(container);
+    expect(unread?.getAttribute("stroke-dasharray")).toBeNull();
+    expect(empty[0]?.getAttribute("stroke-dasharray")).toBe("3 3");
+    expect(unread?.getAttribute("fill")).not.toBe(empty[0]?.getAttribute("fill"));
+    // And the inset is drawn exactly once, on the one seat that is not settled.
+    expect(insetsOf(container)).toHaveLength(1);
   });
 
   /**
@@ -146,7 +247,7 @@ describe("Hull", () => {
       <Hull
         geometry={big}
         label="the boat"
-        seats={Array.from({ length: 24 }, () => ({ state: "booked" as const, initials: "AB" }))}
+        seats={Array.from({ length: 24 }, () => seat("booked", "AB"))}
       />,
     );
     // Not one letter drawn, and every one of the twenty-four seats still there:

@@ -12,14 +12,13 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
 import { formatShortDate } from "@/lib/format";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
-import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "./AddDiverSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { RosterSection } from "./RosterSection";
-import { seatHoldersOf, TripHull } from "./TripHull";
+import { readinessOf, seatHoldersOf, TripHull } from "./TripHull";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -162,11 +161,23 @@ export function TripRosterContent({
    * the boat, "two who cannot board" *is* the picture.
    */
   const hullSeatHolders = hull ? seatHoldersOf(roster) : [];
+  /*
+   * **Counted off the same three-way answer the seats are drawn from**
+   * (`readinessOf`, ADR 20260919-one-idea §3b.5) rather than off
+   * `rosterRowIsBlocked` directly. Asked through the fail-open predicate, a
+   * booking nobody had read counted as neither blocked nor doubtful, so the
+   * sentence said "6 of 6 seats taken" flat — and a reader who cannot see the
+   * boat was told nothing at all about the one diver nobody had looked at.
+   * Design principle 6: colour never carries a state alone, and a dash pattern
+   * is colour's quieter cousin.
+   */
+  const hullReadiness = hullSeatHolders.map((entry) =>
+    readinessOf(readinessByBooking, entry.booking.id),
+  );
   const hullSeatCounts = {
     booked: hullSeatHolders.length,
-    blocked: hullSeatHolders.filter((entry) =>
-      rosterRowIsBlocked(readinessByBooking.get(entry.booking.id)?.readiness),
-    ).length,
+    blocked: hullReadiness.filter((readiness) => readiness === "blocked").length,
+    unread: hullReadiness.filter((readiness) => readiness === "unread").length,
   };
 
   return (
@@ -236,6 +247,7 @@ export function TripRosterContent({
               booked: hullSeatCounts.booked,
               capacity: trip.capacity,
               blocked: hullSeatCounts.blocked,
+              unread: hullSeatCounts.unread,
             })}
           />
         </div>
