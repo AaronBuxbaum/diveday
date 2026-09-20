@@ -260,8 +260,8 @@ describe("what each consumer derives", () => {
 
   /**
    * The widening of 2026-09-10 (issues #1505/#1518) read from the nav: Inbox
-   * is a "Run the shop" row for the captain and the deckhand too, not only for
-   * the desk. Asserted on its own rather than left to the gated-ids list
+   * is a destination for the captain and the deckhand too, not only for the
+   * desk. Asserted on its own rather than left to the gated-ids list
    * above, because that list would still pass if Inbox were dropped from the
    * registry outright.
    */
@@ -344,11 +344,11 @@ describe("what each consumer derives", () => {
     expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("addBooking");
   });
 
-  it("keeps a trip's detail page lit on the board tab", () => {
+  it("keeps a trip's detail page lit on the week the board is", () => {
     const board = STAFF_DESTINATIONS.find((destination) => destination.id === "board");
     expect(board?.suffix).toBe("/schedule/board");
-    // `/trips` only: Staffing has its own "Run the shop" row now, and a page
-    // with a row of its own lights that row, never a borrowed tab.
+    // `/trips` only: Staffing is its own `week` destination, and a page with a
+    // destination of its own lights that, never a borrowed claim.
     expect(board?.alsoMatch).toEqual(["/trips"]);
   });
 

@@ -1892,11 +1892,13 @@ export default async function SettingsPage({
               </SettingsRow>
             ) : null}
 
-            {/* Orders is not here. It is money a shop *reads* every day, so it
-              keeps its header row under "Run the shop" and this page stops
-              offering a second door to it — one destination, one place to find
-              it. Promo codes go the other way: they are configured rarely, so
-              they left the header and this row is now the way in. */}
+            {/* Orders is not here, and that is the rule this page is held to
+              rather than a preference: a row here means `place: "shop"`, and
+              Orders is `season` (`settings-doors.test.ts`). It is money a
+              shop reads, reached from the season and from the search — one
+              destination, one place to find it. Promo codes go the other way:
+              they are configured rarely, they are `shop`, and this row is
+              the door that makes that true. */}
             {canManagePromos ? (
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/promos`}

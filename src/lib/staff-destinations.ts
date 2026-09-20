@@ -267,8 +267,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     suffix: "/schedule/board",
     place: "week",
     inPalette: true,
-    // Trips are the board's detail views. (Staffing used to be claimed here
-    // too — it has its own "Run the shop" row now, and lights that instead.)
+    // Trips are the board's detail views, so a departure lights the week it
+    // sails in. (Staffing used to be claimed here too; it is its own `week`
+    // destination now, and lights itself.)
     alsoMatch: ["/trips"],
   },
   // The global "seat a diver" door. It is an action rather than a place, so it
@@ -380,14 +381,13 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // `unanswered_messages` row, never a nav badge — the same rule Reviews
   // follows.
   { id: "inbox", suffix: "/inbox", place: "day", inPalette: true },
-  // Money the shop reads daily — a "Run the shop" destination, not one of the
-  // five all-day tabs. Orders remains ungated and palette-visible, and the
-  // page's own links keep the money workflow reachable from its context.
+  // Money the shop reads daily, filed under what the days added up to: an
+  // order outlives the day it was taken, and the Orders index is where a
+  // shop asks the season a question about one. Ungated and palette-visible,
+  // and the page's own links keep the money workflow reachable in context.
   { id: "orders", suffix: "/orders", place: "season", inPalette: true },
-  // The monthly read of the money Orders tracks daily — the last beat of the
-  // "Run the shop" cadence, not configuration, so it files under `daily`
-  // rather than `setup`. Its page lights its own row now instead of borrowing
-  // the Orders tab.
+  // The monthly read of the money Orders tracks daily, and the plainest
+  // `season` there is — the bar's third time points here.
   { id: "reports", suffix: "/reports", place: "season", inPalette: true, gate: "reports" },
   // Team and Promo codes still have doors on Settings' own cards — but a card
   // on a page you must already be on is a cross-link, not a menu presence,
