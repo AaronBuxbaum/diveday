@@ -90,6 +90,11 @@
     "undo": "Undo",
     "undoing": "Undoing…"
   },
+  "takings": {
+    "heading": "What today made",
+    "tips": "And {amount} in tips.",
+    "imported": "{count, plural, one {Includes # imported record Stripe has not confirmed.} other {Includes # imported records Stripe has not confirmed.}}"
+  },
   "close": {
     "heading": "Close the day",
     "button": "Close the day",

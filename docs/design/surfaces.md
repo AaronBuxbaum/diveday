@@ -37,6 +37,8 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 **Decided 2026-09-19 (H-88)** ([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), [canvas](canvases/20260919-one-idea/README.md)). Three whole products were drawn: the home is the thing the app is — the day under the sky at the shop's own hour, the boats on the hours they leave and the needs under each (I · Tide); today's boats as coloured hulls with their seats, stacked, the shop's card last (II · Deck); the shop's own water with today's tracks and the day as a sheet over it (III · Chart). No tabs, no More, no dock under any of them. **The pick: I · Tide** — the home is the day: the sky at the shop's own hour, the boats on the hours they leave, the tide under them, a line for now, and the needs under each departure.
 
+**Shipped 2026-09-20, the evening says what the day made** (issue #1930; ADR 20260919-one-idea's decision I · Tide, "money is what the day made"). The evening close gains one money reading — the day's takings, as a figure with tips beside it — **above** the closing block and inside nothing, under the same condition that block renders under. `ClosingBlock`'s charter is two things and nothing else, so a figure inside it would have amended ADR 20260827-clearwater-surface-language decision 4 by implication; a reading is not an act, and Aaron decided the sibling placement in session that day. It is `getMonthlyReport` over `shopDayBounds` — the month's own derivation with narrower bounds, never a second query, so the day and `/reports` cannot disagree. Gated on `canPersonViewShopReports` against live role rows: a captain closing out a Saturday sees the evening exactly as before, with nothing in that slot and no notice that a number was withheld. A day that took nothing says nothing.
+
 **Shipped 2026-09-17, the floor's first row** ([ADR 20260911-clear-the-deck](../architecture/decisions/20260911-clear-the-deck.md) §1, "the door" — the one row of that floor that may start on the ADR alone):
 a row's own tap is its only door. The nine trailing "Open …" verbs are gone from the spine, the desk, the draft row and the first-morning checklist; what is left on a door row is the chevron `LedgerRow` already drew, and the destination is still named on the stretched overlay for a screen reader. A trailing verb survives only where it *is* the fix — a waiver send, a wait-list invite, an invoice resend, "Keep it", the closing block's own link beside a Dismiss demoted to ghost weight. Two tests in `DaySpine.test.tsx` hold it: no row that is itself a link may contain a second link, and a door's name may be spoken but never drawn. Shipped in the same pass: the desk's counting rows are their subject alone (the sentence under "3 messages are waiting on an answer" taught a feature already found); the units row states both guesses and what to do about them; a cancelled departure owes **one** row, not one per seat; the stuck-checkout row no longer prints a Stripe session id; the settled station draws one hairline between its parts instead of two; the plan-change clause is its own sentence on its own line; "Print the day" is the header's one action; and the first-bookable card and the role orientation never render together. The decoration (the band, the tile, the dial, the greeting) and `Badge` are untouched, pending H-77.
 
@@ -78,9 +80,10 @@ carries the green turtle; the two horizons are two tideline panels side by side.
 - **Composition:** **the day's spine.** Today's departures are stations in clock order, each owning
   its time, title, site, hull, crew, price and head count, with its own blockers and chores as
   ledger rows beneath it; a diver's open day-of help request is one neutral row on that departure;
-  work bound to no boat pools under "At the desk"; tomorrow is a collapsed disclosure and the rest
-  of the week one link to the board. A departure's facts are said once, at its station, instead of
-  once per card.
+  work bound to no boat pools under "At the desk"; once every boat is settled the day's takings read
+  above the closing block, for a reader who may read money; tomorrow is a collapsed disclosure and
+  the rest of the week one link to the board. A departure's facts are said once, at its station,
+  instead of once per card.
 
 Enforced beside the code: `DaySpine.tsx` and `DayStation.tsx` defer to the ADR by name,
 `DaySpine.test.tsx` pins the composition (including its silences and, since 2026-09-17, the door

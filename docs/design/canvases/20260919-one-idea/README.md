@@ -91,10 +91,10 @@ data.
 
 ## Slices
 
-Nothing has shipped from this canvas. Round 2's surface rows (22a, 22b, 22i on the superseded canvas)
-land first under any pick, because every idea is drawn on them; everything below waits on H-88. When
-a slice lands, the component that must not drift names the ADR in its doc comment, a test pins the
-rule, and this table moves.
+Six rows have shipped and one is in progress; read the Status column before treating any row as an
+instruction. Round 2's surface rows (22a, 22b, 22i on the superseded canvas) landed first, because
+every idea is drawn on them. When a slice lands, the component that must not drift names the ADR in
+its doc comment, a test pins the rule, and this table moves.
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
@@ -107,6 +107,30 @@ rule, and this table moves.
 | 23f — the week, the requests and the season on the idea: the Board becomes the week; a request is a ghost day (I), a boat to put out (II), a track to add (III) | shipped | `src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx` | `src/lib/week-seats.test.ts`, `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.test.tsx`'s "ScheduleBuilder week board" — "says a day with no departures has none, and still offers to fill it" and "draws the days somebody asked for, and the act that answers one" — and the `schedule-builder-asked` capture in `e2e/visual.spec.ts` |
 | 23g — the rest, one family per session: courses, gear, money, reviews, staffing, and Settings behind the shop's name | open | — | — |
 | 23h — night and glare on the idea: by the hour (I) or by the device (II, III); glare as the crew's word in the roll call's bar; the black-on-white twin held by a test | open | — | — |
+
+### 23g: four of its six are settled, two are not (2026-09-20)
+
+The row names six families and treats them as one session's work. Reading them one at a time, they
+are not the same size, and two needed nothing:
+
+- **staffing** was **already done before Tide** and must not be re-done. `src/lib/staffing-week.ts`
+  and `/shop/[shopSlug]/staffing` read as a week — people as rows, the shop's seven days as columns,
+  shifts as chips, a departure needing crew in its own day cell — which is ADR
+  20260827-the-shops-shelves decision 3.
+- **Settings** is exempt by the ADR's own wording: *"Only Settings has no hour and lives behind the
+  shop's name"*, which slice 23b did.
+- **courses** had a real gap and it is closed (#1929): the staff roster was a catalog with no time in
+  it while the public course page listed sessions. A course now says when it next runs, in the shop's
+  own scope.
+- **money** had the last unclaimed part of decision I · Tide's sentence — *"money is what the day
+  made"* — and it is closed (#1930). The day's takings read above the closing block, gated on
+  `canPersonViewShopReports`, derived by `getMonthlyReport` over the shop's own day rather than by a
+  second query. The placement was a human call: `ClosingBlock`'s charter is "two things and nothing
+  else", so a figure inside it would have overturned ADR 20260827-clearwater-surface-language
+  decision 4 by implication. Aaron decided a sibling above it, in session, on 2026-09-20.
+
+**gear** and **reviews** are the two nobody has examined against the idea yet, and the row stays
+`open` until somebody has.
 
 ### 23e: two of its three were already done (closed 2026-09-20)
 

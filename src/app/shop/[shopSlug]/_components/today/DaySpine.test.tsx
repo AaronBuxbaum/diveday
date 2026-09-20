@@ -31,6 +31,7 @@ vi.mock("@/app/shop/[shopSlug]/actions", () => ({
 }));
 
 import type { FirstBooking } from "@/db/first-booking";
+import type { DayTakings as DayTakingsReading } from "@/lib/closeout";
 import { assembleEveningClose, type CloseoutDeparture } from "@/lib/closeout";
 import { DaySpine, type EveningReading } from "./DaySpine";
 
@@ -125,6 +126,7 @@ function evening(
 ): EveningReading {
   return {
     close: assembleEveningClose(departures, NOW),
+    takings: null,
     headCountCloses: new Map(),
     recapEditors: new Map(),
     canOpenLog: true,
@@ -1695,5 +1697,138 @@ describe("a row that is only a door", () => {
       ],
     });
     expect(screen.getByRole("button", { name: "Send waiver" })).toBeInTheDocument();
+  });
+});
+
+/**
+ * **What today made** — the evening's one money reading (issue #1930; ADR
+ * 20260919-one-idea, decision I · Tide: "money is what the day made").
+ *
+ * The thing these tests exist to hold is the placement Aaron decided in
+ * session on 2026-09-20: a **sibling above** the closing block, never a third
+ * element inside it. `ClosingBlock`'s charter is two things and nothing else,
+ * and a slice that quietly added a third would overturn ADR
+ * 20260827-clearwater-surface-language decision 4 by implication.
+ */
+describe("what today made", () => {
+  const takings = (over: Partial<DayTakingsReading> = {}): DayTakingsReading => ({
+    revenueCents: 124_000,
+    tipsCents: 0,
+    importedRecordCount: 0,
+    ...over,
+  });
+
+  it("reads the day's takings above the act that closes the day", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], { takings: takings() }),
+    });
+
+    const heading = screen.getByRole("heading", { name: "What today made" });
+    expect(heading).toBeInTheDocument();
+    expect(screen.getByText("$1,240")).toBeInTheDocument();
+    // **Above**, and the DOM order is the assertion: a node that precedes
+    // another answers `DOCUMENT_POSITION_FOLLOWING` about it.
+    const closeHeading = screen.getByRole("heading", { name: "Close the day" });
+    expect(heading.compareDocumentPosition(closeHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it("leaves the closing block holding exactly the two things it promises", () => {
+    // The charter, asserted rather than trusted: the figure is outside the
+    // section the closing act lives in, so "two things and nothing else"
+    // still describes that component.
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], {
+        takings: takings(),
+        leftovers: [action({ id: "leftover-1", subject: "Lena Fischer" })],
+      }),
+    });
+
+    const closingBlock = document.querySelector("#close-day");
+    expect(closingBlock).not.toBeNull();
+    expect(closingBlock?.textContent).not.toContain("$1,240");
+    expect(closingBlock?.textContent).not.toContain("What today made");
+  });
+
+  it("says nothing at all when the reader may not read it", () => {
+    // A captain closing out a Saturday. Absent, never "you may not see this":
+    // a withheld-figure notice tells the crew a number exists and is being
+    // kept from them, which is worse than the silence it replaces. The page
+    // resolves `canPersonViewShopReports` and hands down null.
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], { takings: null }),
+    });
+
+    expect(screen.queryByRole("heading", { name: "What today made" })).toBeNull();
+    // Paired with a positive query, so this cannot pass on an evening that
+    // never rendered at all.
+    expect(screen.getByRole("button", { name: "Close the day" })).toBeInTheDocument();
+  });
+
+  it("holds the figure back while a boat is still out", () => {
+    // Same pin as the closing block's: "what today made" is past tense, and a
+    // day with a boat on the water has not made it yet.
+    renderSpine({
+      departures: [],
+      evening: evening(
+        [
+          closed({ tripId: "home" }),
+          closed({
+            tripId: "out",
+            title: "Night Dive",
+            status: "still_out",
+            startsAt: hoursFromNow(-2),
+            endsAt: hoursFromNow(1),
+            ended: false,
+          }),
+        ],
+        { takings: takings() },
+      ),
+    });
+
+    expect(screen.queryByRole("heading", { name: "What today made" })).toBeNull();
+    expect(screen.getByText("Still out")).toBeInTheDocument();
+  });
+
+  it("prints tips as their own sentence and never inside the figure", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], {
+        takings: takings({ tipsCents: 8_500 }),
+      }),
+    });
+
+    // $1,240 and $85, not $1,325: a tip is its own Stripe charge and the month
+    // keeps the two apart for that reason.
+    expect(screen.getByText("$1,240")).toBeInTheDocument();
+    expect(screen.getByText("And $85 in tips.")).toBeInTheDocument();
+    expect(screen.queryByText("$1,325")).toBeNull();
+  });
+
+  it("says nothing about tips a day did not get", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], { takings: takings() }),
+    });
+
+    expect(screen.getByText("$1,240")).toBeInTheDocument();
+    expect(screen.queryByText(/in tips/)).toBeNull();
+  });
+
+  it("names money inside the figure that Stripe never confirmed", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], {
+        takings: takings({ importedRecordCount: 3 }),
+      }),
+    });
+
+    expect(
+      screen.getByText("Includes 3 imported records Stripe has not confirmed."),
+    ).toBeInTheDocument();
   });
 });

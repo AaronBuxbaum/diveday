@@ -3,6 +3,7 @@ import { nowDate } from "./clock";
 import { type CrewRollCallSubject, crewIsAccountedFor, crewRollCallCounts } from "./manifests";
 import { type OpenSeatsDebrief, openSeatsDebrief } from "./open-seats";
 import type { PlanChangeReason } from "./plan-change";
+import type { MonthlyReport } from "./reporting";
 import { rollCallCheckpoints } from "./roll-call";
 import type { RollCallGapReason, TodayAction, TodayActionKind } from "./today";
 import { sortActions } from "./today";
@@ -1018,3 +1019,53 @@ export function assembleEveningClose(
     stations.every((station) => station.crewAccountedFor);
   return { stations, closing, out, back, divers, crew, allHome };
 }
+
+/**
+ * **What today made** — the day's takings, as the evening reads them.
+ *
+ * The figure and the tips beside it, or `null` when the day has no money in
+ * it at all. Null is the common answer and the important one: a shop that
+ * takes cash at the counter would otherwise meet a line reading zero every
+ * night of its life, which is the wallpaper DOM-H3 warns about — a reading
+ * nobody reads, in the one place the day's real work is being finished. The
+ * same restraint `partnerReferredSeats` and `monthHasActivity` already
+ * practise (both in `src/lib/reporting.ts`): nothing to say, so nothing is said.
+ *
+ * **Tips stay beside revenue, never inside it.** `MonthlyReportInput.tipsCents`
+ * carries the reason — a tip is 100% the shop's, charged on its own Stripe
+ * session, and outside the booking payment gate — and the rule that matters
+ * more than either reading is that the day, the month and the year tell one
+ * story. Folding tips in here would make tonight's figure disagree with the
+ * same day inside `/reports`.
+ *
+ * It is an assembly over `summarizeMonth`, never a second derivation: the
+ * caller hands it the output of `getMonthlyReport` over the shop's own day
+ * (`shopDayBounds`), which is the month's query with narrower bounds. See
+ * issue #1930, and ADR 20260919-one-idea's decision I · Tide — "money is what
+ * the day made".
+ */
+export function dayTakings(
+  report: Pick<MonthlyReport, "revenueCents" | "tipsCents" | "importedFinancialRecordCount">,
+): DayTakings | null {
+  if (report.revenueCents === 0 && report.tipsCents === 0) return null;
+  return {
+    revenueCents: report.revenueCents,
+    tipsCents: report.tipsCents,
+    importedRecordCount: report.importedFinancialRecordCount,
+  };
+}
+
+/** The three figures the evening's takings reading renders, and nothing more. */
+export type DayTakings = {
+  /** Net of tax and pass-through, on today's departures. The headline. */
+  revenueCents: number;
+  /** Settled tips on the same departures. Zero renders no clause. */
+  tipsCents: number;
+  /**
+   * How many unverified imported source rows are inside `revenueCents`. The
+   * evening names them for the same reason the month's revenue card does: a
+   * figure carrying money Stripe never confirmed should say so where it is
+   * read, not only where it is reconciled.
+   */
+  importedRecordCount: number;
+};

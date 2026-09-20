@@ -90,6 +90,11 @@
     "undo": "Deshacer",
     "undoing": "Deshaciendo…"
   },
+  "takings": {
+    "heading": "Lo que hizo hoy",
+    "tips": "Y {amount} en propinas.",
+    "imported": "{count, plural, one {Incluye # registro importado que Stripe no ha confirmado.} other {Incluye # registros importados que Stripe no ha confirmado.}}"
+  },
   "close": {
     "heading": "Cerrar el día",
     "button": "Cerrar el día",
