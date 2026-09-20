@@ -1,6 +1,6 @@
 # 20260813-more-is-the-shops-other-door — The nav's sixth slot is "More", carrying every destination the five tabs don't
 
-- **Status:** Accepted
+- **Status:** Superseded on 2026-09-20 by [20260919-one-idea](20260919-one-idea.md), decision I · Tide, slice 23b — the nav this ADR built is gone. Both More surfaces, the phone dock and the five primary tabs were a nav of **nouns**; the bar wears three **times** now (Today, Week, Season) and reaches everything else through the day it sits on or through the search. Two findings here outlived it and are carried forward rather than withdrawn: **the search is a control at every width, never a keyboard-only route** (the failure this ADR was written to end), and **a gated destination is absent, never shown and refused**. The third — that Settings in the identity menu would be a duplicate control — was conditional on the nav holding it, and is void now that nothing else does
 - **Date:** 2026-08-13
 
 ## Context

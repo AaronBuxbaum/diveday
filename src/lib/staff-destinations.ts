@@ -283,9 +283,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // The desk phone's door (N-22): one capture that becomes a date request, a
   // wait-list entry or a booking. Palette-only for the same reason `addBooking`
   // and `walkIn` are — it is an *act*, not a place a shop stands in, and the
-  // dock holds five destination tabs with the sixth spent on More (ADR
-  // 20260813-more-is-the-shops-other-door). It is *here* because the registry is
-  // the only place a destination may be declared at all.
+  // bar wears three times and no acts at all. It is *here* because the registry
+  // is the only place a destination may be declared at all, and its `place` is
+  // the day because that is the day it interrupts.
   //
   // Ungated, deliberately: gating this would take the phone away from the
   // person most likely to answer it. It used to be the odd one out — the
@@ -324,9 +324,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   { id: "reviews", suffix: "/reviews", place: "season", inPalette: true },
   // Divers asking for a day that is not on the board. Part of the shop's
   // running cadence rather than its setup — a shop reads this the way it reads
-  // reviews, on its own rhythm, and answers it by putting a departure up. It is
-  // deliberately *not* a sixth primary tab: the dock holds five and the sixth
-  // slot is More (ADR 20260813-more-is-the-shops-other-door).
+  // reviews, on its own rhythm, and answers it by putting a departure up, which
+  // is why it sits in the **week**: a request is a day that is not on the board
+  // yet.
   //
   // **Ungated since 2026-09-16**, and the gate was *deleted* rather than
   // relaxed, the way the inbox's was (issue #1679, an H-14 amendment).
@@ -350,11 +350,10 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // page. A captain who took a call and wrote down a request was sent straight
   // into a refusal for the row they had just written.
   { id: "requests", suffix: "/requests", place: "week", inPalette: true },
-  // What divers wrote back (ADR 20260907-two-way-inbox). "Run the shop" work
-  // beside Requests and Reviews: a shop reads it on its own rhythm and empties
-  // it by answering, and it is deliberately not a sixth primary tab — the dock
-  // holds five and the sixth slot is More (ADR
-  // 20260813-more-is-the-shops-other-door).
+  // What divers wrote back (ADR 20260907-two-way-inbox). Work a shop reads on
+  // its own rhythm and empties by answering, beside Requests and Reviews — but
+  // filed under the **day**, not the week: an unanswered message is somebody
+  // waiting on today's answer, and Today's queue is where it signals.
   //
   // Ungated since 2026-09-10: it carried an owner/manager gate of its own for
   // the three days between shipping and the owner reading both halves of that
@@ -396,14 +395,14 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // was the answer, so it closes the "Set up" group — a group with that name
   // ending anywhere else would be a joke missing its punchline.
   //
-  // Still not a tab: it is the one destination a shop configures rather than
-  // works, and it does not get a sixth of a phone dock the other five are
-  // tapped from all day with wet hands. It lived behind the header's
-  // shop-identity menu for a while; that door closed when the More groups
-  // arrived (ADR 20260813-more-is-the-shops-other-door) — one destination in
-  // two menus is the duplicate control principle 8 forbids, and the identity
-  // menu is about *this reader and this session* (language, sign out), not a
-  // place in the shop.
+  // **The one place with no hour in it**, which is why `place` is `shop` and
+  // the bar — three times — cannot hold it. So it is back behind the shop's own
+  // name, where it lived before the More groups took it (ADR
+  // 20260919-one-idea, slice 23b): the objection then was that one destination
+  // in two menus is the duplicate control principle 8 forbids, and with the nav
+  // gone there is no second menu for it to be in. `ShopIdentityMenu` draws it
+  // above the rule, apart from the language and the way out, because those are
+  // about *this reader and this session* and this is about the shop.
   //
   // No `alsoMatch` any more: Promo codes, Dive sites and Waivers each light
   // their own row now, and `/settings/*` sub-pages light this one by prefix —
