@@ -335,6 +335,7 @@ export default async function DiverDetailPage({
         locale={locale}
         t={t}
         paymentsConnected={paymentsConnected}
+        offersInvoice
         status={noticeForForm(diverNotice, "story")}
         now={now}
       />
