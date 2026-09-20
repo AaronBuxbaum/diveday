@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
-import { hullGeometry, type SeatReadiness, type SeatState } from "@/lib/hull";
+import { type CrewState, hullGeometry, type SeatReadiness, type SeatState } from "@/lib/hull";
 import { Hull } from "./Hull";
 
 afterEach(cleanup);
@@ -463,5 +463,151 @@ describe("the hull on paper", () => {
     // `ashore` letters in `--surface`, and its seat is empty on paper: white
     // on white is the one ink that has to be re-cut.
     expect(rules.get(".hull-seat-ink-ashore")?.get("fill")).toBe("var(--foreground)");
+  });
+});
+
+/**
+ * **The wheelhouse carries states now** — ADR 20260919-one-idea §3b.6, the
+ * last item between a hull and a manifest.
+ *
+ * A diver had eight and a guide had one, so the better the seats got the more
+ * confidently the whole picture read "all good" over a divemaster who went
+ * back down for a weight belt — and missing crew is severity 2 in the
+ * glossary's unaccounted-for ladder, above every clerical kind.
+ */
+const EVERY_CREW_STATE: Record<CrewState, true> = {
+  rostered: true,
+  awaiting: true,
+  aboard: true,
+  ashore: true,
+  ashoreImplied: true,
+  missing: true,
+};
+const CREW_STATES = Object.keys(EVERY_CREW_STATE) as CrewState[];
+
+const guide = (state: CrewState, initials?: string) => ({
+  reading: { state, checkpoint: state === "rostered" ? null : ("departure" as const) },
+  initials,
+});
+
+/** The whole mark a printer puts down for one guide: circle, ring and cross. */
+function crewPaper(rules: Map<string, Map<string, string>>, state: CrewState) {
+  const read = (selector: string) =>
+    PAPER_CHANNELS.map((property) => `${property}:${rules.get(selector)?.get(property) ?? "-"}`);
+  return [
+    ...read(".hull-crew").map((part) => `base ${part}`),
+    ...read(`.hull-crew-${kebab(state as unknown as SeatState)}`),
+    ...read(`.hull-crew-inset-${kebab(state as unknown as SeatState)}`).map(
+      (part) => `inset ${part}`,
+    ),
+    `ring+cross:${state === "missing"}`,
+  ].join(" | ");
+}
+
+describe("the crew marks", () => {
+  const twoUp = hullGeometry({ capacity: 8, crewCount: 2 });
+
+  it("draws a circle for a guide whose name will not letter", () => {
+    // The person is on the boat; the gap is in the lettering, not the roster.
+    const { container } = render(
+      <Hull
+        geometry={twoUp}
+        label="Two guides"
+        seats={roster}
+        crew={[guide("aboard"), guide("aboard", "KT")]}
+      />,
+    );
+    expect(container.querySelectorAll(".hull-crew")).toHaveLength(2);
+    expect(screen.queryByText("KT")).not.toBeNull();
+  });
+
+  it("gives each state its own class for the print sheet to reach", () => {
+    for (const state of CREW_STATES) {
+      const { container } = render(
+        <Hull geometry={geometry} label="One guide" seats={roster} crew={[guide(state, "KT")]} />,
+      );
+      const mark = container.querySelector(".hull-crew");
+      expect(mark?.getAttribute("class")).toContain(
+        `hull-crew-${kebab(state as unknown as SeatState)}`,
+      );
+      cleanup();
+    }
+  });
+
+  it("gives all six a print treatment, and none of them the same one", () => {
+    // Pairwise and over non-hue channels only, which is §3b.4 restated: the
+    // print palette flattens `--success` and `--warning` onto one near-black,
+    // so any two states told apart by colour alone are one mark on paper.
+    const rules = printRules();
+    const seen = new Map<string, CrewState>();
+    for (const state of CREW_STATES) {
+      const treatment = crewPaper(rules, state);
+      const clash = seen.get(treatment);
+      expect(
+        clash,
+        `${state} and ${clash} print identically — a head count has two answers and paper must keep them apart`,
+      ).toBeUndefined();
+      seen.set(treatment, state);
+    }
+    expect(seen.size).toBe(CREW_STATES.length);
+  });
+
+  it("fills exactly one circle, and it is the one meaning a person is aboard", () => {
+    // Filled is the widest gap paper has left once hue is gone, so it is spent
+    // on the single fact a head count exists to establish. `missing` may not
+    // borrow it: `notBackAboard` means *not* aboard.
+    const rules = printRules();
+    const filled = CREW_STATES.filter((state) => {
+      const fill = rules.get(`.hull-crew-${kebab(state as unknown as SeatState)}`)?.get("fill");
+      return fill !== undefined && fill !== "none";
+    });
+    expect(filled).toEqual(["aboard"]);
+  });
+
+  it("gives the heaviest line to the guide nobody can account for, and to nothing else", () => {
+    const rules = printRules();
+    const weights = new Map(
+      CREW_STATES.map((state) => [
+        state,
+        Number(
+          rules.get(`.hull-crew-${kebab(state as unknown as SeatState)}`)?.get("stroke-width") ??
+            rules.get(".hull-crew")?.get("stroke-width") ??
+            "0",
+        ),
+      ]),
+    );
+    const heaviest = Math.max(...weights.values());
+    expect([...weights].filter(([, width]) => width === heaviest).map(([state]) => state)).toEqual([
+      "missing",
+    ]);
+  });
+
+  it("keeps a guide on a page with no head count drawn as they always were", () => {
+    // `rostered` is not an alarm and must not look like one. A surface with no
+    // roll call in it — the departure page — may not paint people as questions
+    // (ADR 20260827 decision 4, the rule `ashoreImplied` was split out over).
+    const { container } = render(
+      <Hull
+        geometry={geometry}
+        label="Rostered"
+        seats={roster}
+        crew={[guide("rostered", "KT")]}
+        color={DIVEDAY_BRAND_COLOR}
+      />,
+    );
+    const mark = container.querySelector(".hull-crew");
+    expect(mark?.getAttribute("fill")).toBe(DIVEDAY_BRAND_COLOR);
+    expect(mark?.getAttribute("fill-opacity")).toBe("0.18");
+    expect(mark?.getAttribute("stroke-dasharray")).toBeNull();
+  });
+
+  it("does not letter a guide it has crossed out", () => {
+    // Two letters inside a cross is a picture arguing with itself, and the
+    // cross is the half that matters.
+    const { container } = render(
+      <Hull geometry={geometry} label="Missing" seats={roster} crew={[guide("missing", "KT")]} />,
+    );
+    expect(container.querySelector(".hull-crew-cross")).not.toBeNull();
+    expect(screen.queryByText("KT")).toBeNull();
   });
 });
