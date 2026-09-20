@@ -50,6 +50,28 @@ describe("Settings is the door to every place with no hour", () => {
         destination.place === "shop",
       );
     }
+
+    // **And no door pointing at something that is not a destination at all.**
+    // The loop above only ever looks *up* suffixes the registry already knows,
+    // so a row pointing somewhere it has never heard of is invisible to it —
+    // which is the hole `sourcery-ai` found on #1939.
+    //
+    // Settings' own sub-pages are the deliberate exception, and the reason the
+    // fix is not a plain set equality: `/settings/boats`, `/settings/seasons`,
+    // `/settings/security` and a dozen more are surfaces *under* this page
+    // rather than destinations, so the registry does not know them and should
+    // not. Anything else — a door to a top-level `/shop/<slug>/<something>`
+    // with no row in `STAFF_DESTINATIONS` — is a destination declared outside
+    // the one file a destination may be declared in.
+    const shopSuffixes = new Set(
+      STAFF_DESTINATIONS.filter((destination) => destination.place === "shop").map(
+        (destination) => destination.suffix,
+      ),
+    );
+    const strays = [...doors].filter(
+      (door) => !door.startsWith("/settings/") && !shopSuffixes.has(door),
+    );
+    expect(strays).toEqual([]);
   });
 
   it("reads the doors it is asserting over, rather than an empty set", async () => {
