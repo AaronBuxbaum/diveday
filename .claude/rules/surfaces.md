@@ -61,8 +61,10 @@ stay in `AGENTS.md`.
   because `getTripPrep` is six gear queries. There is **no tab strip**: the manifest is one chip in
   the band, and `/prep` and `/guests` survive as routes because `print/_components/TripPacket.tsx`
   composes prep as a *component* for the paper day and the roster has bookmarks. Add to the
-  departure page, never to a fourth surface; a form on it redirects to the departure, not to
-  `/prep` (ADR 20260919-one-idea, slice 23c).
+  departure page, never to a fourth surface; a form on it redirects to `#{PREP_SECTION_ID}` on the
+  departure, not to `/prep`. **A cancelled departure keeps its manifest chip and packs nothing**:
+  the roll call is a record of people, the packing list an instruction about a check-in that is not
+  happening (ADR 20260919-one-idea, slice 23c; dive-domain review 20260920).
 - **The shop home** is one chronological spine (`_components/today/DaySpine.tsx`,
   `DayStation.tsx`); the close-out is its evening state (`ClosingBlock.tsx`) and `/close-out` is a
   308 to it. `?view=` and `/blockers` 308 home (ADR 20260827-clearwater-surface-language). A

@@ -71,6 +71,7 @@ import {
   divemasterRatioGap,
   inWaterDivemasterCount,
 } from "@/lib/divemaster-ratio";
+import { PREP_SECTION_ID } from "@/lib/element-id";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
 import {
@@ -1448,7 +1449,7 @@ export async function getTodayWork(
         aboutDeparture: true,
         detail: missingFitDetailText(t, withoutFit),
         actionLabel: openPrepListActionText(t),
-        href: `${tripHref}/prep`,
+        href: `${tripHref}#${PREP_SECTION_ID}`,
         dueAt: trip.startsAt,
       });
     }
@@ -1465,7 +1466,7 @@ export async function getTodayWork(
         aboutDeparture: true,
         detail: ungatedNitroxDetailText(t, ungatedCount),
         actionLabel: openPrepListActionText(t),
-        href: `${tripHref}/prep`,
+        href: `${tripHref}#${PREP_SECTION_ID}`,
         dueAt: trip.startsAt,
       });
     }

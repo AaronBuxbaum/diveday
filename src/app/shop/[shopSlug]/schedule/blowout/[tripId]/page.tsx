@@ -103,7 +103,7 @@ export default async function BlowoutPage({
       // blow-out?") and put the only link back to the trip in the actions slot
       // as a secondary button, where it competed with the one act on the page
       // (principle 10, issue #823).
-      eyebrow={t("trips.subNav.trip")}
+      eyebrow={t("trips.surfaces.trip")}
       eyebrowHref={tripPath}
       title={blowout ? t("blowout.record.title") : t("blowout.confirm.title")}
       meta={

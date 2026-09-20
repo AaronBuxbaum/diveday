@@ -87,23 +87,13 @@ export default async function TripPrepPage({
       <FlashParams params={["notice"]} />
       <TripPageHeader
         boardHref={shopPath(shopSlug, "trips", tripId)}
-        backLabel={t("trips.subNav.trip")}
+        backLabel={t("trips.surfaces.trip")}
         trip={trip}
         locale={locale}
         timeZone={shop.timezone}
         badge={
           <TripCapacityBadge trip={trip} cancelledLabel={t("trips.detail.cancelledBadge")} t={t} />
         }
-        description={[
-          t("trips.prep.diverCount", { count: checklist.diverCount }),
-          checklist.crewCount > 0
-            ? t("trips.prep.crewCount", { count: checklist.crewCount })
-            : null,
-          t("trips.prep.diveCount", { count: checklist.diveCount }),
-          t("trips.prep.oneTankPerDiver"),
-        ]
-          .filter(Boolean)
-          .join(" · ")}
       />
       <PrepBody
         prep={prep}
@@ -114,20 +104,21 @@ export default async function TripPrepPage({
         rentalItems={shop.rentalItems}
         notice={notice}
         grouping={grouping}
+        cancelled={trip.status === "cancelled"}
         groupPath={shopPath(shopSlug, "trips", tripId, "prep")}
         emptyState={
           // The whole page's content region, so this one wears an h2 — and the
           // packing list can only become real once someone is on the boat,
           // which happens on the departure page.
           <EmptyState
-            title={t("trips.prep.emptyHeading")}
-            body={t("trips.prep.noDivers")}
+            title={t("tripPrep.emptyHeading")}
+            body={t("tripPrep.noDivers")}
             action={
               <Link
                 href={shopPath(shopSlug, "trips", tripId)}
                 className={buttonClass({ className: "mt-4" })}
               >
-                {t("trips.prep.emptyAction")}
+                {t("tripPrep.emptyAction")}
               </Link>
             }
           />

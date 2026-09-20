@@ -250,7 +250,7 @@ async function TripGuestsBody({
       <FlashParams params={["notice", "bid", "form", "noteBookingId", "noteBody"]} />
       <TripPageHeader
         boardHref={shopPath(shopSlug, "trips", tripId)}
-        backLabel={t("trips.subNav.trip")}
+        backLabel={t("trips.surfaces.trip")}
         trip={trip}
         locale={locale}
         timeZone={shop.timezone}

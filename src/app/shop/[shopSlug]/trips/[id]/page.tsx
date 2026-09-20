@@ -27,6 +27,7 @@ import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { depthInUnit } from "@/lib/depth-units";
 import { isPrepGrouping } from "@/lib/dive-prep";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
+import { PREP_SECTION_ID } from "@/lib/element-id";
 import {
   formatHourShort,
   formatMoneyCents,
@@ -330,7 +331,12 @@ export default async function ManageTripPage({
           ? [
               {
                 text: t("trips.pulse.prepGaps", { count: pulse.prepGaps }),
-                href: shopPath(shopSlug, "trips", tripId, "prep"),
+                // An anchor, like every other fact on this strip. It pointed
+                // at `/prep` back when that was a tab; now the list is further
+                // down this very page, and navigating off it to a second copy
+                // of what the reader is already looking at is a round trip to
+                // nowhere (dive-domain review 20260920).
+                href: `#${PREP_SECTION_ID}`,
               },
             ]
           : []),
@@ -757,23 +763,36 @@ export default async function ManageTripPage({
           ) : undefined
         }
         action={
-          cancelled ? undefined : (
-            <>
-              {/* **The departure's one way to the roll call.** The tab strip
-                  is gone (ADR 20260919-one-idea, slice 23c) and the manifest
-                  is the one surface that could not fold in with Prep — it is a
-                  `?checkpoint=` URL contract with external deep-links, a
-                  service worker and an encrypted offline store hanging off it.
-                  So it stands here, in the band, where a crew standing on a
-                  dock reaches it in one tap rather than by scrolling to find
-                  it. Not on the hull beside it: a shore dive has a roll call
-                  and no boat. */}
-              <TripSurfaceLink
-                onSky
-                icon="checkIn"
-                href={shopPath(shopSlug, "trips", tripId, "manifest")}
-                label={t("trips.subNav.manifest")}
-              />
+          <>
+            {/* **The departure's one way to the roll call, on every departure
+                there is.** The tab strip is gone (ADR 20260919-one-idea, slice
+                23c) and the manifest is the one surface that could not fold in
+                with Prep — it is a `?checkpoint=` URL contract with external
+                deep-links, a service worker and an encrypted offline store
+                hanging off it. So it stands here, in the band, where a crew on
+                a dock reaches it in one tap rather than by scrolling to find
+                it.
+
+                **Not gated on `cancelled`**, unlike the hull below it and the
+                Add diver beside it. Those two are predictions — a boat that is
+                not going and a seat nobody should sell — and a roll call is
+                evidence. A blow-out cancels the *trip* and leaves every
+                booking active (the glossary's *Blow-out*), so the call that
+                comes at 06:40 with six people already tapped aboard is exactly
+                when a crew needs the roll call most, to put them back ashore
+                and close the count. `pulseNeeded` is false on a cancellation
+                too, so gating this left the page with no door to any other
+                surface at all (dive-domain review 20260920).
+
+                And not on the hull: a shore dive has a roll call and no
+                boat. */}
+            <TripSurfaceLink
+              onSky
+              icon="checkIn"
+              href={shopPath(shopSlug, "trips", tripId, "manifest")}
+              label={t("trips.surfaces.manifest")}
+            />
+            {cancelled ? null : (
               <TripAddDiverLink
                 onSky
                 href="#add-diver"
@@ -781,8 +800,8 @@ export default async function ManageTripPage({
                 compactLabel={t("trips.about.add")}
                 ariaLabel={t("trips.about.addDiverJump")}
               />
-            </>
-          )
+            )}
+          </>
         }
       />
 
@@ -1187,6 +1206,7 @@ export default async function ManageTripPage({
             <TripPrepSection
               shop={shop}
               tripId={tripId}
+              cancelled={cancelled}
               locale={locale}
               notice={notice}
               grouping={isPrepGrouping(group) ? group : "item"}

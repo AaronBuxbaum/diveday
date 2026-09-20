@@ -162,6 +162,36 @@ reachable only by URL. What shipped:
   Nothing moved under it: the departure page kept its own boundary and gained
   one more inside it.
 
+**What the dive-domain review then made it fix** (20260920), because folding a
+surface in moves more than the pixels:
+
+- **The manifest chip is not gated on `cancelled`.** It was, beside Add diver —
+  and with the strip gone it is the departure's only door to the roll call,
+  while `pulseNeeded` is false on a cancellation too. A blow-out cancels the
+  *trip* and leaves every booking active, so the call that comes at 06:40 with
+  six people already tapped aboard is when a crew needs the roll call most. The
+  hull is not the precedent: a hull is a picture of a plan, a roll call is a
+  record of people.
+- **A cancelled departure packs nothing, and says so.** The tank tiles, the
+  nitrox panel, the missing-size and staff-fit panels, the support panel and
+  both kit tables all still computed on a blown-out boat, and every one is an
+  instruction about a check-in that is not happening. What survives is the half
+  a cancellation creates work in — units reserved, sets already out, and the
+  two controls that undo them — minus the pickers, because a new reservation
+  would hold an exclusion window against the boat that *is* sailing.
+- **A bad moment at the gear counter costs the gear counter.** `<Suspense>` is
+  not an error boundary, so a throw from any of `getTripPrep`'s six queries
+  took the roster, the blockers and the manifest chip with it.
+- **The tank total kept its derivation.** "N divers · N diving crew · N dives ·
+  one tank per diver per dive" lived in `/prep`'s page header, which the
+  departure page does not have — so a captain read a total over a roster half
+  its size with nothing saying the number is per *dive* and includes the diving
+  crew's own tanks. It is drawn inside `PrepBody` now, where both callers get it.
+- **Four inbound links followed the list**: the departure's own prep-gaps pulse
+  fact, the day's `dive_prep` and `nitrox_gate` rows, and the rental slip's way
+  back. `PREP_SECTION_ID` lives in `src/lib/element-id.ts` because `src/db`
+  names it too.
+
 
 ## Working on it
 

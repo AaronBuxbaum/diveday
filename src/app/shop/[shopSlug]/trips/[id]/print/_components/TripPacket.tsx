@@ -118,13 +118,13 @@ export async function TripPacket({
       </section>
       <section aria-labelledby={`print-manifest-${tripId}`} className="print-bundle-page">
         <h2 id={`print-manifest-${tripId}`} className="sr-only">
-          {t("trips.subNav.manifest")}
+          {t("trips.surfaces.manifest")}
         </h2>
         {manifest}
       </section>
       <section aria-labelledby={`print-prep-${tripId}`} className="print-bundle-page">
         <h2 id={`print-prep-${tripId}`} className="sr-only">
-          {t("trips.subNav.prep")}
+          {t("trips.surfaces.prep")}
         </h2>
         {prep}
       </section>

@@ -31,6 +31,20 @@ export function scopedHash(prefix: string | undefined, id: string): string {
 }
 
 /**
+ * **Where the morning packing list lives on a departure page.**
+ *
+ * Here rather than beside the component, because `src/db/today.ts` names it
+ * too — the day's `dive_prep` and `nitrox_gate` rows link a staffer straight
+ * at the list — and the dependency direction is one way (`app → features →
+ * lib/db`, `pnpm check:architecture`). Four callers agreeing on one literal is
+ * how `diver-row-` and `offline-roll-call-` came to disagree below.
+ *
+ * Unscoped: the paper day never renders it, because a printed sheet has no
+ * anchors to follow.
+ */
+export const PREP_SECTION_ID = "packing-list";
+
+/**
  * **The live manifest's diver row, minted once.** Its roll call renders the
  * row and its sticky summary panel links two lists of name chips at it, in two
  * files — three bare template literals until this existed, agreeing only

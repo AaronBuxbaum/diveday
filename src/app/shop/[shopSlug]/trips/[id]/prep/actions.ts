@@ -13,6 +13,7 @@ import {
 } from "@/db/gear";
 import { getShopById } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
+import { PREP_SECTION_ID } from "@/lib/element-id";
 import { GEAR_RETURN_OUTCOMES, tripReservationWindow } from "@/lib/gear";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -81,6 +82,21 @@ function departureOf(shopSlug: string, tripId: string) {
 }
 
 /**
+ * The same departure, landing on the list rather than its hour.
+ *
+ * `assignGearUnit`'s docblock below already argues the cost of a redirect per
+ * row — "the staffer back to the top of a long page" — and the page these four
+ * now land on is several times longer than the `/prep` that was written
+ * against. A counter working down twenty-one divers at 06:15 gets the section
+ * they tapped in, with the answer to that tap in it (dive-domain review
+ * 20260920). `revalidatePath` takes the bare path: a fragment is the browser's
+ * business and names no route.
+ */
+function packingListOf(shopSlug: string, tripId: string) {
+  return `${departureOf(shopSlug, tripId)}#${PREP_SECTION_ID}`;
+}
+
+/**
  * Assign one unit to one diver for this departure's whole window. The window
  * is derived from the trip on the server — never posted from the form — so a
  * stale tab cannot reserve last week's dates, and the exclusion constraint
@@ -94,13 +110,14 @@ export async function assignGearUnitAction(formData: FormData) {
     revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
   }
   const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
+  const landing = packingListOf(session.user.shopSlug, parsed.data.tripId);
 
   const db = await getDb();
   const [shop, trip] = await Promise.all([
     getShopById(db, session.user.shopId),
     getTripWithBooked(db, session.user.shopId, parsed.data.tripId),
   ]);
-  if (!shop || !trip) revalidateAndRedirect(departure, noticeUrl(departure, "gear-invalid"));
+  if (!shop || !trip) revalidateAndRedirect(departure, noticeUrl(landing, "gear-invalid"));
 
   const window = tripReservationWindow(trip, shop.timezone);
   const outcome = await reserveGearUnit(db, {
@@ -115,7 +132,7 @@ export async function assignGearUnitAction(formData: FormData) {
   });
   revalidateAndRedirect(
     departure,
-    noticeUrl(departure, outcome.ok ? "gear-assigned" : RESERVE_GEAR_NOTICE[outcome.reason]),
+    noticeUrl(landing, outcome.ok ? "gear-assigned" : RESERVE_GEAR_NOTICE[outcome.reason]),
   );
 }
 
@@ -193,6 +210,7 @@ export async function releaseGearUnitAction(formData: FormData) {
     revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
   }
   const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
+  const landing = packingListOf(session.user.shopSlug, parsed.data.tripId);
 
   const outcome = await releaseGearReservation(await getDb(), {
     shopId: session.user.shopId,
@@ -200,7 +218,7 @@ export async function releaseGearUnitAction(formData: FormData) {
   });
   revalidateAndRedirect(
     departure,
-    noticeUrl(departure, outcome.ok ? "gear-released" : RESERVATION_ACTION_NOTICE[outcome.reason]),
+    noticeUrl(landing, outcome.ok ? "gear-released" : RESERVATION_ACTION_NOTICE[outcome.reason]),
   );
 }
 
@@ -227,6 +245,7 @@ export async function checkOutTripGearSetAction(formData: FormData) {
     revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
   }
   const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
+  const landing = packingListOf(session.user.shopSlug, parsed.data.tripId);
 
   const outcome = await checkOutTripGearSet(await getDb(), {
     shopId: session.user.shopId,
@@ -235,7 +254,7 @@ export async function checkOutTripGearSetAction(formData: FormData) {
   revalidateAndRedirect(
     departure,
     noticeUrl(
-      departure,
+      landing,
       outcome.ok
         ? "gear-handed-over"
         : outcome.reason === "not_found"
@@ -275,6 +294,7 @@ export async function returnTripGearSetAction(formData: FormData) {
     revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
   }
   const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
+  const landing = packingListOf(session.user.shopSlug, parsed.data.tripId);
 
   const outcome = await returnTripGearSet(await getDb(), {
     shopId: session.user.shopId,
@@ -285,7 +305,7 @@ export async function returnTripGearSetAction(formData: FormData) {
   revalidateAndRedirect(
     departure,
     noticeUrl(
-      departure,
+      landing,
       outcome.ok
         ? "gear-returned-set"
         : outcome.reason === "not_found"

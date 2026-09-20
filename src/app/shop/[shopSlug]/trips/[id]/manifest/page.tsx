@@ -687,7 +687,7 @@ export default async function TripManifestPage({
           boarding count. */}
       <TripPageHeader
         boardHref={shopPath(shopSlug, "trips", tripId)}
-        backLabel={t("trips.subNav.trip")}
+        backLabel={t("trips.surfaces.trip")}
         trip={manifest.trip}
         locale={locale}
         timeZone={shop.timezone}

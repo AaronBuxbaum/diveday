@@ -1,17 +1,20 @@
+import Link from "next/link";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { getDb } from "@/db/client";
 import { getTripPrep, type TripPrepShop } from "@/db/trips-prep";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { PrepGrouping } from "@/lib/dive-prep";
+import { PREP_SECTION_ID } from "@/lib/element-id";
 import { shopPath } from "@/lib/staff-notices";
 import { PrepBody } from "../prep/_components/PrepBody";
 
 /**
  * **The morning packing list, on the departure it is for.**
  *
- * The departure stopped being four tabs (ADR 20260919-one-idea, slice 23c), so
- * the list a crew works down with their hands full reads on the same page as
- * the roster it is derived from — who is aboard, then what to pull for them.
- * `/prep` survives as its own route because the paper day composes it
+ * The departure stopped being three tabs (ADR 20260919-one-idea, slice 23c),
+ * so the list a crew works down with their hands full reads on the same page
+ * as the roster it is derived from — who is aboard, then what to pull for
+ * them. `/prep` survives as its own route because the paper day composes it
  * (`print/_components/TripPacket.tsx`), and both render the one `PrepBody`.
  *
  * **Its own reads, inside its own `<Suspense>`.** `getTripPrep` is six queries
@@ -25,6 +28,7 @@ export async function TripPrepSection({
   locale,
   notice,
   grouping,
+  cancelled,
 }: {
   /**
    * **The session's own shop row, slug included** — deliberately not a `shop`
@@ -40,18 +44,45 @@ export async function TripPrepSection({
   locale: string;
   notice: string | undefined;
   grouping: PrepGrouping;
+  /** A blown-out departure packs nothing; see `PrepBody`. */
+  cancelled: boolean;
 }) {
-  const db = await getDb();
-  const prep = await getTripPrep(db, shop, tripId);
+  const t = staffTranslator(locale);
+  const prepPath = shopPath(shop.slug, "trips", tripId, "prep");
+  let prep: Awaited<ReturnType<typeof getTripPrep>>;
+  try {
+    const db = await getDb();
+    prep = await getTripPrep(db, shop, tripId);
+  } catch {
+    // **A bad moment at the gear counter costs the gear counter, nothing
+    // else.** `<Suspense>` is not an error boundary, so an unhandled throw
+    // from any of these six queries propagates to `trips/[id]/error.tsx` and
+    // takes the roster, the blockers, the crew panel and the one door to the
+    // roll call with it — on the page a crew is standing on, on marina wifi,
+    // at 06:50 (dive-domain review 20260920). Before the fold a prep failure
+    // cost you `/prep` and nothing else, and it still should.
+    //
+    // Worded rather than silent, because a packing list that is simply absent
+    // reads as "nothing to pull", which is the one thing it must never say by
+    // accident. `/prep` reads the same rows on its own page, so it is both the
+    // honest retry and a second chance at the list.
+    return (
+      <div className="mt-10">
+        <StaffNoticeBanner tone="warning">
+          {t("tripPrep.readFailed")}{" "}
+          <Link href={prepPath} className="font-medium underline">
+            {t("trips.surfaces.prep")}
+          </Link>
+        </StaffNoticeBanner>
+      </div>
+    );
+  }
   // The page above has already read this departure and answered `notFound()`
   // if it was gone, so a null here means the row went between the two reads.
-  // On a page that is otherwise rendered, silence is the honest answer —
-  // throwing from inside a streamed boundary would replace a finished page
-  // with an error the reader cannot act on.
+  // On a page that is otherwise rendered, silence is the honest answer.
   if (!prep) return null;
-  const t = staffTranslator(locale);
   return (
-    <div className="mt-10">
+    <div id={PREP_SECTION_ID} className="mt-10 scroll-mt-6">
       <PrepBody
         prep={prep}
         t={t}
@@ -61,6 +92,7 @@ export async function TripPrepSection({
         rentalItems={shop.rentalItems}
         notice={notice}
         grouping={grouping}
+        cancelled={cancelled}
         groupPath={shopPath(shop.slug, "trips", tripId)}
       />
     </div>

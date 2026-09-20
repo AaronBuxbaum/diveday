@@ -56,6 +56,7 @@ import shared from "./shared.json";
 import shopHome from "./shopHome.json";
 import staffing from "./staffing.json";
 import today from "./today.json";
+import tripPrep from "./tripPrep.json";
 import tripSeries from "./tripSeries.json";
 import trips from "./trips.json";
 import waiversStaff from "./waiversStaff.json";
@@ -81,6 +82,7 @@ const staff = {
   schedule,
   trips,
   today,
+  tripPrep,
   tripSeries,
   manifest,
   settings,
