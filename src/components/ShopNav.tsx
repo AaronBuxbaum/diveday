@@ -15,9 +15,11 @@ import {
   type StaffDestinationId,
   type StaffDestinationLabels,
   type StaffDestinationTitles,
+  staffDestination,
+  staffDestinationHref,
   staffShopRoot,
 } from "@/lib/staff-destinations";
-import { ShopPlaceNav, type ShopPlaceNavCopy } from "./ShopPlaceNav";
+import { ShopPlaceMenu, ShopPlaceNav, type ShopPlaceNavCopy } from "./ShopPlaceNav";
 import { CommandPalette } from "./search/CommandPalette";
 
 async function signOutAction() {
@@ -98,47 +100,68 @@ export function ShopNav({
   }));
   const destinationLabels = destinationLabelsFor(t);
   const destinationTitles = destinationTitlesFor(t);
-  // Shared by the header tabs and the phone dock, so a badge can never say
-  // different things in the two places the same destination renders.
+  // Shared by the desk bar's pills and the phone's folded calendar, so a
+  // badge can never say different things in the two places it renders.
   const badgeLabels = {
     blockers: t("shared.shopNavLinks.badgeBlocked", {
       count: navCounts?.blockers ?? 0,
     }),
+  };
+  // One record, read by both forms of the same nav — the desk bar's pills and
+  // the phone's calendar — so the two cannot come to disagree about what a
+  // time is called.
+  const placeCopy: ShopPlaceNavCopy = {
+    navAriaLabel: t("shared.shopPlaceNav.navAriaLabel"),
+    places: {
+      day: t("shared.shopPlaceNav.today"),
+      week: t("shared.shopPlaceNav.week"),
+      season: t("shared.shopPlaceNav.season"),
+    },
+    blockedLabel: badgeLabels.blockers,
   };
   return (
     <>
       {/*
        * The one bar both shells wear — 56px, the page background behind a
        * blur, one hairline, no shadow (ADR
-       * 20260827-clearwater-surface-language, decision 10). Below `lg` the
-       * primary destinations live in the phone dock (StaffTabBar, fixed to the
-       * bottom edge where a thumb actually is) rather than wrapping into extra
-       * header rows, so the bar keeps to identity and search on every width;
-       * from `lg` up the tab strip joins it in the centre slot, which is where
-       * the `order` utilities used to put it.
+       * 20260827-clearwater-surface-language, decision 10).
        *
-       * The bar is a fixed height now, so nothing in it may wrap: every slot
-       * shrinks instead, and a long shop name ellipses (see ShopIdentityMenu,
-       * whose button and label both carry `min-w-0`).
+       * What it carries is now the whole of Tide's answer to "where am I":
+       * the shop's name, the three times, and the search (ADR
+       * 20260919-one-idea, slice 23b). From `lg` up the three stand as pills
+       * in the centre slot; below it they fold into the calendar beside the
+       * search, because the bar is a fixed height and nothing in it may wrap —
+       * every slot shrinks instead, and a long shop name ellipses (see
+       * ShopIdentityMenu, whose button and label both carry `min-w-0`).
        */}
       <ChromeBar
         staffChrome
         leading={
-          /* The identity block is this reader's own disclosure — language and
-             Sign out — rather than standing in permanent chrome: the rarest
-             controls in the header do not get all-day screen time (principle
-             10). Places in the shop (Settings included) live in the nav's More
-             groups instead. Home stays one tap away as Today, in the tabs and
-             the dock. */
+          /* The identity block is the shop's own disclosure — Settings,
+             then this reader's language and the way out — rather than
+             standing in permanent chrome: the rarest controls in the header
+             do not get all-day screen time (principle 10). Settings is here
+             because it is the one place with no hour in it and there is no
+             nav left to hold it (ADR 20260919-one-idea, slice 23b); home
+             stays one tap away as Today, in the three times beside this. */
           <div className="flex min-w-0 shrink items-center">
             <ShopIdentityMenu
               shopName={shopName}
               logoUrl={logoUrl}
+              // The one place with no hour in it, behind the shop's own name —
+              // and absent rather than refusing for a role that may not open
+              // it (ADR 20260919-one-idea, slice 23b).
+              settingsHref={
+                navGates.settings
+                  ? staffDestinationHref(root, staffDestination("settings"))
+                  : undefined
+              }
               signOutAction={signOutAction}
               locale={locale}
               languages={languages}
               setLocaleAction={setLocale}
               copy={{
+                settings: t("shared.shopNavLinks.settings"),
                 language: t("shared.shopNav.language"),
                 signOut: t("shared.shopNav.signOut"),
                 signOutConfirm: t("shared.shopNav.signOutConfirm"),
@@ -170,71 +193,74 @@ export function ShopNav({
           /* **The three times, and nothing else** (ADR 20260919-one-idea,
              slice 23b). Five noun tabs, a "More" menu and a phone dock all
              left with the nav they belonged to; what stands is Today, Week
-             and Season, which is what the desk bar is drawn with. Hidden
-             below `lg` for the reason the tab strip was: the bar is a fixed
-             height and nothing in it may wrap. The phone reaches the same
-             three through the day itself and the search beside this. */
+             and Season, which is what the desk bar is drawn with. Below `lg`
+             these give way to the calendar in the trailing slot — the same
+             three, folded, because the bar is a fixed height and nothing in
+             it may wrap. */
           <ShopPlaceNav
             root={root}
             gates={navGates}
             blocked={navCounts?.blockers}
-            copy={
-              {
-                navAriaLabel: t("shared.shopPlaceNav.navAriaLabel"),
-                places: {
-                  day: t("shared.shopPlaceNav.today"),
-                  week: t("shared.shopPlaceNav.week"),
-                  season: t("shared.shopPlaceNav.season"),
-                },
-                blockedLabel: badgeLabels.blockers,
-              } satisfies ShopPlaceNavCopy
-            }
+            copy={placeCopy}
             className="hidden lg:flex"
           />
         }
         trailing={
-          /* Trips are created from the Schedule, where the surrounding week is
-             visible. */
-          <CommandPalette
-            shopSlug={shopSlug}
-            boatBoardingHref={boatBoardingHref}
-            gates={navGates}
-            locale={locale}
-            languages={languages}
-            setLocaleAction={setLocale}
-            signOutAction={signOutAction}
-            createDiverAction={createDiverAction}
-            copy={{
-              language: t("shared.shopNav.language"),
-              groupSession: t("shared.commandPalette.groupSession"),
-              signOut: t("shared.shopNav.signOut"),
-              search: t("shared.commandPalette.search"),
-              dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
-              comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),
-              placeholder: t("shared.commandPalette.placeholder"),
-              emptyShort: t("shared.commandPalette.emptyShort"),
-              emptyNoMatches: t("shared.commandPalette.emptyNoMatches"),
-              groupDivers: t("shared.commandPalette.groupDivers"),
-              addDiver: t("shared.commandPalette.addDiver"),
-              groupTrips: t("shared.commandPalette.groupTrips"),
-              groupDiveSites: t("shared.commandPalette.groupDiveSites"),
-              groupCourses: t("shared.commandPalette.groupCourses"),
-              groupOrders: t("shared.commandPalette.groupOrders"),
-              groupGear: t("shared.commandPalette.groupGear"),
-              // Every status worded here, where the translator is: `src/db`
-              // returns the code (`src/i18n/gear-labels.ts` owns the words).
-              gearStatuses: gearStatusLabels(t),
-              groupGoTo: t("shared.commandPalette.groupGoTo"),
-              destinationLabels,
-              destinationTitles,
-              goToBoarding: t("shared.commandPalette.goToBoarding"),
-              goToCloseDay: t("shared.commandPalette.goToCloseDay"),
-              goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
-              hintMove: t("shared.commandPalette.hintMove"),
-              hintOpen: t("shared.commandPalette.hintOpen"),
-              hintClose: t("shared.commandPalette.hintClose"),
-            }}
-          />
+          <>
+            {/* **The date the phone's bar carries**, drawn as the calendar
+                `Tide.dc.html`'s pocket puts left of the magnifier. It is the
+                fold of the centre slot's pills and nothing more: one registry
+                read, one set of words, one answer about which time is lit. */}
+            <ShopPlaceMenu
+              root={root}
+              gates={navGates}
+              blocked={navCounts?.blockers}
+              copy={placeCopy}
+              className="lg:hidden"
+            />
+            {/* Trips are created from the Schedule, where the surrounding week
+                is visible. */}
+            <CommandPalette
+              shopSlug={shopSlug}
+              boatBoardingHref={boatBoardingHref}
+              gates={navGates}
+              locale={locale}
+              languages={languages}
+              setLocaleAction={setLocale}
+              signOutAction={signOutAction}
+              createDiverAction={createDiverAction}
+              copy={{
+                language: t("shared.shopNav.language"),
+                groupSession: t("shared.commandPalette.groupSession"),
+                signOut: t("shared.shopNav.signOut"),
+                search: t("shared.commandPalette.search"),
+                dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
+                comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),
+                placeholder: t("shared.commandPalette.placeholder"),
+                emptyShort: t("shared.commandPalette.emptyShort"),
+                emptyNoMatches: t("shared.commandPalette.emptyNoMatches"),
+                groupDivers: t("shared.commandPalette.groupDivers"),
+                addDiver: t("shared.commandPalette.addDiver"),
+                groupTrips: t("shared.commandPalette.groupTrips"),
+                groupDiveSites: t("shared.commandPalette.groupDiveSites"),
+                groupCourses: t("shared.commandPalette.groupCourses"),
+                groupOrders: t("shared.commandPalette.groupOrders"),
+                groupGear: t("shared.commandPalette.groupGear"),
+                // Every status worded here, where the translator is: `src/db`
+                // returns the code (`src/i18n/gear-labels.ts` owns the words).
+                gearStatuses: gearStatusLabels(t),
+                groupGoTo: t("shared.commandPalette.groupGoTo"),
+                destinationLabels,
+                destinationTitles,
+                goToBoarding: t("shared.commandPalette.goToBoarding"),
+                goToCloseDay: t("shared.commandPalette.goToCloseDay"),
+                goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
+                hintMove: t("shared.commandPalette.hintMove"),
+                hintOpen: t("shared.commandPalette.hintOpen"),
+                hintClose: t("shared.commandPalette.hintClose"),
+              }}
+            />
+          </>
         }
       />
     </>

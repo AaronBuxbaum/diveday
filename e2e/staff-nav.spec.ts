@@ -75,6 +75,20 @@ test.describe("owner", () => {
     }
   });
 
+  test("Settings is behind the shop's own name, which is the only door it has", async ({
+    page,
+  }) => {
+    // "Only Settings has no hour and lives behind the shop's name" (ADR
+    // 20260919-one-idea, decision I · Tide). It lived here once and left when
+    // the nav's More groups arrived, because a second door would have been a
+    // duplicate control — there is no nav now, and no second door.
+    await page.goto("/shop/blue-mantis");
+    await expect(page.locator("header").getByRole("link", { name: "Settings" })).toHaveCount(0);
+    await page.locator("header [data-identity-menu]").click();
+    await page.locator("header").getByRole("link", { name: "Settings" }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+  });
+
   test("everything that is not one of the three is reached through the search", async ({
     page,
   }) => {
@@ -138,20 +152,56 @@ test.describe("the phone", () => {
   signedInAsOwner();
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("has no dock, and reaches the shop through the search", async ({ page }) => {
+  test("has no dock — a name, a date and a search, which is what the artboard draws", async ({
+    page,
+  }) => {
     await page.goto("/shop/blue-mantis");
 
     // The dock was a fixed bottom tab bar whose sixth slot raised a sheet.
     // Nothing stands at the bottom edge now.
     await expect(page.locator("[data-dock-more]")).toHaveCount(0);
+    // And the three times do not *stand* here: at 390px they are folded, so
+    // nothing wearing them is on screen until the date is tapped.
     await expect(
       page.getByRole("navigation", { name: "When" }).filter({ visible: true }),
     ).toHaveCount(0);
 
-    // What a thumb has instead: the shop's own name, and the search.
+    // What a thumb has instead — `Tide.dc.html`'s pocket, left to right.
     await expect(page.locator("header [data-identity-menu]")).toBeVisible();
+    await expect(page.locator("header [data-place-menu]")).toBeVisible();
+    await expect(page.locator("header").getByRole("button", { name: "Search" })).toBeVisible();
+  });
+
+  test("folds the three times into the date, and they are the same three", async ({ page }) => {
+    await page.goto("/shop/blue-mantis");
+
+    await page.locator("header [data-place-menu]").click();
+    const when = page.getByRole("navigation", { name: "When" });
+    await expect(when.getByRole("link")).toHaveText([/^Today/, "Week", "Season"]);
+    // The same one is lit as on the desk bar: the day, because that is where
+    // this page sits.
+    await expect(when.getByRole("link", { name: /^Today/ })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    await when.getByRole("link", { name: "Week" }).click();
+    await expect(page).toHaveURL(/\/schedule\/board$/);
+
+    // And the fold knows where the reader went: reopened on the board, Week
+    // is lit and Today is not.
+    await page.locator("header [data-place-menu]").click();
+    await expect(when.getByRole("link", { name: "Week" })).toHaveAttribute("aria-current", "page");
+    await expect(when.getByRole("link", { name: /^Today/ })).not.toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  test("reaches everything that is not a time through the search", async ({ page }) => {
+    await page.goto("/shop/blue-mantis");
+
     const search = page.locator("header").getByRole("button", { name: "Search" });
-    await expect(search).toBeVisible();
     await search.click();
     await page.getByRole("combobox").fill("Divers");
     await page
@@ -164,10 +214,19 @@ test.describe("the phone", () => {
 
 /**
  * The other half of what the dock bought: with the tabs off the header, a
- * phone header holds only the logo, the shop's name, and two icon buttons, so
- * the name gets the width the tab rows used to take. It kept a 10rem clamp
- * from before that — a shop whose name ran past about twenty characters read
- * as "Blue Horizon Dive Ch…" with 80px of empty header beside it.
+ * phone header holds the logo, the shop's name, the date and the search, and
+ * the name gets whatever the row has left. It kept a 10rem clamp from before
+ * that — a shop whose name ran past about twenty characters read as "Blue
+ * Horizon Dive Ch…" with 80px of empty header beside it.
+ *
+ * **What is asserted is the absence of a cap, not that any one name fits.**
+ * This used to demand that "Blue Horizon Dive Charters" render whole, which
+ * was true of a bar with two controls in it and stopped being true when the
+ * three times folded into a third (ADR 20260919-one-idea, slice 23b): at
+ * 390px that name now gives up its last eleven pixels, which is flex doing
+ * its job rather than a clamp doing its worst. So the measurements are the two
+ * that tell those apart — the name is wider than the clamp ever allowed, and
+ * there is no idle space between where it ends and the next control begins.
  *
  * Driven against a freshly onboarded shop because the seeded demo shop's name
  * is short enough to fit either way — the clamp is invisible until a name is
@@ -216,24 +275,35 @@ test.describe("a long shop name on a phone", () => {
           .evaluate((el) => Number(getComputedStyle(el).opacity)),
       )
       .toBe(1);
-    // Rendered whole, and wider than the 10rem clamp that used to cut it.
+    // Wider than the 10rem clamp that used to cut it.
     const width = await name.evaluate((el) => ({
       shown: el.clientWidth,
       wants: el.scrollWidth,
     }));
-    expect(width.shown).toBe(width.wants);
     expect(width.shown).toBeGreaterThan(160);
 
     // Taking the width must not cost a second header row: past the point where
     // the name genuinely runs out of room it truncates, and the flex row never
     // wraps the search buttons under it.
     const trigger = page.locator("header [data-identity-menu]");
+    const date = page.locator("header [data-place-menu]");
     const search = page.locator("header").getByRole("button", { name: "Search" });
-    const [triggerBox, searchBox] = await Promise.all([
+    const [triggerBox, dateBox, searchBox] = await Promise.all([
       trigger.boundingBox(),
+      date.boundingBox(),
       search.boundingBox(),
     ]);
-    if (!triggerBox || !searchBox) throw new Error("header controls have no box");
+    if (!triggerBox || !dateBox || !searchBox) throw new Error("header controls have no box");
+
+    // And nothing is being held back: whatever the name does not get, the row
+    // has already spent. This is the clamp's actual signature — a truncated
+    // name with empty header beside it — and it fails on a cap of any size,
+    // where a fixed width only fails on the one that was shipped. Measured
+    // from the identity control rather than from the name, because the caret
+    // that opens it is part of the control and not idle space; what is left
+    // between the two is the row's own two gaps (8px each) and nothing else.
+    const idle = dateBox.x - (triggerBox.x + triggerBox.width);
+    expect(idle).toBeLessThan(24);
     expect(Math.abs(triggerBox.y - searchBox.y)).toBeLessThan(triggerBox.height);
     expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(searchBox.x);
     // And nothing spilled sideways off the phone.
