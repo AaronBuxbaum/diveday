@@ -280,6 +280,15 @@ export async function openTripFromBoard(page: Page, title: string) {
  * `boat-loop.spec.ts` is where the chip itself is the subject.
  */
 export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep") {
+  // **Wait for the departure before reading the address bar.** A click that
+  // opens one resolves when its request leaves, not when the URL commits, so
+  // `page.url()` here can still be the board the caller clicked from — which is
+  // `check:e2e-hygiene`'s `action-race` wearing a helper. The tab strip bought
+  // this for free: its link could not be clicked before the page holding it had
+  // rendered. Navigating by URL has to ask for it.
+  await page.waitForURL(TRIP_SURFACE_URL).catch(() => {
+    throw new Error(`openTripTab called from ${page.url()}, which is not a departure`);
+  });
   const url = new URL(page.url());
   const root = url.pathname.match(/^(.*\/trips\/[^/?#]+)/)?.[1];
   if (!root) throw new Error(`openTripTab called from ${url.pathname}, which is not a departure`);
@@ -311,6 +320,8 @@ export function rosterRow(page: Page, diverName: string): Locator {
 }
 
 const TRIP_ROOT_URL = /\/trips\/[^/?#]+(?:[?#]|$)/;
+/** Any of a departure's surfaces — the root itself, or one of its sub-pages. */
+const TRIP_SURFACE_URL = /\/trips\/[^/?#]+/;
 
 /** Open the Trip surface's compact About disclosure before using its details. */
 export async function openTripAbout(page: Page): Promise<Locator> {

@@ -235,6 +235,7 @@ export const test = base.extend<
       let failures = 0;
       let lastFailure = "";
       let pageErrors = 0;
+      let lastPageError = "";
       let consoleErrors = 0;
       const verdict = () => {
         const pending = [...inFlight.values()];
@@ -244,6 +245,14 @@ export const test = base.extend<
             ? "in flight when the test ended: nothing"
             : `in flight when the test ended: ${pending.slice(-2).join(" · ")}`,
           ...(lastFailure ? [`last router failure: ${lastFailure}`] : []),
+          // **Hoisted out of the transcript, for the same reason the counts
+          // are.** An uncaught exception is the highest-signal line this
+          // fixture ever records and it is almost never in the first four —
+          // the head is the page load, and a throw is what happened later. On
+          // 2026-09-20 a fold test failed on CI with "1 pageerror" in the
+          // verdict and the exception itself cut off, which is a count where a
+          // cause was one line away.
+          ...(lastPageError ? [`last pageerror: ${lastPageError}`] : []),
         ].join("\n");
       };
       // Errors only. A page's ordinary `console.log` is the app talking to its
@@ -257,6 +266,7 @@ export const test = base.extend<
       // the failure above, and it is currently invisible to the report.
       page.on("pageerror", (error) => {
         pageErrors += 1;
+        lastPageError = error.message;
         record(`pageerror      ${error.message}`);
       });
       // A page turn is one of these two: a document navigation, or the client

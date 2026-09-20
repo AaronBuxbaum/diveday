@@ -7827,9 +7827,26 @@ test.describe("print", () => {
     await page.goto(`${tripPath}/print`);
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
     await page.emulateMedia({ media: "print" });
-    const packetNavs = page.locator('nav[aria-label="Trip"]');
-    await expect(packetNavs).toHaveCount(2);
-    for (const nav of await packetNavs.all()) await expect(nav).not.toBeVisible();
+    // **Three composed headers, and none of their chrome on paper.** This used
+    // to count the two tab strips the composed surfaces brought with them;
+    // slice 23c deleted the strip (ADR 20260919-one-idea), and what each
+    // header carries now is its way back up — "Board" on the packet's own,
+    // "Trip" on the manifest's and the prep list's. `TripPageHeader` marks all
+    // three `print:hidden` for exactly this reason, and a paper sheet with a
+    // link on it is the regression.
+    // **The packet marks its chrome, and paper honours the mark.** This used to
+    // count the two tab strips the composed surfaces brought with them; slice
+    // 23c deleted the strip (ADR 20260919-one-idea), and what is left to keep
+    // off paper is each composed header's way back up plus the rental-ticket
+    // door on an assigned gear row — a count the seed decides, so the rule is
+    // the assertion rather than a number that drifts with the fixture.
+    //
+    // A CSS locator, deliberately: `getByRole` reads the accessibility tree,
+    // `display:none` is not in it, and a role locator here finds nothing and
+    // passes for the wrong reason.
+    const chrome = page.locator('a[class*="print:hidden"]');
+    await expect(chrome).not.toHaveCount(0);
+    for (const link of await chrome.all()) await expect(link).not.toBeVisible();
     await page.emulateMedia({ media: "screen" });
     await capturePrint(page, "trip-packet");
   });
