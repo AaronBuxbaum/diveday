@@ -342,7 +342,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ],
   ["staff/shared.json tripAdmission.nitrox", "the gas, and the word Spanish diving uses for it"],
   ["staff/today.json actionKind.nitroxGate", "the gas, and the word Spanish diving uses for it"],
-  ["staff/trips.json prep.nitrox", "the gas, and the word Spanish diving uses for it"],
+  ["staff/tripPrep.json nitrox", "the gas, and the word Spanish diving uses for it"],
   ["staff/trips.json requirements.nitrox", "the gas, and the word Spanish diving uses for it"],
   [
     "diver.json notifications.staffReply.reSubject",
@@ -356,7 +356,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/requests.json flexible", "the same word in Spanish"],
   ["staff/settings.json team.roleLabels.instructor", "the same word in Spanish"],
   ["staff/settings.json team.rolesLegend", "the same word in Spanish"],
-  ["staff/trips.json prep.total", "the same word in Spanish"],
+  ["staff/tripPrep.json total", "the same word in Spanish"],
   [
     "staff/incidentExport.json executedDiveSurfaceIntervalValue",
     "the unit abbreviation, unchanged in Spanish",

@@ -1,4 +1,4 @@
-import type { HullGeometry, SeatReading, SeatState } from "@/lib/hull";
+import type { CrewReading, CrewState, HullGeometry, SeatReading, SeatState } from "@/lib/hull";
 
 /**
  * **The boat, drawn** — ADR 20260919-one-idea, decision I · Tide: "a
@@ -179,6 +179,109 @@ const SEAT_INK: Record<SeatState, string> = {
   missing: "var(--surface)",
 };
 
+/**
+ * **What a guide's circle paints** — ADR 20260919-one-idea §3b.6.
+ *
+ * Its own map rather than a reuse of `SEAT_FILL`, because a crew member's
+ * vocabulary is not a diver's: three of the seat's eight are readiness, which
+ * a guide holds none of, and `rostered` is a sixth the seats have no need for.
+ * A `Record<CrewState, …>` is what makes adding a state without deciding how
+ * it looks a compile error, which is the same brace the seats use.
+ */
+const CREW_FILL: Record<CrewState, string | null> = {
+  /**
+   * `null` is the hull's own line at 18% — the drawing a guide has always
+   * had, and the one a surface with no head count must keep. A page with no
+   * roll call in it may not paint a person as a question.
+   */
+  rostered: null,
+  /** Nothing said about this person yet — the slate the rows give `awaiting`. */
+  awaiting: "var(--surface-sunken)",
+  aboard: "var(--success)",
+  ashore: "var(--warning)",
+  /** The tint, not the fill — an inference does not get the stated colour. */
+  ashoreImplied: "var(--warning-tint)",
+  /**
+   * **Empty, like the seat's.** `notBackAboard` means *not* aboard, and a
+   * filled circle is what this picture says about somebody who is. The weight
+   * below and the ring and cross are what make it the loudest mark on the
+   * boat without borrowing the mark that means the opposite.
+   */
+  missing: "none",
+};
+
+/**
+ * The line around each guide, and how heavily it is drawn.
+ *
+ * `null` is the hull's own line, as it is for the seats. Everything that is
+ * not `rostered` states its own colour, because a circle that differs from its
+ * neighbour only in fill has no reading left once print flattens the hue —
+ * which is the whole lesson of §3b.4.
+ */
+const CREW_LINE: Record<CrewState, { stroke: string | null; width: number; dashed: boolean }> = {
+  rostered: { stroke: null, width: 1.5, dashed: false },
+  awaiting: { stroke: "var(--border-strong)", width: 1.5, dashed: false },
+  aboard: { stroke: "var(--success)", width: 1.5, dashed: false },
+  ashore: { stroke: "var(--warning)", width: 1.5, dashed: false },
+  /** Dashed for the reason the seat's is: nobody *said* this (§3b.3). */
+  ashoreImplied: { stroke: "var(--warning)", width: 1.5, dashed: true },
+  /** The heaviest line on the boat, and the only one that is. */
+  missing: { stroke: "var(--danger)", width: 3, dashed: false },
+};
+
+/** The ink two initials take on each crew fill, paired as the seats' are. */
+const CREW_INK: Record<CrewState, string> = {
+  rostered: "var(--foreground)",
+  awaiting: "var(--foreground)",
+  aboard: "var(--surface)",
+  ashore: "var(--surface)",
+  /** Warning on its own tint, the pairing `blocked` already uses. */
+  ashoreImplied: "var(--warning)",
+  /** On an empty circle the letters sit on the page, not on a fill. */
+  missing: "var(--danger)",
+};
+
+/**
+ * **The crew states that carry an inner mark**, and why each needs one.
+ *
+ * Paper has three channels — fill, weight, dash — and six states to tell
+ * apart, so three of them are separated by a shape inside the circle rather
+ * than by a fourth channel that does not exist. The seats reached the same
+ * conclusion and this is deliberately the same answer, drawn round: two halves
+ * of one boat may not speak two visual languages.
+ *
+ * - `awaiting` against `rostered`: both are "nothing has been said", but only
+ *   one of them is a **gap in a head count**. Without a mark they print as one
+ *   circle, which the test below caught on the first run.
+ * - `ashore` against `rostered`: a stated fact and a roster entry are not the
+ *   same claim, and on paper the outline alone made them one.
+ * - `ashoreImplied` rides the same inset with a dashed outline, exactly as the
+ *   seat does — the statement and the inference share an inside and differ on
+ *   the line, which is §3b.3's rule drawn rather than written.
+ */
+const CREW_INSET_STATES = new Set<CrewState>(["awaiting", "ashore", "ashoreImplied"]);
+
+/** `ashoreImplied` → `ashore-implied`; every other state is already one word. */
+const crewKebab = (state: CrewState) => state.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+
+/**
+ * A guide in the wheelhouse.
+ *
+ * The same shape `HullSeatContent` has, for the same reason: the picture needs
+ * the reading rather than the bare state, so the head count a green circle
+ * came from rides out with it and the sentence can name it later.
+ */
+export type HullCrewContent = {
+  /** The mark as `crewReadingFor` read it. */
+  reading: CrewReading;
+  /**
+   * Two letters, already shortened by the caller. Absent for a guide whose
+   * name would not letter — the circle is still drawn, because a person with
+   * an awkward name is still a person on the boat.
+   */
+  initials?: string;
+};
+
 export type HullSeatContent = {
   /**
    * The seat as `seatReadingFor` read it — not the bare state.
@@ -202,7 +305,7 @@ export function Hull({
   label,
   seats = [],
   color,
-  crewInitials = [],
+  crew = [],
   className,
 }: {
   geometry: HullGeometry;
@@ -213,13 +316,19 @@ export function Hull({
   /** The shop's colour for this hull, or null for one nobody has painted. */
   color?: string | null;
   /**
-   * The guides in the wheelhouse, already shortened, **in crew order and with
-   * holes**. `undefined` is a crew member whose name would not letter; the
-   * circle is still drawn, because a person with an awkward name is still a
-   * person on the boat. Only the first two are drawn — `hullGeometry` returns
-   * the rest as `crewOverflow`, and the caller says that number in words.
+   * The guides in the wheelhouse, **in crew order and with holes kept**: an
+   * entry whose `initials` are absent is a crew member whose name would not
+   * letter, and the circle is still drawn, because a person with an awkward
+   * name is still a person on the boat. Only the first two are drawn —
+   * `hullGeometry` returns the rest as `crewOverflow`, and the caller says
+   * that number in words.
+   *
+   * Each carries a reading rather than a name, which is §3b.6: a guide used to
+   * have one state where a diver had eight, so the better the seats got the
+   * more confidently the whole picture read "all good" over a divemaster who
+   * went back down for a weight belt.
    */
-  crewInitials?: readonly (string | undefined)[];
+  crew?: readonly HullCrewContent[];
   className?: string;
 }) {
   if (geometry.seats.length === 0) return null;
@@ -363,32 +472,88 @@ export function Hull({
           );
         })}
 
-        {geometry.crew.map((station) => (
-          <g key={station.index}>
-            <circle
-              className="hull-crew"
-              cx={station.cx}
-              cy={station.cy}
-              r={station.r}
-              fill={line}
-              fillOpacity={0.18}
-              stroke={line}
-              strokeWidth={1.5}
-            />
-            {geometry.showsInitials && crewInitials[station.index] ? (
-              <text
-                x={station.cx}
-                y={station.cy + 4}
-                textAnchor="middle"
-                fontSize={10.5}
-                fontWeight={700}
-                fill="var(--foreground)"
-              >
-                {crewInitials[station.index]}
-              </text>
-            ) : null}
-          </g>
-        ))}
+        {geometry.crew.map((station) => {
+          // A station with no entry is a boat whose crew list is shorter than
+          // its wheelhouse — draw the circle the guide has always had rather
+          // than inventing a state for somebody who is not there.
+          const member = crew[station.index];
+          const state = member?.reading.state ?? "rostered";
+          const fill = CREW_FILL[state];
+          const stroke = CREW_LINE[state];
+          return (
+            <g key={station.index}>
+              <circle
+                className={`hull-crew hull-crew-${crewKebab(state)}`}
+                cx={station.cx}
+                cy={station.cy}
+                r={station.r}
+                fill={fill ?? line}
+                fillOpacity={fill === null ? 0.18 : 1}
+                stroke={stroke.stroke ?? line}
+                strokeWidth={stroke.width}
+                strokeDasharray={stroke.dashed ? "4 3" : undefined}
+              />
+              {/* The inner ring that separates the three above from a guide
+                  the page has nothing to say about. Stroked here only for
+                  `awaiting`, whose doubt is worth showing on screen too; the
+                  other two are drawn unstroked so `@media print` can reach
+                  them — a rule beats a presentation attribute, but it cannot
+                  style an element that is not in the document. */}
+              {CREW_INSET_STATES.has(state) ? (
+                <circle
+                  className={`hull-crew-inset hull-crew-inset-${crewKebab(state)}`}
+                  cx={station.cx}
+                  cy={station.cy}
+                  r={station.r - 4}
+                  fill="none"
+                  stroke={state === "awaiting" ? "var(--border-strong)" : "none"}
+                  strokeDasharray={state === "awaiting" ? "3 3" : undefined}
+                  strokeWidth={1}
+                />
+              ) : null}
+              {/* **The ring and the cross a missing guide wears**, drawn for
+                  the reason the seat's are: paper cannot tell `--danger` from
+                  `--warning`, so the loudest thing on the boat needs a mark
+                  that is a shape rather than a hue. Stroked only under print
+                  for the ring — a rule beats a presentation attribute, but it
+                  cannot style an element that is not in the document. */}
+              {state === "missing" ? (
+                <>
+                  <circle
+                    className="hull-crew-ring"
+                    cx={station.cx}
+                    cy={station.cy}
+                    r={station.r + 3}
+                    fill="none"
+                    stroke="none"
+                    strokeWidth={1}
+                  />
+                  <path
+                    className="hull-crew-cross"
+                    d={`M${station.cx - 5} ${station.cy - 5}L${station.cx + 5} ${station.cy + 5}M${station.cx + 5} ${station.cy - 5}L${station.cx - 5} ${station.cy + 5}`}
+                    fill="none"
+                    stroke="var(--danger)"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                  />
+                </>
+              ) : null}
+              {geometry.showsInitials && member?.initials && state !== "missing" ? (
+                <text
+                  className={`hull-crew-ink-${crewKebab(state)}`}
+                  x={station.cx}
+                  y={station.cy + 4}
+                  textAnchor="middle"
+                  fontSize={10.5}
+                  fontWeight={700}
+                  fill={CREW_INK[state]}
+                >
+                  {member.initials}
+                </text>
+              ) : null}
+            </g>
+          );
+        })}
 
         {/* The helm, which is what makes the shape read as a boat rather than a tray. */}
         <circle

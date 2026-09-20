@@ -284,6 +284,7 @@
       "today-band-dawn",
       "today-band-dusk",
       "today-band-night",
+      "today-diver-sheet",
       "today-empty",
       "today-evening",
       "today-evening-closed",
@@ -512,6 +513,7 @@
     "visual": [
       "schedule-builder",
       "schedule-builder-add",
+      "schedule-builder-asked",
       "schedule-builder-add-full",
       "schedule-builder-add-tide",
       "schedule-builder-empty",
@@ -748,7 +750,7 @@
       "prep-assignments",
       "prep-by-diver",
       "prep-dropped-rental",
-      "prep-load-out-handed-over",
+      "departure-load-out-handed-over",
       "prep-no-nitrox"
     ]
   },

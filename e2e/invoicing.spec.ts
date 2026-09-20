@@ -98,6 +98,37 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { level: 1, name: "New order" })).toBeVisible();
   });
 
+  /**
+   * **The positive half of the pair** (`.claude/rules/e2e.md`). Every other
+   * assertion about this link in the suite is an absence, and an absence
+   * naming a string nothing renders passes for the wrong reason — which is
+   * precisely what happened: `e2e/orders-demo.spec.ts` spent this whole time
+   * asserting no link named "+ New invoice", a label the app has never had
+   * (#1920). One positive query of the same string is the only thing that
+   * proves the name still matches anything.
+   *
+   * The href is asserted too, because the record's door is the one that
+   * arrives with the diver already in hand.
+   */
+  test("an owner's diver record offers the invoice door, with that diver in hand", async ({
+    page,
+    request,
+  }) => {
+    await request.post("/api/test/seed-stripe-account");
+
+    await page.goto("/shop/blue-mantis/divers");
+    await page.getByRole("searchbox", { name: "Search divers" }).fill("Grace Halloran");
+    await page.getByRole("link", { name: "Grace Halloran", exact: true }).click();
+    await page.getByRole("heading", { level: 1, name: "Grace Halloran" }).waitFor();
+    const personId = new URL(page.url()).pathname.split("/").pop() ?? "";
+    expect(personId).not.toBe("");
+
+    await expect(page.getByRole("link", { name: "New invoice" })).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/orders/new?personId=${personId}`,
+    );
+  });
+
   test("an invoice with no priced line, or an out-of-bounds one, is refused before Stripe", async ({
     page,
     request,
@@ -157,5 +188,37 @@ test.describe("as captain", () => {
     // FlashParams strips the query, so assert the banner, not the URL param.
     await expect(page.getByText(/limited to owners and managers/).first()).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: "New order" })).toHaveCount(0);
+  });
+
+  /**
+   * **And the record does not offer the door it knows is closed** (issue #1920).
+   *
+   * The refusal above is the boundary and it stays. This is the other half of
+   * ADR 20260724-role-authorization: the UI hides a control the permission
+   * denies, so nobody is shown a button they will be bounced from. Before this,
+   * a captain reading a diver saw "New invoice" at the foot of their story and
+   * paid for the click with the person they were reading.
+   *
+   * `seed-stripe-account` first, deliberately. With payments unconnected the
+   * link is absent for *everyone*, and the assertion would pass for a reason
+   * that has nothing to do with the role — which is exactly how the same
+   * assertion in e2e/orders-demo.spec.ts sat green while naming a label that
+   * does not exist.
+   */
+  test("a captain's diver record offers no invoice door, at a shop that can take money", async ({
+    page,
+    request,
+  }) => {
+    await request.post("/api/test/seed-stripe-account");
+
+    await page.goto("/shop/blue-mantis/divers");
+    await page.getByRole("searchbox", { name: "Search divers" }).fill("Grace Halloran");
+    await page.getByRole("link", { name: "Grace Halloran", exact: true }).click();
+    await page.getByRole("heading", { level: 1, name: "Grace Halloran" }).waitFor();
+
+    // The story itself is there — a captain reads the whole record and is
+    // refused the one act, so an empty page would prove nothing.
+    await expect(page.getByRole("heading", { name: "The story" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "New invoice" })).toHaveCount(0);
   });
 });

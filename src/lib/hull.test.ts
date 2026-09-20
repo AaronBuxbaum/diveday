@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hullGeometry, seatReadingFor, VIEW_HEIGHT } from "./hull";
+import { crewReadingFor, hullGeometry, seatReadingFor, VIEW_HEIGHT } from "./hull";
 
 /**
  * **The two hulls the canvas drew**, copied out of
@@ -237,5 +237,76 @@ describe("what a seat is wearing", () => {
     // At the dock, readiness *is* the question, and still answers it.
     expect(seatReadingFor({ booking: booked, at: dock, recorded: null }).state).toBe("booked");
     expect(seatReadingFor({ booking: blocked, at: dock, recorded: null }).state).toBe("blocked");
+  });
+});
+
+/**
+ * **A crew member has a state now** — ADR 20260919-one-idea §3b.6.
+ *
+ * The item this closes was written as an asymmetry: a diver had eight states
+ * and a guide had one, so the better the diver half got the more confidently
+ * the whole picture read "all good" over a divemaster who went back down for a
+ * weight belt. What is asserted here is the shape of the fix rather than the
+ * fix's pixels — that the five a head count can produce are a diver's own
+ * words, that the three a guide cannot wear are absent, and that the sixth
+ * exists precisely so a surface with no head count does not raise an alarm.
+ */
+describe("crewReadingFor", () => {
+  const dock = "departure" as const;
+  const afterOne = "after_dive_1" as const;
+
+  it("is rostered, not awaiting, where the surface has no head count", () => {
+    // **The whole reason `rostered` exists.** The departure page has no roll
+    // call in it and passes no `at`; painting every guide amber there would be
+    // an alarm earned by the absence of a surface, which is the thing ADR
+    // 20260827 decision 4 forbids and `ashoreImplied` was split out over.
+    const crew = crewReadingFor({});
+    expect(crew.state).toBe("rostered");
+    expect(crew.checkpoint).toBeNull();
+  });
+
+  it("is awaiting once there is a head count and nobody has spoken", () => {
+    // Same two inputs, opposite answers, and the checkpoint is the difference.
+    const crew = crewReadingFor({ at: dock, recorded: null });
+    expect(crew.state).toBe("awaiting");
+    expect(crew.checkpoint).toBe("departure");
+  });
+
+  it("gives a guide the same five words a diver's record gives a seat", () => {
+    // The derivation under both is literally one function — crew and divers
+    // share `rollCallRowState`/`rollCallRecordedTone` — so a guide counted
+    // back aboard is `aboard` in the sense a diver is, or the two halves of
+    // one boat are speaking different languages.
+    expect(crewReadingFor({ at: afterOne, recorded: "boarded" }).state).toBe("aboard");
+    expect(crewReadingFor({ at: dock, recorded: "notBoarded" }).state).toBe("ashore");
+    expect(crewReadingFor({ at: dock, recorded: "notBoardedImplied" }).state).toBe("ashoreImplied");
+    expect(crewReadingFor({ at: afterOne, recorded: "notBackAboard" }).state).toBe("missing");
+  });
+
+  it("keeps the head count a recorded mark was drawn at", () => {
+    // Green at the dock means "got on the boat"; green after a dive means
+    // "came back". A fill cannot say which, so the reading carries it out.
+    const aboardAtDock = crewReadingFor({ at: dock, recorded: "boarded" });
+    const aboardAfterOne = crewReadingFor({ at: afterOne, recorded: "boarded" });
+    expect(aboardAtDock.state).toBe(aboardAfterOne.state);
+    expect(aboardAtDock.checkpoint).toBe("departure");
+    expect(aboardAfterOne.checkpoint).toBe("after_dive_1");
+  });
+
+  it("never says a guide is open, booked or blocked", () => {
+    // The three a crew member cannot wear are all readiness, and readiness
+    // gates boarding *against a booking* — a guide holds neither. The rows say
+    // the same thing: crew never fall back to the blocked tone.
+    const everyPlace = [
+      crewReadingFor({}),
+      crewReadingFor({ at: dock, recorded: null }),
+      crewReadingFor({ at: afterOne, recorded: null }),
+      ...(["boarded", "notBoarded", "notBoardedImplied", "notBackAboard"] as const).map((tone) =>
+        crewReadingFor({ at: dock, recorded: tone }),
+      ),
+    ];
+    for (const reading of everyPlace) {
+      expect(["open", "booked", "blocked"]).not.toContain(reading.state);
+    }
   });
 });

@@ -1,6 +1,6 @@
 # One idea — the app is the day, the boat, or the sea
 
-- **Status:** Live (its ADR is Proposed, pending H-88; drawn 2026-09-19 on the owner's read of the 2026-09-18 canvas's round 2; nothing has shipped from it)
+- **Status:** Live (its ADR is Accepted — **H-88: I · Tide**, decided 2026-09-19; drawn that day on the owner's read of the 2026-09-18 canvas's round 2. Six slices have shipped — 23i, 23b, 23c, 23d, 23e, 23f — so read the table below before treating any row as an instruction)
 - **Date:** 2026-09-19
 - **ADR:** [20260919-one-idea](../../../architecture/decisions/20260919-one-idea.md)
 - **Published:** https://claude.ai/artifact/8oUihSuV75uRbj8DrJ9EpU (round 3 first, with rounds 2 and 1 below it for the record; the superseded canvas's own page stays at its URL)
@@ -101,12 +101,116 @@ rule, and this table moves.
 | 23i — the day itself: `sky-scheme.ts`, `day-strip.ts`, `SkyBand`, `DayStrip` — geometry and gradients, prose-free, gating nothing | shipped | `src/lib/day-strip.ts` | `src/lib/day-strip.test.ts`, `src/lib/sky-scheme.test.ts`, `src/components/day/*.test.tsx` |
 | 23a — the picked idea's home: `/shop/[shopSlug]` becomes the day (I), the stack (II) or the chart (III), on round 2's surface; the Today spine's actions become the idea's own things (hours, seats, tracks) | in progress | `src/app/shop/[shopSlug]/_components/day/DayHeader.tsx` — the day's top; the spine's actions move with 23c | `e2e/day-spine.spec.ts` "the day stands at the top of its own page" |
 | 23b — the shell: the nav of nouns leaves — no tabs, no More, no dock; a date, a search and the shop's name (I), the shop's card (II), the dock (III); `staff-destinations.ts` regrouped into the idea's places; ⌘K stays as the search | shipped | `src/lib/staff-destinations.ts` | `src/lib/staff-destinations.test.ts`, `src/components/ShopPlaceNav.test.tsx`, `e2e/staff-nav.spec.ts` |
-| 23c — the departure: the hour page with the strip (I), the hull with its seats (II), the voyage on the chart (III); the four trip tabs one page; the roll call's one tap untouched beneath | in progress | `src/app/shop/[shopSlug]/trips/[id]/_components/VoyageHeader.tsx` — the hour over its own sky with the voyage drawn, above `_components/TripHull.tsx`'s boat and its roster; **the four tabs are what is left**, and they wait on ADR 20260919-one-idea §3b, which is the list standing between a hull and a manifest | `src/lib/hull.test.ts` (the canvas's own outlines, verbatim), `src/app/shop/[shopSlug]/trips/[id]/_components/TripHull.test.tsx`, `e2e/trip-hull.spec.ts` |
+| 23c — the departure: the hour page with the strip (I), the hull with its seats (II), the voyage on the chart (III); the four trip tabs one page; the roll call's one tap untouched beneath | shipped | `src/app/shop/[shopSlug]/trips/[id]/page.tsx` | `src/lib/hull.test.ts` (the canvas's own outlines, verbatim), `src/app/shop/[shopSlug]/trips/[id]/_components/TripHull.test.tsx`, `e2e/trip-hull.spec.ts`, `e2e/boat-loop.spec.ts` "the departure reaches its manifest, and carries its packing list" |
 | 23d — the storefront's front page on the idea, in Harbor's face and the shop's colour: the day and the week (I), the boat you are about to book (II), where we go (III) | shipped | `src/app/s/[shopSlug]/_components/ShopfrontHero.tsx` | `src/app/s/[shopSlug]/_components/ShopfrontHero.test.tsx`, the `storefront-sky` capture in `e2e/visual.spec.ts` |
-| 23e — the diver, the counter and the walk-in reached through the idea: search and a sheet over the home; the person's record unchanged inside it | open | — | — |
-| 23f — the week, the requests and the season on the idea: the Board becomes the week; a request is a ghost day (I), a boat to put out (II), a track to add (III) | open | — | — |
+| 23e — the diver, the counter and the walk-in reached through the idea: search and a sheet over the home; the person's record unchanged inside it | shipped | `src/components/DiverSheet.tsx` | `e2e/staff-nav.spec.ts` "a diver the search finds is laid over the day, not opened instead of it" and "a diver id that names nobody leaves the day with nobody over it", `e2e/search.spec.ts`, the `today-diver-sheet` capture, `src/db/divers.test.ts` "does not open another shop's live diver" |
+| 23f — the week, the requests and the season on the idea: the Board becomes the week; a request is a ghost day (I), a boat to put out (II), a track to add (III) | shipped | `src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx` | `src/lib/week-seats.test.ts`, `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.test.tsx`'s "ScheduleBuilder week board" — "says a day with no departures has none, and still offers to fill it" and "draws the days somebody asked for, and the act that answers one" — and the `schedule-builder-asked` capture in `e2e/visual.spec.ts` |
 | 23g — the rest, one family per session: courses, gear, money, reviews, staffing, and Settings behind the shop's name | open | — | — |
 | 23h — night and glare on the idea: by the hour (I) or by the device (II, III); glare as the crew's word in the roll call's bar; the black-on-white twin held by a test | open | — | — |
+
+### 23e: two of its three were already done (closed 2026-09-20)
+
+The row names three things reached through the idea — the diver, the counter and the walk-in — and
+only the first was work. The counter (`/check-in`) and the walk-in (`/check-in/walk-in/[tripId]`)
+are both `place: "day"` rows in `src/lib/staff-destinations.ts`, which is what slice 23b's regroup
+into places-in-time already meant by "on the day": they are filed under the hour they happen at and
+reached from the search, like every other destination that is a place.
+
+The diver is the exception the ADR's own decision I names: *"a diver with no booking has no hour;
+the search finds them, and their record opens as a sheet over the day."* A person cannot be filed
+under a time, so the only two honest answers were to spend the day navigating to them or to lay
+them over it. That is the whole slice.
+
+What it cost beyond the sheet: `DiverStatusLedger` needed a `recordPath`, because its fix links are
+bare `#fragment`s that mean nothing anywhere but the record; `?diver=` needed adding to
+`CAPABILITY_QUERY_PARAMS`, because the day fires a server-side `trackEvent` on every render; and the
+sheet needed its own `<Suspense>`, because three more reads inside the day's one boundary blanked
+the spine this slice exists to keep on screen.
+
+### 23c: what the row meant, and what it cost (closed 2026-09-20)
+
+The row above says "the four trip tabs one page", which was written against a
+four-tab world and reads as more work than is left. Verified against the code:
+
+- **There are three tabs, not four.** `TripSubNav` renders Trip · Manifest ·
+  Prep. The fourth, Guests, collapsed in slice 5e (ADR
+  20260827-the-departure-is-two-working-surfaces) — its roster *is* Trip's
+  body. `/guests` survives as a compatibility route whose three db reads are a
+  strict subset of Trip's, with identical arguments.
+- **"The Conditions tab" is already deleted.** Conditions is a row inside
+  About's disclosure with a collapsed summary, not a tab. It holds the
+  automated outlook *and* the editor a shop writes conditions in, so it is a
+  working surface and stays where it is.
+- **"What is due before lines off, then who is aboard" is already built.** It
+  is the roster ledger's two groups — "Still to clear", each blocked diver
+  with their blocker's sentence, the fix link and a note, then "Ready". Two
+  groups in one ledger rather than two headed lists: the artboard's frame, not
+  its information. A second section drawn from `collapseDiverActions` was
+  built, looked at, and reverted — it said the same thing about one diver a
+  third time, and was the poorest of the three tellings.
+- **The manifest cannot join the page**, and this is structural rather than a
+  preference: `print/_components/TripPacket.tsx` imports `manifest/page` and
+  `prep/page` **as components** and renders them for the paper day, so
+  deleting either route deletes the printed packet. `?checkpoint=` is a URL
+  contract with seven external deep-links, `isLiveManifestPath` hides the
+  phone dock on that exact segment, a service worker and an encrypted offline
+  store hang off it, and it carries fifteen db reads nothing else shares. The
+  artboard keeps it too — "reached through the departure's hour".
+
+**So what was left was one slice: the tab strip goes and Prep folds in.** They
+went together — deleting the strip without folding Prep would have left Prep
+reachable only by URL. What shipped:
+
+- **The packing list reads under the roster it is derived from.** `PrepBody`
+  is one component with two callers: the departure page, which renders it
+  inside its own `<Suspense>` because `getTripPrep` is six gear queries and
+  nobody above it should wait on the counter, and `/prep`, which the paper day
+  composes as a component and which therefore could not be deleted. `?group=`
+  moved onto the departure page with it, so the by-item / by-diver switch is
+  the same control on both.
+- **The manifest is one chip in the sky band**, not a tab and not on the hull —
+  a shore dive has a roll call and no boat. Its own eyebrow, and Prep's and
+  Guests', now name the departure rather than the board: with no strip moving
+  you sideways, the page above these three is the departure they are readings
+  of.
+- **The gear forms land on the departure.** `assignGearUnitAction` and its
+  three siblings redirected to `/prep`; a staffer who hands over a set from the
+  departure page would have been dropped on a page with no roster and no way
+  back to the one they were working.
+- `layout.tsx`'s `instant = false` — the last one in the app — is untouched.
+  Nothing moved under it: the departure page kept its own boundary and gained
+  one more inside it.
+
+**What the dive-domain review then made it fix** (20260920), because folding a
+surface in moves more than the pixels:
+
+- **The manifest chip is not gated on `cancelled`.** It was, beside Add diver —
+  and with the strip gone it is the departure's only door to the roll call,
+  while `pulseNeeded` is false on a cancellation too. A blow-out cancels the
+  *trip* and leaves every booking active, so the call that comes at 06:40 with
+  six people already tapped aboard is when a crew needs the roll call most. The
+  hull is not the precedent: a hull is a picture of a plan, a roll call is a
+  record of people.
+- **A cancelled departure packs nothing, and says so.** The tank tiles, the
+  nitrox panel, the missing-size and staff-fit panels, the support panel and
+  both kit tables all still computed on a blown-out boat, and every one is an
+  instruction about a check-in that is not happening. What survives is the half
+  a cancellation creates work in — units reserved, sets already out, and the
+  two controls that undo them — minus the pickers, because a new reservation
+  would hold an exclusion window against the boat that *is* sailing.
+- **A bad moment at the gear counter costs the gear counter.** `<Suspense>` is
+  not an error boundary, so a throw from any of `getTripPrep`'s six queries
+  took the roster, the blockers and the manifest chip with it.
+- **The tank total kept its derivation.** "N divers · N diving crew · N dives ·
+  one tank per diver per dive" lived in `/prep`'s page header, which the
+  departure page does not have — so a captain read a total over a roster half
+  its size with nothing saying the number is per *dive* and includes the diving
+  crew's own tanks. It is drawn inside `PrepBody` now, where both callers get it.
+- **Four inbound links followed the list**: the departure's own prep-gaps pulse
+  fact, the day's `dive_prep` and `nitrox_gate` rows, and the rental slip's way
+  back. `PREP_SECTION_ID` lives in `src/lib/element-id.ts` because `src/db`
+  names it too.
+
 
 ## Working on it
 

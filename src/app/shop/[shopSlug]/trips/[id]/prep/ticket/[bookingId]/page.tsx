@@ -11,6 +11,7 @@ import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
+import { PREP_SECTION_ID } from "@/lib/element-id";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
@@ -78,20 +79,25 @@ export default async function RentalTicketPage({
     (latest, assignment) => (assignment.reservedUntil > latest ? assignment.reservedUntil : latest),
     assignments[0]?.reservedUntil ?? "",
   );
-  const backTo = `${shopPath(shopSlug, "trips", tripId, "prep")}#assignments-heading`;
+  // **Back to where the counter tapped in**, which is the departure now: the
+  // assignments section that carries the Rental ticket link renders there, and
+  // a slip printed for eight divers used to put the staffer out on `/prep`
+  // eight times (dive-domain review 20260920).
+  const backTo = `${shopPath(shopSlug, "trips", tripId)}#${PREP_SECTION_ID}`;
 
   return (
     <div id="rental-ticket">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
         <div>
-          {/* On screen the eyebrow is the way back to the departure's prep
-              page, in the word its own tab uses — this page carried the only
-              link up as a ghost button beside Print, at the same weight as the
-              act the page exists for (principle 10, issue #823). On paper it
+          {/* On screen the eyebrow is the way back to the departure, landing
+              on the packing list the counter tapped in from — this page
+              carried the only link up as a ghost button beside Print, at the
+              same weight as the act the page exists for (principle 10, issue
+              #823). On paper it
               is the slip's own name instead: the sheet a diver walks off with
               has to say what it is, and it has no navigation. */}
           <EyebrowBackLink href={backTo} className="print:hidden">
-            {t("trips.subNav.prep")}
+            {t("trips.surfaces.trip")}
           </EyebrowBackLink>
           <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("gear.ticket.eyebrow")}</p>
           <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{diver.fullName}</h1>

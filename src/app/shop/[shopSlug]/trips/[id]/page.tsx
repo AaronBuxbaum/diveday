@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import type { DayStripProps } from "@/components/day/DayStrip";
 import { FlashParams } from "@/components/FlashParams";
@@ -24,7 +25,9 @@ import { DSD_RATIO } from "@/lib/course-ratios";
 import { dayStripGeometry, dayStripTicks, dayStripWindow } from "@/lib/day-strip";
 import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { depthInUnit } from "@/lib/depth-units";
+import { isPrepGrouping } from "@/lib/dive-prep";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
+import { PREP_SECTION_ID } from "@/lib/element-id";
 import {
   formatHourShort,
   formatMoneyCents,
@@ -62,9 +65,9 @@ import {
 } from "./_components/SeriesSection";
 import { TripAboutSection } from "./_components/TripAboutSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
-import { TripAddDiverLink, TripCapacityBadge } from "./_components/TripPageHeader";
+import { TripAddDiverLink, TripCapacityBadge, TripSurfaceLink } from "./_components/TripPageHeader";
+import { TripPrepSection } from "./_components/TripPrepSection";
 import { TripRosterContent } from "./_components/TripRosterContent";
-import { TripSurfaceNav } from "./_components/TripSurfaceNav";
 import { VoyageHeader } from "./_components/VoyageHeader";
 import {
   addInternalNoteAction,
@@ -96,6 +99,7 @@ import {
   updateSeriesCadenceAction,
   updateTripCrewAction,
 } from "./actions";
+import { PrepBodySkeleton } from "./prep/_components/PrepBodySkeleton";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -149,6 +153,8 @@ export default async function ManageTripPage({
     confirmName?: string;
     confirmEmail?: string;
     confirmPhone?: string;
+    /** The packing list's grouping; anything unrecognised reads as by-item. */
+    group?: string;
   }>;
 }) {
   const [
@@ -165,6 +171,7 @@ export default async function ManageTripPage({
       confirmName,
       confirmEmail,
       confirmPhone,
+      group,
     },
   ] = await Promise.all([params, searchParams]);
   // An unparseable id names no row. Guarded here rather than in the query
@@ -324,7 +331,12 @@ export default async function ManageTripPage({
           ? [
               {
                 text: t("trips.pulse.prepGaps", { count: pulse.prepGaps }),
-                href: shopPath(shopSlug, "trips", tripId, "prep"),
+                // An anchor, like every other fact on this strip. It pointed
+                // at `/prep` back when that was a tab; now the list is further
+                // down this very page, and navigating off it to a second copy
+                // of what the reader is already looking at is a round trip to
+                // nowhere (dive-domain review 20260920).
+                href: `#${PREP_SECTION_ID}`,
               },
             ]
           : []),
@@ -751,17 +763,46 @@ export default async function ManageTripPage({
           ) : undefined
         }
         action={
-          cancelled ? undefined : (
-            <TripAddDiverLink
+          <>
+            {/* **The departure's one way to the roll call, on every departure
+                there is.** The tab strip is gone (ADR 20260919-one-idea, slice
+                23c) and the manifest is the one surface that could not fold in
+                with Prep — it is a `?checkpoint=` URL contract with external
+                deep-links, a service worker and an encrypted offline store
+                hanging off it. So it stands here, in the band, where a crew on
+                a dock reaches it in one tap rather than by scrolling to find
+                it.
+
+                **Not gated on `cancelled`**, unlike the hull below it and the
+                Add diver beside it. Those two are predictions — a boat that is
+                not going and a seat nobody should sell — and a roll call is
+                evidence. A blow-out cancels the *trip* and leaves every
+                booking active (the glossary's *Blow-out*), so the call that
+                comes at 06:40 with six people already tapped aboard is exactly
+                when a crew needs the roll call most, to put them back ashore
+                and close the count. `pulseNeeded` is false on a cancellation
+                too, so gating this left the page with no door to any other
+                surface at all (dive-domain review 20260920).
+
+                And not on the hull: a shore dive has a roll call and no
+                boat. */}
+            <TripSurfaceLink
               onSky
-              href="#add-diver"
-              label={t("trips.addDiver.addDiver")}
-              compactLabel={t("trips.about.add")}
-              ariaLabel={t("trips.about.addDiverJump")}
+              icon="checkIn"
+              href={shopPath(shopSlug, "trips", tripId, "manifest")}
+              label={t("trips.surfaces.manifest")}
             />
-          )
+            {cancelled ? null : (
+              <TripAddDiverLink
+                onSky
+                href="#add-diver"
+                label={t("trips.addDiver.addDiver")}
+                compactLabel={t("trips.about.add")}
+                ariaLabel={t("trips.about.addDiverJump")}
+              />
+            )}
+          </>
         }
-        subNav={<TripSurfaceNav shopSlug={shopSlug} tripId={tripId} locale={locale} />}
       />
 
       <TripNoticeBanner notice={rootPageNotice} locale={locale} />
@@ -1149,6 +1190,37 @@ export default async function ManageTripPage({
         mayWriteOffPayment={mayWriteOffPayment}
         compact
         actions={rosterActions}
+        // **Who is aboard, then what to pull for them.** The packing list is
+        // derived from the roster directly above it, so it reads as that
+        // list's consequence rather than a fourth tab (ADR 20260919-one-idea,
+        // slice 23c). It waits behind its own boundary because its six gear
+        // reads are nobody else's to wait on.
+        afterRoster={
+          // **The anchor is outside the boundary, not inside it.** Five links
+          // land on `#packing-list` — the day's two prep rows, this page's own
+          // pulse fact, the rental slip's way back and the returning-diver
+          // demo story.
+          //
+          // Measured both ways on a cold navigation straight to the hash, and
+          // they scroll identically: Next resolves a hash target that arrives
+          // with the stream. So this is not a fix for a broken jump. It is
+          // there so the *skeleton* holds the anchor's position while the six
+          // gear queries run — the id on a wrapper that always renders means
+          // the scroll lands once, rather than landing late and moving when
+          // the section replaces a fallback that was not the target.
+          <div id={PREP_SECTION_ID} className="mt-10 scroll-mt-6">
+            <Suspense fallback={<PrepBodySkeleton />}>
+              <TripPrepSection
+                shop={shop}
+                tripId={tripId}
+                cancelled={cancelled}
+                locale={locale}
+                notice={notice}
+                grouping={isPrepGrouping(group) ? group : "item"}
+              />
+            </Suspense>
+          </div>
+        }
       />
     </>
   );

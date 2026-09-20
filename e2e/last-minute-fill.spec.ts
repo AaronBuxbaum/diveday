@@ -1,5 +1,11 @@
 import { expect, test } from "./fixtures";
-import { HELD_SEND_TIMEOUT_MS, openDiverFileGroup, seededTripId, signInAsOwner } from "./helpers";
+import {
+  HELD_SEND_TIMEOUT_MS,
+  openDiverFileGroup,
+  rosterRow,
+  seededTripId,
+  signInAsOwner,
+} from "./helpers";
 
 /**
  * Fill-the-boat: a diver opts into the shop-wide last-minute list, staff see
@@ -261,9 +267,7 @@ test("an uncertified joiner is excluded from the last-minute send list", async (
   await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
   await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
 
-  await expect(
-    page.locator("li").filter({ hasText: "Nell Byrne" }).filter({ visible: true }),
-  ).toHaveCount(0);
+  await expect(rosterRow(page, "Nell Byrne").filter({ visible: true })).toHaveCount(0);
   await expect(page.getByText(/below this departure’s requirement/)).toHaveCount(0);
 
   // Other eligible recipients can still receive the deal.

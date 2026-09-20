@@ -516,6 +516,30 @@ describe("person-first diver records", () => {
         (await listDiverSummaries(db, otherShop.id, { filter: "removed", limit: 1000 })).divers,
       ).toEqual([]);
     });
+
+    /**
+     * The live case, which the removed one above does not cover and which one
+     * surface now rests its whole tenant story on: the diver sheet laid over a
+     * shop's day (ADR 20260919-one-idea, slice 23e) renders exactly when this
+     * returns a row, and its `shopId` is the session's. So "another shop's id
+     * with this shop's person" is the one call that decides whether a copied
+     * `?diver=` reads somebody else's roster.
+     */
+    it("does not open another shop's live diver", async () => {
+      const { db, shop } = ctx;
+      const [otherShop] = await db
+        .insert(shops)
+        .values({ name: "Other Shop", slug: "other-shop-live-diver-test", timezone: "UTC" })
+        .returning();
+      if (!otherShop) throw new Error("second shop insert failed");
+      const summaries = (await listDiverSummaries(db, shop.id, { limit: 1000 })).divers;
+      const priya = summaries.find((row) => row.fullName === "Priya Sharma");
+      if (!priya) throw new Error("seed is missing Priya Sharma");
+      // She reads from her own shop, so a null below is the tenant clause and
+      // not an empty database.
+      expect(await getDiverProfile(db, shop.id, priya.id)).not.toBeNull();
+      expect(await getDiverProfile(db, otherShop.id, priya.id)).toBeNull();
+    });
   });
 
   it("frees a deleted diver's email for a genuinely new person, and refuses to restore into a collision (CR-008)", async () => {

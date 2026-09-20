@@ -154,6 +154,10 @@
     "patternAddAlso": "Añádela también"
   },
   "week": {
+    "asked": "Días pedidos",
+    "askedDays": "{days, plural, one {# día} other {# días}}",
+    "askedLead": "{date} · {people, plural, one {# persona} other {# personas}}",
+    "askedOthers": "{others, plural, one {# persona más} other {# personas más}}",
     "ariaLabel": "La semana",
     "previous": "Semana anterior",
     "next": "Semana siguiente",
@@ -161,6 +165,9 @@
     "today": "Hoy",
     "nothingThisWeek": "Nada esta semana. La próxima salida es el {date}.",
     "seats": "{booked} de {capacity}",
+    "seatTally": "{taken} de {total, plural, one {# plaza} other {# plazas}}",
+    "noBoats": "Sin barcos",
+    "runsDays": "{days, plural, one {# día} other {# días}}",
     "sailed": "Zarpó"
   },
   "addBooking": "Añadir una reserva"

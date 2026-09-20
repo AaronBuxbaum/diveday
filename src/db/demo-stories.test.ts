@@ -18,14 +18,16 @@ describe("demoStoryPath", () => {
     expect(await demoStoryPath(db, shop.id, shop.slug, "first-booking")).toBe(`/s/${shop.slug}`);
   });
 
-  it("opens the returning diver on a prep list that has somebody on it", async () => {
+  it("opens the returning diver on a packing list that has somebody on it", async () => {
     const { db, shop } = await seededShopContext();
     const path = await demoStoryPath(db, shop.id, shop.slug, "returning-diver");
-    expect(path).toMatch(new RegExp(`^/shop/${shop.slug}/trips/[0-9a-f-]+/prep$`));
+    // On the departure, where the list reads — not `/prep`, which survives for
+    // the paper day and which no staffer navigates to (slice 23c).
+    expect(path).toMatch(new RegExp(`^/shop/${shop.slug}/trips/[0-9a-f-]+#packing-list$`));
 
     // The departure it picked really does have divers aboard — an empty prep
     // list shows the shop knowing nothing about nobody, which is not the story.
-    const tripId = path.split("/")[4];
+    const tripId = path.split("/")[4]?.split("#")[0];
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find((t) => t.id === tripId);
     expect(trip?.booked ?? 0).toBeGreaterThan(0);
   });

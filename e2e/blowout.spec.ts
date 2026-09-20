@@ -97,6 +97,29 @@ test.describe("weather blow-out cascade", () => {
      * absence is the cancellation and not a name that stopped matching.
      */
     await expect(page.getByRole("img", { name: /drawn as its seats/ })).toHaveCount(0);
+
+    /**
+     * **But the roll call is still one tap away** (dive-domain review
+     * 20260920). The tab strip is gone (ADR 20260919-one-idea, slice 23c), so
+     * this chip is the departure's only door to the manifest — and the hull
+     * above it is *not* the precedent. A hull is a picture of a plan; a roll
+     * call is a record of people. The cancellation that bites is the one that
+     * lands after check-in has started, with six divers already tapped aboard
+     * and a crew that now needs to put them back ashore and close the count.
+     */
+    await expect(page.getByRole("link", { name: "Manifest" })).toBeVisible();
+
+    /**
+     * **And nothing is packed for a boat that is not going.** Every count on
+     * the packing list still computes — a blow-out leaves the bookings active
+     * — and every one of them is an instruction about a check-in that is not
+     * happening. Said rather than simply absent, because a list that vanishes
+     * without a word reads as "nothing to pull".
+     */
+    await expect(page.getByRole("heading", { name: "Tanks", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toHaveCount(0);
+    await expect(page.getByText("The departure is cancelled. Nothing to pack.")).toBeVisible();
+
     await page.getByRole("link", { name: "View the blow-out cascade" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
   });

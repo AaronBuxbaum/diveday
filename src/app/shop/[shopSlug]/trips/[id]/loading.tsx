@@ -1,10 +1,15 @@
 import { sectionCardClass } from "@/components/ui/card";
 
 /**
- * Body-shaped skeleton for the Trip surface (design principle 1). The route
- * owns the full masthead now, so the loading frame includes the three-surface
- * spine and the compact About/roster shapes that replace it. Navigation into
- * a departure should keep its geometry while the two data reads settle.
+ * Body-shaped skeleton for the departure (design principle 1). Navigation into
+ * one should keep its geometry while the reads settle: the masthead, the About
+ * row, and the roster.
+ *
+ * **No bar under the masthead.** That block stood for the three-surface tab
+ * strip, which is gone (ADR 20260919-one-idea, slice 23c) — the departure is
+ * one page. Nor a shape for the packing list under the roster: that has its
+ * own `<Suspense>` inside the page, so this frame is replaced before it
+ * arrives.
  */
 export default function TripSurfaceLoading() {
   return (
@@ -13,7 +18,6 @@ export default function TripSurfaceLoading() {
         <div className="h-4 w-24 rounded bg-surface-sunken" />
         <div className="mt-2 h-10 w-80 max-w-full rounded bg-surface-sunken" />
         <div className="mt-3 h-6 w-72 max-w-full rounded bg-surface-sunken" />
-        <div className="mt-6 h-11 w-full rounded-inset bg-surface-sunken" />
       </div>
 
       <div className={sectionCardClass({ padding: "none", className: "h-16" })} />

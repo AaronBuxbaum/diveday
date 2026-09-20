@@ -167,3 +167,29 @@ export function groupDateRequests<T>(
 
   return { groups, undated };
 }
+
+/**
+ * The schedule builder, opened on this day with these leads carried forward.
+ *
+ * The whole point of counting groups against a day: the builder opens on that
+ * date with the full form already disclosed (ADR 20260806-one-trip-create-form)
+ * and carries the requests forward as invitations, so "two groups could make
+ * the 4th" ends in a departure on the 4th rather than a note somewhere.
+ *
+ * Here rather than beside the Requests page's own row, because the week's
+ * "Asked for" section offers the same act (ADR 20260919-one-idea, slice 23f)
+ * and two surfaces building this URL by hand is how one of them comes to open
+ * the builder on the wrong day or drop the leads.
+ */
+export function addDepartureHref(
+  shopSlug: string,
+  date: CalendarDate,
+  requestIds: readonly string[],
+): string {
+  const params = new URLSearchParams({
+    add: "full",
+    date,
+    requests: requestIds.join(","),
+  });
+  return `/shop/${encodeURIComponent(shopSlug)}/schedule/board?${params.toString()}`;
+}

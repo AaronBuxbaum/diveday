@@ -9,6 +9,7 @@ import {
   openDiverFileGroup,
   openThreadStep,
   openTripAbout,
+  rosterRow,
   signInAsOwner,
   signOut,
 } from "./helpers";
@@ -151,9 +152,9 @@ test("an instructor certifies a diver from the course roster, and they can book 
   await page.getByLabel("Email").fill(diverEmail);
   await page.getByRole("button", { name: "Add to trip" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
-  await expect(page.getByRole("link", { name: diverName })).toBeVisible();
+  await expect(rosterRow(page, diverName).getByRole("link", { name: diverName })).toBeVisible();
 
-  const row = page.locator("li").filter({ hasText: diverName });
+  const row = rosterRow(page, diverName);
   await row.getByText("Certify", { exact: true }).click();
   await row.getByLabel("Level").selectOption({ label: "Open Water" });
   await row.getByRole("button", { name: "Confirm certification" }).click();

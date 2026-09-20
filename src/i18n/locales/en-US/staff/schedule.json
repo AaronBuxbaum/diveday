@@ -154,6 +154,10 @@
     "patternAddAlso": "Add it as well"
   },
   "week": {
+    "asked": "Asked for",
+    "askedDays": "{days, plural, one {# day} other {# days}}",
+    "askedLead": "{date} · {people, plural, one {# person} other {# people}}",
+    "askedOthers": "{others, plural, one {# other} other {# others}}",
     "ariaLabel": "The week",
     "previous": "Previous week",
     "next": "Next week",
@@ -161,6 +165,9 @@
     "today": "Today",
     "nothingThisWeek": "Nothing this week. The next departure is {date}.",
     "seats": "{booked} of {capacity}",
+    "seatTally": "{taken} of {total, plural, one {# seat} other {# seats}}",
+    "noBoats": "No boats",
+    "runsDays": "{days, plural, one {# day} other {# days}}",
     "sailed": "Sailed"
   },
   "addBooking": "Add a booking"

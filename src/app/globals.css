@@ -937,12 +937,109 @@ textarea {
     stroke: var(--border);
   }
 
-  /* A crew member is a person, and a person is never drawn fainter than an
+  /* **A crew member is a person**, and a person is never drawn fainter than an
      empty chair — which is what `--border` made them when this was first
-     printed and looked at. They carry no state yet; §3b.6 is that work. */
+     printed and looked at.
+
+     They carry a state now (ADR 20260919-one-idea §3b.6), and paper needs the
+     same treatment the seats got for the same reason: the print palette
+     collapses `--success` and `--warning` onto one near-black and never
+     redefines the tints, so `aboard` and `ashore` — the only two answers a
+     head count has — would come off a printer identical. Each of the six is a
+     distinct triple of fill, stroke weight and dash below. `rostered` keeps
+     the base rule, because a guide on a page with no head count in it is the
+     drawing a guide has always had. */
   .hull-crew {
     fill: none;
     stroke: var(--border-strong);
+    stroke-width: 1.5;
+    stroke-dasharray: none;
+  }
+
+  /* **Nothing said yet at a head count that happened** — which is not the
+     same claim as a roster entry, and printed identically to one until the
+     inner mark below. The outline stays quiet; the doubt is the dashed ring
+     inside it, exactly as it is for a seat. */
+  .hull-crew-awaiting {
+    stroke: var(--foreground);
+  }
+
+  .hull-crew-inset-awaiting {
+    fill: none;
+    stroke: var(--foreground);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+  }
+
+  /* A statement and an inference share an inside and differ on the line — the
+     seats' own pairing, drawn round (§3b.3).
+
+     **Lighter than the seat's 2.5, and that is geometry rather than taste.** A
+     seat is a rect whose inset sits well clear of two centred letters; a crew
+     circle is r=12, so a ring at r-4 lands exactly where the initials are, and
+     at the seat's weight it struck both of them through. Printed and looked
+     at, which is the only way that shows up. The mark still reads as solid
+     against `awaiting`'s dashes, which is the distinction it exists to make. */
+  .hull-crew-inset-ashore,
+  .hull-crew-inset-ashore-implied {
+    fill: none;
+    stroke: var(--foreground);
+    stroke-width: 1.25;
+    stroke-dasharray: none;
+  }
+
+  /* **The one filled circle in the wheelhouse.** Filled is "this person is on
+     the boat", and it is the widest gap paper has left once hue is gone — the
+     same spend the seats make on `aboard`. */
+  .hull-crew-aboard {
+    fill: var(--foreground);
+    stroke: var(--foreground);
+  }
+
+  /* Said ashore: empty, stated, solid. */
+  .hull-crew-ashore {
+    stroke: var(--foreground);
+  }
+
+  /* Nobody said so — the dock's silence carried forward — so the line is
+     dashed, and an inference never wears a statement's weight (§3b.3). */
+  .hull-crew-ashore-implied {
+    stroke: var(--foreground);
+    stroke-dasharray: 4 3;
+  }
+
+  /* **The heaviest mark on the boat, and empty.** `notBackAboard` means *not*
+     aboard, so it may not borrow the filled circle that means the opposite —
+     it earns its loudness from weight and from two shapes instead. */
+  .hull-crew-missing {
+    fill: none;
+    stroke: var(--foreground);
+    stroke-width: 3;
+  }
+
+  /* Stroked only here: a rule beats a presentation attribute, but it cannot
+     style an element that is not in the document, which is why the component
+     draws the ring at all. */
+  .hull-crew-ring {
+    fill: none;
+    stroke: var(--foreground);
+    stroke-width: 1;
+  }
+
+  .hull-crew-cross {
+    stroke: var(--foreground);
+  }
+
+  /* Letters on a filled circle go to the page, not to the ink. */
+  .hull-crew-ink-aboard {
+    fill: var(--surface);
+  }
+
+  .hull-crew-ink-rostered,
+  .hull-crew-ink-awaiting,
+  .hull-crew-ink-ashore,
+  .hull-crew-ink-ashore-implied {
+    fill: var(--foreground);
   }
 
   .hull-helm-dot {

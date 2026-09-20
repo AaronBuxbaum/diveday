@@ -265,40 +265,63 @@ export async function openTripFromBoard(page: Page, title: string) {
 }
 
 /**
- * Move between a trip record's surfaces (`TripSubNav` — Trip, Manifest,
- * Prep). The nav is labelled "Trip" and its links are plain
- * `<Link>`s, so the click resolves client-side: waiting on the tab's own path
- * segment here is what keeps a caller's first assertion from racing the
- * in-flight transition. The active tab renders as an inert `<span>`, so
- * calling this for the tab you are already on would hang — navigate, don't
- * re-select.
+ * Move between a departure's surfaces.
+ *
+ * **There is no tab strip any more** (ADR 20260919-one-idea, slice 23c). The
+ * packing list reads on the departure page itself, and the manifest is reached
+ * from one chip in the sky band. `/prep` survives as its own route because the
+ * paper day composes it, and it renders the same `PrepBody` — so a capture
+ * taken there still photographs the real thing, on a page that is only the
+ * list rather than the whole departure.
+ *
+ * So this navigates by URL rather than by clicking a strip that is gone. It is
+ * deliberately not a `getByRole("link")` on the band's Manifest chip: a helper
+ * every spec leans on should put the caller on a surface, and
+ * `boat-loop.spec.ts` is where the chip itself is the subject.
  */
 export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep") {
-  // Trip is the canonical root surface. A board link already lands there, so
-  // the helper treats an already-active Trip tab as a successful no-op;
-  // Manifest and Prep remain explicit navigations.
-  //
-  // **Answered from the URL, never from whether the link has rendered.** This
-  // asked `link.count() === 0` — and `count()` is the one locator call that
-  // does not retry, so on a page whose sub-nav had not painted yet it returned
-  // 0, took the no-op branch, and asserted the trip URL while standing on
-  // `/manifest`. That is exactly how it failed on CI on 2026-09-04, in the one
-  // spec that calls this *from* the manifest: an intermittent failure in a
-  // suite that runs `retries: 0` so a flake gets root-caused rather than
-  // re-run. The URL is the authoritative answer to "am I already on the Trip
-  // surface", it is available synchronously, and it cannot race.
-  if (tab === "Trip" && TRIP_ROOT_URL.test(page.url())) return;
-  const link = page.getByRole("navigation", { name: "Trip" }).getByRole("link", { name: tab });
-  // `click()` auto-waits for the link, so the tab arriving late is handled
-  // rather than guessed at.
-  await link.click();
+  // **Wait for the departure before reading the address bar.** A click that
+  // opens one resolves when its request leaves, not when the URL commits, so
+  // `page.url()` here can still be the board the caller clicked from — which is
+  // `check:e2e-hygiene`'s `action-race` wearing a helper. The tab strip bought
+  // this for free: its link could not be clicked before the page holding it had
+  // rendered. Navigating by URL has to ask for it.
+  await page.waitForURL(TRIP_SURFACE_URL).catch(() => {
+    throw new Error(`openTripTab called from ${page.url()}, which is not a departure`);
+  });
+  const url = new URL(page.url());
+  const root = url.pathname.match(/^(.*\/trips\/[^/?#]+)/)?.[1];
+  if (!root) throw new Error(`openTripTab called from ${url.pathname}, which is not a departure`);
+  const target = tab === "Trip" ? root : `${root}/${tab.toLowerCase()}`;
+  if (url.pathname === target) return;
+  await page.goto(target);
   await page.waitForURL(
     tab === "Trip" ? TRIP_ROOT_URL : new RegExp(`/${tab.toLowerCase()}(\\?|#|$)`),
   );
 }
 
-/** The trip record's own surface: `/trips/<id>` with no tab segment after it. */
+/**
+ * **A diver's row in a departure's roster ledger**, scoped to the ledger rather
+ * than to the page.
+ *
+ * `page.locator("li").filter({ hasText: name })` was unambiguous while the
+ * departure page held only the roster. Slice 23c folded the packing list in
+ * under it (ADR 20260919-one-idea), and a diver with no fit on file is now
+ * named in "Sizes still missing" as well as in their own seat — two `<li>`s
+ * holding one name, which is a strict-mode violation rather than a flake, and
+ * which took three specs red on CI at once.
+ *
+ * The ledger's own region is the honest scope: `RosterSection` labels it with
+ * `trips.roster.heading` on any page that owns its masthead, which the
+ * departure does. English, like every other locator in this suite.
+ */
+export function rosterRow(page: Page, diverName: string): Locator {
+  return page.getByRole("region", { name: "Guests" }).locator("li").filter({ hasText: diverName });
+}
+
 const TRIP_ROOT_URL = /\/trips\/[^/?#]+(?:[?#]|$)/;
+/** Any of a departure's surfaces — the root itself, or one of its sub-pages. */
+const TRIP_SURFACE_URL = /\/trips\/[^/?#]+/;
 
 /** Open the Trip surface's compact About disclosure before using its details. */
 export async function openTripAbout(page: Page): Promise<Locator> {
@@ -605,6 +628,26 @@ export async function seededTripId(page: Page, shopSlug: string, title: string):
   const tripId = href.match(/\/trips\/([0-9a-f-]+)/i)?.[1];
   if (!tripId) throw new Error(`could not read a trip id from "${href}" for ${title}`);
   return tripId;
+}
+
+/**
+ * A seeded diver's person id, found the way staff reach them — through the
+ * roster's own search rather than a fixture constant, so a re-seed that gives
+ * them a new id changes nothing here.
+ */
+export async function seededDiverId(
+  page: Page,
+  shopSlug: string,
+  fullName: string,
+): Promise<string> {
+  await page.goto(`/shop/${shopSlug}/divers?q=${encodeURIComponent(fullName)}`);
+  const href = await page
+    .getByRole("link", { name: fullName, exact: true })
+    .first()
+    .getAttribute("href");
+  const personId = href?.match(/\/divers\/([0-9a-f-]+)/i)?.[1];
+  if (!personId) throw new Error(`could not read a person id for ${fullName}`);
+  return personId;
 }
 
 /**

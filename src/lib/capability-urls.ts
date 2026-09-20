@@ -144,6 +144,19 @@ const CAPABILITY_QUERY_PARAMS = [
    * already uses.
    */
   "preview",
+  /**
+   * The diver a staffer's search found, laid over the day as `?diver=<uuid>`
+   * (ADR 20260919-one-idea, decision I · Tide, slice 23e). Not a credential at
+   * all — the day page re-reads the session's own shop row and returns nothing
+   * for an id belonging to anyone else — and redacted for the same reason
+   * `?gate=` is: what the value *says*. It is a stable per-diver identifier,
+   * and the shop home fires a server-side `trackEvent` on every render, so an
+   * unredacted URL ships "this shop, this person, at this minute" to Analytics
+   * on every glance at a diver. `/shop/<slug>/divers/<personId>` already put a
+   * person id in a path this pipeline sees, which is the argument for adding
+   * this one rather than against it (security review, slice 23e).
+   */
+  "diver",
 ] as const;
 
 function decodeSegment(segment: string): string {

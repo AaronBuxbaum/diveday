@@ -1638,7 +1638,7 @@ describe("a row that is only a door", () => {
       aboutDeparture: true,
       detail: "3 divers still need rental sizes.",
       actionLabel: "Open prep list",
-      href: "/shop/blue-mantis/trips/t1/prep",
+      href: "/shop/blue-mantis/trips/t1#packing-list",
       departure: boat("t1"),
     }),
     action({

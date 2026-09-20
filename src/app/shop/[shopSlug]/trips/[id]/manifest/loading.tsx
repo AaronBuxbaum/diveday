@@ -4,7 +4,7 @@ import { sectionCardClass } from "@/components/ui/card";
 /**
  * Roll-call-shaped skeleton for the boat manifest (design principle 1). Like
  * its sibling `trips/[id]/loading.tsx` this renders as the trip layout's
- * children, so the sub-nav above stays put and only the manifest body swaps —
+ * children, so the masthead above stays put and only the manifest body swaps —
  * a captain switching to Manifest at the dock sees the list frame immediately
  * rather than a held page on marina Wi-Fi.
  *

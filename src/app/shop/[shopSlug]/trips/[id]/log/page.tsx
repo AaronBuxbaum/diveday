@@ -137,7 +137,7 @@ export default async function IncidentExportPage({
                 same line names the document instead: a record handed to an
                 insurer has to say what it is, and it has no navigation. */}
             <EyebrowBackLink href={shopPath(shopSlug, "trips", tripId)} className="print:hidden">
-              {t("trips.subNav.trip")}
+              {t("trips.surfaces.trip")}
             </EyebrowBackLink>
             <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("incidentExport.title")}</p>
             <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{doc.meta.tripTitle}</h1>

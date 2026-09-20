@@ -53,14 +53,12 @@ import { webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { requireShopSurface } from "@/lib/session";
 import { seenChipSlugs, seenSiteFor } from "@/lib/sightings";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { divesWithMatch } from "@/lib/support-needs";
 import { STAGE_TAP_KEYS, TRIP_STAGES } from "@/lib/trip-stages";
 import { hasSailed } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
-import { TripSurfaceNav } from "../_components/TripSurfaceNav";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CrewRollCall } from "./_components/CrewRollCall";
@@ -688,8 +686,8 @@ export default async function TripManifestPage({
           call reading "6 of 9 aboard" invites reading the seat count as a
           boarding count. */}
       <TripPageHeader
-        boardHref={shopPath(shopSlug, "schedule", "board")}
-        backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
+        boardHref={shopPath(shopSlug, "trips", tripId)}
+        backLabel={t("trips.surfaces.trip")}
         trip={manifest.trip}
         locale={locale}
         timeZone={shop.timezone}
@@ -716,7 +714,6 @@ export default async function TripManifestPage({
             />
           </ManifestMoreMenu>
         }
-        subNav={<TripSurfaceNav shopSlug={shopSlug} tripId={tripId} locale={locale} />}
       />
       {/* Souls on board, on paper only. The printed manifest is the document
           that goes ashore with the dock or into a coastguard's hands, and the
@@ -749,7 +746,7 @@ export default async function TripManifestPage({
           </span>
         ) : null}
       </p>
-      {/* **The catch-up strip**, under the sub-nav and above the instrument,
+      {/* **The catch-up strip**, under the masthead and above the instrument,
           exactly where the canvas draws it (ADR 20260904-reef-all-the-way-down
           slice 16d). It renders nothing when there is nothing new, and nothing
           at all to somebody who has never worked this departure — so on most
@@ -829,7 +826,7 @@ export default async function TripManifestPage({
       {/* A segmented control, not a row of buttons: the active checkpoint used
           to wear the same filled-primary costume as "Mark boarded", which gave
           the page a second primary that was not an action at all (principle
-          8). The same shared track as the trip sub-nav (`SegmentedControl`),
+          8). The same shared track the grouping switches use (`SegmentedControl`),
           at boat size because this row is switched at the rail. */}
       <SegmentedControl
         ariaLabel={t("manifest.checkpointNavAriaLabel")}

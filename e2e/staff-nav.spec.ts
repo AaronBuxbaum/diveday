@@ -1,4 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
+import { STAFF_DAY_HEADING } from "./helpers";
 
 /**
  * **The bar is three times** — ADR 20260919-one-idea, decision I · Tide, slice
@@ -103,6 +104,68 @@ test.describe("owner", () => {
       .first()
       .click();
     await expect(page).toHaveURL(/\/orders$/);
+  });
+
+  /**
+   * **The one thing the search finds that has no hour** — ADR
+   * 20260919-one-idea, decision I · Tide, slice 23e: "a diver with no booking
+   * has no hour; the search finds them, and their record opens as a sheet over
+   * the day."
+   *
+   * Every other destination the search offers is a place, and taking the
+   * staffer to it is the answer. A person is not: the question is usually one
+   * glance, and paying for it with the day they were reading — the boats, the
+   * blockers, the hour they were standing in — is the trade this slice refuses.
+   */
+  test("a diver the search finds is laid over the day, not opened instead of it", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis");
+    await page.locator("header").getByRole("button", { name: "Search" }).click();
+    await page.getByRole("combobox").fill("Priya");
+    // `exact`, because a person's name is also the text of every seat they
+    // hold: a loose match took whichever row the ranking happened to put up,
+    // which was a booking on a departure. The diver row is the one whose whole
+    // accessible name is the person.
+    await page.getByRole("option", { name: "Priya Sharma", exact: true }).first().click();
+
+    // Still the day, with the diver over it — the URL says so, and so does the
+    // fact that the day's own heading is still on the page behind the sheet.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\?diver=[0-9a-f-]+$/);
+    const sheet = page.getByRole("dialog");
+    await expect(sheet.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
+
+    // **It is a reading, and its one door is the record.** Every act on a
+    // diver redirects with a `?notice=`, which would tear the sheet off the
+    // screen — so the sheet offers none and points at the page that does.
+    await expect(sheet.getByRole("link", { name: /Open the full record/ })).toBeVisible();
+
+    // Closing puts the staffer back on the day they never left, and takes the
+    // param with it so a refresh does not reopen what they just closed.
+    await page.keyboard.press("Escape");
+    await expect(sheet).toHaveCount(0);
+    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+  });
+
+  /**
+   * **A `?diver=` is not a key to anything.** It is the one param on this page
+   * that names a person, so the two ways of writing one by hand both have to
+   * end in a day with nobody over it: an id that is not a uuid, which is
+   * narrowed before it reaches a query, and a well-formed one that names
+   * nobody *of this shop* — the same answer `getDiverProfile` gives for
+   * another tenant's diver, which is what makes a copied URL worth nothing
+   * (`src/db/divers.test.ts`, "does not open another shop's live diver").
+   *
+   * The day rendering is half the assertion: a 404 or a 500 here would be a
+   * different bug wearing the same green.
+   */
+  test("a diver id that names nobody leaves the day with nobody over it", async ({ page }) => {
+    for (const id of ["not-a-uuid", "6f1c9a2e-0b3d-4f5a-8c7e-1d2a3b4c5d6e"]) {
+      const response = await page.goto(`/shop/blue-mantis?diver=${id}`);
+      expect(response?.status()).toBe(200);
+      await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+    }
   });
 
   test("the demoted doors on owning surfaces still hold", async ({ page }) => {

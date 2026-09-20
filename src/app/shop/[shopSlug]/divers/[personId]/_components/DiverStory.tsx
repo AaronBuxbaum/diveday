@@ -38,7 +38,7 @@ import { bookingMoney, bookingMoneyStatusKey, type DiverProfile, type Shop } fro
  * Money is a *fact* of the row, never a control: refunds and the invoice
  * itself stay first-class on the Orders ledger, one tap away, where the refund
  * form can take a partial amount. The record's own money act is the status
- * ledger's "Collect", plus the quiet "+ New invoice" at this ledger's foot.
+ * ledger's "Collect", plus the quiet "New invoice" at this ledger's foot.
  */
 
 /** How the row is weighted, from the order that raised it. See `BookingStoryRow`. */
@@ -100,6 +100,38 @@ type StoryEntry = {
   row: React.ReactNode;
 };
 
+/**
+ * **Whether this reading offers the act at its foot, and whether this reader
+ * may perform it** — two questions, and the second is only askable once the
+ * first is yes.
+ *
+ * The record offers it. The sheet laid over the day does not: it is a reading
+ * whose one door is the record (ADR 20260919-one-idea, slice 23e), and an
+ * invoice link is a second exit that takes the day off the screen to open a
+ * form somewhere else entirely — the exact trade the sheet exists to refuse
+ * (found by review on #1921).
+ *
+ * `canManageOrders` is the live `src/db/authz.ts` answer for the signed-in
+ * staffer. `orders/new` already refuses one without it — `requireShopSurface`'s
+ * `allow` gate bounces to the Orders index with `notice=not-authorized` — so
+ * unasked, the foot offers a captain an act they cannot perform and answers by
+ * taking the person off the screen. The route guard is the boundary and stays;
+ * this is the surface agreeing with it (issue #1920).
+ *
+ * **A union rather than two booleans, so that no caller can state something
+ * false.** A reading that offers nothing has no opinion on who may raise an
+ * invoice, and a sheet made to pass `canManageOrders={false}` would be
+ * asserting a fact about a person it never looked up — the same trap
+ * `paymentsConnected` carries, where a caller passing `false` to suppress the
+ * link would be claiming the shop cannot take money. Here the field simply
+ * does not exist on that arm: the sheet cannot answer, the record cannot
+ * forget, and both are compile errors rather than a link that quietly comes
+ * back the next time either flag gates something else.
+ */
+export type DiverStoryActs =
+  | { offersInvoice: false; canManageOrders?: never }
+  | { offersInvoice: true; canManageOrders: boolean };
+
 export function DiverStory({
   diver,
   shop,
@@ -108,6 +140,8 @@ export function DiverStory({
   locale,
   t,
   paymentsConnected,
+  canManageOrders,
+  offersInvoice,
   status,
   now = nowDate(),
 }: {
@@ -131,7 +165,7 @@ export function DiverStory({
    */
   status?: DiverNotice;
   now?: Date;
-}) {
+} & DiverStoryActs) {
   const entries: StoryEntry[] = [];
 
   for (const entry of diver.bookings) {
@@ -229,7 +263,7 @@ export function DiverStory({
   const shown = behind.slice(0, SHOP_HISTORY_PREVIEW_COUNT);
   const rest = behind.slice(SHOP_HISTORY_PREVIEW_COUNT);
   const invoice =
-    paymentsConnected && !diver.person.deletedAt ? (
+    offersInvoice && canManageOrders && paymentsConnected && !diver.person.deletedAt ? (
       <Link
         href={`/shop/${shopSlug}/orders/new?personId=${personId}`}
         className={buttonClass({ variant: "link", size: "sm", flush: true })}

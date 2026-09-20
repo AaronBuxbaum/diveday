@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { Suspense } from "react";
+import { DiverSheetSection } from "@/app/shop/[shopSlug]/_components/DiverSheetSection";
 import { DayHeader } from "@/app/shop/[shopSlug]/_components/day/DayHeader";
 import {
   DaySpine,
@@ -86,6 +87,7 @@ import {
   type TodayAction,
 } from "@/lib/today";
 import { hasSailed } from "@/lib/trips";
+import { uuidParam } from "@/lib/uuid";
 import { dayHourBoundaries, shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import {
   deleteCrewRecapPhotoAction,
@@ -215,6 +217,8 @@ export default async function ShopPage({
     noted?: string;
     decision?: string;
     decisionState?: string;
+    /** A diver the search found — laid over the day as a sheet (slice 23e). */
+    diver?: string;
   }>;
 }) {
   // The session and the two route-param promises don't depend on one
@@ -222,7 +226,7 @@ export default async function ShopPage({
   const [
     session,
     { shopSlug },
-    { created, series, reset, email, notice, closed, noted, decision, decisionState },
+    { created, series, reset, email, notice, closed, noted, decision, decisionState, diver },
   ] = await Promise.all([requireStaffSession(), params, searchParams]);
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
 
@@ -256,6 +260,7 @@ export default async function ShopPage({
           noted={noted}
           decision={decision}
           decisionState={decisionState}
+          diver={diver}
         />
       </Suspense>
     </main>
@@ -302,6 +307,7 @@ async function TodayBody({
   noted,
   decision,
   decisionState,
+  diver,
 }: {
   session: Awaited<ReturnType<typeof requireStaffSession>>;
   shopSlug: string;
@@ -317,6 +323,8 @@ async function TodayBody({
   /** A leftover just decided, and which way — the Undo toast's whole input. */
   decision?: string;
   decisionState?: string;
+  /** The diver the search found. Narrowed here, so junk names no sheet. */
+  diver?: string;
 }) {
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -342,6 +350,9 @@ async function TodayBody({
   // the helper cannot run inside this boundary.
   if (shop.slug !== shopSlug) notFound();
   const t = staffTranslator(locale);
+  // An unparseable id names no diver, and a `uuid` comparison against junk
+  // raises in Postgres — so it is narrowed here rather than in the reader.
+  const diverSheetId = uuidParam(diver ?? "") ?? undefined;
   // `Object.hasOwn`, not `AUTH_NOTICES[notice]`: `notice` is an attacker-supplied
   // query param, and a bare lookup resolves `?notice=constructor` off the
   // prototype (src/lib/staff-notices.ts).
@@ -1158,6 +1169,22 @@ async function TodayBody({
           }
         />
       )}
+      {/* **The search's one answer that has no hour.** Last in the tree and
+          first on the screen: it portals to the body, so where it sits here
+          decides only what it can reach — this body's own shop row and
+          locale, already resolved, rather than a second pair of reads.
+
+          **Its own boundary, and `null` for a fallback.** Without one, the
+          sheet's three reads join the day's and the whole spine sits behind
+          `TodaySkeleton` while they run — so opening a diver would blank the
+          day that this slice exists to keep on screen. A sheet has no skeleton
+          worth drawing either: it rises over a day that is already painted,
+          which is what it looks like from the palette anyway. */}
+      {diverSheetId ? (
+        <Suspense fallback={null}>
+          <DiverSheetSection shop={shop} personId={diverSheetId} locale={locale} />
+        </Suspense>
+      ) : null}
     </>
   );
 }

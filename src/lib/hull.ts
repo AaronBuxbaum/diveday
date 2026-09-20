@@ -505,3 +505,122 @@ const SEAT_OF_UNRECORDED: Record<SeatReadiness, SeatState> = {
   blocked: "blocked",
   unread: "awaiting",
 };
+
+/**
+ * **What a crew member's mark says** — ADR 20260919-one-idea §3b.6, the last
+ * item between a hull and a manifest.
+ *
+ * A diver had eight states and a crew member had one: `Hull` drew guides as
+ * plain circles with no state input at all. The asymmetry got worse as the
+ * diver half improved, because the more confidently the seats read "all good"
+ * the more confidently the whole picture did — over a divemaster who went back
+ * down for a weight belt. **Missing crew is severity 2** in the glossary's
+ * unaccounted-for ladder, above every clerical kind, so the one person the
+ * picture could not say anything about was near the top of the list of people
+ * it most needed to.
+ *
+ * **Five of the six are a diver's own words**, because the derivation under
+ * them is literally shared: `rollCallRowState` and `rollCallRecordedTone` take
+ * a `Pick<RollCallRecord, "state" | "implied">` and neither knows nor cares
+ * whose it is ("One derivation, four readers", `src/lib/manifests.ts`). A crew
+ * member counted back aboard is `aboard` in exactly the sense a diver is.
+ *
+ * **The three a crew member cannot wear are the dock's.** `open`, `booked` and
+ * `blocked` are all readiness, and readiness gates *boarding against a
+ * booking* — a crew member holds neither. `CrewRollCall` says the same thing
+ * where it renders rows: crew never fall back to the blocked tone.
+ *
+ * **`rostered` is the sixth, and it is why this is its own union.** A surface
+ * with no head count in it must not paint every guide amber: `awaiting` means
+ * "there was a count and nobody said anything about this person", and an alarm
+ * is earned by a recorded fact, never by the absence of one (ADR 20260827
+ * decision 4 — the same rule that made `ashoreImplied` its own state). The
+ * departure page has no roll call at all, so its guides are *rostered*: on the
+ * boat's list, with nothing yet to say. It is not `booked` under another name;
+ * a crew member is not booked, and borrowing the word would be the first step
+ * in the two halves drifting apart again.
+ */
+export type CrewState =
+  /** Assigned to this departure, on a surface with no head count in it. */
+  | "rostered"
+  /** There is a head count, and nobody has said anything about them at it. */
+  | "awaiting"
+  /** A human recorded them aboard. */
+  | "aboard"
+  /** A human **said** they are ashore: they never left the dock. */
+  | "ashore"
+  /** Nobody said so; the dock's silence was carried forward (§3b.3). */
+  | "ashoreImplied"
+  /** After the dive, a human said they did not come back (DOM-H3). */
+  | "missing";
+
+/**
+ * What a crew mark says, with the head count it says it at still attached.
+ *
+ * No `readiness` field, unlike `SeatReading`: there is no readiness to keep.
+ * The checkpoint is here for the reason it is there — green at the dock means
+ * "got on the boat" and green after dive two means "came back", and no reader
+ * tells those apart from a fill.
+ */
+export type CrewReading = {
+  /** What the picture paints. */
+  state: CrewState;
+  /** The head count being drawn, or null on a surface with none. */
+  checkpoint: RollCallCheckpoint | null;
+};
+
+/**
+ * Every recorded tone's crew mark, total for the reason `SEAT_OF_RECORDED_TONE`
+ * is: a tone added to `RollCallRecordedTone` without a meaning here is a
+ * compile error rather than a guide silently rendering as an ordinary one.
+ *
+ * It is the same four answers a seat gives, because it is the same four
+ * records — written by `recordCrewRollCall` instead of `recordRollCall`, and
+ * read through the same `rollCallRowState`.
+ */
+const CREW_OF_RECORDED_TONE: Record<RollCallRecordedTone, CrewState> = {
+  notBackAboard: "missing",
+  boarded: "aboard",
+  notBoarded: "ashore",
+  notBoardedImplied: "ashoreImplied",
+};
+
+/**
+ * A crew member's place in the wheelhouse, as the derivation needs it.
+ *
+ * Two arms rather than two optional fields, exactly as `SeatPlace` is and for
+ * exactly the same reason: **a recorded tone cannot arrive without the head
+ * count it belongs to**. `recorded: never` on the first arm makes handing a
+ * tone to a picture with no roll call in it a `tsc` error, which is what keeps
+ * the departure page — which has no head count and passes no `at` — from
+ * drawing one by accident.
+ */
+export type CrewPlace =
+  | {
+      /** No roll call on this surface — the departure page as it stands. */
+      at?: null;
+      recorded?: never;
+    }
+  | {
+      /** The head count being drawn. */
+      at: RollCallCheckpoint;
+      /** What a human recorded at it, from `rollCallRecordedTone`. */
+      recorded: RollCallRecordedTone | null;
+    };
+
+/**
+ * The mark a crew member is wearing.
+ *
+ * Shorter than `seatReadingFor` because there is no readiness to fall back
+ * through: either a human recorded something at this head count, or nobody
+ * has, or there is no head count here at all. Those are the only three
+ * questions a boat asks about a guide, and they map one to one onto the union.
+ */
+export function crewReadingFor(place: CrewPlace): CrewReading {
+  if (!place.at) return { state: "rostered", checkpoint: null };
+  const recorded = place.recorded;
+  return {
+    state: recorded ? CREW_OF_RECORDED_TONE[recorded] : "awaiting",
+    checkpoint: place.at,
+  };
+}

@@ -15,6 +15,7 @@ import {
   createTrip,
   daysFromNow,
   disclosureSettled,
+  e2eNow,
   manifestRow,
   offlineCopySaved,
   openDiverFileGroup,
@@ -29,6 +30,7 @@ import {
   openTripTab,
   STAFF_DAY_HEADING,
   saveDiveIntent,
+  seededDiverId,
   seededTripId,
   threadStatus,
   waiverLinkFromResult,
@@ -1537,8 +1539,8 @@ async function settleOfflineShellWorker(page: Page) {
  * initials avatar it used to, which went with the table.
  *
  * Parks the pointer at (0,0) before returning. The roster row this clicks sits,
- * at 390, exactly where the record's sub-nav bar lands — so the pointer left
- * behind by the click renders one tab in its hover state, and the phone
+ * at 390, exactly where the record's jump row lands — so the pointer left
+ * behind by the click renders one entry in its hover state, and the phone
  * baselines photographed a "Fit" that looked selected. Deterministic, so never
  * a flake; just a lie about state that a reviewer has to re-derive every time.
  * (0,0) is the demo banner, which has nothing hoverable in the corner.
@@ -1801,6 +1803,14 @@ async function savedOfflineRecordFor(page: Page): Promise<string> {
   await openReefTrip(page);
   await openTripTab(page, "Manifest");
   await offlineCopySaved(page);
+  // The same line the sibling captures carry, in the same place: priming just
+  // registered a worker, and every caller below navigates into the shell it
+  // claims. Without it `OfflineShellVersionBanner`'s `controllerchange`
+  // listener can mount before the claim lands and photograph "A newer version
+  // of DiveDay is ready" — which is exactly what happened to
+  // `offline-manifest-list-needs-refresh-light` on `f58f544`, +118px at 390 and
+  // 24% of the 1280 frame, on a commit that renamed an unrelated capture.
+  await settleOfflineShellWorker(page);
   const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
   if (!tripId) throw new Error(`could not read a trip id from ${page.url()}`);
   await page.route(IDENTITY_ROUTE, (route) => route.abort());
@@ -3673,6 +3683,25 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The one thing the search finds that has no hour** (ADR
+       * 20260919-one-idea, decision I · Tide, slice 23e). A diver laid over the
+       * day rather than opened instead of it: the sheet rises from the foot,
+       * the day dims behind it, and the reading is the record's own story
+       * ledger — the same component, so the two surfaces cannot come to say
+       * different things about one person.
+       *
+       * Reached by URL rather than through the palette: the palette has its
+       * own captures, and a frame that has to type into a combobox first is a
+       * frame that can fail for a reason that is not about pixels.
+       */
+      test(`a diver reads as a sheet over the day (${scheme})`, async ({ page }) => {
+        const personId = await seededDiverId(page, "blue-mantis", "Priya Sharma");
+        await page.goto(`/shop/blue-mantis?diver=${personId}`);
+        await page.getByRole("dialog").getByRole("heading", { name: "Priya Sharma" }).waitFor();
+        await capture(page, "today-diver-sheet", scheme);
+      });
+
+      /**
        * **A station once a blocked diver is on the boat.**
        *
        * The station's aboard line says what the blocker *is* — a medical hold, a
@@ -4397,6 +4426,32 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await boardListSettled(page);
         await capture(page, "schedule-builder", scheme);
+      });
+
+      /**
+       * **The days somebody asked for, under the week they belong to** (ADR
+       * 20260919-one-idea, slice 23f).
+       *
+       * A week off the current one, because that is where the seeded leads
+       * are: `seed-date-requests.ts` places them twelve and thirteen days out,
+       * and the week board is seven days wide. Addressed by `?week=` rather
+       * than by clicking the pager twice — the pager has its own coverage, and
+       * a capture that has to navigate first is a capture that can fail for a
+       * reason that is not about pixels.
+       */
+      test(`the week draws the days somebody asked for (${scheme})`, async ({ page }) => {
+        // Derived from the fleet's frozen clock rather than written down: the
+        // seed places these leads twelve days out, so a literal date here
+        // would rot the moment either moves. Monday-first, like the board.
+        const day = new Date(e2eNow());
+        day.setUTCDate(day.getUTCDate() + 12);
+        day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
+        const asked = day.toISOString().slice(0, 10);
+        await page.goto(`/shop/blue-mantis/schedule/board?week=${asked}`);
+        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await boardListSettled(page);
+        await page.getByText("Asked for").waitFor();
+        await capture(page, "schedule-builder-asked", scheme);
       });
 
       /**
@@ -5556,11 +5611,22 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "prep-assignments", scheme);
       });
 
-      // **The load-out, after one diver's set has been handed across** (issue
-      // #1185, delight report D25). The calm capture above shows the cart line
-      // and its pickers; this one shows the state a counter reaches by 7am —
-      // one set out, its Hand over gone, the return pane in its place.
-      test(`the prep page's load-out reads as handed over (${scheme})`, async ({ page }) => {
+      /**
+       * **The load-out, after one diver's set has been handed across** (issue
+       * #1185, delight report D25). The calm capture above shows the cart line
+       * and its pickers; this one shows the state a counter reaches by 7am —
+       * one set out, its Hand over gone, the return pane in its place.
+       *
+       * **Named for the departure, not for `/prep`, because that is where it
+       * lands.** It starts on `/prep` like its siblings, but it is the only
+       * one here that *acts* — and slice 23c re-pointed `assignGearUnitAction`
+       * and its three siblings at the departure, since after the fold `/prep`
+       * is a page with no roster and no way back. The capture followed the
+       * redirect and its baseline more than doubled (4053 → 8605 at 1280),
+       * which is how the drift was found: a name that says `prep-` over a
+       * picture of the departure would mislead the next triage.
+       */
+      test(`the load-out reads as handed over on the departure (${scheme})`, async ({ page }) => {
         const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
         await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
         const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
@@ -5569,7 +5635,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Wait on what the destination renders, never on a timeout: the set
         // that just went out has a return pane and no hand-over.
         await assignments.getByRole("button", { name: "All good" }).first().waitFor();
-        await capture(page, "prep-load-out-handed-over", scheme);
+        await capture(page, "departure-load-out-handed-over", scheme);
       });
 
       // The slip the counter prints and hands over. Reached the way a staffer      // The slip the counter prints and hands over. Reached the way a staffer
@@ -7545,11 +7611,9 @@ for (const scheme of ["light", "dark"] as const) {
          * and reads `navigator.language`.
          */
         test(`the offline roll call reads in Spanish (${scheme})`, async ({ page }) => {
-          // Board → trip → Manifest, then the saved copy. By URL rather than
-          // through `openTripTab`, which resolves the sub-nav by its English
-          // accessible name — the one helper in this flow that is language-
-          // bound. `openReefTrip` is not: it finds the departure by the title
-          // the shop typed.
+          // Board → trip → Manifest, then the saved copy. By URL, which is
+          // also what `openTripTab` does now that the departure has no tab
+          // strip; spelling it here keeps the flow readable as a URL walk.
           test.setTimeout(FLOW_TIMEOUT_MS);
           await openReefTrip(page);
           await page.goto(`${new URL(page.url()).pathname}/manifest`);
@@ -7829,9 +7893,26 @@ test.describe("print", () => {
     await page.goto(`${tripPath}/print`);
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
     await page.emulateMedia({ media: "print" });
-    const packetNavs = page.locator('nav[aria-label="Trip"]');
-    await expect(packetNavs).toHaveCount(2);
-    for (const nav of await packetNavs.all()) await expect(nav).not.toBeVisible();
+    // **Three composed headers, and none of their chrome on paper.** This used
+    // to count the two tab strips the composed surfaces brought with them;
+    // slice 23c deleted the strip (ADR 20260919-one-idea), and what each
+    // header carries now is its way back up — "Board" on the packet's own,
+    // "Trip" on the manifest's and the prep list's. `TripPageHeader` marks all
+    // three `print:hidden` for exactly this reason, and a paper sheet with a
+    // link on it is the regression.
+    // **The packet marks its chrome, and paper honours the mark.** This used to
+    // count the two tab strips the composed surfaces brought with them; slice
+    // 23c deleted the strip (ADR 20260919-one-idea), and what is left to keep
+    // off paper is each composed header's way back up plus the rental-ticket
+    // door on an assigned gear row — a count the seed decides, so the rule is
+    // the assertion rather than a number that drifts with the fixture.
+    //
+    // A CSS locator, deliberately: `getByRole` reads the accessibility tree,
+    // `display:none` is not in it, and a role locator here finds nothing and
+    // passes for the wrong reason.
+    const chrome = page.locator('a[class*="print:hidden"]');
+    await expect(chrome).not.toHaveCount(0);
+    for (const link of await chrome.all()) await expect(link).not.toBeVisible();
     await page.emulateMedia({ media: "screen" });
     await capturePrint(page, "trip-packet");
   });

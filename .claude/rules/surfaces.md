@@ -32,6 +32,15 @@ stay in `AGENTS.md`.
   **The search is a control in the bar at every width, never only a shortcut**: ADR
   20260813-more-is-the-shops-other-door retired an earlier bar for making fourteen destinations
   ⌘K-only, and that finding outlived the bar it retired.
+  **A diver is the one answer it gives that is not a place.** Tide files everything under an hour
+  and a person has none, so the palette's diver rows point at the day carrying `?diver=<id>` and
+  `src/components/DiverSheet.tsx` lays them over it — never a navigation to `divers/[personId]`,
+  which would spend the day to answer a question that is usually one glance (ADR
+  20260919-one-idea, slice 23e). The sheet is a **reading**: it renders the record's own
+  `DiverStatusLedger` and `DiverStory`, so the two surfaces cannot disagree about a person, and
+  every act is a link to the record — the record's twelve forms all redirect with a `?notice=`,
+  and a redirect tears an overlay off the screen. Its portal waits for a `document`, because
+  unlike `PersonSheet` the *server* decides this one is open.
   `src/components/ShopIdentityMenu.tsx` holds the shop's one place with no hour in it — Settings,
   above the rule — and below it the reader's own session (language, sign out).
 - **Bearer-token pages** (`src/app/waivers/[token]`, `ready/[token]`, `recap/[token]`,
@@ -55,6 +64,16 @@ stay in `AGENTS.md`.
   + `schedule/board/actions.ts`; mutations in `src/db/trips-schedule.ts`. The add panel is the
   **one place a trip is created**; `/shop/[shopSlug]/trips/new` is a 308 to
   `schedule/board?add=full` (ADR 20260806-one-trip-create-form).
+- **A departure is one page and one door.** `trips/[id]/page.tsx` is the hour over its own sky
+  (`_components/VoyageHeader.tsx`), the boat (`_components/TripHull.tsx`), the roster ledger, and
+  under it the morning packing list — `prep/_components/PrepBody.tsx`, inside its own `<Suspense>`
+  because `getTripPrep` is six gear queries. There is **no tab strip**: the manifest is one chip in
+  the band, and `/prep` and `/guests` survive as routes because `print/_components/TripPacket.tsx`
+  composes prep as a *component* for the paper day and the roster has bookmarks. Add to the
+  departure page, never to a fourth surface; a form on it redirects to `#{PREP_SECTION_ID}` on the
+  departure, not to `/prep`. **A cancelled departure keeps its manifest chip and packs nothing**:
+  the roll call is a record of people, the packing list an instruction about a check-in that is not
+  happening (ADR 20260919-one-idea, slice 23c; dive-domain review 20260920).
 - **The shop home** is one chronological spine (`_components/today/DaySpine.tsx`,
   `DayStation.tsx`); the close-out is its evening state (`ClosingBlock.tsx`) and `/close-out` is a
   308 to it. `?view=` and `/blockers` 308 home (ADR 20260827-clearwater-surface-language). A

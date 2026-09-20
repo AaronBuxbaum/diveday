@@ -9,6 +9,7 @@ import {
   openTripAbout,
   openTripActivity,
   openTripMore,
+  rosterRow,
   saveDiveIntent,
   signInAsOwner,
   signOut,
@@ -129,7 +130,7 @@ test.describe("staff", () => {
     // Removing a booking confirms first — it can fire an automatic refund that
     // undo can't claw back, so a misclick shouldn't be one tap from done.
     // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
-    const noraRow = page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true });
+    const noraRow = rosterRow(page, "Nora Quinn").filter({ visible: true });
     await openRosterDetails(noraRow);
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
     await expect(noraRow).toContainText("Remove Nora Quinn from this trip?");
@@ -314,10 +315,7 @@ test.describe("staff", () => {
       .filter({ hasText: title })
       .getByRole("link", { name: title, exact: true })
       .click();
-    await page
-      .getByRole("navigation", { name: "Trip" })
-      .getByRole("link", { name: "Manifest" })
-      .click();
+    await page.getByRole("link", { name: "Manifest" }).click();
     await page.getByRole("heading", { name: "Buddy teams" }).click();
     // The whole of what D23 gets: an aggregate on the team builder, with no
     // name in it and no suggested pairing.
@@ -541,7 +539,7 @@ test.describe("as owner", () => {
       // substring.
       .getByRole("link", { name: tripB, exact: true })
       .click();
-    const row = page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true });
+    const row = rosterRow(page, "Nora Quinn").filter({ visible: true });
     await expect(row).toContainText("Identity unconfirmed");
 
     // Confirming identity clears the blocker — two-tap InlineConfirm, not a
@@ -549,9 +547,9 @@ test.describe("as owner", () => {
     await row.getByRole("button", { name: /^Confirm this is/ }).click();
     await row.getByRole("button", { name: "Yes, this is them" }).click();
     await expect(page.getByRole("status")).toContainText("Identity confirmed");
-    await expect(
-      page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true }),
-    ).not.toContainText("Identity unconfirmed");
+    await expect(rosterRow(page, "Nora Quinn").filter({ visible: true })).not.toContainText(
+      "Identity unconfirmed",
+    );
 
     // And the tap is on the record. Clearing this flag hands the seat Nora's
     // live signed release, her cards and any prepaid dives, and every staff

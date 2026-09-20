@@ -1,5 +1,5 @@
-import { Hull, type HullSeatContent } from "@/components/boat/Hull";
-import { hullGeometry, type SeatReadiness, seatReadingFor } from "@/lib/hull";
+import { Hull, type HullCrewContent, type HullSeatContent } from "@/components/boat/Hull";
+import { crewReadingFor, hullGeometry, type SeatReadiness, seatReadingFor } from "@/lib/hull";
 import { seatIsHeld } from "@/lib/no-show";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import type { ReadinessByBooking, RosterEntry } from "./types";
@@ -114,8 +114,22 @@ export function TripHull({
    * with an awkward name is still a person on the boat. The gap is a hole in
    * the letters now, which `Hull` already draws as a plain circle.
    */
-  const crewInitials = (crew ?? []).map((name) => initialsOf(name));
-  const geometry = hullGeometry({ capacity, crewCount: crewInitials.length });
+  const crewNames = crew ?? [];
+  /*
+   * **`rostered`, and deliberately not `awaiting`** (ADR 20260919-one-idea
+   * §3b.6). Every guide carries a roll-call state now, and the one this page
+   * can honestly give them is "on the boat's list, nothing yet to say": there
+   * is no head count here, exactly as there is none for the seats below, and
+   * `CrewPlace` will not let a recorded tone in without the checkpoint it came
+   * from. Painting them `awaiting` instead would raise an alarm out of a
+   * surface's absence rather than a crew member's silence, which is the thing
+   * ADR 20260827 decision 4 forbids.
+   */
+  const crewMarks: HullCrewContent[] = crewNames.map((name) => ({
+    reading: crewReadingFor({}),
+    initials: initialsOf(name),
+  }));
+  const geometry = hullGeometry({ capacity, crewCount: crewMarks.length });
   const seats: HullSeatContent[] = seatHoldersOf(roster).map((entry) => ({
     reading: seatReadingFor({
       booking: {
@@ -143,7 +157,7 @@ export function TripHull({
       label={label}
       seats={seats}
       color={color}
-      crewInitials={crewInitials}
+      crew={crewMarks}
       className="block h-auto w-full"
     />
   );

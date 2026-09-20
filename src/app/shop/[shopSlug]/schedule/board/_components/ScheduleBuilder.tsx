@@ -206,6 +206,12 @@ export type BuilderCopy = {
   noPriceSet: string;
   noPriceSetAria: string;
   noPriceSetAll: string;
+  /** What a week's day with nothing on it says (slice 23f). */
+  noBoats: string;
+  /** The heading over the days somebody asked for (slice 23f). */
+  asked: string;
+  /** The act that answers one — the Requests page's own word for it. */
+  addDeparture: string;
   rollCallOpen: string;
   rollCallOpenAria: string;
   rollCallOpenNote: string;
