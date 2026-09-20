@@ -53,7 +53,6 @@ import { webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { requireShopSurface } from "@/lib/session";
 import { seenChipSlugs, seenSiteFor } from "@/lib/sightings";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { divesWithMatch } from "@/lib/support-needs";
 import { STAGE_TAP_KEYS, TRIP_STAGES } from "@/lib/trip-stages";

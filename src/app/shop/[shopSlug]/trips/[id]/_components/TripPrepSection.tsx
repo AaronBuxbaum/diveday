@@ -21,14 +21,20 @@ import { PrepBody } from "../prep/_components/PrepBody";
  */
 export async function TripPrepSection({
   shop,
-  shopSlug,
   tripId,
   locale,
   notice,
   grouping,
 }: {
-  shop: TripPrepShop;
-  shopSlug: string;
+  /**
+   * **The session's own shop row, slug included** — deliberately not a `shop`
+   * and a `shopSlug` beside it. Two independent props can be handed a
+   * mismatched pair, and this component builds links from one and reads rows
+   * with the other; one row makes that unrepresentable rather than merely
+   * unwritten (security review 20260920). `requireShopSurface` has already
+   * refused any row whose slug is not the URL's.
+   */
+  shop: TripPrepShop & { slug: string };
   /** Already validated as a UUID by the page above. */
   tripId: string;
   locale: string;
@@ -50,12 +56,12 @@ export async function TripPrepSection({
         prep={prep}
         t={t}
         locale={locale}
-        shopSlug={shopSlug}
+        shopSlug={shop.slug}
         tripId={tripId}
         rentalItems={shop.rentalItems}
         notice={notice}
         grouping={grouping}
-        groupPath={shopPath(shopSlug, "trips", tripId)}
+        groupPath={shopPath(shop.slug, "trips", tripId)}
       />
     </div>
   );

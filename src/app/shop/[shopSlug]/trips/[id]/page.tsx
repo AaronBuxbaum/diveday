@@ -1186,7 +1186,6 @@ export default async function ManageTripPage({
           >
             <TripPrepSection
               shop={shop}
-              shopSlug={shopSlug}
               tripId={tripId}
               locale={locale}
               notice={notice}
