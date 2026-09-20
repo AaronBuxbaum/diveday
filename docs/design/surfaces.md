@@ -144,6 +144,26 @@ five facts.
   page that item opens; the two irreversible series writes and the departure cancel keep a blocking
   `InlineConfirm`, and stopping a repeat has none because the control opposite it puts the run back.
 
+**The long page, deliberately — decided 2026-09-20 (Aaron, in session; issue #1924).** Since slice
+23c folded the packing list in, this is the tallest surface in the app by a wide margin:
+`departure-load-out-handed-over` captures at **12,340px at 390** and **8,605px at 1280**, against
+roughly 2,500px for the shop home. That is about thirty phone screens.
+
+`.claude/rules/e2e.md` says a surface that screenshots enormous is telling you the page is
+unbounded, and the fix belongs in the product. **Here it does not.** A packing list *is* a long
+document; the fold was the point of 23c; and the two halves are one job — who is aboard, then what
+to pull for them. A crew member working down a boat scrolls anyway, and what they had before the
+fold was a second page and a tab strip to reach it.
+
+Not taken: collapsing the list's lower sections (tanks, sizes, staff fit, support, kit,
+assignments) behind disclosures. That puts a lid on the half somebody arriving at `#packing-list`
+came for, to answer a number rather than a complaint. Also not taken, and never: shrinking the
+visual capture so the number reads smaller — that hides the measurement instead of answering it.
+
+So the height is expected. **Measure it again when the page gains a part, not when it merely grows
+with a shop's fleet** — the assignments table scales with the register rather than with this
+departure, which is the one thing here that could turn a long page into an unbounded one.
+
 ### The boat manifest — `/shop/[shopSlug]/trips/[id]/manifest`
 
 **Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): the checkpoint card, the five stage chips, the three-way switch and the disclosure above the first name become the count and one line — at 34px in a group (A), at 44px under a floating bar (B), or as a ring that closes when everyone is aboard (C) — then the one still to call, then everyone aboard, one circle per name; glare is a word in the bar. Pending H-87, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
