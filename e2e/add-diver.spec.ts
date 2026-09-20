@@ -85,7 +85,9 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip, but their waiver wasn’t emailed.",
   );
-  await expect(rosterRow(page, "Walk-in Wanda").getByRole("link")).toBeVisible();
+  await expect(
+    rosterRow(page, "Walk-in Wanda").getByRole("link", { name: "Walk-in Wanda" }),
+  ).toBeVisible();
   // The line under the hour owns the capacity read on the Trip surface now
   // (ADR 20260919-one-idea, decision I · Tide), so a full boat is stated in
   // words there rather than in a ring's accessible label. Scoped to the
@@ -433,7 +435,9 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip, but their waiver wasn’t emailed.",
   );
-  await expect(rosterRow(page, "Phoned In Pat").getByRole("link")).toBeVisible();
+  await expect(
+    rosterRow(page, "Phoned In Pat").getByRole("link", { name: "Phoned In Pat" }),
+  ).toBeVisible();
 });
 
 test("a refusal from the global door stays on the form, boat still chosen", async ({ page }) => {
