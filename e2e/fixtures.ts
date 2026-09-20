@@ -193,30 +193,79 @@ export const test = base.extend<
    * The buffer is bounded: a long spec issues thousands of requests and an
    * unbounded transcript would be both useless to read and a memory leak
    * across a worker's tests.
+   *
+   * **The verdict goes first, because a CI log prints 300 characters of it.**
+   * Playwright's base reporter slices a text attachment at `text.slice(0, 300)`
+   * and prints that much (`playwright/lib/reporters/base.js`). The ring buffer
+   * below keeps the *tail*, which is the half worth having — and the reporter
+   * then prints the *head* of what survived. On this test's fifth occurrence
+   * the printed window ran out at 606ms, some four seconds before the click
+   * anybody wanted to see, on a page that had finished loading in 208ms. The
+   * whole transcript is in the HTML report, but that is a zip behind an
+   * artifact URL, and every diagnosis of this failure so far has been read out
+   * of the log instead.
+   *
+   * So the first lines answer the three-way question outright — how many
+   * requests were issued, how many failed, and what was still in flight when
+   * the test gave up — and the transcript follows for whoever opens the
+   * report. Case 1 is a verdict naming nothing in flight and no failure, case
+   * 2 names the destination as still in flight, and case 3 names it as the
+   * last failure.
    */
   browserActivity: [
     async ({ page }, use, testInfo) => {
+      const started = Date.now();
+      const since = () => Date.now() - started;
+      // The origin is the same two dozen characters on every line and its port
+      // changes per worker, so it is pure cost against the window above.
+      const trim = (url: string) => url.replace(/^https?:\/\/[^/]+/, "");
       const entries: string[] = [];
       const record = (line: string) => {
         // Keep the *tail*: whatever happened around the failure is at the end,
         // and the first thousand lines of a long spec are the setup nobody is
         // asking about.
         if (entries.length >= ACTIVITY_LIMIT) entries.shift();
-        entries.push(`${String(Date.now() - started).padStart(6)}ms  ${line}`);
+        entries.push(`${String(since()).padStart(6)}ms  ${line}`);
       };
-      const started = Date.now();
+      // What the verdict is counted from. `inFlight` is keyed by the request
+      // object rather than by its URL, because two navigations to one URL are
+      // two requests and the second must not close the first.
+      const inFlight = new Map<Request, string>();
+      let requests = 0;
+      let failures = 0;
+      let lastFailure = "";
+      let pageErrors = 0;
+      let consoleErrors = 0;
+      const verdict = () => {
+        const pending = [...inFlight.values()];
+        return [
+          `${requests} requests · ${failures} failed · ${pageErrors} pageerror · ${consoleErrors} console.error`,
+          pending.length === 0
+            ? "in flight when the test ended: nothing"
+            : `in flight when the test ended: ${pending.slice(-2).join(" · ")}`,
+          ...(lastFailure ? [`last router failure: ${lastFailure}`] : []),
+        ].join("\n");
+      };
       // Errors only. A page's ordinary `console.log` is the app talking to its
       // own developers and would bury the one line that matters.
       page.on("console", (message) => {
-        if (message.type() === "error") record(`console.error  ${message.text()}`);
+        if (message.type() !== "error") return;
+        consoleErrors += 1;
+        record(`console.error  ${message.text()}`);
       });
       // An uncaught exception in the client router is the leading candidate for
       // the failure above, and it is currently invisible to the report.
-      page.on("pageerror", (error) => record(`pageerror      ${error.message}`));
+      page.on("pageerror", (error) => {
+        pageErrors += 1;
+        record(`pageerror      ${error.message}`);
+      });
+      // A page turn is one of these two: a document navigation, or the client
+      // router's RSC fetch for the destination. Everything this fixture was
+      // built to tell apart happens here.
+      const routerTraffic = (request: Request) =>
+        request.isNavigationRequest() || request.url().includes("_rsc=");
       const interesting = (request: Request) =>
-        request.isNavigationRequest() ||
-        request.url().includes("_rsc=") ||
-        !request.url().includes("/_next/");
+        routerTraffic(request) || !request.url().includes("/_next/");
       // **Prefetches are marked, not dropped.** Next prefetches every link in
       // the viewport, so an unmarked transcript is forty lines of prefetch with
       // the one navigation that matters buried among them — which is what the
@@ -228,22 +277,39 @@ export const test = base.extend<
         request.headers()["next-router-prefetch"] !== undefined;
       page.on("request", (request) => {
         if (!interesting(request)) return;
-        record(`${isPrefetch(request) ? "⋯" : "→"} ${request.method()} ${request.url()}`);
+        const what = `${request.method()} ${trim(request.url())}`;
+        if (isPrefetch(request)) {
+          record(`⋯ ${what}`);
+          return;
+        }
+        requests += 1;
+        inFlight.set(request, `${what} (started ${since()}ms)`);
+        record(`→ ${what}`);
       });
       page.on("requestfinished", (request) => {
+        inFlight.delete(request);
         if (!interesting(request) || isPrefetch(request)) return;
-        record(`← ${request.method()} ${request.url()}`);
+        record(`← ${request.method()} ${trim(request.url())}`);
       });
       // The third of the three cases, and the only one that says so out loud.
       page.on("requestfailed", (request) => {
-        record(`✗ ${request.method()} ${request.url()} — ${request.failure()?.errorText ?? "?"}`);
+        inFlight.delete(request);
+        failures += 1;
+        const why = `${request.method()} ${trim(request.url())} — ${request.failure()?.errorText ?? "?"}`;
+        // The *count* is every failure, because a storm of them is itself a
+        // symptom. The line naming one is the router's own traffic only: the
+        // sandbox blocks third-party analytics on every run, so an unfiltered
+        // "last failure" would spend sixty of the three hundred characters
+        // above pointing at `speed-insights/script.js` every single time.
+        if (routerTraffic(request)) lastFailure = why;
+        record(`✗ ${why}`);
       });
 
       await use(undefined);
 
       if (testInfo.status !== testInfo.expectedStatus && entries.length > 0) {
         await testInfo.attach("browser-activity", {
-          body: entries.join("\n"),
+          body: [verdict(), "", ...entries].join("\n"),
           contentType: "text/plain",
         });
       }
