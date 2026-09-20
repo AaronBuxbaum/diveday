@@ -7728,9 +7728,15 @@ test.describe("capture harness", () => {
       );
       expect(
         running.filter((name) => name === "CSSTransition"),
-        "if Chromium has started listing ::details-content transitions, Playwright's " +
-          'animations: "disabled" may now settle this on its own — re-measure before ' +
-          "trusting it, and keep the switch-off until it does",
+        "a CSSTransition is running at the moment `capture()` resizes, and there are two " +
+          "readings. Either Chromium has started listing ::details-content transitions, in " +
+          'which case Playwright\'s animations: "disabled" may now settle this on its own — ' +
+          "re-measure before trusting it, and keep the switch-off until it does. Or something " +
+          "*else* on this page transitions across a breakpoint, which is its own capture bug: " +
+          "a screenshot taken during that fade catches the property half-applied. Print the " +
+          "animations' transitionProperty and target to tell them apart — on 2026-09-20 it was " +
+          "the header search button's four border-colour longhands, from a `sm:border` meeting " +
+          "a `transition-colors` that covered it",
       ).toEqual([]);
     });
 
