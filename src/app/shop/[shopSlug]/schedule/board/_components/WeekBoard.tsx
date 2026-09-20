@@ -574,7 +574,7 @@ export function WeekBoard({
   const usualCrew = mostCommonCrew(week.days.flatMap((day) => day.entries));
 
   return (
-    <section aria-label={week.ariaLabel} className="hidden xl:block">
+    <section aria-label={week.ariaLabel}>
       {/* Paging is by week, so the control is a pair of steps and a way home
           — not a cursor. `WeekPager` (src/components/ui/week-pager.tsx) is
           shared with the staffing week, which reads the same `?week=`

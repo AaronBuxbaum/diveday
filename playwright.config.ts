@@ -228,18 +228,22 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      // **1279, not Desktop Chrome's 1280 — one pixel below the week board's
-      // `xl` floor.** From that width up the staff board composes as a
-      // seven-column week and the vertical day stream is `display:none`
-      // (H-63, ADR 20260827-clearwater-surface-language). The stream is the
-      // composition every flow spec in this suite is written against — it
-      // carries the add panel, the row menu and the cursor pager, and it is
-      // what tablets and phones get — so the functional fleet drives the app
-      // at the widest width the stream renders. The board's own spec sets
-      // 1280 explicitly to read the week, and e2e/visual.spec.ts sets its own
-      // 390 / 820 / 1280 viewports, so both compositions are still
-      // photographed and exercised.
-      use: { ...devices["Desktop Chrome"], viewport: { width: 1279, height: 720 } },
+      // **A plain desktop width, and the width no longer decides anything.**
+      //
+      // This was pinned to 1279 — one pixel below the week board's `xl` floor
+      // — because the staff board had two compositions and the flow specs
+      // were all written against the lower one: from 1280 up the seven-column
+      // week rendered and the vertical day stream went `display:none`, taking
+      // the add panel, the row menu and the cursor pager out of reach. A
+      // single pixel decided which board a spec was driving, which is a thing
+      // a suite should never have to know.
+      //
+      // The stream is gone (#1923, finishing slice 23f of ADR
+      // 20260919-one-idea). A day is a row on a phone and a row on a desk, so
+      // the week renders at every width and there is one board to drive.
+      // `e2e/visual.spec.ts` still sets its own 390 / 820 / 1280 viewports,
+      // which is where widths are still a question worth asking.
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 720 } },
     },
   ],
   // One precompiled `next start` server per worker. Playwright waits for all of
