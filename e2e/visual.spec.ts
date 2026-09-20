@@ -1803,6 +1803,14 @@ async function savedOfflineRecordFor(page: Page): Promise<string> {
   await openReefTrip(page);
   await openTripTab(page, "Manifest");
   await offlineCopySaved(page);
+  // The same line the sibling captures carry, in the same place: priming just
+  // registered a worker, and every caller below navigates into the shell it
+  // claims. Without it `OfflineShellVersionBanner`'s `controllerchange`
+  // listener can mount before the claim lands and photograph "A newer version
+  // of DiveDay is ready" — which is exactly what happened to
+  // `offline-manifest-list-needs-refresh-light` on `f58f544`, +118px at 390 and
+  // 24% of the 1280 frame, on a commit that renamed an unrelated capture.
+  await settleOfflineShellWorker(page);
   const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
   if (!tripId) throw new Error(`could not read a trip id from ${page.url()}`);
   await page.route(IDENTITY_ROUTE, (route) => route.abort());
