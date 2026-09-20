@@ -539,26 +539,24 @@ export async function waiverLinkFromToast(page: Page): Promise<string> {
 }
 
 /**
- * The schedule board pages a fixed number of departures at a time and has no
- * text search — a trip scheduled far enough out (or created earlier in the
- * same test) can land past the first page. Pages through "Show later
- * departures" until a trip card matching `title` appears, then returns its
- * link locator — call `.click()`, or `.getAttribute("href")` to read the
+ * Find a departure on the staff board, paging forward a week at a time, and
+ * return its link — call `.click()`, or `.getAttribute("href")` to read the
  * path without racing the click's own navigation.
  *
- * **The board is two compositions, and this crawl walks the stream.** From
- * `xl` (1280px) up the board draws one week as seven columns and the
- * cursor-paged stream is `display:none` behind it (H-63, ADR
- * 20260827-clearwater-surface-language); below that the stream is the board.
- * The stream is in the DOM at every width and is the only one of the two that
- * can walk a whole horizon in one grammar — the week pages seven days at a
- * time — so the crawl reads it either way, and steps by URL rather than by
- * clicking a pager that at desktop is out of the accessibility tree entirely.
- * The returned link is the one the reader can actually *see* where either
- * composition shows the departure, so a `.click()` never lands on the hidden
- * twin; where neither paints it (a desktop board whose visible week is not the
- * one the trip sits in) it is still the right href.
+ * **It walks weeks now, not a cursor** (#1923). The board used to draw the
+ * same departures twice — a cursor-paged vertical stream and, from `xl` up, a
+ * seven-column week — and this crawl stepped the stream's `?after=` pager
+ * because it was the only one of the two that could walk a whole horizon in
+ * one grammar. The stream is gone, so the horizon is walked seven days at a
+ * time through the week pager's own `?week=` href.
+ *
+ * That costs hops: a trip six weeks out is six navigations rather than two
+ * cursor pages. `MAX_WEEK_HOPS` bounds it at a quarter of a year, which is
+ * past anything the seed or a spec schedules, and the throw names the title
+ * so a spec that outruns it says which trip it was hunting.
  */
+const MAX_WEEK_HOPS = 13;
+
 export async function findTripOnBoard(
   page: Page,
   shopSlug: string,
@@ -567,39 +565,24 @@ export async function findTripOnBoard(
   await page.goto(`/shop/${shopSlug}/schedule/board`);
   // The same barrier every page below gets: `goto` resolves into the segment's
   // loading.tsx skeleton while the real list streams in, and `count()` doesn't
-  // auto-wait — so a slow stream-in read as "no cards and no pager" and the
-  // loop concluded the board ended (seen as a one-in-many-runs CI failure
+  // auto-wait — so a slow stream-in reads as "no cards and no pager" and the
+  // loop concludes the board ended (seen as a one-in-many-runs CI failure
   // hunting a seeded trip). The builder section exists only in the streamed
-  // body, whatever the board holds, so its appearance proves the cards and
-  // pager are in the DOM. (The old wait target, the "Schedule overview" stat
-  // row, left the page with the KPI tiles.)
+  // body, whatever the board holds, so its appearance proves the cards and the
+  // pager are in the DOM.
   await page.getByRole("region", { name: "Schedule builder" }).waitFor();
-  for (let hops = 0; hops < 15; hops++) {
+  for (let hops = 0; hops < MAX_WEEK_HOPS; hops++) {
     const link = page.locator(`a[href^="/shop/${shopSlug}/trips/"]`).filter({ hasText: title });
-    // The visible copy first: both compositions render the same departure with
-    // the same href, and at any width one of the two is `display:none`. A
-    // caller that clicks what it gets back has to be handed the one on screen.
-    const onScreen = link.filter({ visible: true });
-    if ((await onScreen.count()) > 0) return onScreen.first();
     if ((await link.count()) > 0) return link.first();
-    // An attribute, not a role query. From `xl` up this pager sits inside the
-    // hidden day stream: it is in the DOM carrying the href that names the next
-    // cursor page, but out of the accessibility tree, so the crawl would
-    // conclude the board ended on page one. `includeHidden: true` looks like
-    // the answer and is not — `e2e/fixtures.ts` wraps every `getByRole` in
-    // `.filter({ visible: true })`, which discards the option silently, and a
-    // first fix that passed it went red on CI unchanged (visual shard 2/4,
-    // "not found on the schedule board after paging"). `page.locator` is the
-    // one query the fixture leaves alone.
-    const later = page.locator("a[data-board-pager='next']");
-    if ((await later.count()) === 0) break;
-    const nextHref = await later.getAttribute("href");
+    // The step's own `aria-label`, not "a link with a week in its href": the
+    // pager renders three of those — previous, next, and the way home — and a
+    // positional pick among them is one reorder away from walking backwards
+    // forever. A navigation rather than a click, so a step that has scrolled
+    // out of view on a tall week is still followable.
+    const next = page.locator('[data-week-board] a[data-week-step="next"]');
+    if ((await next.count()) === 0) break;
+    const nextHref = await next.getAttribute("href");
     if (!nextHref) break;
-    // A navigation rather than a click, for the same reason: the link cannot
-    // be clicked at a width that does not paint it. The barrier after it is
-    // the one above — the builder section exists only in the streamed body, so
-    // its appearance proves this page's cards and pager are in the DOM rather
-    // than the linkless skeleton.
     await page.goto(nextHref);
     await page.getByRole("region", { name: "Schedule builder" }).waitFor();
   }

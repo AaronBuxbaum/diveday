@@ -4353,23 +4353,21 @@ for (const scheme of ["light", "dark"] as const) {
        * One variant out of four, which is what a race looks like and what a code
        * change does not.
        *
-       * The pager is the last thing the list paints, so waiting for it proves
-       * the stream finished. It is stable: the seeded board always holds more
-       * departures than one keyset page.
+       * **The signal is the week's own pager now** (#1923). It used to be the
+       * day stream's cursor link, `a[data-board-pager='next']`, and that went
+       * with the stream. The week's "Next week" step is the same kind of
+       * thing: it arrives in the board's streamed payload and is stable —
+       * every week has a next one, whatever the seed holds.
        *
-       * **Attached, and by attribute.** From `xl` up the day stream is
-       * `display:none` behind the week grid, the pager with it — so a wait for
-       * it to be *visible* is a wait for something that is never coming, and
-       * three board captures spent their whole 184s budget on it. Both
-       * compositions arrive in the same streamed payload, so the pager being in
-       * the DOM proves the tail landed whichever one the width paints. The role
-       * query cannot express that: `e2e/fixtures.ts` appends
+       * **Attached, and by attribute.** A visibility wait is what spent three
+       * board captures' whole 184s budget once, and the role query cannot
+       * express "attached": `e2e/fixtures.ts` appends
        * `.filter({ visible: true })` to every one of them, which is visible in
        * the CI call log and which silently discards `includeHidden`.
        * `page.locator` is the query it leaves alone.
        */
       const boardListSettled = (page: Page) =>
-        page.locator("a[data-board-pager='next']").waitFor({ state: "attached" });
+        page.locator('[data-week-board] a[data-week-step="next"]').waitFor({ state: "attached" });
 
       /**
        * **Prove the add panel is open before photographing it — every other
@@ -4401,6 +4399,10 @@ for (const scheme of ["light", "dark"] as const) {
        * upcoming departures against a 14-row keyset page, so `nextCursor` is
        * never null and the control is never conditional. With the gates below,
        * 20 consecutive captures measured 4,986px and 3,136px, every one.
+       *
+       * Read the two heights as history: that control was the day stream's,
+       * and the stream is gone (#1923). The gates are what mattered and they
+       * still hold; the numbers they stabilised moved with the composition.
        */
       const addPanelSettled = async (page: Page) => {
         // The click's client navigation has committed. Every other gate below

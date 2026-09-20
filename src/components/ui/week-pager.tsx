@@ -51,6 +51,11 @@ export function WeekPager({
         href={nextHref}
         scroll={false}
         aria-label={words.next}
+        // Copy-free, because the label beside it is not: a Spanish run cannot
+        // name this step, and the e2e board crawl walks the horizon one week
+        // at a time through it since the day stream's cursor pager went
+        // (#1923).
+        data-week-step="next"
         className={buttonClass({ variant: "secondary", size: "icon" })}
       >
         <DiveDayIcon name="chevron-right" />

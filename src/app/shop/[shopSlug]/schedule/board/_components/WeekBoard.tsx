@@ -574,7 +574,11 @@ export function WeekBoard({
   const usualCrew = mostCommonCrew(week.days.flatMap((day) => day.entries));
 
   return (
-    <section aria-label={week.ariaLabel}>
+    // `data-week-board` is the copy-free hook a test asks "is the board
+    // here?" with. The `aria-label` beside it is localised, so a Spanish run
+    // cannot name the region — which is the same reason the day stream this
+    // replaced carried `data-day-stream` (#1923).
+    <section data-week-board="" aria-label={week.ariaLabel}>
       {/* Paging is by week, so the control is a pair of steps and a way home
           — not a cursor. `WeekPager` (src/components/ui/week-pager.tsx) is
           shared with the staffing week, which reads the same `?week=`
@@ -613,7 +617,22 @@ export function WeekBoard({
           return (
             <div key={day.dateIso} className="border-b border-border">
               <div className="grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-3 py-2 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-x-5">
-                <h3 id={`week-day-${day.dateIso}`} className="py-2">
+                {/* **The day holds its place while its own boats scroll**
+                    (ADR 20260827-clearwater-surface-language, decision 10).
+                    This was the day stream's behaviour and it moves here
+                    rather than going down with it (#1923): a run of rows on a
+                    phone is as easy to lose your place in as a stream was.
+
+                    `top-(--chrome-h)`, never a number — the bar's height is a
+                    token and a measured pixel value went stale the first time
+                    the bar changed shape (`src/components/chrome/chrome.test.ts`
+                    has the incident). `self-start` so the sticky box is the
+                    header's own height rather than the grid row's, which
+                    would pin an invisible column beside every boat. */}
+                <h3
+                  id={`week-day-${day.dateIso}`}
+                  className="sticky top-(--chrome-h) z-10 self-start bg-background py-2"
+                >
                   <span className="sr-only">{day.label}</span>
                   <span
                     aria-hidden="true"

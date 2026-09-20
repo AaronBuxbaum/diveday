@@ -152,10 +152,10 @@ test.describe("schedule builder", () => {
     // Unique title so every assertion targets this spec's own departure rather
     // than a seeded one. (Isolation itself comes from the per-test demo reset.)
     const title = `Builder Trip ${e2eNow().getTime()}`;
-    // All three days sit well inside the board's first keyset page
-    // (SCHEDULE_PAGE_SIZE trips) even with the seeded departures ahead of
-    // them — the spec asserts both copies are on screen at once, which a
-    // copy landing on page 2 would fail.
+    // All three days sit inside the week the board opens on. That used to be
+    // about the stream's keyset page; since #1923 the board is one week, so a
+    // day past Sunday is a day this spec would have to page to — and it
+    // asserts both copies are on screen at once.
     const addDay = daysFromNow(3);
     const moveDay = daysFromNow(5);
     const copyDay = daysFromNow(4);
@@ -177,7 +177,7 @@ test.describe("schedule builder", () => {
     await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
     const row = page.getByRole("listitem").filter({ hasText: title });
     await expect(row).toHaveCount(1);
-    await expect(row.getByText("0/8")).toBeVisible();
+    await expect(row.getByText("0 of 8")).toBeVisible();
     // No price was typed, so the board still says so, as the row's own amber
     // pill: the seeded board is a mixed one — seven of its fourteen departures
     // carry a price — so `allUnpriced` is false and the flag stays per-row
@@ -192,8 +192,11 @@ test.describe("schedule builder", () => {
     await page.getByRole("button", { name: "Move it" }).click();
     await expect(page.getByRole("status")).toContainText("Moved.");
     // 07:15 + the same four hours it was created with.
+    // The week's row leads with the hour it leaves; the full range is the
+    // departure's own page. The move is proven by the new time appearing on
+    // the row the title names.
     await expect(
-      page.getByRole("listitem").filter({ hasText: title }).getByText("7:15 AM – 11:15 AM"),
+      page.getByRole("listitem").filter({ hasText: title }).getByText("7:15 AM"),
     ).toBeVisible();
 
     // Copy — a second departure, same shape, nobody on it.
@@ -207,9 +210,9 @@ test.describe("schedule builder", () => {
     // Move and Copy use; both copies come back off the board.
     //
     // The confirm is scoped to the page rather than to the row as of issue
-    // #1309: the panel is rendered once for the whole board, outside both the
-    // day stream and the week grid, so that a resize across `xl` cannot hide
-    // it. Only one panel is ever open, so there is nothing to disambiguate.
+    // #1309: the panel renders once for the whole board, outside the grid, so
+    // a row that re-lays cannot take it with it. Only one panel is ever open,
+    // so there is nothing to disambiguate.
     for (let remaining = 2; remaining > 0; remaining -= 1) {
       await chooseRowAction(page, "Remove", title);
       await page.getByRole("button", { name: "Yes, remove the trip" }).click();
@@ -293,10 +296,12 @@ test.describe("schedule builder", () => {
       .filter({ hasText: "Two-Tank Reef — Molasses & French" })
       .first();
     await expect(booked).toBeVisible();
-    await booked.getByRole("button", { name: /^Move, copy, or remove / }).click();
-    await booked.getByRole("button", { name: /^Remove / }).click();
-    // Page-scoped: the confirm panel renders once for the board, outside the
-    // row (issue #1309).
+    // Page-scoped from the "⋯" onwards: the action strip and the confirm both
+    // render once for the whole board, outside the row that opened them
+    // (issue #1309). The stream drew its own list inside the `<li>`, which is
+    // what let this scope the verb to the row; that composition is gone
+    // (#1923), so this goes through the same helper every other row act does.
+    await chooseRowAction(page, "Remove", "Two-Tank Reef — Molasses & French");
     await page.getByRole("button", { name: "Yes, remove the trip" }).click();
 
     await expect(page.getByRole("status")).toContainText("Divers have booked this departure");
@@ -402,14 +407,13 @@ test.describe("schedule builder", () => {
 
     // The staff board and the shopfront — the two shells, and the two surfaces
     // decision 10 names by hand.
-    // Each shell carries its own top width, and the difference is the week
-    // board's doing: a sticky day header belongs to the *stream*, and the
-    // stream's ceiling is the board's `xl` floor (H-63). At 1280 the board is
-    // seven columns with no day header to pin, so 1279 is the widest the board
-    // can be asked this question. The shopfront keeps its stream at every
-    // width and is still asked at 1280.
+    // Both shells are asked at the same three widths since #1923. The board
+    // used to stop at 1279 because a sticky day header belonged to the day
+    // stream and the stream stopped at the `xl` floor; the week is the board
+    // at every width now and its day headers pin too, so there is no width at
+    // which this question has no answer.
     for (const [surface, url, ready, widths] of [
-      ["the schedule board", BOARD, "Board", [390, 768, 1279]],
+      ["the schedule board", BOARD, "Board", [390, 768, 1280]],
       // The shopfront's h1 is the shop's own name now, not the word
       // "Schedule" over a DiveDay-branded bar (slice 7a's hero).
       ["the public schedule", `/s/${SHOP}`, "Blue Mantis Divers", [390, 768, 1280]],
@@ -498,43 +502,38 @@ test.describe("schedule builder", () => {
   });
 
   /**
-   * **The width floor** (H-63, decided 2026-08-27; ADR
-   * 20260827-clearwater-surface-language, decision 5). Seven columns have no
-   * honest form on a portrait tablet, so the board is the vertical day stream
-   * below `xl` and the week from `xl` up — never both, and never neither.
-   * This spec sets its own viewports because the fleet's default is 1279, one
-   * pixel under the floor (playwright.config.ts).
+   * **There is no width floor any more** (#1923, finishing slice 23f of ADR
+   * 20260919-one-idea).
    *
-   * This is the **only** place the floor is really pinned: jsdom evaluates no
-   * media query, so a unit test can read the class and not the breakpoint.
+   * The board had two compositions and a breakpoint between them: the
+   * vertical day stream below `xl`, the week from `xl` up, never both and
+   * never neither. A day is a row on a phone and a row on a desk, so the week
+   * is now the board at every width and the stream is gone.
+   *
+   * This spec keeps setting its own viewports, and that is the point: what it
+   * pinned before was that exactly one composition rendered at each width;
+   * what it pins now is that the same one renders at all of them. A unit test
+   * cannot answer either — jsdom evaluates no media query.
    */
-  test("the board is the day stream below 1280px and the week from 1280 up", async ({ page }) => {
+  test("the board is the week at every width, with nothing underneath it", async ({ page }) => {
     await page.goto(BOARD);
     await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
 
     // Raw CSS locators, not `getByRole`: the fixture patches the role queries
     // to visible-only matches, which would make "is it hidden" unanswerable.
-    //
-    // **Scoped to the stream's own wrapper**, not to the builder section. The
-    // grid is a *child* of that section and renders first, so a
-    // `section[…] ul li` crawl resolved to a week-grid cell and asserted the
-    // exact opposite of this test at every width.
-    const grid = page.locator('section[aria-label="The week"]');
-    const stream = page.locator("[data-day-stream] li").first();
+    const grid = page.locator("[data-week-board]");
+    const stream = page.locator("[data-day-stream]");
 
-    // The portrait tablet a shop keeps the board open on all day, and the
-    // phone under it.
-    for (const width of [390, 820, 1279]) {
+    // The phone, the portrait tablet a shop keeps the board open on all day,
+    // the width that used to be one pixel under the floor, and the width that
+    // used to be the floor itself.
+    for (const width of [390, 820, 1279, 1280]) {
       await page.setViewportSize({ width, height: 900 });
-      await expect(stream, `the day stream is missing at ${width}px`).toBeVisible();
-      await expect(grid, `the week grid renders at ${width}px, below its floor`).toBeHidden();
+      await expect(grid, `the week is missing at ${width}px`).toBeVisible();
+      await expect(stream, `a day stream came back at ${width}px`).toHaveCount(0);
+      // The stream's cursor pager went with it: the board pages by week.
+      await expect(page.locator('a[href*="after="]')).toHaveCount(0);
     }
-
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await expect(grid).toBeVisible();
-    await expect(stream, "the stream renders alongside the week at 1280px").toBeHidden();
-    // The stream's cursor pager goes with it: the grid pages by week.
-    await expect(page.locator('a[href*="after="]').first()).toBeHidden();
   });
 
   /**
@@ -616,9 +615,9 @@ test.describe("schedule builder", () => {
     const week = page.getByRole("region", { name: "The week" });
     await expect(week.getByRole("link", { name: title, exact: true })).toBeVisible();
 
-    // The role queries are visible-only (e2e/fixtures.ts), so these resolve to
-    // the grid's own controls rather than to the stream's hidden twins — which
-    // is exactly the confusion the `w:` key prefix exists to prevent.
+    // One composition, so one "⋯" per departure. These used to have to be
+    // visible-only queries to avoid the stream's hidden twins; that hazard
+    // went with the stream (#1923).
     await chooseRowAction(page, "Move", title);
     await page.getByLabel("New date").fill(moveDay);
     await page.getByLabel("New departure time").fill("06:45");
@@ -634,26 +633,25 @@ test.describe("schedule builder", () => {
     await expect(week.getByRole("link", { name: title, exact: true })).toHaveCount(0);
   });
 
-  test("the week and the stream page by different parameters, and never mix them", async ({
-    page,
-  }) => {
-    // The grid is a second *reading* of the same departures, not a second
-    // stream: a `?week=` in the URL leaves the cursor-paged stream exactly as
-    // it was, and the pager it hands back names a cursor and no week.
+  test("the board pages by week, and by nothing else", async ({ page }) => {
+    // The board had two pagers arguing about where it was: the stream's
+    // keyset cursor in `?after=` and the week's own `?week=`. The stream is
+    // gone (#1923) and so is its cursor — a URL naming one now reaches a
+    // board that simply pages by week, and the controls on screen say so.
     await page.goto(`${BOARD}?week=2026-01-05`);
-    await expect(page.getByRole("region", { name: "Schedule builder" })).toBeVisible();
+    const week = page.getByRole("region", { name: "The week" });
+    await expect(week).toBeVisible();
 
-    const later = page.getByRole("link", { name: "Show later departures" });
-    await expect(later).toBeVisible();
-    const href = await later.getAttribute("href");
-    expect(href).toContain("after=");
-    expect(href).not.toContain("week=");
+    await expect(page.getByRole("link", { name: "Show later departures" })).toHaveCount(0);
+    await expect(page.locator('a[href*="after="]')).toHaveCount(0);
 
-    await later.click();
-    if (href) await page.waitForURL(`**${href}`);
-    await expect(
-      page.getByRole("link", { name: "Back to the next departure" }).first(),
-    ).toBeVisible();
+    // What reaches past this week instead: the pager's own steps, which keep
+    // the reading and move the window.
+    const next = week.getByRole("link", { name: "Next week" });
+    await expect(next).toHaveAttribute("href", /week=/);
+    await next.click();
+    await page.waitForURL(/week=/);
+    await expect(page.getByRole("region", { name: "The week" })).toBeVisible();
   });
 
   test("staff add a private charter, and verify its private charter badge in schedule and details", async ({
