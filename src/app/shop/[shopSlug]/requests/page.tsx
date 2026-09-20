@@ -8,16 +8,12 @@ import { listDateRequestsForStaff } from "@/db/course-inquiries";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
-import { groupDateRequests } from "@/lib/date-requests";
+import { addDepartureHref, groupDateRequests } from "@/lib/date-requests";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
-import {
-  addDepartureHref,
-  RequestDayGroup,
-  requestAdviceLines,
-} from "./_components/RequestDayGroup";
+import { RequestDayGroup, requestAdviceLines } from "./_components/RequestDayGroup";
 import { RequestLedgerRow } from "./_components/RequestLedgerRow";
 import { RequestReferenceRow } from "./_components/RequestReferenceRow";
 

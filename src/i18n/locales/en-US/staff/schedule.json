@@ -154,6 +154,10 @@
     "patternAddAlso": "Add it as well"
   },
   "week": {
+    "asked": "Asked for",
+    "askedDays": "{days, plural, one {# day} other {# days}}",
+    "askedLead": "{date} · {people, plural, one {# person} other {# people}}",
+    "askedOthers": "{others, plural, one {# other} other {# others}}",
     "ariaLabel": "The week",
     "previous": "Previous week",
     "next": "Next week",

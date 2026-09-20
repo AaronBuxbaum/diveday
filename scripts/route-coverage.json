@@ -513,6 +513,7 @@
     "visual": [
       "schedule-builder",
       "schedule-builder-add",
+      "schedule-builder-asked",
       "schedule-builder-add-full",
       "schedule-builder-add-tide",
       "schedule-builder-empty",

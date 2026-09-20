@@ -3,7 +3,6 @@ import { Fragment, type ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { CalendarDate } from "@/lib/calendar-date";
 import type { RequestAdvice } from "@/lib/request-advisor";
 
 /**
@@ -56,27 +55,6 @@ export function requestAdviceLines(
     });
   }
   return lines;
-}
-
-/**
- * The schedule builder, opened on this day with these leads carried forward.
- *
- * The whole point of counting groups against a day: the builder opens on that
- * date with the full form already disclosed (ADR 20260806-one-trip-create-form)
- * and carries the requests forward as invitations, so "two groups could make
- * the 4th" ends in a departure on the 4th rather than a note somewhere.
- */
-export function addDepartureHref(
-  shopSlug: string,
-  date: CalendarDate,
-  requestIds: readonly string[],
-): string {
-  const params = new URLSearchParams({
-    add: "full",
-    date,
-    requests: requestIds.join(","),
-  });
-  return `/shop/${encodeURIComponent(shopSlug)}/schedule/board?${params.toString()}`;
 }
 
 /**

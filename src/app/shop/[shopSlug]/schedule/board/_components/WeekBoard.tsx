@@ -136,6 +136,26 @@ export type BuilderWeek = {
   seatTally: string;
   days: WeekDay[];
   spans: WeekSpan[];
+  /**
+   * **The days in this week nobody put a boat on, that somebody asked for**
+   * (ADR 20260919-one-idea, slice 23f — "a request is a day someone asked for,
+   * drawn as a ghost on the week"). Empty when there are none, and the section
+   * does not render.
+   */
+  asked: WeekAsk[];
+  /** "2 days" — how many are below, said once at the section's head. */
+  askedCount: string;
+};
+
+/** One day the divers asked for, and the act that answers it. */
+export type WeekAsk = {
+  dateIso: string;
+  /** "Wed, Sep 2 · four people" — the date and the heads, already pluralised. */
+  lead: string;
+  /** Who asked, in the reader's own list grammar. */
+  who: string;
+  /** The builder, opened on that day with these leads carried forward. */
+  href: string;
 };
 
 /**
@@ -153,6 +173,10 @@ export type WeekBoardCopy = {
   rollCallOpenAria: string;
   /** What a day with nothing on it says, because a blank row is just a gap. */
   noBoats: string;
+  /** The heading over the days somebody asked for. */
+  asked: string;
+  /** The act that answers one — the Requests page's own word for it. */
+  addDeparture: string;
 };
 
 /**
@@ -632,6 +656,45 @@ export function WeekBoard({
           );
         })}
       </div>
+
+      {/* **The ghost days.** A request is a day somebody asked for, drawn
+          under the week it belongs to so the ask and the board are read
+          together — which is the one thing a week can say that the Requests
+          page cannot, and the reason this is not a second copy of it. */}
+      {week.asked.length > 0 ? (
+        <section aria-labelledby="week-asked" className="mt-8">
+          <p className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
+            <span id="week-asked" className={groupLabelClass("muted")}>
+              {copy.asked}
+            </span>
+            <span className="text-sm text-muted tabular-nums">{week.askedCount}</span>
+          </p>
+          <ul className="flex flex-col">
+            {week.asked.map((ask) => (
+              <li
+                key={ask.dateIso}
+                className="flex items-start gap-3 border-b border-border px-2 py-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm leading-snug font-semibold">{ask.lead}</p>
+                  <p className="mt-0.5 text-sm text-muted line-clamp-2">{ask.who}</p>
+                </div>
+                {/* Never gated on `canConfigure`: a staffer who cannot open a
+                    departure has no use for the door, and the ask itself is
+                    already said above it. */}
+                {canConfigure ? (
+                  <Link
+                    href={ask.href}
+                    className={buttonClass({ variant: "ghost", size: "sm", className: "shrink-0" })}
+                  >
+                    {copy.addDeparture}
+                  </Link>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {/* A week of empty rows and no way forward is a dead end. One line, and
           it is a link to the week that has something in it. */}

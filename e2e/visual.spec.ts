@@ -15,6 +15,7 @@ import {
   createTrip,
   daysFromNow,
   disclosureSettled,
+  e2eNow,
   manifestRow,
   offlineCopySaved,
   openDiverFileGroup,
@@ -4417,6 +4418,32 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await boardListSettled(page);
         await capture(page, "schedule-builder", scheme);
+      });
+
+      /**
+       * **The days somebody asked for, under the week they belong to** (ADR
+       * 20260919-one-idea, slice 23f).
+       *
+       * A week off the current one, because that is where the seeded leads
+       * are: `seed-date-requests.ts` places them twelve and thirteen days out,
+       * and the week board is seven days wide. Addressed by `?week=` rather
+       * than by clicking the pager twice — the pager has its own coverage, and
+       * a capture that has to navigate first is a capture that can fail for a
+       * reason that is not about pixels.
+       */
+      test(`the week draws the days somebody asked for (${scheme})`, async ({ page }) => {
+        // Derived from the fleet's frozen clock rather than written down: the
+        // seed places these leads twelve days out, so a literal date here
+        // would rot the moment either moves. Monday-first, like the board.
+        const day = new Date(e2eNow());
+        day.setUTCDate(day.getUTCDate() + 12);
+        day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
+        const asked = day.toISOString().slice(0, 10);
+        await page.goto(`/shop/blue-mantis/schedule/board?week=${asked}`);
+        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await boardListSettled(page);
+        await page.getByText("Asked for").waitFor();
+        await capture(page, "schedule-builder-asked", scheme);
       });
 
       /**

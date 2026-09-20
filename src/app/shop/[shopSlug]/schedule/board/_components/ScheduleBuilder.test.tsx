@@ -77,6 +77,8 @@ const COPY: BuilderCopy = {
   noPriceSetAll:
     "None of these departures has a price yet, and divers already see them on the schedule. Open a departure to set one.",
   noBoats: "No boats",
+  asked: "Asked for",
+  addDeparture: "Add a departure",
   rollCallOpen: "Roll call · {count} not counted",
   rollCallOpenAria: "Finish the dive {dive} roll call for {ref}",
   rollCallOpenNote: "Back at the dock with the dive {dive} roll call still open.",
@@ -1797,6 +1799,8 @@ describe("ScheduleBuilder week board", () => {
       allUnpriced: false,
       nextDeparture: null,
       seatTally: "14 of 17 seats",
+      asked: [],
+      askedCount: "0 days",
       words: {
         previous: "Previous week",
         next: "Next week",
@@ -1918,6 +1922,44 @@ describe("ScheduleBuilder week board", () => {
         within(grid()).queryByRole("button", { name: `Add a departure on ${past}` }),
       ).toBeNull();
     }
+  });
+
+  /**
+   * **A day somebody asked for, read against the week it belongs to** (ADR
+   * 20260919-one-idea, slice 23f) — which is the one thing a week can say that
+   * the Requests page cannot, and the reason this is not a second copy of it.
+   */
+  it("draws the days somebody asked for, and the act that answers one", () => {
+    board(
+      week({
+        asked: [
+          {
+            dateIso: "2026-08-26",
+            lead: "Wed, Aug 26 · 4 people",
+            who: "Marta Ruiz and Leo Fisher",
+            href: "/shop/blue-mantis/schedule/board?add=full&date=2026-08-26&requests=r1%2Cr2",
+          },
+        ],
+        askedCount: "1 day",
+      }),
+    );
+
+    expect(within(grid()).getByText("Wed, Aug 26 · 4 people")).toBeVisible();
+    expect(within(grid()).getByText("Marta Ruiz and Leo Fisher")).toBeVisible();
+    expect(within(grid()).getByText("1 day")).toBeVisible();
+    expect(within(grid()).getByRole("link", { name: "Add a departure" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/schedule/board?add=full&date=2026-08-26&requests=r1%2Cr2",
+    );
+  });
+
+  /**
+   * A week nobody asked anything of says nothing about it — the heading is not
+   * a permanent fixture waiting to be filled (design/principles.md #9).
+   */
+  it("says nothing about asks on a week that has none", () => {
+    board(week());
+    expect(within(grid()).queryByText("Asked for")).toBeNull();
   });
 
   it("offers a boat already home no move, copy, remove or price warning", () => {
