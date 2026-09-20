@@ -1,6 +1,6 @@
 # One idea — the app is the day, the boat, or the sea
 
-- **Status:** Live (its ADR is Proposed, pending H-88; drawn 2026-09-19 on the owner's read of the 2026-09-18 canvas's round 2; nothing has shipped from it)
+- **Status:** Live (its ADR is Accepted — **H-88: I · Tide**, decided 2026-09-19; drawn that day on the owner's read of the 2026-09-18 canvas's round 2. Six slices have shipped — 23i, 23b, 23c, 23d, 23e, 23f — so read the table below before treating any row as an instruction)
 - **Date:** 2026-09-19
 - **ADR:** [20260919-one-idea](../../../architecture/decisions/20260919-one-idea.md)
 - **Published:** https://claude.ai/artifact/8oUihSuV75uRbj8DrJ9EpU (round 3 first, with rounds 2 and 1 below it for the record; the superseded canvas's own page stays at its URL)
@@ -104,7 +104,7 @@ rule, and this table moves.
 | 23c — the departure: the hour page with the strip (I), the hull with its seats (II), the voyage on the chart (III); the four trip tabs one page; the roll call's one tap untouched beneath | shipped | `src/app/shop/[shopSlug]/trips/[id]/page.tsx` | `src/lib/hull.test.ts` (the canvas's own outlines, verbatim), `src/app/shop/[shopSlug]/trips/[id]/_components/TripHull.test.tsx`, `e2e/trip-hull.spec.ts`, `e2e/boat-loop.spec.ts` "the departure reaches its manifest, and carries its packing list" |
 | 23d — the storefront's front page on the idea, in Harbor's face and the shop's colour: the day and the week (I), the boat you are about to book (II), where we go (III) | shipped | `src/app/s/[shopSlug]/_components/ShopfrontHero.tsx` | `src/app/s/[shopSlug]/_components/ShopfrontHero.test.tsx`, the `storefront-sky` capture in `e2e/visual.spec.ts` |
 | 23e — the diver, the counter and the walk-in reached through the idea: search and a sheet over the home; the person's record unchanged inside it | shipped | `src/components/DiverSheet.tsx` | `e2e/staff-nav.spec.ts` "a diver the search finds is laid over the day, not opened instead of it" and "a diver id that names nobody leaves the day with nobody over it", `e2e/search.spec.ts`, the `today-diver-sheet` capture, `src/db/divers.test.ts` "does not open another shop's live diver" |
-| 23f — the week, the requests and the season on the idea: the Board becomes the week; a request is a ghost day (I), a boat to put out (II), a track to add (III) | open | — | — |
+| 23f — the week, the requests and the season on the idea: the Board becomes the week; a request is a ghost day (I), a boat to put out (II), a track to add (III) | shipped | `src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx` | `src/lib/week-seats.test.ts`, `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.test.tsx`'s "ScheduleBuilder week board" — "says a day with no departures has none, and still offers to fill it" and "draws the days somebody asked for, and the act that answers one" — and the `schedule-builder-asked` capture in `e2e/visual.spec.ts` |
 | 23g — the rest, one family per session: courses, gear, money, reviews, staffing, and Settings behind the shop's name | open | — | — |
 | 23h — night and glare on the idea: by the hour (I) or by the device (II, III); glare as the crew's word in the roll call's bar; the black-on-white twin held by a test | open | — | — |
 
