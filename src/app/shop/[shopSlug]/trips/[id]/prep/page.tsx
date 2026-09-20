@@ -80,7 +80,7 @@ export default async function TripPrepPage({
   const t = staffTranslator(locale);
   const prep = await getTripPrep(db, shop, tripId);
   if (!prep) notFound();
-  const { trip, checklist } = prep;
+  const { trip } = prep;
 
   return (
     <>
