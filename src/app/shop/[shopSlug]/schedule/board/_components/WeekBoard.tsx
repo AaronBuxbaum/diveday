@@ -435,7 +435,7 @@ function WeekBoat({
         {/* The lead line is what the canvas draws: when it leaves, how full it
             is, and the count. The bar sits between them rather than after, so
             a reader scanning a column of times meets every fill at one x. */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap sm:gap-x-3">
           {time ? (
             <p
               className={`text-base leading-tight font-semibold tabular-nums ${sailed ? "text-muted" : ""}`}
@@ -444,7 +444,20 @@ function WeekBoat({
             </p>
           ) : null}
           <SeatBar seats={seats} sailed={sailed} />
-          <p className="min-w-0 flex-1 truncate text-sm text-muted tabular-nums">{meta}</p>
+          {/* **A full line of its own on a phone, inline from `sm` up.** The
+              week was a desktop-only grid until #1923 and this sentence had a
+              row's whole measure to sit in; at 390 it has about 120px between
+              the seat bar and the "⋯", which truncated "Molasses Reef ·
+              Mantis II · 10 of 12 · $95" to "Molas…" — every fact in it lost,
+              including the two the bar is a picture of.
+
+              `basis-full order-last` drops it below the controls on a phone
+              and `sm:` puts it back where the desktop design has it, so the
+              sentence is one node in one place in the reading order rather
+              than two copies fighting a media query. */}
+          <p className="order-last basis-full text-sm text-muted tabular-nums sm:order-none sm:min-w-0 sm:flex-1 sm:basis-auto sm:truncate">
+            {meta}
+          </p>
           {canConfigure && !sailed ? (
             <RowActions
               departure={departure}
@@ -452,7 +465,7 @@ function WeekBoat({
               onToggle={onToggle}
               registerToggle={registerToggle}
               label={copy.rowActionsAria}
-              className="-my-1 -me-2 shrink-0"
+              className="-my-1 -me-2 ms-auto shrink-0 sm:ms-0"
             />
           ) : null}
         </div>
