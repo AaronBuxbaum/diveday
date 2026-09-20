@@ -5603,11 +5603,22 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "prep-assignments", scheme);
       });
 
-      // **The load-out, after one diver's set has been handed across** (issue
-      // #1185, delight report D25). The calm capture above shows the cart line
-      // and its pickers; this one shows the state a counter reaches by 7am —
-      // one set out, its Hand over gone, the return pane in its place.
-      test(`the prep page's load-out reads as handed over (${scheme})`, async ({ page }) => {
+      /**
+       * **The load-out, after one diver's set has been handed across** (issue
+       * #1185, delight report D25). The calm capture above shows the cart line
+       * and its pickers; this one shows the state a counter reaches by 7am —
+       * one set out, its Hand over gone, the return pane in its place.
+       *
+       * **Named for the departure, not for `/prep`, because that is where it
+       * lands.** It starts on `/prep` like its siblings, but it is the only
+       * one here that *acts* — and slice 23c re-pointed `assignGearUnitAction`
+       * and its three siblings at the departure, since after the fold `/prep`
+       * is a page with no roster and no way back. The capture followed the
+       * redirect and its baseline more than doubled (4053 → 8605 at 1280),
+       * which is how the drift was found: a name that says `prep-` over a
+       * picture of the departure would mislead the next triage.
+       */
+      test(`the load-out reads as handed over on the departure (${scheme})`, async ({ page }) => {
         const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
         await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
         const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
@@ -5616,7 +5627,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Wait on what the destination renders, never on a timeout: the set
         // that just went out has a return pane and no hand-over.
         await assignments.getByRole("button", { name: "All good" }).first().waitFor();
-        await capture(page, "prep-load-out-handed-over", scheme);
+        await capture(page, "departure-load-out-handed-over", scheme);
       });
 
       // The slip the counter prints and hands over. Reached the way a staffer      // The slip the counter prints and hands over. Reached the way a staffer
