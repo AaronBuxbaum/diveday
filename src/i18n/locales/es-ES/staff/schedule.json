@@ -161,6 +161,9 @@
     "today": "Hoy",
     "nothingThisWeek": "Nada esta semana. La próxima salida es el {date}.",
     "seats": "{booked} de {capacity}",
+    "seatTally": "{taken} de {total, plural, one {# plaza} other {# plazas}}",
+    "noBoats": "Sin barcos",
+    "runsDays": "{days, plural, one {# día} other {# días}}",
     "sailed": "Zarpó"
   },
   "addBooking": "Añadir una reserva"

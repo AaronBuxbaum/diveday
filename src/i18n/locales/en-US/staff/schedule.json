@@ -161,6 +161,9 @@
     "today": "Today",
     "nothingThisWeek": "Nothing this week. The next departure is {date}.",
     "seats": "{booked} of {capacity}",
+    "seatTally": "{taken} of {total, plural, one {# seat} other {# seats}}",
+    "noBoats": "No boats",
+    "runsDays": "{days, plural, one {# day} other {# days}}",
     "sailed": "Sailed"
   },
   "addBooking": "Add a booking"

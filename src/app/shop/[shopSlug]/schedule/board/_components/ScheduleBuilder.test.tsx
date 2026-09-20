@@ -76,6 +76,7 @@ const COPY: BuilderCopy = {
   noPriceSetAria: "Set a price for {ref}",
   noPriceSetAll:
     "None of these departures has a price yet, and divers already see them on the schedule. Open a departure to set one.",
+  noBoats: "No boats",
   rollCallOpen: "Roll call · {count} not counted",
   rollCallOpenAria: "Finish the dive {dive} roll call for {ref}",
   rollCallOpenNote: "Back at the dock with the dive {dive} roll call still open.",
@@ -1757,6 +1758,7 @@ describe("ScheduleBuilder week board", () => {
       title: "Two-Tank Reef",
       time: "7:00 AM",
       meta: "10 of 12 · $95",
+      seats: { booked: 10, capacity: 12 },
       dayCount: 1,
       status: "upcoming" as const,
       unpriced: false,
@@ -1770,6 +1772,8 @@ describe("ScheduleBuilder week board", () => {
     return {
       title: "Open Water Diver — three-day course",
       meta: "4 of 5 · $595 · Marcus Webb",
+      seats: { booked: 4, capacity: 5 },
+      runsLabel: "3 days",
       dateIso: "2026-08-28",
       startTime: "08:00",
       dayCount: 3,
@@ -1792,6 +1796,7 @@ describe("ScheduleBuilder week board", () => {
       thisWeekHref: null,
       allUnpriced: false,
       nextDeparture: null,
+      seatTally: "14 of 17 seats",
       words: {
         previous: "Previous week",
         next: "Next week",
@@ -1882,18 +1887,25 @@ describe("ScheduleBuilder week board", () => {
     });
     expect(bars).toHaveLength(1);
     expect(bars[0]).toHaveAttribute("href", "/shop/blue-mantis/trips/course-1");
-    // Fri, Sat and Sun — the three days the bar covers — carry the bar and
-    // nothing else. A course drawn as a bar *and* three entries is the same
-    // fact said four times.
-    expect(within(grid()).queryAllByRole("listitem")).toHaveLength(0);
+    // **Once, on the day it starts** (slice 23f). A course owns the days it
+    // covers rather than repeating in them, so the whole week holds exactly
+    // one row for it — the bar it used to be drawn as was the same claim in
+    // the grid's geometry. It says how long it runs where a boat says when it
+    // leaves, which is what a reader loses when the bar stops spanning
+    // columns.
+    expect(within(grid()).queryAllByRole("listitem")).toHaveLength(1);
+    expect(within(grid()).getByText("3 days")).toBeVisible();
   });
 
-  it("says nothing in a day with no departures", () => {
+  it("says a day with no departures has none, and still offers to fill it", () => {
     board(week());
 
-    // No per-cell empty copy anywhere: an empty column is the information
-    // this grid exists to show.
     expect(within(grid()).queryAllByRole("listitem")).toHaveLength(0);
+    // **Seven rows saying "No boats", where the grid said nothing at all.**
+    // An empty *column* is read against the six beside it, which is what gave
+    // the blank its meaning; one empty row in a run of rows is just a gap, so
+    // the week says it in words.
+    expect(within(grid()).getAllByText("No boats")).toHaveLength(7);
     // What an empty day still ahead does carry is its own way to fill it —
     // and a day already behind carries none, because a departure is put on
     // the board and the board is ahead. Aug 27 is "today" in this fixture, so

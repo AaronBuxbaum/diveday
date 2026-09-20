@@ -206,6 +206,8 @@ export type BuilderCopy = {
   noPriceSet: string;
   noPriceSetAria: string;
   noPriceSetAll: string;
+  /** What a week's day with nothing on it says (slice 23f). */
+  noBoats: string;
   rollCallOpen: string;
   rollCallOpenAria: string;
   rollCallOpenNote: string;

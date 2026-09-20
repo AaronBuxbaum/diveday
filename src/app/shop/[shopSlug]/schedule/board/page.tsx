@@ -60,6 +60,7 @@ import {
   weekIsWhollyUnpriced,
   weekStartOf,
 } from "@/lib/week-board";
+import { weekSeatTally } from "@/lib/week-seats";
 import { toDateInputValue, toTimeInputValue, utcToWallTime } from "@/lib/zoned";
 import {
   type BuilderCopy,
@@ -361,6 +362,7 @@ export default async function ScheduleBoardPage({
     noPriceSet: st("schedule.builder.noPriceSet"),
     noPriceSetAria: st.raw("schedule.builder.noPriceSetAria"),
     noPriceSetAll: st("schedule.builder.noPriceSetAll"),
+    noBoats: st("schedule.week.noBoats"),
     rollCallOpen: st.raw("schedule.builder.rollCallOpen"),
     rollCallOpenAria: st.raw("schedule.builder.rollCallOpenAria"),
     rollCallOpenNote: st.raw("schedule.builder.rollCallOpenNote"),
@@ -811,6 +813,10 @@ export default async function ScheduleBoardPage({
           seats,
           price,
         }),
+        // The two numbers the bar is a picture of. Beside `meta` rather than
+        // parsed back out of it: "10 of 12" is a sentence in two languages and
+        // `src/lib/week-seats.ts` must never have to read one.
+        seats: { booked: entry.booked, capacity: entry.capacity },
         rollCallOpen: weekRollCalls.get(entry.tripId) ?? null,
         // Single-day by construction: `weekBoard` returns a multi-day course
         // as a span, never as a day entry, so an entry's move panel never has
@@ -859,6 +865,8 @@ export default async function ScheduleBoardPage({
         // The course's own first day and departure time, not the column the
         // bar happens to start in: a run that began before this week still
         // moves from where it really starts.
+        seats: { booked: span.booked, capacity: span.capacity },
+        runsLabel: st("schedule.week.runsDays", { days: span.dayCount }),
         dateIso: span.firstDay,
         startTime: toTimeInputValue(utcToWallTime(span.startsAt, tz)),
         dayCount: span.dayCount,
@@ -900,6 +908,17 @@ export default async function ScheduleBoardPage({
         nextHref: `${boardPath}?week=${shiftWeek(weekStartIso, 1)}`,
         thisWeekHref: weekStartIso === weekStartOf(todayIso) ? null : boardPath,
         allUnpriced: weekAllUnpriced,
+        // **Counted from the drawn rows, not from the query.** A span replaces
+        // the day cells it covers rather than joining them, so summing these
+        // two lists is summing exactly what a reader can see — and a course
+        // cannot be counted twice by a tally reading the same rows the week
+        // does.
+        seatTally: st("schedule.week.seatTally", {
+          ...weekSeatTally([
+            ...weekViewDays.flatMap((day) => day.entries.map((entry) => entry.seats)),
+            ...weekViewSpans.map((span) => span.seats),
+          ]),
+        }),
         words: {
           previous: st("schedule.week.previous"),
           next: st("schedule.week.next"),
