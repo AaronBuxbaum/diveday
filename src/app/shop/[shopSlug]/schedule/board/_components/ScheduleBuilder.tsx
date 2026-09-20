@@ -27,6 +27,7 @@ import {
 } from "@/lib/minimum-seats";
 import { MOTION_STAGGER_MS, motionMs } from "@/lib/motion";
 import type { MovePreflight, MovePreflightSection } from "@/lib/move-preflight";
+import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import type { BuilderWeek, WeekDeparture } from "./WeekBoard";
 import { AllUnpricedNotice, WeekBoard } from "./WeekBoard";
 
@@ -1839,46 +1840,6 @@ function CopyPanel({
  * disclosure, which is why the stagger is two steps rather than three.
  */
 const MENU_CLOSE_MS = motionMs("unfold") + MOTION_STAGGER_MS * 2 + 10;
-
-/**
- * The crew signature this board mostly runs with, or `null` when it has none.
- *
- * **It is never printed.** The standing "Usual crew: …" sentence it used to
- * feed is gone (surfaces.md's "Remove first" for this board, and the
- * `20260908-one-hand` canvas); what it answers now is only which rows may keep
- * quiet about their crew, so that every row that does print one is the
- * exception a manager is scanning for.
- *
- * A signature is the assignment in the order the row already prints it, so two
- * departures crewed by the same two people in a different order count as two
- * different answers — which is the honest reading, since that ordering is the
- * shop's own (lead first) rather than incidental.
- *
- * Returns `null` unless one signature covers at least three departures *and*
- * more than half the window. Both halves matter: below three, a per-row line
- * still reads as the exception it is, and without the majority there is no
- * "usual" to state. Departures with nobody assigned are excluded from the vote
- * and can never win it.
- */
-function mostCommonCrew(trips: readonly { crew: string[] }[]): string[] | null {
-  const counts = new Map<string, { crew: string[]; count: number }>();
-  for (const trip of trips) {
-    if (trip.crew.length === 0) continue;
-    const key = trip.crew.join("\u0000");
-    const seen = counts.get(key);
-    if (seen) seen.count += 1;
-    else counts.set(key, { crew: trip.crew, count: 1 });
-  }
-  let best: { crew: string[]; count: number } | null = null;
-  for (const entry of counts.values()) if (!best || entry.count > best.count) best = entry;
-  if (!best || best.count < 3 || best.count * 2 <= trips.length) return null;
-  return best.crew;
-}
-
-/** Does this departure run with the board's usual crew, in the same order? */
-function isUsualCrew(crew: readonly string[], usual: readonly string[] | null): boolean {
-  return usual !== null && crew.length === usual.length && crew.every((n, i) => n === usual[i]);
-}
 
 export function ScheduleBuilder({
   shopSlug,
