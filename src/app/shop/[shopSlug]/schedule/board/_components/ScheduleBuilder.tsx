@@ -2007,7 +2007,13 @@ export function ScheduleBuilder({
   }, [pathname]);
 
   return (
-    <section aria-label={copy.ariaLabel} className="mb-8">
+    // `data-schedule-builder` is the copy-free hook a test asks "has the
+    // board finished streaming?" with — true whether or not the week has
+    // anything on it, which `data-week-board` is not. The `aria-label` beside
+    // it is localised, so a Spanish run cannot name the region; that is the
+    // same finding `data-day-stream` and `data-week-board` already carry
+    // (#1923), and the Spanish visual captures are where it bites.
+    <section data-schedule-builder="" aria-label={copy.ariaLabel} className="mb-8">
       {/* No top "Add a departure" band: that control lives in the page
           header's action cluster (a Link to `?add=1` in page.tsx) rather than
           holding a stratum of its own whose only content duplicated the "+

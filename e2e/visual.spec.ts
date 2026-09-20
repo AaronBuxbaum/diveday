@@ -4686,7 +4686,13 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Returns").fill("11:00");
         await page.getByLabel("How often").selectOption("1");
         await page.getByRole("button", { name: "Put it on the board" }).click();
-        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        // **The write's own signal, not the page's heading.** `?add=full` is
+        // the board with the panel open, so the "Board" heading is already on
+        // screen and waiting for it waits for nothing — and the crawl below
+        // reads the week with `count()`, which does not auto-wait, so it
+        // walked past a departure still being written and hunted it to the
+        // end of the horizon (`.claude/rules/e2e.md`'s `action-race`).
+        await expect(page.getByRole("status")).toContainText(title);
         await openTripFromBoard(page, title);
         await openTripAbout(page);
         // The About panel's "Repeats" row — its label and cadence sentence are

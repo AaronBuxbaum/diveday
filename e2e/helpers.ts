@@ -560,6 +560,14 @@ const MAX_WEEK_HOPS = 13;
  * wants a *particular* week rather than the first one holding a title says so
  * with `?week=<any date in it>` instead of calling this.
  *
+ * **It searches settled content and never waits for a write.** Each week is
+ * read with `count()`, so a caller that has just submitted the departure it is
+ * hunting must put the action's own barrier in between — the `role="status"`
+ * line naming the title, or `page.waitForURL` on the `?notice=` redirect. A
+ * crawl started mid-flight walks straight past the week the trip is about to
+ * land on and hunts it to the end of the horizon
+ * (`.claude/rules/e2e.md`'s `action-race`).
+ *
  * **The link is matched by its exact accessible name**, not by row text: an
  * unpriced departure's row also carries a "Set a price for {title}, {date}
  * {time}" link, and a title that is another title's prefix — `X` beside
@@ -574,7 +582,12 @@ async function walkBoardWeeksFor(page: Page, title: string | RegExp): Promise<Lo
   // hunting a seeded trip). The builder section exists only in the streamed
   // body, whatever the board holds, so its appearance proves the rows and the
   // pager are in the DOM.
-  await page.getByRole("region", { name: "Schedule builder" }).waitFor();
+  //
+  // **By its `data-` hook, never by its accessible name.** The section's
+  // `aria-label` is copy, so `getByRole("region", { name: "Schedule builder" })`
+  // waits forever on a Spanish run — which is how three visual captures went
+  // red the first time this crawl was shared with `openTripFromBoard`.
+  await page.locator("[data-schedule-builder]").waitFor();
   for (let hops = 0; hops < MAX_WEEK_HOPS; hops++) {
     const link = page.locator("[data-week-board]").getByRole("link", { name: title, exact: true });
     if ((await link.count()) > 0) return link.first();
@@ -588,7 +601,7 @@ async function walkBoardWeeksFor(page: Page, title: string | RegExp): Promise<Lo
     const nextHref = await next.getAttribute("href");
     if (!nextHref) break;
     await page.goto(nextHref);
-    await page.getByRole("region", { name: "Schedule builder" }).waitFor();
+    await page.locator("[data-schedule-builder]").waitFor();
   }
   throw new Error(`trip "${title}" not found on the schedule board after paging`);
 }
