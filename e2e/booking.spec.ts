@@ -314,10 +314,7 @@ test.describe("staff", () => {
       .filter({ hasText: title })
       .getByRole("link", { name: title, exact: true })
       .click();
-    await page
-      .getByRole("navigation", { name: "Trip" })
-      .getByRole("link", { name: "Manifest" })
-      .click();
+    await page.getByRole("link", { name: "Manifest" }).click();
     await page.getByRole("heading", { name: "Buddy teams" }).click();
     // The whole of what D23 gets: an aggregate on the team builder, with no
     // name in it and no suggested pairing.

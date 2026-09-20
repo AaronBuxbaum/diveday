@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 // The trip layout owns the blocking staff shell; this page still opts into the
-// same instant-navigation contract as the four tabs it composes.
+// same instant-navigation contract as the pages it composes.
 export const instant = true;
 
 /**
@@ -28,7 +28,8 @@ export const instant = true;
  * output as considered as screen output", and a rectangle labelled "Cancel
  * trip" beside a roster is not that.
  *
- * Two of the four tabs are working pages rather than documents, and they were
+ * Two of the three composed pages are working surfaces rather than documents,
+ * and they were
  * the whole problem — I attributed every control before changing anything:
  *
  * - **Overview** held 8 buttons, all 9 selects and most of the inputs, because

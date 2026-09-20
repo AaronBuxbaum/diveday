@@ -265,39 +265,32 @@ export async function openTripFromBoard(page: Page, title: string) {
 }
 
 /**
- * Move between a trip record's surfaces (`TripSubNav` — Trip, Manifest,
- * Prep). The nav is labelled "Trip" and its links are plain
- * `<Link>`s, so the click resolves client-side: waiting on the tab's own path
- * segment here is what keeps a caller's first assertion from racing the
- * in-flight transition. The active tab renders as an inert `<span>`, so
- * calling this for the tab you are already on would hang — navigate, don't
- * re-select.
+ * Move between a departure's surfaces.
+ *
+ * **There is no tab strip any more** (ADR 20260919-one-idea, slice 23c). The
+ * packing list reads on the departure page itself, and the manifest is reached
+ * from one chip in the sky band. `/prep` survives as its own route because the
+ * paper day composes it, and it renders the same `PrepBody` — so a capture
+ * taken there still photographs the real thing, on a page that is only the
+ * list rather than the whole departure.
+ *
+ * So this navigates by URL rather than by clicking a strip that is gone. It is
+ * deliberately not a `getByRole("link")` on the band's Manifest chip: a helper
+ * every spec leans on should put the caller on a surface, and
+ * `boat-loop.spec.ts` is where the chip itself is the subject.
  */
 export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep") {
-  // Trip is the canonical root surface. A board link already lands there, so
-  // the helper treats an already-active Trip tab as a successful no-op;
-  // Manifest and Prep remain explicit navigations.
-  //
-  // **Answered from the URL, never from whether the link has rendered.** This
-  // asked `link.count() === 0` — and `count()` is the one locator call that
-  // does not retry, so on a page whose sub-nav had not painted yet it returned
-  // 0, took the no-op branch, and asserted the trip URL while standing on
-  // `/manifest`. That is exactly how it failed on CI on 2026-09-04, in the one
-  // spec that calls this *from* the manifest: an intermittent failure in a
-  // suite that runs `retries: 0` so a flake gets root-caused rather than
-  // re-run. The URL is the authoritative answer to "am I already on the Trip
-  // surface", it is available synchronously, and it cannot race.
-  if (tab === "Trip" && TRIP_ROOT_URL.test(page.url())) return;
-  const link = page.getByRole("navigation", { name: "Trip" }).getByRole("link", { name: tab });
-  // `click()` auto-waits for the link, so the tab arriving late is handled
-  // rather than guessed at.
-  await link.click();
+  const url = new URL(page.url());
+  const root = url.pathname.match(/^(.*\/trips\/[^/?#]+)/)?.[1];
+  if (!root) throw new Error(`openTripTab called from ${url.pathname}, which is not a departure`);
+  const target = tab === "Trip" ? root : `${root}/${tab.toLowerCase()}`;
+  if (url.pathname === target) return;
+  await page.goto(target);
   await page.waitForURL(
     tab === "Trip" ? TRIP_ROOT_URL : new RegExp(`/${tab.toLowerCase()}(\\?|#|$)`),
   );
 }
 
-/** The trip record's own surface: `/trips/<id>` with no tab segment after it. */
 const TRIP_ROOT_URL = /\/trips\/[^/?#]+(?:[?#]|$)/;
 
 /** Open the Trip surface's compact About disclosure before using its details. */

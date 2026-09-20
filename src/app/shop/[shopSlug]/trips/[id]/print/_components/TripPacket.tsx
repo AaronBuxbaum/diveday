@@ -93,7 +93,7 @@ export async function TripPacket({
           {t("shared.printPacket.divesHeading")}
         </h2>
         {/* Each section breaks onto its own page, so page one has to say which
-            departure it is — through the same header the four tabs wear, not a
+            departure it is — through the same header its sub-pages wear, not a
             hand-rolled title line that would drift from them. */}
         <TripPageHeader
           trip={details.trip}

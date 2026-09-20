@@ -6,6 +6,7 @@ import {
   openDiverFileGroup,
   openSettingsRow,
   openThreadStep,
+  openTripTab,
 } from "./helpers";
 
 async function openWreckTrip(page: Page) {
@@ -51,10 +52,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("status").filter({ hasText: "Marked certified." })).toBeVisible();
 
     await openWreckTrip(page);
-    await page
-      .getByRole("navigation", { name: "Trip" })
-      .getByRole("link", { name: "Prep" })
-      .click();
+    await openTripTab(page, "Prep");
     await expect(page.getByRole("heading", { name: /Wreck Trip/ })).toBeVisible();
 
     // The prep list is derived from rental fit, so it always lists tanks and
@@ -209,10 +207,7 @@ test.describe("a shop that stops filling nitrox", () => {
       .filter({ hasText: "Two-Tank Reef — Molasses & French" })
       .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
       .click();
-    await page
-      .getByRole("navigation", { name: "Trip" })
-      .getByRole("link", { name: "Prep" })
-      .click();
+    await openTripTab(page, "Prep");
     const tanks = page
       .getByRole("heading", { name: "Tanks" })
       .locator("xpath=..")

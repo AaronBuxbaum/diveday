@@ -22,7 +22,7 @@ import { type NoticeCodeOf, noticeUrl, shopPath } from "@/lib/staff-notices";
  * A gear refusal's `?notice=` code, one entry per reason the domain can answer.
  *
  * These used to be built as `` `gear-${outcome.reason}` ``. Every code that
- * produced happened to exist in the prep page's `GEAR_NOTICES` map — but
+ * produced happened to exist in the packing list's `GEAR_NOTICES` map — but
  * `scripts/check-notice-codes.mjs` cannot read an interpolated string, so
  * nothing checked it, and a reason added to either union tomorrow would have
  * produced a code with no map entry. That renders **no banner at all**, which
@@ -63,6 +63,24 @@ const assignSchema = z.object({
 });
 
 /**
+ * **Where a gear form lands its staffer: the departure, not `/prep`.**
+ *
+ * The packing list stopped being a tab of its own and reads on the departure
+ * page now (ADR 20260919-one-idea, slice 23c), so that is where these forms
+ * are submitted from and where their `?notice=` belongs. `/prep` still renders
+ * the same list — the paper day composes it — but sending someone there after
+ * a hand-over would drop them on a page with no roster and no way back to the
+ * one they were working.
+ *
+ * One helper rather than five call sites, because the five must agree: a
+ * redirect and the `revalidatePath` beside it naming different paths is a
+ * staffer watching a stale count.
+ */
+function departureOf(shopSlug: string, tripId: string) {
+  return shopPath(shopSlug, "trips", tripId);
+}
+
+/**
  * Assign one unit to one diver for this departure's whole window. The window
  * is derived from the trip on the server — never posted from the form — so a
  * stale tab cannot reserve last week's dates, and the exclusion constraint
@@ -75,14 +93,14 @@ export async function assignGearUnitAction(formData: FormData) {
     const gear = shopPath(session.user.shopSlug, "gear");
     revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
   }
-  const prep = shopPath(session.user.shopSlug, "trips", parsed.data.tripId, "prep");
+  const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
 
   const db = await getDb();
   const [shop, trip] = await Promise.all([
     getShopById(db, session.user.shopId),
     getTripWithBooked(db, session.user.shopId, parsed.data.tripId),
   ]);
-  if (!shop || !trip) revalidateAndRedirect(prep, noticeUrl(prep, "gear-invalid"));
+  if (!shop || !trip) revalidateAndRedirect(departure, noticeUrl(departure, "gear-invalid"));
 
   const window = tripReservationWindow(trip, shop.timezone);
   const outcome = await reserveGearUnit(db, {
@@ -96,8 +114,8 @@ export async function assignGearUnitAction(formData: FormData) {
     reservedUntil: window.until,
   });
   revalidateAndRedirect(
-    prep,
-    noticeUrl(prep, outcome.ok ? "gear-assigned" : RESERVE_GEAR_NOTICE[outcome.reason]),
+    departure,
+    noticeUrl(departure, outcome.ok ? "gear-assigned" : RESERVE_GEAR_NOTICE[outcome.reason]),
   );
 }
 
@@ -160,7 +178,7 @@ export async function assignGearUnit(input: {
   // The rest of the page holds counts and a "still to assign" list that this
   // pick just changed, so the server tree is refreshed — without the redirect
   // that would throw the staffer back to the top of a long page.
-  revalidatePath(shopPath(session.user.shopSlug, "trips", parsed.data.tripId, "prep"));
+  revalidatePath(departureOf(session.user.shopSlug, parsed.data.tripId));
   return { ok: true };
 }
 
@@ -174,15 +192,15 @@ export async function releaseGearUnitAction(formData: FormData) {
     const gear = shopPath(session.user.shopSlug, "gear");
     revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
   }
-  const prep = shopPath(session.user.shopSlug, "trips", parsed.data.tripId, "prep");
+  const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
 
   const outcome = await releaseGearReservation(await getDb(), {
     shopId: session.user.shopId,
     reservationId: parsed.data.reservationId,
   });
   revalidateAndRedirect(
-    prep,
-    noticeUrl(prep, outcome.ok ? "gear-released" : RESERVATION_ACTION_NOTICE[outcome.reason]),
+    departure,
+    noticeUrl(departure, outcome.ok ? "gear-released" : RESERVATION_ACTION_NOTICE[outcome.reason]),
   );
 }
 
@@ -208,16 +226,16 @@ export async function checkOutTripGearSetAction(formData: FormData) {
     const gear = shopPath(session.user.shopSlug, "gear");
     revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
   }
-  const prep = shopPath(session.user.shopSlug, "trips", parsed.data.tripId, "prep");
+  const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
 
   const outcome = await checkOutTripGearSet(await getDb(), {
     shopId: session.user.shopId,
     bookingId: parsed.data.bookingId,
   });
   revalidateAndRedirect(
-    prep,
+    departure,
     noticeUrl(
-      prep,
+      departure,
       outcome.ok
         ? "gear-handed-over"
         : outcome.reason === "not_found"
@@ -244,7 +262,7 @@ const returnSetSchema = gearSetSchema.extend({
  * is a service concern — the refusal lives there rather than in this schema so
  * the same rule holds for the single-unit path on the register.
  *
- * A set with nothing out answers `not_found`, which the prep page words as
+ * A set with nothing out answers `not_found`, which the packing list words as
  * "nothing from that set is out" rather than as a missing record: on this
  * surface the reservation plainly exists, and the honest thing to say is that
  * somebody else already brought it back.
@@ -256,7 +274,7 @@ export async function returnTripGearSetAction(formData: FormData) {
     const gear = shopPath(session.user.shopSlug, "gear");
     revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
   }
-  const prep = shopPath(session.user.shopSlug, "trips", parsed.data.tripId, "prep");
+  const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
 
   const outcome = await returnTripGearSet(await getDb(), {
     shopId: session.user.shopId,
@@ -265,9 +283,9 @@ export async function returnTripGearSetAction(formData: FormData) {
     note: parsed.data.note,
   });
   revalidateAndRedirect(
-    prep,
+    departure,
     noticeUrl(
-      prep,
+      departure,
       outcome.ok
         ? "gear-returned-set"
         : outcome.reason === "not_found"

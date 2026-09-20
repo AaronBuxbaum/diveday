@@ -1,9 +1,6 @@
 {
   "subNav": {
-    "ariaLabel": "Salida",
     "trip": "Salida",
-    "overview": "Resumen",
-    "guests": "Buceadores",
     "manifest": "Manifiesto",
     "prep": "Preparación"
   },

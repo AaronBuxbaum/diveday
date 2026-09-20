@@ -30,7 +30,6 @@ import { RosterSection } from "../_components/RosterSection";
 import { TripInvitationGroup } from "../_components/TripInvitationSection";
 import { resolveTripNotice, TripNoticeBanner } from "../_components/TripNoticeBanner";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
-import { TripSurfaceNav } from "../_components/TripSurfaceNav";
 import { WaitlistGroup } from "../_components/WaitlistSection";
 import {
   addInternalNoteAction,
@@ -251,8 +250,8 @@ async function TripGuestsBody({
     <div data-trip-guests-ready className="contents">
       <FlashParams params={["notice", "bid", "form", "noteBookingId", "noteBody"]} />
       <TripPageHeader
-        boardHref={shopPath(shopSlug, "schedule", "board")}
-        backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
+        boardHref={shopPath(shopSlug, "trips", tripId)}
+        backLabel={t("trips.subNav.trip")}
         trip={trip}
         locale={locale}
         timeZone={shop.timezone}
@@ -279,7 +278,6 @@ async function TripGuestsBody({
             </p>
           ) : null
         }
-        subNav={<TripSurfaceNav shopSlug={shopSlug} tripId={tripId} locale={locale} />}
       />
 
       {/* A deleted private note is a purely reversible edit, so it gets a

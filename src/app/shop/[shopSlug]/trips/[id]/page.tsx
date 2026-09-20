@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import type { DayStripProps } from "@/components/day/DayStrip";
 import { FlashParams } from "@/components/FlashParams";
@@ -24,6 +25,7 @@ import { DSD_RATIO } from "@/lib/course-ratios";
 import { dayStripGeometry, dayStripTicks, dayStripWindow } from "@/lib/day-strip";
 import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { depthInUnit } from "@/lib/depth-units";
+import { isPrepGrouping } from "@/lib/dive-prep";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
 import {
   formatHourShort,
@@ -62,9 +64,9 @@ import {
 } from "./_components/SeriesSection";
 import { TripAboutSection } from "./_components/TripAboutSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
-import { TripAddDiverLink, TripCapacityBadge } from "./_components/TripPageHeader";
+import { TripAddDiverLink, TripCapacityBadge, TripSurfaceLink } from "./_components/TripPageHeader";
+import { TripPrepSection } from "./_components/TripPrepSection";
 import { TripRosterContent } from "./_components/TripRosterContent";
-import { TripSurfaceNav } from "./_components/TripSurfaceNav";
 import { VoyageHeader } from "./_components/VoyageHeader";
 import {
   addInternalNoteAction,
@@ -96,6 +98,7 @@ import {
   updateSeriesCadenceAction,
   updateTripCrewAction,
 } from "./actions";
+import { PrepBodySkeleton } from "./prep/_components/PrepBodySkeleton";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -149,6 +152,8 @@ export default async function ManageTripPage({
     confirmName?: string;
     confirmEmail?: string;
     confirmPhone?: string;
+    /** The packing list's grouping; anything unrecognised reads as by-item. */
+    group?: string;
   }>;
 }) {
   const [
@@ -165,6 +170,7 @@ export default async function ManageTripPage({
       confirmName,
       confirmEmail,
       confirmPhone,
+      group,
     },
   ] = await Promise.all([params, searchParams]);
   // An unparseable id names no row. Guarded here rather than in the query
@@ -752,16 +758,32 @@ export default async function ManageTripPage({
         }
         action={
           cancelled ? undefined : (
-            <TripAddDiverLink
-              onSky
-              href="#add-diver"
-              label={t("trips.addDiver.addDiver")}
-              compactLabel={t("trips.about.add")}
-              ariaLabel={t("trips.about.addDiverJump")}
-            />
+            <>
+              {/* **The departure's one way to the roll call.** The tab strip
+                  is gone (ADR 20260919-one-idea, slice 23c) and the manifest
+                  is the one surface that could not fold in with Prep — it is a
+                  `?checkpoint=` URL contract with external deep-links, a
+                  service worker and an encrypted offline store hanging off it.
+                  So it stands here, in the band, where a crew standing on a
+                  dock reaches it in one tap rather than by scrolling to find
+                  it. Not on the hull beside it: a shore dive has a roll call
+                  and no boat. */}
+              <TripSurfaceLink
+                onSky
+                icon="checkIn"
+                href={shopPath(shopSlug, "trips", tripId, "manifest")}
+                label={t("trips.subNav.manifest")}
+              />
+              <TripAddDiverLink
+                onSky
+                href="#add-diver"
+                label={t("trips.addDiver.addDiver")}
+                compactLabel={t("trips.about.add")}
+                ariaLabel={t("trips.about.addDiverJump")}
+              />
+            </>
           )
         }
-        subNav={<TripSurfaceNav shopSlug={shopSlug} tripId={tripId} locale={locale} />}
       />
 
       <TripNoticeBanner notice={rootPageNotice} locale={locale} />
@@ -1149,6 +1171,29 @@ export default async function ManageTripPage({
         mayWriteOffPayment={mayWriteOffPayment}
         compact
         actions={rosterActions}
+        // **Who is aboard, then what to pull for them.** The packing list is
+        // derived from the roster directly above it, so it reads as that
+        // list's consequence rather than a fourth tab (ADR 20260919-one-idea,
+        // slice 23c). It waits behind its own boundary because its six gear
+        // reads are nobody else's to wait on.
+        afterRoster={
+          <Suspense
+            fallback={
+              <div className="mt-10">
+                <PrepBodySkeleton />
+              </div>
+            }
+          >
+            <TripPrepSection
+              shop={shop}
+              shopSlug={shopSlug}
+              tripId={tripId}
+              locale={locale}
+              notice={notice}
+              grouping={isPrepGrouping(group) ? group : "item"}
+            />
+          </Suspense>
+        }
       />
     </>
   );

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ActivityLog } from "@/components/ActivityLog";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { UndoToast } from "@/components/UndoToast";
@@ -74,6 +75,7 @@ export function TripRosterContent({
   mayWriteOffPayment,
   hull,
   compact = false,
+  afterRoster = null,
   actions,
 }: {
   guests: TripGuests;
@@ -113,6 +115,13 @@ export function TripRosterContent({
   } | null;
   /** The canonical Trip surface already owns the masthead capacity read. */
   compact?: boolean;
+  /**
+   * What reads as the roster's consequence rather than its footnote — on the
+   * departure page, the packing list derived from these very seats. It goes
+   * *above* the promote and activity disclosures below, which are the page's
+   * quiet tail-matter and not the crew's next job.
+   */
+  afterRoster?: ReactNode;
   actions: TripRosterActions;
 }) {
   const t = staffTranslator(locale);
@@ -348,6 +357,8 @@ export function TripRosterContent({
         compact={compact}
         showSummaryHeading={!compact}
       />
+
+      {afterRoster}
 
       <div className="mt-8">
         {showPromote ? (

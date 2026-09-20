@@ -5,17 +5,17 @@ import { buttonClass } from "@/components/ui/button";
  *
  * Two surfaces have the same problem — the diver record (eleven stacked
  * sections, ~6,400px on a phone) and Settings (~7,000px, eleven forms) — and
- * they solved it twice, with two unrelated grammars. The diver record wore
- * `TripSubNav`'s chrome: a sunken `rounded-2xl` bar of equal-width pills. That
- * bar is a *tab* bar everywhere else in `/shop/**`, where exactly one pill is
- * the page you are on; a jump row can never mark anything current, because
+ * they solved it twice, with two unrelated grammars. The diver record wore the
+ * chrome of the departure's since-deleted tab strip: a sunken `rounded-2xl`
+ * bar of equal-width pills. That bar reads as a *tab* bar, where exactly one
+ * pill is the page you are on; a jump row can never mark anything current,
+ * because
  * every entry is on the screen you are already looking at. Identical-looking
  * controls that mean different things is the drift this component ends.
  *
  * So the shared grammar is Settings': a row of link-buttons under a hairline
  * rule. It reads as "places on this page", promises no active state, and can
- * never be mistaken for a tab bar (`TripSubNav`), which keeps the sunken-bar
- * look and keeps meaning "you are here".
+ * never be mistaken for a tab bar, whose sunken-bar look means "you are here".
  *
  * **Anchors, not routes.** Every entry is a `#id` on the same document, which
  * the browser handles itself: no re-render, no refetch, works before

@@ -55,6 +55,14 @@ stay in `AGENTS.md`.
   + `schedule/board/actions.ts`; mutations in `src/db/trips-schedule.ts`. The add panel is the
   **one place a trip is created**; `/shop/[shopSlug]/trips/new` is a 308 to
   `schedule/board?add=full` (ADR 20260806-one-trip-create-form).
+- **A departure is one page and one door.** `trips/[id]/page.tsx` is the hour over its own sky
+  (`_components/VoyageHeader.tsx`), the boat (`_components/TripHull.tsx`), the roster ledger, and
+  under it the morning packing list — `prep/_components/PrepBody.tsx`, inside its own `<Suspense>`
+  because `getTripPrep` is six gear queries. There is **no tab strip**: the manifest is one chip in
+  the band, and `/prep` and `/guests` survive as routes because `print/_components/TripPacket.tsx`
+  composes prep as a *component* for the paper day and the roster has bookmarks. Add to the
+  departure page, never to a fourth surface; a form on it redirects to the departure, not to
+  `/prep` (ADR 20260919-one-idea, slice 23c).
 - **The shop home** is one chronological spine (`_components/today/DaySpine.tsx`,
   `DayStation.tsx`); the close-out is its evening state (`ClosingBlock.tsx`) and `/close-out` is a
   308 to it. `?view=` and `/blockers` 308 home (ADR 20260827-clearwater-surface-language). A

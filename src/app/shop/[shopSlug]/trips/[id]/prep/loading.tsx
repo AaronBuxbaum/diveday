@@ -1,9 +1,9 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
+import { PrepBodySkeleton } from "./_components/PrepBodySkeleton";
 
 /**
- * Checklist-shaped skeleton for trip prep — renders as the trip layout's
- * children, so switching to the Prep tab keeps the sub-nav in place.
+ * Checklist-shaped skeleton for trip prep. The body half is the same component
+ * the departure page waits behind, so the two cannot drift.
  */
 export default function TripPrepLoading() {
   return (
@@ -15,20 +15,7 @@ export default function TripPrepLoading() {
         meta={<div className="h-6 w-56 max-w-full rounded bg-surface-sunken" />}
       />
       <div className="mt-8">
-        <div className="h-6 w-32 rounded bg-surface-sunken" />
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className={sectionCardClass({ padding: "none", className: "h-28" })} />
-          ))}
-        </div>
-        <div className="mt-2 h-4 w-72 max-w-full rounded bg-surface-sunken" />
-        <div className="mt-8 flex flex-col gap-6">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className={sectionCardClass({ padding: "md", className: "h-36" })} />
-          ))}
-        </div>
-        <div className="mt-8 h-6 w-40 rounded bg-surface-sunken" />
-        <div className={sectionCardClass({ padding: "none", className: "mt-3 h-64" })} />
+        <PrepBodySkeleton />
       </div>
     </div>
   );

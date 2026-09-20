@@ -380,10 +380,7 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
       .filter({ hasText: "Two-Tank Reef — Molasses & French" })
       .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
       .click();
-    await page
-      .getByRole("navigation", { name: "Trip" })
-      .getByRole("link", { name: "Manifest" })
-      .click();
+    await page.getByRole("link", { name: "Manifest" }).click();
     await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
     await expectNoA11yViolations(page);
 
@@ -412,10 +409,7 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
     // in the first place (src/lib/offline-manifests.ts) — going straight to
     // /offline-manifest without it first renders the empty "nothing saved"
     // state instead of a real roster.
-    await page
-      .getByRole("navigation", { name: "Trip" })
-      .getByRole("link", { name: "Manifest" })
-      .click();
+    await page.getByRole("link", { name: "Manifest" }).click();
     await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
     const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\//)?.[1];
 

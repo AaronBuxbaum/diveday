@@ -16,19 +16,31 @@ import { openOnThisPhone, openTripAbout } from "./helpers";
 
 signedInAsOwner();
 
-test("the trip sub-nav reaches all three surfaces", async ({ page }) => {
+test("the departure reaches its manifest, and carries its packing list", async ({ page }) => {
   await page.goto("/shop/blue-mantis");
 
-  // A station's title is the door to its departure; the trip's own sub-nav is
-  // where the manifest's boarding pass lives (ADR
+  // A station's title is the door to its departure (ADR
   // 20260827-clearwater-surface-language, decision 4 — the station carries the
   // day's work, not a second set of destination buttons).
   await page.locator("ol li h3 a").first().click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Manifest" })
-    .click();
+
+  // **The packing list is on this page.** Prep stopped being a tab in slice
+  // 23c (ADR 20260919-one-idea) — the list a crew works down with their hands
+  // full reads under the roster it is derived from, rather than one tap away
+  // from it. Its own heading, not the tab's word, is what proves it is here.
+  await expect(page.getByRole("heading", { name: "Tanks", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toBeVisible();
+
+  // **And there is no strip of nouns above the hour.** The whole point of the
+  // slice: the departure is one page, so a nav that offers to take you to
+  // parts of it would be offering to take you where you already are.
+  await expect(page.getByRole("navigation", { name: "Trip" })).toHaveCount(0);
+
+  // The manifest is the one surface that could not join the page — a
+  // `?checkpoint=` URL contract with a service worker and an encrypted offline
+  // store hanging off it — so it is one chip in the band.
+  await page.getByRole("link", { name: "Manifest" }).click();
   await expect(page).toHaveURL(/\/manifest/);
 
   // Every per-device preference rests behind the "On this phone" line (ADR
@@ -50,33 +62,12 @@ test("the trip sub-nav reaches all three surfaces", async ({ page }) => {
   // flow, so leave room for its 44px target and the page's bottom padding.
   expect(distanceFromPageEnd).toBeLessThan(120);
 
-  const subNav = page.getByRole("navigation", { name: "Trip" });
-  for (const tab of ["Trip", "Manifest", "Prep"]) {
-    await expect(subNav.getByText(tab, { exact: true })).toBeVisible();
-  }
-
-  // Each tab is one tap away and lands on its surface.
-  await subNav.getByRole("link", { name: "Trip" }).click();
+  // **And the way back is up, not sideways.** The manifest's eyebrow names the
+  // departure it belongs to, which is the page that holds everything else.
+  await page.getByRole("link", { name: "Trip", exact: true }).click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
-  await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
   await expect(boatMode).toHaveCount(0);
-
-  await page.getByRole("navigation", { name: "Trip" }).getByRole("link", { name: "Prep" }).click();
-  await expect(page).toHaveURL(/\/prep/);
-  await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
-  await expect(boatMode).toHaveCount(0);
-
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Manifest" })
-    .click();
-  await expect(page).toHaveURL(/\/manifest/);
-  await expect(boatMode).toBeVisible();
-
-  await page.getByRole("navigation", { name: "Trip" }).getByRole("link", { name: "Trip" }).click();
-  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
-  await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
-  await expect(boatMode).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toBeVisible();
 });
 
 test("staff can view or copy a trip's public booking page from its overview", async ({

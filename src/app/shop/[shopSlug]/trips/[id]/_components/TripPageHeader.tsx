@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -36,14 +37,15 @@ export function TripCapacityBadge({
 }
 
 /**
- * The one header every trip surface wears.
+ * The header a departure's sub-pages wear — `/manifest`, `/prep`, `/guests`
+ * and the printed packet. The departure itself wears `VoyageHeader`, its hour
+ * over its own sky.
  *
- * The three surfaces — Trip, Manifest, and Prep — are three readings of one
- * departure, so the identity of the departure — its name, how full it is, when
- * it sails — renders here once, identically, on all three. What stays per-tab
- * is only what genuinely differs: the `description` (what *this* surface is
- * for), the `actions` (its own doors), and `extraMeta` for facts that belong
- * to one reading of the trip.
+ * Each is one reading of one departure, so the identity of the departure — its
+ * name, how full it is, when it sails — renders here once and identically
+ * across them. What stays per-surface is only what genuinely differs: the
+ * `description` (what *this* one is for), the `actions` (its own doors), and
+ * `extraMeta` for facts that belong to one reading of the trip.
  *
  * The boat's name owns the line. It used to share its row with a shrink-proof
  * actions column, so "Two-Tank Reef — French Reef" wrapped at half measure
@@ -63,7 +65,6 @@ export function TripPageHeader({
   extraMeta,
   actions,
   headerAside,
-  subNav,
   price,
   className,
 }: {
@@ -88,8 +89,6 @@ export function TripPageHeader({
   actions?: ReactNode;
   /** Primary work on the Trip masthead, such as capacity and Add diver. */
   headerAside?: ReactNode;
-  /** The three-surface nav, placed after the identity block. */
-  subNav?: ReactNode;
   /** Optional fare shown with the departure's date and time. */
   price?: ReactNode;
   /** Allows a surface to tighten the space after its masthead when needed. */
@@ -97,21 +96,21 @@ export function TripPageHeader({
 }) {
   return (
     <header className={className ?? "mb-8"}>
-      {/* **The way back up.** These three surfaces are the deepest pages in the
-          staff app and were the only ones at depth 2-3 with no link to their
-          parent at all: the first link in the header was the sub-tab strip,
-          which moves you *sideways* between one departure's own pages and
-          never back to the board you came from (issue #823). A crew member who
-          has finished a roll call and wants the next boat had the global nav
-          or the browser's back button — on a phone in boat-mode, on a deck,
-          the nav is the dock at the bottom of the screen: reachable, but a jump
-          out of the departure rather than a step up from it.
+      {/* **The way back up.** These are the deepest pages in the staff app and
+          were once the only ones at depth 2-3 with no link to their parent at
+          all: the first link in the header was a tab strip, which moved you
+          *sideways* between one departure's own pages and never back up (issue
+          #823). A crew member who has finished a roll call and wants the next
+          boat had the global nav or the browser's back button — on a phone in
+          boat-mode, on a deck, the nav is the dock at the bottom of the
+          screen: reachable, but a jump out of the departure rather than a step
+          up from it.
 
-          The word is the nav's own, from `STAFF_DESTINATION_LABEL_KEYS`, so
-          the eyebrow and the tab that highlights for these routes can never
-          come to call one place two things. `print:hidden` because
-          `print/page.tsx` wears this header too and a paper sheet has no
-          navigation. */}
+          The strip is gone now (ADR 20260919-one-idea, slice 23c) and this is
+          the only way up, which is why these three name the **departure** they
+          are readings of rather than the board two levels above it.
+          `print:hidden` because `print/page.tsx` wears this header too and a
+          paper sheet has no navigation. */}
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 sm:gap-x-8">
         <EyebrowBackLink href={boardHref} className="col-start-1 row-start-1 print:hidden">
           {backLabel}
@@ -143,8 +142,46 @@ export function TripPageHeader({
           {extraMeta ? <div className="mt-2 flex flex-col gap-1.5">{extraMeta}</div> : null}
         </div>
       </div>
-      {subNav ? <div className="mt-6">{subNav}</div> : null}
     </header>
+  );
+}
+
+/**
+ * **A door out of the departure, wearing the band's own chip.**
+ *
+ * One of these, for the manifest: the departure lost its tab strip in slice
+ * 23c (ADR 20260919-one-idea) and every other surface folded into the page,
+ * but the manifest could not — `?checkpoint=` is a URL contract with external
+ * deep-links, a service worker and an encrypted offline store hanging off it.
+ * So it is reached the way the hour is read, from the band.
+ *
+ * Same `sky` variant and the same reason as `TripAddDiverLink` below it: the
+ * accent measures 1.76:1 against `--sky-day`, so a link standing on the sky
+ * brings its own opaque box or it is not there.
+ */
+export function TripSurfaceLink({
+  href,
+  label,
+  icon,
+  onSky = false,
+}: {
+  href: string;
+  label: string;
+  icon: Parameters<typeof DiveDayIcon>[0]["name"];
+  onSky?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={
+        onSky
+          ? buttonClass({ variant: "sky", size: "sm", className: "gap-1.5" })
+          : buttonClass({ variant: "link", className: "gap-1.5" })
+      }
+    >
+      <DiveDayIcon name={icon} className="size-4" />
+      {label}
+    </Link>
   );
 }
 

@@ -49,7 +49,6 @@ export function VoyageHeader({
   strip,
   action,
   badge,
-  subNav,
 }: {
   scheme: SkyScheme;
   /** The way back to the day this departure belongs to. */
@@ -71,8 +70,6 @@ export function VoyageHeader({
    * dock is made.
    */
   badge?: ReactNode;
-  /** Trip / Manifest / Prep, below the band. */
-  subNav?: ReactNode;
 }) {
   return (
     <header className="mb-5">
@@ -106,7 +103,6 @@ export function VoyageHeader({
           {strip ? <DayStrip {...strip} className="mt-3 h-24 w-full sm:h-28" /> : null}
         </div>
       </SkyBand>
-      {subNav}
     </header>
   );
 }

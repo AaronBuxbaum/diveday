@@ -1537,8 +1537,8 @@ async function settleOfflineShellWorker(page: Page) {
  * initials avatar it used to, which went with the table.
  *
  * Parks the pointer at (0,0) before returning. The roster row this clicks sits,
- * at 390, exactly where the record's sub-nav bar lands — so the pointer left
- * behind by the click renders one tab in its hover state, and the phone
+ * at 390, exactly where the record's jump row lands — so the pointer left
+ * behind by the click renders one entry in its hover state, and the phone
  * baselines photographed a "Fit" that looked selected. Deterministic, so never
  * a flake; just a lie about state that a reviewer has to re-derive every time.
  * (0,0) is the demo banner, which has nothing hoverable in the corner.
@@ -7545,11 +7545,9 @@ for (const scheme of ["light", "dark"] as const) {
          * and reads `navigator.language`.
          */
         test(`the offline roll call reads in Spanish (${scheme})`, async ({ page }) => {
-          // Board → trip → Manifest, then the saved copy. By URL rather than
-          // through `openTripTab`, which resolves the sub-nav by its English
-          // accessible name — the one helper in this flow that is language-
-          // bound. `openReefTrip` is not: it finds the departure by the title
-          // the shop typed.
+          // Board → trip → Manifest, then the saved copy. By URL, which is
+          // also what `openTripTab` does now that the departure has no tab
+          // strip; spelling it here keeps the flow readable as a URL walk.
           test.setTimeout(FLOW_TIMEOUT_MS);
           await openReefTrip(page);
           await page.goto(`${new URL(page.url()).pathname}/manifest`);

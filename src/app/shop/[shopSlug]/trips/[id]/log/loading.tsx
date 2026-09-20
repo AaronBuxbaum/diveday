@@ -3,7 +3,7 @@ import { sectionCardClass } from "@/components/ui/card";
 /**
  * Document-shaped skeleton for the incident-ready export (design principle 1).
  * Like its sibling `manifest/loading.tsx` this renders as the trip layout's
- * children, so the sub-nav stays put and only the document body swaps in —
+ * children, so the masthead stays put and only the document body swaps in —
  * the header block, the summary tiles, and the roster table frame appear
  * immediately while the full evidence assembly runs.
  */

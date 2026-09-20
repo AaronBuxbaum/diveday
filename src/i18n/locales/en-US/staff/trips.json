@@ -1,9 +1,6 @@
 {
   "subNav": {
-    "ariaLabel": "Trip",
     "trip": "Trip",
-    "overview": "Overview",
-    "guests": "Guests",
     "manifest": "Manifest",
     "prep": "Prep"
   },
