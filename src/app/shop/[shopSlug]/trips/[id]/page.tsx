@@ -1196,22 +1196,30 @@ export default async function ManageTripPage({
         // slice 23c). It waits behind its own boundary because its six gear
         // reads are nobody else's to wait on.
         afterRoster={
-          <Suspense
-            fallback={
-              <div className="mt-10">
-                <PrepBodySkeleton />
-              </div>
-            }
-          >
-            <TripPrepSection
-              shop={shop}
-              tripId={tripId}
-              cancelled={cancelled}
-              locale={locale}
-              notice={notice}
-              grouping={isPrepGrouping(group) ? group : "item"}
-            />
-          </Suspense>
+          // **The anchor is outside the boundary, not inside it.** Five links
+          // land on `#packing-list` — the day's two prep rows, this page's own
+          // pulse fact, the rental slip's way back and the returning-diver
+          // demo story.
+          //
+          // Measured both ways on a cold navigation straight to the hash, and
+          // they scroll identically: Next resolves a hash target that arrives
+          // with the stream. So this is not a fix for a broken jump. It is
+          // there so the *skeleton* holds the anchor's position while the six
+          // gear queries run — the id on a wrapper that always renders means
+          // the scroll lands once, rather than landing late and moving when
+          // the section replaces a fallback that was not the target.
+          <div id={PREP_SECTION_ID} className="mt-10 scroll-mt-6">
+            <Suspense fallback={<PrepBodySkeleton />}>
+              <TripPrepSection
+                shop={shop}
+                tripId={tripId}
+                cancelled={cancelled}
+                locale={locale}
+                notice={notice}
+                grouping={isPrepGrouping(group) ? group : "item"}
+              />
+            </Suspense>
+          </div>
         }
       />
     </>

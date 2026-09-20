@@ -4,7 +4,6 @@ import { getDb } from "@/db/client";
 import { getTripPrep, type TripPrepShop } from "@/db/trips-prep";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { PrepGrouping } from "@/lib/dive-prep";
-import { PREP_SECTION_ID } from "@/lib/element-id";
 import { shopPath } from "@/lib/staff-notices";
 import { PrepBody } from "../prep/_components/PrepBody";
 
@@ -67,14 +66,12 @@ export async function TripPrepSection({
     // accident. `/prep` reads the same rows on its own page, so it is both the
     // honest retry and a second chance at the list.
     return (
-      <div className="mt-10">
-        <StaffNoticeBanner tone="warning">
-          {t("tripPrep.readFailed")}{" "}
-          <Link href={prepPath} className="font-medium underline">
-            {t("trips.surfaces.prep")}
-          </Link>
-        </StaffNoticeBanner>
-      </div>
+      <StaffNoticeBanner tone="warning">
+        {t("tripPrep.readFailed")}{" "}
+        <Link href={prepPath} className="font-medium underline">
+          {t("trips.surfaces.prep")}
+        </Link>
+      </StaffNoticeBanner>
     );
   }
   // The page above has already read this departure and answered `notFound()`
@@ -82,7 +79,7 @@ export async function TripPrepSection({
   // On a page that is otherwise rendered, silence is the honest answer.
   if (!prep) return null;
   return (
-    <div id={PREP_SECTION_ID} className="mt-10 scroll-mt-6">
+    <>
       <PrepBody
         prep={prep}
         t={t}
@@ -95,6 +92,6 @@ export async function TripPrepSection({
         cancelled={cancelled}
         groupPath={shopPath(shop.slug, "trips", tripId)}
       />
-    </div>
+    </>
   );
 }
