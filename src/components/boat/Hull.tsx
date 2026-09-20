@@ -148,7 +148,7 @@ export type HullSeatContent = {
    *
    * The picture paints `reading.state` and nothing else today. The other two
    * fields ride along because the derivation may not throw them away (ADR
-   * 20260919-one-idea §3b.1 and §3b.2): `recordedAt` is the head count a green
+   * 20260919-one-idea §3b.1 and §3b.2): `checkpoint` is the head count a green
    * fill came from, and `readiness` is what was known about the holder *even
    * where a recorded fact outranked it* — "aboard, and nobody ever cleared
    * them" is the sentence an investigator asks for, and a hull is what gets
@@ -188,8 +188,15 @@ export function Hull({
     <svg
       viewBox={`0 0 ${geometry.width} ${geometry.height}`}
       // `print:hidden` is not the caller's to opt out of — see the note above:
-      // the print palette flattens four of the six states into two inks, so the
-      // rows carry the paper and the picture stands down.
+      // the print palette flattens six of the eight states into two inks and
+      // one near-white, so the rows carry the paper and the picture stands
+      // down. It got *worse* with `awaiting` and `ashoreImplied`: the tints are
+      // not redefined for print and `background: transparent !important` does
+      // not reach an SVG `fill`, so `open`, `awaiting` and `ashoreImplied` all
+      // land on "dashed, near-white". The dash is the one channel that survives
+      // the flattening and this component now spends it three times, which is
+      // why ADR 20260919-one-idea §3b.4 says the mono treatment has three
+      // states to re-cut rather than one.
       className={`${className ?? "block h-auto w-full"} print:hidden`}
       role="img"
       aria-label={label}
