@@ -10,6 +10,7 @@ import {
   openRosterDetails,
   openTripFromBoard,
   openTripTab,
+  rosterRow,
   tripPathByTitle,
 } from "./helpers";
 
@@ -172,7 +173,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
   await expect(page.getByRole("status")).toContainText("Diver added to the trip");
 
-  const card = page.locator("li").filter({ hasText: diverName });
+  const card = rosterRow(page, diverName);
   await expect(card.getByText("Not on file").filter({ visible: true })).toBeVisible();
 
   // Failure path: a name with no phone is not a reachable contact — the

@@ -291,6 +291,25 @@ export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep")
   );
 }
 
+/**
+ * **A diver's row in a departure's roster ledger**, scoped to the ledger rather
+ * than to the page.
+ *
+ * `page.locator("li").filter({ hasText: name })` was unambiguous while the
+ * departure page held only the roster. Slice 23c folded the packing list in
+ * under it (ADR 20260919-one-idea), and a diver with no fit on file is now
+ * named in "Sizes still missing" as well as in their own seat — two `<li>`s
+ * holding one name, which is a strict-mode violation rather than a flake, and
+ * which took three specs red on CI at once.
+ *
+ * The ledger's own region is the honest scope: `RosterSection` labels it with
+ * `trips.roster.heading` on any page that owns its masthead, which the
+ * departure does. English, like every other locator in this suite.
+ */
+export function rosterRow(page: Page, diverName: string): Locator {
+  return page.getByRole("region", { name: "Guests" }).locator("li").filter({ hasText: diverName });
+}
+
 const TRIP_ROOT_URL = /\/trips\/[^/?#]+(?:[?#]|$)/;
 
 /** Open the Trip surface's compact About disclosure before using its details. */

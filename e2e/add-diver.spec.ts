@@ -9,6 +9,7 @@ import {
   HELD_SEND_TIMEOUT_MS,
   openTripActivity,
   openTripFromBoard,
+  rosterRow,
 } from "./helpers";
 
 signedInAsOwner();
@@ -84,7 +85,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip, but their waiver wasn’t emailed.",
   );
-  await expect(page.getByRole("link", { name: "Walk-in Wanda" })).toBeVisible();
+  await expect(rosterRow(page, "Walk-in Wanda").getByRole("link")).toBeVisible();
   // The line under the hour owns the capacity read on the Trip surface now
   // (ADR 20260919-one-idea, decision I · Tide), so a full boat is stated in
   // words there rather than in a ring's accessible label. Scoped to the
@@ -152,7 +153,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   // second staffer sees it's already handled. The button opens the mail
   // composer (mailto:) which the test can't follow, so we only assert the
   // recorded state lands.
-  const waitRow = page.locator("li").filter({ hasText: "Waitlist Wally" });
+  const waitRow = rosterRow(page, "Waitlist Wally");
   await waitRow.getByRole("button", { name: /Email .* an invite/ }).click();
   // The invite holds eight seconds with Undo first (ADR 20260906-before-you-ask,
   // decision 2), so the recorded state is allowed the hold before it shows.
@@ -432,7 +433,7 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip, but their waiver wasn’t emailed.",
   );
-  await expect(page.getByRole("link", { name: "Phoned In Pat" })).toBeVisible();
+  await expect(rosterRow(page, "Phoned In Pat").getByRole("link")).toBeVisible();
 });
 
 test("a refusal from the global door stays on the form, boat still chosen", async ({ page }) => {
