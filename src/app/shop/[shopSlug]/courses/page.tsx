@@ -114,7 +114,8 @@ export default async function CoursesPage({
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
 
   /**
-   * The row's quiet line: who it is open to, how long it runs, what it costs.
+   * The row's quiet line: when it next runs, who it is open to, how long it
+   * runs, what it costs.
    *
    * Duration is the shop's own words (`duration_text`); the price is a figure
    * a reader is *scanning* rather than reconciling, so it drops the `.00` that
@@ -125,6 +126,20 @@ export default async function CoursesPage({
   const metaLine = (course: (typeof courseList)[number]) => {
     const nextStart = nextSessions.get(course.id);
     return [
+      // **First, so it is a column rather than a footnote.** It is the one fact
+      // on this line that changes, and the reason the roster has a time in it
+      // at all; appended last it landed at the end of a wrapped second line at
+      // 390, in the same muted grey as the price, and "Not scheduled" read as
+      // one more item in a run rather than a gap to act on. Leading with it
+      // puts every row's answer at the same x, which is how a list is scanned.
+      nextStart
+        ? st("courses.list.nextSession", {
+            // The shop's own zone, never the server's: a 7:30 AM session in
+            // Key West renders as the previous day in UTC often enough to
+            // matter.
+            date: formatShortDate(nextStart, locale, shop.timezone),
+          })
+        : st("courses.list.notScheduled"),
       course.minimumCertificationLevel
         ? st("courses.list.orHigher", {
             level: st(CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
@@ -134,18 +149,6 @@ export default async function CoursesPage({
       course.priceCents === null
         ? null
         : formatMoneyScanned(course.priceCents, toShopCurrency(shop.currency), locale),
-      // Last, because it is the fact that changes: the three before it are what
-      // the course *is*, this is what the shop has done about it. A course with
-      // no session says so rather than trailing off — that silence is the state
-      // the Schedule act in the trailing slot exists to answer.
-      nextStart
-        ? st("courses.list.nextSession", {
-            // The shop's own zone, never the server's: a 7:30 AM session in
-            // Key West renders as the previous day in UTC often enough to
-            // matter.
-            date: formatShortDate(nextStart, locale, shop.timezone),
-          })
-        : st("courses.list.notScheduled"),
     ]
       .filter(Boolean)
       .join(" · ");
