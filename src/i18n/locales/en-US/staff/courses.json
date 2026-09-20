@@ -5,6 +5,8 @@
     "hidden": "Hidden",
     "orHigher": "{level} or higher",
     "openToUncertified": "Open to uncertified divers",
+    "nextSession": "Next {date}",
+    "notScheduled": "Not scheduled",
     "scheduleSrLabel": "Schedule a session of {title}",
     "schedule": "Schedule",
     "editSrLabel": "Edit {title}",

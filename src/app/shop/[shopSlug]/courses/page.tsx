@@ -10,10 +10,11 @@ import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { pagedCourses } from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
+import { nextSessionStartByCourse } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyScanned } from "@/lib/format";
+import { formatMoneyScanned, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursesPath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
@@ -84,10 +85,31 @@ export default async function CoursesPage({
     page: Number.parseInt(page ?? "", 10),
   });
   const courseList = coursePage.courses;
-  // Scheduling is owner/manager/instructor work, so the button is absent — not
-  // disabled — for anyone else (AGENTS.md: gate by not rendering). The
-  // new-trip page re-checks against live roles either way.
-  const canSchedule = await canPersonConfigureTrips(db, shop.id, session.user.personId);
+  // Together rather than in sequence: only the second needs the page of
+  // courses, and the permission read does not, so awaiting them one after the
+  // other would buy a serial round trip for nothing.
+  const [canSchedule, nextSessions] = await Promise.all([
+    // Scheduling is owner/manager/instructor work, so the button is absent —
+    // not disabled — for anyone else (AGENTS.md: gate by not rendering). The
+    // new-trip page re-checks against live roles either way.
+    canPersonConfigureTrips(db, shop.id, session.user.personId),
+    // **The one live fact on a page of standing ones** (ADR 20260919-one-idea,
+    // decision I · Tide, slice 23g — "a course is sessions on days"). Until
+    // this, a diver reading `/s/<shop>/courses/<slug>` could see when a course
+    // next ran and the shop teaching it could not: the roster said what is
+    // taught, never when. One query for the whole page rather than one per row.
+    //
+    // `"shop"` and not `"storefront"`: a course booked out to one family is
+    // scheduled, and the staffer who scheduled it must not read "Not scheduled"
+    // on the morning it runs. The storefront's own call stays public-scoped,
+    // because a diver cannot turn up to a private session.
+    nextSessionStartByCourse(
+      db,
+      shop.id,
+      courseList.map((course) => course.id),
+      "shop",
+    ),
+  ]);
   const base = `/shop/${shopSlug}/courses`;
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
 
@@ -100,8 +122,9 @@ export default async function CoursesPage({
    * be missing — a course a shop has not priced yet says nothing about price
    * rather than saying nothing at all.
    */
-  const metaLine = (course: (typeof courseList)[number]) =>
-    [
+  const metaLine = (course: (typeof courseList)[number]) => {
+    const nextStart = nextSessions.get(course.id);
+    return [
       course.minimumCertificationLevel
         ? st("courses.list.orHigher", {
             level: st(CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
@@ -111,9 +134,22 @@ export default async function CoursesPage({
       course.priceCents === null
         ? null
         : formatMoneyScanned(course.priceCents, toShopCurrency(shop.currency), locale),
+      // Last, because it is the fact that changes: the three before it are what
+      // the course *is*, this is what the shop has done about it. A course with
+      // no session says so rather than trailing off — that silence is the state
+      // the Schedule act in the trailing slot exists to answer.
+      nextStart
+        ? st("courses.list.nextSession", {
+            // The shop's own zone, never the server's: a 7:30 AM session in
+            // Key West renders as the previous day in UTC often enough to
+            // matter.
+            date: formatShortDate(nextStart, locale, shop.timezone),
+          })
+        : st("courses.list.notScheduled"),
     ]
       .filter(Boolean)
       .join(" · ");
+  };
 
   const rows: CourseRosterRow[] = courseList.map((course) => ({
     id: course.id,

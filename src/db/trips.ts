@@ -56,6 +56,7 @@ export {
   type SweptDeparture,
 } from "./trips-minimum";
 export {
+  type CourseSessionScope,
   countShopTrips,
   listShopDayDepartures,
   listTripIdsInOfflineManifestWindow,

@@ -141,6 +141,33 @@ test("a diver reads one agency's ladder at a time and can switch between them", 
 test.describe("staff", () => {
   signedInAsOwner();
 
+  /**
+   * **A course is sessions on days** (ADR 20260919-one-idea, decision I · Tide,
+   * slice 23g). Until this, the staff roster was a catalog with no time in it:
+   * a diver reading `/s/<shop>/courses/<slug>` could see when a course next ran
+   * and the shop teaching it could not.
+   *
+   * Both halves are asserted on one page because they are one reading — a
+   * scannable column of dates is only useful if the gaps in it are legible, and
+   * "Not scheduled" is the state the row's own Schedule act answers.
+   */
+  test("the course roster says when each course next runs, and where it does not", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/courses");
+    await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+
+    // The seed seats this one on the board, so its row carries a date.
+    const scheduled = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
+    await expect(scheduled).toContainText(/Next /);
+
+    // And at least one course in the catalog has no session ahead of it, which
+    // is the row state the Schedule act exists for. Paired with the positive
+    // above so neither passes on a string the page stopped rendering
+    // (`.claude/rules/e2e.md`).
+    await expect(page.getByText("Not scheduled").first()).toBeVisible();
+  });
+
   test("staff set course pricing on the page and hide the course from scheduling", async ({
     page,
   }) => {
