@@ -56,12 +56,29 @@ describe("ShopPlaceNav — the three times as pills", () => {
   });
 
   it("lights nothing at all in a place that has no hour", () => {
-    // The gear register lives behind the shop's name, not in the bar. A nav
-    // that lit Today anyway would be telling the reader they are somewhere
-    // they are not.
-    pathname = `${ROOT}/gear`;
+    // The site library is one of the things a shop *sets up*, so it lives
+    // behind the shop's name rather than in the bar, and a nav that lit one
+    // of the three anyway would be telling the reader they are somewhere they
+    // are not.
+    //
+    // It used to be the gear register here, which read as the same kind of
+    // thing and was not: chasing a wetsuit is the day's work, and Settings
+    // had no door to the fleet for it to live behind (#1937). The pair the
+    // place actually depends on — a `shop` destination and its door — is held
+    // by `settings/settings-doors.test.ts`.
+    pathname = `${ROOT}/dive-sites`;
     render(<ShopPlaceNav root={ROOT} gates={owner} copy={COPY} />);
     expect(screen.queryByRole("link", { current: "page" })).toBeNull();
+  });
+
+  it("lights Today for the gear register, which has an hour in it", () => {
+    // The paired positive, and the reason the absence above is worth
+    // asserting at all: this component *can* light a destination that is not
+    // one of the bar's own three, so the null above is a reading of the
+    // place rather than a nav that lights nothing anywhere.
+    pathname = `${ROOT}/gear`;
+    render(<ShopPlaceNav root={ROOT} gates={owner} copy={COPY} />);
+    expect(screen.getByRole("link", { current: "page" })).toHaveTextContent("Today");
   });
 
   it("drops Season for a reader who may not read it, rather than refusing them", () => {
