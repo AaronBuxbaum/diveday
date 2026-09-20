@@ -348,8 +348,22 @@ function paperTreatment(rules: Map<string, Map<string, string>>, state: SeatStat
   return [
     ...read(`.hull-seat-${kebab(state)}`),
     ...read(`.hull-seat-inset-${kebab(state)}`).map((part) => `inset ${part}`),
-    `ring:${state === "missing"}`,
+    `ring+cross:${state === "missing"}`,
   ].join(" | ");
+}
+
+/**
+ * The *seat rules alone*, which is the comparison a first draft of the e2e
+ * half made and which is not a safe one: `booked` and `awaiting` share a line
+ * deliberately — the doubt is the dashed box inside the second — so anything
+ * that compares seats without their inner marks either passes vacuously or
+ * fails for a reason that is not a bug. This exists so the test below can say
+ * that out loud rather than leave it to be rediscovered.
+ */
+function seatRuleOnly(rules: Map<string, Map<string, string>>, state: SeatState) {
+  return PAPER_CHANNELS.map(
+    (property) => `${property}:${rules.get(`.hull-seat-${kebab(state)}`)?.get(property) ?? "-"}`,
+  ).join(" | ");
 }
 
 describe("the hull on paper", () => {
@@ -370,6 +384,12 @@ describe("the hull on paper", () => {
     for (const state of ["awaiting", "ashore", "ashoreImplied"] as const) {
       expect(container.querySelector(`.hull-seat-inset-${kebab(state)}`)).toBeTruthy();
     }
+    // The alarm's own two marks, both of them paper-only.
+    expect(container.querySelector(".hull-seat-cross")).toBeTruthy();
+    expect(container.querySelector(".hull-seat-ring")).toBeTruthy();
+    // The sentence, as ink rather than as a tooltip: `<title>` is never
+    // painted, and above eight columns there are no initials either.
+    expect(container.querySelector("p.print\\:block")?.textContent).toBe("the boat");
     // The boat itself, whose inline colour print has to take back.
     for (const part of [".hull-body", ".hull-midline", ".hull-crew", ".hull-helm"]) {
       expect(container.querySelector(part)).toBeTruthy();
@@ -392,6 +412,44 @@ describe("the hull on paper", () => {
       expect(clash, `${state} prints exactly like ${clash}: ${treatment}`).toBeUndefined();
       seen.set(treatment, state);
     }
+  });
+
+  /**
+   * **The two rules a crew reads the sheet by**, asserted rather than
+   * described. A dive-domain review of the first draft found both broken: the
+   * heaviest mark on the boat was `blocked`, which means a waiver is unsigned,
+   * and `missing` — a diver who did not come back aboard — was drawn *filled*,
+   * the same mark as `aboard`, separated from it by a hairline halo measuring
+   * about a third of a millimetre on a full boat.
+   */
+  it("keeps a fill meaning a body aboard, and the heaviest line meaning nobody knows", () => {
+    const rules = printRules();
+    const fill = (state: SeatState) => rules.get(`.hull-seat-${kebab(state)}`)?.get("fill");
+    const width = (state: SeatState) =>
+      Number(rules.get(`.hull-seat-${kebab(state)}`)?.get("stroke-width"));
+
+    // One filled state, and it is the one that means a body is in this boat.
+    expect(STATES.filter((state) => fill(state) !== "none")).toEqual(["aboard"]);
+
+    // The heaviest line is the unaccounted-for one, and `blocked` — which
+    // means paperwork — is quieter than it. That ordering is the same one
+    // `ROLL_CALL_ROW_TONE` carries, and inverting it teaches a crew that the
+    // loudest thing on a boat is a signature.
+    const heaviest = Math.max(...STATES.map(width));
+    expect(STATES.filter((state) => width(state) === heaviest)).toEqual(["missing"]);
+    expect(width("blocked")).toBeLessThan(width("missing"));
+    expect(width("blocked")).toBeGreaterThan(width("booked"));
+  });
+
+  /**
+   * The pair §3b.5 exists for. They share a seat rule on purpose, so any
+   * comparison that forgets the inner mark is either vacuous or a false alarm
+   * waiting for the first shop with an unread booking.
+   */
+  it("tells a seat nobody has read from a seat nobody has objected to, by the mark inside it", () => {
+    const rules = printRules();
+    expect(seatRuleOnly(rules, "awaiting")).toBe(seatRuleOnly(rules, "booked"));
+    expect(paperTreatment(rules, "awaiting")).not.toBe(paperTreatment(rules, "booked"));
   });
 
   it("does not let a printer read the shop's paint as a state", () => {

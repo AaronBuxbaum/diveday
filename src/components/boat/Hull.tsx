@@ -36,9 +36,15 @@ import type { HullGeometry, SeatReading, SeatState } from "@/lib/hull";
  *   one mode built for this surface's weather, which left an open seat more
  *   visible than a taken one and inverted the picture's whole first reading
  *   (dive-domain review 20260919).
+ * - **awaiting** — the rows' own slate, a solid line at full weight, and a
+ *   dashed box *inside* it. Solid outside because a body is in this seat;
+ *   unsettled inside because nobody has said anything about them yet (§3b.5).
  * - **blocked** — the danger *tint* behind a danger line and danger ink
  *   (5.45:1, measured in `globals.css`). Quiet, like its row.
  * - **aboard / ashore** — the success and warning fills, solid, white ink.
+ * - **ashoreImplied** — the warning *tint* behind a **dashed** warning line.
+ *   Nobody said this person stayed ashore; the dock's silence was carried
+ *   forward, and an inference never wears a stated line (§3b.3).
  * - **missing** — danger, solid, and the only seat that wears a ring.
  *
  * That blocked is an outline where missing is a solid is the whole distinction
@@ -52,13 +58,29 @@ import type { HullGeometry, SeatReading, SeatState } from "@/lib/hull";
  * It is `role="img"` because a seat is not a control here: the roll call's one
  * tap per name lives on its own surface and is untouched by this.
  *
- * **It does not print.** `@media print` repaints the app black-on-white and
- * flattens `--success`, `--warning` and `--danger` to two near-blacks, so a
- * printed hull would show aboard and ashore as the same blob and a booked seat
- * as white on white. The rows print with every name and state in words, which
- * is what a manifest on a boat is for; a picture that prints a lie is worse
- * than one that does not print. Giving the hull its own mono treatment is on
- * the ADR's pre-manifest list.
+ * **It prints, and paper is a second language.** It did not until the sheet had
+ * a treatment of its own: the print palette flattens `--success` and
+ * `--warning` onto one near-black, so `aboard` and `ashore` — the only two
+ * answers a head count has — came off a printer identical, and the picture
+ * stood down rather than lie. `@media print` in `globals.css` now re-cuts all
+ * eight (ADR 20260919-one-idea §3b.4), and the classes on the elements below
+ * exist for it to reach. Three rules govern that sheet, and none of them is
+ * the screen's:
+ *
+ * 1. **A fill means a body is in this boat**, and `aboard` is the only state
+ *    that has one. Every absence is an empty seat, `missing` included — a
+ *    diver who did not come back aboard is the last person to say otherwise
+ *    about.
+ * 2. **An inner mark means the seat is spoken for and the body is not in it**
+ *    — solid for a stated `ashore`, dashed for an `awaiting` nobody has read.
+ * 3. **The heaviest line always means a person is not accounted for.** That
+ *    ordering is the invariant below, and it is why `blocked` is heavier than
+ *    an ordinary seat and lighter than `missing`, which also wears the ring
+ *    and the one diagonal in the picture.
+ *
+ * So "a line at full weight means a body is in this seat" holds on screen and
+ * is *not* the paper rule: there, a full-weight line means the seat is spoken
+ * for, and the fill is what says the body is in it.
  *
  * **No number is ever drawn on a seat**, and that is not what makes the picture
  * safe — `src/lib/hull.ts` says what does.
@@ -190,8 +212,14 @@ export function Hull({
   seats?: readonly HullSeatContent[];
   /** The shop's colour for this hull, or null for one nobody has painted. */
   color?: string | null;
-  /** Up to two guides in the wheelhouse, already shortened. */
-  crewInitials?: readonly string[];
+  /**
+   * The guides in the wheelhouse, already shortened, **in crew order and with
+   * holes**. `undefined` is a crew member whose name would not letter; the
+   * circle is still drawn, because a person with an awkward name is still a
+   * person on the boat. Only the first two are drawn — `hullGeometry` returns
+   * the rest as `crewOverflow`, and the caller says that number in words.
+   */
+  crewInitials?: readonly (string | undefined)[];
   className?: string;
 }) {
   if (geometry.seats.length === 0) return null;
@@ -200,63 +228,64 @@ export function Hull({
   const line = color ?? "var(--border-strong)";
 
   return (
-    <svg
-      viewBox={`0 0 ${geometry.width} ${geometry.height}`}
-      // **The hull prints.** It used to carry `print:hidden`, because the print
-      // palette collapses `--success` and `--warning` onto one near-black and
-      // leaves the tints alone, so `aboard` and `ashore` — the two answers a
-      // head count has — came out of a printer pixel-identical. Every class
-      // below exists so `@media print` can re-cut that on paper by weight,
-      // dash and an inner mark instead of by hue (ADR 20260919-one-idea
-      // §3b.4). Nothing here changes what the screen draws.
-      className={`hull ${className ?? "block h-auto w-full"}`}
-      role="img"
-      aria-label={label}
-    >
-      <title>{label}</title>
-      <path
-        className="hull-body"
-        d={geometry.outline}
-        fill={color ?? "var(--surface-sunken)"}
-        fillOpacity={color ? 0.12 : 1}
-        stroke={line}
-        strokeWidth={1.5}
-      />
-      <line
-        className="hull-midline"
-        x1={geometry.midline.x1}
-        x2={geometry.midline.x2}
-        y1={geometry.midline.y}
-        y2={geometry.midline.y}
-        stroke={line}
-        strokeOpacity={0.35}
-        strokeDasharray="2 5"
-      />
+    <>
+      <svg
+        viewBox={`0 0 ${geometry.width} ${geometry.height}`}
+        // **The hull prints.** It used to carry `print:hidden`, because the print
+        // palette collapses `--success` and `--warning` onto one near-black and
+        // leaves the tints alone, so `aboard` and `ashore` — the two answers a
+        // head count has — came out of a printer pixel-identical. Every class
+        // below exists so `@media print` can re-cut that on paper by weight,
+        // dash and an inner mark instead of by hue (ADR 20260919-one-idea
+        // §3b.4). Nothing here changes what the screen draws.
+        className={`hull ${className ?? "block h-auto w-full"}`}
+        role="img"
+        aria-label={label}
+      >
+        <title>{label}</title>
+        <path
+          className="hull-body"
+          d={geometry.outline}
+          fill={color ?? "var(--surface-sunken)"}
+          fillOpacity={color ? 0.12 : 1}
+          stroke={line}
+          strokeWidth={1.5}
+        />
+        <line
+          className="hull-midline"
+          x1={geometry.midline.x1}
+          x2={geometry.midline.x2}
+          y1={geometry.midline.y}
+          y2={geometry.midline.y}
+          stroke={line}
+          strokeOpacity={0.35}
+          strokeDasharray="2 5"
+        />
 
-      {geometry.seats.map((seat) => {
-        /* A place the roster does not reach: nobody has taken it, nothing was
+        {geometry.seats.map((seat) => {
+          /* A place the roster does not reach: nobody has taken it, nothing was
            recorded, and there is no holder whose readiness could be read. */
-        const content: HullSeatContent = seats[seat.index] ?? {
-          reading: { state: "open", checkpoint: null, readiness: null },
-        };
-        const state = content.reading.state;
-        const edge = SEAT_LINE[state];
-        return (
-          <g key={seat.index}>
-            <rect
-              className={`hull-seat hull-seat-${kebab(state)}`}
-              x={seat.x}
-              y={seat.y}
-              width={seat.width}
-              height={seat.height}
-              rx={seat.rx}
-              fill={SEAT_FILL[state]}
-              stroke={edge.stroke ?? line}
-              strokeOpacity={edge.opacity}
-              strokeDasharray={edge.dashed ? "3 3" : undefined}
-              strokeWidth={1.5}
-            />
-            {/* A stated "did not come back" is the loudest thing on the boat and
+          const content: HullSeatContent = seats[seat.index] ?? {
+            reading: { state: "open", checkpoint: null, readiness: null },
+          };
+          const state = content.reading.state;
+          const edge = SEAT_LINE[state];
+          return (
+            <g key={seat.index}>
+              <rect
+                className={`hull-seat hull-seat-${kebab(state)}`}
+                x={seat.x}
+                y={seat.y}
+                width={seat.width}
+                height={seat.height}
+                rx={seat.rx}
+                fill={SEAT_FILL[state]}
+                stroke={edge.stroke ?? line}
+                strokeOpacity={edge.opacity}
+                strokeDasharray={edge.dashed ? "3 3" : undefined}
+                strokeWidth={1.5}
+              />
+              {/* A stated "did not come back" is the loudest thing on the boat and
                 the only seat that wears a ring — the same rule, and the same
                 2026-08-04 dive-domain review, that gives the roll call's rows
                 exactly one ring. Full opacity and a wider line than the seat's
@@ -264,20 +293,38 @@ export function Hull({
                 artifact, not a distinction (dive-domain review 20260919), and
                 the thing it has to be told apart from means somebody's waiver
                 is unsigned rather than somebody is still in the water. */}
-            {state === "missing" ? (
-              <rect
-                className="hull-seat-ring"
-                x={seat.x - 3.5}
-                y={seat.y - 3.5}
-                width={seat.width + 7}
-                height={seat.height + 7}
-                rx={seat.rx + 2}
-                fill="none"
-                stroke={SEAT_FILL.missing}
-                strokeWidth={2.5}
-              />
-            ) : null}
-            {/* **The mark that says nobody has said anything.** A dashed inset,
+              {state === "missing" ? (
+                <rect
+                  className="hull-seat-ring"
+                  x={seat.x - 3.5}
+                  y={seat.y - 3.5}
+                  width={seat.width + 7}
+                  height={seat.height + 7}
+                  rx={seat.rx + 2}
+                  fill="none"
+                  stroke={SEAT_FILL.missing}
+                  strokeWidth={2.5}
+                />
+              ) : null}
+              {/* **The one seat that is crossed out**, and only on paper.
+                `missing` is `notBackAboard`: the diver did not come back
+                aboard, so on a sheet where a *fill* means a body is in this
+                boat, this seat is empty like every other absence — and then
+                marked, because it is the one absence nobody has accounted
+                for. On screen the alarm is red and the cross would be noise;
+                the print sheet strokes it (ADR 20260919-one-idea §3b.4,
+                dive-domain review 20260920). */}
+              {state === "missing" ? (
+                <path
+                  className="hull-seat-cross"
+                  d={`M${seat.x + 5} ${seat.y + 5}L${seat.x + seat.width - 5} ${seat.y + seat.height - 5}M${seat.x + seat.width - 5} ${seat.y + 5}L${seat.x + 5} ${seat.y + seat.height - 5}`}
+                  fill="none"
+                  stroke="none"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                />
+              ) : null}
+              {/* **The mark that says nobody has said anything.** A dashed inset,
                 *inside* a seat whose own line stays solid, so the seat still
                 reads as occupied while the inside of it reads as unsettled.
                 It is geometry rather than hue on purpose: the print palette
@@ -285,81 +332,93 @@ export function Hull({
                 so the slate fill alone would not survive paper — and it does
                 not need the two letters, which `hullGeometry` drops above
                 eight columns on every boat larger than a six-pack. */}
-            {INSET_STATES.has(state) ? (
-              <rect
-                className={`hull-seat-inset hull-seat-inset-${kebab(state)}`}
-                x={seat.x + 4}
-                y={seat.y + 4}
-                width={seat.width - 8}
-                height={seat.height - 8}
-                rx={Math.max(2, seat.rx - 3)}
-                fill="none"
-                stroke={state === "awaiting" ? "var(--border-strong)" : "none"}
-                strokeDasharray={state === "awaiting" ? "3 3" : undefined}
-                strokeWidth={1}
-              />
-            ) : null}
-            {geometry.showsInitials && content.initials ? (
+              {INSET_STATES.has(state) ? (
+                <rect
+                  className={`hull-seat-inset hull-seat-inset-${kebab(state)}`}
+                  x={seat.x + 4}
+                  y={seat.y + 4}
+                  width={seat.width - 8}
+                  height={seat.height - 8}
+                  rx={Math.max(2, seat.rx - 3)}
+                  fill="none"
+                  stroke={state === "awaiting" ? "var(--border-strong)" : "none"}
+                  strokeDasharray={state === "awaiting" ? "3 3" : undefined}
+                  strokeWidth={1}
+                />
+              ) : null}
+              {geometry.showsInitials && content.initials ? (
+                <text
+                  x={seat.centerX}
+                  y={seat.centerY + 4}
+                  textAnchor="middle"
+                  fontSize={11.5}
+                  fontWeight={700}
+                  className={`hull-seat-ink hull-seat-ink-${kebab(state)}`}
+                  fill={SEAT_INK[state]}
+                >
+                  {content.initials}
+                </text>
+              ) : null}
+            </g>
+          );
+        })}
+
+        {geometry.crew.map((station) => (
+          <g key={station.index}>
+            <circle
+              className="hull-crew"
+              cx={station.cx}
+              cy={station.cy}
+              r={station.r}
+              fill={line}
+              fillOpacity={0.18}
+              stroke={line}
+              strokeWidth={1.5}
+            />
+            {geometry.showsInitials && crewInitials[station.index] ? (
               <text
-                x={seat.centerX}
-                y={seat.centerY + 4}
+                x={station.cx}
+                y={station.cy + 4}
                 textAnchor="middle"
-                fontSize={11.5}
+                fontSize={10.5}
                 fontWeight={700}
-                className={`hull-seat-ink hull-seat-ink-${kebab(state)}`}
-                fill={SEAT_INK[state]}
+                fill="var(--foreground)"
               >
-                {content.initials}
+                {crewInitials[station.index]}
               </text>
             ) : null}
           </g>
-        );
-      })}
+        ))}
 
-      {geometry.crew.map((station) => (
-        <g key={station.index}>
-          <circle
-            className="hull-crew"
-            cx={station.cx}
-            cy={station.cy}
-            r={station.r}
-            fill={line}
-            fillOpacity={0.18}
-            stroke={line}
-            strokeWidth={1.5}
-          />
-          {geometry.showsInitials && crewInitials[station.index] ? (
-            <text
-              x={station.cx}
-              y={station.cy + 4}
-              textAnchor="middle"
-              fontSize={10.5}
-              fontWeight={700}
-              fill="var(--foreground)"
-            >
-              {crewInitials[station.index]}
-            </text>
-          ) : null}
-        </g>
-      ))}
-
-      {/* The helm, which is what makes the shape read as a boat rather than a tray. */}
-      <circle
-        className="hull-helm"
-        cx={geometry.helm.cx}
-        cy={geometry.helm.cy}
-        r={geometry.helm.ringRadius}
-        fill="none"
-        stroke={line}
-        strokeWidth={1.5}
-      />
-      <circle
-        className="hull-helm-dot"
-        cx={geometry.helm.cx}
-        cy={geometry.helm.cy}
-        r={geometry.helm.dotRadius}
-        fill={line}
-      />
-    </svg>
+        {/* The helm, which is what makes the shape read as a boat rather than a tray. */}
+        <circle
+          className="hull-helm"
+          cx={geometry.helm.cx}
+          cy={geometry.helm.cy}
+          r={geometry.helm.ringRadius}
+          fill="none"
+          stroke={line}
+          strokeWidth={1.5}
+        />
+        <circle
+          className="hull-helm-dot"
+          cx={geometry.helm.cx}
+          cy={geometry.helm.cy}
+          r={geometry.helm.dotRadius}
+          fill={line}
+        />
+      </svg>
+      {/* **The sentence, printed.** `<title>` is an accessible name and a
+          tooltip; it is never ink. On screen the rows under the hull say every
+          one of these facts in words, and a reader who cannot see the picture
+          is given the same sentence — but on paper a letterless hull (every
+          boat over eight columns, which `hull.ts` calls the normal case) would
+          otherwise be a grid of unlabelled boxes in a visual language that
+          exists nowhere else in the product, on the one artifact used when the
+          app is not there to explain it. So the sentence goes on the sheet
+          too, and it is the same string, which is why it cannot drift from the
+          picture (dive-domain review 20260920). */}
+      <p className="hidden print:block mt-1 text-xs text-foreground">{label}</p>
+    </>
   );
 }

@@ -1002,12 +1002,17 @@ textarea {
     stroke-dasharray: 3 3;
   }
 
-  /* Readiness says they cannot board: the heaviest line, where the screen
-     used a tint the print palette never redefined. */
+  /* Readiness says they cannot board, where the screen used a tint the print
+     palette never redefines. Heavier than an ordinary seat and lighter than
+     `missing`: `Hull.tsx` states that ordering as a safety invariant — a
+     quiet blocked against a loud missing, the same one the roll call's rows
+     carry — and a first pass here gave `blocked` the heaviest mark on the
+     boat, which inverted it. The heaviest mark always means a person is not
+     accounted for (dive-domain review 20260920). */
   .hull-seat-blocked {
     fill: none;
     stroke: var(--foreground);
-    stroke-width: 3;
+    stroke-width: 2;
     stroke-dasharray: none;
   }
 
@@ -1043,22 +1048,52 @@ textarea {
   .hull-seat-inset-ashore-implied {
     fill: none;
     stroke: var(--foreground);
-    stroke-width: 2;
+    stroke-width: 2.5;
     stroke-dasharray: none;
   }
 
-  /* Did not come back aboard. Filled like `aboard` and ringed like nothing
-     else, which is the same one-ring rule the roll call's rows follow. */
+  /*
+   * **Did not come back aboard**, and the loudest thing the sheet can say.
+   *
+   * A first pass drew it filled, like `aboard`, on the reasoning that the
+   * screen's alarm is a solid red. Two things were wrong with that. A filled
+   * seat on this sheet means *a body is in this boat*, and a diver who did not
+   * come back aboard is the one person it is most important not to say that
+   * about. And it left the severity-1 state as `aboard` plus a hairline halo —
+   * no pop-out at all in a field of solid seats, with the white gap between
+   * ring and seat measuring about a third of a millimetre on a full boat, which
+   * closes on a worn cartridge and on the photocopy that goes in the incident
+   * file (dive-domain review 20260920).
+   *
+   * So it is empty like every other absence, and then marked three times over:
+   * the heaviest line on the boat, the ring nothing else wears, and the only
+   * diagonal anywhere in the picture. A cross among rectangles is the one mark
+   * here that is found without looking for it.
+   */
   .hull-seat-missing {
-    fill: var(--foreground);
+    fill: none;
     stroke: var(--foreground);
-    stroke-width: 1.5;
+    stroke-width: 3;
     stroke-dasharray: none;
   }
 
   .hull-seat-ring {
     fill: none;
     stroke: var(--foreground);
+  }
+
+  .hull-seat-cross {
+    stroke: var(--foreground);
+  }
+
+  /* `missing` letters in `--surface` on screen, over a solid danger fill. Its
+     seat is empty here and carries the cross, so the letters flip to ink and
+     take a paper-coloured halo to stay readable across it. */
+  .hull-seat-ink-missing {
+    fill: var(--foreground);
+    stroke: var(--surface);
+    stroke-width: 2.5;
+    paint-order: stroke;
   }
 
   /* `ashore` letters in `--surface` on screen, which is white — and its seat

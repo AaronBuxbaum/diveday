@@ -617,7 +617,7 @@
     "uncheckedLabel": "Sin verificar — presiona para marcarlo",
     "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}"
   },
-  "hullLabel": "{boat}, dibujado como sus plazas: {booked} de {capacity, plural, one {# plaza} other {# plazas}} ocupadas{blocked, plural, =0 {} one {, # que no puede embarcar} other {, # que no pueden embarcar}}{unread, plural, =0 {} one {, # cuya preparación nadie ha revisado} other {, # cuya preparación nadie ha revisado}}. Las plazas se llenan por orden de reserva y nunca se asignan.",
+  "hullLabel": "{boat}, dibujado como sus plazas: {booked} de {capacity, plural, one {# plaza} other {# plazas}} ocupadas{blocked, plural, =0 {} one {, # que no puede embarcar} other {, # que no pueden embarcar}}{unread, plural, =0 {} one {, # cuya preparación nadie ha revisado} other {, # cuya preparación nadie ha revisado}}{crewNotDrawn, plural, =0 {} one {, y # guía que el dibujo no muestra} other {, y # guías que el dibujo no muestra}}. Las plazas se llenan por orden de reserva y nunca se asignan.",
   "voyage": {
     "line": "{boat} · {booked} de {capacity, plural, one {# plaza} other {# plazas}} ocupadas",
     "stripLabel": "{title}, dibujado como su travesía: cuándo sale el barco, dónde sitúa el agua cada inmersión y la vuelta."

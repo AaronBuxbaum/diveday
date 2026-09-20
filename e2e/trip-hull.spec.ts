@@ -102,10 +102,23 @@ test("the hull goes on the sheet, in the page's ink rather than the shop's paint
         body: stroke(".hull-body"),
         midline: stroke(".hull-midline"),
         seats: [...svg.querySelectorAll(".hull-seat")].map((seat) => {
-          const style = getComputedStyle(seat);
+          const channels = (node: Element | null | undefined) => {
+            if (!node) return "-";
+            const style = getComputedStyle(node);
+            return `${style.fill} | ${style.strokeWidth} | ${style.strokeDasharray}`;
+          };
+          const state = [...seat.classList].find((name) => name.startsWith("hull-seat-")) ?? "";
+          // **The inner mark counts.** `booked` and `awaiting` share a seat
+          // rule deliberately — the doubt is the dashed box inside the second
+          // — so a comparison of seats alone is not a safe one. A first draft
+          // of this test made it, and it would have gone red, for a reason
+          // that is not a bug, on the first shop with an unread booking.
+          const group = seat.parentElement;
           return {
-            state: [...seat.classList].find((name) => name.startsWith("hull-seat-")) ?? "",
-            paper: `${style.fill} | ${style.strokeWidth} | ${style.strokeDasharray}`,
+            state,
+            paper: `${channels(seat)} / ${channels(group?.querySelector(".hull-seat-inset"))} / ${
+              group?.querySelector(".hull-seat-cross") ? "cross" : "-"
+            }`,
           };
         }),
       };
