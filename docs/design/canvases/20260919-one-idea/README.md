@@ -101,12 +101,50 @@ rule, and this table moves.
 | 23i — the day itself: `sky-scheme.ts`, `day-strip.ts`, `SkyBand`, `DayStrip` — geometry and gradients, prose-free, gating nothing | shipped | `src/lib/day-strip.ts` | `src/lib/day-strip.test.ts`, `src/lib/sky-scheme.test.ts`, `src/components/day/*.test.tsx` |
 | 23a — the picked idea's home: `/shop/[shopSlug]` becomes the day (I), the stack (II) or the chart (III), on round 2's surface; the Today spine's actions become the idea's own things (hours, seats, tracks) | in progress | `src/app/shop/[shopSlug]/_components/day/DayHeader.tsx` — the day's top; the spine's actions move with 23c | `e2e/day-spine.spec.ts` "the day stands at the top of its own page" |
 | 23b — the shell: the nav of nouns leaves — no tabs, no More, no dock; a date, a search and the shop's name (I), the shop's card (II), the dock (III); `staff-destinations.ts` regrouped into the idea's places; ⌘K stays as the search | shipped | `src/lib/staff-destinations.ts` | `src/lib/staff-destinations.test.ts`, `src/components/ShopPlaceNav.test.tsx`, `e2e/staff-nav.spec.ts` |
-| 23c — the departure: the hour page with the strip (I), the hull with its seats (II), the voyage on the chart (III); the four trip tabs one page; the roll call's one tap untouched beneath | in progress | `src/app/shop/[shopSlug]/trips/[id]/_components/VoyageHeader.tsx` — the hour over its own sky with the voyage drawn, above `_components/TripHull.tsx`'s boat and its roster; **the four tabs are what is left**, and they wait on ADR 20260919-one-idea §3b, which is the list standing between a hull and a manifest | `src/lib/hull.test.ts` (the canvas's own outlines, verbatim), `src/app/shop/[shopSlug]/trips/[id]/_components/TripHull.test.tsx`, `e2e/trip-hull.spec.ts` |
+| 23c — the departure: the hour page with the strip (I), the hull with its seats (II), the voyage on the chart (III); the four trip tabs one page; the roll call's one tap untouched beneath | in progress | `src/app/shop/[shopSlug]/trips/[id]/_components/VoyageHeader.tsx` — the hour over its own sky with the voyage drawn, above `_components/TripHull.tsx`'s boat and its roster. §3b is closed, so nothing gates the rest. **What is left is the tab strip and Prep, together** — see the note below, which is narrower than this row used to imply | `src/lib/hull.test.ts` (the canvas's own outlines, verbatim), `src/app/shop/[shopSlug]/trips/[id]/_components/TripHull.test.tsx`, `e2e/trip-hull.spec.ts` |
 | 23d — the storefront's front page on the idea, in Harbor's face and the shop's colour: the day and the week (I), the boat you are about to book (II), where we go (III) | shipped | `src/app/s/[shopSlug]/_components/ShopfrontHero.tsx` | `src/app/s/[shopSlug]/_components/ShopfrontHero.test.tsx`, the `storefront-sky` capture in `e2e/visual.spec.ts` |
 | 23e — the diver, the counter and the walk-in reached through the idea: search and a sheet over the home; the person's record unchanged inside it | open | — | — |
 | 23f — the week, the requests and the season on the idea: the Board becomes the week; a request is a ghost day (I), a boat to put out (II), a track to add (III) | open | — | — |
 | 23g — the rest, one family per session: courses, gear, money, reviews, staffing, and Settings behind the shop's name | open | — | — |
 | 23h — night and glare on the idea: by the hour (I) or by the device (II, III); glare as the crew's word in the roll call's bar; the black-on-white twin held by a test | open | — | — |
+
+### 23c: three of the four are already done (checked 2026-09-20)
+
+The row above says "the four trip tabs one page", which was written against a
+four-tab world and reads as more work than is left. Verified against the code:
+
+- **There are three tabs, not four.** `TripSubNav` renders Trip · Manifest ·
+  Prep. The fourth, Guests, collapsed in slice 5e (ADR
+  20260827-the-departure-is-two-working-surfaces) — its roster *is* Trip's
+  body. `/guests` survives as a compatibility route whose three db reads are a
+  strict subset of Trip's, with identical arguments.
+- **"The Conditions tab" is already deleted.** Conditions is a row inside
+  About's disclosure with a collapsed summary, not a tab. It holds the
+  automated outlook *and* the editor a shop writes conditions in, so it is a
+  working surface and stays where it is.
+- **"What is due before lines off, then who is aboard" is already built.** It
+  is the roster ledger's two groups — "Still to clear", each blocked diver
+  with their blocker's sentence, the fix link and a note, then "Ready". Two
+  groups in one ledger rather than two headed lists: the artboard's frame, not
+  its information. A second section drawn from `collapseDiverActions` was
+  built, looked at, and reverted — it said the same thing about one diver a
+  third time, and was the poorest of the three tellings.
+- **The manifest cannot join the page**, and this is structural rather than a
+  preference: `print/_components/TripPacket.tsx` imports `manifest/page` and
+  `prep/page` **as components** and renders them for the paper day, so
+  deleting either route deletes the printed packet. `?checkpoint=` is a URL
+  contract with seven external deep-links, `isLiveManifestPath` hides the
+  phone dock on that exact segment, a service worker and an encrypted offline
+  store hang off it, and it carries fifteen db reads nothing else shares. The
+  artboard keeps it too — "reached through the departure's hour".
+
+**So what is left is one slice: the tab strip goes and Prep folds in.** They
+go together — deleting the strip without folding Prep leaves Prep reachable
+only by URL. Watch `layout.tsx`'s `instant = false`, the last one in the app,
+restored after three Playwright specs went intermittently red on CI in
+hydration-shaped ways; collapsing pages under it changes which boundary those
+were hiding behind.
+
 
 ## Working on it
 
