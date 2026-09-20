@@ -3732,6 +3732,20 @@ for (const scheme of ["light", "dark"] as const) {
       // 23b). What replaced them as the way to everything else is the search,
       // which `command-palette` and `command-palette-results` already
       // photograph; the bar itself is in every `/shop/**` capture in this file.
+      //
+      // One disclosed surface did replace them, and it is below: the date the
+      // phone's bar carries, which folds the three times the desk bar wears as
+      // pills. Opened at the phone viewport because it only exists below `lg`
+      // — the 1280 image is deliberately the plain page, exactly as the More
+      // menu's 390 image used to be.
+      test(`the phone's date folds the three times (${scheme})`, async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto("/shop/blue-mantis");
+        await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
+        await page.locator("header [data-place-menu]").click();
+        await page.getByRole("navigation", { name: "When" }).waitFor();
+        await capture(page, "nav-when", scheme);
+      });
 
       // **The `blockers` capture retired with its surface.** It photographed
       // Today's by-departure view, reached through the `/blockers` redirect;
