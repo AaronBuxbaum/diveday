@@ -1057,7 +1057,18 @@ export function dayTakings(
 
 /** The three figures the evening's takings reading renders, and nothing more. */
 export type DayTakings = {
-  /** Net of tax and pass-through, on today's departures. The headline. */
+  /**
+   * The headline: `getMonthlyReport`'s own net figure over the shop's day,
+   * after tax and pass-through.
+   *
+   * **Two sources, bucketed two ways, and the difference matters to whoever
+   * reads this next.** Money collected on bookings is anchored to
+   * `trips.startsAt`, so it belongs to the day its boat left. Imported source
+   * history — a shop's payments from whatever it used before DiveDay — has no
+   * departure to hang on and is bucketed by its own `occurred_on` calendar
+   * date in the shop's zone. So a day with no boat at all can still carry a
+   * figure, and `importedRecordCount` below is what lets the surface say so.
+   */
   revenueCents: number;
   /** Settled tips on the same departures. Zero renders no clause. */
   tipsCents: number;
