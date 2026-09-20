@@ -225,10 +225,6 @@
   },
   "shopNavLinks": {
     "badgeBlocked": "{count, plural, one {# buceador bloqueado} other {# buceadores bloqueados}}",
-    "primaryNavAriaLabel": "Principal",
-    "more": "Más",
-    "groupDaily": "Llevar el centro",
-    "groupSetup": "Configurar",
     "today": "Hoy",
     "checkIn": "Registro",
     "walkIn": "Walk-in",
@@ -250,6 +246,12 @@
     "settings": "Ajustes",
     "team": "Equipo",
     "calendarFeed": "Suscripción al calendario"
+  },
+  "shopPlaceNav": {
+    "navAriaLabel": "Cuándo",
+    "today": "Hoy",
+    "week": "Semana",
+    "season": "Temporada"
   },
   "subSurfaceRipple": {
     "iconTitle": "Icono de pase de lista completo",

@@ -40,14 +40,12 @@ export default function ShopLayout({
       <Suspense fallback={<ShopChromeSkeleton />}>
         <ShopChrome params={params} />
       </Suspense>
-      {/* Below `lg` the phone dock (StaffTabBar) owns the bottom edge, so the
-          content wrapper both publishes the clearance it demands and pads
-          itself by it — pages never end underneath the dock, and any fixed
-          element that shares the bottom edge (UndoToast) adds the same
-          `--dock-clearance` to its own offset. The live manifest's `.boat-mode`
-          root under the trip main is the deliberate full-viewport exception;
-          globals.css clears the variable there. From `lg` up it collapses to
-          zero and everything sits where it always did. */}
+      {/* **Nothing owns the bottom edge.** The phone dock did, so this wrapper
+          published the clearance it demanded and padded itself by it, and every
+          fixed element down there (the toasts, a sticky form action row) added
+          the same offset. The dock left with the nav of nouns (ADR
+          20260919-one-idea, slice 23b) and the clearance went with it: a page
+          ends where the page ends. */}
       {/* `water-band`: Reef's page top — the lagoon wash settling into sand
           over the first 168px, behind every staff page's header (ADR
           20260901-diveday-reimagined, decision 1; the system sheet's "water
@@ -61,11 +59,7 @@ export default function ShopLayout({
           which wraps `{children}`. `ShopChrome` emits it as a `<style>`
           setting the same `--water-crest` this element's own class defaults;
           same property, same pixels, no request read above the page. */}
-      <div
-        id="shop-main-content"
-        tabIndex={-1}
-        className="water-band min-h-0 flex-1 outline-none pb-(--dock-clearance)"
-      >
+      <div id="shop-main-content" tabIndex={-1} className="water-band min-h-0 flex-1 outline-none">
         {children}
       </div>
     </>

@@ -11,18 +11,13 @@ import { getAuth } from "@/lib/auth";
 import {
   STAFF_DESTINATION_LABEL_KEYS,
   STAFF_DESTINATION_TITLE_KEYS,
+  type StaffDestinationGates,
   type StaffDestinationId,
   type StaffDestinationLabels,
   type StaffDestinationTitles,
   staffShopRoot,
 } from "@/lib/staff-destinations";
-import {
-  type ShopNavCounts,
-  type ShopNavGates,
-  ShopNavLinks,
-  type ShopNavLinksCopy,
-} from "./ShopNavLinks";
-import { StaffTabBar } from "./StaffTabBar";
+import { ShopPlaceNav, type ShopPlaceNavCopy } from "./ShopPlaceNav";
 import { CommandPalette } from "./search/CommandPalette";
 
 async function signOutAction() {
@@ -78,10 +73,10 @@ export function ShopNav({
   logoUrl?: string;
   /** Today's next departure's boarding, when the shop has a boat out today. */
   boatBoardingHref?: string;
-  /** Owner/manager surfaces (H-14) to hide from the nav and search for everyone else. */
-  navGates: ShopNavGates;
-  /** Small pending-work counts for the Reviews/Blockers nav badges (task 83). */
-  navCounts?: ShopNavCounts;
+  /** Owner/manager surfaces (H-14) to hide from the bar and search for everyone else. */
+  navGates: StaffDestinationGates;
+  /** Divers held back by medical review, drawn on Today (task 83). */
+  navCounts?: { blockers: number };
   locale: string;
   /**
    * Remembers a language the reader picked (`setLocaleAction`). Passed in
@@ -172,27 +167,29 @@ export function ShopNav({
           </div>
         }
         center={
-          /* `w-full` inside the bar's centre slot: the strip's own nav is the
-             flexible item within it, so the "More" door lands at the slot's
-             right edge and the tabs stay hugging the shop's name. */
-          <ShopNavLinks
+          /* **The three times, and nothing else** (ADR 20260919-one-idea,
+             slice 23b). Five noun tabs, a "More" menu and a phone dock all
+             left with the nav they belonged to; what stands is Today, Week
+             and Season, which is what the desk bar is drawn with. Hidden
+             below `lg` for the reason the tab strip was: the bar is a fixed
+             height and nothing in it may wrap. The phone reaches the same
+             three through the day itself and the search beside this. */
+          <ShopPlaceNav
             root={root}
             gates={navGates}
-            counts={navCounts}
+            blocked={navCounts?.blockers}
             copy={
               {
-                primaryNavAriaLabel: t("shared.shopNavLinks.primaryNavAriaLabel"),
-                more: t("shared.shopNavLinks.more"),
-                groupDaily: t("shared.shopNavLinks.groupDaily"),
-                groupSetup: t("shared.shopNavLinks.groupSetup"),
-                labels: destinationLabels,
-                // Resolved for the count each badge actually carries, so the
-                // sr-only noun is pluralised rather than assembled from a digit
-                // and a bare word.
-                badgeLabels,
-              } satisfies ShopNavLinksCopy
+                navAriaLabel: t("shared.shopPlaceNav.navAriaLabel"),
+                places: {
+                  day: t("shared.shopPlaceNav.today"),
+                  week: t("shared.shopPlaceNav.week"),
+                  season: t("shared.shopPlaceNav.season"),
+                },
+                blockedLabel: badgeLabels.blockers,
+              } satisfies ShopPlaceNavCopy
             }
-            className="hidden w-full lg:flex"
+            className="hidden lg:flex"
           />
         }
         trailing={
@@ -239,17 +236,6 @@ export function ShopNav({
             }}
           />
         }
-      />
-      <StaffTabBar
-        root={root}
-        gates={navGates}
-        counts={navCounts}
-        labels={destinationLabels}
-        navAriaLabel={t("shared.shopNavLinks.primaryNavAriaLabel")}
-        badgeLabels={badgeLabels}
-        moreLabel={t("shared.shopNavLinks.more")}
-        groupDailyLabel={t("shared.shopNavLinks.groupDaily")}
-        groupSetupLabel={t("shared.shopNavLinks.groupSetup")}
       />
     </>
   );

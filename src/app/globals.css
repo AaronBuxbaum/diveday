@@ -477,32 +477,16 @@ body {
  */
 
 /*
- * The phone dock has a 56px tab row and a 1px top hairline, plus any
- * home-indicator inset. Keep the same clearance on page padding, sticky form
- * actions, and fixed toasts; a fixed 4.5rem guess is correct only on a device
- * with no inset and drifts on edge-to-edge phones. The desktop media rule
- * below removes it where the dock is hidden.
+ * **There is no phone dock, so nothing reserves the bottom edge.**
+ *
+ * `--dock-clearance` lived here: 56px of tab row, a hairline, and the device's
+ * home-indicator inset, held off the foot of every staff page, every sticky
+ * form action row and every fixed toast, and zeroed again at `lg` and on the
+ * live manifest. The dock left with the nav of nouns (ADR 20260919-one-idea,
+ * slice 23b), and a variable nothing sits above is a band of dead space at the
+ * bottom of every phone screen in the shop — so it left too, along with the
+ * `var(--dock-clearance, 0rem)` each of those three surfaces asked it for.
  */
-#shop-main-content {
-  --dock-clearance: calc(3.5rem + 1px + env(safe-area-inset-bottom));
-}
-
-@media (min-width: 1024px) {
-  #shop-main-content {
-    --dock-clearance: 0rem;
-  }
-}
-
-/*
- * Responsive shell exception — ADR 20260830-responsive-surface-consistency.
- * The live manifest is the only `.boat-mode` surface inside the staff shell.
- * It owns the mobile viewport, so it must not reserve space for the phone dock.
- * `/offline-manifest` renders outside `#shop-main-content` and is therefore
- * intentionally unaffected by this exception.
- */
-#shop-main-content:has(> main > div.boat-mode) {
-  --dock-clearance: 0rem;
-}
 
 /* The live manifest owns the whole phone viewport. Its staff chrome is useful
  * everywhere else, but would consume the roll-call surface here; the deferred

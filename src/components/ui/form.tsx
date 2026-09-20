@@ -516,10 +516,10 @@ export function Field({
  *
  * `sticky`, not `fixed`: it belongs to the form, so it rides the bottom of the
  * viewport while the form is on screen and settles into place at the end of
- * it. A fixed bar would hang over every other page's footer too. When this
- * lives in the staff shell, `--dock-clearance` is the same space the phone
- * dock reserves for page content, so the action row stays above that dock on
- * a short phone or small laptop instead of being hidden behind it.
+ * it. A fixed bar would hang over every other page's footer too. It sat at
+ * `--dock-clearance` for as long as the staff shell had a phone dock under it;
+ * nothing owns the bottom edge now, so it rides the edge itself (ADR
+ * 20260919-one-idea, slice 23b).
  *
  * The negative margins let it span the full width of a padded container while
  * its own padding keeps the buttons where the fields are. Reach for it when a
@@ -535,7 +535,7 @@ export function StickyFormActions({
 }) {
   return (
     <div
-      className={`sticky bottom-[var(--dock-clearance,0rem)] z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5 ${className}`}
+      className={`sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5 ${className}`}
     >
       {children}
     </div>

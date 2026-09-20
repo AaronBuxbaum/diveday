@@ -17,9 +17,20 @@ includes(
   "design principle 2",
 );
 
-const tabBar = read("src/components/StaffTabBar.tsx");
-if ((tabBar.match(/text-base font-medium leading-tight/g) ?? []).length < 2) {
-  failures.push("phone tab bar labels must remain 16px");
+// **The phone's way to a destination is the search now**, so the rule moved
+// with the surface rather than leaving with it. This needled the phone dock's
+// tab labels at 16px, on the grounds that a destination label is a control's
+// own label; the dock went with the nav of nouns (ADR 20260919-one-idea, slice
+// 23b) and the palette's field is what a thumb types into instead. 16px is
+// also what keeps iOS from zooming the page when the field takes focus, which
+// on a search a staffer opens one-handed is the difference between finding a
+// diver and losing your place.
+const palette = read("src/components/search/CommandPalette.tsx");
+// Matched on the field's own class string rather than through `<input`: a JSX
+// attribute may carry a `>` inside an arrow function, so a tag-bounded regex
+// finds nothing and passes for the wrong reason.
+if (!/"[^"]*\btext-base\b[^"]*placeholder:text-muted[^"]*"/.test(palette)) {
+  failures.push("the search field must remain 16px");
 }
 
 // The shopfront's own destinations, for the same reason as the dock's: a
