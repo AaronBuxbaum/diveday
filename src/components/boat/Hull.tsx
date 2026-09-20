@@ -127,6 +127,21 @@ const SEAT_LINE: Record<SeatState, { stroke: string | null; opacity: number; das
  * ink reads 16.8 on `--surface` — the canvas's own vivid fills gave white 2.2,
  * which is the one part of the drawing that did not survive contact with AA.
  */
+/**
+ * **The seat states that carry an inner mark**, and what the mark means.
+ *
+ * On screen only `awaiting` draws one. The other two render the element with
+ * no stroke, because paper needs a mark there and CSS can give it one:
+ * `@media print` in `globals.css` strokes `.hull-seat-inset-ashore` and
+ * `-ashore-implied`, and a rule always beats a presentation attribute. An
+ * element that is not in the document cannot be styled into existence, which
+ * is the whole reason they are drawn at all (ADR 20260919-one-idea §3b.4).
+ */
+const INSET_STATES = new Set<SeatState>(["awaiting", "ashore", "ashoreImplied"]);
+
+/** `ashoreImplied` → `ashore-implied`; every other state is already one word. */
+const kebab = (state: SeatState) => state.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+
 const SEAT_INK: Record<SeatState, string> = {
   /** Kept only to hold the map total: nothing ever letters an empty place. */
   open: "var(--muted)",
@@ -187,22 +202,20 @@ export function Hull({
   return (
     <svg
       viewBox={`0 0 ${geometry.width} ${geometry.height}`}
-      // `print:hidden` is not the caller's to opt out of — see the note above:
-      // the print palette flattens six of the eight states into two inks and
-      // one near-white, so the rows carry the paper and the picture stands
-      // down. It got *worse* with `awaiting` and `ashoreImplied`: the tints are
-      // not redefined for print and `background: transparent !important` does
-      // not reach an SVG `fill`, so `open`, `awaiting` and `ashoreImplied` all
-      // land on "dashed, near-white". The dash is the one channel that survives
-      // the flattening and this component now spends it three times, which is
-      // why ADR 20260919-one-idea §3b.4 says the mono treatment has three
-      // states to re-cut rather than one.
-      className={`${className ?? "block h-auto w-full"} print:hidden`}
+      // **The hull prints.** It used to carry `print:hidden`, because the print
+      // palette collapses `--success` and `--warning` onto one near-black and
+      // leaves the tints alone, so `aboard` and `ashore` — the two answers a
+      // head count has — came out of a printer pixel-identical. Every class
+      // below exists so `@media print` can re-cut that on paper by weight,
+      // dash and an inner mark instead of by hue (ADR 20260919-one-idea
+      // §3b.4). Nothing here changes what the screen draws.
+      className={`hull ${className ?? "block h-auto w-full"}`}
       role="img"
       aria-label={label}
     >
       <title>{label}</title>
       <path
+        className="hull-body"
         d={geometry.outline}
         fill={color ?? "var(--surface-sunken)"}
         fillOpacity={color ? 0.12 : 1}
@@ -210,6 +223,7 @@ export function Hull({
         strokeWidth={1.5}
       />
       <line
+        className="hull-midline"
         x1={geometry.midline.x1}
         x2={geometry.midline.x2}
         y1={geometry.midline.y}
@@ -225,16 +239,18 @@ export function Hull({
         const content: HullSeatContent = seats[seat.index] ?? {
           reading: { state: "open", checkpoint: null, readiness: null },
         };
-        const edge = SEAT_LINE[content.reading.state];
+        const state = content.reading.state;
+        const edge = SEAT_LINE[state];
         return (
           <g key={seat.index}>
             <rect
+              className={`hull-seat hull-seat-${kebab(state)}`}
               x={seat.x}
               y={seat.y}
               width={seat.width}
               height={seat.height}
               rx={seat.rx}
-              fill={SEAT_FILL[content.reading.state]}
+              fill={SEAT_FILL[state]}
               stroke={edge.stroke ?? line}
               strokeOpacity={edge.opacity}
               strokeDasharray={edge.dashed ? "3 3" : undefined}
@@ -248,8 +264,9 @@ export function Hull({
                 artifact, not a distinction (dive-domain review 20260919), and
                 the thing it has to be told apart from means somebody's waiver
                 is unsigned rather than somebody is still in the water. */}
-            {content.reading.state === "missing" ? (
+            {state === "missing" ? (
               <rect
+                className="hull-seat-ring"
                 x={seat.x - 3.5}
                 y={seat.y - 3.5}
                 width={seat.width + 7}
@@ -268,16 +285,17 @@ export function Hull({
                 so the slate fill alone would not survive paper — and it does
                 not need the two letters, which `hullGeometry` drops above
                 eight columns on every boat larger than a six-pack. */}
-            {content.reading.state === "awaiting" ? (
+            {INSET_STATES.has(state) ? (
               <rect
+                className={`hull-seat-inset hull-seat-inset-${kebab(state)}`}
                 x={seat.x + 4}
                 y={seat.y + 4}
                 width={seat.width - 8}
                 height={seat.height - 8}
                 rx={Math.max(2, seat.rx - 3)}
                 fill="none"
-                stroke="var(--border-strong)"
-                strokeDasharray="3 3"
+                stroke={state === "awaiting" ? "var(--border-strong)" : "none"}
+                strokeDasharray={state === "awaiting" ? "3 3" : undefined}
                 strokeWidth={1}
               />
             ) : null}
@@ -288,7 +306,8 @@ export function Hull({
                 textAnchor="middle"
                 fontSize={11.5}
                 fontWeight={700}
-                fill={SEAT_INK[content.reading.state]}
+                className={`hull-seat-ink hull-seat-ink-${kebab(state)}`}
+                fill={SEAT_INK[state]}
               >
                 {content.initials}
               </text>
@@ -300,6 +319,7 @@ export function Hull({
       {geometry.crew.map((station) => (
         <g key={station.index}>
           <circle
+            className="hull-crew"
             cx={station.cx}
             cy={station.cy}
             r={station.r}
@@ -325,6 +345,7 @@ export function Hull({
 
       {/* The helm, which is what makes the shape read as a boat rather than a tray. */}
       <circle
+        className="hull-helm"
         cx={geometry.helm.cx}
         cy={geometry.helm.cy}
         r={geometry.helm.ringRadius}
@@ -332,7 +353,13 @@ export function Hull({
         stroke={line}
         strokeWidth={1.5}
       />
-      <circle cx={geometry.helm.cx} cy={geometry.helm.cy} r={geometry.helm.dotRadius} fill={line} />
+      <circle
+        className="hull-helm-dot"
+        cx={geometry.helm.cx}
+        cy={geometry.helm.cy}
+        r={geometry.helm.dotRadius}
+        fill={line}
+      />
     </svg>
   );
 }

@@ -914,6 +914,160 @@ textarea {
     box-shadow: none !important;
   }
 
+  /*
+   * **The hull on paper, told apart by weight, dash and an inner mark.**
+   *
+   * The palette above is why this section exists. It flattens `--success` and
+   * `--warning` onto the same `#111827`, so `aboard` and `ashore` — the only
+   * two answers a head count has — printed pixel-identical; it leaves
+   * `--danger-tint` and `--warning-tint` alone, and `background: transparent`
+   * never reaches an SVG `fill`, so `blocked` and `ashoreImplied` carried a
+   * screen wash onto paper. The component wore `print:hidden` rather than
+   * print those. ADR 20260919-one-idea §3b.4 is the decision to fix it instead:
+   * a manifest is a piece of paper, and a hull that cannot be printed is not a
+   * manifest.
+   *
+   * So hue carries nothing here. Each state is a distinct triple of fill,
+   * stroke weight and dash, and the three that need a fourth channel get an
+   * inner mark the component draws for them. `.hull-seat-inset-ashore` and
+   * `-ashore-implied` are stroked *only* here — on screen those elements carry
+   * `stroke="none"`, and a rule beats a presentation attribute.
+   *
+   * The shop's own colour does not survive either, and that is deliberate: it
+   * arrives inline, a mid-tone brand prints as mid grey, and a dark one would
+   * land on top of `blocked`. Paper is the shop's ink, not the shop's paint.
+   *
+   * `src/components/boat/Hull.test.tsx` holds the eight apart — pairwise, on
+   * the combination of seat rule, inner mark and ring — so a ninth state
+   * cannot reach paper without a treatment of its own.
+   */
+  .hull-body {
+    fill: none;
+    stroke: var(--border-strong);
+  }
+
+  /* Furniture: the midline a hull is halved by, and the wheel. */
+  .hull-midline,
+  .hull-helm {
+    fill: none;
+    stroke: var(--border);
+  }
+
+  /* A crew member is a person, and a person is never drawn fainter than an
+     empty chair — which is what `--border` made them when this was first
+     printed and looked at. They carry no state yet; §3b.6 is that work. */
+  .hull-crew {
+    fill: none;
+    stroke: var(--border-strong);
+  }
+
+  .hull-helm-dot {
+    fill: var(--border-strong);
+  }
+
+  .hull-seat {
+    stroke-opacity: 1;
+  }
+
+  /* Nobody in it: the lightest line on the boat, and the one dash that is not
+     saying something about a person. */
+  .hull-seat-open {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+  }
+
+  /* A body, and nothing against them. */
+  .hull-seat-booked {
+    fill: none;
+    stroke: var(--border-strong);
+    stroke-width: 1.5;
+    stroke-dasharray: none;
+  }
+
+  /* A body, and nobody has looked. Same line as `booked` on purpose — the
+     doubt is the dashed box inside it, which is a mark rather than a shade. */
+  .hull-seat-awaiting {
+    fill: none;
+    stroke: var(--border-strong);
+    stroke-width: 1.5;
+    stroke-dasharray: none;
+  }
+
+  .hull-seat-inset-awaiting {
+    fill: none;
+    stroke: var(--foreground);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+  }
+
+  /* Readiness says they cannot board: the heaviest line, where the screen
+     used a tint the print palette never redefined. */
+  .hull-seat-blocked {
+    fill: none;
+    stroke: var(--foreground);
+    stroke-width: 3;
+    stroke-dasharray: none;
+  }
+
+  /* Aboard. The one filled seat, because "there is a body in this boat" is
+     the fact a head count is for and it should read across a wheelhouse. */
+  .hull-seat-aboard {
+    fill: var(--foreground);
+    stroke: var(--foreground);
+    stroke-width: 1.5;
+    stroke-dasharray: none;
+  }
+
+  /* Ashore: an empty seat with a body's name on it. Filled against empty is
+     the widest gap the page has, and it is spent on the pair that matters. */
+  .hull-seat-ashore {
+    fill: none;
+    stroke: var(--foreground);
+    stroke-width: 1.5;
+    stroke-dasharray: none;
+  }
+
+  /* Nobody said so; the dock's silence was carried forward. Dashed, for the
+     same reason the screen dashes it: an inference never earns a stated
+     line (ADR 20260827, decision 4). */
+  .hull-seat-ashore-implied {
+    fill: none;
+    stroke: var(--foreground);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+  }
+
+  .hull-seat-inset-ashore,
+  .hull-seat-inset-ashore-implied {
+    fill: none;
+    stroke: var(--foreground);
+    stroke-width: 2;
+    stroke-dasharray: none;
+  }
+
+  /* Did not come back aboard. Filled like `aboard` and ringed like nothing
+     else, which is the same one-ring rule the roll call's rows follow. */
+  .hull-seat-missing {
+    fill: var(--foreground);
+    stroke: var(--foreground);
+    stroke-width: 1.5;
+    stroke-dasharray: none;
+  }
+
+  .hull-seat-ring {
+    fill: none;
+    stroke: var(--foreground);
+  }
+
+  /* `ashore` letters in `--surface` on screen, which is white — and its seat
+     is empty here, so the two letters would print white on white. The only
+     ink this section has to re-cut. */
+  .hull-seat-ink-ashore {
+    fill: var(--foreground);
+  }
+
   /* Keep a diver's row, a summary card, or a kit line whole — a card split at
      the foot of a page is how a name gets skipped on the deck. */
   li,

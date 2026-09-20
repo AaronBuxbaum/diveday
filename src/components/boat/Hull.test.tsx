@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
@@ -180,14 +182,20 @@ describe("Hull", () => {
   });
 
   /**
-   * The print palette flattens `--success` and `--warning` to one near-black
-   * and `--danger` to black, and repaints `--surface-sunken` white — so a
-   * printed hull would show aboard and ashore as the same blob and a booked
-   * seat as white on white. The rows print the same facts in words.
+   * This used to assert `print:hidden`, and the reason was sound: the print
+   * palette flattens `--success` and `--warning` to one near-black, so a
+   * printed hull showed aboard and ashore as the same blob. Standing the
+   * picture down was the honest answer while the paper had no treatment of its
+   * own. It has one now — `@media print` in `globals.css`, held by the block
+   * at the foot of this file — so the boat goes on the sheet, which is what a
+   * manifest is (ADR 20260919-one-idea §3b.4).
    */
-  it("stands down on paper rather than printing a boat it cannot print honestly", () => {
+  it("goes on the sheet, because a manifest is a piece of paper", () => {
     const { container } = render(<Hull geometry={geometry} label="the boat" seats={roster} />);
-    expect(container.querySelector("svg")?.getAttribute("class")).toContain("print:hidden");
+    const className = container.querySelector("svg")?.getAttribute("class") ?? "";
+    expect(className).not.toContain("print:hidden");
+    // The hook the print sheet hangs everything else off.
+    expect(className).toContain("hull");
   });
 
   /**
@@ -259,5 +267,143 @@ describe("Hull", () => {
   it("draws nothing at all for a boat with no places", () => {
     const { container } = render(<Hull geometry={hullGeometry({ capacity: 0 })} label="none" />);
     expect(container.firstChild).toBe(null);
+  });
+});
+
+/**
+ * **The hull on paper** (ADR 20260919-one-idea §3b.4).
+ *
+ * A manifest is a piece of paper. The print palette in `globals.css` flattens
+ * `--success` and `--warning` onto one near-black, so `aboard` and `ashore` —
+ * the only two answers a head count has — printed identically, and the
+ * component wore `print:hidden` rather than print that. These hold the fix:
+ * the classes the print sheet reaches for are on the elements, and no two
+ * states come out of a printer looking the same.
+ */
+
+/**
+ * Every state, as a record rather than a list, so a ninth one fails *here*
+ * rather than reaching paper with no treatment of its own.
+ */
+const EVERY_STATE: Record<SeatState, true> = {
+  open: true,
+  booked: true,
+  blocked: true,
+  awaiting: true,
+  aboard: true,
+  ashore: true,
+  ashoreImplied: true,
+  missing: true,
+};
+const STATES = Object.keys(EVERY_STATE) as SeatState[];
+const kebab = (state: SeatState) => state.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+
+/**
+ * The leaf rules inside `@media print`, as a map from one selector to its
+ * declarations. Brace-counted rather than regexed whole: the block is nested,
+ * and a rule read from the wrong side of it would pass this file while paper
+ * still came out wrong.
+ */
+function printRules(): Map<string, Map<string, string>> {
+  const css = readFileSync(join(import.meta.dirname, "../../app/globals.css"), "utf8").replace(
+    /\/\*[\s\S]*?\*\//g,
+    "",
+  );
+  const rules = new Map<string, Map<string, string>>();
+  for (const start of [...css.matchAll(/@media\s+print\s*\{/g)]) {
+    let depth = 1;
+    let i = start.index + start[0].length;
+    const from = i;
+    while (i < css.length && depth > 0) {
+      if (css[i] === "{") depth += 1;
+      if (css[i] === "}") depth -= 1;
+      i += 1;
+    }
+    for (const rule of css.slice(from, i - 1).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const declarations = new Map(
+        rule[2]
+          .split(";")
+          .map((line) => line.split(":").map((half) => half.trim()))
+          .filter((pair) => pair.length === 2 && pair[0])
+          .map(([property, value]) => [property, value] as const),
+      );
+      for (const selector of rule[1].split(",")) rules.set(selector.trim(), declarations);
+    }
+  }
+  return rules;
+}
+
+/**
+ * What a printer actually puts on the page for one state: the seat's own
+ * treatment, the inner mark if it has one, and the ring if it has one. The
+ * comparison below is over this whole thing rather than over the seat rule
+ * alone, because `booked` and `awaiting` share a line on purpose — the doubt
+ * is the dashed box inside the second one.
+ */
+const PAPER_CHANNELS = ["fill", "stroke-width", "stroke-dasharray"] as const;
+
+function paperTreatment(rules: Map<string, Map<string, string>>, state: SeatState) {
+  const read = (selector: string) =>
+    PAPER_CHANNELS.map((property) => `${property}:${rules.get(selector)?.get(property) ?? "-"}`);
+  return [
+    ...read(`.hull-seat-${kebab(state)}`),
+    ...read(`.hull-seat-inset-${kebab(state)}`).map((part) => `inset ${part}`),
+    `ring:${state === "missing"}`,
+  ].join(" | ");
+}
+
+describe("the hull on paper", () => {
+  it("gives every seat and its inner mark the class the print sheet reaches for", () => {
+    const { container } = render(
+      <Hull
+        geometry={hullGeometry({ capacity: 8, crewCount: 1 })}
+        label="the boat"
+        seats={STATES.filter((state) => state !== "open").map((state) => seat(state, "AB"))}
+      />,
+    );
+    for (const state of STATES) {
+      expect(container.querySelector(`.hull-seat-${kebab(state)}`)).toBeTruthy();
+    }
+    // The three that need a fourth channel on paper draw the element for it.
+    // Two of them stroke it only under print, and CSS cannot style an element
+    // that is not in the document.
+    for (const state of ["awaiting", "ashore", "ashoreImplied"] as const) {
+      expect(container.querySelector(`.hull-seat-inset-${kebab(state)}`)).toBeTruthy();
+    }
+    // The boat itself, whose inline colour print has to take back.
+    for (const part of [".hull-body", ".hull-midline", ".hull-crew", ".hull-helm"]) {
+      expect(container.querySelector(part)).toBeTruthy();
+    }
+  });
+
+  it("gives all eight states a print treatment, and none of them the same one", () => {
+    const rules = printRules();
+    for (const state of STATES) {
+      expect(rules.has(`.hull-seat-${kebab(state)}`)).toBe(true);
+    }
+    // Pairwise, and over the channels that survive a mono laser: fill, stroke
+    // weight, dash, the inner mark and the ring. **Stroke colour is not one of
+    // them** — that is the whole of §3b.4, and a pair told apart only by hue
+    // is exactly what `aboard` and `ashore` were before this.
+    const seen = new Map<string, SeatState>();
+    for (const state of STATES) {
+      const treatment = paperTreatment(rules, state);
+      const clash = seen.get(treatment);
+      expect(clash, `${state} prints exactly like ${clash}: ${treatment}`).toBeUndefined();
+      seen.set(treatment, state);
+    }
+  });
+
+  it("does not let a printer read the shop's paint as a state", () => {
+    const rules = printRules();
+    // A mid-tone brand prints as mid grey and a dark one lands on top of
+    // `blocked`, so the body, the midline and the crew give their inline
+    // colour back to the page's own ink.
+    for (const part of [".hull-body", ".hull-midline", ".hull-crew", ".hull-helm"]) {
+      expect(rules.get(part)?.get("stroke")).toMatch(/^var\(--border/);
+    }
+    // `ashore` letters in `--surface`, and its seat is empty on paper: white
+    // on white is the one ink that has to be re-cut.
+    expect(rules.get(".hull-seat-ink-ashore")?.get("fill")).toBe("var(--foreground)");
   });
 });
