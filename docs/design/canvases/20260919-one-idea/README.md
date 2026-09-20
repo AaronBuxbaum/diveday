@@ -104,9 +104,30 @@ its doc comment, a test pins the rule, and this table moves.
 | 23c — the departure: the hour page with the strip (I), the hull with its seats (II), the voyage on the chart (III); the four trip tabs one page; the roll call's one tap untouched beneath | shipped | `src/app/shop/[shopSlug]/trips/[id]/page.tsx` | `src/lib/hull.test.ts` (the canvas's own outlines, verbatim), `src/app/shop/[shopSlug]/trips/[id]/_components/TripHull.test.tsx`, `e2e/trip-hull.spec.ts`, `e2e/boat-loop.spec.ts` "the departure reaches its manifest, and carries its packing list" |
 | 23d — the storefront's front page on the idea, in Harbor's face and the shop's colour: the day and the week (I), the boat you are about to book (II), where we go (III) | shipped | `src/app/s/[shopSlug]/_components/ShopfrontHero.tsx` | `src/app/s/[shopSlug]/_components/ShopfrontHero.test.tsx`, the `storefront-sky` capture in `e2e/visual.spec.ts` |
 | 23e — the diver, the counter and the walk-in reached through the idea: search and a sheet over the home; the person's record unchanged inside it | shipped | `src/components/DiverSheet.tsx` | `e2e/staff-nav.spec.ts` "a diver the search finds is laid over the day, not opened instead of it" and "a diver id that names nobody leaves the day with nobody over it", `e2e/search.spec.ts`, the `today-diver-sheet` capture, `src/db/divers.test.ts` "does not open another shop's live diver" |
-| 23f — the week, the requests and the season on the idea: the Board becomes the week; a request is a ghost day (I), a boat to put out (II), a track to add (III) | shipped | `src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx` | `src/lib/week-seats.test.ts`, `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.test.tsx`'s "ScheduleBuilder week board" — "says a day with no departures has none, and still offers to fill it" and "draws the days somebody asked for, and the act that answers one" — and the `schedule-builder-asked` capture in `e2e/visual.spec.ts` |
+| 23f — the week, the requests and the season on the idea: the Board becomes the week; a request is a ghost day (I), a boat to put out (II), a track to add (III) | shipped | `src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx` | `src/lib/week-seats.test.ts`, `src/lib/usual-crew.test.ts`, `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.test.tsx`'s "ScheduleBuilder week board" — "says a day with no departures has none, and still offers to fill it", "is the board's one reading, at every width, with no stream beneath it", and the "the week says who is crewing, and only where it differs" block — and the `schedule-builder-asked` capture in `e2e/visual.spec.ts` |
 | 23g — the rest, one family per session: courses, gear, money, reviews, staffing, and Settings behind the shop's name | open | — | — |
 | 23h — night and glare on the idea: by the hour (I) or by the device (II, III); glare as the crew's word in the roll call's bar; the black-on-white twin held by a test | open | — | — |
+
+### 23f: the deletion was its own change, and needed two commits in front of it (2026-09-20)
+
+The row shipped with the week drawn as day rows and the vertical day stream still underneath it,
+gated at `xl` — so the board still composed the same departures twice, which is the thing the slice
+set out to end. That half is done now (#1923), and what held it up is worth keeping:
+
+- **A stream row said things a week row did not.** Crew, hull, dive mode, wind and the full time
+  range. Deleting the stream on that footing takes *which boat has no divemaster* off the board —
+  the question a manager opens it on a Thursday to answer — and nothing in the suite goes red for
+  it. Aaron chose "carry the facts up, then delete" over "let them move to the departure page".
+- **Two behaviours were keyed to the composition rather than to the surface**, and would have gone
+  down with it silently: the add panel's catalogue fetch (gated on the stream's key prefix, so a
+  day's panel would have opened onto selects reading "Loading…" forever) and the dismiss-on-Escape
+  listener (keyed to the stream's row menu, so the week's action strip had never had one).
+- **The whole functional e2e fleet ran one pixel below the breakpoint on purpose**, so that every
+  flow spec drove the stream. That pin is gone and the fleet runs at a plain 1280.
+
+**The wind did not come up**, and is #1936 rather than a silent loss: it is informational only, the
+trip page carries it, and whether a board row should print a forecast is a question rather than an
+oversight.
 
 ### 23g: four of its six are settled, two are not (2026-09-20)
 

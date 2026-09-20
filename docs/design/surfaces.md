@@ -204,6 +204,8 @@ either.
 
 ### The schedule board — `/shop/[shopSlug]/schedule/board`
 
+**Shipped 2026-09-20, the week is the whole board** (issue #1923, finishing slice 23f of [ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md)). The vertical day stream is gone and the week renders at every width: a day is a row on a phone and a row on a desk, so there is no `xl` floor left to declare and no second composition of the same departures. What the stream carried alone came up first, because deleting it otherwise takes the question a manager opens the board on a Thursday to answer — *which boat has no divemaster* — off the board with nothing going red for it. The hull follows the site on the meta line (a shore or pool session says so in its place); the crew prints on its own line, and only on the departures that differ from the week's habit (`src/lib/usual-crew.ts`, which is where that rule lives now that one composition asks it). A course bar prints no crew line — its meta already names the instructor. The day header still pins under the chrome bar, as ADR 20260827-clearwater-surface-language's decision 10 requires; it moved to the week rather than going down with the stream. The board pages by `?week=` and by nothing else: the cursor pager and its `?after=` went too, and reaching past this week is the pager's own step. **The wind left with the stream** and is not back — filed as #1936 rather than restored by reflex, because a row a manager cannot act from is what the density was bought to avoid.
+
 **Shipped 2026-09-06** ([ADR 20260906-before-you-ask](../architecture/decisions/20260906-before-you-ask.md), [canvas](canvases/20260906-before-you-ask/README.md)):
 the add panel opens filled from what the shop ran on that weekday over the last six weeks, under one sentence saying so, every value an ordinary field and the crew as chips (H-68 c); the pattern's second boat is offered as a row and never added on its own; a shop with no history, or a panel opened with a draft, a course, a site or a request, sees the panel it always did.
 
@@ -212,8 +214,8 @@ boat to give the coral detail to, so none carries it.
 
 **Shipped 2026-08-28 (desktop only)** — slice 6e of ADR
 [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
-drawn in [its canvas](canvases/20260827-clearwater-surface-language/README.md). The stream stays
-below `xl` (1280px), on tablets and phones.
+drawn in [its canvas](canvases/20260827-clearwater-surface-language/README.md). The stream stayed
+below `xl` (1280px) until 2026-09-20; see the entry above.
 
 - **One idea:** the shape of the week — where the boats are, and where they aren't.
 - **The question it arrives with:** "what does my week look like?" — answered in one screen of
