@@ -5,6 +5,7 @@ import {
   daysFromNow,
   e2eNow,
   openTripActivity,
+  openTripFromBoard,
   signInAsOwner,
   signOut,
 } from "./helpers";
@@ -137,7 +138,7 @@ test.describe("seat claim links", () => {
     // Staff see the claimant on the roster and the claim on the trail.
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
-    await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    await openTripFromBoard(page, title);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     await expect(page.locator("#roster").getByText("Sam Reyes").first()).toBeVisible();
     await openTripActivity(page);

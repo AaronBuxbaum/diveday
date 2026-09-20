@@ -242,25 +242,19 @@ export async function signInAs(page: Page, login: { email: string; password: str
 }
 
 /**
- * Open a departure from the staff schedule board.
+ * Open a departure from the staff schedule board, which the page must already
+ * be on.
  *
- * The board is the schedule builder (src/app/shop/[shopSlug]/schedule/board/_components),
- * where a row carries its own Move/Copy/Remove controls and only the title is a
- * link — so clicking the row itself lands on padding and navigates nowhere.
- * Every spec that starts "from the board, open trip X" goes through here rather
- * than re-deriving that.
+ * Two things a caller would otherwise re-derive, and twenty specs did:
+ *
+ * - **Only the title is a link.** A row carries its own Move/Copy/Remove
+ *   controls, so clicking the row itself lands on padding and navigates
+ *   nowhere.
+ * - **The board is one week.** A departure further out than the week a spec
+ *   landed on is reached by paging, which `walkBoardWeeksFor` does.
  */
 export async function openTripFromBoard(page: Page, title: string) {
-  await page
-    .getByRole("listitem")
-    .filter({ hasText: title })
-    .first()
-    // Exact match: an unpriced trip's card also carries a "Set a price for
-    // {title}, {date} {time}" link (task 150) whose accessible name contains
-    // the trip title as a substring — a non-exact name match would resolve
-    // to both links and hit Playwright's strict-mode violation.
-    .getByRole("link", { name: title, exact: true })
-    .click();
+  await (await walkBoardWeeksFor(page, title)).click();
   await expect(page).toHaveURL(/\/trips\//);
 }
 
@@ -539,42 +533,52 @@ export async function waiverLinkFromToast(page: Page): Promise<string> {
 }
 
 /**
- * Find a departure on the staff board, paging forward a week at a time, and
- * return its link — call `.click()`, or `.getAttribute("href")` to read the
- * path without racing the click's own navigation.
+ * How far the crawl below pages before it gives up: a quarter of a year, which
+ * is past anything the seed or a spec schedules. The throw names the title, so
+ * a spec that outruns it says which departure it was hunting.
+ */
+const MAX_WEEK_HOPS = 13;
+
+/**
+ * **Find a departure on the staff board, paging forward a week at a time**,
+ * and answer with its title link — `.click()` it, or read
+ * `.getAttribute("href")` to get the path without racing the click's own
+ * navigation. The page must already be on the board.
  *
  * **It walks weeks now, not a cursor** (#1923). The board used to draw the
  * same departures twice — a cursor-paged vertical stream and, from `xl` up, a
  * seven-column week — and this crawl stepped the stream's `?after=` pager
  * because it was the only one of the two that could walk a whole horizon in
  * one grammar. The stream is gone, so the horizon is walked seven days at a
- * time through the week pager's own `?week=` href.
+ * time through the week pager's own `?week=` href. That costs hops: a
+ * departure six weeks out is six navigations rather than two cursor pages.
  *
- * That costs hops: a trip six weeks out is six navigations rather than two
- * cursor pages. `MAX_WEEK_HOPS` bounds it at a quarter of a year, which is
- * past anything the seed or a spec schedules, and the throw names the title
- * so a spec that outruns it says which trip it was hunting.
+ * **Which is also why a spec can no longer assume the trip it just made is on
+ * the board it lands on.** `E2E_FROZEN_CLOCK` is a Tuesday, so `daysFromNow(6)`
+ * is the following Monday — deterministically off the week the board opens to,
+ * which is how ten specs went red at once rather than flaking. A spec that
+ * wants a *particular* week rather than the first one holding a title says so
+ * with `?week=<any date in it>` instead of calling this.
+ *
+ * **The link is matched by its exact accessible name**, not by row text: an
+ * unpriced departure's row also carries a "Set a price for {title}, {date}
+ * {time}" link, and a title that is another title's prefix — `X` beside
+ * `X (PM)`, which this suite's rename specs create on purpose — matches both
+ * under a substring.
  */
-const MAX_WEEK_HOPS = 13;
-
-export async function findTripOnBoard(
-  page: Page,
-  shopSlug: string,
-  title: string | RegExp,
-): Promise<Locator> {
-  await page.goto(`/shop/${shopSlug}/schedule/board`);
+async function walkBoardWeeksFor(page: Page, title: string | RegExp): Promise<Locator> {
   // The same barrier every page below gets: `goto` resolves into the segment's
-  // loading.tsx skeleton while the real list streams in, and `count()` doesn't
-  // auto-wait — so a slow stream-in reads as "no cards and no pager" and the
+  // loading.tsx skeleton while the real week streams in, and `count()` doesn't
+  // auto-wait — so a slow stream-in reads as "no rows and no pager" and the
   // loop concludes the board ended (seen as a one-in-many-runs CI failure
   // hunting a seeded trip). The builder section exists only in the streamed
-  // body, whatever the board holds, so its appearance proves the cards and the
+  // body, whatever the board holds, so its appearance proves the rows and the
   // pager are in the DOM.
   await page.getByRole("region", { name: "Schedule builder" }).waitFor();
   for (let hops = 0; hops < MAX_WEEK_HOPS; hops++) {
-    const link = page.locator(`a[href^="/shop/${shopSlug}/trips/"]`).filter({ hasText: title });
+    const link = page.locator("[data-week-board]").getByRole("link", { name: title, exact: true });
     if ((await link.count()) > 0) return link.first();
-    // The step's own `aria-label`, not "a link with a week in its href": the
+    // The step's own copy-free hook, not "a link with a week in its href": the
     // pager renders three of those — previous, next, and the way home — and a
     // positional pick among them is one reorder away from walking backwards
     // forever. A navigation rather than a click, so a step that has scrolled
@@ -587,6 +591,16 @@ export async function findTripOnBoard(
     await page.getByRole("region", { name: "Schedule builder" }).waitFor();
   }
   throw new Error(`trip "${title}" not found on the schedule board after paging`);
+}
+
+/** The same crawl, from the top of the board rather than wherever the page is. */
+export async function findTripOnBoard(
+  page: Page,
+  shopSlug: string,
+  title: string | RegExp,
+): Promise<Locator> {
+  await page.goto(`/shop/${shopSlug}/schedule/board`);
+  return walkBoardWeeksFor(page, title);
 }
 
 /**

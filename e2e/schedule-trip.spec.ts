@@ -138,7 +138,11 @@ test("a multi-day departure is one trip with a meeting day per day", async ({ pa
   const title = `Open Water Weekend ${e2eNow().getTime()}`;
   await page.goto("/shop/blue-mantis/schedule/board?add=full");
   await page.getByLabel("What is it").fill(title);
-  await page.getByLabel("Date").fill(daysFromNow(6));
+  // Six days out, which from the frozen clock's Tuesday is the following
+  // Monday — so the span is never on the week the board opens to, and the
+  // reading below names its week.
+  const date = daysFromNow(6);
+  await page.getByLabel("Date").fill(date);
   await page.getByLabel("Departs").fill("08:30");
   await page.getByLabel("Returns").fill("12:30");
   await page.getByLabel("Seats").fill("6");
@@ -147,7 +151,9 @@ test("a multi-day departure is one trip with a meeting day per day", async ({ pa
   await expect(page.getByRole("status")).toContainText(title);
 
   // One row on the board, badged with its span — not three look-alikes.
-  await page.goto("/shop/blue-mantis/schedule/board");
+  // `?week=` takes any date inside the week it means (src/lib/week-board.ts),
+  // so the departure's own date names the week that holds it.
+  await page.goto(`/shop/blue-mantis/schedule/board?week=${date}`);
   const row = page.getByRole("listitem").filter({ hasText: title });
   await expect(row).toHaveCount(1);
   await expect(row).toContainText("3 days");
