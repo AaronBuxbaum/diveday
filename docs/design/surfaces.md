@@ -461,6 +461,11 @@ H-01/H-03's.
 drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
 
 - **One idea:** where every unit is, said once.
+- **Its place in time is the day** (2026-09-20, #1937). It read as a place with no hour until then,
+  which put it behind the shop's own name in the bar and behind no door at all on the page: Settings
+  has a row for every other `shop` destination and never had one for the fleet. Packing, handing
+  over and chasing returns is a morning's work, so the bar lights Today here and on a unit's own
+  page.
 - **The question it arrives with:** "what's out, and what's coming back?" — answered by the Out
   and Due back groups before any scrolling.
 - **Controls that dissolved:** the three stat tiles and the Returns panel (the groups are the

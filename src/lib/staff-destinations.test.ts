@@ -243,13 +243,13 @@ describe("what each consumer derives", () => {
       "addBooking",
       "walkIn",
       "tookACall",
+      "gear",
       "inbox",
     ]);
     expect(byPlace("week")).toEqual(["board", "staffing", "courses", "requests"]);
     expect(byPlace("season")).toEqual(["reviews", "orders", "reports"]);
     expect(byPlace("shop")).toEqual([
       "diveSites",
-      "gear",
       "waivers",
       "team",
       "promoCodes",
@@ -452,12 +452,27 @@ describe("currentStaffDestination and the time it lights", () => {
   });
 
   it("lights none of the bar's three for a page that lives behind the shop's name", () => {
-    // The gear register, the site library and Settings are `shop` — no hour,
-    // and no pill. That is the design rather than a gap: they are reached
-    // from the shop's own name at the other end of the bar, and by search.
-    for (const suffix of ["/gear", "/dive-sites", "/settings"]) {
+    // The site library, the waiver template and Settings are `shop` — no
+    // hour, and no pill. That is the design rather than a gap: each is
+    // reached from the shop's own name at the other end of the bar, and by
+    // search. `settings-doors.test.ts` holds the other half of that claim —
+    // that Settings really does carry a door to every one of them.
+    for (const suffix of ["/dive-sites", "/waivers", "/settings"]) {
       expect(place(`${root}${suffix}`), suffix).toBe("shop");
     }
+  });
+
+  it("lights Today for the gear register, which is a morning rather than a setting", () => {
+    // The register was `shop` until #1937, on a mapping of the retired
+    // `navGroup: "daily"` that inverted the row's own reason for being in
+    // that group. Handing a wetsuit over and chasing it back is the day's
+    // work, and Settings never had a door to the fleet — so the bar said
+    // "behind the shop's name" about a page that was not there.
+    expect(place(`${root}/gear`)).toBe("day");
+    // The unit page too, which is where a staffer actually pulls one for
+    // service: `destinationClaim` matches on the path prefix, and a reading
+    // that lit the index and went dark one tap in would be worse than either.
+    expect(place(`${root}/gear/some-unit-id`)).toBe("day");
   });
 });
 

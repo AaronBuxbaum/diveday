@@ -65,15 +65,37 @@ test.describe("owner", () => {
   test("a page with no hour lights nothing, because it lives behind the shop's name", async ({
     page,
   }) => {
-    // Settings, the gear register and the site library are `shop` — the one
+    // Settings, the site library and the waiver template are `shop` — the one
     // place with no time in it. A bar of three times has no pill for them, and
-    // that is the design rather than a gap.
-    for (const suffix of ["/settings", "/gear", "/dive-sites"]) {
+    // that is the design rather than a gap: each has its own door on Settings,
+    // which `settings-doors.test.ts` holds.
+    for (const suffix of ["/settings", "/dive-sites", "/waivers"]) {
       await page.goto(`/shop/blue-mantis${suffix}`);
       const bar = page.locator("header").getByRole("navigation", { name: "When" });
       await expect(bar.getByRole("link")).toHaveCount(3);
       await expect(bar.locator("[aria-current='page']")).toHaveCount(0);
     }
+  });
+
+  test("the gear register lights Today, because chasing a wetsuit is the day's work", async ({
+    page,
+  }) => {
+    // It read as a place with no hour until #1937 — mapped there from the
+    // retired `navGroup: "daily"` by slice 23b, which inverted the row's own
+    // reason for being in that group. In the bar that was a page claiming to
+    // live behind the shop's name while Settings had no door to it.
+    await page.goto("/shop/blue-mantis/gear");
+    const bar = page.locator("header").getByRole("navigation", { name: "When" });
+    await expect(bar.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "page");
+
+    // And one tap in, on the unit a staffer actually pulls for service — a
+    // pill that lit the index and went dark on the page the work happens on
+    // would be worse than either reading.
+    // A unit by its href shape, not "the first link in main": the register
+    // leads with its kind filters, which are `?kind=` readings of this page.
+    await page.locator('main a[href*="/gear/"]').first().click();
+    await expect(page).toHaveURL(/\/gear\/[0-9a-f-]+/i);
+    await expect(bar.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "page");
   });
 
   test("Settings is behind the shop's own name, which is the only door it has", async ({
