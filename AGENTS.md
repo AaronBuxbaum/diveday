@@ -83,6 +83,7 @@ when you open the file.
 | A repeating trip (every Saturday, Mon+Thu, daily) | `src/lib/recurrence.ts` (pure cadence math), `src/db/trips-series.ts` (materialization), nightly roll at `src/app/api/cron/trip-series/` |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
 | Where staff can go (the bar's Today/Week/Season, ⌘K "Go to") | one registry of times, `src/lib/staff-destinations.ts`; two consumers — `src/components/ShopPlaceNav.tsx`, `src/components/search/CommandPalette.tsx` |
+| A diver, who has no hour to file them under | laid over the day as a sheet — `?diver=<id>`, `src/components/DiverSheet.tsx`; every act is still `divers/[personId]` |
 | SMS delivery receipts | `src/lib/notifications/sms-events.ts` + `src/app/api/webhooks/sms/`; runbook [docs/engineering/sms-delivery-receipts-runbook.md](docs/engineering/sms-delivery-receipts-runbook.md) |
 | Environment variables — adding one, or asking who supplies one | one registry, `config/env-registry.mjs`; everything else is generated from it (ADR 20260812-env-provenance-registry) |
 | AWS credentials, and what deploying still leaves for a human | §16 and §17 of `infra/lib/infra-stack.ts`; [docs/engineering/infrastructure-runbook.md](docs/engineering/infrastructure-runbook.md). **Two stacks, one region knob**: mail is its own stack (`infra/lib/email-stack.ts`) and every region is `config/aws-regions.mjs` |
@@ -101,7 +102,7 @@ when you open the file.
 | Whether a diver may *buy* a seat vs. *board* | two gates: `src/lib/trip-admission.ts` (booking-time, weaker) and `src/lib/readiness.ts` (boarding-time); admission may never refuse someone readiness would clear |
 | The booking transaction (capacity enforcement) | `src/db/bookings.ts` — read its tests first |
 | The gear register (the shop's own fleet, service clocks, reservations) | `src/lib/gear.ts`, `src/db/gear.ts`, `src/i18n/gear-labels.ts`, `src/app/shop/[shopSlug]/gear`; `pnpm task:context gear` |
-| Staff seating a diver (Guests tab, walk-in counter, diver record, global Add-booking) | one consequence path: `src/db/seat-diver.ts`, driven by `src/app/actions/seat-diver.ts`; the global door is `src/app/shop/[shopSlug]/bookings/new` |
+| Staff seating a diver (the roster, walk-in counter, diver record, global Add-booking) | one consequence path: `src/db/seat-diver.ts`, driven by `src/app/actions/seat-diver.ts`; the global door is `src/app/shop/[shopSlug]/bookings/new` |
 | Payments, orders, discount codes (Stripe Connect) | `src/lib/payments/`; state in `src/db/orders.ts`, `payments.ts`, `checkouts.ts`, `refunds.ts`, `stripe-accounts.ts`; codes in `src/lib/promo-codes.ts` + `src/db/shop-promos.ts`, deals in `src/db/trip-promos.ts` |
 | The back-office queues (unconfirmed Stripe calls, deletions that never finished) | with the object each is about — the Orders index and Settings' "Data & integrations" group — never on Reports |
 | A diver asking for a day that is not on the board | `src/components/DateRequestForm.tsx`, `src/app/actions/inquiry.ts`, `src/db/course-inquiries.ts`, `src/lib/date-requests.ts`, staff at `src/app/shop/[shopSlug]/requests` |

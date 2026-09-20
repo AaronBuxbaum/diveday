@@ -2,7 +2,7 @@
   "note": "Words of agent context every session loads before reading any code. A ratchet: a count may never rise, and a fall is banked with `node scripts/check-context-budget.mjs --write`. See the module comment in scripts/check-context-budget.mjs.",
   "budgets": {
     "CLAUDE.md": 64,
-    "AGENTS.md": 4271,
+    "AGENTS.md": 4299,
     ".claude/rules/*.md (without paths: frontmatter)": 0,
     ".claude/skills/*/SKILL.md (description lines)": 786,
     ".claude/agents/*.md (description lines)": 130
@@ -128,6 +128,12 @@
       "why": "Stacks: a middle layer now runs no CI at all, and opening a layer cancels the superseded run below it. Every session has to know that a Cancelled check on a stacked layer is the machinery working, not a failure to re-run (ADR 20260919-stack-ci-cancels-superseded-layers).",
       "files": {
         "AGENTS.md": "4264 -> 4273"
+      }
+    },
+    {
+      "why": "Slice 23e adds the one door in the staff app that is not a place: a diver, laid over the day as a sheet. The route map's job is to answer 'where' for every destination the product has, so a new destination is a new row — the budget exists to keep the rest of the file lean, not to cap how many surfaces DiveDay may have. The how and the why are in .claude/rules/surfaces.md, which is path-scoped and costs a session nothing until it opens a file under src/app or src/components; this row is only the pointer. Paid for in part by deleting 'Guests tab' from the seating row, which slice 23c made untrue.",
+      "files": {
+        "AGENTS.md": "4271 -> 4299"
       }
     }
   ]

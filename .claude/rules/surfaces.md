@@ -32,6 +32,15 @@ stay in `AGENTS.md`.
   **The search is a control in the bar at every width, never only a shortcut**: ADR
   20260813-more-is-the-shops-other-door retired an earlier bar for making fourteen destinations
   ⌘K-only, and that finding outlived the bar it retired.
+  **A diver is the one answer it gives that is not a place.** Tide files everything under an hour
+  and a person has none, so the palette's diver rows point at the day carrying `?diver=<id>` and
+  `src/components/DiverSheet.tsx` lays them over it — never a navigation to `divers/[personId]`,
+  which would spend the day to answer a question that is usually one glance (ADR
+  20260919-one-idea, slice 23e). The sheet is a **reading**: it renders the record's own
+  `DiverStatusLedger` and `DiverStory`, so the two surfaces cannot disagree about a person, and
+  every act is a link to the record — the record's twelve forms all redirect with a `?notice=`,
+  and a redirect tears an overlay off the screen. Its portal waits for a `document`, because
+  unlike `PersonSheet` the *server* decides this one is open.
   `src/components/ShopIdentityMenu.tsx` holds the shop's one place with no hour in it — Settings,
   above the rule — and below it the reader's own session (language, sign out).
 - **Bearer-token pages** (`src/app/waivers/[token]`, `ready/[token]`, `recap/[token]`,

@@ -103,10 +103,29 @@ rule, and this table moves.
 | 23b — the shell: the nav of nouns leaves — no tabs, no More, no dock; a date, a search and the shop's name (I), the shop's card (II), the dock (III); `staff-destinations.ts` regrouped into the idea's places; ⌘K stays as the search | shipped | `src/lib/staff-destinations.ts` | `src/lib/staff-destinations.test.ts`, `src/components/ShopPlaceNav.test.tsx`, `e2e/staff-nav.spec.ts` |
 | 23c — the departure: the hour page with the strip (I), the hull with its seats (II), the voyage on the chart (III); the four trip tabs one page; the roll call's one tap untouched beneath | shipped | `src/app/shop/[shopSlug]/trips/[id]/page.tsx` | `src/lib/hull.test.ts` (the canvas's own outlines, verbatim), `src/app/shop/[shopSlug]/trips/[id]/_components/TripHull.test.tsx`, `e2e/trip-hull.spec.ts`, `e2e/boat-loop.spec.ts` "the departure reaches its manifest, and carries its packing list" |
 | 23d — the storefront's front page on the idea, in Harbor's face and the shop's colour: the day and the week (I), the boat you are about to book (II), where we go (III) | shipped | `src/app/s/[shopSlug]/_components/ShopfrontHero.tsx` | `src/app/s/[shopSlug]/_components/ShopfrontHero.test.tsx`, the `storefront-sky` capture in `e2e/visual.spec.ts` |
-| 23e — the diver, the counter and the walk-in reached through the idea: search and a sheet over the home; the person's record unchanged inside it | open | — | — |
+| 23e — the diver, the counter and the walk-in reached through the idea: search and a sheet over the home; the person's record unchanged inside it | shipped | `src/components/DiverSheet.tsx` | `e2e/staff-nav.spec.ts` "a diver the search finds is laid over the day, not opened instead of it" and "a diver id that names nobody leaves the day with nobody over it", `e2e/search.spec.ts`, the `today-diver-sheet` capture, `src/db/divers.test.ts` "does not open another shop's live diver" |
 | 23f — the week, the requests and the season on the idea: the Board becomes the week; a request is a ghost day (I), a boat to put out (II), a track to add (III) | open | — | — |
 | 23g — the rest, one family per session: courses, gear, money, reviews, staffing, and Settings behind the shop's name | open | — | — |
 | 23h — night and glare on the idea: by the hour (I) or by the device (II, III); glare as the crew's word in the roll call's bar; the black-on-white twin held by a test | open | — | — |
+
+### 23e: two of its three were already done (closed 2026-09-20)
+
+The row names three things reached through the idea — the diver, the counter and the walk-in — and
+only the first was work. The counter (`/check-in`) and the walk-in (`/check-in/walk-in/[tripId]`)
+are both `place: "day"` rows in `src/lib/staff-destinations.ts`, which is what slice 23b's regroup
+into places-in-time already meant by "on the day": they are filed under the hour they happen at and
+reached from the search, like every other destination that is a place.
+
+The diver is the exception the ADR's own decision I names: *"a diver with no booking has no hour;
+the search finds them, and their record opens as a sheet over the day."* A person cannot be filed
+under a time, so the only two honest answers were to spend the day navigating to them or to lay
+them over it. That is the whole slice.
+
+What it cost beyond the sheet: `DiverStatusLedger` needed a `recordPath`, because its fix links are
+bare `#fragment`s that mean nothing anywhere but the record; `?diver=` needed adding to
+`CAPABILITY_QUERY_PARAMS`, because the day fires a server-side `trackEvent` on every render; and the
+sheet needed its own `<Suspense>`, because three more reads inside the day's one boundary blanked
+the spine this slice exists to keep on screen.
 
 ### 23c: what the row meant, and what it cost (closed 2026-09-20)
 
