@@ -108,6 +108,7 @@ export function DiverStory({
   locale,
   t,
   paymentsConnected,
+  offersInvoice,
   status,
   now = nowDate(),
 }: {
@@ -124,6 +125,22 @@ export function DiverStory({
    * and the ADR took its CTA off the person page.
    */
   paymentsConnected: boolean;
+  /**
+   * **Whether this reading offers the act at its foot at all.**
+   *
+   * The record does. The sheet laid over the day does not: it is a reading
+   * whose one door is the record (ADR 20260919-one-idea, slice 23e), and an
+   * invoice link is a second exit that takes the day off the screen to open a
+   * form somewhere else entirely — the exact trade the sheet exists to refuse
+   * (found by review on #1921).
+   *
+   * Separate from `paymentsConnected` and not a substitute for it: that is a
+   * fact about the *shop*, and a caller passing it `false` to suppress this
+   * link would be claiming the shop cannot take money. Today it happens to
+   * gate nothing else, which is precisely why the two must not be conflated —
+   * the next thing it gates would silently come back.
+   */
+  offersInvoice: boolean;
   /**
    * This ledger's own outcome — in practice the one bounce `orders/new` can
    * still send back here, when a shop that cannot take money reaches the
@@ -229,7 +246,7 @@ export function DiverStory({
   const shown = behind.slice(0, SHOP_HISTORY_PREVIEW_COUNT);
   const rest = behind.slice(SHOP_HISTORY_PREVIEW_COUNT);
   const invoice =
-    paymentsConnected && !diver.person.deletedAt ? (
+    offersInvoice && paymentsConnected && !diver.person.deletedAt ? (
       <Link
         href={`/shop/${shopSlug}/orders/new?personId=${personId}`}
         className={buttonClass({ variant: "link", size: "sm", flush: true })}

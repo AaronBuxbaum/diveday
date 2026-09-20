@@ -49,7 +49,7 @@ function diver(overrides: Partial<Record<string, unknown>> = {}): DiverProfile {
   } as unknown as DiverProfile;
 }
 
-function renderStory(profile: DiverProfile, paymentsConnected = true) {
+function renderStory(profile: DiverProfile, paymentsConnected = true, offersInvoice = true) {
   return render(
     <DiverStory
       diver={profile}
@@ -57,6 +57,7 @@ function renderStory(profile: DiverProfile, paymentsConnected = true) {
       shopSlug="reef-shop"
       personId="person-1"
       locale="en-US"
+      offersInvoice={offersInvoice}
       t={t}
       paymentsConnected={paymentsConnected}
       now={NOW}
@@ -218,5 +219,22 @@ describe("the story's bounds and its foot", () => {
       "href",
       "/shop/reef-shop/orders/new?personId=person-1",
     );
+  });
+
+  /**
+   * **A reading offers no act at its foot, whatever the shop can do.** The
+   * diver sheet laid over the day (slice 23e) is a reading whose one door is
+   * the record, and an invoice link is a second exit that takes the day off
+   * the screen to open a form somewhere else entirely.
+   *
+   * `paymentsConnected` stays `true` here deliberately: that prop is a fact
+   * about the *shop*, and suppressing the link by lying about it would come
+   * back the moment it gates a second thing (review on #1921).
+   */
+  it("offers no invoice door in a reading, at a shop that can take money", () => {
+    renderStory(diver({ bookings: [AHEAD] }), true, false);
+    expect(screen.queryByRole("link", { name: "New invoice" })).toBeNull();
+    // Still the story, not an empty section — the reading is what survives.
+    expect(screen.getAllByRole("listitem").length).toBeGreaterThan(0);
   });
 });

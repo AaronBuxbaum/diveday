@@ -84,6 +84,10 @@ export async function DiverSheetSection({
         locale={locale}
         t={t}
         paymentsConnected={canAcceptPayments(stripeAccount)}
+        // **No act at the foot of a reading.** The shop's own answer about
+        // payments is passed through unchanged — a sheet must not claim a shop
+        // cannot take money — and the one door below is where an act happens.
+        offersInvoice={false}
         now={now}
       />
       {/* **The one door out.** Everything this sheet does not hold — the
