@@ -547,5 +547,9 @@
   "formDraft": {
     "pickedUp": "Picked up from the desk, {time}.",
     "startOver": "Start over"
+  },
+  "diverSheet": {
+    "close": "Close",
+    "openRecord": "Open the full record"
   }
 }

@@ -9,7 +9,7 @@ afterEach(cleanup);
 
 const t = staffTranslator("en-US");
 
-function renderLedger(rows: DiverStatusRow[]) {
+function renderLedger(rows: DiverStatusRow[], recordPath?: string) {
   return render(
     <DiverStatusLedger
       rows={rows}
@@ -17,6 +17,7 @@ function renderLedger(rows: DiverStatusRow[]) {
       locale="en-US"
       timezone="America/Cancun"
       shopSlug="blue-mantis"
+      recordPath={recordPath}
     />,
   );
 }
@@ -102,6 +103,35 @@ describe("an open item", () => {
     cleanup();
     renderLedger([{ ...row, orderId: undefined }]);
     expect(screen.getByRole("link", { name: "Collect" })).toHaveAttribute("href", "#the-story");
+  });
+
+  /**
+   * **Away from the record, a fragment is a dead link.**
+   *
+   * Three of the four fixes name a control further down the diver's own page,
+   * which is right there and wrong anywhere else — and the day's diver sheet
+   * (ADR 20260919-one-idea, slice 23e) renders these very rows over a page
+   * that has no `#edit-details` on it. A fix that silently scrolls nowhere is
+   * worse than one that is not offered, so the sheet hands over where the
+   * record lives and the same row becomes the navigation it has to be.
+   */
+  it("makes its fix a navigation when it is rendered away from the record", () => {
+    const row: DiverStatusRow = {
+      kind: "contact",
+      tone: "warning",
+      sentence: { key: "divers.status.noEmergencyContact" },
+      action: { labelKey: "divers.status.acts.editContact", target: "edit_contact" },
+    };
+
+    renderLedger([row]);
+    expect(screen.getByRole("link", { name: "Add one" })).toHaveAttribute("href", "#edit-details");
+
+    cleanup();
+    renderLedger([row], "/shop/blue-mantis/divers/p1");
+    expect(screen.getByRole("link", { name: "Add one" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/p1#edit-details",
+    );
   });
 
   /** A row the shop cannot act on renders no fix rather than an invented one. */

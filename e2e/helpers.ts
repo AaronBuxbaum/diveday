@@ -631,6 +631,26 @@ export async function seededTripId(page: Page, shopSlug: string, title: string):
 }
 
 /**
+ * A seeded diver's person id, found the way staff reach them — through the
+ * roster's own search rather than a fixture constant, so a re-seed that gives
+ * them a new id changes nothing here.
+ */
+export async function seededDiverId(
+  page: Page,
+  shopSlug: string,
+  fullName: string,
+): Promise<string> {
+  await page.goto(`/shop/${shopSlug}/divers?q=${encodeURIComponent(fullName)}`);
+  const href = await page
+    .getByRole("link", { name: fullName, exact: true })
+    .first()
+    .getAttribute("href");
+  const personId = href?.match(/\/divers\/([0-9a-f-]+)/i)?.[1];
+  if (!personId) throw new Error(`could not read a person id for ${fullName}`);
+  return personId;
+}
+
+/**
  * Open a settings-hub row by its heading. The hub states each setting's
  * current value in a `<summary>` row and keeps the form behind it (the
  * trip Overview's summary-first grammar), so a spec that edits a setting

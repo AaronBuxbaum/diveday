@@ -50,13 +50,27 @@ export const STATUS_TARGET_ANCHORS: Record<Exclude<DiverStatusTarget, "collect">
   edit_contact: "#edit-details",
 };
 
-function fixHref(row: DiverStatusRow, shopSlug: string): string {
+function fixHref(row: DiverStatusRow, shopSlug: string, recordPath: string): string {
   const target = row.action?.target;
   if (target === "collect") {
-    return row.orderId ? `/shop/${shopSlug}/orders/${row.orderId}` : "#the-story";
+    return row.orderId ? `/shop/${shopSlug}/orders/${row.orderId}` : `${recordPath}#the-story`;
   }
-  return target ? STATUS_TARGET_ANCHORS[target] : "";
+  return target ? `${recordPath}${STATUS_TARGET_ANCHORS[target]}` : "";
 }
+
+/**
+ * **A fragment on this page is not a route change** — but only while "this
+ * page" is the record.
+ *
+ * Every fix below `collect` is a hash naming a control further down the
+ * diver's own record, which is correct there and a dead link anywhere else:
+ * the diver sheet over the day (slice 23e) renders these same rows beside a
+ * page that has no `#edit-details` on it, and a fix that silently scrolls
+ * nowhere is worse than one that is not offered. `recordPath` is empty on the
+ * record — the hash stands alone and keeps the native behaviour the note below
+ * depends on — and the record's own path everywhere else, which turns the same
+ * row into the navigation it has to be.
+ */
 
 /**
  * **A fragment on this page is not a route change.**
@@ -103,11 +117,18 @@ export function DiverStatusLedger({
   locale,
   timezone,
   shopSlug,
+  recordPath = "",
 }: {
   rows: DiverStatusRow[];
   t: StaffTranslator;
   locale: string;
   timezone: string;
+  /**
+   * Where the record lives, when these rows are not on it. Empty on the record
+   * itself, so its fixes stay bare fragments; the day's diver sheet passes the
+   * record's path so the same fix becomes a navigation to the control.
+   */
+  recordPath?: string;
   shopSlug: string;
 }) {
   if (rows.length === 0) return null;
@@ -126,7 +147,7 @@ export function DiverStatusLedger({
             trailing={
               row.action ? (
                 <FixLink
-                  href={fixHref(row, shopSlug)}
+                  href={fixHref(row, shopSlug, recordPath)}
                   // Through `buttonClass` so the 44px target is structural
                   // rather than a remembered `min-h-11` — this is the one tap
                   // the row exists for.

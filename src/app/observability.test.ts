@@ -216,6 +216,27 @@ describe("redactCapabilityUrl", () => {
       "/shop/blue-hole/divers/person-1?notice=trip-full",
     );
   });
+
+  /**
+   * Also not a token: `?diver=` opens a reading of a person over the shop's
+   * day (slice 23e) and the day re-reads the session's own shop row, so
+   * possession opens nothing. Redacted for what it *says* — the shop home
+   * fires a server-side `trackEvent` on every render, so without this every
+   * glance at a diver posts "this shop, this person, at this minute" to
+   * Analytics (security review, slice 23e).
+   */
+  it("redacts the day's ?diver=, which names a person on every render of the day", () => {
+    const redacted = redactCapabilityUrl(
+      "/shop/blue-hole?diver=6f1c9a2e-0b3d-4f5a-8c7e-1d2a3b4c5d6e",
+    );
+    expect(redacted).toBe("/shop/blue-hole?diver=%5Btoken%5D");
+  });
+
+  it("leaves a day with nobody laid over it untouched", () => {
+    expect(redactCapabilityUrl("/shop/blue-hole?notice=saved")).toBe(
+      "/shop/blue-hole?notice=saved",
+    );
+  });
 });
 
 describe("redactEvent", () => {

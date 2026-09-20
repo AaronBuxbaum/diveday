@@ -547,5 +547,9 @@
   "formDraft": {
     "pickedUp": "Retomado del mostrador, {time}.",
     "startOver": "Empezar de nuevo"
+  },
+  "diverSheet": {
+    "close": "Cerrar",
+    "openRecord": "Abrir la ficha completa"
   }
 }

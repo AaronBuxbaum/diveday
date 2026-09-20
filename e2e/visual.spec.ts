@@ -29,6 +29,7 @@ import {
   openTripTab,
   STAFF_DAY_HEADING,
   saveDiveIntent,
+  seededDiverId,
   seededTripId,
   threadStatus,
   waiverLinkFromResult,
@@ -3670,6 +3671,25 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis");
         await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
         await capture(page, "today", scheme);
+      });
+
+      /**
+       * **The one thing the search finds that has no hour** (ADR
+       * 20260919-one-idea, decision I · Tide, slice 23e). A diver laid over the
+       * day rather than opened instead of it: the sheet rises from the foot,
+       * the day dims behind it, and the reading is the record's own story
+       * ledger — the same component, so the two surfaces cannot come to say
+       * different things about one person.
+       *
+       * Reached by URL rather than through the palette: the palette has its
+       * own captures, and a frame that has to type into a combobox first is a
+       * frame that can fail for a reason that is not about pixels.
+       */
+      test(`a diver reads as a sheet over the day (${scheme})`, async ({ page }) => {
+        const personId = await seededDiverId(page, "blue-mantis", "Priya Sharma");
+        await page.goto(`/shop/blue-mantis?diver=${personId}`);
+        await page.getByRole("dialog").getByRole("heading", { name: "Priya Sharma" }).waitFor();
+        await capture(page, "today-diver-sheet", scheme);
       });
 
       /**
