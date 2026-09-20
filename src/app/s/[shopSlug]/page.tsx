@@ -780,6 +780,9 @@ export default async function SchedulePage({
         db,
         shop.id,
         activeCourses.slice(0, 3).map((course) => course.id),
+        // A diver reads this shelf, so a private session is not a date they
+        // may turn up to.
+        "storefront",
       );
   const shelfCourses = activeCourses.slice(0, 3).map((stored) => {
     const course = resolveCourseContentDepths(stored, depthFormat);

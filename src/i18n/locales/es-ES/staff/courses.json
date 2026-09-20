@@ -5,6 +5,8 @@
     "hidden": "Oculto",
     "orHigher": "{level} o superior",
     "openToUncertified": "Abierto a buceadores sin certificar",
+    "nextSession": "Próxima {date}",
+    "notScheduled": "Sin programar",
     "scheduleSrLabel": "Programar una sesión de {title}",
     "schedule": "Programar",
     "editSrLabel": "Editar {title}",

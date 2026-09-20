@@ -4,12 +4,13 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createDiveSite } from "./dive-sites";
-import { bookings, shops, trips } from "./schema";
+import { bookings, courses, shops, trips } from "./schema";
 import { createTripLens } from "./trip-lenses";
 import {
   countShopTrips,
   createTrip,
   listShopDayDepartures,
+  nextSessionStartByCourse,
   offsetUpcomingTripsWithCounts,
   pagedUpcomingTripsWithCounts,
   SCHEDULE_PAGE_SIZE,
@@ -978,5 +979,83 @@ describe("listShopDayDepartures", () => {
     // packet this feeds carries every diver's emergency contact for the day.
     const otherShopId = "00000000-0000-4000-8000-0000000000ff";
     expect(await listShopDayDepartures(db, otherShopId, TZ, dawn)).toEqual([]);
+  });
+});
+
+/**
+ * **Two honest answers to "when does this course next run", and they differ.**
+ *
+ * The storefront's shelf may only promise a date a diver can turn up to, so it
+ * skips private sessions; the shop's own roster must see them, because a course
+ * booked out to one family is scheduled and its staff must not read "Not
+ * scheduled" on the morning it runs (ADR 20260919-one-idea, slice 23g).
+ *
+ * The scope had no test at all until this — the public filter was a bare
+ * `eq(trips.isPrivate, false)` justified only in prose, so reusing the reader
+ * on a staff surface would have quietly under-reported and nothing would have
+ * gone red.
+ */
+describe("nextSessionStartByCourse scope", () => {
+  const FAR_FUTURE = new Date("2031-01-01T00:00:00Z");
+  const PRIVATE_START = new Date("2031-03-01T14:00:00Z");
+  const PUBLIC_START = new Date("2031-03-05T14:00:00Z");
+
+  async function courseWithTwoSessions() {
+    const { db, shop } = ctx;
+    const [course] = await db
+      .select({ id: courses.id })
+      .from(courses)
+      .where(eq(courses.shopId, shop.id))
+      .limit(1);
+    if (!course) throw new Error("the seeded shop teaches no courses");
+
+    // The private one is deliberately the EARLIER of the two, so a reader that
+    // ignores the scope cannot pass by accident.
+    for (const [startsAt, isPrivate] of [
+      [PRIVATE_START, true],
+      [PUBLIC_START, false],
+    ] as const) {
+      const trip = await createTrip(db, {
+        shopId: shop.id,
+        title: isPrivate ? "Private course session" : "Open course session",
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 3 * 60 * 60 * 1000),
+        capacity: 4,
+        plannedDives: 2,
+      });
+      if (!trip) throw new Error("trip creation failed");
+      await db.update(trips).set({ courseId: course.id, isPrivate }).where(eq(trips.id, trip.id));
+    }
+    return { db, shop, courseId: course.id };
+  }
+
+  it("gives the storefront the first session a diver may book", async () => {
+    const { db, shop, courseId } = await courseWithTwoSessions();
+    const found = await nextSessionStartByCourse(db, shop.id, [courseId], "storefront", FAR_FUTURE);
+    expect(found.get(courseId)).toEqual(PUBLIC_START);
+  });
+
+  it("gives the shop its own private session, which is earlier", async () => {
+    const { db, shop, courseId } = await courseWithTwoSessions();
+    const found = await nextSessionStartByCourse(db, shop.id, [courseId], "shop", FAR_FUTURE);
+    expect(found.get(courseId)).toEqual(PRIVATE_START);
+  });
+
+  /**
+   * The state the roster's "Not scheduled" renders, and the one the Schedule
+   * act in the row's trailing slot exists to answer. An absent key, not a null.
+   */
+  it("says nothing about a course with no session ahead of it", async () => {
+    const { db, shop, courseId } = await courseWithTwoSessions();
+    const afterBoth = new Date("2031-06-01T00:00:00Z");
+    for (const scope of ["storefront", "shop"] as const) {
+      const found = await nextSessionStartByCourse(db, shop.id, [courseId], scope, afterBoth);
+      expect(found.has(courseId)).toBe(false);
+    }
+  });
+
+  it("is empty for no courses at all, without reaching the database", async () => {
+    const { db, shop } = ctx;
+    expect(await nextSessionStartByCourse(db, shop.id, [], "shop")).toEqual(new Map());
   });
 });

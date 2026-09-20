@@ -10,10 +10,11 @@ import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { pagedCourses } from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
+import { nextSessionStartByCourse } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyScanned } from "@/lib/format";
+import { formatMoneyScanned, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursesPath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
@@ -84,15 +85,37 @@ export default async function CoursesPage({
     page: Number.parseInt(page ?? "", 10),
   });
   const courseList = coursePage.courses;
-  // Scheduling is owner/manager/instructor work, so the button is absent — not
-  // disabled — for anyone else (AGENTS.md: gate by not rendering). The
-  // new-trip page re-checks against live roles either way.
-  const canSchedule = await canPersonConfigureTrips(db, shop.id, session.user.personId);
+  // Together rather than in sequence: only the second needs the page of
+  // courses, and the permission read does not, so awaiting them one after the
+  // other would buy a serial round trip for nothing.
+  const [canSchedule, nextSessions] = await Promise.all([
+    // Scheduling is owner/manager/instructor work, so the button is absent —
+    // not disabled — for anyone else (AGENTS.md: gate by not rendering). The
+    // new-trip page re-checks against live roles either way.
+    canPersonConfigureTrips(db, shop.id, session.user.personId),
+    // **The one live fact on a page of standing ones** (ADR 20260919-one-idea,
+    // decision I · Tide, slice 23g — "a course is sessions on days"). Until
+    // this, a diver reading `/s/<shop>/courses/<slug>` could see when a course
+    // next ran and the shop teaching it could not: the roster said what is
+    // taught, never when. One query for the whole page rather than one per row.
+    //
+    // `"shop"` and not `"storefront"`: a course booked out to one family is
+    // scheduled, and the staffer who scheduled it must not read "Not scheduled"
+    // on the morning it runs. The storefront's own call stays public-scoped,
+    // because a diver cannot turn up to a private session.
+    nextSessionStartByCourse(
+      db,
+      shop.id,
+      courseList.map((course) => course.id),
+      "shop",
+    ),
+  ]);
   const base = `/shop/${shopSlug}/courses`;
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
 
   /**
-   * The row's quiet line: who it is open to, how long it runs, what it costs.
+   * The row's quiet line: when it next runs, who it is open to, how long it
+   * runs, what it costs.
    *
    * Duration is the shop's own words (`duration_text`); the price is a figure
    * a reader is *scanning* rather than reconciling, so it drops the `.00` that
@@ -100,8 +123,23 @@ export default async function CoursesPage({
    * be missing — a course a shop has not priced yet says nothing about price
    * rather than saying nothing at all.
    */
-  const metaLine = (course: (typeof courseList)[number]) =>
-    [
+  const metaLine = (course: (typeof courseList)[number]) => {
+    const nextStart = nextSessions.get(course.id);
+    return [
+      // **First, so it is a column rather than a footnote.** It is the one fact
+      // on this line that changes, and the reason the roster has a time in it
+      // at all; appended last it landed at the end of a wrapped second line at
+      // 390, in the same muted grey as the price, and "Not scheduled" read as
+      // one more item in a run rather than a gap to act on. Leading with it
+      // puts every row's answer at the same x, which is how a list is scanned.
+      nextStart
+        ? st("courses.list.nextSession", {
+            // The shop's own zone, never the server's: a 7:30 AM session in
+            // Key West renders as the previous day in UTC often enough to
+            // matter.
+            date: formatShortDate(nextStart, locale, shop.timezone),
+          })
+        : st("courses.list.notScheduled"),
       course.minimumCertificationLevel
         ? st("courses.list.orHigher", {
             level: st(CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
@@ -114,6 +152,7 @@ export default async function CoursesPage({
     ]
       .filter(Boolean)
       .join(" · ");
+  };
 
   const rows: CourseRosterRow[] = courseList.map((course) => ({
     id: course.id,

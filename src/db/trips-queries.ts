@@ -790,17 +790,39 @@ export async function listUpcomingSessionsForCourse(
 }
 
 /**
- * The next scheduled session per course, for the storefront's courses shelf
- * (Harbor — ADR 20260901-diveday-reimagined: the board draws "Starts Sep 7"
- * under a card). One query for the three cards rather than
- * {@link listUpcomingSessionsForCourse} three times, and the same scope —
- * live, scheduled, public, within the hour's late-arrival buffer — so the
- * shelf never promises a date the course page then lacks.
+ * **Who is asking when this course next runs.** There are two honest answers
+ * and they are not the same date.
+ *
+ * - `"storefront"` — what a diver may turn up to: live, scheduled, **public**,
+ *   within the hour's late-arrival buffer. Exactly
+ *   {@link listUpcomingSessionsForCourse}'s scope, so the shelf never promises
+ *   a date the course page then lacks.
+ * - `"shop"` — what the shop has on its own books, private sessions included.
+ *   A course booked out to one family is scheduled; telling the staff who
+ *   scheduled it that it is not would be a lie about their own week.
+ *
+ * No default. A caller that does not say which it means is asking a question
+ * with two answers, and the wrong one is silent either way — the storefront
+ * would advertise a session nobody may book, or the roster would report a
+ * course as unscheduled on the morning it runs.
+ */
+export type CourseSessionScope = "storefront" | "shop";
+
+/**
+ * The next scheduled session per course — one query for a page of them, rather
+ * than {@link listUpcomingSessionsForCourse} once per course.
+ *
+ * Built for the storefront's courses shelf (Harbor — ADR
+ * 20260901-diveday-reimagined: the board draws "Starts Sep 7" under a card),
+ * and read by the staff roster too, which is why the scope is stated rather
+ * than assumed (ADR 20260919-one-idea, decision I · Tide, slice 23g — "a
+ * course is sessions on days").
  */
 export async function nextSessionStartByCourse(
   db: AppDb,
   shopId: string,
   courseIds: readonly string[],
+  scope: CourseSessionScope,
   now: Date = nowDate(),
 ): Promise<Map<string, Date>> {
   if (courseIds.length === 0) return new Map();
@@ -813,7 +835,7 @@ export async function nextSessionStartByCourse(
         eq(trips.shopId, shopId),
         inArray(trips.courseId, [...courseIds]),
         eq(trips.status, "scheduled"),
-        eq(trips.isPrivate, false),
+        ...(scope === "storefront" ? [eq(trips.isPrivate, false)] : []),
         gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
       ),
     )
