@@ -1051,19 +1051,50 @@ test.describe("the course editor over a wander through the app", () => {
 
     // **Four routes, and four is the point** — React's Activity holds three, so
     // a three-hop walk never reaches the eviction this test exists to cover.
-    // Close-out left the nav on 2026-08-28 (H-62: the evening is a state of the
-    // home, not a place to go), so the home itself is the fourth hop. Today's
-    // accessible name carries its blocked-diver badge, so it is matched by
-    // prefix where the others are exact.
-    for (const tab of [/^Divers$/, /^Board$/, /^Today/, /^Check-in$/]) {
-      await page.getByRole("link", { name: tab }).first().click();
+    //
+    // It used to walk four nav tabs. The bar is three times now and everything
+    // else is reached through the search (ADR 20260919-one-idea, slice 23b),
+    // so the walk goes the way a staffer's would: two of the bar's own times,
+    // then two places the search finds. Today's accessible name carries its
+    // blocked-diver badge, which is why it is matched by prefix.
+    const goByBar = async (name: RegExp) => {
+      await page
+        .locator("header")
+        .getByRole("navigation", { name: "When" })
+        .getByRole("link", { name })
+        .click();
+    };
+    const goBySearch = async (name: string) => {
+      await page.locator("header").getByRole("button", { name: "Search" }).click();
+      await page.getByRole("combobox").fill(name);
+      await page
+        .getByRole("option", { name: new RegExp(name) })
+        .first()
+        .click();
+    };
+    const settle = async () => {
       await page.waitForURL((candidate) => !candidate.pathname.endsWith("/edit"));
       await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
-    }
+    };
+    await goByBar(/^Week$/);
+    await settle();
+    await goByBar(/^Today/);
+    await settle();
+    await goBySearch("Divers");
+    await settle();
+    await goBySearch("Check-in");
+    await settle();
 
-    // Back the way a person would come back: through the nav, not history.
-    await page.locator("header summary").filter({ hasText: "More" }).click();
-    await page.getByRole("link", { name: "Courses" }).first().click();
+    // Back the way a person would come back: through the search, not history.
+    // The More menu that used to hold Courses left with the nav of nouns (ADR
+    // 20260919-one-idea, slice 23b), and the search is the door now — which is
+    // still "the way a person would come back", just a different door.
+    await page.locator("header").getByRole("button", { name: "Search" }).click();
+    await page.getByRole("combobox").fill("Courses");
+    await page
+      .getByRole("option", { name: /Courses/ })
+      .first()
+      .click();
     await page.waitForURL(/\/courses$/);
     // By the door's own accessible name. The row is one `LedgerRow` whose
     // stretched link is labelled "Edit {title}", and the Schedule act beside it

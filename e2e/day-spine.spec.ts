@@ -125,11 +125,15 @@ test("a diver blocked on the spine is the same diver waiting at the counter", as
   await page.goto("/shop/blue-mantis");
   await expect(page.getByText("Priya Sharma").first()).toBeVisible();
 
-  // Check-in is a nav tab, not a link on the page — which is the point of
-  // having removed the pivot.
+  // Check-in is not a link on the page — which is the point of having removed
+  // the pivot. It was a nav tab; since slice 23b the bar wears three times and
+  // everything else is reached through the search, so that is how a staffer
+  // gets there and how this test does.
+  await page.locator("header").getByRole("button", { name: "Search" }).click();
+  await page.getByRole("combobox").fill("Check-in");
   await page
-    .getByRole("navigation", { name: "Primary" })
-    .getByRole("link", { name: "Check-in" })
+    .getByRole("option", { name: /Check-in/ })
+    .first()
     .click();
   await expect(page.getByRole("heading", { name: "Counter check-in", level: 1 })).toBeVisible();
   await expect(page.getByText("Priya Sharma").first()).toBeVisible();
