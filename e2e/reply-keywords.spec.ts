@@ -1,5 +1,12 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openTripFromBoard,
+  signInAsOwner,
+  signOut,
+} from "./helpers";
 
 /**
  * **A diver replies `C` and gives up their seat** (ADR 20260909-reply-keywords).
@@ -169,15 +176,7 @@ test.describe("reply keywords", () => {
 
     // The seat is untouched by either message.
     await page.goto("/shop/blue-mantis/schedule/board");
-    // Named exactly, not "the link in this row": a departure row on the board
-    // carries a second anchor — the "Set a price for …" nudge, whose accessible
-    // name starts with the trip's own title — so a bare `getByRole("link")`
-    // resolved to two elements and failed strict mode on CI.
-    await page
-      .locator("li")
-      .filter({ hasText: title })
-      .getByRole("link", { name: title, exact: true })
-      .click();
+    await openTripFromBoard(page, title);
     await expect(page.locator("#roster").getByText("Ivan Petrov")).toBeVisible();
   });
 });

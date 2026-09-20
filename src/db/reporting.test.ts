@@ -2,8 +2,9 @@ import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
 import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
-import { summarizeMonth } from "@/lib/reporting";
+import { type MonthlyReport, summarizeMonth } from "@/lib/reporting";
 import { summarizeShopYear } from "@/lib/shop-year";
+import { shiftInstantByCalendarDays, shopDayBounds, shopMonthBounds } from "@/lib/zoned";
 import { seededShopContext, unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import {
@@ -1386,5 +1387,159 @@ describe("getShopYear", () => {
 
     expect(year.divers).toBe(5);
     expect(year.boatsOut).toBe(1);
+  });
+});
+
+/**
+ * **The day, the month and the year must tell one story** (issue #1930).
+ *
+ * The shop home's evening reading calls this same function over
+ * `shopDayBounds` instead of `shopMonthBounds` — no second query, no second
+ * derivation — because a figure a shop reads while closing the till has to
+ * survive being read again on `/reports` the next morning. The invariant that
+ * keeps it honest is not "a day reports something plausible", which passes
+ * forever while the two drift; it is that the days of a month **add up to the
+ * month**.
+ *
+ * The departure that makes this test sharp is the 10 PM one on the 30th:
+ * 2026-06-30 22:00 in New York is 2026-07-01 02:00Z, so it is in June for the
+ * shop and in July for a UTC box. Bracket a day or a month in UTC and this is
+ * the boat that goes missing.
+ */
+describe("a day is the month's own derivation, over narrower bounds", () => {
+  const TZ = "America/New_York";
+  const JUNE = { year: 2026, month: 6 };
+  /** 2026-06-30 22:00 in New York — in June for the shop, July in UTC. */
+  const LATE_ON_THE_LAST_DAY = new Date("2026-07-01T02:00:00Z");
+  /** 2026-06-01 01:00 in New York — the same trap at the other end. */
+  const EARLY_ON_THE_FIRST_DAY = new Date("2026-06-01T05:00:00Z");
+  const MIDMONTH = new Date("2026-06-15T13:00:00Z");
+  /**
+   * 2026-06-15 00:00 in New York — the boundary instant itself, which is the
+   * only kind of departure that can prove a window is half-open. An inclusive
+   * end counts this boat on both the 14th and the 15th, and the sum stops
+   * matching the month.
+   */
+  const ON_THE_STROKE = new Date("2026-06-15T04:00:00Z");
+
+  async function juneShop() {
+    const { db, shop } = await seededShopContext();
+    await db.update(shops).set({ timezone: TZ }).where(eq(shops.id, shop.id));
+    const diver = await makePerson(db, shop.id, "Windowed Wanda");
+
+    const lastNight = await makeTrip(db, shop.id, LATE_ON_THE_LAST_DAY, 8, "Night of the 30th");
+    await pay(db, shop.id, await makeBooking(db, shop.id, lastNight, diver), "paid", 21_000);
+
+    const firstDawn = await makeTrip(db, shop.id, EARLY_ON_THE_FIRST_DAY, 8, "Dawn of the 1st");
+    await pay(db, shop.id, await makeBooking(db, shop.id, firstDawn, diver), "paid", 13_000);
+
+    const ordinary = await makeTrip(db, shop.id, MIDMONTH, 8, "An ordinary Monday");
+    const ordinaryBooking = await makeBooking(db, shop.id, ordinary, diver);
+    await pay(db, shop.id, ordinaryBooking, "paid", 17_000);
+    // Tips ride the same window as everything else — anchored to the boat's
+    // departure, never to when the diver tapped the recap link.
+    await makeTip(db, shop.id, ordinaryBooking, 4_000);
+    const midnight = await makeTrip(db, shop.id, ON_THE_STROKE, 8, "On the stroke of midnight");
+    await pay(db, shop.id, await makeBooking(db, shop.id, midnight, diver), "paid", 5_000);
+
+    // Imported history buckets by its own calendar date in the shop's zone,
+    // which is a second way a day and a month can disagree.
+    await addImportedFinancialHistory(db, {
+      shopId: shop.id,
+      personId: diver,
+      occurredOn: "2026-06-20",
+      direction: "payment",
+      amountCents: 9_000,
+      currency: "usd",
+    });
+
+    return { db, shop };
+  }
+
+  /** Every shop-local day of June 2026, in order, as UTC-bracketed windows. */
+  function juneDays() {
+    const month = shopMonthBounds(JUNE, TZ);
+    const days: { from: Date; to: Date }[] = [];
+    for (let index = 0; index < 30; index += 1) {
+      days.push(shopDayBounds(shiftInstantByCalendarDays(month.from, index, TZ), TZ));
+    }
+    return { month, days };
+  }
+
+  it("tiles the month exactly, with no instant in two days or none", async () => {
+    // The arithmetic below is only meaningful if the windows partition the
+    // month, so that is asserted first rather than assumed.
+    const { month, days } = juneDays();
+    expect(days[0]?.from.toISOString()).toBe(month.from.toISOString());
+    expect(days.at(-1)?.to.toISOString()).toBe(month.to.toISOString());
+    for (let index = 1; index < days.length; index += 1) {
+      expect(days[index]?.from.toISOString()).toBe(days[index - 1]?.to.toISOString());
+    }
+  });
+
+  it("adds the days of a month up to the month", async () => {
+    const { db, shop } = await juneShop();
+    const { month, days } = juneDays();
+    const options = { currency: "usd", timeZone: TZ };
+
+    const wholeMonth = summarizeMonth(
+      await getMonthlyReport(db, shop.id, month.from, month.to, options),
+    );
+    const daily: MonthlyReport[] = [];
+    for (const day of days) {
+      daily.push(summarizeMonth(await getMonthlyReport(db, shop.id, day.from, day.to, options)));
+    }
+    const summed = (pick: (report: (typeof daily)[number]) => number) =>
+      daily.reduce((total, report) => total + pick(report), 0);
+
+    expect(summed((report) => report.tripCount)).toBe(wholeMonth.tripCount);
+    expect(summed((report) => report.seatsBooked)).toBe(wholeMonth.seatsBooked);
+    expect(summed((report) => report.revenueCents)).toBe(wholeMonth.revenueCents);
+    expect(summed((report) => report.tipsCents)).toBe(wholeMonth.tipsCents);
+    expect(summed((report) => report.taxCents)).toBe(wholeMonth.taxCents);
+    expect(summed((report) => report.importedPaymentCents)).toBe(wholeMonth.importedPaymentCents);
+    // A month with nothing in it would satisfy every line above, so the
+    // fixture's own money has to be in there for the equality to mean
+    // anything.
+    expect(wholeMonth.revenueCents).toBeGreaterThan(0);
+    expect(wholeMonth.tipsCents).toBeGreaterThan(0);
+  });
+
+  it("brackets the shop's own day, in instants a reader can check by hand", () => {
+    // Written out rather than derived, because a test that computes both
+    // sides with `shopDayBounds` agrees with any bounds helper — a UTC one
+    // included. New York is UTC-4 in June, so the shop's 30th opens at 04:00Z
+    // on the 30th and closes at 04:00Z on 1 July, which is how a boat leaving
+    // at 02:00Z on 1 July is still the 30th's.
+    expect(shopDayBounds(LATE_ON_THE_LAST_DAY, TZ)).toEqual({
+      from: new Date("2026-06-30T04:00:00Z"),
+      to: new Date("2026-07-01T04:00:00Z"),
+    });
+  });
+
+  it("files the last night's boat under the shop's 30th, never a UTC 1st", async () => {
+    const { db, shop } = await juneShop();
+    const options = { currency: "usd", timeZone: TZ };
+    const titlesBetween = async (from: string, to: string) => {
+      const report = await getMonthlyReport(db, shop.id, new Date(from), new Date(to), options);
+      return report.trips.map((trip) => trip.title);
+    };
+
+    // The shop's 30th of June, then its 1st of July — the day a UTC
+    // bracketing would have filed that boat under.
+    expect(await titlesBetween("2026-06-30T04:00:00Z", "2026-07-01T04:00:00Z")).toContain(
+      "Night of the 30th",
+    );
+    expect(await titlesBetween("2026-07-01T04:00:00Z", "2026-07-02T04:00:00Z")).not.toContain(
+      "Night of the 30th",
+    );
+    // The same trap at the other end: the shop's 1st holds the dawn boat, and
+    // the shop's 31st of May does not.
+    expect(await titlesBetween("2026-06-01T04:00:00Z", "2026-06-02T04:00:00Z")).toContain(
+      "Dawn of the 1st",
+    );
+    expect(await titlesBetween("2026-05-31T04:00:00Z", "2026-06-01T04:00:00Z")).not.toContain(
+      "Dawn of the 1st",
+    );
   });
 });

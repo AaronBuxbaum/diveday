@@ -12,14 +12,7 @@ import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
 import { readFormDraft } from "@/db/form-drafts";
 import { openAfterDiveRollCalls } from "@/db/today";
-import {
-  pagedUpcomingTripsWithCounts,
-  tripCrewByTrip,
-  tripScheduleDayCounts,
-  upcomingScheduleRange,
-  weekBoard,
-} from "@/db/trips";
-import { compassText } from "@/i18n/compass-labels";
+import { tripCrewByTrip, upcomingScheduleRange, weekBoard } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -38,16 +31,9 @@ import {
   weekdayNames,
 } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { fetchAutomatedMarineForecast, shouldShowAutomatedForecast } from "@/lib/marine-forecast";
 import { currencyFractionDigits, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
-import {
-  decodeCursorStack,
-  encodeCursorStack,
-  popCursor,
-  pushCursor,
-} from "@/lib/schedule-pagination";
 import { requireShopSurface } from "@/lib/session";
 import { siteMarkFor } from "@/lib/site-mark";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -65,7 +51,6 @@ import { weekSeatTally } from "@/lib/week-seats";
 import { toDateInputValue, toTimeInputValue, utcToWallTime } from "@/lib/zoned";
 import {
   type BuilderCopy,
-  type BuilderDay,
   type BuilderInitialCourse,
   type BuilderInitialSite,
   type BuilderMoreOptions,
@@ -175,7 +160,7 @@ export default async function ScheduleBoardPage({
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { after, back, builder, created, gear, series, add, date, course, requests, site, week } =
+  const { builder, created, gear, series, add, date, course, requests, site, week } =
     await searchParams;
   const requestIds = [
     ...new Set(
@@ -213,17 +198,8 @@ export default async function ScheduleBoardPage({
   // they are two queries and a whole catalogue of client props for two selects
   // inside a panel that is closed by default, so they load when it opens
   // (`loadBuilderOptionsAction`).
-  const [
-    range,
-    { trips: upcoming, nextCursor },
-    canConfigure,
-    openRollCalls,
-    shopBoats,
-    weekRows,
-    weekAsks,
-  ] = await Promise.all([
+  const [range, canConfigure, openRollCalls, shopBoats, weekRows, weekAsks] = await Promise.all([
     upcomingScheduleRange(db, shop.id, now),
-    pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
     canPersonConfigureTrips(db, shop.id, session.user.personId),
     // Departures that already came back with a head count still open (DOM-H3).
     // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
@@ -264,19 +240,16 @@ export default async function ScheduleBoardPage({
     (await listBoatsForHistory(db, shop.id)).map((boat) => [boat.id, boat.name]),
   );
   const hasUpcoming = range.first !== null;
-  // Depends on the trip ids above, so it runs as a second wave rather than
-  // inside the batch that produces `upcoming`.
-  // The stream's backwards-looking rows lead page one and appear nowhere else;
-  // the week reads `openRollCalls` directly, whatever page the stream is on.
-  const streamRollCalls = after ? [] : openRollCalls;
-  const boardTripIds = [
-    ...streamRollCalls.map((open) => open.tripId),
-    ...upcoming.map((t) => t.id),
-  ];
-  const [dayCounts, crewByTrip] = await Promise.all([
-    tripScheduleDayCounts(db, boardTripIds),
-    tripCrewByTrip(db, shop.id, boardTripIds),
-  ]);
+  // **Who is crewing the week the board is drawing.** Depends on the ids the
+  // week read produced, so it runs as a second wave rather than inside the
+  // batch above. One reading now, so one list: this used to union the stream's
+  // cursor page with the week's ids, and the two never agreed about which
+  // departures were on the board (#1923).
+  const crewByTrip = await tripCrewByTrip(
+    db,
+    shop.id,
+    Object.values(weekRows.days).flatMap((entries) => entries.map((entry) => entry.tripId)),
+  );
 
   // A course the catalogue sent us here to schedule. One list read, and only
   // on the rare navigation that names a course — scoped to the session's own
@@ -588,138 +561,13 @@ export default async function ScheduleBoardPage({
     placeholder: formatMoneyCents(0, currency, locale),
   };
 
-  const builderDays: BuilderDay[] = [];
-  /** Appends one departure to the board, opening a new day header when the day turns. */
-  function pushBuilderTrip(
-    trip: {
-      id: string;
-      title: string;
-      startsAt: Date;
-      endsAt: Date;
-      capacity: number;
-      priceCents: number | null;
-      booked: number;
-      courseTitle: string | null;
-      diveSiteName: string | null;
-      diveMode?: "boat" | "shore" | "pool";
-      boatId?: string | null;
-      windSummary?: string | null;
-    },
-    rollCallOpen: { diveNumber: number; uncounted: number } | null,
-  ) {
-    const wall = utcToWallTime(trip.startsAt, tz);
-    const dateIso = toDateInputValue(wall);
-    let day = builderDays.at(-1);
-    if (day?.dateIso !== dateIso) {
-      day = {
-        dateIso,
-        label: formatShortDate(trip.startsAt, locale, tz),
-        parts: formatDayParts(trip.startsAt, locale, tz),
-        trips: [],
-      };
-      builderDays.push(day);
-    }
-    day.trips.push({
-      id: trip.id,
-      title: trip.title,
-      dateIso,
-      startTime: toTimeInputValue(wall),
-      timeRange: formatTimeRange(trip.startsAt, trip.endsAt, locale, tz),
-      startsAt: trip.startsAt,
-      endsAt: trip.endsAt,
-      capacity: trip.capacity,
-      booked: trip.booked,
-      courseTitle: trip.courseTitle,
-      diveSiteName: trip.diveSiteName,
-      dayCount: dayCounts.get(trip.id) ?? 1,
-      crew: (crewByTrip.get(trip.id) ?? []).map((member) => member.name),
-      priceCents: trip.priceCents,
-      rollCallOpen,
-      diveMode: trip.diveMode ?? "boat",
-      boatId: trip.boatId ?? null,
-      boatName: trip.boatId ? (boatMap.get(trip.boatId) ?? null) : null,
-      windSummary: trip.windSummary ?? null,
-    });
-  }
-
-  // Returned-with-an-open-head-count boats lead the board (DOM-H3). They are
-  // the only backwards-looking rows here, and they go first because every one
-  // of them already ended before `now` — so pushing them ahead of `upcoming`
-  // keeps the whole board in one chronological run and lets a boat that
-  // sailed this morning share its own day header with the afternoon's.
-  for (const open of streamRollCalls) {
-    pushBuilderTrip(
-      {
-        id: open.tripId,
-        title: open.title,
-        startsAt: open.startsAt,
-        endsAt: open.endsAt,
-        capacity: open.capacity,
-        priceCents: open.priceCents,
-        booked: open.rosterSize,
-        courseTitle: null,
-        diveSiteName: null,
-        diveMode: "boat",
-        boatId: null,
-      },
-      { diveNumber: open.diveNumber, uncounted: open.uncounted },
-    );
-  }
-  // The soonest day a new departure would sensibly be added to — never a
-  // returned boat's day, which is in the past and would pre-date the form.
-  const firstUpcomingDateIso = upcoming[0]
-    ? toDateInputValue(utcToWallTime(upcoming[0].startsAt, tz))
+  // The date an add panel opens on when the URL names none. Read off
+  // `upcomingScheduleRange` since the stream that used to supply the first row
+  // of a cursor page went (#1923): it is the same fact — the shop's next
+  // departure — from the query that was already being made for it.
+  const firstUpcomingDateIso = range.first
+    ? toDateInputValue(utcToWallTime(range.first, tz))
     : null;
-  // The board's own staff wind numbers (issue #722's remaining gap — the trip
-  // page and Today already read this forecast; the board did not). Same
-  // gating as both: a site with forecast coordinates, within the provider's
-  // window. Sequential awaits, matching src/db/today.ts's own high-wind
-  // scan — `fetchAutomatedMarineForecast`'s in-process cache (keyed by
-  // site/hour, 5-minute TTL) is what keeps one page of departures from
-  // costing a live request per row, not a batched fetch here.
-  const windSummaryByTripId = new Map<string, string>();
-  for (const trip of upcoming) {
-    const site = trip.diveSite;
-    const forecastPoint =
-      site && site.forecastLatitude !== null && site.forecastLongitude !== null
-        ? { latitude: site.forecastLatitude, longitude: site.forecastLongitude }
-        : null;
-    if (!forecastPoint || !shouldShowAutomatedForecast(trip.startsAt, now)) continue;
-    const forecast = await fetchAutomatedMarineForecast(forecastPoint, trip.startsAt);
-    if (!forecast?.wind) continue;
-    windSummaryByTripId.set(
-      trip.id,
-      st("trips.conditions.automatedWind", {
-        speed: forecast.wind.speedKnots,
-        direction: compassText(st, forecast.wind.direction),
-        gusts: forecast.wind.gustsKnots ?? 0,
-        hasGusts:
-          forecast.wind.gustsKnots !== null && forecast.wind.gustsKnots > forecast.wind.speedKnots
-            ? "yes"
-            : "no",
-      }),
-    );
-  }
-  for (const trip of upcoming) {
-    pushBuilderTrip(
-      {
-        id: trip.id,
-        title: trip.title,
-        startsAt: trip.startsAt,
-        endsAt: trip.endsAt,
-        capacity: trip.capacity,
-        priceCents: trip.priceCents,
-        booked: trip.booked,
-        courseTitle: trip.course?.title ?? null,
-        diveSiteName: trip.diveSite?.name ?? null,
-        diveMode: trip.diveMode,
-        boatId: trip.boatId,
-        windSummary: windSummaryByTripId.get(trip.id) ?? null,
-      },
-      null,
-    );
-  }
-
   /**
    * **"More departures than boats", for one day.** One function because both
    * compositions ask it: the stream asks it of a cursor page's day, the week
@@ -827,9 +675,29 @@ export default async function ScheduleBoardPage({
           status: entry.status,
           sailedLabel: st("schedule.week.sailed"),
           siteName: entry.diveSiteName,
+          // **Which hull, or why there isn't one** (#1923). The day stream
+          // that used to carry this is gone, and a scheduling surface may not
+          // quietly stop saying what a departure is on. A shore or pool
+          // session names itself in the hull's place: the absence is the fact,
+          // and a blank there would read as a boat nobody has assigned.
+          // History, not the live fleet — a departure that sailed on a hull
+          // the shop has since deleted still says which one
+          // (ADR 20260820-every-delete-is-soft).
+          vessel:
+            entry.diveMode === "shore"
+              ? st("boats.modeShore")
+              : entry.diveMode === "pool"
+                ? st("boats.modePool")
+                : entry.boatId
+                  ? (boatMap.get(entry.boatId) ?? null)
+                  : null,
           seats,
           price,
         }),
+        // **Who is crewing it**, in the shop's own lead-first order. The row
+        // decides nothing with this — `WeekBoard` votes on the week's habit and
+        // prints only the departures that differ (`src/lib/usual-crew.ts`).
+        crew: (crewByTrip.get(entry.tripId) ?? []).map((member) => member.name),
         // The two numbers the bar is a picture of. Beside `meta` rather than
         // parsed back out of it: "10 of 12" is a sentence in two languages and
         // `src/lib/week-seats.ts` must never have to read one.
@@ -995,15 +863,6 @@ export default async function ScheduleBoardPage({
       }
     : null;
 
-  for (const day of builderDays) {
-    day.boatWarning = boatWarningFor(
-      day.trips.filter(
-        (t): t is typeof t & { startsAt: Date; endsAt: Date } =>
-          t.startsAt instanceof Date && t.endsAt instanceof Date,
-      ),
-    );
-  }
-
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
@@ -1123,7 +982,6 @@ export default async function ScheduleBoardPage({
         addDraft={addDraft}
         loadPattern={loadWeekdayPatternAction}
         loadTideWindow={loadTideWindowAction}
-        days={builderDays}
         loadOptions={loadBuilderOptionsAction}
         loadMovePreflight={loadMovePreflightAction}
         price={priceInput}
@@ -1148,66 +1006,6 @@ export default async function ScheduleBoardPage({
           draft: { save: saveFormDraftAction, discard: discardFormDraftAction },
         }}
       />
-
-      {/* The stream's own pager, and only the stream's: the grid pages by
-          week, and mixing a cursor into that URL would make two readings
-          argue about where the board is. `xl:hidden` for the same reason the
-          stream is. */}
-      {nextCursor || after ? (
-        <div className="mt-5 flex flex-wrap items-center gap-3 xl:hidden">
-          {(() => {
-            const backStack = decodeCursorStack(back);
-            const previous = popCursor(backStack);
-            if (!previous) return null;
-            const params = new URLSearchParams();
-            if (previous.after) params.set("after", previous.after);
-            if (previous.stack.length > 0) params.set("back", encodeCursorStack(previous.stack));
-            const query = params.toString();
-            return (
-              <Link
-                href={`/shop/${shopSlug}/schedule/board${query ? `?${query}` : ""}`}
-                scroll={false}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("schedule.showEarlier")}
-              </Link>
-            );
-          })()}
-          {nextCursor ? (
-            <Link
-              href={(() => {
-                const params = new URLSearchParams();
-                params.set("after", nextCursor);
-                const nextStack = pushCursor(decodeCursorStack(back), after);
-                if (nextStack.length > 0) params.set("back", encodeCursorStack(nextStack));
-                return `/shop/${shopSlug}/schedule/board?${params.toString()}`;
-              })()}
-              scroll={false}
-              // A crawl's hook onto the stream's own pager. From `xl` up the
-              // whole stream is `display:none` while the week grid renders, so
-              // a helper walking the board to a departure in a later cursor
-              // page has to read this link out of a subtree nothing paints.
-              // `getByRole(..., { includeHidden: true })` cannot do it: the e2e
-              // fixture wraps every role query in `.filter({ visible: true })`
-              // (`e2e/fixtures.ts`), which discards the option without a word.
-              // An attribute survives that, and costs the page nothing.
-              data-board-pager="next"
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("schedule.showLater")}
-            </Link>
-          ) : null}
-          {after ? (
-            <Link
-              href={`/shop/${shopSlug}/schedule/board`}
-              scroll={false}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              {t("schedule.backToNext")}
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
     </main>
   );
 }

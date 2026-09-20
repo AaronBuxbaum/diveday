@@ -242,11 +242,18 @@ export function DayStation({
                 the ones that are back.* A quiet link, not a button: an owner's
                 rare act was standing at button weight beside every boat every
                 morning, and the panel is calmer with it at reading weight
-                (slice 16a). Absent, never disabled, for everyone else. */}
+                (slice 16a). Absent, never disabled, for everyone else.
+
+                Reading weight and a full tap target are the same decision,
+                and `tapTargetLinkClass` is what makes them one: hand-typing
+                the ink left the closing station's identical link at 20px
+                tall, under WCAG 2.5.8's floor, until the evening a11y scan
+                reached it. This one had the same defect and a quieter place
+                to hide in. */}
             {canOpenLog ? (
               <Link
                 href={`/shop/${shopSlug}/trips/${station.tripId}/log`}
-                className="text-sm font-medium text-primary hover:underline"
+                className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}
               >
                 {t("incidentExport.openLink")}
               </Link>

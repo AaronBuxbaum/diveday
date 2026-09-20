@@ -530,26 +530,35 @@ test.describe("a departure's tab strip on a phone, in Spanish", () => {
  * data rather than a translated string.
  */
 async function seededTripPath(page: import("@playwright/test").Page): Promise<string> {
+  return (await seededTrip(page)).path;
+}
+
+/**
+ * The same departure, with the title it is filed under. Shop data, not staff
+ * copy, so the Spanish run can read it — which is the whole point: a spec that
+ * asserts the packet is about *this* departure cannot hard-code a seeded
+ * title, because which departure the board leads with is the seed's business
+ * and moved when the day stream went (#1923).
+ */
+async function seededTrip(
+  page: import("@playwright/test").Page,
+): Promise<{ path: string; title: string }> {
   await page.goto("/shop/blue-mantis/schedule/board");
-  // **Scoped to the day stream, and that scope is the whole point.** The board
-  // draws the same departures twice — the chronological stream below `xl`, the
-  // week grid from `xl` up — and the grid renders *first* in the DOM. So a bare
-  // `.first()` reads "the earliest cell of the week on screen" at one width and
-  // "the next departure" at another, which is a different trip. These tests
-  // name the trip they land on, so the composition has to be named too.
-  const link = page.locator('[data-day-stream] a[href^="/shop/blue-mantis/trips/"]').first();
-  // **Attached, not visible.** From `xl` up the stream is `display:none` behind
-  // the grid, its links still in the DOM. This only reads an href, so presence
-  // is the whole requirement — waiting for a visibility that is never coming is
-  // what timed five tests in this file out at 15s on CI, all of them here
-  // rather than in what they were testing.
+  // **Scoped to the week, which is now the only composition there is** (#1923).
+  // This used to have to name the day stream, because the board drew the same
+  // departures twice and the grid came first in the DOM — so a bare `.first()`
+  // meant "the earliest cell of the week on screen" at one width and "the next
+  // departure" at another, which is a different trip. One board, one answer.
   //
-  // A caller that *clicks* needs the copy on screen instead: that is
-  // `findTripOnBoard` in `e2e/helpers.ts`, which picks the visible one and can
-  // page the board. It takes a title, which is exactly what this helper must
-  // not do — the Spanish run cannot read English copy.
+  // A caller that *clicks* wants `findTripOnBoard` in `e2e/helpers.ts`, which
+  // can page forward a week at a time. It takes a title, which is exactly what
+  // this helper must not do — the Spanish run cannot read English copy.
+  const link = page.locator('[data-week-board] a[href^="/shop/blue-mantis/trips/"]').first();
   await link.waitFor({ state: "attached" });
-  return ((await link.getAttribute("href")) ?? "").replace(/\/(guests|manifest|prep|log)$/, "");
+  return {
+    path: ((await link.getAttribute("href")) ?? "").replace(/\/(guests|manifest|prep|log)$/, ""),
+    title: ((await link.textContent()) ?? "").trim(),
+  };
 }
 
 /**
@@ -575,7 +584,7 @@ test.describe("the printed trip packet", () => {
   signedInAsOwner();
 
   test("carries no control a crew member could try to fill in", async ({ page }) => {
-    const tripPath = await seededTripPath(page);
+    const { path: tripPath, title } = await seededTrip(page);
     await page.goto(`${tripPath}/print`);
     // The packet's own heading — the destination's render, not a timing guess.
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
@@ -608,7 +617,9 @@ test.describe("the printed trip packet", () => {
     // And the facts it exists for are still on it: the departure it is about,
     // the dive plan that only ever lived inside the Overview tab's form, and
     // the roster with the head count.
-    await expect(page.getByRole("heading", { name: /Two-Tank Reef/ }).first()).toBeVisible();
+    // The departure this packet is *about*, named from the board rather than
+    // hard-coded: which one the week leads with is the seed's business.
+    await expect(page.getByRole("heading", { name: title }).first()).toBeVisible();
     await expect(page.getByText(/Dive 1 ·/)).toBeVisible();
     await expect(page.getByText(/Souls on board/)).toBeVisible();
   });

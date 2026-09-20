@@ -10,6 +10,7 @@ import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { WeekPager } from "@/components/ui/week-pager";
 import { fill } from "@/i18n/fill";
 import type { SiteMarkCode } from "@/lib/site-mark";
+import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import { isSoldOut, seatFill } from "@/lib/week-seats";
 
 /**
@@ -66,8 +67,19 @@ export type WeekEntry = WeekDeparture & {
   seats: WeekSeats;
   /** Which drawing marks it — read off the site's name (`siteMarkFor`). */
   mark: SiteMarkCode;
-  /** "10 of 12 · $95", or "Sailed · 9 of 12" for a boat already home. */
+  /** "Molasses Reef · Mantis II · 10 of 12 · $95", or "Sailed · 9 of 12" for a boat already home. */
   meta: string;
+  /**
+   * **Who is crewing this departure**, in the shop's own order — lead first
+   * (#1923). Empty means nobody is assigned, which is the gap the board
+   * exists to show and never the same thing as "the usual people".
+   *
+   * It is the whole assignment rather than a formatted sentence, because the
+   * row does not decide on its own whether to print it: `mostCommonCrew` votes
+   * over the week and only the departures that differ from the habit say
+   * anything. A pre-joined string could not be compared.
+   */
+  crew: string[];
 };
 
 /** A multi-day course session as one bar across the columns it owns. */
@@ -177,6 +189,10 @@ export type WeekBoardCopy = {
   asked: string;
   /** The act that answers one — the Requests page's own word for it. */
   addDeparture: string;
+  /** "Crew:" — the lead-in on the one line a departure prints about its people. */
+  crewLabel: string;
+  /** What stands where the names would be when nobody is assigned. */
+  crewNobodyYet: string;
 };
 
 /**
@@ -371,6 +387,8 @@ function WeekBoat({
   time,
   mark,
   runs,
+  crewLine,
+  hasUsualCrew,
   shopSlug,
   canConfigure,
   openKey,
@@ -386,6 +404,19 @@ function WeekBoat({
   mark: SiteMarkCode | null;
   /** "3 days", on a course that owns more than the day it starts. */
   runs: string | null;
+  /**
+   * The crew to print, or null to print nothing — the caller has already
+   * asked `isUsualCrew`, so this row never re-decides it. `names` is empty for
+   * a departure nobody is assigned to, which is a line that renders and not a
+   * line that is skipped.
+   *
+   * **A course bar passes null.** Its `meta` already names who is teaching it
+   * (`instructorName`), and a bar that also carried a crew line would say one
+   * fact twice on the one shape that has no hull to be about.
+   */
+  crewLine: { names: string } | null;
+  /** Whether the week has a habit at all — decides the line's ink, not its presence. */
+  hasUsualCrew: boolean;
   shopSlug: string;
   canConfigure: boolean;
   openKey: string | null;
@@ -404,7 +435,7 @@ function WeekBoat({
         {/* The lead line is what the canvas draws: when it leaves, how full it
             is, and the count. The bar sits between them rather than after, so
             a reader scanning a column of times meets every fill at one x. */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap sm:gap-x-3">
           {time ? (
             <p
               className={`text-base leading-tight font-semibold tabular-nums ${sailed ? "text-muted" : ""}`}
@@ -413,7 +444,20 @@ function WeekBoat({
             </p>
           ) : null}
           <SeatBar seats={seats} sailed={sailed} />
-          <p className="min-w-0 flex-1 truncate text-sm text-muted tabular-nums">{meta}</p>
+          {/* **A full line of its own on a phone, inline from `sm` up.** The
+              week was a desktop-only grid until #1923 and this sentence had a
+              row's whole measure to sit in; at 390 it has about 120px between
+              the seat bar and the "⋯", which truncated "Molasses Reef ·
+              Mantis II · 10 of 12 · $95" to "Molas…" — every fact in it lost,
+              including the two the bar is a picture of.
+
+              `basis-full order-last` drops it below the controls on a phone
+              and `sm:` puts it back where the desktop design has it, so the
+              sentence is one node in one place in the reading order rather
+              than two copies fighting a media query. */}
+          <p className="order-last basis-full text-sm text-muted tabular-nums sm:order-none sm:min-w-0 sm:flex-1 sm:basis-auto sm:truncate">
+            {meta}
+          </p>
           {canConfigure && !sailed ? (
             <RowActions
               departure={departure}
@@ -421,7 +465,7 @@ function WeekBoat({
               onToggle={onToggle}
               registerToggle={registerToggle}
               label={copy.rowActionsAria}
-              className="-my-1 -me-2 shrink-0"
+              className="-my-1 -me-2 ms-auto shrink-0 sm:ms-0"
             />
           ) : null}
         </div>
@@ -446,6 +490,30 @@ function WeekBoat({
             <span className="shrink-0 text-xs font-medium text-primary tabular-nums">{runs}</span>
           ) : null}
         </div>
+        {/* **The one line a departure prints about its people**, and only when
+            it is the exception (#1923, principle 9). The board ran with a
+            usual crew and said so on every row until this rule replaced the
+            standing caption; what survives is the row a manager opened the
+            board to find. It sheds the muted class where there *is* a habit —
+            a line printed only when it differs should not read like the
+            caption it replaced — and keeps caption grey on a week that has no
+            habit, where every row carries one.
+
+            "Nobody yet" is warning ink either way. That is the gap this line
+            exists to show, and a quiet week is exactly when it would otherwise
+            be missed. */}
+        {crewLine ? (
+          <p className={`mt-1 text-sm ${hasUsualCrew ? "" : "text-muted"}`}>
+            {crewLine.names ? (
+              `${copy.crewLabel} ${crewLine.names}`
+            ) : (
+              <>
+                {copy.crewLabel}{" "}
+                <span className="font-medium text-warning">{copy.crewNobodyYet}</span>
+              </>
+            )}
+          </p>
+        ) : null}
         {/* One slot, one grammar: an open head count outranks a missing price
             rather than stacking two marks on one row. */}
         {departure.rollCallOpen ? (
@@ -511,9 +579,19 @@ export function WeekBoard({
     if (!dayIso) continue;
     spansByDay.set(dayIso, [...(spansByDay.get(dayIso) ?? []), span]);
   }
+  // **The habit this week runs with**, voted on here rather than handed down,
+  // so nothing can pass the grid a `usual` that disagrees with the rows it is
+  // about to draw (#1923; the rule is `src/lib/usual-crew.ts`). Boats only:
+  // the vote is over departures that have a crew to assign, and a course bar
+  // names its instructor in its own meta.
+  const usualCrew = mostCommonCrew(week.days.flatMap((day) => day.entries));
 
   return (
-    <section aria-label={week.ariaLabel} className="hidden xl:block">
+    // `data-week-board` is the copy-free hook a test asks "is the board
+    // here?" with. The `aria-label` beside it is localised, so a Spanish run
+    // cannot name the region — which is the same reason the day stream this
+    // replaced carried `data-day-stream` (#1923).
+    <section data-week-board="" aria-label={week.ariaLabel}>
       {/* Paging is by week, so the control is a pair of steps and a way home
           — not a cursor. `WeekPager` (src/components/ui/week-pager.tsx) is
           shared with the staffing week, which reads the same `?week=`
@@ -552,7 +630,22 @@ export function WeekBoard({
           return (
             <div key={day.dateIso} className="border-b border-border">
               <div className="grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-3 py-2 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-x-5">
-                <h3 id={`week-day-${day.dateIso}`} className="py-2">
+                {/* **The day holds its place while its own boats scroll**
+                    (ADR 20260827-clearwater-surface-language, decision 10).
+                    This was the day stream's behaviour and it moves here
+                    rather than going down with it (#1923): a run of rows on a
+                    phone is as easy to lose your place in as a stream was.
+
+                    `top-(--chrome-h)`, never a number — the bar's height is a
+                    token and a measured pixel value went stale the first time
+                    the bar changed shape (`src/components/chrome/chrome.test.ts`
+                    has the incident). `self-start` so the sticky box is the
+                    header's own height rather than the grid row's, which
+                    would pin an invisible column beside every boat. */}
+                <h3
+                  id={`week-day-${day.dateIso}`}
+                  className="sticky top-(--chrome-h) z-10 self-start bg-background py-2"
+                >
                   <span className="sr-only">{day.label}</span>
                   <span
                     aria-hidden="true"
@@ -599,6 +692,8 @@ export function WeekBoard({
                           time={null}
                           mark={null}
                           runs={span.runsLabel}
+                          crewLine={null}
+                          hasUsualCrew={usualCrew !== null}
                           shopSlug={shopSlug}
                           canConfigure={canConfigure}
                           openKey={openKey}
@@ -617,6 +712,12 @@ export function WeekBoard({
                           time={entry.time}
                           mark={entry.mark}
                           runs={null}
+                          crewLine={
+                            isUsualCrew(entry.crew, usualCrew)
+                              ? null
+                              : { names: entry.crew.join(", ") }
+                          }
+                          hasUsualCrew={usualCrew !== null}
                           shopSlug={shopSlug}
                           canConfigure={canConfigure}
                           openKey={openKey}

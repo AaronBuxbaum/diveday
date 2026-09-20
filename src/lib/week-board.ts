@@ -119,6 +119,18 @@ export function weekIsWhollyUnpriced(board: {
  * already carry (issue 758 — the same call the stream made when it retired
  * its own success pill).
  *
+ * **The hull follows the site**, since #1923: the day stream that used to
+ * carry it is gone, and "which boat is this on" is a scheduling fact a
+ * scheduling surface may not drop. A shore or pool session says so in its
+ * place rather than leaving a gap — it has no hull to name, and that absence
+ * is itself the fact (`vessel` is whichever of the two the caller resolved).
+ * Who is *crewing* it is not here: that prints on its own line, and only on
+ * the departures where it differs from the board's habit (`src/lib/usual-crew.ts`).
+ *
+ * A sailed boat still says only that it sailed and how full it was. Its hull
+ * and its site are no longer decisions anyone can act on, and the row is being
+ * read rather than worked.
+ *
  * Every segment arrives already localised and already formatted for the shop's
  * zone; this decides only which ones there are and in what order, which is why
  * it can be a pure function with a test rather than four lines inside a page.
@@ -128,9 +140,11 @@ export function weekEntryMeta(entry: {
   /** The word for a boat already home — its own state outranks everything. */
   sailedLabel: string;
   siteName: string | null;
+  /** The hull's name, or the word for a shore or pool session. Null when neither is known. */
+  vessel?: string | null;
   seats: string;
   price: string | null;
 }): string {
   if (entry.status === "sailed") return [entry.sailedLabel, entry.seats].join(" · ");
-  return [entry.siteName, entry.seats, entry.price].filter(Boolean).join(" · ");
+  return [entry.siteName, entry.vessel, entry.seats, entry.price].filter(Boolean).join(" · ");
 }

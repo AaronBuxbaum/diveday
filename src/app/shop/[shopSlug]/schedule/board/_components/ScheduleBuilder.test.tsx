@@ -7,7 +7,6 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import type { MovePreflight } from "@/lib/move-preflight";
 import {
   type BuilderCopy,
-  type BuilderDay,
   type BuilderMoreOptions,
   type BuilderPriceInput,
   ScheduleBuilder,
@@ -195,7 +194,24 @@ const MORE: BuilderMoreOptions = {
   },
 };
 
-function baseTrip(overrides: Partial<BuilderDay["trips"][number]> = {}) {
+/** One departure as a spec writes it — the fields these fixtures have always set. */
+type FixtureTrip = {
+  id: string;
+  title: string;
+  dateIso: string;
+  startTime: string;
+  timeRange: string;
+  capacity: number;
+  booked: number;
+  courseTitle: string | null;
+  diveSiteName: string | null;
+  dayCount: number;
+  crew: string[];
+  priceCents: number | null;
+  rollCallOpen: { diveNumber: number; uncounted: number } | null;
+};
+
+function baseTrip(overrides: Partial<FixtureTrip> = {}): FixtureTrip {
   return {
     id: "trip-1",
     title: "Two-Tank Reef",
@@ -210,6 +226,77 @@ function baseTrip(overrides: Partial<BuilderDay["trips"][number]> = {}) {
     crew: ["Dana Reyes"],
     priceCents: 8500,
     rollCallOpen: null,
+    ...overrides,
+  };
+}
+
+/**
+ * A day of fixture departures, in the shape these specs have always written
+ * them. It was `BuilderDay` until the board lost its second composition
+ * (#1923); the type went with the stream and the fixtures stayed, because
+ * what a spec wants to say is still "on this day, these boats".
+ */
+type FixtureDay = {
+  dateIso: string;
+  label: string;
+  parts: { weekday: string; day: string; month: string };
+  trips: FixtureTrip[];
+  boatWarning?: string | null;
+};
+
+/**
+ * **The one board, built from a spec's own days.**
+ *
+ * Every flow below used to drive the vertical day stream, because the fleet
+ * ran one pixel under `xl` and that is what rendered there. The stream is gone
+ * and the week renders at every width, so the fixtures are converted rather
+ * than rewritten: a spec still says "a Saturday with these two boats" and gets
+ * the composition the product actually has.
+ *
+ * The day's `label` carries through untouched — it is what names the per-day
+ * "Add a departure on …" button, in the week exactly as in the stream, which
+ * is why most of these specs needed nothing but this.
+ */
+function weekFrom(days: FixtureDay[], overrides: Partial<BuilderWeek> = {}): BuilderWeek {
+  const first = days[0]?.dateIso ?? "2026-08-01";
+  return {
+    ariaLabel: "The week",
+    rangeLabel: "The week",
+    previousHref: `/shop/blue-mantis/schedule/board?week=${first}`,
+    nextHref: `/shop/blue-mantis/schedule/board?week=${first}`,
+    thisWeekHref: null,
+    allUnpriced: false,
+    nextDeparture: null,
+    seatTally: "",
+    asked: [],
+    askedCount: "0 days",
+    words: { previous: "Previous week", next: "Next week", thisWeek: "This week", today: "Today" },
+    days: days.map((day) => ({
+      dateIso: day.dateIso,
+      weekday: day.parts.weekday,
+      dayNumber: day.parts.day,
+      label: day.label,
+      isToday: false,
+      isPast: false,
+      boatWarning: day.boatWarning ?? null,
+      entries: day.trips.map((trip) => ({
+        tripId: trip.id,
+        dateIso: day.dateIso,
+        startTime: trip.startTime,
+        title: trip.title,
+        time: trip.timeRange.split(" – ")[0] ?? trip.timeRange,
+        mark: "reef" as const,
+        meta: [trip.diveSiteName, `${trip.booked} of ${trip.capacity}`].filter(Boolean).join(" · "),
+        seats: { booked: trip.booked, capacity: trip.capacity },
+        crew: trip.crew,
+        dayCount: trip.dayCount,
+        status: "upcoming" as const,
+        unpriced: trip.priceCents === null,
+        rollCallOpen: trip.rollCallOpen,
+        ref: `${trip.title}, ${day.label} ${trip.timeRange}`,
+      })),
+    })),
+    spans: [],
     ...overrides,
   };
 }
@@ -258,294 +345,8 @@ afterEach(() => {
   setMockPathname("/shop/blue-mantis/schedule/board");
 });
 
-/**
- * **The crew line is printed only where it is the exception** (issue #757). A
- * shop rosters the same two or three people onto nearly everything, so this
- * line used to print the identical names on ten of fourteen rows of the seeded
- * board.
- *
- * The standing "Usual crew: …" sentence that once stated those names above the
- * stream is gone — docs/design/surfaces.md listed it under the board's "Remove
- * first" from the day the week grid shipped, and the `20260908-one-hand` canvas
- * deletes it. What survives is the half that does the work: a row running the
- * board's usual crew says nothing about crew, and every row that still prints
- * one — above all the one with nobody on it — is by construction the exception
- * a manager is scanning for.
- */
-describe("ScheduleBuilder crew line", () => {
-  function board(trips: { id: string; crew: string[] }[]) {
-    const days: BuilderDay[] = [
-      {
-        dateIso: "2026-08-01",
-        label: "Sat, Aug 1",
-        parts: { weekday: "Sat", day: "1", month: "Aug" },
-        trips: trips.map((trip) => baseTrip(trip)),
-      },
-    ];
-    render(
-      <ScheduleBuilder
-        shopSlug="blue-mantis"
-        days={days}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-      />,
-    );
-  }
-
-  const USUAL = ["Keiko Tanaka", "Sal Moretti"];
-
-  it("drops the crew line from the rows that run with the board's usual crew", () => {
-    board([
-      { id: "t1", crew: USUAL },
-      { id: "t2", crew: USUAL },
-      { id: "t3", crew: USUAL },
-      { id: "t4", crew: ["Marcus Webb", "Sal Moretti"] },
-    ]);
-
-    // Nowhere on the three rows it speaks for — and, since the standing
-    // "Usual crew: …" sentence went, nowhere above them either: Keiko crews
-    // three of these four departures and her name is not on the screen at all.
-    expect(screen.queryByText("Crew: Keiko Tanaka, Sal Moretti")).toBeNull();
-    expect(screen.queryByText(/Keiko Tanaka/)).toBeNull();
-    // The one that differs still says who is on it.
-    expect(screen.getByText("Crew: Marcus Webb, Sal Moretti")).toBeInTheDocument();
-  });
-
-  /**
-   * The case this change must never cause: a departure with nobody on it is
-   * not "the usual crew", and hiding it behind a header would turn a staffing
-   * gap into a silent one.
-   */
-  it("never hides a departure with nobody assigned", () => {
-    board([
-      { id: "t1", crew: USUAL },
-      { id: "t2", crew: USUAL },
-      { id: "t3", crew: USUAL },
-      { id: "t4", crew: [] },
-    ]);
-
-    expect(screen.getByText("nobody yet")).toBeInTheDocument();
-  });
-
-  it("suppresses nothing when two crews split the board evenly", () => {
-    // 3/3 is not a majority, so there is no "usual" — and treating one of them
-    // as the default would silence half the rows.
-    board([
-      { id: "t1", crew: USUAL },
-      { id: "t2", crew: USUAL },
-      { id: "t3", crew: USUAL },
-      { id: "t4", crew: ["Marcus Webb", "Sal Moretti"] },
-      { id: "t5", crew: ["Marcus Webb", "Sal Moretti"] },
-      { id: "t6", crew: ["Marcus Webb", "Sal Moretti"] },
-    ]);
-
-    expect(screen.getAllByText("Crew: Keiko Tanaka, Sal Moretti")).toHaveLength(3);
-    expect(screen.getAllByText("Crew: Marcus Webb, Sal Moretti")).toHaveLength(3);
-  });
-
-  it("leaves a short board alone, where a per-row line is still the exception", () => {
-    board([
-      { id: "t1", crew: USUAL },
-      { id: "t2", crew: USUAL },
-    ]);
-
-    expect(screen.getAllByText("Crew: Keiko Tanaka, Sal Moretti")).toHaveLength(2);
-  });
-});
-
-describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
-  it("flags a trip with no price set and links to its Details form", () => {
-    const days: BuilderDay[] = [
-      {
-        dateIso: "2026-08-01",
-        label: "Sat, Aug 1",
-        parts: { weekday: "Sat", day: "1", month: "Aug" },
-        trips: [baseTrip({ id: "trip-unpriced", priceCents: null })],
-      },
-    ];
-    render(
-      <ScheduleBuilder
-        shopSlug="blue-mantis"
-        days={days}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-      />,
-    );
-
-    const flag = screen.getByRole("link", { name: /set a price for/i });
-    expect(flag).toHaveTextContent("No price set");
-    expect(flag).toHaveAttribute("href", "/shop/blue-mantis/trips/trip-unpriced#details");
-  });
-
-  it("does not flag a trip that already has a price", () => {
-    const days: BuilderDay[] = [
-      {
-        dateIso: "2026-08-01",
-        label: "Sat, Aug 1",
-        parts: { weekday: "Sat", day: "1", month: "Aug" },
-        trips: [baseTrip({ id: "trip-priced", priceCents: 8500 })],
-      },
-    ];
-    render(
-      <ScheduleBuilder
-        shopSlug="blue-mantis"
-        days={days}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-      />,
-    );
-
-    expect(screen.queryByText("No price set")).toBeNull();
-  });
-
-  it("collapses the pill into one notice when every departure in the window is unpriced", () => {
-    // A brand-new board (or an imported season) shares the fact on every row —
-    // it moves up to one group-level notice instead of wallpapering the list
-    // (design/principles.md #9).
-    const days: BuilderDay[] = [
-      {
-        dateIso: "2026-08-01",
-        label: "Sat, Aug 1",
-        parts: { weekday: "Sat", day: "1", month: "Aug" },
-        trips: [baseTrip({ id: "t1", priceCents: null }), baseTrip({ id: "t2", priceCents: null })],
-      },
-      {
-        dateIso: "2026-08-02",
-        label: "Sun, Aug 2",
-        parts: { weekday: "Sun", day: "2", month: "Aug" },
-        trips: [baseTrip({ id: "t3", priceCents: null })],
-      },
-    ];
-    render(
-      <ScheduleBuilder
-        shopSlug="blue-mantis"
-        days={days}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-      />,
-    );
-
-    expect(screen.getByText(/None of these departures has a price yet/)).toBeInTheDocument();
-    expect(screen.queryByText("No price set")).toBeNull();
-  });
-
-  it("keeps per-row pills while the fact still distinguishes rows (some priced, some not)", () => {
-    const days: BuilderDay[] = [
-      {
-        dateIso: "2026-08-01",
-        label: "Sat, Aug 1",
-        parts: { weekday: "Sat", day: "1", month: "Aug" },
-        trips: [
-          baseTrip({ id: "t1", priceCents: null }),
-          baseTrip({ id: "t2", priceCents: null }),
-          baseTrip({ id: "t3", priceCents: null }),
-          baseTrip({ id: "t4", priceCents: 8500 }),
-        ],
-      },
-    ];
-    render(
-      <ScheduleBuilder
-        shopSlug="blue-mantis"
-        days={days}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-      />,
-    );
-
-    expect(screen.getAllByText("No price set")).toHaveLength(3);
-    expect(screen.queryByText(/None of these departures/)).toBeNull();
-  });
-});
-
-describe("ScheduleBuilder wind line (issue #722)", () => {
-  function renderDay(trips: ReturnType<typeof baseTrip>[]) {
-    const days: BuilderDay[] = [
-      {
-        dateIso: "2026-08-01",
-        label: "Sat, Aug 1",
-        parts: { weekday: "Sat", day: "1", month: "Aug" },
-        trips,
-      },
-    ];
-    render(
-      <ScheduleBuilder
-        shopSlug="blue-mantis"
-        days={days}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-      />,
-    );
-  }
-
-  it("shows the server-formatted wind numbers when the row carries them", () => {
-    renderDay([baseTrip({ id: "trip-wind", windSummary: "18 kt NE (gusts 22 kt)" })]);
-
-    expect(screen.getByText("Wind: 18 kt NE (gusts 22 kt)")).toBeInTheDocument();
-  });
-
-  it("renders no wind line when the row has no forecast", () => {
-    renderDay([baseTrip({ id: "trip-no-wind", windSummary: null })]);
-
-    expect(screen.queryByText(/^Wind:/)).toBeNull();
-  });
-});
-
 describe("ScheduleBuilder add panel: price, and options fetched on open", () => {
-  const days: BuilderDay[] = [
+  const days: FixtureDay[] = [
     {
       dateIso: "2026-08-01",
       label: "Sat, Aug 1",
@@ -558,7 +359,7 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
     return render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
-        days={days}
+        week={weekFrom(days)}
         loadOptions={loadOptions}
         loadMovePreflight={loadMovePreflight}
         price={PRICE}
@@ -694,7 +495,7 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
  * course, or a site asks for no pattern at all.
  */
 describe("ScheduleBuilder add panel: the weekday pattern", () => {
-  const days: BuilderDay[] = [
+  const days: FixtureDay[] = [
     {
       dateIso: "2026-08-01",
       label: "Sat, Aug 1",
@@ -725,7 +526,7 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
     return render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
-        days={days}
+        week={weekFrom(days)}
         loadOptions={loadOptions}
         loadMovePreflight={loadMovePreflight}
         loadPattern={loadPattern}
@@ -817,168 +618,9 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
   });
 });
 
-describe("ScheduleBuilder row status slot — one grammar (issue 758)", () => {
-  it("states a full boat in the same tabular text as every other count, not a success pill", () => {
-    const days: BuilderDay[] = [
-      {
-        dateIso: "2026-08-01",
-        label: "Sat, Aug 1",
-        parts: { weekday: "Sat", day: "1", month: "Aug" },
-        trips: [baseTrip({ id: "trip-full", capacity: 6, booked: 6 })],
-      },
-    ];
-    render(
-      <ScheduleBuilder
-        shopSlug="blue-mantis"
-        days={days}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-      />,
-    );
-
-    // A sold-out boat is the *expected* good outcome of a departure, not an
-    // exception needing a staffer — so it keeps full-strength ink and weight
-    // and gives up the pill, which was spending the currency the board's real
-    // alerts use (design/principles.md #9, and #3's settled "good news is not
-    // a row kind"). It used to be the single loudest mark on a board carrying
-    // seven amber warnings.
-    const count = screen.getByText("6/6");
-    expect(count.className).not.toContain("bg-success-tint");
-    expect(count.className).toContain("font-medium");
-    expect(count.className).toContain("text-foreground");
-    expect(count.className).toContain("tabular-nums");
-  });
-
-  it("keeps the count on a flagged row, and renders one pill rather than two", () => {
-    const days: BuilderDay[] = [
-      {
-        dateIso: "2026-08-01",
-        label: "Sat, Aug 1",
-        parts: { weekday: "Sat", day: "1", month: "Aug" },
-        trips: [
-          baseTrip({ id: "trip-unpriced", capacity: 12, booked: 5, priceCents: null }),
-          // A second priced row keeps `allUnpriced` false, so the per-row pill
-          // is the thing under test rather than the group-level notice.
-          baseTrip({ id: "trip-priced", capacity: 8, booked: 2 }),
-        ],
-      },
-    ];
-    render(
-      <ScheduleBuilder
-        shopSlug="blue-mantis"
-        days={days}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-      />,
-    );
-
-    // The flag names work to do; the count is still the row's own fact, so a
-    // flagged row is not the one row on the board that cannot say how full it
-    // is. One pill, one count — the same two-part shape every row wears.
-    expect(screen.getByRole("link", { name: /set a price for/i })).toBeInTheDocument();
-    expect(screen.getByText("5/12").className).toContain("text-muted");
-  });
-
-  it("lets an open roll call outrank the price flag instead of stacking two pills", () => {
-    const days: BuilderDay[] = [
-      {
-        dateIso: "2026-08-01",
-        label: "Sat, Aug 1",
-        parts: { weekday: "Sat", day: "1", month: "Aug" },
-        trips: [
-          baseTrip({
-            id: "trip-back",
-            capacity: 10,
-            booked: 9,
-            priceCents: null,
-            rollCallOpen: { diveNumber: 2, uncounted: 3 },
-          }),
-          baseTrip({ id: "trip-priced", capacity: 8, booked: 2 }),
-        ],
-      },
-    ];
-    render(
-      <ScheduleBuilder
-        shopSlug="blue-mantis"
-        days={days}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-      />,
-    );
-
-    // The boat is back with somebody uncounted. A departure that has already
-    // sailed cannot be booked, so its missing price is not this morning's
-    // problem — a second pill beside the loudest thing the board can say only
-    // dilutes it.
-    expect(screen.getByRole("link", { name: /finish the dive 2 roll call/i })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /set a price for/i })).toBeNull();
-  });
-
-  it("renders the count as quiet muted text — not a badge — while seats remain", () => {
-    const days: BuilderDay[] = [
-      {
-        dateIso: "2026-08-01",
-        label: "Sat, Aug 1",
-        parts: { weekday: "Sat", day: "1", month: "Aug" },
-        trips: [baseTrip({ id: "trip-open", capacity: 6, booked: 3 })],
-      },
-    ];
-    render(
-      <ScheduleBuilder
-        shopSlug="blue-mantis"
-        days={days}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-      />,
-    );
-
-    // Counts are facts, not alerts (design/principles.md #9): a routine 3/6
-    // reads in the muted register, and no count on this board wears a pill.
-    const count = screen.getByText("3/6");
-    expect(count.className).toContain("text-muted");
-    expect(count.className).not.toContain("bg-primary-tint");
-  });
-});
-
 describe("ScheduleBuilder open-panel reset on revisit", () => {
   it("closes an expanded add/move/copy panel on a pathname change, instead of resurfacing it with stale defaults", async () => {
-    const days: BuilderDay[] = [
+    const days: FixtureDay[] = [
       {
         dateIso: "2026-08-01",
         label: "Sat, Aug 1",
@@ -989,7 +631,7 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
     const { rerender } = render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
-        days={days}
+        week={weekFrom(days)}
         loadOptions={loadOptions}
         loadMovePreflight={loadMovePreflight}
         price={PRICE}
@@ -1016,7 +658,7 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
     rerender(
       <ScheduleBuilder
         shopSlug="blue-mantis"
-        days={days}
+        week={weekFrom(days)}
         loadOptions={loadOptions}
         loadMovePreflight={loadMovePreflight}
         price={PRICE}
@@ -1036,7 +678,7 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
 });
 
 describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
-  const days: BuilderDay[] = [
+  const days: FixtureDay[] = [
     {
       dateIso: "2026-08-01",
       label: "Sat, Aug 1",
@@ -1105,7 +747,7 @@ describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
 
 describe("ScheduleBuilder panel focus management (accessibility audit §3)", () => {
   it("moves focus into the add panel's first field on open, and back to the toggle on cancel", async () => {
-    const days: BuilderDay[] = [
+    const days: FixtureDay[] = [
       {
         dateIso: "2026-08-01",
         label: "Sat, Aug 1",
@@ -1116,7 +758,7 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
     render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
-        days={days}
+        week={weekFrom(days)}
         loadOptions={loadOptions}
         loadMovePreflight={loadMovePreflight}
         price={PRICE}
@@ -1141,7 +783,7 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
   });
 
   it("moves focus into the move panel's date field on open, and back to the row's actions control on cancel", async () => {
-    const days: BuilderDay[] = [
+    const days: FixtureDay[] = [
       {
         dateIso: "2026-08-01",
         label: "Sat, Aug 1",
@@ -1152,7 +794,7 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
     render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
-        days={days}
+        week={weekFrom(days)}
         loadOptions={loadOptions}
         loadMovePreflight={loadMovePreflight}
         price={PRICE}
@@ -1180,209 +822,8 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
   });
 });
 
-describe("ScheduleBuilder row actions disclosure (design principles #8)", () => {
-  const days: BuilderDay[] = [
-    {
-      dateIso: "2026-08-01",
-      label: "Sat, Aug 1",
-      parts: { weekday: "Sat", day: "1", month: "Aug" },
-      trips: [baseTrip(), baseTrip({ id: "trip-2", title: "Night Dive" })],
-    },
-  ];
-
-  function renderBoard() {
-    return render(
-      <ScheduleBuilder
-        shopSlug="blue-mantis"
-        days={days}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-      />,
-    );
-  }
-
-  it("keeps the board quiet at rest: no per-verb buttons until a row is asked", () => {
-    renderBoard();
-
-    expect(screen.getAllByRole("button", { name: /^Move, copy, or remove / })).toHaveLength(2);
-    expect(screen.queryByRole("button", { name: /^Move Two-Tank/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^Copy / })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^Remove / })).toBeNull();
-  });
-
-  it("opens the list with focus on its first action, and Escape hands focus back", async () => {
-    renderBoard();
-
-    const trigger = screen.getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ });
-    await userEvent.click(trigger);
-    expect(trigger).toHaveAttribute("aria-expanded", "true");
-
-    const move = screen.getByRole("button", { name: /^Move Two-Tank Reef/ });
-    expect(move).toHaveFocus();
-
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() =>
-      expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull(),
-    );
-    expect(trigger).toHaveFocus();
-  });
-
-  it("dismisses on a click anywhere else, and only one row's list is ever open", async () => {
-    renderBoard();
-
-    await userEvent.click(
-      screen.getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
-    );
-    expect(screen.getByRole("button", { name: /^Move Two-Tank Reef/ })).toBeInTheDocument();
-
-    // Opening the other row's list closes this one — same exclusivity the
-    // panels already have.
-    await userEvent.click(
-      screen.getByRole("button", { name: /^Move, copy, or remove Night Dive/ }),
-    );
-    await waitFor(() =>
-      expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull(),
-    );
-    expect(screen.getByRole("button", { name: /^Move Night Dive/ })).toBeInTheDocument();
-
-    // A stray click on the page is a dismissal, never swallowed work — the
-    // list holds no typed state.
-    await userEvent.click(screen.getByRole("heading", { name: "Sat, Aug 1" }));
-    await waitFor(() =>
-      expect(screen.queryByRole("button", { name: /^Move Night Dive/ })).toBeNull(),
-    );
-  });
-
-  it("choosing an action closes the list and opens that action's panel", async () => {
-    renderBoard();
-
-    await userEvent.click(
-      screen.getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: /^Copy Two-Tank Reef/ }));
-
-    expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull();
-    expect(screen.getByLabelText(COPY.copyTo)).toHaveFocus();
-  });
-});
-
-describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
-  const returnedDay = (
-    rollCallOpen: { diveNumber: number; uncounted: number } | null,
-  ): BuilderDay[] => [
-    {
-      dateIso: "2026-07-31",
-      label: "Fri, Jul 31",
-      parts: { weekday: "Fri", day: "31", month: "Jul" },
-      trips: [baseTrip({ id: "trip-returned", rollCallOpen })],
-    },
-  ];
-
-  function renderBoard(days: BuilderDay[], actionOverrides: Partial<typeof actions> = {}) {
-    return render(
-      <ScheduleBuilder
-        shopSlug="blue-mantis"
-        days={days}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={{ ...actions, ...actionOverrides }}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-      />,
-    );
-  }
-
-  it("flags a returned departure whose head count is still open, linking to that checkpoint", () => {
-    renderBoard(returnedDay({ diveNumber: 2, uncounted: 3 }));
-
-    const flag = screen.getByRole("link", { name: /finish the dive 2 roll call for/i });
-    expect(flag).toHaveTextContent("Roll call · 3 not counted");
-    // Straight to the open checkpoint, not the manifest's default departure tab.
-    expect(flag).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/trips/trip-returned/manifest?checkpoint=after_dive_2",
-    );
-    // Says why a boat that already sailed is still sitting on the board.
-    expect(
-      screen.getByText("Back at the dock with the dive 2 roll call still open."),
-    ).toBeInTheDocument();
-  });
-
-  it("never carries the danger tone on hue alone", () => {
-    const { container } = renderBoard(returnedDay({ diveNumber: 1, uncounted: 1 }));
-
-    // Badge's own aria-hidden mark for the three status tones — a colorblind
-    // scan gets the mark before it gets to the words (design/principles.md #6).
-    const badge = container.querySelector("a span.bg-danger-tint");
-    expect(badge).not.toBeNull();
-    expect(badge?.querySelector("svg[aria-hidden='true']")).not.toBeNull();
-  });
-
-  it("confirms a removal in a panel below the row, and only submits on the second press", async () => {
-    // The confirmation used to be an `InlineConfirm` message card rendered
-    // *inside* the inline Move/Copy/Remove cluster: arming it inflated a
-    // padded, bordered box into a button row and shoved the badges and every
-    // row beneath it around while the staffer read the sentence. It is a panel
-    // now, like Move and Copy, and still two deliberate presses.
-    const remove = vi.fn();
-    renderBoard(returnedDay(null), { remove });
-
-    const row = screen.getByRole("listitem");
-    await userEvent.click(within(row).getByRole("button", { name: /^Move, copy, or remove / }));
-    await userEvent.click(within(row).getByRole("button", { name: /^Remove / }));
-
-    // Scoped to the board rather than to the row as of issue #1309: the panel
-    // is rendered once for the whole board, outside both compositions, so that
-    // crossing the `xl` breakpoint cannot hide it. That is more of what this
-    // test already said it was — "a panel now, like Move and Copy" — not less.
-    const panel = screen.getByRole("alert");
-    expect(panel).toHaveTextContent("Take “Two-Tank Reef” off the board for good?");
-    expect(row.contains(panel)).toBe(false);
-    // Arming submits nothing at all.
-    expect(remove).not.toHaveBeenCalled();
-
-    await userEvent.click(screen.getByRole("button", { name: "Never mind" }));
-    expect(screen.queryByRole("alert")).toBeNull();
-    expect(remove).not.toHaveBeenCalled();
-  });
-
-  it("hides the actions control on a returned row, whose mutations all refuse", () => {
-    renderBoard(returnedDay({ diveNumber: 1, uncounted: 2 }));
-
-    expect(screen.queryByRole("button", { name: /^Move, copy, or remove / })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^Move / })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^Copy / })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^Remove / })).toBeNull();
-  });
-
-  it("says nothing on an ordinary upcoming departure", () => {
-    renderBoard(returnedDay(null));
-
-    expect(screen.queryByText(/not counted/)).toBeNull();
-    expect(screen.queryByText(/roll call still open/)).toBeNull();
-    expect(
-      screen.getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
-    ).toBeInTheDocument();
-  });
-});
-
 describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip-create-form)", () => {
-  const days: BuilderDay[] = [
+  const days: FixtureDay[] = [
     {
       dateIso: "2026-08-01",
       label: "Sat, Aug 1",
@@ -1395,7 +836,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     return render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
-        days={days}
+        week={weekFrom(days)}
         loadOptions={loadOptions}
         loadMovePreflight={loadMovePreflight}
         price={PRICE}
@@ -1611,7 +1052,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
  * carry. Both locales, and both sides of the plural.
  */
 describe("ScheduleBuilder request plan: copy composed on the client", () => {
-  const days: BuilderDay[] = [
+  const days: FixtureDay[] = [
     {
       dateIso: "2026-08-01",
       label: "Sat, Aug 1",
@@ -1656,7 +1097,7 @@ describe("ScheduleBuilder request plan: copy composed on the client", () => {
       <ScheduleBuilder
         shopSlug="blue-mantis"
         locale={locale}
-        days={days}
+        week={weekFrom(days)}
         loadOptions={loadOptions}
         loadMovePreflight={loadMovePreflight}
         price={PRICE}
@@ -1761,6 +1202,9 @@ describe("ScheduleBuilder week board", () => {
       time: "7:00 AM",
       meta: "10 of 12 · $95",
       seats: { booked: 10, capacity: 12 },
+      // Unstaffed by default, which is the loud case: a factory that defaulted
+      // to a crew would let a row quietly stop printing its gap.
+      crew: [] as string[],
       dayCount: 1,
       status: "upcoming" as const,
       unpriced: false,
@@ -1823,18 +1267,9 @@ describe("ScheduleBuilder week board", () => {
   }
 
   function board(weekProps: BuilderWeek | null, canConfigure = true) {
-    const days: BuilderDay[] = [
-      {
-        dateIso: "2026-08-27",
-        label: "Thu, Aug 27",
-        parts: { weekday: "Thu", day: "27", month: "Aug" },
-        trips: [baseTrip()],
-      },
-    ];
     return render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
-        days={days}
         loadOptions={loadOptions}
         loadMovePreflight={loadMovePreflight}
         price={PRICE}
@@ -1854,25 +1289,27 @@ describe("ScheduleBuilder week board", () => {
   /** The one grid on the page, whatever else shares its words. */
   const grid = () => screen.getByRole("region", { name: "The week" });
 
-  it("declares the xl floor on both compositions, so only one is ever on screen", () => {
-    const { container } = board(week());
+  it("is the board's one reading, at every width, with no stream beneath it", () => {
+    // **The point of #1923.** The board composed the same departures twice —
+    // this grid from 1280 up, a vertical day stream below it — and a
+    // breakpoint decided which one a reader, a test or a screen reader got.
+    // A day is a row on a phone and a row on a desk, so there is no floor to
+    // declare any more.
+    //
+    // Exact class tokens, never a substring: `toContain("xl:block")` is
+    // satisfied by `2xl:block`, so a floor could come back under a different
+    // name with a looser assertion still green.
+    const { container } = board(
+      weekWithThursday([weekEntry({ tripId: "t1", dateIso: "2026-08-27" })]),
+    );
 
-    // **Exact class tokens, never a substring.** `toContain("xl:block")` is
-    // satisfied by `2xl:block`, so the floor could have moved from 1280 to
-    // 1536 with this test still green. jsdom evaluates no media query, so
-    // *where* the floor sits is pinned in e2e (schedule-builder.spec.ts, "the
-    // board is the day stream below 1280px"); what this pins is that the two
-    // compositions declare complementary halves of one breakpoint and can
-    // never be on screen together.
-    expect(grid().classList.contains("hidden")).toBe(true);
-    expect(grid().classList.contains("xl:block")).toBe(true);
-    // … and the stream stops exactly where it starts. Without the second
-    // half the two would render at once at desktop, which is the whole
-    // failure the floor exists to prevent.
-    const stream = container.querySelector("[data-day-stream]");
-    expect(stream).not.toBeNull();
-    expect(stream?.classList.contains("xl:hidden")).toBe(true);
-    expect(stream?.textContent).toContain("Two-Tank Reef");
+    expect(grid().classList.contains("hidden")).toBe(false);
+    expect(grid().classList.contains("xl:block")).toBe(false);
+    // And the composition it replaced leaves no second copy of the same
+    // departure behind it — which is the regression a deletion this size is
+    // most likely to leave.
+    expect(container.querySelector("[data-day-stream]")).toBeNull();
+    expect(screen.getAllByRole("link", { name: "Two-Tank Reef" })).toHaveLength(1);
   });
 
   it("renders no grid at all on a board with nothing upcoming", () => {
@@ -2365,6 +1802,93 @@ describe("ScheduleBuilder week board", () => {
     const list = within(grid()).getByRole("list", { name: "Day 27" });
     expect(within(list).getByRole("link", { name: "Two-Tank Reef" })).toBeInTheDocument();
   });
+
+  /**
+   * **The crew answer, which the week did not have** (#1923).
+   *
+   * A stream row printed who was crewing a departure and a week row printed
+   * nothing, so deleting the stream would have taken the question a manager
+   * opens the board on a Thursday to answer — *which boat has no divemaster* —
+   * off the board entirely, with nothing going red for it.
+   *
+   * The rule is `src/lib/usual-crew.ts` and is tested there. What these pin is
+   * that the grid asks it, and asks it of the week it is drawing.
+   */
+  describe("the week says who is crewing, and only where it differs", () => {
+    /** Four boats crewed alike, which is a habit by both thresholds. */
+    const usualWeek = (odd: Partial<WeekEntry>[]) =>
+      weekWithThursday([
+        weekEntry({ tripId: "u1", dateIso: "2026-08-27", crew: ["Keiko Tanaka"] }),
+        weekEntry({ tripId: "u2", dateIso: "2026-08-27", crew: ["Keiko Tanaka"] }),
+        weekEntry({ tripId: "u3", dateIso: "2026-08-27", crew: ["Keiko Tanaka"] }),
+        weekEntry({ tripId: "u4", dateIso: "2026-08-27", crew: ["Keiko Tanaka"] }),
+        ...odd.map((over, index) =>
+          weekEntry({ tripId: `odd-${index}`, dateIso: "2026-08-27", ...over }),
+        ),
+      ]);
+
+    it("keeps quiet on the rows that run with the week's usual crew", () => {
+      board(usualWeek([{ crew: ["Sal Moretti"] }]));
+
+      // One line, not five. The exception is the whole point of printing any.
+      expect(within(grid()).getAllByText(/^Crew:/)).toHaveLength(1);
+      expect(within(grid()).getByText("Crew: Sal Moretti")).toBeInTheDocument();
+    });
+
+    it("prints every row's crew on a week that has no usual crew", () => {
+      // Two departures is not a habit (`mostCommonCrew` wants three and a
+      // majority), so there is nothing for a row to be an exception to and
+      // every row states its own.
+      board(
+        weekWithThursday([
+          weekEntry({ tripId: "a", dateIso: "2026-08-27", crew: ["Keiko Tanaka"] }),
+          weekEntry({ tripId: "b", dateIso: "2026-08-27", crew: ["Sal Moretti"] }),
+        ]),
+      );
+
+      expect(within(grid()).getByText("Crew: Keiko Tanaka")).toBeInTheDocument();
+      expect(within(grid()).getByText("Crew: Sal Moretti")).toBeInTheDocument();
+    });
+
+    it("shouts about a departure nobody is on, even where there is a habit", () => {
+      // The one case that must never be silenced by a usual crew: an empty
+      // assignment can neither win the vote nor pass as usual, because this
+      // gap is what the line exists to show.
+      board(usualWeek([{ crew: [] }]));
+
+      const gap = within(grid()).getByText("nobody yet");
+      expect(gap).toBeInTheDocument();
+      // In words and in warning ink, never hue alone.
+      expect(gap).toHaveClass("text-warning");
+    });
+
+    it("names several crew in the shop's own order", () => {
+      board(
+        weekWithThursday([
+          weekEntry({ tripId: "a", dateIso: "2026-08-27", crew: ["Keiko Tanaka", "Sal Moretti"] }),
+        ]),
+      );
+
+      // One line, the order it was given — lead first is the shop's fact, not
+      // the query's accident, which is why `isUsualCrew` compares it.
+      expect(within(grid()).getByText("Crew: Keiko Tanaka, Sal Moretti")).toBeInTheDocument();
+    });
+
+    it("says nothing about crew on a course bar, which already names its teacher", () => {
+      // A span's own meta carries `instructorName`. A crew line beside it
+      // would say one fact twice on the one shape that has no hull to be
+      // about — principle 9, and the reason spans pass `crewLine={null}`.
+      board(
+        week({
+          spans: [weekSpan({ tripId: "course-1", meta: "4 of 5 · $595 · Marcus Webb" })],
+          days: week().days.map((day) => ({ ...day, entries: [] })),
+        }),
+      );
+
+      expect(within(grid()).getByText("4 of 5 · $595 · Marcus Webb")).toBeInTheDocument();
+      expect(within(grid()).queryByText(/^Crew:/)).toBeNull();
+    });
+  });
 });
 
 /**
@@ -2378,7 +1902,7 @@ describe("ScheduleBuilder week board", () => {
  * consequences, and nothing at all when the read fails.
  */
 describe("ScheduleBuilder move impact preview (issue #1203)", () => {
-  const days: BuilderDay[] = [
+  const days: FixtureDay[] = [
     {
       dateIso: "2026-08-01",
       label: "Sat, Aug 1",
@@ -2391,7 +1915,7 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     return render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
-        days={days}
+        week={weekFrom(days)}
         loadOptions={loadOptions}
         loadMovePreflight={loadMovePreflight}
         price={PRICE}
@@ -2613,7 +2137,7 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
    * answer — the bug a single module-level cache would introduce.
    */
   it("asks again for a different departure", async () => {
-    const twoDays: BuilderDay[] = [
+    const twoDays: FixtureDay[] = [
       {
         ...days[0],
         trips: [baseTrip(), baseTrip({ id: "trip-2", title: "Night Dive" })],
@@ -2622,7 +2146,7 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
-        days={twoDays}
+        week={weekFrom(twoDays)}
         loadOptions={loadOptions}
         loadMovePreflight={loadMovePreflight}
         price={PRICE}
@@ -2818,7 +2342,7 @@ describe("the kind of day a season offers", () => {
     return render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
-        days={days}
+        week={weekFrom(days)}
         loadOptions={withSeasons}
         loadMovePreflight={loadMovePreflight}
         price={PRICE}

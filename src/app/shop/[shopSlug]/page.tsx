@@ -33,6 +33,7 @@ import { shopFirstBooking } from "@/db/first-booking";
 import { listFreshFormDrafts } from "@/db/form-drafts";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
 import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
+import { canPersonViewShopReports, getMonthlyReport } from "@/db/reporting";
 import { seasonScale } from "@/db/season-scale";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -48,9 +49,8 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
-import { canViewShopReports } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { assembleEveningClose } from "@/lib/closeout";
+import { assembleEveningClose, dayTakings } from "@/lib/closeout";
 import { dayStripGeometry, dayStripTicks, dayStripWindow } from "@/lib/day-strip";
 import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
 import {
@@ -66,6 +66,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { FIRST_RUN_STEP_COUNT } from "@/lib/onboarding";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { recapAutoSendAt } from "@/lib/recap-schedule";
+import { summarizeMonth } from "@/lib/reporting";
 import { seasonStartInstant } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
 import { skyReadingFor } from "@/lib/sky-scheme";
@@ -374,6 +375,23 @@ async function TodayBody({
   // filters to boat work and badges the boat they crew; an instructor's leads
   // with their sessions. It never re-orders the spine — clock order wins.
   const lens = roleLensFor(session.user.roles);
+  // **Who on this page may read the shop's money**, asked once, of the
+  // database (issue #1930, security review F1).
+  //
+  // Three things here are gated on it: the owed-refund and stuck-payment rows
+  // in the Today queue, the same rows inside the close-out, and the day's
+  // takings below. All three read `canPersonViewShopReports` now; two of them
+  // read `canViewShopReports(session.user.roles)` until this change, and that
+  // is the **JWT's** roles — snapshotted once at sign-in and never re-derived
+  // (`src/lib/auth.ts`, `input: false`). A manager demoted to captain this
+  // morning still passes `requireStaffSession` as staff, so the stale claim
+  // kept handing them owed-refund rows naming a diver and an amount for the
+  // life of the session. The live read closes that window, the way export and
+  // import already close theirs.
+  //
+  // One extra bounded read — three indexed selects — on every shop-home
+  // render, which is the price of a money gate that revokes.
+  const canReadShopMoney = await canPersonViewShopReports(db, shop.id, session.user.personId);
   // One readiness pass for the whole horizon, shared by both shop-day reads
   // below. It costs about ten queries; running it twice would double the
   // page's entire database bill for one collapsed disclosure.
@@ -388,8 +406,8 @@ async function TodayBody({
     t,
     locale,
     // Stuck Stripe operations and failed photo deletions are owner/manager
-    // chores — same gate as Reports (task 157).
-    canViewShopReports(session.user.roles),
+    // chores — same gate as Reports (task 157), read live above.
+    canReadShopMoney,
     evidence,
     shop.diversPerDivemaster,
     session.user.roles,
@@ -432,10 +450,15 @@ async function TodayBody({
     now,
     t,
     locale,
-    canViewShopReports(session.user.roles),
+    canReadShopMoney,
     actions,
   );
   const eveningClose = assembleEveningClose(closeout.state.departures, now);
+  // **The shop's own calendar day**, as the two UTC instants that bracket it.
+  // Four readers below want it — the first-boat-ever question, the day strip's
+  // window and ticks, and the day's takings — and it is the host's day for
+  // none of them, so it is computed once here rather than per caller.
+  const dayBounds = shopDayBounds(now, shop.timezone);
   // The day's whole board, clock order — the strip's marks and the count under
   // the date both read it.
   const dayDepartures = [...closeout.state.departures].sort(
@@ -464,8 +487,7 @@ async function TodayBody({
       : [new Map(), false];
   // The once-ever wording, asked for only in the moment it could apply.
   const firstBoatEver =
-    eveningClose.allHome &&
-    !(await shopHasSailedBefore(db, shop.id, shopDayBounds(now, shop.timezone).from));
+    eveningClose.allHome && !(await shopHasSailedBefore(db, shop.id, dayBounds.from));
   // Real shops only — the demo shop already teaches its own tour via the
   // role switcher banner, and a dismissal there would be meaningless (every
   // demo visit signs in as a fresh, credential-shared session).
@@ -614,8 +636,39 @@ async function TodayBody({
   // scoped to the operational window, which begins at `now` — so at noon it
   // holds the afternoon and the morning's two boats have left it, and a strip
   // drawn from it would show an empty morning to a shop that ran one. The
-  // close-out's list is the day's own, whole, from midnight.
-  const dayBounds = shopDayBounds(now, shop.timezone);
+  // close-out's list is the day's own, whole, from midnight — which is what
+  // `dayBounds` above brackets.
+  //
+  // **What today made** — the evening's one money reading (issue #1930; ADR
+  // 20260919-one-idea, decision I · Tide: "money is what the day made"). It
+  // renders above the closing block and inside nothing; `DayTakings.tsx`
+  // carries the placement and its decision.
+  //
+  // **The month's own derivation, over the day's bounds.** `getMonthlyReport`
+  // is window-shaped — nothing in it is month-specific but its name — and it
+  // anchors every figure to `trips.startsAt`, so the day is the same query
+  // with `shopDayBounds` in place of `shopMonthBounds`. That is deliberate
+  // rather than convenient: a second derivation would let tonight's figure
+  // and the same day inside `/reports` disagree, and which of them a shop
+  // then believed would be a coin toss. `reporting.test.ts` pins the two
+  // together by summing the days of a month against the month itself.
+  //
+  // **Gated before it is read.** `canReadShopMoney` is the live role read
+  // resolved at the top of this page, so a reader who may not have the number
+  // never causes the query that would produce it — and the whole thing is
+  // skipped until the day is closing, so the ordinary morning render pays
+  // nothing for it.
+  const dayTakingsReading =
+    eveningClose.closing && canReadShopMoney
+      ? dayTakings(
+          summarizeMonth(
+            await getMonthlyReport(db, shop.id, dayBounds.from, dayBounds.to, {
+              currency: shop.currency,
+              timeZone: shop.timezone,
+            }),
+          ),
+        )
+      : null;
   const stripMarks = dayDepartures.map((departure) => departure.startsAt);
   // Not midnight to midnight: a whole calendar day spends half its width on
   // night, which flattens the arc to a wire and crowds every boat into the
@@ -755,6 +808,7 @@ async function TodayBody({
   );
   const evening: EveningReading = {
     close: eveningClose,
+    takings: dayTakingsReading,
     headCountCloses,
     recapEditors,
     canOpenLog,

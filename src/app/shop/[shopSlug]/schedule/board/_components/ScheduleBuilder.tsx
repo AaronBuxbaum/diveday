@@ -1,21 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { applyFormFields } from "@/components/apply-form-fields";
 import { FormDraft, type FormDraftActions, type FormDraftProps } from "@/components/FormDraft";
 import { RepeatFields } from "@/components/RepeatFields";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFields";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
 import { controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
-import { StatusMark } from "@/components/ui/StatusMark";
-import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -25,83 +20,9 @@ import {
   MIN_DECISION_HOURS,
   MINIMUM_SEATS_DECISION_HOURS_DEFAULT,
 } from "@/lib/minimum-seats";
-import { MOTION_STAGGER_MS, motionMs } from "@/lib/motion";
 import type { MovePreflight, MovePreflightSection } from "@/lib/move-preflight";
 import type { BuilderWeek, WeekDeparture } from "./WeekBoard";
-import { AllUnpricedNotice, WeekBoard } from "./WeekBoard";
-
-/** One departure as the board hands it to the builder, already shop-local. */
-export type BuilderTrip = {
-  id: string;
-  title: string;
-  /**
-   * The assigned hull's id, for the board's per-boat double-booking check
-   * (`overlappingBoatIds`). `boatName` below is what a card renders; this is
-   * what identifies the vessel, since two hulls may share a name.
-   */
-  boatId?: string | null;
-  /** `YYYY-MM-DD` in the shop's timezone — the grouping key and the date input's value. */
-  dateIso: string;
-  /** `HH:mm` in the shop's timezone. */
-  startTime: string;
-  /** Preformatted for the shop's locale; the client never re-formats a time. */
-  timeRange: string;
-  capacity: number;
-  booked: number;
-  courseTitle: string | null;
-  diveSiteName: string | null;
-  /** A multi-day course moves as a block; the builder says so before it does. */
-  dayCount: number;
-  /** Who is crewing it — the board's other question, answered in place. */
-  crew: string[];
-  /**
-   * Null when no price has ever been set. A builder-created trip publishes
-   * to the public schedule the moment it's on the board, price or not, and
-   * the builder never said so (task 150, UX persona lens 17) — flagged here
-   * so staff catch it before a diver hits an unpriced trip on the public
-   * page.
-   */
-  priceCents: number | null;
-  /**
-   * Set only on a departure that is already back at the dock with an after-dive
-   * head count still open (DOM-H3) — the number that says whether everybody
-   * came out of the water. Those rows are the one thing on this board that
-   * looks backwards: a returned trip is otherwise never listed here, and it is
-   * carried in for exactly as long as the count stays open. `diveNumber` is
-   * the earliest dive still unclosed, `uncounted` how many divers on that
-   * boat's list have no result recorded at it.
-   */
-  rollCallOpen: { diveNumber: number; uncounted: number } | null;
-  diveMode?: "boat" | "shore" | "pool";
-  boatName?: string | null;
-  startsAt?: Date;
-  endsAt?: Date;
-  /**
-   * Preformatted staff wind numbers in knots, from the same automated marine
-   * outlook the trip page and Today already read (issue #722) — the
-   * ICU-formatted `trips.conditions.automatedWind` text, server-rendered so
-   * the client never re-runs the forecast's own unit/direction formatting.
-   * Null when the site has no forecast coordinates or the departure is
-   * outside the provider's window.
-   */
-  windSummary?: string | null;
-};
-
-export type BuilderDay = {
-  dateIso: string;
-  /** Preformatted for the shop's locale, e.g. "Tue, Jul 21". */
-  label: string;
-  /**
-   * The same date as a calendar block — big day numeral, weekday and month
-   * caps — so the board's day headers read exactly like the public schedule's
-   * (`formatDayParts`). One calendar grammar on both sides of the counter:
-   * the staff board and the diver schedule are the same schedule, and they
-   * should look like it.
-   */
-  parts: { weekday: string; day: string; month: string };
-  trips: BuilderTrip[];
-  boatWarning?: string | null;
-};
+import { WeekBoard } from "./WeekBoard";
 
 export type BuilderOption = { id: string; title: string };
 
@@ -1823,62 +1744,15 @@ function CopyPanel({
  * conditions, prices, the roster — stays on the trip's own page, one click away
  * on the title. This surface is deliberately shallow.
  */
-/**
- * How long the row menu's fold runs before React unmounts it: it must outlast
- * the slowest child of `.animate-board-menu-out` in `globals.css`, which is
- * the last button's two-step stagger plus its own fold, or the fold is cut off
- * partway.
- *
- * It used to say `390` under a comment asking the next reader to change this
- * and the stylesheet together (ADR 20260907-nothing-from-nowhere, decision 2).
- * Stated as the sum it has to beat, it now moves when the rung moves, and the
- * 10ms is the only hand-written part: a frame of slack, so the unmount lands
- * after the last paint rather than on it.
- *
- * The whole gesture stays inside principle 5's 400ms ceiling for a staggered
- * disclosure, which is why the stagger is two steps rather than three.
- */
-const MENU_CLOSE_MS = motionMs("unfold") + MOTION_STAGGER_MS * 2 + 10;
 
 /**
- * The crew signature this board mostly runs with, or `null` when it has none.
- *
- * **It is never printed.** The standing "Usual crew: …" sentence it used to
- * feed is gone (surfaces.md's "Remove first" for this board, and the
- * `20260908-one-hand` canvas); what it answers now is only which rows may keep
- * quiet about their crew, so that every row that does print one is the
- * exception a manager is scanning for.
- *
- * A signature is the assignment in the order the row already prints it, so two
- * departures crewed by the same two people in a different order count as two
- * different answers — which is the honest reading, since that ordering is the
- * shop's own (lead first) rather than incidental.
- *
- * Returns `null` unless one signature covers at least three departures *and*
- * more than half the window. Both halves matter: below three, a per-row line
- * still reads as the exception it is, and without the majority there is no
- * "usual" to state. Departures with nobody assigned are excluded from the vote
- * and can never win it.
+ * **Two add keys, not one prefix.** The header's panel is `add:top` and a
+ * day's is `w:add:<dateIso>`. One prefix covered both while the day stream
+ * existed, because its own per-day keys were `add:<dateIso>`; deleting it
+ * (#1923) left `startsWith("add:")` matching only the header's, so a day's
+ * panel opened onto selects that said "Loading…" for the rest of the visit.
  */
-function mostCommonCrew(trips: readonly { crew: string[] }[]): string[] | null {
-  const counts = new Map<string, { crew: string[]; count: number }>();
-  for (const trip of trips) {
-    if (trip.crew.length === 0) continue;
-    const key = trip.crew.join("\u0000");
-    const seen = counts.get(key);
-    if (seen) seen.count += 1;
-    else counts.set(key, { crew: trip.crew, count: 1 });
-  }
-  let best: { crew: string[]; count: number } | null = null;
-  for (const entry of counts.values()) if (!best || entry.count > best.count) best = entry;
-  if (!best || best.count < 3 || best.count * 2 <= trips.length) return null;
-  return best.crew;
-}
-
-/** Does this departure run with the board's usual crew, in the same order? */
-function isUsualCrew(crew: readonly string[], usual: readonly string[] | null): boolean {
-  return usual !== null && crew.length === usual.length && crew.every((n, i) => n === usual[i]);
-}
+const isAddKey = (key: string | null) => key === "add:top" || (key?.startsWith("w:add:") ?? false);
 
 export function ScheduleBuilder({
   shopSlug,
@@ -1886,7 +1760,6 @@ export function ScheduleBuilder({
   addDraft = null,
   loadPattern,
   loadTideWindow,
-  days,
   loadMovePreflight,
   loadOptions,
   price,
@@ -1910,7 +1783,6 @@ export function ScheduleBuilder({
   loadPattern?: (dateIso: string) => Promise<BuilderPattern | null>;
   /** The add panel's tide line for a chosen site (ADR 20260907-noaa-tide-predictions). */
   loadTideWindow?: (input: BuilderTideWindowInput) => Promise<string | null>;
-  days: BuilderDay[];
   /** Fetches the add panel's course and dive-site options, first time it opens. */
   loadOptions: () => Promise<BuilderOptions>;
   /** The move panel's impact preview, fetched per departure when one opens. */
@@ -1946,8 +1818,6 @@ export function ScheduleBuilder({
 }) {
   // One of `add:<dateIso>`, `move:<tripId>`, `copy:<tripId>`, or null.
   const [open, setOpen] = useState<string | null>(openAdd === "closed" ? null : "add:top");
-  const [closingMenu, setClosingMenu] = useState<string | null>(null);
-  const menuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // The top add panel is opened by *links* — the header's "Add a departure",
   // the empty board's call to action, the former /trips/new doors — all of
@@ -1974,30 +1844,6 @@ export function ScheduleBuilder({
     document.querySelector<HTMLElement>("[data-board-add]")?.focus();
   };
 
-  // A shared fact belongs to the group, not the rows (principle 9): when every
-  // departure on the board is unpriced, the per-row pill collapses into one
-  // notice above the list. Three is the floor — below it, a pill per row still
-  // reads as the exception it is.
-  const windowTrips = days.flatMap((day) => day.trips);
-  const unpricedCount = windowTrips.filter((trip) => trip.priceCents === null).length;
-  const allUnpriced = unpricedCount >= 3 && unpricedCount === windowTrips.length;
-  // The same principle, one row lower: a shop rosters the same two or three
-  // people onto nearly everything, so the full crew list was
-  // printing on ten of fourteen rows in the same grey — a third of the board's
-  // ink, saying nothing that distinguishes one departure from another (issue
-  // #757). The crew line is dropped from every row that runs the usual crew,
-  // so what is left on the rows is, by construction, the exception a manager is
-  // scanning for. It is no longer *stated* anywhere: the standing sentence that
-  // named those people above the stream is gone (`mostCommonCrew`'s note).
-  //
-  // **The gate is stricter than the price banner's, and has to be.** Three
-  // rows is the same floor, but this also demands a strict *majority* of the
-  // window: on a board split 7/7 between two crews there is no "usual", and
-  // silencing either half would be hiding who is on which boat on half the
-  // rows. An unstaffed departure can never become the default — it is not a
-  // crew, it is the gap this whole line exists to show.
-  const usualCrew = mostCommonCrew(windowTrips);
-
   // The week grid's own disclosures, read back out of the one `open` key.
   // Everything the grid opens is prefixed `w:` so a control there hands focus
   // back to itself rather than to its identically-keyed twin in the stream,
@@ -2022,87 +1868,43 @@ export function ScheduleBuilder({
   })();
 
   /**
-   * **The one move/copy/remove panel on the board**, whichever composition
-   * opened it (issue #1309).
+   * **The panel a disclosure opens, resolved once.**
    *
-   * The board renders two compositions of the same departures — the vertical
-   * day stream below `xl`, the week grid at and above it — and **both are
-   * mounted at once, hidden with CSS rather than conditionally rendered**. Each
-   * used to render its own copy of these panels, keyed `move:<tripId>` in the
-   * stream and `w:move:<tripId>` in the grid. So the key that was set belonged
-   * to exactly one of them, and crossing the breakpoint made the open panel
-   * vanish: rotate a tablet, un-maximise a window or open devtools with a typed
-   * date in the Move form and it was gone, with nothing in the URL to come back
-   * to.
+   * Move, copy and remove render **outside** the week grid rather than inside
+   * the row that opened them: a move form is two date/time fields, and the
+   * row it hangs off is not a form. One node, so the values typed into its
+   * uncontrolled inputs survive anything that re-lays the rows above it.
    *
-   * The fix is not one shared key. Both subtrees are mounted, so a shared key
-   * would open the panel in *both* — two controls labelled "New date" in the
-   * DOM at once, which breaks strict-mode locators and is an accessibility
-   * problem on its own. The panel renders **once**, outside both wrappers, so
-   * there is one node: it cannot be hidden by either composition's media query,
-   * and because it never moves in the tree, the values typed into its
-   * uncontrolled inputs survive the resize rather than being remounted away.
+   * The `w:` prefix on the key is what is left of the two compositions this
+   * board used to have (#1923). It is now redundant — there is one "⋯" button
+   * per departure and it is always the week's — but it stays on the key rather
+   * than being stripped, because it is also the focus-return address and
+   * rewriting every key to drop two characters buys nothing.
    *
-   * The `w:` prefix stays on the key, and is read here only to decide which
-   * trigger gets focus back. That is the reason it exists: each composition has
-   * its own "⋯" button for the same departure, and the one in the hidden
-   * subtree cannot take focus.
+   * **Spans as well as cells.** A multi-day course is drawn once as a bar
+   * across the days it owns, *instead of* the entries for those days, so a
+   * lookup that missed spans would make the board the one place in the app
+   * where a course cannot be moved, copied or removed at all.
    */
   const sharedPanel = ((): {
     kind: "move" | "copy" | "remove";
     trip: PanelTrip;
-    /** The menu key of the composition that opened it, for focus return. */
+    /** The menu key the panel returns focus to when it closes. */
     closeKey: string;
   } | null => {
     if (!open) return null;
     for (const kind of ["move", "copy", "remove"] as const) {
-      for (const fromWeek of [false, true]) {
-        const prefix = fromWeek ? `w:${kind}:` : `${kind}:`;
-        // `move:` is not a prefix of `w:move:`, so the two never collide.
-        if (!open.startsWith(prefix)) continue;
-        const tripId = open.slice(prefix.length);
-        const closeKey = fromWeek ? `w:menu:${tripId}` : `menu:${tripId}`;
-        // **The composition that opened it describes it.** The two carry the
-        // same departure under the same id and not always the same fields — a
-        // multi-day run is one span in the grid and a row on each of its days
-        // in the stream — so a panel resolved from the wrong side would open
-        // pre-filled with a date the user was not looking at.
-        const entry = fromWeek
-          ? weekDepartures.find((candidate) => candidate.tripId === tripId)
-          : undefined;
-        if (entry) return { kind, trip: panelTripOf(entry), closeKey };
-        const streamTrip = windowTrips.find((candidate) => candidate.id === tripId);
-        if (streamTrip) return { kind, trip: streamTrip, closeKey };
-        const anyEntry = weekDepartures.find((candidate) => candidate.tripId === tripId);
-        if (anyEntry) return { kind, trip: panelTripOf(anyEntry), closeKey };
-      }
+      const prefix = `w:${kind}:`;
+      if (!open.startsWith(prefix)) continue;
+      const tripId = open.slice(prefix.length);
+      const entry = weekDepartures.find((candidate) => candidate.tripId === tripId);
+      if (entry) return { kind, trip: panelTripOf(entry), closeKey: `w:menu:${tripId}` };
     }
     return null;
   })();
 
-  const closeMenu = useCallback((menuKey: string) => {
-    setClosingMenu(menuKey);
-    if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current);
-    menuCloseTimer.current = setTimeout(() => {
-      setOpen((current) => (current === menuKey ? null : current));
-      setClosingMenu((current) => (current === menuKey ? null : current));
-    }, MENU_CLOSE_MS);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current);
-    };
-  }, []);
-
   const toggle = (panel: string) => {
-    if (open === panel) {
-      if (panel.startsWith("menu:")) closeMenu(panel);
-      else setOpen(null);
-      return;
-    }
-    setClosingMenu(null);
-    setOpen(panel);
+    setOpen((current) => (current === panel ? null : panel));
   };
 
   // The add panel's selects, fetched the first time any add panel opens and
@@ -2112,7 +1914,7 @@ export function ScheduleBuilder({
   const [options, setOptions] = useState<BuilderOptions | null>(null);
   const optionsRequested = useRef(false);
   useEffect(() => {
-    if (!open?.startsWith("add:") || optionsRequested.current) return;
+    if (!isAddKey(open) || optionsRequested.current) return;
     optionsRequested.current = true;
     loadOptions().then(setOptions, () => {
       optionsRequested.current = false;
@@ -2127,30 +1929,36 @@ export function ScheduleBuilder({
     toggleRefs.current[key] = el;
   };
   const closePanel = (key: string) => {
-    setClosingMenu(null);
     setOpen(null);
     toggleRefs.current[key]?.focus();
   };
 
-  // A row's "⋯" action list is the one open-able thing here that isn't a form:
-  // it should dismiss the way any disclosed menu does — Escape hands focus back
-  // to the trigger, a click anywhere else simply closes it (focus stays where
-  // the person clicked). Forms keep their explicit Cancel instead — half-typed
-  // work must never be swallowed by a stray click — so both listeners exist
-  // only while a menu is open.
+  // A row's "⋯" action strip is the one open-able thing here that isn't a
+  // form: it dismisses the way any disclosed menu does — Escape hands focus
+  // back to the trigger, a click anywhere else simply closes it (focus stays
+  // where the person clicked). Forms keep their explicit Cancel instead —
+  // half-typed work must never be swallowed by a stray click — so both
+  // listeners exist only while a strip is open.
+  //
+  // **Keyed `w:menu:`, which is what deleting the stream changed** (#1923).
+  // This listened for the stream's own `menu:` prefix, so the week's strip —
+  // now the board's only one — had no keyboard way out at all: it takes focus
+  // on mount and Escape did nothing. The behaviour moves with the surface
+  // rather than going down with the composition that happened to own it.
   useEffect(() => {
-    if (!open?.startsWith("menu:")) return;
+    const prefix = "w:menu:";
+    if (!open?.startsWith(prefix)) return;
     const menuKey = open;
-    const tripId = open.slice("menu:".length);
+    const tripId = open.slice(prefix.length);
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (target instanceof Element && target.closest(`[data-row-menu="${CSS.escape(tripId)}"]`))
         return;
-      closeMenu(menuKey);
+      setOpen((current) => (current === menuKey ? null : current));
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      closeMenu(menuKey);
+      setOpen((current) => (current === menuKey ? null : current));
       toggleRefs.current[menuKey]?.focus();
     };
     document.addEventListener("pointerdown", onPointerDown);
@@ -2159,7 +1967,7 @@ export function ScheduleBuilder({
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open, closeMenu]);
+  }, [open]);
 
   // The schedule route has no dynamic id, so if `cacheComponents: true`'s
   // Activity-based navigation is ever re-enabled, this instance could
@@ -2199,7 +2007,13 @@ export function ScheduleBuilder({
   }, [pathname]);
 
   return (
-    <section aria-label={copy.ariaLabel} className="mb-8">
+    // `data-schedule-builder` is the copy-free hook a test asks "has the
+    // board finished streaming?" with — true whether or not the week has
+    // anything on it, which `data-week-board` is not. The `aria-label` beside
+    // it is localised, so a Spanish run cannot name the region; that is the
+    // same finding `data-day-stream` and `data-week-board` already carry
+    // (#1923), and the Spanish visual captures are where it bites.
+    <section data-schedule-builder="" aria-label={copy.ariaLabel} className="mb-8">
       {/* No top "Add a departure" band: that control lives in the page
           header's action cluster (a Link to `?add=1` in page.tsx) rather than
           holding a stratum of its own whose only content duplicated the "+
@@ -2239,17 +2053,6 @@ export function ScheduleBuilder({
         />
       ) : null}
 
-      {/* When *every* departure in the window is unpriced (a brand-new board,
-          an imported season), the per-row pill is the same fact repeated on
-          every line — noise pretending to be information (design/principles.md
-          #9). Said once up here instead; rows keep their pill only while some
-          are priced and some are not, which is when a per-row mark actually
-          distinguishes anything. Three is the floor so one lone unpriced
-          departure keeps its own pill rather than becoming a banner. */}
-      {allUnpriced ? (
-        <AllUnpricedNotice className="xl:hidden">{copy.noPriceSetAll}</AllUnpricedNotice>
-      ) : null}
-
       {/* **The standing "Usual crew: …" line is gone** — docs/design/surfaces.md
           listed it under the board's "Remove first" from the day the week grid
           shipped, and the `20260908-one-hand` canvas deletes it outright. It
@@ -2276,7 +2079,7 @@ export function ScheduleBuilder({
             registerToggle={registerToggle}
             copy={copy}
           />
-          <div className="hidden xl:block">
+          <div>
             {canConfigure && weekAdd ? (
               <AddPanel
                 locale={locale}
@@ -2297,7 +2100,13 @@ export function ScheduleBuilder({
               />
             ) : null}
             {canConfigure && weekAction ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-inset border border-border bg-surface-sunken/50 p-3">
+              // `data-row-menu` is what tells an outside click from a click
+              // inside the strip. Without it the listener above closes the
+              // strip on the way to its own buttons.
+              <div
+                data-row-menu={weekAction.entry.tripId}
+                className="mt-3 flex flex-wrap items-center gap-2 rounded-inset border border-border bg-surface-sunken/50 p-3"
+              >
                 <p className="text-sm font-medium">{weekAction.entry.ref}</p>
                 <div className="ms-auto flex items-center gap-1">
                   <button
@@ -2376,415 +2185,6 @@ export function ScheduleBuilder({
           ) : null}
         </div>
       ) : null}
-
-      {/* **The stream, and the floor it lives under.** Below `xl` this is the
-          board (H-63, 2026-08-27): seven columns have no honest form on a
-          portrait tablet or a phone, so the vertical day stream is what those
-          widths get, unchanged — the add panel, the row menu, the cursor
-          pager and every mutation included. At `xl` and up the week grid
-          above renders instead.
-
-          `data-day-stream` is the hook a test asks "which of the two is on
-          screen" with. It has to be on the wrapper rather than derived from
-          the section: the grid is a *child* of the same section and renders
-          first, so a `section[…] li` locator resolved to a week cell and
-          asserted the exact opposite of the floor at every width. */}
-      <div data-day-stream="" className="mt-4 flex flex-col gap-8 xl:hidden">
-        {days.map((day) => (
-          <div key={day.dateIso}>
-            {/* The day header is the public schedule's calendar block — big
-                day numeral, weekday and month as its caps, a hairline running
-                out to the day's own "+ Add". The numeral is what a scrolling
-                thumb catches; the sr-only sentence keeps the date readable in
-                one piece for screen readers.
-
-                Sticky like the storefront's, so mid-scroll the rows under a
-                thumb always name their day — but pinned *below* the chrome
-                bar, whose height it reads rather than measures: `--chrome-h`
-                (ADR 20260827-clearwater-surface-language, decision 10) is the
-                same declaration the bar sets its own height from. Preflight
-                makes every box `border-box`, so `--chrome-h` is the bar's
-                whole outside edge, hairline included: the header lands flush
-                against that edge — no slit of scrolling content between the
-                two, and no gap either — and stays there if the bar ever
-                changes height. This was `top-[68px]`, a number somebody
-                measured off a content-driven bar, with an e2e test standing
-                guard over it. z-20 keeps it above the rows' own z-10 action
-                clusters; the row "⋯" menus disclose inline rather than
-                floating, so nothing needs to paint over a pinned header. The
-                day's "+ Add" rides inside the sticky row, so the affordance
-                travels with the day. */}
-            <div className="sticky top-(--chrome-h) z-20 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-background pt-2 pb-2">
-              <h3 className="flex items-center gap-3">
-                <span className="sr-only">{day.label}</span>
-                <span aria-hidden="true" className="flex items-center gap-3">
-                  <span className={`${FIGURE_LARGE_CLASS} leading-none`}>{day.parts.day}</span>
-                  <span className="flex flex-col justify-center leading-tight">
-                    <span className="text-xs font-bold tracking-[0.18em] uppercase">
-                      {day.parts.weekday}
-                    </span>
-                    <span className="text-xs font-medium tracking-[0.18em] text-muted uppercase">
-                      {day.parts.month}
-                    </span>
-                  </span>
-                </span>
-              </h3>
-              <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-border" />
-              {canConfigure ? (
-                <button
-                  type="button"
-                  ref={registerToggle(`add:${day.dateIso}`)}
-                  onClick={() => toggle(`add:${day.dateIso}`)}
-                  aria-expanded={open === `add:${day.dateIso}`}
-                  aria-label={fill(copy.addDepartureOnDay, { day: day.label })}
-                  className={buttonClass({ variant: "ghost", size: "sm" })}
-                >
-                  <span aria-hidden="true">+</span> {copy.add}
-                </button>
-              ) : null}
-            </div>
-            {day.boatWarning ? (
-              <div className="mt-2 flex items-center gap-2 rounded-lg border border-warning/40 bg-warning-tint px-3 py-2 text-xs font-medium text-warning">
-                <StatusMark variant="warning" size="md" />
-                <span>{day.boatWarning}</span>
-              </div>
-            ) : null}
-            {canConfigure && open === `add:${day.dateIso}` ? (
-              <AddPanel
-                locale={locale}
-                addDraft={addDraft}
-                draftActions={actions.draft}
-                loadPattern={loadPattern}
-                loadTideWindow={loadTideWindow}
-                dateIso={day.dateIso}
-                options={options}
-                price={price}
-                copy={copy}
-                more={more}
-                initialCourse={null}
-                requestPlan={null}
-                startExpanded={false}
-                onAdd={actions.add}
-                onCancel={() => closePanel(`add:${day.dateIso}`)}
-              />
-            ) : null}
-
-            <ul className="mt-2 flex flex-col">
-              {day.trips.map((trip) => {
-                const full = trip.booked >= trip.capacity;
-                // "Copy" is designed to mint a same-titled departure on another
-                // day, so the title alone is never a unique accessible name for
-                // these controls. Day and time make it one.
-                const ref = `${trip.title}, ${day.label} ${trip.timeRange}`;
-                return (
-                  <li
-                    key={trip.id}
-                    // Borderless, like the public agenda's rows: the day blocks,
-                    // type, and whitespace carry the hierarchy, and the hover
-                    // tint says "this row is a thing" without a box saying it
-                    // permanently (design/principles.md #10). The open panels
-                    // below keep their own bordered boxes — a form is a form.
-                    className="group/trip -mx-3 rounded-lg px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:-mx-4 sm:px-4"
-                  >
-                    {/* Two columns, not six loose flex children. The time, the
-                        title block, the badges and the buttons all used to sit
-                        side by side under `items-start`, so a short badge and
-                        an 11-unit-tall button row hung off the top of a
-                        three-line title at three different heights and nothing
-                        lined up with anything. Now: what the departure *is* on
-                        the left, what you *do* about it on the right, each
-                        internally aligned.
-                        `relative` scopes the title's stretched pseudo-element
-                        to this summary block only — the move/copy/remove
-                        panels below stay outside the row's tap target. */}
-                    <div className="relative flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-                      <div className="flex w-full min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1 sm:w-auto sm:flex-1">
-                        {/* `leading-6` matches the title's line box, so the
-                            time and the departure name share a baseline
-                            instead of sitting two pixels apart.
-                            `whitespace-nowrap`: a formatted range puts an
-                            ordinary space before AM/PM, so a column too narrow
-                            for it breaks there and strands "PM" on its own line
-                            ("6:30 PM – 10:00" / "PM"). The column is wide enough
-                            for the longest range at this type size; on a phone it
-                            takes the full row instead of squeezing the title into
-                            a three-line stack. */}
-                        <div className="w-full shrink-0 text-sm leading-6 tabular-nums whitespace-nowrap text-muted sm:w-36">
-                          {trip.timeRange}
-                        </div>
-                        {/* Full width on a phone so the title gets the row to
-                          itself and the badges wrap below it, rather than
-                          sharing ~340px with them and stacking three lines
-                          deep. */}
-                        <div className="w-full min-w-0 sm:w-auto sm:flex-1">
-                          {/* The whole summary is the tap target, phone
-                              included: the title link stretches over it via
-                              its pseudo-element (the public agenda's own
-                              mechanic — a borderless row with only a text
-                              link reads as a listing, not a pressable
-                              thing). The badges and the "⋯" menu opt back on
-                              top with z-10; the accessible name stays the
-                              plain title the tests and specs click. */}
-                          <Link
-                            href={`/shop/${shopSlug}/trips/${trip.id}`}
-                            className="font-medium group-hover/trip:text-primary after:absolute after:inset-0 after:z-0"
-                          >
-                            {trip.title}
-                          </Link>
-                          <p className="mt-0.5 text-sm text-muted">
-                            {[
-                              trip.boatName ? (
-                                <span key="boat" className="inline-flex items-center gap-1">
-                                  <DiveDayIcon name="boat" className="size-3.5" />
-                                  {trip.boatName}
-                                </span>
-                              ) : null,
-                              trip.diveMode === "shore" ? copy.modeShore : null,
-                              trip.diveMode === "pool" ? copy.modePool : null,
-                              trip.courseTitle
-                                ? fill(copy.courseLabel, { title: trip.courseTitle })
-                                : null,
-                              trip.diveSiteName,
-                              trip.dayCount > 1
-                                ? fill(
-                                    pluralForm(trip.dayCount, {
-                                      one: copy.dayCountLabelOne,
-                                      other: copy.dayCountLabelOther,
-                                    }),
-                                    { count: trip.dayCount },
-                                  )
-                                : null,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ") || copy.noSiteSetYet}
-                          </p>
-                          {/* Dropped entirely when this departure runs with the
-                              board's usual crew (principle 9). What survives is
-                              an exception, so it sheds the muted class in that
-                              case — a line that is only printed when it differs
-                              should not read like the caption it replaced. With
-                              no usual crew, every row keeps its line in the old
-                              caption grey. "Nobody yet" is warning ink either
-                              way: that is the gap this line exists to show. */}
-                          {isUsualCrew(trip.crew, usualCrew) ? null : (
-                            <p className={`mt-1 text-sm ${usualCrew ? "" : "text-muted"}`}>
-                              {trip.crew.length > 0 ? (
-                                `${copy.crewLabel} ${trip.crew.join(", ")}`
-                              ) : (
-                                <>
-                                  {copy.crewLabel}{" "}
-                                  <span className="font-medium text-warning">
-                                    {copy.crewNobodyYet}
-                                  </span>
-                                </>
-                              )}
-                            </p>
-                          )}
-                          {/* The number a captain actually calls a marginal
-                              morning on (issue #722) — informational only,
-                              same as the trip page's own outlook box; nothing
-                              here refuses or cancels a departure. */}
-                          {trip.windSummary ? (
-                            <p className="mt-1 text-sm text-muted">
-                              {copy.windLabel} {trip.windSummary}
-                            </p>
-                          ) : null}
-                          {/* A returned departure is otherwise the only row here
-                              that isn't upcoming, so it says why it is still on
-                              the board rather than looking like a stale entry. */}
-                          {trip.rollCallOpen ? (
-                            <p className="mt-1 text-sm font-medium text-danger">
-                              {fill(copy.rollCallOpenNote, {
-                                dive: trip.rollCallOpen.diveNumber,
-                              })}
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
-                      {/* The right-hand column: what this departure's state is,
-                          then what you can do about it, on one centred line.
-                          `z-10` lifts its own links and the "⋯" controls above
-                          the title's stretched overlay. */}
-                      <div className="relative z-10 flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-                        {/* One slot, one grammar (issue 758). This strip answers
-                            "how is this departure doing", and it used to answer
-                            it in three: muted tabular text on most rows, a green
-                            green Badge on a full one, and an amber Badge sitting
-                            *beside* the count on an unpriced one — so on the
-                            seeded board a sold-out Saturday was the single
-                            loudest mark among seven departures a diver can see
-                            and cannot buy.
-
-                            Now: at most one pill, and it is always the same kind
-                            of thing — a link to work somebody has to do. The
-                            count is a fact on every row, and it comes last, so
-                            the digits line up down the column instead of sliding
-                            left behind a pill of whatever width. */}
-                        {/* The loudest thing this board can say (DOM-H3): the
-                            boat is back and somebody on its list was never
-                            counted. "danger" carries an aria-hidden drawn mark of its
-                            own, so hue is never the only signal, and the whole
-                            badge is a link straight to the open checkpoint. It
-                            outranks the price flag rather than stacking with it
-                            — a departure that has already sailed cannot be
-                            booked, so its missing price is not this morning's
-                            problem and a second pill only dilutes the first.
-
-                            `min-h-11` on the badge links: the badge stays its
-                            size, the hit area clears the 44px dock-test bar —
-                            the roll-call one is the most safety-adjacent tap
-                            on this board and must not be its smallest. */}
-                        {trip.rollCallOpen ? (
-                          <Link
-                            href={`/shop/${shopSlug}/trips/${trip.id}/manifest?checkpoint=after_dive_${trip.rollCallOpen.diveNumber}`}
-                            aria-label={fill(copy.rollCallOpenAria, {
-                              ref,
-                              dive: trip.rollCallOpen.diveNumber,
-                            })}
-                            className="inline-flex min-h-11 items-center"
-                          >
-                            <Badge tone="danger">
-                              {fill(copy.rollCallOpen, { count: trip.rollCallOpen.uncounted })}
-                            </Badge>
-                          </Link>
-                        ) : trip.priceCents === null && !allUnpriced ? (
-                          <Link
-                            href={`/shop/${shopSlug}/trips/${trip.id}#details`}
-                            aria-label={fill(copy.noPriceSetAria, { ref })}
-                            className="inline-flex min-h-11 items-center"
-                          >
-                            <Badge tone="warning">{copy.noPriceSet}</Badge>
-                          </Link>
-                        ) : null}
-                        {/* Counts are facts, not alerts (design/principles.md
-                            #9): a routine 5/12 reads as quiet tabular text, the
-                            same register the public schedule gives "7 spots
-                            left" — and so does 10/10, which is the *expected*
-                            good outcome of a departure rather than an exception
-                            needing a staffer. A full boat is still worth seeing,
-                            so it keeps full-strength ink and medium weight; what
-                            it gives up is the success pill, which was spending
-                            the same currency the board's real alerts use. §3
-                            settled the same question for the shop home's queue:
-                            good news is not a row kind. */}
-                        <p
-                          className={`text-sm tabular-nums ${
-                            full ? "font-medium text-foreground" : "text-muted"
-                          }`}
-                        >
-                          {trip.booked}/{trip.capacity}
-                        </p>
-                        {/* Move/copy/remove are all refused by `src/db/trips.ts`
-                            for a departure that has already sailed, and a
-                            returned row is only here to have its head count
-                            closed — so it gets the badge and nothing that would
-                            bounce. The three actions sit behind one quiet "⋯"
-                            control rather than three always-on buttons: a board
-                            of twenty rows used to render sixty same-weight
-                            buttons — a red Remove on every one — for actions a
-                            staffer takes on one row at a time (design
-                            principles #8, "collapse the rare path"). The
-                            content is the row; the controls appear when asked. */}
-                        {canConfigure && !trip.rollCallOpen ? (
-                          <div data-row-menu={trip.id} className="flex shrink-0 items-center gap-1">
-                            <button
-                              type="button"
-                              ref={registerToggle(`menu:${trip.id}`)}
-                              onClick={() => toggle(`menu:${trip.id}`)}
-                              aria-expanded={open === `menu:${trip.id}`}
-                              aria-label={fill(copy.rowActionsAria, { ref })}
-                              className={buttonClass({
-                                variant: "ghost",
-                                size: "sm",
-                                className: "min-w-11",
-                              })}
-                            >
-                              {/* Decorative — the aria-label above names what
-                                  this discloses, per row, uniquely. */}
-                              <DiveDayIcon name="more" className="size-4" />
-                            </button>
-                            {/* The three choices disclose *inline*, unfolding
-                                beside the "⋯" that revealed them, never as a
-                                floating panel. On these borderless rows a
-                                dropdown hung over whatever sat beneath it —
-                                the next day's "+ Add" ended up 18px from
-                                fully covered, an automated-scan WCAG 2.5.8
-                                failure. Inline, nothing can ever be obscured,
-                                and the actions sit beside the row they act on
-                                (design/principles.md #10). */}
-                            {open === `menu:${trip.id}` || closingMenu === `menu:${trip.id}` ? (
-                              <div
-                                className={`flex items-center gap-1 ${
-                                  closingMenu === `menu:${trip.id}`
-                                    ? "pointer-events-none animate-board-menu-out"
-                                    : "animate-board-menu-in"
-                                }`}
-                              >
-                                <button
-                                  type="button"
-                                  ref={focusOnMount}
-                                  onClick={() => toggle(`move:${trip.id}`)}
-                                  aria-label={fill(copy.moveAria, { ref })}
-                                  className={buttonClass({
-                                    variant: "ghost",
-                                    size: "sm",
-                                  })}
-                                >
-                                  {copy.move}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => toggle(`copy:${trip.id}`)}
-                                  aria-label={fill(copy.copyAria, { ref })}
-                                  className={buttonClass({
-                                    variant: "ghost",
-                                    size: "sm",
-                                  })}
-                                >
-                                  {copy.copy}
-                                </button>
-                                {/* Remove opens a panel like Move and Copy do,
-                                    rather than swapping itself for an
-                                    `InlineConfirm` message card in place. That
-                                    card is built to be a block of its own, and
-                                    wedged inline it shoved every row beneath it
-                                    around while the staffer read the sentence.
-                                    It is still two deliberate steps: this item
-                                    submits nothing, and the panel below holds
-                                    the only real submit. */}
-                                <button
-                                  type="button"
-                                  onClick={() => toggle(`remove:${trip.id}`)}
-                                  aria-label={fill(copy.removeAria, { ref })}
-                                  className={buttonClass({
-                                    variant: "danger-ghost",
-                                    size: "sm",
-                                  })}
-                                >
-                                  {copy.remove}
-                                </button>
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        {/* The row's one at-rest tap cue, same as the public
-                            agenda's: without a border, a phone row — where
-                            hover doesn't exist — reads as a text listing
-                            rather than a pressable thing. Decorative; the
-                            title link is the navigation. */}
-                        <DiveDayIcon
-                          name="chevron-right"
-                          className="size-4 text-muted transition-transform group-hover/trip:translate-x-0.5"
-                        />
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </div>
     </section>
   );
 }

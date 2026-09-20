@@ -37,6 +37,8 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 **Decided 2026-09-19 (H-88)** ([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), [canvas](canvases/20260919-one-idea/README.md)). Three whole products were drawn: the home is the thing the app is — the day under the sky at the shop's own hour, the boats on the hours they leave and the needs under each (I · Tide); today's boats as coloured hulls with their seats, stacked, the shop's card last (II · Deck); the shop's own water with today's tracks and the day as a sheet over it (III · Chart). No tabs, no More, no dock under any of them. **The pick: I · Tide** — the home is the day: the sky at the shop's own hour, the boats on the hours they leave, the tide under them, a line for now, and the needs under each departure.
 
+**Shipped 2026-09-20, the evening says what the day made** (issue #1930; ADR 20260919-one-idea's decision I · Tide, "money is what the day made"). The evening close gains one money reading — the day's takings, as a figure with tips beside it — **above** the closing block and inside nothing, under the same condition that block renders under. `ClosingBlock`'s charter is two things and nothing else, so a figure inside it would have amended ADR 20260827-clearwater-surface-language decision 4 by implication; a reading is not an act, and Aaron decided the sibling placement in session that day. It is `getMonthlyReport` over `shopDayBounds` — the month's own derivation with narrower bounds, never a second query, so the day and `/reports` cannot disagree. Gated on `canPersonViewShopReports` against live role rows: a captain closing out a Saturday sees the evening exactly as before, with nothing in that slot and no notice that a number was withheld. A day that took nothing says nothing.
+
 **Shipped 2026-09-17, the floor's first row** ([ADR 20260911-clear-the-deck](../architecture/decisions/20260911-clear-the-deck.md) §1, "the door" — the one row of that floor that may start on the ADR alone):
 a row's own tap is its only door. The nine trailing "Open …" verbs are gone from the spine, the desk, the draft row and the first-morning checklist; what is left on a door row is the chevron `LedgerRow` already drew, and the destination is still named on the stretched overlay for a screen reader. A trailing verb survives only where it *is* the fix — a waiver send, a wait-list invite, an invoice resend, "Keep it", the closing block's own link beside a Dismiss demoted to ghost weight. Two tests in `DaySpine.test.tsx` hold it: no row that is itself a link may contain a second link, and a door's name may be spoken but never drawn. Shipped in the same pass: the desk's counting rows are their subject alone (the sentence under "3 messages are waiting on an answer" taught a feature already found); the units row states both guesses and what to do about them; a cancelled departure owes **one** row, not one per seat; the stuck-checkout row no longer prints a Stripe session id; the settled station draws one hairline between its parts instead of two; the plan-change clause is its own sentence on its own line; "Print the day" is the header's one action; and the first-bookable card and the role orientation never render together. The decoration (the band, the tile, the dial, the greeting) and `Badge` are untouched, pending H-77.
 
@@ -78,9 +80,10 @@ carries the green turtle; the two horizons are two tideline panels side by side.
 - **Composition:** **the day's spine.** Today's departures are stations in clock order, each owning
   its time, title, site, hull, crew, price and head count, with its own blockers and chores as
   ledger rows beneath it; a diver's open day-of help request is one neutral row on that departure;
-  work bound to no boat pools under "At the desk"; tomorrow is a collapsed disclosure and the rest
-  of the week one link to the board. A departure's facts are said once, at its station, instead of
-  once per card.
+  work bound to no boat pools under "At the desk"; once every boat is settled the day's takings read
+  above the closing block, for a reader who may read money; tomorrow is a collapsed disclosure and
+  the rest of the week one link to the board. A departure's facts are said once, at its station,
+  instead of once per card.
 
 Enforced beside the code: `DaySpine.tsx` and `DayStation.tsx` defer to the ADR by name,
 `DaySpine.test.tsx` pins the composition (including its silences and, since 2026-09-17, the door
@@ -144,6 +147,27 @@ five facts.
   page that item opens; the two irreversible series writes and the departure cancel keep a blocking
   `InlineConfirm`, and stopping a repeat has none because the control opposite it puts the run back.
 
+**The long page, deliberately — decided 2026-09-20 (Aaron, in session; issue #1924).** Since slice
+23c folded the packing list in, this is the tallest surface in the app by a wide margin:
+`departure-load-out-handed-over` captures at **12,340px at 390** and **8,605px at 1280**, against
+roughly 2,500px for the shop home. The visual suite's phone is 390×844, so that is about fifteen
+screens of scrolling, and about eleven on its 1280×800 desktop.
+
+`.claude/rules/e2e.md` says a surface that screenshots enormous is telling you the page is
+unbounded, and the fix belongs in the product. **Here it does not.** A packing list *is* a long
+document; the fold was the point of 23c; and the two halves are one job — who is aboard, then what
+to pull for them. A crew member working down a boat scrolls anyway, and what they had before the
+fold was a second page and a tab strip to reach it.
+
+Not taken: collapsing the list's lower sections (tanks, sizes, staff fit, support, kit,
+assignments) behind disclosures. That puts a lid on the half somebody arriving at `#packing-list`
+came for, to answer a number rather than a complaint. Also not taken, and never: shrinking the
+visual capture so the number reads smaller — that hides the measurement instead of answering it.
+
+So the height is expected. **Measure it again when the page gains a part, not when it merely grows
+with a shop's fleet** — the assignments table scales with the register rather than with this
+departure, which is the one thing here that could turn a long page into an unbounded one.
+
 ### The boat manifest — `/shop/[shopSlug]/trips/[id]/manifest`
 
 **Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): the checkpoint card, the five stage chips, the three-way switch and the disclosure above the first name become the count and one line — at 34px in a group (A), at 44px under a floating bar (B), or as a ring that closes when everyone is aboard (C) — then the one still to call, then everyone aboard, one circle per name; glare is a word in the bar. Pending H-87, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
@@ -180,6 +204,8 @@ either.
 
 ### The schedule board — `/shop/[shopSlug]/schedule/board`
 
+**Shipped 2026-09-20, the week is the whole board** (issue #1923, finishing slice 23f of [ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md)). The vertical day stream is gone and the week renders at every width: a day is a row on a phone and a row on a desk, so there is no `xl` floor left to declare and no second composition of the same departures. What the stream carried alone came up first, because deleting it otherwise takes the question a manager opens the board on a Thursday to answer — *which boat has no divemaster* — off the board with nothing going red for it. The hull follows the site on the meta line (a shore or pool session says so in its place); the crew prints on its own line, and only on the departures that differ from the week's habit (`src/lib/usual-crew.ts`, which is where that rule lives now that one composition asks it). A course bar prints no crew line — its meta already names the instructor. The day header still pins under the chrome bar, as ADR 20260827-clearwater-surface-language's decision 10 requires; it moved to the week rather than going down with the stream. The board pages by `?week=` and by nothing else: the cursor pager and its `?after=` went too, and reaching past this week is the pager's own step. **The wind left with the stream** and is not back — filed as #1936 rather than restored by reflex, because a row a manager cannot act from is what the density was bought to avoid.
+
 **Shipped 2026-09-06** ([ADR 20260906-before-you-ask](../architecture/decisions/20260906-before-you-ask.md), [canvas](canvases/20260906-before-you-ask/README.md)):
 the add panel opens filled from what the shop ran on that weekday over the last six weeks, under one sentence saying so, every value an ordinary field and the crew as chips (H-68 c); the pattern's second boat is offered as a row and never added on its own; a shop with no history, or a panel opened with a draft, a course, a site or a request, sees the panel it always did.
 
@@ -188,8 +214,8 @@ boat to give the coral detail to, so none carries it.
 
 **Shipped 2026-08-28 (desktop only)** — slice 6e of ADR
 [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
-drawn in [its canvas](canvases/20260827-clearwater-surface-language/README.md). The stream stays
-below `xl` (1280px), on tablets and phones.
+drawn in [its canvas](canvases/20260827-clearwater-surface-language/README.md). The stream stayed
+below `xl` (1280px) until 2026-09-20; see the entry above.
 
 - **One idea:** the shape of the week — where the boats are, and where they aren't.
 - **The question it arrives with:** "what does my week look like?" — answered in one screen of

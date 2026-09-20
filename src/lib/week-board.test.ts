@@ -150,4 +150,35 @@ describe("what a week cell says under its title", () => {
   it("says a boat is home before anything else, and offers it no price to book at", () => {
     expect(weekEntryMeta({ ...cell, status: "sailed" })).toBe("Sailed · 8 of 12");
   });
+
+  it("names the hull after the site, since the stream that used to carry it went", () => {
+    // #1923: the board lost its second composition, so a scheduling fact it
+    // only ever printed there has to land here or leave the product.
+    expect(weekEntryMeta({ ...cell, vessel: "Mantis II" })).toBe(
+      "Molasses Reef · Mantis II · 8 of 12 · $95",
+    );
+  });
+
+  it("says shore or pool in the hull's place, because the absence is the fact", () => {
+    // A shore dive has no vessel to name, and a blank there would read as a
+    // boat nobody has assigned rather than as a dive that needs none.
+    expect(weekEntryMeta({ ...cell, vessel: "Shore" })).toBe(
+      "Molasses Reef · Shore · 8 of 12 · $95",
+    );
+  });
+
+  it("leaves no gap for a departure whose hull is unknown", () => {
+    // Paired with the positive case above: an omitted vessel must vanish from
+    // the line rather than print an empty segment between two separators.
+    expect(weekEntryMeta({ ...cell, vessel: null })).toBe("Molasses Reef · 8 of 12 · $95");
+    expect(weekEntryMeta(cell)).toBe("Molasses Reef · 8 of 12 · $95");
+  });
+
+  it("still says only that a sailed boat sailed, whatever it sailed on", () => {
+    // The hull is not a decision anyone can act on once the boat is home, and
+    // this row is being read rather than worked.
+    expect(weekEntryMeta({ ...cell, status: "sailed", vessel: "Mantis II" })).toBe(
+      "Sailed · 8 of 12",
+    );
+  });
 });

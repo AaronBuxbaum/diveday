@@ -17,7 +17,7 @@ import type { DayCloseoutRecord } from "@/db/closeout";
 import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText } from "@/i18n/today-labels";
-import type { EveningClose } from "@/lib/closeout";
+import type { DayTakings as DayTakingsReading, EveningClose } from "@/lib/closeout";
 import { FORM_DRAFT_LABEL_KEYS, type FormDraftKind } from "@/lib/form-drafts";
 import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
@@ -35,6 +35,7 @@ import { hasSailed } from "@/lib/trips";
 import { ClosingBlock } from "./ClosingBlock";
 import { ClosingStation } from "./ClosingStation";
 import { DayStation } from "./DayStation";
+import { DayTakings } from "./DayTakings";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import {
   ResendConfirmationControl,
@@ -375,6 +376,14 @@ export type EveningReading = {
    * explicit that the document is offered on a boat that has not come home.
    */
   canOpenLog: boolean;
+  /**
+   * **What today made**, or null — the evening's one money reading (issue
+   * #1930). Null means either of the two things the page resolves and a spine
+   * must never ask about: the reader fails `canPersonViewShopReports`, or the
+   * day took nothing at all. The third absence — a day still sailing — is the
+   * `closing` condition this component already holds.
+   */
+  takings: DayTakingsReading | null;
   /** Today's still-open rows, already stripped of the ones the shop dismissed. */
   leftovers: readonly TodayAction[];
   latest: DayCloseoutRecord | null;
@@ -842,6 +851,17 @@ export function DaySpine({
             ) : null}
           </ul>
         </LedgerGroup>
+      ) : null}
+
+      {/* **What today made, above the act that ends the day.** A reading, not
+          a third thing inside the closing block — `ClosingBlock` still shows
+          exactly two things, so its charter and ADR
+          20260827-clearwater-surface-language decision 4 stand unamended
+          (Aaron's call, 2026-09-20, on issue #1930). Same condition as the
+          block itself: while one boat is out there is no day to have made
+          anything yet. */}
+      {closing && evening?.takings ? (
+        <DayTakings takings={evening.takings} currency={currency} locale={locale} t={t} />
       ) : null}
 
       {/* **The closing block, and where it sits.** Beneath the day's own work

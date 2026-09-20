@@ -8,6 +8,7 @@ import {
   openThreadStep,
   openTripAbout,
   openTripActivity,
+  openTripFromBoard,
   openTripMore,
   rosterRow,
   saveDiveIntent,
@@ -115,14 +116,7 @@ test.describe("staff", () => {
     // leg re-walks the real sign-in form on purpose: the loop is the point.
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
-    // Named, because the board row also carries a "Set a price for …" link on a
-    // departure with no price yet — two links in one row, and this one is the
-    // departure.
-    await page
-      .locator("li")
-      .filter({ hasText: title })
-      .getByRole("link", { name: title, exact: true })
-      .click();
+    await openTripFromBoard(page, title);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     // The roster lives on the Guests tab now.
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();
@@ -208,9 +202,15 @@ test.describe("staff", () => {
     const title = `Drift Dive ${e2eNow().getTime()}`;
     const renamed = `${title} (PM)`;
 
+    // Six days out, which from the frozen clock's Tuesday is the following
+    // Monday — so this departure is never on the week the board opens to, and
+    // every reading of it below has to name its week.
+    const date = daysFromNow(6);
+    const tripWeek = `/shop/blue-mantis/schedule/board?week=${date}`;
+
     await createTrip(page, {
       title,
-      date: daysFromNow(6),
+      date,
       departsAt: "13:00",
       returnsAt: "16:00",
     });
@@ -218,14 +218,7 @@ test.describe("staff", () => {
     // Edit the title from the manage page (opened from the schedule). Staff are
     // routed to the editable trip view, never the public booking form.
     await page.goto("/shop/blue-mantis/schedule/board");
-    await page
-      .locator("li")
-      .filter({ hasText: title })
-      // Exact match: an unpriced trip's card also carries a "Set a price
-      // for {title}, ..." link whose accessible name contains the trip
-      // title as a substring.
-      .getByRole("link", { name: title, exact: true })
-      .click();
+    await openTripFromBoard(page, title);
     await expect(page.getByRole("button", { name: "Book my spot" })).toHaveCount(0);
     // The details form waits behind its Edit disclosure (summary-first Overview).
     await openTripAbout(page);
@@ -248,17 +241,22 @@ test.describe("staff", () => {
     // visible after the redirect; match the word rather than the lifecycle
     // notice, which is also present on this page.
     await expect(page.getByText("Cancelled").filter({ visible: true }).first()).toBeVisible();
-    await page.goto("/shop/blue-mantis/schedule/board");
+    // **On the departure's own week**, because the board is one week now
+    // (#1923) and `?week=` takes any date inside the one it means
+    // (src/lib/week-board.ts). A `toHaveCount(0)` on the week the board opens
+    // to would pass whatever the cancel did, which is the weaker assertion
+    // this used to be.
+    await page.goto(tripWeek);
     await expect(
-      page.locator("li").filter({ hasText: renamed }).filter({ visible: true }),
+      page.locator("[data-week-board]").getByRole("link", { name: renamed, exact: true }),
     ).toHaveCount(0);
 
     await page.goto(manageUrl);
     await page.getByRole("button", { name: "Reinstate trip" }).click();
     await expect(page.getByRole("status")).toContainText("Back on");
-    await page.goto("/shop/blue-mantis/schedule/board");
+    await page.goto(tripWeek);
     await expect(
-      page.locator("li").filter({ hasText: renamed }).filter({ visible: true }),
+      page.locator("[data-week-board]").getByRole("link", { name: renamed, exact: true }),
     ).toBeVisible();
   });
 });
@@ -307,14 +305,7 @@ test.describe("staff", () => {
 
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
-    // Exact, for the reason the sibling assertion below already records: an
-    // unpriced trip's card also carries a "Set a price for {title}, …" link
-    // whose accessible name contains the title as a substring.
-    await page
-      .locator("li")
-      .filter({ hasText: title })
-      .getByRole("link", { name: title, exact: true })
-      .click();
+    await openTripFromBoard(page, title);
     await page.getByRole("link", { name: "Manifest" }).click();
     await page.getByRole("heading", { name: "Buddy teams" }).click();
     // The whole of what D23 gets: an aggregate on the team builder, with no
@@ -368,13 +359,7 @@ test.describe("staff", () => {
     // and only on the seat that made it.
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
-    // Named and exact: an unpriced departure's row also carries a "Set a price
-    // for …" link whose accessible name contains the title.
-    await page
-      .locator("li")
-      .filter({ hasText: title })
-      .getByRole("link", { name: title, exact: true })
-      .click();
+    await openTripFromBoard(page, title);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     await expect(page.getByText("Ruth Okafor").first()).toBeVisible();
     await expect(page.getByText("Asked for a word with the divemaster.")).toHaveCount(1);
@@ -449,11 +434,7 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Wreck Trip — Spiegel Grove" })
-    .getByRole("link", { name: "Wreck Trip — Spiegel Grove", exact: true })
-    .click();
+  await openTripFromBoard(page, "Wreck Trip — Spiegel Grove");
   // The wait list is the guests ledger's own "Waiting for a seat" group now
   // (ADR 20260827-the-departure-is-two-working-surfaces, slice 5d).
   await expect(page.getByRole("heading", { name: /Waiting for a seat/ })).toBeVisible();
@@ -531,14 +512,7 @@ test.describe("as owner", () => {
     // Staff open trip B's roster: the diver is held on identity, not ready.
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
-    await page
-      .locator("li")
-      .filter({ hasText: tripB })
-      // Exact match: an unpriced trip's card also carries a "Set a price for
-      // {title}, ..." link whose accessible name contains the trip title as a
-      // substring.
-      .getByRole("link", { name: tripB, exact: true })
-      .click();
+    await openTripFromBoard(page, tripB);
     const row = rosterRow(page, "Nora Quinn").filter({ visible: true });
     await expect(row).toContainText("Identity unconfirmed");
 

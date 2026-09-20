@@ -8,6 +8,7 @@ import {
   type CloseoutRollCallGap,
   type CloseoutTripInput,
   closeoutAdminTaskStatus,
+  dayTakings,
   parseCloseoutSnapshot,
   seatSailed,
   shopDayOf,
@@ -950,5 +951,68 @@ describe("the glossary's close-out entry", () => {
     expect(text).toContain("#1480");
     expect(text).toMatch(/never reopens one the clock has closed/);
     expect(text).toMatch(/Nothing\s+demotes/);
+  });
+});
+
+describe("dayTakings", () => {
+  // The whole of `MonthlyReport` is not the shape under test; these are the
+  // three fields the evening reads, and the type pins that for us.
+  const report = (
+    over: Partial<{
+      revenueCents: number;
+      tipsCents: number;
+      importedFinancialRecordCount: number;
+    }> = {},
+  ) => ({
+    revenueCents: 0,
+    tipsCents: 0,
+    importedFinancialRecordCount: 0,
+    ...over,
+  });
+
+  it("says nothing about a day that took nothing", () => {
+    // The common answer, and the one that keeps a cash shop from meeting a
+    // line reading zero every night of its working life.
+    expect(dayTakings(report())).toBeNull();
+  });
+
+  it("reads a day that took money", () => {
+    expect(dayTakings(report({ revenueCents: 124_000 }))).toEqual({
+      revenueCents: 124_000,
+      tipsCents: 0,
+      importedRecordCount: 0,
+    });
+  });
+
+  it("keeps tips beside revenue rather than inside it", () => {
+    // The rule the month already obeys (`MonthlyReportInput.tipsCents`): a tip
+    // is its own Stripe charge, 100% the shop's, outside the booking payment
+    // gate. Summing them here would make tonight's figure disagree with the
+    // same day read inside `/reports`, and nothing would go red.
+    const reading = dayTakings(report({ revenueCents: 124_000, tipsCents: 8_500 }));
+    expect(reading?.revenueCents).toBe(124_000);
+    expect(reading?.tipsCents).toBe(8_500);
+  });
+
+  it("reads a day whose only money is a tip", () => {
+    // A shop whose seats were all paid before today can still be tipped on
+    // today's boat, and that is money the day made.
+    expect(dayTakings(report({ tipsCents: 2_000 }))?.tipsCents).toBe(2_000);
+  });
+
+  it("reads a day that went backwards", () => {
+    // Imported refunds can outrun imported payments, and `revenueCents` is
+    // signed. A negative day is a real fact the evening states rather than
+    // rounds away to silence — the fork is "no money at all", not "no profit".
+    expect(dayTakings(report({ revenueCents: -4_500 }))?.revenueCents).toBe(-4_500);
+  });
+
+  it("carries the unverified imported count through to the reading", () => {
+    // Money inside the figure that Stripe never confirmed. The month's revenue
+    // card names it; the evening has to be able to name it too.
+    expect(
+      dayTakings(report({ revenueCents: 30_000, importedFinancialRecordCount: 4 }))
+        ?.importedRecordCount,
+    ).toBe(4);
   });
 });
