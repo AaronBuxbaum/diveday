@@ -150,7 +150,8 @@ five facts.
 **The long page, deliberately — decided 2026-09-20 (Aaron, in session; issue #1924).** Since slice
 23c folded the packing list in, this is the tallest surface in the app by a wide margin:
 `departure-load-out-handed-over` captures at **12,340px at 390** and **8,605px at 1280**, against
-roughly 2,500px for the shop home. That is about thirty phone screens.
+roughly 2,500px for the shop home. The visual suite's phone is 390×844, so that is about fifteen
+screens of scrolling, and about eleven on its 1280×800 desktop.
 
 `.claude/rules/e2e.md` says a surface that screenshots enormous is telling you the page is
 unbounded, and the fix belongs in the product. **Here it does not.** A packing list *is* a long
