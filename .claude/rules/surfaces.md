@@ -19,13 +19,21 @@ stay in `AGENTS.md`.
   `src/app/s/[shopSlug]/layout.tsx` and rendered by `src/components/PublicShopChrome.tsx`. Add a
   public destination there, never as a per-page cross-link; the whole header is dropped in
   `?embed=1`.
-- **Where staff can go** (nav tabs, the "More" menu/sheet, ⌘K "Go to"): derive from
-  `src/lib/staff-destinations.ts`. `src/components/ShopNavLinks.tsx`,
-  `src/components/StaffTabBar.tsx` and `src/components/search/CommandPalette.tsx` all read it;
-  `src/components/ShopNav.tsx` resolves the one label record they share, and
-  `currentStaffNavDestinationId` is the one answer to "which row is current". Add a destination to
-  the registry, never to a consumer. `src/components/ShopIdentityMenu.tsx` holds only the reader's
-  own session (language, sign out) — never a place in the shop.
+- **Where staff can go** (the bar's three times, ⌘K "Go to"): derive from
+  `src/lib/staff-destinations.ts`, which is a registry of **places in time** — `day`, `week`,
+  `season`, `shop` — not of nav slots (ADR 20260919-one-idea, slice 23b). It has **two** consumers,
+  not three: `src/components/ShopPlaceNav.tsx` renders Today / Week / Season and nothing else, and
+  `src/components/search/CommandPalette.tsx` is how everything else is reached. The first ships two
+  forms of one nav — pills from `lg`, `ShopPlaceMenu`'s calendar below it — and they are in one file
+  reading one hoisted copy record for that reason. `src/components/ShopNav.tsx` resolves it, and
+  `currentStaffPlace` is the one answer to "which of the three is lit". Add a destination to the
+  registry, never to a consumer — and give it the time it happens at, because nothing is `null` any
+  more.
+  **The search is a control in the bar at every width, never only a shortcut**: ADR
+  20260813-more-is-the-shops-other-door retired an earlier bar for making fourteen destinations
+  ⌘K-only, and that finding outlived the bar it retired.
+  `src/components/ShopIdentityMenu.tsx` holds the shop's one place with no hour in it — Settings,
+  above the rule — and below it the reader's own session (language, sign out).
 - **Bearer-token pages** (`src/app/waivers/[token]`, `ready/[token]`, `recap/[token]`,
   `verify/[token]`, `reset-password/[token]`, `calendar/[token]`): the URL *is* the capability;
   read [docs/engineering/capability-telemetry-runbook.md](../../docs/engineering/capability-telemetry-runbook.md)

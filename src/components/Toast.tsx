@@ -35,7 +35,7 @@ export function Toast({ message, durationMs = 4000 }: { message: string; duratio
 
   if (!visible) return null;
   return (
-    <div className="fixed inset-x-0 bottom-[calc(1rem+var(--dock-clearance,0rem))] z-50 flex justify-center px-4 print:hidden">
+    <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 print:hidden">
       <div
         role="status"
         className={`rounded-inset border border-border bg-surface px-4 py-3 text-sm font-medium shadow-2xl ${

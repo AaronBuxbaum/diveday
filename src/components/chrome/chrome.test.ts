@@ -182,21 +182,33 @@ describe("the chrome bar", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("clears phone dock clearance only for the live manifest inside the staff shell", async () => {
+  /**
+   * These two used to pin the phone dock's clearance: that it was 56px plus a
+   * hairline plus the device's home-indicator inset, that `lg` and the live
+   * manifest each zeroed it, and that the zeroing stayed anchored to the staff
+   * layout rather than to `.boat-mode` globally. The dock left with the nav of
+   * nouns (ADR 20260919-one-idea, slice 23b), and a reserved band with nothing
+   * standing in it is dead space at the foot of every phone screen in the
+   * shop. What is worth pinning now is the absence.
+   */
+  it("reserves nothing at the bottom edge, because nothing stands there", async () => {
     const css = await read("src/app/globals.css");
-    expect(css).toContain("#shop-main-content:has(> main > div.boat-mode)");
-    expect(css).toContain("--dock-clearance: 0rem;");
-    // The offline manifest has its own shell, so this selector must stay
-    // anchored to the staff layout rather than to `.boat-mode` globally.
-    expect(css).not.toContain(".boat-mode {\n  --dock-clearance: 0rem;");
+    expect(css).not.toMatch(/--dock-clearance:\s*[^;]+;/);
   });
 
-  it("includes the device safe area in phone dock clearance", async () => {
-    const css = await read("src/app/globals.css");
-    expect(css).toMatch(
-      /#shop-main-content\s*\{\s*--dock-clearance:\s*calc\(3\.5rem \+ 1px \+ env\(safe-area-inset-bottom\)\);/,
-    );
-    expect(css).toContain("@media (min-width: 1024px)");
+  it("leaves no surface asking for a clearance that is never declared", async () => {
+    // A `var(--dock-clearance, 0rem)` resolves to its fallback and looks fine,
+    // which is exactly how a stale offset survives a deletion. The toasts and
+    // the sticky action row each carried one.
+    for (const path of [
+      "src/components/Toast.tsx",
+      "src/components/UndoToast.tsx",
+      "src/components/ui/form.tsx",
+      "src/app/shop/[shopSlug]/layout.tsx",
+    ]) {
+      const source = await read(path);
+      expect(source, path).not.toMatch(/(?:bottom|pb)-[[(][^\n]*--dock-clearance/);
+    }
   });
 
   it("declares its height once, as a token, at the 56px the ADR names", async () => {

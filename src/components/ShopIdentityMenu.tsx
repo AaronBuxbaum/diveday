@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -11,6 +12,7 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { motionMs } from "@/lib/motion";
 
 export type ShopIdentityMenuCopy = {
+  settings: string;
   language: string;
   signOut: string;
   signOutConfirm: string;
@@ -34,11 +36,20 @@ export type ShopIdentityMenuCopy = {
  * render as their own languages' names rather than as words in whichever
  * language is currently wrong for them.
  *
- * Settings lived here for a while, between leaving the tab strip and the
- * "More" groups arriving — it is a *place*, and places live in the nav: the
- * header's More menu and the dock's More sheet both end their "Set up" group
- * with it (ADR 20260813-more-is-the-shops-other-door). Keeping a second door
- * here too would be the duplicate control principle 8 forbids.
+ * **Settings is back, and it is the reason this menu is the shop's name.**
+ * It lived here once, between leaving the tab strip and the "More" groups
+ * arriving, and left because it is a *place* and places lived in the nav — a
+ * second door here would have been the duplicate control principle 8 forbids
+ * (ADR 20260813-more-is-the-shops-other-door). There is no nav now, and no
+ * other door, so the objection is void and the ADR is explicit: "Only Settings
+ * has no hour and lives behind the shop's name" (ADR 20260919-one-idea,
+ * decision I · Tide, slice 23b).
+ *
+ * It sits above the rule, apart from what follows it, because the two halves
+ * of this menu are about different things: Settings is the *shop*, and the
+ * language and the way out are this *reader*. It is absent rather than
+ * disabled for a role that may not open it, like every other gated place
+ * (ADR 20260724-role-gated-surfaces-hide-not-explain).
  *
  * The sign-out itself keeps its two-tap `InlineConfirm` (task 81): an undo
  * banner is not safe here, because its grace window would keep the session
@@ -54,6 +65,7 @@ export function shopInitials(name: string): string {
 export function ShopIdentityMenu({
   shopName,
   logoUrl,
+  settingsHref,
   signOutAction,
   locale,
   languages,
@@ -62,6 +74,8 @@ export function ShopIdentityMenu({
 }: {
   shopName: string;
   logoUrl?: string;
+  /** Where Settings lives, or absent for a reader who may not open it. */
+  settingsHref?: string;
   signOutAction: () => Promise<void>;
   /** The language this render was written in — the one marked as in force. */
   locale: string;
@@ -145,6 +159,21 @@ export function ShopIdentityMenu({
         <div
           className={`absolute top-full left-0 z-10 mt-2 min-w-44 rounded-inset border border-border bg-surface p-2 shadow-lg ${closing ? "animate-scale-out" : "animate-scale-in"}`}
         >
+          {settingsHref ? (
+            <div className="border-b border-border pb-1">
+              <Link
+                href={settingsHref}
+                onClick={close}
+                className={buttonClass({
+                  variant: "ghost",
+                  size: "sm",
+                  className: "w-full justify-start rounded-lg",
+                })}
+              >
+                {copy.settings}
+              </Link>
+            </div>
+          ) : null}
           <div className="pt-1">
             <GroupLabel className="px-2">{copy.language}</GroupLabel>
             <div className="mt-1">

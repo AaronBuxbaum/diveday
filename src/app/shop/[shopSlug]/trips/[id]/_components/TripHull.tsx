@@ -106,9 +106,15 @@ export function TripHull({
    */
   crew?: readonly string[];
 }) {
-  const crewInitials = (crew ?? [])
-    .map((name) => initialsOf(name))
-    .filter((initials): initials is string => initials !== undefined);
+  /**
+   * **Every crew member counts, lettered or not.** This used to drop the ones
+   * `initialsOf` could not letter — a blank or symbol-only name — from the
+   * array it then measured, so those people left the *geometry* as well as the
+   * lettering and the boat drew one circle fewer than it had crew. A person
+   * with an awkward name is still a person on the boat. The gap is a hole in
+   * the letters now, which `Hull` already draws as a plain circle.
+   */
+  const crewInitials = (crew ?? []).map((name) => initialsOf(name));
   const geometry = hullGeometry({ capacity, crewCount: crewInitials.length });
   const seats: HullSeatContent[] = seatHoldersOf(roster).map((entry) => ({
     reading: seatReadingFor({

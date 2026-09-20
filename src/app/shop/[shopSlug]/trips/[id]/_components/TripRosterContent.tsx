@@ -11,6 +11,7 @@ import { activityLine } from "@/i18n/activity-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
 import { formatShortDate } from "@/lib/format";
+import { crewNotDrawn } from "@/lib/hull";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
@@ -248,6 +249,10 @@ export function TripRosterContent({
               capacity: trip.capacity,
               blocked: hullSeatCounts.blocked,
               unread: hullSeatCounts.unread,
+              // The wheelhouse holds two. A departure with more guides than
+              // that draws a boat with people missing from it, and the one
+              // sentence the picture carries is where that gets said.
+              crewNotDrawn: crewNotDrawn(hull.crew.length),
             })}
           />
         </div>

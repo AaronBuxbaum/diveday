@@ -47,8 +47,9 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Team" })).toBeVisible();
 
     // Promo codes: in Money, where the shop's other money is. These cards are
-    // the doors on the surface that owns them; the nav's "Set up" group is the
-    // other door (ADR 20260813-more-is-the-shops-other-door).
+    // the doors on the surface that owns them, and since the nav of nouns left
+    // they are the *only* standing doors — the shop's own name opens Settings,
+    // and the search finds the rest (ADR 20260919-one-idea, slice 23b).
     await page.goto(`/shop/${SHOP}/settings`);
     await page.getByRole("main").getByRole("link", { name: "Promo codes", exact: true }).click();
     await expect(page).toHaveURL(`/shop/${SHOP}/promos`);

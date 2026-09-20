@@ -1,120 +1,113 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 /**
- * The header nav, the phone dock, and the command palette all read one
- * destination registry (src/lib/staff-destinations.ts). This spec covers what
- * the nav owes that registry: five primary tabs plus one "More" door carrying
- * everything else — the header menu from `lg` up, the bottom sheet on the
- * dock's sixth slot below it (ADR 20260813-more-is-the-shops-other-door) —
- * with exactly one row anywhere reading as current, and a role-gated
- * destination absent rather than disabled (ADR
+ * **The bar is three times** — ADR 20260919-one-idea, decision I · Tide, slice
+ * 23b: "A date, a search and the shop's name in the bar — no tabs, no More, no
+ * dock."
+ *
+ * What this spec used to cover was a nav of *nouns*: five primary tabs, a
+ * "More" menu from `lg` up and a bottom sheet rising from a phone dock's sixth
+ * slot, three consumers deriving twenty-one destinations from one registry
+ * (ADR 20260813-more-is-the-shops-other-door). What it covers now is Today,
+ * Week and Season, and the two things that have to stay true without the nav:
+ * **everything else is reachable through the search**, and **a gated place is
+ * absent rather than shown and refused** (ADR
  * 20260724-role-gated-surfaces-hide-not-explain).
  */
 
 test.describe("owner", () => {
   signedInAsOwner();
 
-  test("the header is four tabs plus a More menu holding the two groups", async ({ page }) => {
+  test("the bar wears three times, and the one you are on is lit", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
 
-    // Scoped to the header: the primary destinations render twice in the DOM
-    // (header strip and phone dock), one visible per breakpoint.
-    const nav = page.locator("header").getByRole("navigation", { name: "Primary" });
-    // "Board", not "Schedule": the public schedule is a different page at a
-    // different URL, and staff call this one the board. **Four, not five**:
-    // Close-out left the bar on 2026-08-28 when the evening became a state of
-    // the home rather than a destination (H-62), and the room it freed is
-    // deliberately unspent. Orders remains reachable from More.
-    await expect(nav.getByRole("link")).toHaveText([/Today/, "Check-in", "Divers", "Board"]);
-    await expect(nav.getByRole("link", { name: "Close-out" })).toHaveCount(0);
+    const bar = page.locator("header").getByRole("navigation", { name: "When" });
+    await expect(bar.getByRole("link")).toHaveText([/Today/, "Week", "Season"]);
+    // The nouns are gone from the bar — all twenty-one of them. Divers and
+    // Check-in are the two that were tabs longest, so they are the ones worth
+    // naming rather than trusting the list above.
+    for (const noun of ["Divers", "Check-in", "Board", "Orders", "More"]) {
+      await expect(bar.getByRole("link", { name: noun, exact: true })).toHaveCount(0);
+    }
 
-    // **`exact`, because Today's badge now says "divers" too.** Its accessible
-    // name is "Today 20 divers blocked", and a role query matches by substring,
-    // so an inexact match resolves to two links and Playwright refuses it.
-    await nav.getByRole("link", { name: "Divers", exact: true }).click();
-    await expect(page).toHaveURL(/\/divers$/);
-    await expect(nav.getByRole("link", { name: "Divers", exact: true })).toHaveAttribute(
+    // **Not `exact`, because Today's badge is part of its name.** The blocked
+    // count rides the pill, so the accessible name is "Today 20 divers
+    // blocked" — an exact match on "Today" finds nothing. A substring match is
+    // unambiguous in a bar of three, where the other two are Week and Season.
+    await expect(bar.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "page");
+
+    // A time is a link to a page, and the page behind it may be rebuilt
+    // without this bar changing: Week is the board today and becomes the week
+    // in 23f.
+    await bar.getByRole("link", { name: "Week" }).click();
+    await expect(page).toHaveURL(/\/schedule\/board$/);
+    await expect(bar.getByRole("link", { name: "Week" })).toHaveAttribute("aria-current", "page");
+    await expect(bar.getByRole("link", { name: "Today" })).not.toHaveAttribute(
       "aria-current",
       "page",
     );
-
-    await page.goto("/shop/blue-mantis");
-    // The More menu holds every other *place*, in two named groups — the
-    // operational cadence, then configuration, with Settings closing the menu.
-    const more = page.locator("header summary").filter({ hasText: "More" });
-    await more.click();
-    const menu = page.locator("header details[open]");
-    await expect(menu.getByRole("list", { name: "Run the shop" }).getByRole("link")).toHaveText([
-      "Staffing",
-      "Courses",
-      "Dive sites",
-      "Gear",
-      "Waivers",
-      "Reviews",
-      "Requests",
-      "Inbox",
-      "Orders",
-      "Reports",
-    ]);
-    await expect(menu.getByRole("list", { name: "Set up" }).getByRole("link")).toHaveText([
-      "Team",
-      "Promo codes",
-      "Calendar subscription",
-      "Settings",
-    ]);
-
-    // A More row navigates and the menu closes behind it.
-    await menu.getByRole("link", { name: "Orders" }).click();
-    await expect(page).toHaveURL(/\/orders$/);
-    await expect(page.locator("header details[open]")).toHaveCount(0);
-    // …and the door that leads here is what reads as current: the More
-    // button, not a borrowed Today tab — in color and in the tree, so a
-    // screen reader isn't left with five non-current tabs and nothing else.
-    await expect(more).toHaveClass(/text-primary/);
-    await expect(more).toHaveAttribute("aria-current", "true");
-    await more.click();
-    await expect(
-      page.locator("header details[open]").getByRole("link", { name: "Orders" }),
-    ).toHaveAttribute("aria-current", "page");
   });
 
-  test("Settings lives in Set up, and only the most specific row lights", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/settings");
-    const more = page.locator("header summary").filter({ hasText: "More" });
-    await more.click();
-    const menu = page.locator("header details[open]");
-    await expect(menu.getByRole("link", { name: "Settings" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+  test("a departure lights the week it sails in, because the board claims it", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/schedule/board");
+    const bar = page.locator("header").getByRole("navigation", { name: "When" });
+    await page
+      .getByRole("main")
+      .getByRole("link")
+      .filter({ hasText: /Reef|Wreck|Night/ })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/trips\//);
+    await expect(bar.getByRole("link", { name: "Week" })).toHaveAttribute("aria-current", "page");
+  });
 
-    // The identity menu is about the reader's own session now — language and
-    // sign out — so Settings' one door is this menu (principle 8: never the
-    // same destination in two menus).
-    await page.keyboard.press("Escape");
-    await page.locator("header [data-identity-menu]").click();
+  test("a page with no hour lights nothing, because it lives behind the shop's name", async ({
+    page,
+  }) => {
+    // Settings, the gear register and the site library are `shop` — the one
+    // place with no time in it. A bar of three times has no pill for them, and
+    // that is the design rather than a gap.
+    for (const suffix of ["/settings", "/gear", "/dive-sites"]) {
+      await page.goto(`/shop/blue-mantis${suffix}`);
+      const bar = page.locator("header").getByRole("navigation", { name: "When" });
+      await expect(bar.getByRole("link")).toHaveCount(3);
+      await expect(bar.locator("[aria-current='page']")).toHaveCount(0);
+    }
+  });
+
+  test("Settings is behind the shop's own name, which is the only door it has", async ({
+    page,
+  }) => {
+    // "Only Settings has no hour and lives behind the shop's name" (ADR
+    // 20260919-one-idea, decision I · Tide). It lived here once and left when
+    // the nav's More groups arrived, because a second door would have been a
+    // duplicate control — there is no nav now, and no second door.
+    await page.goto("/shop/blue-mantis");
     await expect(page.locator("header").getByRole("link", { name: "Settings" })).toHaveCount(0);
-    await page.keyboard.press("Escape");
+    await page.locator("header [data-identity-menu]").click();
+    await page.locator("header").getByRole("link", { name: "Settings" }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+  });
 
-    // A page reached *from* Settings lights its own row, and Settings' row
-    // goes quiet — most specific claim wins, exactly one current row.
-    await page.getByRole("main").getByRole("link", { name: "Team", exact: true }).first().click();
-    await expect(page).toHaveURL(/\/settings\/team$/);
-    await more.click();
-    const reopened = page.locator("header details[open]");
-    await expect(reopened.getByRole("link", { name: "Team" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    await expect(reopened.getByRole("link", { name: "Settings" })).not.toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+  test("everything that is not one of the three is reached through the search", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis");
+    // The search is a control in the bar, not a keyboard shortcut — ADR
+    // 20260813-more-is-the-shops-other-door retired an earlier bar for making
+    // fourteen destinations ⌘K-only, and that finding outlived the bar.
+    await page.locator("header").getByRole("button", { name: "Search" }).click();
+    await page.getByRole("combobox").fill("Orders");
+    await page
+      .getByRole("option", { name: /Orders/ })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/orders$/);
   });
 
   test("the demoted doors on owning surfaces still hold", async ({ page }) => {
     // The monthly report keeps its door on the Orders header — the same
-    // money, summed — alongside its own More row.
+    // money, summed.
     await page.goto("/shop/blue-mantis/orders");
     await expect(page.getByRole("link", { name: "Monthly report" })).toBeVisible();
   });
@@ -123,251 +116,117 @@ test.describe("owner", () => {
 test.describe("captain", () => {
   signedInAs("captain");
 
-  test("a gated destination is absent from the nav, not shown and refused", async ({ page }) => {
+  test("a gated time is absent from the bar, not shown and refused", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
 
-    const nav = page.locator("header").getByRole("navigation", { name: "Primary" });
-    // Board is an ungated primary destination; Orders is still visible to a
-    // captain, but it lives in More with the other daily work.
-    await expect(nav.getByRole("link", { name: "Board" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Orders" })).toHaveCount(0);
+    const bar = page.locator("header").getByRole("navigation", { name: "When" });
+    // Season is Reports, which is gated. A captain's bar is two pills — the
+    // honest picture, rather than a third that refuses when tapped.
+    await expect(bar.getByRole("link")).toHaveText([/Today/, "Week"]);
+    await expect(bar.getByRole("link", { name: "Season" })).toHaveCount(0);
+  });
 
-    // The More menu shows a captain only what their role can open: the
-    // ungated cadence rows, and their own calendar feed — never a disabled
-    // Waivers, Reports, Team, Promo codes, or Settings row.
-    //
-    // **Requests joined this list on 2026-09-16** (issue #1679, an H-14
-    // amendment), beside the Inbox that joined it on 2026-09-10. Both gates
-    // were deleted rather than relaxed, and for one argument: the inbox shows
-    // this same captain a stranger's address and message and lets them answer
-    // as the shop, so "these rows carry contact details for people who have
-    // not booked" had stopped telling the two surfaces apart.
-    await page.locator("header summary").filter({ hasText: "More" }).click();
-    const menu = page.locator("header details[open]");
-    await expect(menu.getByRole("list", { name: "Run the shop" }).getByRole("link")).toHaveText([
-      "Staffing",
-      "Courses",
-      "Dive sites",
-      "Gear",
-      "Reviews",
-      "Requests",
-      "Inbox",
-      "Orders",
-    ]);
-    // "Set up" collapses to the one personal row — a visible heading over a
-    // single row would be noise, but the group keeps its accessible name.
-    await expect(menu.getByRole("list", { name: "Set up" }).getByRole("link")).toHaveText([
-      "Calendar subscription",
-    ]);
-    // Neither Inbox nor Requests is in this loop any more, and they left it for
-    // one reason. Inbox went on 2026-09-10 (#1505/#1518) and Requests on
-    // 2026-09-16 (#1679), both H-14 amendments: the moment the inbox began
-    // showing this captain a stranger's address and message — and letting them
-    // answer as the shop — "these rows carry contact details for people who
-    // have not booked" stopped telling the two surfaces apart. Both are
-    // asserted *visible* in the list above instead. Each row below is named
-    // rather than left to the length of that list, so a gate is asserted
-    // rather than implied.
+  test("the search offers a captain only what their role can open", async ({ page }) => {
+    await page.goto("/shop/blue-mantis");
+    await page.locator("header").getByRole("button", { name: "Search" }).click();
+    // Named one by one rather than left to a list's length, so a gate is
+    // asserted rather than implied.
     for (const gated of ["Waivers", "Reports", "Team", "Promo codes", "Settings"]) {
-      await expect(menu.getByRole("link", { name: gated })).toHaveCount(0);
+      await page.getByRole("combobox").fill(gated);
+      await expect(page.getByRole("option", { name: gated, exact: true })).toHaveCount(0);
+    }
+    // **Requests and the Inbox are not on that list, and the pairing is the
+    // point.** Both gates were deleted rather than relaxed (issues #1505/#1518
+    // on 2026-09-10 and #1679 on 2026-09-16, H-14 amendments): the inbox shows
+    // this same captain a stranger's address and message and lets them answer
+    // as the shop, so "these carry contact details for people who have not
+    // booked" had stopped telling the two surfaces apart.
+    for (const open of ["Requests", "Inbox"]) {
+      await page.getByRole("combobox").fill(open);
+      await expect(page.getByRole("option", { name: open, exact: true }).first()).toBeVisible();
     }
   });
 });
 
-test.describe("phone dock", () => {
+test.describe("the phone", () => {
   signedInAsOwner();
-  // The one breakpoint story this spec exists to pin: below `lg` the primary
-  // destinations live in a fixed bottom tab bar (the phone dock) whose sixth
-  // slot is the More sheet, and the header keeps to identity and search.
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("the primary destinations are a bottom tab bar, not header rows", async ({ page }) => {
+  test("has no dock — a name, a date and a search, which is what the artboard draws", async ({
+    page,
+  }) => {
     await page.goto("/shop/blue-mantis");
 
-    const dock = page.getByRole("navigation", { name: "Primary" }).filter({ visible: true });
-    // Four, not five: "Close" left the dock on 2026-08-28 with the evening
-    // (H-62), the same removal the header test above asserts. The freed slot is
-    // deliberately unspent — the sixth is always More.
-    await expect(dock.getByRole("link")).toHaveText([/Today/, "Check-in", "Divers", "Board"]);
-
-    // The header's own copy of the strip is gone from view on a phone.
+    // The dock was a fixed bottom tab bar whose sixth slot raised a sheet.
+    // Nothing stands at the bottom edge now.
+    await expect(page.locator("[data-dock-more]")).toHaveCount(0);
+    // And the three times do not *stand* here: at 390px they are folded, so
+    // nothing wearing them is on screen until the date is tapped.
     await expect(
-      page.locator("header").getByRole("navigation", { name: "Primary" }),
-    ).not.toBeVisible();
+      page.getByRole("navigation", { name: "When" }).filter({ visible: true }),
+    ).toHaveCount(0);
 
-    // The dock is the thumb's nav: fixed to the bottom edge of the viewport.
-    const box = await dock.boundingBox();
-    if (!box) throw new Error("dock has no box");
-    expect(box.y + box.height).toBeGreaterThan(820);
+    // What a thumb has instead — `Tide.dc.html`'s pocket, left to right.
+    await expect(page.locator("header [data-identity-menu]")).toBeVisible();
+    await expect(page.locator("header [data-place-menu]")).toBeVisible();
+    await expect(page.locator("header").getByRole("button", { name: "Search" })).toBeVisible();
+  });
 
-    // And it navigates: the dock's own tab, not a header row, changes page.
-    await dock.getByRole("link", { name: "Board" }).click();
+  test("folds the three times into the date, and they are the same three", async ({ page }) => {
+    await page.goto("/shop/blue-mantis");
+
+    await page.locator("header [data-place-menu]").click();
+    const when = page.getByRole("navigation", { name: "When" });
+    await expect(when.getByRole("link")).toHaveText([/^Today/, "Week", "Season"]);
+    // The same one is lit as on the desk bar: the day, because that is where
+    // this page sits.
+    await expect(when.getByRole("link", { name: /^Today/ })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    await when.getByRole("link", { name: "Week" }).click();
     await expect(page).toHaveURL(/\/schedule\/board$/);
-    await expect(dock.getByRole("link", { name: "Board" })).toHaveAttribute("aria-current", "page");
+
+    // And the fold knows where the reader went: reopened on the board, Week
+    // is lit and Today is not.
+    await page.locator("header [data-place-menu]").click();
+    await expect(when.getByRole("link", { name: "Week" })).toHaveAttribute("aria-current", "page");
+    await expect(when.getByRole("link", { name: /^Today/ })).not.toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
-  test("the More sheet puts the whole shop two thumb-taps away", async ({ page }) => {
+  test("reaches everything that is not a time through the search", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
 
-    // Tap one: the dock's sixth slot.
-    const moreButton = page.locator("[data-dock-more]");
-    await expect(moreButton).toBeVisible();
-    await moreButton.click();
-
-    // The sheet rises from the dock with the same two groups the desktop
-    // menu holds, rendered by the same components.
-    const sheet = page.locator("nav").getByRole("list", { name: "Run the shop" });
-    await expect(sheet.getByRole("link", { name: "Staffing" })).toBeVisible();
-
-    // The sheet follows its trigger in the DOM, so the keyboard walks into
-    // what it just disclosed: Tab from the More button lands on the first row.
-    await page.keyboard.press("Tab");
-    await expect(sheet.getByRole("link", { name: "Staffing" })).toBeFocused();
-
-    // Every row is a real touch target (dock test: >= 44px).
-    const rowBox = await sheet.getByRole("link", { name: "Staffing" }).boundingBox();
-    if (!rowBox) throw new Error("sheet row has no box");
-    expect(rowBox.height).toBeGreaterThanOrEqual(44);
-
-    // Tap two: Settings, at the end of Set up.
+    const search = page.locator("header").getByRole("button", { name: "Search" });
+    await search.click();
+    await page.getByRole("combobox").fill("Divers");
     await page
-      .locator("nav")
-      .getByRole("list", { name: "Set up" })
-      .getByRole("link", { name: "Settings" })
+      .getByRole("option", { name: /Divers/ })
+      .first()
       .click();
-    await expect(page).toHaveURL(/\/settings$/);
-    // The sheet closed with the navigation, and the More slot is what reads
-    // as current for a page that lives behind it — in color and in the tree.
-    await expect(page.getByRole("list", { name: "Set up" })).toHaveCount(0);
-    await expect(moreButton).toHaveClass(/text-primary/);
-    await expect(moreButton).toHaveAttribute("aria-current", "true");
-  });
-
-  /**
-   * **The thumb that opened the sheet closes it, without reaching** (ADR
-   * 20260907-nothing-from-nowhere, decision 4).
-   *
-   * **Dragged from the handle, since 2026-09-07.** It used to press the
-   * sheet's very bottom edge, so that every point after the press was over the
-   * dock rather than over the sheet — the case that first shipped broken. That
-   * press is now on the *list*, and the list scrolls: the shop's fifteenth
-   * destination (Inbox) took the sheet's content past its
-   * `max-h-[calc(100dvh-8rem)]` cap, so a downward drag begun on a row is a
-   * scroll gesture the browser claims before `useDragSheet` sees a second
-   * move. The handle is the affordance the design added for exactly this — "the
-   * one place a drag may start however far the list beneath it has been
-   * scrolled" — and it is still 300px above the fold, so the finger still
-   * never reaches for the top of the screen, which is the whole claim.
-   *
-   * **And the only one, since #1512.** A press on a row of a sheet whose list
-   * can scroll now starts no gesture at all; the case below holds that, so the
-   * two tests together say where a drag may begin and where it may not.
-   */
-  test("the sheet leaves with a thumb that drags it down by the handle", async ({ page }) => {
-    await page.goto("/shop/blue-mantis");
-    await page.locator("[data-dock-more]").click();
-    const sheet = page.getByRole("dialog", { name: "More" });
-    await expect(sheet).toBeVisible();
-    const handle = sheet.locator("[data-sheet-handle]");
-    const box = await handle.boundingBox();
-    if (!box) throw new Error("sheet handle has no box");
-
-    const x = box.x + box.width / 2;
-    const grip = box.y + box.height / 2;
-    await page.mouse.move(x, grip);
-    await page.mouse.down();
-    // Past the slop, then well past the line — the sheet's own height is what
-    // "far enough" is a share of (`dismissOnRelease`), so this clears it at any
-    // sheet size the dock can raise.
-    await page.mouse.move(x, grip + 40, { steps: 6 });
-    await page.mouse.move(x, grip + 700, { steps: 10 });
-    await page.mouse.up();
-
-    await expect(page.getByRole("list", { name: "Run the shop" })).toHaveCount(0);
-    // It closed rather than navigated: a drag is not a tap on whatever row it
-    // started over.
-    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
-  });
-
-  /**
-   * **The other half of the same rule** (#1512). Once the sheet's list can
-   * scroll, a press anywhere in that list belongs to the list: the sheet must
-   * not move, and it must not leave. Before #1512 it did leave — and on a real
-   * thumb it did worse, starting a gesture the browser's own scroller then took
-   * away mid-flight, so the sheet sat open with no explanation.
-   *
-   * **Pressed on the group's label, not on a row**, which is not a dodge: a
-   * *mouse* press on a link starts Chromium's own link drag, which cancels the
-   * pointer stream, so a row drag ends in nothing under either rule and would
-   * assert nothing here. The label is the same scrolling content a thumb lands
-   * on, and it is the one part of it a mouse can honestly drag.
-   */
-  test("a drag begun on the full sheet's list leaves the sheet open", async ({ page }) => {
-    await page.goto("/shop/blue-mantis");
-    await page.locator("[data-dock-more]").click();
-    const sheet = page.getByRole("dialog", { name: "More" });
-    await expect(sheet).toBeVisible();
-
-    // The rule only speaks about a sheet whose list can scroll, so hold that
-    // here: a shop whose menu shrank back inside the cap would otherwise fail
-    // the assertions below for a reason nothing in this test names.
-    const overflowing = await sheet.evaluate((node) => node.scrollHeight > node.clientHeight);
-    expect(overflowing, "the demo shop's menu now fits the sheet").toBe(true);
-
-    const sheetBox = await sheet.boundingBox();
-    const box = await sheet.getByText("Run the shop", { exact: true }).boundingBox();
-    if (!box || !sheetBox) throw new Error("sheet content has no box");
-    const x = box.x + box.width / 2;
-    const grip = box.y + box.height / 2;
-    // Far enough down that a gesture, had one started, would have dismissed —
-    // clamped inside the viewport, and checked against the sheet's own height
-    // because that is what `dismissOnRelease` measures the line against.
-    const to = Math.min(grip + 700, 840);
-    expect(to - grip).toBeGreaterThan(sheetBox.height * 0.4);
-
-    await page.mouse.move(x, grip);
-    await page.mouse.down();
-    await page.mouse.move(x, grip + 40, { steps: 6 });
-    await page.mouse.move(x, to, { steps: 10 });
-    // Read while the button is still down: no gesture started, so the sheet is
-    // still exactly where it rose to. This is the assertion that fails against
-    // the old rule, which had it 700px down the screen by now.
-    const travelled = await sheet.evaluate((node) => node.style.transform);
-    expect(travelled, "the sheet moved under a finger that was reading the list").toBe("");
-    await page.mouse.up();
-
-    // Nothing under the finger was taken for a tap on the way past, either.
-    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
-    // And the sheet is not merely still in the DOM — it is open and working.
-    // A dismissal would have unmounted this row a fifth of a second later, so
-    // clicking it is what distinguishes "stayed" from "was still leaving".
-    await sheet.getByRole("link", { name: "Staffing" }).click();
-    await expect(page).toHaveURL(/\/staffing$/);
-  });
-
-  test("the sheet dismisses on an outside tap without navigating", async ({ page }) => {
-    await page.goto("/shop/blue-mantis");
-    await page.locator("[data-dock-more]").click();
-    await expect(page.getByRole("list", { name: "Run the shop" })).toBeVisible();
-    // A tap on the dimmed page above the sheet just closes it — no second
-    // tap owed. Coordinates, because what a finger actually hits there is
-    // the scrim, not a control — derived from the sheet's own top edge, so
-    // the sheet growing a row (as it did when Gear joined the register)
-    // cannot move it up underneath a hard-coded point.
-    const sheetBox = await page.getByRole("dialog", { name: "More" }).boundingBox();
-    if (!sheetBox) throw new Error("sheet has no box");
-    await page.mouse.click(195, Math.max(16, sheetBox.y - 40));
-    await expect(page.getByRole("list", { name: "Run the shop" })).toHaveCount(0);
-    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+    await expect(page).toHaveURL(/\/divers$/);
   });
 });
 
 /**
  * The other half of what the dock bought: with the tabs off the header, a
- * phone header holds only the logo, the shop's name, and two icon buttons, so
- * the name gets the width the tab rows used to take. It kept a 10rem clamp
- * from before that — a shop whose name ran past about twenty characters read
- * as "Blue Horizon Dive Ch…" with 80px of empty header beside it.
+ * phone header holds the logo, the shop's name, the date and the search, and
+ * the name gets whatever the row has left. It kept a 10rem clamp from before
+ * that — a shop whose name ran past about twenty characters read as "Blue
+ * Horizon Dive Ch…" with 80px of empty header beside it.
+ *
+ * **What is asserted is the absence of a cap, not that any one name fits.**
+ * This used to demand that "Blue Horizon Dive Charters" render whole, which
+ * was true of a bar with two controls in it and stopped being true when the
+ * three times folded into a third (ADR 20260919-one-idea, slice 23b): at
+ * 390px that name now gives up its last eleven pixels, which is flex doing
+ * its job rather than a clamp doing its worst. So the measurements are the two
+ * that tell those apart — the name is wider than the clamp ever allowed, and
+ * there is no idle space between where it ends and the next control begins.
  *
  * Driven against a freshly onboarded shop because the seeded demo shop's name
  * is short enough to fit either way — the clamp is invisible until a name is
@@ -376,7 +235,7 @@ test.describe("phone dock", () => {
 test.describe("a long shop name on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("uses the width the phone dock freed, and keeps the header one row", async ({ page }) => {
+  test("keeps the header one row, however long the shop calls itself", async ({ page }) => {
     const unique = `long-name-${Date.now()}`;
     await page.goto("/onboard");
     await page
@@ -416,24 +275,35 @@ test.describe("a long shop name on a phone", () => {
           .evaluate((el) => Number(getComputedStyle(el).opacity)),
       )
       .toBe(1);
-    // Rendered whole, and wider than the 10rem clamp that used to cut it.
+    // Wider than the 10rem clamp that used to cut it.
     const width = await name.evaluate((el) => ({
       shown: el.clientWidth,
       wants: el.scrollWidth,
     }));
-    expect(width.shown).toBe(width.wants);
     expect(width.shown).toBeGreaterThan(160);
 
     // Taking the width must not cost a second header row: past the point where
     // the name genuinely runs out of room it truncates, and the flex row never
     // wraps the search buttons under it.
     const trigger = page.locator("header [data-identity-menu]");
+    const date = page.locator("header [data-place-menu]");
     const search = page.locator("header").getByRole("button", { name: "Search" });
-    const [triggerBox, searchBox] = await Promise.all([
+    const [triggerBox, dateBox, searchBox] = await Promise.all([
       trigger.boundingBox(),
+      date.boundingBox(),
       search.boundingBox(),
     ]);
-    if (!triggerBox || !searchBox) throw new Error("header controls have no box");
+    if (!triggerBox || !dateBox || !searchBox) throw new Error("header controls have no box");
+
+    // And nothing is being held back: whatever the name does not get, the row
+    // has already spent. This is the clamp's actual signature — a truncated
+    // name with empty header beside it — and it fails on a cap of any size,
+    // where a fixed width only fails on the one that was shipped. Measured
+    // from the identity control rather than from the name, because the caret
+    // that opens it is part of the control and not idle space; what is left
+    // between the two is the row's own two gaps (8px each) and nothing else.
+    const idle = dateBox.x - (triggerBox.x + triggerBox.width);
+    expect(idle).toBeLessThan(24);
     expect(Math.abs(triggerBox.y - searchBox.y)).toBeLessThan(triggerBox.height);
     expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(searchBox.x);
     // And nothing spilled sideways off the phone.

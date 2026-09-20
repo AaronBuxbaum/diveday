@@ -338,7 +338,7 @@ describe("FormStatus", () => {
 });
 
 describe("StickyFormActions", () => {
-  it("stays above the staff phone dock when the shell provides clearance", () => {
+  it("rides the bottom edge, which nothing stands on any more", () => {
     const { container } = render(
       <StickyFormActions>
         <button type="submit">Save</button>
@@ -346,7 +346,9 @@ describe("StickyFormActions", () => {
     );
 
     expect(container.firstElementChild).toHaveClass("sticky");
-    expect(container.firstElementChild).toHaveClass("bottom-[var(--dock-clearance,0rem)]");
+    // It sat at `--dock-clearance` while the staff shell had a phone dock
+    // under it (ADR 20260919-one-idea, slice 23b retired both).
+    expect(container.firstElementChild).toHaveClass("bottom-0");
   });
 });
 

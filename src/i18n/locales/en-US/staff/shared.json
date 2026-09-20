@@ -224,11 +224,7 @@
     "signOutPending": "Signing out…"
   },
   "shopNavLinks": {
-    "primaryNavAriaLabel": "Primary",
     "badgeBlocked": "{count, plural, one {# diver blocked} other {# divers blocked}}",
-    "more": "More",
-    "groupDaily": "Run the shop",
-    "groupSetup": "Set up",
     "today": "Today",
     "checkIn": "Check-in",
     "walkIn": "Walk-in",
@@ -250,6 +246,12 @@
     "settings": "Settings",
     "team": "Team",
     "calendarFeed": "Calendar subscription"
+  },
+  "shopPlaceNav": {
+    "navAriaLabel": "When",
+    "today": "Today",
+    "week": "Week",
+    "season": "Season"
   },
   "subSurfaceRipple": {
     "iconTitle": "Roll call complete icon",

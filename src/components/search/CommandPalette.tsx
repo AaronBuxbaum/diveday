@@ -555,7 +555,23 @@ export function CommandPalette({
         onClick={() => setOpen(true)}
         aria-keyshortcuts="Meta+K Control+K"
         aria-label={copy.search}
-        className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
+        // **The transition names its two properties rather than saying
+        // `transition-colors`.** That shorthand covers `border-color`, and the
+        // border below arrives at `sm` — so crossing that breakpoint started
+        // four longhand transitions (one per side) on the very resize
+        // `capture()` performs, and a screenshot taken during the fade catches
+        // a half-drawn border. `e2e/visual.spec.ts`'s capture-harness canary is
+        // what found it. Hover changes the text and the background and nothing
+        // else, so those are what may move.
+        //
+        // **A field's box only where it is a field.** From `sm` up this reads
+        // as one — a magnifier, the word, the shortcut, bordered like an
+        // input. Below it the word and the ⌘K hide and the border stayed, a
+        // box drawn around a bare icon and the one control in the bar that did
+        // not match the date beside it (`Tide.dc.html` draws both as plain
+        // strokes). So the border, the padding and the auto width all arrive
+        // at `sm` together with the text that earns them.
+        className="inline-flex size-11 shrink-0 items-center justify-center gap-2 rounded-full text-sm font-medium text-muted transition-[color,background-color] hover:bg-surface-sunken hover:text-foreground sm:size-auto sm:min-h-11 sm:justify-start sm:rounded-lg sm:border sm:border-border sm:px-3"
       >
         <svg
           aria-hidden="true"
@@ -565,7 +581,12 @@ export function CommandPalette({
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="size-4"
+          // 20px beside the date, 16px beside its own word. `Tide.dc.html`
+          // sizes the two the same way — the pocket's marks at 22px, the desk
+          // bar's magnifier at 18px next to "Search anyone, any day" — because
+          // an icon standing alone is the control and an icon labelling a
+          // field is punctuation.
+          className="size-5 sm:size-4"
         >
           <circle cx="11" cy="11" r="7" />
           <path d="m21 21-4.3-4.3" />

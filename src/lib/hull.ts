@@ -73,6 +73,22 @@ const CREW_Y = [56, 94] as const;
 const CREW_IN_WHEELHOUSE = 2;
 
 /**
+ * How many of a departure's crew the picture will not draw.
+ *
+ * The geometry already returns this as `crewOverflow`, and for its first
+ * fortnight nothing read it — so a departure with four guides drew two circles
+ * and left two human beings out of a drawing of a boat, silently. On screen
+ * that is recoverable, because the crew line is on the same page; on paper it
+ * is a picture of a whole boat missing two souls, and paper is what gets
+ * carried when the app is not there. The surface that writes the hull's
+ * sentence calls this and says the number out loud (dive-domain review
+ * 20260920; ADR 20260919-one-idea §3b.6).
+ */
+export function crewNotDrawn(crewCount: number): number {
+  return Math.max(0, crewCount - CREW_IN_WHEELHOUSE);
+}
+
+/**
  * Above this many columns two initials stop being letters and become texture.
  *
  * The hull keeps its aspect — a boat is a shape, not a curve that may flatten —

@@ -3724,31 +3724,27 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today-crew-uncounted", scheme);
       });
 
-      // The nav's other door (ADR 20260813-more-is-the-shops-other-door):
-      // the header's More menu holding the "Run the shop" / "Set up" groups.
-      // The menu only exists from `lg` up, so this capture's 390 image is
-      // deliberately the plain page — the phone door is the dock sheet below.
-      test(`the header's More menu renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis");
-        await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
-        await page.locator("header summary").filter({ hasText: "More" }).click();
-        await page
-          .locator("header details[open]")
-          .getByText("Run the shop", { exact: true })
-          .waitFor();
-        await capture(page, "nav-more-menu", scheme);
-      });
-
-      // The same groups behind the phone dock's sixth slot, as the bottom
-      // sheet rising from the dock. Opened at the phone viewport because the
-      // dock only exists below `lg` — the 1280 image is the plain page.
-      test(`the dock's More sheet renders true to the design (${scheme})`, async ({ page }) => {
+      // **`nav-more-menu` and `nav-more-sheet` retired with their surfaces.**
+      // They photographed the header's "More" menu and the bottom sheet rising
+      // from the phone dock's sixth slot — the nav's other door (ADR
+      // 20260813-more-is-the-shops-other-door). The bar is three times now and
+      // there is no More and no dock to open (ADR 20260919-one-idea, slice
+      // 23b). What replaced them as the way to everything else is the search,
+      // which `command-palette` and `command-palette-results` already
+      // photograph; the bar itself is in every `/shop/**` capture in this file.
+      //
+      // One disclosed surface did replace them, and it is below: the date the
+      // phone's bar carries, which folds the three times the desk bar wears as
+      // pills. Opened at the phone viewport because it only exists below `lg`
+      // — the 1280 image is deliberately the plain page, exactly as the More
+      // menu's 390 image used to be.
+      test(`the phone's date folds the three times (${scheme})`, async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto("/shop/blue-mantis");
         await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
-        await page.locator("[data-dock-more]").click();
-        await page.getByRole("list", { name: "Run the shop" }).waitFor();
-        await capture(page, "nav-more-sheet", scheme);
+        await page.locator("header [data-place-menu]").click();
+        await page.getByRole("navigation", { name: "When" }).waitFor();
+        await capture(page, "nav-when", scheme);
       });
 
       // **The `blockers` capture retired with its surface.** It photographed
@@ -7732,9 +7728,15 @@ test.describe("capture harness", () => {
       );
       expect(
         running.filter((name) => name === "CSSTransition"),
-        "if Chromium has started listing ::details-content transitions, Playwright's " +
-          'animations: "disabled" may now settle this on its own — re-measure before ' +
-          "trusting it, and keep the switch-off until it does",
+        "a CSSTransition is running at the moment `capture()` resizes, and there are two " +
+          "readings. Either Chromium has started listing ::details-content transitions, in " +
+          'which case Playwright\'s animations: "disabled" may now settle this on its own — ' +
+          "re-measure before trusting it, and keep the switch-off until it does. Or something " +
+          "*else* on this page transitions across a breakpoint, which is its own capture bug: " +
+          "a screenshot taken during that fade catches the property half-applied. Print the " +
+          "animations' transitionProperty and target to tell them apart — on 2026-09-20 it was " +
+          "the header search button's four border-colour longhands, from a `sm:border` meeting " +
+          "a `transition-colors` that covered it",
       ).toEqual([]);
     });
 

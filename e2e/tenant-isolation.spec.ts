@@ -84,10 +84,10 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   await page.getByRole("button", { name: "Create shop & start trial" }).click();
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
   // Staff chrome does render — for their *own* shop. Without this the 404s
-  // below could just as well mean "this account is not staff anywhere".
-  // Scoped to the header: the primary destinations render twice in the DOM
-  // (header strip and the phone dock), one visible per breakpoint.
-  await expect(page.locator("header").getByRole("navigation", { name: "Primary" })).toBeVisible();
+  // below could just as well mean "this account is not staff anywhere". The
+  // bar is three times now rather than five noun tabs (slice 23b), and it is
+  // the same assertion: chrome that only a shop's own staff ever see.
+  await expect(page.locator("header").getByRole("navigation", { name: "When" })).toBeVisible();
 
   // The public schedule stays public, for this signed-in outsider as much as
   // for an anonymous visitor. Since the namespace split (ADR
@@ -105,7 +105,7 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   // …and they get the *visitor's* chrome on it: the shop's own public header,
   // never Blue Mantis's staff nav or its pending-work counts.
   await expect(page.getByRole("link", { name: OTHER_SHOP_NAME }).first()).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "When" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Not ready" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Check-in" })).toHaveCount(0);
 
@@ -146,7 +146,7 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
     // not a single row of its roster.
     await expect(page.getByText(OTHER_SHOP_NAME), path).toHaveCount(0);
     await expect(page.getByText(OTHER_SHOP_DIVER), path).toHaveCount(0);
-    await expect(page.getByRole("navigation", { name: "Primary" }), path).toHaveCount(0);
+    await expect(page.getByRole("navigation", { name: "When" }), path).toHaveCount(0);
   }
 
   // A hand-supplied x-diveday-path claiming a public route must not soften

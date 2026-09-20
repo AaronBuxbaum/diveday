@@ -279,8 +279,6 @@
       "tenant-isolation.spec.ts"
     ],
     "visual": [
-      "nav-more-menu",
-      "nav-more-sheet",
       "today",
       "today-all-home",
       "today-band-dawn",

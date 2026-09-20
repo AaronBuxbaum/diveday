@@ -50,8 +50,9 @@ read; the universal rules stay in `AGENTS.md`.
   `session.ts`; edge layer in `src/proxy.ts`. `/shop/**` is staff-only end to end — there is no
   public-route allowlist any more. The proxy is convenience, not the security boundary.
 - **Staff destinations**: one registry, `src/lib/staff-destinations.ts` — path, permission gate,
-  badge source, nav group. Every nav consumer derives from it. **Five `primary` tabs; the dock's
-  sixth slot is More and that is the ceiling** (ADR 20260813-more-is-the-shops-other-door).
+  badge source, and the **place in time** each thing happens at (`day`, `week`, `season`, `shop`).
+  **The bar wears three of them and never a list of destinations**; everything else is reached
+  through the day it sits on or through the search (ADR 20260919-one-idea, slice 23b).
 - **Staff notices**: `src/lib/staff-notices.ts` — `noticeUrl(path, code, extra?)` writes,
   `noticeFromParam` reads, `shopPath(slug, ...segments)` builds. `noticeUrl` percent-encodes every
   value, merges `&bid=`/`&count=`/`&form=`, keeps an existing query and `#fragment`, and normalises
