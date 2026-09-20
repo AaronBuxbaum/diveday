@@ -308,7 +308,9 @@ test.describe("no connected payment account", () => {
 
     // The record's invoice door is simply absent on a shop that cannot take
     // money — the Connect-payments CTA left the person page with the ADR.
-    await expect(page.getByRole("link", { name: "+ New invoice" })).toHaveCount(0);
+    // The name is "New invoice", with no plus: written "+ New invoice" this
+    // matched nothing whatever the page showed, so it could not fail (#1920).
+    await expect(page.getByRole("link", { name: "New invoice" })).toHaveCount(0);
 
     await page.goto(`/shop/blue-mantis/orders/new?personId=${personId}`);
     await page.getByRole("heading", { level: 1, name: "Grace Halloran" }).waitFor();

@@ -87,6 +87,9 @@ export async function DiverSheetSection({
         // **No act at the foot of a reading.** The shop's own answer about
         // payments is passed through unchanged — a sheet must not claim a shop
         // cannot take money — and the one door below is where an act happens.
+        // Saying no here is what makes `canManageOrders` unaskable of a sheet
+        // that never looked the reader up (issue #1920): the prop is `never` on
+        // this arm, so there is no false answer to give.
         offersInvoice={false}
         now={now}
       />

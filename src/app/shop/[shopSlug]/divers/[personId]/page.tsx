@@ -6,6 +6,7 @@ import { UndoToast } from "@/components/UndoToast";
 import {
   canPersonDeleteDiver,
   canPersonErasePersonalData,
+  canPersonManageOrders,
   canPersonMergeDiver,
   canPersonOverrideGearRequest,
   canPersonReadMedicalClearanceDocument,
@@ -158,6 +159,7 @@ export default async function DiverDetailPage({
     canErase,
     canExport,
     canOpenClearance,
+    canManageOrders,
     stripeAccount,
     notes,
     activityPage,
@@ -180,6 +182,17 @@ export default async function DiverDetailPage({
     // is at `canReadMedicalClearanceDocument`. Hiding the link is a courtesy;
     // the route re-checks the same live roles before it signs anything.
     canPersonReadMedicalClearanceDocument(db, shop.id, session.user.personId),
+    // Raising an invoice against this diver (#1920). Three gates already stand
+    // behind the link — `orders/new`'s own `allow:`, its action's re-check, and
+    // `src/db/orders.ts` refusing at the write — so it was never a hole, only a
+    // door a captain could not walk through. `src/db/authz.ts` states the rule
+    // it broke: the UI hides the control when the permission is false, so a
+    // crew member is never shown a button they will be bounced from (ADR
+    // 20260724-role-authorization).
+    //
+    // In this batch rather than after it: a seventh `await` on its own would
+    // put a serial round trip on a page that already parallelises six.
+    canPersonManageOrders(db, shop.id, session.user.personId),
     getShopStripeAccount(db, shop.id),
     listDiverRecordNotes(db, shop.id, personId),
     // Shop-scoped from the session, never the slug, like every read on this
@@ -201,7 +214,7 @@ export default async function DiverDetailPage({
   const mergeCandidates =
     canMerge && !removed ? await listDiverMergeCandidates(db, shop.id, personId) : [];
   // `orders/new` refuses outright without a payable account, so the story's
-  // foot simply omits "+ New invoice" rather than offering a link that bounces.
+  // foot simply omits "New invoice" rather than offering a link that bounces.
   // Connecting payments is a Settings errand and left this page with the ADR.
   const paymentsConnected = canAcceptPayments(stripeAccount);
   const { trips: scannedTrips } = await pagedUpcomingTripsWithCounts(db, shop.id, {
@@ -335,6 +348,7 @@ export default async function DiverDetailPage({
         locale={locale}
         t={t}
         paymentsConnected={paymentsConnected}
+        canManageOrders={canManageOrders}
         offersInvoice
         status={noticeForForm(diverNotice, "story")}
         now={now}

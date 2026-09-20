@@ -2,7 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { DiverStory } from "./DiverStory";
+import { DiverStory, type DiverStoryActs } from "./DiverStory";
 import type { DiverProfile, Shop } from "./shared";
 
 vi.mock("../actions", () => ({}));
@@ -49,7 +49,17 @@ function diver(overrides: Partial<Record<string, unknown>> = {}): DiverProfile {
   } as unknown as DiverProfile;
 }
 
-function renderStory(profile: DiverProfile, paymentsConnected = true, offersInvoice = true) {
+/**
+ * `acts` is spread rather than passed as two booleans because the component
+ * takes them as a union: a reading that offers nothing has no `canManageOrders`
+ * to state. The default is the record's own case — it offers the act, to a
+ * staffer allowed to perform it.
+ */
+function renderStory(
+  profile: DiverProfile,
+  paymentsConnected = true,
+  acts: DiverStoryActs = { offersInvoice: true, canManageOrders: true },
+) {
   return render(
     <DiverStory
       diver={profile}
@@ -57,10 +67,10 @@ function renderStory(profile: DiverProfile, paymentsConnected = true, offersInvo
       shopSlug="reef-shop"
       personId="person-1"
       locale="en-US"
-      offersInvoice={offersInvoice}
       t={t}
       paymentsConnected={paymentsConnected}
       now={NOW}
+      {...acts}
     />,
   );
 }
@@ -222,6 +232,28 @@ describe("the story's bounds and its foot", () => {
   });
 
   /**
+   * **The surface agreeing with the door.** `orders/new` gates on
+   * `canPersonManageOrders` and bounces a staffer without it to the Orders
+   * index with `notice=not-authorized` — so the link offered a captain an act
+   * they cannot perform, and answered by taking the person off the screen
+   * (issue #1920). The route guard is the boundary and stays; this is the foot
+   * not offering what it knows will be refused.
+   *
+   * `paymentsConnected` stays `true` here: the shop can take money, and the
+   * only thing standing between this reader and an invoice is the reader.
+   */
+  it("offers no invoice door to a reader who may not raise one", () => {
+    renderStory(diver({ bookings: [AHEAD] }), true, {
+      offersInvoice: true,
+      canManageOrders: false,
+    });
+    expect(screen.queryByRole("link", { name: "New invoice" })).toBeNull();
+    // The record itself is unchanged — a captain reads everything, and is
+    // only refused the one act.
+    expect(screen.getAllByRole("listitem").length).toBeGreaterThan(0);
+  });
+
+  /**
    * **A reading offers no act at its foot, whatever the shop can do.** The
    * diver sheet laid over the day (slice 23e) is a reading whose one door is
    * the record, and an invoice link is a second exit that takes the day off
@@ -232,7 +264,7 @@ describe("the story's bounds and its foot", () => {
    * back the moment it gates a second thing (review on #1921).
    */
   it("offers no invoice door in a reading, at a shop that can take money", () => {
-    renderStory(diver({ bookings: [AHEAD] }), true, false);
+    renderStory(diver({ bookings: [AHEAD] }), true, { offersInvoice: false });
     expect(screen.queryByRole("link", { name: "New invoice" })).toBeNull();
     // Still the story, not an empty section — the reading is what survives.
     expect(screen.getAllByRole("listitem").length).toBeGreaterThan(0);
