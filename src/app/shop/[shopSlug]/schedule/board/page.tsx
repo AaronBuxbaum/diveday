@@ -269,9 +269,17 @@ export default async function ScheduleBoardPage({
   // The stream's backwards-looking rows lead page one and appear nowhere else;
   // the week reads `openRollCalls` directly, whatever page the stream is on.
   const streamRollCalls = after ? [] : openRollCalls;
+  // **Every departure either reading draws**, deduped — the crew read below is
+  // keyed on it, and the week reaches backwards where the stream never does
+  // (#1923). Scoped to the stream's own ids until the week started printing a
+  // crew line, which left a Monday that had already sailed with an empty crew
+  // and therefore a "Nobody yet" it had no business saying.
   const boardTripIds = [
-    ...streamRollCalls.map((open) => open.tripId),
-    ...upcoming.map((t) => t.id),
+    ...new Set([
+      ...streamRollCalls.map((open) => open.tripId),
+      ...upcoming.map((t) => t.id),
+      ...Object.values(weekRows.days).flatMap((entries) => entries.map((entry) => entry.tripId)),
+    ]),
   ];
   const [dayCounts, crewByTrip] = await Promise.all([
     tripScheduleDayCounts(db, boardTripIds),
@@ -827,9 +835,29 @@ export default async function ScheduleBoardPage({
           status: entry.status,
           sailedLabel: st("schedule.week.sailed"),
           siteName: entry.diveSiteName,
+          // **Which hull, or why there isn't one** (#1923). The day stream
+          // that used to carry this is gone, and a scheduling surface may not
+          // quietly stop saying what a departure is on. A shore or pool
+          // session names itself in the hull's place: the absence is the fact,
+          // and a blank there would read as a boat nobody has assigned.
+          // History, not the live fleet — a departure that sailed on a hull
+          // the shop has since deleted still says which one
+          // (ADR 20260820-every-delete-is-soft).
+          vessel:
+            entry.diveMode === "shore"
+              ? st("boats.modeShore")
+              : entry.diveMode === "pool"
+                ? st("boats.modePool")
+                : entry.boatId
+                  ? (boatMap.get(entry.boatId) ?? null)
+                  : null,
           seats,
           price,
         }),
+        // **Who is crewing it**, in the shop's own lead-first order. The row
+        // decides nothing with this — `WeekBoard` votes on the week's habit and
+        // prints only the departures that differ (`src/lib/usual-crew.ts`).
+        crew: (crewByTrip.get(entry.tripId) ?? []).map((member) => member.name),
         // The two numbers the bar is a picture of. Beside `meta` rather than
         // parsed back out of it: "10 of 12" is a sentence in two languages and
         // `src/lib/week-seats.ts` must never have to read one.

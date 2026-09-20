@@ -10,6 +10,7 @@ import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { WeekPager } from "@/components/ui/week-pager";
 import { fill } from "@/i18n/fill";
 import type { SiteMarkCode } from "@/lib/site-mark";
+import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import { isSoldOut, seatFill } from "@/lib/week-seats";
 
 /**
@@ -66,8 +67,19 @@ export type WeekEntry = WeekDeparture & {
   seats: WeekSeats;
   /** Which drawing marks it — read off the site's name (`siteMarkFor`). */
   mark: SiteMarkCode;
-  /** "10 of 12 · $95", or "Sailed · 9 of 12" for a boat already home. */
+  /** "Molasses Reef · Mantis II · 10 of 12 · $95", or "Sailed · 9 of 12" for a boat already home. */
   meta: string;
+  /**
+   * **Who is crewing this departure**, in the shop's own order — lead first
+   * (#1923). Empty means nobody is assigned, which is the gap the board
+   * exists to show and never the same thing as "the usual people".
+   *
+   * It is the whole assignment rather than a formatted sentence, because the
+   * row does not decide on its own whether to print it: `mostCommonCrew` votes
+   * over the week and only the departures that differ from the habit say
+   * anything. A pre-joined string could not be compared.
+   */
+  crew: string[];
 };
 
 /** A multi-day course session as one bar across the columns it owns. */
@@ -177,6 +189,10 @@ export type WeekBoardCopy = {
   asked: string;
   /** The act that answers one — the Requests page's own word for it. */
   addDeparture: string;
+  /** "Crew:" — the lead-in on the one line a departure prints about its people. */
+  crewLabel: string;
+  /** What stands where the names would be when nobody is assigned. */
+  crewNobodyYet: string;
 };
 
 /**
@@ -371,6 +387,8 @@ function WeekBoat({
   time,
   mark,
   runs,
+  crewLine,
+  hasUsualCrew,
   shopSlug,
   canConfigure,
   openKey,
@@ -386,6 +404,19 @@ function WeekBoat({
   mark: SiteMarkCode | null;
   /** "3 days", on a course that owns more than the day it starts. */
   runs: string | null;
+  /**
+   * The crew to print, or null to print nothing — the caller has already
+   * asked `isUsualCrew`, so this row never re-decides it. `names` is empty for
+   * a departure nobody is assigned to, which is a line that renders and not a
+   * line that is skipped.
+   *
+   * **A course bar passes null.** Its `meta` already names who is teaching it
+   * (`instructorName`), and a bar that also carried a crew line would say one
+   * fact twice on the one shape that has no hull to be about.
+   */
+  crewLine: { names: string } | null;
+  /** Whether the week has a habit at all — decides the line's ink, not its presence. */
+  hasUsualCrew: boolean;
   shopSlug: string;
   canConfigure: boolean;
   openKey: string | null;
@@ -446,6 +477,30 @@ function WeekBoat({
             <span className="shrink-0 text-xs font-medium text-primary tabular-nums">{runs}</span>
           ) : null}
         </div>
+        {/* **The one line a departure prints about its people**, and only when
+            it is the exception (#1923, principle 9). The board ran with a
+            usual crew and said so on every row until this rule replaced the
+            standing caption; what survives is the row a manager opened the
+            board to find. It sheds the muted class where there *is* a habit —
+            a line printed only when it differs should not read like the
+            caption it replaced — and keeps caption grey on a week that has no
+            habit, where every row carries one.
+
+            "Nobody yet" is warning ink either way. That is the gap this line
+            exists to show, and a quiet week is exactly when it would otherwise
+            be missed. */}
+        {crewLine ? (
+          <p className={`mt-1 text-sm ${hasUsualCrew ? "" : "text-muted"}`}>
+            {crewLine.names ? (
+              `${copy.crewLabel} ${crewLine.names}`
+            ) : (
+              <>
+                {copy.crewLabel}{" "}
+                <span className="font-medium text-warning">{copy.crewNobodyYet}</span>
+              </>
+            )}
+          </p>
+        ) : null}
         {/* One slot, one grammar: an open head count outranks a missing price
             rather than stacking two marks on one row. */}
         {departure.rollCallOpen ? (
@@ -511,6 +566,12 @@ export function WeekBoard({
     if (!dayIso) continue;
     spansByDay.set(dayIso, [...(spansByDay.get(dayIso) ?? []), span]);
   }
+  // **The habit this week runs with**, voted on here rather than handed down,
+  // so nothing can pass the grid a `usual` that disagrees with the rows it is
+  // about to draw (#1923; the rule is `src/lib/usual-crew.ts`). Boats only:
+  // the vote is over departures that have a crew to assign, and a course bar
+  // names its instructor in its own meta.
+  const usualCrew = mostCommonCrew(week.days.flatMap((day) => day.entries));
 
   return (
     <section aria-label={week.ariaLabel} className="hidden xl:block">
@@ -599,6 +660,8 @@ export function WeekBoard({
                           time={null}
                           mark={null}
                           runs={span.runsLabel}
+                          crewLine={null}
+                          hasUsualCrew={usualCrew !== null}
                           shopSlug={shopSlug}
                           canConfigure={canConfigure}
                           openKey={openKey}
@@ -617,6 +680,12 @@ export function WeekBoard({
                           time={entry.time}
                           mark={entry.mark}
                           runs={null}
+                          crewLine={
+                            isUsualCrew(entry.crew, usualCrew)
+                              ? null
+                              : { names: entry.crew.join(", ") }
+                          }
+                          hasUsualCrew={usualCrew !== null}
                           shopSlug={shopSlug}
                           canConfigure={canConfigure}
                           openKey={openKey}

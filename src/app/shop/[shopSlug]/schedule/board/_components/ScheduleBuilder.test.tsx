@@ -1761,6 +1761,9 @@ describe("ScheduleBuilder week board", () => {
       time: "7:00 AM",
       meta: "10 of 12 · $95",
       seats: { booked: 10, capacity: 12 },
+      // Unstaffed by default, which is the loud case: a factory that defaulted
+      // to a crew would let a row quietly stop printing its gap.
+      crew: [] as string[],
       dayCount: 1,
       status: "upcoming" as const,
       unpriced: false,
@@ -2364,6 +2367,93 @@ describe("ScheduleBuilder week board", () => {
     // lists; without this, none of them says which day it belongs to.
     const list = within(grid()).getByRole("list", { name: "Day 27" });
     expect(within(list).getByRole("link", { name: "Two-Tank Reef" })).toBeInTheDocument();
+  });
+
+  /**
+   * **The crew answer, which the week did not have** (#1923).
+   *
+   * A stream row printed who was crewing a departure and a week row printed
+   * nothing, so deleting the stream would have taken the question a manager
+   * opens the board on a Thursday to answer — *which boat has no divemaster* —
+   * off the board entirely, with nothing going red for it.
+   *
+   * The rule is `src/lib/usual-crew.ts` and is tested there. What these pin is
+   * that the grid asks it, and asks it of the week it is drawing.
+   */
+  describe("the week says who is crewing, and only where it differs", () => {
+    /** Four boats crewed alike, which is a habit by both thresholds. */
+    const usualWeek = (odd: Partial<WeekEntry>[]) =>
+      weekWithThursday([
+        weekEntry({ tripId: "u1", dateIso: "2026-08-27", crew: ["Keiko Tanaka"] }),
+        weekEntry({ tripId: "u2", dateIso: "2026-08-27", crew: ["Keiko Tanaka"] }),
+        weekEntry({ tripId: "u3", dateIso: "2026-08-27", crew: ["Keiko Tanaka"] }),
+        weekEntry({ tripId: "u4", dateIso: "2026-08-27", crew: ["Keiko Tanaka"] }),
+        ...odd.map((over, index) =>
+          weekEntry({ tripId: `odd-${index}`, dateIso: "2026-08-27", ...over }),
+        ),
+      ]);
+
+    it("keeps quiet on the rows that run with the week's usual crew", () => {
+      board(usualWeek([{ crew: ["Sal Moretti"] }]));
+
+      // One line, not five. The exception is the whole point of printing any.
+      expect(within(grid()).getAllByText(/^Crew:/)).toHaveLength(1);
+      expect(within(grid()).getByText("Crew: Sal Moretti")).toBeInTheDocument();
+    });
+
+    it("prints every row's crew on a week that has no usual crew", () => {
+      // Two departures is not a habit (`mostCommonCrew` wants three and a
+      // majority), so there is nothing for a row to be an exception to and
+      // every row states its own.
+      board(
+        weekWithThursday([
+          weekEntry({ tripId: "a", dateIso: "2026-08-27", crew: ["Keiko Tanaka"] }),
+          weekEntry({ tripId: "b", dateIso: "2026-08-27", crew: ["Sal Moretti"] }),
+        ]),
+      );
+
+      expect(within(grid()).getByText("Crew: Keiko Tanaka")).toBeInTheDocument();
+      expect(within(grid()).getByText("Crew: Sal Moretti")).toBeInTheDocument();
+    });
+
+    it("shouts about a departure nobody is on, even where there is a habit", () => {
+      // The one case that must never be silenced by a usual crew: an empty
+      // assignment can neither win the vote nor pass as usual, because this
+      // gap is what the line exists to show.
+      board(usualWeek([{ crew: [] }]));
+
+      const gap = within(grid()).getByText("nobody yet");
+      expect(gap).toBeInTheDocument();
+      // In words and in warning ink, never hue alone.
+      expect(gap).toHaveClass("text-warning");
+    });
+
+    it("names several crew in the shop's own order", () => {
+      board(
+        weekWithThursday([
+          weekEntry({ tripId: "a", dateIso: "2026-08-27", crew: ["Keiko Tanaka", "Sal Moretti"] }),
+        ]),
+      );
+
+      // One line, the order it was given — lead first is the shop's fact, not
+      // the query's accident, which is why `isUsualCrew` compares it.
+      expect(within(grid()).getByText("Crew: Keiko Tanaka, Sal Moretti")).toBeInTheDocument();
+    });
+
+    it("says nothing about crew on a course bar, which already names its teacher", () => {
+      // A span's own meta carries `instructorName`. A crew line beside it
+      // would say one fact twice on the one shape that has no hull to be
+      // about — principle 9, and the reason spans pass `crewLine={null}`.
+      board(
+        week({
+          spans: [weekSpan({ tripId: "course-1", meta: "4 of 5 · $595 · Marcus Webb" })],
+          days: week().days.map((day) => ({ ...day, entries: [] })),
+        }),
+      );
+
+      expect(within(grid()).getByText("4 of 5 · $595 · Marcus Webb")).toBeInTheDocument();
+      expect(within(grid()).queryByText(/^Crew:/)).toBeNull();
+    });
   });
 });
 
