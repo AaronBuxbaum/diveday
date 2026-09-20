@@ -420,6 +420,13 @@ test.describe("the folding title", () => {
    * be a few pixels shorter than it was measured at without landing mid-fold.
    */
   const FOLD_SCROLL_PX = 240;
+  /**
+   * Further still, because the reduced-motion test's claim is that *no* scroll
+   * folds anything: 400 is more than three times the range, so a bar still at
+   * rest there is at rest because the rule was stilled and not because the
+   * clock had not got going.
+   */
+  const REDUCED_MOTION_SCROLL_PX = 400;
   // `.first()`: the attribute marks the shop's name *and* the caret beside it,
   // because a caret with no label is pointing at nothing. They fold together,
   // so reading either one reads the fold.
@@ -516,18 +523,68 @@ test.describe("the folding title", () => {
    * duration it would snap in within the first fraction of a pixel of scroll:
    * louder than the motion the setting asked to remove. Asserted in a browser
    * because that claim is about the cascade, not about the source.
+   *
+   * **The preference is a context option, not a call**, which is the one thing
+   * that changed after this failed on CI (shard 4/4, 2026-09-20: the shop's
+   * name at opacity 0 where the whole test says it cannot be). Only one rule in
+   * the built stylesheet can take that element to 0 — the fold's own keyframe —
+   * and the reduced-motion block kills its `animation-name` outright, at higher
+   * specificity, with `!important`. So the failing frame was one where the
+   * preference was not matching at all, and `page.emulateMedia()` is the only
+   * thing in the test that can be late: it is a message to a page that already
+   * exists, and the document this test then loads can resolve its style before
+   * the navigation's new renderer has been told. `test.use` puts the preference
+   * in the browser context before the page is created, so there is no window.
+   *
+   * It is stated as a premise below rather than inferred, so that if this ever
+   * goes red again the message says which half broke.
    */
-  test("gives a reduced-motion reader the bar exactly as it ships", async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.setViewportSize(PHONE);
-    await page.goto("/shop/blue-mantis/divers");
-    await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
-    await page.evaluate(() => window.scrollTo(0, 400));
+  test.describe("a reduced-motion reader", () => {
+    test.use({ reducedMotion: "reduce" });
 
-    // Well past the 120px range, and nothing has folded.
-    expect(await opacityOf(page, "[data-chrome-shop-name]")).toBe(1);
-    expect(await opacityOf(page, "[data-chrome-title-slot]")).toBe(0);
-    expect(await opacityOf(page, "[data-chrome-fold-title]")).toBe(1);
+    test("gets the bar exactly as it ships", async ({ page }) => {
+      await page.setViewportSize(PHONE);
+      await page.goto("/shop/blue-mantis/divers");
+      await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
+
+      // **The premise.** Everything below is about what this reader is spared,
+      // so a page that was never in reduced motion would be asserting nothing
+      // — and, having scrolled past the fold's range, would read exactly like
+      // the kill-switch having failed.
+      expect(
+        await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches),
+        "the page was not in reduced motion, so this test had nothing to prove",
+      ).toBe(true);
+
+      // **And the fold's rule has to be live on this page**, or the bar holds
+      // still for the ordinary reason rather than this one: the rule is gated
+      // on `body:has([data-chrome-title-slot]:not(:empty))`, and the portal
+      // fills that slot after mount.
+      await expect(page.locator("[data-chrome-title-slot]")).toHaveText("Divers");
+
+      // **A scroll means nothing until the page can scroll.** Same precondition
+      // as the at-rest test above, and the same reason: this list streams in
+      // behind its own `loading.tsx`, and a skeleton shorter than the viewport
+      // makes the scroll below a no-op — which would pass this test for the
+      // wrong reason, the fold never having had a clock to run on.
+      await expect
+        .poll(
+          () => page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight),
+          { message: "the page never grew tall enough for the fold to have a clock" },
+        )
+        .toBeGreaterThanOrEqual(REDUCED_MOTION_SCROLL_PX);
+      await page.evaluate((y) => window.scrollTo(0, y), REDUCED_MOTION_SCROLL_PX);
+      await expect
+        .poll(() => page.evaluate(() => Math.round(window.scrollY)), {
+          message: "the page did not scroll, so the fold had no clock to run on",
+        })
+        .toBe(REDUCED_MOTION_SCROLL_PX);
+
+      // Well past the 120px range, and nothing has folded.
+      expect(await opacityOf(page, "[data-chrome-shop-name]")).toBe(1);
+      expect(await opacityOf(page, "[data-chrome-title-slot]")).toBe(0);
+      expect(await opacityOf(page, "[data-chrome-fold-title]")).toBe(1);
+    });
   });
 
   /**
