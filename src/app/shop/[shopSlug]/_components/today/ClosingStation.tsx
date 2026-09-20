@@ -185,11 +185,19 @@ export function ClosingStation({
             crew works at the rail. Owner-only (ADR
             20260804-incident-export-owner-gate) and absent, never disabled,
             for everyone else — the gate is the render. A quiet link, at the
-            same weight the live station gives it (slice 16a). */}
+            same weight the live station gives it (slice 16a).
+
+            **A quiet link still has to be tappable.** `tapTargetLinkClass`
+            is the floor and nothing else — no chrome, its own ink — which is
+            precisely what this row wants and what typing the ink by hand left
+            out: 83.7 × **20px**, under WCAG 2.5.8's 24px minimum, which
+            `e2e/a11y.spec.ts`'s evening scan caught the moment this station
+            moved down the page. This file already spells it that way a few
+            lines up. */}
         {canOpenLog ? (
           <Link
             href={`/shop/${shopSlug}/trips/${close.tripId}/log`}
-            className="text-sm font-medium text-primary hover:underline"
+            className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}
           >
             {t("incidentExport.openLink")}
           </Link>
