@@ -219,12 +219,28 @@ describe("the sun", () => {
     expect(geometry.sun?.x ?? 0).toBeGreaterThan(secondArcStart);
   });
 
-  it("walks nothing when no day holds now", () => {
+  /**
+   * **The progress stays non-null on purpose**, and the first draft of this
+   * test did not — which made it prove nothing.
+   *
+   * `sunUp` is `currentDay !== null && progress !== null && …`. Nulling the
+   * progress satisfies the second half, so the arc and the sun come back null
+   * whatever the first half answered: the test passed identically against an
+   * implementation that walked `days[0]` regardless of which day held `now`.
+   * Keeping `BASE`'s `0.5` leaves the *day* as the only thing that can decide,
+   * which is the rule under test (sourcery-ai on #1948).
+   */
+  it("walks nothing when no day holds now, even with a progress to walk", () => {
     const geometry = dayStripGeometry({
       ...BASE,
+      // 21:00, after the 19:45 sunset: a clock reading inside the window and
+      // inside no day's daylight.
       now: new Date(Date.UTC(2026, 7, 27, 21)),
-      daylightProgress: null,
     });
+    expect(
+      BASE.daylightProgress,
+      "a null progress would make the two assertions below pass for the wrong reason",
+    ).not.toBeNull();
     expect(geometry.sunArcs).toHaveLength(1);
     expect(geometry.sunArcElapsed).toBe(null);
     expect(geometry.sun).toBe(null);
