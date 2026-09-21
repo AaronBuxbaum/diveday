@@ -141,7 +141,6 @@
     "nothingToHandOver": "Ese conjunto ya está fuera."
   },
   "import": {
-    "eyebrow": "Ajustes",
     "title": "Importar historial del equipo",
     "description": "Trae tu flota y sus registros de mantenimiento desde otro sistema.",
     "help": "Una fila por unidad o evento. Las unidades coinciden primero por etiqueta y luego por número de serie; las reimportaciones se deduplican.",

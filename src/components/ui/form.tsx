@@ -8,6 +8,7 @@ import {
   type ReactNode,
   useId,
 } from "react";
+import { StatusInView } from "@/components/ui/StatusInView";
 import { currencySymbol, minorToMajor } from "@/lib/money";
 import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
 import { type ForgivingCopy, ForgivingInput } from "./ForgivingInput";
@@ -622,14 +623,21 @@ export function FormStatus({
   if (Children.toArray(children).length === 0) return null;
   const mark = toneMark(tone);
   return (
-    <p
-      id={id}
-      role={noticeRole(tone)}
-      className={`flex items-baseline gap-1.5 text-sm font-medium ${STATUS_TONE[tone]} ${className}`}
-    >
-      {mark ? <StatusMark variant={mark} /> : null}
-      <span>{children}</span>
-    </p>
+    <>
+      <p
+        id={id}
+        role={noticeRole(tone)}
+        className={`flex items-baseline gap-1.5 text-sm font-medium ${STATUS_TONE[tone]} ${className}`}
+      >
+        {mark ? <StatusMark variant={mark} /> : null}
+        <span>{children}</span>
+      </p>
+      {/* An outcome that lands below the fold says nothing at all. Every tone
+          but `danger`, whose own `FieldErrorFocus` has a better destination —
+          see `StatusInView` for why two scrolls in one frame is worse than
+          one. */}
+      {tone === "danger" ? null : <StatusInView />}
+    </>
   );
 }
 

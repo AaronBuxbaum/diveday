@@ -46,6 +46,29 @@ import {
  * new contrast failure on any surface this file scans is now a red build.
  */
 async function expectNoA11yViolations(page: Page) {
+  // **From the top of the page, always** — a scan has to have a scroll
+  // position, and "wherever the previous step left it" is not one.
+  //
+  // Two of the rules here read geometry rather than markup. `target-size`
+  // measures how much of a control is reachable, and `color-contrast` reads
+  // the colours on screen, so both answer differently about an element that is
+  // sliding under a sticky header. The header is `position: sticky`, so on any
+  // page scanned at an arbitrary offset *something* is partly behind it —
+  // which is not a defect a reader meets, because the reader can scroll.
+  //
+  // That is not theoretical: the cert-gated roster below reaches its departure
+  // by clicking a row on the board, and it used to inherit the board's scroll.
+  // Axe then measured the `‹ BOARD` back-link at "63.7px by 9.5px" and failed
+  // WCAG 2.5.8 — red on some CI runs and green on others, with byte-identical
+  // numbers every time it was red (issue #1941). The landing itself is fixed,
+  // in `src/app/globals.css`; this is the rule that stops the *next* scan
+  // inheriting a position from a click three statements earlier.
+  //
+  // No rule is excluded and `target-size` stays on. Axe reads the whole
+  // document rather than the viewport, so scanning from the top costs nothing
+  // a scan at an offset would have caught — it only stops the two geometric
+  // rules answering about the header instead of the markup.
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   // A dynamic route with no build-time param coverage (a just-created trip,
   // never visited before) computes its <title> from a DB read inside
   // generateMetadata — under cacheComponents' Partial Prerendering, that
@@ -252,39 +275,57 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
   });
 
   /**
-   * The same page at depth, and the only scan in this file that emulates a
-   * scheme (issue #1265).
+   * **The scheme rides the context, not a call on a page that already exists.**
    *
-   * Every other scan here runs in the default light scheme, which is why a
-   * branded storefront could render sub-AA in dark mode for as long as it did:
-   * `BrandStyle` emitted one `:root` block that won in *both* schemes, so
-   * blue-mantis's `#158462` arrived at depth as its light-mode derivation
-   * `#13795a` — 3.39:1 on the dark ground, 3.05:1 on the dark shell — while
-   * this file stayed green. `deriveDarkBrandTheme` is the fix; this is what
-   * would have caught it, and what stops it coming back.
+   * `page.emulateMedia()` is a CDP message to a live page, so the document the
+   * `goto` inside creates can resolve its style before the message lands —
+   * whereas `test.use` bakes the preference into the browser context before any
+   * page exists at all. The same swap fixed a CI flake in
+   * `e2e/staff-nav.spec.ts`, where a reduced-motion assertion read the
+   * *animated* opacity about one run in five and failed with
+   * `Expected: 1, Received: 0` (#1940).
    *
-   * The storefront is the right surface to spend the one scheme-swapped scan
-   * on because it is the only place `--primary` is the *shop's* colour rather
-   * than DiveDay's: every staff route wears the palette globals.css ships,
-   * which the light scans already cover.
+   * A nested block rather than a `test.use` on the describe above: every other
+   * scan in it is deliberately light, and the note below says why one dark one
+   * is the right spend.
    */
-  test("the public schedule reads at depth, wearing the shop's own colour", async ({ page }) => {
-    await page.emulateMedia({ colorScheme: "dark" });
-    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
-    // The scan below would pass just as well over a storefront wearing
-    // DiveDay's own dark tokens — which is exactly what a shop with no brand
-    // colour gets, and what a dev database seeded before Harbor shows. So
-    // prove the shop's own colour is what is being scanned, against the value
-    // the derivation actually produces rather than merely "not the light one".
-    await expect(page.locator("style[data-brand-style]")).toHaveCount(1);
-    const primary = await page.evaluate(() =>
-      getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
-    );
-    expect(primary, "the dark block did not win over globals.css's dark palette").toBe(
-      deriveDarkBrandTheme(SEEDED_BRAND_COLOR).primary,
-    );
-    await expectNoA11yViolations(page);
+  test.describe("the storefront in the dark", () => {
+    test.use({ colorScheme: "dark" });
+
+    /**
+     * The same page at depth, and the only scan in this file that asks for a
+     * scheme (issue #1265).
+     *
+     * Every other scan here runs in the default light scheme, which is why a
+     * branded storefront could render sub-AA in dark mode for as long as it did:
+     * `BrandStyle` emitted one `:root` block that won in *both* schemes, so
+     * blue-mantis's `#158462` arrived at depth as its light-mode derivation
+     * `#13795a` — 3.39:1 on the dark ground, 3.05:1 on the dark shell — while
+     * this file stayed green. `deriveDarkBrandTheme` is the fix; this is what
+     * would have caught it, and what stops it coming back.
+     *
+     * The storefront is the right surface to spend the one scheme-swapped scan
+     * on because it is the only place `--primary` is the *shop's* colour rather
+     * than DiveDay's: every staff route wears the palette globals.css ships,
+     * which the light scans already cover.
+     */
+    test("the public schedule reads at depth, wearing the shop's own colour", async ({ page }) => {
+      await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+      await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
+      // The scan below would pass just as well over a storefront wearing
+      // DiveDay's own dark tokens — which is exactly what a shop with no brand
+      // colour gets, and what a dev database seeded before Harbor shows. So
+      // prove the shop's own colour is what is being scanned, against the value
+      // the derivation actually produces rather than merely "not the light one".
+      await expect(page.locator("style[data-brand-style]")).toHaveCount(1);
+      const primary = await page.evaluate(() =>
+        getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
+      );
+      expect(primary, "the dark block did not win over globals.css's dark palette").toBe(
+        deriveDarkBrandTheme(SEEDED_BRAND_COLOR).primary,
+      );
+      await expectNoA11yViolations(page);
+    });
   });
 
   test("the trip booking page and its confirmation have no automated a11y violations", async ({
@@ -1051,9 +1092,23 @@ test.describe("automated accessibility scans of the staff overlays", () => {
  * `signedInAsOwner()`: these are the pages a visitor with no session sees, and
  * several of them (the landing page, `/sign-in`) render differently for a
  * signed-in staff member or bounce them elsewhere entirely.
+ *
+ * **Reduced motion rides the context beside it** (#1940). Two of the three
+ * scans below opened with `page.emulateMedia({ reducedMotion: "reduce" })`,
+ * which is a CDP message to a page that already exists: the document the
+ * `goto` after it creates can resolve its style before the message lands, and
+ * then the scan measures a colour mid-fade — the exact race those two are
+ * here to stop. `test.use` bakes the preference into the browser context
+ * before any page exists, so it cannot lose.
+ *
+ * The third scan (the reef briefing) inherits it, which is a deliberate
+ * widening rather than spillage: it asks for no animated state, and settled
+ * colour is what every scan in this file is meant to be measuring. Scoping it
+ * away would cost a nested block and one level of indentation over a hundred
+ * and forty lines to say nothing.
  */
 test.describe("automated accessibility scans of the signed-out surfaces", () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
+  test.use({ storageState: { cookies: [], origins: [] }, reducedMotion: "reduce" });
 
   test("the marketing, account and diver surfaces have no automated a11y violations", async ({
     page,
@@ -1067,7 +1122,7 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
     // and passed on timing alone until a run caught the fade at 3.89:1 and
     // 2.89:1 (the second row is 120ms behind the first, so it is measured
     // paler still). Settled, `--success` on the card is over the 4.5 floor.
-    await page.emulateMedia({ reducedMotion: "reduce" });
+    // It comes from this block's `test.use` now, not from a call here (#1940).
     await scanStaticRoutes(page, [
       // The landing page and the two account-lifecycle forms. Each renders a
       // single `<h1>`, so matching any non-empty one is enough and keeps this
@@ -1155,7 +1210,9 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
     // resolves it deterministically *through the product*: globals.css pins
     // those rows to `animation: none; opacity: 1`, which is the state every
     // reader ends at and the one worth holding to the contrast rule.
-    await page.emulateMedia({ reducedMotion: "reduce" });
+    //
+    // It is set on this block's `test.use` rather than here, because a call on
+    // a live page races the `goto` it is meant to precede (#1940).
     await scanStaticRoutes(page, [
       { path: "/product", heading: /\S/ },
       { path: "/pricing", heading: /\S/ },

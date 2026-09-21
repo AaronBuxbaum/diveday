@@ -694,8 +694,11 @@ async function TodayBody({
     from: stripWindow.from,
     to: stripWindow.to,
     now,
-    sunriseAt: sky.sunriseAt,
-    sunsetAt: sky.sunsetAt,
+    // **One day, so one entry.** The home's window is the shop's own calendar
+    // day by construction (`shopDayBounds`), which is exactly the case the
+    // single pair used to assume — so the list has one element here and the
+    // picture is the one it has always drawn (issue #1904).
+    daylight: [{ sunriseAt: sky.sunriseAt, sunsetAt: sky.sunsetAt }],
     daylightProgress: sky.daylightProgress,
     marks: dayDepartures.map((departure) => ({
       id: departure.tripId,
@@ -862,7 +865,7 @@ async function TodayBody({
         // an empty horizon is a picture of nothing, and the band still says the
         // date.
         strip={
-          stripGeometry.sunArc || stripGeometry.marks.length > 0
+          stripGeometry.sunArcs.length > 0 || stripGeometry.marks.length > 0
             ? {
                 geometry: stripGeometry,
                 label:

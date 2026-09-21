@@ -112,7 +112,7 @@ export default async function SecurityPage({
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={t("settings.security.eyebrow")}
+        eyebrow={t("settings.main.eyebrow")}
         // The one settings sub-page whose eyebrow was not also its way up.
         eyebrowHref={shopPath(shopSlug, "settings")}
         title={t("settings.security.title")}

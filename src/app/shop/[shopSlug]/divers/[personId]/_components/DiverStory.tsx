@@ -9,6 +9,7 @@ import { formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate, formatTime } from "@/lib/format";
 import { SHOP_HISTORY_PREVIEW_COUNT } from "@/lib/prior-visits";
+import { canRaiseInvoiceFor } from "../_lib/invoice-door";
 import { bookingIsAhead } from "../_lib/status";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import { bookingMoney, bookingMoneyStatusKey, type DiverProfile, type Shop } from "./shared";
@@ -263,7 +264,7 @@ export function DiverStory({
   const shown = behind.slice(0, SHOP_HISTORY_PREVIEW_COUNT);
   const rest = behind.slice(SHOP_HISTORY_PREVIEW_COUNT);
   const invoice =
-    offersInvoice && canManageOrders && paymentsConnected && !diver.person.deletedAt ? (
+    offersInvoice && canRaiseInvoiceFor(diver, { canManageOrders, paymentsConnected }) ? (
       <Link
         href={`/shop/${shopSlug}/orders/new?personId=${personId}`}
         className={buttonClass({ variant: "link", size: "sm", flush: true })}

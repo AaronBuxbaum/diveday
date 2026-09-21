@@ -70,7 +70,7 @@ export default async function DiveSiteImportPage({
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={t("diveSites.import.eyebrow")}
+        eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("diveSites.import.title")}
         description={t("diveSites.import.description")}

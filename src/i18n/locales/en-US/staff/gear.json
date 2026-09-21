@@ -141,7 +141,6 @@
     "nothingToHandOver": "That set is already out."
   },
   "import": {
-    "eyebrow": "Settings",
     "title": "Import gear history",
     "description": "Bring your fleet and its dated service records across from another system.",
     "help": "One row per unit, service event, or historical rental. Units match by tag first, then serial number; assignments match an existing diver by email or exact name, stay display-only, and never affect current availability.",

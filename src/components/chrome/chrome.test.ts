@@ -183,6 +183,43 @@ describe("the chrome bar", () => {
   });
 
   /**
+   * **And declares the one that clears the bar for every scroll in the app.**
+   *
+   * The rule above is the negative — no ruler in the stylesheet. This is its
+   * positive, and it is the load-bearing half, because the *absence* of
+   * `scroll-padding-top` is silent in a way a wrong value is not: with none
+   * declared the floor is zero, so Next's router reads a page's first element
+   * as "already in the viewport" wherever the previous page had been left and
+   * scrolls nothing at all. A staffer opening a departure from a scrolled
+   * board landed 157px in, back-link half under the bar, and the only thing
+   * that ever said so was an axe `target-size` failure that was red on some CI
+   * runs and green on others (issue #1941).
+   *
+   * Deleting the declaration would put that back and break no other test:
+   * `EditorSection` gave up its own `calc(var(--chrome-h)+…)` on the strength
+   * of this line, since scroll padding and scroll margin add.
+   *
+   * **Scoped to the pages that have a bar**, and the pair below is why that is
+   * asserted rather than assumed: the selector and the marker are in different
+   * files, so either one alone is a rule that quietly matches nothing. The
+   * marketing pages have no `ChromeBar`, and `/product` has a sticky chapter
+   * strip of its own height that its sections already clear with
+   * `scroll-mt-24` — an unscoped rule would give both 56px of air they never
+   * asked for.
+   */
+  it("clears the bar for every scroll in the app, by the bar's own token", async () => {
+    const css = await read("src/app/globals.css");
+    expect(css).toMatch(
+      /\bhtml:has\(\[data-chrome-bar\]\)\s*\{[^}]*scroll-padding-top:\s*var\(--chrome-h\)/,
+    );
+  });
+
+  it("and the bar carries the marker that selector looks for", async () => {
+    const source = await read("src/components/chrome/ChromeBar.tsx");
+    expect(source).toMatch(/<header[^>]*\bdata-chrome-bar\b/s);
+  });
+
+  /**
    * These two used to pin the phone dock's clearance: that it was 56px plus a
    * hairline plus the device's home-indicator inset, that `lg` and the live
    * manifest each zeroed it, and that the zeroing stayed anchored to the staff

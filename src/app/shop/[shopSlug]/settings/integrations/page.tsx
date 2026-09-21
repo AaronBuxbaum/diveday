@@ -212,7 +212,7 @@ export default async function IntegrationsSettingsPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow={t("integrations.eyebrow")}
+        eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
         title={t("integrations.title")}
         description={t("integrations.description")}

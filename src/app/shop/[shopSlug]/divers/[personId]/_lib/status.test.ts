@@ -280,3 +280,84 @@ describe("the late-arrival buffer", () => {
     expect(nextBookingAhead(record, NOW)).toBeNull();
   });
 });
+
+/**
+ * **"Collect" is the one fix that can have nowhere to go** (issue #1926).
+ *
+ * With an order raised the act opens that order, and `orders/[id]` gates on
+ * nothing beyond being staff. With none, the act is `#the-story`, whose only
+ * act is the "New invoice" link — which `canRaiseInvoiceFor` removes for a
+ * reader without `canPersonManageOrders` (#1920) or at a shop whose payments
+ * are not connected. So on the record the act could scroll a staffer to a
+ * section offering them nothing, and call that a fix.
+ *
+ * The row stays either way: that money is owed is crew-relevant, and this
+ * ledger reads the diver's standing rather than the viewer's permissions.
+ */
+describe("the Collect act, and whether it has anywhere to go", () => {
+  /** Money owed with nothing invoiced — the only shape where the act is a fragment. */
+  function owesUninvoiced() {
+    return diver({
+      bookings: [booking("b1", LAST_MONTH)],
+      bookingPayments: [{ booking: { id: "b1" }, payment: { status: "unpaid" } }],
+    });
+  }
+
+  it("keeps the sentence and drops the fix when there is nowhere to go", () => {
+    const rows = buildDiverStatus(owesUninvoiced(), null, {
+      now: NOW,
+      collectHasSomewhereToGo: false,
+    });
+
+    const money = rows.filter((row) => row.kind === "payment");
+    expect(money, "the row itself is not the reader's to lose").toHaveLength(1);
+    expect(money[0]?.sentence).toEqual({ key: "divers.status.openBalance", values: { count: 1 } });
+    expect(money[0]?.action).toBeUndefined();
+    expect(money[0]?.orderId).toBeUndefined();
+  });
+
+  it("keeps the fix for a reader who can raise the invoice it points at", () => {
+    const rows = buildDiverStatus(owesUninvoiced(), null, {
+      now: NOW,
+      collectHasSomewhereToGo: true,
+    });
+
+    expect(rows.filter((row) => row.kind === "payment")[0]?.action).toMatchObject({
+      target: "collect",
+    });
+  });
+
+  /**
+   * The distinction the gate turns on. An order is a page of its own, open to
+   * any staffer, so the act is real even for a reader who could not have
+   * raised it — and dropping it there would hide the invoice from the person
+   * looking straight at the balance.
+   */
+  it("keeps the fix when an order exists, whatever the reader may raise", () => {
+    const rows = buildDiverStatus(
+      diver({
+        bookings: [booking("b1", LAST_MONTH)],
+        orders: [{ order: { id: "order-9", bookingId: "b1", status: "open" } }],
+      }),
+      null,
+      { now: NOW, collectHasSomewhereToGo: false },
+    );
+
+    expect(rows[0]).toMatchObject({ action: { target: "collect" }, orderId: "order-9" });
+  });
+
+  /**
+   * The default, and it is not laziness. Every surface but the record reaches
+   * `#the-story` by *navigating* to the record — `fixHref` resolves the
+   * fragment against `recordPath` — and arriving at the record is somewhere to
+   * go whatever the reader may do once there. The diver sheet over the day is
+   * the live case, and it deliberately never looks the reader up (#1920).
+   */
+  it("assumes somewhere to go when nobody says otherwise", () => {
+    const rows = buildDiverStatus(owesUninvoiced(), null, { now: NOW });
+
+    expect(rows.filter((row) => row.kind === "payment")[0]?.action).toMatchObject({
+      target: "collect",
+    });
+  });
+});

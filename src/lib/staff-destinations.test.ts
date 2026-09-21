@@ -5,6 +5,7 @@ import {
   currentStaffDestination,
   currentStaffPlace,
   isLiveManifestPath,
+  isStaffDestinationPage,
   STAFF_DESTINATION_LABEL_KEYS,
   STAFF_DESTINATION_TITLE_KEYS,
   STAFF_DESTINATIONS,
@@ -507,5 +508,56 @@ describe("one destination by id", () => {
   it("resolves, and throws on an id the registry lost", () => {
     expect(staffDestination("checkIn").suffix).toBe("/check-in");
     expect(() => staffDestination("gone" as StaffDestinationId)).toThrow(/unregistered/);
+  });
+});
+
+/**
+ * **A place a reader is *in* versus a page a link *opens*.** The bar needs
+ * both answers and they are not the same question — `currentStaffDestination`
+ * resolves a subtree, so most staff URLs light a time whose link goes
+ * somewhere else (#1938).
+ */
+describe("whether a destination's own link opens the page being read", () => {
+  const root = staffShopRoot("blue-mantis");
+  const owner: StaffDestinationGates = {
+    waivers: true,
+    reports: true,
+    team: true,
+    settings: true,
+  };
+
+  it("says yes on the destination's own href, for a root and a suffix alike", () => {
+    // Today is the shop root, whose claim is exact; Week is a suffix below it.
+    expect(isStaffDestinationPage(root, root, staffDestination("today"))).toBe(true);
+    expect(isStaffDestinationPage(`${root}/schedule/board`, root, staffDestination("board"))).toBe(
+      true,
+    );
+  });
+
+  it("says no on a page the destination claims but does not open", () => {
+    // The pair that decides the whole design. A departure *resolves* to the
+    // board — `alsoMatch: ["/trips"]` — so the week is the right time to
+    // light, and the board's link still opens somewhere else entirely.
+    const departure = `${root}/trips/7f3a`;
+    expect(currentStaffDestination(departure, root, owner)?.id).toBe("board");
+    expect(isStaffDestinationPage(departure, root, staffDestination("board"))).toBe(false);
+
+    // And the flat version of the same shape: the diver list lights Today,
+    // whose link is the shop root.
+    const divers = `${root}/divers`;
+    expect(currentStaffPlace(divers, root, owner)).toBe("day");
+    expect(isStaffDestinationPage(divers, root, staffDestination("today"))).toBe(false);
+  });
+
+  it("says no one path segment past the destination's own", () => {
+    // `/settings/team` is Team's page, not Settings' — the prefix claim that
+    // makes `currentStaffDestination` work is exactly what this must not
+    // inherit.
+    expect(
+      isStaffDestinationPage(`${root}/settings/team`, root, staffDestination("settings")),
+    ).toBe(false);
+    expect(isStaffDestinationPage(`${root}/settings/team`, root, staffDestination("team"))).toBe(
+      true,
+    );
   });
 });

@@ -24,6 +24,52 @@ import { EXEMPT_FILE, findCopy, looksLikeCopy } from "./check-copy.mjs";
 
 const texts = (source, isTsx = true) => findCopy(source, { isTsx }).map((hit) => hit.text);
 
+describe("looksLikeCopy — an emoji is a word", () => {
+  /**
+   * The letters test is what a value passes to count as prose, and a glyph has
+   * none — so `"💡 "`, sitting in JSX beside a translated label, rode through a
+   * full sweep of `src/app`, `src/components` and `src/features` and reached
+   * the demo banner, the first surface a prospect sees (issue #1858). Turning
+   * the rule on found two more the same day, in `StaffPreviewBar` and
+   * `WaterLocker`.
+   */
+  it("reports a glyph standing on its own, which is how three of them shipped", () => {
+    expect(looksLikeCopy("💡 ")).toBe(true);
+    expect(looksLikeCopy("👁 ")).toBe(true);
+    expect(looksLikeCopy("🌧️")).toBe(true);
+    expect(looksLikeCopy("Claimed ✅")).toBe(true);
+  });
+
+  /**
+   * The length floor above the letters test is about identifiers, not glyphs,
+   * and a lone BMP emoji is a single UTF-16 unit — so testing it first ate
+   * exactly the strings this rule was added for (`sourcery-ai` on #1943).
+   */
+  it("reports a glyph that is the whole string, which the length floor used to eat", () => {
+    for (const glyph of ["✅", "❌", "⭐", "🎉", "💡"]) {
+      expect(looksLikeCopy(glyph), glyph).toBe(true);
+    }
+    // And the floor still does its own job on a one-character identifier.
+    expect(looksLikeCopy("a")).toBe(false);
+    expect(looksLikeCopy("|")).toBe(false);
+  });
+
+  /**
+   * **The half that decides whether the rule survives.** The blocks next to the
+   * emoji planes are ordinary typography here, and a guard that cried wolf over
+   * them would be switched off within a week: `→` ends 246 links, `★` is the
+   * rating's own data ink, `✓` and `✦` are marks the roll call draws with, and
+   * `⚓` and `☀` are characters a person would reach for as punctuation.
+   */
+  it("leaves the marks and arrows the app draws with alone", () => {
+    for (const mark of ["→", "←", "↗", "↵", "★", "✓", "✦", "⚓", "☀", "·", "—"]) {
+      expect(looksLikeCopy(mark), mark).toBe(false);
+    }
+    // And the same characters inside real prose still report, for the letters.
+    expect(looksLikeCopy("Read the briefing →")).toBe(true);
+  });
+});
+
 describe("looksLikeCopy — prose still reports", () => {
   it("takes an ordinary sentence", () => {
     expect(looksLikeCopy("Ready to dive?")).toBe(true);

@@ -14,8 +14,12 @@ const strip = {
     from: new Date("2026-09-19T10:00:00.000Z"),
     to: new Date("2026-09-19T16:00:00.000Z"),
     now: new Date("2026-09-19T10:58:00.000Z"),
-    sunriseAt: new Date("2026-09-19T11:00:00.000Z"),
-    sunsetAt: new Date("2026-09-19T23:00:00.000Z"),
+    daylight: [
+      {
+        sunriseAt: new Date("2026-09-19T11:00:00.000Z"),
+        sunsetAt: new Date("2026-09-19T23:00:00.000Z"),
+      },
+    ],
     daylightProgress: null,
     marks: [
       { id: "off", at: new Date("2026-09-19T11:00:00.000Z") },

@@ -593,3 +593,33 @@ export function currentStaffPlace(
 ): StaffPlace | null {
   return currentStaffDestination(pathname, root, gates)?.place ?? null;
 }
+
+/**
+ * **Whether this destination's own link is the page being read**, which is the
+ * difference between ARIA's two `aria-current` values.
+ *
+ * The bar's three are places in *time*, not pages. `currentStaffPlace` answers
+ * "which of day / week / season am I standing in", and on most staff URLs the
+ * lit link navigates away: a staffer on `/divers` lights Today, whose link
+ * opens the shop root. Marking that `aria-current="page"` tells a screen-reader
+ * user they are already where the link goes (#1938). `"page"` is the current
+ * page within a set of links to pages; `"true"` is ARIA's value for the current
+ * item in a set, not otherwise specified — which is what a place is.
+ *
+ * **It compares the href, not the destination id**, and that is the whole
+ * subtlety. `currentStaffDestination` resolves a *subtree*, because
+ * `claimedLength` above claims one: `board` carries `alsoMatch: ["/trips"]`, so
+ * a departure resolves to the board destination while sitting at a path the
+ * board's own link does not open. An id comparison would call that page
+ * "current" and re-open this bug on the busiest staff surface there is.
+ *
+ * Search and hash are not part of the question — `usePathname()` hands over
+ * neither, and `/shop/<slug>?notice=saved` is the same page as `/shop/<slug>`.
+ */
+export function isStaffDestinationPage(
+  pathname: string,
+  root: string,
+  destination: StaffDestination,
+): boolean {
+  return pathname === staffDestinationHref(root, destination);
+}

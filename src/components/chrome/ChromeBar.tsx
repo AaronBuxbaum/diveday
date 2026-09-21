@@ -87,7 +87,14 @@ export function ChromeBar({
   staffChrome?: boolean;
 }) {
   return (
-    <header className={CHROME_BAR_CLASS} data-staff-chrome={staffChrome || undefined}>
+    // `data-chrome-bar` is what `globals.css` asks the document for before it
+    // insets the scrollport by this bar's height — the marker, rather than the
+    // class, because the class is a look and this is a fact about the page.
+    <header
+      className={CHROME_BAR_CLASS}
+      data-chrome-bar=""
+      data-staff-chrome={staffChrome || undefined}
+    >
       {/* One row, always — a fixed height cannot wrap, so every slot shrinks
           instead. `min-w-0` on the two content slots is what lets a long shop
           name ellipse rather than push the row wider than the viewport.

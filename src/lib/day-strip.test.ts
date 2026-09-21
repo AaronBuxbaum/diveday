@@ -13,8 +13,7 @@ const BASE = {
   from: at(6),
   to: at(22),
   now: at(10),
-  sunriseAt: at(7),
-  sunsetAt: at(19, 45),
+  daylight: [{ sunriseAt: at(7), sunsetAt: at(19, 45) }],
   daylightProgress: 0.5,
 };
 
@@ -74,7 +73,7 @@ describe("the window", () => {
       to: at(9),
       marks: [{ id: "x", at: at(9) }],
     });
-    expect(geometry.sunArc).toBe(null);
+    expect(geometry.sunArcs).toEqual([]);
     expect(geometry.marks).toEqual([]);
     expect(geometry.nowX).toBe(null);
   });
@@ -83,7 +82,8 @@ describe("the window", () => {
 describe("the sun", () => {
   it("arcs from its own rise to its own set", () => {
     const geometry = dayStripGeometry(BASE);
-    expect(geometry.sunArc).toMatch(/^M[\d.]+,100 Q[\d.-]+,[\d.-]+ [\d.]+,100$/);
+    expect(geometry.sunArcs).toHaveLength(1);
+    expect(geometry.sunArcs[0]).toMatch(/^M[\d.]+,100 Q[\d.-]+,[\d.-]+ [\d.]+,100$/);
   });
 
   it("reaches the top of the arc at the middle of the daylight", () => {
@@ -104,17 +104,145 @@ describe("the sun", () => {
     expect(geometry.sun).toBe(null);
     expect(geometry.sunArcElapsed).toBe(null);
     // The arc itself stays: the day still had a sun in it.
-    expect(geometry.sunArc).not.toBe(null);
+    expect(geometry.sunArcs).toHaveLength(1);
   });
 
   it("draws no arc where the sun does not cross", () => {
     const geometry = dayStripGeometry({
       ...BASE,
-      sunriseAt: null,
-      sunsetAt: null,
+      daylight: [{ sunriseAt: null, sunsetAt: null }],
       daylightProgress: null,
     });
-    expect(geometry.sunArc).toBe(null);
+    expect(geometry.sunArcs).toEqual([]);
+    expect(geometry.sun).toBe(null);
+  });
+
+  /**
+   * **A voyage that sails overnight gets a sun per day, and the gap is the
+   * night** (issue #1904).
+   *
+   * The seeded "Advanced Open Water Diver — two-day course" runs 08:00
+   * Wednesday to 16:00 Thursday. It drew one arc over Wednesday morning, a bare
+   * line through the night, and nothing over Thursday — the day the divers
+   * actually surface on. The hours were on the strip; the second day's daylight
+   * was not.
+   */
+  it("draws one arc per day the window touches, in the order the days run", () => {
+    const geometry = dayStripGeometry({
+      ...BASE,
+      from: at(6),
+      to: new Date(Date.UTC(2026, 7, 28, 18)),
+      daylight: [
+        { sunriseAt: at(7), sunsetAt: at(19, 45) },
+        {
+          sunriseAt: new Date(Date.UTC(2026, 7, 28, 7, 1)),
+          sunsetAt: new Date(Date.UTC(2026, 7, 28, 19, 44)),
+        },
+      ],
+    });
+    expect(geometry.sunArcs).toHaveLength(2);
+    for (const arc of geometry.sunArcs) {
+      expect(arc).toMatch(/^M[\d.]+,100 Q[\d.-]+,[\d.-]+ [\d.]+,100$/);
+    }
+    // **The night is the gap**, and that is the whole picture: the first arc
+    // has to land back on the horizon before the second leaves it, or the two
+    // days read as one long one.
+    const endOfFirst = Number(geometry.sunArcs[0].split(" ").at(-1)?.split(",")[0]);
+    const startOfSecond = Number(geometry.sunArcs[1].slice(1).split(",")[0]);
+    expect(startOfSecond).toBeGreaterThan(endOfFirst);
+  });
+
+  /**
+   * The paired negative, and the one the shop home rests on: a window of one
+   * calendar day is a one-element list, and a one-element list draws exactly
+   * what the single pair drew. Asserted rather than assumed, because "the
+   * common case is unchanged" is the claim a widening most often breaks.
+   */
+  it("draws a single day exactly as it did before the list", () => {
+    const geometry = dayStripGeometry(BASE);
+    expect(geometry.sunArcs).toHaveLength(1);
+    // **These three literals were read off the implementation this replaced**,
+    // by running the previous `dayStripGeometry` over this same `BASE` — not
+    // copied from the new one's output, which would assert only that the code
+    // agrees with itself. Rise at 07:00 and set at 19:45 in a 06:00-22:00
+    // window, and the home draws exactly this today.
+    expect(geometry.sunArcs[0]).toBe("M71.3,100 Q461.7,-48 852.2,100");
+    expect(geometry.sun).toEqual({ x: 461.7, y: 26 });
+    expect(geometry.sunArcElapsed?.startsWith("M71.3,100 L87.5,94 L103.8,88.2")).toBe(true);
+    expect(geometry.sunArcElapsed?.endsWith("L461.7,26")).toBe(true);
+  });
+
+  /**
+   * A day whose daylight never reaches the window is dropped rather than drawn
+   * off-canvas. The ends of an *overlapping* day's arc still map outside —
+   * they always have, and the SVG clips them — so this is about a day with no
+   * business on the strip at all, which only a list can now hold.
+   */
+  it("drops a day whose daylight does not reach the window", () => {
+    const geometry = dayStripGeometry({
+      ...BASE,
+      daylight: [
+        { sunriseAt: at(7), sunsetAt: at(19, 45) },
+        {
+          sunriseAt: new Date(Date.UTC(2026, 7, 30, 7)),
+          sunsetAt: new Date(Date.UTC(2026, 7, 30, 19, 45)),
+        },
+      ],
+    });
+    expect(geometry.sunArcs).toHaveLength(1);
+  });
+
+  /**
+   * One day holds the sun, and the walked arc belongs to that one. Without
+   * this, `daylightProgress` — which says how far through *a* day's daylight
+   * the clock is and nothing about which day — would walk whichever arc came
+   * first in the list.
+   */
+  it("walks the arc of the day that holds now, not the first one", () => {
+    const secondDayNoon = new Date(Date.UTC(2026, 7, 28, 13));
+    const geometry = dayStripGeometry({
+      ...BASE,
+      to: new Date(Date.UTC(2026, 7, 28, 18)),
+      now: secondDayNoon,
+      daylight: [
+        { sunriseAt: at(7), sunsetAt: at(19, 45) },
+        {
+          sunriseAt: new Date(Date.UTC(2026, 7, 28, 7)),
+          sunsetAt: new Date(Date.UTC(2026, 7, 28, 19, 45)),
+        },
+      ],
+      daylightProgress: 0.5,
+    });
+    // Halfway through the second day, so the sun sits over the second arc —
+    // past the midpoint of the whole window, never in the first day's half.
+    const secondArcStart = Number(geometry.sunArcs[1].slice(1).split(",")[0]);
+    expect(geometry.sun?.x ?? 0).toBeGreaterThan(secondArcStart);
+  });
+
+  /**
+   * **The progress stays non-null on purpose**, and the first draft of this
+   * test did not — which made it prove nothing.
+   *
+   * `sunUp` is `currentDay !== null && progress !== null && …`. Nulling the
+   * progress satisfies the second half, so the arc and the sun come back null
+   * whatever the first half answered: the test passed identically against an
+   * implementation that walked `days[0]` regardless of which day held `now`.
+   * Keeping `BASE`'s `0.5` leaves the *day* as the only thing that can decide,
+   * which is the rule under test (sourcery-ai on #1948).
+   */
+  it("walks nothing when no day holds now, even with a progress to walk", () => {
+    const geometry = dayStripGeometry({
+      ...BASE,
+      // 21:00, after the 19:45 sunset: a clock reading inside the window and
+      // inside no day's daylight.
+      now: new Date(Date.UTC(2026, 7, 27, 21)),
+    });
+    expect(
+      BASE.daylightProgress,
+      "a null progress would make the two assertions below pass for the wrong reason",
+    ).not.toBeNull();
+    expect(geometry.sunArcs).toHaveLength(1);
+    expect(geometry.sunArcElapsed).toBe(null);
     expect(geometry.sun).toBe(null);
   });
 

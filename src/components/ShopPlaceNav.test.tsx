@@ -68,7 +68,12 @@ describe("ShopPlaceNav — the three times as pills", () => {
     // by `settings/settings-doors.test.ts`.
     pathname = `${ROOT}/dive-sites`;
     render(<ShopPlaceNav root={ROOT} gates={owner} copy={COPY} />);
-    expect(screen.queryByRole("link", { current: "page" })).toBeNull();
+    // Every link, not `queryByRole({ current: "page" })`: a bar that lit one
+    // of the three as `"true"` would satisfy that query too, and the claim
+    // here is that nothing is lit at all.
+    for (const link of screen.getAllByRole("link")) {
+      expect(link, link.textContent ?? "").not.toHaveAttribute("aria-current");
+    }
   });
 
   it("lights Today for the gear register, which has an hour in it", () => {
@@ -78,7 +83,47 @@ describe("ShopPlaceNav — the three times as pills", () => {
     // place rather than a nav that lights nothing anywhere.
     pathname = `${ROOT}/gear`;
     render(<ShopPlaceNav root={ROOT} gates={owner} copy={COPY} />);
-    expect(screen.getByRole("link", { current: "page" })).toHaveTextContent("Today");
+    expect(screen.getByRole("link", { current: true })).toHaveTextContent("Today");
+  });
+
+  /**
+   * **A place is not a page, and `aria-current` has a word for each.**
+   *
+   * The bar's three are times. On most staff URLs the lit one's link navigates
+   * away — `/divers` lights Today, whose link opens the shop root — so a
+   * staffer on a screen reader heard "Today, current page" about somewhere
+   * they were not (#1938). `"page"` is the current page within a set of links
+   * to pages; `"true"` is the current item in a set, not otherwise specified.
+   *
+   * The two below are the pair: the same pill, lit both times, saying
+   * different things because the reader is standing somewhere different.
+   * Neither is interesting alone — one of them passes under a bar that has
+   * given up and marks nothing, and the other under the flat `"page"` this
+   * replaced.
+   */
+  it("says “page” when the lit place's own link is the page being read", () => {
+    pathname = ROOT;
+    render(<ShopPlaceNav root={ROOT} gates={owner} copy={COPY} />);
+    expect(screen.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("says “true” when the lit place's link goes somewhere else", () => {
+    pathname = `${ROOT}/divers`;
+    render(<ShopPlaceNav root={ROOT} gates={owner} copy={COPY} />);
+    expect(screen.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "true");
+  });
+
+  /**
+   * The case that decides *how* the question is asked, and the reason this is
+   * an href comparison rather than a destination-id one. `board` carries
+   * `alsoMatch: ["/trips"]`, so a departure resolves to the board destination
+   * while sitting at a path the Week link does not open — an id comparison
+   * would call it "page" and re-open the bug on the busiest staff surface.
+   */
+  it("says “true” on a departure, which the Week link claims but does not open", () => {
+    pathname = `${ROOT}/trips/7f3a`;
+    render(<ShopPlaceNav root={ROOT} gates={owner} copy={COPY} />);
+    expect(screen.getByRole("link", { name: "Week" })).toHaveAttribute("aria-current", "true");
   });
 
   it("drops Season for a reader who may not read it, rather than refusing them", () => {
@@ -128,6 +173,21 @@ describe("ShopPlaceMenu — the same three, folded into the phone's date", () =>
     await userEvent.click(screen.getByRole("button", { name: "When" }));
     const current = screen.getAllByRole("link").filter((link) => link.hasAttribute("aria-current"));
     expect(current.map((link) => link.textContent)).toEqual(["Week"]);
+  });
+
+  it("draws the same distinction between a place and a page the pills draw", async () => {
+    // Both readings on the folded form, because the two are one idea rendered
+    // twice and the failure worth catching is the one where they come apart.
+    pathname = ROOT;
+    render(<ShopPlaceMenu root={ROOT} gates={owner} copy={COPY} />);
+    await userEvent.click(screen.getByRole("button", { name: "When" }));
+    expect(screen.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "page");
+
+    cleanup();
+    pathname = `${ROOT}/divers`;
+    render(<ShopPlaceMenu root={ROOT} gates={owner} copy={COPY} />);
+    await userEvent.click(screen.getByRole("button", { name: "When" }));
+    expect(screen.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "true");
   });
 
   it("hides the same time from the same reader the pills hide it from", async () => {

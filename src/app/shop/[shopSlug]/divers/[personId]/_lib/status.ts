@@ -136,9 +136,12 @@ function firstBlockerIn(
 export function buildDiverStatus(
   diver: DiverProfile,
   readiness: ReadinessResult | null,
-  options: { now?: Date } = {},
+  options: { now?: Date; collectHasSomewhereToGo?: boolean } = {},
 ): DiverStatusRow[] {
   const now = options.now ?? nowDate();
+  // Defaults to yes, which is what every surface but the record can honestly
+  // say: see the `collect` rows below for the one that cannot.
+  const collectHasSomewhereToGo = options.collectHasSomewhereToGo ?? true;
   const next = nextBookingAhead(diver, now);
   const tripContext = next ? { tripId: next.trip.id, startsAt: next.trip.startsAt } : undefined;
   const rows: DiverStatusRow[] = [];
@@ -220,12 +223,37 @@ export function buildDiverStatus(
   const paymentBlocker = firstBlockerIn(readiness, "payment");
   const owed = unpaidBookingCount(diver);
   const orderId = owed > 0 ? firstOpenOrderId(diver) : undefined;
+  // **A fix with nowhere to go is worse than no fix**, and `collect` is the one
+  // row that can have nowhere to go.
+  //
+  // With an order raised, the act opens that order, and `orders/[id]` gates on
+  // nothing beyond being staff — so it is a real page for every reader. With no
+  // order, the act is `#the-story`, and the *only* act in that section is the
+  // "New invoice" link, which `canRaiseInvoiceFor` removes for a reader without
+  // `canPersonManageOrders` (#1920) or at a shop whose payments are not
+  // connected — the second half true for everyone, and true long before #1920.
+  //
+  // So on the record, "Collect" could scroll a staffer to a section offering
+  // them nothing and call it a fix. The **row stays**: that money is owed is
+  // crew-relevant, and this ledger is a reading of the diver's standing rather
+  // than a list of the viewer's permissions. It is the act that goes, exactly
+  // as a held medical drops "Send the waiver" above (issue #1926).
+  //
+  // A surface whose `collect` *navigates* — the diver sheet over the day, where
+  // `fixHref` resolves against the record's own path — keeps the act whatever
+  // the reader may do once there, because arriving at the record is itself
+  // somewhere to go. That is the default, and it is why this asks about the
+  // destination rather than about the reader.
+  const collectAction =
+    orderId !== undefined || collectHasSomewhereToGo
+      ? ({ labelKey: "divers.status.acts.collect", target: "collect" } as const)
+      : undefined;
   if (paymentBlocker) {
     rows.push({
       kind: "payment",
       tone: "danger",
       sentence: { blocker: paymentBlocker },
-      action: { labelKey: "divers.status.acts.collect", target: "collect" },
+      action: collectAction,
       tripContext,
       orderId,
     });
@@ -234,7 +262,7 @@ export function buildDiverStatus(
       kind: "payment",
       tone: "warning",
       sentence: { key: "divers.status.openBalance", values: { count: owed } },
-      action: { labelKey: "divers.status.acts.collect", target: "collect" },
+      action: collectAction,
       orderId,
     });
   }

@@ -45,6 +45,7 @@ import { resolveDiverNotice } from "./_components/record-notices";
 import { ShelfGroup } from "./_components/ShelfGroup";
 import { SupportNeedsPanel } from "./_components/SupportNeedsPanel";
 import { WaiverGroup } from "./_components/WaiverGroup";
+import { canRaiseInvoiceFor } from "./_lib/invoice-door";
 import { bookingIsAhead } from "./_lib/status";
 import { diverStatusRows } from "./_lib/status-load";
 import { restoreCardAction, restoreDiverNoteAction } from "./actions";
@@ -164,7 +165,6 @@ export default async function DiverDetailPage({
     notes,
     activityPage,
     supportNeeds,
-    status,
     thread,
     shelfStanding,
   ] = await Promise.all([
@@ -200,10 +200,6 @@ export default async function DiverDetailPage({
     // anything past the end, so a stale bookmark lands on the last real page.
     pagedDiverActivity(db, shop.id, personId, { page: Number.parseInt(activity ?? "", 10) }),
     getSupportNeeds(db, shop.id, personId),
-    // The readiness of the departure this diver is next on, read through the
-    // entry the Today queue and the manifest already use — never a second
-    // detector (`_lib/status-load.ts`).
-    diverStatusRows(db, shop.id, diver, now),
     // What this diver wrote and what the shop wrote back, interleaved by time.
     // Shop-scoped from the session like every read here.
     personThread(db, shop.id, personId),
@@ -211,15 +207,30 @@ export default async function DiverDetailPage({
     // many phones hold one. Shop-scoped from the session like every read here.
     shelfTokenStanding(db, { shopId: shop.id, personId, now }),
   ]);
-  const mergeCandidates =
-    canMerge && !removed ? await listDiverMergeCandidates(db, shop.id, personId) : [];
   // `orders/new` refuses outright without a payable account, so the story's
   // foot simply omits "New invoice" rather than offering a link that bounces.
   // Connecting payments is a Settings errand and left this page with the ADR.
   const paymentsConnected = canAcceptPayments(stripeAccount);
-  const { trips: scannedTrips } = await pagedUpcomingTripsWithCounts(db, shop.id, {
-    limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT,
+  // **The one place the ledger's "Collect" act has nowhere to go.** With no
+  // order raised, that act is `#the-story`, whose only act is the very link the
+  // line above may have removed — so the row keeps its sentence and loses its
+  // fix (issue #1926). Asked through `canRaiseInvoiceFor` so this page and the
+  // story below cannot answer it differently.
+  const collectHasSomewhereToGo = canRaiseInvoiceFor(diver, {
+    canManageOrders,
+    paymentsConnected,
   });
+  // Three reads that need the two gates above, so they could not ride the
+  // `Promise.all` that produced them — concurrent with each other instead of
+  // the serial pair they used to be.
+  const [mergeCandidates, status, { trips: scannedTrips }] = await Promise.all([
+    canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
+    // The readiness of the departure this diver is next on, read through the
+    // entry the Today queue and the manifest already use — never a second
+    // detector (`_lib/status-load.ts`).
+    diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
+    pagedUpcomingTripsWithCounts(db, shop.id, { limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT }),
+  ]);
   const upcoming = scannedTrips.filter(
     (trip) =>
       !diver.bookings.some(

@@ -198,6 +198,53 @@ export function dayHourBoundaries(
 }
 
 /**
+ * **Noon on every calendar day the window touches**, in the shop's own zone.
+ *
+ * The almanac is asked per *day*, not per hour and not per instant: `sunMoonFor`
+ * answers for the date its `at` falls on, so one representative instant per day
+ * is the whole input it needs. Noon is that instant, and it is noon for the same
+ * reason the walk below steps by noon — it is the hour of the day that no clock
+ * change can take away, so a spring-forward date still has one and a
+ * fall-back date does not have two.
+ *
+ * The walk is `dayHourBoundaries`' (above), minus the hours: step a calendar day
+ * from noon, never from midnight, because midnight plus 24 hours lands at 11 PM
+ * the same date on a spring-forward day and the walk would repeat a day and
+ * never reach the end of the window.
+ *
+ * A window is "touched" by a day if any part of it falls inside — so a voyage
+ * from 08:00 Wednesday to 16:00 Thursday touches two, and one from 23:00 to
+ * 01:00 touches two as well.
+ */
+export function calendarDayNoons(bounds: { from: Date; to: Date }, timeZone: string): Date[] {
+  const from = bounds.from.getTime();
+  const to = bounds.to.getTime();
+  if (!(to > from)) return [];
+  const noons: Date[] = [];
+  const seen = new Set<number>();
+  let wall = utcToWallTime(bounds.from, timeZone);
+  // The same `+ 2` as `dayHourBoundaries`: one pass per whole day the window
+  // spans, plus the day its start sits in and the day its end sits in. A noon
+  // outside the window is kept rather than clamped — the day is touched even
+  // when its noon is not, which is exactly the 08:00-to-16:00 voyage above.
+  const days = Math.ceil((to - from) / MS_PER_DAY) + 2;
+  for (let day = 0; day < days; day += 1) {
+    const noon = wallTimeToUtc({ ...wall, hour: 12, minute: 0 }, timeZone);
+    const dayStart = wallTimeToUtc({ ...wall, hour: 0, minute: 0 }, timeZone).getTime();
+    // Midnight on the *next* date, reached through noon so the step is safe.
+    const nextWall = utcToWallTime(new Date(noon.getTime() + MS_PER_DAY), timeZone);
+    const dayEnd = wallTimeToUtc({ ...nextWall, hour: 0, minute: 0 }, timeZone).getTime();
+    const touches = dayEnd > from && dayStart < to;
+    if (touches && !seen.has(noon.getTime())) {
+      seen.add(noon.getTime());
+      noons.push(noon);
+    }
+    wall = nextWall;
+  }
+  return noons.sort((a, b) => a.getTime() - b.getTime());
+}
+
+/**
  * The exact UTC instants that bracket the shop's own calendar *month* —
  * `from` inclusive, `to` exclusive. The monthly sibling of
  * {@link shopDayBounds}, on the same wall-clock conversion.

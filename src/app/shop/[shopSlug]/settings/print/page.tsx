@@ -73,7 +73,7 @@ export default async function SettingsPrintPage({
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
       <ShopPageHeader
-        eyebrow={t("print.settings.eyebrow")}
+        eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={shopPath(shopSlug, "settings")}
         title={t("print.settings.title")}
         description={t("print.settings.lede")}

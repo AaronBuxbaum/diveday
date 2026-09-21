@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { Browser, Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/AfterState";
+import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
 import {
@@ -370,6 +371,23 @@ for (const name of [...TABLET_SURFACES, ...TV_SURFACES]) {
 const FRAME_WAIT_MS = 500;
 const SCROLL_BUDGET_MS = 20_000;
 const FONTS_WAIT_MS = 5_000;
+/**
+ * The one class that can make a surface photograph as nothing.
+ *
+ * `.marketing-reveal-pending` holds `opacity: 0` in its *base* style
+ * (globals.css) and becomes visible only through the fill of the animation its
+ * IntersectionObserver starts, so an element wearing it at shutter time is a
+ * blank band in the capture. Named once here because two places read it: the
+ * corrective sweep inside `paintWholeDocument` and the tripwire at the end of
+ * it (issue #1910).
+ *
+ * Its sibling `.marketing-hero-motion` deliberately is **not** here. That one's
+ * inactive state is the visible one — the CSS hangs `marketing-device-arrive`
+ * and `marketing-roll-call-settle` off `.marketing-hero-motion-active`, so a
+ * hero whose observer never fires loses an arrival and keeps its content. It
+ * fails to *animate*; this one fails to *appear*, which is the whole difference.
+ */
+const PENDING_REVEAL_SELECTOR = ".marketing-reveal-pending";
 // Budget for the whole image pass, not per image. It has to cover a cold
 // `/_next/image` generating a width it has never been asked for, on a CI runner
 // already running the other shards — the 5s this replaced was under that.
@@ -655,12 +673,21 @@ async function paintWholeDocument(page: Page) {
     stalled: stalledFrames,
     unsettled: unsettledImages,
     scrolledAway,
+    revealPasses,
+    revealStamped,
   } = await withRendererBound(
     page,
     "the scroll-through and image settle",
     PAINT_STALL_MS,
     page.evaluate(
-      async ({ frameWaitMs, scrollBudgetMs, imageSettleMs }) => {
+      async ({
+        frameWaitMs,
+        scrollBudgetMs,
+        imageSettleMs,
+        pendingRevealSelector,
+        revealMarkerAttribute,
+        revealReadyAttribute,
+      }) => {
         let stalled = 0;
         const settle = () =>
           new Promise<void>((resolve) => {
@@ -702,15 +729,54 @@ async function paintWholeDocument(page: Page) {
         const deadline = performance.now() + scrollBudgetMs;
         // Re-read scrollHeight each pass: painting a band can add height. The step
         // cap is a guard against a page that grows forever, not an expected exit.
-        for (let step = 0; step < 100; step += 1) {
-          const y = step * window.innerHeight;
-          if (y >= document.documentElement.scrollHeight) break;
-          window.scrollTo(0, y);
+        //
+        // One deadline for every pass, not one each: the corrective pass below
+        // shares this budget, so a page that needs a second sweep cannot cost
+        // more wall-clock than a page that needs one, and `PAINT_STALL_MS` goes
+        // on meaning what it says.
+        const scrollThrough = async () => {
+          // Checked before the first step and again before the reset, not only
+          // after each step: a pass entered with the budget already spent still
+          // cost a `scrollTo` and a full `settle`, so a page that used the whole
+          // 20s in its first sweep could overrun it in the corrective one
+          // (sourcery-ai on #1950).
+          if (performance.now() >= deadline) return;
+          for (let step = 0; step < 100; step += 1) {
+            const y = step * window.innerHeight;
+            if (y >= document.documentElement.scrollHeight) break;
+            window.scrollTo(0, y);
+            await settle();
+            if (performance.now() > deadline) break;
+          }
+          if (performance.now() >= deadline) return;
+          window.scrollTo(0, 0);
           await settle();
-          if (performance.now() > deadline) break;
+        };
+
+        // **Let the page finish deciding what to hide, before scrolling past
+        // it.** `MarketingSectionMotion` withholds its below-fold sections in a
+        // layout effect, so nothing is withheld until React hydrates, and the
+        // scroll-through below is what gives them back. Racing those two is the
+        // whole of issue #1910: the sweep passed an unmarked page, hydration
+        // then hid every chapter, and nothing scrolled again before the shutter.
+        //
+        // The marker is server-rendered, so its absence is an answer rather than
+        // a page that has not got there yet — every surface without a reveal on
+        // it pays one `querySelector` and moves on. Bounded by the same scroll
+        // deadline as everything else here: a page that never stamps is not
+        // waited on forever, it simply reaches the tripwire at the end of this
+        // function, which is the loud failure this all exists to produce.
+        let revealStamped = true;
+        if (document.querySelector(`[${revealMarkerAttribute}]`) !== null) {
+          while (
+            !document.documentElement.hasAttribute(revealReadyAttribute) &&
+            performance.now() < deadline
+          ) {
+            await settle();
+          }
+          revealStamped = document.documentElement.hasAttribute(revealReadyAttribute);
         }
-        window.scrollTo(0, 0);
-        await settle();
+        await scrollThrough();
 
         const imageDeadline = performance.now() + imageSettleMs;
         const selectionOf = () =>
@@ -778,6 +844,51 @@ async function paintWholeDocument(page: Page) {
         // One more frame so anything decoded above is composited before the shot.
         await settle();
 
+        // **A section that never revealed photographs as nothing at all.**
+        //
+        // `MarketingSectionMotion` (src/components/MarketingReveal.tsx) marks
+        // every below-fold `main section` `.marketing-reveal-pending` —
+        // `opacity: 0` in its base style, globals.css — and clears it from an
+        // IntersectionObserver as the reader arrives. The scroll-through above
+        // *is* that arrival, so the two race: it marks them in a **layout
+        // effect**, so nothing is marked until the page hydrates, and the scroll
+        // wins only if hydration got there first. When it does not, the sweep
+        // passes an unmarked page, hydration then hides every chapter, and
+        // nothing scrolls the page again before the shutter.
+        //
+        // That is `product-dark-vw-390`'s baseline at `df88bf4`: a hero (above
+        // the fold at mount, so never marked), nine thousand blank pixels, and a
+        // footer (outside `<main>`, so outside the component's own query). It
+        // reached a baseline rather than a red job because a pending section
+        // owns **no animation** — `waitForEntranceAnimations` commits the ones
+        // that exist, and there is nothing here to commit and nothing to warn
+        // about. Unrelated branches then paid a 40% diff on a page they had
+        // never touched (issue #1910).
+        //
+        // Scrolling again is the honest correction rather than forcing the class
+        // on: the observer exists by now, so a second sweep reveals them the way
+        // a reader would, and the capture stays a photograph of what the app
+        // does rather than of what the harness wishes it did. Every other
+        // capture in the suite pays one `querySelectorAll` for it.
+        //
+        // **Counted by what they hide, not by how many wear the class.** A
+        // zero-area `<section>` can never satisfy the observer's
+        // `threshold: 0.01` — an intersection ratio of nothing over nothing is
+        // not 1% of anything — so it keeps the class for the page's whole life.
+        // It also hides nothing, having no box to hide, and sweeping the
+        // document twice for it on every marketing capture and then refusing the
+        // shot would be a guard firing at its own blind spot.
+        const hidingSomething = () =>
+          Array.from(document.querySelectorAll(pendingRevealSelector)).filter((element) => {
+            const box = element.getBoundingClientRect();
+            return box.width > 0 && box.height > 0;
+          }).length;
+        let revealPasses = 0;
+        while (hidingSomething() > 0 && revealPasses < 2) {
+          revealPasses += 1;
+          await scrollThrough();
+        }
+
         // **Land at the top, last.** The scroll reset used to sit above the
         // image-settle loop, so every frame that loop awaited was a frame in
         // which something else could scroll the page — with nothing putting it
@@ -799,18 +910,35 @@ async function paintWholeDocument(page: Page) {
         // something to out-wait.
         window.scrollTo(0, 0);
         await settle();
-        return { stalled, unsettled, scrolledAway: window.scrollY !== 0 };
+        return {
+          stalled,
+          unsettled,
+          scrolledAway: window.scrollY !== 0,
+          revealPasses,
+          revealStamped,
+          pendingReveals: hidingSomething(),
+        };
       },
       {
         frameWaitMs: FRAME_WAIT_MS,
         scrollBudgetMs: SCROLL_BUDGET_MS,
         imageSettleMs: IMAGE_SETTLE_MS,
+        pendingRevealSelector: PENDING_REVEAL_SELECTOR,
+        revealMarkerAttribute: REVEAL_MARKER_ATTRIBUTE,
+        revealReadyAttribute: REVEAL_READY_ATTRIBUTE,
       },
     ),
     // A stalled pass painted nothing it can report on, and the warnings
     // below would be lying if they claimed a count; `withRendererBound` has
     // already said what happened.
-    { stalled: 0, unsettled: 0, scrolledAway: false },
+    {
+      stalled: 0,
+      unsettled: 0,
+      scrolledAway: false,
+      revealPasses: 0,
+      revealStamped: true,
+      pendingReveals: 0,
+    },
   );
   if (stalledFrames > 0) {
     console.warn(
@@ -823,6 +951,14 @@ async function paintWholeDocument(page: Page) {
       `visual: ${unsettledImages} image(s) had not finished loading within the ` +
         `${IMAGE_SETTLE_MS}ms bound at ${page.url()} — the shot may contain a partly-loaded ` +
         "photo; check the diff for a changed image tile.",
+    );
+  }
+  if (!revealStamped) {
+    console.warn(
+      `visual: ${page.url()} carries the marketing reveal but never stamped ` +
+        `\`${REVEAL_READY_ATTRIBUTE}\` within the scroll budget — its sections were scrolled past ` +
+        "before the page had finished deciding what to hide, which is the race of issue #1910. The " +
+        "corrective sweep and the tripwire below still speak for the result; this names the cause.",
     );
   }
   if (scrolledAway) {
@@ -853,6 +989,40 @@ async function paintWholeDocument(page: Page) {
   // a font swap can start more: whatever is still running has been started by
   // this pass. See `waitForEntranceAnimations` for the measured case (#1380).
   await waitForEntranceAnimations(page);
+
+  // **The tripwire, at the last moment there is.**
+  //
+  // The corrective sweep above is the fix; this is the check that the fix
+  // worked, and it is deliberately the final thing `paintWholeDocument` does.
+  // Anything still pending here is about to be photographed at `opacity: 0`,
+  // and the whole cost of issue #1910 was that such a capture said nothing at
+  // all on its way to becoming a baseline — so this **throws** where the
+  // warnings above only warn. A blank chapter is not a diff to triage; it is a
+  // capture that did not happen.
+  //
+  // Re-queried rather than reusing the count from the evaluate above, because
+  // the font settle and the animation settle both run in between, and a late
+  // hydration landing in that window is precisely the race being closed.
+  const stillPending = await page.evaluate(
+    // Same "hides something" count as the sweep above, and for the same reason:
+    // a zero-area section keeps the class forever and conceals nothing.
+    (selector) =>
+      Array.from(document.querySelectorAll(selector)).filter((element) => {
+        const box = element.getBoundingClientRect();
+        return box.width > 0 && box.height > 0;
+      }).length,
+    PENDING_REVEAL_SELECTOR,
+  );
+  if (stillPending > 0) {
+    throw new Error(
+      `visual: ${stillPending} marketing section(s) at ${page.url()} were still ` +
+        `\`${PENDING_REVEAL_SELECTOR}\` after ${revealPasses + 1} scroll-through(s). They hold ` +
+        "`opacity: 0` and would photograph as blank bands — see issue #1910, where exactly that " +
+        "became the `product-dark-vw-390` baseline. The reveal is driven by an " +
+        "IntersectionObserver that `MarketingSectionMotion` sets up in a layout effect; if this " +
+        "fires, find what is keeping it from running rather than raising the pass count.",
+    );
+  }
 }
 
 /**

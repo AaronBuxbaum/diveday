@@ -276,7 +276,6 @@
     "saveSiteBriefing": "Save dive site"
   },
   "import": {
-    "eyebrow": "Settings",
     "title": "Import dive sites",
     "description": "Read a dive_sites.csv from your DiveDay export back into this shop’s library.",
     "help": "This reads DiveDay’s own export rather than another system’s file, so it expects the columns the bundle wrote and refuses one it does not recognise. Sites match by id first, then by name: importing into the shop the bundle came from rewrites the sites it names, and importing into a new one creates them. A site that was deleted when the bundle was made comes back deleted.",
