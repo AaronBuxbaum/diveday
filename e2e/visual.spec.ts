@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { Browser, Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/AfterState";
+import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
 import {
@@ -673,12 +674,20 @@ async function paintWholeDocument(page: Page) {
     unsettled: unsettledImages,
     scrolledAway,
     revealPasses,
+    revealStamped,
   } = await withRendererBound(
     page,
     "the scroll-through and image settle",
     PAINT_STALL_MS,
     page.evaluate(
-      async ({ frameWaitMs, scrollBudgetMs, imageSettleMs, pendingRevealSelector }) => {
+      async ({
+        frameWaitMs,
+        scrollBudgetMs,
+        imageSettleMs,
+        pendingRevealSelector,
+        revealMarkerAttribute,
+        revealReadyAttribute,
+      }) => {
         let stalled = 0;
         const settle = () =>
           new Promise<void>((resolve) => {
@@ -726,6 +735,12 @@ async function paintWholeDocument(page: Page) {
         // more wall-clock than a page that needs one, and `PAINT_STALL_MS` goes
         // on meaning what it says.
         const scrollThrough = async () => {
+          // Checked before the first step and again before the reset, not only
+          // after each step: a pass entered with the budget already spent still
+          // cost a `scrollTo` and a full `settle`, so a page that used the whole
+          // 20s in its first sweep could overrun it in the corrective one
+          // (sourcery-ai on #1950).
+          if (performance.now() >= deadline) return;
           for (let step = 0; step < 100; step += 1) {
             const y = step * window.innerHeight;
             if (y >= document.documentElement.scrollHeight) break;
@@ -733,9 +748,34 @@ async function paintWholeDocument(page: Page) {
             await settle();
             if (performance.now() > deadline) break;
           }
+          if (performance.now() >= deadline) return;
           window.scrollTo(0, 0);
           await settle();
         };
+
+        // **Let the page finish deciding what to hide, before scrolling past
+        // it.** `MarketingSectionMotion` withholds its below-fold sections in a
+        // layout effect, so nothing is withheld until React hydrates, and the
+        // scroll-through below is what gives them back. Racing those two is the
+        // whole of issue #1910: the sweep passed an unmarked page, hydration
+        // then hid every chapter, and nothing scrolled again before the shutter.
+        //
+        // The marker is server-rendered, so its absence is an answer rather than
+        // a page that has not got there yet — every surface without a reveal on
+        // it pays one `querySelector` and moves on. Bounded by the same scroll
+        // deadline as everything else here: a page that never stamps is not
+        // waited on forever, it simply reaches the tripwire at the end of this
+        // function, which is the loud failure this all exists to produce.
+        let revealStamped = true;
+        if (document.querySelector(`[${revealMarkerAttribute}]`) !== null) {
+          while (
+            !document.documentElement.hasAttribute(revealReadyAttribute) &&
+            performance.now() < deadline
+          ) {
+            await settle();
+          }
+          revealStamped = document.documentElement.hasAttribute(revealReadyAttribute);
+        }
         await scrollThrough();
 
         const imageDeadline = performance.now() + imageSettleMs;
@@ -875,6 +915,7 @@ async function paintWholeDocument(page: Page) {
           unsettled,
           scrolledAway: window.scrollY !== 0,
           revealPasses,
+          revealStamped,
           pendingReveals: hidingSomething(),
         };
       },
@@ -883,12 +924,21 @@ async function paintWholeDocument(page: Page) {
         scrollBudgetMs: SCROLL_BUDGET_MS,
         imageSettleMs: IMAGE_SETTLE_MS,
         pendingRevealSelector: PENDING_REVEAL_SELECTOR,
+        revealMarkerAttribute: REVEAL_MARKER_ATTRIBUTE,
+        revealReadyAttribute: REVEAL_READY_ATTRIBUTE,
       },
     ),
     // A stalled pass painted nothing it can report on, and the warnings
     // below would be lying if they claimed a count; `withRendererBound` has
     // already said what happened.
-    { stalled: 0, unsettled: 0, scrolledAway: false, revealPasses: 0, pendingReveals: 0 },
+    {
+      stalled: 0,
+      unsettled: 0,
+      scrolledAway: false,
+      revealPasses: 0,
+      revealStamped: true,
+      pendingReveals: 0,
+    },
   );
   if (stalledFrames > 0) {
     console.warn(
@@ -901,6 +951,14 @@ async function paintWholeDocument(page: Page) {
       `visual: ${unsettledImages} image(s) had not finished loading within the ` +
         `${IMAGE_SETTLE_MS}ms bound at ${page.url()} — the shot may contain a partly-loaded ` +
         "photo; check the diff for a changed image tile.",
+    );
+  }
+  if (!revealStamped) {
+    console.warn(
+      `visual: ${page.url()} carries the marketing reveal but never stamped ` +
+        `\`${REVEAL_READY_ATTRIBUTE}\` within the scroll budget — its sections were scrolled past ` +
+        "before the page had finished deciding what to hide, which is the race of issue #1910. The " +
+        "corrective sweep and the tripwire below still speak for the result; this names the cause.",
     );
   }
   if (scrolledAway) {
