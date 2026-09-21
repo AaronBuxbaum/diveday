@@ -44,7 +44,7 @@ export default async function EmbedSettingsPage({
   const origin = publicAppUrl();
   const header = (
     <ShopPageHeader
-      eyebrow={t("settings.embed.eyebrow")}
+      eyebrow={t("settings.main.eyebrow")}
       eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
       title={t("settings.embed.title")}
       description={origin ? t("settings.embed.description") : undefined}

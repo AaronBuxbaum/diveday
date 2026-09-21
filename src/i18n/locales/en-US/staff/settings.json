@@ -502,7 +502,6 @@
     }
   },
   "team": {
-    "eyebrow": "Settings",
     "title": "Team",
     "notice": {
       "invited": "Invite sent.",
@@ -588,7 +587,6 @@
     "publicNameSeen": "Divers see “{name}”, agreed on {date}"
   },
   "safetyChecklist": {
-    "eyebrow": "Settings",
     "title": "Pre-departure checklist",
     "description": "The lines your crew confirms before a boat leaves the dock. You write every item, and DiveDay adds none of its own.",
     "listHeading": "Checklist",
@@ -612,7 +610,6 @@
     }
   },
   "export": {
-    "eyebrow": "Settings",
     "title": "Data export",
     "description": "Everything this shop keeps in DiveDay, as plain CSV: divers, certification records, trips, bookings, signed waivers, rental sizes, orders, wait lists, dive sites, and courses. Includes a ready-to-import contacts file.",
     "downloadButton": {
@@ -647,7 +644,6 @@
     "unassigned": "No crew recorded"
   },
   "import": {
-    "eyebrow": "Settings",
     "title": "Import contacts",
     "description": "Bring divers, certification records, rental sizes, and prior waiver acceptance in from a CSV, whether your old system’s or DiveDay’s own export.",
     "comingFrom": "Coming from <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, or <spreadsheet>a spreadsheet</spreadsheet>? See the matching guide, then come back here to bring it in.",
@@ -901,7 +897,6 @@
     }
   },
   "security": {
-    "eyebrow": "Settings",
     "title": "Account security",
     "twoFactorHeading": "Two-factor authentication",
     "twoFactorDescription": "Use an authenticator app for sensitive account actions. Disabling it removes the stored secret.",
@@ -946,7 +941,6 @@
     }
   },
   "embed": {
-    "eyebrow": "Settings",
     "title": "Website embed",
     "description": "Put your schedule, a departure or a booking button on your own website. One line each; what it shows and how it looks are chosen here.",
     "notConfigured": "Embed links need a configured public hosting address for this DiveDay instance. Contact {email} to get it set up.",

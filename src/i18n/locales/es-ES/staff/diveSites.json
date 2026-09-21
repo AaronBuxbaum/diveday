@@ -276,7 +276,6 @@
     "saveSiteBriefing": "Guardar sitio de buceo"
   },
   "import": {
-    "eyebrow": "Ajustes",
     "title": "Importar sitios de buceo",
     "description": "Vuelve a leer un dive_sites.csv de tu exportación de DiveDay en la biblioteca de este centro.",
     "help": "Esto lee la propia exportación de DiveDay, no el archivo de otro sistema, así que espera las columnas que escribió el paquete y rechaza una que no reconozca. Los sitios se emparejan primero por id y luego por nombre: importar en el centro del que salió el paquete reescribe los sitios que nombra, e importar en otro los crea. Un sitio eliminado cuando se hizo el paquete vuelve eliminado.",

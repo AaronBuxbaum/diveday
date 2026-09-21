@@ -57,7 +57,7 @@ export default async function GearImportPage({
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={t("gear.import.eyebrow")}
+        eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("gear.import.title")}
         description={t("gear.import.description")}

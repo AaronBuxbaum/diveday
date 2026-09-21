@@ -502,7 +502,6 @@
     }
   },
   "team": {
-    "eyebrow": "Ajustes",
     "title": "Equipo",
     "notice": {
       "invited": "Invitación enviada.",
@@ -588,7 +587,6 @@
     "publicNameSeen": "Los buceadores ven “{name}”, aceptado el {date}"
   },
   "safetyChecklist": {
-    "eyebrow": "Ajustes",
     "title": "Lista de verificación previa a la salida",
     "description": "Las líneas que tu tripulación confirma antes de que el barco zarpe. Tú escribes cada elemento, y DiveDay no añade ninguno propio.",
     "listHeading": "Lista de verificación",
@@ -612,7 +610,6 @@
     }
   },
   "export": {
-    "eyebrow": "Ajustes",
     "title": "Exportar datos",
     "description": "Todo lo que el centro guarda en DiveDay, en CSV simple: buceadores, registros de certificación, salidas, reservas, exenciones firmadas, tallas de alquiler, pedidos, listas de espera, sitios de buceo y cursos. Incluye un archivo de contactos listo para importar.",
     "downloadButton": {
@@ -647,7 +644,6 @@
     "unassigned": "Sin tripulación registrada"
   },
   "import": {
-    "eyebrow": "Ajustes",
     "title": "Importar contactos",
     "description": "Trae buceadores, registros de certificación, tallas de alquiler y exenciones ya aceptadas desde un CSV, sea de tu sistema anterior o de la propia exportación de DiveDay.",
     "comingFrom": "¿Vienes de <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, o de <spreadsheet>una hoja de cálculo</spreadsheet>? Consulta la guía correspondiente y vuelve aquí para importar.",
@@ -901,7 +897,6 @@
     }
   },
   "security": {
-    "eyebrow": "Ajustes",
     "title": "Seguridad de la cuenta",
     "twoFactorHeading": "Autenticación en dos pasos",
     "twoFactorDescription": "Usa una aplicación de autenticación para las acciones sensibles. Al desactivarla se elimina el secreto guardado.",
@@ -946,7 +941,6 @@
     }
   },
   "embed": {
-    "eyebrow": "Ajustes",
     "title": "Inserción en tu web",
     "description": "Pon tu calendario, una salida o un botón de reserva en tu propia web. Una línea cada uno; aquí eliges qué muestra y cómo se ve.",
     "notConfigured": "Los enlaces de inserción necesitan una dirección pública configurada para esta instancia de DiveDay; escribe a {email} para activarla.",

@@ -109,7 +109,7 @@ export default async function WhatsAppSettingsPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow={t("whatsapp.eyebrow")}
+        eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
         title={t("whatsapp.title")}
         description={t("whatsapp.description")}

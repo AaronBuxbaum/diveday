@@ -73,7 +73,7 @@ export default async function SafetyChecklistPage({
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
       <ShopPageHeader
-        eyebrow={t("settings.safetyChecklist.eyebrow")}
+        eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("settings.safetyChecklist.title")}
         description={t("settings.safetyChecklist.description")}
