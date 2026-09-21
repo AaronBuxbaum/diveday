@@ -150,13 +150,43 @@ function stripComments(source) {
 }
 
 /**
+ * **An emoji is a word.** The letters test below is what a value has to pass to
+ * count as prose, and a glyph has none — so `"💡 "`, sitting in JSX beside a
+ * translated label, was not copy as far as this gate was concerned and rode
+ * through a full sweep of `src/app`, `src/components` and `src/features`
+ * untranslated and unreviewed. It reached the demo banner, which is the first
+ * surface a prospect sees (issue #1858).
+ *
+ * It is a rule with a decision behind it rather than a preference: ADR
+ * 20260827-clearwater-surface-language says "the words carry no emoji, with one
+ * exception" — the shaka, the product's one word-mark gesture — so a glyph on a
+ * surface is either that exception or a finding. Either way it is a string a
+ * human should have looked at, which is exactly what this gate is for.
+ *
+ * Scoped to the pictographic planes and a named handful of symbols that only
+ * ever carry emoji presentation, because the neighbouring blocks are ordinary
+ * typography in this app and a guard that cried wolf over them would be turned
+ * off: `→` ends 246 links, `★` is the rating's own data ink, and `✓` and `✦`
+ * are marks the roll call draws with. `⚓` and `☀` are left out for the same
+ * reason — a character is only on this list when no one would reach for it as
+ * punctuation.
+ *
+ * The shaka is not exempted here. It is copy either way, and a string carrying
+ * it should go through the bundles like any other; the ADR's exception is about
+ * whether the word-mark may *appear*, not about whether it may skip review.
+ */
+const EMOJI =
+  /[\u{1F300}-\u{1FAFF}\u{1F000}-\u{1F2FF}]|[\u{2705}\u{274C}\u{2757}\u{2B50}\u{2728}]|\u{FE0F}/u;
+
+/**
  * Prose, as opposed to an identifier, a slug, or a symbol. Requires a run of at
- * least two letters and rejects values that look like code or markup leftovers.
+ * least two letters — or a single emoji, which is a word without any — and
+ * rejects values that look like code or markup leftovers.
  */
 export function looksLikeCopy(raw) {
   const value = raw.trim();
   if (value.length < 2) return false;
-  if (!/[A-Za-z]{2}/.test(value)) return false;
+  if (!/[A-Za-z]{2}/.test(value) && !EMOJI.test(value)) return false;
   // Operators and JSX/TS syntax that a `>…<` window can straddle — the window
   // spans from a generic's closing bracket or a comparison to the next tag, so
   // it routinely catches type annotations and expressions.

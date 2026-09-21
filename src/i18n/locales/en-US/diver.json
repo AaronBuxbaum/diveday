@@ -1157,7 +1157,7 @@
   },
   "capability": {
     "waiverReceived": "Waiver received",
-    "waiverDone": "That’s the paperwork done ✅"
+    "waiverDone": "That’s the paperwork done"
   },
   "seatClaim": {
     "metaTitle": "Claim your seat",
@@ -1184,7 +1184,7 @@
     "claimedNotice": "This seat is yours now, and everything on this page is about you. Your organizer can see it’s claimed.",
     "panelHeading": "Your group’s seats",
     "panelBody": "Send each diver their own link. They add their own details, sign their own waiver, and get their own trip prep. A seat nobody claims stays with you, exactly as booked.",
-    "claimedBadge": "Claimed ✅",
+    "claimedBadge": "Claimed",
     "awaitingBadge": "Not claimed yet",
     "copyLabel": "Copy link",
     "showLink": "Show link",

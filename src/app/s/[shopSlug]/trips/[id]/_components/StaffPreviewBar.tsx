@@ -28,10 +28,7 @@ export function StaffPreviewBar({
       role="status"
       className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-inset border border-border bg-surface-sunken px-4 py-3"
     >
-      <p className="text-sm font-medium">
-        <span aria-hidden="true">👁 </span>
-        {message}
-      </p>
+      <p className="text-sm font-medium">{message}</p>
       <Link href={manageHref} className={buttonClass({ variant: "secondary", size: "sm" })}>
         {manageLabel}
       </Link>

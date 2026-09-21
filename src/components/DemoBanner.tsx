@@ -205,7 +205,7 @@ export function DemoBanner({
                       <p className="mt-0.5 text-xs text-muted font-medium">{role.name}</p>
                       <p className="mt-2 text-xs text-muted leading-relaxed">{role.desc}</p>
                       <div className="mt-3 rounded-lg bg-surface-sunken/50 p-2 text-xs border border-border/40">
-                        <span className="font-semibold text-foreground">💡 {copy.tryLabel}</span>{" "}
+                        <span className="font-semibold text-foreground">{copy.tryLabel}</span>{" "}
                         <span className="text-muted">{role.tryThis}</span>
                       </div>
                     </div>

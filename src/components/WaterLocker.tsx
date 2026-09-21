@@ -188,7 +188,12 @@ export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
       className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 p-6 backdrop-blur-md outline-none ${closing ? "animate-fade-out" : "animate-fade-in"}`}
     >
       <div className="max-w-md text-center">
+        {/* An illustration, not words. ADR 20260827-clearwater-surface-language
+            says "the words carry no emoji", and this glyph is not words: it is
+            `role="img"` at `text-5xl`, the overlay's only picture, and a screen
+            reader is handed `copy.rainAlt` rather than the character. */}
         <span className="text-5xl animate-bounce" role="img" aria-label={copy.rainAlt}>
+          {/* i18n-exempt: a picture with a translated label, per the note above. */}
           🌧️
         </span>
         <h2 id={headingId} className={`mt-6 ${LEAD_TITLE_CLASS}`}>
