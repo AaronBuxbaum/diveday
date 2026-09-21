@@ -243,13 +243,13 @@ describe("what each consumer derives", () => {
       "addBooking",
       "walkIn",
       "tookACall",
+      "gear",
       "inbox",
     ]);
     expect(byPlace("week")).toEqual(["board", "staffing", "courses", "requests"]);
     expect(byPlace("season")).toEqual(["reviews", "orders", "reports"]);
     expect(byPlace("shop")).toEqual([
       "diveSites",
-      "gear",
       "waivers",
       "team",
       "promoCodes",
@@ -260,8 +260,8 @@ describe("what each consumer derives", () => {
 
   /**
    * The widening of 2026-09-10 (issues #1505/#1518) read from the nav: Inbox
-   * is a "Run the shop" row for the captain and the deckhand too, not only for
-   * the desk. Asserted on its own rather than left to the gated-ids list
+   * is a destination for the captain and the deckhand too, not only for the
+   * desk. Asserted on its own rather than left to the gated-ids list
    * above, because that list would still pass if Inbox were dropped from the
    * registry outright.
    */
@@ -344,11 +344,11 @@ describe("what each consumer derives", () => {
     expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("addBooking");
   });
 
-  it("keeps a trip's detail page lit on the board tab", () => {
+  it("keeps a trip's detail page lit on the week the board is", () => {
     const board = STAFF_DESTINATIONS.find((destination) => destination.id === "board");
     expect(board?.suffix).toBe("/schedule/board");
-    // `/trips` only: Staffing has its own "Run the shop" row now, and a page
-    // with a row of its own lights that row, never a borrowed tab.
+    // `/trips` only: Staffing is its own `week` destination, and a page with a
+    // destination of its own lights that, never a borrowed claim.
     expect(board?.alsoMatch).toEqual(["/trips"]);
   });
 
@@ -452,12 +452,27 @@ describe("currentStaffDestination and the time it lights", () => {
   });
 
   it("lights none of the bar's three for a page that lives behind the shop's name", () => {
-    // The gear register, the site library and Settings are `shop` — no hour,
-    // and no pill. That is the design rather than a gap: they are reached
-    // from the shop's own name at the other end of the bar, and by search.
-    for (const suffix of ["/gear", "/dive-sites", "/settings"]) {
+    // The site library, the waiver template and Settings are `shop` — no
+    // hour, and no pill. That is the design rather than a gap: each is
+    // reached from the shop's own name at the other end of the bar, and by
+    // search. `settings-doors.test.ts` holds the other half of that claim —
+    // that Settings really does carry a door to every one of them.
+    for (const suffix of ["/dive-sites", "/waivers", "/settings"]) {
       expect(place(`${root}${suffix}`), suffix).toBe("shop");
     }
+  });
+
+  it("lights Today for the gear register, which is a morning rather than a setting", () => {
+    // The register was `shop` until #1937, on a mapping of the retired
+    // `navGroup: "daily"` that inverted the row's own reason for being in
+    // that group. Handing a wetsuit over and chasing it back is the day's
+    // work, and Settings never had a door to the fleet — so the bar said
+    // "behind the shop's name" about a page that was not there.
+    expect(place(`${root}/gear`)).toBe("day");
+    // The unit page too, which is where a staffer actually pulls one for
+    // service: `destinationClaim` matches on the path prefix, and a reading
+    // that lit the index and went dark one tap in would be worse than either.
+    expect(place(`${root}/gear/some-unit-id`)).toBe("day");
   });
 });
 

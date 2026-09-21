@@ -267,8 +267,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     suffix: "/schedule/board",
     place: "week",
     inPalette: true,
-    // Trips are the board's detail views. (Staffing used to be claimed here
-    // too — it has its own "Run the shop" row now, and lights that instead.)
+    // Trips are the board's detail views, so a departure lights the week it
+    // sails in. (Staffing used to be claimed here too; it is its own `week`
+    // destination now, and lights itself.)
     alsoMatch: ["/trips"],
   },
   // The global "seat a diver" door. It is an action rather than a place, so it
@@ -296,13 +297,30 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   { id: "staffing", suffix: "/staffing", place: "week", inPalette: true },
   { id: "courses", suffix: "/courses", place: "week", inPalette: true },
   { id: "diveSites", suffix: "/dive-sites", place: "shop", inPalette: true },
-  // The rental fleet register (ADR 20260815-minimal-gear-register). "Run the
-  // shop" work like the site library beside it — packing, handing over, and
-  // chasing returns is the day's rhythm, not configuration. Ungated: gear is
-  // any-staff work (H-06 already lets any staff member substitute a real
-  // available item, "because that is the day's work"). Its pending-work
-  // signal is Today's gear rows, never a nav badge — same rule as Reviews.
-  { id: "gear", suffix: "/gear", place: "shop", inPalette: true },
+  // The rental fleet register (ADR 20260815-minimal-gear-register), and the
+  // **day's** work rather than the shop's: packing, handing over and chasing
+  // returns is a morning's rhythm, not configuration.
+  //
+  // It was `navGroup: "daily"` and slice 23b mapped it to `place: "shop"`,
+  // which inverted it — that place is what a shop *sets up*, and it is
+  // defined by living behind the shop's own name. Gear never did: Settings
+  // has a door to the site library, the waiver template, promo codes, the
+  // team and the calendar feed, and never had one to the fleet. So the row
+  // said "behind the shop's name" while its own comment said "the day's
+  // rhythm", and the register was reachable by the search alone on any
+  // morning nothing had gone wrong. `settings-doors.test.ts` now refuses
+  // the mismatch in either direction (#1937).
+  //
+  // Filed under the day it belongs to, it keeps the company it always had:
+  // `divers`, `checkIn`, `walkIn` and `inbox` are whole lists too, and they
+  // are the day's because a diver, a counter and a message are worked on a
+  // day. So is a wetsuit that goes out at eight and is chased at four.
+  //
+  // Ungated: gear is any-staff work (H-06 already lets any staff member
+  // substitute a real available item, "because that is the day's work"). Its
+  // pending-work signal is Today's gear rows, never a nav badge — same rule
+  // as Reviews.
+  { id: "gear", suffix: "/gear", place: "day", inPalette: true },
   // The waiver template and signature log — owner/manager work, and part of
   // running the shop rather than setting it up: the log is where a signature
   // question gets answered on a working day.
@@ -363,14 +381,13 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // `unanswered_messages` row, never a nav badge — the same rule Reviews
   // follows.
   { id: "inbox", suffix: "/inbox", place: "day", inPalette: true },
-  // Money the shop reads daily — a "Run the shop" destination, not one of the
-  // five all-day tabs. Orders remains ungated and palette-visible, and the
-  // page's own links keep the money workflow reachable from its context.
+  // Money the shop reads daily, filed under what the days added up to: an
+  // order outlives the day it was taken, and the Orders index is where a
+  // shop asks the season a question about one. Ungated and palette-visible,
+  // and the page's own links keep the money workflow reachable in context.
   { id: "orders", suffix: "/orders", place: "season", inPalette: true },
-  // The monthly read of the money Orders tracks daily — the last beat of the
-  // "Run the shop" cadence, not configuration, so it files under `daily`
-  // rather than `setup`. Its page lights its own row now instead of borrowing
-  // the Orders tab.
+  // The monthly read of the money Orders tracks daily, and the plainest
+  // `season` there is — the bar's third time points here.
   { id: "reports", suffix: "/reports", place: "season", inPalette: true, gate: "reports" },
   // Team and Promo codes still have doors on Settings' own cards — but a card
   // on a page you must already be on is a cross-link, not a menu presence,
@@ -562,9 +579,12 @@ export function currentStaffDestination(
  * **Which of the bar's three is lit**, or none.
  *
  * The bar wears Today, Week and Season, so a page under `shop` — Settings,
- * the gear register, the site library — lights nothing, and that is correct
- * rather than a gap: those live behind the shop's own name, which is its own
- * control at the other end of the bar.
+ * the site library, the waiver template, promo codes — lights nothing, and
+ * that is correct rather than a gap: every one of them lives behind the
+ * shop's own name, which is its own control at the other end of the bar.
+ * That "every" is the whole test of the place, and the gear register failed
+ * it until #1937: it has no door there, because chasing a wetsuit is the
+ * day's work. It is `day` now.
  */
 export function currentStaffPlace(
   pathname: string,

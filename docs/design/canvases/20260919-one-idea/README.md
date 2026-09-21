@@ -99,13 +99,13 @@ its doc comment, a test pins the rule, and this table moves.
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
 | 23i — the day itself: `sky-scheme.ts`, `day-strip.ts`, `SkyBand`, `DayStrip` — geometry and gradients, prose-free, gating nothing | shipped | `src/lib/day-strip.ts` | `src/lib/day-strip.test.ts`, `src/lib/sky-scheme.test.ts`, `src/components/day/*.test.tsx` |
-| 23a — the picked idea's home: `/shop/[shopSlug]` becomes the day (I), the stack (II) or the chart (III), on round 2's surface; the Today spine's actions become the idea's own things (hours, seats, tracks) | in progress | `src/app/shop/[shopSlug]/_components/day/DayHeader.tsx` — the day's top; the spine's actions move with 23c | `e2e/day-spine.spec.ts` "the day stands at the top of its own page" |
+| 23a — the picked idea's home: `/shop/[shopSlug]` becomes the day (I), the stack (II) or the chart (III), on round 2's surface; the Today spine's actions become the idea's own things (hours, seats, tracks) | shipped | `src/app/shop/[shopSlug]/_components/day/DayHeader.tsx` | `e2e/day-spine.spec.ts` "the day stands at the top of its own page" |
 | 23b — the shell: the nav of nouns leaves — no tabs, no More, no dock; a date, a search and the shop's name (I), the shop's card (II), the dock (III); `staff-destinations.ts` regrouped into the idea's places; ⌘K stays as the search | shipped | `src/lib/staff-destinations.ts` | `src/lib/staff-destinations.test.ts`, `src/components/ShopPlaceNav.test.tsx`, `e2e/staff-nav.spec.ts` |
 | 23c — the departure: the hour page with the strip (I), the hull with its seats (II), the voyage on the chart (III); the four trip tabs one page; the roll call's one tap untouched beneath | shipped | `src/app/shop/[shopSlug]/trips/[id]/page.tsx` | `src/lib/hull.test.ts` (the canvas's own outlines, verbatim), `src/app/shop/[shopSlug]/trips/[id]/_components/TripHull.test.tsx`, `e2e/trip-hull.spec.ts`, `e2e/boat-loop.spec.ts` "the departure reaches its manifest, and carries its packing list" |
 | 23d — the storefront's front page on the idea, in Harbor's face and the shop's colour: the day and the week (I), the boat you are about to book (II), where we go (III) | shipped | `src/app/s/[shopSlug]/_components/ShopfrontHero.tsx` | `src/app/s/[shopSlug]/_components/ShopfrontHero.test.tsx`, the `storefront-sky` capture in `e2e/visual.spec.ts` |
 | 23e — the diver, the counter and the walk-in reached through the idea: search and a sheet over the home; the person's record unchanged inside it | shipped | `src/components/DiverSheet.tsx` | `e2e/staff-nav.spec.ts` "a diver the search finds is laid over the day, not opened instead of it" and "a diver id that names nobody leaves the day with nobody over it", `e2e/search.spec.ts`, the `today-diver-sheet` capture, `src/db/divers.test.ts` "does not open another shop's live diver" |
 | 23f — the week, the requests and the season on the idea: the Board becomes the week; a request is a ghost day (I), a boat to put out (II), a track to add (III) | shipped | `src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx` | `src/lib/week-seats.test.ts`, `src/lib/usual-crew.test.ts`, `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.test.tsx`'s "ScheduleBuilder week board" — "says a day with no departures has none, and still offers to fill it", "is the board's one reading, at every width, with no stream beneath it", and the "the week says who is crewing, and only where it differs" block — and the `schedule-builder-asked` capture in `e2e/visual.spec.ts` |
-| 23g — the rest, one family per session: courses, gear, money, reviews, staffing, and Settings behind the shop's name | open | — | — |
+| 23g — the rest, one family per session: courses, gear, money, reviews, staffing, and Settings behind the shop's name | shipped | `src/lib/staff-destinations.ts` | `src/lib/closeout.test.ts`'s `dayTakings`, `src/app/shop/[shopSlug]/settings/settings-doors.test.ts`, `src/lib/staff-destinations.test.ts`'s "lights Today for the gear register", `e2e/day-close.spec.ts`, `e2e/staff-nav.spec.ts`'s "the gear register lights Today" |
 | 23h — night and glare on the idea: by the hour (I) or by the device (II, III); glare as the crew's word in the roll call's bar; the black-on-white twin held by a test | open | — | — |
 
 ### 23f: the deletion was its own change, and needed two commits in front of it (2026-09-20)
@@ -129,7 +129,19 @@ set out to end. That half is done now (#1923), and what held it up is worth keep
 trip page carries it, and whether a board row should print a forecast is a question rather than an
 oversight.
 
-### 23g: four of its six are settled, two are not (2026-09-20)
+### 23a: it was waiting on 23c, and 23c shipped (2026-09-20)
+
+The row stood `in progress` on its own note — "the spine's actions move with 23c" — and 23c is
+`shipped`. Read against the built page, both halves hold: `/shop/[shopSlug]` opens with `DayHeader`
+over a sky that wears the hour (`data-scheme` of `dawn` / `day` / `dusk` / `night`, and nothing else
+decides it), the date is the page's name, and beneath it the spine is `DayStation`s in clock order —
+hours, which is the idea's own thing rather than a queue of tasks. `e2e/day-spine.spec.ts`'s "the day
+stands at the top of its own page, drawn and then said" holds it. The row's third column is the
+day's top alone, the way every other `shipped` row names one file; the spine's stations are
+`_components/today/DayStation.tsx` beneath it. Flipped to `shipped` while editing the 23g row
+below; nothing in that slice changed it.
+
+### 23g: all six are settled, and two of them needed nothing (2026-09-20)
 
 The row names six families and treats them as one session's work. Reading them one at a time, they
 are not the same size, and two needed nothing:
@@ -150,8 +162,27 @@ are not the same size, and two needed nothing:
   else", so a figure inside it would have overturned ADR 20260827-clearwater-surface-language
   decision 4 by implication. Aaron decided a sibling above it, in session, on 2026-09-20.
 
-**gear** and **reviews** are the two nobody has examined against the idea yet, and the row stays
-`open` until somebody has.
+- **gear** was filed under the wrong time, and the mapping said so itself (#1937). Slice 23b moved it
+  from `navGroup: "daily"` to `place: "shop"` — the place with no hour in it, defined by living
+  behind the shop's own name — while leaving the row's own comment reading "chasing returns is the
+  day's rhythm, **not** configuration". It never lived behind that name either: Settings carries a
+  `SettingsDoorRow` for the site library, the waiver template, promo codes, the team and the
+  calendar feed, and none for the fleet, so on a morning with nothing overdue the register was
+  reachable by the search alone — the finding ADR 20260813-more-is-the-shops-other-door retired an
+  earlier nav on. It is `place: "day"` now, beside `divers`, `checkIn`, `walkIn` and `inbox`, which
+  are whole lists too and are the day's for the same reason. A wetsuit goes out at eight and is
+  chased at four.
+- **reviews** needed nothing, and that is the finding rather than an absence of one. `place:
+  "season"` is the ADR's own sentence verbatim — "what the days added up to: the money, the month,
+  the reviews" — every row names the departure and the date it was dived and links to both the trip
+  and the diver, which is the idea's "reached from the object it belongs to", and its pending work
+  is a Today row rather than a nav badge.
+
+**The half nothing held.** `place: "shop"` is a claim about *where a surface is reached*, and no
+test tied it to the doors that make it true — which is exactly how it came apart on the day it was
+written. `settings-doors.test.ts` now asserts that Settings carries a row for every `shop`
+destination **and for no other**: the first direction is the gear bug, the second is Settings
+growing back into the nav of nouns 23b deleted.
 
 ### 23e: two of its three were already done (closed 2026-09-20)
 
