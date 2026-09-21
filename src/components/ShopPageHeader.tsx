@@ -18,6 +18,36 @@ const EYEBROW_SHAPE = "text-[11px] leading-4 font-bold tracking-[0.16em] upperca
 export const EYEBROW_CLASS = `${EYEBROW_SHAPE} text-primary`;
 
 /**
+ * **A 44px tap target that costs the layout the same 16px a `<p>` costs.**
+ *
+ * `tapTargetLinkClass`'s `min-h-11` is what keeps a linked eyebrow over WCAG
+ * 2.5.8's 24px floor, and it is not negotiable — axe measures the element's own
+ * box, so moving the hit area onto a pseudo-element would satisfy a person and
+ * fail the scan. The box has to be 44px. The *flow* has to be 16, or the header
+ * is a different height depending on whether its eyebrow links anywhere, and
+ * one skeleton cannot stand in for both.
+ *
+ * **The negative margin that used to do this never did.** `-my-2` sat on the
+ * link itself, and the link is `inline-flex` — an *inline-level* box, whose
+ * vertical margins do not move the line box it sits on. Measured on a running
+ * dev server (issue #1857): the eyebrow occupied 28px against `EYEBROW_CLASS`'s
+ * 16, so `ShopPageHeaderSkeleton`'s `h-4` bar was 12px short of the header it
+ * stands in for and **every sub-page with a back-link jumped its title 12px**
+ * the instant the page landed — the exact jump `loading.tsx` exists to prevent,
+ * on every navigation staff make all day. Widening the margin to 14px a side
+ * moved the number to 8 and never to 0, which is what said the mechanism was
+ * wrong rather than the arithmetic.
+ *
+ * So the link is wrapped instead. The wrapper is block-level and exactly the
+ * eyebrow's line box; `items-center` centres the 44px link on it and lets it
+ * bleed 14px into the padding above and the title's `mt-2` below, where there
+ * is nothing to hit. The link's text then lands on the same line as a `<p>`
+ * eyebrow's — it used to sit 6px lower — and the header is the same height
+ * either way. `ShopPageHeader.test.tsx` pins it.
+ */
+export const EYEBROW_TAP_WRAPPER = "flex h-4 items-center";
+
+/**
  * The eyebrow-as-breadcrumb, for a header that is not `ShopPageHeader`.
  *
  * `TripPageHeader` is the one — the four trip surfaces share their own header,
@@ -48,26 +78,28 @@ export function EyebrowBackLink({
   onSky?: boolean;
 }) {
   return (
-    <Link
-      href={href}
-      className={`${tapTargetLinkClass} ${EYEBROW_SHAPE} ${
-        onSky ? "text-(--sky-ink)" : "text-primary"
-      } -my-2 gap-1 py-2 hover:underline ${className}`.trim()}
-    >
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="size-3 shrink-0"
+    <span className={EYEBROW_TAP_WRAPPER}>
+      <Link
+        href={href}
+        className={`${tapTargetLinkClass} ${EYEBROW_SHAPE} ${
+          onSky ? "text-(--sky-ink)" : "text-primary"
+        } gap-1 hover:underline ${className}`.trim()}
       >
-        <path d="m15 18-6-6 6-6" />
-      </svg>
-      {children}
-    </Link>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="size-3 shrink-0"
+        >
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+        {children}
+      </Link>
+    </span>
   );
 }
 
