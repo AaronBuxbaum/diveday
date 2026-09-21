@@ -198,10 +198,25 @@ describe("the chrome bar", () => {
    * Deleting the declaration would put that back and break no other test:
    * `EditorSection` gave up its own `calc(var(--chrome-h)+…)` on the strength
    * of this line, since scroll padding and scroll margin add.
+   *
+   * **Scoped to the pages that have a bar**, and the pair below is why that is
+   * asserted rather than assumed: the selector and the marker are in different
+   * files, so either one alone is a rule that quietly matches nothing. The
+   * marketing pages have no `ChromeBar`, and `/product` has a sticky chapter
+   * strip of its own height that its sections already clear with
+   * `scroll-mt-24` — an unscoped rule would give both 56px of air they never
+   * asked for.
    */
   it("clears the bar for every scroll in the app, by the bar's own token", async () => {
     const css = await read("src/app/globals.css");
-    expect(css).toMatch(/\bhtml\s*\{[^}]*scroll-padding-top:\s*var\(--chrome-h\)/);
+    expect(css).toMatch(
+      /\bhtml:has\(\[data-chrome-bar\]\)\s*\{[^}]*scroll-padding-top:\s*var\(--chrome-h\)/,
+    );
+  });
+
+  it("and the bar carries the marker that selector looks for", async () => {
+    const source = await read("src/components/chrome/ChromeBar.tsx");
+    expect(source).toMatch(/<header[^>]*\bdata-chrome-bar\b/s);
   });
 
   /**

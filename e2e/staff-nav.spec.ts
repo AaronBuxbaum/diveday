@@ -19,6 +19,30 @@ import { STAFF_DAY_HEADING } from "./helpers";
 test.describe("owner", () => {
   signedInAsOwner();
 
+  /**
+   * How far down the board the scroll test below reads before clicking a row.
+   *
+   * **157, because that is the number the bug was reported at** (issue #1941)
+   * — the offset `e2e/a11y.spec.ts`'s cert-gated roster kept inheriting, where
+   * axe measured the back-link at "63.7px by 9.5px" and failed WCAG 2.5.8.
+   *
+   * It is not an arbitrary point inside a range. Next's router leaves the
+   * scroll alone while the destination's first non-sticky element is inside
+   * the *usable* viewport, which `scroll-padding-top` now starts at the bar's
+   * bottom edge. Measured against the seeded board, on a warm route:
+   *
+   *     board offset     0   60  100  120  140  157  200
+   *     lands, before    0   60  100  120  140  157  157
+   *     lands, after     0   60  100    0    0    0    0
+   *
+   * So anything from about 101 up arrives at the departure's own top, and
+   * below that the inherited offset is small enough that nothing is covered —
+   * except a hairline band around 100, which is issue #1946. 157 is the
+   * reported case, sits well clear of that edge, and is the only column where
+   * the two rows differ by the full carry-over.
+   */
+  const BOARD_SCROLL_PX = 157;
+
   test("the bar wears three times, and the one you are on is lit", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
 
@@ -91,34 +115,98 @@ test.describe("owner", () => {
    */
   test("a departure opened from a scrolled board starts at its own top", async ({ page }) => {
     await page.goto("/shop/blue-mantis/schedule/board");
-    const departures = page
+    const departure = page
       .getByRole("main")
       .getByRole("link")
-      .filter({ hasText: /Reef|Wreck|Night/ });
-    await expect(departures.first()).toBeVisible();
+      .filter({ hasText: /Reef|Wreck|Night/ })
+      .first();
+    await expect(departure).toBeVisible();
 
-    // The last row on the board, reached the way a staffer reaching it does.
-    // Taking the last one means the click needs no scroll of its own, so what
-    // the navigation inherits is a position somebody actually read from.
-    const last = departures.last();
-    await last.scrollIntoViewIfNeeded();
+    // **Open the departure once and come back, the way a staffer does.**
+    //
+    // This is not setup; it is the condition the bug needs, and leaving it out
+    // is what made two earlier drafts of this test pass with the fix deleted.
+    // A route opened cold renders its shell first, and a document barely taller
+    // than the viewport cannot *hold* an inherited offset — the browser clamps
+    // it to 0, the body streams in underneath, and the page looks correct for
+    // a reason that has nothing to do with the router. Warm, it renders at full
+    // height immediately and the inherited offset stays exactly where the
+    // router left it.
+    //
+    // Which is also why `e2e/a11y.spec.ts`'s cert-gated roster was red on some
+    // CI runs and green on others: whether the route was already in the client
+    // cache decided whether the defect could show at all.
+    //
+    // The return leg is a click rather than a `goto`, because a document load
+    // would empty the router cache and put the route back to cold.
+    await departure.click();
+    await expect(page).toHaveURL(/\/trips\//);
+    await expect(page.locator("#roster")).toBeVisible();
+    await page
+      .locator("header")
+      .getByRole("navigation", { name: "When" })
+      .getByRole("link", { name: "Week" })
+      .click();
+    await expect(page).toHaveURL(/\/schedule\/board$/);
+    await expect(departure).toBeVisible();
+
+    // **The offset has to be one the bug actually reaches.**
+    //
+    // The first draft of this test scrolled to the *last* row on the board, far
+    // past any of this, and passed with `scroll-padding-top` deleted: at a big
+    // enough offset the destination's top is above the viewport and Next
+    // scrolls to the top regardless. A test that cannot fail is worse than no
+    // test, because it reads as cover. See `BOARD_SCROLL_PX` for the window
+    // and the measurements it was chosen from.
+    await page.evaluate((y) => window.scrollTo(0, y), BOARD_SCROLL_PX);
     await expect
       .poll(() => page.evaluate(() => window.scrollY), {
-        message:
-          "the board never scrolled, so this test had nothing to prove — a seeded week short enough to fit 720px is the thing to fix, not this assertion",
+        message: "the board did not scroll, so this test had nothing to prove",
       })
-      .toBeGreaterThan(0);
+      .toBe(BOARD_SCROLL_PX);
+    // Playwright scrolls an out-of-view target before clicking it, and its
+    // scroll — not this one — would be what the navigation then inherited.
+    // Asserting the row is already in view is what keeps the offset above the
+    // one actually under test.
+    await expect(departure).toBeInViewport();
 
-    await last.click();
+    await departure.click();
     await expect(page).toHaveURL(/\/trips\//);
     // The masthead, which is the page's own name and the thing that was being
-    // skipped. Waiting on it is what makes the scroll read below deterministic.
+    // skipped.
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expect
-      .poll(() => page.evaluate(() => window.scrollY), {
-        message: "the departure opened partway down itself",
-      })
-      .toBe(0);
+    // **Settled first, then read once — never polled.**
+    //
+    // The departure streams its body, and until the roster lands the document
+    // is barely taller than the viewport, so the browser clamps the inherited
+    // offset to 0 and then restores it as the page grows. An `expect.poll` on
+    // `window.scrollY` retries *until it passes*, so it finds that transient
+    // and calls it green on a page about to scroll itself back down: this test
+    // passed with `scroll-padding-top` deleted for exactly that reason, and
+    // the probe that caught it differed only in waiting for `#roster` first.
+    //
+    // A poll is the right tool for a value that settles toward the assertion.
+    // It is the wrong one for a value that passes through it.
+    await expect(page.locator("#roster")).toBeVisible();
+    expect(
+      await page.evaluate(() => window.scrollY),
+      "the departure opened partway down itself",
+    ).toBe(0);
+
+    // And the defect in its own language: axe failed this page because the
+    // back-link was *half under the bar*, not because a number was wrong.
+    // Asserting the clearance rather than only the offset means a future
+    // change that lands at zero by some other route still has to keep the
+    // masthead readable.
+    const clearance = await page.evaluate(() => {
+      const bar = document.querySelector("[data-chrome-bar]")?.getBoundingClientRect();
+      const back = [...document.querySelectorAll("a")]
+        .find((anchor) => /board/i.test(anchor.textContent ?? ""))
+        ?.getBoundingClientRect();
+      return bar && back ? Math.round(back.top - bar.bottom) : null;
+    });
+    expect(clearance, "the back-link was left under the staff bar").not.toBeNull();
+    expect(clearance ?? -1).toBeGreaterThanOrEqual(0);
   });
 
   test("a page with no hour lights nothing, because it lives behind the shop's name", async ({

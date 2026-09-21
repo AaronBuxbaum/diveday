@@ -456,17 +456,50 @@
  * element counted as in-view wherever the previous page had been left, the
  * router took its early return, and a staffer who clicked a row on a scrolled
  * board landed 157px into the departure with the back-link half under the bar
- * — an axe `target-size` failure at "63.7px by 9.5px" that turned
- * `e2e/a11y.spec.ts`'s cert-gated roster red on some CI runs and green on
- * others (issue #1941). No application code scrolled; that is why
- * instrumenting `window.scrollTo` and `scrollIntoView` recorded nothing.
+ * — an axe `target-size` failure at "63.7px by 9.5px" (issue #1941). No
+ * application code scrolled; that is why instrumenting `window.scrollTo` and
+ * `scrollIntoView` recorded nothing.
+ *
+ * **Why it was red on some CI runs and green on others**, which is the part
+ * worth carrying forward: the defect needs the destination to be *warm*. A
+ * route opened cold renders its shell first, and a document barely taller
+ * than the viewport cannot hold an inherited offset — the browser clamps it
+ * to 0 and the body streams in underneath, so the page looks right for a
+ * reason that has nothing to do with the router. Already in the client cache,
+ * it renders at full height and the offset stays exactly where the router
+ * left it. Whether a given run had visited a departure before decided whether
+ * the bug could appear at all, and two drafts of the e2e test passed against
+ * the unfixed stylesheet before that was understood.
+ *
+ * **It makes the router's rule correct, not absent**, and the difference is
+ * worth knowing before the next person reads a scroll offset here as a bug.
+ * The rule is "leave it alone if the reader can already see the top of what
+ * they asked for", and naming where the viewport becomes usable is the whole
+ * of what it was missing. Measured against the seeded board, warm, landing
+ * offset by inherited offset:
+ *
+ *     board            0   60  100  120  140  157  200
+ *     lands, before    0   60  100  120  140  157  157
+ *     lands, after     0   60  100    0    0    0    0
+ *
+ * From about 101 up — every offset that could hide the masthead — the page
+ * arrives at its own top. Below it the carry-over is small enough that nothing
+ * is covered. One hairline band at the boundary is issue #1946.
  *
  * On `html` because that is the viewport's scrollport, and because Next reads
  * `getComputedStyle(document.documentElement)` specifically. `--chrome-h` and
  * never a number, which `chrome.test.ts` refuses in this file by name — it has
  * scanned for a hand-written one here since before the property existed.
+ *
+ * **Only where the bar is.** `scroll-padding-top` says "the usable scrollport
+ * starts here", and on a page with no `ChromeBar` that is not true: the
+ * marketing pages would gain 56px of air above every anchor landing for no
+ * reason, and `/product`'s chapter strip is its own sticky bar of its own
+ * height, already cleared by the `scroll-mt-24` its sections carry. `:has()`
+ * makes the rule say exactly what it means, and a browser too old for it
+ * simply gets today's behaviour back rather than something wrong.
  */
-html {
+html:has([data-chrome-bar]) {
   scroll-padding-top: var(--chrome-h);
 }
 
