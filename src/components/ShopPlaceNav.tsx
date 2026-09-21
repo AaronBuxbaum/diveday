@@ -10,12 +10,38 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { motionMs } from "@/lib/motion";
 import {
   currentStaffPlace,
+  isStaffDestinationPage,
   STAFF_DESTINATION_BADGE_TONES,
   type StaffBarPlace,
+  type StaffDestination,
   type StaffDestinationGates,
   staffBarPlaces,
   staffDestinationHref,
 } from "@/lib/staff-destinations";
+
+/**
+ * **What a lit place says about itself**, in one place because the bar has two
+ * forms and they may not disagree.
+ *
+ * A place that is not lit says nothing. A lit one says `"page"` only when its
+ * own link opens the page being read — everywhere else it says `"true"`, which
+ * is ARIA's "the current item in a set, not otherwise specified"
+ * (`isStaffDestinationPage`, and #1938 for what the flat `"page"` told a
+ * screen-reader user on `/divers`).
+ *
+ * The same pair `SegmentedControl` takes as `ariaCurrentValue` and `AgencyTabs`,
+ * `FilterChips` and `EditorRail` already spell out. The bar was the one control
+ * in the app that had not been asked the question.
+ */
+function placeAriaCurrent(
+  active: boolean,
+  pathname: string,
+  root: string,
+  destination: StaffDestination,
+): "page" | "true" | undefined {
+  if (!active) return undefined;
+  return isStaffDestinationPage(pathname, root, destination) ? "page" : "true";
+}
 
 /**
  * **The three times the bar wears** — ADR 20260919-one-idea, decision I · Tide,
@@ -89,7 +115,7 @@ export function ShopPlaceNav({
           <Link
             key={place}
             href={staffDestinationHref(root, destination)}
-            aria-current={active ? "page" : undefined}
+            aria-current={placeAriaCurrent(active, pathname, root, destination)}
             className={`${placeClass} ${
               active ? "bg-primary-tint text-primary" : "text-muted hover:text-foreground"
             }`}
@@ -201,7 +227,7 @@ export function ShopPlaceMenu({
                 key={place}
                 href={staffDestinationHref(root, destination)}
                 onClick={close}
-                aria-current={active ? "page" : undefined}
+                aria-current={placeAriaCurrent(active, pathname, root, destination)}
                 className={`flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold ${
                   active ? "bg-primary-tint text-primary" : "text-foreground"
                 }`}

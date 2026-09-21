@@ -59,7 +59,12 @@ test.describe("owner", () => {
       .first()
       .click();
     await expect(page).toHaveURL(/\/trips\//);
-    await expect(bar.getByRole("link", { name: "Week" })).toHaveAttribute("aria-current", "page");
+    // **Lit, and `"true"` rather than `"page"`** — the distinction #1938 is
+    // about, on the surface that makes it. The board *claims* `/trips` (its
+    // `alsoMatch`), so the week is the honest answer to "which time am I in";
+    // it does not *open* this URL, so a screen reader may not be told this
+    // link is the page being read.
+    await expect(bar.getByRole("link", { name: "Week" })).toHaveAttribute("aria-current", "true");
   });
 
   test("a page with no hour lights nothing, because it lives behind the shop's name", async ({
@@ -73,7 +78,10 @@ test.describe("owner", () => {
       await page.goto(`/shop/blue-mantis${suffix}`);
       const bar = page.locator("header").getByRole("navigation", { name: "When" });
       await expect(bar.getByRole("link")).toHaveCount(3);
-      await expect(bar.locator("[aria-current='page']")).toHaveCount(0);
+      // Any `aria-current`, not only `page`: since #1938 a lit place that is
+      // not its own page says `"true"`, and a bar that lit one here would
+      // still satisfy a `[aria-current='page']` count of zero.
+      await expect(bar.locator("[aria-current]")).toHaveCount(0);
     }
   });
 
@@ -86,7 +94,9 @@ test.describe("owner", () => {
     // live behind the shop's name while Settings had no door to it.
     await page.goto("/shop/blue-mantis/gear");
     const bar = page.locator("header").getByRole("navigation", { name: "When" });
-    await expect(bar.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "page");
+    // `"true"`: the register is the day's work, and Today's link is the shop
+    // root rather than this page (#1938).
+    await expect(bar.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "true");
 
     // And one tap in, on the unit a staffer actually pulls for service — a
     // pill that lit the index and went dark on the page the work happens on
@@ -95,7 +105,7 @@ test.describe("owner", () => {
     // leads with its kind filters, which are `?kind=` readings of this page.
     await page.locator('main a[href*="/gear/"]').first().click();
     await expect(page).toHaveURL(/\/gear\/[0-9a-f-]+/i);
-    await expect(bar.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "page");
+    await expect(bar.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "true");
   });
 
   test("Settings is behind the shop's own name, which is the only door it has", async ({
