@@ -6,6 +6,13 @@ import { Suspense, useEffect, useLayoutEffect } from "react";
 const storageKey = "diveday:form-scroll";
 
 /**
+ * Stamped on `<html>` once this component has put the viewport where it is
+ * going — or decided it has nothing to put. `StatusInView` waits for it before
+ * asking whether a form's outcome is on screen.
+ */
+export const SCROLL_SETTLED_ATTRIBUTE = "data-form-scroll-settled";
+
+/**
  * The page identity this component stores, as a number rather than the path
  * itself. One of the three surfaces that mount this is `/ready/<token>`, whose
  * *pathname is the credential*
@@ -73,8 +80,28 @@ function PreserveFormScrollEffects() {
   // change them while leaving this persistent shop layout mounted.
   // biome-ignore lint/correctness/useExhaustiveDependencies: see explanation above
   useLayoutEffect(() => {
+    /**
+     * **Say when the viewport has been put where it is going**, in every branch
+     * below including the ones that move nothing — the same contract
+     * `ScrollToHash` states for `data-hash-landed`, and for the same reason: a
+     * marker set only on the interesting path is a marker its reader hangs on
+     * for the boring one.
+     *
+     * `StatusInView` is that reader. A form's outcome renders in the section
+     * that produced it, and whether it is on screen depends entirely on where
+     * this lands — so a check made before the restore measures a position that
+     * is about to change. Measured on the diver record's gear group: the status
+     * sat at viewport 138 when the check ran and at 748 once the restore had
+     * happened, and the reveal correctly declined to move a page it had been
+     * told was fine.
+     *
+     * Cleared first, so a marker left by the previous navigation cannot be read
+     * as this one's answer.
+     */
+    const landed = () => document.documentElement.setAttribute(SCROLL_SETTLED_ATTRIBUTE, "true");
+    document.documentElement.removeAttribute(SCROLL_SETTLED_ATTRIBUTE);
     const saved = sessionStorage.getItem(storageKey);
-    if (!saved) return;
+    if (!saved) return landed();
     sessionStorage.removeItem(storageKey);
     // Parsed, not cast: sessionStorage is outside our control (an old tab, an
     // extension), and a throw here would take the whole shell's render with it.
@@ -82,13 +109,15 @@ function PreserveFormScrollEffects() {
     try {
       position = JSON.parse(saved);
     } catch {
-      return;
+      return landed();
     }
-    if (typeof position !== "object" || position === null) return;
+    if (typeof position !== "object" || position === null) return landed();
     const { page, y } = position as { page?: unknown; y?: unknown };
-    if (page === pageKey(pathname) && typeof y === "number") {
-      requestAnimationFrame(() => window.scrollTo({ top: y, behavior: "instant" }));
-    }
+    if (page !== pageKey(pathname) || typeof y !== "number") return landed();
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: y, behavior: "instant" });
+      landed();
+    });
   }, [pathname, searchParams]);
 
   return null;
