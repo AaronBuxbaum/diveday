@@ -50,7 +50,7 @@ import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { uuidParam } from "@/lib/uuid";
-import { dayHourBoundaries, utcToWallTime as wallTimeOf } from "@/lib/zoned";
+import { calendarDayNoons, dayHourBoundaries, utcToWallTime as wallTimeOf } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
@@ -533,11 +533,44 @@ export default async function ManageTripPage({
     longitude: shop.longitude,
   });
   /**
-   * The walked half of that arc is where the *reader's* clock sits on it, which
-   * is `departureSky`'s own progress only when the departure is today. Reading
-   * next week's charter walks none of it, and null is how the strip says so.
+   * **A sun for every day the voyage touches**, not just the day it sails.
+   *
+   * `departureSky` above answers for `trip.startsAt`, which is the right sky
+   * for the band and only the first day of the strip. The seeded two-day
+   * course runs 08:00 Wednesday to 16:00 Thursday — 32 hours — and drew one
+   * morning, a bare line through the night, and nothing at all over the day
+   * the divers surface on (issue #1904).
+   *
+   * The almanac is asked **once per calendar day in the shop's own zone**,
+   * never once per hour and never per instant: `calendarDayNoons` hands back
+   * one noon per day the window touches, and noon is the hour no clock change
+   * can take away. A single-day voyage yields one entry and the picture does
+   * not move.
    */
-  const voyageDaylight = daylightProgressAt(now, departureSky.sunriseAt, departureSky.sunsetAt);
+  const voyageDaylight = calendarDayNoons(
+    { from: trip.startsAt, to: trip.endsAt },
+    shop.timezone,
+  ).map((noon) => {
+    const sky = skyReadingFor({
+      at: noon,
+      timeZone: shop.timezone,
+      latitude: shop.latitude,
+      longitude: shop.longitude,
+    });
+    return { sunriseAt: sky.sunriseAt, sunsetAt: sky.sunsetAt };
+  });
+  /**
+   * The walked half of an arc is where the *reader's* clock sits on it, and at
+   * most one of the days can hold it — so ask each in turn and take the one
+   * that answers. Reading next week's charter walks none of them, and null is
+   * how the strip says so. `dayStripGeometry` picks the matching arc by the
+   * same test, so the two cannot disagree about which day it is.
+   */
+  const voyageDaylightProgress =
+    voyageDaylight.reduce<number | null>(
+      (found, day) => found ?? daylightProgressAt(now, day.sunriseAt, day.sunsetAt),
+      null,
+    ) ?? null;
   /**
    * Each dive on the hour the boat is actually over the site, not the hour it
    * left the dock. `tideWindowsForDeparture` already lays the shop's own dock-day
@@ -595,9 +628,8 @@ export default async function ManageTripPage({
       from: voyageWindow.from,
       to: voyageWindow.to,
       now,
-      sunriseAt: departureSky.sunriseAt,
-      sunsetAt: departureSky.sunsetAt,
-      daylightProgress: voyageDaylight,
+      daylight: voyageDaylight,
+      daylightProgress: voyageDaylightProgress,
       marks: [
         { id: "off", at: trip.startsAt },
         ...voyageDiveMarks.map(({ id, at }) => ({ id, at })),

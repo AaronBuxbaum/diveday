@@ -21,8 +21,7 @@ const geometry = dayStripGeometry({
   from: at(6),
   to: at(22),
   now: at(10, 40),
-  sunriseAt: at(7),
-  sunsetAt: at(19, 45),
+  daylight: [{ sunriseAt: at(7), sunsetAt: at(19, 45) }],
   daylightProgress: 0.29,
   marks: [
     { id: "morning", at: at(7) },
@@ -98,8 +97,7 @@ describe("DayStrip", () => {
       from: at(6),
       to: at(22),
       now: at(10),
-      sunriseAt: at(7),
-      sunsetAt: at(19, 45),
+      daylight: [{ sunriseAt: at(7), sunsetAt: at(19, 45) }],
       daylightProgress: 0.2,
       marks: [
         { id: "first", at: at(7) },
@@ -129,8 +127,7 @@ describe("DayStrip", () => {
       from: at(7),
       to: at(19),
       now: at(10),
-      sunriseAt: at(7),
-      sunsetAt: at(19, 45),
+      daylight: [{ sunriseAt: at(7), sunsetAt: at(19, 45) }],
       daylightProgress: 0.2,
       marks: [{ id: "first", at: at(7) }],
     });
@@ -166,8 +163,7 @@ describe("DayStrip", () => {
       from: at(6),
       to: at(22),
       now: at(23),
-      sunriseAt: at(7),
-      sunsetAt: at(19, 45),
+      daylight: [{ sunriseAt: at(7), sunsetAt: at(19, 45) }],
       daylightProgress: null,
     });
     const { container } = render(

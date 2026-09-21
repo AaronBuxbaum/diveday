@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addCalendarDays,
+  calendarDayNoons,
   dayHourBoundaries,
   parseWallTime,
   shiftInstantByCalendarDays,
@@ -352,5 +353,63 @@ describe("dayHourBoundaries", () => {
       expect(hour.at.getTime()).toBeGreaterThanOrEqual(bounds.from.getTime());
       expect(hour.at.getTime()).toBeLessThan(bounds.to.getTime());
     }
+  });
+});
+
+/**
+ * **Which calendar days a window touches**, for the almanac to be asked once
+ * per day rather than once per hour (issue #1904 — a two-day course drew one
+ * morning and a bare line where the second day's sun belonged).
+ */
+describe("noon on every calendar day a window touches", () => {
+  const KEY_LARGO = "America/New_York";
+
+  it("gives one noon for a window inside a single day", () => {
+    const noons = calendarDayNoons(
+      { from: new Date("2026-08-27T12:00:00Z"), to: new Date("2026-08-27T20:00:00Z") },
+      KEY_LARGO,
+    );
+    expect(noons).toHaveLength(1);
+    expect(utcToWallTime(noons[0], KEY_LARGO)).toMatchObject({
+      year: 2026,
+      month: 8,
+      day: 27,
+      hour: 12,
+    });
+  });
+
+  it("gives two for a voyage that sails overnight", () => {
+    // 08:00 Wednesday to 16:00 Thursday, in the shop's own zone — the seeded
+    // two-day course, and the case the single pair could not draw.
+    const noons = calendarDayNoons(
+      { from: new Date("2026-08-26T12:00:00Z"), to: new Date("2026-08-27T20:00:00Z") },
+      KEY_LARGO,
+    );
+    expect(noons.map((noon) => utcToWallTime(noon, KEY_LARGO).day)).toEqual([26, 27]);
+  });
+
+  it("counts a day the window only clips, not just the days it fills", () => {
+    // 23:00 to 01:00 touches two dates and fills neither.
+    const noons = calendarDayNoons(
+      { from: new Date("2026-08-27T03:00:00Z"), to: new Date("2026-08-27T05:00:00Z") },
+      KEY_LARGO,
+    );
+    expect(noons.map((noon) => utcToWallTime(noon, KEY_LARGO).day)).toEqual([26, 27]);
+  });
+
+  it("does not repeat or skip a day across a spring-forward", () => {
+    // 2026-03-08 is the US spring-forward. Stepping a calendar day from
+    // midnight would land at 11 PM the same date and stall the walk; this
+    // steps from noon, which no clock change takes away.
+    const noons = calendarDayNoons(
+      { from: new Date("2026-03-07T17:00:00Z"), to: new Date("2026-03-10T17:00:00Z") },
+      KEY_LARGO,
+    );
+    expect(noons.map((noon) => utcToWallTime(noon, KEY_LARGO).day)).toEqual([7, 8, 9, 10]);
+  });
+
+  it("answers nothing for a window with no width", () => {
+    const instant = new Date("2026-08-27T12:00:00Z");
+    expect(calendarDayNoons({ from: instant, to: instant }, KEY_LARGO)).toEqual([]);
   });
 });

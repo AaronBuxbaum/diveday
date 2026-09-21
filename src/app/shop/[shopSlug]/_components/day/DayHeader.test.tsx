@@ -13,8 +13,7 @@ const geometry = dayStripGeometry({
   from: at(6),
   to: at(21),
   now: at(10),
-  sunriseAt: at(7),
-  sunsetAt: at(19, 45),
+  daylight: [{ sunriseAt: at(7), sunsetAt: at(19, 45) }],
   daylightProgress: 0.24,
   marks: [{ id: "morning", at: at(7) }],
 });

@@ -176,6 +176,12 @@ export function dayStripTicks(input: {
   return [inside[Math.floor(inside.length / 2)].at];
 }
 
+/**
+ * One day's own daylight. A list of these is what a window spanning more than
+ * one calendar day needs, and a one-element list is what a single day is.
+ */
+export type DaylightWindow = { sunriseAt: Date | null; sunsetAt: Date | null };
+
 export type StripMark = { id: string; at: Date };
 export type StripBand = { id: string; from: Date; to: Date };
 export type TideTurn = { at: Date; kind: "high" | "low" };
@@ -185,8 +191,22 @@ export type DayStripInput = {
   from: Date;
   to: Date;
   now: Date;
-  sunriseAt: Date | null;
-  sunsetAt: Date | null;
+  /**
+   * **One entry per calendar day the window touches**, in the shop's own zone.
+   *
+   * It was a single `sunriseAt`/`sunsetAt` pair, which is the right shape for
+   * the home — whose window is one calendar day by construction — and the wrong
+   * one for a departure, whose window is the voyage's own hours. The seeded
+   * two-day course runs 32 of them: the arc rose over Wednesday morning, set
+   * before the strip's "12 AM" tick, and then nothing. Thursday, which is the
+   * day the divers actually surface on, had no sun over it at all, and the
+   * night between the two read as a bare line rather than as a night
+   * (issue #1904).
+   *
+   * Empty for a shop with no coordinates, which is the honest answer rather
+   * than a drawn guess — the almanac cannot say, so the strip says nothing.
+   */
+  daylight?: readonly DaylightWindow[];
   /** Where the sun is between its own rise and set, 0-1, from `skyReadingFor`. */
   daylightProgress: number | null;
   /** The day's predicted turns of the tide, in any order. */
@@ -203,9 +223,14 @@ export type DayStripGeometry = {
   width: number;
   height: number;
   horizonY: number;
-  /** The whole arc from sunrise to sunset, or null where the sun does not cross. */
-  sunArc: string | null;
-  /** The part of it already walked, or null before sunrise. */
+  /**
+   * One arc per day the window touches, each from that day's own rise to its
+   * own set, in the order the days run. Empty where the sun does not cross —
+   * and the *gaps between* them are the nights, which is what makes an
+   * overnight voyage legible as one (issue #1904).
+   */
+  sunArcs: string[];
+  /** The part of the arc now sits on already walked, or null before sunrise. */
   sunArcElapsed: string | null;
   /** Where the sun is now, or null when it is down. */
   sun: { x: number; y: number } | null;
@@ -230,39 +255,64 @@ export function dayStripGeometry(input: DayStripInput): DayStripGeometry {
   const x = (at: number): number => PAD_X + ((at - from) / span) * (VIEW_WIDTH - PAD_X * 2);
   const inside = (at: number): boolean => at >= from && at <= to;
 
-  const sunrise = input.sunriseAt?.getTime() ?? null;
-  const sunset = input.sunsetAt?.getTime() ?? null;
-  const hasArc = sunrise !== null && sunset !== null && sunset > sunrise;
+  // **A day is drawn only if its daylight reaches the window.** A voyage's
+  // window is its own hours, so the day it starts on and the day it ends on
+  // both have daylight hanging off the edges — that is kept, because the arc's
+  // ends have always mapped outside the window and the SVG clips them. What is
+  // dropped is a day with no overlap at all, which a longer list can now hold.
+  const days = (input.daylight ?? [])
+    .map((day) => ({
+      rise: day.sunriseAt?.getTime() ?? null,
+      set: day.sunsetAt?.getTime() ?? null,
+    }))
+    .filter(
+      (day): day is { rise: number; set: number } =>
+        day.rise !== null &&
+        day.set !== null &&
+        day.set > day.rise &&
+        day.set > from &&
+        day.rise < to,
+    )
+    .sort((a, b) => a.rise - b.rise);
 
   // A quadratic whose ends sit on the horizon and whose midpoint reaches the
   // apex. A Bézier's control point is not its midpoint: at t=0.5 the curve
   // reaches a quarter of each end plus half the control, so the control has to
   // be pushed twice as far to land the top of the arc where it is wanted.
-  const arcStartX = hasArc ? x(sunrise) : 0;
-  const arcEndX = hasArc ? x(sunset) : 0;
-  const arcMidX = (arcStartX + arcEndX) / 2;
   const controlY = 2 * ARC_APEX_Y - HORIZON_Y;
-  const pointAt = (progress: number): { x: number; y: number } => {
-    const t = Math.min(1, Math.max(0, progress));
-    const inverse = 1 - t;
+  const arcOf = (day: { rise: number; set: number }) => {
+    const startX = x(day.rise);
+    const endX = x(day.set);
+    const midX = (startX + endX) / 2;
     return {
-      x: inverse * inverse * arcStartX + 2 * inverse * t * arcMidX + t * t * arcEndX,
-      y: inverse * inverse * HORIZON_Y + 2 * inverse * t * controlY + t * t * HORIZON_Y,
+      path: `M${round(startX)},${HORIZON_Y} Q${round(midX)},${round(controlY)} ${round(endX)},${HORIZON_Y}`,
+      pointAt: (progress: number): { x: number; y: number } => {
+        const t = Math.min(1, Math.max(0, progress));
+        const inverse = 1 - t;
+        return {
+          x: inverse * inverse * startX + 2 * inverse * t * midX + t * t * endX,
+          y: inverse * inverse * HORIZON_Y + 2 * inverse * t * controlY + t * t * HORIZON_Y,
+        };
+      },
     };
   };
 
   const progress = input.daylightProgress;
-  const sunUp = hasArc && progress !== null && progress >= 0 && progress <= 1;
+  // **Which arc the sun is standing on.** `daylightProgress` says how far
+  // through a day's daylight the reader's clock is, and says nothing about
+  // *which* day — so the day holding `now` is the one that answers, and a
+  // window with no such day walks nothing. One day cannot hold two suns.
+  const nowAt = input.now.getTime();
+  const currentDay = days.find((day) => nowAt >= day.rise && nowAt <= day.set) ?? null;
+  const sunUp = currentDay !== null && progress !== null && progress >= 0 && progress <= 1;
 
   return {
     width: VIEW_WIDTH,
     height: VIEW_HEIGHT,
     horizonY: HORIZON_Y,
-    sunArc: hasArc
-      ? `M${round(arcStartX)},${HORIZON_Y} Q${round(arcMidX)},${round(controlY)} ${round(arcEndX)},${HORIZON_Y}`
-      : null,
-    sunArcElapsed: sunUp ? elapsedArc(pointAt, progress) : null,
-    sun: sunUp ? roundPoint(pointAt(progress)) : null,
+    sunArcs: days.map((day) => arcOf(day).path),
+    sunArcElapsed: sunUp && currentDay ? elapsedArc(arcOf(currentDay).pointAt, progress) : null,
+    sun: sunUp && currentDay ? roundPoint(arcOf(currentDay).pointAt(progress)) : null,
     tidePath: tidePath(input.tideTurns ?? [], x, from, to),
     marks: (input.marks ?? [])
       .filter((mark) => inside(mark.at.getTime()))
@@ -349,7 +399,7 @@ function emptyGeometry(): DayStripGeometry {
     width: VIEW_WIDTH,
     height: VIEW_HEIGHT,
     horizonY: HORIZON_Y,
-    sunArc: null,
+    sunArcs: [],
     sunArcElapsed: null,
     sun: null,
     tidePath: null,

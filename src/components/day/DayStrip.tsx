@@ -149,17 +149,21 @@ export function DayStrip({
             />
           ))}
 
-          {/* The sun's whole arc, dashed, with the part already walked drawn solid. */}
-          {geometry.sunArc ? (
+          {/* One dashed arc per day the window touches, with the part already
+              walked drawn solid over whichever of them holds now. A day is one
+              arc; a voyage that sails overnight is two, and the bare stretch of
+              horizon between them is the night (issue #1904). */}
+          {geometry.sunArcs.map((arc) => (
             <path
-              d={geometry.sunArc}
+              key={arc}
+              d={arc}
               fill="none"
               stroke="var(--sky-rule-faint)"
               strokeWidth={1.5}
               strokeDasharray="2 5"
               vectorEffect="non-scaling-stroke"
             />
-          ) : null}
+          ))}
           {geometry.sunArcElapsed ? (
             <path
               d={geometry.sunArcElapsed}
