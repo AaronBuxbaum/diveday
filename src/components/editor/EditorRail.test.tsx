@@ -165,12 +165,22 @@ describe("an editor section", () => {
     expect(document.getElementById("block-pricing")?.className).toContain("border-t border-border");
   });
 
-  /** An anchor jump has to land the label below the bar, not behind it. */
-  it("clears the chrome bar when an anchor lands on it", () => {
+  /**
+   * An anchor jump has to land the label below the bar, not behind it — and
+   * since #1941 the bar's own height is not this component's to carry. One
+   * `scroll-padding-top: var(--chrome-h)` on `html` insets every scroll in the
+   * app, so what is left here is the *air* between the bar and the label.
+   * Scroll padding and scroll margin add, so a `--chrome-h` still spelled here
+   * would land the label a whole bar too low; `chrome.test.ts` holds the other
+   * half, that the stylesheet declares the padding at all.
+   */
+  it("keeps its own air above an anchored label, and leaves the bar to the stylesheet", () => {
     render(<Editor />);
 
     for (const section of SECTIONS) {
-      expect(document.getElementById(section.id)?.className).toContain("var(--chrome-h)");
+      const className = document.getElementById(section.id)?.className ?? "";
+      expect(className, section.id).toContain("scroll-mt-6");
+      expect(className, `${section.id} double-counts the bar`).not.toContain("--chrome-h");
     }
   });
 });

@@ -53,10 +53,13 @@ export type EditorUnsavedCopy = {
  * where a `<fieldset>` would prefix every label with a name that only some of
  * them share.
  *
- * `scroll-mt` is `--chrome-h` plus a little air: an anchor jump has to land the
- * group label *below* the bar rather than behind it (`ChromeBar`, ADR
- * 20260827-clearwater-surface-language decision 10 — the height is read, never
- * measured).
+ * `scroll-mt` is a little air, and no longer the bar's height as well: an
+ * anchor jump has to land the group label *below* the bar rather than behind
+ * it (`ChromeBar`, ADR 20260827-clearwater-surface-language decision 10 — the
+ * height is read, never measured), and since #1941 `globals.css` clears the
+ * bar for every scroll in the app with one `scroll-padding-top` on `html`.
+ * Scroll padding and scroll margin add, so keeping `--chrome-h` here as well
+ * would land this label a whole bar's height too low.
  */
 export function EditorSection({
   id,
@@ -78,9 +81,7 @@ export function EditorSection({
 }) {
   // Hairlines between, never above the first: the rule separates two sections,
   // and a rule under the page header separates nothing.
-  const shell = `scroll-mt-[calc(var(--chrome-h)+1.5rem)] ${
-    lead ? "" : "border-t border-border pt-6"
-  }`.trim();
+  const shell = `scroll-mt-6 ${lead ? "" : "border-t border-border pt-6"}`.trim();
   // The attribute the unsaved-note hook traces a typed control back to, and
   // the one thing that makes a section findable without knowing its id. Written
   // out rather than spread from a constant so JSX keeps its typing.

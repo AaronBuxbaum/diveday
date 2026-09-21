@@ -67,6 +67,60 @@ test.describe("owner", () => {
     await expect(bar.getByRole("link", { name: "Week" })).toHaveAttribute("aria-current", "true");
   });
 
+  /**
+   * **A row click opens a departure at the departure, not partway down it.**
+   *
+   * It did not. A staffer who had read down the week and clicked a row landed
+   * at `window.scrollY === 157` — the board's own position, carried over — with
+   * the masthead that names the departure already under the staff bar and the
+   * `‹ BOARD` back-link half covered by it. Axe read that as a WCAG 2.5.8
+   * failure at "63.7px by 9.5px", which is why `e2e/a11y.spec.ts`'s cert-gated
+   * roster was red on some CI runs and green on others (issue #1941).
+   *
+   * Nothing in this app scrolled: `getScrollTargetState` in Next's
+   * `layout-router` treats an element as "already in the viewport" from
+   * `scroll-padding-top` downwards, that was 0 because the stylesheet declared
+   * none, and the router took its early return and moved nothing at all. The
+   * fix is one `scroll-padding-top: var(--chrome-h)` on `html`
+   * (`src/app/globals.css`); this is the reader's half of it, and
+   * `chrome.test.ts` holds the stylesheet's.
+   *
+   * Here rather than in `trips.spec.ts` because the claim is about where a
+   * *navigation* puts you, which is this file's subject, and because it is
+   * true of every staff page rather than of a departure.
+   */
+  test("a departure opened from a scrolled board starts at its own top", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/schedule/board");
+    const departures = page
+      .getByRole("main")
+      .getByRole("link")
+      .filter({ hasText: /Reef|Wreck|Night/ });
+    await expect(departures.first()).toBeVisible();
+
+    // The last row on the board, reached the way a staffer reaching it does.
+    // Taking the last one means the click needs no scroll of its own, so what
+    // the navigation inherits is a position somebody actually read from.
+    const last = departures.last();
+    await last.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY), {
+        message:
+          "the board never scrolled, so this test had nothing to prove — a seeded week short enough to fit 720px is the thing to fix, not this assertion",
+      })
+      .toBeGreaterThan(0);
+
+    await last.click();
+    await expect(page).toHaveURL(/\/trips\//);
+    // The masthead, which is the page's own name and the thing that was being
+    // skipped. Waiting on it is what makes the scroll read below deterministic.
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY), {
+        message: "the departure opened partway down itself",
+      })
+      .toBe(0);
+  });
+
   test("a page with no hour lights nothing, because it lives behind the shop's name", async ({
     page,
   }) => {

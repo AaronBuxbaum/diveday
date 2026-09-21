@@ -438,6 +438,38 @@
   --font-brand-display: var(--brand-display, var(--font-geist-sans));
 }
 
+/*
+ * **The bar's height, told to every scroll that aims at the top of something.**
+ *
+ * `scroll-padding-top` insets the scrollport: a `scrollIntoView`, a fragment
+ * navigation, and the router's own landing all stop this far short instead of
+ * putting their target's first pixel at viewport zero — where the sticky
+ * `ChromeBar` is, and where it would cover it.
+ *
+ * It fixes a bug nobody could find by reading this app, because the code that
+ * reads this value is Next's (`client/components/layout-router.js`):
+ *
+ *     return elementTop >= getScrollPaddingTop() && elementTop <= viewportHeight ? 1 : 2;
+ *     // 1 means "already in the viewport" — the router then scrolls nothing at all.
+ *
+ * With no padding declared that floor was 0, so a departure's first non-sticky
+ * element counted as in-view wherever the previous page had been left, the
+ * router took its early return, and a staffer who clicked a row on a scrolled
+ * board landed 157px into the departure with the back-link half under the bar
+ * — an axe `target-size` failure at "63.7px by 9.5px" that turned
+ * `e2e/a11y.spec.ts`'s cert-gated roster red on some CI runs and green on
+ * others (issue #1941). No application code scrolled; that is why
+ * instrumenting `window.scrollTo` and `scrollIntoView` recorded nothing.
+ *
+ * On `html` because that is the viewport's scrollport, and because Next reads
+ * `getComputedStyle(document.documentElement)` specifically. `--chrome-h` and
+ * never a number, which `chrome.test.ts` refuses in this file by name — it has
+ * scanned for a hand-written one here since before the property existed.
+ */
+html {
+  scroll-padding-top: var(--chrome-h);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
