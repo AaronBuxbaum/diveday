@@ -58,11 +58,37 @@ describe("the eyebrow's line box", () => {
     expect(heightOf(link.className, "min-h")).toBeGreaterThanOrEqual(24);
   });
 
+  /**
+   * **The wrapper is the element the caller lays out.** `TripPageHeader` places
+   * its back link with `col-start-1 row-start-1`, and the log and ticket pages
+   * hide theirs with `print:hidden` so a print-only `<p>` can take the line.
+   * Introducing the wrapper put those on the nested link, where grid placement
+   * does nothing and `print:hidden` leaves a 16px band of nothing on paper
+   * (`sourcery-ai` on #1943). Colour is the exception, and already has `onSky`.
+   */
+  it("gives the caller's layout classes to the wrapper, which is what the parent lays out", () => {
+    render(
+      <EyebrowBackLink
+        href="/shop/blue-mantis/trips/1"
+        className="col-start-1 row-start-1 print:hidden"
+      >
+        Board
+      </EyebrowBackLink>,
+    );
+    const link = screen.getByRole("link", { name: "Board" });
+    const wrapper = link.parentElement;
+    for (const cls of ["col-start-1", "row-start-1", "print:hidden"]) {
+      expect(wrapper?.className, `wrapper is missing ${cls}`).toContain(cls);
+      expect(link.className, `link should not carry ${cls}`).not.toContain(cls);
+    }
+  });
+
   it("wraps the link rather than giving it a margin, because an inline box's margins do not move a line box", () => {
     const { container } = render(
       <EyebrowBackLink href="/shop/blue-mantis/settings">Settings</EyebrowBackLink>,
     );
     const link = screen.getByRole("link", { name: "Settings" });
+    // No caller class here, so the wrapper is exactly the constant.
     expect(link.parentElement?.className).toBe(EYEBROW_TAP_WRAPPER);
     expect(container.firstElementChild).toBe(link.parentElement);
     // The paired negative: no vertical margin anywhere on the link. One left

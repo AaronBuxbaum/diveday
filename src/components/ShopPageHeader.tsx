@@ -65,6 +65,15 @@ export function EyebrowBackLink({
 }: {
   href: string;
   children: ReactNode;
+  /**
+   * **Layout classes land on the wrapper, not the link.** The wrapper is the
+   * element the caller's parent lays out -- `TripPageHeader` places it with
+   * `col-start-1 row-start-1`, and the log and ticket pages hide it in print
+   * with `print:hidden` so their print-only `<p>` can take the line. On the
+   * link those do nothing and the wrapper auto-places, which is a 16px band of
+   * nothing on paper and a back-link in the wrong grid cell on screen. Colour
+   * is the exception and already has a prop, for the reason below.
+   */
   className?: string;
   /**
    * This eyebrow is standing on a `SkyBand`, so it wears the band's ink rather
@@ -78,12 +87,12 @@ export function EyebrowBackLink({
   onSky?: boolean;
 }) {
   return (
-    <span className={EYEBROW_TAP_WRAPPER}>
+    <span className={`${EYEBROW_TAP_WRAPPER} ${className}`.trim()}>
       <Link
         href={href}
         className={`${tapTargetLinkClass} ${EYEBROW_SHAPE} ${
           onSky ? "text-(--sky-ink)" : "text-primary"
-        } gap-1 hover:underline ${className}`.trim()}
+        } gap-1 hover:underline`.trim()}
       >
         <svg
           aria-hidden="true"

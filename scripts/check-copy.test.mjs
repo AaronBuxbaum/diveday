@@ -41,6 +41,20 @@ describe("looksLikeCopy — an emoji is a word", () => {
   });
 
   /**
+   * The length floor above the letters test is about identifiers, not glyphs,
+   * and a lone BMP emoji is a single UTF-16 unit — so testing it first ate
+   * exactly the strings this rule was added for (`sourcery-ai` on #1943).
+   */
+  it("reports a glyph that is the whole string, which the length floor used to eat", () => {
+    for (const glyph of ["✅", "❌", "⭐", "🎉", "💡"]) {
+      expect(looksLikeCopy(glyph), glyph).toBe(true);
+    }
+    // And the floor still does its own job on a one-character identifier.
+    expect(looksLikeCopy("a")).toBe(false);
+    expect(looksLikeCopy("|")).toBe(false);
+  });
+
+  /**
    * **The half that decides whether the rule survives.** The blocks next to the
    * emoji planes are ordinary typography here, and a guard that cried wolf over
    * them would be switched off within a week: `→` ends 246 links, `★` is the

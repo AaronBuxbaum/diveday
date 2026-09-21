@@ -185,7 +185,10 @@ const EMOJI =
  */
 export function looksLikeCopy(raw) {
   const value = raw.trim();
-  if (value.length < 2) return false;
+  // The length floor is about identifiers, not glyphs: a lone BMP emoji such as
+  // `"✅"` is a single UTF-16 unit, so testing it first ate exactly the strings
+  // the rule above was added for (`sourcery-ai` on #1943).
+  if (!EMOJI.test(value) && value.length < 2) return false;
   if (!/[A-Za-z]{2}/.test(value) && !EMOJI.test(value)) return false;
   // Operators and JSX/TS syntax that a `>…<` window can straddle — the window
   // spans from a generic's closing bracket or a comparison to the next tag, so
