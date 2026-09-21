@@ -19,10 +19,11 @@ export async function diverStatusRows(
   shopId: string,
   diver: DiverProfile,
   now: Date = nowDate(),
+  options: { collectHasSomewhereToGo?: boolean } = {},
 ): Promise<DiverStatusRow[]> {
   const next = nextBookingAhead(diver, now);
   const readiness = next ? await getBookingReadiness(db, shopId, next.booking.id) : null;
-  return buildDiverStatus(diver, readiness, { now });
+  return buildDiverStatus(diver, readiness, { now, ...options });
 }
 
 /**
