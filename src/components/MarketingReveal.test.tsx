@@ -4,7 +4,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MarketingHeroMotion, MarketingSectionMotion } from "./MarketingReveal";
+import {
+  MarketingHeroMotion,
+  MarketingSectionMotion,
+  REVEAL_MARKER_ATTRIBUTE,
+  REVEAL_READY_ATTRIBUTE,
+} from "./MarketingReveal";
 
 afterEach(cleanup);
 
@@ -73,6 +78,7 @@ function placeSections(tops: number[]) {
 }
 
 beforeEach(() => {
+  document.documentElement.removeAttribute(REVEAL_READY_ATTRIBUTE);
   document.body.innerHTML = "";
   // A 800px viewport, and no reader asking for stillness. Both are read at
   // mount and both change which branch the effect takes.
@@ -228,5 +234,93 @@ describe("the capture's own guard against a blank chapter", () => {
     // nothing — and the tripwire would fail captures for a class that no
     // longer hides anything.
     expect(css).toMatch(/\.marketing-reveal-pending\s*\{[^}]*opacity:\s*0/);
+  });
+});
+
+/**
+ * **The camera's half of the contract** (sourcery-ai on #1950).
+ *
+ * The tripwire alone could not close the race it was built for: hydration can
+ * land between the last check and the shutter, marking sections hidden after
+ * the guard has passed. A check placed later only narrows that window — it
+ * cannot shut it, because nothing in the capture knew when the page had
+ * *finished deciding*.
+ *
+ * So the page says. The marker is server-rendered, so its absence is an answer
+ * rather than a page that has not got there yet; the stamp lands in every
+ * branch the effect returns through, so the camera is never left waiting by the
+ * case that had nothing to hide. Same contract as `ScrollToHash`'s
+ * `data-hash-landed`.
+ */
+describe("the signal the camera waits on", () => {
+  it("marks the page as one that runs a reveal, before any script does", () => {
+    stubIntersectionObserver();
+    const { container } = render(<MarketingSectionMotion />);
+
+    // Rendered output, not an effect: a server render carries this too, which
+    // is the entire point — a camera can tell "will decide" from "nothing to
+    // decide" without waiting on a signal that is never coming.
+    expect(container.querySelector(`[${REVEAL_MARKER_ATTRIBUTE}]`)).not.toBeNull();
+  });
+
+  it("says when it has finished deciding what to withhold", () => {
+    stubIntersectionObserver();
+    placeSections([1400]);
+
+    expect(document.documentElement.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(false);
+    render(<MarketingSectionMotion />);
+    expect(document.documentElement.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(true);
+  });
+
+  /**
+   * The branches that withhold nothing are the ones a duration-based wait gets
+   * wrong, so they are the ones worth pinning: a camera waiting on this must
+   * not hang on a page that simply had nothing to hide.
+   */
+  it("says so even when it withholds nothing at all", () => {
+    stubIntersectionObserver();
+    placeSections([200]); // every section already above the fold
+
+    render(<MarketingSectionMotion />);
+
+    expect(document.documentElement.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(true);
+  });
+
+  it("says so for a reader who asked for no motion", () => {
+    stubIntersectionObserver();
+    vi.stubGlobal(
+      "matchMedia",
+      (query: string) =>
+        ({ matches: query.includes("reduced-motion"), media: query }) as MediaQueryList,
+    );
+    placeSections([1400]);
+
+    render(<MarketingSectionMotion />);
+
+    expect(document.documentElement.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(true);
+  });
+});
+
+describe("the capture waits for that signal, and bounds every pass", () => {
+  const readSpec = () =>
+    readFile(path.join(process.cwd(), "e2e/visual.spec.ts"), "utf8") as Promise<string>;
+
+  it("waits for the page to finish deciding before it scrolls past", async () => {
+    const spec = await readSpec();
+    // Gated on the server-rendered marker, so no other surface pays the wait.
+    expect(spec).toMatch(/document\.querySelector\(`\[\$\{revealMarkerAttribute\}\]`\) !== null/);
+    expect(spec).toMatch(
+      /!document\.documentElement\.hasAttribute\(revealReadyAttribute\) &&\s*performance\.now\(\) < deadline/,
+    );
+  });
+
+  /**
+   * Bounded by the same deadline as everything else in that pass: a page that
+   * never stamps must reach the tripwire, not hold the capture open.
+   */
+  it("never lets a pass begin or end after the budget is spent", async () => {
+    const spec = await readSpec();
+    const guards = spec.match(/if \(performance\.now\(\) >= deadline\) return;/g) ?? [];
+    expect(guards, "one before the first step, one before the reset").toHaveLength(2);
   });
 });
