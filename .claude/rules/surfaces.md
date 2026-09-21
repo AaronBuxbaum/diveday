@@ -98,8 +98,8 @@ stay in `AGENTS.md`.
   (`src/i18n/marine-life-labels.ts`).
 - **Design tokens**: `src/app/globals.css` (semantic only, ADR-0004). **Wrappers**:
   `src/components/ui/` — `form.tsx` (`Field`, `FieldGrid`, `controlClass`, `FormStatus`,
-  `FieldErrorFocus`), `button.ts` (`buttonClass`), `card.tsx` (`SectionCard`, `sectionCardClass`),
-  `tone.ts` (`toneMark`). Readiness words: `src/i18n/readiness-labels.ts` — never spell a status
+  `FieldErrorFocus`, and `StatusInView`, which `FormStatus` carries), `button.ts` (`buttonClass`),
+  `card.tsx` (`SectionCard`, `sectionCardClass`), `tone.ts` (`toneMark`). Readiness words: `src/i18n/readiness-labels.ts` — never spell a status
   inline. Heading levels come from `src/components/ui/typography.ts` (`pnpm check:type-ramp`).
 - **Paging a staff list**: `src/components/Pager.tsx` + `offsetPage` in `src/db/paging.ts`. Every
   paged staff list wears it (ADR 20260803-one-pagination-model); keyset cursors (`src/db/cursor.ts`)
@@ -157,6 +157,19 @@ with `space-y-10` rather than per-section `mt-*`. See
 action row (`FormStatus`), with `FieldErrorFocus` to move the cursor to the offending box. A page's
 `?notice=` is routed to the form that produced it by `noticeForForm` (`src/lib/staff-notices.ts`);
 the page banner is left for what is genuinely about the page.
+
+**And it has to be on screen, or it said nothing.** Putting the outcome in its own section fixed a
+confirmation appearing off-screen *above* a reader who saved halfway down, and left the mirror image
+open: `PreserveFormScroll` puts them back exactly where they submitted from, so an outcome rendered
+below the submit button can land below the fold. `FormStatus` carries `StatusInView`, which brings
+it into view **only when it is off screen** — a status that yanks the viewport when the reader can
+already read it is worse than one that does nothing — and never for `danger`, whose `FieldErrorFocus`
+has the better destination. It waits for three conditions rather than a duration: the status is
+something the renderer is drawing (`checkVisibility()`, not a zero-sized rect inside a `<details>`
+that has just opened), `PreserveFormScroll` has stamped `SCROLL_SETTLED_ATTRIBUTE`, and the page has
+stopped moving. All three were found by measuring: on the diver record's gear group the status read
+viewport 138 mid-flight and 748 once the disclosure, the restore and the browser's smooth animation
+between them had all landed.
 
 ## A new page ships with a `loading.tsx` and `export const instant = true`
 
