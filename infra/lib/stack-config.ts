@@ -23,8 +23,8 @@ import type { Construct } from "constructs";
  * Re-exported rather than defined here: the regions and stack names are also
  * read by `scripts/infra-bootstrap.mjs`, `scripts/infra-deploy.mjs` and
  * `scripts/post-deploy-wizard.mjs`, none of which compile TypeScript, so the
- * one definition lives in `config/aws-regions.mjs`. Read that file for why SES
- * is in us-east-2 and what moving it back involves.
+ * one definition lives in `config/aws-regions.mjs`. Read that file for which
+ * region SES is in, why, and what moving it involves.
  */
 export {
   DEPLOY_REGIONS,

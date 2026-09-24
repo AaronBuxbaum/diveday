@@ -21,14 +21,15 @@ stacks**, and one `pnpm infra:deploy` does all of them:
 | Stack | Region | Holds |
 | --- | --- | --- |
 | `DiveDay` (`diveday-infra`) | `us-east-2` (`PRIMARY_REGION`) | everything below |
-| `DiveDayEmail` (`diveday-email`) | `us-east-2` (`SES_REGION`) | the SES identity, configuration set, event topic, the two reputation alarms, and the inbound receipt rule set with its bucket and topic — see [§7](#7-ses-email-provider-infra) |
+| `DiveDayEmail` (`diveday-email`) | `us-east-1` (`SES_REGION`) | the SES identity, configuration set, event topic, the two reputation alarms, and the inbound receipt rule set with its bucket and topic — see [§7](#7-ses-email-provider-infra) |
 | `DiveDayGlobal` (`diveday-global`) | `us-east-1` (`ROUTE53_METRICS_REGION`) | the external uptime monitor: Route 53 health checks and the alarms on their metric |
 
 Every region and every stack name is one constant in [config/aws-regions.mjs](../../config/aws-regions.mjs).
 
 Neither split is tidiness. Mail is its own stack because SES's production-access sandbox is per
-region and AWS refused the us-east-1 request, so the region mail is sent from is a decision AWS gets
-a vote in and should stay a one-line change. The uptime monitor is its own stack because Route 53
+region, so the region mail is sent from is a decision AWS gets a vote in and should stay a one-line
+change — it has moved twice (ADR
+[20260924-mail-back-in-us-east-1](../architecture/decisions/20260924-mail-back-in-us-east-1.md)). The uptime monitor is its own stack because Route 53
 publishes `HealthCheckStatus` to CloudWatch in us-east-1 and nowhere else, so those alarms cannot
 follow `PRIMARY_REGION` anywhere (ADR
 [20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md)).
@@ -385,10 +386,10 @@ AWS-side infra below is still a manual multi-step cutover before real sending wo
 the "how to actually use it" reference. See [docs/engineering/ses-email-runbook.md](ses-email-runbook.md)
 for the day-to-day operational guide.
 
-**Where:** `us-east-2`, in the `diveday-email` stack
+**Where:** `us-east-1` (`SES_REGION`), in the `diveday-email` stack
 ([infra/lib/email-stack.ts](../../infra/lib/email-stack.ts)) — everything in the first four bullets
 below. The sender identity and its key are in `diveday-infra` with the rest of IAM. Every `aws ses*`
-command against this setup needs `--region us-east-2`; a call to the wrong region reports that the
+command against this setup needs `--region us-east-1`; a call to the wrong region reports that the
 identity does not exist rather than that the region is wrong.
 
 **What's provisioned now (AWS side):**
@@ -405,7 +406,7 @@ identity does not exist rather than that the region is wrong.
   (`SesEventNotificationsTopicArn` output) for bounce/complaint/delivery events.
 - A `diveday-ses-sender` IAM user (in `diveday-infra` — IAM is global), scoped to
   `ses:SendEmail`/`ses:SendRawEmail` on just this identity and its configuration set, by ARNs that
-  name `us-east-2`. Its access key is minted by the deploy and delivered in the credentials
+  name `SES_REGION`. Its access key is minted by the deploy and delivered in the credentials
   secret ([§10](#10-the-credentials-secret)) as `SES_AWS_ACCESS_KEY_ID` /
   `SES_AWS_SECRET_ACCESS_KEY` — never store it in the repo.
 

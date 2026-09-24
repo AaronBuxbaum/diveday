@@ -2,7 +2,8 @@
 
 DiveDay's regions are three constants in [config/aws-regions.mjs](../../config/aws-regions.mjs), and this is what changing one of them actually costs.
 
-Today `PRIMARY_REGION` and `SES_REGION` are both `us-east-2`; `ROUTE53_METRICS_REGION` is `us-east-1` and is not a choice (ADR [20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md)).
+Today `PRIMARY_REGION` is `us-east-2` and `SES_REGION` is `us-east-1`, and `PRIMARY_REGION` is meant to follow it (ADR [20260924-mail-back-in-us-east-1](../architecture/decisions/20260924-mail-back-in-us-east-1.md)); `ROUTE53_METRICS_REGION` is `us-east-1` and is not a choice (ADR [20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md)).
+This page and `pnpm infra:migrate-region` move `PRIMARY_REGION`; moving `SES_REGION` on its own is [its own procedure](ses-email-runbook.md#moving-mail-to-another-region).
 
 Read this before editing either of the first two.
 The edit is one line; the move is not.

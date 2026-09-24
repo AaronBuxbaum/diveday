@@ -301,8 +301,8 @@ jobs:
       #
       # All three stacks, named rather than `--all`: the app builds three now
       # (ADR 20260910-one-region-in-us-east-2, ADR
-      # 20260910-one-region-in-us-east-2) -- `DiveDay` and `DiveDayEmail` in
-      # us-east-2, `DiveDayGlobal` pinned to us-east-1 because Route 53
+      # 20260910-one-region-in-us-east-2) -- `DiveDay` in PRIMARY_REGION,
+      # `DiveDayEmail` in SES_REGION, `DiveDayGlobal` pinned to us-east-1 because Route 53
       # publishes its health-check metric nowhere else. A job that deployed
       # whatever the app happened to contain would be a different job after the
       # next stack is added. `aws-region` below is only the session's default --

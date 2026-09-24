@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { SES_REGION } from "../config/aws-regions.mjs";
 import { contextValue, runPostDeployWizard } from "./post-deploy-wizard.mjs";
 import { SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
@@ -66,7 +67,7 @@ describe("post-deploy wizard", () => {
           // this the call answers NotFoundException and the whole DNS step
           // reads as "the identity was never created".
           "--region",
-          "us-east-2",
+          SES_REGION,
           "--email-identity",
           "ses.example.com",
           "--query",
@@ -125,7 +126,7 @@ describe("post-deploy wizard", () => {
           "dive.day",
           "mail.ses.example.com",
           "MX",
-          "feedback-smtp.us-east-2.amazonses.com",
+          `feedback-smtp.${SES_REGION}.amazonses.com`,
           "10",
         ],
       ],
@@ -260,7 +261,7 @@ describe("post-deploy wizard", () => {
         if (arguments_[2] === "dns" && arguments_[3] === "ls") {
           return [
             "rec_1 first._domainkey.ses.example.com CNAME first.dkim.amazonses.com. 3600",
-            "rec_2 mail.ses.example.com MX 10 feedback-smtp.us-east-2.amazonses.com. 3600",
+            `rec_2 mail.ses.example.com MX 10 feedback-smtp.${SES_REGION}.amazonses.com. 3600`,
             "rec_3 mail.ses.example.com TXT v=spf1 include:amazonses.com ~all 3600",
           ].join("\n");
         }
@@ -281,7 +282,7 @@ describe("post-deploy wizard", () => {
           // this the call answers NotFoundException and the whole DNS step
           // reads as "the identity was never created".
           "--region",
-          "us-east-2",
+          SES_REGION,
           "--email-identity",
           "ses.example.com",
           "--query",
@@ -321,7 +322,7 @@ describe("post-deploy wizard", () => {
           // and one stale MX pointing at the region the identity moved out of.
           return [
             "rec_1 first._domainkey.ses.example.com CNAME first.dkim.amazonses.com. 3600",
-            "rec_2 mail.ses.example.com MX 10 feedback-smtp.us-east-1.amazonses.com. 3600",
+            "rec_2 mail.ses.example.com MX 10 feedback-smtp.eu-west-1.amazonses.com. 3600",
             "rec_3 mail.ses.example.com TXT v=spf1 include:amazonses.com ~all 3600",
           ].join("\n");
         }

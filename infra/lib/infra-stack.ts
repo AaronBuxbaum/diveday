@@ -711,9 +711,10 @@ export class InfraStack extends cdk.Stack {
     // 8. The app's SES credential. Everything else about SES -- the verified
     // identity, the configuration set and its event destination, the SNS topic
     // the events arrive on, and the two reputation alarms -- moved to its own
-    // stack in its own region on 2026-09-03 (infra/lib/email-stack.ts, ADR 20260910-one-region-in-us-east-2). The sandbox is per region and AWS
-    // refused the us-east-1 production-access request; CloudFormation is
-    // regional, so moving the mail means a second stack.
+    // stack in its own region on 2026-09-03 (infra/lib/email-stack.ts, ADR
+    // 20260910-one-region-in-us-east-2). The SES sandbox is per region and
+    // CloudFormation is regional, so mail that can move on its own means a
+    // second stack -- and it has, to SES_REGION (ADR 20260924-mail-back-in-us-east-1).
     //
     // The sender stays here, and it is not an oversight: IAM is global, its
     // access key belongs in the one credentials document this stack renders
@@ -2132,7 +2133,7 @@ exports.handler = async (event) => {
           "aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version --region us-east-2",
           "aws s3control get-public-access-block --account-id <12-digit-account-id> --query PublicAccessBlockConfiguration",
         ],
-        note: "The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential. The wrapper bootstraps both regions in one run because the email stack lives in us-east-2 (ADR 20260910-one-region-in-us-east-2); a region left unbootstrapped surfaces as an sts:AssumeRole failure on a role name ending in it, which reads as a broken trust policy rather than an unfinished prerequisite.",
+        note: "The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential. The wrapper bootstraps every region in DEPLOY_REGIONS in one run (config/aws-regions.mjs); a region left unbootstrapped surfaces as an sts:AssumeRole failure on a role name ending in it, which reads as a broken trust policy rather than an unfinished prerequisite.",
       },
       {
         id: "cloudfront-account-verification",
@@ -2391,7 +2392,7 @@ exports.handler = async (event) => {
         store:
           "Vercel DNS for dive.day. The CLI creates the three CNAME records on the SES identity subdomain.",
         verify: [
-          "aws sesv2 get-email-identity --region us-east-2 --email-identity <sesEmailDomain> --query DkimAttributes.Status  # SUCCESS",
+          `aws sesv2 get-email-identity --region ${SES_REGION} --email-identity <sesEmailDomain> --query DkimAttributes.Status  # SUCCESS`,
         ],
         note: "The tokens are per region. Moving the identity to another region mints three new ones, so this is redone -- and the previous region's three CNAMEs deleted -- on every move.",
       },
@@ -2403,13 +2404,13 @@ exports.handler = async (event) => {
         why: "Same reason as the DKIM records: the zone is at Vercel.",
         run: [
           "pnpm exec vercel dns rm <the existing mail.ses MX, if one names another region>",
-          "pnpm exec vercel dns add dive.day mail.ses MX feedback-smtp.us-east-2.amazonses.com 10",
+          `pnpm exec vercel dns add dive.day mail.ses MX feedback-smtp.${SES_REGION}.amazonses.com 10`,
           "pnpm exec vercel dns add dive.day mail.ses TXT 'v=spf1 include:amazonses.com ~all'",
         ],
         store:
           "Vercel -> dive.day -> DNS, on the MAIL FROM subdomain. Exactly one MX record -- SES fails the setup outright if the subdomain has several, which is why a region move is a delete-then-add rather than an add.",
         verify: [
-          "aws sesv2 get-email-identity --region us-east-2 --email-identity <sesEmailDomain> --query MailFromAttributes.MailFromDomainStatus  # SUCCESS",
+          `aws sesv2 get-email-identity --region ${SES_REGION} --email-identity <sesEmailDomain> --query MailFromAttributes.MailFromDomainStatus  # SUCCESS`,
         ],
         note: "The MX names the SES region. One naming a region the identity no longer lives in does not fail loudly: mail keeps sending on the shared amazonses.com envelope, with SPF aligned to Amazon rather than to us, and only DMARC reporting says so. The post-deploy wizard will not do the delete for you -- it finds a rival MX, names it, and skips its own add rather than leaving the subdomain with two.",
       },
@@ -2494,15 +2495,15 @@ exports.handler = async (event) => {
         id: "ses-production-access",
         title: "Request SES production access",
         category: "AWS account",
-        when: `once per region -- currently us-east-2, before sending to anyone who has not verified their address`,
-        why: "A human-reviewed AWS Support case. There is no API, and the sandbox is per region -- which is why the identity moved regions at all: us-east-1 refused, and a refusal in one region carries no weight in another (ADR 20260910-one-region-in-us-east-2).",
+        when: `once per region -- currently ${SES_REGION}, before sending to anyone who has not verified their address`,
+        why: "A human-reviewed AWS Support case. There is no API, and the sandbox is per region: each region is its own request, judged on its own text. The history of every case filed so far is in docs/engineering/ses-email-runbook.md (ADR 20260924-mail-back-in-us-east-1).",
         run: [
           "Read docs/engineering/ses-email-runbook.md, 'Production access: the request', and paste its case text.",
-          `SES console, switched to us-east-2 -> Account dashboard -> Request production access (Transactional, https://dive.day), then answer the reviewer's follow-up in the same case.`,
+          `SES console, switched to ${SES_REGION} -> Account dashboard -> Request production access (Transactional, https://dive.day), then answer the reviewer's follow-up in the same case.`,
         ],
         produces:
           "Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.",
-        verify: [`aws sesv2 get-account --region us-east-2 --query ProductionAccessEnabled`],
+        verify: [`aws sesv2 get-account --region ${SES_REGION} --query ProductionAccessEnabled`],
         onFailure:
           "A denial with no reason is the norm, not the end: reply on the same case with the runbook's follow-up answers, and if it is closed, open a new case that names the closed case id. A second region is its own sandbox and its own request.",
         note: "Everything the reviewer asks for is already in the stack: DKIM and a custom MAIL FROM on the identity, bounce and complaint events to /api/webhooks/ses, account-level suppression on the configuration set, one-click unsubscribe headers, Reply-To and a postal footer from the shop record, and the two reputation alarms in the email stack. The case text lists them; do not paraphrase it shorter.",
@@ -2564,7 +2565,7 @@ exports.handler = async (event) => {
         when: "after every deploy that created or replaced a subscription",
         why: "An HTTPS subscription is only real once the endpoint answers SNS's handshake, and both routes answer 503 until their topic ARN is in the app's environment. On a fresh environment the stack therefore creates a subscription the app cannot yet confirm, and SNS deletes it after roughly three days. Nothing else detects this: every hop either side reads healthy while no event ever arrives.",
         run: [
-          `aws sns list-subscriptions-by-topic --region us-east-2 --topic-arn <SesEventNotificationsTopicArn>`,
+          `aws sns list-subscriptions-by-topic --region ${SES_REGION} --topic-arn <SesEventNotificationsTopicArn>`,
           "aws sns list-subscriptions-by-topic --topic-arn <SmsDeliveryReceiptsTopicArn>",
         ],
 
