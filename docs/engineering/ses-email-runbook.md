@@ -62,12 +62,12 @@ made — DiveDay records the issue without spending a send. The demo seed intent
 
 ### Which region
 
-**`us-east-1`**, while the rest of the estate is still in us-east-2
-(ADR [20260924-mail-back-in-us-east-1](../architecture/decisions/20260924-mail-back-in-us-east-1.md)).
+**`us-east-1`**, along with the rest of the estate
+(ADR [20260924-one-region-in-us-east-1](../architecture/decisions/20260924-one-region-in-us-east-1.md)).
 The sandbox is per region. Mail went to us-east-2 after us-east-1 refused production access in
 August (ADR [20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md));
-the us-east-2 case was then closed in September with no decision, and mail came back to us-east-1,
-the region the whole estate is returning to, for a new request there.
+the us-east-2 case was then closed in September with no decision, and the whole estate came back to
+us-east-1, beside the database, for a new request there.
 
 Mail still has its own stack, `diveday-email`, holding everything CloudFormation can only create in
 the sending region: the identity, the configuration set, the event topic, the two reputation alarms,
@@ -85,6 +85,10 @@ Practically, **every `aws ses*` and SES-topic `aws sns` command on this page wan
 not say "wrong region" — it says the identity does not exist.
 
 ### Moving mail to another region
+
+When `PRIMARY_REGION` moves too, follow [region-migration.md](region-migration.md) instead — it
+takes the old email stack down first and hands the rest to `pnpm infra:migrate-region`; steps 4–7
+below still apply afterwards. This section is for mail moving on its own.
 
 Changing `SES_REGION` and deploying is not enough on its own: a deploy into the new region never
 touches the stack in the old one, and `diveday-inbound-mail` is a global bucket name the old stack
@@ -270,7 +274,7 @@ Add a row when a case moves. The next request names every earlier one, so this t
 | 178576512200471 | us-east-1 | 2026-08-03 | Follow-up answered; refused Aug 5 and Aug 6 with no reason, closed as final Aug 15 ("identifiable patterns and signals"). |
 | 178839371400539 | us-east-1 | 2026-09-02 | Asked why. AWS's automated reply (Sep 3): submit a **new** request that describes what changed since the refusal. |
 | 178905641100543 | us-east-2 | 2026-09-10 | Follow-up answered within 25 minutes with the case text; closed with no decision. Two comments on the closed case (Sep 12, Sep 14) drew no reply — a comment on a closed case does not reach the reviewer, so open a new one. |
-| — | us-east-1 | pending | The text below, after [Moving mail to another region](#moving-mail-to-another-region). |
+| — | us-east-1 | pending | The text below, after the move in [region-migration.md](region-migration.md). |
 
 ### Before you file
 

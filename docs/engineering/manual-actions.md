@@ -22,12 +22,11 @@ this file is the checklist, not the argument.
     note     The only long-lived administrator credential in this picture. Everything else in the checklist exists to replace a use of it, so it should be reached for rarely and stored like it matters.
 
 [2] Bootstrap the account for CDK
-    when     once per account, and once per region -- both of them
+    when     once per account, and once per region in DEPLOY_REGIONS
     why      CDK deploys through four roles that a bootstrap stack provisions. S5's deployer holds sts:AssumeRole on exactly those four ARNs and nothing else, so without them it can deploy nothing. The wrapper opens aws login if needed, reads the signed-in profile's AWS account, asks you to confirm it, then sets the account-level S3 public-access configuration the visual-report bucket needs.
     run      pnpm infra:bootstrap
     produces The cdk-<qualifier>-{deploy,file-publishing,image-publishing,lookup}-role roles, in each region this app deploys into.
-    verify   aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version
-             aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version --region us-east-2
+    verify   aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version --region us-east-1
              aws s3control get-public-access-block --account-id <12-digit-account-id> --query PublicAccessBlockConfiguration
     note     The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential. The wrapper bootstraps every region in DEPLOY_REGIONS in one run (config/aws-regions.mjs); a region left unbootstrapped surfaces as an sts:AssumeRole failure on a role name ending in it, which reads as a broken trust policy rather than an unfinished prerequisite.
 
@@ -118,7 +117,7 @@ this file is the checklist, not the argument.
 ```text
 [11] Request SES production access
     when     once per region -- currently us-east-1, before sending to anyone who has not verified their address
-    why      A human-reviewed AWS Support case. There is no API, and the sandbox is per region: each region is its own request, judged on its own text. The history of every case filed so far is in docs/engineering/ses-email-runbook.md (ADR 20260924-mail-back-in-us-east-1).
+    why      A human-reviewed AWS Support case. There is no API, and the sandbox is per region: each region is its own request, judged on its own text. The history of every case filed so far is in docs/engineering/ses-email-runbook.md (ADR 20260924-one-region-in-us-east-1).
     run      Read docs/engineering/ses-email-runbook.md, 'Production access: the request', and paste its case text.
              SES console, switched to us-east-1 -> Account dashboard -> Request production access (Transactional, https://dive.day), then answer the reviewer's follow-up in the same case.
     produces Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.

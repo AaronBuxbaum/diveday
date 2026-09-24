@@ -1,6 +1,6 @@
 # 20260910-one-region-in-us-east-2 — The whole estate moves to us-east-2, and the two things that cannot follow get stacks of their own
 
-- **Status:** Accepted; region superseded for mail by [20260924-mail-back-in-us-east-1](20260924-mail-back-in-us-east-1.md)
+- **Status:** Superseded by [20260924-one-region-in-us-east-1](20260924-one-region-in-us-east-1.md) (the region; the stack split stands)
 - **Date:** 2026-09-10
 
 ## Context

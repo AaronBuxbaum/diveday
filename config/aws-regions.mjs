@@ -21,17 +21,17 @@
  * Where everything that is not a health-check alarm lives: every bucket, every
  * Lambda, every log group, the credentials secret, the dashboard.
  *
- * us-east-2, for now. It followed mail there in September 2026 and mail has
- * since gone back to us-east-1 ({@link SES_REGION}); this is meant to follow it
- * again (ADR 20260924-mail-back-in-us-east-1), because a two-region estate
- * costs something every day -- a console
- * switched to the wrong region shows an empty list rather than an error, an
- * alarm cannot notify a topic across the border, and every ARN either stack
- * builds for the other has to be assembled from constants instead of read off a
- * construct. None of that buys anything once the identity has moved. One region
- * for everything is the shape with the fewest things to remember, and the
- * migration is a one-way door worth walking through while the estate is still
- * pre-pilot and its buckets hold seed data.
+ * us-east-1, and the same us-east-1 as {@link SES_REGION},
+ * {@link ROUTE53_METRICS_REGION}, the Neon database (`aws-us-east-1`, H-04) and
+ * Vercel's default function region (`iad1`) -- the one region where nothing
+ * this estate touches is a border away (ADR 20260924-one-region-in-us-east-1).
+ * It was in us-east-2 for two weeks in September 2026, following mail there
+ * after us-east-1 refused SES production access; mail came back for a fresh
+ * request and the rest came with it, because a two-region estate costs
+ * something every day -- a console switched to the wrong region shows an empty
+ * list rather than an error, an alarm cannot notify a topic across the border,
+ * and every ARN either stack builds for the other has to be assembled from
+ * constants instead of read off a construct.
  *
  * Changing this line is the whole of the *code* half of a move and nowhere near
  * the whole of the move: S3 bucket names and IAM user names are global, so a
@@ -45,34 +45,30 @@
  * into two different regions and CloudFormation would cheerfully build two
  * estates.
  */
-export const PRIMARY_REGION = "us-east-2";
+export const PRIMARY_REGION = "us-east-1";
 
 /**
  * Where the app's mail is sent from and received at, and the one line to change
  * to move it.
  *
- * us-east-1, while {@link PRIMARY_REGION} is still us-east-2: the estate is
- * two-region again on purpose, and for as long as it takes the rest to follow
- * (ADR 20260924-mail-back-in-us-east-1). Mail is the one part of this estate
- * whose region is decided by AWS rather than by us. SES's production-access
- * sandbox is **per region**; us-east-1 refused in August, the us-east-2 case
- * was closed in September without a decision, and the request is being made
- * again in us-east-1 -- the region the whole estate is going back to -- with a
- * case text that says what changed since the refusal
- * (docs/engineering/ses-email-runbook.md, "Production access: the request").
+ * The same region as {@link PRIMARY_REGION} today, and still its own constant
+ * and its own stack. That is not leftover scaffolding -- mail is the one part
+ * of this estate whose region is decided by AWS rather than by us. SES's
+ * production-access sandbox is **per region**: us-east-1 refused in August,
+ * the us-east-2 case closed in September without a decision, and the request is
+ * made again in us-east-1 with a case text that says what changed since the
+ * refusal (docs/engineering/ses-email-runbook.md, "Production access: the
+ * request"). If a verdict ever forces mail somewhere else, it is this line.
  *
- * Changing this line moves the email stack, and it is not a cutover. A deploy
- * into the new region does not touch the stack in the old one, and the inbound
- * mail bucket's name is global, so the old `diveday-email` stack (and its
- * retained bucket) has to be deleted *before* the new one is created -- after
+ * Changing this line alone is not a cutover. A deploy into the new region does
+ * not touch the email stack in the old one, and the inbound mail bucket's name
+ * is global, so the old `diveday-email` stack has to be deleted first -- after
  * deactivating the old region's receipt rule set, which CloudFormation cannot
- * delete while it is active. The main stack's ARNs and the app's
- * `SES_AWS_REGION` follow the constant. Three things do not -- the DKIM CNAMEs
- * and the MAIL FROM and inbound MX records, which name the region and are
- * re-added by hand; the receipt rule set activation, a per-region switch; and
- * production access, its own sandbox and its own request wherever the identity
- * lands. The ordered steps are in the SES runbook, "Moving mail to another
- * region".
+ * delete while it is active. Three things never follow the constant: the DKIM
+ * CNAMEs and the MAIL FROM and inbound MX records, which name the region; the
+ * receipt rule set activation, a per-region switch; and production access, its
+ * own sandbox and its own request. The SES runbook's "Moving mail to another
+ * region" is the ordered version.
  */
 export const SES_REGION = "us-east-1";
 
@@ -113,8 +109,8 @@ export const STACK_IDS = [MAIN_STACK_ID, EMAIL_STACK_ID, GLOBAL_STACK_ID];
 
 /**
  * Every region a deploy touches, deduplicated -- what has to be bootstrapped,
- * and the reason `scripts/infra-bootstrap.mjs` does not just take one. Two
- * entries today and one on the day the estate is single-region again; the
- * scripts read the length rather than assuming it.
+ * and the reason `scripts/infra-bootstrap.mjs` does not just take one. One
+ * entry today, since every constant above names us-east-1; the scripts read
+ * the length rather than assuming it, so a split estate needs no code change.
  */
 export const DEPLOY_REGIONS = [...new Set([PRIMARY_REGION, SES_REGION, ROUTE53_METRICS_REGION])];

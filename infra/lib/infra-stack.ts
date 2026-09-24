@@ -714,7 +714,7 @@ export class InfraStack extends cdk.Stack {
     // stack in its own region on 2026-09-03 (infra/lib/email-stack.ts, ADR
     // 20260910-one-region-in-us-east-2). The SES sandbox is per region and
     // CloudFormation is regional, so mail that can move on its own means a
-    // second stack -- and it has, to SES_REGION (ADR 20260924-mail-back-in-us-east-1).
+    // second stack -- and it has, to SES_REGION (ADR 20260924-one-region-in-us-east-1).
     //
     // The sender stays here, and it is not an oversight: IAM is global, its
     // access key belongs in the one credentials document this stack renders
@@ -2123,14 +2123,16 @@ exports.handler = async (event) => {
         id: "cdk-bootstrap",
         title: "Bootstrap the account for CDK",
         category: "Prerequisites",
-        when: "once per account, and once per region -- both of them",
+        when: "once per account, and once per region in DEPLOY_REGIONS",
         why: "CDK deploys through four roles that a bootstrap stack provisions. S5's deployer holds sts:AssumeRole on exactly those four ARNs and nothing else, so without them it can deploy nothing. The wrapper opens aws login if needed, reads the signed-in profile's AWS account, asks you to confirm it, then sets the account-level S3 public-access configuration the visual-report bucket needs.",
         run: ["pnpm infra:bootstrap"],
         produces:
           "The cdk-<qualifier>-{deploy,file-publishing,image-publishing,lookup}-role roles, in each region this app deploys into.",
         verify: [
-          "aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version",
-          "aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version --region us-east-2",
+          ...DEPLOY_REGIONS.map(
+            (region) =>
+              `aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version --region ${region}`,
+          ),
           "aws s3control get-public-access-block --account-id <12-digit-account-id> --query PublicAccessBlockConfiguration",
         ],
         note: "The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential. The wrapper bootstraps every region in DEPLOY_REGIONS in one run (config/aws-regions.mjs); a region left unbootstrapped surfaces as an sts:AssumeRole failure on a role name ending in it, which reads as a broken trust policy rather than an unfinished prerequisite.",
@@ -2451,7 +2453,7 @@ exports.handler = async (event) => {
         title: "Serve media from a domain DiveDay owns",
         category: "DNS",
         when: "once, and again only if the media domain itself changes. Optional: the distribution works without it",
-        why: "Two halves the stack cannot do. A CloudFront alias needs an ACM certificate covering it, and a certificate for CloudFront must be in us-east-1 whatever region the stack is in -- PRIMARY_REGION is us-east-2, so this stack cannot create one. And validating it means a DNS record in a zone at Vercel, which no stack here can write; a CDK-created certificate would leave CloudFormation sitting on the deploy for hours waiting for a human to paste it. The CNAME pointing the name at the distribution is the same Vercel-zone problem as the SES records above.",
+        why: "Two halves the stack cannot do. A CloudFront alias needs an ACM certificate covering it, and a certificate for CloudFront must be in us-east-1 whatever region the stack is in -- so it is imported by ARN rather than created here, which keeps the stack free to move. And validating it means a DNS record in a zone at Vercel, which no stack here can write; a CDK-created certificate would leave CloudFormation sitting on the deploy for hours waiting for a human to paste it. The CNAME pointing the name at the distribution is the same Vercel-zone problem as the SES records above.",
         run: [
           "aws acm request-certificate --region us-east-1 --domain-name media.dive.day --validation-method DNS --query CertificateArn  # the region is not a typo and is not PRIMARY_REGION",
           "aws acm describe-certificate --region us-east-1 --certificate-arn <arn> --query 'Certificate.DomainValidationOptions[0].ResourceRecord'",
@@ -2496,7 +2498,7 @@ exports.handler = async (event) => {
         title: "Request SES production access",
         category: "AWS account",
         when: `once per region -- currently ${SES_REGION}, before sending to anyone who has not verified their address`,
-        why: "A human-reviewed AWS Support case. There is no API, and the sandbox is per region: each region is its own request, judged on its own text. The history of every case filed so far is in docs/engineering/ses-email-runbook.md (ADR 20260924-mail-back-in-us-east-1).",
+        why: "A human-reviewed AWS Support case. There is no API, and the sandbox is per region: each region is its own request, judged on its own text. The history of every case filed so far is in docs/engineering/ses-email-runbook.md (ADR 20260924-one-region-in-us-east-1).",
         run: [
           "Read docs/engineering/ses-email-runbook.md, 'Production access: the request', and paste its case text.",
           `SES console, switched to ${SES_REGION} -> Account dashboard -> Request production access (Transactional, https://dive.day), then answer the reviewer's follow-up in the same case.`,
@@ -3693,9 +3695,10 @@ exports.handler = async () => {
    * **Two context values, and neither is useful without the other.** CloudFront
    * will not accept an alias without a certificate covering it, and a
    * certificate for CloudFront must live in **us-east-1** whatever region the
-   * rest of this stack is in, so it cannot be created here: `PRIMARY_REGION` is
-   * us-east-2 (ADR 20260910-one-region-in-us-east-2). It is imported by ARN
-   * rather than built in `GlobalStack`, which *is* in us-east-1, because
+   * rest of this stack is in. `PRIMARY_REGION` happens to be us-east-1 today
+   * (ADR 20260924-one-region-in-us-east-1), but it is a line meant to be able
+   * to move, so the certificate is imported by ARN rather than built here or
+   * in `GlobalStack`, because
    * `stack-config.ts` joins the three stacks by nothing at synth on purpose,
    * and because a CDK-created certificate would not help anyway: authoritative
    * DNS for `dive.day` is Vercel (S17, `ses-dkim-dns` says why), so validation is

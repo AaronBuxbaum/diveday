@@ -20,7 +20,7 @@ stacks**, and one `pnpm infra:deploy` does all of them:
 
 | Stack | Region | Holds |
 | --- | --- | --- |
-| `DiveDay` (`diveday-infra`) | `us-east-2` (`PRIMARY_REGION`) | everything below |
+| `DiveDay` (`diveday-infra`) | `us-east-1` (`PRIMARY_REGION`) | everything below |
 | `DiveDayEmail` (`diveday-email`) | `us-east-1` (`SES_REGION`) | the SES identity, configuration set, event topic, the two reputation alarms, and the inbound receipt rule set with its bucket and topic — see [§7](#7-ses-email-provider-infra) |
 | `DiveDayGlobal` (`diveday-global`) | `us-east-1` (`ROUTE53_METRICS_REGION`) | the external uptime monitor: Route 53 health checks and the alarms on their metric |
 
@@ -28,8 +28,8 @@ Every region and every stack name is one constant in [config/aws-regions.mjs](..
 
 Neither split is tidiness. Mail is its own stack because SES's production-access sandbox is per
 region, so the region mail is sent from is a decision AWS gets a vote in and should stay a one-line
-change — it has moved twice (ADR
-[20260924-mail-back-in-us-east-1](../architecture/decisions/20260924-mail-back-in-us-east-1.md)). The uptime monitor is its own stack because Route 53
+change, even while it agrees with `PRIMARY_REGION` as it does today (ADR
+[20260924-one-region-in-us-east-1](../architecture/decisions/20260924-one-region-in-us-east-1.md)). The uptime monitor is its own stack because Route 53
 publishes `HealthCheckStatus` to CloudWatch in us-east-1 and nowhere else, so those alarms cannot
 follow `PRIMARY_REGION` anywhere (ADR
 [20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md)).
@@ -88,7 +88,7 @@ Even when an older raw deploy key can complete the CDK deploy, the post-deploy e
 that administrator-profile check before it reads `diveday/env`.
 It writes the generated identities as named `~/.aws/credentials` profiles — including
 `diveday-deployer`, `reg-suit-bot`, and the service identities — while preserving
-unrelated profiles. It also writes the `diveday-admin` profile's `PRIMARY_REGION` (`us-east-2`) region to
+unrelated profiles. It also writes the `diveday-admin` profile's `PRIMARY_REGION` (`us-east-1`) region to
 `~/.aws/config`; the administrator *credential* still predates the stack and must be configured by
 you. Before the generated deployer profile exists, the infrastructure commands select
 `diveday-admin` whether or not its profile block has been written yet; afterwards `pnpm infra:deploy`,
@@ -102,7 +102,7 @@ limited deployer identity.
 
 ## 2. Bootstrapping the Environment
 
-AWS CDK requires one-time bootstrapping of an AWS environment (combination of account and region) before you can deploy any stacks. This process provisions resources CDK needs to operate (like an S3 bucket for staging assets). There is one environment per region the stacks name — two today, `us-east-2` and `us-east-1` — and the wrapper does every one in a single run, reading `DEPLOY_REGIONS` rather than counting them itself.
+AWS CDK requires one-time bootstrapping of an AWS environment (combination of account and region) before you can deploy any stacks. This process provisions resources CDK needs to operate (like an S3 bucket for staging assets). There is one environment per region the stacks name — one today, `us-east-1`, which all three share — and the wrapper does every one in a single run, reading `DEPLOY_REGIONS` rather than counting them itself.
 
 Bootstrap the intended administrator profile:
 ```bash
@@ -835,8 +835,8 @@ half-set pair throws at synth rather than deploying a distribution that answers 
 TLS error while looking successful.
 
 **Why the certificate is imported by ARN rather than created here.** A certificate for CloudFront
-must be in **us-east-1**, whatever region the stack is in, and `PRIMARY_REGION` is us-east-2 (ADR
-20260910-one-region-in-us-east-2) — so this stack cannot create one. `GlobalStack` *is* in us-east-1,
+must be in **us-east-1**, whatever region the stack is in. `PRIMARY_REGION` is us-east-1 today, but
+it is a constant meant to be able to move, and a certificate this stack created would pin it. `GlobalStack` is in us-east-1 for good,
 but `infra/lib/stack-config.ts` joins the three stacks by nothing at synth on purpose, and a
 CDK-created certificate would not help regardless: authoritative DNS for `dive.day` is Vercel, so
 validation is a record a human pastes there, and CloudFormation would sit on the deploy for hours
