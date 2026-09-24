@@ -268,8 +268,11 @@ things, and the brand voice is the note.
   count").
 - First person is allowed, and a fact only the builder would know is the kind of note worth
   writing ("I tried a spinner here and the captain read it as the phone thinking").
-- Every screen ends in **one door into the demo as that role** (`ScreenDoor`, link-weight, tagged
-  per screen in `src/lib/funnel.ts`), and the page's one primary stays the shared pair.
+- Every screen a visitor could open ends in **one door into the demo as that role** (`ScreenDoor`,
+  link-weight, tagged per screen in `src/lib/funnel.ts`), and the page's one primary stays the
+  shared pair. A screen that reaches its reader another way has no door and says so in its last
+  note: the recap arrives by email once the boat is back, so its last note is "No door here on
+  purpose", and `e2e/marketing.spec.ts` pins the band at three doors for four screens.
 - Headings say what the screen is, in the builder's words ("The manifest, on a phone with no
   signal."), never what the reader should feel.
 - Prose that is not a note (the price, the terms, the export claim, the FAQ answers) is the

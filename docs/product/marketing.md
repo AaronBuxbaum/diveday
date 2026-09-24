@@ -384,9 +384,11 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   hidden `role`, at link weight, labelled for its screen ("Open the demo as the captain →"),
   because a builder's note that ends "as that role" cannot end on a button that says nothing about
   the role ([design/brand.md](../design/brand.md), "The two registers of the public pages"). One
-  per screen, tagged per screen in `src/lib/funnel.ts` (`home-desk-moment`, `home-dock-moment`,
-  `switching-hub-preview`), never primary weight, and never the page's demo button: the spec counts
-  "Try the live demo" by name, and a screen door is not one.
+  per screen a visitor could open, tagged per screen in `src/lib/funnel.ts` (`home-desk-moment`,
+  `home-dock-moment`, `switching-hub-preview`), never primary weight, and never the page's demo
+  button: the spec counts "Try the live demo" by name, and a screen door is not one. The recap
+  screen has none on purpose (it reaches the diver by email, so there is no role to open it as)
+  and its last note says so; the spec pins three doors under four screens.
 - **The demo's cost is stated once per page, at the first door.** `marketing.common.demoNote` ("no
   sign-up, no card") answers the only question the button raises, and the answer is worth nothing
   the second time: repeated under every demo button it stops reading as reassurance and starts
