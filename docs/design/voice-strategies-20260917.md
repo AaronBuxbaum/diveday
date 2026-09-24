@@ -1,9 +1,10 @@
-# Six voices for the public pages (proposed, 2026-09-17)
+# Six voices for the public pages (2026-09-17)
 
-**Status: proposed.** Nothing here is the DiveDay voice until the product owner picks one; then the
-pick moves into [brand.md](brand.md) as the current identity and this document becomes the dated
-record of the alternatives. The decision itself is the owner's and goes in
-[product/human-decisions.md](../product/human-decisions.md).
+**Status: decided 2026-09-24** (Aaron Buxbaum, H-89 in
+[product/human-decisions.md](../product/human-decisions.md)): **6, Margin Notes, on every public
+page, with 4, Over a Beer, on `/about`.** The voice now lives in [brand.md](brand.md) ("The two
+registers of the public pages"); this document is the dated record of the diagnosis and the
+alternatives, and the samples below are proposals, not the pages as shipped.
 
 The owner's brief (2026-09-17): the public pages (`/`, `/product`, `/pricing`, `/about`,
 `/onboard`, `/switching/*`, `/dive/*`, `/status`, `/privacy`, `/terms`) all read as machine-written
@@ -348,9 +349,13 @@ shape.
 
 ## After the pick
 
-Every public page is rewritten in the chosen voice; the four shape refusals join `pnpm check:voice`
-so the pages cannot drift back; the voice is recorded in [brand.md](brand.md) as current rather
-than proposed; `e2e/marketing.spec.ts`'s pinned headlines and `src/app/about/copy.test.ts` move
-with the copy; the placeholders above go to the owner as a short list before anything ships. The
-artifact that presented these six side by side is the same content as this document, rendered as
+Done 2026-09-24, in the change that recorded H-89: every public page rewritten in the chosen voice
+(the homepage as four annotated screens, `/product` as chapters with notes, `/pricing` as an
+annotated invoice, the switching hub's preview as an annotated screen, `/about` as speech); the
+four shape refusals in `pnpm check:voice` (the mirrored pair, the anaphoric triplet, the tag
+sentence, the house phrase), scoped to the public pages' strings; the voice in [brand.md](brand.md)
+as current; `e2e/marketing.spec.ts`'s pinned headlines and `src/app/about/copy.test.ts` moved
+with the copy. The questions above stay open, and nothing was written on the owner's behalf: no
+town, no date, no name on the homepage, and support still reads "a real person reads it". The
+artifact that presented these six side by side was the same content as this document, rendered as
 pages.

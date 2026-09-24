@@ -387,6 +387,29 @@ town, and the shops that dive out of it.
   `<details>` naming its group and counting its lines, so the page ends where its argument does
   instead of running on through ninety-odd bullets.
 
+**Annotated, 2026-09-24** (H-89, [brand.md](brand.md) "The two registers of the public pages"):
+each chapter is now the screen with the builder's notes under it, a numbered `MarginNotes` list
+of things visible in the mockup (the readiness list's three states, the roll call's “Offline copy ·
+up to date” line and its count, the recap's dive-log entry), each note giving a reason or a limit
+and none an evaluation. The descriptive paragraphs the notes replaced are gone, not moved; the
+existing four demo doors stay, one per chapter, and the index and the honest-no are unchanged.
+
+### The pricing page — `/pricing`
+
+**Reviewed 2026-09-24** — conversion surface, governed by
+[marketing.md](../product/marketing.md)'s claims and control budget; the H-89 voice pass.
+
+- **One idea:** what a shop pays, line by line, with nothing behind a click.
+- **The question it arrives with:** "how much, what's not in that number, and what does it cost
+  to leave?" — answered by the price line, the ledger under it, and the export terms.
+- **Controls that dissolved:** none; the budget holds. The ledger is a `<dl>`, not a row of
+  cards.
+- **Remove first:** any sentence about how the price should feel; the ledger states it.
+- **Composition:** the price as an invoice — eight labelled lines (setup, logins, tiers, cut,
+  cards, contract, trial, leaving) beside four notes from the person who set them — then the fee
+  comparison, the exit terms and the FAQ. The notes are the builder's-note register: each names one
+  line of the invoice and says why it is what it is.
+
 ### The thread — `/ready/[token]` (and every state after booking)
 
 **Chosen 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), slice 18f, [spec](canvases/20260907-nothing-from-nowhere/SPEC.md)):
@@ -649,3 +672,20 @@ drawn on that canvas's `TryItWithYourBoats.dc.html`.
 - **Composition, drawn:** their chrome, the day as a line with their boat on it, the app's own
   greeting, one sentence naming the time and its zone, a live countdown, three rows that are one
   door, the primary that opens it.
+
+**The band under the hero became four annotated screens, 2026-09-24** (H-89,
+[brand.md](brand.md) "The two registers of the public pages").
+
+- **One idea:** the page is the product's own screens, in the order a day runs them, with notes
+  from the person who built them; the copy is the note, not a description of the screen.
+- **The question it arrives with:** "what does it actually look like when the day is running?"
+  — answered by the diver's booking page, the desk's readiness list, the captain's roll call and
+  the diver's recap, each with three or four notes naming one visible thing and its reason or
+  limit.
+- **What it never does:** evaluate. No note says a screen is fast, calm or simple; a note says
+  what is on it and why, and what is deliberately not on it.
+- **Controls that dissolved:** none added at primary weight. Each screen ends in one link-weight
+  door into the demo as that role (`ScreenDoor`, tagged per screen), so the band's primary count
+  stays at zero and the hero pair is still the page's one ask.
+- **Composition:** hero, four screens with notes, the breadth band as four groups, the records
+  band, the terms-style close.

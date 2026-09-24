@@ -4,9 +4,10 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
+import { ScreenDoor } from "@/app/_components/ScreenDoor";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
-import { MarketingMockup } from "@/components/MarketingSections";
+import { MarginNotes, MarketingMockup } from "@/components/MarketingSections";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import {
@@ -231,7 +232,14 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
           Stacked inside the page's own `max-w-4xl` measure rather than beside
           the words at `max-w-7xl`: the wide band started 130px left of every
           other section on the page, and stacking gives the mockup ~200px more
-          width than the two-column version it replaced. */}
+          width than the two-column version it replaced.
+
+          The words under the screen are the builder's notes (docs/design/
+          brand.md, "The builder's note"): each names one thing visible in the
+          mockup and gives its reason or its limit, and the band ends in one
+          door into the demo as the role that uses this screen. The door is
+          link-weight, so the band's primary count stays at zero and the
+          page's one primary is still the pair above. */}
       <section className="border-y border-border bg-surface">
         <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
           <p className="text-sm font-semibold tracking-widest text-primary uppercase">
@@ -240,15 +248,27 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
           <h2 className={`mt-4 max-w-2xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("switching.hub.previewTitle")}
           </h2>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
-            {t("switching.hub.previewBody")}
-          </p>
           <MarketingMockup
             label={t("switching.hub.previewMockupLabel")}
-            className="mt-10 shadow-xl shadow-foreground/5"
+            className="mt-8 shadow-xl shadow-foreground/5"
           >
             <ImportPreviewFallback locale={locale} />
           </MarketingMockup>
+          <MarginNotes
+            className="mt-8 max-w-2xl"
+            notes={[
+              t("switching.hub.previewNote1"),
+              t("switching.hub.previewNote2"),
+              t("switching.hub.previewNote3"),
+              t("switching.hub.previewNote4"),
+            ]}
+          />
+          <ScreenDoor
+            locale={locale}
+            demoRole="owner"
+            source="switching-hub-preview"
+            label={t("switching.hub.previewDoor")}
+          />
         </div>
       </section>
 

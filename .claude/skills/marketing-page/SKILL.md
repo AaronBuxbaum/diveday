@@ -51,11 +51,16 @@ written down.
 
 - Outcome in the buyer's world, not a category label. Test: could a rival paste this sentence
   truthfully onto their site? If yes, sharpen it.
-- Reads as a person, not a model. No em-dash in prose, no "not a project, a file" contrast, no
-  "No X. No Y. No Z." run, no *actually*/*genuinely*/*plainly*, no "Here's how", no aphorism or
-  rhetorical question as a heading, no closing flourish. The list, with before/after, is "What
-  gives us away" in `docs/design/brand.md`; `pnpm check:voice` refuses the mechanical half. Page
-  `metadata` descriptions are English literals the guard cannot see, so read them by hand.
+- Written in the page's register (`docs/design/brand.md`, "The two registers of the public
+  pages"): the builder's note everywhere (a screen, then notes under twenty words each naming one
+  visible thing and its reason or limit, never an evaluation, one link-weight `ScreenDoor` into
+  the demo as that role), and speech on `/about` (every heading the owner's question repeated
+  back without a mark). Reads as a person, not a model. No em-dash in prose, no "not a project, a
+  file" contrast, no "No X. No Y. No Z." run, no *actually*/*genuinely*/*plainly*, no "Here's how",
+  no aphorism or rhetorical question as a heading, no closing flourish, no mirrored pair, no
+  triplet for rhythm, no tag sentence, no phrase reused on a third page. The list, with
+  before/after, is "What gives us away" in `docs/design/brand.md`; `pnpm check:voice` refuses the
+  mechanical half, the four shapes included, in the bundles and in route `metadata`.
 - Shipped-only; no "coming soon"; no unprovable superlatives ("everything", "complete").
 - No software jargon ("operating system", "platform", "solution") — name the whiteboard, the
   clipboard, the counter, the boat.

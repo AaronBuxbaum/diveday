@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   findTells,
+  housePhrases,
   metadataStrings,
+  mirroredPairs,
+  pageOf,
   proseDashes,
   RULES,
   straightApostrophes,
@@ -333,5 +336,218 @@ describe("route metadata", () => {
     )) {
       expect(rules(value)).toContain("apostrophe");
     }
+  });
+});
+
+describe("the four shapes (2026-09-24)", () => {
+  const shapes = (value, key = "marketing.home.x") =>
+    findTells(value, "en-US", key).map((hit) => hit.rule);
+
+  it("catches a pair that opens both halves the same way", () => {
+    expect(shapes("Nothing gets asked twice and nothing gets missed once.")).toContain(
+      "mirrored-pair",
+    );
+    expect(
+      shapes("The demo is the sample shop, with nothing to import and nothing to undo."),
+    ).toContain("mirrored-pair");
+  });
+
+  it("catches a pair that closes both halves the same way", () => {
+    expect(shapes("Records come in with a file and leave with a button.")).toContain(
+      "mirrored-pair",
+    );
+    expect(
+      mirroredPairs("One readiness list, read at the desk and again at the dock."),
+    ).toHaveLength(1);
+  });
+
+  it("leaves a factual pair alone", () => {
+    expect(shapes("There is no setup fee and no annual contract.")).not.toContain("mirrored-pair");
+    expect(
+      shapes(
+        "Payments run through your own Stripe account, and roll call runs on a phone with no signal.",
+      ),
+    ).not.toContain("mirrored-pair");
+  });
+
+  it("leaves a list of two things that both start with an article alone", () => {
+    expect(
+      shapes("A wait list that fills a freed seat, and a last-minute list divers join."),
+    ).not.toContain("mirrored-pair");
+    expect(
+      shapes(
+        "Una lista de espera que llena la plaza, y una lista de última hora.",
+        "marketing.home.x",
+      ),
+    ).not.toContain("mirrored-pair");
+  });
+
+  it("catches a list of three that opens every item the same way", () => {
+    expect(shapes("Paper never crashes, never logs you out, and never needs five taps.")).toContain(
+      "anaphoric-triplet",
+    );
+    expect(
+      shapes("We hold them to run the product: not to sell, not to train anything, not to share."),
+    ).toContain("anaphoric-triplet");
+  });
+
+  it("leaves a list of things alone, whatever opens each item", () => {
+    for (const value of [
+      "A whiteboard, a clipboard, a spreadsheet somebody updates by hand, and a handful of apps.",
+      "There is no setup fee, no contract, and no card.",
+      "Your colour, your typeface, your cover photo, your badges, the year you opened.",
+      "Multi-day departures with one roster, one waiver, one crew.",
+      "Do not use it to store data you may not hold, to send messages nobody agreed to, or to reach another tenant.",
+    ]) {
+      expect(shapes(value), value).not.toContain("anaphoric-triplet");
+    }
+  });
+
+  it("catches the short last sentence after a long one", () => {
+    expect(
+      shapes(
+        "Roll call keeps going when the signal does not, then checks itself when service returns. Nothing is lost.",
+      ),
+    ).toContain("tag-sentence");
+    expect(
+      shapes("Review it, fix any flagged rows, and import for real. It takes one sitting."),
+    ).toContain("tag-sentence");
+  });
+
+  it("leaves a short sentence alone when it is not the tag", () => {
+    // Mid-paragraph, it is speech; last but carrying a number, a placeholder
+    // or an arrow, it is a fact or a control; after a short sentence, it is
+    // two labels.
+    for (const value of [
+      "The whiteboard stays because it has never once crashed on anybody. That’s the bar. If the crew would rather reach for the marker, the screen isn’t good enough yet.",
+      "Everything the product does is in the price, and the pricing page lists it. Locked for 2 years.",
+      "A real person on the DiveDay team reads whatever you send. Email {email} anytime.",
+      "Open the demo. See it.",
+      "Twelve divers, five rental kits, twenty-four tanks, and the crew note. 3 spots left.",
+    ]) {
+      expect(shapes(value), value).not.toContain("tag-sentence");
+    }
+  });
+
+  it("applies the shapes only to the public pages' strings", () => {
+    const tag =
+      "Roll call keeps going when the signal does not, then checks itself when service returns. Nothing is lost.";
+    expect(shapes(tag, "manifest.rollCall.hint")).not.toContain("tag-sentence");
+    expect(shapes(tag, "marketing.product.dockNote1")).toContain("tag-sentence");
+    expect(shapes(tag, "switching.hub.previewNote1")).toContain("tag-sentence");
+    expect(shapes(tag, "metadata.description")).toContain("tag-sentence");
+    expect(shapes(tag, "account.onboard.errors.signinFailed")).not.toContain("tag-sentence");
+    // And with no key at all, a caller measures words and typography only.
+    expect(findTells(tag, "en-US").map((hit) => hit.rule)).not.toContain("tag-sentence");
+  });
+
+  it("catches a phrase repeated on three pages, and names them", () => {
+    const hits = housePhrases(
+      [
+        { key: "marketing.home.a", value: "The export works from day one of a trial." },
+        { key: "marketing.pricing.b", value: "Your records are exportable from day one." },
+        { key: "marketing.about.c", value: "The button is there from day one." },
+      ],
+      "en-US",
+    );
+    expect(hits).toEqual([
+      {
+        key: "“from day one”",
+        rule: "house-phrase",
+        text: "marketing.about, marketing.home, marketing.pricing",
+      },
+    ]);
+  });
+
+  it("counts a page once, and two pages are not a house phrase", () => {
+    expect(
+      housePhrases(
+        [
+          { key: "marketing.home.a", value: "The export works from day one." },
+          { key: "marketing.home.b", value: "The export works from day one." },
+          { key: "marketing.pricing.c", value: "The export works from day one." },
+        ],
+        "en-US",
+      ),
+    ).toEqual([]);
+  });
+
+  it("leaves the shared namespaces, the names of things, and stopword runs out of it", () => {
+    expect(
+      housePhrases(
+        [
+          // Rendered on every page by design.
+          { key: "marketing.common.demoNote", value: "The demo opens a working sample shop." },
+          { key: "marketing.features.a", value: "The demo opens a working sample shop." },
+          { key: "switching.common.b", value: "The demo opens a working sample shop." },
+          { key: "marketing.guides.shared.c", value: "The demo opens a working sample shop." },
+          // The name of a thing, on three pages.
+          { key: "marketing.home.d", value: "Open the live demo." },
+          { key: "marketing.pricing.e", value: "Walk the live demo." },
+          { key: "marketing.about.f", value: "Read the live demo." },
+          // Fewer than two content words, on three pages.
+          { key: "marketing.home.g", value: "It is in the price, and that is the end of it." },
+          { key: "marketing.pricing.h", value: "It is in the price, and that is the end of it." },
+          { key: "marketing.about.i", value: "It is in the price, and that is the end of it." },
+          // A conjunction ends a phrase: two names, not one three-word phrase.
+          { key: "marketing.home.j", value: "Rental sizes and certification records land." },
+          { key: "marketing.pricing.k", value: "Rental sizes and certification records arrive." },
+          { key: "marketing.about.l", value: "Rental sizes and certification records import." },
+          // Product screens are never compared.
+          { key: "manifest.a", value: "Wet hands and one bar of signal." },
+          { key: "checkIn.b", value: "Wet hands and one bar of signal." },
+          { key: "today.c", value: "Wet hands and one bar of signal." },
+        ],
+        "en-US",
+      ),
+    ).toEqual([]);
+  });
+
+  it("treats the five competitor guides as one page", () => {
+    expect(
+      housePhrases(
+        [
+          {
+            key: "marketing.guides.eve.note2",
+            value: "Your column headings do not have to match.",
+          },
+          {
+            key: "marketing.guides.rezdy.note2",
+            value: "Your column headings do not have to match.",
+          },
+          {
+            key: "marketing.guides.fareharbor.note2",
+            value: "Your column headings do not have to match.",
+          },
+        ],
+        "en-US",
+      ),
+    ).toEqual([]);
+    expect(pageOf("marketing.guides.eve.heroLede")).toBe("guides");
+    expect(pageOf("marketing.guides.shared.cutover.intro")).toBeNull();
+    expect(pageOf("switching.spreadsheet.title")).toBe("switching.spreadsheet");
+    expect(pageOf("account.onboard.trialNote")).toBe("onboard");
+    expect(pageOf("manifest.rollCall.title")).toBeNull();
+  });
+
+  it("holds Spanish to the same shapes with its own stopwords", () => {
+    expect(
+      findTells(
+        "Nada se pregunta dos veces y nada se pierde una vez.",
+        "es-ES",
+        "marketing.home.x",
+      ).map((hit) => hit.rule),
+    ).toContain("mirrored-pair");
+    expect(
+      housePhrases(
+        [
+          { key: "marketing.home.a", value: "Desde el primer día de la prueba." },
+          { key: "marketing.pricing.b", value: "Desde el primer día de la prueba." },
+          { key: "marketing.about.c", value: "Desde el primer día de la prueba." },
+        ],
+        "es-ES",
+      ),
+    ).toEqual([]);
+    expect(() => housePhrases([], "fr-FR")).toThrow(/stopword/);
   });
 });

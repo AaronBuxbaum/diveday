@@ -13,7 +13,7 @@ import {
   RecapPageFallback,
   ShopPrepListFallback,
 } from "@/components/MarketingScreenFallbacks";
-import { CaptainPhoneFrame, MarketingMockup } from "@/components/MarketingSections";
+import { CaptainPhoneFrame, MarginNotes, MarketingMockup } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
@@ -44,15 +44,15 @@ import { ProductChapterNav } from "./_components/ProductChapterNav";
 export const instant = true;
 
 export const metadata: Metadata = {
-  title: "Product — booking to head count | DiveDay",
+  title: "Product — the day, screen by screen | DiveDay",
   description:
-    "How DiveDay runs a dive shop’s day: bookings, waivers, cert checks, trip prep, and a boat manifest that keeps working when the signal doesn’t.",
+    "Five screens from a dive shop’s day with a note on each: the schedule, the readiness list, the prep list and the brief, the manifest that works with no signal, and the recap.",
   alternates: { canonical: "/product" },
   openGraph: {
     ...sharedLinkCard,
-    title: "DiveDay product — booking to head count",
+    title: "DiveDay product — the day, screen by screen",
     description:
-      "Bookings, waivers, cert checks, trip prep, and the boat manifest, organized around the trip itself.",
+      "Bookings, waivers, cert checks, trip prep and the boat manifest, one screen at a time.",
     url: "/product",
   },
   // `summary_large_image`: the OG block above names the shared link card
@@ -62,9 +62,9 @@ export const metadata: Metadata = {
   // never unfurls with the root layout's generic site-level words.
   twitter: {
     card: "summary_large_image",
-    title: "DiveDay product — booking to head count",
+    title: "DiveDay product — the day, screen by screen",
     description:
-      "Bookings, waivers, cert checks, trip prep, and the boat manifest, organized around the trip itself.",
+      "Bookings, waivers, cert checks, trip prep and the boat manifest, one screen at a time.",
   },
 };
 
@@ -234,19 +234,23 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.product.bookingTitle")}
               </h2>
-              <p className="mt-5 text-lg leading-8 text-muted">
-                {t("marketing.product.bookingDescription")}
-              </p>
-              <ul className="mt-7 space-y-3 border-l-2 border-border pl-5 text-sm leading-6 text-muted">
-                <li>{t("marketing.product.bookingPoint1")}</li>
-                <li>{t("marketing.product.bookingPoint2")}</li>
-                <li>{t("marketing.product.bookingPoint3")}</li>
-                {/* The fourth point is Harbor's storefront and the embeds, and
-                    the one place on this page the built-to-order website is
-                    offered (H-64) — beside the shipped claim it extends, not
-                    in the reference index, which promises only the demo. */}
-                <li>{t("marketing.product.bookingPoint4")}</li>
-              </ul>
+              {/* The builder's notes beside the screen (the 2026-09-24 voice
+                  decision, docs/design/brand.md): each names one thing on the
+                  mockup and gives its reason or its limit. The fifth note is
+                  Harbor's storefront and the embeds, and the one place on this
+                  page the built-to-order website is offered (H-64) — beside
+                  the shipped claim it extends, not in the reference index,
+                  which promises only the demo. */}
+              <MarginNotes
+                className="mt-6"
+                notes={[
+                  t("marketing.product.bookingNote1"),
+                  t("marketing.product.bookingNote2"),
+                  t("marketing.product.bookingNote3"),
+                  t("marketing.product.bookingNote4"),
+                  t("marketing.product.bookingNote5"),
+                ]}
+              />
             </div>
             <MarketingMockup
               label={t("marketing.product.bookingMockupLabel")}
@@ -272,23 +276,14 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.product.readinessTitle")}
               </h2>
-              <p className="mt-5 text-lg leading-8 text-muted">
-                {t("marketing.product.readinessDescription")}
-              </p>
-              <ol className="mt-7 space-y-3 text-sm leading-6 text-muted">
-                <li className="flex gap-3">
-                  <span className="font-semibold text-primary tabular-nums">1</span>
-                  {t("marketing.product.readinessStep1")}
-                </li>
-                <li className="flex gap-3">
-                  <span className="font-semibold text-primary tabular-nums">2</span>
-                  {t("marketing.product.readinessStep2")}
-                </li>
-                <li className="flex gap-3">
-                  <span className="font-semibold text-primary tabular-nums">3</span>
-                  {t("marketing.product.readinessStep3")}
-                </li>
-              </ol>
+              <MarginNotes
+                className="mt-6"
+                notes={[
+                  t("marketing.product.readinessNote1"),
+                  t("marketing.product.readinessNote2"),
+                  t("marketing.product.readinessNote3"),
+                ]}
+              />
             </div>
           </div>
         </section>
@@ -361,10 +356,19 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.product.dockTitle")}
               </h2>
-              <p className="mt-5 text-lg leading-8 text-muted">
-                {t("marketing.product.dockDescription")}
-              </p>
-              <p className="mt-5 rounded-inset border border-border bg-surface-sunken p-4 text-sm leading-6 text-muted">
+              <MarginNotes
+                className="mt-6"
+                notes={[
+                  t("marketing.product.dockNote1"),
+                  t("marketing.product.dockNote2"),
+                  t("marketing.product.dockNote3"),
+                  t("marketing.product.dockNote4"),
+                ]}
+              />
+              {/* The offline answer in the captain's words, kept as its own
+                  callout under the notes: `src/lib/marketing.test.ts` pins
+                  this key as the one place the offline claim is made in full. */}
+              <p className="mt-6 rounded-inset border border-border bg-surface-sunken p-4 text-sm leading-6 text-muted">
                 {t("marketing.product.dockNote")}
               </p>
             </div>
@@ -395,10 +399,15 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.product.recapTitle")}
               </h2>
-              <p className="mt-5 text-lg leading-8 text-muted">
-                {t("marketing.product.recapDescription")}
-              </p>
-              <p className="mt-4 leading-7 text-muted">{t("marketing.product.afterTripBody")}</p>
+              <MarginNotes
+                className="mt-6"
+                notes={[
+                  t("marketing.product.recapNote1"),
+                  t("marketing.product.recapNote2"),
+                  t("marketing.product.recapNote3"),
+                  t("marketing.product.recapNote4"),
+                ]}
+              />
             </div>
             <MarketingMockup
               label={t("marketing.product.recapMockupLabel")}
