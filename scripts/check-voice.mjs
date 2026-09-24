@@ -42,6 +42,11 @@ import { pathToFileURL } from "node:url";
  *   (`'{depth18}'`), which must stay straight or the marker stops being a
  *   literal.
  *
+ * - **Four shapes**, on the public pages' strings only (2026-09-24): the
+ *   mirrored pair, the anaphoric triplet, the tag sentence, and the house
+ *   phrase repeated across pages. Each is defined, with what it leaves alone,
+ *   above `shapeTells` below.
+ *
  * Every locale states its own word list, and a locale with none is a failure
  * rather than a pass: a third language must name what it refuses.
  *
@@ -215,14 +220,332 @@ export function straightDoubleQuotes(value) {
   return found;
 }
 
-/** Every tell in one bundle value, for one locale. */
-export function findTells(value, locale) {
+/**
+ * The four **shape** rules (2026-09-24, the voice decision — H-89 in
+ * docs/product/human-decisions.md, "The builder's note" in docs/design/brand.md).
+ *
+ * The 2026-09-03 sweep removed the words a model overuses and left the shapes:
+ * measured over the five marketing pages afterwards, the mirrored pair
+ * ("come in with a file and leave with a button"), the list of three with a
+ * tail ("never crashes, never logs you out, and never needs five taps"), the
+ * tag sentence (36 sentences of five words or fewer, most of them a beat after
+ * a long one: "One answer, all day."), and the house phrase reused across
+ * pages ("from day one" seven times, "a real person" four). Each is a regex's
+ * job once it is named precisely, and each is named here as narrowly as it
+ * can be so the "leaves alone" cases in the test file hold:
+ *
+ * - **The mirrored pair.** Two clauses of one sentence, each three or more
+ *   words, joined by a conjunction, that open with the same two words or close
+ *   on the same two words before the last ("nothing gets asked twice and
+ *   nothing gets missed once"; "come in with a file and leave with a button").
+ *   A factual pair with different words on both ends ("no setup fee and no
+ *   annual contract") is a fact, not a mirror.
+ * - **The anaphoric triplet.** A comma list whose second and third items open
+ *   with the same word and whose first item carries it too ("paper never
+ *   crashes, never logs you out, and never needs five taps"). Articles and the
+ *   ledger's "no" are exempt: "a whiteboard, a clipboard, a spreadsheet" and
+ *   "no setup fee, no contract, no card" are lists of things, and a list has
+ *   however many items are true.
+ * - **The tag sentence.** A value's last sentence of four words or fewer, with
+ *   no number, placeholder or arrow in it, after a sentence of seven or more.
+ *   A beat for effect, in the one position where it can only be effect. A
+ *   short sentence elsewhere in the value is speech and is left alone.
+ * - **The house phrase.** Three consecutive words, two of them content words,
+ *   appearing on more than two distinct pages of a bundle. The names of things
+ *   ("the live demo", "your own Stripe account") are exempt by list; a phrase
+ *   of style is not, whatever it is.
+ *
+ * The three per-value shapes apply to the public pages' strings only
+ * (`SHAPE_SCOPES`): a product screen's label is four words by design, and its
+ * notices are the register docs/design/brand.md calls the divemaster's, where
+ * a short sentence is the norm rather than a beat. The house-phrase rule is
+ * per file and only ever compares those same namespaces.
+ */
+export const SHAPE_SCOPES = ["marketing.", "switching.", "account.onboard.", "metadata."];
+
+export function inShapeScope(key) {
+  // A notice ("Your shop was created, but signing you in failed. Try signing
+  // in below.") is the divemaster's register, where the short last sentence
+  // is the next action rather than a beat.
+  if (/\.errors?\./.test(key)) return false;
+  return SHAPE_SCOPES.some((prefix) => key.startsWith(prefix));
+}
+
+const CONJUNCTION_WORDS = new Set(["and", "but", "or", "nor", "y", "e", "o", "u", "pero", "ni"]);
+const CONJUNCTIONS = /\s+(?:and|but|or|nor|y|e|o|u|pero|ni)\s+/i;
+const SENTENCE_END = /(?<=[.!?…])\s+/;
+
+/** Lower-case words with punctuation stripped, placeholders and tags removed. */
+function wordsOf(text) {
+  return text
+    .toLowerCase()
+    .replace(/\{[^}]*\}/g, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/[^\p{L}\p{N}\s'’-]/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/**
+ * Words a list may open every item with, and a pair may open both halves
+ * with: the articles, the possessives, the count "one", the infinitive's
+ * "to", and the ledger's "no"/"ni"/"sin". "a whiteboard, a clipboard, a
+ * spreadsheet", "your colour, your typeface, your cover photo", "one roster,
+ * one waiver, one crew" and "no setup fee, no contract, no card" are lists of
+ * things, and a list has however many items are true.
+ */
+const DETERMINERS = new Set(
+  "a an the your our their its my one to no un una unos unas el la los las tu tus su sus mi mis nuestro nuestra nuestros nuestras ni sin".split(
+    " ",
+  ),
+);
+
+function sentencesOf(value) {
+  return value
+    .split(SENTENCE_END)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+}
+
+export function mirroredPairs(value) {
+  const found = [];
+  for (const sentence of sentencesOf(value)) {
+    const clauses = sentence.split(CONJUNCTIONS).map(wordsOf);
+    for (let index = 1; index < clauses.length; index += 1) {
+      const a = clauses[index - 1];
+      const b = clauses[index];
+      if (a.length < 3 || b.length < 3) continue;
+      const sameOpening = !DETERMINERS.has(a[0]) && a[0] === b[0] && a[1] === b[1];
+      const sameClosing =
+        a[a.length - 2] === b[b.length - 2] && a[a.length - 3] === b[b.length - 3];
+      if (sameOpening || sameClosing) {
+        found.push({
+          rule: "mirrored-pair",
+          text: `${a.slice(0, 4).join(" ")}… / ${b.slice(0, 4).join(" ")}…`,
+        });
+      }
+    }
+  }
+  return found;
+}
+
+export function anaphoricTriplets(value) {
+  const found = [];
+  for (const sentence of sentencesOf(value)) {
+    const items = sentence
+      .split(/,\s*/)
+      .map((item) => item.replace(/^(?:and|or|y|e|o|u)\s+/i, ""))
+      .map(wordsOf)
+      .filter((item) => item.length > 0);
+    for (let index = 2; index < items.length; index += 1) {
+      const word = items[index][0];
+      if (DETERMINERS.has(word) || word !== items[index - 1][0]) continue;
+      if (!items[index - 2].includes(word)) continue;
+      found.push({ rule: "anaphoric-triplet", text: `${word} …, ${word} …, ${word} …` });
+      break;
+    }
+  }
+  return found;
+}
+
+const TAG_MAX_WORDS = 4;
+const TAG_AFTER_WORDS = 7;
+
+export function tagSentences(value) {
+  const sentences = sentencesOf(value);
+  if (sentences.length < 2) return [];
+  const last = sentences[sentences.length - 1];
+  const previous = sentences[sentences.length - 2];
+  if (/[\d{}→<>@]/.test(last) || !/[.!?…]$/.test(last)) return [];
+  const lastWords = wordsOf(last);
+  if (lastWords.length === 0 || lastWords.length > TAG_MAX_WORDS) return [];
+  if (wordsOf(previous).length < TAG_AFTER_WORDS) return [];
+  return [{ rule: "tag-sentence", text: last }];
+}
+
+/** Every per-value shape, for a key in scope. */
+export function shapeTells(value) {
+  return [...mirroredPairs(value), ...anaphoricTriplets(value), ...tagSentences(value)];
+}
+
+/**
+ * Which public page a bundle key belongs to, or `null` for a namespace that is
+ * rendered on several pages by design (the shared feature groups, the price
+ * list, the export claim, the switching chrome and the guides' shared phases)
+ * or for a product-screen key, which the rule never compares.
+ *
+ * The five competitor guides are one page here: they mirror each other's
+ * structure on purpose, so a sentence all five carry is a template, not a tic.
+ */
+const SHARED_NAMESPACES = [
+  "marketing.common.",
+  "marketing.features.",
+  "marketing.price.",
+  "marketing.export.",
+  "marketing.capabilities.",
+  "marketing.guides.shared.",
+  "switching.common.",
+  "switching.concierge.",
+];
+
+export function pageOf(key) {
+  if (SHARED_NAMESPACES.some((prefix) => key.startsWith(prefix))) return null;
+  if (key.startsWith("marketing.guides.")) return "guides";
+  const [head, page] = key.split(".");
+  if (head === "marketing" || head === "switching") return `${head}.${page}`;
+  if (key.startsWith("account.onboard.")) return "onboard";
+  return null;
+}
+
+/**
+ * Function words, per locale. "one" and "two" are deliberately not here: a
+ * number word carries meaning ("from day one", "one ZIP", "one button"), and
+ * "one ZIP / button / number / price" sixteen times across five pages was the
+ * house phrase this rule was written for.
+ */
+const STOPWORDS = {
+  "en-US": new Set(
+    "a an the and or but of to in on at for with from by is are was were be been it its your you we our us they their them this that these those as not no if so do does did than then into out up off all any every each can will what who when where which there here have has had my me he she him her his own same about over before after until while whether only more most other some such like once just also very".split(
+      " ",
+    ),
+  ),
+  "es-ES": new Set(
+    "un una unos unas el la los las y e o u de del en con por para es son se su sus tu tus que lo al a no ni sin como más cada todo toda todos todas hay ya si este esta esto ese esa eso le les me te nos mi mis nuestro nuestra nuestros nuestras uno otra otro otras otros aquí allí entre sobre desde hasta cuando donde quién qué cuál cuáles pero también muy solo sólo está están ser era fue han ha he hemos cualquier cualquiera propio propia propios propias mismo misma mismos mismas primer primera primero tras ante según además aunque porque así tan tanto algo nada nadie ningún ninguna ninguno mucho mucha muchos muchas poco poca pocos pocas".split(
+      " ",
+    ),
+  ),
+};
+
+/**
+ * Names of things, which several pages may call by the same three words. A
+ * phrase joins this list because it is what the thing is called, never
+ * because it reads well.
+ */
+export const HOUSE_PHRASE_ALLOWLIST = new Set([
+  "the live demo",
+  "try the live demo",
+  "the sample shop",
+  "a real person",
+  "real person reads",
+  "person reads it",
+  "your own stripe",
+  "own stripe account",
+  "the pricing page",
+  "a dive shop",
+  "the dive day",
+  "roll call",
+  "run roll call",
+  "certification records",
+  "the export button",
+  "the head count",
+  "a head count",
+  "with no signal",
+  "the night before",
+  "the first day",
+  "first day of",
+  "of a trial",
+  "start a trial",
+  "the boat leaves",
+  "before the boat",
+  "the demo is",
+  "demo is the",
+  "is the sample",
+  "switching to diveday",
+  "one row per",
+  "no setup fee",
+  "the full list",
+  "hoja de cálculo",
+  "registros de certificación",
+  "día de buceo",
+  "contacto de emergencia",
+  "tallas de alquiler",
+  "historial de pagos",
+  "centros de buceo",
+  "centro de buceo",
+  "base de datos",
+  "cuota de alta",
+  "de venta minorista",
+  "como propietario capitán",
+  "un precio único",
+  "precio único de",
+  "antes de guardar",
+  "ajustes cualquier día",
+  "el centro de",
+  "de buceo",
+  "la demo",
+  "la demo en",
+  "demo en vivo",
+  "una persona real",
+  "persona real lo",
+  "real lo lee",
+  "tu propia cuenta",
+  "propia cuenta de",
+  "cuenta de stripe",
+  "la página de",
+  "página de precios",
+  "pase de lista",
+  "el pase de",
+  "primer día de",
+  "día de la",
+  "de la prueba",
+  "sin señal",
+  "la noche anterior",
+  "nombre del centro",
+  "centro de muestra",
+  "la vista previa",
+  "inicio de sesión",
+  "exportación de datos",
+  "lee una persona",
+  "la lista completa",
+  "comisión por reserva",
+  "teléfono sin señal",
+]);
+
+/**
+ * Phrases repeated across pages of one bundle. Returns one hit per phrase,
+ * naming the pages it appears on.
+ */
+export function housePhrases(entries, locale) {
+  const stopwords = STOPWORDS[locale];
+  if (!stopwords) throw new Error(`no stopword list for locale ${locale}`);
+  const pagesByPhrase = new Map();
+  for (const { key, value } of entries) {
+    const page = pageOf(key);
+    if (!page) continue;
+    // A conjunction ends a phrase: "rental sizes and certification records"
+    // is two names, not one three-word phrase.
+    const words = wordsOf(value).map((word) => (CONJUNCTION_WORDS.has(word) ? null : word));
+    for (let index = 0; index + 3 <= words.length; index += 1) {
+      const gram = words.slice(index, index + 3);
+      if (gram.some((word) => word === null || /\d/.test(word))) continue;
+      if (gram.filter((word) => !stopwords.has(word)).length < 2) continue;
+      const phrase = gram.join(" ");
+      if (HOUSE_PHRASE_ALLOWLIST.has(phrase)) continue;
+      if (!pagesByPhrase.has(phrase)) pagesByPhrase.set(phrase, new Set());
+      pagesByPhrase.get(phrase).add(page);
+    }
+  }
+  const found = [];
+  for (const [phrase, pages] of pagesByPhrase) {
+    if (pages.size <= 2) continue;
+    found.push({ key: `“${phrase}”`, rule: "house-phrase", text: [...pages].sort().join(", ") });
+  }
+  return found;
+}
+
+/**
+ * Every tell in one bundle value, for one locale. The shape rules apply only
+ * to a key under `SHAPE_SCOPES`; a call with no key measures words and
+ * typography alone.
+ */
+export function findTells(value, locale, key = "") {
   const rules = RULES[locale];
   if (!rules) throw new Error(`no voice rules for locale ${locale}`);
   const found = [
     ...proseDashes(value),
     ...straightApostrophes(value),
     ...straightDoubleQuotes(value),
+    ...(inShapeScope(key) ? shapeTells(value) : []),
   ];
   for (const [rule, pattern] of Object.entries(rules)) {
     pattern.lastIndex = 0;
@@ -333,7 +656,7 @@ export async function scanMetadata() {
     const source = await readFile(path.join(ROOT, file), "utf8");
     const hits = [];
     for (const { key, value } of metadataStrings(source)) {
-      for (const tell of findTells(value, "en-US")) hits.push({ key, ...tell });
+      for (const tell of findTells(value, "en-US", key)) hits.push({ key, ...tell });
     }
     if (hits.length > 0) {
       counts.set(file, hits.length);
@@ -376,9 +699,12 @@ export async function scanBundles() {
     for (const file of await bundleFiles(path.join(LOCALES_DIR, locale))) {
       const bundle = JSON.parse(await readFile(path.join(ROOT, file), "utf8"));
       const hits = [];
+      const entries = [];
       walkValues(bundle, "", (key, value) => {
-        for (const tell of findTells(value, locale)) hits.push({ key, ...tell });
+        entries.push({ key, value });
+        for (const tell of findTells(value, locale, key)) hits.push({ key, ...tell });
       });
+      hits.push(...housePhrases(entries, locale));
       if (hits.length > 0) {
         counts.set(file, hits.length);
         details.set(file, hits);
@@ -502,7 +828,7 @@ async function main() {
   if (violations.length > 0) {
     console.error(`Voice violations:\n${violations.map((v) => `- ${v}`).join("\n")}`);
     console.error(
-      "A prose em-dash becomes a full stop, a comma or a colon; an intensifier is deleted; a lead-in is deleted; a 'not just X' contrast states the thing; an apostrophe is ’ (U+2019), never ' — the ICU-quoted `'{depth18}'` markers are the only exception; quotation marks are “ ”, never \", with no exception, since \" means nothing to ICU. The full list and the reasoning: docs/design/brand.md, \"What gives us away\". `node scripts/check-voice.mjs --report <file>` lists every hit.",
+      "A prose em-dash becomes a full stop, a comma or a colon; an intensifier is deleted; a lead-in is deleted; a 'not just X' contrast states the thing; an apostrophe is ’ (U+2019), never ' — the ICU-quoted `'{depth18}'` markers are the only exception; quotation marks are “ ”, never \", with no exception, since \" means nothing to ICU. A mirrored pair keeps one of its halves; an anaphoric triplet becomes a list of however many things are true; a tag sentence joins the sentence before it or goes; a house phrase on three pages is reworded on two of them, or joins HOUSE_PHRASE_ALLOWLIST only when it is the name of a thing. The full list and the reasoning: docs/design/brand.md, \"What gives us away\". `node scripts/check-voice.mjs --report <file>` lists every hit.",
     );
     process.exit(1);
   }

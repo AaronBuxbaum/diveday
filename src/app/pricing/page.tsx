@@ -7,7 +7,7 @@ import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingN
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { ExportBundleFallback } from "@/components/MarketingScreenFallbacks";
-import { MarketingMockup } from "@/components/MarketingSections";
+import { MarginNotes, MarketingMockup } from "@/components/MarketingSections";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS, DISPLAY_TITLE_CLASS } from "@/components/ui/typography";
@@ -29,13 +29,13 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Pricing — one flat price per shop | DiveDay",
   description:
-    "One flat price for the dive shop, with bookings, waivers, cert checks, trip prep, and the boat manifest included. No setup fee, no per-seat charge, and no feature tiers.",
+    "One flat price per shop location, line by line: no setup fee, no per-seat charge, no feature tiers and no cut of your bookings. A three-week trial with no card.",
   alternates: { canonical: "/pricing" },
   openGraph: {
     ...sharedLinkCard,
     title: "DiveDay pricing — one flat price per shop",
     description:
-      "Every workflow DiveDay ships, in one plan. No setup fee, no per-seat charge, and no feature tiers.",
+      "One plan, line by line. No setup fee, no per-seat charge and no cut of your bookings.",
     url: "/pricing",
   },
   // `summary_large_image`: the OG block above names the shared link card
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "DiveDay pricing — one flat price per shop",
     description:
-      "Every workflow DiveDay ships, in one plan. No setup fee, no per-seat charge, and no feature tiers.",
+      "One plan, line by line. No setup fee, no per-seat charge and no cut of your bookings.",
   },
 };
 
@@ -233,8 +233,8 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
             figure itself is the weight. The old page answered in screenful
             two, inside a bordered card below a generic headline band. */}
         <section className="border-b border-border">
-          <div className="mx-auto max-w-3xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
-            <div className="text-center">
+          <div className="mx-auto max-w-4xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
+            <div className="mx-auto max-w-3xl text-center">
               {/* The spaces around the separator are load-bearing, not
                   formatting: the middot is `aria-hidden`, and JSX drops the
                   newlines between these three children, so without them the
@@ -276,17 +276,64 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               <p className="mt-2 text-sm leading-6 text-pretty text-muted">
                 {t("marketing.pricing.lockNote")}
               </p>
-              {/* Two blocks, not one paragraph: as one they broke mid-clause
-                  ("No cut / of your bookings") directly under the figure. The
-                  split protects the break, not a line count — the longer
-                  Spanish negations wrap, and wrap between sentences. */}
-              <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-muted">
-                {t("marketing.pricing.heroDescription")}
-              </p>
-              <p className="mx-auto mt-1 max-w-2xl text-lg leading-8 text-muted">
-                {t("marketing.pricing.heroSafetyNote")}
-              </p>
-              <FunnelCtas locale={locale} source="pricing" className="mt-9 justify-center" />
+            </div>
+
+            {/* **The annotated invoice** (the 2026-09-24 voice decision,
+                docs/design/brand.md: `/pricing` is the one page whose screen
+                is a bill). The catches the old hero listed as a sentence
+                ("no setup fee, no per-seat charge…") are lines on an invoice
+                now, each with its amount, and the builder's notes stand in
+                the margin beside it saying why a line reads the way it does.
+                No figure appears in the ledger: the price is the display
+                figure above, the H-12 single source, and every row is a word
+                rather than a number so the bundle never carries a currency
+                amount (src/lib/marketing.test.ts). */}
+            <div className="mt-12 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
+              <dl
+                aria-label={t("marketing.pricing.invoice.title")}
+                className="divide-y divide-border border-y border-border"
+              >
+                {(
+                  [
+                    "setup",
+                    "logins",
+                    "tiers",
+                    "cut",
+                    "cards",
+                    "contract",
+                    "trial",
+                    "leaving",
+                  ] as const
+                ).map((row) => (
+                  <div
+                    key={row}
+                    className="flex items-baseline justify-between gap-6 py-3 text-sm leading-6"
+                  >
+                    <dt className="text-muted">{t(`marketing.pricing.invoice.${row}.label`)}</dt>
+                    <dd className="text-end font-medium">
+                      {t(`marketing.pricing.invoice.${row}.value`)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <div>
+                <h2 className="text-sm font-semibold tracking-widest text-muted uppercase">
+                  {t("marketing.pricing.notes.title")}
+                </h2>
+                <MarginNotes
+                  className="mt-4"
+                  notes={[
+                    t("marketing.pricing.notes.note1"),
+                    t("marketing.pricing.notes.note2"),
+                    t("marketing.pricing.notes.note3"),
+                    t("marketing.pricing.notes.note4"),
+                  ]}
+                />
+              </div>
+            </div>
+
+            <div className="mx-auto max-w-3xl text-center">
+              <FunnelCtas locale={locale} source="pricing" className="mt-12 justify-center" />
               {/* What the click costs, at the point of decision — the same
                   shared line `/` and `/product` carry under their own demo
                   doors. On this page the answer used to sit in a FAQ row two

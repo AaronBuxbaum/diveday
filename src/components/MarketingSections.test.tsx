@@ -15,9 +15,17 @@ afterEach(cleanup);
 describe("marketingMockups", () => {
   it("carries one illustration per moment the homepage tells", () => {
     // The day the band tells: a diver books, the desk clears the boat, the
-    // diver goes home with something worth sending on. The evening entry
-    // landed 2026-08-28 (docs/product/marketing-review-20260827.md).
-    expect(Object.keys(marketingMockups)).toEqual(["diverBooking", "frontDeskReadiness", "recap"]);
+    // captain calls the roll, the diver goes home with something worth
+    // sending on. The evening entry landed 2026-08-28
+    // (docs/product/marketing-review-20260827.md); the dock entry on
+    // 2026-09-24, when the band became four annotated screens (H-89) and the
+    // roll call the hero already showed became a screen of its own.
+    expect(Object.keys(marketingMockups)).toEqual([
+      "diverBooking",
+      "frontDeskReadiness",
+      "captainRollCall",
+      "recap",
+    ]);
   });
 
   it("renders the recap screen the product page's after-trip chapter also shows", () => {

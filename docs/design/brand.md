@@ -229,6 +229,7 @@ lines should have a destination or explain a change; they should not wiggle for 
 | Precise where safety or money is involved | Overconfident or vague |
 | Lightly playful when a real moment is complete | Loud, breathless, or celebratory all the time |
 | Helpful about the next action | A software vendor talking about “solutions” and “platforms” |
+| On the public pages, the builder pointing at the screen from the margin, and on `/about`, someone who dives answering a shop owner's questions out loud | A landing page describing the screen, or a brand talking about itself |
 
 Copy rules:
 
@@ -245,6 +246,61 @@ Copy rules:
   shop's divers' data is the reader's own question rather than a capability being sold — see
   [principles.md](principles.md) §4.
 - Never invent proof, customer counts, testimonials, certifications, or superlatives.
+
+### The two registers of the public pages
+
+**Decided 2026-09-24** (Aaron Buxbaum; H-89 in [product/human-decisions.md](../product/human-decisions.md)):
+of the six voices drawn in [voice-strategies-20260917.md](voice-strategies-20260917.md), the public
+pages speak in **6, Margin Notes**, and `/about` in **4, Over a Beer**. That document is the dated
+record of the alternatives and the diagnosis; this section is the voice.
+
+**The builder's note** (every public page but `/about`). Stop writing marketing copy. A page is
+the product's own screens with short notes from the person who built them, pointing at specific
+things, and the brand voice is the note.
+
+- A note is under twenty words and names **one visible thing** on the screen beside it. It may give
+  a reason or a limit. It never gives an evaluation ("fast", "simple", "calm"), and it never asks
+  for anything.
+- The app's own words are quoted as they appear on the screen: “Offline copy · up to date”,
+  “Not recognized, so ignored”. The mockup mirrors the real screen element for element, so a note
+  is re-read whenever the screen it annotates changes.
+- What is deliberately missing gets a note too ("There is no percentage bar; the count is the
+  count").
+- First person is allowed, and a fact only the builder would know is the kind of note worth
+  writing ("I tried a spinner here and the captain read it as the phone thinking").
+- Every screen a visitor could open ends in **one door into the demo as that role** (`ScreenDoor`,
+  link-weight, tagged per screen in `src/lib/funnel.ts`), and the page's one primary stays the
+  shared pair. A screen that reaches its reader another way has no door and says so in its last
+  note: the recap arrives by email once the boat is back, so its last note is "No door here on
+  purpose", and `e2e/marketing.spec.ts` pins the band at three doors for four screens.
+- Headings say what the screen is, in the builder's words ("The manifest, on a phone with no
+  signal."), never what the reader should feel.
+- Prose that is not a note (the price, the terms, the export claim, the FAQ answers) is the
+  notice-board register: the fact, in the order a buyer asks for it, with no sentence spent on how
+  to feel about it.
+
+**The spoken register** (`/about` only). Write the way the best diver in the shop explains the
+software to a mate after the boat is tied up.
+
+- Who talks: someone from DiveDay who dives, to a shop owner who asked. The founder's own parts
+  are first-person singular; what both people here share is "we"
+  ([product/marketing.md](../product/marketing.md)'s biography rules are unchanged).
+- Every heading is **the owner's question, repeated back** the way a person repeats a question
+  before answering it: no question mark, no full stop ("Who am I dealing with", "What's the
+  catch", "What happens to my records if I leave"). The band under it is the answer, and the
+  headline test binds the first sentence of that answer rather than the question.
+  `src/app/about/copy.test.ts` holds the arithmetic for the exit band.
+- Contractions always. "Honestly" and "look" get a budget of one each on the page. Paragraphs run
+  from one line to eight and stop where the speaker stops caring. No bullet lists.
+- One joke on the page, about the work, never about the product. No "people love the…": with no
+  customers yet there are no people.
+- A fact is conceded flat, with no flinch and no flourish after it. "I don't know yet" is allowed.
+- Everything the page says is still shipped-only and checkable in the demo. The register changes
+  how a fact is said, never which facts are said.
+
+Both registers keep every rule under "What gives us away" below. The one they bend is the heading
+rule: a builder's heading names the screen, and a spoken heading is a question with the mark left
+off, and neither argues.
 
 ### Before / after examples
 
@@ -291,7 +347,24 @@ briefing is plain sentences in the order the day happens, and the confidence is 
 - **No staccato runs.** "No setup fee. No per-seat math. No feature tiers. No cut of your bookings."
   Four fragments in a row is a cadence, not a claim. Write it as a sentence with the facts in it.
 - **No triplets for rhythm.** Three parallel nouns or clauses because three sounds finished. A list
-  has however many items are true.
+  has however many items are true. The mechanical half is the **anaphoric triplet**, a comma list
+  whose items open with the same word ("never crashes, never logs you out, and never needs five
+  taps"); `pnpm check:voice` refuses it on the public pages, and leaves a list of things alone
+  whatever article or possessive opens each one.
+- **No mirrored pairs.** "Nothing gets asked twice and nothing gets missed once." "Records come in
+  with a file and leave with a button." Two clauses cut to the same shape so the sentence sounds
+  balanced. Keep the half that carries the fact. `pnpm check:voice` refuses a pair that opens or
+  closes both halves on the same two words.
+- **No tag sentence.** "One answer, all day." "Better now than after the move." "It does not
+  decide." A sentence of four words or fewer at the end of a value, after a long one, is a beat
+  for effect; `pnpm check:voice` refuses it on the public pages. A short sentence in the middle of
+  a paragraph is speech and stays.
+- **No house phrase.** "From day one" seven times, "a real person" four, "one ZIP / button /
+  number / price" sixteen: a phrase that reads well once becomes the site's tic by the third
+  page. `pnpm check:voice` refuses three words with two of substance on more than two pages of a
+  bundle; the names of things ("the live demo", "your own Stripe account") are exempt by list,
+  and a phrase joins that list because it is what the thing is called, never because it reads
+  well.
 - **No aphorism headings.** "The door swings both ways." "The spreadsheet got you this far." "That's
   our whole price." A heading that could open a TED talk is a heading that argues nothing. A heading
   states a fact the band beneath it can be checked on (the `/about` test in
@@ -337,8 +410,10 @@ consequence has fixed the wrong thing.
 
 `pnpm check:voice` (`scripts/check-voice.mjs`) refuses the mechanical half of this list in every
 message bundle: the prose em-dash, the intensifiers, the lead-ins, the "not just" contrast, and the
-staccato run, per locale. The rest is judgement, and the [brand-voice](../../.claude/skills/brand-voice/SKILL.md)
-skill's checklist is where it is applied.
+staccato run, per locale, and on the public pages' strings (`marketing.*`, `switching.*`,
+`account.onboard.*`, every route's `metadata`) the four shapes: the mirrored pair, the anaphoric
+triplet, the tag sentence and the house phrase. The rest is judgement, and the
+[brand-voice](../../.claude/skills/brand-voice/SKILL.md) skill's checklist is where it is applied.
 
 ### Marketing boundary
 

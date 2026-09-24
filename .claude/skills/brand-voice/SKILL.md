@@ -34,8 +34,11 @@ the workflow for applying it.
    divemaster says the thing; they do not set it up, pivot to it with a dash, contrast it with what
    it is not, or tell you it is true. No em-dash in prose, no "not a project, a file", no
    "No X. No Y. No Z.", no *actually*/*genuinely*/*plainly*, no "Here's how", no aphorism or
-   rhetorical question as a heading, no closing flourish. `pnpm check:voice` refuses the mechanical
-   half in every message bundle; the rest is this step.
+   rhetorical question as a heading, no closing flourish, no mirrored pair, no triplet for rhythm,
+   no tag sentence, no phrase reused on a third page. `pnpm check:voice` refuses the mechanical
+   half in every message bundle, the four shapes on the public pages' strings; the rest is this
+   step. A public page is also written in its register ("The two registers of the public pages"
+   in the same doc): the builder's note, or speech on `/about`.
 5. For merch or vendor work, provide the ground color, imprint colors, type treatment, placement,
    production constraints, and proof checklist. Keep coral as a small accent and use the bubble
    trail without stretching, rotating, or decorating it.

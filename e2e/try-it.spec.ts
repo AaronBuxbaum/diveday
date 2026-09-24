@@ -39,7 +39,7 @@ test("the hero redraws as the visitor's own first day, and says where it came fr
   // Before: the hero it has always been, plus three fields and a button that
   // is inert until there is something to draw.
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Who is booked, who is cleared, and who is on the boat. One answer, all day.",
+    "Four screens from a dive shop’s day, with notes from the person who made them.",
   );
   await expect(page.getByRole("button", { name: "Draw my day" })).toBeDisabled();
 

@@ -30,7 +30,15 @@ import { publicSchedulePath } from "./public-routes";
  */
 const FIXED_SOURCES = [
   "home-hero",
+  // The homepage's screens each end in one door into the demo as the role the
+  // screen belongs to (the 2026-09-24 voice decision; docs/design/brand.md).
+  // One tag per screen, for the same reason the switching guides are split per
+  // slug: which screen a shop owner opened the demo from is the question these
+  // exist to answer. `home-diver-moment` predates the other two and keeps its
+  // name so its history holds.
   "home-diver-moment",
+  "home-desk-moment",
+  "home-dock-moment",
   // Retired 2026-08-13 — kept for history, not for reuse. See above.
   "home-mid",
   // The records band's two doors onto the switching surface, split by position
@@ -102,6 +110,12 @@ const FIXED_SOURCES = [
   "about-switching",
   "sign-in",
   "switching-hub",
+  // The hub's annotated import-preview screen ends in one door into the demo
+  // as the owner, the role that runs the import (docs/design/brand.md, "The
+  // builder's note"). Its own tag for the reason `home-desk-moment` has one:
+  // a reader who opened the demo from the screen itself is a different moment
+  // from one who did not find their system in the list above it.
+  "switching-hub-preview",
   "switching-spreadsheet",
   "switching-spreadsheet-mid",
   "switching-spreadsheet-close",

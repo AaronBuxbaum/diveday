@@ -83,8 +83,43 @@ export const marketingMockups = {
   frontDeskReadiness: {
     render: (locale: DiverLocale) => <FrontDeskReadinessFallback locale={locale} />,
   },
+  // The roll call as a flat still, for the homepage's dock screen; the hero
+  // shows the same screen inside `CaptainPhoneFrame`, and a second bezel on
+  // one page would read as two phones.
+  captainRollCall: { render: (locale: DiverLocale) => <CaptainRollCallFallback locale={locale} /> },
   recap: { render: (locale: DiverLocale) => <RecapPageFallback locale={locale} /> },
 } as const;
+
+/**
+ * The builder's notes beside a screen: the register the public pages speak
+ * in since the 2026-09-24 voice decision (docs/design/brand.md, "The voice on
+ * the public pages"). A numbered list, each item one note under twenty words
+ * that names a thing visible on the mockup next to it and gives its reason or
+ * its limit. The number is the anchor a reader's eye carries from the note to
+ * the screen, which is why it is set in the primary colour rather than muted
+ * like a body list's.
+ *
+ * Structure only: the notes arrive resolved from the bundle, because the same
+ * list renders on `/` and on `/product` and neither may spell a note inline.
+ */
+export function MarginNotes({
+  notes,
+  className = "",
+}: {
+  notes: readonly string[];
+  className?: string;
+}) {
+  return (
+    <ol className={`space-y-3 text-sm leading-6 text-muted ${className}`}>
+      {notes.map((note, index) => (
+        <li key={note} className="flex gap-3">
+          <span className="w-4 shrink-0 font-semibold text-primary tabular-nums">{index + 1}</span>
+          <span>{note}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 /**
  * The `productFeatureGroups` grid rendered on landing and pricing: four cards,

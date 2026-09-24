@@ -198,7 +198,7 @@ const CURATED_TIMEZONE_KEYS: Record<CuratedTimeZone, DiverMessageKey> = {
 export const metadata: Metadata = {
   title: "Start a dive shop trial — DiveDay",
   description:
-    "Set up your own DiveDay shop in a few details. No card, no setup fee, and your records download as one ZIP from day one.",
+    "A few details and the shop exists. No card, no setup fee, and the export works on the first day.",
   // Canonical because every marketing page now links here with a `?from=`
   // funnel tag — one page, not nine.
   alternates: { canonical: "/onboard" },

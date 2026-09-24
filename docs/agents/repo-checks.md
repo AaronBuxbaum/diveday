@@ -197,6 +197,45 @@ It holds the **house quotation marks** the same way: `“ ”` everywhere a pers
 
 **It has no exemption list, which is the difference worth knowing.** The apostrophe rule must strip ICU-quoted spans because a straight `'` is what *makes* `'{depth18}'` a literal. `"` means nothing to ICU in any mode, so no value needs it, and the rule landed at zero the same day it was written. More than half the sweep was not marketing prose but the CSV importer's row notes in `settings.json`, which quote an interpolated value — `Email “{email}” doesn’t look valid` — and those are prose too: the value is read aloud inside a sentence rather than set as a code literal. Spanish sweeps identically; `src/i18n/locales/es-ES/README.md` settles `“ ”` over the peninsular `« »`, so like the apostrophe this sits beside `proseDashes` rather than in `RULES`.
 
+**Four shapes joined it on 2026-09-24** (H-89, the voice decision), on the public pages' strings
+only — `marketing.*`, `switching.*`, `account.onboard.*` and every route's `metadata` — because
+the 2026-09-03 sweep had removed the words a model overuses and left its shapes: measured
+afterwards over the five marketing pages, a mirrored pair in the hero of three of them, a list of
+three with a tail in most founder paragraphs, 36 sentences of five words or fewer most of them a
+beat after a long one, and "from day one" seven times
+([docs/design/voice-strategies-20260917.md](../design/voice-strategies-20260917.md)). Each is named
+as narrowly as a regex can name it, and the "leaves alone" cases in `scripts/check-voice.test.mjs`
+carry at least as much weight as the refusals:
+
+- The **mirrored pair**: two clauses of one sentence, each three or more words, joined by a
+  conjunction, that open with the same two words or close on the same two words before the last
+  ("nothing gets asked twice and nothing gets missed once"; "come in with a file and leave with a
+  button"). A pair opening on an article or possessive ("a wait list … and a last-minute list") is
+  a list of two things and is left alone, as is any factual pair with different words at both ends.
+- The **anaphoric triplet**: a comma list whose second and third items open with the same word,
+  carried by the first item too ("paper never crashes, never logs you out, and never needs five
+  taps"). Articles, possessives, "one", the infinitive's "to" and the ledger's "no"/"ni"/"sin"
+  are exempt, so "a whiteboard, a clipboard, a spreadsheet", "your colour, your typeface, your
+  cover photo", "one roster, one waiver, one crew" and "no setup fee, no contract, no card" are
+  lists of things and stay.
+- The **tag sentence**: a value's last sentence of four words or fewer, carrying no digit,
+  placeholder or arrow, after a sentence of seven or more ("One answer, all day." "It does not
+  decide."). A short sentence mid-paragraph is speech and stays, which is what lets `/about`'s
+  spoken register keep "That's the bar." A key under `.errors.` is a notice and is never measured
+  for shape: its short last sentence is the next action.
+- The **house phrase**: three consecutive words, at least two of them content words, on more than
+  two distinct pages of one bundle. Pages are the second key segment (`marketing.home`,
+  `switching.spreadsheet`); the shared namespaces rendered on several pages by design
+  (`marketing.common`, `features`, `price`, `export`, `capabilities`, `guides.shared`,
+  `switching.common`, `switching.concierge`) are never compared, the five competitor guides count
+  as one page because they mirror each other's structure on purpose, and a conjunction ends a
+  phrase so "rental sizes and certification records" is two names rather than one. Number words
+  are content ("from day one", "one ZIP"): the sixteen "one ZIP / button / number / price" were
+  the phrase this rule was written for. `HOUSE_PHRASE_ALLOWLIST` holds the names of things
+  ("the live demo", "your own Stripe account", "hoja de cálculo"), and a phrase joins it because
+  it is what the thing is called, never because it reads well. The hit is reported once per
+  phrase, naming the pages.
+
 A short label separator is deliberately not a hit: "Boarded — tap again to undo" and "Checked in —
 2" are not sentences, and the tell is the dash that replaced a full stop or a comma in running
 prose. Ratcheted per file in `scripts/voice-baseline.json` exactly like `check:copy` (`--write`

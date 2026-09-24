@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type ReactNode, Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
+import { ScreenDoor } from "@/app/_components/ScreenDoor";
 import { ShopYearBand } from "@/app/_components/ShopYearBand";
 import { TryItHero } from "@/app/_components/TryItHero";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
@@ -12,6 +13,7 @@ import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
 import {
   CaptainPhoneFrame,
   FeatureGroupsGrid,
+  MarginNotes,
   MarketingMockup,
   marketingMockups,
 } from "@/components/MarketingSections";
@@ -46,15 +48,15 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 export const instant = true;
 
 export const metadata: Metadata = {
-  title: "Dive shop software for the whole dive day — DiveDay",
+  title: "Dive shop software, from booking to head count — DiveDay",
   description:
-    "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place. Try it in a live demo, run the boat on it, and take your records with you if you ever leave.",
+    "Four screens from a dive shop’s day, with notes from the person who made them: the schedule, the readiness list, the captain’s roll call and the diver’s recap. All of it runs in a live demo with no sign-up.",
   alternates: { canonical: "/" },
   openGraph: {
     ...sharedLinkCard,
-    title: "DiveDay — dive shop software for the whole dive day",
+    title: "DiveDay — dive shop software, from booking to head count",
     description:
-      "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place, from first booking to final head count.",
+      "Bookings, waivers, cert checks, trip prep and the boat manifest, shown as the screens a shop runs its day on.",
     url: "/",
   },
   // `summary_large_image`: the shared link card resolves here, and this page
@@ -66,9 +68,9 @@ export const metadata: Metadata = {
   // policy).
   twitter: {
     card: "summary_large_image",
-    title: "DiveDay — dive shop software for the whole dive day",
+    title: "DiveDay — dive shop software, from booking to head count",
     description:
-      "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place, from first booking to final head count.",
+      "Bookings, waivers, cert checks, trip prep and the boat manifest, shown as the screens a shop runs its day on.",
   },
 };
 
@@ -288,36 +290,48 @@ async function HomeBody({
   const competitors = cachedListFormat(locale, { type: "disjunction" }).format(
     MIGRATION_GUIDES.map((guide) => guide.competitor),
   );
-  // The day the hero's dock screen completes: a diver books days before, the
-  // front desk clears the boat that morning, and the diver goes home with
-  // something worth sending their buddy. Alternating full-width rows — the
-  // screen is the claim, so each row gives the mockup the wider column.
+  // **Four screens, with notes** (the 2026-09-24 voice decision:
+  // docs/design/brand.md, "The voice on the public pages"). Each row is one
+  // of the product's own screens, drawn as it is, with the builder's notes
+  // beside it — under twenty words each, naming one thing on the screen and
+  // giving its reason or its limit — and one door into the demo as the role
+  // the screen belongs to. The rows used to be three "moments" told in prose
+  // with the screen as illustration; the screen is now the claim and the
+  // prose is what a person would say pointing at it.
   //
-  // Three rows rather than two since 2026-08-28: the day used to end at 8 a.m.,
-  // which left the product's own thesis — the shop gets remembered — with no
-  // home on `/` at all (docs/product/marketing-review-20260827.md, "A third
-  // moment: the evening"). The evening row is also the one row that argues
-  // revenue rather than administration, and it carries no link: the recap is
-  // something a shop's divers do, not a screen a visitor is asked to go poke,
-  // so the page's demo-door count is exactly what it was.
+  // The dock row is new here: the roll call was the hero's picture and
+  // nowhere else on the page, so the one screen the doc that chose this voice
+  // says to show first had no notes. The hero keeps the phone (its motion is
+  // the page's opening beat); this row is the same screen as a flat still.
+  //
+  // Doors: the diver row keeps its link to the public schedule (no sign-in
+  // needed, so no demo mint); the desk and dock rows submit `enterDemoAction`
+  // with their role through `ScreenDoor`; the recap row has none, and says so
+  // in its last note — it reaches a diver by email after a trip and is not a
+  // screen a visitor is sent to poke, which is also why the page's
+  // "Try the live demo" count did not move (e2e/marketing.spec.ts).
+  //
   // `id` is the message-bundle namespace, never a rendered string: it is this
-  // list's React key, and every other field here is localized copy. Keying on
-  // the title would make a language switch look like two different components
-  // to React (needless remount of the mockup beside it) and would collide the
-  // moment a copy edit ever gave two rows the same heading.
-  const dailyMoments = [
+  // list's React key, and every other field here is localized copy.
+  const screens = [
     {
       id: "diver",
       when: t("marketing.home.moments.diver.when"),
       title: t("marketing.home.moments.diver.title"),
-      description: t("marketing.home.moments.diver.description"),
-      // The diver preview stays here rather than in the hero: there it
-      // competed with the demo and trial CTAs for the first click; here it
-      // sits beside the schedule mockup it opens.
-      link: {
-        label: t("marketing.home.moments.diver.link"),
-        href: scheduleAttributionHref(DEMO_SHOP_SLUG, "home-diver-moment"),
-      },
+      notes: [
+        t("marketing.home.moments.diver.note1"),
+        t("marketing.home.moments.diver.note2"),
+        t("marketing.home.moments.diver.note3"),
+        t("marketing.home.moments.diver.note4"),
+      ],
+      door: (
+        <Link
+          href={scheduleAttributionHref(DEMO_SHOP_SLUG, "home-diver-moment")}
+          className={buttonClass({ variant: "link", flush: true, className: "mt-2 self-start" })}
+        >
+          {t("marketing.home.moments.diver.door")}
+        </Link>
+      ),
       mockupLabel: t("marketing.home.moments.diver.mockupLabel"),
       mockup: marketingMockups.diverBooking,
     },
@@ -325,17 +339,55 @@ async function HomeBody({
       id: "frontDesk",
       when: t("marketing.home.moments.frontDesk.when"),
       title: t("marketing.home.moments.frontDesk.title"),
-      description: t("marketing.home.moments.frontDesk.description"),
-      link: null,
+      notes: [
+        t("marketing.home.moments.frontDesk.note1"),
+        t("marketing.home.moments.frontDesk.note2"),
+        t("marketing.home.moments.frontDesk.note3"),
+        t("marketing.home.moments.frontDesk.note4"),
+      ],
+      door: (
+        <ScreenDoor
+          locale={locale}
+          demoRole="owner"
+          source="home-desk-moment"
+          label={t("marketing.home.moments.frontDesk.door")}
+        />
+      ),
       mockupLabel: t("marketing.home.moments.frontDesk.mockupLabel"),
       mockup: marketingMockups.frontDeskReadiness,
+    },
+    {
+      id: "dock",
+      when: t("marketing.home.moments.dock.when"),
+      title: t("marketing.home.moments.dock.title"),
+      notes: [
+        t("marketing.home.moments.dock.note1"),
+        t("marketing.home.moments.dock.note2"),
+        t("marketing.home.moments.dock.note3"),
+        t("marketing.home.moments.dock.note4"),
+      ],
+      door: (
+        <ScreenDoor
+          locale={locale}
+          demoRole="captain"
+          source="home-dock-moment"
+          label={t("marketing.home.moments.dock.door")}
+        />
+      ),
+      mockupLabel: t("marketing.home.moments.dock.mockupLabel"),
+      mockup: marketingMockups.captainRollCall,
     },
     {
       id: "recap",
       when: t("marketing.home.moments.recap.when"),
       title: t("marketing.home.moments.recap.title"),
-      description: t("marketing.home.moments.recap.description"),
-      link: null,
+      notes: [
+        t("marketing.home.moments.recap.note1"),
+        t("marketing.home.moments.recap.note2"),
+        t("marketing.home.moments.recap.note3"),
+        t("marketing.home.moments.recap.note4"),
+      ],
+      door: null,
       mockupLabel: t("marketing.home.moments.recap.mockupLabel"),
       mockup: marketingMockups.recap,
     },
@@ -447,50 +499,51 @@ async function HomeBody({
 
       {proofBand}
 
-      {/* The day, told backwards from the hero's dock screen: two alternating
-          proof rows (marker → title → one sentence beside a large mockup)
-          instead of the twin-card grid this section used to be — the pair are
-          different moments of one day, and the geometry now says so. */}
+      {/* The four screens, in the order the day runs them: alternating rows,
+          each a marker, a title, the builder's notes and one door beside a
+          large mockup. The rows are the page's argument now — the screen is
+          the claim, the notes say why it is drawn that way — so the section
+          holds four of them rather than the three prose "moments" it held
+          until 2026-09-24. */}
       <MarketingReveal>
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
           <div className="max-w-2xl">
-            {/* One sentence, not two: the h2 and its lede said the same thing
-                in the same words ("what the front desk clears in the morning is
-                exactly what the captain sees at the dock"), so the lede was
-                deleted and the sentence promoted into the heading
-                (docs/product/marketing-review-20260827.md). */}
+            {/* One sentence and no lede: the four rows beneath are the whole
+                of what the band has to say. */}
             <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.home.momentsTitle")}
             </h2>
           </div>
 
           <div className="mt-14 space-y-16 lg:mt-20 lg:space-y-24">
-            {dailyMoments.map((moment, index) => (
-              <div key={moment.id} className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14">
-                <div className={`lg:col-span-5 ${index % 2 === 1 ? "lg:order-last" : ""}`}>
-                  <SectionMarker>{moment.when}</SectionMarker>
+            {screens.map((screen, index) => (
+              // One `<article>` per screen: each is its own labelled thing in
+              // the outline, and each carries at most one door, which is what
+              // keeps "one primary per screen" countable per screen rather
+              // than per band (e2e/marketing.spec.ts).
+              <article
+                key={screen.id}
+                className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14"
+              >
+                <div
+                  className={`flex flex-col lg:col-span-5 ${index % 2 === 1 ? "lg:order-last" : ""}`}
+                >
+                  <SectionMarker>{screen.when}</SectionMarker>
                   <h3 className={`mt-3 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>
-                    {moment.title}
+                    {screen.title}
                   </h3>
-                  <p className="mt-3 max-w-lg leading-7 text-muted">{moment.description}</p>
-                  {moment.link ? (
-                    <Link
-                      href={moment.link.href}
-                      className={buttonClass({ variant: "link", flush: true, className: "mt-2" })}
-                    >
-                      {moment.link.label}
-                    </Link>
-                  ) : null}
+                  <MarginNotes notes={screen.notes} className="mt-5 max-w-lg" />
+                  {screen.door}
                 </div>
                 <div className="lg:col-span-6">
                   <MarketingMockup
-                    label={moment.mockupLabel}
+                    label={screen.mockupLabel}
                     className="shadow-xl shadow-foreground/5"
                   >
-                    {moment.mockup.render(locale)}
+                    {screen.mockup.render(locale)}
                   </MarketingMockup>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         </section>

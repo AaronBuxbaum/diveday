@@ -28,15 +28,15 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 export const instant = true;
 
 export const metadata: Metadata = {
-  title: "Who we are — DiveDay",
+  title: "Who you’d be dealing with — DiveDay",
   description:
-    "DiveDay is built by people who dive, who saw what shops were running on and decided paperwork should not be the job. Who you are buying from, what we will not pretend, and how your records get in and back out.",
+    "Two divers, one of them writing the code, and a product that doesn’t need either of us at eight in the morning. Who’s behind DiveDay, what it won’t do, and how your records get back out.",
   alternates: { canonical: "/about" },
   openGraph: {
     ...sharedLinkCard,
-    title: "Who we are — DiveDay",
+    title: "Who you’d be dealing with — DiveDay",
     description:
-      "Divers who saw what the shops were running on. Who you are buying from, and what we will not pretend.",
+      "Two divers, one writing the code. Who’s behind DiveDay, what it won’t do, and how your records get back out.",
     url: "/about",
   },
   // `summary_large_image`: the OG block above names the shared link card
@@ -44,9 +44,9 @@ export const metadata: Metadata = {
   // image to fill it — docs/product/marketing.md, Twitter-card policy.
   twitter: {
     card: "summary_large_image",
-    title: "Who we are — DiveDay",
+    title: "Who you’d be dealing with — DiveDay",
     description:
-      "Divers who saw what the shops were running on. Who you are buying from, and what we will not pretend.",
+      "Two divers, one writing the code. Who’s behind DiveDay, what it won’t do, and how your records get back out.",
   },
 };
 
@@ -96,6 +96,11 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
    * concede loudly, because an honest no buys trust the claims can't. These are
    * facts about the company (how new it is, how much it is still moving) rather
    * than product scope — the product's own honest-no lives on /product.
+   *
+   * The whole page is written as speech (docs/design/brand.md, "The spoken
+   * register on /about"): every h2 is the shop owner's question, repeated back
+   * without a mark, and the band under it is the answer. The founder's own
+   * parts stay first-person singular; what both people here share is "we".
    */
   const plainTruths = [
     { title: t("marketing.about.truths.new.title"), body: t("marketing.about.truths.new.body") },

@@ -2240,7 +2240,7 @@
       "fullNamePlaceholder": "e.g. Dana Reyes",
       "emailPlaceholder": "e.g. owner@example.com",
       "passwordPlaceholder": "At least 8 characters",
-      "demoNote": "Want to explore a sample shop first?",
+      "demoNote": "The demo is a sample shop, if you want to look at one first.",
       "tryLiveDemo": "Try the live demo",
       "settingUp": "Setting up your shop…",
       "submit": "Create shop & start trial",
@@ -2270,7 +2270,7 @@
     "common": {
       "backToGuides": "← All switching guides",
       "contextEyebrow": "Where you are today",
-      "heroCtaNote": "The demo is a working shop. No sign-up, nothing to import, and nothing to undo.",
+      "heroCtaNote": "The demo is the sample shop, already full, so there is nothing to import first.",
       "facts": {
         "moves": {
           "label": "What moves",
@@ -2278,7 +2278,7 @@
         },
         "time": {
           "label": "How long",
-          "value": "An afternoon. Export, preview, and import in one sitting."
+          "value": "An afternoon, export to import."
         },
         "preview": {
           "label": "Before it saves",
@@ -2286,43 +2286,47 @@
         },
         "back": {
           "label": "The way out",
-          "value": "What arrives can leave the same way."
+          "value": "The same export button, from the first day."
         }
       },
       "moveTitle": "How the move works",
-      "moveIntro": "Every step is one you run yourself, in your own time. Rather hand it off? Send us the file and a person brings your divers in with you, free.",
+      "moveIntro": "Every step is one you run yourself, in your own time. If you would rather hand it off, send us the file and a person brings your divers in with you, free.",
       "scopeTableTitle": "What comes across, and what does not",
       "scopeTableDescription": "The same table DiveDay shows you before it imports a single row.",
       "comesAcross": "Comes across",
       "seePricing": "See what DiveDay costs →",
       "staysBehind": "Stays behind",
       "bothWaysTitle": "The same table, read the other way.",
-      "bothWaysBody": "Everything above is what arrives. What arrives is also what leaves: {claim}",
+      "bothWaysBody": "The rows above are what arrives, and the export is the same list. {claim}",
       "bringFileTitle": "Bring the file into DiveDay",
-      "bringFileIntro": "The rest is in DiveDay, and it takes minutes.",
+      "bringFileIntro": "The rest happens in DiveDay, in the order below.",
       "openSettingsTitle": "Open Settings → Import contacts",
       "openSettingsBody": "The owner or manager uploads the CSV in your DiveDay shop.",
       "checkPreviewTitle": "Check the preview",
-      "checkPreviewBody": "DiveDay maps your columns and shows how each one landed, what it’s leaving behind, and any row it can’t bring across. A diver with a matching email is updated, not duplicated. Nothing saves until you confirm.",
+      "checkPreviewBody": "The preview shows how each column landed, which ones it is leaving behind, and any row it can’t bring across. A diver whose email already exists is updated rather than duplicated, and nothing saves until you confirm.",
       "importReadyTitle": "Import, and your roster is ready",
-      "importReadyBody": "Roster, sizes, and certification records land immediately. They arrive flagged imported, with a one-tap confirm for staff, and only a specialty-gated dive waits on that confirmation.",
+      "importReadyBody": "Roster, sizes and certification records land at once, flagged imported with a one-tap confirm for staff. Only a specialty-gated dive waits on that confirmation.",
       "openImportCta": "Open Import in your shop",
       "midCtaTitle": "See it in the live demo",
-      "midCtaBody": "Walk the live demo as the owner, the captain, or a diver. The same cert checks, waivers, and roll call are what your file lands into."
+      "midCtaBody": "The demo is the sample shop your file would land in: the same cert checks, waivers and roll call, as the owner, the captain or a diver."
     },
     "hub": {
       "eyebrow": "Switching to DiveDay",
-      "title": "Records come in with a file and leave with a button.",
-      "description": "Find what you run now. Each guide shows both directions.",
+      "title": "Every guide ends at the same import screen.",
+      "description": "Pick what you run now. Each guide gets your file out of it, and the screen at the bottom of this page is where the file lands.",
       "spreadsheetTitle": "Coming from a spreadsheet",
-      "spreadsheetDescription": "Bring the sheet you already keep, and add the jobs a list cannot do, like checking every certification before the boat leaves.",
+      "spreadsheetDescription": "The sheet you already keep is the file. This guide is the column list it reads, then the four jobs a list never did.",
       "switchingFrom": "Switching from {competitor}",
-      "previewEyebrow": "Before anything saves",
-      "previewTitle": "You see the whole file before a single row lands.",
-      "previewBody": "Upload the CSV and DiveDay shows you its own reading of it: the columns it matched, the ones it will ignore, the divers and certification records it counted, and every row it intends to skip.",
+      "previewEyebrow": "The screen every guide ends on",
+      "previewTitle": "The preview reads your file back to you before a row is saved.",
+      "previewNote1": "Four columns it recognized from their headings. Yours don’t have to match these names.",
+      "previewNote2": "“Not recognized, so ignored” names the two columns it drops rather than guessing at them.",
+      "previewNote3": "One row is marked skipped: it has no name. A name is the only thing a row needs.",
+      "previewNote4": "“Nothing saves until you say so” is the screen’s title. In the demo: Settings → Import contacts.",
+      "previewDoor": "Open the demo as the owner →",
       "previewMockupLabel": "The DiveDay import preview, showing matched columns, ignored columns, counts, and a skipped row.",
-      "dontSeeSystem": "Something else, or nothing at all?",
-      "dontSeeSystemBody": "Most exports come in as they are. Recognizable name, certification, and size columns are all it takes."
+      "dontSeeSystem": "Not listed here",
+      "dontSeeSystemBody": "An export comes in as it is: a name column is the one thing a row needs, and certification and size columns come along when they exist."
     },
     "competitor": {
       "keepOrLeaveEyebrow": "Keep it, or leave it",
@@ -2331,37 +2335,37 @@
       "websiteOurs": "In DiveDay",
       "forExportPrefix": "For a {competitor} export:",
       "runTheDay": "Run the dive day {competitor} can’t.",
-      "readyToMove": "Ready to make the move off {competitor}?",
-      "walkDemoFirst": "Walk the demo first, then bring your export. The cert checks, waivers, and roll call are already in place.",
+      "readyToMove": "The move off {competitor}, in one sitting.",
+      "walkDemoFirst": "The demo first, then your export. The cert checks, waivers and roll call your file lands into are already running there.",
       "otherGuides": "Other switching guides →",
       "sources": "Sources"
     },
     "spreadsheet": {
       "eyebrow": "Coming from a spreadsheet",
       "title": "Bring the spreadsheet with you.",
-      "heroLede": "A spreadsheet will not flag an unverified certification, chase an unsigned waiver, or let a diver book a seat on a Sunday night. DiveDay reads the sheet you already keep and takes on those jobs.",
-      "wedgeIntro1": "A spreadsheet remembers everything and checks nothing. It holds the names and the numbers, and the checking (cards, waivers, who is still not ready) is what you are doing by hand right now.",
-      "wedgeIntro2": "These are the jobs a list cannot hold:",
+      "heroLede": "The sheet you keep is the file: one row per diver, saved as CSV. What follows is the column list it reads, then the four jobs it takes on that a list never did.",
+      "wedgeIntro1": "A spreadsheet holds the names and the numbers and checks none of them. The checking, cards, waivers, who is still not ready, is what you do by hand right now.",
+      "wedgeIntro2": "The four jobs it takes on:",
       "wedge": {
         "cardsChecked": {
           "title": "Every certification checked before the boat leaves",
-          "body": "DiveDay re-reads each diver’s certification against what the trip and the site require, and the ones who can’t board yet surface on their own."
+          "body": "Each diver’s certification is read against what the trip and the site require. Anyone who can’t board yet is listed, with the reason."
         },
         "blockersOnePlace": {
           "title": "The day’s blockers in one place",
-          "body": "One screen shows who still cannot board and why, whether a missing waiver or a certification to verify, so nothing is left to memory at the dock."
+          "body": "One screen lists who still can’t board and why: a missing waiver, or a certification nobody has verified yet."
         },
         "diversBookThemselves": {
           "title": "Divers book and sign themselves",
-          "body": "A diver picks a seat and signs the waiver from a link, with no account and no app, so the signature chase at the dock mostly disappears."
+          "body": "A diver picks a seat and signs the waiver from a link, with no account and no app. An unsigned one shows on the blockers list the night before."
         },
         "manifestHeadCount": {
           "title": "A manifest that is a head count",
-          "body": "The captain checks divers off dive by dive on a phone, working from a copy saved to it before the boat leaves. Roll call keeps going when the signal does not, then checks itself against the live manifest when service returns."
+          "body": "The captain checks divers off dive by dive on a phone, from a copy saved to it before the boat leaves, so the count keeps working with no signal at the ramp."
         }
       },
-      "columnsTitle": "Does your sheet have these columns?",
-      "columnsIntro": "One row per diver, saved as CSV. Your headings do not have to match anything. DiveDay recognizes the common names and flags what it does not.",
+      "columnsTitle": "The columns it reads",
+      "columnsIntro": "One row per diver, saved as CSV. Your headings don’t have to match these; the common names are recognized, and the preview names any it isn’t sure of.",
       "downloadTemplate": "Download the starter template (CSV)",
       "columns": {
         "name": {
@@ -2426,14 +2430,14 @@
         }
       },
       "parallelRunNote": "Keep the sheet going as long as you like. A re-import matches divers by email and updates them instead of duplicating, so the day you stop keeping it is yours to pick.",
-      "closingTitle": "See it before you switch a thing.",
-      "closingDescription": "Walk the live demo as the owner, the captain, or a diver. No sign-up, only the working shop.",
+      "closingTitle": "The demo is the shop your sheet would land in.",
+      "closingDescription": "Open it as the owner, the captain or a diver. No sign-up, and nothing in it is yours to break.",
       "otherSystems": "Switching from other software →"
     },
     "concierge": {
       "eyebrow": "A person does the import with you",
       "title": "We will switch you on, and off, ourselves.",
-      "description": "Send us what you have, whether a clean export or a decade of messy tabs, and we will map the columns and bring your divers in with you, free. If DiveDay is ever the wrong fit, we will help you carry it all back out the same way.",
+      "description": "Send us what you have, whether a clean export or a decade of messy tabs, and we’ll map the columns and bring your divers in with you, free. If DiveDay is ever the wrong fit, we’ll help you carry it all back out the same way.",
       "emailCta": "Email us at {email}"
     }
   },
@@ -2614,12 +2618,12 @@
   "marketing": {
     "home": {
       "eyebrow": "Dive shop software",
-      "heroTitle": "Who is booked, who is cleared, and who is on the boat. One answer, all day.",
-      "heroDescription": "Bookings, waivers, cert checks, trip prep, and the roll call in one calm place. When a diver is not ready, DiveDay says so at the desk, while there is still time to fix it.",
+      "heroTitle": "Four screens from a dive shop’s day, with notes from the person who made them.",
+      "heroDescription": "Booking, the readiness list, roll call and the recap. A diver who isn’t ready is named at the desk, hours before the dock, and every screen runs in the demo shop.",
       "heroPriceLine": "One flat price of {price} {cadence}, and no cut of your bookings.",
-      "phoneFrameLabel": "A captain marking divers boarded on DiveDay’s mobile roll-call screen.",
+      "phoneFrameLabel": "A captain marking divers boarded on DiveDay’s roll-call screen, from the copy saved to the phone.",
       "dockEyebrow": "At the dock",
-      "dockDetail": "Roll-call buttons big enough for wet thumbs, with or without signal.",
+      "dockDetail": "Saved to this phone before the boat left, so the count keeps working with no signal.",
       "tryIt": {
         "lede": "Type your shop and one boat, and this page becomes your first day.",
         "shopLabel": "Your shop",
@@ -2649,48 +2653,68 @@
         "nothingSaved": "Nothing is saved until you open it.",
         "again": "Type it again"
       },
-      "momentsTitle": "The desk clears it in the morning. The captain sees it at the dock.",
+      "momentsTitle": "Four screens, in the order a day runs them.",
       "moments": {
         "diver": {
           "when": "Days before",
-          "title": "A clear way onto the boat",
-          "description": "A diver reads the live schedule, picks a day, and finishes the booking without a call to the shop.",
-          "link": "See a diver’s booking page →",
-          "mockupLabel": "The Blue Mantis public schedule with upcoming dive trips and available places."
+          "title": "The schedule a diver books from",
+          "note1": "Seats left are counted against the boat, live. A full boat says so and takes no more.",
+          "note2": "No sign-in on this page. A diver books, pays, and gets a link to their trip by email.",
+          "note3": "The form after this one asks for wetsuit and BCD sizes, so the counter never has to.",
+          "note4": "It goes on your website as an embed, or lives on ours in your colors.",
+          "door": "Book a seat in the demo →",
+          "mockupLabel": "The Blue Mantis public schedule, two upcoming trips with the seats left on each."
         },
         "frontDesk": {
           "when": "The morning of",
-          "title": "One answer to “are they ready?”",
-          "description": "Waiver, certification, site requirements, payment, and rental fit are settled before the diver reaches the dock. When something cannot be verified, DiveDay says which thing, and the diver stays blocked until it is.",
-          "mockupLabel": "The trip readiness section showing clear diver-ready and diver-blocked states."
+          "title": "The readiness list",
+          "note1": "Each name gets words, never a color on its own. The desk phone is sometimes in sunlight.",
+          "note2": "A blocked name says which thing. Priya’s waiver is unsigned, and Diego’s card is waiting on a staff confirm.",
+          "note3": "There is no “mark everyone ready” button. I left it out on purpose.",
+          "note4": "“Ready to board” is Lena’s whole row. A cleared name gets no further detail.",
+          "door": "Open Today as the owner →",
+          "mockupLabel": "The trip’s readiness list, one diver ready and two blocked, with the reason beside each name."
+        },
+        "dock": {
+          "when": "At the dock",
+          "title": "Roll call, on the captain’s phone",
+          "note1": "Buttons this big so a wet thumb lands on the right name.",
+          "note2": "The three counts come from taps. Boarded reads 4 until a fifth name is tapped.",
+          "note3": "“Offline copy” in the corner means the manifest was saved to the phone. Readiness on it is as of that save.",
+          "note4": "Ready reads 7 of 9 divers. The two names still blocked are cleared ashore, at the desk, never here.",
+          "door": "Open the demo as the captain →",
+          "mockupLabel": "The captain’s roll call: three counts for the boat, then one row per diver with a Mark boarded button."
         },
         "recap": {
           "when": "That evening",
-          "title": "Divers go home with a page to share",
-          "description": "Their dives, a note from the crew, and room for their own photos, with your shop’s name on the page they send their buddy.",
+          "title": "What the diver gets that evening",
+          "note1": "The dive record at the top is the shop’s, written once: boat, crew, site, conditions.",
+          "note2": "The crew’s note is a quote. It is whatever the crew typed, with no template behind it.",
+          "note3": "Your shop’s name is on it, at the top, and it is the diver’s to share.",
+          "note4": "No door here on purpose. This one reaches the diver by email once the boat is back.",
           "mockupLabel": "A diver’s recap page with the day’s dive record, a note from the crew, and one review ask."
         }
       },
-      "productTitle": "Instead of a whiteboard, a clipboard, and three apps that do not talk to each other.",
+      "productTitle": "What the whiteboard, the clipboard and the three apps did, in four groups.",
       "seeFullProduct": "See the full product",
-      "exportTitle": "Bring your records in clean. Keep them useful.",
+      "exportTitle": "How records arrive, and how they leave.",
       "arrivingLabel": "Coming in",
-      "exportDescription1": "The importer shows what comes across and what does not before a single row saves. Or send us the sheet and we will bring your divers in with you, free.",
+      "exportDescription1": "Upload a spreadsheet. Before anything saves, the preview shows what each column became and which rows it will skip. Or email us the file and a person does the import with you, free.",
       "importMockupLabel": "The DiveDay import preview, showing matched columns, ignored columns, counts, and a skipped row.",
       "spreadsheetLink": "Your spreadsheet, column by column →",
       "leavingLabel": "Going out",
-      "exportDescription2": "One ZIP of your shop’s records, ready to download from Settings whenever you need a complete copy. {terms}",
+      "exportDescription2": "The Data export button in Settings downloads one ZIP with all of this in it. {terms}",
       "exportItem1": "Documented CSV files, one per kind of record",
       "exportItem2": "Divers, bookings, waiver records, and payment history",
       "exportItem3": "A contacts file shaped for another system’s import wizard",
       "exportItem4": "A plain-language guide to every file",
-      "guidesLink": "Switching from {competitors}, or something else? Read the guides →",
-      "tryTitle": "See how it feels when the desk and the boat read the same page.",
-      "tryDescription": "The shops that join now shape what gets built. What your crew runs into this season is what gets attention next.",
+      "guidesLink": "Guides for leaving {competitors}, and one for a spreadsheet →",
+      "tryTitle": "What it costs, and the terms.",
+      "tryDescription": "Every staff login is in the price and there is no setup fee. The trial runs three weeks and asks for no card, and the export button is there on the first day.",
       "priceLine": "One flat price of {price} {cadence}, locked for two years for founding shops.",
       "seeIncluded": "See what’s included →",
       "contactTitle": "Ask us first",
-      "contactBody": "Write in with whatever would decide it for you: a question, a doubt, a bad morning at the counter.",
+      "contactBody": "Write in with whatever would decide it for you. A real person reads it.",
       "contactCta": "Email {email}"
     },
     "common": {
@@ -2703,38 +2727,38 @@
     },
     "features": {
       "welcome": {
-        "eyebrow": "Welcome divers well",
-        "title": "From first click to confirmed place on the boat",
-        "summary": "Divers book and pay themselves, from your website or ours, and you can see that the confirmation arrived. No phone tag, and no “did you get my email?”"
+        "eyebrow": "Booking",
+        "title": "A diver books and pays without a phone call",
+        "summary": "The schedule takes the booking, the deposit and the party in one pass, from your site or ours, in the diver’s own language. You can see the confirmation went out."
       },
       "ready": {
-        "eyebrow": "Get ready before the dock",
-        "title": "The paperwork, evidence, and exceptions stay together",
-        "summary": "Waivers, medical answers and certification records arrive from home, so you find the missing one while there is still time to fix it, rather than at the dock with the boat waiting."
+        "eyebrow": "Before the boat",
+        "title": "Waivers, cards and medical answers arrive from home",
+        "summary": "The missing one shows on the readiness list days out, with the name and the thing beside it. A medical answer that needs a physician’s sign-off blocks the diver until it is in."
       },
       "diveDay": {
-        "eyebrow": "Run the dive day",
-        "title": "The counter and the boat read the same thing",
-        "summary": "Rental sizes, site briefings, nitrox and a roll call that keeps working with no signal, so the captain leaves with the head count you cleared."
+        "eyebrow": "On the day",
+        "title": "The counter and the boat read one list",
+        "summary": "Rental sizes, the site briefing, nitrox fills and the roll call all come off the same manifest, so the captain calls the roll against the same list the desk cleared."
       },
       "motion": {
-        "eyebrow": "Keep the shop in motion",
-        "title": "The next handoff is already clear",
-        "summary": "Set the board for the season, put crew on it and take the money, so tomorrow’s shift opens on what happened rather than on what someone remembers."
+        "eyebrow": "The season",
+        "title": "The board, the crew and the money",
+        "summary": "Set the season’s departures once and put crew on them. Payment lands in your own Stripe account, and the close-out writes down what happened so tomorrow opens on it."
       }
     },
     "price": {
       "name": "Founding shop",
       "cadence": "per location / month",
       "item1": "Bookings, courses, waivers, certifications, rental fit, dive sites, nitrox, and the offline-ready manifest",
-      "item2": "Every staff role, from front desk to captain, in one place",
-      "item3": "New features as they ship, all through early access",
-      "item4": "A practice shop preloaded with realistic trips to train on",
-      "item6": "Email support. Write in and hear back from a real person",
+      "item2": "Every staff role, front desk to captain",
+      "item3": "New features as they ship, with no higher tier",
+      "item4": "A practice shop, preloaded with trips, to train new staff on",
+      "item6": "Email support. A real person reads it",
       "item7": "A storefront in your brand and embeds for your own site, or a website we build with you when you ask"
     },
     "export": {
-      "claim": "Settings → Data export downloads one ZIP of plain, documented CSVs (divers, bookings, waiver records, payment history), led by a contacts file shaped for another system’s import wizard. Every stored photo (certification evidence, dive-site pictures, trip recaps) comes as a real file rather than a link.",
+      "claim": "Settings → Data export downloads one ZIP of plain, documented CSVs (divers, bookings, waiver records, payment history), led by a contacts file shaped for another system’s import wizard. Every stored photo (certification evidence, dive-site pictures, trip recaps) is in it as a file.",
       "terms": "No export fee, no support ticket, no minimum stay, and the same download works on the first day of a trial."
     },
     "capabilities": {
@@ -2868,7 +2892,7 @@
       "shared": {
         "cutover": {
           "heading": "Cutover without downtime",
-          "intro": "Leaving a system you have run for years does not have to mean a weekend of downtime.",
+          "intro": "Two systems can run side by side for a trip cycle, so nothing here needs a weekend.",
           "crewFirst": {
             "title": "Let the crew walk their screens first",
             "detail": "The live demo runs the same roles your dock does. Have the captain run a roll call and the desk see who’s not ready before you move a single record."
@@ -2887,18 +2911,18 @@
           },
           "step4": {
             "title": "Budget an afternoon, not a week",
-            "detail": "Exporting from the old system is minutes of work, and the preview shows what will land before anything saves. Review it, fix any flagged rows, and import for real. It takes one sitting."
+            "detail": "Exporting from the old system is minutes of work, and the preview shows what will land before anything saves. Review it, fix any flagged rows, and import for real, all in one sitting."
           },
-          "midSeason": "Mid-season is fine: run DiveDay alongside what you have for a trip cycle, and a second import updates your divers instead of duplicating them. Budget an afternoon."
+          "midSeason": "Mid-season is fine. Run DiveDay beside what you have for one trip cycle, then import again, and the second import updates your divers instead of duplicating them. Budget an afternoon for it."
         },
         "coexist": {
           "item1": {
             "title": "Readiness that stops an unready diver boarding",
-            "detail": "The trip and the dive site decide what each diver needs. If certification evidence or a waiver cannot be verified, DiveDay says which thing and the diver stays blocked. {competitor} takes the booking and never checks whether the diver is cleared to get on the boat."
+            "detail": "The trip and the dive site decide what each diver needs. If nothing on file clears a diver’s certification or waiver, DiveDay names which one and the diver stays blocked. {competitor} takes the booking and never checks whether the diver is cleared to get on the boat."
           },
           "item2": {
             "title": "Certification checks that gate the dive",
-            "detail": "DiveDay gates the dive on certification: a deep dive will not clear a diver without the required certification, and every nitrox fill is re-checked at fill time. Records you enter are verified by staff, and imported records are flagged for a one-tap confirmation."
+            "detail": "DiveDay gates the dive on certification: a site marked deep will not clear a diver without the deep card, and the nitrox card is re-checked every time the prep list is read. Records you enter are verified by staff, and imported records are flagged for a one-tap confirmation."
           },
           "item3": {
             "title": "Native waivers with medical review, in every tier",
@@ -2906,7 +2930,7 @@
           },
           "item4": {
             "title": "A roll-call manifest that survives the dock",
-            "detail": "Big Boarded / Not-boarded buttons for wet thumbs, a head count for every dive, and a manifest the crew saves to the phone so it keeps working after the signal drops at the ramp."
+            "detail": "Big Boarded / Not-boarded buttons for wet hands, a head count for every dive, and a manifest the crew saves to the phone so it keeps working after the signal drops at the ramp."
           },
           "item5": {
             "title": "Rental fit and the trip’s packing list",
@@ -2914,7 +2938,7 @@
           },
           "item6": {
             "title": "The night-before brief and a recap they share",
-            "detail": "Each diver gets a plain-language brief the night before (dock time, conditions, what to bring) and a shareable recap page after. The booking confirmation was the start of the relationship, and this is the rest of it."
+            "detail": "Each diver gets a plain-language brief the night before (dock time, conditions, what to bring) and a shareable recap page after."
           }
         },
         "scopeTable": {
@@ -2986,11 +3010,11 @@
         "metaDescription": "Leaving EVE? A step-by-step guide to exporting your customers and certifications from EVE and bringing them into DiveDay: what comes across, what does not, and why.",
         "heroEyebrow": "Switching to DiveDay",
         "heroTitle": "Moving your shop off EVE",
-        "heroLede": "Years of divers and their certification records are sitting in a database on one back-office PC, and shops report the history is the hard part to pull out cleanly. This guide walks through getting your file out of EVE yourself, with a plain account of what makes the trip and what stays behind.",
+        "heroLede": "Years of divers and their certification records are sitting in a database on one back-office PC, and shops report the history is the hard part to pull out cleanly. This guide is the export, step by step, then the table of what comes across and what stays in EVE.",
         "context": {
           "item1": "EVE (from Integrated Scuba Systems) is the desktop shop-management system PADI retailers ran for years, and DiveShop360 acquired it in 2023. If you are planning a move off it, this guide covers the practical part: getting your people and their certification records out of EVE and into DiveDay.",
           "item2": "The part that makes leaving feel risky is real. EVE stores its data in a database on your own PC, and shops report that years of booking history can be hard to pull out cleanly. DiveDay brings over your roster, certification records, rental sizes, and, through the separate gear-history CSV, your tagged fleet’s dated service records, so your people and equipment are ready from the first booking.",
-          "item3": "You export your own file from your own EVE install. DiveDay never logs into EVE and never reaches across to another system to pull your data. It is your data to hand us."
+          "item3": "You export your own file from your own EVE install. DiveDay never logs into EVE and never reaches across to another system to pull your data."
         },
         "exportHeading": "Get your data out of EVE",
         "exportIntro": "EVE runs on Windows, so this happens on the back-office PC where it’s installed, not on a website. The goal is a spreadsheet of your customers and their certification records. Menu labels shifted across EVE versions, so treat these as the shape of the path, not word-for-word buttons.",
@@ -3021,7 +3045,7 @@
           }
         },
         "exportNotes": {
-          "note1": "Do this while your EVE install still opens and your license is active. A working export today beats chasing it later.",
+          "note1": "Do this while your EVE install still opens and your license is active; an export you can run today is the one to keep.",
           "note2": "Your column headings do not have to match anything. DiveDay recognizes the common names EVE and every other system use, and shows you how each column mapped before you commit.",
           "note3": "If EVE will give you a sales or booking report as well, take it. A file with one row per booking brings your regulars’ visit history across, so a fifteen-year customer does not arrive looking brand new. Register receipts and repair tickets stay in EVE; see the scope table below."
         }
@@ -3032,11 +3056,11 @@
         "metaDescription": "Leaving DiveShop360? A step-by-step guide to exporting your customers and certification data as CSV and bringing them into DiveDay: what comes across, what does not, and why.",
         "heroEyebrow": "Switching to DiveDay",
         "heroTitle": "Moving your shop off DiveShop360",
-        "heroLede": "Your customers and their certification records live in DiveShop360’s cloud, and the way out is the four CSVs its own FAQ names, downloaded one at a time (no bulk export, no API). You need two of them. This guide covers the path, with a plain account of what makes the trip and what stays behind.",
+        "heroLede": "Your customers and their certification records live in DiveShop360’s cloud, and the way out is the four CSVs its own FAQ names, downloaded one at a time (no bulk export, no API). You need two of them. This guide is the path, then the table of what comes across and what stays in DiveShop360.",
         "context": {
           "item1": "DiveShop360 grew out of a retail point-of-sale system, and that is where it is strongest: registers, inventory, vendor catalogs. Its own FAQ names four CSV exports: customers, inventory, sales reports, and certification data. A move to DiveDay needs two of them, customers and certification data.",
           "item2": "DiveDay does not replace your point of sale. It runs the water: bookings, readiness, the boat. Bring your POS and DiveDay runs the dive day, which is why we only ask for the customer and certification files.",
-          "item3": "You export your own CSV from your own DiveShop360 account. DiveDay never signs into DiveShop360 and never reaches across to pull your data. It is your data to hand us."
+          "item3": "You export your own CSV from your own DiveShop360 account. DiveDay never signs into DiveShop360 and never reaches across to pull your data."
         },
         "exportHeading": "Get your data out of DiveShop360",
         "exportIntro": "DiveShop360 runs in a browser, and exports come from the back-office admin rather than the register. You want two CSVs, customers and certification data. There is no public API or bulk export, so it is a manual download one dataset at a time, and menu labels shift between versions.",
@@ -3067,7 +3091,7 @@
           }
         },
         "exportNotes": {
-          "note1": "Manual CSV, one dataset at a time, is a limit of DiveShop360 (no API, no bulk export, no webhooks), not of DiveDay. Doing it yourself from the admin is the whole path.",
+          "note1": "Manual CSV, one dataset at a time, is DiveShop360’s limit (no API, no bulk export, no webhooks). Doing it yourself from the admin is the only path, and it is enough.",
           "note2": "Your column headings do not have to match anything. DiveDay recognizes the common names DiveShop360 and every other system use, and shows you how each column mapped before you commit.",
           "note3": "If you can also export a booking or sales report, bring it. One row per booking becomes your divers’ visit history here. Retail receipts, repair tickets, and your e-commerce site stay in DiveShop360; see the scope table below."
         },
@@ -3084,7 +3108,7 @@
           "item1": "Smartwaiver does one thing, digital waivers, and some shops reach it because their booking system (DiveShop360 among them) outsources waivers to it. DiveDay’s waivers are native and in every tier, so moving off means bringing the people across and telling DiveDay which of them already have a waiver on file.",
           "item2": "The people migrate cleanly: a Smartwaiver participant export carries names, email, phone, and often an emergency contact, which is the roster you need. What it does not hold is certification records or rental sizes, because a waiver system is not where those live.",
           "item3": "If a row in your export marks a diver’s waiver as already accepted, DiveDay’s importer trusts that and brings the waiver across too, marked imported, dated to the acceptance date in your file, and satisfying the boarding gate without asking the diver to sign again. It is not a copy of the signed Smartwaiver PDF itself (that stays in Smartwaiver, or you can attach a saved copy of it during import). It is your prior acceptance, carried forward.",
-          "item4": "You export your own participant CSV from your own Smartwaiver account. DiveDay never signs into Smartwaiver and never reaches across to pull your data. It is your data to hand us."
+          "item4": "You export your own participant CSV from your own Smartwaiver account. DiveDay never signs into Smartwaiver and never reaches across to pull your data."
         },
         "exportHeading": "Get your data out of Smartwaiver",
         "exportIntro": "Smartwaiver runs in a browser. The goal is a participant CSV, the people who signed your waivers. Menu labels shift over time, so treat these as the shape of the path rather than word-for-word buttons.",
@@ -3134,7 +3158,7 @@
         },
         "website": {
           "heading": "Leaving FareHarbor does not mean rebuilding your site.",
-          "intro": "Every button, frame and link you pasted from it has a twin here, in your colours and your typeface, and the diver never leaves your brand.",
+          "intro": "Every button, frame and link you pasted from it has a twin here, in your colours and your typeface.",
           "rows": {
             "row1": {
               "theirs": "Book Now button",
@@ -3262,229 +3286,273 @@
       }
     },
     "about": {
-      "eyebrow": "Who we are",
-      "heroTitle": "Your season doesn’t hang on us.",
+      "eyebrow": "The people behind it",
+      "heroTitle": "Who am I dealing with",
       "phoneFrameLabel": "A captain running roll call in DiveDay from the phone’s offline copy.",
-      "heroDescription": "Payments run through your own Stripe account, your records download as one ZIP any day, and roll call works on a phone with no signal. Divers build DiveDay, and everything below is something you can go and try in the next few minutes.",
+      "heroDescription": "Two of us, both divers, and I write the code. Before you read any further: the parts your season would hang on don’t hang on us. Payments run through your own Stripe account, your records come out as a ZIP any day you like, and roll call runs on a phone with no signal. Everything on this page is something you can check in the demo before you write to anyone.",
       "founderEyebrow": "From the founder",
-      "founderTitle": "Why this exists.",
-      "founderP1": "A dive shop owner walked me through an ordinary day: a whiteboard, a clipboard, a hand-updated spreadsheet, and a few apps that do not talk to each other. He was paying for it twice, once in software and again in the hours it pulled from his divers.",
-      "founderP2": "Most shops run on software nobody built for them. It was made for a back office, and the dock is wet, bright, and in a hurry. Shops keep the whiteboard and the clipboard because paper never crashes, never logs you out, and never needs five taps with wet hands.",
-      "founderP3": "DiveDay is built from watching how a boat day runs: fast, clear, and forgiving enough that a crew reaches for it without being told to.",
+      "founderTitle": "Why did you build this",
+      "founderP1": "A dive shop owner walked me through his ordinary day. A whiteboard, a clipboard, a spreadsheet somebody updates by hand, and a handful of apps that don’t talk to each other. He was paying for all of it twice: once in software, and again in the hours it ate out of his crew’s day.",
+      "founderP2": "I’m a software engineer. I’ve worked on Google Maps, helped build a biotech company that went public, and these days I work on self-driving cars, and I’d never seen a business run on so much software nobody built for it. What those shops pay for was made for a back office, and the dock is wet, bright and in a hurry. The whiteboard stays because it has never once crashed on anybody. That’s the bar. If the crew would still rather reach for the marker, the screen isn’t good enough yet.",
+      "founderP3": "The other person here, also a diver, does the legal and the outreach, and I do the rest. DiveDay is what came out of watching how a boat day runs and building for the eight-in-the-morning version of it instead of the office version.",
       "runEyebrow": "How it’s run",
-      "runTitle": "Straightforward pricing. Real support.",
-      "runP1": "Write in about a bad morning at the counter, a bug, or a question. A real person reads it and helps. There is no form that asks for a screenshot before anyone looks.",
-      "runP2": "Pricing works the same way: all of it is on one page, and you can read every line without talking to anyone here first.",
+      "runTitle": "What happens when something breaks at seven in the morning",
+      "runP1": "You write in and a real person reads it. There’s no form that wants a screenshot before anyone will look, and nobody’s going to ask if you’ve tried turning it off and on again. Tell us what the counter looked like.",
+      "runP2": "Pricing works the same way. All of it’s on one page, and you can read every line without talking to anyone here first.",
       "emailCta": "Email {email}",
       "seeCost": "One flat {price} {cadence}. See the full list",
       "seeProduct": "See what it does →",
-      "rulesEyebrow": "What we hold it to",
-      "rulesTitle": "Four rules, and you can check every one.",
-      "rulesDescription": "Each one is something you can go and do in the demo today.",
+      "rulesEyebrow": "The rules",
+      "rulesTitle": "How do I know any of that’s true",
+      "rulesDescription": "Look, you don’t have to take it from me. These are the four rules we build to, and under each one is the thing to go and do in the demo. Ten minutes covers all four of them.",
       "rules": {
         "survivesDock": {
           "title": "It has to survive the dock.",
-          "body": "Wet hands, bright sun, one bar of signal, a boat that is already late. A screen that only works sitting down in an office is not finished.",
+          "body": "Wet hands, bright sun, one bar of signal and a boat that’s already late. If a screen only works sitting down in an office, it isn’t done, and I’ve thrown out a few that weren’t.",
           "check": "save a manifest to your phone, turn the network off, and run roll call anyway."
         },
         "noSilentPasses": {
           "title": "No silent passes.",
-          "body": "Software that waves a diver through because a field was blank is worse than paper. When DiveDay cannot verify something, it stops and says which thing.",
+          "body": "Software that waves a diver through because a field was blank is worse than paper. When nothing on file clears a diver, DiveDay stops and tells you which thing, and it would rather annoy your desk than let someone on the boat it can’t vouch for.",
           "check": "open the blockers queue and read why each name is on it."
         },
         "onePrice": {
           "title": "One price, no seats.",
-          "body": "Everything the product does is in the price. There is no tier holding back the feature you need, and nobody here is paid to sell you more of it.",
+          "body": "Everything it does is in the price. There’s no tier holding back the one thing you need, and nobody here gets paid to sell you more of it.",
           "check": "read the pricing page. It’s one number and one list."
         },
         "yourRecords": {
           "title": "Your records are yours.",
-          "body": "The export is ready from day one of a trial. One button gives your shop documented files you can use anywhere.",
+          "body": "The export button works on the first day of a trial, before you’ve typed a single diver in. It gives you documented files you can open anywhere, and nobody has to approve it first.",
           "check": "start a trial and download the ZIP before you’ve entered anything."
         }
       },
-      "plainlyEyebrow": "Know this first",
-      "plainlyTitle": "Three facts before you move a season of bookings.",
-      "plainlyDescription": "You would find them out anyway. Better now than after the move.",
+      "plainlyEyebrow": "The catch",
+      "plainlyTitle": "What’s the catch",
+      "plainlyDescription": "Three things, and you’d find all of them out inside a month anyway. Better from me now than from your crew in August.",
       "truths": {
         "new": {
           "title": "DiveDay is new.",
-          "body": "You would be among the first shops on it. That is why the demo is a working shop instead of a sales call, and why the export button works on your first day."
+          "body": "You’d be one of the first shops on it. That’s why the demo is a whole working shop instead of a sales call, and why the export button works on your first day: if it’s wrong for you, you leave with your spreadsheets and we’ve cost you an afternoon."
         },
         "notEverything": {
           "title": "It doesn’t do everything.",
-          "body": "No retail register and no agency sync. Those are real jobs for the tools your shop already trusts, and DiveDay stays on the water side."
+          "body": "No retail register and no agency sync. Keep the till you’ve got. A cert check here is your staff looking at the card and tapping confirm, and DiveDay stays on the water side of the shop."
         },
         "stillMoving": {
           "title": "It’s still moving.",
-          "body": "Shops that join now steer what gets built next. What your crew hits this season is what gets attention. The trade is a product that bends toward your shop while it is still changing under you."
+          "body": "Shops that join now steer what gets built next, and what your crew hits this season is what I work on. The trade is a product that bends toward your shop while it’s still changing under you, and I won’t pretend that second part is free."
         }
       },
-      "leaveEyebrow": "From day one",
-      "leaveTitle": "Month to month, and the export is one button.",
-      "leaveP1": "These are the records that get your divers on a boat. This is how they stay useful to your team and how our people help you bring them across.",
-      "leaveP2": "{terms} If you are bringing over an existing export or spreadsheet, a person will sit with it and bring your divers across with you.",
+      "leaveEyebrow": "The exit",
+      "leaveTitle": "What happens to my records if I leave",
+      "leaveP1": "They’re yours, and they’re the ones that get your divers on a boat, so nothing about the plan is built to keep hold of them. The whole of the terms fits in three lines, and the short version is that you can go on any day of the month and take your records with you.",
+      "leaveP2": "{terms} And if you’re bringing over an export or a spreadsheet from somewhere else, a person here sits with it and brings your divers across with you.",
       "switchingLink": "How switching works, both directions →",
       "whereLiveLabel": "Where your records live",
-      "whereLiveValue": "On servers in the United States, in a download you can take at any time, and in an optional weekly delivery to storage your shop owns.",
+      "whereLiveValue": "On servers in the United States, in a download you can take whenever you like, and, if you turn it on, in a weekly copy delivered to storage your shop owns.",
       "committingLabel": "How the plan works",
-      "committingValue": "Month to month, per location, with your records exportable from day one. No setup fee and no annual contract.",
+      "committingValue": "Month to month, per location. No setup fee and no annual contract.",
       "whoAnswersLabel": "Who answers you",
-      "whoAnswersValue": "A real person on the DiveDay team. Email {email} anytime.",
-      "closingTitle": "The best way to judge any of this is to go and use it.",
-      "closingDescription": "No call and no form first. Walk a full sample shop as the owner, the captain, or a diver, and decide whether your crew would open it on a busy morning."
+      "whoAnswersValue": "A real person on the DiveDay team. Email {email} whenever you like.",
+      "closingTitle": "Alright, how do I try it",
+      "closingDescription": "No call and no form. Open the sample shop as the owner, the captain or a diver, walk a whole day in it, and decide whether your crew would reach for it on a busy morning."
     },
     "product": {
       "eyebrow": "The product",
-      "heroTitle": "From the first booking to the last head count.",
-      "heroDescription": "Every booking, waiver, certification, payment, and head count stays attached to the trip it belongs to, so nothing gets asked twice and nothing gets missed once.",
+      "heroTitle": "The day, one screen at a time, with a note on each.",
+      "heroDescription": "Five screens, in the order a trip runs them: booking, readiness, the night before, the dock, the recap. Each note points at one thing and says why it is there.",
       "arcTitle": "One dive day",
       "bookingEyebrow": "Days before",
-      "bookingTitle": "Divers book themselves. The boat cannot be oversold.",
-      "bookingDescription": "The public schedule takes the booking, the deposit, and the whole party in one pass, from your own website and in the visitor’s own language.",
-      "bookingPoint1": "Book for the whole party in one go, or as a gift for someone else.",
-      "bookingPoint2": "Discount codes shop-wide, or a last-minute deal on one under-booked boat.",
-      "bookingPoint3": "Divers share their sizes and gear needs before they ever reach the counter.",
-      "bookingPoint4": "In your own brand, or on a website we build with you when you ask.",
+      "bookingTitle": "The schedule takes the booking, and the boat cannot be oversold.",
+      "bookingNote1": "The seat count comes off the boat’s capacity, so a full boat takes no more bookings.",
+      "bookingNote2": "One booking can cover a party, or be a gift for someone else.",
+      "bookingNote3": "A discount code works shop-wide. A last-minute deal is one price on one under-booked boat.",
+      "bookingNote4": "The booking form after this page asks for sizes, and they land on the prep list.",
+      "bookingNote5": "Your brand, on your site or ours. A person here builds the website with you when asked.",
       "bookingMockupLabel": "The public DiveDay schedule a diver books from.",
       "readinessEyebrow": "Before departure",
-      "readinessTitle": "One readiness answer, shared everywhere it matters.",
-      "readinessDescription": "The front desk sees why a diver is blocked. The captain sees the same answer on the manifest. No one has to guess whether a missing waiver or pending certification is okay to ignore.",
-      "readinessStep1": "The trip and the dive site decide what each diver needs.",
-      "readinessStep2": "If something cannot be verified, DiveDay says which thing and the diver stays blocked.",
-      "readinessStep3": "Staff fix the problem at the desk, not at the dock.",
+      "readinessTitle": "One readiness list, and the desk and the dock read the same one.",
+      "readinessNote1": "The trip and the dive site decide what each diver needs. A site you mark deep asks for the deep card.",
+      "readinessNote2": "When one thing on file does not clear a diver, the list says which thing, and the name stays blocked.",
+      "readinessNote3": "The fix happens at the desk, while there is still time. The dock only reads the answer.",
       "readinessMockupLabel": "The DiveDay readiness section used by a dive shop’s front desk.",
       "nightBeforeEyebrow": "The night before",
-      "prepTitle": "A prep list for the crew and a plain-words brief for the diver.",
+      "prepTitle": "Two screens the night before: the crew’s prep list and the diver’s brief.",
       "prepShopLabel": "At the shop",
       "prepShopTitle": "A prep list written from the divers’ own sizes",
-      "prepShopBody": "Every diver’s rental sizes land on the trip’s prep list, so the boat is packed without a clipboard.",
+      "prepShopBody": "Twelve divers, five rental kits, twenty-four tanks, counted off the manifest. The sizes are the ones divers typed when they booked.",
       "prepShopMockupLabel": "A dive shop’s trip prep staging list showing rental kit allocations, tank fills, and crew assignments.",
       "prepDiverLabel": "On the diver’s phone",
       "nightBeforeTitle": "A brief in plain words",
-      "nightBeforeBody": "When to be at the dock, what the water looks like, what to pack, and who to text if something changes, written for someone’s first boat dive.",
+      "nightBeforeBody": "Arrival time, the water and the forecast, and a checklist with the waiver, card and payment ticked. Written for someone’s first boat dive.",
       "nightBeforeMockupLabel": "A diver’s pre-trip briefing page showing arrival times, weather conditions, and readiness checklist status.",
       "dockEyebrow": "At the dock",
-      "dockTitle": "A manifest that stays useful after the signal disappears.",
-      "dockDescription": "Big phone controls, head counts for every dive, blockers that can’t be ignored, a boarding history that keeps every correction, and a print view from the same manifest.",
-      "dockNote": "The crew saves the manifest to their phone before leaving the dock. Anything marked offline stays labeled until DiveDay is back in service, and nothing is ever overwritten.",
+      "dockTitle": "The manifest, on a phone with no signal.",
+      "dockNote1": "A roll call for every dive, kept apart, so the second dive does not inherit the first.",
+      "dockNote2": "Ready 7, Divers 9: two names are blocked, and a blocked name gets no Mark boarded button.",
+      "dockNote3": "Mark boarded is the only verb on the screen. There is no “mark all” and no swipe.",
+      "dockNote4": "The print view comes off this same manifest.",
+      "dockNote": "The crew saves the manifest to the phone before leaving the dock. Anything tapped with no signal is labeled that way until DiveDay is back in service, and a tap the live record has moved past comes back marked refused rather than written over.",
       "captainPhoneLabel": "A captain using the mobile roll-call view in DiveDay.",
       "recapEyebrow": "After the boat is back",
-      "recapTitle": "The day ends with a recap divers share.",
-      "recapDescription": "After the trip, each diver gets their own page to keep and share, and the shop gets remembered.",
+      "recapTitle": "The recap, on the diver’s phone that evening.",
+      "recapNote1": "The record at the top is the shop’s, written once: boat, crew, site and conditions.",
+      "recapNote2": "The crew’s note is a quote, in whatever words the crew typed.",
+      "recapNote3": "“How was your day?” is the one button on it. The photo and tip links are left out of this drawing.",
+      "recapNote4": "It carries the shop’s name, and it is the diver’s to share.",
       "recapMockupLabel": "A diver’s post-trip recap page with the day’s dive record, a note from the crew, and one review ask.",
-      "afterTripBody": "The sites they dived, a shout-out from the crew, and room for their own photos, with a nudge to bring a buddy next time.",
       "paymentEyebrow": "Getting paid",
       "paymentTitle": "The money runs through your own Stripe account.",
       "paymentDescription": "Divers pay at booking, or leave a deposit and settle at the dock. Staff invoice a trip, course, rental, nitrox, or retail line. Cancel inside the published window and the refund is automatic.",
-      "yourAccountTitle": "Your account, your money",
-      "yourAccountBody": "Payouts, disputes, and history stay in the Stripe account you already control, and there is no per-booking cut on top of the flat price.",
-      "pricedTitle": "Priced before they board",
-      "pricedBody": "Payment is part of the same readiness answer as the waiver and the certification. Nobody boards on an assumption that someone else already settled up.",
-      "pricingLink": "One flat {price} {cadence}. See everything it covers →",
-      "boxEyebrow": "Everything in the box",
+      "yourAccountTitle": "The account is yours",
+      "yourAccountBody": "Payouts, disputes and history sit in the Stripe account you already hold. There is no per-booking cut on top of the flat price.",
+      "pricedTitle": "Paid before they board",
+      "pricedBody": "Payment is on the same readiness list as the waiver and the card, so nobody boards on someone else’s assumption.",
+      "pricingLink": "One flat {price} {cadence}. The pricing page lists what it covers →",
+      "boxEyebrow": "The full list",
       "boxTitle": "Every shipped workflow, in one list.",
-      "boxDescription": "No tiers, no add-ons, and nothing held back for a bigger plan. Every one of these {count, plural, one {# line} other {# lines}} is something you can go and do in the live demo right now.",
+      "boxDescription": "There is one plan, and all {count, plural, one {# line} other {# lines}} are in it. Each one runs in the live demo today.",
       "boxGroupCount": "{count, plural, one {# workflow} other {# workflows}}",
-      "noEyebrow": "A focused product",
+      "noEyebrow": "Not in it",
       "noTitle": "What DiveDay doesn’t do.",
-      "noDescription": "Every product has an edge. Better you hear about ours now than find it in your second week.",
-      "leavingNote": "Your shop’s records stay usable from day one: download the complete set in one ZIP whenever you need it. {terms}",
+      "noDescription": "Three jobs it does not do, and the tool that should keep doing them.",
+      "leavingNote": "Settings has a Data export button that downloads your shop’s records as a single ZIP, on any day. {terms}",
       "notCovered": {
         "pos": {
           "title": "A retail point of sale",
-          "detail": "Keep the register you have. An order can carry a retail line, but there is no barcode scanner or stock count. DiveDay runs the water side of the shop."
+          "detail": "Keep the register you have. An order here can carry a retail line, but there is no scanner and no stock count."
         },
         "workOrders": {
           "title": "A repair shop",
-          "detail": "Keep whatever tracks your workshop today. DiveDay does not run repair tickets, parts, or labor. It tracks what a diver rents from you."
+          "detail": "Keep whatever tracks your workshop today. DiveDay runs no repair tickets, parts or labor. It tracks what a diver rents from you."
         },
         "agencyLine": {
           "title": "A live line to PADI or SSI",
-          "detail": "No agency lets software verify a certification automatically. Staff check the record with the agency and mark it certified themselves."
+          "detail": "DiveDay connects to no agency. Staff check the record with the agency and mark it certified themselves."
         }
       },
-      "closingTitle": "Try it as the person doing the work.",
-      "closingDescription": "Walk the live demo as the owner, the captain, or a diver, then start a trial shop of your own.",
+      "closingTitle": "The demo is the sample shop from the screens above.",
+      "closingDescription": "A switcher inside it moves you between the owner, the crew and a diver. A trial shop of your own starts empty.",
       "spreadsheetLink": "See how DiveDay reads your spreadsheet →"
     },
     "pricing": {
-      "heroTitle": "One flat price for the whole shop.",
-      "heroDescription": "There is no setup fee, no per-seat charge, no feature tier, and no cut of your bookings.",
-      "heroSafetyNote": "The safety workflow is never an add-on.",
+      "heroTitle": "What a shop pays, line by line.",
       "lockNote": "Today’s price, locked for two years for founding shops.",
       "trialNote": "The trial is a shop of your own: free for 3 weeks, no card, and nothing switches off when the window ends.",
       "earlyAccessBadge": "Early access",
+      "invoice": {
+        "title": "The invoice",
+        "setup": {
+          "label": "Setup",
+          "value": "None"
+        },
+        "logins": {
+          "label": "Staff logins",
+          "value": "All of them"
+        },
+        "tiers": {
+          "label": "Feature tiers",
+          "value": "One plan"
+        },
+        "cut": {
+          "label": "Cut of your bookings",
+          "value": "None"
+        },
+        "cards": {
+          "label": "Card processing",
+          "value": "Stripe’s fee, paid to Stripe"
+        },
+        "contract": {
+          "label": "Contract",
+          "value": "Month to month"
+        },
+        "trial": {
+          "label": "Trial",
+          "value": "3 weeks, no card"
+        },
+        "leaving": {
+          "label": "Leaving",
+          "value": "A ZIP from Settings, any day"
+        }
+      },
+      "notes": {
+        "title": "Notes on the invoice",
+        "note1": "Every staff login is in the price, front desk to captain. Nothing is counted per seat.",
+        "note2": "Waivers, medical review and the cert gate are in the price. None of it is an add-on.",
+        "note3": "Card fees are Stripe’s and go to Stripe. The money never sits with us.",
+        "note4": "I wrote the trial to switch nothing off on day 22. What you build in it keeps working."
+      },
       "feesNote": "Payment-processing fees stay between you and your payment provider.",
       "includedLead": "What the price covers",
+      "seeFullList": "The full list is on the product page →",
       "feeAnchor": {
-        "title": "A flat price beside a cut of every seat you sell.",
-        "body": "If your bookings run through a channel today, you have already done this math: the busier the season, the bigger the cut. This is how two of those channels describe their own pricing, next to DiveDay’s flat shop price.",
+        "title": "What two booking channels charge, in their own words.",
+        "body": "Both rows are the channel’s own published terms, cited on its switching guide. Nothing here is a figure for what any shop pays in practice.",
         "rezdy": "{competitor}’s pricing is a monthly subscription plus 3% of every online booking.",
-        "fareharbor": "{competitor} publishes no rate at all. Nothing monthly. Instead, a fee on every booking, added to your guest’s checkout price, for as long as you use it. Third parties report that fee at around 6%.",
-        "ours": "DiveDay takes no cut of a booking. Checkout runs through your own Stripe account, and what you pay us is the price above, the same number in a busy August as in a quiet January.",
+        "fareharbor": "{competitor} publishes no rate at all. There is no monthly charge. Instead a fee on every booking is added to your guest’s checkout price for as long as you use it, and third parties report that fee at around 6%.",
+        "ours": "DiveDay takes no cut of a booking. What you pay is the number above, in August and in January.",
         "sourcesNote": "Both descriptions come from the switching guides, where each one is cited to the incumbent’s own pages.",
         "guideLink": "What moving off {competitor} looks like →"
       },
       "dataExit": {
         "eyebrow": "Your records",
         "title": "What happens to my records if I leave?",
-        "body": "Every diver, booking, signed waiver and payment history, as documented CSVs, plus every photo the shop stored as a real file rather than a link. One ZIP, downloaded by the shop’s owner from Settings, on any day including the first day of a trial.",
-        "securityNote": "The only things held back from your shop’s records are credentials: passwords and device push keys, which no other system could use anyway.",
+        "body": "Divers, bookings, signed waivers and payment history as documented CSVs, and every stored photo as a file. One ZIP, downloaded from Settings on any day, the first day of a trial included.",
+        "securityNote": "What is held back from your shop’s records is credentials: passwords and device push keys, which no other system could use.",
         "mockupLabel": "The Data export screen in DiveDay, listing the bundle’s files with a row count for each and the account credentials that stay protected"
       },
-      "seeFullList": "See everything it does, in detail →",
-      "faqTitle": "The questions that decide it.",
+      "faqTitle": "The questions owners ask first.",
       "faq": {
         "billing": {
           "question": "How does billing work?",
-          "answer": "Month to month, per location. Your records are exportable from day one, with no setup fee and no annual contract."
+          "answer": "Month to month, per location, with no setup fee and no annual contract. The export works on the first day."
         },
         "crewSize": {
           "question": "Do I pay more as my crew grows?",
-          "answer": "No. The price is per location, whoever is on the schedule. Front desk, instructors, divemasters, captains and crew all get their own login at no extra cost. Divers never need an account at all: they book on your shop’s pages and open their own trip from a link."
+          "answer": "No. The price is per location, whoever is on the schedule: front desk, instructors, divemasters, captains and crew each get a login. Divers never need an account. They book on your shop’s pages and open their trip from a link."
         },
         "trialMeaning": {
           "question": "What does “trial” mean right now?",
-          "answer": "What you set up keeps working when the window ends, so if your season is months out, nothing is lost by building the board now. Starting a shop is free for 3 weeks with no card required. When you are ready to move to paid, email {email}."
+          "answer": "What you set up keeps working after the window ends, so a shop whose season is months out loses nothing by building the board now. The trial is free for 3 weeks with no card. To move to paid, email {email}."
         },
         "seeBefore": {
           "question": "Can I see it before I commit?",
-          "answer": "Yes. The live demo is a shop already full of sample trips. Walk the day as the owner, an instructor, a divemaster, the captain, or a diver. A trial shop of your own starts empty, ready for your first trip."
+          "answer": "Yes. The live demo is a sample shop with trips already on the board, and a switcher inside it moves you between the owner, an instructor, a divemaster, the captain and a diver. A trial shop of your own starts empty."
         },
         "setupTime": {
           "question": "How long does setup take?",
-          "answer": "Six fields: your shop’s name, its web address, its timezone, then your own name, email and password. The shop exists the moment you submit it, ready for its first trip. Bringing a spreadsheet of divers across is its own step."
+          "answer": "Six fields: your shop’s name, its web address, its timezone, then your own name, email and password. The shop exists the moment you submit it. Bringing a spreadsheet of divers across is its own step."
         },
         "dataIfNotWorking": {
           "question": "How do I access my shop’s records?",
-          "answer": "Your shop’s records are ready from day one. {claim} {terms}"
+          "answer": "Any day, from Settings. {claim} {terms}"
         },
         "switching": {
           "question": "What does switching to DiveDay involve?",
-          "answer": "Export a spreadsheet of customers from your current system. DiveDay’s importer brings in your divers, certification records, and rental sizes, and shows what will happen before anything is saved. Step-by-step guides cover {competitors}.",
+          "answer": "Export a spreadsheet of customers from your current system. DiveDay’s importer brings in your divers, certification records and rental sizes, and shows what will happen before anything is saved. Guides cover {competitors}.",
           "guidesLink": "Browse the switching guides →"
         },
         "agency": {
           "question": "Does DiveDay connect to PADI or SSI?",
-          "answer": "No agency lets software verify a certification automatically, so DiveDay does not pretend to. Certification evidence goes on the diver’s profile once, staff confirm it with the agency, and it stays with them for good. Courses arrive as your shop’s copy of the agency catalog, and you set prices and visibility."
+          "answer": "DiveDay connects to no agency. Certification evidence goes on the diver’s profile once, staff check it with the agency and confirm it, and it stays with them for good. Courses arrive as your shop’s copy of the agency catalog, and you set prices and visibility."
         },
         "pos": {
           "question": "Does DiveDay replace my POS?",
-          "answer": "No. Keep your register. DiveDay runs the water side: bookings, courses, readiness, prep, and the boat, paid through your own Stripe account. You can add a retail line to an order, but there is no register or stock count here."
+          "answer": "No. Keep your register. DiveDay runs bookings, courses, readiness, prep and the boat, paid through your own Stripe account. An order can carry a retail line, and there is no register or stock count."
         },
         "whyFounding": {
           "question": "Why be a founding shop?",
-          "answer": "Early shops steer what ships next: what your crew runs into is what gets built. Founding shops also lock in today’s price for two years, and every new feature lands in the one plan there is, with no higher tier to move things into."
+          "answer": "Founding shops keep today’s price for two years. What your crew runs into this season is what gets built next, and every feature lands in the one plan."
         },
         "multipleLocations": {
           "question": "What about multiple locations?",
-          "answer": "Each DiveDay shop runs one location today. If you operate more than one, email {email}. We would rather build that with you than pretend it is already here."
+          "answer": "Each DiveDay shop runs one location today. If you run more than one, email {email}."
         }
       },
       "closingTitle": "That is the full price.",
-      "closingBody": "{price} {cadence}. Your records stay exportable from day one, with no annual contract.",
-      "stillQuestion": "Still have a question? A real person reads every one.",
+      "closingBody": "{price} {cadence}, month to month, and the export works on any day.",
+      "stillQuestion": "Anything this page did not answer, email it. A real person reads it.",
       "emailCta": "Email {email}"
     },
     "privacy": {
@@ -3497,7 +3565,7 @@
         "shopTerm": "With a dive shop",
         "shopBody": "we are the software they run their business on. Their staff hold accounts with us, and we hold what they put in.",
         "diverTerm": "With a shop’s divers",
-        "diverBody": "we hold data on the shop’s instruction. A waiver, medical answers and certification evidence are the shop’s records, in the shop’s own tenant. We do not sell them, do not train anything on them, and never move them between shops. A diver wanting to see or delete their record should ask their shop, which can do both from inside DiveDay."
+        "diverBody": "we hold data on the shop’s instruction. A waiver, medical answers and certification evidence are the shop’s records, in the shop’s own tenant. They are not sold or used to train anything, and they never move between shops. A diver wanting to see or delete their record should ask their shop, which can do both from inside DiveDay."
       },
       "collect": {
         "heading": "What is stored",
@@ -3540,7 +3608,7 @@
       },
       "links": {
         "heading": "Links that work as keys",
-        "body": "Some of what DiveDay sends is a link that needs no password: the waiver a diver signs, their trip-prep page, the recap after a dive. Holding the link is the permission, so it can be opened on a dock with one hand free. Those links are treated as credentials throughout: the token is removed before a page view is recorded, before an error is reported, and before any line reaches a log. They expire, and a shop can invalidate one."
+        "body": "Some of what DiveDay sends is a link that needs no password: the waiver a diver signs, their trip-prep page, the recap after a dive. Holding the link is the permission, so it can be opened on a dock with one hand free. Those links are treated as credentials throughout: the token is removed before a page view is recorded or an error reported, and before any line reaches a log. They expire, and a shop can invalidate one."
       },
       "keep": {
         "heading": "How long it is kept",
@@ -3569,7 +3637,7 @@
       },
       "open": {
         "heading": "What this page does not yet say",
-        "body": "DiveDay is in early access and some of this is unsettled: the retention period for waivers and medical answers, and the formal data-processing terms a shop signs. Rather than publish a policy that reads complete and is not, those are named here as open. Nothing above is aspirational. It describes what the code does today."
+        "body": "DiveDay is in early access and some of this is unsettled: the retention period for waivers and medical answers, and the formal data-processing terms a shop signs. Rather than publish a policy that reads complete and is not, those are named here as open. The rest of the page describes what the code does today, and none of it is a plan."
       }
     },
     "status": {
@@ -3597,14 +3665,14 @@
       "intro": "Plain terms for an early-access product: how DiveDay is meant to be used, what we do and do not promise, and what happens when a shop wants to leave.",
       "what": {
         "heading": "What DiveDay is",
-        "body": "Software a dive shop uses to run bookings, waivers, certification checks, trip prep and boat manifests. It is a tool the shop operates, not a service that operates the shop. Every judgement that matters on a dock (whether a diver is fit to dive, whether a certification is genuine, whether a boat should sail) stays with the shop’s own staff. DiveDay shows what it has been told and refuses to hide a gap. It does not decide."
+        "body": "Software a dive shop uses to run bookings, waivers, certification checks, trip prep and boat manifests. It is a tool the shop operates, not a service that operates the shop. Every judgement that matters on a dock (whether a diver is fit to dive, a certification genuine, or a boat ready to sail) stays with the shop’s own staff. DiveDay shows what it has been told, refuses to hide a gap, and does not decide."
       },
       "account": {
         "heading": "The shop’s side",
         "accurateTerm": "Keep the records accurate",
         "accurateBody": "a manifest is only as good as what was typed into it, and the boat carries what the shop entered.",
         "legalTerm": "The waiver is the shop’s own instrument",
-        "legalBody": "DiveDay stores and presents the release and the medical questionnaire. It does not supply their wording, and it does not vouch for their sufficiency in any jurisdiction.",
+        "legalBody": "DiveDay stores and presents the release and the medical questionnaire. It does not supply their wording or vouch for their sufficiency in any jurisdiction.",
         "accessTerm": "Accounts belong to people",
         "accessBody": "not to a shared login. A shop is responsible for who it invites and for removing them when they leave."
       },
@@ -3614,7 +3682,7 @@
       },
       "data": {
         "heading": "Whose data it is",
-        "body": "The shop’s records are the shop’s. We hold them to run the product and for no other purpose: not to sell, not to train anything, not to share between shops. A shop can download the whole lot as one ZIP from its settings on any day, without asking and without a fee. How it is handled while we hold it is on the privacy page."
+        "body": "The shop’s records are the shop’s. We hold them to run the product and for nothing else: they are not sold, not used to train anything, and they stay inside the shop’s own tenant. A shop can download the whole lot as one ZIP from its settings on any day, without asking and without a fee. How it is handled while we hold it is on the privacy page."
       },
       "availability": {
         "heading": "What we do not promise",

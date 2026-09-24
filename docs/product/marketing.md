@@ -283,6 +283,15 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   a skimmer reads, so one that argues nothing costs the band it stands over.
   `src/app/about/copy.test.ts` makes the test mechanical for that heading: some clause of it has to
   appear in the band's own published prose, which no metaphor can satisfy.
+  **Since 2026-09-24 (H-89) `/about` is written as speech**, and every heading on it is the shop
+  owner's question repeated back without a mark: "Who am I dealing with", "How do I know any of
+  that's true", "Why did you build this", "What happens when something breaks at seven in the
+  morning", "What's the catch", "What happens to my records if I leave", "Alright, how do I try
+  it". The sentence that survived four failures ("your season doesn't hang on us") is now the first
+  thing said under the H1 rather than the H1 itself. The headline test binds the first sentence of
+  each answer rather than the question, and the copy test's arithmetic moved with it: the exit
+  heading names the thing its band publishes (a content word of the question appears in the band's
+  own prose), carries no mark at either end, and is none of the three retired headings.
 - **Concede the facts; never apologize for them.** This is the rule the page-level version of the
   claims policy kept losing. "DiveDay is new", "it doesn't do everything", and "it's still moving"
   are honesty the policy requires, and they stay. What is banned is the register that grew up around them — by
@@ -304,6 +313,14 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   `pnpm check:voice` refuses the mechanical half of it in every bundle, and the rest is read for
   by hand before a page ships. The rule underneath is the one already above: a divemaster giving a
   briefing says the thing.
+  **The words were swept on 2026-09-03 and the pages still read as machine-written**, because the
+  sweep left the shapes: the mirrored pair, the list of three with a tail, the tag sentence, the
+  house phrase reused on every page, one temperature everywhere. The owner's 2026-09-17 brief asked
+  for a voice defined top-down and six were drawn ([design/voice-strategies-20260917.md](../design/voice-strategies-20260917.md));
+  he picked **6, Margin Notes, with 4, Over a Beer, on `/about`** (H-89, 2026-09-24). The public
+  pages are now the product's own screens with the builder's notes under them, `/about` is speech,
+  both registers are in [design/brand.md](../design/brand.md), and `pnpm check:voice` refuses the
+  four shapes on the public pages' strings so they cannot drift back.
 - **Concrete nouns over software jargon.** The buyer runs a shop, a counter, a boat — not an
   "operating system", "platform", or "solution". Name what DiveDay replaces: the whiteboard, the
   clipboard, the three apps and a spreadsheet.
@@ -362,6 +379,16 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   `home-hero`, `home-mid`, `home-closing` still mean what they meant, so attribution history spans
   the rename. This closes the MKT-F4 half of **HD-25**; the remaining HD-25 calls (MKT-F5's "most
   shops…" wording, MKT-F10's offline roll-call claim versus the V-02 embargo) are untouched by it.
+  **The role door under an annotated screen is the one exception (2026-09-24, H-89).** A
+  `ScreenDoor` (`src/app/_components/ScreenDoor.tsx`) submits the same `enterDemoAction` with a
+  hidden `role`, at link weight, labelled for its screen ("Open the demo as the captain →"),
+  because a builder's note that ends "as that role" cannot end on a button that says nothing about
+  the role ([design/brand.md](../design/brand.md), "The two registers of the public pages"). One
+  per screen a visitor could open, tagged per screen in `src/lib/funnel.ts` (`home-desk-moment`,
+  `home-dock-moment`, `switching-hub-preview`), never primary weight, and never the page's demo
+  button: the spec counts "Try the live demo" by name, and a screen door is not one. The recap
+  screen has none on purpose (it reaches the diver by email, so there is no role to open it as)
+  and its last note says so; the spec pins three doors under four screens.
 - **The demo's cost is stated once per page, at the first door.** `marketing.common.demoNote` ("no
   sign-up, no card") answers the only question the button raises, and the answer is worth nothing
   the second time: repeated under every demo button it stops reading as reassurance and starts
@@ -397,7 +424,9 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   until 2026-08-27, a leftover from before that decision); `/pricing`'s trial door is simply
   measured at two positions (the price hero, and the closing band tagged `pricing-close`). The
   nav's single door stays secondary weight so it never competes, and the CTA hides entirely on
-  `/onboard`, where it would link to the page it's on.
+  `/onboard`, where it would link to the page it's on. A screen's role door (above) is a
+  link-weight submit and spends none of the screen's budget; the spec asserts it carries no primary
+  fill, the way it asserts `/about`'s support door does not.
   `/product` is where the budget is easiest to lose — the longest page on the site, offering the
   demo from four positions inside its body, each added by a different review answering a different
   objection. `e2e/marketing.spec.ts` counts the primary in *every* band of that page rather than
@@ -408,8 +437,9 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   **The homepage hero is the scarcest screen on the site and is capped at one primary plus one
   secondary** — it once offered around nine choices (a five-chip role picker, a diver-preview link,
   demo, trial), which is a menu, not an ask. Cutting a hero control never means deleting the
-  destination: the roles moved into the in-demo switcher, the diver preview into the daily-moments
-  row it illustrates, and both are still reachable and still tagged. `e2e/marketing.spec.ts` counts
+  destination: the roles moved into the in-demo switcher, the diver preview into the band of
+  annotated screens it illustrates (since 2026-09-24 each screen there has its own role door), and
+  both are still reachable and still tagged. `e2e/marketing.spec.ts` counts
   the hero's enabled controls so the budget can't quietly grow back.
   **The three fields are inside that budget, not beside it** (2026-09-10, ADR
   20260908-one-hand decision 6, possibility Y). The hero now takes a shop's name, one boat and a first

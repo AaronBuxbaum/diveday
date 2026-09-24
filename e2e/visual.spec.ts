@@ -3516,7 +3516,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the switching hub renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/switching");
         await page
-          .getByRole("heading", { name: "Records come in with a file and leave with a button." })
+          .getByRole("heading", { name: "Every guide ends at the same import screen." })
           .waitFor();
         await capture(page, "switching-hub", scheme);
       });
