@@ -3429,7 +3429,7 @@
         },
         "agencyLine": {
           "title": "A live line to PADI or SSI",
-          "detail": "No agency lets software verify a certification automatically. Staff check the record with the agency and mark it certified themselves."
+          "detail": "DiveDay connects to no agency. Staff check the record with the agency and mark it certified themselves."
         }
       },
       "closingTitle": "The demo is the sample shop from the screens above.",
