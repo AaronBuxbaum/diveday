@@ -297,8 +297,13 @@ function plural(count, word) {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
 
+/**
+ * A value made safe inside a Markdown table cell: backslashes first, so the
+ * escape added for a pipe cannot be undone by one already in the text.
+ */
 function cell(text) {
   return String(text ?? "")
+    .replace(/\\/g, "\\\\")
     .replace(/\|/g, "\\|")
     .replace(/\n/g, " ");
 }

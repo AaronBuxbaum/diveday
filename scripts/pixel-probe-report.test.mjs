@@ -149,6 +149,29 @@ describe("the report", () => {
   });
 });
 
+describe("table cells", () => {
+  it("escapes a backslash before a pipe, so a class string cannot break the table", () => {
+    const flag = {
+      check: "small-target",
+      severity: "S2",
+      sig: "a.[&>svg]:size-4",
+      csig: "",
+      cls: "a\\|b",
+      label: "x",
+      msg: "ends in a backslash \\",
+    };
+    const report = buildReport(
+      [{ capture: "c", width: 390, probed: true, path: "/", titlePath: TITLE, flags: [flag] }],
+      {},
+    );
+    const markdown = renderMarkdown(report);
+    // The source text a\|b: its backslash doubled, then its pipe escaped.
+    expect(markdown).toContain("a\\\\\\|b");
+    // A trailing backslash can no longer swallow the cell's closing pipe.
+    expect(markdown).toContain("ends in a backslash \\\\");
+  });
+});
+
 describe("tiles", () => {
   it("cuts a tall phone capture into 390×1560 tiles with a short last one", () => {
     const cells = tileGrid(390, 4000, { width: 390, height: 1560 });
