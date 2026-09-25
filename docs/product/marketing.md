@@ -76,8 +76,13 @@ chosen battlegrounds — and re-read it before changing the spine.
 
 ## The two doors, and which one leads (decided 2026-08-22)
 
-The funnel has two doors — **Try the live demo** and **Start a trial** — and the order they are
+The funnel has two doors — **Try the live demo** and **Get set up** — and the order they are
 offered in is a property of the funnel, not of any one page.
+
+**Since 2026-09-25 the second door is a mail, not a sign-up** ([ADR 20260925-shops-are-set-up-by-hand](../architecture/decisions/20260925-shops-are-set-up-by-hand.md)). Every shop is set up
+by hand, so "Get set up" is a `mailto:` to `onboarding@dive.day` with the subject written, and
+`/onboard` without the owner's setup key is one sentence and that same mail. Where this section
+says "trial" below, read it as that door.
 
 - **The demo leads, everywhere, at every depth.** It is the primary; the trial follows as
   `secondary`. The demo is the claim nobody else in this market can make, and it costs the reader
@@ -589,8 +594,8 @@ the role, and the tag below, and nothing about the visitor, who never identified
 
 The tag vocabulary is a closed registry in `src/lib/funnel.ts`, because the failure it prevents is
 silent: a misspelled tag doesn't error, it opens a second bucket that reads like a real page with
-suspiciously few visits. So a demo form tags itself with `<FunnelTag source="…">` and a trial link
-builds its href with `trialHref("…")` — both type-checked against the registry — and a tag arriving
+suspiciously few visits. So a demo form tags itself with `<FunnelTag source="…">` — type-checked against the registry; the
+"Get set up" mail carries no tag at all, since a mail client drops it — and a tag arriving
 off a request goes through `eventSource()`, which returns `unknown` for anything unregistered.
 **Adding a marketing CTA means tagging it**, and a new page means adding its tag to the registry
 first; an untagged link is a conversion we can't attribute. Read the pair per surface: a page with

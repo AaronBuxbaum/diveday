@@ -1,5 +1,6 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { STAFF_DAY_HEADING } from "./helpers";
+import { ONBOARD_FORM_PATH } from "./servers";
 
 /**
  * **The bar is three times** — ADR 20260919-one-idea, decision I · Tide, slice
@@ -474,7 +475,7 @@ test.describe("a long shop name on a phone", () => {
 
   test("keeps the header one row, however long the shop calls itself", async ({ page }) => {
     const unique = `long-name-${Date.now()}`;
-    await page.goto("/onboard");
+    await page.goto(ONBOARD_FORM_PATH);
     await page
       .locator('input[name="shopName"]')
       .filter({ visible: true })

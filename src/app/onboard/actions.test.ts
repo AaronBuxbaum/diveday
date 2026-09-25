@@ -42,8 +42,8 @@ vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") 
 // none of it is what either suite is about, and the real one wants a request
 // context this test has no reason to stand up.
 vi.mock("next/server", () => ({ after: vi.fn() }));
-// The first day the homepage hero drew. Stubbed so the suite below can make it
-// fail on demand (ADR 20260908-one-hand, decision 6, possibility Y).
+// The first day the form's two optional fields describe. Stubbed so the suite
+// below can make it fail on demand.
 vi.mock("@/db/first-day", () => ({ createFirstDay: vi.fn() }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
@@ -51,6 +51,8 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
+const { checkRateLimit } = await import("@/lib/rate-limit");
+const { DEV_ONBOARD_SETUP_KEY } = await import("@/lib/onboard-setup-key");
 const { createFirstDay } = await import("@/db/first-day");
 const { onboardAction } = await import("./actions");
 const { unseededTestDb } = await import("@/test/db");
@@ -59,6 +61,8 @@ const { eq } = await import("drizzle-orm");
 
 function onboardForm(ownerEmail: string): FormData {
   const form = new FormData();
+  // The fixed key a non-production run accepts; the suite runs under `test`.
+  form.set("setup", DEV_ONBOARD_SETUP_KEY);
   form.set("shopName", "Reef Runners");
   form.set("shopSlug", "reef-runners");
   form.set("timezone", "America/New_York");
@@ -89,6 +93,52 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
+/**
+ * **No key, no shop** (ADR 20260925-shops-are-set-up-by-hand). The page hides
+ * the form without the key, but the action is callable on its own, so it is the
+ * action that has to refuse — before a database handle is taken, and without
+ * echoing anything the caller sent back into a `Location:` header.
+ */
+describe("onboardAction without the setup key", () => {
+  async function redirectTarget(form: FormData): Promise<string> {
+    try {
+      await onboardAction(form);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.startsWith("REDIRECT:")) return message.slice("REDIRECT:".length);
+      throw error;
+    }
+    throw new Error("expected onboardAction to redirect");
+  }
+
+  it.each([
+    ["no key at all", null],
+    ["an empty key", ""],
+    ["a wrong key", "not-the-key-not-the-key-not-the-key"],
+    ["a prefix of the key", DEV_ONBOARD_SETUP_KEY.slice(0, -1)],
+  ])("sends %s back to the closed door without touching the database", async (_, key) => {
+    const form = onboardForm("owner@no-key.example");
+    if (key === null) form.delete("setup");
+    else form.set("setup", key);
+    expect(await redirectTarget(form)).toBe("/onboard");
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  it("does not echo an unverified key when the rate limit bounces the request", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValueOnce({ allowed: false } as never);
+    const form = onboardForm("owner@no-key.example");
+    form.set("setup", "attacker-chosen-value");
+    expect(await redirectTarget(form)).toBe("/onboard");
+  });
+
+  it("carries the verified key back on a bounce, so the form is still there", async () => {
+    const target = await redirectTarget(onboardForm("owner@demo.invalid"));
+    const params = new URLSearchParams(target.split("?")[1]);
+    expect(params.get("setup")).toBe(DEV_ONBOARD_SETUP_KEY);
+    expect(params.get("error")).toBe("email_reserved");
+  });
+});
+
 describe("onboardAction and the reserved demo namespace", () => {
   it.each([
     "owner@demo.invalid",
@@ -117,8 +167,7 @@ describe("onboardAction and the reserved demo namespace", () => {
 });
 
 /**
- * **The first day the hero drew is never load-bearing** (ADR 20260908-one-hand,
- * decision 6, possibility Y).
+ * **The first day is never load-bearing.**
  *
  * `createFirstDay` runs after the shop, the owner and the account are already
  * committed, and it writes two rows a shop could add by hand in half a minute:

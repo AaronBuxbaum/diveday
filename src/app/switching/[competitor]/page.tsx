@@ -122,18 +122,11 @@ export default async function MigrationGuidePage({
 async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
   const locale = await requestLocale();
   const t = diverTranslator(locale);
-  const importSource = guideSource(guide.slug, "mid");
   return (
     <GuideBody
       locale={locale}
       guide={guide}
-      importCta={
-        <SwitchingImportCta
-          label={t("switching.common.openImportCta")}
-          trialLabel={t("marketing.common.startTrial")}
-          source={importSource}
-        />
-      }
+      importCta={<SwitchingImportCta label={t("switching.common.openImportCta")} />}
     />
   );
 }
@@ -142,9 +135,8 @@ async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
  * Cached per (negotiated locale, guide) — `guide` is a plain, serializable
  * data object (`src/lib/migration-guides.ts`), safe as a `"use cache"`
  * argument. `importCta` carries {@link SwitchingImportCta} (session-scoped —
- * reads `auth()`) as a pass-through slot per Next's interleaving rules. Its
- * funnel source is bound before it crosses this cache boundary, so this body
- * only renders the slot unchanged and its per-visitor content never enters the
+ * reads `auth()`) as a pass-through slot per Next's interleaving rules. This body
+ * only renders the slot unchanged, so its per-visitor content never enters the
  * cache entry.
  */
 async function GuideBody({

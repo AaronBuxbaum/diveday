@@ -2185,12 +2185,17 @@
       "signingIn": "Iniciando sesión…",
       "submit": "Iniciar sesión",
       "needShop": "¿Necesitas un centro?",
-      "createShop": "Crear un centro",
+      "getSetUp": "Escribe a {email}",
       "publicSchedule": "¿Buscas el calendario de buceo?"
     },
     "onboard": {
       "eyebrow": "Empieza un centro",
       "title": "Abre tu centro",
+      "closed": {
+        "title": "Abrimos cada centro a mano",
+        "body": "Cuéntanos de tu centro y lo abrimos contigo.",
+        "cta": "Escribir a {email}"
+      },
       "shopSectionTitle": "Tu centro",
       "shopNameLabel": "Nombre del centro",
       "shopNamePlaceholder": "p. ej. Green Lagoon Divers",
@@ -2624,35 +2629,6 @@
       "phoneFrameLabel": "Un capitán marcando buceadores como embarcados en la pantalla de pase de lista de DiveDay, desde la copia guardada en el teléfono.",
       "dockEyebrow": "En el muelle",
       "dockDetail": "Guardado en este teléfono antes de que saliera el barco, así que el recuento sigue aunque no haya señal.",
-      "tryIt": {
-        "lede": "Escribe tu centro y un barco, y esta página se convierte en tu primer día.",
-        "shopLabel": "Tu centro",
-        "shopPlaceholder": "Nombre del centro",
-        "boatLabel": "Un barco",
-        "boatPlaceholder": "Nombre del barco",
-        "departureLabel": "Primera salida",
-        "draw": "Dibuja mi día",
-        "drawnFrom": "Dibujado con lo que escribiste",
-        "greetingMorning": "Buenos días, {shop}",
-        "greetingAfternoon": "Buenas tardes, {shop}",
-        "greetingEvening": "Buenas noches, {shop}",
-        "greetingNight": "Trabajando hasta tarde, {shop}",
-        "firstDay": "Tu primer día. {boat} está en la línea mañana a las {time} {zone}, y el resto lo pones tú.",
-        "leavesInMinutes": "{boat} sale en {minutes} min.",
-        "leavesInHours": "{boat} sale en {hours} h {minutes} min.",
-        "boatsRow": "Tus barcos",
-        "boatsRowMeta": "{boat}, y los que quieras",
-        "boatsRowAction": "Añadir un barco",
-        "colorRow": "Tu color",
-        "colorRowMeta": "elegido a partir de tu nombre",
-        "colorRowAction": "Cámbialo",
-        "diverRow": "Tu primer buceador",
-        "diverRowMeta": "por nombre o desde una hoja de cálculo",
-        "diverRowAction": "Añadir o importar",
-        "open": "Abre {shop}",
-        "nothingSaved": "No se guarda nada hasta que lo abras.",
-        "again": "Escríbelo otra vez"
-      },
       "momentsTitle": "Cuatro pantallas, en el orden en que las usa un día.",
       "moments": {
         "diver": {
@@ -2720,7 +2696,8 @@
     "common": {
       "gettingReady": "Preparando tu centro…",
       "tryDemo": "Probar la demo en vivo",
-      "startTrial": "Empezar una prueba",
+      "getSetUp": "Pide tu centro",
+      "setUpSubject": "Quiero abrir mi centro en DiveDay",
       "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta.",
       "midCtaTitle": "Míralo en la demo en vivo",
       "checkItLabel": "Compruébalo: "

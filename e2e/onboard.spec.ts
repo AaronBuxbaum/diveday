@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { E2E_APP_HOST } from "./servers";
+import { E2E_APP_HOST, ONBOARD_FORM_PATH } from "./servers";
 
 /** The origin the fleet advertises, as the shop-link hint prints it: no scheme. */
 const STOREFRONT_HOST = new URL(E2E_APP_HOST).host;
@@ -11,7 +11,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   page,
 }) => {
   const unique = `first-run-${Date.now()}`;
-  await page.goto("/onboard");
+  await page.goto(ONBOARD_FORM_PATH);
   await page.locator('input[name="shopName"]').filter({ visible: true }).fill("First Run E2E");
   await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
   // The one decision sign-up asks an owner to make is what their web address
@@ -108,7 +108,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
 // the old list, and check the shop is really keeping time there.
 test("a shop outside the curated dive regions can pick its own timezone", async ({ page }) => {
   const unique = `raja-ampat-${Date.now()}`;
-  await page.goto("/onboard");
+  await page.goto(ONBOARD_FORM_PATH);
 
   // Both tiers are on offer: the pinned dive-region shortcuts, and every other
   // zone the runtime knows.
@@ -162,7 +162,7 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
 }) => {
   test.setTimeout(30_000);
   const unique = `empty-doors-${Date.now()}`;
-  await page.goto("/onboard");
+  await page.goto(ONBOARD_FORM_PATH);
   await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Empty Doors E2E");
   await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
   await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
@@ -224,7 +224,7 @@ test.describe("a shop signing up from the Caribbean", () => {
   test.use({ timezoneId: "America/Cancun" });
 
   test("finds its own zone already picked, and can still change it", async ({ page }) => {
-    await page.goto("/onboard");
+    await page.goto(ONBOARD_FORM_PATH);
     const timezone = page.locator('select[name="timezone"]').filter({ visible: true });
     await expect(timezone).toHaveValue("America/Cancun");
 
@@ -244,7 +244,7 @@ test.describe("a shop signing up from the Caribbean", () => {
   test("is started on pesos, and asked to check before it prices anything", async ({ page }) => {
     test.setTimeout(60_000);
     const unique = "cozumel-units";
-    await page.goto("/onboard");
+    await page.goto(ONBOARD_FORM_PATH);
     await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Cozumel Divers");
     await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
     await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Rosa Mendez");

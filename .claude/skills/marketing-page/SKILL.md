@@ -19,8 +19,9 @@ the same PR.
    are in `docs/product/marketing.md`; the 2026-07-23 review that argued for it is delivered and
    archived at `docs/product/archive/marketing-review-20260723.md` — read it for *why*, never as a
    task list.
-4. Any new CTA gets a funnel tag from the registry in `src/lib/funnel.ts` — `<FunnelTag source="…">`
-   on a demo form, `trialHref("…")` on a trial link. A new page adds its tag there first. See
+4. Any new demo CTA gets a funnel tag from the registry in `src/lib/funnel.ts` —
+   `<FunnelTag source="…">` on the form. The "Get set up" door is a mail and carries none; there
+   is no self-serve sign-up to link to (ADR 20260925-shops-are-set-up-by-hand). A new page adds its tag there first. See
    "Measuring which story converts" in `docs/product/marketing.md`.
 5. If the task is a new or edited `/switching/*` guide, use the **switching-pages** skill instead
    — it layers the incumbent-specific procedure (guide shapes, `IMPORT_HONESTY_TABLE`, coexist

@@ -1,5 +1,6 @@
 import { cpus } from "node:os";
 import { resolveE2EBasePort } from "@/lib/e2e-port";
+import { E2E_ONBOARD_SETUP_KEY } from "@/lib/onboard-setup-key";
 
 /**
  * Shared topology for the e2e server fleet, imported by playwright.config.ts,
@@ -83,6 +84,23 @@ export const E2E_TEST_ROUTE_SECRET =
  * `minimum-seats.spec.ts` also asserts.
  */
 export const E2E_CRON_SECRET = process.env.CRON_SECRET || "diveday-e2e-cron-secret";
+
+/**
+ * The key that opens `/onboard` (ADR 20260925-shops-are-set-up-by-hand),
+ * pinned into the worker servers' env like the two secrets above. `next start`
+ * is a production runtime, so without it the fleet's door would be shut and
+ * every spec that opens a fresh shop would meet the "write to us" page.
+ * `ONBOARD_FORM_PATH` is the link the owner would use; a spec that means to
+ * fill the form in goes there, and one about the public door goes to
+ * `/onboard` bare.
+ *
+ * A fixed literal, never inherited from the shell: a shell that has exported a
+ * developer's `.env.local` would otherwise carry the real key into every
+ * trace, report and screenshot URL. `onboardSetupKey` accepts it only under
+ * the harness (`DIVEDAY_E2E=1`, no `DATABASE_URL`).
+ */
+export { E2E_ONBOARD_SETUP_KEY };
+export const ONBOARD_FORM_PATH = `/onboard?setup=${E2E_ONBOARD_SETUP_KEY}`;
 
 /**
  * The instant the whole e2e fleet pretends "now" is. The demo seed is

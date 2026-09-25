@@ -1,6 +1,14 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
 import { expect, test } from "./fixtures";
+import { ONBOARD_FORM_PATH } from "./servers";
+
+/**
+ * Every public "Get set up" door: a mail to the onboarding inbox, because every
+ * shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand). There is no
+ * self-serve sign-up for a marketing page to link to.
+ */
+const SET_UP_HREF = "mailto:onboarding@dive.day?subject=Set%20up%20my%20shop%20on%20DiveDay";
 
 test("the homepage hero offers one demo door, and the diver preview lives on its daily-moment row", async ({
   page,
@@ -13,7 +21,7 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   // the hero; the closing band repeats the same label deliberately.
   await expect(page.getByRole("button", { name: "Try the live demo" }).first()).toBeVisible();
   // The click's cost is stated at the point of decision, scoped to the demo —
-  // it must not promise "no sign-up" on behalf of the trial button beside it.
+  // it must not promise "no sign-up" on behalf of the set-up link beside it.
   await expect(
     page
       .getByText("The demo opens a working sample shop in one click. No sign-up and no card.")
@@ -46,7 +54,7 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   const heroSection = page.getByRole("main").locator("section").first();
   await expect(heroSection.locator("button:not([disabled])")).toHaveCount(1);
   await expect(heroSection.getByRole("link")).toHaveCount(1);
-  await expect(heroSection.getByRole("link")).toHaveAttribute("href", "/onboard?from=home-hero");
+  await expect(heroSection.getByRole("link")).toHaveAttribute("href", SET_UP_HREF);
 
   // The flat price reaches the first screen as a *sentence*
   // (docs/product/marketing-review-20260827.md, "The price reaches the first
@@ -75,7 +83,7 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   const scheduleLink = page.getByRole("link", { name: "Book a seat in the demo →" });
   const href = await scheduleLink.getAttribute("href");
   // Sourced from DEMO_SHOP_SLUG rather than a hand-typed literal, and tagged
-  // for funnel attribution the same way the trial link is. The source moved to
+  // for funnel attribution the same way the demo door is. The source moved to
   // the diver's daily-moments row when the hero's role picker was retired
   // (#328); the path is the split public namespace's.
   expect(href).toBe(`/s/${DEMO_SHOP_SLUG}?from=home-diver-moment`);
@@ -326,14 +334,10 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(productMain.locator('input[name="source"][value="product-mid"]')).toHaveCount(1);
   await expect(productMain.locator('input[name="source"][value="product-index"]')).toHaveCount(1);
   await expect(productMain.locator('input[name="source"][value="product"]')).toHaveCount(2);
-  await expect(
-    productMain.locator('a[href="/onboard?from=product-mid"]'),
-    "the mid-page trial link is tagged like its demo twin",
-  ).toHaveCount(1);
-  await expect(
-    productMain.locator('a[href="/onboard?from=product-index"]'),
-    "the index door's trial link is tagged like its demo twin",
-  ).toHaveCount(1);
+  // Every demo door has its set-up mail beside it (four), and there is no
+  // self-serve trial link left to tag.
+  await expect(productMain.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(4);
+  await expect(productMain.locator('a[href^="/onboard"]')).toHaveCount(0);
   // And the door stands where the dare is made, not somewhere the reader has
   // to go looking for it: inside the band the capability list closes.
   const indexBand = productMain
@@ -484,7 +488,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // one component (src/app/_components/FunnelCtas.tsx), not per page.
   const priceHeroDoors = page.getByRole("main").locator("section").first().locator("a, button");
   await expect(priceHeroDoors.first()).toHaveText("Try the live demo");
-  await expect(priceHeroDoors.nth(1)).toHaveText("Start a trial");
+  await expect(priceHeroDoors.nth(1)).toHaveText("Get set up");
   // The trial terms are a sentence, not a third door. When a page owes a
   // reader a fact at a door it states it rather than opening another one
   // (docs/product/marketing.md, "The budget binds controls, not facts") — and
@@ -494,7 +498,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(trialTerms.last().locator("a, button")).toHaveCount(0);
 
   // The page closes on the number it opened with, and that closing door is
-  // tagged apart from the hero's. Without it there was no trial door below
+  // tagged apart from the hero's. Without it there was no second door below
   // the fold at all — the header carries the demo now, not the trial (#934)
   // — so a reader who scrolled the objection layer had nothing left to act
   // on. Tagged like `product-mid`, so the position can be shown to have
@@ -505,9 +509,8 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // Visible, not merely present: `toHaveCount` passes on a `display:none`
   // anchor, and a closing door nobody can see is the bug this one exists to
   // fix rather than a fix for it.
-  await expect(pricingMain.getByRole("link", { name: "Start a trial" }).last()).toBeVisible();
-  await expect(pricingMain.locator('a[href="/onboard?from=pricing-close"]')).toHaveCount(1);
-  await expect(pricingMain.locator('a[href="/onboard?from=pricing"]')).toHaveCount(1);
+  await expect(pricingMain.getByRole("link", { name: "Get set up" }).last()).toBeVisible();
+  await expect(pricingMain.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(2);
   // The demo is offered at the close too, and tagged for that position. It
   // used to be dropped here, leaving the higher-friction door alone at the
   // moment the reader is warmest (issue #785).
@@ -565,12 +568,12 @@ test("/product holds one primary per screen across all four of its doors", async
     const band = sections.nth(index);
     const primaries = await band.locator("button:not([disabled])").count();
     expect(primaries, `band ${index} offers more than one primary`).toBeLessThanOrEqual(1);
-    // And where there is a primary there is exactly one secondary trial link
+    // And where there is a primary there is exactly one secondary set-up link
     // beside it — the pair is one component and a page chooses only where it
     // sits (src/app/_components/FunnelCtas.tsx). A band that grew a second
-    // trial link would be a third choice at one moment of decision.
+    // one would be a third choice at one moment of decision.
     if (primaries === 1) {
-      await expect(band.locator('a[href^="/onboard?from="]')).toHaveCount(1);
+      await expect(band.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(1);
     }
   }
 
@@ -582,21 +585,32 @@ test("/product holds one primary per screen across all four of its doors", async
   expect(tags).toEqual(["product", "product", "product-index", "product-mid"]);
 });
 
-test("the sign-up form answers the hesitation it creates", async ({ page }) => {
-  // The trial link carries the page that sent it, so demo-vs-trial can be read
-  // per surface; the form hands that tag back to the action.
+test("a visitor who wants a shop is sent to a person, not a sign-up form", async ({ page }) => {
+  // Every shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand): the
+  // pricing page's second door is a mail to the onboarding inbox.
   await page.goto("/pricing");
-  // Scoped to `<main>`: the header's own CTA is the demo now, not a trial
-  // link (#934), and the page closes with a second trial door tagged
-  // `pricing-close`, so `.first()` inside `<main>` is unambiguously the hero's.
-  await page.getByRole("main").getByRole("link", { name: "Start a trial" }).first().click();
-  await expect(page).toHaveURL(/\/onboard\?from=pricing$/);
-  // A hidden input can't be scoped with `.filter({ visible: true })` (it would
-  // never match), and the previous route's own `input[name="source"]` (this
-  // page's FunnelTag) stays reachable while Activity keeps it in the DOM — so
-  // scope through the current page's own `<main>` landmark instead, which
-  // `getByRole` (visibility-safe, see e2e/fixtures.ts) narrows to the one
-  // that's actually on screen.
+  await expect(
+    page.getByRole("main").getByRole("link", { name: "Get set up" }).first(),
+  ).toHaveAttribute("href", SET_UP_HREF);
+
+  // And the old address, from a bookmark or a search result, is a closed door
+  // that says where to write — with no form, and nothing to submit.
+  await page.goto("/onboard?from=pricing");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("We set up every shop by hand");
+  await expect(page.getByRole("link", { name: "Email onboarding@dive.day" })).toHaveAttribute(
+    "href",
+    SET_UP_HREF,
+  );
+  await expect(page.getByRole("main").locator("form")).toHaveCount(0);
+  await expect(page.locator('input[name="ownerPassword"]')).toHaveCount(0);
+  // A wrong key is no key.
+  await page.goto("/onboard?setup=not-the-key-not-the-key-not-the-key");
+  await expect(page.locator('input[name="ownerPassword"]')).toHaveCount(0);
+});
+
+test("the setup link opens the form, which answers the hesitation it creates", async ({ page }) => {
+  await page.goto(`${ONBOARD_FORM_PATH}&from=pricing`);
+  // The tag still reaches the form when the link carries one.
   await expect(page.getByRole("main").locator('input[name="source"]')).toHaveValue("pricing");
 
   // Asking for a password is the moment of maximum hesitation, so the door
@@ -608,16 +622,14 @@ test("the sign-up form answers the hesitation it creates", async ({ page }) => {
   await expect(
     page.getByText("Free for 3 weeks, no card, and nothing switches off when the window ends."),
   ).toBeVisible();
-  // The three claims it replaced keep their paragraphs on the marketing pages
-  // the visitor came from; the door repeats none of them.
   await expect(page.getByText("No card, no setup fee.")).toHaveCount(0);
   await expect(page.getByText("Your records are ready from day one.")).toHaveCount(0);
   await expect(page.getByText("Real support, one email away.")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Create shop & start trial" })).toBeVisible();
 
   // An unrecognized tag is bucketed rather than echoed into the funnel.
-  await page.goto("/onboard?from=Not%20A%20Real%20Source");
-  await expect(page.locator('input[name="source"]')).toHaveValue("unknown");
+  await page.goto(`${ONBOARD_FORM_PATH}&from=Not%20A%20Real%20Source`);
+  await expect(page.getByRole("main").locator('input[name="source"]')).toHaveValue("unknown");
 });
 
 test("the about page says who is behind DiveDay and what it won't pretend", async ({ page }) => {
@@ -726,7 +738,7 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
     has: page.getByRole("heading", { name: "How do I know any of that’s true" }),
   });
   await expect(rulesBand.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
-  await expect(rulesBand.locator('a[href="/onboard?from=about-rules"]')).toHaveCount(1);
+  await expect(rulesBand.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(1);
 
   // …and the note that answers the only question that button raises, at the
   // page's *first* door (docs/product/marketing.md, "The demo's cost is stated
@@ -765,11 +777,11 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
     const band = bands.nth(index);
     const primaries = await band.locator("button:not([disabled])").count();
     expect(primaries, `band ${index} offers more than one primary`).toBeLessThanOrEqual(1);
-    // Where there is a primary there is exactly one trial link beside it: the
+    // Where there is a primary there is exactly one set-up link beside it: the
     // pair is one component and a page chooses only where it sits
     // (src/app/_components/FunnelCtas.tsx).
     if (primaries === 1) {
-      await expect(band.locator('a[href^="/onboard?from="]')).toHaveCount(1);
+      await expect(band.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(1);
     }
   }
 
@@ -850,26 +862,22 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await expect(
     page.getByRole("heading", { name: "The same table, read the other way." }),
   ).toBeVisible();
-  // Same guard as the spreadsheet guide: no shop session, no deep-link CTA.
+  // Same guard as the spreadsheet guide: no shop session, no deep-link CTA —
+  // and no second door in its place, since the concierge band already offers
+  // a person to write to.
   await expect(page.getByRole("link", { name: "Open Import in your shop" })).toBeHidden();
-  await expect(
-    page
-      .getByRole("heading", { name: "Bring the file into DiveDay" })
-      .locator("..")
-      .getByRole("link", { name: "Start a trial" }),
-  ).toHaveAttribute("href", "/onboard?from=switching-eve-mid");
 
   // A buyer can act from the hero, not only from the closing block seven
-  // sections down: the demo form and the trial link sit in the same section as
-  // the h1, and the trial link carries this guide's funnel tag. This is the
+  // sections down: the demo form and the set-up link sit in the same section
+  // as the h1, and the demo carries this guide's funnel tag. This is the
   // *buyer's* CTA — distinct from the deep-link above, which is for an owner
   // who already has a shop and is correct to stay hidden here.
   const heroSection = page.getByRole("main").locator("section").first();
   await expect(heroSection.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(heroSection.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
-  await expect(heroSection.getByRole("link", { name: "Start a trial" })).toHaveAttribute(
+  await expect(heroSection.getByRole("link", { name: "Get set up" })).toHaveAttribute(
     "href",
-    "/onboard?from=switching-eve",
+    SET_UP_HREF,
   );
   // Four doors out, and only four: the nav, the hero, the hinge between the
   // argument and the mechanics, and the close.
@@ -1207,12 +1215,6 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   // sitting on their own shop's session (see import.spec.ts) — an anonymous
   // visitor has no shop to deep-link into.
   await expect(page.getByRole("link", { name: "Open Import in your shop" })).toBeHidden();
-  await expect(
-    page
-      .getByRole("heading", { name: "Bring the file into DiveDay" })
-      .locator("..")
-      .getByRole("link", { name: "Start a trial" }),
-  ).toHaveAttribute("href", "/onboard?from=switching-spreadsheet-mid");
 
   // The starter template downloads a real CSV (not a dead link).
   const templateHref = await page
@@ -1254,9 +1256,9 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(4);
   const spreadsheetHero = page.getByRole("main").locator("section").first();
   await expect(spreadsheetHero.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
-  await expect(spreadsheetHero.getByRole("link", { name: "Start a trial" })).toHaveAttribute(
+  await expect(spreadsheetHero.getByRole("link", { name: "Get set up" })).toHaveAttribute(
     "href",
-    "/onboard?from=switching-spreadsheet",
+    SET_UP_HREF,
   );
 });
 
@@ -1334,7 +1336,6 @@ test("every public marketing page unfurls as a card, not a bare URL", async ({ p
     "/switching",
     "/switching/spreadsheet",
     "/switching/eve",
-    "/onboard",
   ]) {
     await page.goto(path);
     // `.first()`: a dynamic hole resolving after a client-side render can

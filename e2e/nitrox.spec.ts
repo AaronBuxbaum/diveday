@@ -8,6 +8,7 @@ import {
   openThreadStep,
   openTripTab,
 } from "./helpers";
+import { ONBOARD_FORM_PATH } from "./servers";
 
 async function openWreckTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -231,7 +232,7 @@ test("a freshly onboarded shop starts without nitrox, and turning it on unlocks 
   // every run — which is the collision this is avoiding. The pid separates two
   // workers that land on the same millisecond.
   const slug = `nitrox-off-e2e-${Date.now()}-${process.pid}`;
-  await page.goto("/onboard");
+  await page.goto(ONBOARD_FORM_PATH);
   await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Nitrox Off Divers");
   await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(slug);
   await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nadia Cole");

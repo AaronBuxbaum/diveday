@@ -142,13 +142,15 @@ test("sitemap.xml lists the marketing pages, excludes the demo shop, and never l
   const origin = originMatch?.[1] ?? "";
   expect(origin).toMatch(/^https?:\/\//);
 
-  for (const path of ["/", "/product", "/pricing", "/onboard", "/about", "/switching"]) {
+  for (const path of ["/", "/product", "/pricing", "/about", "/switching"]) {
     const url = path === "/" ? origin : `${origin}${path}`;
     expect(body, `sitemap.xml missing ${url}`).toContain(`<loc>${url}</loc>`);
   }
 
   expect(body).not.toContain(`/s/${DEMO_SHOP_SLUG}`);
   expect(body).not.toContain("/waivers/");
+  // Every shop is set up by hand; the door exists but nobody is sent to it.
+  expect(body).not.toContain(`${origin}/onboard`);
 });
 
 /**

@@ -1,16 +1,20 @@
-import Link from "next/link";
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
-import { type FunnelSource, trialHref } from "@/lib/funnel";
+import type { FunnelSource } from "@/lib/funnel";
+import { setUpMailto } from "@/lib/platform-mail";
 
 /**
  * The funnel's two doors, in the one order they are ever offered: **the demo
- * leads, the trial follows** (Aaron, 2026-08-22 — issue #785;
+ * leads, getting set up follows** (Aaron, 2026-08-22 — issue #785;
  * docs/product/marketing.md, "The two doors, and which one leads").
+ *
+ * The second door is a mail, not a sign-up form: every shop is opened by hand
+ * (ADR 20260925-shops-are-set-up-by-hand), so it writes to the onboarding
+ * inbox. The funnel tag rides the demo door only — a mail client carries none.
  *
  * It exists because the arrangement is a property of the *funnel* and every
  * page had been deciding it alone. Each page was written as a page and reviewed
@@ -57,15 +61,15 @@ export function FunnelCtas({
           {t("marketing.common.tryDemo")}
         </SubmitButton>
       </form>
-      <Link
-        href={trialHref(source)}
+      <a
+        href={setUpMailto(t("marketing.common.setUpSubject"))}
         className={buttonClass({
           variant: "secondary",
           className: `border-border-strong ${width}`,
         })}
       >
-        {t("marketing.common.startTrial")}
-      </Link>
+        {t("marketing.common.getSetUp")}
+      </a>
     </div>
   );
 }

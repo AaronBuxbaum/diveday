@@ -33,10 +33,33 @@ export function redactBreadcrumb(breadcrumb: Sentry.Breadcrumb): Sentry.Breadcru
   return breadcrumb;
 }
 
-/** Same redaction applied to Sentry event URLs and referrer header. */
+/**
+ * A request's query string on its own, through the same redaction as a URL.
+ * Sentry's server request-data integration records it apart from `url`, so a
+ * capability query parameter (`?setup=`, `?handoff=`, `?preview=`…) left there
+ * would reach Sentry even with the URL redacted.
+ */
+function redactQueryString(
+  query: NonNullable<Sentry.ErrorEvent["request"]>["query_string"],
+): NonNullable<Sentry.ErrorEvent["request"]>["query_string"] {
+  if (typeof query === "string") {
+    const bare = query.startsWith("?") ? query.slice(1) : query;
+    return redactCapabilityUrl(`/?${bare}`).replace(/^\/\?/, "");
+  }
+  const pairs = Array.isArray(query) ? query : Object.entries(query ?? {});
+  const redacted = new URLSearchParams(
+    redactCapabilityUrl(`/?${new URLSearchParams(pairs).toString()}`).replace(/^\/\?/, ""),
+  );
+  return Array.isArray(query) ? [...redacted.entries()] : Object.fromEntries(redacted.entries());
+}
+
+/** Same redaction applied to Sentry event URLs, query strings and referrer header. */
 export function redactEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
   if (event.request?.url) {
     event.request.url = redactCapabilityUrl(event.request.url);
+  }
+  if (event.request?.query_string) {
+    event.request.query_string = redactQueryString(event.request.query_string);
   }
   const headers = event.request?.headers;
   if (headers) {

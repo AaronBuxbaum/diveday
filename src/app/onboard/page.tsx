@@ -13,21 +13,22 @@ import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form
 import { GroupLabel } from "@/components/ui/ledger";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { MAX_FIRST_DAY_NAME, parseFirstDayFields } from "@/lib/first-day";
 import { eventSource } from "@/lib/funnel";
-import { sharedLinkCard } from "@/lib/marketing";
 import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications";
+import { isOnboardSetupKey, ONBOARD_SETUP_PARAM } from "@/lib/onboard-setup-key";
 import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
   type OnboardErrorCode,
   suggestShopSlug,
 } from "@/lib/onboarding";
+import { ONBOARDING_EMAIL, setUpMailto } from "@/lib/platform-mail";
 import {
   type CuratedTimeZone,
   type CuratedTimezoneGroupKey,
   DEFAULT_TIMEZONE,
 } from "@/lib/timezones";
-import { MAX_TRY_IT_NAME, parseTryItHandoff } from "@/lib/try-it";
 import { onboardAction } from "./actions";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -195,29 +196,21 @@ const CURATED_TIMEZONE_KEYS: Record<CuratedTimeZone, DiverMessageKey> = {
   "Pacific/Auckland": "account.onboard.timezone.auckland",
 };
 
+/**
+ * Not a page anyone is sent to any more: every shop is set up by hand (ADR
+ * 20260925-shops-are-set-up-by-hand), so it is out of the sitemap and out of
+ * the index. Without the setup key it says where to write; with it, it is the
+ * form the owner fills in for a shop they have spoken to.
+ */
 export const metadata: Metadata = {
-  title: "Start a dive shop trial — DiveDay",
-  description:
-    "A few details and the shop exists. No card, no setup fee, and the export works on the first day.",
-  // Canonical because every marketing page now links here with a `?from=`
-  // funnel tag — one page, not nine.
-  alternates: { canonical: "/onboard" },
-  openGraph: {
-    ...sharedLinkCard,
-    title: "Start a dive shop trial — DiveDay",
-    description:
-      "A few details and you’re looking at your own working shop. No card, no setup fee.",
-    url: "/onboard",
-  },
-  // `summary_large_image`: the OG block above names the shared link card
-  // (`sharedLinkCard` → `src/app/opengraph-image.tsx`), so the large card has an
-  // image to fill it — docs/product/marketing.md, Twitter-card policy.
-  twitter: {
-    card: "summary_large_image",
-    title: "Start a dive shop trial — DiveDay",
-    description:
-      "A few details and you’re looking at your own working shop. No card, no setup fee.",
-  },
+  title: "Get set up — DiveDay",
+  description: "Every DiveDay shop is set up by hand. Write to us to get yours.",
+  robots: { index: false, follow: true },
+  // The setup key rides this page's URL, and the default policy sends the full
+  // URL as the referrer on every same-origin navigation away from it — where
+  // analytics would read it off `document.referrer`. Nothing about this page
+  // is worth telling the next one.
+  referrer: "no-referrer",
 };
 
 export default async function OnboardPage({
@@ -231,16 +224,10 @@ export default async function OnboardPage({
     timezone?: string;
     ownerName?: string;
     ownerEmail?: string;
-    /**
-     * What the homepage hero drew (ADR 20260908-one-hand, decision 6,
-     * possibility Y). `shop` is the hero's own short spelling of the shop's
-     * name; `shopName` is this form's echo of itself on a bounce, and it wins
-     * because it is the more recent answer.
-     */
-    shop?: string;
     boat?: string;
     departure?: string;
-    color?: string;
+    /** The setup key ({@link ONBOARD_SETUP_PARAM}); without it there is no form. */
+    setup?: string;
   }>;
 }) {
   const {
@@ -251,25 +238,22 @@ export default async function OnboardPage({
     timezone,
     ownerName,
     ownerEmail,
-    shop,
     boat,
     departure,
-    color,
+    setup,
   } = await searchParams;
-  // Every field the hero can carry, judged once. A hand-edited parameter loses
-  // itself and nothing else: this door's job is to be filled in, not to refuse
-  // a link (`src/lib/try-it.ts`).
-  const drawn = parseTryItHandoff({ shop, boat, departure, color });
-  // **The form's own echo wins over the hero's.** A bounce carries `shopName`
-  // back verbatim and it is the more recent answer; it is also the one this
-  // page must not judge, because `onboardSchema` allows a hundred characters
-  // and the hero only carries sixty — reading a bounced long name through the
-  // hero's bounds would silently empty a box a shop had already filled in.
-  const shopNameValue = shopName ?? drawn.shopName ?? "";
-  // Which marketing page's "Start a trial" sent them here; the action reads it
-  // back off the form for the trial_started funnel event.
-  const source = eventSource(from);
   const t = diverTranslator(await requestLocale());
+
+  // **Shut without the key** (ADR 20260925-shops-are-set-up-by-hand). A
+  // visitor who arrives from an old link or a search result is told where to
+  // write, and nothing about the form exists on the page for them.
+  if (!isOnboardSetupKey(setup)) return <ClosedDoor t={t} />;
+
+  // A hand-edited parameter loses itself and nothing else.
+  const firstDay = parseFirstDayFields({ boat, departure });
+  const shopNameValue = shopName ?? "";
+  // The action reads this back off the form for the trial_started event.
+  const source = eventSource(from);
 
   // The refusal lands on the box that earned it, not in a banner above the
   // whole form (docs/design/forms-and-controls.md); only a code about the
@@ -316,6 +300,7 @@ export default async function OnboardPage({
         {errorField && errorField !== "form" ? <FieldErrorFocus key={error} /> : null}
         <form action={onboardAction} className="flex flex-col gap-5">
           <input type="hidden" name="source" value={source} />
+          <input type="hidden" name={ONBOARD_SETUP_PARAM} value={setup} />
           <section className="flex flex-col gap-4">
             <GroupLabel as="h2">{t("account.onboard.shopSectionTitle")}</GroupLabel>
             <FieldGrid columns={2}>
@@ -417,24 +402,17 @@ export default async function OnboardPage({
                 untouchedValue={timezone || DEFAULT_TIMEZONE}
               />
             </FieldGrid>
-            {/* **The two the hero asked for** (ADR 20260908-one-hand, decision
-                6). Optional here as they are there: a shop that arrived from
-                `/product` or a search result never saw the hero and is not
-                asked for a boat to get through the door. Filled, they become a
-                real hull and a real departure on tomorrow's board, so the first
-                Today has a boat on it (`src/db/first-day.ts`).
-
-                The colour is not a field. The hero drew one from the shop's
-                name and this carries it; Settings is where a shop changes it,
-                which is the one place a brand belongs. */}
+            {/* Optional. Filled, they become a real hull and a real departure
+                on tomorrow's board, so the first Today has a boat on it
+                (`src/db/first-day.ts`). */}
             <FieldGrid columns={2}>
               <Field label={t("account.onboard.boatLabel")} hint={t("common.optional")}>
                 <input
                   name="boat"
                   type="text"
-                  defaultValue={drawn.boatName ?? ""}
+                  defaultValue={firstDay.boatName ?? ""}
                   placeholder={t("account.onboard.boatPlaceholder")}
-                  maxLength={MAX_TRY_IT_NAME}
+                  maxLength={MAX_FIRST_DAY_NAME}
                   className={controlClass}
                 />
               </Field>
@@ -442,14 +420,11 @@ export default async function OnboardPage({
                 <input
                   name="departure"
                   type="time"
-                  defaultValue={drawn.departure ?? ""}
+                  defaultValue={firstDay.departure ?? ""}
                   className={controlClass}
                 />
               </Field>
             </FieldGrid>
-            {drawn.brandColor ? (
-              <input type="hidden" name="color" value={drawn.brandColor} />
-            ) : null}
           </section>
 
           <section className="mt-2 flex flex-col gap-4">
@@ -521,6 +496,48 @@ export default async function OnboardPage({
             </FormStatus>
           ) : null}
         </form>
+      </EntryShell>
+      <MarketingFooter />
+    </div>
+  );
+}
+
+/**
+ * The page everyone without the key sees: one sentence on how a shop gets
+ * set up, and the mail that starts it. The demo and sign-in stay one line
+ * each underneath, as they did under the form.
+ */
+function ClosedDoor({ t }: { t: DiverTranslator }) {
+  return (
+    <div className="flex flex-1 flex-col">
+      <MarketingNav hideCta compactMobile />
+      <EntryShell
+        eyebrow={t("account.onboard.eyebrow")}
+        title={t("account.onboard.closed.title")}
+        footer={
+          <>
+            <p>
+              {t("account.onboard.demoNote")}{" "}
+              <Link href="/" className="font-medium text-primary hover:underline">
+                {t("account.onboard.tryLiveDemo")}
+              </Link>
+            </p>
+            <p>
+              {t("account.onboard.alreadyHaveShop")}{" "}
+              <Link href="/sign-in" className="font-medium text-primary hover:underline">
+                {t("account.onboard.signIn")}
+              </Link>
+            </p>
+          </>
+        }
+      >
+        <p className="text-muted">{t("account.onboard.closed.body")}</p>
+        <a
+          href={setUpMailto(t("marketing.common.setUpSubject"))}
+          className={buttonClass({ className: "mt-6 w-full" })}
+        >
+          {t("account.onboard.closed.cta", { email: ONBOARDING_EMAIL })}
+        </a>
       </EntryShell>
       <MarketingFooter />
     </div>

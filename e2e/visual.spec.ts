@@ -37,7 +37,7 @@ import {
   waiverLinkFromResult,
   waiverLinkFromToast,
 } from "./helpers";
-import { E2E_FROZEN_CLOCK } from "./servers";
+import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
 
 /**
  * Visual regression coverage. Two hundred and forty-four key surfaces × light/dark, each
@@ -2094,36 +2094,6 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "landing", scheme);
       });
 
-      /**
-       * **The hero drawn as the visitor's own first day** (ADR
-       * 20260908-one-hand, decision 6, possibility Y): their name in the
-       * chrome, a colour hashed off that name through Harbor's derivation,
-       * their boat on the day line, and the door already filled. It is the same
-       * route as the capture above and a different surface — the drawn state
-       * replaces both columns of the hero — so it earns its own baseline at
-       * both widths.
-       *
-       * The words typed here are the canvas's own, and the clock and zone are
-       * the fleet's frozen pair, so the greeting band, the rendered 11:00 AM
-       * and the countdown are identical on every run.
-       */
-      test(`the landing hero drawn as the visitor's shop renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await page.goto("/");
-        await page.getByLabel("Your shop").fill("Coral Cove Dive Co.");
-        await page.getByLabel("A boat").fill("Reef Runner");
-        await page.getByLabel("First departure").fill("11:00");
-        await page.getByRole("button", { name: "Draw my day" }).click();
-        // The greeting is the drawn hero's own <h1>; the hero it replaced has
-        // a different one, so this is the readiness proof for the capture.
-        await page
-          .getByRole("heading", { level: 1, name: "Good morning, Coral Cove Dive Co" })
-          .waitFor();
-        await page.mouse.move(0, 0);
-        await capture(page, "landing-drawn", scheme);
-      });
-
       // The other two buyer-facing sales surfaces: the product narrative
       // (readiness, dock, diver arc, honest-no scope) and the pricing page
       // with its objection FAQ. Copy changes here are product changes.
@@ -2137,12 +2107,12 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "pricing", scheme);
       });
 
-      // Where the trial actually starts: two group labels over six fields, the
-      // storefront address written under the shop link, and the one sentence a
-      // skeptical owner reads before typing a password (ADR
-      // 20260827-first-light, decision 1).
+      // Where a shop the owner has spoken to is opened: two group labels over
+      // the fields, the storefront address written under the shop link, and
+      // the one trial sentence (ADR 20260827-first-light, decision 1). Only
+      // behind the setup key (ADR 20260925-shops-are-set-up-by-hand).
       test(`the onboarding form renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/onboard");
+        await page.goto(ONBOARD_FORM_PATH);
         // This route owns a loading.tsx, and `goto` resolves on the document
         // load event while the body is still streaming — a bare capture here
         // once shot the skeleton and published it as the baseline
@@ -2152,6 +2122,16 @@ for (const scheme of ["light", "dark"] as const) {
         // capture below whose route owns a loading.tsx.
         await page.locator("h1").first().waitFor();
         await capture(page, "onboard", scheme);
+      });
+
+      // What everyone without the key meets at `/onboard`: one sentence on how
+      // a shop is set up and the mail that starts it.
+      test(`the closed onboarding door renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/onboard");
+        await page.locator("h1").first().waitFor();
+        await capture(page, "onboard-closed", scheme);
       });
 
       test(`the sign-in page renders true to the design (${scheme})`, async ({ page }) => {
@@ -3605,7 +3585,7 @@ for (const scheme of ["light", "dark"] as const) {
         // (light/dark) is unique enough since this test runs once per scheme
         // and the suite has no retries (playwright.config.ts).
         const unique = `today-empty-${scheme}`;
-        await page.goto("/onboard");
+        await page.goto(ONBOARD_FORM_PATH);
         await page
           .locator('input[name="shopName"]')
           .filter({ visible: true })
@@ -3716,7 +3696,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the first bookable moment renders true to the design (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const unique = `bookable-${scheme}`;
-        await page.goto("/onboard");
+        await page.goto(ONBOARD_FORM_PATH);
         await page
           .locator('input[name="shopName"]')
           .filter({ visible: true })
@@ -3811,9 +3791,10 @@ for (const scheme of ["light", "dark"] as const) {
      * `storageState`; the sibling "public" block must stay anonymous.
      *
      * Shot on `/onboard` rather than the landing page for two reasons. It is
-     * the shortest marketing surface (one form), so the duplicated body below
-     * the header costs the least; and it is the one page that sets `hideCta`,
-     * where the signed-in branch has a documented rule with nothing watching
+     * the shortest marketing surface (one sentence and a mail), so the
+     * duplicated body below the header costs the least; and it is the one page
+     * that sets `hideCta`, where the signed-in branch has a documented rule
+     * with nothing watching
      * it — the CTA *pitch* is suppressed, but the way back to your own shop is
      * wayfinding and still renders. The header markup is identical on every
      * marketing route, so this frame is the state, not a special case of it.

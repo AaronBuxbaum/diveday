@@ -70,7 +70,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { CONNECT_CLIENT_ID } from "@/lib/payments/connect";
-import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
+import { ONBOARDING_EMAIL, SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { publicShopRegisterPath } from "@/lib/public-routes";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
@@ -1883,10 +1883,10 @@ export default async function SettingsPage({
                 <p className="mt-3 text-sm text-muted">{t("settings.main.trial.upgradeBody")}</p>
                 <div className="mt-4">
                   <a
-                    href={`mailto:${UPGRADE_EMAIL}`}
+                    href={`mailto:${ONBOARDING_EMAIL}`}
                     className={buttonClass({ variant: "secondary" })}
                   >
-                    {t("settings.main.trial.emailCta", { email: UPGRADE_EMAIL })}
+                    {t("settings.main.trial.emailCta", { email: ONBOARDING_EMAIL })}
                   </a>
                 </div>
               </SettingsRow>

@@ -14,8 +14,22 @@
  */
 export const SUPPORT_EMAIL = "support@dive.day";
 
-/** Where a trial shop's owner writes in to move to a paid plan. */
-export const UPGRADE_EMAIL = "onboarding@dive.day";
+/**
+ * Where a shop writes in to be set up, and where a trial shop's owner writes in
+ * to move to a paid plan. Every shop is opened by hand from this inbox (ADR
+ * 20260925-shops-are-set-up-by-hand), so every public "Get set up" door is a
+ * mail to it.
+ */
+export const ONBOARDING_EMAIL = "onboarding@dive.day";
+
+/**
+ * The public "Get set up" door: a mail to {@link ONBOARDING_EMAIL} with the
+ * subject already written, in the reader's language (the caller passes it from
+ * the bundle, because this file is shared with code that has no locale).
+ */
+export function setUpMailto(subject: string): string {
+  return `mailto:${ONBOARDING_EMAIL}?subject=${encodeURIComponent(subject)}`;
+}
 
 /** Where operational alerts (new signups, error monitoring) land — not diver- or shop-facing. */
 export const ALERT_EMAIL = "alerts@dive.day";

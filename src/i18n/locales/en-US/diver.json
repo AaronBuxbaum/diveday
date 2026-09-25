@@ -2185,12 +2185,17 @@
       "signingIn": "Signing in…",
       "submit": "Sign in",
       "needShop": "Need a shop?",
-      "createShop": "Create a shop",
+      "getSetUp": "Write to {email}",
       "publicSchedule": "Looking for the dive schedule?"
     },
     "onboard": {
       "eyebrow": "Start a shop",
       "title": "Open your shop",
+      "closed": {
+        "title": "We set up every shop by hand",
+        "body": "Tell us about your shop and we’ll open it with you.",
+        "cta": "Email {email}"
+      },
       "shopSectionTitle": "Your shop",
       "shopNameLabel": "Shop name",
       "shopNamePlaceholder": "e.g. Green Lagoon Divers",
@@ -2624,35 +2629,6 @@
       "phoneFrameLabel": "A captain marking divers boarded on DiveDay’s roll-call screen, from the copy saved to the phone.",
       "dockEyebrow": "At the dock",
       "dockDetail": "Saved to this phone before the boat left, so the count keeps working with no signal.",
-      "tryIt": {
-        "lede": "Type your shop and one boat, and this page becomes your first day.",
-        "shopLabel": "Your shop",
-        "shopPlaceholder": "Shop name",
-        "boatLabel": "A boat",
-        "boatPlaceholder": "Boat name",
-        "departureLabel": "First departure",
-        "draw": "Draw my day",
-        "drawnFrom": "Drawn from what you typed",
-        "greetingMorning": "Good morning, {shop}",
-        "greetingAfternoon": "Good afternoon, {shop}",
-        "greetingEvening": "Good evening, {shop}",
-        "greetingNight": "Working late, {shop}",
-        "firstDay": "Your first day. {boat} is on the line tomorrow at {time} {zone}, and the rest is yours to put there.",
-        "leavesInMinutes": "{boat} leaves in {minutes} min.",
-        "leavesInHours": "{boat} leaves in {hours} hr {minutes} min.",
-        "boatsRow": "Your boats",
-        "boatsRowMeta": "{boat}, and any others",
-        "boatsRowAction": "Add a boat",
-        "colorRow": "Your color",
-        "colorRowMeta": "picked from your name",
-        "colorRowAction": "Change it",
-        "diverRow": "Your first diver",
-        "diverRowMeta": "by name, or from a spreadsheet",
-        "diverRowAction": "Add or import",
-        "open": "Open {shop}",
-        "nothingSaved": "Nothing is saved until you open it.",
-        "again": "Type it again"
-      },
       "momentsTitle": "Four screens, in the order a day runs them.",
       "moments": {
         "diver": {
@@ -2720,7 +2696,8 @@
     "common": {
       "gettingReady": "Getting your shop ready…",
       "tryDemo": "Try the live demo",
-      "startTrial": "Start a trial",
+      "getSetUp": "Get set up",
+      "setUpSubject": "Set up my shop on DiveDay",
       "demoNote": "The demo opens a working sample shop in one click. No sign-up and no card.",
       "midCtaTitle": "See it in the live demo",
       "checkItLabel": "Check it: "

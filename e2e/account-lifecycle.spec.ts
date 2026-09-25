@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
+import { ONBOARD_FORM_PATH } from "./servers";
 
 // Real verify/reset links only ever exist inside a real email — there is no
 // staff-facing screen that displays them (unlike a waiver or readiness
@@ -13,7 +14,7 @@ import { expect, test } from "./fixtures";
 async function onboardFreshOwner(page: Page, slug: string) {
   const unique = `${slug}-${Date.now()}`;
   const email = `${unique}@example.com`;
-  await page.goto("/onboard");
+  await page.goto(ONBOARD_FORM_PATH);
   await page
     .locator('input[name="shopName"]')
     .filter({ visible: true })
