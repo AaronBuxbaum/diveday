@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
 import { FlashParams } from "@/components/FlashParams";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { UndoToast } from "@/components/UndoToast";
 import { canPersonDeleteDiver, loadActiveStaffRoles } from "@/db/authz";
@@ -281,7 +281,7 @@ export default async function DiversPage({
             pageCount={diverPage.pageCount}
             href={pageHref}
             total={t("divers.list.pagination.total", { count: diverPage.total })}
-            t={t}
+            words={staffPagerWords(t)}
             className="mt-8"
           />
         }

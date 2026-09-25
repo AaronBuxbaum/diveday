@@ -258,6 +258,28 @@ describe("the guests ledger (slice 5d)", () => {
     expect(within(addDiver as HTMLElement).getByTestId("add-diver-form")).toBeVisible();
     expect(screen.queryByText("No one on this boat yet")).toBeNull();
   });
+
+  /**
+   * A cleared seat with no notes and no arrival has nothing to put at the end
+   * of its name line, and the pixel probe found the trailing slot rendered
+   * anyway: an empty `div` that still took the line's 12px gap on every such
+   * row of ten trip captures, and on a phone wrapped to a line of its own
+   * whose 4px row gap put the name 2px above the row's centre.
+   */
+  it("leaves no empty slot at the end of a name line with nothing to show", () => {
+    const { container } = renderRoster(fixtures);
+
+    const clearedLine = container.querySelector(`#booking-${ready.booking.id} > div`);
+    expect(clearedLine).not.toBeNull();
+    expect(clearedLine?.querySelectorAll(":scope > :empty")).toHaveLength(0);
+    expect(clearedLine?.children).toHaveLength(1);
+
+    // A seat with a state word still gets the slot, pushed to the line's end.
+    const blockedLine = container.querySelector(`#booking-${blocked.booking.id} > div`);
+    expect(blockedLine?.children).toHaveLength(2);
+    expect(blockedLine?.lastElementChild).toHaveClass("ms-auto");
+    expect(blockedLine?.lastElementChild).toHaveTextContent("Blocked");
+  });
 });
 
 /**

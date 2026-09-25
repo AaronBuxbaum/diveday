@@ -115,8 +115,12 @@ Each class gives its rule, its tolerance, its usual severity, the probe check th
 - **Tolerance.** 1px. More than 1px is S3; 2px or more is S2.
 - **Probe.** `off-centre`, `three-part-row`, `text-beside-control`.
 - **History.** Labels sat at the top of 44px targets until centring moved into the shared
-  primitives (800e99d, #56). `Pager` puts an empty `<span>` in the missing side of a
-  `justify-between` row, so the position readout moves from page to page.
+  primitives (800e99d, #56). `Pager` put an empty `<span>` in the missing side of a
+  `justify-between` row, so the position readout sat 28px left of centre on page 1 and moved
+  from page to page. Three columns with the outer two equal (`grid-cols-[1fr_auto_1fr]`) fixed
+  it from `sm` up and not on a phone: `1fr` is `minmax(auto, 1fr)`, so the widest readout left
+  the outer columns unequal and sat 25–28px off centre at 390 and 360. Below `sm` the readout now
+  has a row of its own over the links.
 
 ### 2. Icons and glyphs
 

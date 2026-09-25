@@ -36,8 +36,9 @@ export default function DiverProfileLoading() {
             ))}
           </div>
         </div>
-        {/* The file: four inset groups, each a label over one hairline shell. */}
-        <div className="mt-8 flex flex-col gap-8">
+        {/* The file: four inset groups, each a label over one hairline shell,
+            on the record's one section rhythm (`space-y-10` on the page). */}
+        <div className="mt-10 flex flex-col gap-10">
           {["certifications", "waiver", "gear", "notes"].map((group) => (
             <div key={group}>
               <div className="h-4 w-28 rounded bg-surface-sunken" />

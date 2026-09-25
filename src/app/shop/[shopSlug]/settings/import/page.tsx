@@ -351,6 +351,10 @@ export default async function ImportContactsPage({
         description={t("settings.import.description")}
       />
 
+      {/* Three links inside one sentence. The space between them is the words
+          between them (", " and ", or "), so the pixel probe's uneven-gaps
+          check, which measures 7.8 then 24.9px, is reading prose rather than
+          layout (settled in docs/design/settled-questions.md). */}
       <p className="-mt-2 mb-6 text-sm text-muted">
         {t.rich("settings.import.comingFrom", {
           eve: (chunks) => (
@@ -385,18 +389,25 @@ export default async function ImportContactsPage({
                 <span className="font-medium text-foreground">
                   {t(SCOPE_ROW_KEYS[row.id].what)}
                 </span>
-                {/* The cell stays even when empty, so the detail column keeps
-                    its start edge down the whole list. */}
-                <span>
-                  {row.scope === "stays-behind" ? (
+                {/* The chip's cell renders only on a row that has the chip,
+                    and the detail names its own column from `sm` up, so it
+                    keeps its start edge down the whole list either way. The
+                    cell used to stay even when empty, to hold that edge, and on
+                    a phone, where the row is one column, the empty cell took a
+                    4px gap of its own (the pixel probe: 8px between a row's
+                    name and its detail where the chip rows sit 4px apart). */}
+                {row.scope === "stays-behind" ? (
+                  <span>
                     <span
                       className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${staysBehind.className}`}
                     >
                       {staysBehind.label}
                     </span>
-                  ) : null}
+                  </span>
+                ) : null}
+                <span className="text-sm text-muted sm:col-start-3">
+                  {t(SCOPE_ROW_KEYS[row.id].detail)}
                 </span>
-                <span className="text-sm text-muted">{t(SCOPE_ROW_KEYS[row.id].detail)}</span>
               </li>
             ))}
           </ul>

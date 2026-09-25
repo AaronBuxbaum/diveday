@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -312,7 +312,7 @@ export default async function GearRegisterPage({
                   pageCount={deletedPage.pageCount}
                   href={(target) => gearHref({ deleted: true, page: target })}
                   total={t("gear.fleet.pagination.total", { count: deletedPage.total })}
-                  t={t}
+                  words={staffPagerWords(t)}
                   className="mt-4"
                 />
               </>

@@ -156,7 +156,6 @@ export function GearAndSizes({
       // diver by hand — so the group that carries it opens with the record.
       open={Boolean(status) || flagged}
       stacked
-      className="mt-8"
     >
       <InsetGroup>
         <FactRow label={t("divers.file.rentsFromUs")}>

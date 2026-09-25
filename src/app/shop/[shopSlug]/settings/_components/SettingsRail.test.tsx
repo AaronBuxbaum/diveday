@@ -356,6 +356,37 @@ describe("the rows the pane is made of", () => {
     expect(anchor).toBeTruthy();
     expect(anchor?.closest("details")).toBeTruthy();
   });
+
+  /**
+   * On a phone the summary is a column: the heading line, then the value.
+   * A row with no value used to keep the value's wrapper anyway, holding only
+   * the desktop caret, which is `hidden` there. The wrapper collapsed to 0px
+   * and still took the column's 4px gap, so the pixel probe measured every
+   * such label (Address, The counter card, Tax, …) 2px above its row's
+   * centre on ten settings captures. Below `sm`, only boxes with something in
+   * them may take part in the column.
+   */
+  it("keeps a row with no value to its heading line on a phone", () => {
+    const { container } = render(
+      <SettingsRow sectionId="address" heading="The counter card">
+        <span>form</span>
+      </SettingsRow>,
+    );
+    const summary = container.querySelector("summary");
+    expect(summary?.querySelectorAll(":scope > :not(.hidden)")).toHaveLength(1);
+  });
+
+  it("stacks a row's value under its heading on a phone", () => {
+    const { container } = render(
+      <SettingsRow sectionId="address" heading="Address" value="12 Harbour Rd">
+        <span>form</span>
+      </SettingsRow>,
+    );
+    const summary = container.querySelector("summary");
+    const shown = summary?.querySelectorAll(":scope > :not(.hidden)");
+    expect(shown).toHaveLength(2);
+    expect(shown?.[1]).toHaveTextContent("12 Harbour Rd");
+  });
 });
 
 describe("the frame", () => {

@@ -27,6 +27,12 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
  * `?notice=` redirects (`#gear`, `#waiver`, `#notes`, …) and the prep panel's
  * `#support` land on it — and `openHashTarget` below opens whichever group
  * holds the target, which is what makes a deep link into a closed door work.
+ *
+ * **No outer margin, and no prop to hang one on.** The record stacks its
+ * groups on one `space-y-10` (forms-and-controls.md, "Section rhythm"). A
+ * `className` used to let each group bring its own, and five brought `mt-8`,
+ * one `mt-10` and the shelf none, which the pixel probe measured as a
+ * 32/40/32/32/0/32px stack with two rows sharing a hairline.
  */
 export function DiverFileGroupDisclosure({
   id,
@@ -35,7 +41,6 @@ export function DiverFileGroupDisclosure({
   summaryTone = "muted",
   open = false,
   stacked = false,
-  className = "",
   children,
 }: {
   id: string;
@@ -57,7 +62,6 @@ export function DiverFileGroupDisclosure({
   open?: boolean;
   /** Put a long summary on its own, label-aligned line below `sm`. */
   stacked?: boolean;
-  className?: string;
   children: ReactNode;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
@@ -153,7 +157,7 @@ export function DiverFileGroupDisclosure({
     : `shrink-0 text-sm ${toneClass} tabular-nums`;
 
   return (
-    <section aria-label={label} className={className || undefined}>
+    <section aria-label={label}>
       <details
         ref={detailsRef}
         // `|| undefined` rather than a bare `false`: React writes an attribute

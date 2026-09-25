@@ -121,3 +121,33 @@ describe("PrepBody", () => {
     expect(byDiver.getAttribute("href")).toBe("/shop/blue-mantis/trips/t1?group=diver");
   });
 });
+
+/**
+ * The departure page wraps this body in its `#packing-list` anchor and passes
+ * no `emptyState`: the roster directly above already says the boat is empty.
+ * On a departure nobody is booked on, the body must therefore render no node
+ * at all, which is what lets that wrapper's `empty:hidden` take back the 40px
+ * it would otherwise hold open (the pixel probe's phantom gap on the
+ * trip-repeating captures, where the wrapper measured 0px tall).
+ */
+describe("an empty departure on the departure page", () => {
+  it("renders no node at all when nobody is aboard and the page passes no emptyState", () => {
+    const empty = prepFor();
+    empty.checklist = buildDivePrepChecklist({ divers: [], plannedDives: 2, divingCrew: [] });
+    const { container } = render(
+      <PrepBody
+        prep={empty}
+        t={t}
+        locale="en-US"
+        shopSlug="blue-mantis"
+        tripId="t1"
+        rentalItems={["bcd", "wetsuit"]}
+        notice={undefined}
+        grouping="item"
+        groupPath="/shop/blue-mantis/trips/t1"
+        cancelled={false}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+});

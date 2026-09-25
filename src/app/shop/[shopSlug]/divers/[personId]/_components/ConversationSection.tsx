@@ -91,7 +91,6 @@ export function ConversationSection({
           : t("inbox.thread.summary", { count: entries.length })
       }
       open={Boolean(status) || unanswered > 0}
-      className="mt-8"
     >
       <InsetGroup>
         {entries.map((entry) => {

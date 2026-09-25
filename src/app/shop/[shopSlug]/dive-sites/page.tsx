@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { StoredPhoto } from "@/components/StoredPhoto";
@@ -244,7 +244,7 @@ export default async function DiveSitesPage({
         pageCount={sitePage.pageCount}
         href={pageHref}
         total={t("diveSites.list.pagination.total", { count: sitePage.total })}
-        t={t}
+        words={staffPagerWords(t)}
         className="mt-4"
       />
     </main>
@@ -411,7 +411,7 @@ async function CatalogView({
         pageCount={catalog.pageCount}
         href={pageHref}
         total={t("diveSites.catalog.pagination.total", { count: catalog.total })}
-        t={t}
+        words={staffPagerWords(t)}
         className="mt-6"
       />
     </main>

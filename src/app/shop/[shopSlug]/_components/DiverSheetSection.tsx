@@ -76,23 +76,27 @@ export async function DiverSheetSection({
         shopSlug={shop.slug}
         recordPath={recordPath}
       />
-      <DiverStory
-        diver={diver}
-        shop={shop}
-        shopSlug={shop.slug}
-        personId={personId}
-        locale={locale}
-        t={t}
-        paymentsConnected={canAcceptPayments(stripeAccount)}
-        // **No act at the foot of a reading.** The shop's own answer about
-        // payments is passed through unchanged — a sheet must not claim a shop
-        // cannot take money — and the one door below is where an act happens.
-        // Saying no here is what makes `canManageOrders` unaskable of a sheet
-        // that never looked the reader up (issue #1920): the prop is `never` on
-        // this arm, so there is no false answer to give.
-        offersInvoice={false}
-        now={now}
-      />
+      {/* The sheet owns the space above the story, as the record's
+          `space-y-10` does there: the story carries no margin of its own. */}
+      <div className="mt-10">
+        <DiverStory
+          diver={diver}
+          shop={shop}
+          shopSlug={shop.slug}
+          personId={personId}
+          locale={locale}
+          t={t}
+          paymentsConnected={canAcceptPayments(stripeAccount)}
+          // **No act at the foot of a reading.** The shop's own answer about
+          // payments is passed through unchanged — a sheet must not claim a shop
+          // cannot take money — and the one door below is where an act happens.
+          // Saying no here is what makes `canManageOrders` unaskable of a sheet
+          // that never looked the reader up (issue #1920): the prop is `never` on
+          // this arm, so there is no false answer to give.
+          offersInvoice={false}
+          now={now}
+        />
+      </div>
       {/* **The one door out.** Everything this sheet does not hold — the
           certifications, the waiver, the fit, the notes, and every form — is on
           the record, and a form here would redirect with a `?notice=` and take

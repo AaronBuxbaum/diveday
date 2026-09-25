@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
@@ -619,43 +619,57 @@ export function RosterSection({
         ) : null}
       </div>
     );
-    // Arrived at the counter — display only, the same capsule the manifest
-    // shows. It reads existing booking state and gates nothing.
-    const headerBadges = (
-      <>
-        {/* A note nobody knows exists was never written: the settled one-line
-            row still says there are notes to read (dive-domain review,
-            2026-08-21). An unsettled row's open half already shows the notes
-            disclosure itself. */}
-        {settledRow && !holdOpen && notes.length > 0 ? (
-          <span className="text-sm text-muted">
-            {t("trips.roster.privateStaffNotes", { count: notes.length })}
-          </span>
-        ) : null}
-        {booking.status === "checked_in" ? (
-          <Badge tone="neutral">{t("trips.roster.checkedInPill")}</Badge>
-        ) : null}
-        {/* The group band already says what the rows beneath it share, so a
-            capsule here marks only this diver's own exceptional state — the
-            word, never an emoji mark (readiness vocabulary:
-            src/i18n/readiness-labels.ts; "blocked is always danger"). */}
-        {readiness && readiness.status !== "ready" ? (
-          // `lg`: the readiness word is the one fact on this row a staffer
-          // reads to decide, which principle 2's own definition makes
-          // critical text — 16px, not the pill default.
-          <Badge tone={readinessStatusTone(readiness.status)} toneMark={false} size="lg">
-            {readinessStatusText(t, readiness.status)}
-          </Badge>
-        ) : null}
-        {/* The boat-wide advisory's mark on this diver — the group's shared
-            line above carries the sentence once. */}
-        {depthShared ? (
-          <Badge tone="warning" size="sm">
-            {t("trips.roster.depthChip")}
-          </Badge>
-        ) : null}
-      </>
-    );
+    // The name line's trailing capsules, as a list rather than a fragment so
+    // the slot can tell when it has nothing to hold. `Children.toArray` drops
+    // every `null` below, the same question `FormStatus` asks of its children.
+    // A cleared seat with no notes and no arrival is the common row, and it
+    // used to render the slot's wrapper empty: the pixel probe found that
+    // `div` taking the line's 12px gap on every such row of ten trip
+    // captures, and on a phone wrapping to a line of its own whose 4px row gap
+    // put the name 2px above the row's centre.
+    const headerBadges = Children.toArray([
+      // A note nobody knows exists was never written: the settled one-line
+      // row still says there are notes to read (dive-domain review,
+      // 2026-08-21). An unsettled row's open half already shows the notes
+      // disclosure itself.
+      settledRow && !holdOpen && notes.length > 0 ? (
+        <span key="notes" className="text-sm text-muted">
+          {t("trips.roster.privateStaffNotes", { count: notes.length })}
+        </span>
+      ) : null,
+      // Arrived at the counter — display only, the same capsule the manifest
+      // shows. It reads existing booking state and gates nothing.
+      booking.status === "checked_in" ? (
+        <Badge key="checked-in" tone="neutral">
+          {t("trips.roster.checkedInPill")}
+        </Badge>
+      ) : null,
+      // The group band already says what the rows beneath it share, so a
+      // capsule here marks only this diver's own exceptional state — the
+      // word, never an emoji mark (readiness vocabulary:
+      // src/i18n/readiness-labels.ts; "blocked is always danger").
+      //
+      // `lg`: the readiness word is the one fact on this row a staffer reads
+      // to decide, which principle 2's own definition makes critical text —
+      // 16px, not the pill default.
+      readiness && readiness.status !== "ready" ? (
+        <Badge
+          key="readiness"
+          tone={readinessStatusTone(readiness.status)}
+          toneMark={false}
+          size="lg"
+        >
+          {readinessStatusText(t, readiness.status)}
+        </Badge>
+      ) : null,
+      // The boat-wide advisory's mark on this diver — the group's shared
+      // line above carries the sentence once.
+      depthShared ? (
+        <Badge key="depth" tone="warning" size="sm">
+          {t("trips.roster.depthChip")}
+        </Badge>
+      ) : null,
+    ]);
     // Staff record or correct a contact from the same form wherever it is
     // rendered — in the open when the seat has none (that is work), behind
     // the disclosure when it does (that is reference).
@@ -1431,9 +1445,11 @@ export function RosterSection({
       >
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pe-11">
           {headerLeft}
-          <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
-            {headerBadges}
-          </div>
+          {headerBadges.length > 0 ? (
+            <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
+              {headerBadges}
+            </div>
+          ) : null}
         </div>
         {/* A cleared seat is one line in the Ready group (principle 9): the
             group band says the state, the drawn mark confirms it, and

@@ -102,7 +102,8 @@ stay in `AGENTS.md`.
   `card.tsx` (`SectionCard`, `sectionCardClass`), `tone.ts` (`toneMark`). Readiness words: `src/i18n/readiness-labels.ts` — never spell a status
   inline. Heading levels come from `src/components/ui/typography.ts` (`pnpm check:type-ramp`).
 - **Paging a staff list**: `src/components/Pager.tsx` + `offsetPage` in `src/db/paging.ts`. Every
-  paged staff list wears it (ADR 20260803-one-pagination-model); keyset cursors (`src/db/cursor.ts`)
+  paged staff list wears it with `words={staffPagerWords(t)}`, and the public reviews archive with
+  the diver bundle's words (ADR 20260803-one-pagination-model); keyset cursors (`src/db/cursor.ts`)
   are the one earned exception. A list's **count must share the row query's exact scope** (joins,
   `where`, `having`, `now`), or the pager promises pages that render nothing.
 - **Link previews and icons** (`ImageResponse`): every surface that rasterizes at request time —

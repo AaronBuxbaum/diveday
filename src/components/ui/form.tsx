@@ -416,8 +416,13 @@ export function Field({
       {hint ? <span className="font-normal text-muted"> {hint}</span> : null}
     </>
   );
+  // `empty:hidden` for a description that is a component with nothing to say
+  // yet: the onboarding form's storefront link renders nothing until there is
+  // a slug to show, and its empty slot still took the body's 4px gap under
+  // the control (the pixel probe, onboard). The slot stays mounted, so
+  // `aria-describedby` keeps its target, and takes no room while it is empty.
   const descriptionSpan = description ? (
-    <span id={descriptionId} className="text-xs font-normal text-muted">
+    <span id={descriptionId} className="text-xs font-normal text-muted empty:hidden">
       {description}
     </span>
   ) : null;

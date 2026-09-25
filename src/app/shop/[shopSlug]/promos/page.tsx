@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { PaymentsConnectCta } from "@/components/PaymentsConnectCta";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
@@ -545,7 +545,7 @@ export default async function PromosPage({
         pageCount={promoPage.pageCount}
         href={promosHref}
         total={t("promos.pagination.total", { count: promoPage.total })}
-        t={t}
+        words={staffPagerWords(t)}
         className="mt-4"
       />
 
@@ -579,7 +579,7 @@ export default async function PromosPage({
         pageCount={dealPage.pageCount}
         href={dealsHref}
         total={t("promos.tripDeals.pagination.total", { count: dealPage.total })}
-        t={t}
+        words={staffPagerWords(t)}
         className="mt-4"
       />
     </main>

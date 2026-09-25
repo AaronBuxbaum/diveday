@@ -194,12 +194,13 @@ a heading reading "A quiet day at the dock" and 900px of boxes disagreeing with 
 the state exists only on a shop with no departures, which a seeded demo never is, so it needs a
 capture of its own against a freshly onboarded shop or nobody will ever look at it.
 
-**A long list gets one pager, not a per-surface invention.** Every paged staff list renders
-`src/components/Pager.tsx` — previous, "Page 3 of 7", next — with its words from the one shared
-`shared.pager.*` key set and its data from `offsetPage` (`src/db/paging.ts`). Both directions
-always work and the reader is always told where they are; the pager draws nothing at all when
-there is only one page. Four grammars for this used to coexist, and the most common of them was
-forward-only — a staffer three pages into the roster could only start over (ADR
+**A long list gets one pager, not a per-surface invention.** Every paged list renders
+`src/components/Pager.tsx` — previous, "Page 3 of 7", next — with its words from one key set per
+audience (`shared.pager.*` through `staffPagerWords` on every staff list, the diver bundle's
+`reviews.*` on the public reviews archive) and its data from `offsetPage` (`src/db/paging.ts`).
+Both directions always work and the reader is always told where they are; the pager draws nothing
+at all when there is only one page. Four grammars for this used to coexist, and the most common of
+them was forward-only — a staffer three pages into the roster could only start over (ADR
 [20260803-one-pagination-model](../architecture/decisions/20260803-one-pagination-model.md)). The
 one exception is a list that is a genuine **stream** with no end to count (the schedule board's
 upcoming departures), which pages by cursor and says so in direction words rather than page

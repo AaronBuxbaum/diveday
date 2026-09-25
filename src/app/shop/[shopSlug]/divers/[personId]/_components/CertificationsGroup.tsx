@@ -469,7 +469,6 @@ export function CertificationsGroup({
       summaryTone={onFile.tone}
       open={Boolean(status)}
       stacked
-      className="mt-10"
     >
       <InsetGroup
         // A list of cards is a list: each row is one record a staffer can act

@@ -56,7 +56,6 @@ export function DiverNotesSection({
       // record that has none opens on an empty box asking to be filled, which
       // is the thing the door exists to keep shut.
       open={Boolean(status) || notes.length > 0}
-      className="mt-8"
     >
       <InsetGroup>
         {notes.map(({ note, authorName, tripId, tripTitle, tripStartsAt }) => (

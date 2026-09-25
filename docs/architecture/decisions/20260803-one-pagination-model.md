@@ -37,6 +37,9 @@ or give the reader any sense of what they were looking at.
 - `src/components/Pager.tsx` — a Server Component rendering prev / position / next. Its words come
   from **one** shared key set, `shared.pager.*`. It renders nothing when `pageCount <= 1`, so no
   caller needs its own guard and no shop with one screenful is told it is on "page 1 of 1".
+  _Amended 2026-09-25: `Pager` takes its words as a `words` prop, and `staffPagerWords(t)` hands
+  every staff list the `shared.pager.*` set, so the public reviews archive wears the same component
+  in the diver bundle's words instead of a hand-copied row that had kept the old empty stand-ins._
 - The **counted noun** stays with the list that owns it (`orders.index.pagination.total`,
   `blockers.pagination.total`, …), passed in as an already-translated ICU-pluralised string. A bare
   noun interpolated into a shared sentence does not survive translation.

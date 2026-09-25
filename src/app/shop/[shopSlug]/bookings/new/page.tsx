@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import {
   type BookingRequestCardItem,
@@ -271,7 +271,7 @@ export default async function NewBookingPage({
             pageCount={tripPage.pageCount}
             href={pageHref}
             total={t("bookings.new.pagination.total", { count: tripPage.total })}
-            t={t}
+            words={staffPagerWords(t)}
             className="mt-4"
           />
           {/* Under the list rather than over it: it explains an absence, and

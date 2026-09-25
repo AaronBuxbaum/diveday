@@ -698,6 +698,13 @@ export function DiverRollCall({
                           >
                             {t("manifest.resolveBlockersLink")}
                           </Link>
+                          {/* **The rule is the content.** An `<hr>` has no
+                            children by nature, so the pixel probe's
+                            phantom-gap check reads 25px here (12 above, the
+                            1px rule, 12 below) where the panel's siblings sit
+                            12px apart. That span is the rule's own even
+                            margins, not a gap an empty box took (settled in
+                            docs/design/settled-questions.md). */}
                           <hr className="my-3 border-border" />
                         </>
                       ) : null}

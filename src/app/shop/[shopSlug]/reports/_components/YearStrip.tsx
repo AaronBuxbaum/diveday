@@ -49,6 +49,12 @@ export function YearStrip({
   const columns = { gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))` };
   return (
     <div className={className || undefined} aria-hidden="true">
+      {/* **Uneven on purpose.** Each month's label starts in the week column
+          its first day falls in, so the space between two labels is four or
+          five weeks wide, as the calendar is. The pixel probe's uneven-gaps
+          check reads that as a broken rhythm (133.5/100.9px at 1280); spacing
+          the labels evenly would put each one over the wrong weeks (settled
+          in docs/design/settled-questions.md). */}
       <div className="grid gap-[3px] text-[10px] text-muted tabular-nums" style={columns}>
         {months.map((month) => (
           <span key={month.key} style={{ gridColumnStart: month.column }}>

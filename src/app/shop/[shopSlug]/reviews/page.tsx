@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -449,7 +449,7 @@ export default async function ReviewsPage({
         pageCount={moderatedPage.pageCount}
         href={pageHref}
         total={t("reviews.pagination.total", { count: moderatedPage.total })}
-        t={t}
+        words={staffPagerWords(t)}
         className="mt-8"
       />
     </main>

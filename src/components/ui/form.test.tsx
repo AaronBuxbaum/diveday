@@ -167,6 +167,28 @@ describe("Field error", () => {
     expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(alert.id);
   });
 
+  /**
+   * A description can be a component that has nothing to say yet: the
+   * onboarding form's storefront link says nothing until there is a slug to
+   * show. Its slot rendered anyway, empty, and still took the body's 4px gap
+   * under the control (the pixel probe, onboard). The slot stays mounted, so
+   * `aria-describedby` keeps a target, and hides itself while it is empty.
+   */
+  it("keeps a description that renders nothing out of the field's column", () => {
+    function NothingYet() {
+      return null;
+    }
+    render(
+      <Field label="Shop link" description={<NothingYet />}>
+        <input name="shopSlug" />
+      </Field>,
+    );
+    const input = screen.getByLabelText("Shop link");
+    const description = document.getElementById(`${input.id}-description`);
+    expect(description).toBeEmptyDOMElement();
+    expect(description).toHaveClass("empty:hidden");
+  });
+
   it("keeps the helper description alongside the refusal", () => {
     render(
       <Field label="Depth" description="Metres, to the nearest metre." error="Too deep.">

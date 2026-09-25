@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
@@ -233,7 +233,7 @@ export default async function CoursesPage({
         pageCount={coursePage.pageCount}
         href={pageHref}
         total={st("courses.list.pagination.total", { count: coursePage.total })}
-        t={st}
+        words={staffPagerWords(st)}
         className="mt-6"
       />
     </main>

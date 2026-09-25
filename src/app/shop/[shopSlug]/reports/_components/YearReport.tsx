@@ -138,97 +138,105 @@ export function YearReport({
         {quietestMonthLabel ? ` ${t("reports.year.quietest", { month: quietestMonthLabel })}` : ""}
       </p>
 
-      <section aria-label={t("reports.year.stripLabel")} className="mt-8">
-        <YearStrip
-          cells={year.strip}
-          months={monthMarkers}
-          copy={{
-            day: (cell: ShopYearCell) =>
-              cell.boats > 0
-                ? t("reports.year.stripDay", {
-                    day: formatCalendarDate(cell.day ?? year.firstDay, locale),
-                    divers: cell.divers,
-                    boats: cell.boats,
-                  })
-                : t("reports.year.stripQuietDay", {
-                    day: formatCalendarDate(cell.day ?? year.firstDay, locale),
-                  }),
-          }}
-        />
-        <p className="mt-3 text-sm text-muted">{t("reports.year.stripLegend")}</p>
-      </section>
-
-      <MonthFigures label={t("reports.year.numbersLabel")} figures={figures} columns={4} />
-
-      {shownSites.length > 0 ? (
-        <section aria-labelledby="year-sites" className="mt-10">
-          <GroupLabel
-            as="h2"
-            id="year-sites"
-            meta={t("reports.year.sitesCount", { count: year.siteCount })}
-          >
-            {t("reports.year.sitesLabel")}
-          </GroupLabel>
-          <ul>
-            {shownSites.map((site) => (
-              <SiteRow key={site.siteId} site={site} shopSlug={shopSlug} t={t} />
-            ))}
-          </ul>
-          {restSites.length > 0 ? (
-            <p className="mt-3 text-end text-sm text-muted tabular-nums">
-              {t("reports.year.sitesRest", { count: restSites.length, dives: restDives })}
-            </p>
-          ) : null}
+      {/* **One rhythm between the sections, and the stack owns it.** The strip
+          used to take `mt-8`, the figures nothing, and the sites and entries
+          `mt-10`, so the pixel probe measured 0 then 40px between them and the
+          strip's legend sat about 4px above the figures' top hairline. One
+          `space-y-10` here, and no `mt-*` on anything inside it
+          (forms-and-controls.md). */}
+      <div className="mt-8 space-y-10">
+        <section aria-label={t("reports.year.stripLabel")}>
+          <YearStrip
+            cells={year.strip}
+            months={monthMarkers}
+            copy={{
+              day: (cell: ShopYearCell) =>
+                cell.boats > 0
+                  ? t("reports.year.stripDay", {
+                      day: formatCalendarDate(cell.day ?? year.firstDay, locale),
+                      divers: cell.divers,
+                      boats: cell.boats,
+                    })
+                  : t("reports.year.stripQuietDay", {
+                      day: formatCalendarDate(cell.day ?? year.firstDay, locale),
+                    }),
+            }}
+          />
+          <p className="mt-3 text-sm text-muted">{t("reports.year.stripLegend")}</p>
         </section>
-      ) : null}
 
-      {shownEntries.length > 0 ? (
-        <section aria-labelledby="year-entries" className="mt-10">
-          <GroupLabel
-            as="h2"
-            id="year-entries"
-            meta={t("reports.year.entriesCount", { count: year.entries.length })}
-          >
-            {t("reports.year.entriesLabel")}
-          </GroupLabel>
-          <ul>
-            {shownEntries.map((entry) => (
-              <LedgerRow key={entry.day} stacked>
-                <span className="flex flex-wrap items-baseline gap-x-3">
-                  <span className="font-medium tabular-nums">
-                    {formatCalendarDate(entry.day, locale)}
-                  </span>
-                  <span className="text-muted">
-                    {t("reports.year.entry", { divers: entry.divers, boats: entry.boats })}
-                  </span>
-                  <span className="text-sm text-muted">
-                    {t("reports.year.entryClosedBy", { name: entry.actor })}
-                  </span>
-                </span>
-              </LedgerRow>
-            ))}
-          </ul>
-          {restEntries > 0 ? (
-            <p className="mt-3 text-end text-sm text-muted tabular-nums">
-              {t("reports.year.entriesRest", { count: restEntries })}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
+        <MonthFigures label={t("reports.year.numbersLabel")} figures={figures} columns={4} />
 
-      {/* Where the card goes when it leaves the shop, and the one door that
+        {shownSites.length > 0 ? (
+          <section aria-labelledby="year-sites">
+            <GroupLabel
+              as="h2"
+              id="year-sites"
+              meta={t("reports.year.sitesCount", { count: year.siteCount })}
+            >
+              {t("reports.year.sitesLabel")}
+            </GroupLabel>
+            <ul>
+              {shownSites.map((site) => (
+                <SiteRow key={site.siteId} site={site} shopSlug={shopSlug} t={t} />
+              ))}
+            </ul>
+            {restSites.length > 0 ? (
+              <p className="mt-3 text-end text-sm text-muted tabular-nums">
+                {t("reports.year.sitesRest", { count: restSites.length, dives: restDives })}
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+
+        {shownEntries.length > 0 ? (
+          <section aria-labelledby="year-entries">
+            <GroupLabel
+              as="h2"
+              id="year-entries"
+              meta={t("reports.year.entriesCount", { count: year.entries.length })}
+            >
+              {t("reports.year.entriesLabel")}
+            </GroupLabel>
+            <ul>
+              {shownEntries.map((entry) => (
+                <LedgerRow key={entry.day} stacked>
+                  <span className="flex flex-wrap items-baseline gap-x-3">
+                    <span className="font-medium tabular-nums">
+                      {formatCalendarDate(entry.day, locale)}
+                    </span>
+                    <span className="text-muted">
+                      {t("reports.year.entry", { divers: entry.divers, boats: entry.boats })}
+                    </span>
+                    <span className="text-sm text-muted">
+                      {t("reports.year.entryClosedBy", { name: entry.actor })}
+                    </span>
+                  </span>
+                </LedgerRow>
+              ))}
+            </ul>
+            {restEntries > 0 ? (
+              <p className="mt-3 text-end text-sm text-muted tabular-nums">
+                {t("reports.year.entriesRest", { count: restEntries })}
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+
+        {/* Where the card goes when it leaves the shop, and the one door that
           changes it. A quiet line rather than a section, on the tax line's
           pattern: it is a state and a door, not a heading's worth of page. */}
-      <p className="mt-10 text-end text-sm text-muted">
-        {showsOnDiveday ? t("reports.year.shareOn") : t("reports.year.shareOff")}
-        {" · "}
-        <Link
-          href={shopPath(shopSlug, "settings", "display")}
-          className="font-medium text-primary hover:underline"
-        >
-          {t("reports.year.shareDoor")}
-        </Link>
-      </p>
+        <p className="text-end text-sm text-muted">
+          {showsOnDiveday ? t("reports.year.shareOn") : t("reports.year.shareOff")}
+          {" · "}
+          <Link
+            href={shopPath(shopSlug, "settings", "display")}
+            className="font-medium text-primary hover:underline"
+          >
+            {t("reports.year.shareDoor")}
+          </Link>
+        </p>
+      </div>
     </>
   );
 }

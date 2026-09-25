@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
@@ -710,7 +710,7 @@ export default async function ReportsPage({
                       target > 1 ? `&page=${target}` : ""
                     }`
                   }
-                  t={t}
+                  words={staffPagerWords(t)}
                   className="mt-4"
                 />
               }
