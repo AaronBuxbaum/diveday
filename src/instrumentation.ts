@@ -58,7 +58,6 @@ export async function register() {
       tracesSampleRate: 0,
       beforeSend: redactEvent,
       beforeBreadcrumb: redactBreadcrumb,
-      enableLogs: true,
     });
   }
 }
