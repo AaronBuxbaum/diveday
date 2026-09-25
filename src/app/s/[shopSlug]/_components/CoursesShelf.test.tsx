@@ -50,6 +50,24 @@ describe("three cards and one door", () => {
   });
 });
 
+describe("a card's focus ring", () => {
+  /**
+   * The card's link fills it, and the card clipped its photo with
+   * `overflow-hidden` — which cut the whole global ring, 5px outside the link,
+   * on all four sides. An inset ring is no answer here: the photo is a
+   * positioned box, painted after the link's own outline, so it covered the
+   * top of the ring. The clip moves onto the link instead, which rounds the
+   * photo to the same corners and never clips the link's own outline.
+   */
+  it("clips the photo on the link, so nothing clips the link's ring", () => {
+    render(<CoursesShelf courses={[course(1)]} allCoursesHref="/s/blue-mantis/courses" t={t} />);
+    const card = screen.getByRole("listitem");
+    const link = screen.getByRole("link", { name: /Course 1/ });
+    expect(card).not.toHaveClass("overflow-hidden");
+    expect(link).toHaveClass("overflow-hidden", "rounded-[inherit]");
+  });
+});
+
 describe("the wave placeholder", () => {
   it("stands in for a course with no photo, in the primary tint and never the accent", () => {
     const { container } = render(

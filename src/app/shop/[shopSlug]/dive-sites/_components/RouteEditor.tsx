@@ -165,12 +165,15 @@ export function RouteEditor({
             >
               {/* The click surface sits over the whole frame. A `<button>`
                   rather than a bare div so it is a real control with a name,
-                  and so a tap on a phone behaves like a tap and not a drag. */}
+                  and so a tap on a phone behaves like a tap and not a drag.
+                  It fills the window the frame's `overflow-hidden` clips,
+                  so its focus ring is drawn inside it, and its top corners
+                  are the frame's, or the clip shaves the ring's. */}
               <button
                 type="button"
                 aria-label={copy.mapAriaLabel}
                 onClick={addPoint}
-                className="absolute inset-0 h-full w-full cursor-crosshair"
+                className="absolute inset-0 h-full w-full cursor-crosshair rounded-t-lg focus-visible:focus-ring-inset"
               />
               <svg
                 viewBox="0 0 100 100"

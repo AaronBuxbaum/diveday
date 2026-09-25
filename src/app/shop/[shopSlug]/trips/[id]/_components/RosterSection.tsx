@@ -1346,7 +1346,9 @@ export function RosterSection({
 
         {/* `-mx-3` on the row, and both controls at the same `sm` padding, so
             the padded pair sits on the text column every other line in this
-            panel sits on. */}
+            panel sits on. The bleed puts whichever control comes first 4px
+            from the card's `overflow-hidden` on a phone, a pixel short of the
+            outset ring, so both draw their ring inside. */}
         <div className="mt-4 border-t border-border pt-4">
           <div className="-mx-3 flex flex-wrap items-center gap-x-1 gap-y-2">
             {/* One orders door per row, and only when the shop can take money
@@ -1355,7 +1357,11 @@ export function RosterSection({
             {paymentsConnected ? (
               <Link
                 href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
-                className={buttonClass({ variant: "link", size: "sm" })}
+                className={buttonClass({
+                  variant: "link",
+                  size: "sm",
+                  className: "focus-visible:focus-ring-inset",
+                })}
               >
                 {t("trips.roster.createOrder")}
               </Link>
@@ -1378,7 +1384,11 @@ export function RosterSection({
                 // panel, indistinguishable from the sentences above it, so
                 // the one irreversible act on the row was the only thing
                 // there that did not read as a control.
-                triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                triggerClassName={buttonClass({
+                  variant: "danger-ghost",
+                  size: "sm",
+                  className: "focus-visible:focus-ring-inset",
+                })}
                 confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
               />
             </form>
@@ -1397,7 +1407,7 @@ export function RosterSection({
     const markSummary = (
       <summary
         aria-label={t("trips.roster.detailsSummaryLabel", { name: person.fullName })}
-        className={`absolute top-2.5 end-2 flex size-11 cursor-pointer list-none items-center justify-center rounded-lg transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary sm:end-3 ${
+        className={`absolute top-2.5 end-2 flex size-11 cursor-pointer list-none items-center justify-center rounded-lg transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:end-3 ${
           settledRow ? "text-success" : "text-muted hover:text-foreground"
         }`}
       >

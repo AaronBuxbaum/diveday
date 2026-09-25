@@ -93,4 +93,38 @@ describe("Trip About panel", () => {
     expect(screen.getByText("More for this departure")).toBeVisible();
     expect(screen.getByRole("button", { name: "Cancel this departure" })).not.toBeVisible();
   });
+
+  /**
+   * The card is `overflow-hidden`, and its own summary fills it edge to edge,
+   * so the outset ring was cut on all four sides: that one summary draws its
+   * ring inset, at the card's radius. A row's summary sits inside the body's
+   * `px-4`, 11px clear of the clip once the 5px ring is drawn, so it keeps the
+   * global ring — an inset ring there landed on the label's first letter and
+   * the caret, which sit on the summary's own edges (review, 2026-09-25).
+   */
+  it("rings the card's own summary inset at the card's radius, and gives a row's summary and the 'more' summary no ring utility, so both keep the global ring", () => {
+    const { container } = render(
+      <TripAboutSection
+        {...props}
+        open
+        moreLabel="More for this departure"
+        more={<button type="button">Cancel this departure</button>}
+      />,
+    );
+
+    const card = container.querySelector("details");
+    expect(card).toHaveClass("overflow-hidden");
+    expect(card?.querySelector(":scope > summary")).toHaveClass(
+      "focus-visible:focus-ring-inset",
+      "rounded-panel",
+      "group-open/about:rounded-b-none",
+    );
+    for (const summary of [
+      container.querySelector("details#details > summary"),
+      container.querySelector("details#about-more > summary"),
+    ]) {
+      expect(summary).not.toBeNull();
+      expect(summary?.className).not.toMatch(/focus-ring|outline/);
+    }
+  });
 });

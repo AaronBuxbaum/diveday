@@ -1091,6 +1091,16 @@ describe("states", () => {
     expect(checks(flags)).toEqual(["focus-ring-differs"]);
   });
 
+  it("leaves the global ring's inset twin alone: 3px at -3px, globals.css's focus-ring-inset", () => {
+    const inset = snap({ outline: { ...ring, offset: -3 } });
+    expect(analyzeStates(meta, snap(), null, inset)).toEqual([]);
+  });
+
+  it("still flags an inset ring drawn at any other width or offset", () => {
+    const hand = snap({ outline: { ...ring, width: 2, offset: -2 } });
+    expect(checks(analyzeStates(meta, snap(), null, hand))).toEqual(["focus-ring-differs"]);
+  });
+
   it("ignores a state the probe could not force", () => {
     const unforced = snap({ matches: { hover: false, focus: false, focusVisible: false } });
     expect(analyzeStates(meta, snap(), unforced, unforced)).toEqual([]);

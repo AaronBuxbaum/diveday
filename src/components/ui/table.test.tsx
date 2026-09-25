@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { Table, TBody, Td, THead, Th } from "./table";
+import { RowLink, Table, TBody, Td, THead, Th, Tr } from "./table";
 
 afterEach(cleanup);
 
@@ -184,5 +184,37 @@ describe("Table", () => {
     expect(screen.getByRole("cell", { name: "Row" }).closest("tbody")).toHaveClass(
       "[&>tr]:break-inside-avoid",
     );
+  });
+});
+
+/**
+ * **Focus is drawn once, on the target.** The link's `::after` overlay is what
+ * a pointer lands on, so it carries the ring, inset; the text switches its own
+ * outline off, which the outline guard in `src/app/focus-ring.test.ts` allows
+ * only while the overlay's ring is beside it. Before the global ring moved into
+ * `@layer base` it overrode that `outline-none` and the text wore a second
+ * ring. jsdom has no layout, so this pins which element carries what.
+ */
+describe("RowLink focus", () => {
+  it("rings the ::after overlay inset (focus-visible:after:focus-ring-inset), positions it against the row, and switches the text's own outline off", () => {
+    render(
+      <Table>
+        <TBody>
+          <Tr>
+            <Td>
+              <RowLink href="/shop/blue-mantis/divers/p-1">Grace Mensah</RowLink>
+            </Td>
+          </Tr>
+        </TBody>
+      </Table>,
+    );
+    const link = screen.getByRole("link", { name: "Grace Mensah" });
+    expect(link).toHaveClass(
+      "after:absolute",
+      "after:inset-0",
+      "focus-visible:after:focus-ring-inset",
+      "focus-visible:outline-none",
+    );
+    expect(link.closest("tr")).toHaveClass("relative");
   });
 });

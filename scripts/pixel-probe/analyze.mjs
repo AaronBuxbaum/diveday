@@ -19,6 +19,12 @@
 
 /** The global focus ring (globals.css): a 3px outline at a 2px offset. */
 export const GLOBAL_RING = { width: 3, offset: 2 };
+/**
+ * Its inset twin, `focus-ring-inset` (globals.css): the same 3px drawn wholly
+ * inside the box, for a row flush in a clipping container. One ring in two
+ * placements, so neither is "drawn two ways".
+ */
+export const GLOBAL_RING_INSET = { width: 3, offset: -3 };
 /** How far that ring reaches outside the box it surrounds. */
 export const DEFAULT_RING_REACH = GLOBAL_RING.width + GLOBAL_RING.offset;
 /** docs/design/principles.md §2: touch targets ≥ 44 px. */
@@ -1672,14 +1678,17 @@ export function analyzeStates(element, rest, hover, focus) {
       const reach = ringReach(focus);
       const global =
         ringShown &&
-        Math.abs(focus.outline.width - GLOBAL_RING.width) < 0.5 &&
-        Math.abs(focus.outline.offset - GLOBAL_RING.offset) < 0.5;
+        [GLOBAL_RING, GLOBAL_RING_INSET].some(
+          (sanctioned) =>
+            Math.abs(focus.outline.width - sanctioned.width) < 0.5 &&
+            Math.abs(focus.outline.offset - sanctioned.offset) < 0.5,
+        );
       if (!global) {
         flags.push(
           make("focus-ring-differs", {
             state: "focus",
             msg: ringShown
-              ? `focus ring is ${focus.outline.width}px at ${focus.outline.offset}px offset, not the global 3px at 2px`
+              ? `focus ring is ${focus.outline.width}px at ${focus.outline.offset}px offset, not the global 3px at 2px (or -3px inset)`
               : shadowChanged
                 ? `focus is a box-shadow ring (${reach}px reach), not the global outline`
                 : "focus is shown only by a fill, border or ink change — no ring",

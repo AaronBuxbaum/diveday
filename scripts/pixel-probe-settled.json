@@ -1,4 +1,17 @@
 {
   "//": "Pixel-probe flags that are right as they are. Each entry names the check and the signature (or a `classes` list the flag's class string must all carry), the reason, and a pointer to the code comment that explains it. The report lists matches as settled — never drops them. A flag that belongs here also earns a row in docs/design/settled-questions.md.",
-  "settled": []
+  "settled": [
+    {
+      "check": "focus-invisible",
+      "classes": ["focus-visible:outline-none", "focus-visible:after:focus-ring-inset"],
+      "reason": "Focus shows on RowLink's ::after overlay, the target a pointer has: focus-visible:after:focus-ring-inset draws the ring inside the overlay's own edge, and the text is not ringed a second time. The probe reads only the element's own outline. How far the overlay reaches (the cell or the whole row) is issue #1989.",
+      "pointer": "src/components/ui/table.tsx, RowLink's doc comment; docs/design/settled-questions.md"
+    },
+    {
+      "check": "focus-invisible",
+      "classes": ["w-16", "bg-transparent", "focus:outline-none"],
+      "reason": "Focus shows on the bordered box around the tip picker's custom amount input: its label wears has-[:focus-visible]:focus-ring, the global ring at +2px around the whole box. The input is a 64px strip of that box, so its own ring would circle the digits alone.",
+      "pointer": "src/app/ready/[token]/_components/TipAmountPicker.tsx, the comment above the preset pills; docs/design/settled-questions.md"
+    }
+  ]
 }

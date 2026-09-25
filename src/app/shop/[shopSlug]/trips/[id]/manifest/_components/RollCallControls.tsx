@@ -160,9 +160,18 @@ export function rollCallScrollMargin(isDeparture: boolean): string {
  * semibold wants 165px and the column has 176 to give it. A name that wraps
  * pushes its own audit line down and makes every row a different height, which
  * is the one thing a list read at a glance cannot afford.
+ *
+ * **The focus ring is drawn inside, at the card's radius.** The roll-call card
+ * is `overflow-hidden`, and the button starts 4px in, behind the row's tone
+ * rule, and flush with the card's top on the first row — so the global ring
+ * lost a pixel on the left of every row and 5px off the top of the first. The
+ * radius is the card's own (`rounded-panel`), so at the ends the ring's
+ * corners nest in the card's without the row having to know it is an end —
+ * which it cannot by `:first-child`, since an alarmed row is `order-first`.
+ * The button paints nothing, so the radius shapes the ring and nothing else.
  */
 export const ROW_DISCLOSURE_SUMMARY_CLASS =
-  "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 py-3 ps-4 pe-2 text-start select-none [&::-webkit-details-marker]:hidden";
+  "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 rounded-panel py-3 ps-4 pe-2 text-start select-none focus-visible:focus-ring-inset [&::-webkit-details-marker]:hidden";
 export const ROW_DISCLOSURE_PANEL_CLASS =
   "mx-4 mb-4 rounded-inset border border-border/70 bg-surface-sunken/50 p-3";
 

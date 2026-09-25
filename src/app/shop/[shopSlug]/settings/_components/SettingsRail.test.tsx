@@ -183,6 +183,16 @@ describe("the rail as it renders", () => {
     expect(selected[0]?.className).toContain("rounded-lg");
   });
 
+  it("draws the focus ring inside each row", () => {
+    // The rows sit flush with the left edge of the rail's own scroll box, which
+    // cut the outset ring's left 5px on every one of them; and they are 36px
+    // rows with no gap, so an outset ring would paint over its neighbours too.
+    renderRail();
+    for (const link of screen.getAllByRole("link")) {
+      expect(link).toHaveClass("focus-visible:focus-ring-inset", "rounded-lg");
+    }
+  });
+
   it("spends no accent ink at all", () => {
     renderRail({ badges: { stripe: "Not connected" } });
     const nav = screen.getByRole("navigation", { name: "Settings sections" });
@@ -319,6 +329,21 @@ describe("the rows the pane is made of", () => {
     const [tax, units] = [...container.querySelectorAll("details")];
     expect(tax?.open).toBe(true);
     expect(units?.open).toBe(false);
+  });
+
+  it("rings a setting's summary inside itself, rounded into the group's corners at the ends", () => {
+    // Flush inside `InsetGroup`'s `overflow-hidden` card: the outset ring was
+    // cut on both sides of every row (the probe's largest settings cluster).
+    const { container } = render(
+      <SettingsRow sectionId="tax" heading="Sales tax & VAT">
+        <span>form</span>
+      </SettingsRow>,
+    );
+    expect(container.querySelector("summary")).toHaveClass(
+      "focus-visible:focus-ring-inset",
+      "[details:first-child>&]:rounded-t-panel",
+      "[details:last-child:not([open])>&]:rounded-b-panel",
+    );
   });
 
   it("puts the fragment target inside the disclosure, where the reveal reaches it", () => {

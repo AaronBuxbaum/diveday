@@ -44,14 +44,20 @@ export function JumpNav({
     // the page title above rather than sitting 12px inside it. The padding
     // itself stays — with `min-h-11` it is what makes each label a real touch
     // target on a phone. Never on paper: a printed manifest or diver record
-    // has no "jump".
+    // has no "jump". The same pull puts the first link 4px from a 390px
+    // screen's edge, so the focus ring is drawn inside each link rather than
+    // 5px outside it, where the screen cut a pixel.
     <div className={`mb-8 border-b border-border pb-2 print:hidden ${className}`}>
       <nav aria-label={ariaLabel} className="-ml-3 flex flex-wrap items-center gap-x-1">
         {items.map((item) => (
           <a
             key={item.id}
             href={`#${item.id}`}
-            className={buttonClass({ variant: "link", size: "sm" })}
+            className={buttonClass({
+              variant: "link",
+              size: "sm",
+              className: "focus-visible:focus-ring-inset",
+            })}
           >
             {item.label}
           </a>

@@ -188,9 +188,12 @@ function Row({ row }: { row: WeekLedgerRow }) {
   return (
     <li>
       <div className="group relative -mx-3 flex flex-col gap-2 rounded-lg px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-start sm:gap-4 sm:px-4 sm:py-5">
+        {/* The ring is drawn inside the row: below `sm` the row bleeds
+            `-mx-3` into a 16px gutter, 4px from the screen's edge, which cut
+            the outset ring by a pixel on each side. */}
         <Link
           href={row.href}
-          className="absolute inset-0 z-0 rounded-inset"
+          className="absolute inset-0 z-0 rounded-inset focus-visible:focus-ring-inset"
           aria-label={row.linkLabel}
         />
         {/* The date lives on the day rule above, so the row carries only its

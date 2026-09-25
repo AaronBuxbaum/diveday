@@ -46,3 +46,27 @@ describe("TipAmountPicker currency (task 60)", () => {
     for (const input of presetInputs) expect(input.checked).toBe(false);
   });
 });
+
+/**
+ * **Focus shows on the boxes the eye reads as the controls.** A preset's radio
+ * is `sr-only`, so a Tab into the group lit nothing until its label was
+ * ringed; the custom field is a 64px strip of the "Other" box, so its own ring
+ * would circle the digits alone. The field switching its outline off is one of
+ * the two named exceptions to the outline guard in
+ * `src/app/focus-ring.test.ts`. jsdom has no layout, so this pins which
+ * element carries the ring.
+ */
+describe("TipAmountPicker focus", () => {
+  it("rings each preset's label and the Other box (has-[:focus-visible]:focus-ring), and only the amount field inside switches its own outline off", () => {
+    render(
+      <TipAmountPicker presets={[5, 10, 20]} defaultPreset={10} currencySymbol="$" {...copy} />,
+    );
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio).toHaveClass("sr-only");
+      expect(radio.closest("label")).toHaveClass("has-[:focus-visible]:focus-ring");
+    }
+    const custom = screen.getByLabelText("Other tip amount");
+    expect(custom).toHaveClass("focus:outline-none");
+    expect(custom.closest("label")).toHaveClass("has-[:focus-visible]:focus-ring", "border");
+  });
+});

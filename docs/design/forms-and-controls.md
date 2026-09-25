@@ -286,8 +286,8 @@ in the *device's* language, whatever the reader's is. Every photo picker in the 
 shape by hand:
 
 - the input is `sr-only` **inside** a `<label>` wearing `buttonClass()`, so what looks like a
-  button *is* the label — one control, one tap target, one focus stop (the ring is drawn with
-  `focus-within`);
+  button *is* the label — one control, one tap target, one focus stop (the label draws the ring,
+  with `has-[:focus-visible]:focus-ring`; see [Focus rings](#focus-rings-one-ring-two-placements));
 - `sr-only` and never `hidden`: a `display:none` control carrying `required` makes Chrome refuse
   the whole submit as "not focusable" instead of reporting the field;
 - what was picked is named beside it, and the button switches to its `chooseAnother` word;
@@ -602,6 +602,51 @@ Transform and opacity only ([principle 5](principles.md)). Animating `box-shadow
 large surface paints every frame — `.card-scale-hint` did exactly that, with a literal
 `rgba(0, 0, 0, 0.05)` shadow invisible on the dark palette, so half the readers paid for an effect
 none of them saw.
+
+## Focus rings: one ring, two placements
+
+Every control gets the global ring from `globals.css` — 3px of `--focus-ring` at a 2px offset,
+reaching 5px outside the box — and a call site never draws a ring of its own. The rule lives in
+`@layer base` so the two utilities beside it can move it. It used to be unlayered, which beat every
+Tailwind utility whatever its specificity: the trip's About summary and the offline manifest's rows
+asked for an inset ring, rendered the global one at +2px, and the `overflow-hidden` card around
+them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
+
+- **`focus-ring`**, under `has-[:focus-visible]:` or `peer-focus-visible:`, is for a stand-in:
+  focus lands on something invisible and the eye reads another box as the control. The label
+  around an `sr-only` input (`ImageFileInput`, a weekday chip, a tip preset), a switch's track.
+  `has-[:focus-visible]` rather than `focus-within`, so it lights for the keyboard the way the
+  global rule does.
+- **`focus-visible:focus-ring-inset`** is for an element flush with an `overflow-hidden` or
+  scrolling edge: a list card's rows, a scroll box's options, the command palette's field, a row
+  or a control bled `-mx-3` or `-ml-3` to 4px from a clipping edge. It is the same 3px, drawn
+  wholly inside the box, and on the element's own fill (the contrast of each fill is in the
+  utility's comment in `globals.css`). Where the row meets the container's rounded corner it
+  takes the container's radius too, or the clip shaves the ring's square corner —
+  `LIST_ROW_SUMMARY_RING` in `src/components/ui/disclosure.tsx` for a `<summary>` row, which
+  cannot `inherit` a radius through its `<details>`. Never remove the container's
+  `overflow-hidden` to make room: it is what rounds the rows' hover fills.
+- **Room, not an inset ring,** for chips in a strip that scrolls sideways (`FilterChips`, the
+  product page's chapter strip): vertical padding on the scroller for the 5px, and the same
+  negative margin so nothing around it moves. A negative top margin collapses through a parent
+  with no top border or padding, so that parent is `flow-root`. Room too where the row's
+  padding was the defect: the diver record's shelf rows had `px-1` in an `InsetGroup` and now
+  take its `px-5 py-4 sm:px-6`.
+- **Never switch the outline off** on an `a`, `button`, `input`, `select`, `textarea` or
+  `summary`. In `@layer base` the global rule loses to `outline-none`, so it now does what it
+  says and leaves a keyboard user nothing. The two exceptions show focus on another box:
+  `RowLink`'s text (its `::after` overlay is ringed) and the tip picker's amount field (the
+  bordered box around it is).
+- **A positioned child paints over its parent's outline.** An inset ring on a link that holds a
+  photo is hidden under the photo. The storefront's course cards moved the clip from the card onto
+  the link instead, which keeps the global ring: an element's `overflow` never clips its own
+  outline.
+
+`src/app/focus-ring.test.ts` refuses a width or an offset under any focus variant, and an outline
+switched off anywhere but an element the global rule never rings (in practice a `tabIndex={-1}`
+container a script moves focus into) and those two exceptions. It also lists the elements the
+probe measured a clip cutting whose components do not render in jsdom; the rest are pinned in
+their own components' tests. These read classes, not pixels: the pixel probe measures the ring.
 
 ## Buttons: `buttonClass()`
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { LIST_ROW_SUMMARY_RING } from "@/components/ui/disclosure";
 import { type SectionId, settingsSectionFragment } from "../settings-groups";
 
 /**
@@ -54,7 +55,9 @@ function RowSummary({
   // dock test's device is exactly where an email or address would otherwise
   // be cut to "hello@demo.inva…".
   return (
-    <summary className="flex min-h-14 cursor-pointer list-none flex-col justify-center gap-1 px-4 py-3 transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
+    <summary
+      className={`flex min-h-14 cursor-pointer list-none flex-col justify-center gap-1 px-4 py-3 transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 ${LIST_ROW_SUMMARY_RING}`}
+    >
       <span className="flex items-center justify-between gap-4">
         <h3 id={anchorId} className="scroll-mt-24 text-base font-medium sm:shrink-0">
           {heading}

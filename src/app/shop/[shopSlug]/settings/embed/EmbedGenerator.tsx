@@ -156,7 +156,7 @@ export function EmbedGenerator({
                 {EMBED_KINDS.map((k) => (
                   <label
                     key={k}
-                    className={`${tile(kind === k)} cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary`}
+                    className={`${tile(kind === k)} cursor-pointer has-[:focus-visible]:focus-ring`}
                   >
                     <input
                       type="radio"
@@ -227,7 +227,7 @@ export function EmbedGenerator({
                     {(["site", "light"] as const).map((value) => (
                       <label
                         key={value}
-                        className={`flex min-h-9 flex-1 cursor-pointer items-center justify-center rounded-lg px-3 text-sm font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary ${
+                        className={`flex min-h-9 flex-1 cursor-pointer items-center justify-center rounded-lg px-3 text-sm font-semibold has-[:focus-visible]:focus-ring ${
                           look === value ? "bg-surface text-foreground shadow-sm" : "text-muted"
                         }`}
                       >
@@ -328,7 +328,7 @@ export function EmbedGenerator({
             {PLATFORMS.map((p) => (
               <label
                 key={p}
-                className={`min-h-9 cursor-pointer rounded-full border px-3 py-1.5 text-sm font-medium has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary ${
+                className={`min-h-9 cursor-pointer rounded-full border px-3 py-1.5 text-sm font-medium has-[:focus-visible]:focus-ring ${
                   platform === p ? "border-primary bg-primary-tint" : "border-border bg-surface"
                 }`}
               >

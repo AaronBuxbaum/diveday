@@ -274,8 +274,16 @@ export function Tr({ className = "", children, ...rest }: React.ComponentPropsWi
  * on its own.
  *
  * **The focus ring is on the overlay, not the text**, so it traces the target a
- * pointer actually has; `outline-offset-[-2px]` pulls it just inside the cell's
- * edge.
+ * pointer actually has, and `focus-ring-inset` draws it wholly inside the
+ * overlay's own edge, where no clip flush with that edge can cut it. (A browser
+ * lab drew the overlay, and its ring, across the whole row rather than the
+ * cell, the cell's `overflow-hidden` notwithstanding; #1989 checks that in the
+ * app.) The link's own ring is off, so focus is drawn once: until the global
+ * ring moved into `@layer base` it overrode that `outline-none` and the text
+ * wore a second ring. The pixel probe reads only the element's own outline, so
+ * it calls this `focus-invisible` — settled in
+ * `scripts/pixel-probe-settled.json`, and one of the two named exceptions to
+ * the outline guard in `src/app/focus-ring.test.ts`.
  *
  * **To win the whole row**, the cell holding this says `clip={false}` — see
  * `Td`, which carries the two conditions that come with it. The dive-site
@@ -297,7 +305,7 @@ export function RowLink({
     <Link
       href={href}
       onClick={onClick}
-      className={`${tapTargetLinkClass} after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary ${className}`.trim()}
+      className={`${tapTargetLinkClass} after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:focus-ring-inset ${className}`.trim()}
     >
       {children}
     </Link>

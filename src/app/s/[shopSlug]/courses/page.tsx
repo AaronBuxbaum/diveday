@@ -169,7 +169,7 @@ export default async function PublicCoursesPage({
                   <li key={course.id}>
                     <Link
                       href={publicCoursePath(shopSlug, course.slug)}
-                      className="group -mx-3 flex gap-4 rounded-lg px-3 py-5 transition-colors hover:bg-surface-sunken"
+                      className="group -mx-3 flex gap-4 rounded-lg px-3 py-5 transition-colors hover:bg-surface-sunken focus-visible:focus-ring-inset"
                     >
                       {/* The course's own face, decorative (`alt=""` — the
                           title beside it names the course). A course with no

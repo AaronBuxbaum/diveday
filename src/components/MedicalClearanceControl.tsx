@@ -162,14 +162,14 @@ export function MedicalClearanceControl({
               language whatever the reader's is. The input is `sr-only` inside
               the `<label>` — never `hidden`, which makes Chrome refuse a submit
               it cannot focus — so what looks like a button *is* the control,
-              and the ring is drawn with `focus-within`. */}
+              and the label draws the ring, from `has-[:focus-visible]` so it
+              lights for the keyboard as the global ring does. */}
           <div className="flex flex-wrap items-center gap-3">
             <label
               className={buttonClass({
                 variant: "secondary",
                 size: "sm",
-                className:
-                  "cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary",
+                className: "cursor-pointer has-[:focus-visible]:focus-ring",
               })}
             >
               {picked ? copy.documentChooseAnother : copy.documentChoose}

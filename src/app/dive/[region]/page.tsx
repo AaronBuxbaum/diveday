@@ -148,7 +148,7 @@ export default async function RegionPage({ params }: { params: Promise<{ region:
             <li key={shop.id}>
               <Link
                 href={publicSchedulePath(shop.slug)}
-                className="group -mx-3 flex items-center gap-4 rounded-lg px-3 py-5 transition-colors hover:bg-surface-sunken"
+                className="group -mx-3 flex items-center gap-4 rounded-lg px-3 py-5 transition-colors hover:bg-surface-sunken focus-visible:focus-ring-inset"
               >
                 {shop.logoUrl ? (
                   // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo

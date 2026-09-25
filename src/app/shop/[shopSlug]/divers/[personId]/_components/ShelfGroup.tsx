@@ -48,8 +48,14 @@ export function ShelfGroup({
 
   return (
     <DiverFileGroupDisclosure id="shelf" label={t("divers.shelf.label")} summary={summary}>
+      {/* Both rows take the inset every other group on the record gives its
+          rows (`px-5 py-4 sm:px-6`, as in the notes and conversation groups).
+          They had the summary's `px-1`, which put the text 4px from the
+          card's edge, sat the button's border on the divider above it, and
+          left the button's 5px focus ring a pixel short of the card's
+          `overflow-hidden`. */}
       <InsetGroup>
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-1 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4 sm:px-6">
           <p className="text-sm text-muted">
             {standing.phones > 0
               ? t("divers.shelf.phones", { count: standing.phones })
@@ -68,7 +74,7 @@ export function ShelfGroup({
         </div>
         <form
           action={sendShelfLinkAction.bind(null, shopSlug, personId)}
-          className="flex flex-wrap items-center gap-3 px-1 pb-3"
+          className="flex flex-wrap items-center gap-3 px-5 py-4 sm:px-6"
         >
           <SubmitButton
             pendingLabel={t("divers.shelf.send")}

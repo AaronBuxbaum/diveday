@@ -56,10 +56,14 @@ export function EditorRail({
           const active = section.id === current;
           return (
             <li key={section.id} className="flex">
+              {/* The ring is inside the row, as on the settings rail: from
+                  `lg` up this is a column of stacked rows, and below it the
+                  row's `-ms-3` puts the first link 4px from a 390px screen's
+                  edge, which cut an outset ring by a pixel. */}
               <a
                 href={`#${section.id}`}
                 aria-current={active ? "true" : undefined}
-                className={`flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-sunken hover:text-foreground lg:w-full ${
+                className={`flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-sunken hover:text-foreground focus-visible:focus-ring-inset lg:w-full ${
                   active ? "text-muted lg:bg-primary-tint lg:text-primary" : "text-muted"
                 }`}
               >

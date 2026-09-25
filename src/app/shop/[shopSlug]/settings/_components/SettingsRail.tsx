@@ -158,7 +158,12 @@ function RailLink({
   selected: boolean;
   children: React.ReactNode;
 }) {
-  const className = `flex h-9 items-center justify-between gap-2 rounded-lg px-2 text-sm font-medium transition-brand ${
+  // The ring is drawn inside the row. The rows sit flush with the left edge
+  // of the rail's own scroll box, which cut the outset ring's left 5px on
+  // every one of them; and they are 36px rows with no gap between, so an
+  // outset ring would also paint over the row above and the row below.
+  // Inside, it traces the row's own rounded fill.
+  const className = `flex h-9 items-center justify-between gap-2 rounded-lg px-2 text-sm font-medium transition-brand focus-visible:focus-ring-inset ${
     selected
       ? "bg-primary-tint text-primary"
       : "text-muted hover:bg-surface-sunken hover:text-foreground"

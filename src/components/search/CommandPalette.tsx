@@ -653,7 +653,18 @@ export function CommandPalette({
                     setActive(0);
                   }}
                   onKeyDown={onKeyDown}
-                  className="w-full border-b border-border bg-transparent px-5 py-4 text-base outline-none placeholder:text-muted"
+                  // **The ring is drawn inside the field.** Focus sits here
+                  // for as long as the palette is open — no option ever takes
+                  // it (`tabIndex={-1}`; the arrows move
+                  // `aria-activedescendant`) — and the field is flush with the
+                  // dialog's `overflow-hidden` on three sides, which cut the
+                  // outset global ring to a 3px bar under it. Inset, the ring
+                  // is whole; `rounded-t-panel` bends it with the dialog's
+                  // top corners (20px against the 19px the dialog's border
+                  // leaves inside it, so the clip's curve never reaches it).
+                  // The field paints no fill, so the radius shapes the ring
+                  // and nothing else.
+                  className="w-full rounded-t-panel border-b border-border bg-transparent px-5 py-4 text-base placeholder:text-muted focus-visible:focus-ring-inset"
                 />
                 {/* `pb-2` inside the scroll box, not on the panel: the last
                     row now ends on its own padding rather than being sliced
@@ -695,7 +706,7 @@ export function CommandPalette({
                                 setActive(flat.findIndex((entry) => entry.key === item.key))
                               }
                               onClick={() => go(item)}
-                              className={`flex w-full items-center gap-3 px-5 py-2.5 text-left ${
+                              className={`flex w-full items-center gap-3 px-5 py-2.5 text-left focus-visible:focus-ring-inset ${
                                 isActive ? "bg-primary/10" : ""
                               }`}
                             >

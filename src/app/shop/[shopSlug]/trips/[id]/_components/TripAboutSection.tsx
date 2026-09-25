@@ -35,7 +35,7 @@ function AboutRow({ row }: { row: TripAboutRow }) {
   }
   return (
     <AboutRowDetails id={row.id} open={row.editorOpen} className="group/row scroll-mt-24">
-      <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary">
+      <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
         <span className={ROW_GRID}>
           {beat}
           <span className="inline-flex min-h-11 w-fit items-center gap-1 self-start text-sm font-semibold text-primary sm:justify-self-end">
@@ -148,7 +148,12 @@ export function TripAboutSection({
         className: "group/about scroll-mt-24 overflow-hidden",
       })}
     >
-      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2.5 px-4 py-2 text-sm transition-colors [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary sm:min-h-16 sm:gap-3 sm:px-5 sm:py-2.5">
+      {/* The summary fills the card, whose `overflow-hidden` cut the outset
+          ring on all four sides, so the ring is drawn inside it — at the
+          card's own radius, or the clip shaves its square corners. The radius
+          is spelled, not `inherit`ed: a `<summary>` inherits through the
+          `<details>`' shadow slot, which carries none. */}
+      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2.5 rounded-panel px-4 py-2 text-sm transition-colors [&::-webkit-details-marker]:hidden focus-visible:focus-ring-inset group-open/about:rounded-b-none sm:min-h-16 sm:gap-3 sm:px-5 sm:py-2.5">
         <svg
           aria-hidden="true"
           className="size-4 shrink-0 text-muted sm:size-5"
@@ -188,7 +193,7 @@ export function TripAboutSection({
         </div>
         {more ? (
           <details id="about-more" open={moreOpen} className="group/more mt-4">
-            <summary className="-mx-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <summary className="-mx-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
               {moreLabel}
               <DisclosureCaret direction="down" className="size-4 group-open/more:rotate-180" />
             </summary>
