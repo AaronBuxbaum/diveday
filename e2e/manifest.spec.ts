@@ -15,8 +15,15 @@ signedInAsOwner();
 // The manifest page primes the offline shell in the background — no tap
 // required. Wait for that to land before cutting the network. Polled from
 // the page's main world (not waitForFunction's utility world, where the
-// worker's controller and cache state can lag) so the three readiness
-// signals are read atomically.
+// worker's state and cache state can lag) so both readiness signals are read
+// atomically.
+//
+// The worker *activated*, not this page *controlled*: a page whose own
+// navigation was in flight when the worker activated is never claimed, and
+// waiting on its controller then waits forever (visual run 36103429213; see
+// `settleOfflineShellWorker` in visual.spec.ts). Every caller proves the shell
+// with a fresh navigation — a reload, a goto — which an activated worker
+// controls from its first byte, so that is the state worth waiting for.
 async function waitForShellPrimed(page: Page) {
   // The worker is a build output (scripts/build-service-worker.mjs), not a
   // committed file — `public/manifest-sw.js` is gitignored. When it is absent
@@ -38,8 +45,7 @@ async function waitForShellPrimed(page: Page) {
         const registration = await navigator.serviceWorker.getRegistration("/manifest-sw.js");
         const cache = await caches.open("diveday-offline-manifest-shell-v2");
         return (
-          !!navigator.serviceWorker.controller &&
-          !!registration?.active &&
+          registration?.active?.state === "activated" &&
           (await cache.match("/offline-manifest")) !== undefined
         );
       }),
@@ -208,6 +214,10 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "After dive 1" })).toBeVisible();
 
+  // Only an *activated* worker catches the reload below. Neither the pill nor
+  // the shell having rendered says its install has finished — under load the
+  // reload otherwise reaches the network and fails ERR_INTERNET_DISCONNECTED.
+  await waitForShellPrimed(page);
   await context.setOffline(true);
   await page.reload();
   // Offline reload serves the device copy; its freshness badge reads
@@ -983,6 +993,10 @@ test("a checklist tap made offline queues, then syncs once signal returns", asyn
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
 
+  // Only an *activated* worker catches the reload below. Neither the pill nor
+  // the shell having rendered says its install has finished — under load the
+  // reload otherwise reaches the network and fails ERR_INTERNET_DISCONNECTED.
+  await waitForShellPrimed(page);
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByText("Fresh copy")).toBeVisible();
@@ -1158,6 +1172,10 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
 
+  // Only an *activated* worker catches the reload below. Neither the pill nor
+  // the shell having rendered says its install has finished — under load the
+  // reload otherwise reaches the network and fails ERR_INTERNET_DISCONNECTED.
+  await waitForShellPrimed(page);
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByText("Fresh copy")).toBeVisible();
