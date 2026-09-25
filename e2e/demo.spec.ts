@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import { STAFF_DAY_HEADING } from "./helpers";
+import { ONBOARD_FORM_PATH } from "./servers";
 
 test("landing demo CTA drops a visitor into the staff shop", async ({ page }) => {
   await page.goto("/");
@@ -55,7 +56,7 @@ test("an onboarded trial shop is a real shop, not demo mode", async ({ page }) =
   // `Date.now()` is the runner's real clock; `e2eNow()` is the fleet's frozen
   // instant and would produce the same string every run.
   const slug = `coral-cove-e2e-${Date.now()}-${process.pid}`;
-  await page.goto("/onboard");
+  await page.goto(ONBOARD_FORM_PATH);
   await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Coral Cove Divers");
   await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(slug);
   await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Riva Okonkwo");

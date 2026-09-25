@@ -2,7 +2,6 @@ import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
 import { canImportShopData } from "@/lib/authz";
-import { type FunnelSource, trialHref } from "@/lib/funnel";
 
 /**
  * The other direction of the import/switching link (task 163): a switching
@@ -14,43 +13,18 @@ import { type FunnelSource, trialHref } from "@/lib/funnel";
  * the role has since changed, so a stale token here only costs an extra
  * click, never a bypassed gate.
  */
-export async function SwitchingImportCta({
-  label,
-  trialLabel,
-  source,
-}: {
-  label: string;
-  trialLabel: string;
-  source?: FunnelSource;
-}) {
+export async function SwitchingImportCta({ label }: { label: string }) {
   const session = await auth();
   const shopSlug = session?.user?.shopSlug;
-  if (shopSlug && canImportShopData(session.user.roles)) {
-    return (
-      <div className="mt-8">
-        <Link
-          href={`/shop/${shopSlug}/settings/import`}
-          className={buttonClass({ variant: "secondary", className: "border-border-strong" })}
-        >
-          {label}
-        </Link>
-      </div>
-    );
-  }
-
-  // A signed-out reader has no shop to deep-link into, but this is the point
-  // where they have just seen the importer explain what their file can bring
-  // across. Keep the door secondary and use the guide's position tag so the
-  // trial remains attributable without adding a fourth demo door.
-  if (!session && source) {
-    return (
-      <div className="mt-8">
-        <Link href={trialHref(source)} className={buttonClass({ variant: "secondary" })}>
-          {trialLabel}
-        </Link>
-      </div>
-    );
-  }
-
-  return null;
+  if (!shopSlug || !canImportShopData(session.user.roles)) return null;
+  return (
+    <div className="mt-8">
+      <Link
+        href={`/shop/${shopSlug}/settings/import`}
+        className={buttonClass({ variant: "secondary", className: "border-border-strong" })}
+      >
+        {label}
+      </Link>
+    </div>
+  );
 }

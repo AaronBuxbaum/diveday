@@ -118,13 +118,7 @@ export default async function SpreadsheetSwitchPage() {
       </Suspense>
       <SpreadsheetBody
         locale={locale}
-        importCta={
-          <SwitchingImportCta
-            label={t("switching.common.openImportCta")}
-            trialLabel={t("marketing.common.startTrial")}
-            source="switching-spreadsheet-mid"
-          />
-        }
+        importCta={<SwitchingImportCta label={t("switching.common.openImportCta")} />}
       />
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
@@ -163,9 +157,8 @@ const WEDGE_ITEMS = [
 /**
  * Cached per negotiated locale (DIVER_LOCALES — two entries). `importCta` carries
  * {@link SwitchingImportCta} (session-scoped — reads `auth()`) as a
- * pass-through slot per Next's `"use cache"` interleaving rules. Its funnel
- * source is bound before it crosses this cache boundary, so this body only
- * renders the slot unchanged and its per-visitor content never enters the
+ * pass-through slot per Next's `"use cache"` interleaving rules. This body only
+ * renders the slot unchanged, so its per-visitor content never enters the
  * cache entry.
  */
 async function SpreadsheetBody({

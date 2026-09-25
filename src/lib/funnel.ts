@@ -3,14 +3,16 @@ import { MIGRATION_GUIDE_SLUGS } from "./migration-guides";
 import { publicSchedulePath } from "./public-routes";
 
 /**
- * The funnel vocabulary: every page that can send a visitor toward the demo or
- * a trial, named once. Both marketing events (`demo_entered`, `trial_started`)
- * carry one of these tags so the two halves can be read per surface.
+ * The funnel vocabulary: every page that can send a visitor toward the demo,
+ * named once. `demo_entered` carries one of these tags so the demo can be read
+ * per surface; `trial_started` still reads one off `/onboard?from=`, though
+ * since every shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand)
+ * no public door carries it there.
  *
  * A registry rather than a loose string, because the failure it prevents is
  * silent: a misspelled tag doesn't error, it just opens a second bucket that
  * looks like a real page with suspiciously few visits. Tags are chosen from
- * this list at the call site (`trialHref`, `<FunnelTag>`), and anything that
+ * this list at the call site (`<FunnelTag>`), and anything that
  * arrives off a request is clamped back to it by `eventSource`.
  *
  * A page that offers the same action from more than one place splits its tag by
@@ -49,14 +51,10 @@ const FIXED_SOURCES = [
   // (docs/product/marketing.md).
   "home-records",
   "home-records-arriving",
-  // The door out of the hero once a visitor has typed their shop, their boat
-  // and a departure into it (ADR 20260908-one-hand, decision 6, possibility Y).
-  // Its own tag rather than `home-hero`'s: a shop that drew its own first day
-  // before opening the door is a different moment from one that read the
-  // headline and clicked, and it is the whole question the hero's three fields
-  // were added to answer. The three rows above the button carry it too — they
-  // are the same door, and splitting them would divide one decision into four
-  // buckets nobody could read.
+  // Retired 2026-09-25 with the hero it tagged: the door out of the homepage's
+  // "try it with your boats" drawing, which led to a self-serve sign-up that no
+  // longer exists (ADR 20260925-shops-are-set-up-by-hand). Kept for history,
+  // not for reuse.
   "home-drawn",
   "home-closing",
   "nav",
@@ -174,18 +172,9 @@ export function eventSource(value: unknown): FunnelSource | "unknown" {
 }
 
 /**
- * The trial CTA's destination. Every "Start a trial" link goes through here, so
- * the tag can't be forgotten on a new one or misspelled on an existing one —
- * both become type errors instead of a gap in the funnel.
- */
-export function trialHref(source: FunnelSource): string {
-  return `/onboard?from=${source}`;
-}
-
-/**
  * The "see a diver's booking page" link's destination — the third door out of
- * a marketing CTA, alongside the demo and the trial. Tagged the same way
- * `trialHref` tags its own; the query string needs no companion custom event
+ * a marketing CTA, alongside the demo and the set-up mail. Tagged the same way
+ * the demo form tags its own; the query string needs no companion custom event
  * because the Vercel `<Analytics />` page view it produces already carries it.
  * Takes the shop slug rather than assuming the demo shop, so a server
  * component supplies `DEMO_SHOP_SLUG` and this file — reachable from a client

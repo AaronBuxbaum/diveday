@@ -42,7 +42,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/", priority: 1 },
     { path: "/product", priority: 0.9 },
     { path: "/pricing", priority: 0.9 },
-    { path: "/onboard", priority: 0.8 },
     { path: "/about", priority: 0.6 },
     // The regional index (issue #1436, N-49). Its town pages are appended
     // below, from the same reader the page itself uses, so a town appears here

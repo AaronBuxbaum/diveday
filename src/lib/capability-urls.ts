@@ -157,6 +157,16 @@ const CAPABILITY_QUERY_PARAMS = [
    * this one rather than against it (security review, slice 23e).
    */
   "diver",
+  /**
+   * The onboard setup key (ADR 20260925-shops-are-set-up-by-hand):
+   * `/onboard?setup=<key>` is the only way a shop gets created, and the key is
+   * long-lived and shared — one value opens the form for every shop until it is
+   * rotated. A leaked copy in a telemetry pipeline is a working sign-up door
+   * for anyone who can read that pipeline. `onboard-setup-key.test.ts`
+   * imports `ONBOARD_SETUP_PARAM` and asserts this list blanks it, so the two
+   * cannot drift.
+   */
+  "setup",
 ] as const;
 
 function decodeSegment(segment: string): string {

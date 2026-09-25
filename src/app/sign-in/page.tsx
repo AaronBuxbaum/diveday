@@ -14,7 +14,7 @@ import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { getAuth } from "@/lib/auth";
-import { trialHref } from "@/lib/funnel";
+import { ONBOARDING_EMAIL, setUpMailto } from "@/lib/platform-mail";
 import { publicSchedulePath, shopSlugFromStaffUrl } from "@/lib/public-routes";
 
 // This page was instant before the rest of the app was (ADR
@@ -125,9 +125,12 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
           ) : null}
           <p>
             {t("account.signIn.needShop")}{" "}
-            <Link href={trialHref("sign-in")} className="font-medium text-primary hover:underline">
-              {t("account.signIn.createShop")}
-            </Link>
+            <a
+              href={setUpMailto(t("marketing.common.setUpSubject"))}
+              className="font-medium text-primary hover:underline"
+            >
+              {t("account.signIn.getSetUp", { email: ONBOARDING_EMAIL })}
+            </a>
           </p>
         </>
       }

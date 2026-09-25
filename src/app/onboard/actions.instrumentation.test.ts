@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEV_ONBOARD_SETUP_KEY } from "@/lib/onboard-setup-key";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { seededTestDb } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
@@ -60,6 +61,8 @@ const { onboardAction } = await import("./actions");
 
 function onboardForm(overrides: Record<string, string> = {}): FormData {
   const form = new FormData();
+  // The fixed key a non-production run accepts; the suite runs under `test`.
+  form.set("setup", DEV_ONBOARD_SETUP_KEY);
   form.set("shopName", "Reef Runners");
   form.set("shopSlug", "reef-runners");
   form.set("timezone", "America/New_York");

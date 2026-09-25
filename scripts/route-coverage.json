@@ -6,10 +6,9 @@
       "manifest.spec.ts",
       "marketing.spec.ts",
       "seo.spec.ts",
-      "shop-year.spec.ts",
-      "try-it.spec.ts"
+      "shop-year.spec.ts"
     ],
-    "visual": ["landing", "landing-drawn", "landing-year-band"],
+    "visual": ["landing", "landing-year-band"],
     "a11y": ["a11y.spec.ts"]
   },
   "/about": {
@@ -82,10 +81,9 @@
       "marketing.spec.ts",
       "nitrox.spec.ts",
       "onboard.spec.ts",
-      "tenant-isolation.spec.ts",
-      "try-it.spec.ts"
+      "tenant-isolation.spec.ts"
     ],
-    "visual": ["marketing-nav-signed-in", "onboard"],
+    "visual": ["marketing-nav-signed-in", "onboard", "onboard-closed"],
     "a11y": ["a11y.spec.ts"]
   },
   "/pricing": {

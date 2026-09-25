@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  eventSource,
-  guideSource,
-  scheduleAttributionHref,
-  switchingHref,
-  trialHref,
-} from "./funnel";
+import { eventSource, guideSource, scheduleAttributionHref, switchingHref } from "./funnel";
 import { MIGRATION_GUIDE_SLUGS } from "./migration-guides";
 
 describe("eventSource", () => {
@@ -29,18 +23,15 @@ describe("eventSource", () => {
     // sections" can never be shown to have earned its place.
     expect(eventSource("product-mid")).toBe("product-mid");
     expect(eventSource("product")).toBe("product");
-    expect(trialHref("product-mid")).toBe("/onboard?from=product-mid");
     // `/product` now offers the same action from three positions. The index
     // door is the page's own dare — "every one of these lines is something you
     // can go and do in the live demo right now" — and a reader convinced by the
     // inventory is a different moment from one convinced by the dock story
     // above it, so it gets its own bucket rather than inflating either.
     expect(eventSource("product-index")).toBe("product-index");
-    expect(trialHref("product-index")).toBe("/onboard?from=product-index");
     // Same split on the pricing page: its hero door and the door that closes
     // the objection layer answer different moments in the same visit.
     expect(eventSource("pricing-close")).toBe("pricing-close");
-    expect(trialHref("pricing-close")).toBe("/onboard?from=pricing-close");
     // …and on `/about`, whose second position is the band where the page
     // manufactures its impulse: four rules, each ending in the demo action that
     // proves it. A reader who moved there is a different moment from one who
@@ -48,7 +39,6 @@ describe("eventSource", () => {
     // arrived at the closing band, so the two cannot share a bucket.
     expect(eventSource("about-rules")).toBe("about-rules");
     expect(eventSource("about-closing")).toBe("about-closing");
-    expect(trialHref("about-rules")).toBe("/onboard?from=about-rules");
   });
 
   it("keeps each switching guide door distinct by position", () => {
@@ -57,8 +47,6 @@ describe("eventSource", () => {
     expect(guideSource("eve", "close")).toBe("switching-eve-close");
     expect(eventSource("switching-eve-mid")).toBe("switching-eve-mid");
     expect(eventSource("switching-eve-close")).toBe("switching-eve-close");
-    expect(trialHref(guideSource("eve", "mid"))).toBe("/onboard?from=switching-eve-mid");
-    expect(trialHref(guideSource("eve", "close"))).toBe("/onboard?from=switching-eve-close");
     expect(eventSource("switching-spreadsheet-mid")).toBe("switching-spreadsheet-mid");
     expect(eventSource("switching-spreadsheet-close")).toBe("switching-spreadsheet-close");
   });
@@ -80,17 +68,6 @@ describe("eventSource", () => {
     expect(eventSource("prciing")).toBe("unknown");
     expect(eventSource("home-herp")).toBe("unknown");
     expect(eventSource("switching-eeve")).toBe("unknown");
-  });
-});
-
-describe("trialHref", () => {
-  it("tags the trial CTA with the page that sent the visitor", () => {
-    expect(trialHref("pricing")).toBe("/onboard?from=pricing");
-    expect(trialHref(guideSource("eve"))).toBe("/onboard?from=switching-eve");
-  });
-
-  it("round-trips: every href it builds survives eventSource", () => {
-    expect(eventSource(trialHref("nav").split("=")[1])).toBe("nav");
   });
 });
 

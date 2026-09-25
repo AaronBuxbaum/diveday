@@ -254,7 +254,8 @@ support load per shop measured and sustainable (else the cap holds until it is).
   and industry coverage, X-Ray Mag, and Scubanomics for the business-of-diving angle. The story
   is not "new software"; it is "the safety-first dive-ops system that lets you leave" — the
   roll-call-on-a-wet-phone demo is the visual.
-- **Open the funnel fully:** self-serve trial (already built — the demo/trial shop split exists),
+- **Open the funnel fully:** self-serve trial (built, then shut on 2026-09-25 so every shop is set up
+  by hand — reopening it is removing one key check, [ADR 20260925-shops-are-set-up-by-hand](../architecture/decisions/20260925-shops-are-set-up-by-hand.md)),
   pricing public and final, founding cohort closes, standard price honors the meet-the-market
   posture.
 - **What we still don't do** (repeating [what NOT to do](assessments/competitive-strategy.md#what-not-to-do)

@@ -19,6 +19,7 @@ import {
   threadStatus,
   waiverLinkFromResult,
 } from "./helpers";
+import { ONBOARD_FORM_PATH } from "./servers";
 
 /**
  * Automated a11y scan for the current page state — WCAG 2.0 A/AA plus 2.2 AA,
@@ -1130,6 +1131,9 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
       { path: "/", heading: /\S/ },
       { path: "/sign-in", heading: /\S/ },
       { path: "/onboard", heading: /\S/ },
+      // The same route with the setup key is the form itself; without it,
+      // the closed door above.
+      { path: ONBOARD_FORM_PATH, heading: /\S/ },
       // **A door that has closed** (issue #1123). Every route above is one a
       // person walks *through*, and `EntryDone` is a different composition
       // entirely — a decorative drawn mark in a circle, an `<h1>`, one muted

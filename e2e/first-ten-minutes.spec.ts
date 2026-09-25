@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { E2E_FROZEN_CLOCK } from "./servers";
+import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
 
 /**
  * The first ten minutes — the golden path a brand-new shop walks from "never
@@ -27,7 +27,7 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
   const arrive = (label: string) => screens.push(label);
 
   // ── Screen 1: the sign-up form ────────────────────────────────────────────
-  await page.goto("/onboard");
+  await page.goto(ONBOARD_FORM_PATH);
   arrive("onboard");
 
   // The shop link writes itself from the name — the one "invent something"
@@ -110,7 +110,7 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
 
 test("the second trip does not repeat the bookable moment", async ({ page }) => {
   const unique = `ten-min-again-${Date.now()}`;
-  await page.goto("/onboard");
+  await page.goto(ONBOARD_FORM_PATH);
   await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Second Trip E2E");
   await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
   await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
@@ -169,7 +169,7 @@ test("a shop with a departure today is not treated as a shop with no departures"
   page,
 }) => {
   const unique = `ten-min-today-${Date.now()}`;
-  await page.goto("/onboard");
+  await page.goto(ONBOARD_FORM_PATH);
   await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Sails Today E2E");
   await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
   await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");

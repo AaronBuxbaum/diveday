@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ALERT_EMAIL, alertRecipient } from "./platform-mail";
+import { ALERT_EMAIL, alertRecipient, setUpMailto } from "./platform-mail";
 
 /**
  * `alertRecipient` is the one place both operational alerts — a trial start and
@@ -26,5 +26,18 @@ describe("alertRecipient", () => {
 
   it("trims a value that arrived with stray whitespace", () => {
     expect(alertRecipient({ OPS_ALERT_EMAIL: "  ops@example.org  " })).toBe("ops@example.org");
+  });
+});
+
+describe("setUpMailto", () => {
+  it("writes to the onboarding inbox with the subject encoded", () => {
+    expect(setUpMailto("Set up my shop & more")).toBe(
+      "mailto:onboarding@dive.day?subject=Set%20up%20my%20shop%20%26%20more",
+    );
+  });
+
+  it("cannot be steered into a second header by the subject", () => {
+    // A subject is bundle copy today; this keeps it a subject if that changes.
+    expect(setUpMailto("hi&bcc=someone@example.com")).not.toContain("&bcc=");
   });
 });

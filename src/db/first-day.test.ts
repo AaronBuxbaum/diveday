@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { FIRST_BOAT_CAPACITY } from "@/lib/try-it";
+import { FIRST_BOAT_CAPACITY } from "@/lib/first-day";
 import { seededShopContext } from "@/test/db";
 import { listBoats } from "./boats";
 import { createFirstDay, type FirstDayShop } from "./first-day";

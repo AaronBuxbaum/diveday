@@ -66,6 +66,7 @@
  */
 
 const LOCAL = ["local"];
+const VERCEL = ["vercel"];
 const LOCAL_AND_VERCEL = ["local", "vercel"];
 const LOCAL_AND_GITHUB = ["local", "github"];
 
@@ -154,6 +155,27 @@ export const ENV_GROUPS = [
         targets: LOCAL_AND_VERCEL,
         absent:
           "both alerts go to the ALERT_EMAIL mailbox in src/lib/platform-mail.ts, which is the right answer for every deployment that *is* DiveDay. Only a fork, a staging deploy, or a self-hosted instance has one to set",
+      },
+    ],
+  },
+  {
+    doc: [
+      "The key that opens /onboard (ADR 20260925-shops-are-set-up-by-hand). Every",
+      "shop is set up by hand: /onboard?setup=<this value> shows the sign-up form",
+      "and its action accepts a submission only when the posted key matches. Any",
+      "long random string (openssl rand -base64 32); change it to revoke a link",
+      "already sent. Keys shorter than 24 characters, and the dev and e2e keys",
+      "written in this repository, are ignored.",
+    ],
+    keys: [
+      {
+        key: "ONBOARD_SETUP_KEY",
+        from: "manual",
+        // Vercel only: a dev run has its own fallback, and the production key
+        // has no business in every workstation's generated .env.local.
+        targets: VERCEL,
+        absent:
+          "production creates no shops at all -- /onboard only offers the onboarding mailbox. A dev run falls back to a fixed non-production key",
       },
     ],
   },

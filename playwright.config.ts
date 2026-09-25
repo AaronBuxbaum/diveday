@@ -4,6 +4,7 @@ import {
   E2E_APP_HOST,
   E2E_CRON_SECRET,
   E2E_FROZEN_CLOCK,
+  E2E_ONBOARD_SETUP_KEY,
   E2E_TEST_ROUTE_SECRET,
   E2E_WORKER_COUNT,
   e2eBaseURL,
@@ -42,6 +43,9 @@ const serverEnv = {
   DIVEDAY_E2E_SECRET: E2E_TEST_ROUTE_SECRET,
   // Lets a spec fire a scheduled pass — see E2E_CRON_SECRET in e2e/servers.ts.
   CRON_SECRET: E2E_CRON_SECRET,
+  // Opens `/onboard` for the specs that set up a fresh shop — see
+  // E2E_ONBOARD_SETUP_KEY in e2e/servers.ts.
+  ONBOARD_SETUP_KEY: E2E_ONBOARD_SETUP_KEY,
   // Freeze the server clock so the clock-anchored seed and every relative
   // render resolve to one fixed instant on every run — the server half of what
   // keeps visual baselines stable (the browser half is the `context` init

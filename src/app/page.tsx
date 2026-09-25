@@ -6,7 +6,6 @@ import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { ScreenDoor } from "@/app/_components/ScreenDoor";
 import { ShopYearBand } from "@/app/_components/ShopYearBand";
-import { TryItHero } from "@/app/_components/TryItHero";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
 import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
@@ -405,56 +404,9 @@ async function HomeBody({
 
   return (
     <main className="flex-1">
-      {/* **The hero is the visitor's, once they type three words** (ADR
-          20260908-one-hand, decision 6, possibility Y). Until then it is the
-          hero it has always been with the three fields under it; after, it is
-          their shop's first day in a colour drawn from their name. The hero
-          owns the section element either way, because the drawn state replaces
-          both of its columns rather than one.
-
-          Every word below is read here, in the reader's own language, and
-          handed down: the drawn hero is a Client Component and this page mounts
-          no `DiverIntlProvider`. */}
-      <TryItHero
-        locale={locale}
-        words={{
-          // `t.raw` for every sentence with a `{placeholder}` in it: the drawn
-          // hero fills them on the client, so asking `t()` to format one here
-          // — with no values, because there are none yet — is the exact misuse
-          // `src/i18n/raw-messages.test.ts` refuses (the waiver page hands its
-          // two progress templates across the same way). The bundle's rule
-          // follows: a message composed on the client says its plural as a
-          // pair, never as ICU.
-          lede: t("marketing.home.tryIt.lede"),
-          shopLabel: t("marketing.home.tryIt.shopLabel"),
-          shopPlaceholder: t("marketing.home.tryIt.shopPlaceholder"),
-          boatLabel: t("marketing.home.tryIt.boatLabel"),
-          boatPlaceholder: t("marketing.home.tryIt.boatPlaceholder"),
-          departureLabel: t("marketing.home.tryIt.departureLabel"),
-          draw: t("marketing.home.tryIt.draw"),
-          drawnFrom: t("marketing.home.tryIt.drawnFrom"),
-          greetingMorning: t.raw("marketing.home.tryIt.greetingMorning"),
-          greetingAfternoon: t.raw("marketing.home.tryIt.greetingAfternoon"),
-          greetingEvening: t.raw("marketing.home.tryIt.greetingEvening"),
-          greetingNight: t.raw("marketing.home.tryIt.greetingNight"),
-          firstDay: t.raw("marketing.home.tryIt.firstDay"),
-          leavesInMinutes: t.raw("marketing.home.tryIt.leavesInMinutes"),
-          leavesInHours: t.raw("marketing.home.tryIt.leavesInHours"),
-          boatsRow: t("marketing.home.tryIt.boatsRow"),
-          boatsRowMeta: t.raw("marketing.home.tryIt.boatsRowMeta"),
-          boatsRowAction: t("marketing.home.tryIt.boatsRowAction"),
-          colorRow: t("marketing.home.tryIt.colorRow"),
-          colorRowMeta: t("marketing.home.tryIt.colorRowMeta"),
-          colorRowAction: t("marketing.home.tryIt.colorRowAction"),
-          diverRow: t("marketing.home.tryIt.diverRow"),
-          diverRowMeta: t("marketing.home.tryIt.diverRowMeta"),
-          diverRowAction: t("marketing.home.tryIt.diverRowAction"),
-          open: t.raw("marketing.home.tryIt.open"),
-          nothingSaved: t("marketing.home.tryIt.nothingSaved"),
-          again: t("marketing.home.tryIt.again"),
-        }}
-        headline={
-          <>
+      <section className="relative overflow-hidden border-b border-border">
+        <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:py-24">
+          <div className="max-w-2xl">
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
               {t("marketing.home.eyebrow")}
             </p>
@@ -482,9 +434,7 @@ async function HomeBody({
                 cadence: t(earlyAccessPrice.cadenceKey),
               })}
             </p>
-          </>
-        }
-        aside={
+          </div>
           <MarketingHeroMotion>
             <div className="mx-auto w-full max-w-sm lg:max-w-md">
               <CaptainPhoneFrame label={t("marketing.home.phoneFrameLabel")} locale={locale} />
@@ -494,8 +444,8 @@ async function HomeBody({
               </div>
             </div>
           </MarketingHeroMotion>
-        }
-      />
+        </div>
+      </section>
 
       {proofBand}
 

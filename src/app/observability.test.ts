@@ -259,6 +259,30 @@ describe("redactEvent", () => {
   it("leaves an event with no request untouched", () => {
     expect(redactEvent({ type: undefined })).toEqual({ type: undefined });
   });
+
+  it("redacts a capability query parameter in the query string, in each shape Sentry sends", () => {
+    const key = "the-onboard-setup-key-itself";
+    const asString = redactEvent({
+      type: undefined,
+      request: { query_string: `setup=${key}&error=email_taken` },
+    });
+    expect(asString.request?.query_string).toBe("setup=%5Btoken%5D&error=email_taken");
+    const asRecord = redactEvent({
+      type: undefined,
+      request: { query_string: { setup: key, error: "email_taken" } },
+    });
+    expect(asRecord.request?.query_string).toEqual({ setup: "[token]", error: "email_taken" });
+    const asPairs = redactEvent({
+      type: undefined,
+      request: { query_string: [["handoff", key]] },
+    });
+    expect(JSON.stringify(asPairs.request?.query_string)).not.toContain(key);
+  });
+
+  it("leaves an ordinary query string as it was", () => {
+    const event = redactEvent({ type: undefined, request: { query_string: "from=pricing" } });
+    expect(event.request?.query_string).toBe("from=pricing");
+  });
 });
 
 describe("redactBreadcrumb", () => {

@@ -1,18 +1,14 @@
+import { FIRST_BOAT_CAPACITY, firstDepartureDay, firstDepartureEndTime } from "@/lib/first-day";
 import { MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { type TripDetailsShop, tripDetailsPatch } from "@/lib/trip-details";
-import { FIRST_BOAT_CAPACITY, firstDepartureDay, firstDepartureEndTime } from "@/lib/try-it";
 import { createBoat } from "./boats";
 import type { AppDb } from "./client";
 import { createTrip } from "./trips";
 
 /**
- * **The first day a new shop opens onto** — the boat and the one departure a
- * visitor typed into DiveDay's homepage hero, written once, when they open the
- * door (ADR 20260908-one-hand, decision 6, possibility Y).
- *
- * The homepage draws that day from client state and stores nothing; this is the
- * only thing in the tree that turns it into rows, and it runs after the shop,
- * the owner and the account exist.
+ * **The first day a new shop opens onto** — the boat and the one departure
+ * typed into the onboard form's two optional fields, written once, after the
+ * shop, the owner and the account exist.
  *
  * **It creates the departure through the schedule's own door.** `createTrip`
  * (`@/db/trips`) is what the schedule builder calls, and `tripDetailsPatch` is
@@ -37,7 +33,7 @@ export async function createFirstDay(
   db: AppDb,
   shop: FirstDayShop,
   input: {
-    /** The hull's name, exactly as the visitor typed it. */
+    /** The hull's name, exactly as it was typed. */
     boatName: string;
     /** `HH:MM` in the shop's own zone. */
     departure: string;

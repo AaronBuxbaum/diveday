@@ -17,7 +17,7 @@ import type { DiverLocale } from "@/i18n/settings";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice, fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
-import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
+import { ONBOARDING_EMAIL, SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 // `instant = true`: navigating here paints immediately. The request-scoped
 // read this page makes (`requestLocale()`) sits behind this segment's
@@ -147,7 +147,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
       // I move a trial shop to paid" through its own inbox, and the soft
       // expiry ("nothing switches off") restates src/lib/trial.ts, where
       // expiry blocks no route and no mutation.
-      answer: t("marketing.pricing.faq.trialMeaning.answer", { email: UPGRADE_EMAIL }),
+      answer: t("marketing.pricing.faq.trialMeaning.answer", { email: ONBOARDING_EMAIL }),
     },
     {
       question: t("marketing.pricing.faq.seeBefore.question"),

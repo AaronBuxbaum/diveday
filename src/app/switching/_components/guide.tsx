@@ -451,7 +451,7 @@ export function ClosingCta({
   return (
     // `sm:shrink-0` on the action column: at `max-w-4xl` the prose was taking
     // the width it wanted and squeezing the buttons until "Try the live demo"
-    // and "Start a trial" both broke across two lines mid-phrase.
+    // and the second door both broke across two lines mid-phrase.
     <section className="mx-auto flex max-w-4xl flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center lg:py-20">
       <div className="max-w-md">
         <h2 className={`${LEAD_TITLE_CLASS} text-balance`}>{title}</h2>

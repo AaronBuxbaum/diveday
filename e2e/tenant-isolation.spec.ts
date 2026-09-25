@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
+import { ONBOARD_FORM_PATH } from "./servers";
 
 /**
  * Cross-shop tenant isolation on `/shop/[shopSlug]/**`.
@@ -69,7 +70,7 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   // worker's database is in-memory and per-run, so it costs nothing to leave
   // behind. Same approach as onboard.spec.ts.
   const unique = `tenant-iso-${Date.now()}`;
-  await page.goto("/onboard");
+  await page.goto(ONBOARD_FORM_PATH);
   await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Tenant Iso E2E");
   await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
   await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Rina Vasquez");
