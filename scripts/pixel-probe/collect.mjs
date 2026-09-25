@@ -337,7 +337,10 @@ export function collectGeometry(options) {
       cw: 0,
       ch: 0,
       heading: /^h[1-6]$/.test(tag) || role === "heading",
-      id: element.id ? element.id.slice(0, 60) : "",
+      // Through the attribute, never the property: a <form> holding an
+      // <input name="id"> answers `form.id` with that input (DOM clobbering),
+      // which is how settings-display's form once skipped every width.
+      id: (element.getAttribute("id") || "").slice(0, 60),
     };
     if (text.length > 0) record.asc = ascentOf(style);
     if (interactive || text.length > 0) {

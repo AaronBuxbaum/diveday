@@ -83,6 +83,16 @@ describe("collectGeometry, rebuilt from its own source", () => {
     expect(snapshot).toHaveProperty("pageBg");
   });
 
+  it("survives a form whose named input clobbers its own properties", () => {
+    const window = freshWindow(
+      `<form class="f"><input name="id" value="1"><input name="className" value="x"><button>Go</button></form>`,
+    );
+    const snapshot = inWindow(window, collectGeometry)({});
+    const form = snapshot.elements.find((el) => el.tag === "form");
+    expect(form.id).toBe("");
+    expect(form.cls).toBe("f");
+  });
+
   it("puts back the one style it lifts", () => {
     const window = freshWindow(html);
     window.document.body.style.overflowX = "clip";
