@@ -69,6 +69,15 @@ export type MonthFigure = {
  * - a **rule above** every figure that starts a new visual row (the container
  *   draws the row's own top and bottom edges);
  * - a **gutter beside** every figure that does not.
+ *
+ * **Its rules are a ledger's length.** The band sits over the departures
+ * ledger, whose rows keep 8px of room each side of the column
+ * (`ledgerRowBoxClass`, src/components/ui/ledger.tsx), so the band reaches out
+ * by the same 8px (`-mx-2`, `FIGURE_COLUMNS`) and every figure takes the 8px
+ * back as start padding — a figure beside another keeps its 24px gutter
+ * instead. The first figure of each visual row starts on the column, and the
+ * band's rules, the rules between its stacked rows and the ledger's rules
+ * below all end at one x.
  */
 function figureCellClass(index: number): string {
   const rule =
@@ -85,7 +94,7 @@ function figureCellClass(index: number): string {
         index % 2 === 1
         ? "sm:border-s sm:border-border sm:ps-6"
         : "lg:border-s lg:border-border lg:ps-6";
-  return `py-5 pe-6 ${rule} ${gutter}`.replace(/\s+/g, " ").trim();
+  return `py-5 ps-2 pe-6 ${rule} ${gutter}`.replace(/\s+/g, " ").trim();
 }
 
 /**
@@ -97,8 +106,8 @@ function figureCellClass(index: number): string {
  * class names as literals.
  */
 const FIGURE_COLUMNS = {
-  4: "grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-4",
-  5: "grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-5",
+  4: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-4",
+  5: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-5",
 } as const;
 
 export function MonthFigures({

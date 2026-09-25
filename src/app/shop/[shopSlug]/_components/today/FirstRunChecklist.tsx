@@ -123,7 +123,6 @@ function ChecklistStep({
   const door = done || primary ? {} : { href, linkLabel: actionLabel };
   return (
     <LedgerRow
-      className="-mx-2 px-2"
       // A settled step says so in words as well as in the mark — `SettledCheck`
       // has no way to be used as a bare tick — and it stands where that step's
       // button used to be, so a finished row offers nothing to press.
@@ -261,7 +260,6 @@ export function FirstRunChecklist({
           primary={nextStep === "trip"}
         />
         <LedgerRow
-          className="-mx-2 px-2"
           trailing={
             <Copyable
               layout="inline"
@@ -290,7 +288,6 @@ export function FirstRunChecklist({
             beside the row as a plain `<a>` doing a full navigation, wearing
             the same words and chevron the doors wear. */}
         <LedgerRow
-          className="-mx-2 px-2"
           trailing={
             stripeDone ? (
               <SettledCheck settled label={copy.doneBadge} />

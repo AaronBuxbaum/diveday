@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Body-shaped skeleton for Reviews (design principle 1): the aggregate line
@@ -15,7 +16,7 @@ function LedgerRows({ count, height }: { count: number; height: string }) {
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: static bars, no identity of their own
           key={index}
-          className={`flex items-center gap-3 border-t border-border last:border-b ${height}`}
+          className={`flex items-center gap-3 ${height} ${ledgerRowBoxClass}`}
         >
           <div className="h-4 w-20 shrink-0 rounded bg-surface-sunken" />
           <div className="h-4 flex-1 rounded bg-surface-sunken" />

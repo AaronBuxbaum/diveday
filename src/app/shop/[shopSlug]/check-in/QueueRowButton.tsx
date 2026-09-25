@@ -44,7 +44,12 @@ export function QueueRowButton({
       type="submit"
       aria-label={ariaLabel}
       disabled={pending}
-      className={`flex min-h-14 w-full touch-manipulation items-center justify-between gap-4 px-4 py-3 text-left transition-[background-color,transform] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:px-5 ${className}`}
+      // Rule to rule, words on the column: the form around this takes back the
+      // room `LedgerRow` keeps (`-mx-2`, in `CheckInActionForm`) and the room
+      // goes on here as padding, so the fill spans the row's hairlines the way
+      // a door's does and the name starts where the group labels and the
+      // walk-in door start.
+      className={`flex min-h-14 w-full touch-manipulation items-center justify-between gap-4 px-2 py-3 text-left transition-[background-color,transform] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 ${className}`}
     >
       <span className="min-w-0">{children}</span>
       {Children.toArray(slot).length > 0 ? (

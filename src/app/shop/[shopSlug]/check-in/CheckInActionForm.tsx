@@ -58,9 +58,12 @@ export function CheckInActionForm({
       action={action}
       sendFailedLabel={sendFailedLabel}
       onSubmitting={() => setOptimisticTrailing(pendingTrailing)}
-      // The row's own padding rather than this form's default margin, so the
-      // failure line lands exactly where it did before the reducer moved out.
-      sendFailedClassName="px-4 pb-3 text-sm font-medium text-danger-strong sm:px-5"
+      // The tap is the row's whole box: `LedgerRow` keeps 8px of room around
+      // its words, and the form takes it back so the button's fill runs rule
+      // to rule. The button and the failure line keep the same 8px inside, so
+      // both stay on the column the row's words start on.
+      className="-mx-2"
+      sendFailedClassName="px-2 pb-3 text-sm font-medium text-danger-strong"
     >
       <input type="hidden" name="bookingId" value={bookingId} />
       <QueueRowButton

@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Body-shaped skeleton for the register (design principle 1), shaped to the
@@ -33,7 +34,7 @@ export default function GearLoading() {
                     // identity a placeholder row has.
                     // biome-ignore lint/suspicious/noArrayIndexKey: see above
                     key={`${group}-${row}`}
-                    className="flex min-h-12 items-center justify-between gap-4 border-t border-border last:border-b"
+                    className={`flex min-h-12 items-center justify-between gap-4 ${ledgerRowBoxClass}`}
                   >
                     <span className="flex w-full max-w-lg items-center gap-3 py-2">
                       <span className="block h-5 w-20 shrink-0 rounded bg-surface-sunken" />

@@ -65,6 +65,43 @@ describe("Trip About panel", () => {
     expect(row).not.toHaveAttribute("open");
   });
 
+  it("puts the rows' rules 8px past the column, and an editable row's square fill between them with the words inset 8px", () => {
+    // The pixel probe (2026-09-25, trip-crew-clash and five more): the row's
+    // summary is its hover fill, and with no room of its own the fill's edge
+    // ran into "THE PLAN" (0px). The ledger's answer, not a rounded chip
+    // hanging past square rules: the rules move out by 8px, the summary spans
+    // them, and the room the words keep is the grid's — the same room a fact
+    // row's grid keeps, so both kinds of row share one left edge.
+    const { container } = render(<TripAboutSection {...props} open />);
+    const editable = container.querySelector("details#details");
+    const fact = container.querySelector("#conditions");
+    const rules = editable?.parentElement;
+    expect(rules).toBe(fact?.parentElement);
+    expect(rules).toHaveClass("-mx-2", "divide-y", "border-y");
+
+    const summary = editable?.querySelector(":scope > summary");
+    expect(summary).toHaveClass("hover:bg-surface-sunken");
+    // The fill is the row's whole width and square: no margin, padding or
+    // corner of its own.
+    expect(summary?.className).not.toMatch(/(?:^|\s)-?(?:m|p)[xse]-|rounded/);
+
+    const summaryGrid = summary?.firstElementChild;
+    expect(summaryGrid).toHaveClass("px-2");
+    expect(fact).toHaveClass("px-2");
+    // The editor opens on the same column.
+    expect(screen.getByText("Details editor").parentElement).toHaveClass("px-2");
+  });
+
+  it("rings an editable row inside its own box", () => {
+    // Three focus classes here compiled and did nothing: the global ring rule
+    // beat them. The app's inset ring is one utility, not a width and offset
+    // spelled at the call site.
+    const { container } = render(<TripAboutSection {...props} open />);
+    const summary = container.querySelector("details#details > summary");
+    expect(summary).toHaveClass("focus-visible:focus-ring-inset");
+    expect(summary?.className).not.toMatch(/focus-visible:outline-/);
+  });
+
   it("opens the row whose editor has an outcome to show", () => {
     const { container } = render(
       <TripAboutSection
@@ -97,12 +134,15 @@ describe("Trip About panel", () => {
   /**
    * The card is `overflow-hidden`, and its own summary fills it edge to edge,
    * so the outset ring was cut on all four sides: that one summary draws its
-   * ring inset, at the card's radius. A row's summary sits inside the body's
-   * `px-4`, 11px clear of the clip once the 5px ring is drawn, so it keeps the
-   * global ring — an inset ring there landed on the label's first letter and
-   * the caret, which sit on the summary's own edges (review, 2026-09-25).
+   * ring inset, at the card's radius. The 'more' summary sits inside the
+   * body's `px-4`, clear of the clip once the 5px ring is drawn, so it keeps
+   * the global ring. A row's summary is a ledger row: its fill runs rule to
+   * rule and its words sit 8px in, so it rings inside itself as a ledger row
+   * does (the test above). Before the ledger geometry the label and caret sat
+   * on the summary's own edges, where an inset ring landed on them (review,
+   * 2026-09-25); they no longer do.
    */
-  it("rings the card's own summary inset at the card's radius, and gives a row's summary and the 'more' summary no ring utility, so both keep the global ring", () => {
+  it("rings the card's own summary inset at the card's radius, and gives the 'more' summary no ring utility, so it keeps the global ring", () => {
     const { container } = render(
       <TripAboutSection
         {...props}
@@ -119,12 +159,8 @@ describe("Trip About panel", () => {
       "rounded-panel",
       "group-open/about:rounded-b-none",
     );
-    for (const summary of [
-      container.querySelector("details#details > summary"),
-      container.querySelector("details#about-more > summary"),
-    ]) {
-      expect(summary).not.toBeNull();
-      expect(summary?.className).not.toMatch(/focus-ring|outline/);
-    }
+    const more = container.querySelector("details#about-more > summary");
+    expect(more).not.toBeNull();
+    expect(more?.className).not.toMatch(/focus-ring|outline/);
   });
 });

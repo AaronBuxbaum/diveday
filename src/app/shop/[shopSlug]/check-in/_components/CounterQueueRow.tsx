@@ -270,7 +270,7 @@ export function CounterQueueRow({
          on this page instead of vanishing: the diver who walks in as the lines
          come off needs somewhere for a staffer to walk it back. */
       <LedgerRow as="article" size="lg" className="py-1">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 py-2">
           <div className="min-w-0">
             <DiverIdentity
               row={row}
@@ -564,7 +564,7 @@ export function CounterQueueRow({
     </RowActionForm>
   ) : null;
   return (
-    <LedgerRow as="article" size="lg" className="px-4 py-3 sm:px-5">
+    <LedgerRow as="article" size="lg" className="py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <DiverIdentity

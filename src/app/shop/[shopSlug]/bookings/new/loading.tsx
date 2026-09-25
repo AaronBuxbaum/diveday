@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Departure-picker skeleton for the global "add a booking" door (design
@@ -25,7 +26,7 @@ export default function NewBookingLoading() {
                 {[0, 1].map((row) => (
                   <div
                     key={row}
-                    className="flex min-h-12 items-center gap-3 border-t border-border last:border-b"
+                    className={`flex min-h-12 items-center gap-3 ${ledgerRowBoxClass}`}
                   >
                     <div className="h-4 flex-1 rounded bg-surface-sunken" />
                     <div className="h-4 w-24 shrink-0 rounded bg-surface-sunken" />

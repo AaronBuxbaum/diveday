@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Body-shaped skeleton for Check-in (design principle 1) — the readiness
@@ -32,7 +33,7 @@ export default function CheckInLoading() {
           {[0, 1, 2, 3, 4].map((row) => (
             <div
               key={row}
-              className="flex min-h-14 items-center justify-between gap-4 border-t border-border px-4 last:border-b sm:px-5"
+              className={`flex min-h-14 items-center justify-between gap-4 ${ledgerRowBoxClass}`}
             >
               <div className="h-5 w-44 max-w-full rounded bg-surface-sunken" />
               <div className="h-6 w-24 rounded bg-surface-sunken" />

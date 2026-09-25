@@ -35,6 +35,27 @@ function renderFigures(figures: MonthFigure[] = FIGURES) {
   return render(<MonthFigures label="This month’s numbers" figures={figures} />);
 }
 
+describe("the band's rules", () => {
+  it("run 8px past the column each side, as the ledger's below do, with every figure keeping 8px of start room", () => {
+    // The departures ledger under this band keeps a `LedgerRow`'s room, so its
+    // rules reach 8px past the column (src/components/ui/ledger.tsx). A band
+    // left on the column drew its rules 8px short of the ledger's at both ends.
+    const { container } = renderFigures();
+    const band = container.querySelector("dl");
+    expect(band).toHaveClass("-mx-2", "border-y");
+    const cells = [...(band?.children ?? [])];
+    expect(cells).toHaveLength(FIGURES.length);
+    for (const cell of cells) {
+      // The room comes back as start padding, so the first figure of each
+      // visual row starts on the column; a figure beside another keeps its
+      // 24px gutter at the breakpoint where it has a neighbour.
+      expect(cell).toHaveClass("ps-2");
+    }
+    expect(cells[1]).toHaveClass("sm:ps-6");
+    expect(cells[2]).toHaveClass("lg:ps-6");
+  });
+});
+
 describe("the figures are unboxed", () => {
   it("wears no card chrome anywhere in the row", () => {
     const { container } = renderFigures();

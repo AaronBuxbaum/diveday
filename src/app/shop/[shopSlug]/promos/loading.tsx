@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Body-shaped skeleton for Promos (design principle 1) — the discount-code
@@ -32,7 +33,7 @@ export default function PromosLoading() {
                 {[0, 1].map((row) => (
                   <div
                     key={row}
-                    className="flex min-h-12 items-center gap-3 border-t border-border py-3 last:border-b"
+                    className={`flex min-h-12 items-center gap-3 py-3 ${ledgerRowBoxClass}`}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="h-4 w-40 max-w-full rounded bg-surface-sunken" />

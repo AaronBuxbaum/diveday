@@ -16,6 +16,7 @@ import {
   FieldGrid,
   FormStatus,
 } from "@/components/ui/form";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { listCrewAssignmentRequests, listCrewAvailabilityBlocks } from "@/db/crew-requests";
 import type { staffCredentials } from "@/db/schema";
@@ -774,8 +775,9 @@ function AddDoor({
 }) {
   return (
     // The hairline belongs to the row, not to the `<details>`, so `last:`
-    // closes a ledger whose final member is this door.
-    <Tag className="list-none border-t border-border last:border-b">
+    // closes a ledger whose final member is this door — and it is a ledger
+    // row's box, so its rules end where the credentials' rules above it do.
+    <Tag className={`list-none ${ledgerRowBoxClass}`}>
       <AutoOpenDetails id={id} openOnHash={id} open={open} className="group/add scroll-mt-8">
         <summary
           className={buttonClass({

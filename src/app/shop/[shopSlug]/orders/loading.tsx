@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Body-shaped skeleton for the Orders day ledger (design principle 1; the
@@ -31,7 +32,7 @@ export default function OrdersIndexLoading() {
                 <div className="h-3 w-28 rounded bg-surface-sunken" />
               </div>
               {[0, 1, 2].map((row) => (
-                <div key={row} className="h-12 border-t border-border last:border-b" />
+                <div key={row} className={`h-12 ${ledgerRowBoxClass}`} />
               ))}
             </div>
           ))}

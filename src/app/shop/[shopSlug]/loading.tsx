@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * The staff subtree's page frame (design principle 1) — the shop home's own
@@ -38,9 +39,9 @@ export default function ShopSurfaceLoading() {
                 </div>
                 <div className="size-19 shrink-0 rounded-full bg-surface-sunken" />
               </div>
-              <div className="mt-5 flex flex-col divide-y divide-border border-t border-border">
+              <div className="mt-5 flex flex-col">
                 {[0, 1, 2].map((row) => (
-                  <div key={row} className="flex items-center gap-3 py-4">
+                  <div key={row} className={`flex items-center gap-3 py-4 ${ledgerRowBoxClass}`}>
                     <div className="size-5 rounded-full bg-surface-sunken" />
                     <div className="h-4 w-20 rounded bg-surface-sunken" />
                     <div className="h-4 flex-1 rounded bg-surface-sunken" />

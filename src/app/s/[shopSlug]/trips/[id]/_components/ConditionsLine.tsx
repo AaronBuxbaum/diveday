@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { ledgerRowRoomClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { depthText, seaStateText, temperatureText, windText } from "@/i18n/unit-labels";
 import { formatDateTimeTz } from "@/lib/format";
@@ -120,7 +121,9 @@ export function ConditionsLine({
   if (parts.length === 0 && tide.length === 0) return null;
 
   return (
-    <section className="mt-6 border-t border-border pt-4">
+    // The ledger's room: its rule ends where the day's rows' rules end, and
+    // its words stay on the column.
+    <section className={`mt-6 border-t border-border pt-4 ${ledgerRowRoomClass}`}>
       {parts.length > 0 ? (
         <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
           {parts.map((part, index) => (

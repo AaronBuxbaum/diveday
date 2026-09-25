@@ -3,7 +3,7 @@ import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel, ledgerRowBoxClass } from "@/components/ui/ledger";
 import type { SignedWaiverEntry } from "@/db/waivers";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -66,6 +66,15 @@ function IntegrityBadge({ entry, t }: { entry: SignedWaiverEntry; t: StaffTransl
   );
 }
 
+/**
+ * The pinned record's bar: 2px of `--border-strong`, 4px outside the row's
+ * box, drawn as a pseudo-element so it takes no room from the row. As a
+ * border with a padding to clear it, it pushed the pinned row's name 2px right
+ * of every other name in the log and started its rules 12px left of theirs.
+ */
+const PINNED_BAR =
+  "relative before:absolute before:inset-y-0 before:-start-1 before:w-0.5 before:bg-border-strong";
+
 function SignatureRow({
   entry,
   shopSlug,
@@ -105,18 +114,21 @@ function SignatureRow({
         }`
       : t("waiversStaff.signatures.noTrip");
   return (
-    <li
-      className={`border-t border-border last:border-b${
-        pinned ? " -ms-3 border-s-2 border-s-border-strong ps-3" : ""
-      }`}
-    >
+    // A ledger row's box (`ledgerRowBoxClass`): the rules reach 8px past the
+    // column, and the words stay on it.
+    <li className={pinned ? `${ledgerRowBoxClass} ${PINNED_BAR}` : ledgerRowBoxClass}>
       <AutoOpenDetails
         id={id}
         openOnHash={id}
         open={pinned}
         className="group/signature scroll-mt-24"
       >
-        <summary className="flex min-h-12 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 py-2 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/60">
+        {/* The summary is the row's hover fill, and it spans the row's whole
+            box, rule to rule and square like them: it takes the row's 8px back
+            as a negative margin and keeps it as padding, so the fill clears the
+            name by 8px and the name stays on the column. On the pinned row the
+            bar sits 2px clear of the fill. */}
+        <summary className="-mx-2 flex min-h-12 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/60">
           <span className="font-medium sm:w-52 sm:shrink-0">{entry.personName}</span>
           <span className="min-w-0 flex-1 truncate text-sm text-muted">{trip}</span>
           <IntegrityBadge entry={entry} t={t} />

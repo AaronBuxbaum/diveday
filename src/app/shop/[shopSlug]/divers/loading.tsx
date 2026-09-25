@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Body-shaped skeleton for the Divers roster (design principle 1): the chip
@@ -30,10 +31,7 @@ export default function DiversLoading() {
               <div className="h-3 w-6 rounded bg-surface-sunken" />
               <div className="mt-2">
                 {[0, 1, 2].map((row) => (
-                  <div
-                    key={row}
-                    className="flex min-h-12 items-center border-t border-border last:border-b"
-                  >
+                  <div key={row} className={`flex min-h-12 items-center ${ledgerRowBoxClass}`}>
                     <div className="h-4 w-44 max-w-[60%] rounded bg-surface-sunken" />
                   </div>
                 ))}

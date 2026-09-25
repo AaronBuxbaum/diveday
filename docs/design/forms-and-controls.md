@@ -619,7 +619,9 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
   global rule does.
 - **`focus-visible:focus-ring-inset`** is for an element flush with an `overflow-hidden` or
   scrolling edge: a list card's rows, a scroll box's options, the command palette's field, a row
-  or a control bled `-mx-3` or `-ml-3` to 4px from a clipping edge. It is the same 3px, drawn
+  or a control bled `-mx-3` or `-ml-3` to 4px from a clipping edge. A ledger row's door and a
+  folded horizon's `<summary>` take it too: each is the row's whole box, rule to rule, so the
+  outset ring crossed both hairlines. It is the same 3px, drawn
   wholly inside the box, and on the element's own fill (the contrast of each fill is in the
   utility's comment in `globals.css`). Where the row meets the container's rounded corner it
   takes the container's radius too, or the clip shaves the ring's square corner —
@@ -714,6 +716,15 @@ above them that way. `flush` drops the size's horizontal padding at every breakp
 // Right
 <Link className={buttonClass({ variant: "link", flush: true })}>See the full list →</Link>
 ```
+
+**What `flush` does depends on what the variant paints.** `link` and `bare` paint nothing of their
+own around their words (a link's hover is an underline), so their padding goes to `px-0`. `ghost`
+and `danger-ghost` paint only on hover, and their tint with the padding gone sat 0px from either
+side of "Delete Morgan Vale" (pixel probe, 2026-09-25), so they get `-mx-2 px-2`: the label sits
+where a padless one would, and the tint reaches 8px past it. A ledger row keeps the same 8px, for
+the same reason (`FILL_ROOM` in `src/components/ui/ledger.tsx`). The variants painted at rest
+(`primary`, `secondary`, `danger`, `danger-solid`, `sky`) are boxes, and a box lines up by its edge,
+not its label, so the type refuses `flush` on them.
 
 The same trap applies to the type scale, which is why it lives on the sizes: a `text-base` passed
 through `className` cannot reliably beat a size's `text-sm`. Pick the size that already says it.
@@ -844,7 +855,10 @@ radii on 2026-09-19. They are these now:
   field with no button on its line; `md` is 48px (`controlClassFor("md")`, `SearchField size="md"`),
   for a control on one line with `md` buttons. Each size carries its own vertical padding, so the
   content box is 26px at both.
-- **Rows**: a `LedgerRow` is never tighter than **52px** (`md`); `lg` is 56.
+- **Rows**: a `LedgerRow` is never tighter than **52px** (`md`); `lg` is 56. Every row, door or
+  not, keeps 8px of room each side of its words and runs its rules 8px past the column with it, so
+  every ledger on a page draws its rules at one length; a skeleton or a hand-set line among ledger
+  rows takes `ledgerRowBoxClass` (`src/components/ui/ledger.tsx`).
 - **The ⌘K cap** belongs to the command palette's trigger in the header, not to `SearchField`: a
   real `<input>` does not advertise a global shortcut it does not own. The sheet drew them as one
   field; the split is deliberate.

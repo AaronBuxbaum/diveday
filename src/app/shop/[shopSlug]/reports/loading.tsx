@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Body-shaped skeleton for Reports (design principle 1) — the monthly
@@ -26,12 +27,13 @@ export default function ReportsLoading() {
           </div>
         </div>
         {/* The figure row: unboxed, one hairline above and below, and the same
-            one/two/five column run the figures themselves wear. */}
-        <div className="grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-5">
+            one/two/five column run the figures themselves wear — reaching 8px
+            past the column, as the figures' band and the ledger below do. */}
+        <div className="-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-5">
           {[0, 1, 2, 3, 4].map((index) => (
             <div
               key={index}
-              className={`py-5 pe-6 ${
+              className={`py-5 ps-2 pe-6 ${
                 index === 0
                   ? ""
                   : index === 1
@@ -57,10 +59,7 @@ export default function ReportsLoading() {
         <div className="mt-10 h-3 w-32 rounded bg-surface-sunken" />
         <div className="mt-2">
           {[0, 1, 2, 3, 4, 5].map((row) => (
-            <div
-              key={row}
-              className="flex min-h-12 items-center gap-4 border-t border-border last:border-b"
-            >
+            <div key={row} className={`flex min-h-12 items-center gap-4 ${ledgerRowBoxClass}`}>
               <div className="h-4 flex-1 rounded bg-surface-sunken" />
               <div className="hidden h-4 w-28 rounded bg-surface-sunken sm:block lg:w-52" />
               <div className="hidden h-4 w-12 rounded bg-surface-sunken sm:block lg:w-20" />

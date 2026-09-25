@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { LedgerRow } from "@/components/ui/ledger";
 import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { publicBoatLine } from "@/db/boat-line";
 import { getDb } from "@/db/client";
@@ -180,27 +181,37 @@ export default async function FollowTheBoatPage({
           cannot tell them reads a quiet line as bad news. */}
       <p className="mt-6 text-sm text-muted">{t("boatLine.note")}</p>
 
-      <div className="mt-8 flex flex-col border-t border-border">
-        <div className="flex min-h-13 items-center gap-3 border-b border-border">
-          <span className="min-w-0 flex-1 text-base">{meetingLabel}</span>
-          {mapQuery ? (
-            <a
-              href={googleMapsUrl(mapQuery)}
-              target="_blank"
-              rel="noopener"
-              className={QUIET_LINK_CLASS}
-            >
-              {t("boatLine.directions")}
-            </a>
-          ) : null}
-        </div>
+      {/* Ledger rows, as the day above is, so the page's hairlines are one
+          length and its words one column. */}
+      <div className="mt-8">
+        <LedgerRow
+          as="div"
+          trailing={
+            mapQuery ? (
+              <a
+                href={googleMapsUrl(mapQuery)}
+                target="_blank"
+                rel="noopener"
+                className={QUIET_LINK_CLASS}
+              >
+                {t("boatLine.directions")}
+              </a>
+            ) : null
+          }
+        >
+          <span className="text-base">{meetingLabel}</span>
+        </LedgerRow>
         {shop.contactPhone ? (
-          <div className="flex min-h-13 items-center gap-3 border-b border-border">
-            <span className="min-w-0 flex-1 text-base">{t("boatLine.callShop")}</span>
-            <a href={telHref(shop.contactPhone)} className={QUIET_LINK_CLASS}>
-              {shop.contactPhone}
-            </a>
-          </div>
+          <LedgerRow
+            as="div"
+            trailing={
+              <a href={telHref(shop.contactPhone)} className={QUIET_LINK_CLASS}>
+                {shop.contactPhone}
+              </a>
+            }
+          >
+            <span className="text-base">{t("boatLine.callShop")}</span>
+          </LedgerRow>
         ) : null}
       </div>
     </main>
