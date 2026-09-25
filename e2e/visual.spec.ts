@@ -560,6 +560,75 @@ const SURFACE_TIMEOUT_MS =
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
 
 /**
+ * **The pixel probe** (`scripts/pixel-probe/`, docs/design/pixel-craft.md): with
+ * `PIXEL_PROBE=1`, `capture()` measures every light-scheme surface after each
+ * viewport's screenshot — geometry, forced hover and focus at the desktop
+ * width, and a sweep of the tight edge of each Tailwind band — and writes
+ * candidates to `e2e/pixel-probe/` (gitignored, never under `e2e/screenshots/`,
+ * which reg-suit compares). CI never sets it, and with it unset nothing below
+ * runs and nothing is even imported.
+ *
+ * Its budget is derived the way `SURFACE_TIMEOUT_MS` is, from the bounds the
+ * probe itself honours: every page evaluate and protocol call goes through
+ * `withRendererBound` at one of these ceilings, and the state pass stops
+ * starting new elements at its deadline. A capture that probes extends its own
+ * test by the sum, so a slow probe degrades to a `skipped` record rather than
+ * turning a green capture red.
+ */
+const PIXEL_PROBE = process.env.PIXEL_PROBE === "1";
+/** One `collectGeometry` walk of the document. */
+const PROBE_COLLECT_MS = 15_000;
+/** Any one protocol step: a forced state, a measure, a resize settle. */
+const PROBE_CALL_MS = 5_000;
+/** The desktop state pass starts no new element after this. */
+const PROBE_STATES_MS = 45_000;
+/** The focus-ring pass at the other widths starts no new element after this. */
+const PROBE_RINGS_MS = 10_000;
+/** One clipped screenshot of a forced state. */
+const PROBE_SHOT_MS = 10_000;
+/** Decoding the capture, cutting crops, writing JSON — node-side work. */
+const PROBE_WRITE_MS = 10_000;
+/** An element already in flight at a deadline: its forces, measures and shots. */
+const PROBE_OVERRUN_MS = 8 * PROBE_CALL_MS + 3 * PROBE_SHOT_MS;
+const PROBE_SWEEP_WIDTHS = 4;
+const PROBE_VIEWPORT_MS =
+  PROBE_COLLECT_MS + PROBE_RINGS_MS + PROBE_OVERRUN_MS + PROBE_WRITE_MS + RENDERER_PROBE_MS;
+const PROBE_SWEEP_MS = PROBE_CALL_MS + PROBE_COLLECT_MS + PROBE_WRITE_MS + RENDERER_PROBE_MS;
+function probeBudgetMs(viewportCount: number): number {
+  return (
+    viewportCount * PROBE_VIEWPORT_MS +
+    PROBE_STATES_MS +
+    PROBE_OVERRUN_MS +
+    PROBE_SWEEP_WIDTHS * PROBE_SWEEP_MS
+  );
+}
+/** Control signatures this worker has already photographed for the state atlas. */
+const PROBE_ATLAS_SEEN = new Set<string>();
+let pixelProbe: Promise<typeof import("../scripts/pixel-probe/probe.mjs")> | undefined;
+
+function probeContext(page: Page, capture: string, scheme: "light" | "dark", width: number) {
+  return {
+    capture,
+    scheme,
+    width,
+    states: width === VIEWPORTS[1].width,
+    targets: width === VIEWPORTS[0].width || width === TABLET_VIEWPORT.width,
+    titlePath: test.info().titlePath,
+    testFile: test.info().file,
+    atlasSeen: PROBE_ATLAS_SEEN,
+    bound: <T>(what: string, ms: number, work: Promise<T>, degraded: T) =>
+      withRendererBound(page, what, ms, work, degraded),
+    budgets: {
+      collectMs: PROBE_COLLECT_MS,
+      callMs: PROBE_CALL_MS,
+      statesMs: PROBE_STATES_MS,
+      ringsMs: PROBE_RINGS_MS,
+      shotMs: PROBE_SHOT_MS,
+    },
+  };
+}
+
+/**
  * A test that runs a real flow — a booking, a mutation and its revert, a crawl
  * of the schedule board — before it can shoot anything. The surface ceiling
  * plus the flow, derived so it tracks the budgets the same way.
@@ -1472,15 +1541,29 @@ async function capture(
     ...(TABLET_SURFACES.has(baseline) ? [TABLET_VIEWPORT] : []),
     ...(TV_SURFACES.has(baseline) ? [TV_VIEWPORT] : []),
   ];
+  // Light only: geometry does not change with the scheme, and checking one
+  // scheme is the owner's standing rule for anything that is not colour work.
+  // The import happens here, inside the flag, so an unset flag loads nothing.
+  if (PIXEL_PROBE && scheme === "light") pixelProbe ??= import("../scripts/pixel-probe/probe.mjs");
+  const probe = PIXEL_PROBE && scheme === "light" ? await pixelProbe : undefined;
+  if (probe) test.info().setTimeout(test.info().timeout + probeBudgetMs(viewports.length));
   await withTransitionsOff(page, async () => {
     for (const viewport of viewports) {
       await page.setViewportSize(viewport);
       await paintWholeDocument(page);
-      await screenshotOrGiveUp(
-        page,
-        `e2e/screenshots/${baseline}-${scheme}-vw-${viewport.width}.png`,
-      );
+      const shot = `e2e/screenshots/${baseline}-${scheme}-vw-${viewport.width}.png`;
+      await screenshotOrGiveUp(page, shot);
+      // After the shot and before the next resize, so nothing the probe does
+      // can reach a baseline; `probeViewport` never throws.
+      if (probe) {
+        await probe.probeViewport(page, {
+          ...probeContext(page, baseline, scheme, viewport.width),
+          shot,
+        });
+      }
     }
+    // The width sweep, after every captured width has been shot.
+    if (probe) await probe.probeSweep(page, probeContext(page, baseline, scheme, 0));
     // capture() runs mid-flow (navigation and clicks continue after it), so
     // restore the base viewport the test was using before resizing for each
     // capture above — matching what the old Argos `viewports` option did.

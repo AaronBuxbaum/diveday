@@ -35,6 +35,13 @@ import { MIN_MAIN_TEXT, SKELETON_SELECTOR } from "./screenshot-guards.mjs";
  * - A file left by an *earlier* run is reported as replaced rather than
  *   silently overwritten. A tool whose job is "look at this" should never
  *   make a picture disappear without saying so.
+ * - `--probe` runs the pixel probe (scripts/pixel-probe/, docs/design/pixel-craft.md)
+ *   on every light capture, writing candidates to `e2e/pixel-probe/` exactly
+ *   as `PIXEL_PROBE=1` does for the visual suite — for a surface no capture
+ *   reaches, and for the fix loop. `node scripts/pixel-probe-report.mjs`
+ *   then reads both. A dev server dies at about thirty page renders, and a
+ *   probe adds a sweep of four widths to each path, so probe two or three
+ *   paths per run.
  *
  * For review-grade captures of a surface the visual spec already covers,
  * prefer a filtered visual-spec run (see the design-review skill) — that path
@@ -97,6 +104,7 @@ const TABLET_VIEWPORT = { width: 820, height: 1180 };
 let viewports = [{ width: 390 }, { width: 1280 }];
 const DEFAULT_ROLE = "owner";
 let role = DEFAULT_ROLE;
+let probing = false;
 
 for (let index = 0; index < args.length; index += 1) {
   const arg = args[index];
@@ -107,6 +115,7 @@ for (let index = 0; index < args.length; index += 1) {
   else if (arg === "--width") viewports = [{ width: Number(args[++index]) }];
   else if (arg === "--tablet") viewports = [TABLET_VIEWPORT];
   else if (arg === "--as") role = args[++index];
+  else if (arg === "--probe") probing = true;
   else if (arg.startsWith("--")) {
     console.error(`Unknown flag ${arg}`);
     process.exit(1);
@@ -119,7 +128,7 @@ if (
   viewports.some((viewport) => Number.isNaN(viewport.width))
 ) {
   console.error(
-    "Usage: node scripts/screenshot.mjs <path> [<path>…] [--base http://localhost:3000] [--out screenshots] [--light|--dark] [--width <px>|--tablet] [--as owner|instructor|divemaster|captain]\n" +
+    "Usage: node scripts/screenshot.mjs <path> [<path>…] [--base http://localhost:3000] [--out screenshots] [--light|--dark] [--width <px>|--tablet] [--as owner|instructor|divemaster|captain] [--probe]\n" +
       "Writes <out>/<path>[-<role>]-<scheme>-<width>.png; the role appears only when it is not the default owner.",
   );
   process.exit(1);
@@ -176,6 +185,29 @@ async function launch() {
 }
 
 const needsStaffSession = paths.some((p) => p.startsWith("/shop"));
+
+/**
+ * The pixel probe's bound, for a dev server rather than the visual spec's
+ * `withRendererBound`: race the work against the budget, hand back the
+ * degraded value on a stall, and let a real error through.
+ */
+function probeBound(what, ms, work, degraded) {
+  let timer;
+  return Promise.race([
+    work,
+    new Promise((resolve) => {
+      timer = setTimeout(() => {
+        console.warn(`screenshot: ${what} did not return within ${ms}ms — recorded as skipped.`);
+        resolve(degraded);
+      }, ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
+/** Transitions off while the probe forces states, as the visual spec's capture does. */
+const PROBE_TRANSITIONS_OFF =
+  "*, *::before, *::after, *::backdrop, details::details-content { transition: none !important; }";
+const probeAtlasSeen = new Set();
 const browser = await launch();
 fs.mkdirSync(out, { recursive: true });
 const written = [];
@@ -497,6 +529,45 @@ try {
         // half of this trade — review-grade pixels come from the visual specs.
         await page.screenshot({ path: file, fullPage: true, caret: "initial" });
         written.push(file);
+        // Light only: geometry does not change with the scheme.
+        if (probing && colorScheme === "light") {
+          const probe = await import("./pixel-probe/probe.mjs");
+          const style = await page.addStyleTag({ content: PROBE_TRANSITIONS_OFF });
+          try {
+            const ctx = {
+              capture: `dev-${slug}${rolePart}`,
+              scheme: colorScheme,
+              width,
+              shot: file,
+              states: width === 1280,
+              targets: width === 390 || width === TABLET_VIEWPORT.width,
+              titlePath: [],
+              testFile: "",
+              source: "dev",
+              atlasSeen: probeAtlasSeen,
+              bound: probeBound,
+              budgets: {
+                collectMs: 30_000,
+                callMs: 10_000,
+                statesMs: 60_000,
+                ringsMs: 20_000,
+                shotMs: 15_000,
+              },
+            };
+            const record = await probe.probeViewport(page, ctx);
+            console.log(
+              record.probed
+                ? `probed ${ctx.capture} @ ${width}: ${record.flags.length} flag(s)`
+                : `probe skipped ${ctx.capture} @ ${width}: ${record.skipped}`,
+            );
+            // The sweep once per path, from the widest width this run takes.
+            if (width === Math.max(...viewports.map((viewport) => viewport.width))) {
+              await probe.probeSweep(page, { ...ctx, width: 0 });
+            }
+          } finally {
+            await style.evaluate((node) => node.remove()).catch(() => undefined);
+          }
+        }
       }
 
       await context.close();

@@ -1,0 +1,4 @@
+{
+  "//": "Pixel-probe flags that are right as they are. Each entry names the check and the signature (or a `classes` list the flag's class string must all carry), the reason, and a pointer to the code comment that explains it. The report lists matches as settled — never drops them. A flag that belongs here also earns a row in docs/design/settled-questions.md.",
+  "settled": []
+}
