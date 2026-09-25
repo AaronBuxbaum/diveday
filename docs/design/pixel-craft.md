@@ -94,6 +94,7 @@ disagrees with the code, the code wins and the doc is wrong.
 | What | Value | Where |
 | --- | --- | --- |
 | Radius ladder | control 12 (`rounded-lg`) · inset 12 (`rounded-inset`) · panel 20 (`rounded-panel`) · pill | `--radius`, `--radius-inset`, `--radius-panel` |
+| Nested radii | outer less the inset: on a segmented track or in a menu panel 7 (12 − 1 − 4); flush in a card 19 (20 − 1) | `SEGMENT_CORNER` in `ui/segmented.ts` (`MENU_PANEL` in `ui/menu.ts` takes the track's inset), `PANEL_INNER_RADIUS` in `ui/card.tsx` |
 | Focus ring | 3px outline at a 2px offset, so it reaches **5px** outside the box; `focus-ring-inset` is the same 3px at −3px, for a row flush in a clipping container | `:where(a, button, …):focus-visible` in `@layer base`; `@utility focus-ring`, `focus-ring-inset` |
 | Chrome bar | 56px (`--chrome-h`); anything pinned under it offsets by the token | `--chrome-h` |
 | Buttons | `md` 48px with a 16px label; `sm` 44px with 14px; `icon` a 48px square; `boat` 56px. **One size per row** | `src/components/ui/button.ts` |
@@ -159,12 +160,18 @@ Each class gives its rule, its tolerance, its usual severity, the probe check th
 ### 6. Boxes, borders and radii
 
 - **Rule.** A painted box near a rounded ancestor's corner takes the ancestor's radius minus the
-  inset. Radii stay on the ladder. An edge has one border, never two stacked.
+  inset. Radii stay on the ladder, except a nested corner derived from its ancestor, spelled only
+  as `SEGMENT_CORNER` / `PANEL_INNER_RADIUS`. An edge has one border, never two stacked.
 - **Tolerance.** 2px on the nested radius, checked within 8px of the corner.
 - **Severity.** S2.
 - **Probe.** `nested-corners`, `fill-corners`. Double borders are eyes only.
-- **History.** A double border (e174e0a). `SegmentedControl`'s 12px pill sits 6px inside a 12px
-  track, where it nests at 6px.
+- **History.** A double border (e174e0a). `SegmentedControl`'s 12px pill sat 6px inside a 12px
+  track, where it nests at 6px, and its options 5px, where they nest at 7px. The extra pixel was a
+  placement bug, the pill measured from the track's border edge, not its padding edge; with that
+  fixed one derived corner, 7px, serves both. The manifest's "On this phone" summary put a 12px
+  hover fill flush in a 20px corner that does not clip. The three header menus (identity, When,
+  language) put 12px rows 9px inside a 12px panel; the panel took the track's `p-1` inset so its
+  rows take the same 7px.
 
 ### 7. Interaction states
 

@@ -3,6 +3,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SEGMENT_CORNER, segmentedTrackClass } from "@/components/ui/segmented";
 import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
 import { EMBED_KINDS, PLATFORMS } from "@/lib/embed-snippets";
 import { EmbedGenerator, type EmbedGeneratorCopy } from "./EmbedGenerator";
@@ -157,6 +158,47 @@ describe("EmbedGenerator", () => {
     expect(screen.getByLabelText("Referral link")).toHaveValue(
       "https://diveday.example/s/blue-mantis?utm_source=partner&utm_medium=referral&utm_campaign=the-reef-hotel",
     );
+  });
+
+  /**
+   * The look toggle is a segmented choice between two radios, and it takes the
+   * segmented recipe rather than a copy of it. The copy's `rounded-lg` segments
+   * sat 5px inside a 12px track, where they nest at 7px — the probe's
+   * `nested-corners` flag on `settings-embed` at both widths.
+   */
+  it("draws the look toggle from the segmented recipe, nested in its track's corner", () => {
+    const { container } = renderGenerator();
+    // By value: the first radio also answers to the field's own label, so its
+    // accessible name is not "Your site" alone (#1972).
+    const site = container.querySelector('input[type="radio"][value="site"]')?.closest("label");
+    const light = screen.getByRole("radio", { name: "DiveDay" }).closest("label");
+    const track = site?.parentElement;
+    for (const token of segmentedTrackClass.split(" ")) expect(track).toHaveClass(token);
+    for (const segment of [site, light]) {
+      expect(segment).toHaveClass(SEGMENT_CORNER);
+      expect(segment).not.toHaveClass("rounded-lg");
+      // Keyboard focus is the global ring's utility, not a hand-drawn outline.
+      expect(segment).toHaveClass("has-[:focus-visible]:focus-ring");
+      expect(segment?.className).not.toMatch(/outline-/);
+    }
+  });
+
+  /**
+   * Each look label is its radio's whole tap target (the radio itself is
+   * `sr-only`). It was `min-h-9`, 36px, under the 44px floor every target
+   * clears (principles.md §2). jsdom lays nothing out, so this pins the floor
+   * the label carries; the probe's `small-target` check measures it.
+   */
+  it("gives both look labels, the radios' tap targets, the 44px floor and not the 36px one", () => {
+    const { container } = renderGenerator();
+    const labels = [...container.querySelectorAll('input[type="radio"]')]
+      .filter((radio) => ["site", "light"].includes((radio as HTMLInputElement).value))
+      .map((radio) => radio.closest("label"));
+    expect(labels).toHaveLength(2);
+    for (const label of labels) {
+      expect(label).toHaveClass("min-h-11");
+      expect(label).not.toHaveClass("min-h-9");
+    }
   });
 });
 

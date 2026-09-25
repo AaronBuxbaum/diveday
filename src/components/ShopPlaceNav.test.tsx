@@ -2,6 +2,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { MENU_PANEL } from "@/components/ui/menu";
+import { SEGMENT_CORNER } from "@/components/ui/segmented";
 import type { StaffDestinationGates } from "@/lib/staff-destinations";
 import { ShopPlaceMenu, ShopPlaceNav, type ShopPlaceNavCopy } from "./ShopPlaceNav";
 
@@ -217,5 +219,27 @@ describe("ShopPlaceMenu — the same three, folded into the phone's date", () =>
     pathname = ROOT;
     render(<ShopPlaceMenu root={ROOT} gates={owner} blocked={0} copy={COPY} />);
     expect(screen.getByRole("button", { name: "When" })).not.toHaveTextContent("blocked");
+  });
+});
+
+/**
+ * **The When menu nests its rows in its corner** (pixel-craft.md, class 6).
+ * Its panel was `rounded-inset … p-2` with `rounded-lg` rows, so the lit
+ * "Today" drew a 12px fill 9px inside a 12px corner at rest. The panel is now
+ * the shared menu panel, whose `p-1` inset is the one `SEGMENT_CORNER`
+ * subtracts.
+ */
+describe("ShopPlaceMenu — the open panel", () => {
+  it("is the shared p-1 menu panel, and every row wears the derived corner", async () => {
+    pathname = ROOT;
+    render(<ShopPlaceMenu root={ROOT} gates={owner} copy={COPY} />);
+    await userEvent.click(screen.getByRole("button", { name: "When" }));
+    const panel = screen.getByRole("navigation", { name: "When" });
+    for (const token of MENU_PANEL.split(" ")) expect(panel).toHaveClass(token);
+    expect(panel).not.toHaveClass("p-2");
+    for (const row of screen.getAllByRole("link")) {
+      expect(row, row.textContent ?? "").toHaveClass(SEGMENT_CORNER);
+      expect(row, row.textContent ?? "").not.toHaveClass("rounded-lg");
+    }
   });
 });

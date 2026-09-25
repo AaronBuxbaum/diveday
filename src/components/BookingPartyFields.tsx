@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { segmentClass, segmentedTrackClass } from "@/components/ui/segmented";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { suggestEmailTypo } from "@/lib/email-typo";
 import { loadReturningDiver, type ReturningDiver } from "@/lib/returning-diver";
@@ -165,11 +166,13 @@ export function BookingPartyFields({
               a form input whose value has to reach `FormData` and survive a
               refused server parse with everything the diver typed still on
               screen. Radios named `partySize` do that; a navigation control
-              cannot. The track's geometry is copied from it so the two read as
-              one grammar — `rounded-inset` over `rounded-lg` segments, which
-              is the pair that nests. It carried `rounded-panel` (28px) around
-              8px segments until 2026-09-06, so the selected pill's corners
-              stood outside the track's own curve at both ends. */}
+              cannot. The track and its segments come from the same recipe,
+              `segmented.ts`, so the two read as one grammar and nest the same
+              way. They were a copy until 2026-09-25, and the copy had kept
+              `rounded-lg` segments 5px inside a 12px track, where a nested
+              corner is 7px; before 2026-09-06 it carried `rounded-panel`
+              (28px) around 8px segments, so the selected pill's corners stood
+              outside the track's own curve at both ends. */}
           {/* **The segment reads as a number, not a sentence.** Six segments
               spelling "1 diver … 6 divers" are wider than any phone, so the
               track wrapped — and because each segment also grew to fill its
@@ -178,21 +181,21 @@ export function BookingPartyFields({
               The group is captioned "Number of divers" directly above, so the
               numeral is the whole answer; the plural sentence stays as each
               radio's accessible name, which is both what a screen reader
-              announces and what the specs match on. */}
+              announces and what the specs match on. The radio is `sr-only`,
+              so its label draws the global ring from `has-[:focus-visible]`
+              — keyboard focus only, as on the embed page's look. */}
           <div
             role="radiogroup"
             aria-labelledby="party-size-label"
             data-hydrated={hydrated ? "true" : "false"}
-            className="mt-2 flex w-fit max-w-full gap-1 rounded-inset border border-border bg-surface-sunken p-1"
+            className={`mt-2 w-fit max-w-full ${segmentedTrackClass}`}
           >
             {counts.map((count) => (
               <label
                 key={count}
-                className={`inline-flex min-h-11 min-w-11 flex-1 cursor-pointer items-center justify-center rounded-lg px-2.5 text-sm font-semibold tabular-nums transition-colors ${
-                  size === count
-                    ? "bg-surface text-primary shadow-sm"
-                    : "text-muted hover:bg-surface hover:text-foreground"
-                }`}
+                className={`inline-flex min-h-11 min-w-11 flex-1 cursor-pointer items-center justify-center px-2.5 text-sm tabular-nums transition-colors has-[:focus-visible]:focus-ring ${segmentClass(
+                  { selected: size === count },
+                )}`}
               >
                 <input
                   type="radio"

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { GroupLabel } from "@/components/ui/ledger";
+import { MENU_PANEL, MENU_TICK_GUTTER } from "@/components/ui/menu";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { motionMs } from "@/lib/motion";
 
@@ -118,10 +119,13 @@ export function LanguagePicker({
         />
       </button>
       {mounted ? (
+        // The shared menu panel (`ui/menu.ts`), so the language rows nest in
+        // its corner, and the heading on the rows' tick gutter, so it starts
+        // where the names do.
         <div
-          className={`absolute top-full right-0 z-10 mt-1 min-w-40 rounded-inset border border-border bg-surface p-2 shadow-lg ${closing ? "animate-scale-out" : "animate-scale-in"}`}
+          className={`absolute top-full right-0 z-10 mt-1 min-w-40 ${MENU_PANEL} ${closing ? "animate-scale-out" : "animate-scale-in"}`}
         >
-          <GroupLabel className="px-2">{copy.heading}</GroupLabel>
+          <GroupLabel className={MENU_TICK_GUTTER}>{copy.heading}</GroupLabel>
           <div className="mt-1">
             <LanguageChoices
               current={current}

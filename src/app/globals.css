@@ -167,10 +167,13 @@
      **Inset now shares the control rung** rather than standing between them —
      a well carved out of a group is a control-shaped hole, and a third rung
      between 12 and 20 is a difference nobody can see. Nothing on a staff
-     surface is squarer than the control or sits between the rungs; Tailwind's
-     own `rounded-xl`/`rounded-2xl` (12/16) are not on the ladder and
-     `card.test.tsx` refuses them. Reef's ladder was 10 · 18 · 28, and its
-     control read 12 from Clearwater until 2026-09-02. */
+     surface is squarer than the control or sits between the rungs, except a
+     nested corner derived from its ancestor, spelled only as
+     `SEGMENT_CORNER` (7, in `ui/segmented.ts`) or `PANEL_INNER_RADIUS` (19,
+     in `ui/card.tsx`). Tailwind's own `rounded-xl`/`rounded-2xl` (12/16)
+     are not on the ladder and `card.test.tsx` refuses them. Reef's ladder
+     was 10 · 18 · 28, and its control read 12 from Clearwater until
+     2026-09-02. */
   --radius: 0.75rem;
   --radius-inset: 0.75rem;
   --radius-panel: 1.25rem;

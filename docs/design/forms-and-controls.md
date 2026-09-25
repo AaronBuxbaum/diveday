@@ -770,7 +770,10 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
   leave it off for a content-width track that sits beside other things in a row.
 - **`size="boat"`** raises the target floor to 56px with 16px labels, for surfaces worked at the
   rail with wet hands and glare (the manifest's checkpoint row). Everything else takes the default,
-  `md`: 44px with 14px labels. The track is `rounded-inset` and the pill `rounded-lg`, both 12px.
+  `md`: 44px with 14px labels. The track is `rounded-inset`, 12px. The pill, the options and their
+  hover fill sit 5px inside it (a 1px border and `p-1`), so they take its corner less that inset:
+  7px, `SEGMENT_CORNER`. They wore `rounded-lg` until 2026-09-25, a 12px curve 5px inside a 12px
+  one, and the pixel probe flagged it on 42 captures.
 - **The pill slides.** The raised pill is one element that travels from the option it was on to
   the one it is on now — a FLIP on `transform`, on the arrival curve — so a tap explains where the
   selection went. Every option is still a navigation; the component keeps the last measured box
@@ -782,6 +785,13 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
   `ariaCurrentValue="true"`, and `scroll={false}` so switching views holds the reader's place.
 - Labels arrive resolved: staff copy is server-side only, so each call site translates its own
   options and passes words.
+
+**A segmented choice inside a form takes the parts, not the component.** The booking's party size
+and the embed page's look are radios: their value has to reach `FormData`, and a `<nav>` of links
+cannot carry one. They draw the same track and segments from `src/components/ui/segmented.ts` —
+`segmentedTrackClass` and `segmentClass({ selected })`, which `SegmentedControl` itself uses — and
+keep only their own target size and focus treatment. They were copies until 2026-09-25, and each
+copy had kept the mis-nested corner; `segmented.test.ts` now fails on a track spelled anywhere else.
 
 **Not for same-page anchors.** A row that jumps to sections of the page you are already on is
 `src/components/JumpNav.tsx` — link-buttons under a hairline rule — and it stays visually distinct
@@ -806,6 +816,15 @@ radii on 2026-09-19. They are these now:
   on a class string that also spells a panel's `border-border bg-surface`, `shadow-sm` on any
   `rounded-panel` string, and any `rounded-lg`/`xl`/`2xl`/`3xl` on `SectionCard` itself. A
   `rounded-xl` inset elsewhere passes (#1965).
+- **Nested corners are derived, not picked.** A box painted near a rounded ancestor's corner takes
+  the ancestor's radius less the inset between them, spelled from the same tokens so the two move
+  together ([pixel-craft.md](pixel-craft.md), class 6): `SEGMENT_CORNER` in `ui/segmented.ts` for
+  anything on a segmented track (12 − 1 − 4 = 7), `PANEL_INNER_RADIUS` in `ui/card.tsx` for a fill
+  flush inside a card that does not clip (20 − 1 = 19), on the corners it touches. These two are
+  the only radii off the ladder. A header menu's panel is `MENU_PANEL` in `ui/menu.ts`, which
+  takes the segmented track's inset on purpose so its rows take `SEGMENT_CORNER` too. A menu whose
+  rows can carry a tick (the identity menu, the language picker) starts every row's words and its
+  group label on one gutter, `MENU_TICK_GUTTER`, and `menuRowClass` draws those rows.
 - **Buttons**: `md` is **48px tall with a 16px label**, the sheet's default; `sm` stays 44/14 for a
   table row or a chip row; `icon` is a 48px square; `boat` stays the 56px dock target. The base's
   `min-h-11` is still the floor every size clears.

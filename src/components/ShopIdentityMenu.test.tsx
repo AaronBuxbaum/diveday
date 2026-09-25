@@ -3,6 +3,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { MENU_PANEL, MENU_TICK, MENU_TICK_GUTTER } from "@/components/ui/menu";
+import { SEGMENT_CORNER } from "@/components/ui/segmented";
 import { ShopIdentityMenu, shopInitials } from "./ShopIdentityMenu";
 
 afterEach(() => {
@@ -114,5 +116,100 @@ describe("ShopIdentityMenu", () => {
     expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
     // …and the reader's own half of the menu is still there.
     expect(screen.getByText("Language")).toBeInTheDocument();
+  });
+});
+
+/**
+ * **One panel, one corner, one text edge** (pixel-craft.md, classes 3 and 6).
+ * The panel was `rounded-inset … p-2` with `rounded-lg` rows, a 12px fill 9px
+ * inside a 12px corner: the probe's `fill-corners` flag on Settings and Sign
+ * out in `identity-menu-open`. And the words started at three edges, measured
+ * from the panel's padding box: the LANGUAGE label at 16px, Settings and Sign
+ * out at 20px, the language names at 40px behind their tick column.
+ *
+ * jsdom lays nothing out, so these pin which element carries which part of
+ * the recipe, and what is absent. `menu.test.ts` pins what the parts add up
+ * to, and the integration stage's probe measures the rendered result.
+ */
+describe("ShopIdentityMenu — the open panel", () => {
+  const LANGUAGES = [
+    { locale: "en-US", label: "English (US)" },
+    { locale: "es-ES", label: "Español" },
+  ];
+
+  async function openMenu() {
+    render(
+      <ShopIdentityMenu
+        shopName="Blue Mantis Divers"
+        settingsHref="/shop/blue-mantis/settings"
+        signOutAction={vi.fn()}
+        locale="en-US"
+        languages={LANGUAGES}
+        setLocaleAction={vi.fn()}
+        copy={COPY}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: /Blue Mantis Divers/ });
+    await userEvent.click(trigger);
+    return trigger.nextElementSibling as HTMLElement;
+  }
+
+  const horizontalPadding = (element: Element) =>
+    [...element.classList].filter((token) => /^(p|px|pl|pr|ps|pe)-/.test(token));
+
+  it("puts Settings, the LANGUAGE label, both languages and Sign out on the tick gutter and no other inset", async () => {
+    await openMenu();
+    const starts = [
+      screen.getByRole("link", { name: "Settings" }),
+      screen.getByText("Language"),
+      screen.getByRole("button", { name: "English (US)" }),
+      screen.getByRole("button", { name: "Español" }),
+      screen.getByRole("button", { name: "Sign out" }),
+    ];
+    for (const element of starts) {
+      expect(horizontalPadding(element).sort(), element.textContent ?? "").toEqual(
+        MENU_TICK_GUTTER.split(" ").sort(),
+      );
+    }
+  });
+
+  it("draws a tick only in the gutter of the language in force, out of its words' flow", async () => {
+    const panel = await openMenu();
+    const current = screen.getByRole("button", { name: "English (US)" });
+    expect(current).toHaveAttribute("aria-current", "true");
+    const ticks = panel.querySelectorAll("svg");
+    expect(ticks).toHaveLength(1);
+    const tick = ticks[0].parentElement as HTMLElement;
+    expect(current).toContainElement(tick);
+    expect(tick).toHaveAttribute("aria-hidden", "true");
+    for (const token of MENU_TICK.split(" ")) expect(tick).toHaveClass(token);
+    // No inert placeholder is left in the other rows to hold their edge: the
+    // gutter holds it.
+    expect(screen.getByRole("button", { name: "Español" }).children).toHaveLength(0);
+  });
+
+  it("nests the panel's rows in its corner: a p-1 panel, and every row on the derived corner", async () => {
+    const panel = await openMenu();
+    for (const token of MENU_PANEL.split(" ")) expect(panel).toHaveClass(token);
+    expect(panel).not.toHaveClass("p-2");
+    const rows = [
+      screen.getByRole("link", { name: "Settings" }),
+      screen.getByRole("button", { name: "English (US)" }),
+      screen.getByRole("button", { name: "Español" }),
+      screen.getByRole("button", { name: "Sign out" }),
+    ];
+    for (const row of rows) {
+      expect(row, row.textContent ?? "").toHaveClass(SEGMENT_CORNER);
+      expect(row, row.textContent ?? "").not.toHaveClass("rounded-lg");
+    }
+  });
+
+  it("keeps Sign out's words on the gutter once armed, warning with a ring rather than a border", async () => {
+    await openMenu();
+    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    const armed = screen.getByRole("button", { name: "Sign out now?" });
+    expect(horizontalPadding(armed).sort()).toEqual(MENU_TICK_GUTTER.split(" ").sort());
+    expect(armed).toHaveClass("ring-inset", "text-danger", SEGMENT_CORNER);
+    expect([...armed.classList].filter((token) => /^border/.test(token))).toEqual([]);
   });
 });

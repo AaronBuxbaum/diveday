@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
+import { MENU_PANEL } from "@/components/ui/menu";
+import { SEGMENT_CORNER } from "@/components/ui/segmented";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { motionMs } from "@/lib/motion";
@@ -216,9 +218,12 @@ export function ShopPlaceMenu({
         ) : null}
       </button>
       {mounted ? (
+        // The shared menu panel (`ui/menu.ts`): its `p-1` inset is the one
+        // `SEGMENT_CORNER` subtracts, so the lit row's fill nests in the
+        // panel's corner. These rows carry no tick, so they keep `px-3`.
         <nav
           aria-label={copy.navAriaLabel}
-          className={`absolute top-full end-0 z-10 mt-2 min-w-40 rounded-inset border border-border bg-surface p-2 shadow-lg ${closing ? "animate-scale-out" : "animate-scale-in"}`}
+          className={`absolute top-full end-0 z-10 mt-2 min-w-40 ${MENU_PANEL} ${closing ? "animate-scale-out" : "animate-scale-in"}`}
         >
           {staffBarPlaces(gates).map(({ place, destination }) => {
             const active = place === current;
@@ -228,7 +233,7 @@ export function ShopPlaceMenu({
                 href={staffDestinationHref(root, destination)}
                 onClick={close}
                 aria-current={placeAriaCurrent(active, pathname, root, destination)}
-                className={`flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold ${
+                className={`flex min-h-11 items-center ${SEGMENT_CORNER} px-3 text-sm font-semibold ${
                   active ? "bg-primary-tint text-primary" : "text-foreground"
                 }`}
               >

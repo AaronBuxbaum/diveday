@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { MENU_TICK, menuRowClass } from "@/components/ui/menu";
 
 /** One language on offer: its tag, and its own name for itself. */
 export type LanguageChoice = { locale: string; label: string };
@@ -21,7 +22,9 @@ export type LanguageChoice = { locale: string; label: string };
  * of alternatives, a wrapping row of nine reads as a paragraph of buttons. It
  * is a row only where a caller can guarantee the space (nowhere, now that both
  * surfaces disclose it); `list` is the stacked form a menu wants and the one
- * that keeps working however many languages this app carries.
+ * that keeps working however many languages this app carries. A `list` row is
+ * a menu row (`menuRowClass`), because both surfaces that disclose this list
+ * are menus, and a list row has to share its menu's corner and text edge.
  *
  * `setLocale` is a Server Action the mounting surface binds — the words on
  * every page are chosen during the server render, so switching is a round
@@ -67,21 +70,25 @@ export function LanguageChoices({
                 onChosen?.();
               });
             }}
-            className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium transition-colors ${
-              list ? "w-full justify-start gap-2" : ""
-            } ${
-              active
-                ? "bg-surface-sunken text-foreground"
-                : "text-muted hover:bg-surface-sunken hover:text-foreground disabled:opacity-60"
-            }`}
+            className={
+              list
+                ? menuRowClass(active ? "current" : "quiet")
+                : `inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-surface-sunken text-foreground"
+                      : "text-muted hover:bg-surface-sunken hover:text-foreground disabled:opacity-60"
+                  }`
+            }
           >
             {/* In a stacked list the tick is what marks the language in force
                 — `aria-current` alone is invisible, and a fill that reads as
-                "selected" in a row of two reads as "hovered" in a menu. The
-                inert placeholder keeps every label on one left edge. */}
-            {list ? (
-              <span aria-hidden="true" className="w-3 shrink-0 text-primary">
-                {active ? <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} /> : null}
+                "selected" in a row of two reads as "hovered" in a menu. It
+                sits in the row's tick gutter, which every row of the menu
+                reserves, so the names share one left edge with each other and
+                with the menu's other rows whether or not they carry it. */}
+            {list && active ? (
+              <span aria-hidden="true" className={`${MENU_TICK} text-primary`}>
+                <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} />
               </span>
             ) : null}
             {choice.label}

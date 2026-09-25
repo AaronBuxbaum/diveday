@@ -4,7 +4,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { SectionCard, sectionCardClass } from "./card";
+import { PANEL_INNER_RADIUS, SectionCard, sectionCardClass } from "./card";
 
 afterEach(cleanup);
 
@@ -60,6 +60,22 @@ describe("sectionCardClass", () => {
       elevated: true,
     });
     expect(forced).toBe(sectionCardClass());
+  });
+
+  /**
+   * **A fill laid flush inside a panel takes the panel's inner corner** —
+   * pixel-craft class 6. The manifest's "On this phone" summary painted its
+   * hover fill at the control rung, 12px, flush against the inside of a 20px
+   * panel that does not clip, so the fill's corner poked out past the panel's
+   * curve (the probe's `fill-corners`, 13 manifest captures). The concentric
+   * radius is the panel's less the one thing between them, its hairline: pinned
+   * as that derivation, so a heavier border fails here first.
+   */
+  it("derives the inner corner from the panel's own radius and border", () => {
+    const shell = sectionCardClass({ padding: "none" }).split(" ");
+    expect(shell).toContain("rounded-panel");
+    expect(shell.filter((token) => /^border(-\d+)?$/.test(token))).toEqual(["border"]);
+    expect(PANEL_INNER_RADIUS).toBe("rounded-[calc(var(--radius-panel)-1px)]");
   });
 });
 

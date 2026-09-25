@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { SEGMENT_CORNER, segmentedTrackClass } from "@/components/ui/segmented";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { renderDiver } from "@/test/intl";
 import { BookingPartyFields } from "./BookingPartyFields";
@@ -141,5 +142,36 @@ describe("BookingPartyFields — the party-count control", () => {
     unmount();
     renderDiver(<BookingPartyFields maxPartySize={MAX_PUBLIC_PARTY_SIZE} />);
     expect(screen.getByLabelText("Number of divers")).toHaveAttribute("data-hydrated");
+  });
+
+  /**
+   * The segmented grammar's track and corner, taken from the one recipe rather
+   * than copied from it. The copy had kept `rounded-lg` segments 5px inside a
+   * 12px track, where they nest at 7px — the probe's `nested-corners` flag on
+   * the selected count, on the booking, profile and site-briefing captures.
+   */
+  it("draws its track and segments from the segmented recipe, nested in its corner", () => {
+    renderDiver(<BookingPartyFields maxPartySize={4} />);
+    const group = screen.getByRole("radiogroup", { name: "Number of divers" });
+    for (const token of segmentedTrackClass.split(" ")) expect(group).toHaveClass(token);
+    for (const radio of screen.getAllByRole("radio")) {
+      const segment = radio.closest("label");
+      expect(segment).toHaveClass(SEGMENT_CORNER);
+      expect(segment).not.toHaveClass("rounded-lg");
+    }
+  });
+
+  /**
+   * The radio is `sr-only`, so keyboard focus is invisible unless its label
+   * draws it. The label takes the global ring's utility on `:focus-visible`
+   * within it, never a hand-drawn outline.
+   */
+  it("draws keyboard focus on each segment with the global ring", () => {
+    renderDiver(<BookingPartyFields maxPartySize={4} />);
+    for (const radio of screen.getAllByRole("radio")) {
+      const segment = radio.closest("label");
+      expect(segment).toHaveClass("has-[:focus-visible]:focus-ring");
+      expect(segment?.className).not.toMatch(/outline-/);
+    }
   });
 });

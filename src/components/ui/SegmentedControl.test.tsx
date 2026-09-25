@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { SegmentedControl } from "./SegmentedControl";
+import { SEGMENT_CORNER, segmentedTrackClass } from "./segmented";
 
 afterEach(cleanup);
 
@@ -144,6 +145,34 @@ describe("SegmentedControl", () => {
     expect(option.childElementCount).toBe(0);
     expect(option).toHaveTextContent("Overview");
   });
+
+  /**
+   * **The pill and the options nest in the track's corner** (pixel-craft class
+   * 6). Both wore `rounded-lg`, 12px, 5px inside the track's 12px corner, where
+   * a concentric curve is 7px: the probe's `nested-corners` flag on the pill
+   * and `fill-corners` on the options' hover fill, on every capture that shows
+   * a trip's tabs, the manifest's checkpoints or the reports' range. The
+   * derivation lives in `segmented.ts`; this pins that every part the
+   * component paints takes it, at both sizes.
+   */
+  it("rounds the pill and every option to the track's corner less its inset", () => {
+    for (const size of ["md", "boat"] as const) {
+      render(<SegmentedControl ariaLabel="Trip" items={items} currentKey="guests" size={size} />);
+      const nav = screen.getByRole("navigation", { name: "Trip" });
+      for (const token of segmentedTrackClass.split(" ")) expect(nav, size).toHaveClass(token);
+      const parts = [
+        nav.querySelector('span[aria-hidden="true"]'),
+        screen.getByText("Guests"),
+        screen.getByRole("link", { name: "Overview" }),
+        screen.getByRole("link", { name: "Manifest" }),
+      ];
+      for (const part of parts) {
+        expect(part, size).toHaveClass(SEGMENT_CORNER);
+        expect(part, size).not.toHaveClass("rounded-lg");
+      }
+      cleanup();
+    }
+  });
 });
 
 /**
@@ -168,33 +197,107 @@ describe("the pill's measured box", () => {
   const NAV_BOX = { left: 10.1234, top: 20.5678, width: 300.4321, height: 54.8765 };
   const OPTION_BOX = { left: 84.3369, top: 24.9696, width: 74.3369, height: 44.0608 };
 
-  it("writes whole device pixels, never the fraction it measured", () => {
-    const original = Element.prototype.getBoundingClientRect;
+  /**
+   * Renders the control with every box stubbed before mount, and the track's
+   * border reported through its computed style. jsdom loads no stylesheet, so
+   * it answers with no border width at all, which is also what a borderless
+   * track would. A test that wants the border to matter has to say how wide it
+   * is, and at what device pixel ratio the page is drawn.
+   *
+   * `clientLeft`/`clientTop` are stubbed to the whole-pixel value a browser
+   * would round them to, so a component that read them instead of the
+   * computed style would be caught by the fractional-border test below.
+   */
+  function renderMeasured(trackBorder: number, dpr = 1) {
+    const originalRect = Element.prototype.getBoundingClientRect;
+    const originalStyle = window.getComputedStyle;
+    const originalLeft = Object.getOwnPropertyDescriptor(Element.prototype, "clientLeft");
+    const originalTop = Object.getOwnPropertyDescriptor(Element.prototype, "clientTop");
+    const originalDpr = Object.getOwnPropertyDescriptor(window, "devicePixelRatio");
     Element.prototype.getBoundingClientRect = function stubbed(this: Element) {
       const box = this.tagName === "NAV" ? NAV_BOX : OPTION_BOX;
       return { ...box, right: 0, bottom: 0, x: box.left, y: box.top, toJSON: () => box } as DOMRect;
     };
+    window.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+      const style = originalStyle.call(window, element, pseudo);
+      if (element.tagName !== "NAV") return style;
+      for (const side of ["borderLeftWidth", "borderTopWidth"]) {
+        Object.defineProperty(style, side, { configurable: true, value: `${trackBorder}px` });
+      }
+      return style;
+    }) as typeof window.getComputedStyle;
+    const rounded = {
+      configurable: true,
+      get(this: Element) {
+        return this.tagName === "NAV" ? Math.round(trackBorder) : 0;
+      },
+    };
+    Object.defineProperty(Element.prototype, "clientLeft", rounded);
+    Object.defineProperty(Element.prototype, "clientTop", rounded);
+    Object.defineProperty(window, "devicePixelRatio", { configurable: true, value: dpr });
     try {
       render(<SegmentedControl ariaLabel="Trip" items={items} currentKey="guests" />);
-      const nav = screen.getByRole("navigation", { name: "Trip" });
-      const pill = nav.querySelector('span[aria-hidden="true"]') as HTMLElement;
-
-      // Every written value is whole at dpr 1 — and none of them is empty, or
-      // the assertion below would be satisfied by a pill that measured nothing.
-      for (const [name, value] of Object.entries({
-        left: pill.style.left,
-        top: pill.style.top,
-        width: pill.style.width,
-        height: pill.style.height,
-      })) {
-        expect(value, `${name} should have been written`).not.toBe("");
-        expect(value, `${name} was ${value}, not a whole pixel at dpr 1`).toMatch(/^-?\d+px$/);
-      }
-      // And snapped to the nearest, not truncated: 84.3369 - 10.1234 = 74.2135.
-      expect(pill.style.left).toBe("74px");
-      expect(pill.style.height).toBe("44px");
     } finally {
-      Element.prototype.getBoundingClientRect = original;
+      Element.prototype.getBoundingClientRect = originalRect;
+      window.getComputedStyle = originalStyle;
+      if (originalLeft) Object.defineProperty(Element.prototype, "clientLeft", originalLeft);
+      if (originalTop) Object.defineProperty(Element.prototype, "clientTop", originalTop);
+      if (originalDpr) Object.defineProperty(window, "devicePixelRatio", originalDpr);
+      else Reflect.deleteProperty(window, "devicePixelRatio");
     }
+    const nav = screen.getByRole("navigation", { name: "Trip" });
+    return nav.querySelector('span[aria-hidden="true"]') as HTMLElement;
+  }
+
+  it("writes whole device pixels, never the fraction it measured", () => {
+    const pill = renderMeasured(0);
+
+    // Every written value is whole at dpr 1 — and none of them is empty, or
+    // the assertion below would be satisfied by a pill that measured nothing.
+    for (const [name, value] of Object.entries({
+      left: pill.style.left,
+      top: pill.style.top,
+      width: pill.style.width,
+      height: pill.style.height,
+    })) {
+      expect(value, `${name} should have been written`).not.toBe("");
+      expect(value, `${name} was ${value}, not a whole pixel at dpr 1`).toMatch(/^-?\d+px$/);
+    }
+    // And snapped to the nearest, not truncated: 84.3369 - 10.1234 = 74.2135.
+    expect(pill.style.left).toBe("74px");
+    expect(pill.style.height).toBe("44px");
+  });
+
+  /**
+   * **The pill sits on its option, not one border-width below and right of
+   * it.** `getBoundingClientRect` measures from the track's *border* edge; an
+   * absolutely positioned child is placed from its container's *padding* edge.
+   * Written straight through, the difference moved the pill by the track's 1px
+   * border on both axes — which the probe read as two insets on one corner:
+   * on `check-in-checked` at 1280px the first option starts 5px inside the
+   * track (x 221) and the pill 6px (x 222), so the pill stood 6px off the
+   * track's left edge and 4px off its right, and 1px past its own option.
+   */
+  it("places the pill from the track's padding edge, inside its border", () => {
+    const pill = renderMeasured(1);
+    // 84.3369 - 10.1234 - 1 = 73.2135, and 24.9696 - 20.5678 - 1 = 3.4018.
+    expect(pill.style.left).toBe("73px");
+    expect(pill.style.top).toBe("3px");
+    // The border moves the pill; it never resizes it.
+    expect(pill.style.width).toBe("74px");
+    expect(pill.style.height).toBe("44px");
+  });
+
+  /**
+   * At 125% zoom a 1px border is laid out one device pixel wide, 0.8 CSS px,
+   * but `clientTop` rounds it back to 1. The option's top sits 4.4018px below
+   * the track's border edge. Less the laid-out 0.8px that is 3.6018px, 4.50
+   * device pixels, which snaps to 5: 4px. Less a rounded 1px it is 3.4018px,
+   * 4.25 device pixels, which snaps to 4: 3.2px, one device pixel above its
+   * option.
+   */
+  it("subtracts the border's laid-out width, fraction and all, at 125% zoom", () => {
+    const pill = renderMeasured(0.8, 1.25);
+    expect(pill.style.top).toBe("4px");
   });
 });
