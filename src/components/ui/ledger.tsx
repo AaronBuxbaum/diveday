@@ -407,7 +407,9 @@ type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkL
  * do, door or not, so no two lists on a page draw their rules at two lengths.
  * The words stay on the column. A child that paints the row's whole box — the
  * counter's one-tap button — takes the room back with `-mx-2` and keeps it as
- * its own `px-2`, so its fill spans rule to rule like a door's. A call site
+ * its own `px-2`, so its fill spans rule to rule like a door's; beside a
+ * `trailing` act it takes back only the start side, and the row's `gap-3` is
+ * the room at its end (`CheckInActionForm`'s `ROW_ROOM`). A call site
  * never sets the row's horizontal margin or padding; `ledger.test.tsx` sweeps
  * for it.
  */

@@ -319,6 +319,9 @@ export function CounterQueueRow({
           sendFailedLabel={t("checkIn.sendFailed")}
           ariaLabel={t("checkIn.undoAriaLabel", { name: row.personName })}
           className="hover:bg-surface-sunken/60"
+          // The pass trails this tap on the same line: the undo's fill stops
+          // at the row's gap, so the two acts keep their 12px apart.
+          rowHasTrailingAction
           // **Nothing in the state slot**, because the group this row lives in
           // is called "Checked in — 5" and every row under it repeated the
           // same mark and the same two words (principle 9). The tap is still

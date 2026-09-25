@@ -583,4 +583,28 @@ describe("the row's box", () => {
     expect(tap).toHaveClass("w-full", "px-2");
     expect(tap?.className).not.toMatch(/(?:^|\s)(?:sm:)?px-(?:4|5)(?:\s|$)/);
   });
+
+  /**
+   * **Two acts on one line keep the row's gap between them** (dive-domain-expert
+   * review, 2026-09-25). The settled row trails "Print a pass" a `gap-3` (12px)
+   * after its undo. Taking the row's room back on both sides pushed the undo's
+   * fill 8px into that gap, leaving 4px between two targets a wet-handed desk
+   * worker taps one after the other: tick the diver off, hand them a pass. So
+   * the tap takes back only the start side, and draws no end padding; the gap
+   * is the room at its end. The ready row above has nothing after its tap and
+   * keeps both sides.
+   */
+  it("keeps the settled row's undo a whole gap clear of its pass", () => {
+    renderRow({ bookingStatus: "checked_in" });
+    const undo = screen.getByRole("button", { name: "Undo check-in for Nadia Petrov" });
+    const pass = screen.getByRole("button", { name: "Print a pass" });
+    expect(undo.compareDocumentPosition(pass) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const form = undo.parentElement;
+    expect(form?.tagName).toBe("FORM");
+    expect(form).toHaveClass("-ms-2");
+    expect(form?.className).not.toMatch(/(?:^|\s)-m[xe]-/);
+    expect(undo).toHaveClass("w-full", "ps-2");
+    expect(undo.className).not.toMatch(/(?:^|\s)p[xe]-/);
+  });
 });

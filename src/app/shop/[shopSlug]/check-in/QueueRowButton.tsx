@@ -45,11 +45,13 @@ export function QueueRowButton({
       aria-label={ariaLabel}
       disabled={pending}
       // Rule to rule, words on the column: the form around this takes back the
-      // room `LedgerRow` keeps (`-mx-2`, in `CheckInActionForm`) and the room
-      // goes on here as padding, so the fill spans the row's hairlines the way
+      // room `LedgerRow` keeps and the room comes back here, through
+      // `className`, as padding, so the fill spans the row's hairlines the way
       // a door's does and the name starts where the group labels and the
-      // walk-in door start.
-      className={`flex min-h-14 w-full touch-manipulation items-center justify-between gap-4 px-2 py-3 text-left transition-[background-color,transform] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 ${className}`}
+      // walk-in door start. Both halves are chosen together, in
+      // `CheckInActionForm`'s `ROW_ROOM`, because a row with an act after
+      // this tap takes back only the start side.
+      className={`flex min-h-14 w-full touch-manipulation items-center justify-between gap-4 py-3 text-left transition-[background-color,transform] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 ${className}`}
     >
       <span className="min-w-0">{children}</span>
       {Children.toArray(slot).length > 0 ? (
