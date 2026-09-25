@@ -20,7 +20,8 @@ How to build anything here. Written for AI agents; humans may follow along.
    ([design/principles.md](../design/principles.md)).
 4. **Verify** — the `verify` skill: the local gate (`pnpm check:repo`, `pnpm lint`,
    `pnpm typecheck`, `pnpm test:changed`), one focused `pnpm e2e <spec>` when flows changed, and
-   for UI work look at the running app (screenshot light + dark) — never ship UI you haven't seen.
+   for UI work look at the running app (screenshot in light; both schemes only for colour work) —
+   never ship UI you haven't seen.
    The whole `pnpm check` runs on CI ([agents/verifying.md](../agents/verifying.md)).
 5. **Document** — update any doc your change invalidates; new hard-to-reverse choice → ADR
    (`adr` skill); new domain term → glossary.
@@ -44,7 +45,8 @@ How to build anything here. Written for AI agents; humans may follow along.
 
 - [ ] the local gate green and CI's `pnpm check` green; the touched `pnpm e2e <spec>` green when flows changed
 - [ ] New logic has tests that fail without it
-- [ ] UI seen in browser, light + dark; design checklist passes for user-facing changes
+- [ ] UI seen in browser, in light (dark too for colour work); design checklist passes for
+      user-facing changes
 - [ ] Docs/ADR/glossary updated in the same PR
 - [ ] Every follow-up, open question, and deliberately-skipped cleanup filed as a `needs-triage`
       GitHub issue — nothing left only in the closing message

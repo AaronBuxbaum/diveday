@@ -77,8 +77,8 @@ in the same PR as the slice:
 
 The canvas is not the check. Build it, then look at the real thing:
 
-- `node scripts/screenshot.mjs <path…>` against a running `pnpm dev` — light and dark, phone and
-  desktop.
+- `node scripts/screenshot.mjs <path…>` against a running `pnpm dev` — light, phone and desktop;
+  `--both` for dark too when the slice changes colour.
 - The **design-review** skill for the principles pass, and **verify** before commit.
 - **e2e-and-visual** for the flow spec and the visual capture; **visual-triage** for the diffs a new
   surface necessarily produces. Expect them, explain them in the PR — a redesign that moves pixels

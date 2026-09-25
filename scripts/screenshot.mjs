@@ -8,8 +8,8 @@ import { MIN_MAIN_TEXT, SKELETON_SELECTOR } from "./screenshot-guards.mjs";
 /**
  * Look at a page you just changed, without writing a throwaway driver.
  *
- * The hard rules require *seeing* changed UI (light + dark) before calling it
- * done, and history shows what happens without a sanctioned tool: sessions
+ * The hard rules require *seeing* changed UI before calling it done, and
+ * history shows what happens without a sanctioned tool: sessions
  * hand-write one-off Playwright scripts and leave them behind (the
  * `/.shots*.mjs` gitignore entry exists because two reached the index in one
  * session). This is that script, kept, so the next session doesn't write one.
@@ -18,12 +18,17 @@ import { MIN_MAIN_TEXT, SKELETON_SELECTOR } from "./screenshot-guards.mjs";
  *
  * - Targets a running `pnpm dev` server (default http://localhost:3000;
  *   override with --base). It does not start one.
- * - Captures every path at phone (390px) and desktop (1280px) widths, in
- *   light and dark (`prefers-color-scheme` emulation) — the same matrix the
- *   visual spec uses. Narrow with --light/--dark/--width <px>.
+ * - Captures every path at phone (390px) and desktop (1280px) widths — the
+ *   visual spec's widths — in **light only** (`prefers-color-scheme`
+ *   emulation). One scheme is enough for a check unless the work is itself
+ *   about colour (the owner's rule, H-90 in docs/product/human-decisions.md);
+ *   CI's visual matrix still captures both. `--both` takes light then dark
+ *   for colour work, `--dark` dark alone, and `--light` is the default spelled
+ *   out. Narrow the widths with --width <px>.
  * - --tablet swaps in the portrait tablet the spec's TABLET_SURFACES use
- *   (820x1180): the counter, the manifest, the board, the prep list and the
- *   departure log. The two staying in step is why the default pair is
+ *   (820x1180): the counter, the manifest, the schedule board, the prep list,
+ *   the departure log, the departures board and the self check-in kiosk. The
+ *   two staying in step is why the default pair is
  *   documented as matched — a design review of those surfaces should be
  *   looking at the width CI checks them at.
  * - `/shop/**` paths sign in automatically through the seeded dev credentials
@@ -95,7 +100,9 @@ const args = process.argv.slice(2);
 const paths = [];
 let base = "http://localhost:3000";
 let out = "screenshots";
-let schemes = ["light", "dark"];
+// Light only unless asked: a check needs one scheme, and dark is for colour
+// work (`--both`). See the docblock above.
+let schemes = ["light"];
 // Height matters at the tablet width and not at the other two: 820x1180 is a
 // portrait iPad, and a `md:` layout photographed at a landscape height is a
 // different picture. Carried as a pair rather than a bare width for that
@@ -112,6 +119,7 @@ for (let index = 0; index < args.length; index += 1) {
   else if (arg === "--out") out = args[++index];
   else if (arg === "--light") schemes = ["light"];
   else if (arg === "--dark") schemes = ["dark"];
+  else if (arg === "--both") schemes = ["light", "dark"];
   else if (arg === "--width") viewports = [{ width: Number(args[++index]) }];
   else if (arg === "--tablet") viewports = [TABLET_VIEWPORT];
   else if (arg === "--as") role = args[++index];
@@ -128,7 +136,7 @@ if (
   viewports.some((viewport) => Number.isNaN(viewport.width))
 ) {
   console.error(
-    "Usage: node scripts/screenshot.mjs <path> [<path>…] [--base http://localhost:3000] [--out screenshots] [--light|--dark] [--width <px>|--tablet] [--as owner|instructor|divemaster|captain] [--probe]\n" +
+    "Usage: node scripts/screenshot.mjs <path> [<path>…] [--base http://localhost:3000] [--out screenshots] [--light|--dark|--both] [--width <px>|--tablet] [--as owner|instructor|divemaster|captain] [--probe]\n" +
       "Writes <out>/<path>[-<role>]-<scheme>-<width>.png; the role appears only when it is not the default owner.",
   );
   process.exit(1);
@@ -167,6 +175,9 @@ const executableCandidates = [
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
   process.env.CHROME_PATH,
   process.env.CHROMIUM_PATH,
+  // A Mac with Chrome and no Playwright-pinned Chromium — the same fallback
+  // e2e/browser.ts already carries, so this tool starts wherever the suite does.
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   "/opt/pw-browsers/chromium",
   "/usr/bin/chromium",
   "/usr/bin/chromium-browser",

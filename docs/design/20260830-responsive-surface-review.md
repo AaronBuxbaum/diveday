@@ -32,8 +32,8 @@ surfaces must keep.
 
 ## Covered states
 
-Review each covered route at 414px, 390px, 768px, and desktop width in both light and dark
-schemes. Check:
+Review each covered route at 414px, 390px, 768px, and desktop width in the light scheme, and in
+dark as well only when the change is about colour. Check:
 
 - loading and skeleton geometry;
 - empty and first-run states;

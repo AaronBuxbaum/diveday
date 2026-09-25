@@ -124,8 +124,7 @@ three ship together:
    exists in one locale and not the other, in **either** direction.
 
 Then `pnpm check:repo && pnpm lint && pnpm typecheck && pnpm test:changed` — and, because a
-deleted paragraph changes a layout, look at the surface in
-light and dark ([verify](../verify/SKILL.md)).
+deleted paragraph changes a layout, look at the surface in light ([verify](../verify/SKILL.md)).
 
 Deleting copy usually **lowers** the `check:copy` / `check:domain-strings` counts, which is fine:
 both baselines sit at zero and the checks refuse an increase, never a decrease.

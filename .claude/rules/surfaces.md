@@ -244,7 +244,7 @@ worker owns its own database and resets it before every test (`e2e/servers.ts`).
 ## Every surface gets looked at
 
 A user-facing change is verified by looking at it — `node scripts/screenshot.mjs <path…>` against a
-running `pnpm dev`, light and dark, phone and desktop — and by the **design-review** skill for a
-significant surface. Every important flow gets an `e2e/` spec and every important surface a capture
-in `e2e/visual.spec.ts` (the **e2e-and-visual** skill). Safety-critical surfaces get a
-`dive-domain-expert` review.
+running `pnpm dev`, phone and desktop, light only unless the work is colour (then `--both`) — and by
+the **design-review** skill for a significant surface. Every important flow gets an `e2e/` spec and
+every important surface a capture in `e2e/visual.spec.ts` (the **e2e-and-visual** skill).
+Safety-critical surfaces get a `dive-domain-expert` review.
