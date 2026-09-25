@@ -362,21 +362,37 @@ function textLineCount(ix, el, depth = 0) {
 }
 
 /**
+ * How far below a stacked sibling the two edge walks read. One number for
+ * both, so any word the content walk reads inside a painted box, the box walk
+ * reaches that box too: the staff chrome's monogram tile sits six levels under
+ * the header, and a box walk that stopped at four read the "BM" inside it
+ * (23.8px) as the header's edge instead of the tile's own 16.
+ */
+const EDGE_DEPTH = 6;
+
+/**
  * Where the eye puts an element's left edge: where its first word or icon
  * starts. A painted box with nothing inside it is its own edge. Two stacked
  * siblings "line up" when their content does — an active nav item's pill can
  * bleed past the column so long as its label does not.
+ *
+ * The answer depends on the depth it was asked from (past `EDGE_DEPTH` a box
+ * is its own x), so the cache is keyed by both: keyed by element alone, an
+ * outer stack that first reached `CompactDisclosureRow`'s `-mx-2` summary
+ * seven levels down stored "the summary's x" (8px left of its caret), and the
+ * row's own stack read that back as the row's edge.
  */
 function visualLeft(ix, el, cache, depth = 0) {
-  if (cache.has(el.i)) return cache.get(el.i);
+  const key = `${el.i}:${depth}`;
+  if (cache.has(key)) return cache.get(key);
   let value;
-  if (el.replaced || depth > 6) value = el.x;
+  if (el.replaced || depth > EDGE_DEPTH) value = el.x;
   else {
     const lefts = (el.text || []).map((line) => line[0]);
     for (const kid of flowKids(ix, el)) lefts.push(visualLeft(ix, kid, cache, depth + 1));
     value = lefts.length > 0 ? Math.min(...lefts) : el.x;
   }
-  cache.set(el.i, value);
+  cache.set(key, value);
   return value;
 }
 
@@ -386,7 +402,7 @@ function visualLeft(ix, el, cache, depth = 0) {
  */
 function boxLeft(ix, el, span, depth = 0) {
   if (isPainted(el) && el.w < span - 2) return el.x;
-  if (depth > 4) return null;
+  if (depth > EDGE_DEPTH) return null;
   let best = null;
   for (const kid of flowKids(ix, el)) {
     const edge = boxLeft(ix, kid, span, depth + 1);
@@ -971,7 +987,12 @@ function checkRaggedEdges(ix) {
     // lines up if either edge meets the stack's common edge.
     // Only a full-bleed band has no edge to align; a full-width card does.
     const span = ix.snapshot.doc?.width || Number.POSITIVE_INFINITY;
-    const lefts = kids.map((kid) => round1(visualLeft(ix, kid, cache)));
+    // Centred text starts wherever centring put it, so it offers no content
+    // edge (EntryShell's `text-center` footer at 36 against a column at 24);
+    // a centred card still offers its painted box.
+    const lefts = kids.map((kid) =>
+      /center/.test(kid.ta) ? null : round1(visualLeft(ix, kid, cache)),
+    );
     const boxes = kids.map((kid) => {
       const edge = boxLeft(ix, kid, span);
       return edge === null ? null : round1(edge);
@@ -982,16 +1003,15 @@ function checkRaggedEdges(ix) {
         counts.set(value, (counts.get(value) || 0) + 1);
       }
     });
+    if (counts.size === 0) continue;
     const mode = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
     const near = (value) => value !== null && Math.abs(value - mode) < 0.75;
     const strays = kids
-      .map((kid, index) => ({
-        kid,
-        left: lefts[index],
-        box: boxes[index],
-        off: lefts[index] - mode,
-      }))
-      .filter(({ left, box }) => !near(left) && !near(box))
+      .map((kid, index) => {
+        const edge = lefts[index] ?? boxes[index];
+        return { kid, left: edge, box: boxes[index], off: edge === null ? null : edge - mode };
+      })
+      .filter(({ left, box }) => left !== null && !near(left) && !near(box))
       .filter(({ off }) => Math.abs(off) >= 1 && Math.abs(off) <= 12);
     if (strays.length === 0) continue;
     // A stray that is the stack's majority is the stack's choice, not a stray.

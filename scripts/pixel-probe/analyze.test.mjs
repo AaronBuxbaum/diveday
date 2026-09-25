@@ -676,6 +676,155 @@ describe("ragged edges", () => {
     ]);
     expect(flagsOf(snapshot, "ragged-edges")).toEqual([]);
   });
+
+  it("finds a painted tile six wrappers down, the staff chrome's logo, before the letters inside it", () => {
+    // Cluster C2, 137 captures at 390: the header's first content is the
+    // shop's 36px monogram tile at x 16, on the column with the banner and the
+    // page. The "BM" centred inside it starts at 23.8, and the tile sits six
+    // levels under the header (bar row, two leading slots, the menu's root,
+    // its button): deep enough for the content edge to read the letters and,
+    // until the two walks shared one depth, too deep for the painted-box edge
+    // to find the tile.
+    const band = { bg: true, bgc: "rgb(255,255,255)" };
+    const tile = {
+      tag: "span",
+      cls: "tile",
+      disp: "grid",
+      bg: true,
+      bgc: "rgb(0,100,210)",
+      rad: [12, 12, 12, 12],
+    };
+    const trigger = { tag: "button", cls: "trigger", disp: "flex", interactive: true };
+    const snapshot = page(
+      [
+        [0, -1, { cls: "shell", disp: "flex", fd: "column", x: 0, y: 0, w: 390, h: 600 }],
+        [1, 0, { ...band, cls: "banner", x: 0, y: 0, w: 390, h: 40 }],
+        [2, 1, { tag: "p", x: 16, y: 10, w: 200, h: 20, text: [[16, 10, 200, 20]] }],
+        [3, 0, { ...band, tag: "header", bw: [0, 0, 1, 0], x: 0, y: 40, w: 390, h: 56 }],
+        [4, 3, { cls: "bar", disp: "flex", x: 0, y: 40, w: 390, h: 56 }],
+        [5, 4, { cls: "leading", disp: "flex", x: 16, y: 46, w: 200, h: 44 }],
+        [6, 5, { cls: "identity", disp: "flex", x: 16, y: 46, w: 200, h: 44 }],
+        [7, 6, { cls: "menu", disp: "flex", x: 16, y: 46, w: 200, h: 44 }],
+        [8, 7, { ...trigger, x: 16, y: 46, w: 200, h: 44 }],
+        [9, 8, { ...tile, x: 16, y: 50, w: 36, h: 36, text: [[23.8, 60, 20.4, 16]] }],
+        [10, 8, { tag: "span", x: 60, y: 58, w: 150, h: 20, text: [[60, 58, 150, 20]] }],
+        [11, 0, { tag: "main", cls: "page", x: 16, y: 96, w: 358, h: 400 }],
+        [12, 11, { tag: "h1", x: 16, y: 96, w: 358, h: 32, text: [[16, 96, 200, 32]] }],
+      ],
+      { width: 390 },
+    );
+    expect(flagsOf(snapshot, "ragged-edges")).toEqual([]);
+  });
+
+  it("still flags that header when the tile is off the column too", () => {
+    const band = { bg: true, bgc: "rgb(255,255,255)" };
+    const snapshot = page(
+      [
+        [0, -1, { cls: "shell", disp: "flex", fd: "column", x: 0, y: 0, w: 390, h: 600 }],
+        [1, 0, { ...band, cls: "banner", x: 0, y: 0, w: 390, h: 40 }],
+        [2, 1, { tag: "p", x: 16, y: 10, w: 200, h: 20, text: [[16, 10, 200, 20]] }],
+        [3, 0, { ...band, tag: "header", bw: [0, 0, 1, 0], x: 0, y: 40, w: 390, h: 56 }],
+        [4, 3, { cls: "bar", disp: "flex", x: 0, y: 40, w: 390, h: 56 }],
+        [5, 4, { cls: "leading", disp: "flex", x: 20, y: 46, w: 200, h: 44 }],
+        [6, 5, { cls: "identity", disp: "flex", x: 20, y: 46, w: 200, h: 44 }],
+        [7, 6, { cls: "menu", disp: "flex", x: 20, y: 46, w: 200, h: 44 }],
+        [8, 7, { tag: "button", cls: "trigger", interactive: true, x: 20, y: 46, w: 200, h: 44 }],
+        [
+          9,
+          8,
+          {
+            tag: "span",
+            cls: "tile",
+            bg: true,
+            bgc: "rgb(0,100,210)",
+            x: 20,
+            y: 50,
+            w: 36,
+            h: 36,
+            text: [[27.8, 60, 20.4, 16]],
+          },
+        ],
+        [10, 0, { tag: "main", cls: "page", x: 16, y: 96, w: 358, h: 400 }],
+        [11, 10, { tag: "h1", x: 16, y: 96, w: 358, h: 32, text: [[16, 96, 200, 32]] }],
+      ],
+      { width: 390 },
+    );
+    const [flag] = flagsOf(snapshot, "ragged-edges");
+    expect(flag.measure.strays[0].off).toBe(11.8);
+  });
+
+  it("reads a row's edge the same however deep an outer stack first reached it", () => {
+    // `CompactDisclosureRow`, 108 flags "at −8px": its summary bleeds `-mx-2`
+    // (x 165) for a hover fill that is not painted at rest, and its caret sits
+    // on the rows' 173. An outer stack first reached the summary seven levels
+    // down, past the content walk's depth, and cached "the summary's own x";
+    // the row's own stack then read that cached 165 as the row's edge.
+    const summary = {
+      tag: "summary",
+      cls: "-mx-2 px-2 rounded-lg hover:bg-surface-sunken",
+      disp: "flex",
+      interactive: true,
+      focusable: true,
+      pad: [8, 8, 8, 8],
+      rad: [12, 12, 12, 12],
+    };
+    const snapshot = page([
+      [0, -1, { cls: "outer", x: 0, y: 0, w: 1280, h: 900 }],
+      [1, 0, { tag: "p", x: 16, y: 0, w: 400, h: 24, text: [[16, 0, 300, 24]] }],
+      [2, 0, { tag: "p", x: 16, y: 40, w: 400, h: 24, text: [[16, 40, 300, 24]] }],
+      [3, 0, { tag: "section", cls: "s1", x: 157, y: 80, w: 966, h: 400 }],
+      [4, 3, { cls: "s2", x: 157, y: 80, w: 966, h: 400 }],
+      [5, 4, { cls: "s3", x: 157, y: 80, w: 966, h: 400 }],
+      [6, 5, { tag: "ul", cls: "s4", x: 157, y: 80, w: 966, h: 400 }],
+      [7, 6, { cls: "s5", x: 157, y: 80, w: 966, h: 400 }],
+      [8, 7, { tag: "li", cls: "row", x: 157, y: 80, w: 966, h: 200 }],
+      [9, 8, { tag: "p", cls: "fact", x: 173, y: 80, w: 934, h: 24, text: [[173, 80, 200, 24]] }],
+      [
+        10,
+        8,
+        { tag: "p", cls: "fact", x: 173, y: 110, w: 934, h: 24, text: [[173, 110, 200, 24]] },
+      ],
+      [11, 8, { tag: "details", cls: "group/compact-row", x: 173, y: 140, w: 934, h: 44 }],
+      [12, 11, { ...summary, x: 165, y: 140, w: 950, h: 44 }],
+      [13, 12, { tag: "span", cls: "flex gap-2", disp: "flex", x: 173, y: 150, w: 120, h: 24 }],
+      [14, 13, { tag: "svg", cls: "caret", replaced: true, x: 173, y: 154, w: 16, h: 16 }],
+      [15, 13, { tag: "span", x: 197, y: 150, w: 96, h: 24, text: [[197, 150, 96, 24]] }],
+    ]);
+    expect(flagsOf(snapshot, "ragged-edges")).toEqual([]);
+  });
+
+  it("gives centred text no left edge to be ragged by", () => {
+    // EntryShell's footer (`items-center text-center`) and a `text-center`
+    // fine print: their first line starts wherever centring put it (x 36
+    // against the column's 24), which is not an edge anyone aligns by.
+    const footer = { tag: "footer", cls: "items-center text-center", ta: "center" };
+    const snapshot = page([
+      [0, -1, STACK],
+      para(1, 24, 0),
+      para(2, 24, 40),
+      [3, 0, { ...footer, x: 24, y: 80, w: 342, h: 40, text: [[36, 80, 318, 20]] }],
+      para(4, 24, 140),
+    ]);
+    expect(flagsOf(snapshot, "ragged-edges")).toEqual([]);
+  });
+
+  it("still reads a centred card's painted box as its edge", () => {
+    const card = {
+      cls: "card text-center",
+      ta: "center",
+      bg: true,
+      bgc: "rgb(255,255,255)",
+    };
+    const snapshot = page([
+      [0, -1, STACK],
+      para(1, 24, 0),
+      para(2, 24, 40),
+      [3, 0, { ...card, x: 28, y: 80, w: 300, h: 40, text: [[60, 90, 236, 20]] }],
+      para(4, 24, 140),
+    ]);
+    const [flag] = flagsOf(snapshot, "ragged-edges");
+    expect(flag.measure.strays).toEqual([{ sig: "div.card text-center", off: 4 }]);
+  });
 });
 
 describe("repeated rows", () => {
