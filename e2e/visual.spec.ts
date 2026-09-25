@@ -1758,8 +1758,8 @@ async function deepDiverLogPath(page: Page): Promise<string> {
 }
 
 /**
- * Wait until this page is *controlled* by the offline service worker, before
- * navigating into a shell surface that photographs it.
+ * Wait until the offline service worker is *activated*, before navigating into
+ * a shell surface that photographs it.
  *
  * `OfflineShellVersionBanner` renders "A newer version of DiveDay is ready"
  * off a `controllerchange` event, which fires exactly once per context: when
@@ -1769,18 +1769,59 @@ async function deepDiverLogPath(page: Page): Promise<string> {
  * carried the banner on `fc0950b` and not on the run after it, on a commit
  * that touched neither the shell nor the worker.
  *
- * Waiting here rather than on the shell page is the whole point: once the
- * controller is in place *before* the shell loads, the banner's listener
- * mounts with nothing left to hear, so the surface is photographed in the
- * steady state a crew member actually meets. Masking the banner would have
- * hidden a real control instead.
+ * Waiting here rather than on the shell page is the whole point: a navigation
+ * that starts against an activated worker is controlled from its first byte,
+ * so the shell's banner mounts with nothing left to hear and the surface is
+ * photographed in the steady state a crew member actually meets. Masking the
+ * banner would have hidden a real control instead.
+ *
+ * **Activated, not "this page is controlled"** — which is what this waited for
+ * until it spent a capture's whole 225s budget waiting (run 36103429213).
+ * The two usually arrive together, since `activate` claims every open page,
+ * but a page whose own navigation was still in flight at that moment gets
+ * neither: it asked for a worker before one was active, so the network
+ * answered it, and it was not yet a client `clients.claim()` could take, so
+ * nothing ever claims it. The manifest page lands in exactly that window when
+ * `openTripTab`'s `goto` leaves while the install the schedule board started
+ * is still writing its cache. On that run the install's last fetch finished at
+ * 681.00s, the manifest's navigation left unintercepted at 681.10s, the page's
+ * own priming found the worker already active at 681.41s — and the page was
+ * still uncontrolled 221 seconds later. The worker's state is what the *next*
+ * navigation depends on, and it always arrives.
+ *
+ * Bounded by the expect budget, and a failure says why: the registration's
+ * state (`no registration` is a failed `register()` or install, `installing` a
+ * stuck install fetch) and the status of the two responses no install survives
+ * without. The worker's own requests are the frame-less rows in the trace's
+ * network tab; `browser-activity` records only the page's.
  *
  * Only for captures that reach the shell through a primed manifest page. The
  * empty/discarded states deliberately suppress priming, so no worker ever
  * claims them and there is no race to cut.
  */
 async function settleOfflineShellWorker(page: Page) {
-  await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller));
+  const workerState = () =>
+    page.evaluate(async () => {
+      const registration = await navigator.serviceWorker?.getRegistration("/");
+      if (!registration) return "no registration";
+      const { installing, waiting, active } = registration;
+      if (active?.state === "activated") return "activated";
+      return `installing ${installing?.state ?? "none"} · waiting ${waiting?.state ?? "none"} · active ${active?.state ?? "none"}`;
+    });
+  try {
+    await expect.poll(workerState).toBe("activated");
+  } catch (error) {
+    const served = await Promise.all(
+      ["/manifest-sw.js", "/offline-manifest"].map(async (path) => {
+        const response = await page.request.get(new URL(path, page.url()).toString());
+        return `GET ${path} ${response.status()}`;
+      }),
+    );
+    throw new Error(
+      `the offline shell's worker never activated: its registration reads "${await workerState()}" (${served.join(", ")})`,
+      { cause: error },
+    );
+  }
 }
 
 /**
