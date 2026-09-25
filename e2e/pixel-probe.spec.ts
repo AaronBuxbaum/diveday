@@ -383,6 +383,18 @@ test.describe("phantom-gap", () => {
   test("leaves a column with no empty child alone", async ({ page }) => {
     await leavesStatic(page, "phantom-gap", stack(""), "stack");
   });
+
+  test("leaves an empty slot in a spread row alone: the free space takes its gap", async ({
+    page,
+  }) => {
+    // The ready roster row: a name, then a badge slot that is empty for a
+    // ready diver, in a `justify-content: space-between` header.
+    const header = html(
+      `.header { display: flex; justify-content: space-between; align-items: center; gap: 12px; height: 44px; }`,
+      `<div class="header"><span class="name">Ann Lee</span><div class="badges"></div></div>`,
+    );
+    await leavesStatic(page, "phantom-gap", header, "badges");
+  });
 });
 
 test.describe("page-overflow", () => {

@@ -1170,6 +1170,24 @@ function checkRaggedColumns(ix) {
 // ---------------------------------------------------------------------------
 // 8. Uneven gaps, and a zero-size child doubling one.
 
+/**
+ * Whether a flex line spreads its free space between its items
+ * (`justify-content: space-between`, `-around`, `-evenly`) along the axis the
+ * gap is read on, and has some left over. There an empty item's gap comes out
+ * of that free space: the items at the ends stay at the ends, and nothing
+ * visible moves (the ready roster row's empty badge slot, the Pager's
+ * placeholder). A line with no free space has its gap pushing something.
+ */
+function spreadWithRoom(el, all, vertical) {
+  if (!/flex/.test(el.disp) || !/space-(between|around|evenly)/.test(el.jc)) return false;
+  if (/reverse/.test(el.fd) || /column/.test(el.fd) !== vertical) return false;
+  const box = contentBox(el);
+  const size = vertical ? box.h : box.w;
+  const used = all.reduce((sum, kid) => sum + (vertical ? kid.h : kid.w), 0);
+  const gap = vertical ? el.gapR : el.gapC;
+  return size - used - gap * (all.length - 1) > 0.5;
+}
+
 function checkGaps(ix, enabled) {
   const flags = [];
   for (const el of ix.els) {
@@ -1225,7 +1243,8 @@ function checkGaps(ix, enabled) {
       // settings rows whose label sat 2px high over an empty description.
       const gap = vertical ? el.gapR : el.gapC;
       const gapped = /flex|grid/.test(el.disp) && gap > 0 && kids.length >= 1;
-      if (gapped) {
+      const spread = spreadWithRoom(el, all, vertical);
+      if (gapped && !spread) {
         for (const [position, hollow] of [
           ["first", all[0]],
           ["last", all.at(-1)],
@@ -1262,6 +1281,10 @@ function checkGaps(ix, enabled) {
           if (kids[k - 1] === before && kids[k] === after) continue;
           others.push(gapOf(kids[k - 1], kids[k]));
         }
+        // Spread items sit their gap plus a share of the free space apart, so
+        // only their measured spacing says what doubled looks like; with no
+        // other pair to measure, the two sit at the line's ends either way.
+        if (spread && others.length === 0) continue;
         const usual =
           others.length > 0
             ? others.sort((a, b) => a - b)[Math.floor(others.length / 2)]

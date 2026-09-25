@@ -963,6 +963,66 @@ describe("gaps", () => {
     expect(flag.measure).toMatchObject({ gap: 4, position: "last" });
   });
 
+  describe("in a spread row, whose free space takes the gap", () => {
+    // `justify-content: space-between` (or around, evenly) shares out what
+    // is left of the line after the gaps, so an empty item's gap comes out of
+    // that share and nothing visible moves: the ready roster row's empty
+    // badge slot, the Pager's placeholder, a footer's empty line (the bulk of
+    // the audit's 78 dismissed `phantom-gap` flags).
+    const spread = (jc, kids) =>
+      page([
+        [0, -1, { cls: "header", disp: "flex", jc, gapC: 12, x: 0, y: 0, w: 400, h: 44 }],
+        ...kids,
+      ]);
+    const name = (i, x, w = 150) => [
+      i,
+      0,
+      { tag: "span", cls: "name", x, y: 12, w, h: 20, text: [[x, 12, w, 20]] },
+    ];
+    const slot = (i, x) => [i, 0, { cls: "slot", x, y: 22, w: 0, h: 0 }];
+
+    it("leaves an empty last slot alone", () => {
+      const snapshot = spread("space-between", [name(1, 0), slot(2, 400)]);
+      expect(flagsOf(snapshot, "phantom-gap")).toEqual([]);
+    });
+
+    it("leaves an empty first slot alone (the Pager's placeholder)", () => {
+      const snapshot = spread("space-between", [
+        slot(1, 0),
+        name(2, 150, 100),
+        [3, 0, { tag: "a", cls: "next", x: 340, y: 0, w: 60, h: 44, text: [[350, 12, 40, 20]] }],
+      ]);
+      expect(flagsOf(snapshot, "phantom-gap")).toEqual([]);
+    });
+
+    it("leaves an empty slot between the only two items alone", () => {
+      for (const jc of ["space-between", "space-around", "space-evenly"]) {
+        const snapshot = spread(jc, [name(1, 0), slot(2, 200), name(3, 250)]);
+        expect(flagsOf(snapshot, "phantom-gap")).toEqual([]);
+      }
+    });
+
+    it("still flags the slot when the line has no free space to take its gap", () => {
+      const snapshot = spread("space-between", [name(1, 0, 388), slot(2, 400)]);
+      const [flag] = flagsOf(snapshot, "phantom-gap");
+      expect(flag.measure).toMatchObject({ gap: 12, position: "last" });
+    });
+
+    it("still flags a slot that doubles the spread's own spacing", () => {
+      // Four items spread over the line sit (gap + share) apart; the empty
+      // one leaves twice that between its neighbours, which does show.
+      const snapshot = spread("space-between", [
+        name(1, 0, 40),
+        name(2, 100, 40),
+        slot(3, 200),
+        name(4, 260, 40),
+        name(5, 360, 40),
+      ]);
+      const [flag] = flagsOf(snapshot, "phantom-gap");
+      expect(flag.measure).toMatchObject({ spanned: 120, usual: 60 });
+    });
+  });
+
   it("leaves a column with nothing empty in it alone", () => {
     const snapshot = page([
       [0, -1, { cls: "stack", disp: "flex", fd: "column", gapR: 16, x: 0, y: 0, w: 300, h: 300 }],
