@@ -419,6 +419,17 @@ test.describe("text-spill", () => {
   test("leaves the same word allowed to break anywhere alone", async ({ page }) => {
     await leavesStatic(page, "text-spill", chip("overflow-wrap: anywhere;"), "chip");
   });
+
+  test("leaves a preserved space hanging at a wrap alone", async ({ page }) => {
+    // `pre-wrap` keeps the space at each wrap and lets it hang past the line's
+    // end (the waiver release, a diver's message). "aaaa bbbb" fills the 9ch
+    // box exactly, so the space after it hangs 1ch outside: no ink does.
+    const release = html(
+      `.release { width: 9ch; margin: 0; font: 16px/24px monospace; white-space: pre-wrap; }`,
+      `<p class="release">aaaa bbbb cccc dddd</p>`,
+    );
+    await leavesStatic(page, "text-spill", release, "release");
+  });
 });
 
 test.describe("hard-clip", () => {
