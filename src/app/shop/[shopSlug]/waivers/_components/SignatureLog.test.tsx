@@ -201,6 +201,25 @@ describe("a row's box", () => {
       [...(li?.classList ?? [])].filter((token) => /^-?(?:m|p)[xse]-|^border-s/.test(token));
     expect(box(pinnedRow)).toEqual(box(plainRow));
   });
+
+  it("rings a focused row inside its own box, so the ring never paints over the pinned bar", () => {
+    // The bar sits 2-4px outside the row's box (`before:-start-1`, 2px wide),
+    // and the global ring 2-5px outside it: outset, the ring covered the one
+    // mark saying which record the link resolved, on the row a reviewer
+    // arriving from the roster is there to read (dive-domain-expert review,
+    // 2026-09-25). Inset, it is drawn inside the box, clear of the bar, and
+    // every row rings the same way so the pinned one is not the odd one out.
+    const pinned = entry({ id: "pinned" });
+    const { container } = renderLog([entry({ id: "b" })], pinned);
+    expect(rowFor(container, "pinned").closest("li")).toHaveClass(
+      "before:-start-1",
+      "before:w-0.5",
+    );
+    for (const id of ["pinned", "b"]) {
+      const summary = rowFor(container, id).querySelector("summary");
+      expect(summary).toHaveClass("focus-visible:focus-ring-inset");
+    }
+  });
 });
 
 /**

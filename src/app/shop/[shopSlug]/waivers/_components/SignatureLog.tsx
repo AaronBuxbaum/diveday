@@ -127,8 +127,14 @@ function SignatureRow({
             box, rule to rule and square like them: it takes the row's 8px back
             as a negative margin and keeps it as padding, so the fill clears the
             name by 8px and the name stays on the column. On the pinned row the
-            bar sits 2px clear of the fill. */}
-        <summary className="-mx-2 flex min-h-12 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/60">
+            bar sits 2px clear of the fill.
+
+            The focus ring is drawn inside that box, as a ledger door's is. The
+            global ring sits 2-5px outside the box, and the pinned bar sits
+            2-4px outside it, so a keyboard reaching the pinned record painted
+            the ring over the one mark that says which record the link
+            resolved (dive-domain-expert review, 2026-09-25). */}
+        <summary className="-mx-2 flex min-h-12 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/60 focus-visible:focus-ring-inset">
           <span className="font-medium sm:w-52 sm:shrink-0">{entry.personName}</span>
           <span className="min-w-0 flex-1 truncate text-sm text-muted">{trip}</span>
           <IntegrityBadge entry={entry} t={t} />
