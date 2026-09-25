@@ -3,10 +3,12 @@ import { cleanup, render } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { BookActivity } from "./BookActivity";
 import { DiverHeader } from "./DiverHeader";
-import type { DiverProfile } from "./shared";
+import type { DiverProfile, Shop } from "./shared";
 
 vi.mock("../actions", () => ({ savePersonAction: vi.fn() }));
+vi.mock("@/app/actions/seat-diver", () => ({ seatExistingDiverAction: vi.fn() }));
 
 afterEach(cleanup);
 
@@ -32,9 +34,11 @@ function diver(): DiverProfile {
 function renderHeader({
   editOpen = false,
   status,
+  book = <span>Book a departure</span>,
 }: {
   editOpen?: boolean;
   status?: HeaderStatus;
+  book?: ComponentProps<typeof DiverHeader>["book"];
 } = {}) {
   return render(
     <DiverHeader
@@ -45,7 +49,7 @@ function renderHeader({
       locale="en-US"
       country="US"
       visits={0}
-      book={<span>Book a departure</span>}
+      book={book}
       editOpen={editOpen}
       status={status}
     />,
@@ -86,6 +90,55 @@ describe("DiverHeader edit disclosure", () => {
 
     summary?.focus();
     expect(document.activeElement).toBe(summary);
+  });
+
+  /**
+   * **The masthead's action row is one size, `md`.** "Book a departure"
+   * arrives in the `book` slot at the default size and "Edit details" was
+   * `sm`: a 48px, 16px primary beside a 44px, 14px secondary, top-aligned, so
+   * the pair ended 4px apart on every diver record (the pixel probe's
+   * `mismatched-controls` cluster, 72 flags on twelve captures, 2026-09-25).
+   * Rendered with the real `BookActivity`, because the drift was two
+   * components choosing their sizes apart.
+   */
+  it("draws Edit details at the size of the Book a departure beside it", () => {
+    const book = (
+      <BookActivity
+        diver={diver()}
+        shop={{ timezone: "America/New_York" } as Shop}
+        locale="en-US"
+        t={t}
+        upcoming={[]}
+        shopSlug="blue-mantis"
+        personId="person-1"
+      />
+    );
+    const { container } = renderHeader({ book });
+    const summaries = [...container.querySelectorAll<HTMLElement>("summary")];
+    expect(summaries.map((summary) => summary.id)).toEqual(["book-departure", "edit-details"]);
+    for (const summary of summaries) {
+      expect(summary, summary.id).toHaveClass("min-h-12", "text-base");
+      expect(summary, summary.id).not.toHaveClass("text-sm");
+    }
+  });
+
+  it("stands the departure picker level with the button it sits beside", () => {
+    const { container } = render(
+      <BookActivity
+        diver={diver()}
+        shop={{ timezone: "America/New_York" } as Shop}
+        locale="en-US"
+        t={t}
+        upcoming={[]}
+        shopSlug="blue-mantis"
+        personId="person-1"
+      />,
+    );
+    const picker = container.querySelector("select[name='tripId']");
+    const submit = container.querySelector("form button[type='submit']");
+    expect(picker).toHaveClass("min-h-12");
+    expect(picker).not.toHaveClass("min-h-11");
+    expect(submit).toHaveClass("min-h-12", "text-base");
   });
 
   it("honors an initially open editor and keeps a danger notice with it", () => {

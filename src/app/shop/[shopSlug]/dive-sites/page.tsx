@@ -176,12 +176,14 @@ export default async function DiveSitesPage({
             label={t("diveSites.list.searchLabel")}
             defaultValue={query}
             placeholder={t("diveSites.list.searchPlaceholder")}
+            // `md`: the clear button beside it is a 48px `icon` square.
+            size="md"
             className="w-full min-w-0 sm:w-80"
           />
           {query ? (
             // The glyph a search box clears with everywhere else, through the
             // shared `size: "icon"` box rather than a hand-spelled square —
-            // 44px, and the same construction as the crew chip's unassign and
+            // 48px, and the same construction as the crew chip's unassign and
             // the report navigator's arrows. The words survive as the
             // accessible name, so nothing is lost to a screen reader or to
             // the e2e spec that clicks it by name.

@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { buttonClass } from "./button";
 import { InlineConfirm } from "./InlineConfirm";
 
 // A stand-in for Next's real router context: `usePathname()` is what
@@ -88,6 +89,42 @@ describe("InlineConfirm", () => {
     expect(screen.queryByText(/free-cancellation window/)).not.toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
+
+  /**
+   * One size per row: the Cancel stands beside the confirm, so it is drawn at
+   * the row's size rather than a fixed `sm`. Kinds of day's rows are `md`, and
+   * an `md` confirm beside a fixed `sm` Cancel was a 16px word beside a 14px
+   * one; its call site used to shrink the confirm to `sm` to match instead.
+   */
+  it.each([
+    ["sm, the default", undefined, ["text-sm"], ["text-base", "min-h-12"]],
+    ["md, when passed size md", "md", ["min-h-12", "text-base"], ["text-sm"]],
+  ] as const)(
+    "draws the armed Cancel at %s, the size of the confirm beside it",
+    async (_, size, has, lacks) => {
+      render(
+        <form>
+          <InlineConfirm
+            message="Wreck dives is on 3 departures. Delete it anyway?"
+            triggerLabel="Delete"
+            confirmLabel="Delete it"
+            cancelLabel="Keep it"
+            pendingLabel="Deleting…"
+            triggerClassName={buttonClass({ variant: "danger-ghost", size: size ?? "sm" })}
+            size={size}
+          />
+        </form>,
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+      const confirm = screen.getByRole("button", { name: "Delete it" });
+      const cancel = screen.getByRole("button", { name: "Keep it" });
+      for (const button of [confirm, cancel]) {
+        expect(button).toHaveClass(...has);
+        for (const token of lacks) expect(button).not.toHaveClass(token);
+      }
+    },
+  );
 
   it("disarms on a pathname change — an Activity-preserved show/hide cycle must never resurface it armed", async () => {
     const onSubmit = vi.fn();

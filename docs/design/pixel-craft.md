@@ -98,6 +98,7 @@ disagrees with the code, the code wins and the doc is wrong.
 | Focus ring | 3px outline at a 2px offset, so it reaches **5px** outside the box; `focus-ring-inset` is the same 3px at −3px, for a row flush in a clipping container | `:where(a, button, …):focus-visible` in `@layer base`; `@utility focus-ring`, `focus-ring-inset` |
 | Chrome bar | 56px (`--chrome-h`); anything pinned under it offsets by the token | `--chrome-h` |
 | Buttons | `md` 48px with a 16px label; `sm` 44px with 14px; `icon` a 48px square; `boat` 56px. **One size per row** | `src/components/ui/button.ts` |
+| Text controls | 16px type; `field` 44px, `md` 48px. **A row with a text control in it is an `md` row** | `controlClassFor` in `src/components/ui/form.tsx` |
 | Targets | ≥ 44px, measured on the element's own box (a stretched `::after` counts only as far as its clipping ancestors let it) | principles.md §2 |
 | Rows | a `LedgerRow` is never under 52px (`md`); `lg` is 56px | `src/components/ui/ledger.tsx` |
 | Section rhythm | `space-y-10` between a page's sections, never `mt-*` | forms-and-controls.md |

@@ -7,7 +7,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field } from "@/components/ui/form";
+import { controlClassFor, Field } from "@/components/ui/form";
 import { getAccountSecurity, getTotpSecret, listAccountSessions } from "@/db/account-security";
 import { userAccounts } from "@/db/schema";
 import { requestLocale } from "@/i18n/request";
@@ -147,7 +147,7 @@ export default async function SecurityPage({
                 pattern="[0-9A-Za-z-]{6,32}"
                 maxLength={32}
                 required
-                className={controlClass}
+                className={controlClassFor("md")}
               />
             </Field>
             <SubmitButton
@@ -190,7 +190,7 @@ export default async function SecurityPage({
                     pattern="[0-9A-Za-z-]{6,32}"
                     maxLength={32}
                     required
-                    className={controlClass}
+                    className={controlClassFor("md")}
                   />
                 </Field>
                 <SubmitButton
@@ -217,7 +217,7 @@ export default async function SecurityPage({
                     pattern="[0-9]{6}"
                     maxLength={6}
                     required
-                    className={controlClass}
+                    className={controlClassFor("md")}
                   />
                 </Field>
                 <SubmitButton

@@ -687,6 +687,18 @@ and a chip row take `sm`; and every button in one row takes the same size. A 16p
 is made by being the row's one primary, or by `w-full` on a phone, never by its own type size.
 `icon` is a 48px square so it sits level with `md` in a header or a pager.
 
+**A row with a text control in it is an `md` row.** A control's type is 16px at every size, because
+iOS Safari zooms the page when a box under 16px takes focus, so the only button it can stand level
+with is `md`, whose label is 16px too. `sm` beside a box matches its 44px and not its type. The
+control then takes md's height: `controlClassFor("md")` (48px) for an input or select, placed by hand
+or in a `Field` that shares its line with the button, and `size="md"` on `SearchField`.
+`controlClass` stays the 44px `field` size for a control stacked in a `Field` whose line holds no
+button, alone in a toolbar, or in a row of controls only. The pixel probe found the two sizes
+together on 2026-09-25: a 44px search box beside a 48px "Add diver" on the trip roster's seat-diver
+door and the diver roster, and a 16px box beside a 14px "Go" or "Save" wherever a row reached for
+`sm` to match the box's height. The probe groups a control inside a `Field` with its caption, not
+with the row, so it cannot see a `Field` beside a button: read those rows.
+
 **A `link` that must line up with the prose above it passes `flush: true`, never `className:
 "px-0"`.** Two utilities for one property resolve by **stylesheet** order, not by the order you
 wrote them in the attribute, and Tailwind emits `px-0` before the size's `px-4` — so the size wins
@@ -828,6 +840,10 @@ radii on 2026-09-19. They are these now:
 - **Buttons**: `md` is **48px tall with a 16px label**, the sheet's default; `sm` stays 44/14 for a
   table row or a chip row; `icon` is a 48px square; `boat` stays the 56px dock target. The base's
   `min-h-11` is still the floor every size clears.
+- **Text controls**: 16px type at every size. `field` is 44px (`controlClass`), for a stacked
+  field with no button on its line; `md` is 48px (`controlClassFor("md")`, `SearchField size="md"`),
+  for a control on one line with `md` buttons. Each size carries its own vertical padding, so the
+  content box is 26px at both.
 - **Rows**: a `LedgerRow` is never tighter than **52px** (`md`); `lg` is 56.
 - **The ⌘K cap** belongs to the command palette's trigger in the header, not to `SearchField`: a
   real `<input>` does not advertise a global shortcut it does not own. The sheet drew them as one
@@ -841,7 +857,9 @@ A staff list that can be searched renders **one search box and nothing around it
 `SearchField` in `src/components/ui/form.tsx`: a `type="search"` control wearing `controlClass`, a
 magnifier in its leading inset, its label `sr-only`, no caption above it and no "Search" button
 beside it. A form with one text control submits on Enter; surfaces that want type-to-apply drive
-`requestSubmit()` from `onInput`, as the orders toolbar and the counter do.
+`requestSubmit()` from `onInput`, as the orders toolbar and the counter do. A box that shares its
+line with an `md` button, as the roster's and the seat-diver picker's do with "Add diver", passes
+`size="md"` and stands at the button's 48px.
 
 ```tsx
 import { SearchField } from "@/components/ui/form";

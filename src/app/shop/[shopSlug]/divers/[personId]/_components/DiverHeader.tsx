@@ -32,6 +32,12 @@ import type { DiverProfile } from "./shared";
  * and the picker that drops out of it is a full-width form — the same call the
  * details editor already made here, for the same reason.
  * `_lib/record-primaries.test.ts` fails the build if a second primary joins it.
+ *
+ * **The row is `md`.** Book arrives in the `book` slot at the default size, so
+ * "Edit details" takes it too: it was `sm`, a 44px, 14px secondary beside a
+ * 48px, 16px primary, top-aligned, and the pair ended 4px apart on every diver
+ * record (the pixel probe's `mismatched-controls` cluster, 2026-09-25). The
+ * size follows the surface, and this is a page header.
  */
 export function DiverHeader({
   diver,
@@ -148,7 +154,6 @@ export function DiverHeader({
             id="edit-details"
             className={buttonClass({
               variant: "secondary",
-              size: "sm",
               className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
             })}
           >

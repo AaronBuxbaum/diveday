@@ -5,7 +5,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass } from "@/components/ui/form";
+import { controlClassFor } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { countTripLensDepartures, listTripLenses } from "@/db/trip-lenses";
@@ -33,6 +33,14 @@ export const metadata: Metadata = { title: "Kinds of day — DiveDay" };
  * disclosure that opens onto one is a page wearing a row. Unconditional — a
  * shore-diving shop with no hull still names its kinds of day — so this route
  * carries no `hasBoatDiving` gate.
+ *
+ * **Every row here that holds a text box is an `md` row.** A list row would
+ * take `sm`, but a box's type is 16px and `sm`'s is 14px, so a rename box
+ * beside `sm` Save and Delete read as two sizes on all six rows of
+ * `settings-kinds-of-day` (the pixel probe's `mismatched-controls` cluster,
+ * 2026-09-25). The buttons take `md` and the boxes stand at its 48px, and the
+ * delete confirm of a word that carries departures passes `size="md"` so the
+ * Cancel `InlineConfirm` draws beside its confirm is `md` too.
  */
 export default async function KindsOfDaySettingsPage({
   params,
@@ -93,13 +101,13 @@ export default async function KindsOfDaySettingsPage({
                         defaultValue={lens.name}
                         aria-label={t("lenses.nameLabel")}
                         placeholder={t("lenses.nameLabel")}
-                        className={controlClass}
+                        className={controlClassFor("md")}
                       />
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                       <SubmitButton
                         pendingLabel={t("lenses.submitting")}
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
+                        className={buttonClass({ variant: "secondary" })}
                       >
                         {t("lenses.submit")}
                       </SubmitButton>
@@ -123,14 +131,15 @@ export default async function KindsOfDaySettingsPage({
                         cancelLabel={t("lenses.deleteCancel")}
                         confirmLabel={t("lenses.deleteConfirm")}
                         pendingLabel={t("lenses.deletePending")}
-                        triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                        triggerClassName={buttonClass({ variant: "danger-ghost" })}
+                        size="md"
                       />
                     ) : (
                       <InlineConfirm
                         triggerLabel={t("lenses.delete")}
                         confirmLabel={t("lenses.deleteConfirm")}
                         pendingLabel={t("lenses.deletePending")}
-                        triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                        triggerClassName={buttonClass({ variant: "danger-ghost" })}
                       />
                     )}
                   </form>
@@ -153,7 +162,7 @@ export default async function KindsOfDaySettingsPage({
                   maxLength={LENS_NAME_MAX}
                   aria-label={t("lenses.nameLabel")}
                   placeholder={t("lenses.nameLabel")}
-                  className={controlClass}
+                  className={controlClassFor("md")}
                 />
                 {/* The one line that earns its place here: it names the
                     consequence a shop cannot see from this form, which is that
@@ -162,7 +171,7 @@ export default async function KindsOfDaySettingsPage({
               </div>
               <SubmitButton
                 pendingLabel={t("lenses.adding")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
+                className={buttonClass({ variant: "secondary" })}
               >
                 {t("lenses.add")}
               </SubmitButton>
