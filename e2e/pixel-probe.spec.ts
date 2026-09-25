@@ -344,6 +344,21 @@ test.describe("ragged-column", () => {
   test("leaves a caret pushed to each row's right edge alone", async ({ page }) => {
     await leavesStatic(page, "ragged-column", list("margin-left: auto;"), "caret");
   });
+
+  test("leaves a required mark running on after each label alone", async ({ page }) => {
+    // Punctuation in a line of text: its x is the label before it, as a
+    // field's "*" is (`form.tsx`), and a legal term's " — " (`LegalDocument`).
+    const fields = html(
+      `.form { display: flex; flex-direction: column; gap: 8px; }
+       .field { height: 44px; }`,
+      `<div class="form">
+         <div class="field"><label>Date</label><span class="req"> *</span></div>
+         <div class="field"><label>Departs from</label><span class="req"> *</span></div>
+         <div class="field"><label>Returns</label><span class="req"> *</span></div>
+       </div>`,
+    );
+    await leavesStatic(page, "ragged-column", fields, "req");
+  });
 });
 
 test.describe("uneven-gaps", () => {

@@ -901,6 +901,166 @@ describe("repeated rows", () => {
   it("leaves a caret pinned to the row's end alone", () => {
     expect(flagsOf(rows([368, 368, 368]), "ragged-column")).toEqual([]);
   });
+
+  it("still flags a caret that is its own item after each row's name", () => {
+    // e2e/pixel-probe.spec.ts's flagging fixture: a flex row, a name, and a
+    // caret beside it that should sit in one column and follows the name.
+    const snapshot = page([
+      [0, -1, { tag: "ul", cls: "list", x: 0, y: 0, w: 358, h: 132 }],
+      ...[60, 110, 150].flatMap((end, n) => [
+        [1 + n * 3, 0, { tag: "li", cls: "item", disp: "flex", x: 0, y: n * 44, w: 358, h: 44 }],
+        [
+          2 + n * 3,
+          1 + n * 3,
+          {
+            tag: "span",
+            cls: "name",
+            x: 0,
+            y: n * 44 + 10,
+            w: end,
+            h: 24,
+            text: [[0, n * 44 + 10, end, 24]],
+          },
+        ],
+        [
+          3 + n * 3,
+          1 + n * 3,
+          {
+            tag: "span",
+            cls: "caret",
+            label: "›",
+            x: end + 8,
+            y: n * 44 + 10,
+            w: 6,
+            h: 24,
+            text: [[end + 8, n * 44 + 10, 6, 24]],
+          },
+        ],
+      ]),
+    ]);
+    expect(flagsOf(snapshot, "ragged-column")).toHaveLength(1);
+  });
+
+  it("leaves a mark that runs on inline after each row's words alone", () => {
+    // The required "*" after a field's label (`form.tsx`), the " — " after a
+    // legal term's `<dt>` (`LegalDocument.tsx`, cluster C92): punctuation in
+    // a line of text, whose x is the words before it: the commonest shape
+    // among the audit's 56 dismissed `ragged-column` flags.
+    const snapshot = page([
+      [0, -1, { tag: "dl", cls: "terms", disp: "flex", fd: "column", x: 0, y: 0, w: 358, h: 132 }],
+      ...[64, 120, 92].flatMap((end, n) => [
+        [1 + n * 4, 0, { x: 0, y: n * 44, w: 358, h: 40 }],
+        [
+          2 + n * 4,
+          1 + n * 4,
+          {
+            tag: "dt",
+            cls: "inline font-semibold",
+            disp: "inline",
+            x: 0,
+            y: n * 44,
+            w: end,
+            h: 24,
+            text: [[0, n * 44, end, 24]],
+          },
+        ],
+        [
+          3 + n * 4,
+          1 + n * 4,
+          {
+            tag: "span",
+            disp: "inline",
+            label: "—",
+            x: end,
+            y: n * 44,
+            w: 24,
+            h: 24,
+            text: [[end + 4, n * 44, 16, 24]],
+          },
+        ],
+        [
+          4 + n * 4,
+          1 + n * 4,
+          {
+            tag: "dd",
+            cls: "inline text-muted",
+            disp: "inline",
+            x: 0,
+            y: n * 44,
+            w: 358,
+            h: 40,
+            text: [[end + 24, n * 44, 358 - end - 24, 24]],
+          },
+        ],
+      ]),
+    ]);
+    expect(flagsOf(snapshot, "ragged-column")).toEqual([]);
+  });
+
+  it("leaves a caret closing its own label's box alone", () => {
+    // The trip's About actions ("Edit details ⌄", "Write a crew prediction
+    // ⌄") and the gear page's "Add a note ⌄": each caret ends a box that
+    // fits its label, and that box is what sits on the rows' column.
+    const snapshot = page([
+      [0, -1, { cls: "rows", x: 0, y: 0, w: 358, h: 132 }],
+      ...[80, 170, 120].flatMap((end, n) => [
+        [1 + n * 3, 0, { tag: "li", cls: "about-row", x: 0, y: n * 44, w: 358, h: 44 }],
+        [
+          2 + n * 3,
+          1 + n * 3,
+          {
+            tag: "span",
+            cls: "inline-flex w-fit gap-1",
+            disp: "flex",
+            x: 33,
+            y: n * 44,
+            w: end - 33 + 20,
+            h: 44,
+            text: [[33, n * 44 + 12, end - 33, 20]],
+          },
+        ],
+        [
+          3 + n * 3,
+          2 + n * 3,
+          { tag: "svg", cls: "caret", replaced: true, x: end + 4, y: n * 44 + 14, w: 16, h: 16 },
+        ],
+      ]),
+    ]);
+    expect(flagsOf(snapshot, "ragged-column")).toEqual([]);
+  });
+
+  it("still flags an inline mark at the start of a grid cell that wanders", () => {
+    // Inline, but with no words before it in its own line: its x is its
+    // cell's, and a cell that moves is a column that wanders.
+    const snapshot = page([
+      [0, -1, { cls: "table", x: 0, y: 0, w: 400, h: 132 }],
+      ...[200, 206, 200, 210].flatMap((cell, n) => [
+        [1 + n * 4, 0, { cls: "grid-row", disp: "grid", x: 0, y: n * 33, w: 400, h: 32 }],
+        [
+          2 + n * 4,
+          1 + n * 4,
+          { cls: "name", x: 0, y: n * 33, w: 180, h: 32, text: [[0, n * 33 + 6, 150, 20]] },
+        ],
+        [3 + n * 4, 1 + n * 4, { cls: "status", x: cell, y: n * 33, w: 100, h: 32 }],
+        [
+          4 + n * 4,
+          3 + n * 4,
+          {
+            tag: "span",
+            cls: "badge",
+            disp: "inline-flex",
+            bg: true,
+            x: cell,
+            y: n * 33 + 6,
+            w: 60,
+            h: 20,
+            text: [[cell + 8, n * 33 + 6, 44, 20]],
+          },
+        ],
+      ]),
+    ]);
+    expect(flagsOf(snapshot, "ragged-column")).toHaveLength(1);
+  });
 });
 
 describe("gaps", () => {

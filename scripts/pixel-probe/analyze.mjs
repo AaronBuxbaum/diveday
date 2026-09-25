@@ -1099,6 +1099,47 @@ function row0Width(spots) {
   return spots[0].row.w;
 }
 
+/** A text line on `el`'s line that ends at or before its left edge. */
+function endsBefore(el) {
+  return ([x, y, w, h]) =>
+    x + w <= el.x + 1 && Math.min(y + h, bottom(el)) - Math.max(y, el.y) > Math.min(h, el.h) * 0.5;
+}
+
+/** The text lines laid out before `el` in its parent: the parent's own, then earlier siblings'. */
+function linesBefore(ix, el) {
+  const parent = ix.els[el.p];
+  if (!parent) return [];
+  const lines = [...(parent.text || [])];
+  const gather = (node, depth) => {
+    if (!isVisible(node)) return;
+    lines.push(...(node.text || []));
+    if (depth < 3) for (const i of ix.kids[node.i]) gather(ix.els[i], depth + 1);
+  };
+  for (const i of ix.kids[parent.i]) {
+    if (i >= el.i) break;
+    gather(ix.els[i], 0);
+  }
+  return lines;
+}
+
+/**
+ * Whether a repeated child's x is set by the words before it rather than by a
+ * column: an inline element running on after words in its own line (a field's
+ * required "*", the " — " after a legal term's `<dt>`, a link mid-sentence),
+ * or a glyph closing a box that fits its own label ("Edit details ⌄"), where
+ * the box is what lines up. Most of the audit's 56 dismissed `ragged-column`
+ * flags were one of the two. A caret that is its own item in the row, after a
+ * name, is neither, and is still judged.
+ */
+function placedByWords(ix, el, row) {
+  const parent = ix.els[el.p];
+  if (!parent) return false;
+  const before = endsBefore(el);
+  if (/^inline/.test(el.disp)) return linesBefore(ix, el).some(before);
+  if (parent.i === row.i || !(parent.text || []).some(before)) return false;
+  return right(contentBox(parent)) - right(el) <= 1;
+}
+
 function checkRaggedColumns(ix) {
   const flags = [];
   for (const el of ix.els) {
@@ -1129,7 +1170,12 @@ function checkRaggedColumns(ix) {
               kid.replaced ||
               (isPainted(kid) && kid.w < row.w * 0.3) ||
               (kid.label && kid.label.length <= 2 && kid.w < 32);
-            if (columnish && kid.w < row.w * 0.5 && !seen.has(sig)) {
+            if (
+              columnish &&
+              kid.w < row.w * 0.5 &&
+              !seen.has(sig) &&
+              !placedByWords(ix, kid, row)
+            ) {
               seen.add(sig);
               if (!positions.has(sig)) positions.set(sig, []);
               positions.get(sig).push({ kid, row, l: kid.x - row.x, r: right(row) - right(kid) });
