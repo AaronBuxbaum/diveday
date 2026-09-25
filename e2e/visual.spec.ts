@@ -40,8 +40,8 @@ import {
 import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
 
 /**
- * Visual regression coverage. Two hundred and forty-four key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 976 screenshots per run (see
+ * Visual regression coverage. Two hundred and fifty-three key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 1,012 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -66,10 +66,10 @@ import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
  * `TABLET_SURFACES` adds 16 — eight surfaces a shop runs on a tablet get a
  * third, portrait width, at one screenshot per scheme rather than two — and
  * `TV_SURFACES` adds 2 for the one board a lobby screen shows. That brings the
- * run to 992 screenshots: the extra widths are a 2% addition, not the 50% a
+ * run to 1,034 screenshots: the extra widths are a 2% addition, not the 50% a
  * third viewport applied to every surface would have cost.
  *
- * Three of the 244 are the same surface twice, in a second language: see
+ * Three of the 253 are the same surface twice, in a second language: see
  * {@link SPANISH}. A Spanish sibling takes the standard pair and keys its own
  * baseline off `<name>-es-ES`, so it is a new item in the report rather than a
  * change to the English one.
@@ -169,10 +169,11 @@ const VIEWPORTS = [
  * targets.
  *
  * 768-1024px is also where Tailwind's `sm:`/`md:` breakpoints change a
- * layout's *shape* — where a two-column `FieldGrid` collapses, and where
- * `StaffTabBar`'s six-slot phone dock gives way to the header nav. Every one
- * of those transitions was unphotographed, so a regression there reached a
- * shop before it reached CI.
+ * layout's *shape* — where a two-column `FieldGrid` stands in columns while
+ * the staff bar is still folded, its Today/Week/Season pills (`hidden
+ * lg:flex`) and the calendar menu they fold into (`lg:hidden`) swapping
+ * together at `lg`. Every one of those transitions was unphotographed, so a
+ * regression there reached a shop before it reached CI.
  *
  * Portrait rather than landscape because portrait is the harder layout and the
  * posture a stand holds. A crew member holding a phone sideways at the rail is
@@ -185,10 +186,10 @@ const PHONE_VIEWPORT = VIEWPORTS[0];
 const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
 
 /**
- * The capture names that get `TABLET_VIEWPORT` as a third width — **five, not
+ * The capture names that get `TABLET_VIEWPORT` as a third width — **eight, not
  * every surface in this file.**
  *
- * A third width applied everywhere is another 320 screenshots and the baseline
+ * A third width applied everywhere is another 506 screenshots and the baseline
  * churn to match, and most routes have nothing new to say at 820px. So the
  * list is a constant rather than a global width: the cost is bounded, and
  * which surfaces earn it is a decision a reviewer can argue with in one place
@@ -3914,6 +3915,31 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis");
         await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
         await capture(page, "today", scheme);
+      });
+
+      /**
+       * **The identity menu, open** — the shop's name in the chrome bar opens
+       * Settings, the language choices and Sign out (`ShopIdentityMenu` with
+       * `LanguageChoices`). Nothing else in this file opens it, so until this
+       * capture no baseline and no pixel probe had ever seen the panel: its
+       * text edges, and the `rounded-lg` rows inside a `rounded-inset p-2`
+       * panel, had only ever been reviewed by people.
+       *
+       * It closes on a pointerdown outside it, on Escape, or on a navigation
+       * (`useMenuDismissal`) — none of which `capture()` does — and the test
+       * closes it with Escape so it cannot leak into anything that follows.
+       */
+      test(`the identity menu, open, renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis");
+        await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
+        const trigger = page.locator("[data-identity-menu]");
+        await trigger.click();
+        await expect(trigger).toHaveAttribute("aria-expanded", "true");
+        // The language rows are what the panel renders once mounted.
+        await page.getByRole("button", { name: "Español" }).waitFor();
+        await capture(page, "identity-menu-open", scheme);
+        await page.keyboard.press("Escape");
+        await expect(trigger).toHaveAttribute("aria-expanded", "false");
       });
 
       /**
