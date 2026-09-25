@@ -913,6 +913,13 @@ function checkRows(ix, enabled) {
           const flexRow = /flex/.test(owner.disp) && !/column/.test(owner.fd);
           if (!flexRow && gapX > 48) continue;
           if (overlapY(tBox, controlMember.unit) <= 0) continue;
+          // Side by side means the words themselves: the first line has to
+          // share some height with the control and stay out of its column. A
+          // `<label>` wrapping a caption and its field runs its *box* beside
+          // the row's button while its words sit above both — every one of
+          // the 20 flags the audit gave this check was that stacked caption.
+          const line = { x: firstLine[0], y: firstLine[1], w: firstLine[2], h: lineH };
+          if (overlapY(line, control) <= 0.5 || overlapX(line, control) > 0.5) continue;
           const controlCentre = control.y + control.h / 2;
           const lineCentre = firstLine[1] + firstLine[3] / 2;
           const blockCentre = text.y + text.h / 2;
