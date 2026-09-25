@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
+import { type ButtonSize, buttonClass } from "@/components/ui/button";
 
 type SharedProps = {
   triggerLabel: React.ReactNode;
@@ -31,11 +31,19 @@ type MessageModeProps = SharedProps & {
   /** Shown once armed — the refund/impact preview plus the "are you sure" line. Its presence is what selects this full shape over the compact one. */
   message: string;
   cancelLabel: string;
+  /**
+   * The size the armed block's Cancel is drawn at, which should be the size
+   * of the confirm beside it: one size per row. `sm`, the default, is a list
+   * row's; a row of `md` controls passes `md` (kinds of day).
+   */
+  size?: ButtonSize;
 };
 
 type CompactModeProps = SharedProps & {
   message?: undefined;
   cancelLabel?: undefined;
+  /** No Cancel to size: the trigger is the whole control. */
+  size?: undefined;
 };
 
 export type InlineConfirmProps = MessageModeProps | CompactModeProps;
@@ -88,6 +96,7 @@ export function InlineConfirm(props: InlineConfirmProps) {
     confirmFields,
     message,
     cancelLabel,
+    size = "sm",
   } = props;
   const [armed, setArmed] = useState(false);
   const { pending } = useFormStatus();
@@ -184,7 +193,7 @@ export function InlineConfirm(props: InlineConfirmProps) {
           <button
             type="button"
             onClick={() => setArmed(false)}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
+            className={buttonClass({ variant: "secondary", size })}
           >
             {cancelLabel}
           </button>

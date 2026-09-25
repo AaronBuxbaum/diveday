@@ -274,7 +274,10 @@ export function DiverStory({
     ) : null;
 
   return (
-    <section className="mt-10" aria-labelledby="the-story">
+    // **No outer margin, and no prop to hang one on.** Whoever stacks the
+    // story owns the space above it: the record's one `space-y-10`, and the
+    // diver sheet's own wrapper (`DiverSheetSection`).
+    <section aria-labelledby="the-story">
       <GroupLabel as="h2" id="the-story" className="scroll-mt-24">
         {t("divers.story.heading")}
       </GroupLabel>

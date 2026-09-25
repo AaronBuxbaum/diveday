@@ -126,3 +126,25 @@ describe("the chapter strip following its own highlight", () => {
     expect(screen.getByRole("link", { name: /Dock/ })).toHaveAttribute("aria-current", "step");
   });
 });
+
+/**
+ * **Room for the focus ring, without moving the bar.** The strip scrolls
+ * sideways, and a scroll box clips both axes, so a tab's 5px ring needs 5px of
+ * the strip's own padding above and below it. `py-1.5` gives 6px and
+ * `-my-0.5` takes the 2px back — which holds only while the nav keeps the
+ * strip's top margin inside it. The nav has no top border or padding, so
+ * without `flow-root` that margin collapsed through it and the bar moved up
+ * 2px and grew 2px, over the hero's hairline (review lab, 2026-09-25). jsdom
+ * has no layout, so this pins the structure that makes the geometry, and the
+ * pixel probe measures the geometry itself.
+ */
+describe("the chapter strip's room for a focus ring", () => {
+  it("pads the scrolling strip (py-1.5 -my-0.5) and makes the nav a flow-root, so the strip's negative margin stays inside the bar", () => {
+    const { box } = renderNav();
+    const nav = screen.getByRole("navigation", { name: "Chapters" });
+    expect(box.parentElement).toBe(nav);
+    expect(box).toContainElement(screen.getByRole("link", { name: /Dock/ }));
+    expect(box).toHaveClass("overflow-x-auto", "py-1.5", "-my-0.5");
+    expect(nav).toHaveClass("flow-root");
+  });
+});

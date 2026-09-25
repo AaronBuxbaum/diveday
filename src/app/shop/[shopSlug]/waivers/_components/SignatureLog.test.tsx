@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import type { SignedWaiverEntry } from "@/db/waivers";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { SignatureLog, signatureRowId } from "./SignatureLog";
@@ -168,6 +169,56 @@ describe("a flagged medical answer", () => {
     // The disclosure is the row's own, and it is what the answers sit behind —
     // never the summary, which would put them on the page at rest.
     expect(within(summary).queryByText(/chest surgery/)).toBeNull();
+  });
+});
+
+describe("a row's box", () => {
+  it("draws its rules on a ledger row's box and its square fill across the whole box, 8px clear of the name", () => {
+    // The pixel probe (2026-09-25, staff-waivers-record): the summary is the
+    // row's hover fill, and with no room of its own the fill's edge ran
+    // straight into the diver's name (0px). The ledger's geometry, not a
+    // rounded chip hanging past square rules: the row takes a `LedgerRow`'s
+    // box, and the summary takes the row's room back as a negative margin and
+    // keeps it as padding, so the fill runs rule to rule.
+    const { container } = renderLog([entry({ id: "a" })]);
+    const row = rowFor(container, "a").closest("li");
+    expect(row).toHaveClass(...ledgerRowBoxClass.split(" "));
+    const summary = rowFor(container, "a").querySelector("summary");
+    expect(summary).toHaveClass("-mx-2", "px-2");
+    expect(summary?.className).not.toMatch(/rounded/);
+  });
+
+  it("draws the pinned record's bar outside the box, so the pinned name and rules sit where every other row's do", () => {
+    // As a start border with padding to clear it, the bar pushed the pinned
+    // name 2px right of its neighbours and started its rules 12px left of
+    // theirs. A pseudo-element takes no room from the row.
+    const pinned = entry({ id: "pinned" });
+    const { container } = renderLog([entry({ id: "b" })], pinned);
+    const pinnedRow = rowFor(container, "pinned").closest("li");
+    const plainRow = rowFor(container, "b").closest("li");
+    expect(pinnedRow).toHaveClass("before:absolute", "before:bg-border-strong");
+    const box = (li: Element | null) =>
+      [...(li?.classList ?? [])].filter((token) => /^-?(?:m|p)[xse]-|^border-s/.test(token));
+    expect(box(pinnedRow)).toEqual(box(plainRow));
+  });
+
+  it("rings a focused row inside its own box, so the ring never paints over the pinned bar", () => {
+    // The bar sits 2-4px outside the row's box (`before:-start-1`, 2px wide),
+    // and the global ring 2-5px outside it: outset, the ring covered the one
+    // mark saying which record the link resolved, on the row a reviewer
+    // arriving from the roster is there to read (dive-domain-expert review,
+    // 2026-09-25). Inset, it is drawn inside the box, clear of the bar, and
+    // every row rings the same way so the pinned one is not the odd one out.
+    const pinned = entry({ id: "pinned" });
+    const { container } = renderLog([entry({ id: "b" })], pinned);
+    expect(rowFor(container, "pinned").closest("li")).toHaveClass(
+      "before:-start-1",
+      "before:w-0.5",
+    );
+    for (const id of ["pinned", "b"]) {
+      const summary = rowFor(container, id).querySelector("summary");
+      expect(summary).toHaveClass("focus-visible:focus-ring-inset");
+    }
   });
 });
 

@@ -276,7 +276,6 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
       // sentence takes the width beneath them, which is the phone artboard's
       // reading and the only one where a full sentence has room to be read.
       stacked
-      className="-mx-2 px-2"
       // The row's glyph — the first of the anatomy's four parts (glyph, one
       // word of kind, one sentence, one fix), drawn from the shipped status
       // family and never from the illustration hand: a status glyph is a
@@ -673,7 +672,6 @@ export function DaySpine({
           <ul className="mt-3">
             <LedgerRow
               size="lg"
-              className="-mx-2 px-2"
               href={`/shop/${shopSlug}/trips/${firstBooking.tripId}`}
               linkLabel={firstBooking.tripTitle}
             >
@@ -832,7 +830,6 @@ export function DaySpine({
             {drafts.map((draft) => (
               <LedgerRow
                 key={`draft:${draft.form}`}
-                className="-mx-2 px-2"
                 kind={{ word: t("today.unfinished.label"), tone: "neutral" }}
                 href={draft.href}
                 linkLabel={t("today.unfinished.resume")}
@@ -842,7 +839,6 @@ export function DaySpine({
             ))}
             {showPaymentsRow ? (
               <LedgerRow
-                className="-mx-2 px-2"
                 href={`/shop/${shopSlug}/settings#stripe`}
                 linkLabel={t("shopHome.spine.deskPaymentsAction")}
               >
@@ -931,7 +927,12 @@ export function DaySpine({
                 // The hairline goes transparent rather than to width zero:
                 // `border-t`'s width beats a `border-0` on emit order, and a
                 // colour beats a colour by name.
-                className="-mx-2 px-2 hover:bg-surface-sunken sm:mx-0 sm:rounded-panel sm:border-transparent sm:px-0 sm:last:border-transparent"
+                //
+                // The row keeps its room from `sm` up as well: it used to take
+                // it back there (`sm:mx-0 sm:px-0`), which left the fill
+                // flush against "This week" while Tomorrow's summary in the
+                // panel beside it kept its 8px.
+                className="hover:bg-surface-sunken sm:rounded-panel sm:border-transparent sm:last:border-transparent"
                 href={`/shop/${shopSlug}/schedule/board`}
                 linkLabel={t("shopHome.spine.openBoard")}
                 trailing={

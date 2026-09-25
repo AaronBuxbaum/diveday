@@ -348,6 +348,10 @@ export function DiverList({
             onChange={(event) => search(event.target.value)}
             onKeyDown={submitSearch}
             placeholder={copy.searchPlaceholder}
+            // `md`, level with the `md` "Add diver" beside it (either door);
+            // at the default 44px it stood 2px short of the button at each
+            // edge (`divers`, `divers-removed`, 2026-09-25).
+            size="md"
             className="w-full min-w-0 sm:w-80"
           />
           {/* One offer, two doors, and deliberately the same words on both so

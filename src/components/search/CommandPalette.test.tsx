@@ -119,3 +119,23 @@ describe("CommandPalette answer card", () => {
     expect(screen.getAllByRole("option")[0]).not.toHaveTextContent("↵");
   });
 });
+
+/**
+ * The field is the palette's one focus stop, flush with the dialog's
+ * `overflow-hidden` on three sides: the outset global ring was cut to a bar
+ * under it, and switching the ring off to hide the bar left the field with no
+ * focus state at all (review, 2026-09-25). jsdom has no layout, so this pins
+ * which element carries what; the pixel probe measures the ring.
+ */
+describe("CommandPalette search field focus", () => {
+  it("lands focus in the field, which wears the inset ring at the dialog's top radius and never switches its outline off", async () => {
+    renderPalette();
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+
+    const field = screen.getByRole("combobox");
+    await waitFor(() => expect(field).toHaveFocus());
+    expect(field).toHaveClass("focus-visible:focus-ring-inset", "rounded-t-panel");
+    expect(field.className).not.toMatch(/(^|[\s:])outline-(none|hidden|0)(\s|$)/);
+    expect(screen.getByRole("dialog")).toHaveClass("overflow-hidden", "rounded-panel");
+  });
+});

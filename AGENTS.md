@@ -58,7 +58,7 @@ provider-specific folders are adapters and must not introduce unique requirement
 | `pnpm build` | production build |
 | `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (the **schema-change** skill) |
 | `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds. **Refuses while a dev server is running**, naming the pid (ADR 20260903-one-process-per-pglite-directory) |
-| `node scripts/screenshot.mjs <path…>` | look at a page against a running `pnpm dev` — light/dark × phone/desktop PNGs into `screenshots/`, with dev-credential sign-in for `/shop/**`. Review-grade captures still come from a filtered visual-spec run (the **verify** skill) |
+| `node scripts/screenshot.mjs <path…>` | look at a page against a running `pnpm dev` — light-mode phone/desktop PNGs into `screenshots/`, with dev-credential sign-in for `/shop/**`. Review-grade captures come from a filtered visual-spec run (the **verify** skill) |
 | `pnpm visual` | capture the visual surfaces and compare them against the S3 baseline for this branch's parent commit (baselines are rendered on CI's Linux runners; triage from the CI report) |
 
 Never put a literal `--` before args to a `pnpm` script (`pnpm test -- <file>`): pnpm forwards it,
@@ -199,7 +199,7 @@ for anything touching auth, tokens, personal or medical data, or export/import.
   green when that is the fastest way to learn what is broken, say in the body what you ran and what
   you did not, and work what comes back — a red PR you are driving is fine, a red PR you have
   stopped driving is not. Never report unverified work as done, and *look at* UI you changed
-  (screenshots, light + dark), which is the one thing CI cannot answer
+  (screenshots, light only unless the work is colour), the one thing CI cannot answer
   ([docs/agents/verifying.md](docs/agents/verifying.md)).
 - **A thought you don't act on goes in the tracker, not in your closing message.** An idea left
   undone, a question only a human can answer, a risk noticed in passing, a cleanup deliberately

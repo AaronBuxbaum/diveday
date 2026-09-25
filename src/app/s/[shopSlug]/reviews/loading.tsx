@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Body-shaped skeleton for the public review archive (ADR
@@ -27,7 +28,7 @@ export default function PublicReviewsLoading() {
         {/* The ledger `ReviewLedger` renders — hairline rows, not a card grid. */}
         <div className="mt-4 flex flex-col">
           {[0, 1, 2, 3].map((row) => (
-            <div key={row} className="border-t border-border py-4 last:border-b">
+            <div key={row} className={`py-4 ${ledgerRowBoxClass}`}>
               <div className="h-4 w-24 rounded bg-surface-sunken" />
               <div className="mt-1.5 h-5 w-96 max-w-full rounded bg-surface-sunken" />
               <div className="mt-1.5 h-4 w-48 max-w-full rounded bg-surface-sunken" />

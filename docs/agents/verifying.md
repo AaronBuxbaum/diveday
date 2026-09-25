@@ -104,9 +104,11 @@ what a failure here is about.
 
 ## The one thing CI cannot answer
 
-Whether the surface looks right. Screenshots, light and dark, phone and desktop, are yours — the
-visual run tells you a pixel *moved*, never that the new one is better. See the **design-review**
-and **visual-triage** skills.
+Whether the surface looks right. Screenshots, phone and desktop, are yours — in light only, unless
+the work is itself about colour (then `screenshot.mjs --both`); that is the owner's rule,
+[H-90](../product/human-decisions.md#decision-register). CI's visual run keeps both schemes, so a
+dark pixel that moved still shows up as a diff — but it tells you a pixel *moved*, never that the
+new one is better. See the **design-review** and **visual-triage** skills.
 
 ## What a focused `pnpm e2e` run does and does not reset
 

@@ -183,6 +183,16 @@ describe("the rail as it renders", () => {
     expect(selected[0]?.className).toContain("rounded-lg");
   });
 
+  it("draws the focus ring inside each row", () => {
+    // The rows sit flush with the left edge of the rail's own scroll box, which
+    // cut the outset ring's left 5px on every one of them; and they are 36px
+    // rows with no gap, so an outset ring would paint over its neighbours too.
+    renderRail();
+    for (const link of screen.getAllByRole("link")) {
+      expect(link).toHaveClass("focus-visible:focus-ring-inset", "rounded-lg");
+    }
+  });
+
   it("spends no accent ink at all", () => {
     renderRail({ badges: { stripe: "Not connected" } });
     const nav = screen.getByRole("navigation", { name: "Settings sections" });
@@ -321,6 +331,21 @@ describe("the rows the pane is made of", () => {
     expect(units?.open).toBe(false);
   });
 
+  it("rings a setting's summary inside itself, rounded into the group's corners at the ends", () => {
+    // Flush inside `InsetGroup`'s `overflow-hidden` card: the outset ring was
+    // cut on both sides of every row (the probe's largest settings cluster).
+    const { container } = render(
+      <SettingsRow sectionId="tax" heading="Sales tax & VAT">
+        <span>form</span>
+      </SettingsRow>,
+    );
+    expect(container.querySelector("summary")).toHaveClass(
+      "focus-visible:focus-ring-inset",
+      "[details:first-child>&]:rounded-t-panel",
+      "[details:last-child:not([open])>&]:rounded-b-panel",
+    );
+  });
+
   it("puts the fragment target inside the disclosure, where the reveal reaches it", () => {
     const { container } = render(
       <SettingsRow sectionId="reviewLink" heading="Review link">
@@ -330,6 +355,37 @@ describe("the rows the pane is made of", () => {
     const anchor = container.querySelector("#review-link");
     expect(anchor).toBeTruthy();
     expect(anchor?.closest("details")).toBeTruthy();
+  });
+
+  /**
+   * On a phone the summary is a column: the heading line, then the value.
+   * A row with no value used to keep the value's wrapper anyway, holding only
+   * the desktop caret, which is `hidden` there. The wrapper collapsed to 0px
+   * and still took the column's 4px gap, so the pixel probe measured every
+   * such label (Address, The counter card, Tax, …) 2px above its row's
+   * centre on ten settings captures. Below `sm`, only boxes with something in
+   * them may take part in the column.
+   */
+  it("keeps a row with no value to its heading line on a phone", () => {
+    const { container } = render(
+      <SettingsRow sectionId="address" heading="The counter card">
+        <span>form</span>
+      </SettingsRow>,
+    );
+    const summary = container.querySelector("summary");
+    expect(summary?.querySelectorAll(":scope > :not(.hidden)")).toHaveLength(1);
+  });
+
+  it("stacks a row's value under its heading on a phone", () => {
+    const { container } = render(
+      <SettingsRow sectionId="address" heading="Address" value="12 Harbour Rd">
+        <span>form</span>
+      </SettingsRow>,
+    );
+    const summary = container.querySelector("summary");
+    const shown = summary?.querySelectorAll(":scope > :not(.hidden)");
+    expect(shown).toHaveLength(2);
+    expect(shown?.[1]).toHaveTextContent("12 Harbour Rd");
   });
 });
 

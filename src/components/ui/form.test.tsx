@@ -3,9 +3,11 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { buttonClass } from "./button";
 import { ForgivingInput } from "./ForgivingInput";
 import {
   controlClass,
+  controlClassFor,
   DateField,
   Field,
   FieldActions,
@@ -53,6 +55,80 @@ describe("SearchField", () => {
     expect(box).toHaveValue("reef");
     expect(box).toHaveAttribute("data-hydrated", "true");
     expect(box).toHaveAttribute("name", "q");
+  });
+
+  it("stands at md's 48px beside an md button, and at the 44px floor anywhere else", () => {
+    render(
+      <>
+        <SearchField id="orders-search" label="Search orders" />
+        <SearchField id="diverq-search" label="Find a diver" size="md" />
+      </>,
+    );
+    const alone = screen.getByRole("searchbox", { name: "Search orders" });
+    const beside = screen.getByRole("searchbox", { name: "Find a diver" });
+    expect(alone).toHaveClass("min-h-11");
+    expect(beside).toHaveClass("min-h-12", "ps-9");
+    expect(beside).not.toHaveClass("min-h-11");
+  });
+});
+
+/** The px a Tailwind spacing step names: `min-h-12` is 48, `py-2.5` is 10. */
+function stepPx(tokens: string[], prefix: string): number {
+  const token = tokens.find((one) => one.startsWith(prefix));
+  expect(token, `${prefix}* in ${tokens.join(" ")}`).toBeDefined();
+  return Number(token?.slice(prefix.length)) * 4;
+}
+
+/**
+ * **A text control on a line with buttons stands at their size** — the pixel
+ * probe's `mismatched-controls` cluster on 2026-09-25: a 44px search box beside
+ * a 48px "Add diver" on seventeen trip captures and the roster, and a 16px box
+ * beside a 14px "Go" or "Save" wherever a row paired one with `sm`. A control's
+ * type is 16px and stays there, so `md`, the one button rung with a 16px label,
+ * is what it can stand level with, and `controlClassFor("md")` is how it
+ * reaches that rung's height.
+ */
+describe("controlClassFor", () => {
+  it("stands an md control level with an md button, in height and in type", () => {
+    const control = controlClassFor("md").split(/\s+/);
+    const button = buttonClass().split(/\s+/);
+    expect(control).toContain("min-h-12");
+    expect(button).toContain("min-h-12");
+    expect(control).not.toContain("min-h-11");
+    expect(control).toContain("text-base");
+    expect(button).toContain("text-base");
+  });
+
+  it("keeps the stacked field's control at the 44px floor, as `controlClass`", () => {
+    expect(controlClassFor("field")).toBe(controlClass);
+    expect(controlClass.split(/\s+/)).toContain("min-h-11");
+    expect(controlClass.split(/\s+/)).not.toContain("min-h-12");
+  });
+
+  it("grows the padding with the height, so a control that does not centre itself still sits centred", () => {
+    // A text box centres its line at any height; a native file picker lays its
+    // button at the top of the content box. The same content box at every size
+    // puts the extra height equally above and below either one.
+    const contentBox = (classes: string) => {
+      const tokens = classes.split(/\s+/);
+      const border = tokens.includes("border") ? 2 : 0;
+      return stepPx(tokens, "min-h-") - 2 * stepPx(tokens, "py-") - border;
+    };
+    expect(contentBox(controlClassFor("md"))).toBe(contentBox(controlClassFor("field")));
+  });
+
+  it("spells each size's height and padding once, so nothing is left to stylesheet order", () => {
+    for (const size of ["field", "md"] as const) {
+      const tokens = controlClassFor(size).split(/\s+/);
+      expect(
+        tokens.filter((one) => one.startsWith("min-h-")),
+        size,
+      ).toHaveLength(1);
+      expect(
+        tokens.filter((one) => one.startsWith("py-")),
+        size,
+      ).toHaveLength(1);
+    }
   });
 });
 
@@ -165,6 +241,28 @@ describe("Field error", () => {
     // The message is *the* description of the control, not a sibling a screen
     // reader has to be told about separately.
     expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(alert.id);
+  });
+
+  /**
+   * A description can be a component that has nothing to say yet: the
+   * onboarding form's storefront link says nothing until there is a slug to
+   * show. Its slot rendered anyway, empty, and still took the body's 4px gap
+   * under the control (the pixel probe, onboard). The slot stays mounted, so
+   * `aria-describedby` keeps a target, and hides itself while it is empty.
+   */
+  it("keeps a description that renders nothing out of the field's column", () => {
+    function NothingYet() {
+      return null;
+    }
+    render(
+      <Field label="Shop link" description={<NothingYet />}>
+        <input name="shopSlug" />
+      </Field>,
+    );
+    const input = screen.getByLabelText("Shop link");
+    const description = document.getElementById(`${input.id}-description`);
+    expect(description).toBeEmptyDOMElement();
+    expect(description).toHaveClass("empty:hidden");
   });
 
   it("keeps the helper description alongside the refusal", () => {

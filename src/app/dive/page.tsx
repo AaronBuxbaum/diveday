@@ -71,7 +71,7 @@ export default async function RegionsPage() {
               <li key={region.slug}>
                 <Link
                   href={regionPath(region.slug)}
-                  className="group -mx-3 flex items-baseline justify-between gap-6 rounded-lg px-3 py-5 transition-colors hover:bg-surface-sunken"
+                  className="group -mx-3 flex items-baseline justify-between gap-6 rounded-lg px-3 py-5 transition-colors hover:bg-surface-sunken focus-visible:focus-ring-inset"
                 >
                   <h2 className={`${SECTION_TITLE_CLASS} min-w-0 group-hover:text-primary`}>
                     {region.name}

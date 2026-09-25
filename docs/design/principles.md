@@ -194,12 +194,13 @@ a heading reading "A quiet day at the dock" and 900px of boxes disagreeing with 
 the state exists only on a shop with no departures, which a seeded demo never is, so it needs a
 capture of its own against a freshly onboarded shop or nobody will ever look at it.
 
-**A long list gets one pager, not a per-surface invention.** Every paged staff list renders
-`src/components/Pager.tsx` — previous, "Page 3 of 7", next — with its words from the one shared
-`shared.pager.*` key set and its data from `offsetPage` (`src/db/paging.ts`). Both directions
-always work and the reader is always told where they are; the pager draws nothing at all when
-there is only one page. Four grammars for this used to coexist, and the most common of them was
-forward-only — a staffer three pages into the roster could only start over (ADR
+**A long list gets one pager, not a per-surface invention.** Every paged list renders
+`src/components/Pager.tsx` — previous, "Page 3 of 7", next — with its words from one key set per
+audience (`shared.pager.*` through `staffPagerWords` on every staff list, the diver bundle's
+`reviews.*` on the public reviews archive) and its data from `offsetPage` (`src/db/paging.ts`).
+Both directions always work and the reader is always told where they are; the pager draws nothing
+at all when there is only one page. Four grammars for this used to coexist, and the most common of
+them was forward-only — a staffer three pages into the roster could only start over (ADR
 [20260803-one-pagination-model](../architecture/decisions/20260803-one-pagination-model.md)). The
 one exception is a list that is a genuine **stream** with no end to count (the schedule board's
 upcoming departures), which pages by cursor and says so in direction words rather than page
@@ -536,10 +537,11 @@ dock test, and one-primary all still apply.
 ## Tokens (the mechanics)
 
 Defined in `src/app/globals.css`, bound to Tailwind — see
-[ADR-0004](../architecture/decisions/0004-design-tokens.md) for the rules. Palette story: sunlit
-sand (light) / open ocean at depth (dark); **lagoon** (`--primary`) is the action color;
-**coral** (`--accent`) is rationed for earned moments — its every sanctioned appearance is the
-**coral budget**,
+[ADR-0004](../architecture/decisions/0004-design-tokens.md) for the rules. Palette story (I · Tide,
+ADR [20260919-one-idea](../architecture/decisions/20260919-one-idea.md)): a cool grey ground
+under white groups (light) / black under near-black groups (dark); **lagoon** (`--primary`), the one
+DiveDay blue, is the action color; **coral** (`--accent`), a warm orange, is rationed for earned
+moments — its every sanctioned appearance is the **coral budget**,
 [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
 decision 11 (one table, at most one earned coral moment per surface — Reef adds the drawn hand's
 single warm detail beside it, [20260901-diveday-reimagined](../architecture/decisions/20260901-diveday-reimagined.md) —
@@ -580,21 +582,23 @@ booking page and a diver's `/ready`.
 
 It is the wrong device for the surfaces a dive shop actually works from. `/check-in` calls itself
 "Counter mode", and a counter device is an iPad on a stand; the manifest is read at the rail,
-frequently through a dry case, which is the entire premise of `boat-mode` above. So five staff
-surfaces — the counter check-in, the live manifest, the schedule board, the trip prep list and the
-departure log — are captured at a **third, portrait-tablet width of 820x1180**, named in
-`TABLET_SURFACES` in that spec. `node scripts/screenshot.mjs <path> --tablet` gives a design review
-the same width.
+frequently through a dry case, which is the entire premise of `boat-mode` above. So eight captures
+— the counter check-in, the live manifest, the schedule board, the trip prep list, the departure
+log (at rest and with every checkpoint), the departures board and the self check-in kiosk — take a
+**third, portrait-tablet width of 820x1180**, named in `TABLET_SURFACES` in that spec; the
+departures board also takes a lobby TV's 1920x1080 (`TV_SURFACES`).
+`node scripts/screenshot.mjs <path> --tablet` gives a design review the tablet width.
 
-Five, not sixty-nine: a third width everywhere would be another 320 screenshots and the baseline
+Eight, not every surface: a third width everywhere would add half the run again and the baseline
 churn to match, and most routes have nothing new to say at 820px. The list being a constant with a
 comment is what keeps the cost bounded and the choice arguable.
 
-What that width is there to catch is the **shape change**, not the pixels. 768-1024px is where
-Tailwind's `sm:`/`md:` breakpoints collapse a two-column `FieldGrid`, and where `StaffTabBar`'s
-six-slot phone dock gives way to the header nav. Those two swap at `lg` (1024px) and they swap
-together — the dock is `lg:hidden`, the header strip is `hidden lg:flex` — so a portrait tablet
-correctly gets the touch dock with the wide content layout, and now there is a baseline that would
+What that width is there to catch is the **shape change**, not the pixels. At 820px the content has
+opened to its `sm:`/`md:` layout — a two- or three-column `FieldGrid` stands in columns, and a
+four-column one holds at two until `lg` — while the staff bar is still folded. Its two forms swap
+together at `lg` (1024px): the Today/Week/Season pills are `hidden lg:flex`, and the calendar menu
+they fold into beside the search is `lg:hidden` (`src/components/ShopNav.tsx`). So a portrait
+tablet correctly gets the phone's bar over the wide content layout, and the tablet baseline would
 notice if one half of that pair ever moved without the other.
 
 Landscape phone is a real posture at the rail and is deliberately **not** photographed. Add it when
@@ -659,9 +663,15 @@ what stop it rotting.
 ## Review checklist
 
 - [ ] Semantic tokens only (no raw hex / palette-scale classes)
-- [ ] Light **and** dark verified (screenshots)
+- [ ] Verified in light (screenshots); dark as well only when the change is colour work — a token,
+      a tint, a hue ([H-90](../product/human-decisions.md#decision-register))
+- [ ] Pixel pass: the probe ran on every changed capture, every flag has a verdict (confirmed with
+      its measurement, or dismissed with its reason and settled), and the 1:1 tiles and the atlas
+      entries for the controls touched were read before the source —
+      [pixel-craft.md](pixel-craft.md)
 - [ ] Dock test: targets ≥ 44 px, text ≥ 16 px, AA contrast (4.5:1 text, 3:1 focus ring/control
-      border) — measured, not eyeballed; the axe scan does not check contrast today
+      border) — measured, not eyeballed; axe checks contrast only on the surfaces
+      `e2e/a11y.spec.ts` scans
 - [ ] Buttons and button-shaped links via `buttonClass()`; labels centered in the target
 - [ ] Stacked form fields via `<Field>`/`<FieldGrid>`; controls aligned across columns
 - [ ] Loading = content-shaped skeletons; no layout shift

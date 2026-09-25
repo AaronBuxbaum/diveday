@@ -64,8 +64,9 @@ Turbopack's rather than V8's. ADR 20260903-the-dev-server-is-supervised has the 
 node scripts/screenshot.mjs /s/blue-mantis /shop/blue-mantis --as owner
 ```
 
-Light and dark × phone and desktop, into `screenshots/` (gitignored). `/shop/**` signs itself in
-through the seeded dev credentials. It needs a server already running and does not start one.
+Light × phone and desktop, into `screenshots/` (gitignored); add `--both` for dark as well, which
+only colour work needs. `/shop/**` signs itself in through the seeded dev credentials. It needs a
+server already running and does not start one.
 
 A capture matrix over staff pages runs to about 12 GB, so the supervisor may restart underneath it;
 the script retries a capture once when the connection drops and says so. A *second* failure is

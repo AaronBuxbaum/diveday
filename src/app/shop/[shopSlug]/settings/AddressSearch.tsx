@@ -397,11 +397,13 @@ export function AddressSearch({
             // `-ml-3` cancels the variant's own left padding so the label lines
             // up with the address above it rather than sitting indented from
             // it — a borderless button's box is invisible, so its padding reads
-            // as a stray indent instead of as the control's edge.
+            // as a stray indent instead of as the control's edge. That bleed
+            // leaves the box 4px from the card's `overflow-hidden` on a phone,
+            // a pixel short of the outset ring, so the ring is drawn inside.
             className={buttonClass({
               variant: "danger-ghost",
               size: "sm",
-              className: "-ml-3 mt-1",
+              className: "-ml-3 mt-1 focus-visible:focus-ring-inset",
             })}
           >
             {saving === "removing" ? copy.removing : copy.removeLabel}

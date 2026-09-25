@@ -64,7 +64,10 @@ export function NoShowScript({
     // speaks (`BlockedDiverRow`'s reasons, `LedgerGroup folded`): keyboard and
     // screen-reader behaviour for free, and no client component for a thing
     // that is a triangle.
-    <details className="group/no-show px-4 pb-3 sm:px-5">
+    // No horizontal padding of its own: the row already keeps its room
+    // (`LedgerRow`), so the caret sits on the column the name above it
+    // starts on, and the summary's hover chip bleeds 8px past it.
+    <details className="group/no-show pb-3">
       <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-sm font-medium text-muted transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
         <DisclosureCaret className="group-open/no-show:rotate-90" />
         {copy.door}
@@ -116,7 +119,7 @@ export type NoShowSalvageCopy = {
 
 export function NoShowSalvage({ copy }: { copy: NoShowSalvageCopy }) {
   return (
-    <div className="px-4 pb-3 text-sm sm:px-5">
+    <div className="pb-3 text-sm">
       <p className="text-muted">{copy.line}</p>
       {copy.links.length > 0 ? (
         <ul className="mt-1 flex flex-wrap gap-x-4">

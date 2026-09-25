@@ -133,11 +133,20 @@ export function ProductChapterNav({
   return (
     <nav
       aria-label={ariaLabel}
-      className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm"
+      className="sticky top-0 z-20 flow-root border-b border-border bg-background/95 backdrop-blur-sm"
     >
+      {/* `py-1.5 -my-0.5`, not `py-1`: a scroll box clips both axes, and
+          4px above and below the 44px tabs left the focus ring's 5px a pixel
+          short at each. The margin takes back what the padding adds, so the
+          bar keeps its 53px — but only because the nav is `flow-root`.
+          Without it the strip's -2px top margin collapses through the nav
+          (no top border, no padding) and through its `relative` parent, so
+          the nav rose 2px, grew to 55px and painted over the hero's hairline
+          (review lab, 2026-09-25). One pixel is still short while the bar is
+          stuck: the ring's top then sits 1px above the screen (#1977). */}
       <div
         ref={stripRef}
-        className="mx-auto flex max-w-6xl items-center gap-x-4 sm:gap-x-8 px-4 sm:px-6 py-1 text-sm overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        className="mx-auto -my-0.5 flex max-w-6xl items-center gap-x-4 sm:gap-x-8 px-4 sm:px-6 py-1.5 text-sm overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       >
         <p className="shrink-0 py-2 text-xs sm:text-sm font-semibold tracking-tight">{title}</p>
         <ol className="flex items-center gap-x-2 sm:gap-x-8 shrink-0">

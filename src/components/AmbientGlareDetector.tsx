@@ -237,10 +237,13 @@ export function AmbientContrastControl({
       <div className="mt-1.5 flex max-w-full overflow-x-auto overscroll-x-contain rounded-full border border-border bg-surface-sunken p-1">
         {CONTRAST_MODES.map((value) => {
           const active = value === mode;
+          // The ring sits inside the pill: the track scrolls sideways on a
+          // narrow phone, and a scroll box clips both axes — its 4px of
+          // padding left an outset ring's 5px a pixel short.
           return (
             <label
               key={value}
-              className={`inline-flex min-h-11 cursor-pointer items-center rounded-full px-3 text-sm font-semibold whitespace-nowrap transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
+              className={`inline-flex min-h-11 cursor-pointer items-center rounded-full px-3 text-sm font-semibold whitespace-nowrap transition-colors has-[:focus-visible]:focus-ring-inset ${
                 active ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
               }`}
             >

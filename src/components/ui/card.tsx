@@ -145,6 +145,24 @@ export function sectionCardClass({
     .trim();
 }
 
+/**
+ * **The corner of a fill laid flush inside a panel**: the panel's radius less
+ * the one thing between them, its 1px border — 20 − 1 = 19px, a curve that
+ * runs parallel to the panel's own (docs/design/pixel-craft.md, class 6).
+ *
+ * For a `padding="none"` card whose first or only child paints a fill against
+ * the panel's edge — a `<summary>`'s hover band — and where the card does not
+ * clip. Apply it to the corners the fill actually touches; a corner that meets
+ * the card's own body stays square. The manifest's "On this phone" summary
+ * wore the control rung, 12px, flush in the 20px corner, so its hover fill
+ * poked out past the panel's curve on every manifest capture the probe took.
+ *
+ * A clipped card (`DisclosureRowList`'s `overflow-hidden`) does not need it,
+ * because the card's own corner cuts the fill; clipping is the wrong fix for a
+ * card that holds focusable controls near its edge, whose rings it would cut.
+ */
+export const PANEL_INNER_RADIUS = "rounded-[calc(var(--radius-panel)-1px)]";
+
 /** Closed set on purpose — a caller never hands this component an arbitrary tag. */
 type SectionCardElement = "section" | "div" | "article" | "aside" | "ul" | "li" | "details";
 

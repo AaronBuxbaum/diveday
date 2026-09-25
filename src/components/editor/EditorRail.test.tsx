@@ -129,6 +129,27 @@ describe("the unsaved-changes sentence", () => {
     expect(await screen.findByText("Unsaved changes in Pricing")).toBeVisible();
   });
 
+  /**
+   * The sentence sits in `StickyFormActions` beside the one Save, a `gap-3`
+   * row. Empty, it was still a flex item, so the pixel probe found it taking
+   * 12px after the button on every dive-site editor capture. It cannot simply
+   * be left out: a live region has to be in the document before its words
+   * change, or the change is never announced. So it stays, out of the row's
+   * flow, until it has something to say.
+   */
+  it("stays in the document while silent, but out of the action row's flow", async () => {
+    const { container } = render(<Editor />);
+    const region = container.querySelector("form [aria-live='polite']");
+    expect(region).not.toBeNull();
+    expect(region).toBeEmptyDOMElement();
+    expect(region).toHaveClass("absolute");
+
+    await userEvent.type(screen.getByLabelText("Price"), "595");
+
+    expect(await screen.findByText("Unsaved changes in Pricing")).toBe(region);
+    expect(region).not.toHaveClass("absolute");
+  });
+
   it("counts once more than one section is edited", async () => {
     render(<Editor />);
 

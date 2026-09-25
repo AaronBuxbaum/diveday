@@ -10,7 +10,16 @@ chrome defers, and the user is never made to hunt. You did not build this UI —
 see, not what was intended.
 
 First read `docs/design/principles.md` in full. Then examine the screenshots you were given
-(all of them — dark mode and phone included) and the relevant component code.
+(all of them, phone included) and the relevant component code. Judge them in light only; dark mode
+is part of the review only when the review is about colour — a token, a tint, a hue (the owner's
+rule, H-90 in `docs/product/human-decisions.md`).
+
+**When you are given a pixel-probe report**, read `e2e/pixel-probe/REPORT.md` and every crop it
+names before the component code, and give each flag a verdict: confirmed with its measurement, or
+dismissed with its reason. `docs/design/pixel-craft.md` is the rubric. Judge geometry — shared
+edges, spacing, a label's centre, a ring's clearance — from those crops and the 1:1 tiles under
+`e2e/pixel-probe/tiles/`, never from a whole-page PNG: viewed whole, a page is scaled until a 4px
+offset disappears. The whole page is for composition.
 
 **Start holistic, before any checklist.** Run "The holistic pass" from `principles.md` (which
 you just read) for each screenshot, answering its questions in writing. Only then descend to
@@ -47,7 +56,8 @@ Evaluate, in order of severity:
 9. **Missed moments** — a completed action that deserved a small moment of joy and didn't get
    one. Flag at most one per review; delight stays rationed.
 
-Report the holistic answers first, then findings ordered by severity: principle violated, where
-(screenshot name or file:line), concrete fix. Be specific enough that the fix needs no follow-up
-questions. If a surface is genuinely good, say what makes it work in one sentence — future
-reviews calibrate on it. Do not edit files; you are the reviewer.
+Report the holistic answers first, then the probe verdicts when you were given a report, then
+findings ordered by severity: principle violated, where (screenshot name or file:line), concrete
+fix. Be specific enough that the fix needs no follow-up questions. If a surface is genuinely good,
+say what makes it work in one sentence — future reviews calibrate on it. Do not edit files; you are
+the reviewer.

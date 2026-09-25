@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -335,7 +335,7 @@ export default async function WaiversPage({
               pageCount={auditPage.pageCount}
               href={pageHref}
               total={t("waiversStaff.signatures.pagination.total", { count: auditPage.total })}
-              t={t}
+              words={staffPagerWords(t)}
               className="mt-6"
             />
           </>

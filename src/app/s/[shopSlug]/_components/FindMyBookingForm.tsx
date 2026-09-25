@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
-import { controlClass, Field } from "@/components/ui/form";
+import { controlClassFor, Field } from "@/components/ui/form";
 import { type FindMyBookingFormState, requestFindMyBookingAction } from "../actions";
 
 const INITIAL_STATE: FindMyBookingFormState = {};
@@ -48,7 +48,7 @@ export function FindMyBookingForm({ shopSlug }: { shopSlug: string }) {
             maxLength={200}
             inputMode="email"
             autoComplete="email"
-            className={controlClass}
+            className={controlClassFor("md")}
           />
         </Field>
         <SubmitButton

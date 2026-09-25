@@ -1,5 +1,5 @@
 import { ActivityLog } from "@/components/ActivityLog";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import type { OffsetPage } from "@/db/paging";
 import { activityLine } from "@/i18n/activity-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -47,7 +47,6 @@ export function ActivitySection({
       // own links carry `#activity`, and landing on a shut door with the page
       // they asked for behind it would be the pager promising nothing.
       open={page.page > 1}
-      className="mt-8"
     >
       <div className="mt-3">
         <ActivityLog
@@ -74,7 +73,7 @@ export function ActivitySection({
             }#activity`
           }
           total={t("divers.activity.total", { count: page.total })}
-          t={t}
+          words={staffPagerWords(t)}
           className="mt-4"
         />
       </div>

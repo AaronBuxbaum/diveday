@@ -74,8 +74,17 @@ export function CoursesShelf({
       </div>
       <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {courses.map((course) => (
-          <SectionCard as="li" key={course.id} padding="none" className="overflow-hidden">
-            <Link href={course.href} className="group flex h-full flex-col">
+          // The clip is on the link, not the card. The link fills the card,
+          // so a card that clipped cut the whole outset ring away; an inset
+          // ring is no answer either, because the photo is a positioned box
+          // and paints over the link's own outline. Clipped at the card's
+          // radius, the link rounds the photo exactly as the card did, and an
+          // element's overflow never clips its own outline.
+          <SectionCard as="li" key={course.id} padding="none">
+            <Link
+              href={course.href}
+              className="group flex h-full flex-col overflow-hidden rounded-[inherit]"
+            >
               {course.heroImageUrl ? (
                 <StoredPhoto
                   src={course.heroImageUrl}

@@ -226,4 +226,27 @@ describe("the row", () => {
     renderRow({ locationName: "Key Largo", depthRange: "8–12 m" });
     expect(screen.getByText("Key Largo · 8–12 m")).toBeInTheDocument();
   });
+
+  /**
+   * A site that asks only for Open Water, at the published version, has no
+   * words and no badge to trail. The row still handed `LedgerRow` a wrapper,
+   * and a stacked row with no kind drops its trailing slot to a full-width
+   * line of its own on a phone: an empty line, whose 12px row gap the pixel
+   * probe measured as 24px where the row's lines sit 12px apart, with the
+   * site's name 6px above the row's centre.
+   */
+  it("hands the row no trailing slot when it has nothing to trail", () => {
+    const { container } = renderRow({});
+    const row = screen.getByRole("link", { name: "Molasses Reef" }).closest("li");
+    expect(row).not.toBeNull();
+    // The stretched link is empty by design (its name is its `aria-label`);
+    // an empty *box* is what this is about.
+    expect(row?.querySelectorAll("div:empty")).toHaveLength(0);
+    expect(container.querySelector(".pointer-events-none")).toBeNull();
+  });
+
+  it("keeps the trailing slot for a row with requirement words", () => {
+    const { container } = renderRow({ requiresNitrox: true });
+    expect(container.querySelector(".pointer-events-none")).toHaveTextContent("Nitrox");
+  });
 });

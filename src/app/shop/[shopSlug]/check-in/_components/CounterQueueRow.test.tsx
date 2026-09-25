@@ -522,3 +522,89 @@ describe("the no-show script", () => {
     expect(screen.queryByText("Checked in")).not.toBeInTheDocument();
   });
 });
+
+/**
+ * **One box for every hairline row** (`FILL_ROOM`, src/components/ui/ledger.tsx).
+ * The row keeps 8px of room around its words and nothing inside it adds an
+ * inset of its own, so every name on the counter starts on the column its
+ * group labels and the walk-in door start on. The queue's own `px-4 sm:px-5`
+ * set the names 16px (20px from `sm`) inside that column, and the blocked row
+ * passed the same inset to the row itself, where it fought the row's room.
+ */
+describe("the row's box", () => {
+  const salvage: NoShowSalvageCopy = {
+    line: "2 divers are waiting for this seat",
+    links: [],
+    money: { line: "Nothing is charged.", href: "/shop/blue-mantis/orders", label: "Orders" },
+  };
+  const states: [string, () => ReturnType<typeof renderRow>][] = [
+    [
+      "ready, with the not-here door",
+      () => renderRow({}, false, true, undefined, { claim: "frees_seat" }),
+    ],
+    ["checked in", () => renderRow({ bookingStatus: "checked_in" })],
+    ["blocked", () => renderRow(owesWaiver)],
+    [
+      "not here, with its salvage",
+      () => renderRow({ bookingStatus: "no_show" }, false, true, undefined, { salvage }),
+    ],
+  ];
+
+  it.each(states)("adds no horizontal inset of its own inside a %s row", (_state, draw) => {
+    const { container } = draw();
+    const article = container.querySelector("article");
+    expect(article).not.toBeNull();
+    // A control carries its own size's padding (`buttonClass`, a summary's
+    // chip), and so does a painted box (a badge); a block that only holds the
+    // row's words may not. A one-sided indent under a disclosure's caret is
+    // not an inset of the row and is not asked about.
+    const painted = (element: Element) =>
+      [...element.classList].some((token) => /^(?:bg-|border$|border-)/.test(token));
+    const insets = [...(article?.querySelectorAll("*") ?? [])]
+      .filter((element) => !element.matches("button, a, summary, button *, a *, summary *"))
+      .filter((element) => !painted(element))
+      .flatMap((element) =>
+        [...element.classList]
+          .filter((token) => /^(?:\S*:)?px-/.test(token))
+          .map((token) => `${element.tagName.toLowerCase()}: ${token}`),
+      );
+    expect(insets).toEqual([]);
+    // And the row's own horizontal padding is the room, and nothing else.
+    const own = [...(article?.classList ?? [])].filter((token) => /^(?:\S*:)?p[xse]-/.test(token));
+    expect(own).toEqual(["px-2"]);
+  });
+
+  it("spans the one tap from rule to rule, with its words on the column", () => {
+    const { container } = renderRow();
+    const tap = container.querySelector("article form > button[type='submit']");
+    // The form takes the row's 8px of room back, and the button keeps it as its
+    // own padding: the fill is the row's whole box, as a door's is.
+    expect(tap?.parentElement).toHaveClass("-mx-2");
+    expect(tap).toHaveClass("w-full", "px-2");
+    expect(tap?.className).not.toMatch(/(?:^|\s)(?:sm:)?px-(?:4|5)(?:\s|$)/);
+  });
+
+  /**
+   * **Two acts on one line keep the row's gap between them** (dive-domain-expert
+   * review, 2026-09-25). The settled row trails "Print a pass" a `gap-3` (12px)
+   * after its undo. Taking the row's room back on both sides pushed the undo's
+   * fill 8px into that gap, leaving 4px between two targets a wet-handed desk
+   * worker taps one after the other: tick the diver off, hand them a pass. So
+   * the tap takes back only the start side, and draws no end padding; the gap
+   * is the room at its end. The ready row above has nothing after its tap and
+   * keeps both sides.
+   */
+  it("keeps the settled row's undo a whole gap clear of its pass", () => {
+    renderRow({ bookingStatus: "checked_in" });
+    const undo = screen.getByRole("button", { name: "Undo check-in for Nadia Petrov" });
+    const pass = screen.getByRole("button", { name: "Print a pass" });
+    expect(undo.compareDocumentPosition(pass) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const form = undo.parentElement;
+    expect(form?.tagName).toBe("FORM");
+    expect(form).toHaveClass("-ms-2");
+    expect(form?.className).not.toMatch(/(?:^|\s)-m[xe]-/);
+    expect(undo).toHaveClass("w-full", "ps-2");
+    expect(undo.className).not.toMatch(/(?:^|\s)p[xe]-/);
+  });
+});

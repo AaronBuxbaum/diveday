@@ -413,26 +413,30 @@ function StaffRow({
         </CompactDisclosureRow>
       </div>
 
+      {/* One of two things, never both: Resend at the start for somebody still
+          invited, or the account's switches at the end for everybody else.
+          The Resend slot used to be an empty `<div>` on every other card,
+          which took this row's 8px gap and pushed the switches 8px down on a
+          phone (the pixel probe, settings-team). `sm:ms-auto` holds the
+          switches to the end without a placeholder holding the start. */}
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          {member.accountStatus === "invited" ? (
-            <form action={resendInviteAction}>
-              <input type="hidden" name="userAccountId" value={member.userAccountId} />
-              <SubmitButton
-                pendingLabel={t("settings.team.staffRow.sending")}
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "sm",
-                  className: "w-full sm:w-auto",
-                })}
-              >
-                {t("settings.team.staffRow.resendInvite")}
-              </SubmitButton>
-            </form>
-          ) : null}
-        </div>
+        {member.accountStatus === "invited" ? (
+          <form action={resendInviteAction}>
+            <input type="hidden" name="userAccountId" value={member.userAccountId} />
+            <SubmitButton
+              pendingLabel={t("settings.team.staffRow.sending")}
+              className={buttonClass({
+                variant: "secondary",
+                size: "sm",
+                className: "w-full sm:w-auto",
+              })}
+            >
+              {t("settings.team.staffRow.resendInvite")}
+            </SubmitButton>
+          </form>
+        ) : null}
         {member.accountStatus !== "invited" ? (
-          <div className="flex gap-2">
+          <div className="flex gap-2 sm:ms-auto">
             <form action={setStaffStatusAction}>
               <input type="hidden" name="personId" value={member.personId} />
               <input type="hidden" name="userAccountId" value={member.userAccountId} />

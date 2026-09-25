@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { PANEL_INNER_RADIUS } from "@/components/ui/card";
 import {
   loadOfflineManifest,
   primeOfflineManifestShell,
@@ -270,5 +271,27 @@ describe("OfflineManifestManager", () => {
       "min-h-14",
     );
     expect(group.getByTestId("device-settings")).toBeInTheDocument();
+  });
+
+  /**
+   * The summary sits flush inside a panel that does not clip, so its hover fill
+   * draws its own corners. At `rounded-lg` (12px) against the panel's 20px it
+   * poked out past the panel's curve at every corner it touched — the probe's
+   * `fill-corners` flag on 13 manifest captures. It takes the panel's inner
+   * corner (20 less the 1px border) wherever it touches the panel: all four
+   * while closed, when the summary is the whole card; the top two once open,
+   * when its bottom edge meets the body and a curve there would float the band
+   * off the rows beneath it.
+   */
+  it("gives the summary's hover fill the panel's inner corner where it touches the panel", async () => {
+    setOnline(false);
+    vi.mocked(loadOfflineManifest).mockResolvedValue(envelope());
+
+    render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
+
+    const heading = await screen.findByRole("heading", { name: "On this phone" });
+    const summary = heading.closest("summary");
+    expect(summary).toHaveClass(PANEL_INNER_RADIUS, "group-open/phone:rounded-b-none");
+    expect(summary).not.toHaveClass("rounded-lg");
   });
 });

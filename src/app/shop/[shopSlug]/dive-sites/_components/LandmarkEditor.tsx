@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { controlClass, controlClassFor, Field } from "@/components/ui/form";
 import {
   DIVE_SITE_LANDMARK_KINDS,
   type DiveSiteLandmark,
@@ -89,25 +89,27 @@ export function LandmarkEditor({
               key={index}
               className="rounded-lg border border-border bg-surface-sunken p-3"
             >
+              {/* One `md` row, the field guide's shape on the same page: the
+                  name box and the kind select stand at md's 48px beside an
+                  `md` Remove, each under a caption of its own. Remove was
+                  `sm`, a 14px word beside two 16px controls. */}
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-                <label className="min-w-0 flex-1 text-sm font-medium sm:min-w-48">
-                  {copy.nameLabel}
+                <Field label={copy.nameLabel} className="flex-1 sm:min-w-48">
                   <input
                     value={landmark.name}
                     onChange={(event) => update(index, { name: event.target.value })}
                     maxLength={80}
                     placeholder={copy.namePlaceholder}
-                    className={`${controlClass} mt-1`}
+                    className={controlClassFor("md")}
                   />
-                </label>
-                <label className="w-full text-sm font-medium sm:w-auto sm:min-w-40">
-                  {copy.kindLabel}
+                </Field>
+                <Field label={copy.kindLabel} className="w-full sm:w-auto sm:min-w-40">
                   <select
                     value={landmark.kind}
                     onChange={(event) =>
                       update(index, { kind: event.target.value as DiveSiteLandmarkKind })
                     }
-                    className={`${controlClass} mt-1`}
+                    className={controlClassFor("md")}
                   >
                     {DIVE_SITE_LANDMARK_KINDS.map((kind) => (
                       <option key={kind} value={kind}>
@@ -115,31 +117,26 @@ export function LandmarkEditor({
                       </option>
                     ))}
                   </select>
-                </label>
+                </Field>
                 <button
                   type="button"
                   aria-label={copy.removeAriaLabel.replace("{name}", landmark.name)}
                   onClick={() => setLandmarks((current) => current.filter((_, at) => at !== index))}
-                  className={buttonClass({
-                    variant: "ghost",
-                    size: "sm",
-                    className: "w-full sm:w-auto",
-                  })}
+                  className={buttonClass({ variant: "ghost", className: "w-full sm:w-auto" })}
                 >
                   {copy.remove}
                 </button>
               </div>
-              <label className="mt-3 block text-sm font-medium">
-                {copy.noteLabel}
+              <Field label={copy.noteLabel} className="mt-3">
                 <textarea
                   value={landmark.note}
                   onChange={(event) => update(index, { note: event.target.value })}
                   rows={2}
                   maxLength={400}
                   placeholder={copy.notePlaceholder}
-                  className={`${controlClass} mt-1`}
+                  className={controlClass}
                 />
-              </label>
+              </Field>
             </li>
           ))}
         </ul>

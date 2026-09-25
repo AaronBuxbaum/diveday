@@ -167,8 +167,7 @@ export function RepeatFields({
                 className={buttonClass({
                   variant: on ? "primary" : "secondary",
                   size: "sm",
-                  className:
-                    "min-w-12 rounded-full has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary has-[:focus-visible]:ring-offset-2",
+                  className: "min-w-12 rounded-full has-[:focus-visible]:focus-ring",
                 })}
               >
                 {/* The checkbox itself is the state — visually replaced by the

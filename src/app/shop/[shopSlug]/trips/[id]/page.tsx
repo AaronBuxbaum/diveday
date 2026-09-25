@@ -1240,7 +1240,16 @@ export default async function ManageTripPage({
           // gear queries run — the id on a wrapper that always renders means
           // the scroll lands once, rather than landing late and moving when
           // the section replaces a fallback that was not the target.
-          <div id={PREP_SECTION_ID} className="mt-10 scroll-mt-6">
+          //
+          // **And it takes no room when the list has nothing to say.** On a
+          // departure nobody is booked on, the list renders no node at all
+          // (the roster above already says the boat is empty), and the pixel
+          // probe measured this wrapper 0px tall still holding its `mt-10`
+          // open: 40px where its siblings sit 20px apart.
+          // `empty:hidden` removes it then and only then. Suspense's markers
+          // are comments, which `:empty` ignores, and the skeleton or a
+          // read-failure banner inside it is a child, which it does not.
+          <div id={PREP_SECTION_ID} className="mt-10 scroll-mt-6 empty:hidden">
             <Suspense fallback={<PrepBodySkeleton />}>
               <TripPrepSection
                 shop={shop}

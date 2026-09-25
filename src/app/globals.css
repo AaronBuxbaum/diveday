@@ -167,10 +167,13 @@
      **Inset now shares the control rung** rather than standing between them —
      a well carved out of a group is a control-shaped hole, and a third rung
      between 12 and 20 is a difference nobody can see. Nothing on a staff
-     surface is squarer than the control or sits between the rungs; Tailwind's
-     own `rounded-xl`/`rounded-2xl` (12/16) are not on the ladder and
-     `card.test.tsx` refuses them. Reef's ladder was 10 · 18 · 28, and its
-     control read 12 from Clearwater until 2026-09-02. */
+     surface is squarer than the control or sits between the rungs, except a
+     nested corner derived from its ancestor, spelled only as
+     `SEGMENT_CORNER` (7, in `ui/segmented.ts`) or `PANEL_INNER_RADIUS` (19,
+     in `ui/card.tsx`). Tailwind's own `rounded-xl`/`rounded-2xl` (12/16)
+     are not on the ladder and `card.test.tsx` refuses them. Reef's ladder
+     was 10 · 18 · 28, and its control read 12 from Clearwater until
+     2026-09-02. */
   --radius: 0.75rem;
   --radius-inset: 0.75rem;
   --radius-panel: 1.25rem;
@@ -703,10 +706,61 @@ summary {
  * `outline-offset` keeps the ring off the control's own fill, so the color it
  * has to beat is the surface behind it — which is what --focus-ring is measured
  * against (see its definition for the per-skin ratios).
+ *
+ * **In `@layer base`, and that is load-bearing.** Tailwind v4 emits every
+ * utility inside `@layer utilities`, and a declaration outside any layer beats
+ * every layered one whatever its specificity. Written unlayered, this rule
+ * overrode every component that asked for its ring somewhere else: the trip's
+ * About summary and the offline manifest's rows asked for an inset ring,
+ * rendered this one at +2px instead, and their `overflow-hidden` card cut it
+ * away — the pixel probe measured the outline at 3px / +2px on both, among
+ * 1,700 clipped rings. In the base layer it is the default every control gets
+ * and a utility below can still move. `focus-ring.test.ts` holds both halves.
  */
-:where(a, button, input, select, textarea, summary):focus-visible {
+@layer base {
+  :where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * The same ring, for the two places the rule above cannot draw it.
+ *
+ * `focus-ring` is for a stand-in the eye reads as the control while focus
+ * lands somewhere invisible: the label wrapping an `sr-only` input
+ * (`has-[:focus-visible]:focus-ring`), a switch's track beside its hidden
+ * checkbox (`peer-focus-visible:focus-ring`).
+ *
+ * `focus-ring-inset` is for a row flush inside an `overflow-hidden` container
+ * — a list card's rows, a scroll box's options — where the outset ring has no
+ * room and is cut. At -3px the outline's outer edge is the element's own
+ * border box, so a clip at that edge cannot reach it. Where the row meets the
+ * container's rounded corner it takes the container's radius too, or the clip
+ * shaves the ring's square corner.
+ *
+ * Drawn inset, the ring sits on the element's own fill rather than on the
+ * surface behind it that the rule above is measured against, so these are the
+ * pairs WCAG 1.4.11's 3:1 applies to (light scheme, from the tokens): 4.87:1
+ * on the settings rail's selected `bg-primary-tint`; 4.75:1 on
+ * `bg-surface-sunken` (4.95:1 on boat mode's, under the offline manifest's
+ * rows); 4.83:1 on the palette's active `bg-primary/10`; and on the roll
+ * call's tone rows 4.09:1 at worst, a boarded row's `bg-success/20` (5.53:1
+ * and up with glare on). On the manifest the ring is `:root`'s `--primary`,
+ * not boat mode's, because `.boat-mode` redeclares `--primary` on a
+ * descendant, which a `var()` resolved on `:root` never sees (#1988).
+ *
+ * A width or an offset written at a call site is a second spelling of the
+ * ring, and `focus-ring.test.ts` refuses one under any focus variant.
+ */
+@utility focus-ring {
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
+}
+
+@utility focus-ring-inset {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: -3px;
 }
 
 /*

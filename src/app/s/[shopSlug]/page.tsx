@@ -12,6 +12,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRowList } from "@/components/ui/disclosure";
 import { FilterChips } from "@/components/ui/FilterChips";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
@@ -1585,7 +1586,7 @@ function ScheduleReviewsSkeleton() {
       </div>
       <div className="mt-4 flex flex-col">
         {[0, 1].map((row) => (
-          <div key={row} className="border-t border-border py-4 last:border-b">
+          <div key={row} className={`py-4 ${ledgerRowBoxClass}`}>
             <div className="h-4 w-24 rounded bg-surface-sunken" />
             <div className="mt-1.5 h-5 w-80 max-w-full rounded bg-surface-sunken" />
             <div className="mt-1.5 h-4 w-56 max-w-full rounded bg-surface-sunken" />

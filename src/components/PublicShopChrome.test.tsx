@@ -70,6 +70,35 @@ describe("the public shop footer", () => {
     expect(screen.getByText("hello@demo.invalid")).toBeInTheDocument();
   });
 
+  /**
+   * A shop still being set up has no address, phone or email on file. The
+   * contact line rendered anyway, empty, and in the footer's phone column its
+   * 8px gap sat under the credit line with nothing below it (the pixel probe,
+   * public-schedule-new-shop).
+   */
+  it("leaves no empty contact line for a shop with no way to reach it on file", () => {
+    const { container } = render(
+      <PublicShopFooter
+        shop={{
+          ...shop,
+          contactEmail: null,
+          contactPhone: null,
+          addressStreet: null,
+          addressLocality: null,
+          addressRegion: null,
+          addressPostalCode: null,
+          addressCountry: null,
+        }}
+        spokenLanguagesLine={null}
+        t={t}
+      />,
+    );
+
+    const columns = container.querySelector("footer > div");
+    expect(columns?.children).toHaveLength(1);
+    expect(columns?.querySelectorAll(":scope > :empty")).toHaveLength(0);
+  });
+
   it("shows the words without a map link when there is too little to point at", () => {
     // A country and a shop name would centre a map on the middle of a continent
     // and present it as the shop's front door — `shopMapQuery`'s own rule. The

@@ -13,12 +13,19 @@ routes one tap apart rendered the same panel at two different corner radii, and 
 cards sat at two elevations on one page.
 
 One spelling now, and it is the one `ShopStat` and the `<Table>` shell already shared —
-`rounded-panel border border-border bg-surface shadow-bed` (Reef's 28px panel on the warm bed, ADR
-20260901-diveday-reimagined 13a) — so **a card, a stat tile and a table shell read as
-the same object**. That spelling lost its shadow on 2026-08-28 (ADR
-20260827-clearwater-surface-language, decision 1: **elevation is earned**) — a panel at rest is a
-fill and a hairline, and a shadow says the thing *floats above the page*, which is true of a menu,
-a sheet, a dialog and a toast and of nothing else.
+`rounded-panel border border-border bg-surface shadow-bed` — so **a card, a stat tile and a table
+shell read as the same object**. `rounded-panel` is the panel rung, 20px (the ladder is under
+[The rungs, as they ship](#the-rungs-as-they-ship)).
+
+**A resting panel sits on the bed.** `shadow-bed` is the one soft shadow a panel wears: a token
+(`--shadow-bed`, two neutral layers, redrawn for the night palette), so it moves with the palette
+and never with a call site. Clearwater took every panel's shadow away on 2026-08-28 (ADR
+20260827-clearwater-surface-language, decision 1: **elevation is earned**), and Reef put this one
+back for the panel alone (ADR 20260901-diveday-reimagined, 13a). Everything else still follows
+Clearwater: a menu, a sheet, a dialog and a toast carry `shadow-lg`/`shadow-2xl` because they float
+above the page, and `card.test.tsx` fails the build on any `rounded-panel` class string that also
+carries `shadow-sm`. Round 2's surface (ADR 20260918-nothing-to-explain, slice 22b) says "no bed".
+The code has kept it, and whether it should stay is #1965.
 
 ```tsx
 import { SectionCard } from "@/components/ui/card";
@@ -42,14 +49,17 @@ import { SectionCard } from "@/components/ui/card";
   `none` for a card that is a **shell**: a divided row list, a `<details>`, anything whose own parts
   pad themselves.
 - **There is no `elevated` prop either.** It existed so a card nested inside another card could
-  stop stacking surface on surface; with no shadow at rest there is nothing left to stack, and an
-  option that can only ever be a no-op is a call site asking for an elevation it will never get.
+  stop stacking surface on surface. The panel's elevation is now the bed, the same at every call
+  site, so there is nothing left to switch, and an option that can only ever be a no-op is a call
+  site asking for an elevation it will never get.
   `Table`'s `flush` and `ShopStat`'s `inset` still follow containment — they drop the *border and
   fill*, which is a different question.
-- **The heading is folded in.** Pass `title`; never spell `<h2 className="text-lg font-semibold">`
-  at a call site. `titleAs="h3"` steps a card down one level when it sits under a group that
-  already owns the `h2` (the export page's Backups half) — the element *and* its size, so a group
-  and the five cards under it never shout at the same volume.
+- **The heading is folded in.** Pass `title`; never spell a heading class at a call site. The
+  card's `h2` is `LEAD_TITLE_CLASS` from `src/components/ui/typography.ts` (`text-2xl font-semibold
+  tracking-tight`, 24px). `titleAs="h3"` steps a card down one level, to `text-base
+  font-semibold` (16px), when it sits under a group that already owns the `h2` (the export page's
+  Backups half). It changes the element *and* its size, so a group and the five cards under it
+  never shout at the same volume.
 - **`description` and `actions`** are the rest of the header row: one quiet line under the heading,
   and whatever belongs to its right (a `Badge`, the section's buttons), wrapping below it on a
   phone. The card owns the gap between that header and the body, so **a call site never opens its
@@ -78,9 +88,11 @@ it names itself.
 - **A plural body → the heading stands above, and the members name themselves.** "Plural" means a
   stack of sibling cards, a grid of object cards, one `padding="none"` shell of divided rows, or a
   body that renders `EmptyState` when it is empty. The group heading is a bare `<h2
-  className="text-lg font-semibold">` — the **same scale** as a card's own `h2`, because a section
-  speaks at one volume whether its heading sits inside one card or above five — and each card under
-  it steps down with `titleAs="h3"`, or carries the object's own name when the card *is* a thing.
+  className={LEAD_TITLE_CLASS}>`, the **same scale** as a card's own `h2`, because a section speaks
+  at one volume whether its heading sits inside one card or above five. Each card under it steps
+  down with `titleAs="h3"`, or carries the object's own name when the card *is* a thing. The tree
+  does not keep this yet: most hand-spelled section headings still wear `SECTION_TITLE_CLASS`
+  (`text-lg`, 18px) beside titled cards at 24px, and #1966 picks the one size.
   The heading has to live above precisely because the body is unreliable: close-out's "Tomorrow"
   heading must survive its card swapping to an `EmptyState`, and a heading inside that card would
   vanish at the moment the section most needs to say "nothing waiting".
@@ -100,22 +112,24 @@ Parts only true *together* — a progress figure over its own rows, a map above 
 — are one card with internal structure. Members that can be added, removed, or linked to on their
 own are a group under one heading. **A group of one is still a group if it can grow.**
 
-**The hand-spelled anatomies place by this grammar too.** The marketing exemption above is a
-*type-scale* exemption, not a placement one, and the marketing pages already prove it: `/product`'s
-mid-CTA heading sits **inside** its card, hand-spelled under 36px display type where `text-lg` would
-turn the page's one checkable proof into fine print. The same goes for a tone-carrying panel, a
-full-bleed shell, and an eyebrow — each hand-spells its heading for a reason stated at the site, and
-each still *places* it by this grammar. So does a card that is a `<form>`: `SectionCard`'s element
-set excludes `<form>`, so such a card cannot take a `title` at all, and its heading is hand-spelled
-at the `h2` scale as the card's first child (`BookActivity` on the diver record) rather than floated
-above it.
+**The hand-spelled anatomies place by this grammar too.** The marketing pages keep their own type
+scale at the call site (`card.tsx`'s docblock), but that is a *type-scale* exemption, not a
+placement one, and the marketing pages already prove it: `/product`'s mid-CTA heading sits
+**inside** its card, hand-spelled at `SUB_TITLE_CLASS` under the chapter's 36px heading, where the
+card's own `h3` rung (`text-base`) would turn the page's one checkable proof into fine print. The
+same goes for a tone-carrying panel, a full-bleed shell, and an eyebrow. Each hand-spells its
+heading for a reason stated at the site, and each still *places* it by this grammar. So does a card
+that is a `<form>`: `SectionCard`'s element set excludes `<form>`, so such a card cannot take a
+`title` at all, and its heading is hand-spelled at the `h2` scale as the card's first child
+(`BookActivity` on the diver record) rather than floated above it.
 
 **A tone does not change a heading's volume.** A warning, success or primary-tinted panel spells its
-`h2` at the same `text-lg font-semibold` as an untoned one, keeping whatever tone colour it carries:
-scale carries hierarchy, colour carries state. A heading that grew or shrank because something went
-wrong would move the page's apparent structure as panels change state, and a reader would re-learn
-the hierarchy every time — so a tone-carrying panel's heading is never quieter for having a tone,
-and never louder for it either.
+`h2` on the same rung as an untoned one, keeping whatever tone colour it carries: scale carries
+hierarchy, colour carries state. A heading that grew or shrank because something went wrong would
+move the page's apparent structure as panels change state, and a reader would re-learn the
+hierarchy every time — so a tone-carrying panel's heading is never quieter for having a tone, and
+never louder for it either. The trip's prep page breaks this today: its two warning panels are
+`LEAD_TITLE_CLASS` and its untoned sections `SECTION_TITLE_CLASS`, which is part of #1966.
 
 ### Section rhythm: `space-y-10`, never `mt-*`
 
@@ -272,8 +286,8 @@ in the *device's* language, whatever the reader's is. Every photo picker in the 
 shape by hand:
 
 - the input is `sr-only` **inside** a `<label>` wearing `buttonClass()`, so what looks like a
-  button *is* the label — one control, one tap target, one focus stop (the ring is drawn with
-  `focus-within`);
+  button *is* the label — one control, one tap target, one focus stop (the label draws the ring,
+  with `has-[:focus-visible]:focus-ring`; see [Focus rings](#focus-rings-one-ring-two-placements));
 - `sr-only` and never `hidden`: a `display:none` control carrying `required` makes Chrome refuse
   the whole submit as "not focusable" instead of reporting the field;
 - what was picked is named beside it, and the button switches to its `chooseAnother` word;
@@ -427,77 +441,85 @@ surface that renders per-field errors gets the focus move for free. `key` it on 
 
 ### Which tone token: `text-success` or `text-success-strong`
 
-Settled by measurement, so nobody has to re-derive it. Ratios computed from the token values in
-`src/app/globals.css`, sRGB compositing, WCAG 2.x relative luminance. AA for normal text is
-**4.5:1**, and contrast is size-independent — a 12px badge and a 16px paragraph face the same bar,
-because none of this is "large text" (18pt / 14pt bold).
+Settled by measurement, so nobody has to re-derive it. The ratios below are computed from the token
+values in `src/app/globals.css` on Tide's palette (recomputed 2026-09-25), with sRGB compositing and
+WCAG 2.x relative luminance, and truncated to two places so a figure never overstates. AA for
+normal text is **4.5:1**, and contrast is size-independent — a 12px badge and a 16px paragraph face
+the same bar, because none of this is "large text" (18pt / 14pt bold).
 
 The `-strong` tokens are `color-mix(in srgb, black 6%, var(--success|--warning))`. The `-tint`
-fills are `color-mix(in srgb, var(--<hue>) 10%, var(--surface))` — **opaque**, which is what makes
-"on its own tint" a single number rather than one per parent. See the note under the table.
+fills are drawn values, one per hue per scheme (`--success-tint` is `#e3f2ea` by day and `#0b2617`
+at night), and **opaque**, which is what makes "on its own tint" a single number rather than one
+per parent. See the note under the table.
 
-**Light palette** (`--surface` `#ffffff`, `--background` `#faf9f6`, `--surface-sunken` `#f1efe9`):
-
-| text | on `bg-surface` | on its own `-tint` | on `bg-background` | on `bg-surface-sunken` |
-| --- | --- | --- | --- | --- |
-| `text-success` | 5.02 | **4.38** | 4.76 | **4.36** |
-| `text-success-strong` | 5.56 | 4.86 | 5.28 | 4.84 |
-| `text-warning` | 5.02 | **4.39** | 4.77 | **4.37** |
-| `text-warning-strong` | 5.56 | 4.86 | 5.28 | 4.83 |
-| `text-danger` | 6.47 | 5.45 | 6.15 | 5.63 |
-
-**Dark palette** (`--surface` `#0d222d`, `--background` `#071720`, `--surface-sunken` `#051118`):
+**Light palette** (`--surface` `#ffffff`, `--background` `#f2f2f7`, `--surface-sunken` `#ececf1`):
 
 | text | on `bg-surface` | on its own `-tint` | on `bg-background` | on `bg-surface-sunken` |
 | --- | --- | --- | --- | --- |
-| `text-success` | 9.39 | 7.59 | 10.46 | 10.96 |
-| `text-success-strong` | 8.30 | 6.71 | 9.24 | 9.69 |
-| `text-warning` | 9.80 | 8.01 | 10.92 | 11.44 |
-| `text-warning-strong` | 8.66 | 7.08 | 9.65 | 10.11 |
-| `text-danger` | 5.91 | 5.20 | 6.59 | 6.90 |
+| `text-success` | 5.42 | 4.69 | 4.86 | 4.61 |
+| `text-success-strong` | 5.97 | 5.16 | 5.35 | 5.07 |
+| `text-warning` | 5.42 | 4.80 | 4.86 | 4.60 |
+| `text-warning-strong` | 5.97 | 5.28 | 5.35 | 5.07 |
+| `text-danger` | 5.38 | 4.65 | 4.82 | 4.57 |
 
-Bold is under AA. Read off it:
+**Dark palette** (`--surface` `#1c1c1e`, `--background` `#000000`, `--surface-sunken` `#0b0b0d`):
+
+| text | on `bg-surface` | on its own `-tint` | on `bg-background` | on `bg-surface-sunken` |
+| --- | --- | --- | --- | --- |
+| `text-success` | 8.41 | 7.96 | 10.38 | 9.72 |
+| `text-success-strong` | 7.43 | 7.03 | 9.17 | 8.59 |
+| `text-warning` | 8.27 | 7.90 | 10.21 | 9.56 |
+| `text-warning-strong` | 7.31 | 6.98 | 9.02 | 8.45 |
+| `text-danger` | 4.99 | 5.08 | 6.16 | 5.77 |
+
+Nothing in either table is under AA. The rules below were set on the Clearwater palette, where the
+raw success and warning hues measured 4.36–4.39 on a tint or a sunken fill and failed. On Tide's
+palette the raw hues clear those fills by 0.1–0.3, and `-strong` clears them by 0.5 or more, so the
+components still use `-strong`. Read off it:
 
 - **A coloured ink sits on `bg-<hue>-tint`, never on `bg-<hue>/10`.** The `/10` form is
   translucent, so the real background is the hue mixed over *whatever is behind the element*, and
   every number in these tables assumed that was `--surface`. It frequently is not: a pill rendered
-  straight onto `--background` measured 4.21:1 where the table says 4.86, and a `bg-primary/10`
-  badge nested inside a `bg-success/10` row on `/check-in` reached 4.09:1 — the worst in the app,
-  and invisible to anyone reading the palette (issue #793). The opaque token is the table's number
-  wherever the element is mounted, including inside a sunken panel, which is why the old "a tinted
-  status fill does not go inside a sunken panel" rule is gone. Reach for `Badge` and this is
-  already handled.
-- **Light is the binding scheme.** Every dark-palette combination clears AA by a wide margin.
-  Mixing black into an already-light-on-dark hue *lowers* contrast, so `-strong` is a light-mode fix
-  that costs a little in dark and never rescues anything there. It is still safe everywhere, which
-  is why one token can serve both schemes.
-- **On a tint of its own hue, success/warning text is `-strong`.** The raw hue lands at
-  4.38–4.39, just under. `danger` needs no `-strong` and has none.
-- **On `bg-surface-sunken`, success/warning text is `-strong`** even with no tint (4.36 → 4.84).
-  This is why `StatTile`'s figure uses `-strong`: the tile's `inset` variant is a sunken box.
-- **On plain `bg-surface`, the raw hue is fine** (5.02) — and that is exactly why a component that
+  straight onto `--background` measured 4.21:1 where the palette's own table said 4.86, and a
+  `bg-primary/10` badge nested inside a `bg-success/10` row on `/check-in` reached 4.09:1 — the
+  worst in the app, and invisible to anyone reading the palette (issue #793). The opaque token is
+  the table's number wherever the element is mounted, including inside a sunken panel, which is why
+  the old "a tinted status fill does not go inside a sunken panel" rule is gone. Reach for `Badge`
+  and this is already handled.
+- **Light is the binding scheme for success and warning.** Every dark-palette pairing of those two
+  clears AA by a wide margin. Mixing black into an already-light-on-dark hue *lowers* contrast, so
+  `-strong` is a light-mode fix that costs a little in dark and never rescues anything there. It is
+  still safe everywhere, which is why one token can serve both schemes. `danger` is the tightest ink
+  in both schemes: 4.57 on a light sunken fill, 4.99 on the dark surface.
+- **On a tint of its own hue, success/warning text is `-strong`.** The raw hue lands at 4.69–4.80
+  (4.38–4.39 on Clearwater's palette, just under). `danger` needs no `-strong` and has none.
+- **On `bg-surface-sunken`, success/warning text is `-strong`** even with no tint (4.60 → 5.07).
+  This is why `ShopStat`'s figure uses `-strong`: the tile's `inset` variant is a sunken box.
+- **On plain `bg-surface`, the raw hue is fine** (5.42) — and that is exactly why a component that
   does not know what it is mounted on may not rely on it. `KindChip` named `bg-surface` on *itself*
   so it could; its replacement, `LedgerRow`'s kind word (`src/components/ui/ledger.tsx`), carries no
-  fill at all, so it takes `text-warning-strong` (5.56 / 4.83 / 4.86 — clears on surface, sunken and
-  tint alike) and keeps `text-danger`, which needs no `-strong` at any of them. The case is not
-  hypothetical: a `LedgerRow` that is a door hovers to `bg-surface-sunken/60`, where the raw hue is
-  4.37. **The general rule this is an instance of:** a component mounted in whatever container its
-  caller chose picks the ink that clears everywhere, rather than the one that clears where its
-  author happened to be looking — `FormStatus` and `ShopStat` already settle it the same way. A
-  `className` override is not the escape hatch, because Tailwind emits colour utilities
-  alphabetically by token name and the override would win or lose by that accident.
+  fill at all, so it takes `text-warning-strong` (5.97 / 5.07 / 5.28 on surface, sunken and tint)
+  and keeps `text-danger`, which needs no `-strong` at any of them. The case is not hypothetical: a
+  `LedgerRow` that is a door hovers to `bg-surface-sunken/60`, where the raw hue measured 4.37 on
+  Clearwater's palette (4.92 today). **The general rule this is an instance of:** a component
+  mounted in whatever container its caller chose picks the ink that clears everywhere, rather than
+  the one that clears where its author happened to be looking — `FormStatus` and `ShopStat` already
+  settle it the same way. A `className` override is not the escape hatch, because Tailwind emits
+  colour utilities alphabetically by token name and the override would win or lose by that
+  accident.
 - **`opacity-*` dims the ratio too.** A row greyed out with `opacity-60` takes its own status chip
   down with it — 2.81:1 on the import preview, on a table whose whole job is being read. Quiet ink
   is `text-muted`, which is a token with a measured ratio; opacity is not.
-- **A `/15` fill is a different question, and the answer is the skin.** Measured across all three
-  palettes at a 15% fill of the ink's own hue: **boat light bottoms out at 4.98:1** and boat dark at
-  5.50:1, against the **app palette's 3.90:1** for the same pair. So the roll-call surfaces that use
+- **A `/15` fill is a different question, and the answer is the skin.** At a 15% fill of the ink's
+  own hue over each scheme's surface, ground and sunken fill, **boat light bottoms out at 4.99:1**
+  and boat dark at 5.59:1, against the **app palette's 3.50:1**. So the roll-call surfaces that use
   one are compliant where they render and the app-palette ones are not — the shop home's first-run
-  tick was at 4.33:1 until it moved to `bg-success-tint` (issue #874). `scripts/check-tinted-ink.mjs`
-  knows which files render under boat mode; everywhere else, use the opaque token.
+  tick was at 4.33:1 until it moved to `bg-success-tint` (issue #874).
+  `scripts/check-tinted-ink.mjs` knows which files render under boat mode; everywhere else, use the
+  opaque token.
 - **Boat mode is exempt from all of it.** `.boat-mode` retunes the feedback hues for a deck in
-  sun; its worst tinted-fill combination measures 5.40:1 in light and 5.32:1 in dark, so the
-  roll-call fills that use the raw token there are compliant and stay as they are.
+  sun; its worst tinted-fill combination at 10% measures 5.40:1 in light and 6.16:1 in dark, so
+  the roll-call fills that use the raw token there are compliant and stay as they are.
 
 Since 2026-08-23 this is enforced rather than remembered: `e2e/a11y.spec.ts` runs axe's
 `color-contrast` rule with no exclusion list, over every surface it scans.
@@ -506,14 +528,26 @@ Since 2026-08-23 this is enforced rather than remembered: `e2e/a11y.spec.ts` run
 its form is in — a card footer, a disclosed settings row, a sunken inset panel — and it is the
 component that tells a staffer a save was refused, so it does not get to be the one that guessed.
 
-### The tone marks (✅ ⚠️ ❌)
+### The tone marks: `StatusMark`
 
-One declaration, `src/components/ui/tone.ts`, shared by `Badge`, `FormStatus`, and `ShopNotice`.
-Only the three pass/fail/caution tones get a mark; `primary`/`neutral` are counts and labels, so
-`toneGlyph()` returns `undefined` for them and a caller cannot mark a count. They are **emoji, not
-text dingbats** (`✓ ▲ ✕`) — a text codepoint takes the surrounding font and colour and reads at
-badge size as a font falling back rather than as a status, which was reported from the field. Don't
-tidy them back. The strings carry no trailing space; the gap belongs to the consumer's layout.
+One mapping, `toneMark()` in `src/components/ui/tone.ts`, and one drawing,
+`src/components/ui/StatusMark.tsx`, shared by `Badge`, `FormStatus`, and `ShopNotice`. Only the
+three pass/fail/caution tones get a mark. `primary` and `neutral` are counts and labels, so
+`toneMark()` returns `undefined` for them and a caller cannot mark a count. `Badge`'s
+`toneMark={false}` turns the mark off for a count that wears a status tone.
+
+The marks are **drawn SVG, not emoji and not text dingbats**: a check in a circle (success), a
+triangle holding a bar and a dot (warning), a cross in a circle (danger). Each is drawn on a
+24-unit grid with a 1.9 stroke in `currentColor`, so it takes the ink of the words beside it and
+stays a distinct shape in monochrome (ADR 20260827-the-departure-is-two-working-surfaces, decision
+5). They are `aria-hidden`, and the words carry the status. Sizes: `sm` is 16px (`size-4`, the
+default, and every `Badge` below `lg`), `md` is 20px (a `lg` `Badge`), and `lg` is 24px. The gap
+belongs to the consumer's layout: `gap-1` in a `Badge`, `gap-1.5` in `FormStatus`, `me-1` in
+`ShopNotice`.
+
+These replaced the emoji (✅ ⚠️ ❌) on 2026-08-29. The emoji had replaced text dingbats (`✓ ▲ ✕`),
+which took the surrounding font and read at badge size as a font falling back. Don't swap a glyph
+back in.
 
 ### Lint note: icon-only controls
 
@@ -557,8 +591,10 @@ in the waiver's progress bar (issue #833).
 - **Weight** — `ease-spring`, for something that *unfolds on request*. A lie on anything that
   merely appears.
 - **A duration that is not 200 ms** — write it, and it should be because the motion means something
-  different, not because 260 ms was what got typed. The only two left in the app are the hold-to-
-  unlock gauge's 75 ms and 100 ms, which are a gauge rather than an arrival.
+  different, not because 260 ms was what got typed. The ones left in the app are the water
+  locker's hold-to-unlock gauge (75 ms and 100 ms), the roll call head count's water (300 ms) and
+  the pull-to-refresh arrow (150 ms). Each is a gauge following a finger or a count, not an
+  arrival.
 - **`transition-brand`** stays for a surface whose hover changes several things at once; it reads
   the same defaults.
 
@@ -566,6 +602,53 @@ Transform and opacity only ([principle 5](principles.md)). Animating `box-shadow
 large surface paints every frame — `.card-scale-hint` did exactly that, with a literal
 `rgba(0, 0, 0, 0.05)` shadow invisible on the dark palette, so half the readers paid for an effect
 none of them saw.
+
+## Focus rings: one ring, two placements
+
+Every control gets the global ring from `globals.css` — 3px of `--focus-ring` at a 2px offset,
+reaching 5px outside the box — and a call site never draws a ring of its own. The rule lives in
+`@layer base` so the two utilities beside it can move it. It used to be unlayered, which beat every
+Tailwind utility whatever its specificity: the trip's About summary and the offline manifest's rows
+asked for an inset ring, rendered the global one at +2px, and the `overflow-hidden` card around
+them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
+
+- **`focus-ring`**, under `has-[:focus-visible]:` or `peer-focus-visible:`, is for a stand-in:
+  focus lands on something invisible and the eye reads another box as the control. The label
+  around an `sr-only` input (`ImageFileInput`, a weekday chip, a tip preset), a switch's track.
+  `has-[:focus-visible]` rather than `focus-within`, so it lights for the keyboard the way the
+  global rule does.
+- **`focus-visible:focus-ring-inset`** is for an element flush with an `overflow-hidden` or
+  scrolling edge: a list card's rows, a scroll box's options, the command palette's field, a row
+  or a control bled `-mx-3` or `-ml-3` to 4px from a clipping edge. A ledger row's door and a
+  folded horizon's `<summary>` take it too: each is the row's whole box, rule to rule, so the
+  outset ring crossed both hairlines. It is the same 3px, drawn
+  wholly inside the box, and on the element's own fill (the contrast of each fill is in the
+  utility's comment in `globals.css`). Where the row meets the container's rounded corner it
+  takes the container's radius too, or the clip shaves the ring's square corner —
+  `LIST_ROW_SUMMARY_RING` in `src/components/ui/disclosure.tsx` for a `<summary>` row, which
+  cannot `inherit` a radius through its `<details>`. Never remove the container's
+  `overflow-hidden` to make room: it is what rounds the rows' hover fills.
+- **Room, not an inset ring,** for chips in a strip that scrolls sideways (`FilterChips`, the
+  product page's chapter strip): vertical padding on the scroller for the 5px, and the same
+  negative margin so nothing around it moves. A negative top margin collapses through a parent
+  with no top border or padding, so that parent is `flow-root`. Room too where the row's
+  padding was the defect: the diver record's shelf rows had `px-1` in an `InsetGroup` and now
+  take its `px-5 py-4 sm:px-6`.
+- **Never switch the outline off** on an `a`, `button`, `input`, `select`, `textarea` or
+  `summary`. In `@layer base` the global rule loses to `outline-none`, so it now does what it
+  says and leaves a keyboard user nothing. The two exceptions show focus on another box:
+  `RowLink`'s text (its `::after` overlay is ringed) and the tip picker's amount field (the
+  bordered box around it is).
+- **A positioned child paints over its parent's outline.** An inset ring on a link that holds a
+  photo is hidden under the photo. The storefront's course cards moved the clip from the card onto
+  the link instead, which keeps the global ring: an element's `overflow` never clips its own
+  outline.
+
+`src/app/focus-ring.test.ts` refuses a width or an offset under any focus variant, and an outline
+switched off anywhere but an element the global rule never rings (in practice a `tabIndex={-1}`
+container a script moves focus into) and those two exceptions. It also lists the elements the
+probe measured a clip cutting whose components do not render in jsdom; the rest are pinned in
+their own components' tests. These read classes, not pixels: the pixel probe measures the ring.
 
 ## Buttons: `buttonClass()`
 
@@ -583,10 +666,15 @@ import { buttonClass } from "@/components/ui/button";
 <button type="submit" className={buttonClass({ variant: "danger" })}>Refund</button>
 ```
 
-Variants: `primary`, `secondary`, `ghost`, `danger`, `danger-solid`, and `link` (reads as inline
-text but still claims a full target). Sizes: `md` (the default, 48px with a 16px label), `sm` (44px
-with a 14px label), `boat`, `icon`. Pass one-off adjustments through `className`; do not rebuild the
-base. If you find yourself cancelling a variant's own styles, the variant is wrong — add one.
+Variants: `primary`, `secondary`, `ghost`, `danger`, `danger-ghost` (the danger hue without the
+box, for a destructive row in a quiet menu), `danger-solid`, `link` (reads as inline text but still
+claims a full target), `sky` (a translucent chip for a control standing on a `SkyBand`), and `bare`
+(shape and target only, for a control whose fill is the state of its row). Sizes: `md` (the
+default, 48px with a 16px label), `sm` (44px with a 14px label), `boat` (56px with a 16px
+semibold label), `icon` (a 48px square), and `mark` (a 56px square the roll call rounds to a
+circle). The base's corner is the control rung, `rounded-lg` (12px). Pass one-off adjustments
+through `className`; do not rebuild the base. If you find yourself cancelling a variant's own
+styles, the variant is wrong — add one.
 
 **`primary` is the one thing in the app that carries a `shadow-sm` at rest**, and it is an
 exception stated at the rule rather than a second rule: ADR
@@ -600,6 +688,18 @@ and a chip row take `sm`; and every button in one row takes the same size. A 16p
 `cta` rungs — `md` with 4px more padding, or with a heavier weight — went with it: a call to action
 is made by being the row's one primary, or by `w-full` on a phone, never by its own type size.
 `icon` is a 48px square so it sits level with `md` in a header or a pager.
+
+**A row with a text control in it is an `md` row.** A control's type is 16px at every size, because
+iOS Safari zooms the page when a box under 16px takes focus, so the only button it can stand level
+with is `md`, whose label is 16px too. `sm` beside a box matches its 44px and not its type. The
+control then takes md's height: `controlClassFor("md")` (48px) for an input or select, placed by hand
+or in a `Field` that shares its line with the button, and `size="md"` on `SearchField`.
+`controlClass` stays the 44px `field` size for a control stacked in a `Field` whose line holds no
+button, alone in a toolbar, or in a row of controls only. The pixel probe found the two sizes
+together on 2026-09-25: a 44px search box beside a 48px "Add diver" on the trip roster's seat-diver
+door and the diver roster, and a 16px box beside a 14px "Go" or "Save" wherever a row reached for
+`sm` to match the box's height. The probe groups a control inside a `Field` with its caption, not
+with the row, so it cannot see a `Field` beside a button: read those rows.
 
 **A `link` that must line up with the prose above it passes `flush: true`, never `className:
 "px-0"`.** Two utilities for one property resolve by **stylesheet** order, not by the order you
@@ -616,6 +716,15 @@ above them that way. `flush` drops the size's horizontal padding at every breakp
 // Right
 <Link className={buttonClass({ variant: "link", flush: true })}>See the full list →</Link>
 ```
+
+**What `flush` does depends on what the variant paints.** `link` and `bare` paint nothing of their
+own around their words (a link's hover is an underline), so their padding goes to `px-0`. `ghost`
+and `danger-ghost` paint only on hover, and their tint with the padding gone sat 0px from either
+side of "Delete Morgan Vale" (pixel probe, 2026-09-25), so they get `-mx-2 px-2`: the label sits
+where a padless one would, and the tint reaches 8px past it. A ledger row keeps the same 8px, for
+the same reason (`FILL_ROOM` in `src/components/ui/ledger.tsx`). The variants painted at rest
+(`primary`, `secondary`, `danger`, `danger-solid`, `sky`) are boxes, and a box lines up by its edge,
+not its label, so the type refuses `flush` on them.
 
 The same trap applies to the type scale, which is why it lives on the sizes: a `text-base` passed
 through `className` cannot reliably beat a size's `text-sm`. Pick the size that already says it.
@@ -643,7 +752,8 @@ import { Switch } from "@/components/ui/Switch";
 wants. The label's words are the accessible name *and* a tap target; `aria-checked` is derived from
 the same prop as `checked`, so the two cannot disagree; the thumb moves on a bare
 `transition-transform`, so `prefers-reduced-motion` stills it through the global kill-switch; the
-control is `min-h-11` and `print:hidden`.
+label is `min-h-11` around a 44×24 track and a 16px thumb, and the whole control is
+`print:hidden`.
 
 **A checkbox is not a switch, and the difference is when it takes effect.** A choice that only means
 something once a form is submitted stays a plain `<input type="checkbox" className="size-4
@@ -682,8 +792,11 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 - **`fill`** makes the options equal-width across the container (a tab bar under a page header);
   leave it off for a content-width track that sits beside other things in a row.
 - **`size="boat"`** raises the target floor to 56px with 16px labels, for surfaces worked at the
-  rail with wet hands and glare (the manifest's checkpoint row). Everything else takes the default
-  44px.
+  rail with wet hands and glare (the manifest's checkpoint row). Everything else takes the default,
+  `md`: 44px with 14px labels. The track is `rounded-inset`, 12px. The pill, the options and their
+  hover fill sit 5px inside it (a 1px border and `p-1`), so they take its corner less that inset:
+  7px, `SEGMENT_CORNER`. They wore `rounded-lg` until 2026-09-25, a 12px curve 5px inside a 12px
+  one, and the pixel probe flagged it on 42 captures.
 - **The pill slides.** The raised pill is one element that travels from the option it was on to
   the one it is on now — a FLIP on `transform`, on the arrival curve — so a tap explains where the
   selection went. Every option is still a navigation; the component keeps the last measured box
@@ -696,6 +809,13 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 - Labels arrive resolved: staff copy is server-side only, so each call site translates its own
   options and passes words.
 
+**A segmented choice inside a form takes the parts, not the component.** The booking's party size
+and the embed page's look are radios: their value has to reach `FormData`, and a `<nav>` of links
+cannot carry one. They draw the same track and segments from `src/components/ui/segmented.ts` —
+`segmentedTrackClass` and `segmentClass({ selected })`, which `SegmentedControl` itself uses — and
+keep only their own target size and focus treatment. They were copies until 2026-09-25, and each
+copy had kept the mis-nested corner; `segmented.test.ts` now fails on a track spelled anywhere else.
+
 **Not for same-page anchors.** A row that jumps to sections of the page you are already on is
 `src/components/JumpNav.tsx` — link-buttons under a hairline rule — and it stays visually distinct
 on purpose. A segmented track marks one option current; a jump row can never mark anything current,
@@ -703,19 +823,42 @@ because every entry is on this screen. Two controls that look identical and mean
 is the exact drift both components exist to end, so never dress a jump row as a track, or a tab bar
 as a row of links.
 
-## Reef's rungs, as they ship (2026-09-02)
+## The rungs, as they ship
 
 The system sheet of [ADR 20260901-diveday-reimagined](../architecture/decisions/20260901-diveday-reimagined.md)
-drew the parts at sizes the first slices did not all land. They are these now, and each is pinned:
+set the parts' sizes on 2026-09-02, and Tide's surface
+([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), decision I) re-cut the
+radii on 2026-09-19. They are these now:
 
-- **Radius**: control 10 (`rounded-lg`, `--radius`) · inset 18 (`rounded-inset`, the sunken block
-  a card carves out of itself — a fieldset on the tideline, a nested list, a photo tile, a toast) ·
-  panel 28 (`rounded-panel`, the card and every tone-carrying panel that is a card's sibling) · pill
-  999. Tailwind's own `rounded-xl` and `rounded-2xl` are not rungs and `card.test.tsx` refuses them.
+- **Radius**, Tide's ladder: control 12 (`rounded-lg`, `--radius`) · inset 12 (`rounded-inset`,
+  the sunken block a card carves out of itself — a fieldset, a nested list, a photo tile, a menu
+  panel, a toast) · panel 20 (`rounded-panel`, the card and every tone-carrying panel that is a
+  card's sibling) · pill 999 (`rounded-full`). Inset shares the control rung, so there are two
+  radii and a capsule. Reef's ladder was 10 · 18 · 28. Tailwind's own `rounded-xl` (12) and
+  `rounded-2xl` (16) are not rungs. `card.test.tsx` refuses less than that sounds: `rounded-2xl`
+  on a class string that also spells a panel's `border-border bg-surface`, `shadow-sm` on any
+  `rounded-panel` string, and any `rounded-lg`/`xl`/`2xl`/`3xl` on `SectionCard` itself. A
+  `rounded-xl` inset elsewhere passes (#1965).
+- **Nested corners are derived, not picked.** A box painted near a rounded ancestor's corner takes
+  the ancestor's radius less the inset between them, spelled from the same tokens so the two move
+  together ([pixel-craft.md](pixel-craft.md), class 6): `SEGMENT_CORNER` in `ui/segmented.ts` for
+  anything on a segmented track (12 − 1 − 4 = 7), `PANEL_INNER_RADIUS` in `ui/card.tsx` for a fill
+  flush inside a card that does not clip (20 − 1 = 19), on the corners it touches. These two are
+  the only radii off the ladder. A header menu's panel is `MENU_PANEL` in `ui/menu.ts`, which
+  takes the segmented track's inset on purpose so its rows take `SEGMENT_CORNER` too. A menu whose
+  rows can carry a tick (the identity menu, the language picker) starts every row's words and its
+  group label on one gutter, `MENU_TICK_GUTTER`, and `menuRowClass` draws those rows.
 - **Buttons**: `md` is **48px tall with a 16px label**, the sheet's default; `sm` stays 44/14 for a
-  table row or a chip row; `boat` stays the 56px dock target. The base's `min-h-11` is still the
-  floor every size clears.
-- **Rows**: a `LedgerRow` is never tighter than **52px** (`md`); `lg` is 56.
+  table row or a chip row; `icon` is a 48px square; `boat` stays the 56px dock target. The base's
+  `min-h-11` is still the floor every size clears.
+- **Text controls**: 16px type at every size. `field` is 44px (`controlClass`), for a stacked
+  field with no button on its line; `md` is 48px (`controlClassFor("md")`, `SearchField size="md"`),
+  for a control on one line with `md` buttons. Each size carries its own vertical padding, so the
+  content box is 26px at both.
+- **Rows**: a `LedgerRow` is never tighter than **52px** (`md`); `lg` is 56. Every row, door or
+  not, keeps 8px of room each side of its words and runs its rules 8px past the column with it, so
+  every ledger on a page draws its rules at one length; a skeleton or a hand-set line among ledger
+  rows takes `ledgerRowBoxClass` (`src/components/ui/ledger.tsx`).
 - **The ⌘K cap** belongs to the command palette's trigger in the header, not to `SearchField`: a
   real `<input>` does not advertise a global shortcut it does not own. The sheet drew them as one
   field; the split is deliberate.
@@ -728,7 +871,9 @@ A staff list that can be searched renders **one search box and nothing around it
 `SearchField` in `src/components/ui/form.tsx`: a `type="search"` control wearing `controlClass`, a
 magnifier in its leading inset, its label `sr-only`, no caption above it and no "Search" button
 beside it. A form with one text control submits on Enter; surfaces that want type-to-apply drive
-`requestSubmit()` from `onInput`, as the orders toolbar and the counter do.
+`requestSubmit()` from `onInput`, as the orders toolbar and the counter do. A box that shares its
+line with an `md` button, as the roster's and the seat-diver picker's do with "Add diver", passes
+`size="md"` and stands at the button's 48px.
 
 ```tsx
 import { SearchField } from "@/components/ui/form";
@@ -831,4 +976,10 @@ concept.
 
 Dropdown panels are one column, one item per row, `whitespace-nowrap`. A multi-column menu wraps
 short labels onto two lines and strands the odd item of an odd-length group in a column of its own,
-which reads as a layout bug rather than a menu. See `src/components/ShopNavLinks.tsx`.
+which reads as a layout bug rather than a menu. The "More" menu in `ShopNavLinks.tsx` that taught
+this left with the nav of nouns (ADR 20260919-one-idea, slice 23b). The two menus in the staff
+chrome now are `ShopPlaceMenu` in `src/components/ShopPlaceNav.tsx` (the three places, folded
+behind one button below `lg`, read from `src/lib/staff-destinations.ts`) and
+`src/components/ShopIdentityMenu.tsx` (settings, language and sign-out). Both are one column. Both
+keep a row on one line with a panel minimum width (`min-w-40`, `min-w-44`) rather than
+`whitespace-nowrap` on the row, which holds only while every label fits that width.

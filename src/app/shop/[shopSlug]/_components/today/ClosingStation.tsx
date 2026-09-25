@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { LedgerRow } from "@/components/ui/ledger";
+import { LedgerRow, ledgerRowRoomClass } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { FIGURE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
@@ -224,9 +224,14 @@ export function ClosingStation({
           closing hairline already is it, and a second one twelve pixels below
           drew an empty band with nothing at all in it. And nothing renders
           when there is no recap to write — a rule under thin air is the same
-          defect from the other side. */}
+          defect from the other side. Drawn here, it keeps the ledger's room,
+          so it is as long as the unsold-seats row's rule it stands in for. */}
       {children ? (
-        <div className={openSeats ? "pt-3" : "mt-3 border-t border-border pt-3"}>{children}</div>
+        <div
+          className={openSeats ? "pt-3" : `mt-3 border-t border-border pt-3 ${ledgerRowRoomClass}`}
+        >
+          {children}
+        </div>
       ) : null}
     </SectionCard>
   );

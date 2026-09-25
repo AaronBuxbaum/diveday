@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Body-shaped skeleton for the follow-the-boat page (ADR
@@ -29,20 +30,19 @@ export default function FollowTheBoatLoading() {
         <div className="mt-8 h-4 w-20 rounded bg-surface-sunken" />
         <div className="mt-2 flex flex-col">
           {[0, 1, 2, 3, 4].map((row) => (
-            <div key={row} className="flex min-h-13 items-center gap-3 border-t border-border">
+            <div key={row} className={`flex min-h-13 items-center gap-3 ${ledgerRowBoxClass}`}>
               <div className="size-2 shrink-0 rounded-full bg-surface-sunken" />
               <div className="h-4 w-40 max-w-full rounded bg-surface-sunken" />
               <div className="ms-auto h-4 w-16 rounded bg-surface-sunken" />
             </div>
           ))}
-          <div className="border-b border-border" />
         </div>
 
         {/* The one note, then the two doors. */}
         <div className="mt-6 h-8 w-full rounded bg-surface-sunken" />
-        <div className="mt-8 flex flex-col border-t border-border">
+        <div className="mt-8 flex flex-col">
           {[0, 1].map((row) => (
-            <div key={row} className="flex min-h-13 items-center gap-3 border-b border-border">
+            <div key={row} className={`flex min-h-13 items-center gap-3 ${ledgerRowBoxClass}`}>
               <div className="h-4 w-44 max-w-full rounded bg-surface-sunken" />
               <div className="ms-auto h-4 w-24 rounded bg-surface-sunken" />
             </div>

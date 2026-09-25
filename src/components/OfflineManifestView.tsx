@@ -915,11 +915,18 @@ export function OfflineManifestView() {
                   timeStyle: "short",
                   timeZone: saved.snapshot.shop.timezone,
                 });
+                // The row fills the card, whose `overflow-hidden` cut the
+                // outset ring on three sides: the ring goes inside, and the
+                // first and last rows take the card's corners so the clip
+                // cannot shave the ring's.
                 return (
-                  <li key={tripManifest.trip.id}>
+                  <li
+                    key={tripManifest.trip.id}
+                    className="first:rounded-t-panel last:rounded-b-panel"
+                  >
                     <a
                       href={`/offline-manifest?trip=${tripManifest.trip.id}`}
-                      className="flex min-h-14 flex-col gap-2 p-4 transition-colors hover:bg-surface-sunken focus-visible:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                      className="flex min-h-14 flex-col gap-2 rounded-[inherit] p-4 transition-colors hover:bg-surface-sunken focus-visible:bg-surface-sunken focus-visible:focus-ring-inset sm:flex-row sm:items-center sm:justify-between sm:p-5"
                     >
                       <div>
                         <p className={SECTION_TITLE_CLASS}>{tripManifest.trip.title}</p>
@@ -2233,7 +2240,7 @@ export function OfflineManifestView() {
                         offline-manifests.ts) — so this is always the plain
                         two-fact summary, never the "& medical" variant. */}
                       <details className="group/offlinefacts mt-2 max-w-xl">
-                        <summary className="group/summary -mx-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-base font-medium text-muted select-none transition-colors hover:bg-surface-sunken/70 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+                        <summary className="group/summary -mx-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-base font-medium text-muted select-none transition-colors hover:bg-surface-sunken/70 hover:text-primary focus-visible:focus-ring-inset [&::-webkit-details-marker]:hidden">
                           <DisclosureCaret className="group-open/offlinefacts:rotate-90" />
                           <span className="group-hover/summary:underline">
                             {t("manifest.diverFactsSummary")}
@@ -2613,7 +2620,7 @@ export function OfflineManifestView() {
           aria-labelledby="offline-phone-heading"
         >
           <details id="offline-phone-settings" className="group/offline-phone">
-            <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-surface-sunken/70 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+            <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-surface-sunken/70 focus-visible:focus-ring-inset [&::-webkit-details-marker]:hidden">
               <DisclosureCaret className="group-open/offline-phone:rotate-90" />
               <h2
                 id="offline-phone-heading"

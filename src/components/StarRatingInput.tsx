@@ -65,7 +65,7 @@ export function StarRatingInput({
                 would otherwise hide entirely. */}
             <span
               aria-hidden="true"
-              className={`pointer-events-none flex size-11 items-center justify-center rounded-lg peer-focus-visible:ring-2 peer-focus-visible:ring-primary ${
+              className={`pointer-events-none flex size-11 items-center justify-center rounded-lg peer-focus-visible:focus-ring ${
                 value <= lit ? "text-warning" : "text-border-strong"
               }`}
             >

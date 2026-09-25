@@ -132,13 +132,13 @@ export function ImageFileInput({
             not `hidden`, because a `display:none` control carrying `required`
             makes Chrome refuse the whole submit with "not focusable" instead of
             reporting the field — which is the shape `ImportWizard` already
-            uses. Focus therefore lands on the invisible input, so the ring is
-            drawn by `focus-within` on the label. */}
+            uses. Focus therefore lands on the invisible input, so the label
+            draws the ring — `has-[:focus-visible]`, keyboard focus only, as the
+            global ring decides it; `focus-within` also lit it after a click. */}
         <label
           className={buttonClass({
             variant: "secondary",
-            className:
-              "cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary",
+            className: "cursor-pointer has-[:focus-visible]:focus-ring",
           })}
         >
           {picked ? copy.chooseAnother : copy.choose}

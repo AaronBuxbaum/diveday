@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { EmptyState } from "@/components/EmptyState";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LedgerGroup } from "@/components/ui/ledger";
@@ -139,7 +139,7 @@ export default async function InboxPage({
         pageCount={messages.pageCount}
         href={pageHref}
         total={t("inbox.pagination.total", { count: messages.total })}
-        t={t}
+        words={staffPagerWords(t)}
         className="mt-6"
       />
     </main>

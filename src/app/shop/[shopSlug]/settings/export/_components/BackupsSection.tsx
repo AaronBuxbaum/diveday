@@ -1,5 +1,5 @@
 import { EmptyState } from "@/components/EmptyState";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -351,7 +351,7 @@ export function BackupsSection({
                 page={deliveries.page}
                 pageCount={deliveries.pageCount}
                 href={(nextPage) => `${basePath}?page=${nextPage}#backups`}
-                t={t}
+                words={staffPagerWords(t)}
                 total={t("backup.history.total", { count: deliveries.total })}
                 className="mt-4"
               />

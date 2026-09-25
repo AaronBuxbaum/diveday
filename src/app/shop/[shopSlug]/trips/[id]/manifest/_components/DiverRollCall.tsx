@@ -698,6 +698,13 @@ export function DiverRollCall({
                           >
                             {t("manifest.resolveBlockersLink")}
                           </Link>
+                          {/* **The rule is the content.** An `<hr>` has no
+                            children by nature, so the pixel probe's
+                            phantom-gap check reads 25px here (12 above, the
+                            1px rule, 12 below) where the panel's siblings sit
+                            12px apart. That span is the rule's own even
+                            margins, not a gap an empty box took (settled in
+                            docs/design/settled-questions.md). */}
                           <hr className="my-3 border-border" />
                         </>
                       ) : null}
@@ -819,10 +826,15 @@ export function DiverRollCall({
                     </div>
                   </PersonSheet>
                   {/* The row's one tap, at the trailing edge where every row's
-                    mark lands. `pt-2.5` centres the 56px circle against the
-                    76px summary line rather than against the panel below it,
-                    which would walk the mark down the row as it opens. */}
-                  <div className="shrink-0 pt-2.5 ps-3 pe-3 print:hidden">
+                    mark lands. The top 10px centres the 56px circle against
+                    the 76px summary line rather than against the panel below
+                    it, which would walk the mark down the row as it opens.
+                    The bottom 10px is the room its 5px focus ring needs on
+                    the last row, flush with the card's `overflow-hidden`:
+                    in Boat mode glare's 44px floor shrinks the summary to
+                    52px, the mark column sets the row's height, and with no
+                    padding below it the ring lost its bottom 5px (#1981). */}
+                  <div className="shrink-0 py-2.5 ps-3 pe-3 print:hidden">
                     {rowState.notBackAboard ? (
                       <RollCallMark state="notBack" />
                     ) : boardingControlShown ? (

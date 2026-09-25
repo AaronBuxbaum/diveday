@@ -65,8 +65,8 @@ export function RowActionForm({
   className?: string;
   /**
    * Where the failure line sits. The default suits a control with its own
-   * margin; the row's check-in tap passes the page's row padding so the tap's
-   * picture is exactly what it was before this form was extracted from it.
+   * margin; the row's check-in tap passes its own 8px of room, so the line
+   * sits on the column the tap's words start on.
    */
   sendFailedClassName?: string;
   children: ReactNode;

@@ -36,10 +36,14 @@ export function TipAmountPicker({
   return (
     <fieldset className="flex flex-wrap items-center gap-2">
       <legend className="sr-only">{legend}</legend>
+      {/* The pills and the "Other" box draw the ring, because neither
+          focusable thing inside them can: a preset's radio is `sr-only`, so a
+          Tab into the group lit nothing at all, and the custom input is a
+          64px strip of its box whose own ring would circle the digits alone. */}
       {presets.map((usd) => (
         <label
           key={usd}
-          className="flex min-h-11 cursor-pointer items-center rounded-lg border border-border px-4 text-sm font-medium has-checked:border-primary has-checked:bg-primary-tint has-checked:text-primary"
+          className="flex min-h-11 cursor-pointer items-center rounded-lg border border-border px-4 text-sm font-medium has-checked:border-primary has-checked:bg-primary-tint has-checked:text-primary has-[:focus-visible]:focus-ring"
         >
           <input
             type="radio"
@@ -58,7 +62,7 @@ export function TipAmountPicker({
       ))}
       <label
         htmlFor={customInputId}
-        className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm has-[:focus-within]:border-primary"
+        className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm has-[:focus-within]:border-primary has-[:focus-visible]:focus-ring"
       >
         <span className="text-muted">{currencySymbol}</span>
         <input

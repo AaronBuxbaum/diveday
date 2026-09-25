@@ -219,7 +219,6 @@ export function WaiverGroup({
       // clearance door that resolves it, are both inside.
       open={Boolean(status) || heldForMedical || Boolean(overriddenReferralAt)}
       stacked
-      className="mt-8"
     >
       <InsetGroup>
         <WaiverStateRow

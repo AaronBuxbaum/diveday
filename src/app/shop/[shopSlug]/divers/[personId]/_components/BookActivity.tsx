@@ -3,7 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClassFor, Field, FieldGrid } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, groupByLocalDay } from "@/lib/calendar-date";
 import { formatTime } from "@/lib/format";
@@ -71,7 +71,10 @@ export function BookActivity({
           <input type="hidden" name="personId" value={personId} />
           <FieldGrid columns={1} className="flex-1">
             <Field label={t("divers.bookActivity.courseOrDiveLabel")}>
-              <select name="tripId" required defaultValue="" className={controlClass}>
+              {/* `md`: from `sm` up the picker shares a line with the `md` "Book
+                  activity", bottom-aligned, and at the 44px default the
+                  button stood 4px above its top edge. */}
+              <select name="tripId" required defaultValue="" className={controlClassFor("md")}>
                 <option value="" disabled>
                   {t("divers.bookActivity.chooseActivity")}
                 </option>

@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Body-shaped skeleton for the dive-site library (design principle 1), shaped
@@ -31,7 +32,7 @@ export default function DiveSitesLoading() {
                     // identity a placeholder row has.
                     // biome-ignore lint/suspicious/noArrayIndexKey: see above
                     key={`${group}-${row}`}
-                    className="flex min-h-12 items-center justify-between gap-4 border-t border-border last:border-b"
+                    className={`flex min-h-12 items-center justify-between gap-4 ${ledgerRowBoxClass}`}
                   >
                     <span className="block w-full max-w-64 py-2">
                       <span className="block h-5 w-40 max-w-full rounded bg-surface-sunken" />

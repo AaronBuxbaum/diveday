@@ -241,6 +241,23 @@ describe("DiverList empty state", () => {
     expect(css).not.toContain("@media (width < 40rem)");
   });
 
+  /**
+   * The box wore the stacked field's 44px beside a 48px `md` "Add diver":
+   * centred on one line, 2px short at the top and at the bottom (the pixel
+   * probe's `mismatched-controls` cluster on the roster, 2026-09-25). Both
+   * doors checked, since either can be the one on screen.
+   */
+  it("stands the search box level with whichever Add diver door is showing", () => {
+    renderList({ query: "" });
+    const search = screen.getByRole("searchbox", { name: "Search divers" });
+    expect(search).toHaveClass("min-h-12");
+    expect(search).not.toHaveClass("min-h-11");
+    expect(screen.getByRole("link", { name: "Add diver" })).toHaveClass("min-h-12", "text-base");
+
+    fireEvent.change(search, { target: { value: "Nora" } });
+    expect(screen.getByRole("button", { name: "Add diver" })).toHaveClass("min-h-12", "text-base");
+  });
+
   it("treats a built-in view chip as narrowing too, not as an empty roster", () => {
     renderList({ filter: "needs_attention" });
     expect(screen.getByText("No divers match this view.")).toBeInTheDocument();

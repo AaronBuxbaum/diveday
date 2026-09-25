@@ -2,11 +2,29 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { type ButtonSize, buttonClass } from "./button";
+import { type ButtonSize, type ButtonVariant, buttonClass } from "./button";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const SIZES = ["sm", "md", "boat", "icon"] as const satisfies readonly ButtonSize[];
+
+/** The sizes that carry a horizontal padding for `flush` to act on. */
+const PADDED_SIZES = ["sm", "md", "boat"] as const satisfies readonly ButtonSize[];
+
+/** The variants that paint nothing of their own around their label, hover included. */
+const PAINTS_NOTHING = ["link", "bare"] as const satisfies readonly ButtonVariant[];
+
+/** The variants that paint a fill around their label on hover, and only then. */
+const HOVER_FILL_VARIANTS = ["ghost", "danger-ghost"] as const satisfies readonly ButtonVariant[];
+
+/** The variants painted at rest: a filled or bordered box. */
+const PAINTED_AT_REST = [
+  "primary",
+  "secondary",
+  "danger",
+  "danger-solid",
+  "sky",
+] as const satisfies readonly ButtonVariant[];
 
 /**
  * Every horizontal-padding utility in a class list, variant prefixes included —
@@ -123,6 +141,73 @@ describe("buttonClass", () => {
 
     it("is off by default", () => {
       expect(buttonClass({ variant: "link" })).toContain("px-4");
+    });
+
+    it("drops a link's and a bare button's padding whole: neither paints a fill for the words to sit against", () => {
+      // The premise that lets them be truly padless: a link's hover is an
+      // underline, and `bare` paints nothing of its own at all.
+      for (const variant of PAINTS_NOTHING) {
+        const tokens = buttonClass({ variant, flush: true }).split(" ");
+        expect(
+          tokens.filter((token) => /^(?:[\w-]+:)*bg-/.test(token)),
+          variant,
+        ).toEqual([]);
+        expect(
+          tokens.filter((token) => /^(?:[\w-]+:)*-m[xse]-/.test(token)),
+          variant,
+        ).toEqual([]);
+        expect(horizontalPadding(tokens.join(" ")), variant).toEqual(["px-0"]);
+      }
+    });
+
+    it("keeps 8px around a ghost's label, outdented by the same 8px, because its hover paints the box", () => {
+      // The pixel probe (2026-09-25): "Delete Morgan Vale" and a gear unit's
+      // "Delete" are `danger-ghost` + `flush`, and their hover tint measured
+      // 0px either side of the words — `px-0` had taken the room along with
+      // the indent. The label still has to line up with the text above it,
+      // which is what `flush` is for, so the room goes back on as padding and
+      // comes off again as an equal negative margin: the words sit where a
+      // padless label would, and the tint reaches 8px past them. 8px rather
+      // than the size's own padding, so the tint and the 5px focus ring stay
+      // inside a phone's 16px gutter.
+      for (const variant of HOVER_FILL_VARIANTS) {
+        for (const size of PADDED_SIZES) {
+          const classes = buttonClass({ variant, size, flush: true });
+          expect(horizontalPadding(classes), `${variant}/${size}`).toEqual(["px-2"]);
+          expect(classes.split(" "), `${variant}/${size}`).toContain("-mx-2");
+        }
+      }
+    });
+
+    it("refuses flush on a variant painted at rest, and leaves its box as the size draws it", () => {
+      // A filled or bordered box lines up by its box, not by its label
+      // (docs/design/pixel-craft.md, class 3): half its padding and an 8px
+      // overhang would be a box drawn two ways. The type says so; at runtime
+      // the option changes nothing.
+      // @ts-expect-error — `flush` is `false` only on a painted variant.
+      buttonClass({ variant: "primary", flush: true });
+      // @ts-expect-error — and on the default variant, which is `primary`.
+      buttonClass({ flush: true });
+      // What a caller that got past the type would pass.
+      const forced = true as boolean as false;
+      for (const variant of PAINTED_AT_REST) {
+        for (const size of PADDED_SIZES) {
+          const flushed = buttonClass({ variant, size, flush: forced });
+          expect(flushed, `${variant}/${size}`).toBe(buttonClass({ variant, size }));
+        }
+      }
+    });
+
+    it("leaves a size with no horizontal padding exactly as it was", () => {
+      // An icon square has no padding to drop and no text to line up: `flush`
+      // on it must not shove the square 8px out of place.
+      for (const size of ["icon", "mark"] as const) {
+        for (const variant of ["link", "danger-ghost"] as const) {
+          expect(buttonClass({ variant, size, flush: true }), `${variant}/${size}`).toBe(
+            buttonClass({ variant, size }),
+          );
+        }
+      }
     });
 
     it("removes a size's whole horizontal padding, responsive variants included", () => {

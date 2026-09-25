@@ -9,9 +9,20 @@ import { AboutRowDetails } from "./AboutRowDetails";
  * Label, settled value, and the row's own control, on one grid at every width —
  * the same three columns whether the row opens or only states a fact, so a
  * column of them keeps one left edge.
+ *
+ * `px-2` is the ledger's room (`ledgerRowRoomClass`): the rows' rules reach 8px
+ * past the panel's column (`ROWS_CLASS`) and the grid takes the 8px back, so
+ * the words stay on the column and an editable row's fill, which is its whole
+ * summary, runs rule to rule.
  */
 const ROW_GRID =
-  "grid w-full gap-1 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-start sm:gap-4";
+  "grid w-full gap-1 px-2 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-start sm:gap-4";
+
+/**
+ * The rows' rules, a ledger's length: 8px past the panel's column on each side,
+ * as every `LedgerRow`'s are, inside the panel's own 16px of padding.
+ */
+const ROWS_CLASS = "-mx-2 divide-y divide-border border-y border-border";
 
 /**
  * One beat of the departure's definition: the label, the settled value, and —
@@ -35,7 +46,16 @@ function AboutRow({ row }: { row: TripAboutRow }) {
   }
   return (
     <AboutRowDetails id={row.id} open={row.editorOpen} className="group/row scroll-mt-24">
-      <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary">
+      {/* The summary is the row's hover fill and spans the row, rule to rule:
+          the room around the label is the grid's (`ROW_GRID`), so the fill
+          clears the words by 8px on both sides (the probe measured 0px against
+          "THE PLAN") while the label stays on the fact rows' column. Square,
+          like the rules it spans. Its focus ring is drawn inside it, on the
+          fill's own edge, as a ledger row's stretched link draws its own: the
+          words sit 8px in, so the 3px ring clears them by 5px. (The outset
+          ring was kept here while the label and caret sat on the summary's
+          edges, where an inset ring landed on them.) */}
+      <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:focus-ring-inset">
         <span className={ROW_GRID}>
           {beat}
           <span className="inline-flex min-h-11 w-fit items-center gap-1 self-start text-sm font-semibold text-primary sm:justify-self-end">
@@ -47,7 +67,7 @@ function AboutRow({ row }: { row: TripAboutRow }) {
       {/* The editor sits on the text column the value above it sits on, and
           the space below it is what keeps the next row's label off the last
           field of this one. */}
-      <div className="pb-5">{row.editor}</div>
+      <div className="px-2 pb-5">{row.editor}</div>
     </AboutRowDetails>
   );
 }
@@ -148,7 +168,12 @@ export function TripAboutSection({
         className: "group/about scroll-mt-24 overflow-hidden",
       })}
     >
-      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2.5 px-4 py-2 text-sm transition-colors [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary sm:min-h-16 sm:gap-3 sm:px-5 sm:py-2.5">
+      {/* The summary fills the card, whose `overflow-hidden` cut the outset
+          ring on all four sides, so the ring is drawn inside it — at the
+          card's own radius, or the clip shaves its square corners. The radius
+          is spelled, not `inherit`ed: a `<summary>` inherits through the
+          `<details>`' shadow slot, which carries none. */}
+      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2.5 rounded-panel px-4 py-2 text-sm transition-colors [&::-webkit-details-marker]:hidden focus-visible:focus-ring-inset group-open/about:rounded-b-none sm:min-h-16 sm:gap-3 sm:px-5 sm:py-2.5">
         <svg
           aria-hidden="true"
           className="size-4 shrink-0 text-muted sm:size-5"
@@ -181,14 +206,14 @@ export function TripAboutSection({
       </summary>
       <div className="border-t border-border px-4 pb-4 sm:px-5 sm:pb-5">
         {actions ? <div className="flex flex-wrap gap-2 py-3">{actions}</div> : null}
-        <div className="divide-y divide-border border-y border-border">
+        <div className={ROWS_CLASS}>
           {rows.map((row) => (
             <AboutRow key={row.id} row={row} />
           ))}
         </div>
         {more ? (
           <details id="about-more" open={moreOpen} className="group/more mt-4">
-            <summary className="-mx-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <summary className="-mx-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
               {moreLabel}
               <DisclosureCaret direction="down" className="size-4 group-open/more:rotate-180" />
             </summary>

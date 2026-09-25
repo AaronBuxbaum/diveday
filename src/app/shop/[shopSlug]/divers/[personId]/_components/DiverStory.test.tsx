@@ -270,3 +270,19 @@ describe("the story's bounds and its foot", () => {
     expect(screen.getAllByRole("listitem").length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * The record stacks the story with the file groups on one `space-y-10`, and
+ * the diver sheet gives it a wrapper of its own. A margin on the story's root
+ * would add to either, which is how the record's gaps drifted to
+ * 32/40/32/32/0px.
+ */
+describe("the story's own box", () => {
+  it("carries no margin of its own: its section has no class at all", () => {
+    const { container } = renderStory(diver({ bookings: [AHEAD] }));
+    const section = container.querySelector('section[aria-labelledby="the-story"]');
+    expect(section).not.toBeNull();
+    expect(section?.getAttribute("class")).toBeNull();
+    expect(section?.parentElement).toBe(container);
+  });
+});

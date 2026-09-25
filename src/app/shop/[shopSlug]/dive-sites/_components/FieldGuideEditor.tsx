@@ -5,7 +5,7 @@ import { requestMarineLifeSpecies } from "@/app/actions/marine-life-request";
 import { EmptyState } from "@/components/EmptyState";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { controlClassFor, Field } from "@/components/ui/form";
 import { MAX_SITE_CREATURES } from "@/lib/dive-site-field-guide";
 
 /**
@@ -141,9 +141,14 @@ export function FieldGuideEditor({
           the last species has to be savable too. */}
       <input type="hidden" name="creatures" value={JSON.stringify(chosen)} />
 
+      {/* One `md` row: the box and Add. The box's type is 16px, and Add was
+          `sm`, a 14px word beside it at the same height (`dive-site-edit`,
+          2026-09-25), so Add takes `md` and the box stands at md's 48px.
+          The caption is `Field`'s own label, above the box: a hand-built
+          label wrapping caption and box stood in the row as one tall block
+          of text beside Add. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <label className="min-w-0 flex-1 text-sm font-medium sm:min-w-56">
-          {copy.searchLabel}
+        <Field label={copy.searchLabel} className="flex-1 sm:min-w-56">
           <input
             list={listId}
             value={query}
@@ -163,9 +168,9 @@ export function FieldGuideEditor({
             placeholder={copy.searchPlaceholder}
             disabled={full}
             aria-invalid={missed || undefined}
-            className={`${controlClass} mt-1`}
+            className={controlClassFor("md")}
           />
-        </label>
+        </Field>
         <datalist id={listId}>
           {catalog.map((entry) => (
             <option key={entry.slug} value={entry.name}>
@@ -177,11 +182,7 @@ export function FieldGuideEditor({
           type="button"
           onClick={addFromQuery}
           disabled={full || query.trim() === ""}
-          className={buttonClass({
-            variant: "secondary",
-            size: "sm",
-            className: "w-full sm:w-auto",
-          })}
+          className={buttonClass({ variant: "secondary", className: "w-full sm:w-auto" })}
         >
           {copy.add}
         </button>

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
-import Link from "next/link";
 import { Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
@@ -8,7 +7,6 @@ import { ScreenDoor } from "@/app/_components/ScreenDoor";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
 import { MarginNotes, MarketingMockup } from "@/components/MarketingSections";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import {
   BANNER_TITLE_CLASS,
@@ -21,6 +19,7 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { sharedLinkCard } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
+import { HubGuideRow } from "./_components/HubGuideRow";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -192,21 +191,12 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
       <section className="mx-auto max-w-4xl px-6 pb-16 lg:pb-24">
         <ul className="border-t border-border">
           {guides.map((guide) => (
-            <li key={guide.href}>
-              <Link
-                href={guide.href}
-                className="group flex items-start gap-6 border-b border-border py-6 transition-colors hover:bg-surface"
-              >
-                <div className="min-w-0 flex-1">
-                  <h2 className={`${SUB_TITLE_CLASS} group-hover:text-primary`}>{guide.title}</h2>
-                  <p className="mt-1.5 leading-7 text-muted">{guide.summary}</p>
-                </div>
-                <DiveDayIcon
-                  name="arrow-right"
-                  className="mt-1 size-5 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-primary motion-reduce:transition-none"
-                />
-              </Link>
-            </li>
+            <HubGuideRow
+              key={guide.href}
+              href={guide.href}
+              title={guide.title}
+              summary={guide.summary}
+            />
           ))}
         </ul>
 

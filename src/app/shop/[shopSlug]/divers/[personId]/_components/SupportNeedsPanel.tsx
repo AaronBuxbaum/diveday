@@ -67,7 +67,6 @@ export function SupportNeedsPanel({
       label={t("divers.support.heading")}
       summary={supportSummary}
       open={Boolean(status)}
-      className="mt-8"
     >
       <InsetGroup>
         <div className="px-5 py-4 sm:px-6">

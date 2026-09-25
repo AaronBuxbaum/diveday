@@ -45,8 +45,7 @@ export function CsvFileInput({
       <label
         className={buttonClass({
           variant: "secondary",
-          className:
-            "cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary",
+          className: "cursor-pointer has-[:focus-visible]:focus-ring",
         })}
       >
         {picked ? copy.chooseAnother : copy.choose}

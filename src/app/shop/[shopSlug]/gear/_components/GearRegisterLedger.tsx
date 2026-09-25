@@ -1,5 +1,5 @@
 import { EarnedMomentLine } from "@/components/EarnedMoment";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -120,7 +120,7 @@ export function GearRegisterLedger({
             page={groups.onWall.page}
             pageCount={groups.onWall.pageCount}
             href={pageHref}
-            t={t}
+            words={staffPagerWords(t)}
             className="mt-4"
           />
         </div>

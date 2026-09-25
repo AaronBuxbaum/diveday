@@ -80,3 +80,6 @@ public/manifest-sw.js
 
 # Weekly persona walk output (`pnpm persona:bots`): findings.json and a screenshot per surface.
 /persona-bots/
+
+# pixel probe output (scripts/pixel-probe/, docs/design/pixel-craft.md)
+/e2e/pixel-probe/

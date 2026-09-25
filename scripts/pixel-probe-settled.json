@@ -1,0 +1,44 @@
+{
+  "//": "Pixel-probe flags that are right as they are. Each entry names the check and the signature (or a `classes` list the flag's class string must all carry), the reason, and a pointer to the code comment that explains it. The report lists matches as settled — never drops them. A flag that belongs here also earns a row in docs/design/settled-questions.md.",
+  "settled": [
+    {
+      "check": "focus-invisible",
+      "classes": ["focus-visible:outline-none", "focus-visible:after:focus-ring-inset"],
+      "reason": "Focus shows on RowLink's ::after overlay, the target a pointer has: focus-visible:after:focus-ring-inset draws the ring inside the overlay's own edge, and the text is not ringed a second time. The probe reads only the element's own outline. How far the overlay reaches (the cell or the whole row) is issue #1989.",
+      "pointer": "src/components/ui/table.tsx, RowLink's doc comment; docs/design/settled-questions.md"
+    },
+    {
+      "check": "focus-invisible",
+      "classes": ["w-16", "bg-transparent", "focus:outline-none"],
+      "reason": "Focus shows on the bordered box around the tip picker's custom amount input: its label wears has-[:focus-visible]:focus-ring, the global ring at +2px around the whole box. The input is a 64px strip of that box, so its own ring would circle the digits alone.",
+      "pointer": "src/app/ready/[token]/_components/TipAmountPicker.tsx, the comment above the preset pills; docs/design/settled-questions.md"
+    },
+    {
+      "check": "phantom-gap",
+      "signature": "hr.border-border",
+      "container": "div.bg-surface-sunken/50 border border-border/70 p-3 rounded-inset",
+      "reason": "An <hr> has no children by nature: the 25px is the rule's own my-3 on each side of its 1px border, even above and below, not a gap an empty box took.",
+      "pointer": "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx, the comment on the blockers' <hr>"
+    },
+    {
+      "check": "uneven-gaps",
+      "signature": "span{block;p0,0,0,0;b0,0,0,0;r0,0,0,0;f10/400;}",
+      "container": "div.gap-[3px] grid tabular-nums text-[10px] text-muted",
+      "reason": "The year strip's month labels start in the week column each month's first day falls in, so they sit four or five weeks apart as the calendar does.",
+      "pointer": "src/app/shop/[shopSlug]/reports/_components/YearStrip.tsx, the comment on the month-label row"
+    },
+    {
+      "check": "uneven-gaps",
+      "signature": "a.underline",
+      "container": "p.text-muted text-sm",
+      "reason": "Links inside one sentence: the space between them is the words between them (\", \" and \", or \"), not layout.",
+      "pointer": "src/app/shop/[shopSlug]/settings/import/page.tsx, the comment on the \"Coming from\" sentence"
+    },
+    {
+      "check": "fill-tight",
+      "classes": ["gap-2", "ring-2"],
+      "reason": "A diver record's waiver channel button carries its delivery state as an sr-only word. The probe reads that word's unclipped rects into the button's text box, so the text appears to run past the button and the hover fill reads as 9px short on the right. Nothing visible spills; the visible label keeps the size's 12px either side.",
+      "pointer": "src/app/shop/[shopSlug]/divers/[personId]/_components/WaiverDeliveryActions.tsx, the comment on the sr-only state word; docs/design/settled-questions.md"
+    }
+  ]
+}

@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
+import { MENU_PANEL, MENU_TICK_GUTTER, menuRowClass } from "@/components/ui/menu";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { motionMs } from "@/lib/motion";
@@ -156,26 +156,23 @@ export function ShopIdentityMenu({
         </span>
       </button>
       {mounted ? (
+        // The shared menu panel and its rows (`ui/menu.ts`): a `p-1` panel
+        // whose rows nest in its corner, and one tick gutter that Settings,
+        // the LANGUAGE label, the language names and Sign out all start
+        // their words on. The rows are not `buttonClass`, whose `rounded-lg`
+        // would beat the nested corner in the stylesheet.
         <div
-          className={`absolute top-full left-0 z-10 mt-2 min-w-44 rounded-inset border border-border bg-surface p-2 shadow-lg ${closing ? "animate-scale-out" : "animate-scale-in"}`}
+          className={`absolute top-full left-0 z-10 mt-2 min-w-44 ${MENU_PANEL} ${closing ? "animate-scale-out" : "animate-scale-in"}`}
         >
           {settingsHref ? (
             <div className="border-b border-border pb-1">
-              <Link
-                href={settingsHref}
-                onClick={close}
-                className={buttonClass({
-                  variant: "ghost",
-                  size: "sm",
-                  className: "w-full justify-start rounded-lg",
-                })}
-              >
+              <Link href={settingsHref} onClick={close} className={menuRowClass("quiet")}>
                 {copy.settings}
               </Link>
             </div>
           ) : null}
           <div className="pt-1">
-            <GroupLabel className="px-2">{copy.language}</GroupLabel>
+            <GroupLabel className={MENU_TICK_GUTTER}>{copy.language}</GroupLabel>
             <div className="mt-1">
               <LanguageChoices
                 current={locale}
@@ -201,19 +198,12 @@ export function ShopIdentityMenu({
               triggerLabel={copy.signOut}
               confirmLabel={copy.signOutConfirm}
               pendingLabel={copy.signOutPending}
-              // `justify-start`: the menu is a list of rows now, and a
-              // centered label beside a left-aligned one reads as two
-              // different kinds of thing.
-              triggerClassName={buttonClass({
-                variant: "ghost",
-                size: "sm",
-                className: "w-full justify-start rounded-lg",
-              })}
-              confirmClassName={buttonClass({
-                variant: "danger",
-                size: "sm",
-                className: "w-full justify-start rounded-lg",
-              })}
+              // Menu rows, start-aligned like every other row here: a
+              // centred label beside a left-aligned one reads as two
+              // different kinds of thing. Armed, the row warns with a ring,
+              // so its words stay on the gutter.
+              triggerClassName={menuRowClass("quiet")}
+              confirmClassName={menuRowClass("armed")}
               autoResetMs={4000}
             />
           </form>

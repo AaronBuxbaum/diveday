@@ -28,9 +28,51 @@ import { toneMark } from "./tone";
  * See docs/design/forms-and-controls.md.
  */
 
-/** Shared control styling for inputs, selects, and textareas. */
-export const controlClass =
-  "min-h-11 w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal transition-colors focus:border-primary";
+/**
+ * **How tall a text control stands, named for what it stands beside.**
+ *
+ * A control's type is 16px at every size, because iOS Safari zooms the whole
+ * page when a box under 16px takes focus. So the control can only ever be
+ * level with a button whose label is 16px too, and `buttonClass`'s `md` is
+ * that button: 48px with a 16px label. `sm` is 44px with a 14px label and
+ * never matches a control, whatever its height.
+ *
+ * - `field`, the default: 44px, the target floor. A control stacked in a
+ *   `Field` whose line holds no button, alone in a toolbar, or in a row of
+ *   controls only (the orders toolbar's search and selects).
+ * - `md`: 48px. A control that shares a line with `md` buttons or `icon`
+ *   squares, inside a `Field` or not: a search beside its "Add diver", the
+ *   reports month box between its arrows, a rename box beside its Save, a
+ *   `Field`'s box beside its form's submit. **A row with a text control in
+ *   it is an `md` row.**
+ *
+ * The pixel probe found the two apart on 2026-09-25 (the `mismatched-controls`
+ * cluster): a 44px search box beside a 48px "Add diver" on seventeen trip
+ * captures and the roster, and a 16px box beside a 14px "Go" or "Save"
+ * wherever a row reached for `sm` to match the box's height.
+ *
+ * Each size spells its own vertical padding with its height, so the content
+ * box is 26px at both. A text box centres its line at any height, but a native
+ * file picker lays its button at the top of the content box, and would sit
+ * high in a 48px box still padded for 44.
+ */
+const controlSizes = {
+  field: "min-h-11 py-2",
+  md: "min-h-12 py-2.5",
+} as const;
+
+export type ControlSize = keyof typeof controlSizes;
+
+const controlBody =
+  "w-full rounded-lg border border-border-strong bg-surface px-3 text-base font-normal transition-colors focus:border-primary";
+
+/** Shared control styling at a size — see `controlSizes` for which size a row takes. */
+export function controlClassFor(size: ControlSize): string {
+  return `${controlSizes[size]} ${controlBody}`;
+}
+
+/** Shared control styling for inputs, selects, and textareas, at the `field` size. */
+export const controlClass = controlClassFor("field");
 
 /**
  * **The one search box** — a `type="search"` control wearing `controlClass`,
@@ -56,19 +98,26 @@ export const controlClass =
  * Every native input prop passes through — `ref`, `value`/`onChange` for a
  * controlled box, `defaultValue` for a form-owned one, `data-*` hooks the e2e
  * suite waits on — so a surface never has a reason to spell the box by hand.
+ *
+ * `size="md"` where the box shares a line with an `md` button, as the diver
+ * roster's and the seat-diver picker's do with their "Add diver"; the default
+ * everywhere else (`controlSizes` says why).
  */
 export function SearchField({
   id,
   label,
+  size = "field",
   className = "",
   ...input
 }: {
   id: string;
   /** The accessible name — "Search divers", "Scan or search diver". */
   label: string;
+  /** The row's size: `md` beside an `md` button, the default anywhere else. */
+  size?: ControlSize;
   /** Sizes the box. `controlClass` already sets `w-full`; the wrapper decides the width. */
   className?: string;
-} & Omit<ComponentPropsWithRef<"input">, "id" | "type" | "className" | "children">) {
+} & Omit<ComponentPropsWithRef<"input">, "id" | "type" | "className" | "children" | "size">) {
   return (
     <div className={`relative ${className}`.trim()}>
       <label className="sr-only" htmlFor={id}>
@@ -97,7 +146,7 @@ export function SearchField({
         autoComplete="off"
         maxLength={120}
         {...input}
-        className={`${controlClass} ps-9`}
+        className={`${controlClassFor(size)} ps-9`}
       />
     </div>
   );
@@ -416,8 +465,13 @@ export function Field({
       {hint ? <span className="font-normal text-muted"> {hint}</span> : null}
     </>
   );
+  // `empty:hidden` for a description that is a component with nothing to say
+  // yet: the onboarding form's storefront link renders nothing until there is
+  // a slug to show, and its empty slot still took the body's 4px gap under
+  // the control (the pixel probe, onboard). The slot stays mounted, so
+  // `aria-describedby` keeps its target, and takes no room while it is empty.
   const descriptionSpan = description ? (
-    <span id={descriptionId} className="text-xs font-normal text-muted">
+    <span id={descriptionId} className="text-xs font-normal text-muted empty:hidden">
       {description}
     </span>
   ) : null;

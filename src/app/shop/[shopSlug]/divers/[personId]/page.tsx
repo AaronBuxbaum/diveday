@@ -351,107 +351,116 @@ export default async function DiverDetailPage({
         timezone={shop.timezone}
         shopSlug={shopSlug}
       />
-      <DiverStory
-        diver={diver}
-        shop={shop}
-        shopSlug={shopSlug}
-        personId={personId}
-        locale={locale}
-        t={t}
-        paymentsConnected={paymentsConnected}
-        canManageOrders={canManageOrders}
-        offersInvoice
-        status={noticeForForm(diverNotice, "story")}
-        now={now}
-      />
-      {/* After the story and before the file: what happened, then what was
-          said about it, then the record's own paperwork. Renders nothing for a
-          diver who has never written. */}
-      <ConversationSection
-        entries={thread}
-        diverName={diver.person.fullName}
-        shopSlug={shopSlug}
-        personId={personId}
-        locale={locale}
-        timezone={shop.timezone}
-        now={now}
-        // `removed` alone, never `removed || anonymizedAt`: the CHECK
-        // `people_anonymized_stays_removed` makes an anonymized person removed
-        // by construction, so the second term could never add a case.
-        removed={removed}
-        t={t}
-        status={noticeForForm(diverNotice, "reply")}
-      />
-      <CertificationsGroup
-        diver={diver}
-        shop={shop}
-        shopSlug={shopSlug}
-        personId={personId}
-        locale={locale}
-        t={t}
-        status={cardsStatus}
-      />
-      <WaiverGroup
-        diver={diver}
-        shopSlug={shopSlug}
-        personId={personId}
-        locale={locale}
-        t={t}
-        timezone={shop.timezone}
-        canOpenClearance={canOpenClearance}
-        status={noticeForForm(diverNotice, "waiver")}
-      />
-      <GearAndSizes
-        diver={diver}
-        shopSlug={shopSlug}
-        personId={personId}
-        rentalItems={shop.rentalItems}
-        canOverride={canOverrideFit}
-        locale={locale}
-        t={t}
-        status={noticeForForm(diverNotice, "fit")}
-      />
-      {/* After the gear it shares its sizes with, and before the notes staff
-          write for the crew: the shelf is the diver's own view of everything
-          above it (slice 20t). */}
-      <ShelfGroup
-        shopSlug={shopSlug}
-        personId={personId}
-        standing={shelfStanding}
-        locale={locale}
-        timezone={shop.timezone}
-        t={t}
-        status={noticeForForm(diverNotice, "shelf")}
-      />
-      <DiverNotesSection
-        notes={notes}
-        shopSlug={shopSlug}
-        personId={personId}
-        locale={locale}
-        timezone={shop.timezone}
-        t={t}
-        status={notesStatus}
-      />
-      {/* After notes in the file, because support is a quieter planning fact
-          than the record context staff write for the crew. A staffer arriving
-          from the prep panel's link still lands on this group's own #support
-          target (issue #1069). */}
-      <SupportNeedsPanel
-        needs={supportNeeds}
-        shopSlug={shopSlug}
-        personId={personId}
-        canOverride={canOverrideFit}
-        t={t}
-        status={noticeForForm(diverNotice, "support")}
-      />
-      <ActivitySection
-        page={activityPage}
-        shopSlug={shopSlug}
-        personId={personId}
-        locale={locale}
-        timezone={shop.timezone}
-        t={t}
-      />
+      {/* **One rhythm, owned here.** The story and every file group are the
+          record's sections, and they stack on this wrapper's `space-y-10`
+          (forms-and-controls.md, "Section rhythm"). Each used to hang its own
+          margin — the story and certifications `mt-10`, five others `mt-8`,
+          the shelf none — and the pixel probe measured the stack at
+          32/40/32/32/0/32/32/32px. A section that renders nothing (a diver
+          who never wrote, an empty activity log) takes no space in it. */}
+      <div className="mt-10 space-y-10">
+        <DiverStory
+          diver={diver}
+          shop={shop}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          t={t}
+          paymentsConnected={paymentsConnected}
+          canManageOrders={canManageOrders}
+          offersInvoice
+          status={noticeForForm(diverNotice, "story")}
+          now={now}
+        />
+        {/* After the story and before the file: what happened, then what was
+            said about it, then the record's own paperwork. Renders nothing for a
+            diver who has never written. */}
+        <ConversationSection
+          entries={thread}
+          diverName={diver.person.fullName}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          timezone={shop.timezone}
+          now={now}
+          // `removed` alone, never `removed || anonymizedAt`: the CHECK
+          // `people_anonymized_stays_removed` makes an anonymized person removed
+          // by construction, so the second term could never add a case.
+          removed={removed}
+          t={t}
+          status={noticeForForm(diverNotice, "reply")}
+        />
+        <CertificationsGroup
+          diver={diver}
+          shop={shop}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          t={t}
+          status={cardsStatus}
+        />
+        <WaiverGroup
+          diver={diver}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          t={t}
+          timezone={shop.timezone}
+          canOpenClearance={canOpenClearance}
+          status={noticeForForm(diverNotice, "waiver")}
+        />
+        <GearAndSizes
+          diver={diver}
+          shopSlug={shopSlug}
+          personId={personId}
+          rentalItems={shop.rentalItems}
+          canOverride={canOverrideFit}
+          locale={locale}
+          t={t}
+          status={noticeForForm(diverNotice, "fit")}
+        />
+        {/* After the gear it shares its sizes with, and before the notes staff
+            write for the crew: the shelf is the diver's own view of everything
+            above it (slice 20t). */}
+        <ShelfGroup
+          shopSlug={shopSlug}
+          personId={personId}
+          standing={shelfStanding}
+          locale={locale}
+          timezone={shop.timezone}
+          t={t}
+          status={noticeForForm(diverNotice, "shelf")}
+        />
+        <DiverNotesSection
+          notes={notes}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          timezone={shop.timezone}
+          t={t}
+          status={notesStatus}
+        />
+        {/* After notes in the file, because support is a quieter planning fact
+            than the record context staff write for the crew. A staffer arriving
+            from the prep panel's link still lands on this group's own #support
+            target (issue #1069). */}
+        <SupportNeedsPanel
+          needs={supportNeeds}
+          shopSlug={shopSlug}
+          personId={personId}
+          canOverride={canOverrideFit}
+          t={t}
+          status={noticeForForm(diverNotice, "support")}
+        />
+        <ActivitySection
+          page={activityPage}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          timezone={shop.timezone}
+          t={t}
+        />
+      </div>
       {/* **The quiet foot** — the things you do *to* a record rather than with
           it. Nothing here is primary-weight, and reaching the two destructive
           ones costs a scroll on purpose (ADR 20260802-diver-data-erasure). */}

@@ -7,6 +7,25 @@ import { RowActionForm } from "./RowActionForm";
 type CheckInAction = (formData: FormData) => Promise<{ ok: true }>;
 
 /**
+ * The tap is the row's whole box. `LedgerRow` keeps 8px of room around its
+ * words; the form takes it back so the button's fill runs rule to rule, and the
+ * button and the failure line keep it as padding, so both stay on the column
+ * the row's words start on. The margin and the padding that cancels it are one
+ * entry here, so they cannot disagree.
+ *
+ * **Beside a trailing action, the start side only** (dive-domain-expert review,
+ * 2026-09-25). The checked-in row trails "Print a pass" a `gap-3` (12px) after
+ * this tap. Taking the end's room back as well pushed the undo's fill 8px into
+ * that gap and left 4px between two acts a wet-handed desk worker taps one
+ * after the other. There the row's gap is the end's room, so the button draws
+ * no end padding either.
+ */
+const ROW_ROOM = {
+  alone: { form: "-mx-2", inset: "px-2" },
+  besideTrailingAction: { form: "-ms-2", inset: "ps-2" },
+} as const;
+
+/**
  * Check-in is a high-frequency toggle, so a successful write refreshes the
  * server-rendered row in place. Keeping the action inside a client form with
  * `useOptimistic` lets the row respond instantaneously on tap (Principle 1),
@@ -35,7 +54,8 @@ export function CheckInActionForm({
   ariaLabel,
   trailing,
   pendingTrailing,
-  className,
+  rowHasTrailingAction = false,
+  className = "",
   children,
 }: {
   action: CheckInAction;
@@ -45,6 +65,12 @@ export function CheckInActionForm({
   ariaLabel: string;
   trailing: React.ReactNode;
   pendingTrailing: React.ReactNode;
+  /**
+   * The row draws an act of its own after this tap, in `LedgerRow`'s
+   * `trailing` slot: the checked-in row's "Print a pass". The tap then takes
+   * back only the start side of the row's room (`ROW_ROOM`).
+   */
+  rowHasTrailingAction?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -52,20 +78,20 @@ export function CheckInActionForm({
     trailing,
     (_current, update: React.ReactNode) => update,
   );
+  const room = rowHasTrailingAction ? ROW_ROOM.besideTrailingAction : ROW_ROOM.alone;
 
   return (
     <RowActionForm
       action={action}
       sendFailedLabel={sendFailedLabel}
       onSubmitting={() => setOptimisticTrailing(pendingTrailing)}
-      // The row's own padding rather than this form's default margin, so the
-      // failure line lands exactly where it did before the reducer moved out.
-      sendFailedClassName="px-4 pb-3 text-sm font-medium text-danger-strong sm:px-5"
+      className={room.form}
+      sendFailedClassName={`${room.inset} pb-3 text-sm font-medium text-danger-strong`}
     >
       <input type="hidden" name="bookingId" value={bookingId} />
       <QueueRowButton
         ariaLabel={ariaLabel}
-        className={className}
+        className={`${room.inset} ${className}`.trim()}
         trailing={optimisticTrailing}
         pendingTrailing={pendingTrailing}
       >

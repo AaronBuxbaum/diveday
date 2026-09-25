@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { controlClassFor } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
   canPersonViewShopReports,
@@ -533,6 +533,18 @@ export default async function ReportsPage({
         `parseMonthKey` already reads, and its `min` matches the floor the page
         clamps to server-side, so the control cannot offer a month the page
         would silently rewrite.
+
+        One size across the row: the arrows are `icon`, 48px squares that sit
+        level with `md`, so the month box is `md` and so is "Go". They were the
+        44px default and `sm` (14px), two heights and two type sizes in four
+        controls (`reports`, `reports-figures`, 2026-09-25).
+
+        The box's width is on a wrapper, because `controlClassFor` carries
+        `w-full` and a `w-40` beside it on the input lost to it: the box drew
+        at its intrinsic 191px. An `md` "Go" is about 11px wider than an `sm`
+        one, which at 390px pushed the next-month arrow onto a line of its own.
+        176px (`w-44`) keeps the row on one line at 390px and still shows
+        "September 2026", the longest month name; 160px cut its year.
       */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className={SECTION_TITLE_CLASS}>
@@ -564,21 +576,17 @@ export default async function ReportsPage({
             <label htmlFor="report-month" className="sr-only">
               {t("reports.monthPicker.label")}
             </label>
-            <input
-              id="report-month"
-              type="month"
-              name="month"
-              defaultValue={monthKey(current)}
-              min={monthKey(floorMonth)}
-              className={`${controlClass} w-40`}
-            />
-            <button
-              type="submit"
-              className={buttonClass({
-                variant: "secondary",
-                size: "sm",
-              })}
-            >
+            <div className="w-44">
+              <input
+                id="report-month"
+                type="month"
+                name="month"
+                defaultValue={monthKey(current)}
+                min={monthKey(floorMonth)}
+                className={controlClassFor("md")}
+              />
+            </div>
+            <button type="submit" className={buttonClass({ variant: "secondary" })}>
               {t("reports.monthPicker.go")}
             </button>
           </form>
@@ -710,7 +718,7 @@ export default async function ReportsPage({
                       target > 1 ? `&page=${target}` : ""
                     }`
                   }
-                  t={t}
+                  words={staffPagerWords(t)}
                   className="mt-4"
                 />
               }

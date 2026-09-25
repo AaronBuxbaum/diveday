@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { segmentClass, segmentedTrackClass } from "@/components/ui/segmented";
 import {
   DEFAULT_EMBED_OPTIONS,
   EMBED_KINDS,
@@ -156,7 +157,7 @@ export function EmbedGenerator({
                 {EMBED_KINDS.map((k) => (
                   <label
                     key={k}
-                    className={`${tile(kind === k)} cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary`}
+                    className={`${tile(kind === k)} cursor-pointer has-[:focus-visible]:focus-ring`}
                   >
                     <input
                       type="radio"
@@ -223,13 +224,22 @@ export function EmbedGenerator({
             {kind !== "qr" && kind !== "partner" ? (
               <FieldGrid columns={2}>
                 <Field label={copy.look} hint={look === "site" ? copy.lookNote : undefined}>
-                  <div className="flex gap-1 rounded-inset border border-border bg-surface-sunken p-1">
+                  {/* Two radios, so the segmented recipe rather than
+                      `SegmentedControl` (a `<nav>` of links): the look is a
+                      form value, not a destination. The recipe is what nests
+                      the segments in the track's corner and gives them the
+                      one selected and hover treatment. Each label is the
+                      radio's tap target, so it takes the 44px floor
+                      (`min-h-11`, as `SegmentedControl`'s own options do):
+                      it was `min-h-9`, 36px. That makes the track 54px
+                      beside a 44px select (#1974). */}
+                  <div className={segmentedTrackClass}>
                     {(["site", "light"] as const).map((value) => (
                       <label
                         key={value}
-                        className={`flex min-h-9 flex-1 cursor-pointer items-center justify-center rounded-lg px-3 text-sm font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary ${
-                          look === value ? "bg-surface text-foreground shadow-sm" : "text-muted"
-                        }`}
+                        className={`flex min-h-11 flex-1 cursor-pointer items-center justify-center px-3 text-sm has-[:focus-visible]:focus-ring ${segmentClass(
+                          { selected: look === value },
+                        )}`}
                       >
                         <input
                           type="radio"
@@ -328,7 +338,7 @@ export function EmbedGenerator({
             {PLATFORMS.map((p) => (
               <label
                 key={p}
-                className={`min-h-9 cursor-pointer rounded-full border px-3 py-1.5 text-sm font-medium has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary ${
+                className={`min-h-9 cursor-pointer rounded-full border px-3 py-1.5 text-sm font-medium has-[:focus-visible]:focus-ring ${
                   platform === p ? "border-primary bg-primary-tint" : "border-border bg-surface"
                 }`}
               >

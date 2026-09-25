@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { Pager } from "@/components/Pager";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { PaymentsConnectCta } from "@/components/PaymentsConnectCta";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
@@ -683,7 +683,7 @@ export default async function OrdersIndexPage({
         page={orderPage.page}
         pageCount={orderPage.pageCount}
         href={(target) => hrefWith({ page: target })}
-        t={t}
+        words={staffPagerWords(t)}
         className="mt-8"
       />
 
@@ -804,7 +804,7 @@ export default async function OrdersIndexPage({
               page={importedHistoryPage.page}
               pageCount={importedHistoryPage.pageCount}
               href={(target) => hrefWith({ importedPage: target })}
-              t={t}
+              words={staffPagerWords(t)}
               className="mt-4"
             />
           </LedgerGroup>

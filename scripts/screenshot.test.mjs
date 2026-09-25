@@ -98,3 +98,32 @@ describe("the capture itself", () => {
     expect(source.match(/page\.screenshot\(/g)).toHaveLength(1);
   });
 });
+
+/**
+ * The fourth: one scheme by default.
+ *
+ * The owner's rule (H-90 in docs/product/human-decisions.md): "whenever you do
+ * checks, you only need to check one of light or dark, unless you are
+ * explicitly doing color-related work!" The script used to shoot light and
+ * dark on every run, which doubled every look — and, on a dev server that
+ * dies at about thirty renders, halved how many paths one run could reach.
+ * Light is the default; dark is asked for, alone or with `--both`.
+ */
+describe("the colour schemes", () => {
+  const source = readFileSync(path.join(process.cwd(), "scripts/screenshot.mjs"), "utf8");
+
+  it("starts from light alone", () => {
+    expect(source).toMatch(/^let schemes = \["light"\];$/m);
+  });
+
+  it("takes both schemes, light first, only when --both asks", () => {
+    expect(source).toContain('else if (arg === "--both") schemes = ["light", "dark"];');
+    expect(source.match(/\["light", "dark"\]/g)).toHaveLength(1);
+  });
+
+  it("keeps --light and --dark, and names --both in the usage", () => {
+    expect(source).toContain('else if (arg === "--light") schemes = ["light"];');
+    expect(source).toContain('else if (arg === "--dark") schemes = ["dark"];');
+    expect(source).toContain("[--light|--dark|--both]");
+  });
+});

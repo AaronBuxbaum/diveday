@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Roster-shaped skeleton for the staff course list (design principle 1).
@@ -23,7 +24,7 @@ export default function StaffCoursesLoading() {
                 {[0, 1, 2].map((row) => (
                   <div
                     key={row}
-                    className="flex min-h-12 items-center gap-3 border-t border-border py-3 last:border-b"
+                    className={`flex min-h-12 items-center gap-3 py-3 ${ledgerRowBoxClass}`}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="h-4 w-52 max-w-full rounded bg-surface-sunken" />

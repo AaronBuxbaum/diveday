@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Body-shaped skeleton for a public dive-site page (ADR
@@ -30,7 +31,7 @@ export default function DiveSitePageLoading() {
         <div className="mt-8 h-3 w-40 rounded bg-surface-sunken" />
         <div className="mt-2 flex flex-col">
           {[0, 1, 2].map((row) => (
-            <div key={row} className="border-t border-border py-4 last:border-b">
+            <div key={row} className={`py-4 ${ledgerRowBoxClass}`}>
               <div className="h-4 w-40 rounded bg-surface-sunken" />
               <div className="mt-1.5 h-4 w-32 rounded bg-surface-sunken" />
             </div>

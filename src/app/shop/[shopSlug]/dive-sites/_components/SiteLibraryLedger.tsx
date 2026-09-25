@@ -174,29 +174,38 @@ function SiteRow({
       // their own beneath, and from `sm` up the row is byte-for-byte the row
       // the artboard draws.
       stacked
+      // **No slot for a row with nothing to trail.** A site that asks only for
+      // Open Water, at the published version, has neither words nor badge, and
+      // `LedgerRow` draws whatever it is handed: a stacked row with no kind
+      // drops its trailing slot to a full-width line of its own on a phone, so
+      // an empty wrapper there was an empty line, 12px of row gap below the
+      // site's name (the pixel probe: 24px where the lines sit 12px apart,
+      // and the name 6px above the row's centre).
       trailing={
-        // Nothing in here is interactive, and `LedgerRow` lifts its trailing
-        // slot above the row-wide link overlay — so without this a tap landing
-        // on the requirement words or the badge would do nothing at all. The
-        // door's chevron is the row's own.
-        <div className="pointer-events-none flex items-center gap-3">
-          {updateReady ? (
-            <Badge tone="primary" size="sm">
-              {t("diveSites.list.templateUpdateReady", { version: published })}
-            </Badge>
-          ) : null}
-          {requirementWords.length > 0 ? (
-            <span
-              className={
-                requirement.emphasised
-                  ? "text-end text-sm font-medium text-warning-strong"
-                  : "text-end text-sm text-muted"
-              }
-            >
-              {requirementWords.join(" · ")}
-            </span>
-          ) : null}
-        </div>
+        updateReady || requirementWords.length > 0 ? (
+          // Nothing in here is interactive, and `LedgerRow` lifts its trailing
+          // slot above the row-wide link overlay — so without this a tap
+          // landing on the requirement words or the badge would do nothing at
+          // all. The door's chevron is the row's own.
+          <div className="pointer-events-none flex items-center gap-3">
+            {updateReady ? (
+              <Badge tone="primary" size="sm">
+                {t("diveSites.list.templateUpdateReady", { version: published })}
+              </Badge>
+            ) : null}
+            {requirementWords.length > 0 ? (
+              <span
+                className={
+                  requirement.emphasised
+                    ? "text-end text-sm font-medium text-warning-strong"
+                    : "text-end text-sm text-muted"
+                }
+              >
+                {requirementWords.join(" · ")}
+              </span>
+            ) : null}
+          </div>
+        ) : undefined
       }
     >
       <div className="min-w-0 py-2">

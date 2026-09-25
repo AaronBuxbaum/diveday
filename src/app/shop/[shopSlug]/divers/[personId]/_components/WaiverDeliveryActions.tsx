@@ -157,7 +157,15 @@ function ChannelButton({
             </span>
           ) : null}
           {/* Free to add and invisible to everyone else, so it is never the
-              thing traded away (docs/design/accessibility-tradeoffs.md). */}
+              thing traded away (docs/design/accessibility-tradeoffs.md).
+
+              The pixel probe reads this word into the button's text box —
+              an `sr-only` span's rects come back unclipped, running past the
+              button's end — and so calls the hover fill 9px short of the
+              label on the right (`fill-tight`, "Email waiver · Didn’t go
+              out", 2026-09-25). Nothing visible spills: the label keeps the
+              size's 12px either side. Settled in
+              scripts/pixel-probe-settled.json. */}
           {stateLabel ? <span className="sr-only">{stateLabel}</span> : null}
         </>
       )}

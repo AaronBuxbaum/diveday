@@ -2,6 +2,12 @@
 
 import Link from "next/link";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import {
+  SEGMENT_CORNER,
+  SEGMENT_RAISED,
+  segmentClass,
+  segmentedTrackClass,
+} from "@/components/ui/segmented";
 
 /**
  * The one segmented control: a sunken track with a raised pill on the current
@@ -65,6 +71,11 @@ import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
  *   read twice.
  * - **Never on paper.** A way to switch surfaces means nothing printed, so
  *   the track is `print:hidden` unconditionally.
+ * - **Corners that nest.** The track, the options, their hover fill and the
+ *   pill come from `segmented.ts`, which the party-size picker and the embed
+ *   page's look toggle also take: every part laid on the track wears the
+ *   track's corner less the track's inset, 7px, not the 12px control rung
+ *   that stood inside a 12px corner until 2026-09-25.
  *
  * The current item renders **inert** (a `<span>` with `aria-current`) by
  * default — a tab bar's "you are here" is not a destination. A control whose
@@ -110,9 +121,6 @@ const sizes = {
 } as const;
 
 export type SegmentedControlSize = keyof typeof sizes;
-
-/** The raised pill's own look — the one place the selected fill is spelled. */
-const PILL_CLASS = "bg-surface shadow-sm";
 
 export function SegmentedControl({
   ariaLabel,
@@ -187,11 +195,27 @@ export function SegmentedControl({
       // Device pixels rather than CSS pixels because the grid antialiasing
       // happens on is physical: at dpr 2 a half-pixel edge is exact, and
       // rounding it away would be the only visible thing this does.
+      //
+      // **Offsets count from the track's padding edge, inside its border.**
+      // `getBoundingClientRect` measures from the border edge, but `left` and
+      // `top` on an absolutely positioned child are read from its container's
+      // padding edge — so the plain difference put the pill one border-width
+      // (1px) lower and further right than its own option. The probe saw it as
+      // a second inset: on `check-in-checked` the first option starts 5px
+      // inside the track and the pill 6px, which left the pill 6px off the
+      // track's left edge, 4px off its right, and 1px past its option's box.
+      // The border widths come from the computed style, not `clientLeft` /
+      // `clientTop`: those round to whole CSS pixels, and at 125% zoom a 1px
+      // border is laid out 0.8px wide. `|| 0` covers an engine that answers
+      // with no length at all (jsdom, a borderless track).
+      const trackStyle = getComputedStyle(nav);
+      const borderLeft = Number.parseFloat(trackStyle.borderLeftWidth) || 0;
+      const borderTop = Number.parseFloat(trackStyle.borderTopWidth) || 0;
       const dpr = window.devicePixelRatio || 1;
       const snap = (value: number) => Math.round(value * dpr) / dpr;
       const next = {
-        left: snap(box.left - navBox.left),
-        top: snap(box.top - navBox.top),
+        left: snap(box.left - navBox.left - borderLeft),
+        top: snap(box.top - navBox.top - borderTop),
         width: snap(box.width),
         height: snap(box.height),
       };
@@ -232,18 +256,21 @@ export function SegmentedControl({
   // with `mb-*` would stack the two margins instead of taking the larger —
   // +28px of phantom space the old hand-rolled navs (all block-level) never
   // had. Content width comes from `w-fit`, not from being inline.
-  const track = `relative flex ${
+  const track = `relative ${segmentedTrackClass} ${
     fill ? "" : "w-fit max-w-full"
-  } flex-wrap gap-1 rounded-inset border border-border bg-surface-sunken p-1 print:hidden ${className}`.trim();
+  } flex-wrap print:hidden ${className}`
+    .replace(/\s+/g, " ")
+    .trim();
   return (
     <nav ref={navRef} aria-label={ariaLabel} className={track}>
       {/* First in the tree so every option paints above it; `relative` on the
           options is what puts them in the same paint order. Positioned by the
-          effect above, invisible until it has measured. */}
+          effect above, invisible until it has measured, and cornered like the
+          option it sits on. */}
       <span
         ref={pillRef}
         aria-hidden="true"
-        className={`pointer-events-none absolute rounded-lg transition-transform ease-out-soft [transform-origin:top_left] ${PILL_CLASS}`}
+        className={`pointer-events-none absolute ${SEGMENT_CORNER} transition-transform ease-out-soft [transform-origin:top_left] ${SEGMENT_RAISED}`}
         style={{ opacity: 0 }}
       />
       {items.map((item) => {
@@ -254,11 +281,10 @@ export function SegmentedControl({
         // ragged — four tabs become a 2x2 block on a phone.
         const cls = `relative inline-flex ${
           fill ? "flex-1" : "grow"
-        } pressable items-center justify-center rounded-lg font-semibold whitespace-nowrap ${sizes[size]} ${
-          active
-            ? `text-primary${pillReady ? "" : ` ${PILL_CLASS}`}`
-            : "text-muted hover:bg-surface hover:text-foreground"
-        }`;
+        } pressable items-center justify-center whitespace-nowrap ${sizes[size]} ${segmentClass({
+          selected: active,
+          raised: !pillReady,
+        })}`;
         // `hidden` is `display: none`, so exactly one form is in the
         // accessibility tree at any width and the accessible name is whichever
         // one a reader can see. An item with no `shortLabel` renders its label

@@ -54,30 +54,36 @@ export function FilterChips({
   onNavigate?: () => void;
 }) {
   return (
-    <nav
-      aria-label={label}
-      // One row that scrolls on a phone, wrapping only from `sm` up. Eleven
-      // gear kinds wrapped to four rows at 390px and pushed the list they
-      // narrow below the fold; a row a thumb can flick through keeps the
-      // control one line tall at every width. The negative margin lets the
-      // row bleed to the screen edge so the last chip peeks in from the
-      // right, which is the only affordance a scrolling row has.
-      className={`flex items-center gap-2 max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] sm:flex-wrap${className ? ` ${className}` : ""}`}
-    >
-      {chips.map((chip) => (
-        <Link
-          key={chip.key}
-          href={chip.href}
-          // The chips sit above the list they narrow; a scroll reset would
-          // throw the reader back to the top of the page on every view change.
-          scroll={false}
-          onClick={onNavigate}
-          aria-current={chip.active ? "true" : undefined}
-          className={chipClass(chip.active)}
-        >
-          {chip.label}
-        </Link>
-      ))}
+    <nav aria-label={label} className={className || undefined}>
+      {/* One row that scrolls on a phone, wrapping only from `sm` up. Eleven
+          gear kinds wrapped to four rows at 390px and pushed the list they
+          narrow below the fold; a row a thumb can flick through keeps the
+          control one line tall at every width. The negative margin lets the
+          row bleed to the screen edge so the last chip peeks in from the
+          right, which is the only affordance a scrolling row has.
+
+          A scroll box clips both axes, and the chips sat flush with its top
+          and bottom, so the focus ring's 5px went on both (every filtered
+          list at 390px). `py-1.5` gives it room and `-my-1.5` takes the
+          room back, so nothing around the row moves. That is also why the
+          scroller is its own box inside the nav: a caller's `mb-5` on the
+          same element would lose to the negative margin. */}
+      <div className="flex items-center gap-2 max-sm:-mx-4 max-sm:-my-1.5 max-sm:overflow-x-auto max-sm:px-4 max-sm:py-1.5 max-sm:[scrollbar-width:none] sm:flex-wrap">
+        {chips.map((chip) => (
+          <Link
+            key={chip.key}
+            href={chip.href}
+            // The chips sit above the list they narrow; a scroll reset would
+            // throw the reader back to the top of the page on every view change.
+            scroll={false}
+            onClick={onNavigate}
+            aria-current={chip.active ? "true" : undefined}
+            className={chipClass(chip.active)}
+          >
+            {chip.label}
+          </Link>
+        ))}
+      </div>
     </nav>
   );
 }

@@ -5,7 +5,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass } from "@/components/ui/form";
+import { controlClassFor, Field } from "@/components/ui/form";
 import { canPersonImportShopData } from "@/db/import";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -97,16 +97,22 @@ export default async function DiveSiteImportPage({
           encType="multipart/form-data"
           className="mt-5 flex flex-wrap items-end gap-3"
         >
-          <label className="grid gap-1 text-sm font-medium">
-            {t("diveSites.import.file")}
+          {/* One `md` row: the file box and the submit. The box was the 44px
+              default beside a 48px `md` button, and `items-end` stood the
+              button 4px above the box's top edge
+              (`settings-dive-site-import`, 2026-09-25). The caption is
+              `Field`'s own label, above the box; `markRequired={false}`
+              because this is the form's one field, so a `*` would tell
+              nothing apart. */}
+          <Field label={t("diveSites.import.file")} markRequired={false}>
             <input
               name="file"
               type="file"
               accept=".csv,text/csv"
               required
-              className={controlClass}
+              className={controlClassFor("md")}
             />
-          </label>
+          </Field>
           <SubmitButton
             pendingLabel={t("diveSites.import.pending")}
             className={buttonClass({ variant: "secondary" })}

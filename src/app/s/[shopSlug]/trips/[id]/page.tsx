@@ -8,6 +8,7 @@ import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { buttonClass } from "@/components/ui/button";
+import { ledgerRowRoomClass } from "@/components/ui/ledger";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { readKnownDiver } from "@/db/booking-handoff";
 import { getBookingForTrip } from "@/db/bookings";
@@ -784,7 +785,11 @@ export default async function TripDetailPage({
             whose own page states its admission rule. */}
         <TripAlternatives alternatives={worthALookRows} locale={locale} />
         {requirementNote ? (
-          <p className="mt-8 border-t border-border pt-4 text-sm text-muted">
+          // The ledger's room, so this rule is as long as the alternatives'
+          // rules just above it.
+          <p
+            className={`mt-8 border-t border-border pt-4 text-sm text-muted ${ledgerRowRoomClass}`}
+          >
             {t("trip.requirementNote", { list: requirementNote })}
           </p>
         ) : null}

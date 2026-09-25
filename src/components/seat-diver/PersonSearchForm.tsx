@@ -82,6 +82,12 @@ export function PersonSearchForm({
         key={query}
         defaultValue={query}
         placeholder={placeholder}
+        // `md`, the size of the "Add diver" beside it. At the 44px default the
+        // box sat 2px inside that 48px button at the top and at the bottom, on
+        // every door that seats a returning diver (seventeen trip captures in
+        // the pixel probe's `mismatched-controls` cluster, 2026-09-25). The
+        // button is `md` because the band is a card body; the box follows it.
+        size="md"
         className="min-w-0 flex-1 max-sm:basis-full"
       />
       {addDiverHref && addDiverLabel ? (

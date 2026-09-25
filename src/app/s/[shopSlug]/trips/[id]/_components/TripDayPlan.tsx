@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
 import { StoredPhoto } from "@/components/StoredPhoto";
-import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
+import { GroupLabel, LedgerRow, ledgerRowBoxClass } from "@/components/ui/ledger";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
@@ -400,9 +400,10 @@ export function TripDayPlan({
                   the kind gutter and the trailing depth — about a third of the
                   screen — and three sentences of reading set in it wrapped
                   every line twice. The surface interval below already has this
-                  shape for the same reason. */}
+                  shape for the same reason. It takes the dive rows' box, so its
+                  rules are theirs and a list that ends on it still closes. */}
               {seen ? (
-                <li className="flex gap-3 border-t border-border py-2">
+                <li className={`flex gap-3 py-2 ${ledgerRowBoxClass}`}>
                   <span className="min-w-23 shrink-0" />
                   <SiteSeen
                     seen={seen}
@@ -417,7 +418,7 @@ export function TripDayPlan({
                   Indented past the kind word so it reads as part of the run
                   rather than as a third dive. */}
               {interval ? (
-                <li className="flex items-center gap-3 border-t border-border py-2">
+                <li className={`flex items-center gap-3 py-2 ${ledgerRowBoxClass}`}>
                   <span className="min-w-23 shrink-0" />
                   <span className="text-sm text-muted tabular-nums">
                     {t("trip.dayProfile.surfaceInterval", { minutes: interval })}
@@ -741,12 +742,14 @@ export function TripSiteNotes({
   return (
     <section className="mt-6">
       <GroupLabel as="h2">{t("trip.theSite", { count: sites.length })}</GroupLabel>
-      <div className="mt-2 divide-y divide-border">
+      {/* The rules between passages are a ledger's length, as the door's own
+          rule above them is: 8px past the column, with the words kept on it. */}
+      <div className="-mx-2 mt-2 divide-y divide-border">
         {sites.map(({ site, landmarks, lookFor }) => {
           const fit = siteFit(site);
           const fitWord = fit.tone === "unknown" ? null : t(fitLabelKey[fit.tone]);
           return (
-            <div key={site.id} className="py-4 first:pt-0 last:pb-0">
+            <div key={site.id} className="px-2 py-4 first:pt-0 last:pb-0">
               {/* One heading line: the site (only when the day dives more than
                   one — on a single-mooring day "The day" above has already said
                   it) and its fit word, together rather than as two stacked

@@ -4,7 +4,14 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { GroupLabel, InsetGroup, LedgerGroup, LedgerRow, RowKind } from "./ledger";
+import {
+  GroupLabel,
+  InsetGroup,
+  LedgerGroup,
+  LedgerRow,
+  ledgerRowBoxClass,
+  RowKind,
+} from "./ledger";
 
 afterEach(cleanup);
 
@@ -30,6 +37,52 @@ function sourceFiles(dir: string): string[] {
  * label would land.
  */
 const SWEEP_EXEMPT = new Set([LEDGER, join(HERE, "ledger.test.tsx")]);
+
+/**
+ * The class tokens a `className={…}` expression can produce, read from the
+ * string and template literals in it with every `${…}` left out:
+ * `` `py-3 ${rowClassName}`.trim() `` reads as `py-3`.
+ */
+function classLiterals(expression: string): string {
+  return [...expression.matchAll(/"([^"]*)"|'([^']*)'|`([^`]*)`/g)]
+    .map((match) => (match[1] ?? match[2] ?? match[3] ?? "").replace(/\$\{[^}]*\}/g, " "))
+    .join(" ");
+}
+
+/**
+ * The attributes of every `<LedgerRow …>` opening tag in a source file, with
+ * whatever sits inside braces left out — so a `className` on a button in the
+ * row's `trailing` slot is not read as the row's own — except the row's own
+ * `className={…}`, whose literals are kept as a `className="…"` attribute.
+ * Found by walking brace depth rather than by a regex, because an attribute
+ * value may be a ternary, a template string or a whole element.
+ */
+function ledgerRowTags(source: string): string[] {
+  const tags: string[] = [];
+  for (const opening of source.matchAll(/<LedgerRow(?=[\s>/])/g)) {
+    let depth = 0;
+    let own = "";
+    let expression: string | null = null;
+    for (let cursor = opening.index ?? 0; cursor < source.length; cursor++) {
+      const char = source[cursor];
+      if (char === "{") {
+        if (depth === 0 && own.endsWith("className=")) expression = "";
+        else if (expression !== null) expression += char;
+        depth++;
+      } else if (char === "}") {
+        depth--;
+        if (depth === 0 && expression !== null) {
+          own += `"${classLiterals(expression)}"`;
+          expression = null;
+        } else if (expression !== null) expression += char;
+      } else if (expression !== null) expression += char;
+      else if (depth === 0 && char === ">" && source[cursor - 1] !== "=") break;
+      else if (depth === 0) own += char;
+    }
+    tags.push(own);
+  }
+  return tags;
+}
 
 /**
  * These are small-caps by design but are not group labels: the public eyebrow,
@@ -251,6 +304,20 @@ describe("LedgerGroup", () => {
     expect(summary).toHaveClass("flex-wrap");
     expect(screen.getByText("3 departures")).toHaveClass("max-sm:basis-full", "max-sm:text-end");
   });
+
+  it("rings a horizon row's summary inside itself, as a ledger row's door is ringed", () => {
+    // The summary is a ledger row's box, rule to rule. The outset ring crossed
+    // the hairlines, and inside an embed frame, whose column is 12px from the
+    // screen, it ran 1px off both edges (the pixel probe, booking-confirmed-embed).
+    const { container } = render(
+      <LedgerGroup label="The rest of the briefing" folded summaryVariant="row">
+        <p>a row</p>
+      </LedgerGroup>,
+    );
+    const summary = container.querySelector("summary");
+    expect(summary).toHaveClass("focus-visible:focus-ring-inset", "-mx-2", "px-2");
+    expect(summary?.className).not.toMatch(/outline-/);
+  });
 });
 
 describe("LedgerRow", () => {
@@ -298,6 +365,83 @@ describe("LedgerRow", () => {
       "absolute",
       "inset-0",
     );
+  });
+
+  it("draws a door and a plain row on one box: 8px of room inside, handed back as margin", () => {
+    // The pixel probe (2026-09-25) measured a door's hover fill leaving 0px
+    // between its edge and the row's first word, across 50 captures: the
+    // fill paints the row, and the row had no horizontal padding. `px-2` is the
+    // room; `-mx-2` hands the same 8px back, so the words still start on the
+    // column the group label above them starts on. A plain row takes the same
+    // box, or its rules step 8px wherever it meets a door — in one list (the
+    // inbox's unknown senders) or between two on one page (the diver record's
+    // status rows over its bookings).
+    const { container, rerender } = render(
+      <LedgerRow as="div" href="/shop/blue-mantis/orders/1" linkLabel="Open the order">
+        Amara Osei
+      </LedgerRow>,
+    );
+    const box = (element: Element | null) =>
+      [...(element?.classList ?? [])].filter((token) => /^-?(?:m|p)[xse]-|border/.test(token));
+    const door = box(container.firstElementChild);
+    expect(container.firstElementChild).toHaveClass(...ledgerRowBoxClass.split(" "));
+
+    rerender(<LedgerRow as="div">Grace Mensah</LedgerRow>);
+    expect(box(container.firstElementChild)).toEqual(door);
+  });
+
+  it("rings the door with the app's inset ring on the row's own corner, and sets no ring geometry of its own", () => {
+    // The overlay link is the row's box, so the global ring's 2px offset drew
+    // it 5px outside the fill, across the hairlines and the rows either side.
+    // The inset ring is one utility beside the global rule in globals.css; an
+    // offset written here (it was `-3px`, in a style attribute) would be a
+    // second copy of the ring's width.
+    render(
+      <LedgerRow as="div" href="/shop/blue-mantis/divers/1" linkLabel="Open Grace Mensah">
+        Grace Mensah
+      </LedgerRow>,
+    );
+    const link = screen.getByRole("link", { name: "Open Grace Mensah" });
+    expect(link).toHaveClass("focus-visible:focus-ring-inset", "rounded-[inherit]");
+    expect(link).not.toHaveAttribute("style");
+  });
+
+  it("owns its horizontal box: no call site sets a row's horizontal margin or padding", () => {
+    // Today's spine and the first-run checklist each spelled `-mx-2 px-2` on
+    // their rows by hand, and the week row then took it back from `sm` up
+    // with `sm:mx-0 … sm:px-0` — the very row the probe found with its fill
+    // flush against "This week". The counter's blocked row passed `px-4
+    // sm:px-5`, which outranks the row's own `px-2` by stylesheet order. The
+    // room is the component's: any horizontal margin or padding on a
+    // `<LedgerRow>`, in a string or a `className={…}` expression, is a second
+    // copy of it or a cancellation of it.
+    const offenders = sourceFiles(SRC_DIR)
+      .filter((file) => file.endsWith(".tsx") && !SWEEP_EXEMPT.has(file))
+      .flatMap((file) =>
+        ledgerRowTags(readFileSync(file, "utf8")).flatMap((tag) =>
+          [...tag.matchAll(/className="([^"]*)"/g)]
+            .flatMap((match) => match[1].split(/\s+/))
+            .filter((token) => /^(?:\S*:)?-?(?:m|p)[xse]-/.test(token))
+            .map((token) => `${relative(SRC_DIR, file)}: ${token}`),
+        ),
+      );
+    // Listed, not counted — nothing on screen will name the file.
+    expect(offenders).toEqual([]);
+  });
+
+  it("reads a row's own className expression and nothing in its slots", () => {
+    // The sweep above is only as good as what it reads: a template string on
+    // the row is the row's, and a class on a button in `trailing` is not.
+    // Built in pieces so no string literal here carries an interpolation.
+    const source = [
+      "<LedgerRow className={`px-4 ",
+      "$",
+      "{extra}`}",
+      ' trailing={<a className="px-3">x</a>}>y</LedgerRow>',
+    ].join("");
+    const [tag] = ledgerRowTags(source);
+    expect(tag).toMatch(/className="px-4\s*"/);
+    expect(tag).not.toContain("px-3");
   });
 
   it("draws the door's chevron itself, after the trailing slot", () => {

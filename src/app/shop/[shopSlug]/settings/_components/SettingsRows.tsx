@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { LIST_ROW_SUMMARY_RING } from "@/components/ui/disclosure";
 import { type SectionId, settingsSectionFragment } from "../settings-groups";
 
 /**
@@ -53,21 +54,39 @@ function RowSummary({
   // truncating beside it — the row exists to *state* the answer, and the
   // dock test's device is exactly where an email or address would otherwise
   // be cut to "hello@demo.inva…".
+  //
+  // **A row with no value is its heading line alone on a phone.** The value's
+  // wrapper used to render regardless, holding only the desktop caret, which
+  // is `hidden` below `sm`: the wrapper collapsed to 0px and still took the
+  // column's `gap-1`, so the pixel probe measured "The counter card" and every
+  // other valueless label 2px above its row's centre. Without a value the
+  // caret is the summary's own last item instead, and `hidden` takes it out
+  // of the phone's column entirely; from `sm` up it sits at the row's end,
+  // where the wrapper used to put it.
+  const desktopCaret = (
+    <DisclosureCaret
+      direction="down"
+      className="hidden text-muted group-open:rotate-180 sm:block"
+    />
+  );
   return (
-    <summary className="flex min-h-14 cursor-pointer list-none flex-col justify-center gap-1 px-4 py-3 transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
+    <summary
+      className={`flex min-h-14 cursor-pointer list-none flex-col justify-center gap-1 px-4 py-3 transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 ${LIST_ROW_SUMMARY_RING}`}
+    >
       <span className="flex items-center justify-between gap-4">
         <h3 id={anchorId} className="scroll-mt-24 text-base font-medium sm:shrink-0">
           {heading}
         </h3>
         <DisclosureCaret direction="down" className="text-muted group-open:rotate-180 sm:hidden" />
       </span>
-      <span className="flex min-w-0 items-center gap-3">
-        {value != null ? <span className="text-sm text-muted sm:truncate">{value}</span> : null}
-        <DisclosureCaret
-          direction="down"
-          className="hidden text-muted group-open:rotate-180 sm:block"
-        />
-      </span>
+      {value != null ? (
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="text-sm text-muted sm:truncate">{value}</span>
+          {desktopCaret}
+        </span>
+      ) : (
+        desktopCaret
+      )}
     </summary>
   );
 }

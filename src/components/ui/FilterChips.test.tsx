@@ -48,6 +48,21 @@ describe("FilterChips", () => {
     expect(onNavigate).toHaveBeenCalledTimes(1);
   });
 
+  it("leaves the focus ring room above and below where the row scrolls, without moving", () => {
+    // Below `sm` the row is a sideways scroll box, and a scroll box clips both
+    // axes: with the chips flush top and bottom, the ring's 5px went on both
+    // (the pixel probe, every filtered list at 390px). The room is padding the
+    // same negative margin takes back, so the row's box does not move.
+    render(<FilterChips label="Roster views" chips={chips} className="mb-5" />);
+    const nav = screen.getByRole("navigation", { name: "Roster views" });
+    const scroller = screen.getByRole("link", { name: "All divers" }).parentElement;
+    expect(scroller).toHaveClass("max-sm:overflow-x-auto", "max-sm:py-1.5", "max-sm:-my-1.5");
+    // A caller's margin goes on the nav, never on the scroller whose negative
+    // margin would override it.
+    expect(nav).toHaveClass("mb-5");
+    expect(scroller).not.toHaveClass("mb-5");
+  });
+
   it("centers its labels inside the 44px touch floor rather than relying on memory", () => {
     // docs/design/forms-and-controls.md: a min-h floor without flex centering
     // leaves the label at the top of the taller box. Structural, so asserted.

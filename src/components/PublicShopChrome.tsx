@@ -209,22 +209,31 @@ export function PublicShopFooter({
             </div>
           ) : null}
         </div>
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          {addressNode}
-          {shop.contactPhone ? (
-            <a href={telHref(shop.contactPhone)} className="hover:text-foreground hover:underline">
-              {shop.contactPhone}
-            </a>
-          ) : null}
-          {shop.contactEmail ? (
-            <a
-              href={mailtoHref(shop.contactEmail)}
-              className="hover:text-foreground hover:underline"
-            >
-              {shop.contactEmail}
-            </a>
-          ) : null}
-        </p>
+        {/* Only when there is a way to reach the shop on file. A shop still
+            being set up has none, and the empty line took the phone column's
+            8px gap under the credit line (the pixel probe,
+            public-schedule-new-shop). */}
+        {addressNode || shop.contactPhone || shop.contactEmail ? (
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {addressNode}
+            {shop.contactPhone ? (
+              <a
+                href={telHref(shop.contactPhone)}
+                className="hover:text-foreground hover:underline"
+              >
+                {shop.contactPhone}
+              </a>
+            ) : null}
+            {shop.contactEmail ? (
+              <a
+                href={mailtoHref(shop.contactEmail)}
+                className="hover:text-foreground hover:underline"
+              >
+                {shop.contactEmail}
+              </a>
+            ) : null}
+          </p>
+        ) : null}
       </div>
     </footer>
   );

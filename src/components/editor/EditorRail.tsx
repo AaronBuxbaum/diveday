@@ -56,10 +56,14 @@ export function EditorRail({
           const active = section.id === current;
           return (
             <li key={section.id} className="flex">
+              {/* The ring is inside the row, as on the settings rail: from
+                  `lg` up this is a column of stacked rows, and below it the
+                  row's `-ms-3` puts the first link 4px from a 390px screen's
+                  edge, which cut an outset ring by a pixel. */}
               <a
                 href={`#${section.id}`}
                 aria-current={active ? "true" : undefined}
-                className={`flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-sunken hover:text-foreground lg:w-full ${
+                className={`flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-sunken hover:text-foreground focus-visible:focus-ring-inset lg:w-full ${
                   active ? "text-muted lg:bg-primary-tint lg:text-primary" : "text-muted"
                 }`}
               >
@@ -108,8 +112,16 @@ export function UnsavedSections({
         : (copy.inSections[dirty.length] ?? null);
   // Always in the document, never conditionally mounted: a live region has to
   // exist before its content changes or the change is never announced.
+  //
+  // **Out of the row's flow while it is silent.** It sits in
+  // `StickyFormActions`, a `gap-3` flex row, where an empty span is still a
+  // flex item: the pixel probe found it taking 12px after the Save on every
+  // dive-site editor capture. `absolute` takes a box out of flex layout
+  // without taking it out of the accessibility tree (`hidden` would do both,
+  // and a region that appears with its words is one nobody hears), and an
+  // empty span positioned there is 0 by 0.
   return (
-    <span aria-live="polite" className="text-sm text-muted">
+    <span aria-live="polite" className={`text-sm text-muted${sentence ? "" : " absolute"}`}>
       {sentence}
     </span>
   );

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
+import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ReviewLedger } from "@/components/ShopReviews";
 import { StarRating } from "@/components/StarRating";
-import { buttonClass } from "@/components/ui/button";
+
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { getDb } from "@/db/client";
 import {
@@ -174,39 +174,23 @@ export default async function PublicReviewsPage({
         ) : null}
       </section>
 
-      {reviewPage.pageCount > 1 ? (
-        <nav
-          aria-label={t("reviews.paginationLabel")}
-          className="mt-6 flex items-center justify-between gap-3"
-        >
-          {reviewPage.page > 1 ? (
-            <Link
-              href={pageHref(reviewPage.page - 1)}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("reviews.previousPage")}
-            </Link>
-          ) : (
-            <span />
-          )}
-          <p className="text-sm text-muted">
-            {t("reviews.pagePosition", {
-              page: reviewPage.page,
-              pageCount: reviewPage.pageCount,
-            })}
-          </p>
-          {reviewPage.page < reviewPage.pageCount ? (
-            <Link
-              href={pageHref(reviewPage.page + 1)}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("reviews.nextPage")}
-            </Link>
-          ) : (
-            <span />
-          )}
-        </nav>
-      ) : null}
+      {/* The shared pager in the diver's words. This was a hand-copied
+          `justify-between` row with an empty `<span>` standing in for a
+          missing link, the shape that put the staff pager's readout 28px off
+          centre; the one pager centres it at every width. It renders nothing
+          on a single page, so the archive needs no guard of its own. */}
+      <Pager
+        page={reviewPage.page}
+        pageCount={reviewPage.pageCount}
+        href={pageHref}
+        words={{
+          label: t("reviews.paginationLabel"),
+          previous: t("reviews.previousPage"),
+          next: t("reviews.nextPage"),
+          position: (page, pageCount) => t("reviews.pagePosition", { page, pageCount }),
+        }}
+        className="mt-6"
+      />
     </main>
   );
 }

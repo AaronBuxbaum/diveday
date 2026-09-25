@@ -86,9 +86,75 @@ export function groupLabelClass(tone: GroupLabelTone = "muted") {
  */
 const GROUP_META_CLASS = "shrink-0 text-xs font-medium text-muted tabular-nums";
 
-/** The row grammar used by a collapsed horizon such as Tomorrow. */
-const HORIZON_SUMMARY_CLASS =
-  "-mx-2 flex min-h-14 cursor-pointer list-none items-center gap-3 border-t border-border px-2 py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken";
+/**
+ * **The room a row keeps around its words**: 8px of padding inside the row's
+ * box, handed back as an equal negative margin, so a fill reaches 8px past the
+ * words while the words stay on the column the group label starts on.
+ *
+ * The pixel rubric asks a hover fill for at least 4px
+ * (docs/design/pixel-craft.md, class 5), and a ledger row had none: its fill
+ * paints the row, the row had no horizontal padding, and the probe measured
+ * the fill's edge running straight into the first word — 0px, 102 times
+ * across 50 captures, from the orders ledger to the diver roster
+ * (2026-09-25). Today's spine had already found this answer and spelled it
+ * by hand on every one of its rows; this is that spelling, owned once. 8px
+ * rather than more because a phone's gutter is 16px, and the global focus
+ * ring reaches 5px beyond whatever box it rings.
+ *
+ * The hairline moves out with the fill, deliberately: a fill that ran 8px past
+ * the ends of the rules above and below it would read as a block that had
+ * slipped, where one that spans rule to rule reads as the row lighting up.
+ *
+ * **Every row takes it, door or not.** A plain row paints no fill, but a rule
+ * left on the column would step 8px wherever a plain row met a door — inside
+ * one list (the inbox's unknown senders, a retired dive site) and between two
+ * lists on one page (the diver record's status rows over its bookings, the
+ * promo codes over the deals, the counter's queue over its walk-in door). One
+ * box for every row is the only spelling under which no two rules on a page
+ * disagree.
+ */
+const FILL_ROOM = "-mx-2 px-2";
+
+/**
+ * **The ledger's room, for a hairline `LedgerRow` does not draw** — a rule
+ * over a paragraph in a column of ledger rows (the public trip's requirement
+ * note, a settled station's recap). Its rule then ends where the rows' rules
+ * end, and its words stay on the column.
+ */
+export const ledgerRowRoomClass = FILL_ROOM;
+
+/**
+ * **A ledger row's box, for a row `LedgerRow` does not draw**: its room and its
+ * two rules. A loading skeleton standing in for a list of `LedgerRow`s takes
+ * it, or its rules sit 8px inside the loaded rows' and jump on arrival
+ * (docs/design/pixel-craft.md, class 11); so does a hand-set line inside a
+ * ledger's list — the public trip's surface interval — or it steps the list's
+ * rules. `LedgerRow` spells its own box with it, so there is one string to
+ * keep.
+ */
+export const ledgerRowBoxClass = `${FILL_ROOM} border-t border-border last:border-b`;
+
+/**
+ * A ledger row's focus ring, drawn inside the row instead of 2px outside it:
+ * a door's overlay link and a horizon's summary are each the row's whole box,
+ * so the global ring's offset put it 5px past the fill, across the hairlines
+ * and over the rows either side of it — and, where the column is only 12px
+ * from the screen (the public trip's door inside an embed frame), off the
+ * screen's edges. The words sit 8px in (`FILL_ROOM`), so the 3px ring clears
+ * them by 5px.
+ *
+ * `focus-ring-inset` is the app's one ring moved inside its box — the same
+ * width and colour, the offset its own width — defined once in `globals.css`
+ * beside the global rule. Spelling the offset here instead would be a second
+ * copy of the ring's width, and it would drift the day the ring changes.
+ */
+const INSET_RING = "focus-visible:focus-ring-inset";
+
+/**
+ * The row grammar used by a collapsed horizon such as Tomorrow: a ledger row's
+ * box and top rule, ringed inside itself as a door is.
+ */
+const HORIZON_SUMMARY_CLASS = `${FILL_ROOM} flex min-h-14 cursor-pointer list-none items-center gap-3 border-t border-border py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken ${INSET_RING}`;
 const HORIZON_LABEL_CLASS = "min-w-0 flex-1 text-base font-semibold tracking-tight";
 const HORIZON_META_CLASS = "shrink-0 text-sm font-medium text-muted tabular-nums";
 
@@ -191,7 +257,9 @@ export function LedgerGroup({
           <DisclosureCaret className="text-muted group-open/fold:rotate-90" />
         </summary>
       ) : (
-        <summary className="-mx-2 flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg px-2 py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
+        <summary
+          className={`${FILL_ROOM} flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken`}
+        >
           {/* Which way this goes, before you press it — decorative; the native
               disclosure semantics carry the state. */}
           <DisclosureCaret className="text-muted group-open/fold:rotate-90" />
@@ -333,6 +401,17 @@ type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkL
  * is a name and a state (the counter's queue, the gear register) reads better
  * on one line at every width, and changing those would be restyling surfaces
  * this decision has not reached yet.
+ *
+ * **Every row keeps room around its words** (`FILL_ROOM`, above): a door's
+ * fill sits 8px outside the column on each side, and every row's hairlines
+ * do, door or not, so no two lists on a page draw their rules at two lengths.
+ * The words stay on the column. A child that paints the row's whole box — the
+ * counter's one-tap button — takes the room back with `-mx-2` and keeps it as
+ * its own `px-2`, so its fill spans rule to rule like a door's; beside a
+ * `trailing` act it takes back only the start side, and the row's `gap-3` is
+ * the room at its end (`CheckInActionForm`'s `ROW_ROOM`). A call site
+ * never sets the row's horizontal margin or padding; `ledger.test.tsx` sweeps
+ * for it.
  */
 export function LedgerRow({
   leading,
@@ -372,7 +451,7 @@ export function LedgerRow({
 } & LedgerRowDoor) {
   return (
     <Tag
-      className={`relative flex items-center gap-3 border-t border-border last:border-b ${
+      className={`relative flex items-center gap-3 ${ledgerRowBoxClass} ${
         size === "lg" ? "min-h-14" : "min-h-13"
       } ${stacked ? "max-sm:flex-wrap max-sm:py-2" : ""} ${href ? "pressable-row hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
         .replace(/\s+/g, " ")
@@ -481,7 +560,15 @@ export function LedgerRow({
         // own guide names it for this shape, but 34 render trees would follow
         // it to the client, and if it is ever taken it wraps this `<Link>`
         // alone.
-        <Link href={href} aria-label={linkLabel} className="absolute inset-0 z-0" />
+        //
+        // Its ring is drawn inside it (`INSET_RING`), and it takes the row's
+        // own corner, so a row a caller rounds — Today's week panel — is ringed
+        // on the curve its fill is painted on.
+        <Link
+          href={href}
+          aria-label={linkLabel}
+          className={`absolute inset-0 z-0 rounded-[inherit] ${INSET_RING}`}
+        />
       ) : null}
     </Tag>
   );

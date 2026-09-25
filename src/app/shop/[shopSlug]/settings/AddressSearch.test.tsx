@@ -218,6 +218,20 @@ describe("the address card with a geocoder", () => {
   });
 
   /**
+   * A negative start margin lines the label up with the address, and leaves
+   * the button 4px from the settings card's `overflow-hidden` on a phone,
+   * where the outset ring lost its left pixel (pixel probe, `settings-address`
+   * at 390). jsdom has no layout, so this pins which element carries the
+   * inset ring.
+   */
+  it("draws the Remove address button's focus ring inset, since its margin bleeds it to 4px from the card's edge", () => {
+    renderCard({ initial: KEY_LARGO_ADDRESS });
+    expect(screen.getByRole("button", { name: copy.removeLabel })).toHaveClass(
+      "focus-visible:focus-ring-inset",
+    );
+  });
+
+  /**
    * Every fire is a *billed* Amazon Location request against an hourly budget,
    * and the budget running out looks, from this box, exactly like the geocoder
    * being down — which is how the card came to be reported as simply not

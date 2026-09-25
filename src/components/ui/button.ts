@@ -267,17 +267,67 @@ export type ButtonSize = keyof typeof sizes;
  */
 const FLUSH = "px-0";
 
-export function buttonClass({
-  variant = "primary",
+/**
+ * **`flush` on a variant whose hover paints a fill keeps room around the label.**
+ *
+ * Dropping the padding only works for a variant that paints nothing of its own
+ * around its words — `link`, whose hover is an underline, and `bare`, which
+ * paints nothing at all. On `ghost` and `danger-ghost` the hover tint is the
+ * button's box, so `px-0` pressed it against the words: the pixel probe
+ * measured `danger-ghost`'s hover tint at 0px either side of "Delete Morgan
+ * Vale" on every diver record, and of a gear unit's "Delete" (2026-09-25).
+ *
+ * So a flush ghost keeps 8px of padding and hands the same 8px back as a
+ * negative margin: the label sits exactly where a padless one would — which
+ * is all `flush` promises — and the tint reaches 8px past it on each side.
+ * 8px, not the size's own padding, so the tint and the 5px focus ring around
+ * it stay inside a phone's 16px gutter. It is the room `ledger.tsx` gives a
+ * row's fill, and for the same reason.
+ */
+const FLUSH_HOVER_FILL = "-mx-2 px-2";
+
+/** The variants that paint nothing of their own around their words, hover included. */
+const PAINTS_NOTHING: ReadonlySet<ButtonVariant> = new Set(["link", "bare"]);
+
+/** The variants that paint only on hover, and so need room kept around the label. */
+const HOVER_FILL: ReadonlySet<ButtonVariant> = new Set(["ghost", "danger-ghost"]);
+
+/**
+ * The variants painted at rest — a filled or bordered box. A box lines up by
+ * its edge, not by its label (docs/design/pixel-craft.md, class 3), so there is
+ * no label for `flush` to line up: the type refuses `flush` on them, and at
+ * runtime it changes nothing.
+ */
+type PaintedAtRest = "primary" | "secondary" | "danger" | "danger-solid" | "sky";
+
+/**
+ * The horizontal padding a button renders with. A size that carries none — the
+ * `icon` and `mark` squares — has nothing for `flush` to drop and no label to
+ * line up, and is left exactly as it is; so is a variant painted at rest.
+ */
+function horizontalPadding(variant: ButtonVariant, x: string, flush: boolean) {
+  if (!flush || x === FLUSH) return x;
+  if (PAINTS_NOTHING.has(variant)) return FLUSH;
+  if (HOVER_FILL.has(variant)) return FLUSH_HOVER_FILL;
+  return x;
+}
+
+export function buttonClass<V extends ButtonVariant = "primary">({
+  variant = "primary" as V,
   size = "md",
   flush = false,
   busy = false,
   className = "",
 }: {
-  variant?: ButtonVariant;
+  variant?: V;
   size?: ButtonSize;
-  /** Drop the size's horizontal padding so the label sits flush with adjacent text. */
-  flush?: boolean;
+  /**
+   * Line the label up with adjacent text: the size's horizontal padding is
+   * dropped (`link`, `bare`), or traded for 8px of room and an equal negative
+   * margin (`ghost`, `danger-ghost`; see `FLUSH_HOVER_FILL`). Refused on a
+   * variant painted at rest, whose box is what lines up.
+   */
+  flush?: V extends PaintedAtRest ? false : boolean;
   /**
    * This control's disabled state means "in flight", not "unavailable" — every
    * `SubmitButton`, which disables itself for the duration of its own submit.
@@ -287,7 +337,9 @@ export function buttonClass({
   className?: string;
 } = {}) {
   const { x, rest } = sizes[size];
-  return `${base} ${DISABLED[busy ? "busy" : "default"]} ${variants[variant]} ${rest} ${
-    flush ? FLUSH : x
-  } ${className}`.trim();
+  return `${base} ${DISABLED[busy ? "busy" : "default"]} ${variants[variant]} ${rest} ${horizontalPadding(
+    variant,
+    x,
+    flush,
+  )} ${className}`.trim();
 }

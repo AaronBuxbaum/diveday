@@ -40,7 +40,7 @@ whole suite and belongs to CI; name the four guards by path instead
 ## 2. Flows changed: e2e
 
 ```bash
-pnpm e2e          # config auto-detects the sandbox Chromium; no install needed
+pnpm e2e e2e/<flow>.spec.ts --reporter=line   # one spec; the whole suite runs on CI
 ```
 
 If new user-facing flows were added, extend `e2e/` with a smoke spec for them first, and add a
@@ -50,16 +50,22 @@ check` includes `check:clock`, which fails if domain/data code reads the wall cl
 ## 3. UI changed: look at it
 
 Never ship UI you haven't seen. The visual spec asserts nothing — it writes PNGs at both the
-phone and desktop widths, in light and dark — so a filtered run of it is the capture step:
+phone and desktop widths — so a filtered run of it is the capture step. Look in light only; dark
+joins it only when the change is colour work (a token, a tint, a hue — the owner's rule,
+[H-90](../../../docs/product/human-decisions.md#decision-register)), and the `light mode.*` prefix
+is what keeps the run to one scheme:
 
 ```bash
 pnpm e2e:build
-npx playwright test e2e/visual.spec.ts -g '<name of the capture group>' --reporter=line
+pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*<name of the capture group>' --reporter=line
 ```
 
 Read the PNGs in `e2e/screenshots/` (gitignored) and check them against the checklist at the bottom of
-`docs/design/principles.md`. For significant UI work, also run the `design-review` skill.
-Send the screenshots to the user when reporting completion.
+`docs/design/principles.md`. Then probe them: the same run with `PIXEL_PROBE=1` in front, then
+`node scripts/pixel-probe-report.mjs`, and give every flag in `e2e/pixel-probe/REPORT.md` a verdict
+— the `design-review` skill's pixel pass has the rest, and
+[pixel-craft.md](../../../docs/design/pixel-craft.md) the rubric. For significant UI work, also run
+the `design-review` skill. Send the screenshots to the user when reporting completion.
 
 Prefer this Playwright-driven capture over backgrounding `pnpm dev` and browsing it manually: the
 Playwright commands build, run, and exit on their own, while a backgrounded dev server doesn't —
@@ -68,10 +74,11 @@ real problems (stale-server corruption, and sessions getting stuck waiting on a 
 that a leftover process will never emit).
 
 For a surface with no visual-spec capture group yet, or a quick mid-iteration look while a dev
-server is already running, use `node scripts/screenshot.mjs <path> [--dark] [--as owner]` — it
-captures the light/dark × phone/desktop matrix into `screenshots/` (gitignored) and signs in
-through the seeded dev credentials for `/shop/**` paths. Never hand-write a throwaway driver for
-this; the script exists so scratch `.shots*.mjs` files stop reaching the index.
+server is already running, use `node scripts/screenshot.mjs <path> [--as owner]` — it captures
+the light phone/desktop pair into `screenshots/` (gitignored), `--both` adds dark for colour work,
+`--probe` runs the pixel probe on it, and it signs in through the seeded dev credentials for
+`/shop/**` paths. Never hand-write a throwaway driver for this; the script exists so scratch
+`.shots*.mjs` files stop reaching the index.
 
 **A long capture run kills the dev server, and the corpse takes the next one with it.** Two facts
 worth knowing before you point that script at thirty paths:

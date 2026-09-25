@@ -48,8 +48,26 @@ export function DisclosureRowList({
   );
 }
 
-const SUMMARY_CLASS =
-  "flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:px-6";
+/**
+ * **The focus ring of a full-width `<summary>` in a rounded list** —
+ * `DisclosureRowList` here, `InsetGroup` for `SettingsRows`.
+ *
+ * The list is `overflow-hidden` (it rounds the hover fills), and the row is
+ * flush with it, so the global ring — 5px outside the summary — was cut on both
+ * sides of every row and the top of the first: 462 of the pixel probe's flags
+ * on the settings rows alone. The ring is drawn inside instead, and at the
+ * list's two ends the summary takes the list's corners, or the clip shaves the
+ * ring's square ones. The last row's bottom corners go
+ * square again when it opens, since its body is then what meets the corner.
+ *
+ * The corners are spelled against the `<details>`, not `rounded-[inherit]`:
+ * a `<summary>` inherits through the `<details>`' shadow slot, which carries
+ * no radius, so `inherit` resolves to 0.
+ */
+export const LIST_ROW_SUMMARY_RING =
+  "focus-visible:focus-ring-inset [details:first-child>&]:rounded-t-panel [details:last-child:not([open])>&]:rounded-b-panel";
+
+const SUMMARY_CLASS = `flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:px-6 ${LIST_ROW_SUMMARY_RING}`;
 
 /** The row's body inset — the same horizontal padding as the summary above it. */
 const BODY_CLASS = "px-5 pb-6 sm:px-6";
