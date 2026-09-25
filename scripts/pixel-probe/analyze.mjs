@@ -524,8 +524,21 @@ export function ringClips(ix, el, reach) {
   return hits;
 }
 
+/**
+ * Whether a keyboard can put focus here — what forcing `:focus-visible` on it
+ * stands in for. `tabindex="-1"` takes a box out of the tab order: the command
+ * palette's options wear it because focus stays in the combobox and the arrows
+ * move `aria-activedescendant`, so a ring forced onto one is a state no
+ * keyboard reaches (82 dismissed `focus-ring-clipped` flags). A box that is a
+ * `-1` in one capture and a tab stop in another (a roving tab stop) is judged
+ * where it is the stop. It stays a pointer target either way.
+ */
+export function takesFocus(el) {
+  return Boolean(el.focusable) && !(el.ti < 0);
+}
+
 function isFocusCandidate(el) {
-  return el.focusable && isVisible(el) && !el.srOnly && el.disabled !== true;
+  return takesFocus(el) && isVisible(el) && !el.srOnly && el.disabled !== true;
 }
 
 /** Focusable elements whose ring *would* be clipped at the global ring's reach. */

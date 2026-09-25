@@ -8,6 +8,7 @@ import {
   clusterKey,
   familyOf,
   hitBox,
+  ringCandidates,
   ringReach,
   settledEntryFor,
   signatureOf,
@@ -88,6 +89,7 @@ const BASE = {
   ch: 0,
   heading: false,
   id: "",
+  ti: null,
 };
 
 /** Build a snapshot from `[index, parent, props]` rows, filling every field. */
@@ -184,6 +186,39 @@ describe("focus ring clipped", () => {
     const [flag] = flagsOf(snapshot, "focus-ring-clipped");
     expect(flag.measure.sides).toMatchObject({ left: 5, right: 5, top: 5 });
     expect(flag.csig).toBe(signatureOf(snapshot.elements[0]));
+  });
+
+  it("leaves an option no keyboard focuses alone, and never forces focus on it", () => {
+    // The command palette's results, 82 dismissed flags: `tabindex="-1"`
+    // options under an input that keeps focus and moves
+    // `aria-activedescendant`, flush in a scrolling listbox. Forced into
+    // `:focus-visible` their ring is cut, but no keyboard ever puts it there.
+    const listbox = {
+      role: "listbox",
+      cls: "max-h-[58vh] overflow-y-auto py-2",
+      clips: true,
+      clipsX: true,
+      clipsY: true,
+      ovx: "auto",
+      ovy: "auto",
+    };
+    const option = {
+      tag: "button",
+      role: "option",
+      cls: "option",
+      focusable: true,
+      interactive: true,
+    };
+    const snapshot = page([
+      [0, -1, { ...listbox, x: 16, y: 100, w: 400, h: 300 }],
+      [1, 0, { ...option, ti: -1, cp: 0, x: 16, y: 108, w: 400, h: 44 }],
+    ]);
+    expect(flagsOf(snapshot, "focus-ring-clipped")).toEqual([]);
+    expect(ringCandidates(snapshot)).toEqual([]);
+    // The same button in the tab order is judged like any other.
+    snapshot.elements[1].ti = 0;
+    expect(flagsOf(snapshot, "focus-ring-clipped")).toHaveLength(1);
+    expect(ringCandidates(snapshot)).toEqual([1]);
   });
 
   it("leaves a row the card pads away from its edge, with a nested radius, alone", () => {

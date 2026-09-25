@@ -93,6 +93,21 @@ describe("collectGeometry, rebuilt from its own source", () => {
     expect(form.cls).toBe("f");
   });
 
+  it("records a tabindex, so an option focus never reaches is known as one", () => {
+    // The command palette's results: `<button role="option" tabindex="-1">`
+    // under an input that keeps focus and moves `aria-activedescendant`.
+    const window = freshWindow(
+      `<div role="listbox"><button class="opt" role="option" tabindex="-1">Tuesday</button></div>
+       <button class="plain">Save</button><div class="stop" tabindex="0">Map</div>`,
+    );
+    const snapshot = inWindow(window, collectGeometry)({});
+    const byCls = (cls) => snapshot.elements.find((el) => el.cls === cls);
+    // Still a control and still a target — only not a tab stop.
+    expect(byCls("opt")).toMatchObject({ ti: -1, focusable: true, interactive: true });
+    expect(byCls("plain").ti).toBeNull();
+    expect(byCls("stop")).toMatchObject({ ti: 0, focusable: true });
+  });
+
   it("puts back the one style it lifts", () => {
     const window = freshWindow(html);
     window.document.body.style.overflowX = "clip";

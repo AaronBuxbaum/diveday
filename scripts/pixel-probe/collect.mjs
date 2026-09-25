@@ -227,6 +227,7 @@ export function collectGeometry(options) {
       /paint|strict|content/.test(contain) || (style.clipPath && style.clipPath !== "none");
     const clips = clipsX || clipsY || clipsPaint;
     const tabIndexAttr = element.getAttribute("tabindex");
+    const tabIndex = tabIndexAttr === null ? Number.NaN : Number.parseInt(tabIndexAttr, 10);
     const focusable =
       (FOCUSABLE_TAGS.has(element.tagName) &&
         !(element.tagName === "A" && !element.hasAttribute("href")) &&
@@ -317,6 +318,10 @@ export function collectGeometry(options) {
       lc: num(style.webkitLineClamp || style.getPropertyValue("-webkit-line-clamp")),
       interactive,
       focusable,
+      // The tabindex attribute, or null: a `-1` is focusable by script and
+      // out of the tab order (the command palette's options, which focus never
+      // reaches), which is not the same as focusable.
+      ti: Number.isFinite(tabIndex) ? tabIndex : null,
       disabled,
       ariaHidden: element.closest('[aria-hidden="true"]') !== null,
       // Inside an illustration (`role="img"`): a mock of the product drawn on

@@ -164,6 +164,41 @@ test.describe("focus-ring-clipped", () => {
     // takes the nested 12px radius the ladder gives it.
     await leavesStatic(page, "focus-ring-clipped", card(8, 12), "row");
   });
+
+  // The command palette's shape: an input that keeps focus and moves
+  // `aria-activedescendant`, over a scrolling listbox whose options sit flush
+  // against its sides.
+  const palette = (optionAttrs: string) =>
+    html(
+      `.list { height: 120px; overflow-y: auto; padding: 8px 0; }
+       .opt { display: block; width: 100%; padding: 12px 20px; border: 0; background: none; text-align: left; }`,
+      `<input class="field" role="combobox" aria-controls="list" aria-activedescendant="o1">
+       <div id="list" class="list" role="listbox"><button id="o1" class="opt" type="button" role="option" ${optionAttrs}>Tuesday dives</button></div>`,
+    );
+
+  test("flags an option in the tab order flush in a scrolling listbox", async ({ page }) => {
+    await flagsStatic(page, "focus-ring-clipped", palette(""), "opt");
+  });
+
+  test("leaves an option focus never reaches (tabindex -1) alone", async ({ page }) => {
+    await leavesStatic(page, "focus-ring-clipped", palette(`tabindex="-1"`), "opt");
+  });
+
+  test("hovers that option but never forces it into focus", async ({ page }) => {
+    const snapshot = await snapshotOf(page, palette(`tabindex="-1"`));
+    const el = byClass(snapshot, "opt");
+    const { results, stats } = await statePass(page, {
+      candidates: [el.i],
+      hoverOnly: new Set([el.i]),
+      mode: "full",
+      bound,
+      callMs: 5_000,
+      deadline: Date.now() + 10_000,
+    });
+    expect(stats.error).toBeNull();
+    expect(results.get(el.i)?.hover?.matches.hover, "hover was forced").toBe(true);
+    expect(results.get(el.i)?.focus).toBeNull();
+  });
 });
 
 test.describe("nested-corners", () => {
