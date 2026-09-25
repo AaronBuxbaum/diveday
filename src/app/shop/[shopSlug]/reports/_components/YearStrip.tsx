@@ -54,7 +54,14 @@ export function YearStrip({
           five weeks wide, as the calendar is. The pixel probe's uneven-gaps
           check reads that as a broken rhythm (133.5/100.9px at 1280); spacing
           the labels evenly would put each one over the wrong weeks (settled
-          in docs/design/settled-questions.md). */}
+          in docs/design/settled-questions.md).
+
+          **Wider than its column, also on purpose.** A label is anchored in
+          the one week column its month starts in, which is narrower than the
+          word, so it runs on over its own month's empty weeks; the next label
+          is four or five weeks along, so nothing is overlapped or clipped.
+          The probe's text-spill check reads the overrun as spill (settled
+          there too). */}
       <div className="grid gap-[3px] text-[10px] text-muted tabular-nums" style={columns}>
         {months.map((month) => (
           <span key={month.key} style={{ gridColumnStart: month.column }}>

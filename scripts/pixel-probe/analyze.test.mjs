@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   analyzeSnapshot,
@@ -1619,6 +1620,61 @@ describe("clusters, the settled list and the census", () => {
     expect(settledEntryFor(flag, settled)?.pointer).toBe("x.tsx:1");
     expect(settledEntryFor({ ...flag, check: "off-centre" }, settled)).toBeNull();
     expect(settledEntryFor({ ...flag, cls: "other" }, settled)).toBeNull();
+  });
+
+  it("settles the flags the audit found right by design, and nothing beside them", () => {
+    // scripts/pixel-probe-settled.json itself, against flags as the probe
+    // raised them in the 36-group audit. Each settled entry points at a code
+    // comment and has a row in docs/design/settled-questions.md.
+    const settled = JSON.parse(
+      fs.readFileSync(new URL("../pixel-probe-settled.json", import.meta.url), "utf8"),
+    ).settled;
+    const chrome =
+      "header.backdrop-blur-xl bg-background border-b border-border h-(--chrome-h) print:hidden sticky supports-[backdrop-filter]:bg-background/85";
+    const ledgerRow =
+      "li.border-border border-t flex gap-3 items-center last:border-b min-h-13 px-2 relative";
+    const right = [
+      {
+        check: "text-spill",
+        sig: "span{block;p0,0,0,0;b0,0,0,0;r0,0,0,0;f10/400;}",
+        csig: "div.min-h-0 outline-none water-band",
+        cls: "",
+        label: "Jan",
+      },
+      { check: "truncated", sig: "span.truncate", csig: chrome, cls: "truncate", label: "Harbour" },
+      {
+        check: "truncated",
+        sig: "span.block font-semibold group-open/about:hidden leading-snug truncate",
+        csig: "summary.flex",
+        cls: "block truncate font-semibold leading-snug group-open/about:hidden",
+        label: "Spiegel Grove · Mantis II · Ke",
+      },
+      {
+        check: "truncated",
+        sig: "p.font-mono text-muted text-xs truncate",
+        csig: ledgerRow,
+        cls: "mt-1 max-w-full truncate font-mono text-xs text-muted",
+        label: "https://e2e.diveday.example/s/",
+      },
+    ];
+    const register = fs.readFileSync(
+      new URL("../../docs/design/settled-questions.md", import.meta.url),
+      "utf8",
+    );
+    for (const found of right) {
+      const entry = settledEntryFor(found, settled);
+      expect(entry, `${found.check} ${found.sig}`).not.toBeNull();
+      const file = entry.pointer.split(",")[0];
+      expect(fs.existsSync(new URL(`../../${file}`, import.meta.url)), file).toBe(true);
+      expect(register).toContain(`\`${file}\``);
+    }
+    // The same classes somewhere else are still findings.
+    const elsewhere = [
+      { check: "truncated", sig: "span.truncate", csig: "li.row", cls: "truncate", label: "" },
+      { ...right[3], csig: "li.other" },
+      { ...right[0], check: "hard-clip" },
+    ];
+    for (const found of elsewhere) expect(settledEntryFor(found, settled)).toBeNull();
   });
 
   it("finds one family at 22 and 24px, and leaves a deliberate size step alone", () => {

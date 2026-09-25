@@ -188,6 +188,11 @@ export function TripAboutSection({
           <path d="m13.8 8.2-1.7 4-4 1.7 1.7-4z" />
         </svg>
         <span className="min-w-0 flex-1">
+          {/* One line at rest, cut to fit rather than wrapped: it previews the
+              rows the panel opens into, one tap away, and a wrapped preview
+              would push the roster under it down for facts the panel holds in
+              full. The pixel probe's `truncated` reports the cut (settled in
+              docs/design/settled-questions.md). */}
           <span className="block truncate font-semibold leading-snug group-open/about:hidden">
             {summary}
           </span>
