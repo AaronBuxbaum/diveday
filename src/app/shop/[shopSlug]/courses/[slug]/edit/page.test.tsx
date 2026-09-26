@@ -192,7 +192,9 @@ describe("EditCoursePage editor rail", () => {
  * a section whose fields already stand `gap-5` apart, so it sat 40px under the
  * Duration box where every sibling sits 20px; and its hint was a sibling of
  * its own in that gap, 42px under the box, where every other hint on the page
- * sits 4px under its control.
+ * sits 4px under its control. Moved under the row, the hint still hung from
+ * the row's 44px target, about 23px under the 16px box, and at 14px where
+ * every other helper on the editor is a `Field` description's 12px (class 12).
  */
 describe("EditCoursePage nitrox box", () => {
   it("keeps the section's field gap and carries its hint, wired to the box", async () => {
@@ -214,10 +216,16 @@ describe("EditCoursePage nitrox box", () => {
     const row = box.closest("label");
     const hint = screen.getByText("courses.edit.nitroxCompatibleHint");
     expect(row).not.toHaveClass("mt-5");
-    // One item in the section's column, the row and its hint together.
-    expect(hint.parentElement).toBe(row?.parentElement);
-    expect(row?.parentElement?.children).toHaveLength(2);
-    expect(hint.id).not.toBe("");
-    expect(box).toHaveAttribute("aria-describedby", hint.id);
+    // The hint is the next line of the box's own words, in their column, at a
+    // description's size: not a paragraph under the row's 44px target.
+    expect(hint.parentElement).toBe(
+      screen.getByText("courses.edit.nitroxCompatibleLabel").parentElement,
+    );
+    expect(row).toContainElement(hint);
+    expect(hint).toHaveClass("text-xs", "text-muted");
+    expect(hint).not.toHaveClass("text-sm", "mt-1");
+    // Inside the label, and still the box's description rather than its name.
+    expect(box).toHaveAccessibleName("courses.edit.nitroxCompatibleLabel");
+    expect(box).toHaveAccessibleDescription("courses.edit.nitroxCompatibleHint");
   });
 });
