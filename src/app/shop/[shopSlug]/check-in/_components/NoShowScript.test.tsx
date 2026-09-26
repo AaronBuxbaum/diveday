@@ -73,6 +73,29 @@ describe("NoShowScript", () => {
       "booking-1",
     );
   });
+
+  /**
+   * **The confirm stands in the row's control column** (pixel-craft class 3,
+   * K-253). It followed its sentence a `gap-3` along, so it ended wherever
+   * the sentence did (1011 at 1280, against the Check in circle's 1063), and
+   * the sailed script's longer sentence wrapped it to the line's start. The
+   * sentence grows from its own width and the row packs to its end, so the
+   * button ends on the row's edge beside the sentence, and under it, still on
+   * that edge, once the two do not fit on one line. `grow`, not `flex-1`: a
+   * zero basis never wraps, and squeezed the sentence into a narrow column
+   * beside the button on a phone.
+   */
+  it("ends its confirm on the row's edge, beside the sentence or under it", () => {
+    render(<NoShowScript action={vi.fn()} bookingId="booking-1" copy={scriptCopy} />);
+    const sentence = screen.getByText(scriptCopy.consequence);
+    const line = sentence.parentElement;
+    expect(line).toHaveClass("flex", "flex-wrap", "justify-end");
+    expect(sentence).toHaveClass("min-w-0", "grow");
+    expect(sentence).not.toHaveClass("flex-1");
+    expect(line?.lastElementChild).toContainElement(
+      screen.getByRole("button", { name: scriptCopy.confirmAriaLabel }),
+    );
+  });
 });
 
 describe("NoShowSalvage", () => {
