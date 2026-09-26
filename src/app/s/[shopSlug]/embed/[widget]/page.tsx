@@ -10,7 +10,9 @@ import { shopBySlugCached } from "@/db/shops";
 import { getTripWithBooked, pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
+import { courseDepthFormat } from "@/i18n/unit-labels";
 import { nowDate } from "@/lib/clock";
+import { resolveCourseContentDepths } from "@/lib/courses";
 import { isEmbedWidget } from "@/lib/embed-routes";
 import { formatDayParts, formatMoneyScanned, formatTimeRange } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
@@ -64,6 +66,15 @@ export default async function EmbedWidgetPage({
   const now = nowDate();
   const origin = publicAppUrl() ?? "";
   const tz = shop.timezone;
+  // `{depth18}` markers in the shop's own course prose resolve into the shop's
+  // unit before a card reads a field, the same one-shot pass the course
+  // catalog makes (src/lib/courses.ts). Rendered raw, a framed summary read
+  // "How to dive between {depth18n} and {depth40}…" (K-376).
+  const depthFormat = courseDepthFormat(t, shop.depthUnit);
+  const activeCourses = async () =>
+    (await listActiveCourses(db, shop.id)).map((course) =>
+      resolveCourseContentDepths(course, depthFormat),
+    );
 
   const money = (cents: number | null) =>
     cents === null ? null : formatMoneyScanned(cents, currency, locale);
@@ -101,7 +112,7 @@ export default async function EmbedWidgetPage({
       />
     );
   } else if (widget === "courses") {
-    const active = await listActiveCourses(db, shop.id);
+    const active = await activeCourses();
     // **One course, or the catalogue** (issue #1284, completing ADR
     // 20260901-diveday-reimagined decision 2's "what it shows"). A slug that
     // names no active course is a 404 rather than a silently empty list, the
@@ -151,7 +162,7 @@ export default async function EmbedWidgetPage({
   } else {
     const [{ trips }, courses] = await Promise.all([
       pagedUpcomingTripsWithCounts(db, shop.id, { now, limit: 6, publicOnly: true }),
-      listActiveCourses(db, shop.id),
+      activeCourses(),
     ]);
     body = (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
