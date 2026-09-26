@@ -6,7 +6,14 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldGrid, FormStatus, legendClass } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  controlClass,
+  Field,
+  FieldGrid,
+  FormStatus,
+  legendClass,
+} from "@/components/ui/form";
 import { canPersonManageOrders } from "@/db/authz";
 import { getBookingContext, listOrderableCustomers } from "@/db/orders";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -314,8 +321,15 @@ export default async function NewOrderPage({
             </fieldset>
           ) : null}
 
-          <fieldset className="flex flex-col gap-3">
-            <legend className="text-sm font-medium">{t("orders.new.lineItemsLegend")}</legend>
+          {/* `ChoiceFieldset` captions the rows as `Field` captions a control,
+              the body 4px under the legend. A hand-set `<legend>` took no gap
+              at all: it is not a flex item, so the fieldset's `gap-3` never
+              reached it, and "Line items" sat 5px over its first box where
+              every other caption here sits 8px over its control (K-570). */}
+          <ChoiceFieldset
+            legend={t("orders.new.lineItemsLegend")}
+            bodyClassName="flex flex-col gap-3"
+          >
             {Array.from({ length: LINE_ITEM_ROWS }).map((_, i) => {
               const rowDefault = lineDefaults[i] ?? null;
               return (
@@ -369,7 +383,7 @@ export default async function NewOrderPage({
                 </div>
               );
             })}
-          </fieldset>
+          </ChoiceFieldset>
 
           <div className="flex flex-wrap items-center gap-3">
             <SubmitButton pendingLabel={t("orders.new.sending")} className={buttonClass()}>

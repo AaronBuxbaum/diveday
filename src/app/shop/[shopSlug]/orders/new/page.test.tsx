@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { ChoiceFieldset } from "@/components/ui/form";
 import type { AppDb } from "@/db/client";
 import { bookings, trips } from "@/db/schema";
 import { getShopBySlug, setShopTaxEnabled } from "@/db/shops";
@@ -143,5 +144,24 @@ describe("the tax location form", () => {
     );
     expect(legends).toHaveLength(1);
     expect(legends[0]?.props.className).toContain("-ms-1 px-1");
+  });
+});
+
+describe("the line items", () => {
+  /**
+   * A `<legend>` is not a flex item, so the fieldset's `gap-3` never reached
+   * it: "Line items" sat 5px over its first box where every caption on the
+   * form sits 8px over its control (K-570). `ChoiceFieldset` captions a group
+   * the way `Field` captions a control, its body 4px under the legend.
+   */
+  it("caption their boxes the way every field on the form is captioned", async () => {
+    const { db, shop } = await shopThatCanBill();
+    await setShopTaxEnabled(db, shop.id, false);
+    const tree = await renderWith();
+
+    const groups = findElements<{ legend?: unknown }>(tree, ChoiceFieldset);
+    expect(groups.map((group) => group.props.legend)).toEqual(["Line items"]);
+    // No hand-set legend left to carry a gap of its own.
+    expect(findElements(tree, "legend")).toHaveLength(0);
   });
 });
