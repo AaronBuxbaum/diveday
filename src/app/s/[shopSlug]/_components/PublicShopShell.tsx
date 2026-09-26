@@ -33,6 +33,7 @@ import { LanguageFallbackNotice } from "@/components/LanguageFallbackNotice";
 import { PublicShopFooter, PublicShopHeader } from "@/components/PublicShopChrome";
 import type { PublicShopNavItem } from "@/components/PublicShopNav";
 import { SkipLink } from "@/components/SkipLink";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
@@ -195,11 +196,17 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
       ) : null}
       {showStaffBar && shop ? (
         <div className="border-b border-border bg-surface-sunken">
-          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm sm:px-6">
-            <p className="text-muted">{staffT("shared.publicPreview.youWorkHere")}</p>
+          {/* One 44px row from `sm`, two on a phone: the link is a 44px
+              target and the bar's padding is its box, so the sentence takes
+              the same height to sit level with it (it was a 20px word in a
+              36px bar). */}
+          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between px-4 text-sm sm:px-6">
+            <p className="flex min-h-11 items-center text-muted">
+              {staffT("shared.publicPreview.youWorkHere")}
+            </p>
             <Link
               href={`/shop/${shop.slug}/schedule/board`}
-              className="font-medium text-primary hover:underline"
+              className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
             >
               {staffT("shared.publicPreview.openTheBoard")}
             </Link>
