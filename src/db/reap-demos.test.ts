@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { HOUR_MS, nowMs } from "@/lib/clock";
@@ -129,6 +131,36 @@ describe("createDemoShop", () => {
     } finally {
       spy.mockRestore();
     }
+  });
+
+  /**
+   * **A minted shop wears a brand only when a capture asks it to.** A fresh
+   * tenant is blank shop-wide config (ADR 20260815-per-test-private-shops), so
+   * by default it has no logo, cover photo or badges. `brand` exists for the
+   * one surface that needs all of them on file: the settings profile row,
+   * where a stored logo and cover photo are taken back off (`settings-profile`).
+   * The canonical demo cannot be that fixture: it has no logo, and giving it
+   * one would put a logo in the header of every staff capture.
+   */
+  it("wears the canonical demo's brand, and a logo, only when asked", async () => {
+    const db = await seededTestDb();
+    const plain = await requireShop(db, (await createDemoShop(db)).slug);
+    expect(plain.logoUrl).toBeNull();
+    expect(plain.brandHeroImageUrl).toBeNull();
+    expect(plain.brandBadges).toEqual([]);
+
+    const canonical = await requireShop(db, DEMO_SHOP_SLUG);
+    const branded = await requireShop(db, (await createDemoShop(db, { brand: true })).slug);
+    expect(branded.brandHeroImageUrl).toBe(canonical.brandHeroImageUrl);
+    expect(branded.brandHeroImageAlt).toBe(canonical.brandHeroImageAlt);
+    expect(branded.brandBadges).toEqual(canonical.brandBadges);
+    expect(branded.brandColor).toBe(canonical.brandColor);
+    // A bundled file, as the cover photo is, so a capture draws it with no
+    // media storage configured, and a different one, so the two read apart.
+    expect(branded.logoUrl).toMatch(/^\/dive-sites\//);
+    expect(branded.logoUrl).not.toBe(branded.brandHeroImageUrl);
+    const logoFile = path.join(process.cwd(), "public", decodeURIComponent(branded.logoUrl ?? ""));
+    expect(existsSync(logoFile), logoFile).toBe(true);
   });
 
   it("evicts the oldest minted demo once the live cap is reached", async () => {

@@ -283,6 +283,42 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
 }
 
 /**
+ * **Blue Mantis wears its own brand** (Harbor, ADR 20260901-diveday-reimagined):
+ * the demo is where a shop leaving FareHarbor first sees a storefront that is
+ * not DiveDay-coloured, so the demo shop has a colour, a face, a cover photo
+ * and a badge wall. Mantis green, chosen because it is not the product's teal
+ * and dark enough for white text as typed (so the demo's Settings carry no
+ * darkening hint); the photo is one of the bundled Molasses Reef frames the
+ * site catalog already ships.
+ */
+const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
+  brandColor: "#158462",
+  brandDisplayFont: "bricolage_grotesque",
+  brandHeroImageUrl: `/dive-sites/${encodeURIComponent("Elkhorn coral 8 Molasses Reef 20080309.jpg")}`,
+  // i18n-exempt: a shop writes its own alt text, like its tagline.
+  brandHeroImageAlt: "Elkhorn coral on Molasses Reef, sunlight from above",
+  establishedYear: 1998,
+  brandBadges: ["padi_5_star", "blue_star", "tripadvisor"],
+};
+
+/**
+ * **The brand a minted shop wears when a visual capture asks for one**: Blue
+ * Mantis's own, and a logo, which Blue Mantis has none of. The settings
+ * profile row takes a stored logo and cover photo back off, and
+ * `settings-profile` is the only capture that shows it with both on file. The
+ * canonical demo cannot be that fixture: a logo on it would sit in the header
+ * of every staff capture in the suite.
+ *
+ * The logo is a bundled frame, as the cover photo is, because the fleet
+ * configures no media storage, so an upload through the form is refused. A
+ * different frame, so the tile and the cover read as two photos.
+ */
+const MINTED_DEMO_BRAND: Partial<typeof shops.$inferInsert> = {
+  ...DEMO_SHOP_BRAND,
+  logoUrl: `/dive-sites/${encodeURIComponent("French Angelfish Molasses Reef 20080309.jpg")}`,
+};
+
+/**
  * The stable half of the demo: the shop, its default waiver template, its
  * staff, and their logins. Seeded once and left alone — resetting the demo
  * playground never touches these, so a signed-in demo session survives a reset
@@ -302,21 +338,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // that state.
       // i18n-exempt: a shop types its own tagline, like its packing list.
       tagline: "Small-boat reef and wreck diving out of Key Largo.",
-      // **Blue Mantis wears its own brand** (Harbor, ADR
-      // 20260901-diveday-reimagined): the demo is where a shop leaving
-      // FareHarbor first sees a storefront that is not DiveDay-coloured, so the
-      // demo shop has a colour, a face, a cover photo and a badge wall. Mantis
-      // green, chosen because it is not the product's teal and dark enough for
-      // white text as typed (so the demo's Settings carry no darkening hint);
-      // the photo is one of the bundled Molasses Reef frames the site catalog
-      // already ships.
-      brandColor: "#158462",
-      brandDisplayFont: "bricolage_grotesque",
-      brandHeroImageUrl: `/dive-sites/${encodeURIComponent("Elkhorn coral 8 Molasses Reef 20080309.jpg")}`,
-      // i18n-exempt: a shop writes its own alt text, like its tagline.
-      brandHeroImageAlt: "Elkhorn coral on Molasses Reef, sunlight from above",
-      establishedYear: 1998,
-      brandBadges: ["padi_5_star", "blue_star", "tripadvisor"],
+      ...DEMO_SHOP_BRAND,
       timezone: DEMO_SHOP_TIMEZONE,
       // **Blue Mantis finished its own onboarding**, like the trading shop it
       // is meant to portray. Without this the queue asks it which currency it
@@ -564,7 +586,12 @@ const DEMO_IDENTITY_ATTEMPTS = 5;
  * identity on a name collision — never patching the slug alone, since every
  * staff email is derived from it and would otherwise disagree with the shop.
  */
-async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, timezone?: string) {
+async function insertDemoShop(
+  db: DbExecutor,
+  pinnedSlug?: string,
+  timezone?: string,
+  brand = false,
+) {
   let lastError: unknown;
   for (let attempt = 0; attempt < DEMO_IDENTITY_ATTEMPTS; attempt += 1) {
     // A pinned identity has nothing to retry *to* — it is the caller's own
@@ -647,6 +674,7 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, timezone?: st
           isDemo: true,
           hasShoreDiving: true,
           hasPoolDiving: true,
+          ...(brand ? MINTED_DEMO_BRAND : {}),
         })
         .returning();
       if (!shop) throw new Error("createDemoShop: failed to insert shop");
@@ -671,8 +699,13 @@ export async function createDemoShop(
    * capture can photograph a water band other than the fleet clock's (ADR
    * 20260904-reef-all-the-way-down, Budget rule 1), which no test can do by
    * moving `DIVEDAY_CLOCK` — that is one process-wide value.
+   *
+   * `brand` dresses the shop in `MINTED_DEMO_BRAND` (a logo, a cover photo,
+   * badges), for the one capture of the profile row that needs them on file.
+   * Left off, a minted shop is blank shop-wide config, as every behavioural
+   * spec expects.
    */
-  opts: { history?: boolean; slug?: string; timezone?: string } = {},
+  opts: { history?: boolean; slug?: string; timezone?: string; brand?: boolean } = {},
 ): Promise<{ slug: string; ownerEmail: string }> {
   // Aggregate storage cap (security review, finding 1): the per-IP rate limit
   // bounds one visitor's burst but not the fleet-wide total, so an IP-rotating
@@ -681,7 +714,7 @@ export async function createDemoShop(
   // ceiling — the canonical demo and real shops are never eligible (see below).
   await enforceMintedDemoCap(db);
 
-  const { shop, identity } = await insertDemoShop(db, opts.slug, opts.timezone);
+  const { shop, identity } = await insertDemoShop(db, opts.slug, opts.timezone, opts.brand);
 
   await db.insert(boats).values([
     {

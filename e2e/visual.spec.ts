@@ -8826,6 +8826,48 @@ for (const scheme of ["light", "dark"] as const) {
 }
 
 /**
+ * **The shop profile row with a logo and a cover photo on file** (the K-247
+ * follow-up and the K-13 review): the logo in the square the storefront crops
+ * it to, its tick on the tile's corner and its caption under it; the cover
+ * photo in a gallery cell; the two photo pickers; and the badges' fieldset
+ * with its hint.
+ *
+ * No other capture opens this row, and no seeded shop has a logo. Blue Mantis
+ * has a cover photo and badges but no logo, and giving it one would put a logo
+ * in the header of every staff capture. So this takes a shop of its own,
+ * minted in Blue Mantis's brand plus a logo (`privateShopBrand`). It writes
+ * nothing: the shop is only the fixture that can hold a logo.
+ *
+ * **A pinned identity**, for the same reason `manifest-emergency-empty` has
+ * one: the minted shop's name renders in the staff header and its slug-derived
+ * owner email in the dev banner.
+ */
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode — the shop profile with a logo on file`, () => {
+    test.use({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+      privateShopSlug: "reef-light-divers",
+      privateShopBrand: true,
+    });
+
+    test(`the profile row's stored photos and pickers render true to the design (${scheme})`, async ({
+      page,
+      privateShop,
+    }) => {
+      await page.goto(`/shop/${privateShop.slug}/settings`);
+      await openSettingsRow(page, "Shop profile & branding");
+      await page.getByRole("button", { name: "Save profile" }).waitFor();
+      // The stored photos' own boxes: a mint that lost its brand fails here,
+      // rather than photographing the empty row under this name.
+      await page.getByRole("checkbox", { name: "Remove current logo" }).waitFor();
+      await page.getByRole("checkbox", { name: "Remove the cover photo" }).waitFor();
+      await capture(page, "settings-profile", scheme);
+    });
+  });
+}
+
+/**
  * **The proof band on DiveDay's own homepage** (ADR 20260908-one-hand,
  * decision 6, lever T): a real shop's year card, the one sentence a number on
  * the card can prove, and the line that says why it is there.

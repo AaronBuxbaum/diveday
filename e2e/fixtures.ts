@@ -119,6 +119,7 @@ export const test = base.extend<
     privateShop: PrivateShop;
     privateShopSlug: string | null;
     privateShopTimezone: string | null;
+    privateShopBrand: boolean;
   },
   { workerBaseURL: string; staffStorageState: (role: StaffRole) => Promise<string> }
 >({
@@ -381,13 +382,29 @@ export const test = base.extend<
    */
   privateShopTimezone: [null, { option: true }],
 
-  privateShop: async ({ demoReset, request, page, privateShopSlug, privateShopTimezone }, use) => {
+  /**
+   * Dress the minted shop in a **logo, a cover photo and badges**, for a
+   * visual capture and nothing else.
+   *
+   * A minted shop is blank shop-wide config, and the canonical demo has a
+   * cover photo and badges but no logo, so no fixture showed the settings
+   * profile row with a stored logo to take back off. Uploading one through the
+   * form cannot work here: the fleet configures no media storage. Set it with
+   * `test.use({ privateShopBrand: true })` on the describe that captures.
+   */
+  privateShopBrand: [false, { option: true }],
+
+  privateShop: async (
+    { demoReset, request, page, privateShopSlug, privateShopTimezone, privateShopBrand },
+    use,
+  ) => {
     // Named only for ordering: the reset purges the *previous* test's minted
     // shop, and it has to have run before this one mints its replacement.
     void demoReset;
     const mint = new URLSearchParams();
     if (privateShopSlug) mint.set("slug", privateShopSlug);
     if (privateShopTimezone) mint.set("timezone", privateShopTimezone);
+    if (privateShopBrand) mint.set("brand", "1");
     const query = mint.toString();
     const response = await request.post(
       query ? `/api/test/seed-private-shop?${query}` : "/api/test/seed-private-shop",
