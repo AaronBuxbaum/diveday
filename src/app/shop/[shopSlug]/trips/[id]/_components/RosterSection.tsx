@@ -91,53 +91,55 @@ type RosterPrivateNote = Awaited<ReturnType<typeof listBookingNotes>>[number] & 
 };
 
 // The whole waiver collapses to a single control per diver. Its face is the
-// status; its click is the only sensible next action. `action: null` means the
-// waiver is signed and there is nothing left to do — it renders as a static pill.
-type WaiverControl = {
-  label: string;
-  hint?: string;
-  tone: string;
-  action: "send" | "resend" | null;
-  confirm: boolean;
-};
-
+// status; its click is the only sensible next action. `action: null` means
+// there is nothing left to send — the waiver is signed, or a medical answer
+// decides it — and the row has no control at all.
 type WaiverControlKeys = {
   labelKey: StaffMessageKey;
   hintKey?: StaffMessageKey;
-  tone: string;
-  action: "send" | "resend" | null;
   confirm: boolean;
-};
+} & (
+  | {
+      action: "send" | "resend";
+      /**
+       * The button the send wears: the app's own `sm` button, as the diver
+       * record draws the same act (`WaiverDeliveryActions`), never a
+       * hand-rolled pill beside it (K-174). `danger` for a link that expired.
+       */
+      variant: "secondary" | "danger";
+    }
+  | { action: null }
+);
+
+type WaiverControl = WaiverControlKeys & { label: string; hint?: string };
 
 const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlKeys> = {
   not_sent: {
     labelKey: "trips.roster.waiverSend",
-    tone: "border border-border bg-surface hover:bg-surface-sunken",
+    variant: "secondary",
     action: "send",
     confirm: false,
   },
   awaiting_signature: {
     labelKey: "trips.roster.waiverSent",
     hintKey: "trips.roster.waiverResendHint",
-    tone: "border border-border bg-surface hover:bg-surface-sunken",
+    variant: "secondary",
     action: "resend",
     confirm: true,
   },
   expired: {
     labelKey: "trips.roster.waiverLinkExpired",
-    tone: "border border-danger/40 text-danger hover:bg-danger-tint",
+    variant: "danger",
     action: "resend",
     confirm: false,
   },
   complete: {
     labelKey: "trips.roster.waiverSigned",
-    tone: "bg-success-tint text-success-strong",
     action: null,
     confirm: false,
   },
   medical_review: {
     labelKey: "trips.roster.waiverMedicalReview",
-    tone: "bg-warning-tint text-warning-strong",
     action: null,
     confirm: false,
   },
@@ -147,7 +149,6 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlK
   // sending another link would be the wrong thing to offer (issue #1283).
   medical_not_cleared: {
     labelKey: "trips.roster.waiverMedicalNotCleared",
-    tone: "bg-danger-tint text-danger-strong",
     action: null,
     confirm: false,
   },
@@ -327,11 +328,9 @@ export function RosterSection({
     Object.entries(WAIVER_CONTROL_KEYS).map(([status, entry]) => [
       status,
       {
+        ...entry,
         label: t(entry.labelKey),
         hint: entry.hintKey ? t(entry.hintKey) : undefined,
-        tone: entry.tone,
-        action: entry.action,
-        confirm: entry.confirm,
       } satisfies WaiverControl,
     ]),
   ) as Record<ReturnType<typeof waiverState>, WaiverControl>;
@@ -985,7 +984,7 @@ export function RosterSection({
                   ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
                   : undefined
               }
-              className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors ${waiverControl.tone}`}
+              className={buttonClass({ variant: waiverControl.variant, size: "sm" })}
               wrapperClassName=""
               copy={waiverSendCopy(t)}
             />

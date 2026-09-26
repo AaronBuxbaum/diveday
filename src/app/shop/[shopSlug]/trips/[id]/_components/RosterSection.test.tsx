@@ -3,6 +3,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { buttonClass } from "@/components/ui/button";
 import { emptyMedicalAnswers, flaggedMedicalPrompts, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { rendersFlush } from "@/test/button-flush";
@@ -719,5 +720,45 @@ describe("the roster's row geometry", () => {
     const capsules = verdict.parentElement;
     expect(capsules?.firstElementChild).toBe(verdict);
     expect(capsules).toHaveClass("ms-auto", "justify-end", "max-sm:ms-0", "max-sm:justify-start");
+  });
+
+  /**
+   * K-174: the roster drew its waiver send as a hand-rolled pill (fully
+   * round, 16px inset, no `pressable`, no disabled state) while the diver
+   * record draws the same act as the app's `sm` button. Both are the one
+   * button now; an expired link's send wears `danger`.
+   */
+  it("draws the waiver's send as the app's own sm button, as the diver record does", () => {
+    const unsent = entry("n", "Nadia Petrov");
+    const lapsed = entry("x", "Xavier Lind");
+    const blocker = [{ code: "certification_missing", params: undefined }];
+    renderRoster({
+      roster: [unsent, lapsed],
+      readiness: new Map([
+        ["n", readinessRow("blocked", blocker)],
+        ["x", readinessRow("blocked", blocker)],
+      ]) as ReadinessByBooking,
+      waivers: new Map([
+        [
+          "x",
+          {
+            waiver: {
+              id: "w-x",
+              status: "sent",
+              completedAt: null,
+              signatureMethod: null,
+              expiresAt: new Date("2020-01-01T00:00:00Z"),
+              medicalAnswers: null,
+            },
+          },
+        ],
+      ]) as unknown as WaiverByBooking,
+    });
+
+    const send = screen.getByRole("button", { name: "Send waiver" });
+    const resend = screen.getByRole("button", { name: "Link expired" });
+    expect(send.className).toBe(buttonClass({ variant: "secondary", size: "sm" }));
+    expect(resend.className).toBe(buttonClass({ variant: "danger", size: "sm" }));
+    for (const control of [send, resend]) expect(control).not.toHaveClass("rounded-full");
   });
 });

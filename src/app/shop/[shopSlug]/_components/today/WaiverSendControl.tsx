@@ -247,15 +247,16 @@ export function WaiverSendControl({
   /** A person-scoped waiver target, independent of any booking or schedule. */
   personId?: string;
   label: string;
-  /** Short trailing detail (e.g. "tap to resend") — the roster's richer status pill uses this. */
+  /** Short trailing detail (e.g. "tap to resend") — the roster's status-faced send uses this. */
   hint?: string;
   pendingLabel?: string;
   /** An in-page `InlineConfirm` guard before a resend — the roster's already-sent case wants this. */
   confirmMessage?: string;
   /**
-   * Overrides the default secondary-button look — the roster's per-status tone
-   * pill. The default is `sm`: its home is a ledger row on Today, beside fixes
-   * that are all `sm` (`button.ts`, "a ledger row … takes `sm`").
+   * Overrides the default secondary-button look — the roster's per-status
+   * `buttonClass`, `danger` for an expired link. The default is `sm`: its home
+   * is a ledger row on Today, beside fixes that are all `sm` (`button.ts`, "a
+   * ledger row … takes `sm`").
    */
   className?: string;
   /** Overrides the outer `sm:text-right` alignment — the roster's two-column grid wants it left. */
