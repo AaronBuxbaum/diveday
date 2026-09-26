@@ -136,7 +136,11 @@ export default async function DeparturesBoardPage({
       className="boat-mode flex min-h-screen flex-col bg-background px-6 py-6 text-foreground sm:px-10 sm:py-8 lg:px-14 lg:py-12"
     >
       <BoardRefresh everyMs={REFRESH_MS} />
-      <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
+      {/* The date stands on the name's last baseline, not on its line box's
+          bottom: a 44px heading descends further than a 28px date, so
+          `items-end` set the date 4px low (K-256). `loading.tsx` copies this
+          row class for class. */}
+      <header className="flex flex-wrap items-baseline-last justify-between gap-x-8 gap-y-2">
         <h1 className="text-[2rem] leading-tight font-bold tracking-tight text-balance lg:text-[2.75rem]">
           {shop.name}
         </h1>

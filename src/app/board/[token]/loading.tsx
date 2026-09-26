@@ -8,7 +8,10 @@ export default function BoardLoading() {
   return (
     <main className="boat-mode flex min-h-screen flex-col bg-background px-6 py-6 text-foreground sm:px-10 sm:py-8 lg:px-14 lg:py-12">
       <div className="animate-pulse">
-        <div className="flex items-end justify-between gap-6">
+        {/* The page's header row, class for class: at 390 the name and the
+            date stack, and so do these. An empty bar's baseline is its bottom
+            edge, so on one row the two bars stand on one line. */}
+        <div className="flex flex-wrap items-baseline-last justify-between gap-x-8 gap-y-2">
           <div className="h-10 w-72 max-w-full rounded bg-surface-sunken" />
           <div className="h-7 w-40 rounded bg-surface-sunken" />
         </div>

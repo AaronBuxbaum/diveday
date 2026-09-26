@@ -98,7 +98,9 @@ export default async function KioskCheckInPage({ params }: { params: Promise<{ t
 
   return (
     <main className="boat-mode mx-auto flex min-h-screen w-full max-w-2xl flex-col px-6 py-8 text-foreground sm:px-10 sm:py-12">
-      <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
+      {/* The date on the name's last baseline, as on the departures board
+          (K-256); `loading.tsx` copies this row class for class. */}
+      <header className="flex flex-wrap items-baseline-last justify-between gap-x-8 gap-y-2">
         <h1 className="text-[2rem] leading-tight font-bold tracking-tight text-balance">
           {shop.name}
         </h1>
