@@ -279,6 +279,16 @@ already named and leaves the caption a plain sibling. Pass it whenever the child
 `<label>` of its own: nested labels are invalid HTML, and a click in the overlap has two controls
 to forward to.
 
+A body that is a **group** of self-labelled controls rather than one — a segmented pair of radios
+beside a select in a two-column `FieldGrid`, as the embed generator's look is — takes `group`: the
+caption names the body by id (`role="group"`, `aria-labelledby`, described by the field's
+description and refusal) and wraps nothing. A group of choices on a row of its own is a
+`ChoiceFieldset`; `group` is for one that must keep a `FieldGrid` row's caption line, which a
+fieldset's rendered legend cannot take. `form.test.tsx` refuses a `Field` with neither `htmlFor` nor
+`group` whose body holds a `<label>`, `ChoiceRow`, `ChoicePill`, `ImageFileInput` or
+`RemovablePhoto`: with a logo on file, the settings profile's "Shop logo" caption labelled the
+"Remove current logo" box, and a click on the caption ticked it (K-13 review).
+
 ### Picking a file: `ImageFileInput`
 
 A bare `<input type="file">` paints the operating system's grey "Choose Files / No file chosen" —
@@ -842,7 +852,8 @@ A checkbox or radio a person sees is drawn one way, from `src/components/ui/form
   around its label and the aside, with the box on the plain pill's 16px inset.
 - **`ChoiceFieldset`** captions a group of them the way `Field` captions a control: a
   `text-sm font-medium` legend, then 4px, then the body (`bodyClassName` lays the choices out).
-  `required` draws `Field`'s aria-hidden `*`. Hand-rolled legends put 8px there (`mb-2`, `mt-2`),
+  `required` draws `Field`'s aria-hidden `*`, and `hint` sets a qualifier after the legend the way
+  `Field` sets its own. Hand-rolled legends put 8px there (`mb-2`, `mt-2`),
   so a group sat further from its caption than every field around it; `form.test.tsx` refuses a
   legend with its own bottom margin (a floated legend aside), and a legend spelled as this caption
   (`text-sm font-medium`) anywhere else. Three files that have not been touched since are named in
