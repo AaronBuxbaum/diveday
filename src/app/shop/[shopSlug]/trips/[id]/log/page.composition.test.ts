@@ -148,15 +148,22 @@ describe("the roll-call tables' columns", () => {
    * columns, so the roster's six were 125px each on paper and 149px on screen:
    * a checkpoint's "Awaiting roll call" had as much room as the buddy cell
    * beside it, which ran four and five lines (K-104, DEPARTURE-8-20). The
-   * checkpoint columns are pinned at 8rem and the diver, contact and buddy
-   * columns share the rest; `Table` releases the pin in print, where the
-   * paper's width is all there is.
+   * checkpoint columns are pinned — 8rem on screen, and on paper the share
+   * `rollCallCheckpointPrintClass` picks for the count — and the diver,
+   * contact and buddy columns share the rest.
    */
   for (const id of ["incident-roster-heading", "incident-crew-heading"]) {
-    it(`pins each checkpoint column at 8rem (${id})`, () => {
+    it(`pins each checkpoint column on screen and on paper (${id})`, () => {
       const headers = section(id).match(/<Th\b[^>]*>\s*\{checkpointText\(checkpoint\)\}/g) ?? [];
       expect(headers).toHaveLength(1);
       expect(headers[0]).toContain('width="8rem"');
+      expect(headers[0]).toContain("className={checkpointPrintClass}");
     });
   }
+
+  it("takes the paper share from the checkpoint count", () => {
+    expect(SOURCE).toContain(
+      "const checkpointPrintClass = rollCallCheckpointPrintClass(doc.meta.checkpoints.length);",
+    );
+  });
 });

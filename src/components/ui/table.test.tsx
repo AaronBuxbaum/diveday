@@ -83,30 +83,6 @@ describe("Table", () => {
     expect(table).toHaveClass("print:min-w-0");
   });
 
-  it("pins a describing column narrow on screen and releases it in print", () => {
-    // The departure log pins one column per checkpoint, and a departure runs
-    // up to five: 5 × 8rem is 640px of a ~750px printed page, which would
-    // leave the diver's name 37px. On paper the columns share the width again,
-    // for the reason `MIN_WIDTH`'s floors carry `print:min-w-0`.
-    render(
-      <Table>
-        <THead>
-          <Th>Diver</Th>
-          <Th width="8rem">Before departure</Th>
-        </THead>
-        <TBody>
-          <tr>
-            <Td>Ana Reyes</Td>
-            <Td>Boarded</Td>
-          </tr>
-        </TBody>
-      </Table>,
-    );
-    const header = screen.getByRole("columnheader", { name: "Before departure" });
-    expect(header).toHaveClass("w-32");
-    expect(header).toHaveClass("print:w-auto");
-  });
-
   it("right-aligns numeric columns with tabular figures, header and cells alike", () => {
     render(
       <Table>
