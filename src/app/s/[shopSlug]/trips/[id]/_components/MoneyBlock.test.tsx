@@ -114,6 +114,26 @@ describe("MoneyBlock — the lines that do not render", () => {
   });
 });
 
+/**
+ * **The last line sits midway between its two hairlines.**
+ *
+ * The caller opens the block with a rule and 16px (`border-t pt-4`), and the
+ * total closes it with a rule of its own. The lines stack at `gap-2`, so with
+ * nothing else the last line had 16px of air above it and 8px below, and the
+ * pixel probe measured its ink 4px under the band's centre on the public trip.
+ * The total's rule takes the other 8px itself, and 16px under it, the rhythm
+ * of every other rule in the booking card.
+ */
+describe("MoneyBlock — the total's rule", () => {
+  it("stands 16px under the last line and 16px over the total", () => {
+    renderDiver(<MoneyBlock {...props()} />);
+    const total = screen.getByText("Due now").parentElement;
+    expect(total?.parentElement).toHaveClass("gap-2");
+    expect(total).toHaveClass("mt-2", "border-t", "border-border", "pt-4");
+    expect(total).not.toHaveClass("pt-3");
+  });
+});
+
 describe("MoneyBlock — the deposit split", () => {
   it("charges the deposit now and names when the remainder is owed", () => {
     renderDiver(
