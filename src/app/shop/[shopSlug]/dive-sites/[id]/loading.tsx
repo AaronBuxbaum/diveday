@@ -1,6 +1,6 @@
 import { EditorRailSkeleton } from "@/components/editor/EditorRail";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { SITE_FORM_SECTION_ORDER } from "../_components/site-form-sections";
+import { SITE_FORM_RAIL_STUBS } from "../_components/site-form-sections";
 
 /**
  * Form-shaped skeleton for one dive site's briefing (ADR
@@ -25,8 +25,9 @@ export default function DiveSiteLoading() {
 
         <div className="mt-8 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
           {/* The jump row on a phone, the rail on a desktop: the rail's own
-              boxes, one stub per section. */}
-          <EditorRailSkeleton count={SITE_FORM_SECTION_ORDER.length} />
+              boxes, one stub per section at its label's width, so the phone
+              wrap takes the loaded rail's rows. */}
+          <EditorRailSkeleton widths={SITE_FORM_RAIL_STUBS} />
 
           <div className="flex min-w-0 flex-col gap-6">
             {[0, 1, 2].map((section) => (

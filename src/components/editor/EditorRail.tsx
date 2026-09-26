@@ -101,15 +101,28 @@ export function EditorRail({
  * column from `lg` up. The editors' skeletons each drew a rail of their own — one
  * row of three 36px pills over a hairline with `mb-8` — so on a phone the whole
  * form dropped about 131px when the eleven-section dive-site editor arrived.
- * `count` is the editor's own section count, read from its section list where
- * the page has one.
+ *
+ * **How many rows the phone wrap takes is the stubs' widths**, and each row is
+ * 44px of form. `count` draws uniform `w-24` stubs, which is right where the
+ * editor's labels wrap the way they do (the course editor's eight, at every
+ * swept width). `widths` names each stub's width class instead, in section
+ * order, for an editor whose labels do not: eleven `w-24` stubs wrap three to a
+ * row at 390, four rows, where the dive-site editor's labels wrap 3/3/2/2/1,
+ * five, so its form still dropped 44px. Either way the count is the editor's
+ * own, read from its section list where the page has one.
  */
-export function EditorRailSkeleton({ count }: { count: number }) {
+export function EditorRailSkeleton(props: { count: number } | { widths: readonly string[] }) {
+  const widths =
+    "widths" in props ? props.widths : Array.from({ length: props.count }, () => "w-24");
   return (
     <div className={RAIL_CLASS}>
       <div className={RAIL_LIST_CLASS}>
-        {[...Array(count).keys()].map((entry) => (
-          <div key={entry} className="h-11 w-24 rounded-lg bg-surface-sunken lg:w-full" />
+        {widths.map((width, entry) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: a fixed run of placeholders, never reordered.
+            key={entry}
+            className={`h-11 ${width} rounded-lg bg-surface-sunken lg:w-full`}
+          />
         ))}
       </div>
     </div>

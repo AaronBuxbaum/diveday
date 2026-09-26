@@ -155,7 +155,30 @@ describe("the editor rail's skeleton", () => {
     expect(skeleton).not.toHaveClass("border-b");
     expect(stubs).toHaveClass("flex-wrap");
     expect(stubs?.children).toHaveLength(11);
-    for (const stub of stubs?.children ?? []) expect(stub).toHaveClass("h-11");
+    for (const stub of stubs?.children ?? []) expect(stub).toHaveClass("h-11", "w-24", "lg:w-full");
+  });
+
+  /**
+   * The stubs' widths decide how many rows the phone wrap takes, and every row
+   * is 44px of form pushed down. Eleven uniform `w-24` stubs wrap three to a
+   * row at 390, four rows, where the dive-site editor's own labels wrap
+   * 3/3/2/2/1, five: the form still dropped 44px. An editor whose labels wrap
+   * differently from uniform stubs names each stub's width instead.
+   */
+  it("draws each stub at the width its editor names, still a column from lg", () => {
+    const { container } = render(<EditorRailSkeleton widths={["w-20", "w-38", "w-49"]} />);
+    const stubs = [...(container.firstElementChild?.firstElementChild?.children ?? [])];
+
+    expect(stubs).toHaveLength(3);
+    expect(stubs.map((stub) => [...stub.classList].find((token) => /^w-/.test(token)))).toEqual([
+      "w-20",
+      "w-38",
+      "w-49",
+    ]);
+    for (const stub of stubs) {
+      expect(stub).toHaveClass("h-11", "lg:w-full");
+      expect(stub).not.toHaveClass("w-24");
+    }
   });
 });
 
