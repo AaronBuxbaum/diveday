@@ -103,9 +103,10 @@ describe("the eyebrow's line box", () => {
   });
 
   /**
-   * **The wrapper is the element the caller lays out.** `TripPageHeader` places
-   * its back link with `col-start-1 row-start-1`, and the log and ticket pages
-   * hide theirs with `print:hidden` so a print-only `<p>` can take the line.
+   * **The wrapper is the element the caller lays out.** A grid places a back
+   * link with `col-start-1 row-start-1` (as `TripPageHeader` once did), and
+   * the log and ticket pages hide theirs with `print:hidden` so a print-only
+   * `<p>` can take the line.
    * Introducing the wrapper put those on the nested link, where grid placement
    * does nothing and `print:hidden` leaves a 16px band of nothing on paper
    * (`sourcery-ai` on #1943). Colour is the exception, and already has `onSky`.

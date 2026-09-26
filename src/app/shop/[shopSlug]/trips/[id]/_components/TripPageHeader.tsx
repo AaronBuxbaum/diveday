@@ -49,10 +49,10 @@ export function TripCapacityBadge({
  *
  * The boat's name owns the line. It used to share its row with a shrink-proof
  * actions column, so "Two-Tank Reef — French Reef" wrapped at half measure
- * while three quiet controls kept a whole column to themselves; now the
- * actions wrap in after the title and drop below it the moment the name needs
- * the room, which on a phone is exactly the stack the old layout collapsed to
- * anyway.
+ * while three quiet controls kept a whole column to themselves. The one
+ * surface with actions (the manifest's ••• menu) now puts them at the end of
+ * the title's own row, centred on it at every width; a surface without them
+ * gives the title the row alone.
  */
 export function TripPageHeader({
   trip,
@@ -111,37 +111,41 @@ export function TripPageHeader({
           are readings of rather than the board two levels above it.
           `print:hidden` because `print/page.tsx` wears this header too and a
           paper sheet has no navigation. */}
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 sm:gap-x-8">
-        <EyebrowBackLink href={boardHref} className="col-start-1 row-start-1 print:hidden">
-          {backLabel}
-        </EyebrowBackLink>
+      <EyebrowBackLink href={boardHref} className="print:hidden">
+        {backLabel}
+      </EyebrowBackLink>
+      {/* **The title and its actions are one row, centred on each other.**
+          The 48px ••• used to sit in a grid cell beside the 16px eyebrow on a
+          phone — 16px under the eyebrow's centre, and holding the title 49px
+          below it — and from `sm` to top-align beside the title, 4px above
+          its line (K-196, K-357). The eyebrow keeps a line of its own at
+          every width, and the actions end the title's. */}
+      <div className="mt-2 flex items-center gap-4 sm:gap-8">
+        <h1 className="min-w-0 flex-1 text-[23px] leading-[1.15] font-semibold tracking-tight text-balance sm:text-[34px] sm:leading-[1.12]">
+          {trip.title}
+        </h1>
         {headerAside || actions ? (
-          <div className="col-start-2 row-start-1 flex flex-wrap items-start justify-end gap-2 sm:row-start-2 sm:gap-3">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
             {headerAside}
             {actions ? (
-              <div className="flex flex-wrap items-start gap-x-1 gap-y-2">{actions}</div>
+              <div className="flex flex-wrap items-center gap-x-1 gap-y-2">{actions}</div>
             ) : null}
           </div>
         ) : null}
-        <div className="col-span-2 row-start-2 mt-2 min-w-0 sm:col-span-1 sm:col-start-1 sm:mt-2">
-          <h1 className="text-[23px] leading-[1.15] font-semibold tracking-tight text-balance sm:text-[34px] sm:leading-[1.12]">
-            {trip.title}
-          </h1>
-          {/* One geometry for every trip, whatever the length of its name: the
-              name owns its line; beneath it, the trip's own facts — when it
-              sails, what this surface is for, and any per-surface metadata. */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] text-muted sm:mt-2.5 sm:text-[15px]">
-            {badge}
-            <span>
-              {formatShortDate(trip.startsAt, locale, timeZone)} ·{" "}
-              {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, timeZone)}
-              {price ? <> · {price}</> : null}
-            </span>
-          </div>
-          {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}
-          {extraMeta ? <div className="mt-2 flex flex-col gap-1.5">{extraMeta}</div> : null}
-        </div>
       </div>
+      {/* One geometry for every trip, whatever the length of its name: the
+          name owns its line; beneath it, the trip's own facts — when it
+          sails, what this surface is for, and any per-surface metadata. */}
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] text-muted sm:mt-2.5 sm:text-[15px]">
+        {badge}
+        <span>
+          {formatShortDate(trip.startsAt, locale, timeZone)} ·{" "}
+          {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, timeZone)}
+          {price ? <> · {price}</> : null}
+        </span>
+      </div>
+      {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}
+      {extraMeta ? <div className="mt-2 flex flex-col gap-1.5">{extraMeta}</div> : null}
     </header>
   );
 }

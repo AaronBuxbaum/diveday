@@ -88,12 +88,13 @@ export function EyebrowBackLink({
   children: ReactNode;
   /**
    * **Layout classes land on the wrapper, not the link.** The wrapper is the
-   * element the caller's parent lays out -- `TripPageHeader` places it with
-   * `col-start-1 row-start-1`, and the log and ticket pages hide it in print
-   * with `print:hidden` so their print-only `<p>` can take the line. On the
-   * link those do nothing and the wrapper auto-places, which is a 16px band of
-   * nothing on paper and a back-link in the wrong grid cell on screen. Colour
-   * is the exception and already has a prop, for the reason below.
+   * element the caller's parent lays out -- a grid places it with
+   * `col-start-1 row-start-1`, and `TripPageHeader` and the log and ticket
+   * pages hide it in print with `print:hidden` (the last two so their
+   * print-only `<p>` can take the line). On the link those do nothing and the
+   * wrapper auto-places, which is a 16px band of nothing on paper and a
+   * back-link in the wrong grid cell on screen. Colour is the exception and
+   * already has a prop, for the reason below.
    */
   className?: string;
   /**
