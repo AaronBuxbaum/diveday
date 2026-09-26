@@ -242,14 +242,20 @@ describe("the identity trigger", () => {
 
   /**
    * 8px of fill round the mark, handed back at the start so the mark stays on
-   * the bar's gutter. Not at the end: when the name folds, the page's title
-   * lands where this box ends, and the end padding is what puts it 8px past
-   * the mark — where the unfolded name's first letter sits. A negative end
-   * margin would pull the title back onto the mark.
+   * the bar's gutter. Not at the end below `lg`: when the name folds, the
+   * page's title lands where this box ends, and the end padding is what puts
+   * it 8px past the mark — where the unfolded name's first letter sits. A
+   * negative end margin there would pull the title back onto the mark.
+   *
+   * From `lg` up the bar never folds (globals.css scopes the fold to
+   * `width < 64rem`), and the end padding only widened the leading slot: the
+   * start-aligned Today/Week/Season pills moved 8px right on every staff page,
+   * 20px from the caret where they stood 12px. So from `lg` it is handed back
+   * too, and the pills stand where they stood.
    */
-  it("gives the fill 8px of room without moving the mark, and keeps the folded title clear of it", () => {
+  it("gives the fill 8px of room without moving the mark, the folded title, or the pills", () => {
     const button = trigger();
-    expect(button).toHaveClass("-ms-2", "px-2");
+    expect(button).toHaveClass("-ms-2", "px-2", "lg:-me-2");
     expect(button).not.toHaveClass("-mx-2");
     expect(button).not.toHaveClass("-me-2");
   });

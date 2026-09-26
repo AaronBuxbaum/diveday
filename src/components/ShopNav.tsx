@@ -132,7 +132,8 @@ export function ShopNav({
        * in the centre slot; below it they fold into the calendar beside the
        * search, because the bar is a fixed height and nothing in it may wrap —
        * every slot shrinks instead, and a long shop name ellipses (see
-       * ShopIdentityMenu, whose button and label both carry `min-w-0`).
+       * ShopIdentityMenu: its button shrinks, down to the 44px `min-w-11`
+       * round the mark, and its label carries `min-w-0`).
        */}
       <ChromeBar
         staffChrome
