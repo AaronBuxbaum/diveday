@@ -208,15 +208,6 @@ describe("the map", () => {
 });
 
 /**
- * **The way out of a lost printout** — `stopArrivalCodesFromReady`, issue #1729.
- *
- * The page never shows the code, so the control has to say what it is about on
- * its own, and it may not appear where there is nothing to stop: a diver who
- * never saved the card would be reading a sentence about a credential they do
- * not hold. Whether they hold one is `hasLiveArrivalCapability`'s answer and
- * arrives here as the presence of the action.
- */
-/**
  * **A rule sits midway between the rows it divides.** The card's column is
  * `gap-3` and each ruled row opened with `pt-4`, so every rule had 12px above
  * it and 16px below, and the rows sat low between their rules (pixel-craft
@@ -244,6 +235,15 @@ describe("the ruled rows", () => {
   });
 });
 
+/**
+ * **The way out of a lost printout** — `stopArrivalCodesFromReady`, issue #1729.
+ *
+ * The page never shows the code, so the control has to say what it is about on
+ * its own, and it may not appear where there is nothing to stop: a diver who
+ * never saved the card would be reading a sentence about a credential they do
+ * not hold. Whether they hold one is `hasLiveArrivalCapability`'s answer and
+ * arrives here as the presence of the action.
+ */
 describe("stopping the code on a saved card", () => {
   const stop = async () => {};
 
