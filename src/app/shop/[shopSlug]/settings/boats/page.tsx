@@ -6,7 +6,13 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass } from "@/components/ui/form";
+import {
+  controlClass,
+  Field,
+  FieldActions,
+  FieldGrid,
+  textareaClassFor,
+} from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { countBoatDepartures, listBoats } from "@/db/boats";
@@ -119,15 +125,19 @@ export default async function BoatsSettingsPage({
                         className={`${controlClass} tabular-nums`}
                       />
                     </div>
+                    {/* A textarea, because the value is a sentence of up to
+                        200 characters: a one-line box cut the seed's 72 at
+                        its padding edge, mid-word (K-446). It grows with its
+                        text and never shows fewer than two lines. */}
                     <div className="w-full sm:basis-full">
-                      <input
+                      <textarea
                         name="description"
-                        type="text"
+                        rows={2}
                         maxLength={200}
                         defaultValue={boat.description ?? ""}
                         placeholder={t("boats.descriptionLabel")}
                         aria-label={t("boats.descriptionLabel")}
-                        className={controlClass}
+                        className={textareaClassFor(2)}
                       />
                     </div>
                     {/* **The colour, with the boat under it** (ADR
@@ -221,49 +231,44 @@ export default async function BoatsSettingsPage({
             </div>
           )}
 
+          {/* **Every box says what it is for, above it.** An empty form has
+              no values to read a box by, and its placeholders were its only
+              labels: the 128px capacity box read "Capacity (se" and the
+              description lost twenty characters of its own at 390 (K-145).
+              Captions, as the seasons form beside it has them; a row above
+              keeps its placeholders because its values say what each box
+              holds. */}
           <AddPanel title={t("boats.createTitle")}>
-            <form
-              action={createBoatAction}
-              className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3"
-            >
-              <div className="flex-1 w-full">
-                <input
-                  name="name"
-                  type="text"
-                  required
-                  placeholder={t("boats.nameLabel")}
-                  aria-label={t("boats.nameLabel")}
-                  className={controlClass}
-                />
-              </div>
-              <div className="w-full sm:w-32">
+            <FieldGrid as="form" columns={2} action={createBoatAction}>
+              <Field label={t("boats.nameLabel")}>
+                <input name="name" type="text" required className={controlClass} />
+              </Field>
+              <Field label={t("boats.capacityLabel")}>
                 <input
                   name="capacity"
                   type="number"
                   required
                   min={1}
-                  placeholder={t("boats.capacityLabel")}
-                  aria-label={t("boats.capacityLabel")}
                   className={`${controlClass} tabular-nums`}
                 />
-              </div>
-              <div className="w-full sm:basis-full">
-                <input
+              </Field>
+              <Field label={t("boats.descriptionLabel")} className="sm:col-span-2">
+                <textarea
                   name="description"
-                  type="text"
+                  rows={2}
                   maxLength={200}
-                  placeholder={t("boats.descriptionLabel")}
-                  aria-label={t("boats.descriptionLabel")}
-                  className={controlClass}
+                  className={textareaClassFor(2)}
                 />
-              </div>
-              <SubmitButton
-                pendingLabel={t("boats.submitting")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("boats.addBoat")}
-              </SubmitButton>
-            </form>
+              </Field>
+              <FieldActions>
+                <SubmitButton
+                  pendingLabel={t("boats.submitting")}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {t("boats.addBoat")}
+                </SubmitButton>
+              </FieldActions>
+            </FieldGrid>
           </AddPanel>
         </div>
       </SectionCard>
