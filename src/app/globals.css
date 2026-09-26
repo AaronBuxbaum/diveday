@@ -520,12 +520,18 @@ html:has([data-chrome-bar]) {
  * opaque, and nothing told the browser it was there: a field Tab moved focus
  * to, or a fragment a link jumped to, could land under it whole. The pixel
  * probe measured the dive-site editor at 390 with "Name *" and its box at
- * 757–817 under a bar at 771–845. The height is the bar's own: its md button
- * (3rem), its `py-3` (1.5rem) and its hairline. Only where the bar is, for the
- * reason the rule above gives.
+ * 757–817 under a bar at 771–845. Only where the bar is, for the reason the
+ * rule above gives.
+ *
+ * The height is the bar's measured one, `--sticky-actions-h`, which
+ * `StickyActionsInset` writes on `<html>` whenever the bar resizes: the bar is
+ * a wrapping row, and the unsaved-changes sentence beside Save wraps under it
+ * at 390 whenever the form is dirty, standing it about 105px. The fallback is
+ * its one-row height — the md button (3rem), its `py-3` (1.5rem) and its
+ * hairline — for the server's paint and a browser with no `ResizeObserver`.
  */
 html:has([data-sticky-actions]) {
-  scroll-padding-bottom: calc(3rem + 1.5rem + 1px);
+  scroll-padding-bottom: var(--sticky-actions-h, calc(3rem + 1.5rem + 1px));
 }
 
 body {

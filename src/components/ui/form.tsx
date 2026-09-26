@@ -14,6 +14,7 @@ import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
 import { DateInput } from "./DateInput";
 import { type ForgivingCopy, ForgivingInput } from "./ForgivingInput";
 import { StatusMark } from "./StatusMark";
+import { StickyActionsInset } from "./StickyActionsInset";
 import { toneMark } from "./tone";
 
 /**
@@ -835,7 +836,10 @@ export function ChoiceFieldset({
  *
  * `data-sticky-actions` is what `globals.css` pads the viewport's bottom by
  * (`html:has([data-sticky-actions])`), so a field focus or a fragment jump
- * lands above the bar rather than under it.
+ * lands above the bar rather than under it. The padding is the bar's own
+ * measured height, which `StickyActionsInset` keeps in `--sticky-actions-h`:
+ * the row wraps to two lines when the note beside Save is long, and a fixed
+ * one-row inset then left a focused field half under it.
  */
 export function StickyFormActions({
   className = "",
@@ -849,6 +853,7 @@ export function StickyFormActions({
       data-sticky-actions=""
       className={`sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 ${className}`}
     >
+      <StickyActionsInset />
       {children}
     </div>
   );

@@ -313,7 +313,10 @@ two-field panel wearing one is a bar hovering over nothing.
 **Nothing lands under it.** The bar marks itself `data-sticky-actions`, and `globals.css` pads the
 viewport's bottom by its height (`html:has([data-sticky-actions]) { scroll-padding-bottom }`), the
 twin of the chrome bar's `scroll-padding-top`, so a field that takes focus or a fragment a link
-jumps to scrolls into view above it. Its bleed is spelled for the containers it sits in — a
+jumps to scrolls into view above it. The height is measured, not assumed: the bar is a wrapping row,
+and the unsaved-changes sentence beside Save wraps under it at 390 whenever the form is dirty, so
+`StickyActionsInset` writes the bar's live height to `--sticky-actions-h` and the rule falls back to
+the one-row 73px only until it has. Its bleed is spelled for the containers it sits in — a
 `<main>` padded `px-4 sm:px-6`, and from `lg` the editor rail's unpadded form cell — so its rule
 runs to the screen's edges on a phone and with the form's column on a desk.
 

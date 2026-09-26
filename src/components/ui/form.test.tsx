@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buttonClass } from "./button";
 import { ForgivingInput } from "./ForgivingInput";
 import {
@@ -844,8 +844,65 @@ describe("StickyFormActions", () => {
     );
     const rule = css.match(/html:has\(\[data-sticky-actions\]\)\s*\{([^}]*)\}/);
     expect(rule, "html:has([data-sticky-actions]) { … }").not.toBeNull();
-    // The md button (3rem), the bar's py-3 (1.5rem) and its hairline.
-    expect(rule?.[1]).toMatch(/scroll-padding-bottom:\s*calc\(3rem \+ 1\.5rem \+ 1px\)/);
+    // The bar's measured height, and until it is measured (the server's
+    // paint, a browser with no ResizeObserver) its one-row height: the md
+    // button (3rem), the bar's py-3 (1.5rem) and its hairline.
+    expect(rule?.[1]).toMatch(
+      /scroll-padding-bottom:\s*var\(--sticky-actions-h,\s*calc\(3rem \+ 1\.5rem \+ 1px\)\)/,
+    );
+  });
+
+  /**
+   * **The inset is the bar's real height, not its one-row height.** Both
+   * callers put Save and an unsaved-changes sentence in the bar's wrapping
+   * row, and at 390 the sentence wraps under Save whenever the form is dirty —
+   * exactly while someone is tabbing through it — so the bar stands about
+   * 105px, and a fixed 73px inset left a focused field about 32px under it
+   * (K-01, review). The bar measures itself and tells the page.
+   */
+  it("insets the page by the bar's measured height, and follows it when its row wraps", () => {
+    const fire: Array<() => void> = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: () => void) {
+          fire.push(callback);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    let height = 73;
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        return { height: this.hasAttribute("data-sticky-actions") ? height : 0 } as DOMRect;
+      });
+    const root = document.documentElement;
+    try {
+      const { container, unmount } = render(
+        <StickyFormActions>
+          <button type="submit">Save</button>
+        </StickyFormActions>,
+      );
+      expect(root.style.getPropertyValue("--sticky-actions-h")).toBe("73px");
+
+      height = 105;
+      act(() => {
+        for (const callback of fire) callback();
+      });
+      expect(root.style.getPropertyValue("--sticky-actions-h")).toBe("105px");
+
+      // The measuring leaf is not a flex item: an empty span in the bar's
+      // gap-3 row would push Save 12px off its edge.
+      expect(container.querySelector("[data-sticky-actions] > span")).toHaveAttribute("hidden");
+
+      unmount();
+      expect(root.style.getPropertyValue("--sticky-actions-h")).toBe("");
+    } finally {
+      rect.mockRestore();
+      vi.unstubAllGlobals();
+    }
   });
 });
 
