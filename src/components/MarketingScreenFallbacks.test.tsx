@@ -45,6 +45,20 @@ describe("the mock family's inset", () => {
     expect(bar.className).not.toMatch(/(^|\s)p[xl]?-4(\s|$)/);
     expect(body.className).not.toMatch(/(^|\s)p[xl]?-4(\s|$)/);
   });
+
+  // In /about's 290px phone screen both halves of the bar wrapped inside
+  // themselves: "BLUE MANTIS / DIVERS" beside "Offline copy · up to / date"
+  // (K-398). Each half is one unit; when the pair does not fit on one line the
+  // label moves under the name whole. Not `truncate`: an ellipsis there would
+  // cut "up to date", which is the half of the label that says anything.
+  it.each(EVERY_MOCK)("%s never splits the shop name or the bar's label", (_name, Mock) => {
+    const { bar } = barAndBody(Mock);
+    expect(bar).toHaveClass("flex-wrap", "gap-x-3");
+    const [name, label] = Array.from(bar.children);
+    expect(name).toHaveClass("whitespace-nowrap");
+    expect(label).toHaveClass("whitespace-nowrap");
+    expect(label).not.toHaveClass("truncate");
+  });
 });
 
 describe("MarketingScreenFallbacks", () => {

@@ -25,14 +25,24 @@ import type { DiverLocale } from "@/i18n/settings";
 const MOCK_INSET_X = "px-5";
 const MOCK_BODY = `${MOCK_INSET_X} py-5`;
 
+/**
+ * The shop name and the screen's label are each one unit. In /about's 290px
+ * phone screen the pair does not fit on one line, and both used to wrap inside
+ * themselves ("BLUE MANTIS / DIVERS" beside "Offline copy · up to / date",
+ * K-398). Now the label moves under the name whole. Not `truncate`: the
+ * ellipsis would land on "up to date", the half of the label that means
+ * something.
+ */
 function AppBar({ label }: { label: string }) {
   return (
     <div
-      className={`flex items-center justify-between border-b border-border bg-surface ${MOCK_INSET_X} py-3 text-xs text-muted`}
+      className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 border-b border-border bg-surface ${MOCK_INSET_X} py-3 text-xs text-muted`}
     >
       {/* i18n-exempt: sample shop name used only in marketing mockups */}
-      <span className="font-semibold tracking-wide text-primary uppercase">Blue Mantis Divers</span>
-      <span>{label}</span>
+      <span className="font-semibold tracking-wide whitespace-nowrap text-primary uppercase">
+        Blue Mantis Divers
+      </span>
+      <span className="whitespace-nowrap">{label}</span>
     </div>
   );
 }
