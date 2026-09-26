@@ -735,6 +735,13 @@ summary {
   :where(button:not(:disabled), summary, [role="button"]) {
     cursor: pointer;
   }
+
+  /* Running text never ends on one word. The longhand, not `text-wrap`: the
+     shorthand also sets `text-wrap-mode: wrap`, which would undo the `nowrap`
+     a `<p>` inherits from a `truncate` parent (`text-wrap.test.ts`). */
+  :where(p, li, dd, figcaption) {
+    text-wrap-style: pretty;
+  }
 }
 
 /*
