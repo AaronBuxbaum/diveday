@@ -66,8 +66,11 @@ export function TripPlanSection({
           Below `sm` the pair is a column, so the note follows the link at body
           spacing; from `sm` it is one baseline row. The box's unseen 20px is
           above the words, in the 8px under the list and what the words would
-          have had anyway: `mt-2` keeps its ring 3px clear of the list's rule. */}
-      <div className="mt-2 flex flex-col sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3">
+          have had anyway: `mt-2` keeps its ring 3px clear of the list's rule.
+          The column is `items-start`: stretched, the link was a target the
+          phone's whole width, and a tap beside the words opened the after-dive
+          log. */}
+      <div className="mt-2 flex flex-col items-start sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3">
         <Link
           href={doorHref}
           className="inline-flex min-h-11 items-end text-base font-semibold text-primary hover:underline"
