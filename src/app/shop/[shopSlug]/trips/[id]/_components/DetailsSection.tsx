@@ -28,6 +28,14 @@ import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { toDateInputValue, toTimeInputValue, type WallTime } from "@/lib/zoned";
 import type { DiveSiteList, Trip, TripDiveList } from "./types";
 
+/**
+ * The frame of a group inside the Details card: a sunken inset, not a second
+ * card, because surface never stacks on surface (see SectionCard's "what is
+ * not a section card"). Arrival guidance, the Dive plan and Pay at booking
+ * wear it, spelled once so none of them drifts (pixel-craft K-95).
+ */
+const GROUP_INSET = "rounded-inset bg-surface-sunken p-4 sm:p-5";
+
 export function DetailsSection({
   action,
   status,
@@ -144,7 +152,7 @@ export function DetailsSection({
           />
         </Field>
       </FieldGrid>
-      <fieldset className="rounded-inset bg-surface-sunken p-4 sm:p-5">
+      <fieldset className={GROUP_INSET}>
         <legend className={`${legendClass} text-sm font-medium`}>
           {t("trips.details.arrivalGuidanceLegend")}
         </legend>
@@ -247,6 +255,7 @@ export function DetailsSection({
         </FieldGrid>
       </fieldset>
       <TripDiveFields
+        frameClassName={GROUP_INSET}
         diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
         initialCount={trip.plannedDives}
         initialDives={tripDiveList.map(({ dive }) => ({
@@ -438,10 +447,7 @@ export function DetailsSection({
           </Field>
         )}
       </FieldGrid>
-      {/* A sunken inset, not a second card: this group sits *inside* the
-              Details card, and surface never stacks on surface (see
-              SectionCard's "what is not a section card"). */}
-      <fieldset className="rounded-inset bg-surface-sunken p-4 sm:p-5">
+      <fieldset className={GROUP_INSET}>
         <legend className={`${legendClass} text-sm font-medium`}>
           {t("trips.details.payAtBookingLegend")}
         </legend>

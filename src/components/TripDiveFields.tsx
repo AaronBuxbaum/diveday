@@ -42,12 +42,6 @@ export type TripDiveFieldsCopy = {
   footerNote: string;
 };
 
-/**
- * The trip page's shape for a group inside its Details card: a sunken inset,
- * the same as the arrival and pay-at-booking fieldsets beside it there.
- */
-const INSET_FRAME = "rounded-inset bg-surface-sunken p-4 sm:p-5";
-
 export function TripDiveFields({
   diveSites,
   initialCount = 2,
@@ -56,7 +50,7 @@ export function TripDiveFields({
   disabled = false,
   onCountChange,
   onFirstDiveSiteChange,
-  frameClassName = INSET_FRAME,
+  frameClassName,
 }: {
   diveSites: DiveOption[];
   initialCount?: number;
@@ -76,13 +70,13 @@ export function TripDiveFields({
   onFirstDiveSiteChange?: (diveSiteId: string) => void;
   /**
    * The block's frame (corner, border, fill, padding), replaced whole: it is
-   * drawn like the groups around it on whichever form it sits in. A fixed
-   * 20px panel corner and 16px phone inset matched neither the trip page's
-   * sunken insets nor the schedule builder's 12px fieldsets, and sat inside
-   * the builder's 12px add panel (pixel-craft K-95). Pass the builder's own
-   * fieldset frame there; the default is the trip page's.
+   * drawn like the groups around it on whichever form it sits in, so it takes
+   * that form's own spelling of their frame and keeps none of its own. A
+   * fixed 20px panel corner and 16px phone inset matched neither the trip
+   * page's sunken insets nor the schedule builder's 12px fieldsets, and sat
+   * inside the builder's 12px add panel (pixel-craft K-95).
    */
-  frameClassName?: string;
+  frameClassName: string;
 }) {
   const [count, setCount] = useState(Math.min(4, Math.max(1, initialCount)));
 

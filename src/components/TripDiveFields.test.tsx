@@ -41,18 +41,12 @@ function frame() {
  * Pay at booking's and Repeat's (pixel-craft K-95).
  */
 describe("the Dive plan's frame", () => {
-  it("is a sunken inset by default, the trip page's shape for a group inside its card", () => {
-    render(<TripDiveFields diveSites={[]} copy={COPY} />);
-    const section = frame();
+  it.each([
+    ["the trip page's sunken inset", "rounded-inset bg-surface-sunken p-4 sm:p-5"],
+    ["the builder's fieldset", "rounded-lg border border-border bg-surface p-5"],
+  ])("takes the caller's frame whole: %s", (_, frameClassName) => {
+    render(<TripDiveFields diveSites={[]} copy={COPY} frameClassName={frameClassName} />);
 
-    expect(section).toHaveClass("rounded-inset", "bg-surface-sunken", "p-4", "sm:p-5");
-    expect(section).not.toHaveClass("rounded-panel");
-  });
-
-  it("takes the caller's frame whole, so the builder draws it like its own fieldsets", () => {
-    const fieldset = "rounded-lg border border-border bg-surface p-5";
-    render(<TripDiveFields diveSites={[]} copy={COPY} frameClassName={fieldset} />);
-
-    expect(frame()?.getAttribute("class")).toBe(fieldset);
+    expect(frame()?.getAttribute("class")).toBe(frameClassName);
   });
 });
