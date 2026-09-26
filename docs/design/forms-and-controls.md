@@ -645,12 +645,13 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
   `LIST_ROW_SUMMARY_RING` in `src/components/ui/disclosure.tsx` for a `<summary>` row, which
   cannot `inherit` a radius through its `<details>`. Never remove the container's
   `overflow-hidden` to make room: it is what rounds the rows' hover fills.
-- **Room, not an inset ring,** for chips in a strip that scrolls sideways (`FilterChips`, the
-  product page's chapter strip): vertical padding on the scroller for the 5px, and the same
-  negative margin so nothing around it moves. A negative top margin collapses through a parent
-  with no top border or padding, so that parent is `flow-root`. Room too where the row's
-  padding was the defect: the diver record's shelf rows had `px-1` in an `InsetGroup` and now
-  take its `px-5 py-4 sm:px-6`.
+- **Room, not an inset ring,** for chips in a strip that scrolls sideways (`FilterChips`): vertical
+  padding on the scroller for the 5px, and the same negative margin so nothing around it moves. A
+  negative top margin collapses through a parent with no top border or padding, so that parent is
+  `flow-root`. Not for underline tabs: the product page's chapter strip padded its tabs that way and
+  floated the active underline 4px above the bar's rule (K-400), so its tabs take the ring inset and
+  sit on the rule. Room too where the row's padding was the defect: the diver record's shelf rows
+  had `px-1` in an `InsetGroup` and now take its `px-5 py-4 sm:px-6`.
 - **Never switch the outline off** on an `a`, `button`, `input`, `select`, `textarea` or
   `summary`. In `@layer base` the global rule loses to `outline-none`, so it now does what it
   says and leaves a keyboard user nothing. The two exceptions show focus on another box:

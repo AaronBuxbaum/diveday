@@ -393,9 +393,10 @@ function classStringsWith(source: string, anchor: string, needs: readonly string
  * `focus-ring-clipped`). Rows flush inside an `overflow-hidden` card or a
  * scroll box, or bled to 4px from the screen edge by a `-mx-3`, take the ring
  * inset; where one meets the container's rounded corner it also takes the
- * container's radius, or the clip shaves the ring's square corner. A strip that
- * scrolls sideways keeps the outset ring and gets room for it instead, and so
- * does a row whose padding was the defect.
+ * container's radius, or the clip shaves the ring's square corner. A strip of
+ * chips that scrolls sideways keeps the outset ring and gets room for it
+ * instead, and so does a row whose padding was the defect; a strip of underline
+ * tabs takes it inset, so its underline can sit on its rule (K-400).
  *
  * These are class strings, read from source. An element whose component
  * renders in jsdom is pinned in that component's own test instead, which

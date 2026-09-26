@@ -127,24 +127,52 @@ describe("the chapter strip following its own highlight", () => {
   });
 });
 
+/** Every vertical padding or margin utility in a class list, variants included. */
+const blockSpacing = (element: Element) =>
+  [...element.classList].filter((token) => /^(?:[\w-]+:)*-?[pm][ytb]-/.test(token));
+
 /**
- * **Room for the focus ring, without moving the bar.** The strip scrolls
- * sideways, and a scroll box clips both axes, so a tab's 5px ring needs 5px of
- * the strip's own padding above and below it. `py-1.5` gives 6px and
- * `-my-0.5` takes the 2px back — which holds only while the nav keeps the
- * strip's top margin inside it. The nav has no top border or padding, so
- * without `flow-root` that margin collapsed through it and the bar moved up
- * 2px and grew 2px, over the hero's hairline (review lab, 2026-09-25). jsdom
- * has no layout, so this pins the structure that makes the geometry, and the
- * pixel probe measures the geometry itself.
+ * **The active chapter's underline sits on the bar's rule** (K-400).
+ *
+ * The strip padded 4px under its tabs, first for nothing and then as room for
+ * the tabs' outset focus ring (a scroll box clips both axes), so the 2px
+ * underline and the nav's 1px rule ran 4px apart: two stacked lines where one
+ * edge was meant. The tabs take the ring inset now, drawn wholly inside their
+ * own box, which needs no room — so the strip pads the top alone (`pt-2`,
+ * keeping the bar 53px: 8 + 44 + the rule) and the underline is the last
+ * thing above the rule. The inset ring also cannot reach past the screen's
+ * top while the bar is stuck, which the outset one did by a pixel. jsdom has
+ * no layout, so this pins the structure, and the pixel probe measures it.
  */
-describe("the chapter strip's room for a focus ring", () => {
-  it("pads the scrolling strip (py-1.5 -my-0.5) and makes the nav a flow-root, so the strip's negative margin stays inside the bar", () => {
+describe("the chapter strip's underline and rule", () => {
+  it("pads the scrolling strip above its tabs and not below them", () => {
     const { box } = renderNav();
     const nav = screen.getByRole("navigation", { name: "Chapters" });
     expect(box.parentElement).toBe(nav);
-    expect(box).toContainElement(screen.getByRole("link", { name: /Dock/ }));
-    expect(box).toHaveClass("overflow-x-auto", "py-1.5", "-my-0.5");
-    expect(nav).toHaveClass("flow-root");
+    expect(nav).toHaveClass("border-b");
+    expect(box).toHaveClass("overflow-x-auto");
+    expect(blockSpacing(box)).toEqual(["pt-2"]);
+  });
+
+  it("rings every chapter inset, inside the box that scrolls", () => {
+    renderNav();
+    for (const chapter of CHAPTERS) {
+      expect(screen.getByRole("link", { name: new RegExp(chapter.label) })).toHaveClass(
+        "focus-visible:focus-ring-inset",
+      );
+    }
+  });
+});
+
+/**
+ * **The strip keeps the page's 24px gutter at every width** (K-401). Every
+ * section on /product is `px-6`; the strip was `px-4 sm:px-6`, so on a phone
+ * its title and last tab ran 8px nearer the screen's edge than the page.
+ */
+describe("the chapter strip's gutter", () => {
+  it("is the page's px-6, with no phone-only narrowing", () => {
+    const { box } = renderNav();
+    expect(box).toHaveClass("px-6");
+    expect([...box.classList].filter((token) => /(^|:)px-/.test(token))).toEqual(["px-6"]);
   });
 });
