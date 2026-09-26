@@ -12,9 +12,10 @@ afterEach(cleanup);
  * **The staffing skeleton has the week's geometry** (docs/design/pixel-craft.md,
  * class 11: nothing shifts when the week arrives). K-274 measured it short at
  * every step: the pager's squares 36px against the loaded 48, the day-header
- * band 32px against 36, a chip bar 32px where the shortest chip is 44, and on a
- * phone grey cards under a rule where the page draws hairline rows under a
- * label. Class 11 is eyes-only for the probe, so the classes are pinned here.
+ * band 32px against 36, a chip bar 32px where a two-line shift chip is 46 (44
+ * before K-498 gave every chip its 1px edge), and on a phone grey cards under
+ * a rule where the page draws hairline rows under a label. Class 11 is
+ * eyes-only for the probe, so the classes are pinned here.
  */
 function skeleton() {
   const { container } = render(<StaffingLoading />);
@@ -59,8 +60,13 @@ describe("the staffing skeleton", () => {
       expect(person.firstElementChild).toHaveClass(...WEEK_GRID.person.split(" "));
       for (const day of [...person.children].slice(1)) {
         expect(day).toHaveClass(...WEEK_GRID.day.split(" "));
-        // A chip bar is the shortest real chip, not 32px.
-        for (const bar of day.children) expect(bar).toHaveClass("h-11");
+        // A chip bar is a shift chip's own box around its two 16px lines, so
+        // it follows the chip's padding and edge: 1 + 6 + 32 + 6 + 1 = 46px.
+        // A fixed height drifted 2px a row when K-498 added the edge.
+        for (const bar of day.children) {
+          expect(bar).toHaveClass(...WEEK_GRID.shiftChip.split(" "));
+          expect(bar.firstElementChild).toHaveClass("h-8");
+        }
       }
     }
   });

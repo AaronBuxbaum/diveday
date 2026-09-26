@@ -575,6 +575,10 @@ const GRID_CLASS = "grid grid-cols-[9rem_repeat(7,minmax(0,1fr))]";
  * - `dayHead` / `day`: a day's label takes its cells' inset, so it starts on
  *   its chips' painted edge (K-240). The band is `py-2.5` a side: `pt-3 pb-2`
  *   set its caps 1.5px below its centre (K-499).
+ * - `shiftChip`: a shift chip's box, which the skeleton's chip bar wears
+ *   around its two lines so it stands at the chip's height, edge and all. A
+ *   fixed `h-11` was the chip before K-498 gave it its 1px edge, 2px short
+ *   of the 46px it is now, a row (K-274).
  */
 export const WEEK_GRID = {
   row: `${GRID_CLASS} ${ledgerRowBoxClass}`,
@@ -582,6 +586,7 @@ export const WEEK_GRID = {
   dayHead: "border-s border-border px-1.5 py-2.5",
   person: "pe-2 py-3",
   day: "flex flex-col items-start gap-1 border-s border-border px-1.5 py-2",
+  shiftChip: chipClass("shift"),
 } as const;
 
 /**

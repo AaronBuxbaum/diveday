@@ -16,11 +16,11 @@ const DAYS = [0, 1, 2, 3, 4, 5, 6];
  *
  * **Every height is the loaded one** (K-274, pixel-craft class 11). The pager
  * squares were 36px against the pager's 48, the day-header band 32px against
- * 36, a chip bar 32px where the shortest chip is 44, and the phone's days
+ * 36, a chip bar 32px where a two-line shift chip is 46, and the phone's days
  * were grey cards under a rule where the page draws hairline rows under a
  * label — so everything under the pager dropped when the week arrived. A bar
  * now stands in a box its line's height, and the grid is drawn from the
- * loaded grid's own parts (`WEEK_GRID`).
+ * loaded grid's own parts (`WEEK_GRID`), the chip bar included.
  */
 export default function StaffingLoading() {
   return (
@@ -64,7 +64,11 @@ export default function StaffingLoading() {
                   {/* A shift lands in some cells and not others; a full grid of
                       bars would promise a week nobody works. */}
                   {(row + day) % 3 === 0 ? (
-                    <div className="h-11 w-full rounded-lg bg-surface-sunken" />
+                    // The chip's own box around its two 16px lines, a time
+                    // over a note: 46px with the chip's edge (K-498).
+                    <div className={WEEK_GRID.shiftChip}>
+                      <div className="h-8" />
+                    </div>
                   ) : null}
                 </div>
               ))}
