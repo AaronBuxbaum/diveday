@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
@@ -208,6 +208,19 @@ export function PrepBody({
       dropped
     );
   };
+  /**
+   * A rental line's divers, breakable only between two names. Joined as one
+   * string, a line could end inside one: "Sam / Whitfield" in the table and the
+   * phone card alike (pixel-craft class 8).
+   */
+  const diverNames = (names: readonly string[]) =>
+    names.map((name, place) => (
+      // biome-ignore lint/suspicious/noArrayIndexKey: two divers can share a name, and the list is drawn once, never reordered
+      <Fragment key={`${place}:${name}`}>
+        {place > 0 ? ", " : null}
+        <span className="whitespace-nowrap">{name}</span>
+      </Fragment>
+    ));
   /** The same answer in a Size column, where an unsized piece still owes a cell. */
   const sizeCell = (piece: PrepPiece) => {
     return pieceSize(piece) ?? <span className="text-muted">—</span>;
@@ -771,7 +784,7 @@ export function PrepBody({
                           </div>
                           <div className="col-span-2 grid grid-cols-subgrid">
                             <dt className="text-muted">{t("tripPrep.forColumn")}</dt>
-                            <dd className="text-muted">{line.divers.join(", ")}</dd>
+                            <dd className="text-muted">{diverNames(line.divers)}</dd>
                           </div>
                         </dl>
                       </li>
@@ -796,7 +809,7 @@ export function PrepBody({
                           <Td className="font-medium">{rentalItemLabel(t, line.kind)}</Td>
                           <Td>{sizeCell(line)}</Td>
                           <Td numeric>{line.count}</Td>
-                          <Td muted>{line.divers.join(", ")}</Td>
+                          <Td muted>{diverNames(line.divers)}</Td>
                         </tr>
                       ))}
                     </TBody>
