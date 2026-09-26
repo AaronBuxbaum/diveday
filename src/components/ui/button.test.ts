@@ -686,6 +686,28 @@ describe("buttonClass", () => {
       expect(offenders).toEqual([]);
     });
 
+    it("hands no 44px or 48px square to buttonClass: a glyph with no label is `icon-sm` or `icon`", () => {
+      // The public schedule's month arrows were `sm` with `min-w-11` passed
+      // by hand, the square `icon-sm` exists for, and a `text-base` beside it
+      // that did nothing: `.text-sm` is emitted after `.text-base`, so the
+      // size's won (K-41). A square spelled at a call site is the four-way
+      // drift `icon` was written to end. (A labelled chip's floor is not a
+      // square: the weekday pills' `min-w-12` keeps "M" from a sliver.)
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(
+            /(?<![\w-])(?:[\w-]+:)*(?:(?:w|size)-1[12]|min-w-11)(?![\w.-])/g,
+          ) ?? []) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
     it("hands no radius to buttonClass: the corner is `shape`'s", () => {
       // Two radius utilities resolve by stylesheet order, and `.rounded-full`
       // is emitted before `.rounded-lg`, so a pill asked for through

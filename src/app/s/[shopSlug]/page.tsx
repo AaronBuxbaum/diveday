@@ -1073,11 +1073,7 @@ export default async function SchedulePage({
                   href={`${publicSchedulePath(shopSlug)}?month=${prevMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
                   aria-label={t("schedule.previousMonth")}
                   scroll={false}
-                  className={buttonClass({
-                    variant: "ghost",
-                    size: "sm",
-                    className: "min-w-11 text-base",
-                  })}
+                  className={buttonClass({ variant: "ghost", size: "icon-sm" })}
                 >
                   <DiveDayIcon name="chevron-left" className="size-4" />
                 </Link>
@@ -1087,11 +1083,7 @@ export default async function SchedulePage({
                   href={`${publicSchedulePath(shopSlug)}?month=${nextMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
                   aria-label={t("schedule.nextMonth")}
                   scroll={false}
-                  className={buttonClass({
-                    variant: "ghost",
-                    size: "sm",
-                    className: "min-w-11 text-base",
-                  })}
+                  className={buttonClass({ variant: "ghost", size: "icon-sm" })}
                 >
                   <DiveDayIcon name="chevron-right" className="size-4" />
                 </Link>
