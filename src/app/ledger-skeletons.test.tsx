@@ -251,6 +251,102 @@ describe("the diver roster's skeleton", () => {
   });
 });
 
+/** The row floor (`min-h-*`) a loaded `LedgerRow` of `size` draws. */
+function loadedRowFloor(size: "md" | "lg" = "md"): string {
+  const { container } = render(
+    <ul>
+      <LedgerRow size={size}>x</LedgerRow>
+    </ul>,
+  );
+  const floor = [...(container.querySelector("li")?.classList ?? [])].find((token) =>
+    token.startsWith("min-h-"),
+  );
+  cleanup();
+  return floor ?? "";
+}
+
+function hairlineRows(container: HTMLElement): Element[] {
+  return [...container.querySelectorAll("*")].filter((element) =>
+    element.classList.contains("last:border-b"),
+  );
+}
+
+/**
+ * **The register's skeleton is the register's height** (class 11, K-430). Its
+ * rows kept the 48px `LedgerRow` read until 2026-09-02, 4px short of every
+ * loaded row; every on-the-wall row drew an act the wall's rows do not carry;
+ * and four chips on one line stood in for a band that wraps to two at 1280.
+ */
+describe("the gear register's skeleton", () => {
+  it("draws every row at the loaded row's floor", () => {
+    const floor = loadedRowFloor();
+    const rows = hairlineRows(render(<GearLoading />).container);
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(row).toHaveClass(floor);
+  });
+
+  it("draws no act on the on-the-wall rows, whose only trailing mark is the door's chevron", () => {
+    const { container } = render(<GearLoading />);
+    const groups = container.querySelectorAll(".animate-pulse > div:last-child > div");
+    expect(groups).toHaveLength(2);
+    const wallRows = hairlineRows(groups[1] as HTMLElement);
+    expect(wallRows.length).toBeGreaterThan(0);
+    for (const row of wallRows) expect(row.querySelector(".rounded-lg")).toBeNull();
+    for (const row of hairlineRows(groups[0] as HTMLElement)) {
+      expect(row.querySelector(".rounded-lg")).not.toBeNull();
+    }
+  });
+
+  it("lays its chips out as FilterChips does: one scrolling line on a phone, wrapping from sm", () => {
+    const { container } = render(<GearLoading />);
+    const band = container.querySelector(".rounded-full")?.parentElement;
+    expect(band).toHaveClass("flex", "gap-2", "max-sm:overflow-hidden", "sm:flex-wrap");
+    expect(band).not.toHaveClass("flex-wrap");
+    // A shop's full register: All, nine kinds and the service-due view, which
+    // wrap to a second line at 1280 as the loaded band does.
+    expect(band?.children).toHaveLength(11);
+  });
+});
+
+/**
+ * **Staff reviews' skeleton rows are the review row's stack** (class 11,
+ * K-436). Fixed `h-20` and `h-14` bars stood in for rows that are a star line,
+ * a quote and a meta line in the ledger's 12px inset — 97px and 69–94px at
+ * 1280 — and ignored the phone, where `LedgerRow stacked` drops the row's act
+ * to a 44px line of its own; every row under the first slid down on arrival.
+ */
+describe("the staff reviews' skeleton", () => {
+  it("draws each row as ReviewLedgerRow's LedgerRow: stacked, 12px inset, the row floor", () => {
+    const floor = loadedRowFloor();
+    const rows = hairlineRows(render(<StaffReviewsLoading />).container);
+    expect(rows).toHaveLength(6);
+    for (const row of rows) {
+      expect(row).toHaveClass(floor, "py-3", "max-sm:flex-wrap");
+      expect(row).not.toHaveClass("h-20");
+      expect(row).not.toHaveClass("h-14");
+    }
+  });
+
+  it("stacks stars, quote and meta, the waiting quote at the 16px type it is set in", () => {
+    const rows = hairlineRows(render(<StaffReviewsLoading />).container);
+    const stack = (row: Element) =>
+      [...(row.firstElementChild?.children ?? [])].map((bar) =>
+        [...bar.classList].filter((token) => /^(h|mt)-/.test(token)).join(" "),
+      );
+    expect(stack(rows[0])).toEqual(["h-6", "mt-1 h-6", "mt-1 h-4"]);
+    expect(stack(rows[5])).toEqual(["h-6", "mt-1 h-5", "mt-1 h-4"]);
+  });
+
+  it("stands in for the row's act with a 44px bar that drops to its own line on a phone", () => {
+    const rows = hairlineRows(render(<StaffReviewsLoading />).container);
+    for (const row of rows) {
+      const act = row.lastElementChild;
+      expect(act).toHaveClass("max-sm:basis-full", "max-sm:justify-end");
+      expect(act?.firstElementChild).toHaveClass("h-11");
+    }
+  });
+});
+
 describe("a loading skeleton standing in for ledger rows", () => {
   it.each(SKELETONS)(
     "draws every %s hairline row on the ledger box its loaded list (%s) draws",
