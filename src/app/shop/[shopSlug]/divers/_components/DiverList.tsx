@@ -404,11 +404,13 @@ export function DiverList({
         </p>
       </div>
       {/* Bare and class-less on purpose: the ledger's `mt-8` and the pager's
-          own offset keep the exact gaps they had as direct section children. */}
+          own offset keep the exact gaps they had as direct section children.
+          The empty card takes the ledger's `mt-8` too, so narrowing the view
+          to nothing moves nothing under the toolbar. */}
       <div ref={rosterRef}>
         {rows.length === 0 ? (
           <EmptyState
-            className="mt-6"
+            className="mt-8"
             title={narrowed ? copy.noDiversMatchView : copy.noDiversOnFile}
             body={narrowed ? null : copy.addOneHere}
             /* Narrowed to nothing and empty on day one are different problems,
