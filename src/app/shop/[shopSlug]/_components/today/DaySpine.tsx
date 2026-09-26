@@ -664,7 +664,15 @@ export function DaySpine({
       {/* The coral table's two home rows, one at a time (see the docblock).
           Each renders only while its condition holds and vanishes when it
           passes — nothing here is stored, and nothing replays a celebration
-          the day has moved past. */}
+          the day has moved past.
+
+          **Only the all-home line is pulled up** (`-mt-4`, pixel-craft K-319):
+          it tucks under the header's "Next up" sentence, which the page prints
+          only once no station is left on the spine — an evening's shape. The
+          all-clear needs today's stations, and the season's fact comes with
+          them, so nothing is above either but the sky band: pulled, they sat
+          16px under its edge with 40px to the first station. Unpulled, they
+          sit the header's 32px under the band like every first block. */}
       {allHomeLine && evening ? (
         <EarnedMomentLine className="-mt-4 tabular-nums">
           {/* **Souls, not seats** (issue #1346). The one sentence in the
@@ -683,7 +691,7 @@ export function DaySpine({
         // 20260901-diveday-reimagined, decision 1: "one earned moment on a
         // staff surface, once a day"). Drawn in the line, without its own coral
         // detail: the panel it sits in is the surface's coral.
-        <EarnedMomentLine className="-mt-4 flex items-center gap-3">
+        <EarnedMomentLine className="flex items-center gap-3">
           <SiteMark mark="turtle" size="sm" ground="surface" coral={false} />
           <span>{t("today.todayQueue.boatsClear")}</span>
         </EarnedMomentLine>
@@ -696,7 +704,7 @@ export function DaySpine({
           booking is still: the fact holds all day, and a celebration replayed
           on every visit stops meaning anything. */}
       {factOfScaleLine && factOfScale ? (
-        <EarnedMomentLine animate={false} className="-mt-4">
+        <EarnedMomentLine animate={false}>
           <span className="font-medium">
             {factOfScale.kind === "first_boat"
               ? t("shopHome.spine.factOfScale.firstBoat")

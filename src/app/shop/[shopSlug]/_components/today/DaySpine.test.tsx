@@ -1714,6 +1714,40 @@ describe("one fact of scale (slice 16b)", () => {
 });
 
 /**
+ * **A moment line is pulled up only toward a sentence** (pixel-craft class 4,
+ * K-319). The `-mt-4` tucks a line under the header's "Next up" sentence,
+ * which the page prints only on a day with no station left on the spine. The
+ * season's fact and the morning all-clear render over today's stations, so
+ * there is no sentence above them and the pull aimed at the sky band's edge:
+ * 16px under it, then 40px to the first station, where every other first
+ * block sits the header's 32px under the band.
+ */
+describe("where a moment line sits (K-319)", () => {
+  it("leaves the season's fact the header's own distance under the band", () => {
+    renderSpine({
+      factOfScale: { kind: "first_boat", seasonStart: { month: 5, day: 1 } },
+      actions: [action({ id: "b", departure: boat("t1") })],
+    });
+    expect(screen.getByRole("status")).not.toHaveClass("-mt-4");
+  });
+
+  it("leaves the morning all-clear there too: it needs today's stations, so no sentence is above it", () => {
+    renderSpine({
+      actions: [
+        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+        action({ id: "later", kind: "waiver", departure: boat("t9") }),
+      ],
+    });
+    expect(screen.getByRole("status")).not.toHaveClass("-mt-4");
+  });
+
+  it("still tucks the all-home line under the sentence an evening's header ends on", () => {
+    renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
+    expect(screen.getByRole("status")).toHaveClass("-mt-4");
+  });
+});
+
+/**
  * **The boat says where it is** — ADR 20260904-reef-all-the-way-down, decision
  * 2, Budget rule 4, slice 16c.
  */
