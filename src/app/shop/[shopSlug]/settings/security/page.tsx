@@ -254,18 +254,24 @@ export default async function SecurityPage({
         >
           <ul className="space-y-2">
             {sessions.map((item) => (
+              // One line, Revoke at its end: the device line takes the room
+              // Revoke leaves and wraps in it, breaking a long unspaced token
+              // (an IPv6 address) rather than running under the button. With
+              // `flex-wrap` and no basis to give up, a real user agent pushed
+              // Revoke onto a second line of its own, the box 12px above the
+              // words and 25px below them (K-448).
               <li
                 key={item.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
+                className="flex items-center gap-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
               >
-                <span>
+                <span className="min-w-0 flex-1 break-words">
                   {item.userAgent ?? t("settings.security.unknownDevice")} ·{" "}
                   {item.ipAddress ?? t("settings.security.unknownIp")} ·{" "}
                   {t("settings.security.lastSeen", {
                     date: formatDateTimeTz(item.updatedAt, locale, shop.timezone),
                   })}
                 </span>
-                <form action={revokeSessionAction.bind(null, shopSlug)}>
+                <form action={revokeSessionAction.bind(null, shopSlug)} className="shrink-0">
                   <input type="hidden" name="sessionId" value={item.id} />
                   <SubmitButton
                     pendingLabel={t("settings.security.revoking")}

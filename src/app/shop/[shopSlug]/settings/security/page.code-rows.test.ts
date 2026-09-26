@@ -44,4 +44,29 @@ describe("the security page's session rows", () => {
     expect(call).toContain("flush: true");
     expect(call).toContain("focus-visible:focus-ring-inset");
   });
+
+  /**
+   * **Revoke stays at the row's end** (pixel-craft class 5). A real user
+   * agent is longer than the row, and the device line's `<span>` had no flex
+   * basis to give up, so it pushed the Revoke form onto a second flex line:
+   * Revoke alone under the text, and the grey box 12px above the words and 25px
+   * below them (K-448). The line takes the room that is left and wraps in it,
+   * breaking a long unspaced token (an IPv6 address) rather than running under
+   * the button; the form keeps its own width.
+   */
+  it("keeps Revoke beside the device line, however long the line", () => {
+    const row = SOURCE.slice(SOURCE.indexOf("sessions.map("), SOURCE.indexOf("</li>"));
+    /** The first `<tag …>` in the row: its opening tag alone, and its classes. */
+    const opening = (tag: string) => {
+      const start = row.indexOf(`<${tag}`);
+      const open = row.slice(start, row.indexOf(">", start));
+      return { open, classes: open.match(/className="([^"]*)"/)?.[1].split(/\s+/) ?? [] };
+    };
+    expect(opening("span").classes).toEqual(
+      expect.arrayContaining(["min-w-0", "flex-1", "break-words"]),
+    );
+    const form = opening("form");
+    expect(form.open).toContain("revokeSessionAction");
+    expect(form.classes).toContain("shrink-0");
+  });
 });
