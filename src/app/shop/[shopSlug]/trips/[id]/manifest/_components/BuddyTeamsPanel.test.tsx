@@ -69,3 +69,46 @@ describe("a buddy team's member chips", () => {
     expect(screen.queryByRole("button", { name: /manifest\.buddyRemoveMember/ })).toBeNull();
   });
 });
+
+describe("a buddy team's row", () => {
+  /**
+   * **One chip, whether or not it can lose a member** (pixel-craft class 12,
+   * K-359). A team of three's chips hold a 44px remove target, and stood 50px
+   * tall with the name 18px in; a team of two's were `px-3 py-1`, 34px with the
+   * name 14px in — Team 01 small and tight over a tall Team 02. Both kinds now
+   * share one box: the remove target's height, and one inset before the name.
+   */
+  it("draws every member chip at one height and one inset", () => {
+    renderPanel([
+      team(["Marie Tharp", "Sylvia Earle"]),
+      team(["Ada Blackjack", "Jane Goodall", "Eugenie Clark"]),
+    ]);
+    const chips = [...document.querySelectorAll<HTMLElement>("li[data-buddy-member]")];
+    expect(chips).toHaveLength(5);
+    for (const chip of chips) {
+      expect(chip).toHaveClass("min-h-12.5", "items-center", "ps-4");
+      expect(chip.className).not.toMatch(/(^|\s)(px-3|py-1|py-0\.5)(\s|$)/);
+    }
+  });
+
+  /**
+   * **"Dissolve team" stands in the chip row, at the row's size** (pixel-craft
+   * class 1, K-360). It was a 48px `md` button beside the label-and-chips
+   * block, topped against it, so its words sat 15px off the chips' centre on a
+   * team of two and 23px on a team of three (1280). As the chip list's last
+   * item, at `sm`, it takes the chips' centre from the list's `items-center`,
+   * and on a phone it wraps with them.
+   */
+  it("sets Dissolve team as the chip row's last item, at the chips' size", () => {
+    renderPanel([team(["Marie Tharp", "Sylvia Earle"])]);
+    const dissolve = screen.getByRole("button", { name: "manifest.buddyDissolve" });
+    const chips = document.querySelector("li[data-buddy-member]")?.parentElement;
+    const item = dissolve.closest("li");
+    expect(chips).toHaveClass("items-center");
+    expect(item?.parentElement).toBe(chips);
+    expect(item).toBe(chips?.lastElementChild);
+    expect(item).not.toHaveAttribute("data-buddy-member");
+    expect(dissolve).toHaveClass("text-sm");
+    expect(dissolve.className).not.toMatch(/(^|\s)min-h-12(\s|$)/);
+  });
+});
