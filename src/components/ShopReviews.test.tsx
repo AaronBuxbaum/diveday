@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { tapTargetLineClass, tapTargetLinkClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLineClass } from "@/components/ui/button";
 import type { PublicReview } from "@/db/reviews";
 import { diverTranslator } from "@/i18n/messages";
 import { ShopReviews } from "./ShopReviews";
@@ -52,7 +52,9 @@ describe("the shelf's door", () => {
   });
 
   it("is a 44px target on a 20px line, so the header row stays the heading's height", () => {
-    // It was a bare 70.8×20 word (pixel-craft K-237).
+    // It was a bare 70.8×20 word (pixel-craft K-237). It is spelled as the
+    // storefront's other text doors are ("Follow", the season link), so all
+    // four draw one ring.
     render(
       <ShopReviews
         aggregate={AGGREGATE}
@@ -65,7 +67,7 @@ describe("the shelf's door", () => {
     );
     const door = screen.getByRole("link", { name: "All reviews" });
 
-    expect(door).toHaveClass(...tapTargetLinkClass.split(" "));
+    expect(door.className).toBe(buttonClass({ variant: "link", size: "sm", flush: true }));
     expect(door.parentElement).toHaveClass(...tapTargetLineClass.split(" "));
   });
 
