@@ -149,6 +149,32 @@ describe("the trip page's order", () => {
     expect(SOURCE).not.toContain("max-w-2xl");
   });
 
+  /**
+   * **The trip stands in the public pages' own frame** (pixel-craft class 3,
+   * K-170). It alone was `px-6 py-16`: on a phone its hero, rules and card
+   * started at x 24 where the chrome, the footer and every sibling page start
+   * at 16, and its eyebrow sat 84px under the chrome's rule against the
+   * siblings' 36–44 — the 64px padding plus the header's own `mt-4`.
+   */
+  it("frames its column as every public page does, with nothing above the header", () => {
+    const FRAME = "mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10";
+    const LOADING = readFileSync(join(__dirname, "loading.tsx"), "utf8");
+    const HEADER = readFileSync(join(__dirname, "_components", "TripHeader.tsx"), "utf8");
+    const BOATS = readFileSync(
+      join(__dirname, "..", "..", "boats", "[tripId]", "page.tsx"),
+      "utf8",
+    );
+    // The same frame the boat page draws, for the same `max-w-xl` measure.
+    expect(BOATS).toContain(`<main className="${FRAME}">`);
+    // Both of this page's non-embed columns — the departure and the cancelled
+    // landing — and its loading skeleton.
+    expect(SOURCE.split(`: "${FRAME}"`).length - 1).toBe(2);
+    expect(LOADING).toContain(`<main className="${FRAME}">`);
+    for (const source of [SOURCE, LOADING]) expect(source).not.toContain("py-16");
+    // The header opens the column; the staff preview bar keeps its own `mb-6`.
+    expect(HEADER).toMatch(/return \(\s*<ShopPageHeader/);
+  });
+
   it("keeps the sticky phone pill a verb pointing at the form", () => {
     // It carried the seat count ("Book · 3 left"), which is the fact the card
     // it scrolls to already states in its own corner.

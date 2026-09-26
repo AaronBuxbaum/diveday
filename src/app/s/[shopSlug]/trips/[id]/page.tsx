@@ -238,7 +238,9 @@ export default async function TripDetailPage({
       <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["booking"]}>
         <main
           className={
-            isEmbed ? "w-full flex-1 px-3 py-4" : "mx-auto w-full max-w-xl flex-1 px-6 py-16"
+            isEmbed
+              ? "w-full flex-1 px-3 py-4"
+              : "mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
           }
         >
           {staffPreviewBar}
@@ -639,7 +641,9 @@ export default async function TripDetailPage({
     >
       <main
         className={
-          isEmbed ? "w-full flex-1 px-3 py-4" : "mx-auto w-full max-w-xl flex-1 px-6 py-16"
+          isEmbed
+            ? "w-full flex-1 px-3 py-4"
+            : "mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
         }
       >
         {structuredData ? <JsonLd data={structuredData} /> : null}

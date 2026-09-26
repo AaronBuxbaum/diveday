@@ -19,21 +19,19 @@ import { sectionCardClass } from "@/components/ui/card";
  */
 export default function TripDetailLoading() {
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <div className="h-4 w-24 rounded bg-surface-sunken" />
-        <div className="mt-4">
-          <ShopPageHeaderSkeleton
-            titleWidth="w-72 max-w-full"
-            description={false}
-            meta={
-              <>
-                <div className="h-7 w-56 max-w-full rounded bg-surface-sunken" />
-                <div className="mt-4 h-9 w-36 rounded bg-surface-sunken" />
-              </>
-            }
-          />
-        </div>
+        <ShopPageHeaderSkeleton
+          titleWidth="w-72 max-w-full"
+          description={false}
+          meta={
+            <>
+              <div className="h-7 w-56 max-w-full rounded bg-surface-sunken" />
+              <div className="mt-4 h-9 w-36 rounded bg-surface-sunken" />
+            </>
+          }
+        />
         {/* "The day" — the run of dives, one row each. */}
         <div className="mt-8 h-28 rounded bg-surface-sunken" />
         {/* The pitch, in its three parts: the fact chip, the three tiles, the
