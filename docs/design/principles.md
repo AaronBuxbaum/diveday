@@ -506,7 +506,11 @@ to *look for* anything. Content leads; chrome defers. Concretely:
   (Settings, the course catalog and editor) stays at `max-w-3xl`, a comfortable line length.
   Every settings page and skeleton takes its `<main>` from `settingsPaneClass`
   (`settings/_components/settings-pane.ts`), which also starts the column on the rail's edge, so
-  the column holds still as the rail changes the page; `settings-pane.test.ts` pins that. A
+  the column holds still as the rail changes the page. Two settings pages ask it for `max-w-5xl`
+  because their content is a grid of its own — Team's roster, and Website embed's form beside its
+  preview — so only their right edge differs. `settings-pane.test.ts` pins the class and the two
+  wide pages; `settings/layout.test.tsx` renders the frame to pin what the shared left edge reads,
+  the rail (or its skeleton) standing before the pane, and nothing there when no rail is drawn. A
   single record's own page, or a focused list rather than a dense table — the check-in queue, a
   diver's own record, promos, requests, staff reviews, and every page under one departure (the
   trip layout, so Overview/Guests/Manifest/Prep share it) — takes `max-w-4xl`: narrower than a
@@ -519,10 +523,14 @@ to *look for* anything. Content leads; chrome defers. Concretely:
   shape as well, not a claim this system reaches outside staff surfaces. And a route's
   `loading.tsx` wears the **exact same width** as its page,
   because a skeleton narrower or wider than what replaces it is a sideways layout jump on every
-  navigation into the route. `pnpm check:loading-skeletons` (in `pnpm check:repo`) enforces both
-  halves — that a page *has* a sibling skeleton, and that the two containers match — because a
-  route with none silently paints its nearest ancestor's, a picture of a different page at a
-  different width, and that only shows up on a cold navigation over a slow link.
+  navigation into the route. `pnpm check:loading-skeletons` (in `pnpm check:repo`) enforces that
+  a page *has* a sibling skeleton, because a route with none silently paints its nearest
+  ancestor's, a picture of a different page at a different width, and that only shows up on a
+  cold navigation over a slow link. It compares the two containers only where the page's own file
+  spells a `max-w-*`. A pair whose width lives above it or in a shared helper spells none — the
+  trip family's layout owns its `<main>`, and every settings page and skeleton calls
+  `settingsPaneClass` — so the guard counts it as owning no width, and the pair's parity rests on
+  that owner: the one layout, or `settings-pane.test.ts`.
 
 ## 11. Creative within the system
 
