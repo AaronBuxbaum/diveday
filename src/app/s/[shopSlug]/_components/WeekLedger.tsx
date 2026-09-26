@@ -105,7 +105,12 @@ export function WeekLedger({
 }) {
   let lastDayKey: string | null = null;
   return (
-    <ul className="flex flex-col" aria-label={listLabel}>
+    // `-mb-4 sm:-mb-5` hands back the last row's lower room — its `py-4
+    // sm:py-5`, kept for the hover fill and unpainted at rest — so whatever
+    // follows measures from the last row's words. Stacked on the next
+    // section's margin, it put "Courses" 78px under the last meta line at
+    // 1280 against the page's 56px section gap.
+    <ul className="-mb-4 flex flex-col sm:-mb-5" aria-label={listLabel}>
       {rows.map((row) => {
         const newDay = row.dayKey !== lastDayKey;
         lastDayKey = row.dayKey;

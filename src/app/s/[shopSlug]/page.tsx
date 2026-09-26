@@ -1202,9 +1202,16 @@ export default async function SchedulePage({
       {/* No pager in the frame either. "Show later departures" is the same
           nested navigation the fixed height caused — a second page loaded
           inside somebody else's site — and the widget already offers the way
-          out to the real schedule below (issue #805). */}
+          out to the real schedule below (issue #805). Under the week's list
+          the row's margin is `mt-9 sm:mt-10`: the list hands its last row's
+          16px (20px) of hover room back below itself, and this row takes it
+          into its margin, so it still sits 20px under that row's box. Under
+          an empty state (a month or a filter with nothing in it) no room is
+          handed back. */}
       {!isEmbed && (nextCursor || after || explicitMonth) ? (
-        <div className="mt-5 flex flex-wrap items-center gap-3">
+        <div
+          className={`flex flex-wrap items-center gap-3 ${hasUpcoming && visibleUpcoming.length > 0 ? "mt-9 sm:mt-10" : "mt-5"}`}
+        >
           {(() => {
             const backStack = decodeCursorStack(back);
             const previous = popCursor(backStack);

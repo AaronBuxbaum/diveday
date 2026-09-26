@@ -42,6 +42,22 @@ describe("the public schedule identity composition", () => {
  * which heads itself as a lead (24px) unless told otherwise; every other h2
  * here is the brand face at `SECTION_TITLE_CLASS` (18px).
  */
+/**
+ * The week's list hands its last row's 16px (20px from `sm`) of hover room back
+ * below itself (`WeekLedger`), so the section after it measures from the last
+ * row's words. The "Show later departures" row takes that room into its own
+ * margin, and so sits where it did: 16 + 20px under the words, 20 + 20 from
+ * `sm`. Under an empty state nothing is handed back, and it keeps its 20px.
+ */
+describe("the schedule's pager row", () => {
+  it("keeps its place under the list's last row, and under an empty state", () => {
+    const pager = SOURCE.slice(positionOf("(nextCursor || after || explicitMonth) ? ("));
+    expect(pager).toMatch(
+      /^[^<]*<div\s+className=\{`flex flex-wrap items-center gap-3 \$\{hasUpcoming && visibleUpcoming\.length > 0 \? "mt-9 sm:mt-10" : "mt-5"\}`\}/,
+    );
+  });
+});
+
 describe("the off-season ask's heading", () => {
   it("is handed the rung the page's other section heads use", () => {
     const start = positionOf("<DateRequestForm");

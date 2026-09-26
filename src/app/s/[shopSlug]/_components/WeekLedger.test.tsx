@@ -434,6 +434,23 @@ describe("seat state and price", () => {
   });
 });
 
+/**
+ * **The list ends at its last row's words** (pixel-craft class 4). A row keeps
+ * `py-4 sm:py-5` of room for its hover fill, unpainted at rest, and the last
+ * row's lower half stacked on the next section's own margin: last meta line to
+ * "Courses" measured 78px at 1280 and 75px at 390, against the page's 56px
+ * section gap. The list hands the same room back below itself.
+ */
+describe("the list's close", () => {
+  it("hands back its last row's unpainted room, so what follows measures from the words", () => {
+    render(<WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />);
+
+    const box = screen.getByRole("link", { name: /Two-Tank Reef/ }).parentElement;
+    expect(box).toHaveClass("py-4", "sm:py-5");
+    expect(screen.getByRole("list", { name: "Upcoming trips" })).toHaveClass("-mb-4", "sm:-mb-5");
+  });
+});
+
 describe("the day rule", () => {
   it("renders once per shop-local day, above that day's first row", () => {
     render(
