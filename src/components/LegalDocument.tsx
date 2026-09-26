@@ -120,30 +120,38 @@ export function LegalDocumentFallback({
             <div key={section}>
               <SkeletonLineBars lines={1} height={`h-lh ${SUB_TITLE_CLASS}`} width="w-2/5" />
               <div className={SECTION_BODY_CLASS}>
-                {blocks.map((block, index) =>
-                  "terms" in block ? (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: as above
-                    <div key={index} className={TERM_LIST_CLASS}>
-                      {block.terms.map((lines, term) => (
-                        // biome-ignore lint/suspicious/noArrayIndexKey: as above
-                        <div key={term}>
-                          <SkeletonLineBars lines={lines} height={prose} width="w-full" />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: as above
-                    <div key={index}>
-                      <SkeletonLineBars lines={block.paragraph} height={prose} width="w-full" />
-                    </div>
-                  ),
-                )}
+                {blocks.map((block, index) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: as above
+                  <LegalBlockBars key={index} block={block} />
+                ))}
               </div>
             </div>
           ))}
         </div>
       </div>
     </main>
+  );
+}
+
+/** One block of a fallback section: a paragraph's lines, or a term list's terms at the list's gap. */
+function LegalBlockBars({ block }: { block: LegalBlockShape }) {
+  const prose = `h-lh ${PROSE_CLASS}`;
+  if ("terms" in block) {
+    return (
+      <div className={TERM_LIST_CLASS}>
+        {block.terms.map((lines, term) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: bars, not records — the term's place is the only identity a placeholder has
+          <div key={term}>
+            <SkeletonLineBars lines={lines} height={prose} width="w-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div>
+      <SkeletonLineBars lines={block.paragraph} height={prose} width="w-full" />
+    </div>
   );
 }
 
