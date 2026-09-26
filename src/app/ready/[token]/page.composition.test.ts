@@ -195,6 +195,19 @@ describe("day-of details", () => {
     return SOURCE.slice(start, SOURCE.indexOf("</form>", at));
   };
 
+  it("keeps who sees the intent answer with the question, above the next rule", () => {
+    // It was a child of its own in the `divide-y` stack, so a rule fell
+    // between it and "What's this dive for?" and it read as the start of the
+    // next question (K-469).
+    const intent = formFor("saveDiveIntentFromReady.bind(null, token)");
+    expect(intent).toContain('t("booking.intent.audience")');
+    expect(countOf('t("booking.intent.audience")')).toBe(1);
+    // …and it describes the select it is about, not only sits near it.
+    const id = /<p id="([^"]+)"[^>]*>\s*\{t\("booking\.intent\.audience"\)\}/.exec(intent)?.[1];
+    expect(id).toBeTruthy();
+    expect(intent).toContain(`aria-describedby="${id}"`);
+  });
+
   it("keeps each select row's Save at its own width on a phone", () => {
     // Below `sm` the row is `flex-col`, which stretches a direct child across
     // the column: these two Saves ran 350px wide beside siblings as wide as
