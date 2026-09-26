@@ -215,7 +215,10 @@ export function TripRosterContent({
         // corners were tighter than every card's, its words 4px further in.
         <section className={`mt-6 ${TONE_PANEL_CLASS} border-warning/40 bg-warning-tint`}>
           <p className={groupLabelClass("warning")}>{t("trips.guests.demandSignal")}</p>
-          <h2 className={`mt-1 ${SECTION_TITLE_CLASS}`}>{t("trips.guests.demandHeading")}</h2>
+          {/* Balanced: at 390 it ended on "capacity" alone (K-504). */}
+          <h2 className={`mt-1 text-balance ${SECTION_TITLE_CLASS}`}>
+            {t("trips.guests.demandHeading")}
+          </h2>
           <p className="mt-1 text-sm text-muted">
             {t("trips.guests.demandBody", { count: demand.unmetSeats })}
           </p>
