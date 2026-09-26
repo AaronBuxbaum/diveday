@@ -192,4 +192,21 @@ describe("the recap row at rest", () => {
     expect(summary?.lastElementChild).toHaveClass("ms-auto");
     expect(note.className).not.toMatch(/(?:^|\s)ps-/);
   });
+
+  /**
+   * **The card's last line sits as far from its foot as its first from its
+   * top** (pixel-craft class 5, K-453). From `sm` the summary is one 20px line
+   * in a 44px target, the card's last thing, so 12px of invisible target sat
+   * between the Recap line and the card's 24px padding: 38px of card under
+   * the last ink against 28px over the first. Closed, the target keeps its
+   * 44px and overhangs the padding by the excess (`sm:-mb-3`); open, the form
+   * follows it and the margin goes. Below `sm` the stacked word and note fill
+   * the target already.
+   */
+  it("lets its target overhang the card's foot at rest, and only at rest", () => {
+    const { container } = renderClosed();
+    const summary = container.querySelector("summary");
+    expect(summary).toHaveClass("min-h-11", "sm:-mb-3", "sm:group-open/recap:mb-0");
+    expect(summary?.className).not.toMatch(/(?:^|\s)-mb-/);
+  });
 });

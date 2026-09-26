@@ -119,8 +119,17 @@ export function RecapNoteEditor({
           caret on one line, the note full width beneath them (`order-last
           basis-full`). Inline at phone width the label and the note fought
           over ~340px and the heading broke across lines beside one line of
-          note. `content-center` centres the lines in the 44px target. */}
-      <summary className="flex min-h-11 cursor-pointer list-none flex-wrap content-center items-center gap-x-3 gap-y-0.5 text-sm [&::-webkit-details-marker]:hidden sm:flex-nowrap">
+          note. `content-center` centres the lines in the 44px target.
+
+          **From `sm`, closed, the target overhangs the card's foot** (K-453).
+          There the summary is one 20px line in a 44px target and the last
+          thing in the card, so 12px of target with nothing in it sat between
+          the Recap line and the card's padding: 38px of card under the last
+          ink against 28px over the first. `sm:-mb-3` takes that excess out of
+          the flow and the target reaches into the padding (24px, room for it
+          and the 5px ring); open, the form follows the summary and the margin
+          goes. Below `sm` the stacked word and note fill the target. */}
+      <summary className="flex min-h-11 cursor-pointer list-none flex-wrap content-center items-center gap-x-3 gap-y-0.5 text-sm [&::-webkit-details-marker]:hidden sm:-mb-3 sm:flex-nowrap sm:group-open/recap:mb-0">
         <span className={`${ledgerKindColumnClass} shrink-0 font-medium`}>
           {t("closeout.recap.summaryHeading")}
         </span>
