@@ -216,6 +216,34 @@ describe("the map", () => {
  * not hold. Whether they hold one is `hasLiveArrivalCapability`'s answer and
  * arrives here as the presence of the action.
  */
+/**
+ * **A rule sits midway between the rows it divides.** The card's column is
+ * `gap-3` and each ruled row opened with `pt-4`, so every rule had 12px above
+ * it and 16px below, and the rows sat low between their rules (pixel-craft
+ * K-480). A ruled row's top padding is the column's gap, whatever it is.
+ */
+describe("the ruled rows", () => {
+  it("pad below each rule exactly what the column keeps above it", () => {
+    const { container } = render(
+      <TripArrivalCard
+        shop={{ ...shop, contactPhone: "+1 305 555 0100" }}
+        trip={trip}
+        locale="en-US"
+        sites={["Molasses Reef"]}
+        stopCodeAction={async () => {}}
+      />,
+    );
+    const ruled = [...container.querySelectorAll(".border-t")];
+
+    expect(ruled).toHaveLength(3);
+    for (const row of ruled) {
+      const gap = row.parentElement?.className.match(/(?:^|\s)gap-(\d+(?:\.\d+)?)(?:\s|$)/)?.[1];
+      expect(gap).toBeDefined();
+      expect(row).toHaveClass(`pt-${gap}`);
+    }
+  });
+});
+
 describe("stopping the code on a saved card", () => {
   const stop = async () => {};
 

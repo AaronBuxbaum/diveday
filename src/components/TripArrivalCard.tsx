@@ -183,6 +183,9 @@ export function TripArrivalCard({
           className="mb-5 block aspect-[16/9] w-full rounded-inset border-0 bg-surface-sunken"
         />
       ) : null}
+      {/* A ruled row pads `pt-3` under its rule, the column's own gap above
+          it, so each rule sits midway between the rows it divides. At `pt-4`
+          the rows sat 4px low between their rules (pixel-craft K-480). */}
       <div className="flex flex-col gap-3">
         <div>
           <p className="text-base font-semibold">{facts.label}</p>
@@ -204,7 +207,7 @@ export function TripArrivalCard({
           {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
           {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
         </p>
-        <dl className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
+        <dl className="grid gap-4 border-t border-border pt-3 sm:grid-cols-2">
           {sites && sites.length > 0 ? (
             <div>
               <dt className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm font-semibold">
@@ -236,7 +239,7 @@ export function TripArrivalCard({
           ) : null}
         </dl>
         {shop.contactPhone || shop.contactEmail ? (
-          <p className="border-t border-border pt-4 text-sm text-muted">
+          <p className="border-t border-border pt-3 text-sm text-muted">
             {t("trip.arrivalSupport")}{" "}
             <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
           </p>
@@ -251,7 +254,7 @@ export function TripArrivalCard({
             not available — so the consequence is read at the moment of
             commitment, the way the self-cancel's refund preview is. */}
         {stopCodeAction ? (
-          <form action={stopCodeAction} className="border-t border-border pt-4">
+          <form action={stopCodeAction} className="border-t border-border pt-3">
             <InlineConfirm
               triggerLabel={t("trip.arrivalCodeStop")}
               triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
