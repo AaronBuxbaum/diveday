@@ -232,9 +232,20 @@ export function AmbientContrastControl({
     // Real radios in a fieldset, not styled buttons: exactly one of the three
     // is on, arrow keys move between them for free, and the legend names the
     // group without a second visible heading.
+    //
+    // The legend floats so it is not the fieldset's *rendered* legend, which a
+    // browser lays into the block-start border and cuts that border with: the
+    // manifest and its offline copy border this fieldset as a tile, and
+    // "BOAT MODE" stood on a gap in the tile's top edge. Floated, it is the
+    // first thing inside the padding, full width, so the track clears it; the
+    // gap is the float's `mb-1.5`, since a top margin on the track would be
+    // taken up by the float and render as nothing. It still names the group.
+    //
+    // The track is `w-fit`: a block-level flex row ran the column's width, and
+    // on `/ready` at 1280 that was 528px of capsule around 200px of options.
     <fieldset className={`select-none text-left print:hidden ${className}`.trim()}>
-      <legend className={groupLabelClass()}>{copy.modeLabel}</legend>
-      <div className="mt-1.5 flex max-w-full overflow-x-auto overscroll-x-contain rounded-full border border-border bg-surface-sunken p-1">
+      <legend className={`float-start mb-1.5 w-full ${groupLabelClass()}`}>{copy.modeLabel}</legend>
+      <div className="flex w-fit max-w-full overflow-x-auto overscroll-x-contain rounded-full border border-border bg-surface-sunken p-1">
         {CONTRAST_MODES.map((value) => {
           const active = value === mode;
           // The ring sits inside the pill: the track scrolls sideways on a
