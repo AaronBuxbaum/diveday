@@ -1,7 +1,19 @@
 // @vitest-environment jsdom
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { CompactDisclosureRow, DisclosureRow, DisclosureRowList } from "./disclosure";
+import { cardSummaryClass } from "./card";
+import {
+  CompactDisclosureRow,
+  DangerDisclosure,
+  DisclosureRow,
+  DisclosureRowList,
+  SummaryCaret,
+} from "./disclosure";
+
+const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 describe("DisclosureRow's focus ring", () => {
   /**
@@ -27,6 +39,88 @@ describe("DisclosureRow's focus ring", () => {
         "[details:last-child:not([open])>&]:rounded-b-panel",
       );
     }
+  });
+});
+
+/**
+ * **A caret sits on its summary's first line** — pixel-craft classes 1 and 2.
+ * Centred on the block, a caret beside a wrapped title floated between its
+ * lines, or level with the chips under it: 12.5px low on the manifest's dock
+ * checklist at 390, 21px on "On this phone". Its box is one line tall.
+ */
+describe("SummaryCaret", () => {
+  it("boxes the caret one line tall, centred in that line", () => {
+    const { container } = render(<SummaryCaret className="group-open/x:rotate-90" />);
+    const box = container.firstElementChild;
+    expect(box).toHaveClass("flex", "h-lh", "shrink-0", "items-center");
+    const caret = box?.querySelector("svg");
+    expect(caret).toBeTruthy();
+    expect(caret).toHaveClass("group-open/x:rotate-90");
+  });
+
+  it("takes the first line's own height when it is not the summary's line", () => {
+    // A larger heading passes its type class, so `1lh` is that heading's line;
+    // a first line that is a row of 36px chips passes `h-9`.
+    const { container } = render(<SummaryCaret line="h-9" />);
+    expect(container.firstElementChild).toHaveClass("h-9");
+    expect(container.firstElementChild).not.toHaveClass("h-lh");
+  });
+});
+
+/**
+ * **One danger zone, drawn one way** — pixel-craft class 12. "Delete site"
+ * was a 20px-radius band with a 16px semibold label and a "+"; "Erase …
+ * personal data" a 12px-radius box with a 14px medium label and no affordance
+ * at all, its border a different red, its summary 4px shorter and inset 16px.
+ */
+describe("DangerDisclosure", () => {
+  it("draws the band at the panel radius, its summary a card face with a caret", () => {
+    const { container, getByText } = render(
+      <DangerDisclosure summary="Delete site">
+        <p>Body</p>
+      </DangerDisclosure>,
+    );
+    const details = container.querySelector("details");
+    expect(details).toHaveClass("rounded-panel", "border", "border-danger/30", "bg-danger/5");
+    const summary = container.querySelector("summary");
+    for (const token of cardSummaryClass({ tone: "danger" }).split(" ")) {
+      expect(summary).toHaveClass(token);
+    }
+    expect(summary).toHaveClass("min-h-12", "text-base", "font-semibold", "text-danger");
+    expect(summary).toContainElement(getByText("Delete site"));
+    expect(summary?.querySelector("svg")).toBeTruthy();
+    // No glyph typed as text: a "+" reads as "add" and stays "+" when open.
+    expect(summary?.textContent).toBe("Delete site");
+  });
+
+  it("opens on its own outcome, and keeps the caller's margin on the band", () => {
+    const { container } = render(
+      <DangerDisclosure summary="Erase" open className="mt-4">
+        <p>Body</p>
+      </DangerDisclosure>,
+    );
+    const details = container.querySelector("details");
+    expect(details).toHaveAttribute("open");
+    expect(details).toHaveClass("mt-4");
+  });
+
+  it("is the only danger band a <details> wears anywhere", () => {
+    function files(dir: string): string[] {
+      return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) return files(full);
+        return /\.tsx$/.test(entry.name) && !/\.test\.tsx$/.test(entry.name) ? [full] : [];
+      });
+    }
+    const offenders = files(SRC_DIR)
+      .filter((file) => !file.endsWith(join("ui", "disclosure.tsx")))
+      .filter((file) =>
+        [...readFileSync(file, "utf8").matchAll(/<details\b[^>]*>/g)].some(([tag]) =>
+          /\bborder-danger\b|\bbg-danger\//.test(tag),
+        ),
+      )
+      .map((file) => relative(SRC_DIR, file).split(/[\\/]/).join("/"));
+    expect(offenders).toEqual([]);
   });
 });
 

@@ -2,8 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ExecutedDive } from "@/db/schema";
@@ -169,8 +169,10 @@ export function ExecutedDiveLog({
                   longer claims the screen while a crew is counting bodies. The
                   same treatment `PreDepartureCheckList` took in slice 5a. */}
               <details className="group/dive print:hidden">
-                <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-2 px-4 py-3 select-none [&::-webkit-details-marker]:hidden">
-                  <DisclosureCaret className="group-open/dive:rotate-90" />
+                <summary
+                  className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}
+                >
+                  <SummaryCaret className="group-open/dive:rotate-90" />
                   <span className="text-base font-semibold group-hover/summary:underline">
                     {summaryLine}
                   </span>

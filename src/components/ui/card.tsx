@@ -163,6 +163,57 @@ export function sectionCardClass({
  */
 export const PANEL_INNER_RADIUS = "rounded-[calc(var(--radius-panel)-1px)]";
 
+/** The hover fill of a card face, by the band it sits on. */
+const CARD_SUMMARY_HOVER = {
+  neutral: "hover:bg-surface-sunken",
+  // A tinted band keeps its tint under the pointer: a grey fill would paint
+  // the danger out of the one row that is about danger.
+  danger: "hover:bg-danger/5",
+} as const;
+
+/**
+ * **The face of a card that is itself a disclosure**: a `<summary>` that is
+ * the first thing inside a `padding="none"` card, or inside a `<details>` that
+ * wears the panel itself (`SectionCard as="details"`, `DangerDisclosure`).
+ *
+ * Nine of these were hand-rolled four ways (pixel-craft classes 7 and 12):
+ *
+ * - **No radius**, so the global ring, which follows the element's corners,
+ *   drew a square around a 20px card and stood 8px off it at every corner.
+ *   The face takes the panel's inner corner, `PANEL_INNER_RADIUS`, and squares
+ *   its bottom once open, when the body is what meets the card's corner. The
+ *   open state is spelled against the `<details>` (`[[open]>&]`) rather than
+ *   `group-open:`, which would need every call site's group to be unnamed.
+ * - **`items-center`**, so a title that wrapped left its caret floating
+ *   between its lines, or level with the chips under it (12–21px low on the
+ *   manifest at 390). The row starts at the top and the caret sits in a
+ *   `SummaryCaret` (`ui/disclosure.tsx`), a box one first line tall. Top
+ *   alignment means a single line no longer centres itself in a `min-h-*`
+ *   floor, so a call site pads the face to its height: `py-4` round a 24px
+ *   line is the 56px `min-h-14` exactly.
+ * - **Two gaps** (8 and 12px) put two titles on one manifest 4px apart; one
+ *   gap now.
+ * - **Two hovers**, a fill on one card and an underline on the next; the fill
+ *   takes the same corner, so it cannot poke past the card's curve. A heading
+ *   inside may still underline with it.
+ *
+ * The card does not clip — clipping would cut the ring and the focusable
+ * controls in the body — so the ring is the global one, 2px outside the face,
+ * concentric with the card. Padding stays at the call site: a manifest row and
+ * a settings section are different insets of the same face.
+ */
+export function cardSummaryClass({
+  tone = "neutral",
+  className = "",
+}: {
+  tone?: keyof typeof CARD_SUMMARY_HOVER;
+  className?: string;
+} = {}): string {
+  return `flex cursor-pointer list-none items-start gap-3 ${PANEL_INNER_RADIUS} [[open]>&]:rounded-b-none transition-colors select-none [&::-webkit-details-marker]:hidden ${CARD_SUMMARY_HOVER[tone]} ${className}`
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Closed set on purpose — a caller never hands this component an arbitrary tag. */
 type SectionCardElement = "section" | "div" | "article" | "aside" | "ul" | "li" | "details";
 

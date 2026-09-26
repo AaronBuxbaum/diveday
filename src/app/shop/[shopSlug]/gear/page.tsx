@@ -7,8 +7,8 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
 import {
@@ -364,13 +364,18 @@ export default async function GearRegisterPage({
         >
           <summary
             id="add-unit"
-            className="flex min-h-11 scroll-mt-24 cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden sm:p-6"
+            className={cardSummaryClass({
+              className: "min-h-11 scroll-mt-24 justify-between p-5 sm:p-6",
+            })}
           >
             <div className="min-w-0">
               <h2 className={SECTION_TITLE_CLASS}>{t("gear.addUnit.title")}</h2>
               <p className="mt-1 text-sm text-muted">{t("gear.addUnit.description")}</p>
             </div>
-            <DisclosureCaret className="size-4 shrink-0 text-muted group-open/add-unit:rotate-90" />
+            <SummaryCaret
+              line={`h-lh ${SECTION_TITLE_CLASS}`}
+              className="size-4 text-muted group-open/add-unit:rotate-90"
+            />
           </summary>
           <div className="border-t border-border p-5 sm:p-6">
             <FieldGrid as="form" action={createGearItemAction} columns={2}>

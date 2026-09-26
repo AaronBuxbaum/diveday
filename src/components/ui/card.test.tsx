@@ -4,7 +4,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { PANEL_INNER_RADIUS, SectionCard, sectionCardClass } from "./card";
+import { cardSummaryClass, PANEL_INNER_RADIUS, SectionCard, sectionCardClass } from "./card";
 
 afterEach(cleanup);
 
@@ -131,6 +131,97 @@ describe("every panel shell wears the panel radius and the bed", () => {
     expect(
       offenders((text) => /\brounded-panel\b/.test(text) && /\bshadow-sm\b/.test(text)),
     ).toEqual([]);
+  });
+});
+
+/**
+ * **The face of a card that is a disclosure** — pixel-craft classes 7 and 12.
+ * Nine summaries were hand-rolled four ways: no radius, so the global ring
+ * drew a square around a 20px card (8px off each corner); `items-center`, so a
+ * wrapped title left its caret floating between lines (12–21px low on the
+ * manifest at 390); two gaps (8 and 12px) and two hovers on one page.
+ */
+describe("cardSummaryClass", () => {
+  it("takes the panel's inner corner, square at the bottom once open", () => {
+    const tokens = cardSummaryClass().split(" ");
+    expect(tokens).toContain(PANEL_INNER_RADIUS);
+    // The open state is spelled against the `<details>`, never `group-open:`:
+    // none of these disclosures names an unnamed `group`.
+    expect(tokens).toContain("[[open]>&]:rounded-b-none");
+    expect(tokens.some((token) => token.startsWith("group-open:"))).toBe(false);
+  });
+
+  it("starts its row at the top, so a caret stays on the first line", () => {
+    const tokens = cardSummaryClass().split(" ");
+    expect(tokens).toEqual(expect.arrayContaining(["flex", "items-start", "gap-3"]));
+    expect(tokens).not.toContain("items-center");
+  });
+
+  it("is a control, with one hover fill, and no marker", () => {
+    const tokens = cardSummaryClass().split(" ");
+    expect(tokens).toEqual(
+      expect.arrayContaining([
+        "cursor-pointer",
+        "list-none",
+        "[&::-webkit-details-marker]:hidden",
+        "hover:bg-surface-sunken",
+      ]),
+    );
+    // The global ring, following the corner: the card does not clip.
+    expect(tokens).not.toContain("focus-visible:focus-ring-inset");
+  });
+
+  it("fills a danger band with its own tint, and appends the caller's padding", () => {
+    const tokens = cardSummaryClass({ tone: "danger", className: "px-4 py-3" }).split(" ");
+    expect(tokens).toContain("hover:bg-danger/5");
+    expect(tokens).not.toContain("hover:bg-surface-sunken");
+    expect(tokens).toEqual(expect.arrayContaining(["px-4", "py-3"]));
+  });
+});
+
+/**
+ * The tree half: a `<summary>` that is the first thing inside a card —
+ * a `padding="none"` shell, a `SectionCard as="details"`, a `<details>` that
+ * wears the panel radius itself — takes the shared class, or it draws its ring
+ * square and its caret wherever `items-center` leaves it. A clipped card
+ * (`overflow-hidden`) rounds its own fills and rings inside (the About card,
+ * `LIST_ROW_SUMMARY_RING`), so it is not a card face in this sense.
+ */
+describe("every card-face summary wears cardSummaryClass", () => {
+  function files(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) return files(full);
+      return /\.tsx$/.test(entry.name) && !/\.test\.tsx$/.test(entry.name) ? [full] : [];
+    });
+  }
+
+  const CARD_OPENER =
+    /sectionCardClass\(\{[^}]*padding: "none"|<SectionCard\b[^>]*as="details"|<details\b[^>]*rounded-panel/g;
+
+  it("finds none hand-rolled", () => {
+    const offenders: string[] = [];
+    for (const file of files(SRC_DIR)) {
+      const text = readFileSync(file, "utf8");
+      for (const summary of text.matchAll(/<summary\s/g)) {
+        const before = text.slice(0, summary.index);
+        const openers = [...before.matchAll(CARD_OPENER)];
+        const opener = openers.at(-1);
+        if (opener?.index === undefined) continue;
+        // Nothing closed between the card's opening and the summary: the
+        // summary is the card's first child, through a bare `<details>` at most.
+        const between = before.slice(opener.index);
+        if (between.includes("</")) continue;
+        const openingTag = between.slice(0, between.indexOf(">") + 1);
+        if (/\boverflow-hidden\b/.test(openingTag)) continue;
+        const tag = text.slice(summary.index, text.indexOf(">", summary.index));
+        if (!tag.includes("cardSummaryClass(")) {
+          const line = before.split("\n").length;
+          offenders.push(`${relative(SRC_DIR, file).split(/[\\/]/).join("/")}:${line}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });
 

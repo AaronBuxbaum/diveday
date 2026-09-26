@@ -5,8 +5,8 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { buttonClass } from "@/components/ui/button";
-import { PANEL_INNER_RADIUS, sectionCardClass } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { GroupLabel } from "@/components/ui/ledger";
 import { fill, pluralForm } from "@/i18n/fill";
 import { requestBackgroundFlush } from "@/lib/background-flush";
@@ -501,21 +501,21 @@ export function OfflineManifestManager({
         aria-labelledby={scopedId(idPrefix, "offline-heading")}
       >
         <details className="group/phone">
-          {/* Flush in a card that does not clip, so the hover fill carries
-              the card's inner corner wherever it touches the card: all four
-              while closed, when the summary is the whole card; the top two
-              once open, when its bottom edge meets the body below. */}
-          <summary
-            className={`group/summary flex min-h-14 cursor-pointer list-none items-center gap-3 ${PANEL_INNER_RADIUS} group-open/phone:rounded-b-none px-4 py-3 select-none transition-colors hover:bg-surface-sunken/70 focus-visible:focus-ring-inset [&::-webkit-details-marker]:hidden`}
-          >
-            <DisclosureCaret className="group-open/phone:rotate-90" />
+          {/* The card's face (`cardSummaryClass`): flush in a card that does
+              not clip, so its fill and ring carry the card's inner corner
+              wherever it touches the card — all four while closed, the top
+              two once open. Its first line is the 36px row of status chips,
+              so the caret's box is that tall, and so is the label's, which
+              keeps the caret on the label when the chips wrap under it. */}
+          <summary className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-3" })}>
+            <SummaryCaret line="h-9" className="group-open/phone:rotate-90" />
             {/* A deliberate eyebrow rather than a section heading, which is a
                 scale `SectionCard`'s own `title` does not render. */}
             <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
               <GroupLabel
                 as="h2"
                 id={scopedId(idPrefix, "offline-heading")}
-                className="group-hover/summary:underline"
+                className="flex min-h-9 items-center group-hover/summary:underline"
               >
                 {copy.groupHeading}
               </GroupLabel>

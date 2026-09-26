@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { scopedId } from "@/lib/element-id";
 import type { PreDepartureCheckResult } from "../actions";
@@ -121,8 +121,8 @@ export function PreDepartureCheckList({
       className={sectionCardClass({ padding: "none", className: "mt-5" })}
     >
       <details className="group/check print:hidden">
-        <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-2 px-4 py-3 select-none [&::-webkit-details-marker]:hidden">
-          <DisclosureCaret className="group-open/check:rotate-90" />
+        <summary className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}>
+          <SummaryCaret className="group-open/check:rotate-90" />
           <h2
             id={scopedId(idPrefix, "pre-departure-check-heading")}
             className="text-base font-semibold group-hover/summary:underline"
