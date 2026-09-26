@@ -165,24 +165,6 @@ describe("the eyebrow's line box", () => {
 });
 
 /**
- * **The mark opens the notice's first line; it is not a line of its own.**
- *
- * The notice used to be a block holding `<StatusMark className="me-1" />` and
- * then its words. Preflight makes every `svg` a block, so the mark stood alone
- * on a line above the sentence it marks, its `me-1` spacing it from nothing:
- * 16px of every toned notice spent on a lone glyph, on orders, check-in, the
- * trip packet and the rest (K-15).
- *
- * The root is a row. The words keep their own block in the second column, so
- * a notice holding a heading, a paragraph and a list still stacks them. The
- * row aligns on the first baseline, not the top, because not every notice's
- * first line starts at its top: the trip banner's words sit centred beside a
- * 44px Undo, and the duplicate-diver warning opens on a 16px heading. So the
- * mark's column holds one line of the notice's own text — a box `h-lh` tall
- * with the mark centred in it — and that line's baseline is the one the row
- * lines up with the words' first line, wherever that line is.
- */
-/**
  * **A skeleton says whether its page has a description.**
  *
  * The bar used to be on by default, and 49 of 57 loading files took the
@@ -482,6 +464,24 @@ describe("ShopStat's figure", () => {
   });
 });
 
+/**
+ * **The mark opens the notice's first line; it is not a line of its own.**
+ *
+ * The notice used to be a block holding `<StatusMark className="me-1" />` and
+ * then its words. Preflight makes every `svg` a block, so the mark stood alone
+ * on a line above the sentence it marks, its `me-1` spacing it from nothing:
+ * 16px of every toned notice spent on a lone glyph, on orders, check-in, the
+ * trip packet and the rest (K-15).
+ *
+ * The root is a row. The words keep their own block in the second column, so
+ * a notice holding a heading, a paragraph and a list still stacks them. The
+ * row aligns on the first baseline, not the top, because not every notice's
+ * first line starts at its top: the trip banner's words sit centred beside a
+ * 44px Undo, and the duplicate-diver warning opens on a 16px heading. So the
+ * mark's column holds one line of the notice's own text — a box `h-lh` tall
+ * with the mark centred in it — and that line's baseline is the one the row
+ * lines up with the words' first line, wherever that line is.
+ */
 describe("ShopNotice's mark", () => {
   it("sits beside the first line of the words rather than on a line above them", () => {
     render(

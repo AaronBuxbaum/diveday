@@ -553,8 +553,11 @@ triangle holding a bar and a dot (warning), a cross in a circle (danger). Each i
 stays a distinct shape in monochrome (ADR 20260827-the-departure-is-two-working-surfaces, decision
 5). They are `aria-hidden`, and the words carry the status. Sizes: `sm` is 16px (`size-4`, the
 default, and every `Badge` below `lg`), `md` is 20px (a `lg` `Badge`), and `lg` is 24px. The gap
-belongs to the consumer's layout: `gap-1` in a `Badge`, `gap-1.5` in `FormStatus`, `me-1` in
-`ShopNotice`.
+belongs to the consumer's layout: `gap-1` in a `Badge`, `gap-1.5` in `FormStatus`, and `gap-2` in
+`ShopNotice`, whose mark sits in a one-line `StatusMark inline` box on the words' first baseline.
+A mark inside running text (the printed pre-departure list) takes `inline` too, because a bare
+mark is a block: preflight makes every `svg` `display: block`, so it stands on a line of its own
+above its words, and a margin on it spaces it from nothing.
 
 These replaced the emoji (✅ ⚠️ ❌) on 2026-08-29. The emoji had replaced text dingbats (`✓ ▲ ✕`),
 which took the surrounding font and read at badge size as a font falling back. Don't swap a glyph
