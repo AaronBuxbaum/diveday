@@ -587,9 +587,18 @@ export function Field({
  * 20260919-one-idea, slice 23b).
  *
  * The negative margins let it span the full width of a padded container while
- * its own padding keeps the buttons where the fields are. Reach for it when a
- * form is taller than a phone screen with content still to come — a two-field
- * panel wearing one is a bar hovering over nothing.
+ * its own padding keeps the buttons where the fields are. They are spelled for
+ * the one container it sits in: `<main className="… px-4 sm:px-6">` below
+ * `lg`, where the bar bleeds to the screen's edges, and from `lg` the editor
+ * rail grid's form cell, which has no padding, where the bar is exactly the
+ * form's column. It used to bleed `sm:-mx-5` for a `px-5` card nobody put it
+ * in: at 1280 its rule ran 408–1147 against a column of 428–1127, 20px into
+ * the rail's gutter, and from 640 to 1023 it stopped 4px short of both screen
+ * edges (the pixel probe, course-edit and dive-site-edit). A caller in some
+ * other container needs its own bleed, not this one.
+ *
+ * Reach for it when a form is taller than a phone screen with content still
+ * to come — a two-field panel wearing one is a bar hovering over nothing.
  */
 export function StickyFormActions({
   className = "",
@@ -600,7 +609,7 @@ export function StickyFormActions({
 }) {
   return (
     <div
-      className={`sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5 ${className}`}
+      className={`sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 ${className}`}
     >
       {children}
     </div>

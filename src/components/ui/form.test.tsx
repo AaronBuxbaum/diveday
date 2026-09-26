@@ -477,6 +477,26 @@ describe("StickyFormActions", () => {
     // under it (ADR 20260919-one-idea, slice 23b retired both).
     expect(container.firstElementChild).toHaveClass("bottom-0");
   });
+
+  /**
+   * **Its rule meets an edge the form has.** Both callers sit in a `<main>`
+   * padded `px-4 sm:px-6`, and from `lg` in the editor rail grid's form cell,
+   * which has no padding at all. Bleeding `sm:-mx-5` ran the rule and fill
+   * 408–1147 at 1280 against a column of 428–1127, 20px into the rail's
+   * gutter, and stopped 4px short of both screen edges from 640 to 1023
+   * (K-61). Full-bleed under `lg`, exactly the column from `lg` up.
+   */
+  it("bleeds to main's padding below lg and runs with the form column from lg", () => {
+    const { container } = render(
+      <StickyFormActions>
+        <button type="submit">Save</button>
+      </StickyFormActions>,
+    );
+    const bar = container.firstElementChild;
+    expect(bar).toHaveClass("-mx-4", "px-4", "sm:-mx-6", "sm:px-6", "lg:mx-0", "lg:px-0");
+    expect(bar).not.toHaveClass("sm:-mx-5");
+    expect(bar).not.toHaveClass("sm:px-5");
+  });
 });
 
 /**
