@@ -257,6 +257,42 @@ describe("a screen row's geometry", () => {
     );
     expect(meta?.textContent).not.toMatch(/ ·/);
   });
+
+  /**
+   * **An armed Revoke gets a line of its own.** Arming swaps the trigger for
+   * `InlineConfirm`'s question block (`role="alert"`), and an `auto` grid track
+   * grows to its content's max-content before the `1fr` track gets anything:
+   * with the question in the right column the name and meta shrank to 144px
+   * at 1280 and to 18px at 640, and the row grew to 432px (the review of
+   * K-441). While the row holds that block it is one column, so the question
+   * stands under the text, as the wrapping row always put it; a row at rest
+   * keeps its two.
+   */
+  it("stacks an armed Revoke's question under the text rather than beside it", async () => {
+    render(
+      panel([
+        screenRow("aaaaaaaa-1111-4222-8333-444444444444", "Lobby TV", "Expires 12 Mar 2027"),
+        screenRow("bbbbbbbb-1111-4222-8333-444444444444", "Dock B tablet"),
+      ]),
+    );
+    const list = screen.getByRole("region", { name: copy.listHeading });
+    const [armedRow, restingRow] = within(list).getAllByRole("listitem");
+
+    await userEvent.click(screen.getByRole("button", { name: "Revoke Lobby TV" }));
+
+    const question = within(list).getByRole("alert");
+    expect(question).toHaveTextContent(copy.confirmRevoke);
+    // The block the variant keys on is inside the row it collapses, and only
+    // that row: the resting row holds none, so it keeps its two columns.
+    expect(question.closest("li")).toBe(armedRow);
+    expect(restingRow?.querySelector('[role="alert"]')).toBeNull();
+    for (const row of [armedRow, restingRow]) {
+      expect(row).toHaveClass(
+        "sm:grid-cols-[minmax(0,1fr)_auto]",
+        "sm:has-[[role=alert]]:grid-cols-1",
+      );
+    }
+  });
 });
 
 /**

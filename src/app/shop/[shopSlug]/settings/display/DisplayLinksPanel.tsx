@@ -226,9 +226,15 @@ export function DisplayLinksPanel({
               // under it on the next, as each meta line ran (K-441). From `sm`
               // the row is two columns and the actions always the right one;
               // below it they always follow the text.
+              //
+              // **Except while Revoke is armed.** Its question block
+              // (`role="alert"`) would fill the `auto` column to its one-line
+              // width before the text got any, squeezing the name to 18px at
+              // 640; a row holding it is one column, the question under the
+              // text.
               <li
                 key={screen.id}
-                className="flex flex-col gap-2 py-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-x-6"
+                className="flex flex-col gap-2 py-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-x-6 sm:has-[[role=alert]]:grid-cols-1"
               >
                 <div className="min-w-0">
                   <p className="font-medium">{screen.label}</p>
