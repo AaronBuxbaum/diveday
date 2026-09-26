@@ -20,8 +20,12 @@ import QRCode from "qrcode";
  * with the text column the box sits in. With one white module inside the
  * image, the pixel probe measured the pass's code 3px right of its title and
  * the dock sign's 2px and 4px right of their captions. The price is that each
- * call site keeps four modules of paper clear on every side: about 3.3mm
- * around the pass's 24mm code, 4.7mm around the sticker's 34mm one.
+ * call site keeps four modules of paper clear on every side, sized for the
+ * coarsest code its payload can make: a booking id is always a version 3 (29
+ * modules), so 3.3mm around the pass's 24mm code; a storefront link on a short
+ * slug is a version 2 (25 modules), so 5.1mm around the dock sign's 32mm codes
+ * and 5.4mm around the sticker's 34mm one. `SheetCode.test.tsx` checks all
+ * three.
  */
 const CODE_PIXELS = 512;
 
