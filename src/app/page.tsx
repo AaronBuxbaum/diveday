@@ -519,8 +519,10 @@ async function HomeBody({
               {/* A manifest, not a card: hairline rows echoing the marker rule
                 above them. The bordered card this replaced put a second
                 rounded box beside the import mockup and read as its twin,
-                when the two halves are a picture and an inventory. */}
-              <ul className="divide-y divide-border border-y border-border leading-6 text-muted">
+                when the two halves are a picture and an inventory. Its bottom
+                rule is `lg`-only: below `lg` the list stacks last, and the
+                band's closing rule 48px under it is its end (K-294). */}
+              <ul className="divide-y divide-border border-t border-border leading-6 text-muted lg:border-b">
                 {exportInventory.map((itemKey) => (
                   <li key={itemKey} className="flex gap-3 py-4">
                     <DiveDayIcon name="check" className="mt-1 size-4 shrink-0 text-primary" />
@@ -540,7 +542,9 @@ async function HomeBody({
             these two land at the same left margin a short gap apart and scan as
             a stacked pair — the exact shape the 2026-08-13 redesign removed,
             reached from a different direction. The rule says this one closes
-            both columns. */}
+            both columns. Below `lg` the inventory stacks last and draws no
+            bottom rule of its own, so this is its end rather than a second
+            rule 48px under one (an empty fifth row, K-294). */}
           <div className="mt-12 border-t border-border pt-6">
             <Link
               href={switchingHref("/switching", "home-records")}
