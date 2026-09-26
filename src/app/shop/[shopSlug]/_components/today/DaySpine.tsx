@@ -163,9 +163,14 @@ function rowKey(action: TodayAction): string {
  * ring, not a border: it is drawn at rest too, clear, so neither the hover nor
  * its arrival moves a pixel. The rows keep their fills for the phone, where no
  * panel is painted under them.
+ *
+ * **Only where a pointer can hover.** Every `hover:` utility carries
+ * Tailwind's `@media (hover: hover)` gate; a `:hover` written inside `has-[]`
+ * does not, so on a touch tablet a tap that opened Tomorrow left the whole
+ * panel ringed until the next tap somewhere else. The step names the gate.
  */
 const HORIZON_PANEL_CLASS =
-  "sm:rounded-panel sm:bg-surface-sunken sm:px-5 sm:py-1 sm:inset-ring sm:inset-ring-transparent sm:has-[>summary:hover,>li:hover]:inset-ring-border-strong";
+  "sm:rounded-panel sm:bg-surface-sunken sm:px-5 sm:py-1 sm:inset-ring sm:inset-ring-transparent sm:[@media(hover:hover)]:has-[>summary:hover,>li:hover]:inset-ring-border-strong";
 
 /** The status family's shape for each kind tone, and the ink it takes. */
 const ROW_GLYPH = { danger: "danger", warning: "warning", neutral: "pending" } as const;

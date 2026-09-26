@@ -957,9 +957,14 @@ describe("the two horizon rows", () => {
     const step = (element: Element | null | undefined) =>
       (element?.className ?? "")
         .split(/\s+/)
-        .filter((name) => /^sm:has-\[.*:hover.*\]:inset-ring-border-strong$/.test(name));
+        .filter((name) => /has-\[.*:hover.*\]:inset-ring-border-strong$/.test(name));
     expect(step(fold)).toHaveLength(1);
     expect(step(weekPanel)).toEqual(step(fold));
+    // Only where a pointer can hover. `hover:` carries Tailwind's
+    // `@media (hover: hover)` gate and a `:hover` inside `has-[]` does not, so
+    // on a touch tablet a tap that opened Tomorrow left the whole panel ringed
+    // until the next tap somewhere else. The step names the gate itself.
+    expect(step(fold)[0]).toMatch(/^sm:\[@media\(hover:hover\)\]:has-\[/);
     // Resting, the edge is there and clear, so the hover moves no pixel.
     expect(fold).toHaveClass("sm:inset-ring", "sm:inset-ring-transparent");
     expect(weekPanel).toHaveClass("sm:inset-ring", "sm:inset-ring-transparent");
