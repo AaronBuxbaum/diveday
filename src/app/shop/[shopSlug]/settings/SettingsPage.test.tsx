@@ -5,7 +5,7 @@ import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
-import { FieldActions } from "@/components/ui/form";
+import { Field, FieldActions } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
@@ -463,6 +463,32 @@ describe("the emergency reference row", () => {
     ).filter((button) => button.props.children === EMERGENCY.submit);
     expect(saves).toHaveLength(1);
     expect(saves[0]?.props.className).toBe(buttonClass({ variant: "secondary" }));
+  });
+
+  /**
+   * The examples were each label box's placeholder, and a half-width box is
+   * 331px at 1280 and 324 at 390: "Chamber, dive-accident hotline, coast
+   * guard…" was cut mid-word, and the Spanish is longer (K-583). They are the
+   * first line's description now, which wraps, and no box carries them.
+   */
+  it("gives its examples once, under the first line, where they wrap", async () => {
+    const row = await emergencyRow();
+    const lines = findElements<{ description?: unknown; children?: unknown }>(
+      row.props.children,
+      Field,
+    ).filter((field) => {
+      const control = field.props.children as ReactElement<{ name?: string }> | undefined;
+      return control?.props?.name?.startsWith("emergencyLabel-");
+    });
+    expect(lines.length).toBeGreaterThan(1);
+    for (const line of lines) {
+      const control = line.props.children as ReactElement<{ placeholder?: unknown }>;
+      expect(control.props.placeholder).toBeUndefined();
+    }
+    expect(lines.map((line) => line.props.description)).toEqual([
+      EMERGENCY.lineExamples,
+      ...lines.slice(1).map(() => undefined),
+    ]);
   });
 });
 

@@ -475,7 +475,7 @@
       "empty": "Nothing recorded",
       "intro": "These ride on the boat manifest, including offline. DiveDay never fills them in, because the nearest chamber and the right hotline depend on where you dive.",
       "lineLabel": "What it is {n}",
-      "linePlaceholder": "Chamber, dive-accident hotline, coast guard…",
+      "lineExamples": "Chamber, dive-accident hotline, coast guard…",
       "phoneLabel": "Number {n}",
       "vesselLabel": "Vessel",
       "shoreContactLabel": "Shore contact",

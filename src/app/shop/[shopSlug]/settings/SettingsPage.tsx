@@ -1784,13 +1784,20 @@ export default async function SettingsPage({
                 <FieldGrid columns={2}>
                   {EMERGENCY_LINE_SLOTS.map((slot, index) => (
                     <Fragment key={slot}>
-                      <Field label={t("settings.main.emergency.lineLabel", { n: index + 1 })}>
+                      {/* The examples are the first line's description, which
+                          wraps: as every label box's placeholder they were cut
+                          mid-word in a half-width box (K-583). */}
+                      <Field
+                        label={t("settings.main.emergency.lineLabel", { n: index + 1 })}
+                        description={
+                          index === 0 ? t("settings.main.emergency.lineExamples") : undefined
+                        }
+                      >
                         <input
                           name={`emergencyLabel-${index}`}
                           type="text"
                           maxLength={80}
                           defaultValue={shop.emergencyReference.lines[index]?.label ?? ""}
-                          placeholder={t("settings.main.emergency.linePlaceholder")}
                           className={controlClass}
                         />
                       </Field>
