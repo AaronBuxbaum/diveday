@@ -279,24 +279,36 @@ export function SiteFields({
             </Field>
             {/* The tide is read at a NOAA station, never at the coordinates
               above — a reef is rarely a station — so the id is its own field,
-              and the hint carries the one link a staffer needs to find one.
+              and its help carries the one link a staffer needs to find one.
               A blank id says nothing about the tide anywhere (ADR
-              20260907-noaa-tide-predictions). */}
+              20260907-noaa-tide-predictions).
+
+              The help is the field's description, under the box, with the
+              station NOAA answered for beneath it: two sentences and a link
+              are not a `hint`, the inline "(optional)" on the caption's line,
+              where they stood "NOAA tide station" two lines above "Dives
+              best" beside it (K-418). */}
             <Field
               label={t("diveSites.form.tideStationLabel")}
-              description={tideStationNote}
-              hint={t.rich("diveSites.form.tideStationHint", {
-                link: (chunks) => (
-                  <a
-                    href="https://tidesandcurrents.noaa.gov/tide_predictions.html"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {chunks}
-                  </a>
-                ),
-              })}
+              description={
+                <>
+                  <span className="block">
+                    {t.rich("diveSites.form.tideStationHint", {
+                      link: (chunks) => (
+                        <a
+                          href="https://tidesandcurrents.noaa.gov/tide_predictions.html"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {chunks}
+                        </a>
+                      ),
+                    })}
+                  </span>
+                  {tideStationNote}
+                </>
+              }
             >
               {/* No `pattern`: native constraint validation refuses the submit
                 outright, in the browser's own words, and the form never
@@ -606,9 +618,11 @@ export function SiteFields({
                 className={textareaClassFor(3)}
               />
             </Field>
+            {/* A sentence of help, so a description under the box, as the
+                form's other help is; not the caption's inline hint (K-418). */}
             <Field
               label={t("diveSites.form.conservationNoteLabel")}
-              hint={t("diveSites.form.conservationNoteHint")}
+              description={t("diveSites.form.conservationNoteHint")}
             >
               <textarea
                 name="conservationNote"
