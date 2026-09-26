@@ -2933,6 +2933,17 @@ describe("OfflineManifestView — one column, one text edge", () => {
       "max-sm:[&>*]:grow",
     );
   });
+
+  // K-542: the affirmative control had no hover beside a negative that did.
+  it("gives the unrecorded board control a hover, on the diver rows and the crew rows", async () => {
+    await renderTrip(richEnvelope("trip-1"));
+    expect(within(priyaRow()).getByRole("button", { name: "Mark boarded" })).toHaveClass(
+      "hover:bg-primary-tint",
+    );
+    expect(within(crewList()).getAllByRole("button", { name: "Mark aboard" })[0]).toHaveClass(
+      "hover:bg-primary-tint",
+    );
+  });
 });
 
 // K-255: `rounded-3xl` (24px) is off the radius ladder; a panel is 20.

@@ -1978,7 +1978,7 @@ export function OfflineManifestView() {
                                   ? "border border-border-strong bg-surface-sunken"
                                   : member.state?.state === "boarded"
                                     ? "border border-success bg-success/15 text-success"
-                                    : "border border-primary bg-surface text-primary"
+                                    : "border border-primary bg-surface text-primary hover:bg-primary-tint"
                               }`}
                             >
                               {busyBooking === crewPersonId ? (
@@ -2426,7 +2426,7 @@ export function OfflineManifestView() {
                                   ? "border border-border-strong bg-surface-sunken"
                                   : state?.state === "boarded"
                                     ? "border border-success bg-success/15 text-success"
-                                    : "border border-primary bg-surface text-primary"
+                                    : "border border-primary bg-surface text-primary hover:bg-primary-tint"
                               }`}
                             >
                               {busyBooking === diver.bookingId ? (
