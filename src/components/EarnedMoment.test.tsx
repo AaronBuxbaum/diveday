@@ -115,8 +115,17 @@ describe("the whole-page moment's inset", () => {
     expect(momentFor("You’re on the boat")?.className).not.toMatch(/(^|\s)(sm:)?p-[67](\s|$)/);
   });
 
-  it("keeps its own wider inset where it opens a page", () => {
+  /**
+   * Where it opens a page it keeps the default, SectionCard's `lg` rung
+   * (K-109): a step wider, `p-6 sm:p-7`, put the recap's welcome 4px right of
+   * the cards under it.
+   */
+  it("keeps the lg rung where it opens a page, a step wider than the card inset", () => {
     render(<EarnedMoment as="h1" title="Waiver signed" />);
-    expect(momentFor("Waiver signed")).toHaveClass("p-6", "sm:p-7");
+    const lgInset = sectionCardClass({ padding: "lg" })
+      .split(" ")
+      .filter((name) => /^(sm:)?p-\d/.test(name));
+    expect(lgInset).toEqual(["p-5", "sm:p-6"]);
+    expect(momentFor("Waiver signed")).toHaveClass(...lgInset);
   });
 });
