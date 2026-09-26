@@ -742,15 +742,27 @@ export function CommandPalette({
                                   </span>
                                 </span>
                               ) : (
-                                <span className="min-w-0 flex-1 truncate font-medium">
-                                  {item.label}
+                                /* **The label and its detail share one column.**
+                                   Side by side on a phone the detail never
+                                   shrank, so a departure's name took all the
+                                   loss — cut to 81px while its date kept 172
+                                   (the pixel audit, command-palette-results).
+                                   Below `sm` the detail is the label's second
+                                   line; from `sm` up the column lays them out
+                                   in a row, the date at its full width as
+                                   before. A card carries its facts in `lines`
+                                   and has no detail. */
+                                <span className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
+                                  <span className="block min-w-0 truncate font-medium sm:flex-1">
+                                    {item.label}
+                                  </span>
+                                  {item.detail ? (
+                                    <span className="block truncate text-sm text-muted sm:shrink-0">
+                                      {item.detail}
+                                    </span>
+                                  ) : null}
                                 </span>
                               )}
-                              {item.detail ? (
-                                <span className="shrink-0 truncate text-sm text-muted">
-                                  {item.detail}
-                                </span>
-                              ) : null}
                             </button>
                           );
                         })}

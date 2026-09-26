@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SearchResults } from "@/db/search";
@@ -140,6 +140,51 @@ describe("CommandPalette key caps", () => {
     // The answer card's ↵, and the legend's ↑ ↓ ↵ esc.
     expect(caps).toHaveLength(5);
     for (const cap of caps) expect(cap).toHaveClass("inline-flex", "h-4", "items-center");
+  });
+});
+
+/**
+ * A departure's name is the thing a staffer is looking for, and on a phone the
+ * row gave it all the loss: the date beside it never shrank, so "Two-Tank Reef
+ * — Benwood & Molasses" was cut to 81px while its date kept 172 (the pixel
+ * audit, command-palette-results at 390). Below `sm` the detail is the label's
+ * second line; from `sm` up the one column lays the two out side by side.
+ */
+describe("CommandPalette result detail", () => {
+  it("sets a result's detail under its label below `sm`, and beside it from `sm` up", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              ...results(null),
+              trips: [
+                {
+                  id: "t-1",
+                  title: "Two-Tank Reef — Benwood & Molasses",
+                  detail: "7:00 AM Thu, Aug 27",
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+      ),
+    );
+    renderPalette();
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    await userEvent.type(screen.getByRole("combobox"), "reef");
+
+    const option = await screen.findByRole("option", {
+      name: "Two-Tank Reef — Benwood & Molasses",
+    });
+    const detail = within(option).getByText("7:00 AM Thu, Aug 27");
+    const label = within(option).getByText("Two-Tank Reef — Benwood & Molasses");
+    // One column holds both, so the detail is never a second copy.
+    expect(detail.parentElement).toBe(label.parentElement);
+    expect(detail.parentElement).toHaveClass("min-w-0", "flex-1", "sm:flex");
+    expect(label).toHaveClass("block", "truncate", "sm:flex-1");
+    expect(detail).toHaveClass("block", "truncate", "sm:shrink-0");
   });
 });
 
