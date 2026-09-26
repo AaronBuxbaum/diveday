@@ -32,11 +32,11 @@ function evidence(overrides: Partial<IncidentCertificationEvidence> = {}) {
   } satisfies IncidentCertificationEvidence;
 }
 
-function renderLine(card: IncidentCertificationEvidence) {
+function renderLine(card: IncidentCertificationEvidence, translator = t) {
   const { container } = render(
     <p>
       <CertificationLine
-        t={t}
+        t={translator}
         card={card}
         agencyText={(agency) => agency.toUpperCase()}
         dateTime={() => WHEN}
@@ -65,15 +65,16 @@ describe("the card number", () => {
   });
 
   it("reads exactly as the message says", () => {
-    // Word for word; only the space before each separator is a no-break one
-    // (see "the line's separators" below).
+    // Character for character: the line sets the message, it never rewrites
+    // it. The no-break space before each separator is the bundle's own (see
+    // "the line's separators" below).
     const message = t("incidentExport.certLevelLine", {
       agency: "PADI",
       level: t("shared.readiness.certificationLevels.openWater"),
       identifier: "PADI-12-3456",
     });
     const text = renderLine(evidence()).textContent ?? "";
-    expect(text.startsWith(message.replaceAll(" · ", "\u00a0· "))).toBe(true);
+    expect(text.startsWith(message)).toBe(true);
   });
 
   it("leaves the no-number phrase free to wrap, since it is words and not a number", () => {
@@ -89,21 +90,29 @@ describe("the line's separators", () => {
    * the dot at the start of the next line: at 390 Lena ×2, June, Nadia and
    * Ines led a line with "· Certified" or "· Pending review", while other
    * rows ended theirs with it (K-552, DEPARTURE-4-48). A no-break space before
-   * each dot keeps it with what it follows, so a line can only break after one.
+   * each dot keeps it with what it follows, so a line can only break after one:
+   * the component's own joins spell it, and the messages' joins carry it in
+   * the bundles, where a translator sees it, rather than having it patched in
+   * after translation.
    */
-  for (const [label, card] of [
-    ["a verified, imported card", evidence({ imported: true })],
-    ["a self-declared card", evidence({ identifier: null, status: "pending", selfDeclared: true })],
-    ["a specialty card", evidence({ kind: "specialty", level: null, specialty: "deep" })],
-    ["a nitrox card", evidence({ kind: "nitrox", level: null })],
-  ] as const) {
-    it(`glue every dot to what comes before it (${label})`, () => {
-      const text = renderLine(card).textContent ?? "";
-      const dots = [...text.matchAll(/·/g)];
-      expect(dots.length, "the line has separators to check").toBeGreaterThanOrEqual(2);
-      for (const dot of dots) {
-        expect(text[(dot.index ?? 0) - 1], `before the dot at ${dot.index}`).toBe("\u00a0");
-      }
-    });
+  for (const locale of ["en-US", "es-ES"] as const) {
+    for (const [label, card] of [
+      ["a verified, imported card", evidence({ imported: true })],
+      [
+        "a self-declared card",
+        evidence({ identifier: null, status: "pending", selfDeclared: true }),
+      ],
+      ["a specialty card", evidence({ kind: "specialty", level: null, specialty: "deep" })],
+      ["a nitrox card", evidence({ kind: "nitrox", level: null })],
+    ] as const) {
+      it(`glue every dot to what comes before it (${label}, ${locale})`, () => {
+        const text = renderLine(card, staffTranslator(locale)).textContent ?? "";
+        const dots = [...text.matchAll(/·/g)];
+        expect(dots.length, "the line has separators to check").toBeGreaterThanOrEqual(3);
+        for (const dot of dots) {
+          expect(text[(dot.index ?? 0) - 1], `before the dot at ${dot.index}`).toBe("\u00a0");
+        }
+      });
+    }
   }
 });

@@ -13,7 +13,8 @@ const NUMBER_SLOT = "\u{E000}";
 /**
  * The line's separator, glued to what it follows by a no-break space: a wrap
  * falls after a dot, never before one, so no line of the evidence starts with
- * "· Certified". The messages' own " · " joins get the same glue.
+ * "· Certified". The messages' own joins carry the same glue in the bundles,
+ * where a translator sees it; this component sets the message as written.
  */
 const SEPARATOR = "\u00a0· ";
 
@@ -64,20 +65,17 @@ export function CertificationLine({
             agency: agencyText(card.agency),
             identifier,
           });
-  const line = translated
-    .replaceAll(" · ", SEPARATOR)
-    .split(NUMBER_SLOT)
-    .flatMap((part, index) =>
-      index === 0
-        ? [part]
-        : [
-            // biome-ignore lint/suspicious/noArrayIndexKey: the message's own order, never reordered
-            <span key={index} className="whitespace-nowrap">
-              {card.identifier}
-            </span>,
-            part,
-          ],
-    );
+  const line = translated.split(NUMBER_SLOT).flatMap((part, index) =>
+    index === 0
+      ? [part]
+      : [
+          // biome-ignore lint/suspicious/noArrayIndexKey: the message's own order, never reordered
+          <span key={index} className="whitespace-nowrap">
+            {card.identifier}
+          </span>,
+          part,
+        ],
+  );
   const status =
     card.status === "verified"
       ? card.reviewedAt
