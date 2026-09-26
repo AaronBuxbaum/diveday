@@ -148,18 +148,22 @@ export function ClosingStation({
           {close.title}
         </Link>
       </h3>
-      <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+      {/* The count and who closed it are the status line's own facts, so they
+          ride inside the mark's text block: a fact that wraps starts under the
+          status word, never back under the glyph (pixel-craft K-593). */}
+      <p className="mt-1.5 text-sm">
         <SettledCheck
           settled={close.status === "all_home"}
           label={t(CLOSEOUT_STATUS_KEYS[close.status])}
-          className="font-medium"
-        />
-        <span className={`${detailInk} tabular-nums`}>{detail}</span>
-        {counted && headCountClose ? (
-          <span className="text-muted">
-            {t("shopHome.spine.close.closedBy", { name: headCountClose.closedBy })}
-          </span>
-        ) : null}
+          labelClassName="font-medium"
+        >
+          <span className={`${detailInk} tabular-nums`}>{detail}</span>
+          {counted && headCountClose ? (
+            <span className="text-muted">
+              {t("shopHome.spine.close.closedBy", { name: headCountClose.closedBy })}
+            </span>
+          ) : null}
+        </SettledCheck>
       </p>
       {/* **What the boat actually dived** (issue #1184, D24). Its own line,
           and its own sentence: it rode inside the status line above until the

@@ -1232,6 +1232,54 @@ describe("the evening reading", () => {
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   });
 
+  /**
+   * **A settled station's facts hang beside its mark** (pixel-craft class 3,
+   * K-593). The status, the count and who closed it were three flex siblings
+   * of the mark, so at 390 "head count closed by Sal Moretti" wrapped back
+   * under the check glyph (x 38) rather than under "All home" (x 65). They
+   * are one text block beside the mark now; every word of them still renders.
+   */
+  it("hangs a settled station's count and who closed it beside its mark", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1", booked: 8 })], {
+        headCountCloses: new Map([["t1", { closedAt: hoursFromNow(-3), closedBy: "Sal Moretti" }]]),
+      }),
+    });
+    const label = screen.getByText("All home");
+    const block = label.parentElement;
+    expect(block?.querySelector("svg")).toBeNull();
+    expect(block).toContainElement(screen.getByText(/, 10 back by /));
+    expect(block).toContainElement(screen.getByText("head count closed by Sal Moretti"));
+    expect(block?.parentElement?.querySelector("svg path")).not.toBeNull();
+  });
+
+  it("hangs an open head count's sentence the same way, in its tone, beside the open mark", () => {
+    // The failure path of the same line: a boat whose count did not close
+    // keeps its word, its per-reason sentence and its danger ink, beside the
+    // hollow mark rather than the tick.
+    renderSpine({
+      departures: [],
+      evening: evening([
+        closed({
+          tripId: "t1",
+          status: "unreconciled",
+          gapReason: "missing_diver",
+          diveNumber: 1,
+          uncounted: 1,
+        }),
+      ]),
+    });
+    const label = screen.getByText("Unreconciled");
+    const block = label.parentElement;
+    const sentence = block?.querySelector(".text-danger");
+    expect(sentence?.textContent).toBeTruthy();
+    expect(block?.querySelector("svg")).toBeNull();
+    const row = block?.parentElement;
+    expect(row?.querySelector("svg circle")).not.toBeNull();
+    expect(row?.querySelector("svg path")).toBeNull();
+  });
+
   it("offers the departure log only to a reader who may generate one", () => {
     renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
     expect(screen.getByRole("link", { name: "Generate log" })).toBeInTheDocument();

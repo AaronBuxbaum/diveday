@@ -77,6 +77,44 @@ describe("SettledCheck", () => {
     expect(SETTLED_CHECK_TEXT_INSET).toBe(`ps-${markSize + gap}`);
   });
 
+  /**
+   * **What follows the label hangs beside the mark** (pixel-craft class 3,
+   * K-593). Today's settled station set its detail and its "closed by" as
+   * flex siblings of this component, so a third fact that wrapped started
+   * back under the glyph (x 38) instead of under "All home" (x 65). Passed as
+   * children, they share the label's text block, which is the mark's
+   * neighbour: every line of it starts where the label does.
+   */
+  it("sets its children in the label's text block, beside the mark and never under it", () => {
+    const { container } = render(
+      <SettledCheck settled label="All home" labelClassName="font-medium">
+        <span>8 of 8 back by 8:30 AM</span>
+        <span>head count closed by Sal Moretti</span>
+      </SettledCheck>,
+    );
+    const glyph = mark(container);
+    const label = screen.getByText("All home");
+    const block = label.parentElement;
+    expect(block).toBe(screen.getByText("head count closed by Sal Moretti").parentElement);
+    expect(block).toHaveClass("min-w-0");
+    expect(block?.contains(glyph)).toBe(false);
+    // The block and the mark are the two halves of one row that starts at the
+    // top, so the mark sits on the first line and the rest hangs under text.
+    const row = block?.parentElement;
+    expect(row?.contains(glyph)).toBe(true);
+    expect(row).toHaveClass("flex", "items-start");
+    // The weight is the label's alone: the facts after it keep their own.
+    expect(label).toHaveClass("font-medium");
+    expect(row).not.toHaveClass("font-medium");
+  });
+
+  it("stays one inline mark-and-word when it has nothing after the label", () => {
+    const { container } = render(<SettledCheck settled label="Checked in" />);
+    const label = screen.getByText("Checked in");
+    expect(label.parentElement).toHaveClass("inline-flex", "items-center");
+    expect(label.parentElement?.contains(mark(container))).toBe(true);
+  });
+
   it("drops the entrance when it un-settles mid-animation", () => {
     // A head count that closes and reopens inside the 200ms used to leave the
     // unsettled mark animating: `onAnimationEnd` is the only thing that cleared

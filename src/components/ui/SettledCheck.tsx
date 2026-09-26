@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { SETTLED_MARK_GAP, SETTLED_MARK_SIZE } from "./settled-mark";
 
 /**
@@ -23,16 +23,30 @@ import { SETTLED_MARK_GAP, SETTLED_MARK_SIZE } from "./settled-mark";
  * never on the first paint, so a page of forty settled rows does not pop forty
  * marks on arrival. A `prefers-reduced-motion` reader gets the mark swapping
  * with no motion at all, via the kill-switch in globals.css.
+ *
+ * **What follows the label hangs beside the mark** (pixel-craft class 3,
+ * K-593). A status line that says more than its word — Today's settled station:
+ * "All home", the count, who closed it — passes the rest as `children`. They
+ * join the label in one text block beside the mark, laid out as the line was
+ * (each fact an item, 8px apart, a wrapped one moving whole), so a fact that
+ * wraps starts under the label. As siblings of this component they started
+ * back under the glyph: 38px in, where the label is 65.
  */
 export function SettledCheck({
   settled,
   label,
+  labelClassName = "",
   className = "",
+  children,
 }: {
   settled: boolean;
   /** The state in words — always rendered, never optional. */
   label: string;
+  /** The label's own type (its weight), apart from the facts that follow it. */
+  labelClassName?: string;
   className?: string;
+  /** The rest of the status line, set beside the mark after the label. */
+  children?: ReactNode;
 }) {
   // `null` until the first effect runs, which is what distinguishes "this
   // component just mounted holding `true`" from "it was false a moment ago and
@@ -53,25 +67,43 @@ export function SettledCheck({
     else if (!settled) setSettling(false);
   }, [settled]);
 
+  const mark = (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      onAnimationEnd={() => setSettling(false)}
+      className={`${SETTLED_MARK_SIZE} shrink-0 ${settled ? "text-success" : "text-muted"} ${
+        settling && settled ? "settle-in" : ""
+      }`.trim()}
+    >
+      <circle cx="12" cy="12" r="9" />
+      {settled ? <path d="m8.2 12.3 2.6 2.6 5-5.4" /> : null}
+    </svg>
+  );
+  const word = <span className={labelClassName || undefined}>{label}</span>;
+
+  if (children == null) {
+    return (
+      <span className={`inline-flex items-center ${SETTLED_MARK_GAP} ${className}`.trim()}>
+        {mark}
+        {word}
+      </span>
+    );
+  }
   return (
-    <span className={`inline-flex items-center ${SETTLED_MARK_GAP} ${className}`.trim()}>
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        onAnimationEnd={() => setSettling(false)}
-        className={`${SETTLED_MARK_SIZE} shrink-0 ${settled ? "text-success" : "text-muted"} ${
-          settling && settled ? "settle-in" : ""
-        }`.trim()}
-      >
-        <circle cx="12" cy="12" r="9" />
-        {settled ? <path d="m8.2 12.3 2.6 2.6 5-5.4" /> : null}
-      </svg>
-      <span>{label}</span>
+    // The row starts at the top and the mark stands in a box one line tall,
+    // so it centres on the first line whatever the line's height.
+    <span className={`flex items-start ${SETTLED_MARK_GAP} ${className}`.trim()}>
+      <span className="flex h-lh shrink-0 items-center">{mark}</span>
+      <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+        {word}
+        {children}
+      </span>
     </span>
   );
 }
