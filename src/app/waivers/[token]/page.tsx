@@ -1129,9 +1129,14 @@ export default async function WaiverPage({
                 fields can only ever improve what the crew has. */}
             {emergencyContact?.name && emergencyContact?.phone ? (
               <p className="mt-2 text-sm text-muted">
-                {t("waiver.emergencyOnFile", {
+                {/* The number is set whole: it broke after "+1-305-555-" at 390
+                    (K-257). A `nowrap` span, never non-breaking hyphens, so a
+                    number copied off the page still dials; the bundle glues the
+                    dot before it to both sides. */}
+                {t.rich("waiver.emergencyOnFile", {
                   name: emergencyContact.name,
                   phone: emergencyContact.phone,
+                  nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>,
                 })}{" "}
                 {t("waiver.emergencyContactChangeHint")}
               </p>

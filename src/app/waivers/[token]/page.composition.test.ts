@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createElement, Fragment } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { diverTranslator } from "@/i18n/messages";
 
 /**
  * **What the waiver page is, and what it stopped being** — ADR
@@ -207,6 +210,46 @@ describe("the emergency contact's two boxes", () => {
     expect(SOURCE).toContain('id="emergencyContactPhone"');
     // One sentence for both boxes: the fix is the same either way.
     expect(countOf('textKey: "waiver.errorContactPair"')).toBe(2);
+  });
+
+  it("sets the number on file whole, never split at a hyphen", () => {
+    // "Already on file: Asha Sharma (sister) · +1-305-555-0231." broke after
+    // "+1-305-555-" at 390, four digits short of fitting (waiver-active, K-257):
+    // a hyphen is a place a line may end. The number is set in a
+    // `whitespace-nowrap` span through the message's own `<nowrap>` tag — the
+    // rule the roster's emergency phone and the departure log's card numbers
+    // take — and never with non-breaking hyphens, so a number copied off the
+    // page still dials.
+    //
+    // Whole, the number would move to the next line and leave the "·" ending
+    // this one, so the dot is glued to both sides in the bundle (U+00A0, as
+    // `joinFacts` glues a line's last fact): "(sister) · +1-305-555-0231."
+    // moves as one, and the name still breaks between its own words.
+    expect(SOURCE).toContain('t.rich("waiver.emergencyOnFile"');
+    expect(SOURCE).toContain(
+      'nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>',
+    );
+    for (const locale of ["en-US", "es-ES"] as const) {
+      const bundle = JSON.parse(
+        readFileSync(join(__dirname, `../../../i18n/locales/${locale}/diver.json`), "utf8"),
+      ) as { waiver: { emergencyOnFile: string } };
+      expect(bundle.waiver.emergencyOnFile, locale).toContain(
+        "{name}\u00A0·\u00A0<nowrap>{phone}</nowrap>",
+      );
+      const line = renderToStaticMarkup(
+        createElement(
+          Fragment,
+          null,
+          diverTranslator(locale).rich("waiver.emergencyOnFile", {
+            name: "Asha Sharma (sister)",
+            phone: "+1-305-555-0231",
+            nowrap: (chunks) => createElement("span", { className: "whitespace-nowrap" }, chunks),
+          }),
+        ),
+      );
+      expect(line, locale).toContain('<span class="whitespace-nowrap">+1-305-555-0231</span>');
+      expect(line, locale).not.toContain("\u2011");
+    }
   });
 });
 

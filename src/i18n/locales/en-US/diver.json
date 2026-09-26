@@ -1084,7 +1084,7 @@
     "emergencyContact": "Emergency contact",
     "contactName": "Contact name",
     "contactPhone": "Contact phone",
-    "emergencyOnFile": "Already on file: {name} · {phone}.",
+    "emergencyOnFile": "Already on file: {name}\u00a0·\u00a0<nowrap>{phone}</nowrap>.",
     "emergencyContactChangeHint": "Change it here if it’s out of date. Fill in both boxes, or leave both blank to keep what’s on file. Ask the shop if you need the contact taken off your record.",
     "signature": "Your signature",
     "typeFullName": "Type your full name",
