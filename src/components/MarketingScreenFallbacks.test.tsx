@@ -172,6 +172,18 @@ describe("MarketingScreenFallbacks", () => {
       render(<ImportPreviewFallback locale="es-ES" />);
       expect(screen.getByText("Vista previa de importación")).toBeInTheDocument();
     });
+
+    // Three tiles in a row leave a 60.67px label box at 360, and "Certifications"
+    // is 64.8px at 10px, so it ran 4px past its tile (K-122). The tiles give up
+    // 4px of padding a side below sm, where the row is narrowest.
+    it("pads its stat tiles so the longest label fits at 360", () => {
+      render(<ImportPreviewFallback locale="en-US" />);
+      for (const label of ["Divers in file", "Certifications", "Skipped"]) {
+        const tile = screen.getByText(label).parentElement;
+        expect(tile).toHaveClass("px-2", "sm:px-3");
+        expect(tile).not.toHaveClass("px-3");
+      }
+    });
   });
 
   describe("ExportBundleFallback", () => {

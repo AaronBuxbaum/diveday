@@ -202,7 +202,9 @@ export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
             [t("fallback.import.statCards"), "96"],
             [t("fallback.import.statSkipped"), "2"],
           ].map(([label, value]) => (
-            <div key={label} className="rounded-lg bg-surface-sunken px-3 py-2">
+            // `px-2` below sm: three tiles at 360 leave a 60.67px label box
+            // with `px-3`, and "Certifications" is 64.8px (K-122).
+            <div key={label} className="rounded-lg bg-surface-sunken px-2 py-2 sm:px-3">
               <dt className="text-[10px] text-muted">{label}</dt>
               <dd className={FIGURE_INLINE_CLASS}>{value}</dd>
             </div>
