@@ -228,7 +228,7 @@ export default async function CoursesPage({
             canSchedule ? (
               <Link
                 href={`/shop/${shopSlug}/schedule/board`}
-                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {st("courses.list.emptyAction")}
               </Link>

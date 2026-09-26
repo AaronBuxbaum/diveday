@@ -249,10 +249,7 @@ export default async function NewBookingPage({
         <EmptyState
           title={t("bookings.new.tripEmpty")}
           action={
-            <Link
-              href={`/shop/${shopSlug}/schedule/board`}
-              className={buttonClass({ className: "mt-4" })}
-            >
+            <Link href={`/shop/${shopSlug}/schedule/board`} className={buttonClass()}>
               {t("bookings.new.tripEmptyAction")}
             </Link>
           }

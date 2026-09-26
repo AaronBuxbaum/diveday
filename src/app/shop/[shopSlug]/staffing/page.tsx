@@ -394,10 +394,7 @@ export default async function StaffingPage({
           }
           action={
             canManage ? (
-              <Link
-                href={shopPath(shopSlug, "settings", "team")}
-                className={buttonClass({ className: "mt-4" })}
-              >
+              <Link href={shopPath(shopSlug, "settings", "team")} className={buttonClass()}>
                 {t("staffing.working.rosterEmptyAction")}
               </Link>
             ) : null

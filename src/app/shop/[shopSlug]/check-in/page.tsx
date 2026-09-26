@@ -737,7 +737,6 @@ export default async function CheckInPage({
                     className={buttonClass({
                       variant: "secondary",
                       size: "sm",
-                      className: "mt-4",
                     })}
                   >
                     {t("checkIn.emptyClearSearch")}
@@ -748,7 +747,6 @@ export default async function CheckInPage({
                     className={buttonClass({
                       variant: upcomingDepartures > 0 ? "secondary" : "primary",
                       size: "sm",
-                      className: "mt-4",
                     })}
                   >
                     {upcomingDepartures > 0

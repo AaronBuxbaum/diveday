@@ -967,7 +967,7 @@ export default async function ScheduleBoardPage({
               <Link
                 href={`/shop/${shopSlug}/schedule/board?add=1`}
                 scroll={false}
-                className={buttonClass({ className: "mt-4" })}
+                className={buttonClass()}
               >
                 {st("schedule.scheduleTrip")}
               </Link>

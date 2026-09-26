@@ -277,11 +277,7 @@ export default async function GearRegisterPage({
         {fleetTotal === 0 && !showDeleted ? (
           <EmptyState
             title={t("gear.empty.heading")}
-            action={
-              <div className="mt-4 flex flex-wrap justify-center gap-3">
-                <AddUnitLink className={buttonClass()}>{t("gear.addUnit.door")}</AddUnitLink>
-              </div>
-            }
+            action={<AddUnitLink className={buttonClass()}>{t("gear.addUnit.door")}</AddUnitLink>}
             className="mt-4"
           />
         ) : (

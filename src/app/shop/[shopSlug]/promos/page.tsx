@@ -524,7 +524,7 @@ export default async function PromosPage({
              unconnected the banner above is the only next move there is. */
           action={
             connected ? (
-              <a href="#new-code" className={buttonClass({ className: "mt-4" })}>
+              <a href="#new-code" className={buttonClass()}>
                 {t("promos.empty.action")}
               </a>
             ) : null
@@ -571,7 +571,7 @@ export default async function PromosPage({
           action={
             <Link
               href={`/shop/${shopSlug}/schedule/board`}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
             >
               {t("promos.tripDeals.emptyAction")}
             </Link>
