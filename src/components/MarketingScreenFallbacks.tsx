@@ -26,6 +26,14 @@ const MOCK_INSET_X = "px-5";
 const MOCK_BODY = `${MOCK_INSET_X} py-5`;
 
 /**
+ * The one primary button the mocks draw ("Mark boarded", "Download", "Leave my
+ * review"), at the `sm` rung's 44px. The recap's was `min-h-10`, a 40px step
+ * off the button ladder, in an otherwise identical string (K-516).
+ */
+const MOCK_PRIMARY_BUTTON =
+  "inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground";
+
+/**
  * The shop name and the screen's label are each one unit. In /about's 290px
  * phone screen the pair does not fit on one line, and both used to wrap inside
  * themselves ("BLUE MANTIS / DIVERS" beside "Offline copy · up to / date",
@@ -84,11 +92,7 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
                     <p className="text-sm font-semibold">{name}</p>
                     <p className="text-xs text-success">{t("fallback.readyToBoard")}</p>
                   </div>
-                  <button
-                    type="button"
-                    disabled
-                    className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"
-                  >
+                  <button type="button" disabled className={MOCK_PRIMARY_BUTTON}>
                     {t("fallback.markBoarded")}
                   </button>
                 </div>
@@ -264,11 +268,7 @@ export function ExportBundleFallback({ locale }: { locale: DiverLocale }) {
             <p className={groupLabelClass("primary")}>{t("fallback.export.eyebrow")}</p>
             <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.export.title")}</h3>
           </div>
-          <button
-            type="button"
-            disabled
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"
-          >
+          <button type="button" disabled className={`shrink-0 ${MOCK_PRIMARY_BUTTON}`}>
             {t("fallback.export.download")}
           </button>
         </div>
@@ -426,11 +426,7 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
               </svg>
             ))}
           </div>
-          <button
-            type="button"
-            disabled
-            className="mt-3 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"
-          >
+          <button type="button" disabled className={`mt-3 ${MOCK_PRIMARY_BUTTON}`}>
             {t("fallback.recap.reviewSubmit")}
           </button>
         </div>

@@ -61,6 +61,42 @@ describe("the mock family's inset", () => {
   });
 });
 
+/**
+ * "Mark boarded" and "Download" were 44px and the recap's "Leave my review"
+ * 40px, off the button ladder, with the class string otherwise identical
+ * (K-516). One drawn primary button, at the `sm` rung's 44px.
+ */
+describe("the mocks' primary button", () => {
+  it("is one 44px button in every mock that draws one", () => {
+    const buttons = EVERY_MOCK.flatMap(([, Mock]) => {
+      const { container, unmount } = render(<Mock locale="en-US" />);
+      const found = Array.from(container.querySelectorAll("button"));
+      const classes = found.map((button) => button.className);
+      unmount();
+      return classes;
+    });
+    expect(buttons.length).toBeGreaterThanOrEqual(4);
+    for (const className of buttons) {
+      const tokens = className.split(/\s+/);
+      expect(tokens).toEqual(
+        expect.arrayContaining([
+          "inline-flex",
+          "min-h-11",
+          "items-center",
+          "justify-center",
+          "rounded-lg",
+          "bg-primary",
+          "px-3",
+          "text-xs",
+          "font-semibold",
+          "text-primary-foreground",
+        ]),
+      );
+      expect(tokens).not.toContain("min-h-10");
+    }
+  });
+});
+
 describe("MarketingScreenFallbacks", () => {
   describe("ShopPrepListFallback", () => {
     it("renders in English with crew staging checklist", () => {
