@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { FormStatus } from "@/components/ui/form";
+import { ChoicePill, FormStatus } from "@/components/ui/form";
 
 export type StaffRoleOption = {
   /** The `STAFF_ROLES` value. */
@@ -292,18 +292,14 @@ export function StaffRolesDisclosure({
           >
             <legend className="sr-only">{legend}</legend>
             {options.map((option) => (
-              <label
+              <ChoicePill
                 key={option.value}
-                className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm"
+                type="checkbox"
+                name={inputName(option.value)}
+                defaultChecked={option.checked}
               >
-                <input
-                  name={inputName(option.value)}
-                  type="checkbox"
-                  defaultChecked={option.checked}
-                  className="size-4 accent-primary"
-                />
                 {option.label}
-              </label>
+              </ChoicePill>
             ))}
           </fieldset>
           <FormStatus id={refusalId} tone="danger">

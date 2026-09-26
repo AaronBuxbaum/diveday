@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { ChoiceRow } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { groupLabelClass } from "@/components/ui/ledger";
 
@@ -77,7 +78,7 @@ export type PublishReleaseCopy = {
 /** The two answers `saveWaiverAction` accepts, and the only two this posts. */
 type Materiality = "material" | "non-material";
 
-function ChoiceRow({
+function MaterialityChoice({
   value,
   title,
   detail,
@@ -91,24 +92,21 @@ function ChoiceRow({
   onChoose: (value: Materiality) => void;
 }) {
   return (
-    <label className="flex min-h-11 cursor-pointer items-start gap-3 border-t border-border py-3 last:border-b">
-      <input
-        type="radio"
-        name="material"
-        value={value}
-        checked={checked}
-        onChange={() => onChoose(value)}
-        // The gate, in the platform: a radio group with nothing selected makes
-        // the form invalid, so Publish cannot post a materiality the staffer
-        // never stated. `saveWaiverAction` refuses the same shape again.
-        required
-        className="mt-1 shrink-0"
-      />
-      <span className="min-w-0">
-        <span className="block text-base font-medium">{title}</span>
-        <span className="mt-0.5 block text-sm text-muted">{detail}</span>
-      </span>
-    </label>
+    <ChoiceRow
+      type="radio"
+      name="material"
+      value={value}
+      checked={checked}
+      onChange={() => onChoose(value)}
+      // The gate, in the platform: a radio group with nothing selected makes
+      // the form invalid, so Publish cannot post a materiality the staffer
+      // never stated. `saveWaiverAction` refuses the same shape again.
+      required
+      className="border-t border-border py-3 last:border-b"
+    >
+      <span className="block text-base font-medium">{title}</span>
+      <span className="mt-0.5 block text-sm text-muted">{detail}</span>
+    </ChoiceRow>
   );
 }
 
@@ -144,14 +142,14 @@ export function PublishRelease({
       <fieldset className="min-w-0">
         <legend className={groupLabelClass()}>{copy.choiceLegend}</legend>
         <div className="mt-2">
-          <ChoiceRow
+          <MaterialityChoice
             value="non-material"
             title={copy.correction}
             detail={copy.correctionDetail}
             checked={choice === "non-material"}
             onChoose={setChoice}
           />
-          <ChoiceRow
+          <MaterialityChoice
             value="material"
             title={copy.material}
             detail={copy.materialDetail}

@@ -4,7 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ChoicePill, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import type { DiverMessageKey } from "@/i18n/messages";
 import { formatMoneyCents } from "@/lib/format";
@@ -422,22 +422,19 @@ export function RentalFitForm({
                 (issue 627). The booking page, where nitrox genuinely can be a
                 first encounter, keeps its own (BookingGearFields.tsx). */}
             <legend className="text-sm font-medium">{t("rental.nitroxLegend")}</legend>
-            <label className="mt-2 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
-              <input
-                name="nitrox"
-                type="checkbox"
-                checked={nitroxRequested}
-                onChange={(event) => setNitroxRequested(event.target.checked)}
-                className="size-4 accent-primary"
-              />
-              <span className="flex-1">
-                {showPricing && pricing.nitroxCents !== null
-                  ? t("rental.nitroxReserveWithPrice", {
-                      price: formatMoneyCents(pricing.nitroxCents, currency, locale),
-                    })
-                  : t("rental.nitroxReserveNoPrice")}
-              </span>
-            </label>
+            <ChoicePill
+              type="checkbox"
+              name="nitrox"
+              checked={nitroxRequested}
+              onChange={(event) => setNitroxRequested(event.target.checked)}
+              className="mt-2"
+            >
+              {showPricing && pricing.nitroxCents !== null
+                ? t("rental.nitroxReserveWithPrice", {
+                    price: formatMoneyCents(pricing.nitroxCents, currency, locale),
+                  })
+                : t("rental.nitroxReserveNoPrice")}
+            </ChoicePill>
             {/* Speaks only when there is something true to say: what the crew
                 will do about a card they actually have. A request carried in
                 from the booking form with no card behind it says nothing at

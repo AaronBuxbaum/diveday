@@ -5,7 +5,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { ChoicePill, controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { canPersonManageShopSettings } from "@/db/authz";
 import {
   listIntegrationSummaries,
@@ -76,18 +76,15 @@ function EventCheckboxes({ t, selected }: { t: StaffTranslator; selected: readon
         {t("integrations.common.selectedEvents")}
       </legend>
       {EVENT_OPTIONS.map((event) => (
-        <label
+        <ChoicePill
           key={event.value}
-          className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm"
+          type="checkbox"
+          name="eventType"
+          value={event.value}
+          defaultChecked={selected.includes(event.value)}
         >
-          <input
-            type="checkbox"
-            name="eventType"
-            value={event.value}
-            defaultChecked={selected.includes(event.value)}
-          />
           {t(event.label as EventLabelKey)}
-        </label>
+        </ChoicePill>
       ))}
     </fieldset>
   );

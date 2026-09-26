@@ -9,7 +9,15 @@ import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneO
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
-import { controlClass, Field, FieldActions, FieldGrid, PriceField } from "@/components/ui/form";
+import {
+  ChoicePill,
+  choiceClass,
+  controlClass,
+  Field,
+  FieldActions,
+  FieldGrid,
+  PriceField,
+} from "@/components/ui/form";
 import { GroupLabel, InsetGroup } from "@/components/ui/ledger";
 import {
   canPersonErasePersonalData,
@@ -926,7 +934,12 @@ export default async function SettingsPage({
                           className="size-16 rounded-inset border border-border bg-surface object-cover"
                         />
                         <label className="flex items-center gap-2 text-sm text-muted hover:text-foreground cursor-pointer">
-                          <input type="checkbox" name="removeLogo" value="true" />
+                          <input
+                            type="checkbox"
+                            name="removeLogo"
+                            value="true"
+                            className={choiceClass}
+                          />
                           <span>{t("settings.main.profile.removeLogo")}</span>
                         </label>
                       </div>
@@ -996,7 +1009,12 @@ export default async function SettingsPage({
                           className="h-16 w-28 rounded-inset border border-border bg-surface object-cover"
                         />
                         <label className="flex items-center gap-2 text-sm text-muted hover:text-foreground cursor-pointer">
-                          <input type="checkbox" name="removeHero" value="true" />
+                          <input
+                            type="checkbox"
+                            name="removeHero"
+                            value="true"
+                            className={choiceClass}
+                          />
                           <span>{t("settings.main.profile.removeHero")}</span>
                         </label>
                       </div>
@@ -1910,18 +1928,14 @@ export default async function SettingsPage({
                       <legend className="sr-only">{t("settings.main.rentals.legend")}</legend>
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         {SHOP_CATALOG_ITEMS.map((item) => (
-                          <label
+                          <ChoicePill
                             key={item.kind}
-                            className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
+                            type="checkbox"
+                            name={item.name}
+                            defaultChecked={offeredKinds.has(item.kind)}
                           >
-                            <input
-                              name={item.name}
-                              type="checkbox"
-                              defaultChecked={offeredKinds.has(item.kind)}
-                              className="size-4 accent-primary"
-                            />
                             {catalogItemLabel(t, item.kind)}
-                          </label>
+                          </ChoicePill>
                         ))}
                       </div>
                     </fieldset>

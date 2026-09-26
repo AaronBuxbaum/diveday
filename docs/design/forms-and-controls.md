@@ -219,7 +219,8 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
   is as tall as the longest neighbouring field's `description`; `Field` pins the control to the top
   of that track (`content-start`) so a 44px input never renders as a 52px box beside its sibling.
 - `FieldActions` spans every column, so the submit button never becomes a lopsided extra field.
-- Horizontal checkbox/radio rows are not stacked fields — leave them as plain labels.
+- Horizontal checkbox/radio rows are not stacked fields — they are `ChoiceRow`s or `ChoicePill`s
+  (below), never a `Field`.
 
 ### Required fields
 
@@ -790,11 +791,38 @@ label is `min-h-11` around a 44×24 track and a 16px thumb, and the whole contro
 `print:hidden`.
 
 **A checkbox is not a switch, and the difference is when it takes effect.** A choice that only means
-something once a form is submitted stays a plain `<input type="checkbox" className="size-4
-accent-primary">` — Settings → Team's role and language boxes, a departure's requirement toggles,
-the buddy-team and waiver boxes, roughly 25 sites. None of those should slide: a control that
-animates into its new state is telling the reader something happened, and until the form is
-submitted nothing has.
+something once a form is submitted stays a plain checkbox — Settings → Team's role and language
+boxes, a departure's requirement toggles, the buddy-team and waiver boxes, roughly 25 sites. None of
+those should slide: a control that animates into its new state is telling the reader something
+happened, and until the form is submitted nothing has.
+
+## Checkboxes and radios: `ChoiceRow`, `ChoicePill`, `choiceClass`
+
+A checkbox or radio a person sees is drawn one way, from `src/components/ui/form.tsx`:
+
+- **`choiceClass`** is the box: `size-4 shrink-0`, 16px and never squashed beside a label that
+  wraps. The colour is `globals.css`'s `accent-color` on every input, not a utility.
+- **`ChoiceRow`** is a box with its words beside it — a waiver's agreement, a readiness answer, a
+  publish choice. The label is the whole row, at least 44px tall, and the box sits on the middle of
+  the words' first line however many lines they wrap to.
+- **`ChoicePill`** is the bordered answer pill — Yes / No on the medical questionnaire, a call's
+  outcome, a staffer's roles — 44px, `px-4`, one hover. `size="md"` sets its words at 16px for a
+  diver-facing form whose copy is 16px.
+
+```tsx
+<ChoicePill type="radio" name="outcome" value="cleared" required>
+  {copy.outcomeCleared}
+</ChoicePill>
+<ChoiceRow type="checkbox" name="acknowledged" value="on" required className="mt-4 text-base">
+  {t("waiver.agreementCheckbox")}
+</ChoiceRow>
+```
+
+Both pass every input prop to the box (`name`, `value`, `checked`/`onChange`, `aria-*`, `ref`) and
+take `className` for the row. Before them the pill was spelled by hand a dozen ways and radios were
+left at the platform's 13px beside 16px checkboxes (the pixel probe, waiver-active). `form.test.tsx`
+refuses a visible box with no size, one wearing the forms plugin's `rounded border-* text-primary
+focus:ring-*` (not loaded here, and inert on a native box), and a pill spelled by hand.
 
 ## Segmented choices: `SegmentedControl`
 

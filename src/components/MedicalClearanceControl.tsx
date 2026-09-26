@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { MedicalClearanceCopy } from "@/components/medical-clearance-copy";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
+import { ChoicePill, controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
 import { WaiverActionIcon } from "@/components/WaiverActionIcon";
 
 /**
@@ -117,14 +117,12 @@ export function MedicalClearanceControl({
             </span>
           </legend>
           <div className="mt-2 flex flex-wrap gap-3">
-            <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface">
-              <input type="radio" name="outcome" value="cleared" required />
+            <ChoicePill type="radio" name="outcome" value="cleared" required>
               {copy.outcomeCleared}
-            </label>
-            <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface">
-              <input type="radio" name="outcome" value="not_cleared" required />
+            </ChoicePill>
+            <ChoicePill type="radio" name="outcome" value="not_cleared" required>
               {copy.outcomeNotCleared}
-            </label>
+            </ChoicePill>
           </div>
         </fieldset>
         <Field label={copy.evaluatedOnLabel} htmlFor="evaluatedOn">

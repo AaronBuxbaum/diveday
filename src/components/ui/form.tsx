@@ -587,6 +587,102 @@ export function Field({
 }
 
 /**
+ * **The one checkbox and radio box: 16px, and never squashed.**
+ *
+ * The platform draws a radio at 13px and a checkbox at 13px or so, and this
+ * app sized its checkboxes and not its radios, so a waiver's answer radio
+ * stood 13×13 on a page whose checkbox was 16×16 (the pixel probe,
+ * waiver-active). `shrink-0` because a flex or grid row shrinks a box beside
+ * a label long enough to wrap, and a squashed box is a sliver. The colour is
+ * not here: `globals.css` gives every input `accent-color: var(--primary)`,
+ * unlayered, so a utility would say it twice and lose.
+ *
+ * Reach for `ChoiceRow` or `ChoicePill`, which carry this; the bare class is
+ * for a box whose row is its own business (a table cell's box, a roster
+ * line). `form.test.tsx` refuses a visible box with no size, or wearing the
+ * forms plugin's `rounded border-* text-primary focus:ring-*`, which this app
+ * does not load and which do nothing to a native box.
+ */
+export const choiceClass = "size-4 shrink-0";
+
+type ChoiceProps = {
+  type: "checkbox" | "radio";
+  /** The words, which are the box's accessible name and part of its target. */
+  children: ReactNode;
+  /** Classes on the row itself: its margin, and its type size where it is not the pill's. */
+  className?: string;
+} & Omit<ComponentPropsWithRef<"input">, "type" | "className" | "children" | "size">;
+
+/**
+ * Where the box sits in both: in a box one line tall and centred
+ * (`CHOICE_BOX_LINE`), so it sits on the middle of its words' first line
+ * however many lines they wrap to — the reason the row is `items-start` and
+ * not `items-center`, which would hang the box beside the middle of a
+ * paragraph. The input is written out in each, not in a shared child, so
+ * the label visibly holds its control (Biome's `noLabelWithoutControl`
+ * cannot see through a component).
+ */
+const CHOICE_BOX_LINE = "flex h-lh items-center";
+
+/**
+ * **A checkbox or radio with its words beside it** — a waiver's agreement, a
+ * readiness answer, a publish choice.
+ *
+ * The label is the whole row, so the words are part of the target, and the
+ * row is never under 44px (principles §2): a one-line row centres its line in
+ * that height (`content-center`) and a longer one grows. Label rows had no
+ * such floor, and the ready page's answers were 20px targets (K-13). Every
+ * native input prop passes through to the box, `ref` and `aria-*` included.
+ */
+export function ChoiceRow({ type, className = "", children, ...input }: ChoiceProps) {
+  return (
+    <label
+      className={`grid min-h-11 cursor-pointer grid-cols-[auto_minmax(0,1fr)] content-center items-start gap-x-3 ${className}`.trim()}
+    >
+      <span className={CHOICE_BOX_LINE}>
+        <input type={type} {...input} className={choiceClass} />
+      </span>
+      <span>{children}</span>
+    </label>
+  );
+}
+
+/**
+ * **A bordered answer pill** — one of a few short answers set side by side
+ * or in a grid: Yes / No on the medical questionnaire, a call's outcome, a
+ * staffer's roles, the events a hook sends.
+ *
+ * It was spelled by hand in a dozen places, four ways: `px-3` or `px-4`, a
+ * `gap-2` or `gap-3` between box and words, a hover to `bg-surface` (the
+ * colour of the card under it, so no hover at all) or to `bg-surface-sunken`
+ * or none, and an unsized 13px radio (K-13). This is the one. It paints
+ * `bg-surface` so it reads as a control on a sunken form as it does on a
+ * card, the way a text box does, and its one hover is the sunken fill.
+ *
+ * `size="md"` sets the words at 16px, for a diver-facing form whose own copy
+ * is 16px (the waiver); the default is a staff form's 14px. The height is
+ * 44px either way.
+ */
+export function ChoicePill({
+  type,
+  size = "sm",
+  className = "",
+  children,
+  ...input
+}: ChoiceProps & { size?: "sm" | "md" }) {
+  return (
+    <label
+      className={`grid min-h-11 cursor-pointer grid-cols-[auto_minmax(0,1fr)] content-center items-start gap-x-2 rounded-lg border border-border bg-surface px-4 py-2 transition-colors hover:bg-surface-sunken ${size === "md" ? "text-base" : "text-sm"} ${className}`.trim()}
+    >
+      <span className={CHOICE_BOX_LINE}>
+        <input type={type} {...input} className={choiceClass} />
+      </span>
+      <span>{children}</span>
+    </label>
+  );
+}
+
+/**
  * **The submit row of a form longer than a screen, pinned to the bottom edge.**
  *
  * `FieldActions` below is right for a form you can see all of. This one is for

@@ -6,6 +6,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buttonClass } from "./button";
 import { ForgivingInput } from "./ForgivingInput";
 import {
+  ChoicePill,
+  ChoiceRow,
+  choiceClass,
   controlClass,
   controlClassFor,
   DateField,
@@ -270,6 +273,89 @@ describe("PriceField", () => {
       />,
     );
     expect(screen.getByLabelText("Deposit")).toHaveAttribute("placeholder", "€");
+  });
+});
+
+/**
+ * **One checkbox, one radio, one row and one pill.** There was no shared
+ * choice primitive, so each site drew its own: radios left at the platform's
+ * 13px beside 16px checkboxes (waiver-active: radio ink 13×13 in its pill,
+ * the page's checkbox 16×16), `size-4` boxes without `shrink-0` that squashed
+ * beside a wrapped label, label rows with no 44px floor, and the bordered
+ * answer pill spelled four ways (K-13).
+ */
+describe("ChoicePill and ChoiceRow", () => {
+  it("draws the box at 16px and never lets a long label squash it", () => {
+    expect(choiceClass.split(/\s+/)).toEqual(expect.arrayContaining(["size-4", "shrink-0"]));
+  });
+
+  it("puts a 16px radio in a 44px bordered pill, named by its words", () => {
+    render(
+      <ChoicePill type="radio" name="outcome" value="cleared" required>
+        Cleared to dive
+      </ChoicePill>,
+    );
+    const radio = screen.getByRole("radio", { name: "Cleared to dive" });
+    expect(radio).toHaveAttribute("name", "outcome");
+    expect(radio).toHaveAttribute("value", "cleared");
+    expect(radio).toBeRequired();
+    expect(radio).toHaveClass("size-4", "shrink-0");
+    // The box centres on the first line of the words, however they wrap.
+    expect(radio.parentElement).toHaveClass("h-lh", "items-center");
+    const pill = radio.closest("label");
+    expect(pill).toHaveClass(
+      "min-h-11",
+      "rounded-lg",
+      "border",
+      "px-4",
+      "text-sm",
+      "hover:bg-surface-sunken",
+    );
+  });
+
+  it("sets a diver-facing pill's words at 16px when asked", () => {
+    render(
+      <ChoicePill type="radio" name="q1" value="yes" size="md">
+        Yes
+      </ChoicePill>,
+    );
+    const pill = screen.getByRole("radio", { name: "Yes" }).closest("label");
+    expect(pill).toHaveClass("text-base");
+    expect(pill).not.toHaveClass("text-sm");
+  });
+
+  it("puts a 16px checkbox on the first line of a 44px row, and passes every input prop", () => {
+    let node: HTMLInputElement | null = null;
+    render(
+      <ChoiceRow
+        type="checkbox"
+        id="acknowledged"
+        name="acknowledged"
+        value="on"
+        defaultChecked
+        aria-describedby="acknowledged-error"
+        aria-invalid="true"
+        required
+        className="text-base"
+        ref={(input) => {
+          node = input;
+        }}
+      >
+        I have read and agree to the release above, which runs to several lines.
+      </ChoiceRow>,
+    );
+    const box = screen.getByRole("checkbox", { name: /I have read and agree/ });
+    expect(box).toBeChecked();
+    expect(box).toHaveAttribute("id", "acknowledged");
+    // The waiver's refusal wiring rides on these: a refused agreement is
+    // announced as invalid and pointed at its message, and stays required.
+    expect(box).toHaveAttribute("aria-describedby", "acknowledged-error");
+    expect(box).toHaveAttribute("aria-invalid", "true");
+    expect(box).toBeRequired();
+    expect(box).toHaveClass("size-4", "shrink-0");
+    expect(box.parentElement).toHaveClass("h-lh", "items-center");
+    expect(box.closest("label")).toHaveClass("min-h-11", "items-start", "text-base");
+    expect(node).toBe(box);
   });
 });
 
@@ -941,6 +1027,49 @@ describe("source sweeps", () => {
     for (const { file, source } of sourceFiles()) {
       for (const { index, text } of openingTags(source, "legend")) {
         if (/\bpx-1\b/.test(text)) offenders.push(`${file}:${lineOf(source, index)} ${text}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * **A checkbox or radio a person sees is drawn one way.** Three shapes of
+   * the drift K-13 found are refused outright: a visible box with no size at
+   * all (the platform's 13px), a box wearing the forms plugin's classes this
+   * app does not load (`rounded border-border text-primary focus:ring-*`,
+   * which do nothing to a native box), and a bordered answer pill spelled by
+   * hand instead of `ChoicePill`. A box that is `sr-only` or `opacity-0` is a
+   * stand-in's business, not this rule's.
+   */
+  it("draws no visible choice box at the platform's size or in dead plugin classes", () => {
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      for (const { index, text } of openingTags(source, "input")) {
+        if (!/type=(?:"|\{")(checkbox|radio)"/.test(text)) continue;
+        if (/\b(sr-only|opacity-0)\b/.test(text)) continue;
+        const where = `${file}:${lineOf(source, index)}`;
+        if (!/\bchoiceClass\b|\bsize-\d/.test(text)) offenders.push(`${where} has no size`);
+        if (/\b(rounded|border-[a-z-]+|text-primary|focus:ring-[a-z-]+)\b/.test(text))
+          offenders.push(`${where} wears forms-plugin classes`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // A pill is a 44px bordered row padded at its sides. A bordered *card*
+  // padded all round (`p-3`), holding a title and a sentence — the merge
+  // picker, the conditions hold — is another component and not this rule's.
+  it("draws every bordered answer pill with ChoicePill", () => {
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      for (const { index, text } of openingTags(source, "label")) {
+        const pill = ["rounded-lg", "border", "min-h-11", "px-\\d"].every((token) =>
+          new RegExp(`\\b${token}\\b`).test(text),
+        );
+        if (!pill) continue;
+        const body = source.slice(index + text.length, source.indexOf("</label>", index));
+        if (/type=(?:"|\{")(checkbox|radio)"/.test(body) && !/\bsr-only\b/.test(body))
+          offenders.push(`${file}:${lineOf(source, index)}`);
       }
     }
     expect(offenders).toEqual([]);

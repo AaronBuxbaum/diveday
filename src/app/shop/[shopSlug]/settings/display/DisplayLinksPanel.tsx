@@ -6,7 +6,7 @@ import { Copyable } from "@/components/Copyable";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { ChoicePill, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { displayLinkAction } from "./actions";
 import {
@@ -125,28 +125,26 @@ export function DisplayLinksPanel({
               </span>
             </legend>
             <div className="mt-2 flex flex-wrap gap-3">
-              <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface">
-                <input
-                  type="radio"
-                  name="purpose"
-                  value="board"
-                  required
-                  checked={purpose === "board"}
-                  onChange={() => setPurpose("board")}
-                />
+              <ChoicePill
+                type="radio"
+                name="purpose"
+                value="board"
+                required
+                checked={purpose === "board"}
+                onChange={() => setPurpose("board")}
+              >
                 {copy.purposeBoard}
-              </label>
-              <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface">
-                <input
-                  type="radio"
-                  name="purpose"
-                  value="check_in"
-                  required
-                  checked={purpose === "check_in"}
-                  onChange={() => setPurpose("check_in")}
-                />
+              </ChoicePill>
+              <ChoicePill
+                type="radio"
+                name="purpose"
+                value="check_in"
+                required
+                checked={purpose === "check_in"}
+                onChange={() => setPurpose("check_in")}
+              >
                 {copy.purposeCheckIn}
-              </label>
+              </ChoicePill>
             </div>
             <p className="mt-2 text-sm text-muted">{copy.purposeCheckInDescription}</p>
           </fieldset>

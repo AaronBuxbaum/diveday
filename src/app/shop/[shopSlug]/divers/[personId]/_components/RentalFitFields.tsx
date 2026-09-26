@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { controlClass, Field } from "@/components/ui/form";
+import { ChoicePill, controlClass, Field } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 
 /** One "rents from the shop" tick — the shop's catalog, not the diver's answer. */
@@ -76,24 +76,20 @@ export function RentalFitFields({
           <legend className="text-sm font-medium">{legend}</legend>
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
             {toggles.map((toggle) => (
-              <label
+              <ChoicePill
                 key={toggle.name}
-                className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
+                type="checkbox"
+                name={toggle.name}
+                checked={rented[toggle.name] ?? false}
+                onChange={(event) =>
+                  setRented((previous) => ({
+                    ...previous,
+                    [toggle.name]: event.target.checked,
+                  }))
+                }
               >
-                <input
-                  name={toggle.name}
-                  type="checkbox"
-                  checked={rented[toggle.name] ?? false}
-                  onChange={(event) =>
-                    setRented((previous) => ({
-                      ...previous,
-                      [toggle.name]: event.target.checked,
-                    }))
-                  }
-                  className="size-4 accent-primary"
-                />
                 {toggle.label}
-              </label>
+              </ChoicePill>
             ))}
           </div>
         </fieldset>

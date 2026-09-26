@@ -9,6 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import {
+  choiceClass,
   controlClass,
   DateField,
   Field,
@@ -647,7 +648,12 @@ function ServiceCard({
             </Field>
             {item.status === "needs_service" ? (
               <label className="flex min-h-11 items-center gap-2 text-sm sm:col-span-2">
-                <input type="checkbox" name="returnToService" defaultChecked className="h-4 w-4" />
+                <input
+                  type="checkbox"
+                  name="returnToService"
+                  defaultChecked
+                  className={choiceClass}
+                />
                 {t("gear.unit.service.returnToService")}
               </label>
             ) : null}

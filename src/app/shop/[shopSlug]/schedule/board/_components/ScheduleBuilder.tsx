@@ -10,7 +10,14 @@ import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFi
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
-import { controlClass, DateField, Field, FieldGrid, legendClass } from "@/components/ui/form";
+import {
+  choiceClass,
+  controlClass,
+  DateField,
+  Field,
+  FieldGrid,
+  legendClass,
+} from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -772,7 +779,7 @@ function AddPanel({
             name="isPrivate"
             value="true"
             disabled={!expanded}
-            className="size-4 rounded border-border"
+            className={choiceClass}
           />
           <div className="flex flex-col">
             <span>{copy.isPrivateLabel}</span>
@@ -1144,7 +1151,7 @@ function AddPanel({
               name="selfGuided"
               value="true"
               disabled={!expanded || courseId !== ""}
-              className="size-4 rounded border-border"
+              className={choiceClass}
             />
             <div className="flex flex-col">
               <span>{copy.selfGuidedLabel}</span>

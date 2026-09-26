@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
+import { ChoicePill, controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
 import {
   CALL_OUTCOMES,
   type CallOutcome,
@@ -81,19 +81,16 @@ export function TookACallFields({
         </legend>
         <div className="mt-2 grid gap-2">
           {CALL_OUTCOMES.map((option) => (
-            <label
+            <ChoicePill
               key={option}
-              className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface"
+              type="radio"
+              name="outcome"
+              value={option}
+              required
+              defaultChecked={option === defaultOutcome}
             >
-              <input
-                type="radio"
-                name="outcome"
-                value={option}
-                required
-                defaultChecked={option === defaultOutcome}
-              />
               {copy.outcome[option]}
-            </label>
+            </ChoicePill>
           ))}
         </div>
       </fieldset>
