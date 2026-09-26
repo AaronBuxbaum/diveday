@@ -90,6 +90,7 @@ export function SettingsRail({
   useEffect(() => {
     if (currentId && scrollerRef.current) revealCurrentRow(scrollerRef.current);
   }, [currentId]);
+  useLabelWashDepth(scrollerRef);
 
   return (
     <nav aria-label={ariaLabel} className="hidden lg:block lg:w-[264px] lg:shrink-0">
@@ -119,7 +120,9 @@ export function SettingsRail({
                   was a grey slab across the blue. `settings-rail-label`
                   (globals.css) paints the words' box from a scroll-state
                   query, which is why they sit in a span of their own: a
-                  container cannot style itself. */}
+                  container cannot style itself. And the fill is that wash,
+                  lined up by `useLabelWashDepth`, because a label stuck at the
+                  box's top is still inside it. */}
               <GroupLabel
                 id={`settings-rail-${group.id}`}
                 tone={isCurrentGroup ? "primary" : "muted"}
@@ -185,6 +188,52 @@ function revealCurrentRow(scroller: HTMLElement) {
   const cover = label instanceof HTMLElement ? label.getBoundingClientRect().height : 0;
   if (rect.top >= box.top + cover && rect.bottom <= box.bottom) return;
   scroller.scrollTop += rect.top + rect.height / 2 - (box.top + box.height / 2);
+}
+
+/**
+ * Publish each group label's depth into the page's water band as
+ * `--rail-label-depth`, so a filled label paints the stretch of the wash that
+ * is behind it (globals.css, `.settings-rail-label`) rather than a flat slab of
+ * ground across the blue.
+ *
+ * Measured, because no stylesheet can know it: the band is the shop layout's
+ * background and scrolls with the page, while the rail's box is sticky and
+ * scrolls on its own. So it is read on landing and again whenever the page or
+ * the rail scrolls or the window resizes, one frame at a time. A page with no
+ * band, or a rail that is not drawn (`hidden` below `lg`), publishes nothing,
+ * and the fill stays the plain ground.
+ */
+function useLabelWashDepth(scrollerRef: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    const band = scroller?.closest<HTMLElement>(".water-band");
+    if (!scroller || !band) return;
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      if (scroller.getBoundingClientRect().height === 0) return;
+      const bandTop = band.getBoundingClientRect().top;
+      const labels = Array.from(scroller.querySelectorAll<HTMLElement>(".settings-rail-label"));
+      // Every read before any write, so the frame lays out once.
+      const depths = labels.map((label) => `${label.getBoundingClientRect().top - bandTop}px`);
+      labels.forEach((label, index) => {
+        label.style.setProperty("--rail-label-depth", depths[index] ?? null);
+      });
+    };
+    const schedule = () => {
+      if (!frame) frame = window.requestAnimationFrame(measure);
+    };
+    measure();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    scroller.addEventListener("scroll", schedule, { passive: true });
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      scroller.removeEventListener("scroll", schedule);
+    };
+  }, [scrollerRef]);
 }
 
 function RailLink({
