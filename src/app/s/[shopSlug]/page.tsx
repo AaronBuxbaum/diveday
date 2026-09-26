@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { submitInquiryAction } from "@/app/actions/inquiry";
 import { DateRequestForm } from "@/components/DateRequestForm";
+import { EmbedCredit } from "@/components/EmbedCredit";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopReviews } from "@/components/ShopReviews";
@@ -1492,20 +1493,17 @@ export default async function SchedulePage({
         </div>
       ) : null}
       {isEmbed && hostCarriesCredit ? null : isEmbed ? (
-        <p className="mt-4 text-center text-xs text-muted">
-          <Link
-            href={`/?${new URLSearchParams({
-              utm_source: "embed",
-              utm_medium: "widget",
-              utm_campaign: shopSlug,
-            }).toString()}`}
-            target="_blank"
-            rel="noopener"
-            className="hover:underline"
-          >
-            {t("schedule.poweredByDiveDay")}
-          </Link>
-        </p>
+        <EmbedCredit
+          href={`/?${new URLSearchParams({
+            utm_source: "embed",
+            utm_medium: "widget",
+            utm_campaign: shopSlug,
+          }).toString()}`}
+          target="_blank"
+          rel="noopener"
+        >
+          {t("schedule.poweredByDiveDay")}
+        </EmbedCredit>
       ) : null}
     </main>
   );

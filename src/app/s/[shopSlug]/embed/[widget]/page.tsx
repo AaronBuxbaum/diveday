@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EmbedCredit } from "@/components/EmbedCredit";
 import { buttonClass } from "@/components/ui/button";
 import { listBoats } from "@/db/boats";
 import { getDb } from "@/db/client";
@@ -195,15 +196,9 @@ export default async function EmbedWidgetPage({
     <main className="w-full p-3">
       {body}
       {hostCarriesCredit ? null : (
-        <p className="mt-3 text-center text-xs text-muted">
-          <Link
-            href={`${origin}${publicSchedulePath(shopSlug)}`}
-            target="_top"
-            className="hover:underline"
-          >
-            {t("schedule.poweredByDiveDay")}
-          </Link>
-        </p>
+        <EmbedCredit href={`${origin}${publicSchedulePath(shopSlug)}`} target="_top">
+          {t("schedule.poweredByDiveDay")}
+        </EmbedCredit>
       )}
       <EmbedHeightReporter />
     </main>
