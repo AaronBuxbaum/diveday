@@ -67,4 +67,12 @@ describe("MarketingNavView", () => {
     renderNav({ hideCta: true });
     expect(screen.queryByRole("button", { name: "Try the live demo" })).not.toBeInTheDocument();
   });
+
+  // The first row's height is its tallest child. With the CTA gone it used to
+  // fall to the 24px wordmark, so the logo sat 12px higher on /dive than on /
+  // (K-178); the home link's own 48px floor now holds the row at the CTA's height.
+  it("keeps the first row at the CTA's 48px when hideCta drops the CTA", () => {
+    renderNav({ hideCta: true });
+    expect(screen.getByRole("link", { name: "DiveDay." })).toHaveClass("min-h-12");
+  });
 });
