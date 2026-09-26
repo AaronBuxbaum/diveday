@@ -9,7 +9,6 @@ import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typograp
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getIncidentExport } from "@/db/incident-export";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
-import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabels } from "@/i18n/staff-role-labels";
@@ -20,17 +19,13 @@ import {
   formatTimeRangeTz,
   formatTimeZoneName,
 } from "@/lib/format";
-import type {
-  IncidentCertificationEvidence,
-  IncidentRollCallResult,
-  IncidentWaiverStatus,
-} from "@/lib/incident-export";
+import type { IncidentRollCallResult, IncidentWaiverStatus } from "@/lib/incident-export";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { RollCallCheckpoint } from "@/lib/manifests";
-import type { CertificationLevel } from "@/lib/readiness";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { CertificationLine } from "./_components/CertificationLine";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — the claim every trips/[id] sibling makes (ADR
@@ -749,67 +744,4 @@ function WaiverLine({
     return <>{t("incidentExport.waiverExpired")}</>;
   }
   return <>{t("incidentExport.waiverNotSigned")}</>;
-}
-
-/** One held card, as the shop's records state it. */
-function CertificationLine({
-  t,
-  card,
-  agencyText,
-  dateTime,
-}: {
-  t: StaffTranslator;
-  card: IncidentCertificationEvidence;
-  agencyText: (agency: string) => string;
-  dateTime: (isoString: string) => string;
-}) {
-  const levelKey = card.level
-    ? CERTIFICATION_LEVEL_KEYS[card.level as CertificationLevel]
-    : undefined;
-  const specialtyKey = card.specialty
-    ? SPECIALTY_KEYS[card.specialty as keyof typeof SPECIALTY_KEYS]
-    : undefined;
-  // A self-declared card has no number the shop holds, and "absence is stated,
-  // never blank" is rule 2 of this document (src/lib/incident-export.ts) — a
-  // bare gap where a card number belongs reads as a missing page to an
-  // investigator. The card is separately tagged as the diver's own word below.
-  const identifier = card.identifier ?? t("incidentExport.certNoNumber");
-  const line =
-    card.kind === "level" && levelKey
-      ? t("incidentExport.certLevelLine", {
-          agency: agencyText(card.agency),
-          level: t(levelKey),
-          identifier,
-        })
-      : card.kind === "specialty" && specialtyKey
-        ? t("incidentExport.certSpecialtyLine", {
-            agency: agencyText(card.agency),
-            specialty: t(specialtyKey),
-            identifier,
-          })
-        : t("incidentExport.certNitroxLine", {
-            agency: agencyText(card.agency),
-            identifier,
-          });
-  const status =
-    card.status === "verified"
-      ? card.reviewedAt
-        ? card.reviewedByName
-          ? t("incidentExport.certStatusVerifiedBy", {
-              date: dateTime(card.reviewedAt),
-              name: card.reviewedByName,
-            })
-          : t("incidentExport.certStatusVerifiedUnknownReviewer", {
-              date: dateTime(card.reviewedAt),
-            })
-        : t("incidentExport.certStatusVerifiedNoDate")
-      : t("incidentExport.certStatusPending");
-  return (
-    <>
-      {line} · {status}
-      {card.imported ? <> · {t("incidentExport.certImportedTag")}</> : null}
-      {/* The weakest thing on the page, and it has to read that way. */}
-      {card.selfDeclared ? <> · {t("incidentExport.certSelfDeclaredTag")}</> : null}
-    </>
-  );
 }
