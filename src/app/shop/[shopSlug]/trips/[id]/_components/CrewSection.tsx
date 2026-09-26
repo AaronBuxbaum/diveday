@@ -349,8 +349,9 @@ export function CrewSection({
             // states follow one rule") — it was a bare `<p>`, so one component
             // said "nothing here" two ways. `icon={false}`: this one sits under
             // the assign picker rather than standing alone, so the bubbles
-            // would outweigh the line of text.
-            <EmptyState title={copy.notAssignedYet} icon={false} />
+            // would outweigh the line of text. `nested`: it sits in the Crew
+            // card, whose white it would otherwise shadow.
+            <EmptyState title={copy.notAssignedYet} icon={false} nested />
           ) : (
             // A sunken inset, not a card in a card — the roster is carved into
             // the Crew card the way ShopStat's `inset` variant is (see

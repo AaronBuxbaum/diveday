@@ -263,8 +263,9 @@ export function BackupsSection({
           {deliveries.total === 0 ? (
             // `icon={false}`: this sits inside the history card, under its own
             // `<h3>` — the bubbles belong to a page-level rest state, not to a
-            // panel nested two boxes deep.
-            <EmptyState title={t("backup.history.empty")} icon={false} />
+            // panel nested two boxes deep — and, `nested`, neither does a fill
+            // or a shadow of its own.
+            <EmptyState title={t("backup.history.empty")} icon={false} nested />
           ) : (
             <>
               {/* Five columns at `sm` and up; one stacked block below it.

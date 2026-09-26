@@ -85,6 +85,25 @@ describe("EmptyState", () => {
     expect(container.querySelectorAll("svg")).toHaveLength(0);
   });
 
+  /**
+   * A card inside a card casts no shadow of its own (docs/design/pixel-craft.md,
+   * class 6). The Crew card's "nobody assigned yet" box painted `bg-surface
+   * shadow-bed` on the card's own white, so a 30px shadow faded out under its
+   * dashed border onto the panel it sits in.
+   */
+  it("draws a nested card as the dashed outline alone, with no fill or bed shadow", () => {
+    const { container } = render(<EmptyState title="Nobody assigned yet" icon={false} nested />);
+    const card = container.firstElementChild;
+    expect(card).toHaveClass("border-dashed", "bg-transparent");
+    expect(card).not.toHaveClass("shadow-bed");
+    expect(card).not.toHaveClass("bg-surface");
+  });
+
+  it("stands a page-level card on the bed, as every panel does", () => {
+    const { container } = render(<EmptyState title="No trips yet" />);
+    expect(container.firstElementChild).toHaveClass("bg-surface", "shadow-bed", "border-dashed");
+  });
+
   it("carries a body and an action when there is something to say and somewhere to go", () => {
     render(
       <EmptyState
