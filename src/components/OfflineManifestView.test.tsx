@@ -1885,7 +1885,8 @@ describe("OfflineManifestView — the crew panel tells apart 'still to call' fro
     // Still open — the fail-closed rule is untouched.
     expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
     const note = screen.getByText(/1 crew member still to call/);
-    const panel = note.closest("div");
+    const panel = note.closest("section");
+    expect(panel).toBe(screen.getByRole("region", { name: "Crew aboard" }));
     expect(panel?.className).not.toContain("warning");
     expect(panel?.className).not.toContain("danger");
     // The limitation line belongs to an older copy only, and this is not one.
@@ -1915,7 +1916,8 @@ describe("OfflineManifestView — the crew panel tells apart 'still to call' fro
     expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
     const note = screen.getByText(/2 crew members on this saved copy can’t be called here/);
     expect(note).toBeInTheDocument();
-    const panel = note.closest("div");
+    const panel = note.closest("section");
+    expect(panel).toBe(screen.getByRole("region", { name: "Crew aboard" }));
     expect(panel?.className).not.toContain("warning");
     expect(panel?.className).not.toContain("danger");
     // No control for a person this copy cannot name to the server.
@@ -1935,7 +1937,7 @@ describe("OfflineManifestView — the crew panel tells apart 'still to call' fro
     render(<OfflineManifestView />);
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
     const alarm = screen.getByText(/1 crew member is not back aboard/);
-    expect(alarm.closest("div")?.className).toContain("danger");
+    expect(alarm.closest("section")?.className).toContain("danger");
     // This one is emphatically *not* "we can't record it here".
     expect(screen.queryByText(/can’t be tapped from this saved copy/)).not.toBeInTheDocument();
     expect(screen.getByText(/Sal Ortiz · Not back aboard/)).toBeInTheDocument();
@@ -2736,5 +2738,112 @@ describe("OfflineManifestView — the counter's harder readings", () => {
     expect(screen.queryByRole("region", { name: "At the counter" })).not.toBeInTheDocument();
     // The roll call it was sitting on top of is still there.
     expect(screen.getByRole("heading", { name: "Before departure roll call" })).toBeInTheDocument();
+  });
+});
+
+/**
+ * **Pixel craft on the dock copy** (docs/design/pixel-craft.md). jsdom lays
+ * nothing out, so these pin the class arithmetic that puts each thing on its
+ * edge, one cluster of the audit per case; the geometry itself is the pixel
+ * probe's to re-measure on the `offline-manifest-*` captures.
+ */
+describe("OfflineManifestView — one column, one text edge", () => {
+  beforeEach(() => {
+    searchParams = new URLSearchParams({ trip: "trip-1" });
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+    vi.mocked(readDiscardedOfflineRecords).mockResolvedValue([]);
+  });
+
+  async function renderTrip(envelope: OfflineManifestEnvelope) {
+    vi.mocked(loadOfflineManifest).mockResolvedValue(envelope);
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+  }
+
+  function crewList(): HTMLElement {
+    const list = document.getElementById("offline-crew-roll-call");
+    if (!list) throw new Error("crew list missing");
+    return list;
+  }
+
+  function priyaRow(): HTMLElement {
+    const row = document.getElementById("offline-roll-call-diver-priya");
+    if (!row) throw new Error("Priya's row missing");
+    return row;
+  }
+
+  // K-183: a `p-3` notice put its text 8px left of the `p-4 sm:p-5` panels
+  // below it in the same column (4px at 390).
+  it("starts every toned notice's text on the panels' own inset", async () => {
+    vi.mocked(readDiscardedOfflineRecords).mockResolvedValue([
+      {
+        tripId: "trip-9",
+        tripTitle: "Morning Two-Tank",
+        shopName: "Reef Runners",
+        pendingEvents: 2,
+        discardedAt: new Date(FROZEN_MS).toISOString(),
+      },
+    ]);
+    await renderTrip(richEnvelope("trip-1"));
+
+    const freshness = screen.getByText(/Readiness reflects that moment/);
+    const discarded = (
+      await screen.findByText("Roll call that never sent has been removed")
+    ).closest("section");
+    for (const notice of [freshness, discarded]) {
+      expect(notice).toHaveClass("rounded-inset", "px-4", "py-3", "sm:px-5");
+      expect(notice).not.toHaveClass("p-3");
+    }
+  });
+
+  it("starts the expired banner's text on the panels' own inset too", async () => {
+    await renderTrip(
+      richEnvelope("trip-1", {}, { expiresAt: new Date(FROZEN_MS - 1000).toISOString() }),
+    );
+    const expired = screen.getByText(/This saved copy has expired/);
+    expect(expired).toHaveClass("rounded-inset", "px-4", "py-3", "sm:px-5");
+    expect(expired).not.toHaveClass("p-3");
+  });
+
+  // K-183 and K-474: the crew box's heading pads like a panel, and its roster
+  // is the diver roll call's ruled list laid flush to the box, so the crew
+  // controls end where the diver controls below them end.
+  it("pads the crew box's heading like a panel and lays its roster flush as ruled rows", async () => {
+    await renderTrip(richEnvelope("trip-1"));
+
+    const box = screen.getByRole("region", { name: "Crew aboard" });
+    expect(box).toHaveClass("overflow-hidden", "rounded-inset", "border");
+    expect(box).not.toHaveClass("p-3");
+    expect(screen.getByText("Crew aboard").parentElement).toHaveClass("p-4", "sm:p-5");
+
+    const list = crewList();
+    expect(list.parentElement).toBe(box);
+    expect(list).toHaveClass("divide-y", "divide-border");
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row).toHaveClass("border-l-4", "p-4", "sm:p-5");
+      expect(row).not.toHaveClass("rounded-lg");
+      expect(row).not.toHaveClass("px-3");
+    }
+    // The same inset as a diver's row, which is what puts both lists'
+    // controls on one right edge.
+    expect(priyaRow()).toHaveClass("border-l-4", "p-4", "sm:p-5");
+    // An uncalled crew member wears the roll call's own awaiting tone: the
+    // left rule is the edge a card's border used to be.
+    expect(rows[0]).toHaveClass("border-border-strong", "bg-surface-sunken");
+  });
+
+  it("keeps a missing crew member's row in danger ink", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    await renderTrip(
+      richEnvelope("trip-1", {
+        withCarriedNotBoarded: true,
+        crewCalled: true,
+        crewNotBackAboard: true,
+      }),
+    );
+    const row = screen.getByText(/Sal Ortiz · Not back aboard/).closest("li");
+    expect(row).toHaveClass("border-danger", "font-bold", "text-danger");
   });
 });

@@ -19,7 +19,7 @@ import { MissingDiversGrid } from "@/components/MissingDiversGrid";
 import { freshnessInkClass, OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { OFFLINE_CREW_ROW_TONE, ROLL_CALL_ROW_TONE } from "@/components/row-tones";
+import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SkipLink } from "@/components/SkipLink";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -117,6 +117,20 @@ const OFFLINE_BOAT_TARGET_CLASS = buttonClass({
   busy: true,
   className: "w-full sm:w-auto",
 });
+
+/**
+ * **The toned notice this page draws, in one anatomy**, with its tone added at
+ * each call site: the expired and freshness banners and the discarded-records
+ * alert.
+ *
+ * They were three copies of `rounded-lg … p-3`, which started their text 8px
+ * left of the `p-4 sm:p-5` panels below them in the same column (4px on a
+ * phone), so the page had two text edges a few pixels apart
+ * (docs/design/pixel-craft.md, class 3). The inline padding is the panels'
+ * own. Not `ShopNotice`: that is the desk's 14px notice with a mark, and these
+ * are read at 16px on a wet deck.
+ */
+const OFFLINE_NOTICE_CLASS = "rounded-inset border px-4 py-3 text-base leading-6 sm:px-5";
 
 /**
  * One diver's roll-call row id, minted here and nowhere else: this is both what
@@ -1428,11 +1442,13 @@ export function OfflineManifestView() {
             }
           />
           {expired ? (
-            <p className="mt-4 rounded-lg border border-danger/40 bg-danger-tint p-3 text-base leading-6 font-semibold text-danger">
+            <p
+              className={`mt-4 ${OFFLINE_NOTICE_CLASS} border-danger/40 bg-danger-tint font-semibold text-danger`}
+            >
               {t("shared.offlineManifest.single.expiredBanner")}
             </p>
           ) : (
-            <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-base leading-6">
+            <p className={`mt-4 ${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10`}>
               {t("shared.offlineManifest.single.freshnessBanner", {
                 freshnessNote: t(`shared.offlineManifest.freshnessCopy.${freshness}`),
               })}
@@ -1770,46 +1786,62 @@ export function OfflineManifestView() {
            * either way: the checkpoint reads open here exactly as it does
            * online, never the reverse.
            */}
-          <div
-            className={
+          {/* **A panel's inset for the words, and the roster flush.** The box
+            pads its heading and status like every panel in this column
+            (`p-4 sm:p-5`), and its roster is the diver roll call's own ruled
+            list laid edge to edge inside it, the shape the live crew list
+            already has (`CrewRollCall`). The rows were `px-3` cards inside a
+            `p-3` box, so their controls ended 5–9px inside the diver controls
+            below them. `overflow-hidden` rounds the last row's fill into the
+            box's corner; every control in a row sits a whole padding clear of
+            that edge, so no focus ring reaches it. A `section` named by its
+            heading, as the counter's is. */}
+          <section
+            aria-labelledby="offline-crew-heading"
+            className={`mt-3 overflow-hidden rounded-inset border ${
               crewMissing
-                ? "mt-3 rounded-inset border border-danger bg-danger/10 p-3 ring-1 ring-inset ring-danger/40"
+                ? "border-danger bg-danger/10 ring-1 ring-inset ring-danger/40"
                 : completeness.crewAccountedFor
-                  ? "mt-3 rounded-inset border border-success/40 bg-success/10 p-3"
-                  : "mt-3 rounded-inset border border-border-strong bg-surface-sunken p-3"
-            }
+                  ? "border-success/40 bg-success/10"
+                  : "border-border-strong bg-surface-sunken"
+            }`}
           >
-            <p className={`text-sm font-bold${crewMissing ? " text-danger" : ""}`}>
-              {t("shared.offlineManifest.single.crewHeading")}
-            </p>
-            <p className="mt-1 text-sm">
-              {crewMissing
-                ? t("shared.offlineManifest.single.crewNotBackAboard", {
-                    count: crewCounts.crewNotBackAboard,
-                  })
-                : completeness.crewReason === "crew_awaiting"
-                  ? t("shared.offlineManifest.single.crewAwaiting", {
-                      count: crewCounts.crewAwaiting,
+            <div className="p-4 sm:p-5">
+              <p
+                id="offline-crew-heading"
+                className={`text-sm font-bold${crewMissing ? " text-danger" : ""}`}
+              >
+                {t("shared.offlineManifest.single.crewHeading")}
+              </p>
+              <p className="mt-1 text-sm">
+                {crewMissing
+                  ? t("shared.offlineManifest.single.crewNotBackAboard", {
+                      count: crewCounts.crewNotBackAboard,
                     })
-                  : completeness.crewReason === "crew_none_assigned"
-                    ? t("shared.offlineManifest.single.crewNoneAssigned")
-                    : completeness.crewReason === "crew_none_aboard"
-                      ? t("shared.offlineManifest.single.crewNoneAboard")
-                      : t("shared.offlineManifest.single.crewAllAccountedFor", {
-                          assigned: crewAssigned,
-                        })}
-            </p>
-            {/* The one remaining limitation, and it belongs to the *copy*, not
+                  : completeness.crewReason === "crew_awaiting"
+                    ? t("shared.offlineManifest.single.crewAwaiting", {
+                        count: crewCounts.crewAwaiting,
+                      })
+                    : completeness.crewReason === "crew_none_assigned"
+                      ? t("shared.offlineManifest.single.crewNoneAssigned")
+                      : completeness.crewReason === "crew_none_aboard"
+                        ? t("shared.offlineManifest.single.crewNoneAboard")
+                        : t("shared.offlineManifest.single.crewAllAccountedFor", {
+                            assigned: crewAssigned,
+                          })}
+              </p>
+              {/* The one remaining limitation, and it belongs to the *copy*, not
               to the feature: a snapshot older than H-46 has crew with no id,
               so there is nobody for a tap to be about. Named with a count, so
               a captain can tell whether it is the whole crew or one late
               addition, and pointed at the two things that fix it. Absent
               entirely on a current copy. */}
-            {crewWithoutId > 0 ? (
-              <p className="mt-1 text-sm font-semibold text-muted">
-                {t("shared.offlineManifest.single.crewOlderCopy", { count: crewWithoutId })}
-              </p>
-            ) : null}
+              {crewWithoutId > 0 ? (
+                <p className="mt-1 text-sm font-semibold text-muted">
+                  {t("shared.offlineManifest.single.crewOlderCopy", { count: crewWithoutId })}
+                </p>
+              ) : null}
+            </div>
             {/* Who, not just how many — and now with the controls to answer for
               each one, the same two the diver rows carry. */}
             {crewAssigned > 0 ? (
@@ -1817,7 +1849,10 @@ export function OfflineManifestView() {
               // are now lists of rows with roll-call controls on them, so
               // anything reaching for "the first Mark aboard button" has to be
               // able to say which list it means.
-              <ul id="offline-crew-roll-call" className="mt-2 space-y-2">
+              <ul
+                id="offline-crew-roll-call"
+                className="divide-y divide-border border-t border-border"
+              >
                 {crewWithKeys.map((member) => {
                   // Hoisted so the guard below narrows it for both handlers: a
                   // crew member with no id has no subject to record against.
@@ -1829,13 +1864,13 @@ export function OfflineManifestView() {
                   return (
                     <li
                       key={member.key}
-                      // One colour vocabulary with the live manifest's rows,
-                      // now by import rather than by copy — see
-                      // `OFFLINE_CREW_ROW_TONE` for why the shape differs and
-                      // the hues do not.
-                      className={`rounded-lg px-3 py-2 text-sm ${
-                        crewTone ? OFFLINE_CREW_ROW_TONE[crewTone] : OFFLINE_CREW_ROW_TONE.awaiting
-                      }`}
+                      // The diver rows' own left rule, tone and inset, and the
+                      // live crew list's: one colour vocabulary by import. A
+                      // missing crew member's words go danger as well, because
+                      // their state is part of a sentence here, not a pill.
+                      className={`border-l-4 p-4 text-sm sm:p-5 ${
+                        crewTone ? ROLL_CALL_ROW_TONE[crewTone] : ROLL_CALL_ROW_TONE.awaiting
+                      }${missingCrew ? " font-bold text-danger" : ""}`}
                     >
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <p>
@@ -2075,7 +2110,7 @@ export function OfflineManifestView() {
                 })}
               </ul>
             ) : null}
-          </div>
+          </section>
           {/* Buddy teams are display-only on the dock copy, and the split-team
             read ("someone back, someone not") belongs to the live roll call
             alone — a snapshot cannot know who came back (ADR
@@ -2745,10 +2780,7 @@ function DiscardedRecordsNotice({
   if (records.length === 0) return null;
   const lostEvents = records.reduce((sum, record) => sum + record.pendingEvents, 0);
   return (
-    <section
-      role="alert"
-      className="mb-4 rounded-lg border border-danger/40 bg-danger/10 p-3 text-base leading-6"
-    >
+    <section role="alert" className={`mb-4 ${OFFLINE_NOTICE_CLASS} border-danger/40 bg-danger/10`}>
       <p className="font-bold text-danger">{t("shared.offlineManifest.discarded.heading")}</p>
       <p className="mt-1">{t("shared.offlineManifest.discarded.body", { count: lostEvents })}</p>
       <ul className="mt-2 space-y-1 text-sm font-semibold">
