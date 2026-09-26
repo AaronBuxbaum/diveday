@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { MapEmbed } from "@/components/MapEmbed";
+import { RouteWaypoint } from "@/components/RouteWaypoint";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import {
@@ -192,29 +193,26 @@ export function RouteEditor({
                     vectorEffect="non-scaling-stroke"
                   />
                 ) : null}
-                {points.map((point, index) => (
-                  <circle
-                    // Waypoints have no identity beyond their position in the
-                    // route, and two clicks can land on the same spot — the
-                    // index is the only stable key here.
-                    // biome-ignore lint/suspicious/noArrayIndexKey: see above
-                    key={index}
-                    cx={point.x}
-                    cy={point.y}
-                    r="2.4"
-                    fill={
-                      index === 0
-                        ? "var(--primary)"
-                        : index === points.length - 1
-                          ? "var(--accent)"
-                          : "var(--surface)"
-                    }
-                    stroke="var(--surface)"
-                    strokeWidth="1.1"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                ))}
               </svg>
+              {/* The waypoints over the line, each a dot of its own: in the
+                  stretched box above, a circle drew as an oval (K-413). */}
+              {points.map((point, index) => (
+                <RouteWaypoint
+                  // Waypoints have no identity beyond their position in the
+                  // route, and two clicks can land on the same spot — the
+                  // index is the only stable key here.
+                  // biome-ignore lint/suspicious/noArrayIndexKey: see above
+                  key={index}
+                  point={point}
+                  className={`border-surface ${
+                    index === 0
+                      ? "bg-primary"
+                      : index === points.length - 1
+                        ? "bg-accent"
+                        : "bg-surface"
+                  }`}
+                />
+              ))}
             </MapEmbed>
           </div>
 
