@@ -255,13 +255,18 @@ export function BuddyTeamsPanel({
                                     a word, because the label lives inside a
                                     44px circle that a word would burst; the
                                     disabled + `aria-busy` state is what says
-                                    the tap landed. */}
+                                    the tap landed.
+
+                                    Ringed inside its own circle
+                                    (`focus-ring-inset`): the global ring's
+                                    5px reach put its left arm on the last
+                                    letter of the name 4px before it. */}
                                   <SubmitButton
                                     pendingLabel="×"
                                     ariaLabel={t("manifest.buddyRemoveMember", {
                                       name: member.fullName,
                                     })}
-                                    className="flex size-11 cursor-pointer items-center justify-center rounded-full text-lg leading-none text-muted disabled:cursor-wait disabled:opacity-70 hover:bg-danger-tint hover:text-danger"
+                                    className="flex size-11 cursor-pointer items-center justify-center rounded-full text-lg leading-none text-muted disabled:cursor-wait disabled:opacity-70 hover:bg-danger-tint hover:text-danger focus-visible:focus-ring-inset"
                                   >
                                     <span aria-hidden="true">×</span>
                                   </SubmitButton>
