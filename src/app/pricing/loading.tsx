@@ -17,16 +17,16 @@ const INVOICE_ROWS = [
 /**
  * What the plan covers, one entry per item with the lines it wraps to on a
  * phone (`base`, 314px of text at 390) and in the two-column list from `sm`
- * (measured at 1280, 376px of text a column on the hero's `max-w-4xl`). A
- * grid row is as tall as its taller item, so the rows are two lines each; on
- * `max-w-5xl` (440px) the practice-shop line fits on one and the middle row is
- * one line, so its `sm` follows the measure (loading.test.tsx reads it).
+ * (measured at 1280, 440px of text a column on the hero's `max-w-5xl`, K-404).
+ * A grid row is as tall as its taller item, so the rows are two lines, one,
+ * then two: the practice-shop line, about 420px, fits on one there where
+ * `max-w-4xl`'s 376px wrapped it (loading.test.tsx holds both).
  */
 const COVERS_LINES = [
   ["item1", { base: 3, sm: 2 }],
   ["item2", { base: 1, sm: 1 }],
   ["item3", { base: 2, sm: 1 }],
-  ["item4", { base: 2, sm: 2 }],
+  ["item4", { base: 2, sm: 1 }],
   ["item6", { base: 1, sm: 1 }],
   ["item7", { base: 3, sm: 2 }],
 ] as const;
@@ -70,7 +70,7 @@ export default function PricingLoading() {
       <MarketingNavFallback />
       <main className="flex-1 animate-pulse">
         <section className="border-b border-border">
-          <div className="mx-auto max-w-4xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
+          <div className="mx-auto max-w-5xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
             <div className="mx-auto flex max-w-3xl flex-col items-center">
               <div className="h-5 w-52 rounded bg-surface-sunken" />
               <div className="mt-5 w-full">
