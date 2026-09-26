@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
@@ -19,6 +20,13 @@ const EXPERIENCE_KEYS: Record<CourseInquiryExperience, StaffMessageKey> = {
   certified: "requests.experience.certified",
   lapsed: "requests.experience.lapsed",
 };
+
+/**
+ * A line's separator, glued to what it follows by a no-break space: a wrap
+ * falls after a dot, never before one, so no line of a request starts with
+ * "· Asked" (the departure log's `CertificationLine` does the same).
+ */
+const SEPARATOR = " · ";
 
 /**
  * **A 44px target that leaves its line alone** (principles.md §2; pixel-craft
@@ -90,15 +98,22 @@ export function RequestLedgerRow({
 
   // The row's quiet facts, in planning order: how many of them, where they are
   // up to, why they are filed here, and how long the lead has been sitting.
+  // `whole` is a unit a wrap may not split — a count, "Flexible", the date it
+  // was asked on (K-462); where the diver is up to is a phrase ("Certified,
+  // can share certification record", longer still in Spanish) and wraps like
+  // one, or it would run out of a phone's column.
   const experienceFact = request.experienceLevel
     ? t(EXPERIENCE_KEYS[request.experienceLevel])
     : null;
   const facts = [
-    request.divers ? t("requests.divers", { count: request.divers }) : null,
-    experienceFact,
-    request.dateFlexible ? t("requests.flexible") : null,
-    t("requests.askedOn", { date: formatShortDate(request.createdAt, locale, timezone) }),
-  ].filter((fact): fact is string => Boolean(fact));
+    request.divers ? { text: t("requests.divers", { count: request.divers }), whole: true } : null,
+    experienceFact ? { text: experienceFact, whole: false } : null,
+    request.dateFlexible ? { text: t("requests.flexible"), whole: true } : null,
+    {
+      text: t("requests.askedOn", { date: formatShortDate(request.createdAt, locale, timezone) }),
+      whole: true,
+    },
+  ].filter((fact): fact is { text: string; whole: boolean } => fact !== null);
 
   return (
     <LedgerRow
@@ -106,6 +121,10 @@ export function RequestLedgerRow({
       pad="lg"
       // The booking link on the name's line, not centred on the whole request.
       align="first-line"
+      // Below `sm` the booking link drops beneath the request, which takes
+      // the row's whole width: beside a 112px link column the request wrapped
+      // in 230px (K-462).
+      stacked
       trailing={
         <Link
           href={`${shopPath(shopSlug, "bookings", "new")}?request=${encodeURIComponent(request.id)}`}
@@ -131,7 +150,14 @@ export function RequestLedgerRow({
         </p>
         <div className="min-w-0 flex-1">
           <p className="font-medium">{ask}</p>
-          <p className="mt-0.5 text-sm text-muted tabular-nums">{facts.join(" · ")}</p>
+          <p className="mt-0.5 text-sm text-muted tabular-nums">
+            {facts.map((fact, index) => (
+              <Fragment key={fact.text}>
+                {index > 0 ? SEPARATOR : null}
+                <span className={fact.whole ? "whitespace-nowrap" : undefined}>{fact.text}</span>
+              </Fragment>
+            ))}
+          </p>
           {request.email || request.phone ? (
             <p className="mt-0.5 text-sm text-muted">
               {request.email ? (
@@ -150,13 +176,16 @@ export function RequestLedgerRow({
                   {request.email}
                 </a>
               ) : null}
-              {request.email && request.phone ? " · " : null}
+              {request.email && request.phone ? SEPARATOR : null}
               {/* A request's number is the diver's own typing, not a
                   normalised `people.phone`, so this mostly hands back exactly
                   what they wrote — it groups the one shape that would
                   otherwise arrive here as an unbroken run, a diver who typed
-                  E.164 into the public form. */}
-              {displayStoredPhone(request.phone)}
+                  E.164 into the public form. One unbreakable run: it split
+                  after its hyphens at 390 (K-462). */}
+              {request.phone ? (
+                <span className="whitespace-nowrap">{displayStoredPhone(request.phone)}</span>
+              ) : null}
             </p>
           ) : null}
           {request.timing ? (

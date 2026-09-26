@@ -75,7 +75,64 @@ describe("a request row renders flat, in one shape", () => {
 
   it("still says a request can move, when the diver said so", () => {
     row({ dateFlexible: true });
-    expect(screen.getByText(/·\s*Flexible\s*·/)).toBeTruthy();
+    expect(lineOf("Flexible")).toMatch(/·\s*Flexible\s*·/);
+  });
+});
+
+/** The whole text of the line holding `words`, with its no-break spaces read as spaces. */
+function lineOf(words: string): string {
+  const line = screen.getByText(words).closest("p");
+  return (line?.textContent ?? "").replaceAll(" ", " ");
+}
+
+/**
+ * **A fact stays whole when its line wraps** (pixel-craft class 8, K-462).
+ * The facts were one joined string and the number bare text, so a 230px body
+ * beside a 112px "Create a booking" column split "Asked Fri, Jul" from "17"
+ * and "+1-305-555-" from "0433" — four split units in one capture at 390.
+ * Each whole fact and the number are their own unbreakable run now, where the
+ * diver is up to is a phrase and wraps like one, and each separator is glued
+ * to what it follows, so a line breaks only after a dot. And below `sm` the
+ * row is `stacked`: the booking link drops beneath the request, which takes
+ * the row's whole width.
+ */
+describe("where a request's lines may break", () => {
+  const unbroken = (words: string) => screen.getByText(words).closest(".whitespace-nowrap");
+
+  it("keeps each whole fact on one line, and lets the experience phrase wrap", () => {
+    row({ dateFlexible: true });
+    expect(unbroken("2 divers")).not.toBeNull();
+    expect(unbroken("Flexible")).not.toBeNull();
+    expect(unbroken("Asked Sat, Feb 20")).not.toBeNull();
+    expect(unbroken("Certified, can share certification record")).toBeNull();
+  });
+
+  it("keeps the diver's number on one line", () => {
+    row({});
+    expect(unbroken("+1-305-555-0433")).not.toBeNull();
+  });
+
+  it("glues every separator to what it follows, so no line starts with a dot", () => {
+    row({ dateFlexible: true });
+    for (const line of [
+      screen.getByText("2 divers").closest("p"),
+      screen.getByText("+1-305-555-0433").closest("p"),
+    ]) {
+      const text = line?.textContent ?? "";
+      const dots = [...text.matchAll(/·/g)];
+      expect(dots.length, "the line has separators to check").toBeGreaterThanOrEqual(1);
+      for (const dot of dots) {
+        expect(text[(dot.index ?? 0) - 1], `before the dot at ${dot.index}`).toBe(" ");
+      }
+    }
+  });
+
+  it("drops the booking link beneath the request below sm, at the row's full width", () => {
+    const item = row({});
+    expect(item).toHaveClass("max-sm:flex-wrap");
+    const book = screen.getByRole("link", { name: "Create a booking" });
+    const slot = [...item.children].find((child) => child.contains(book));
+    expect(slot).toHaveClass("max-sm:order-3", "max-sm:basis-full");
   });
 });
 
@@ -87,7 +144,7 @@ describe("what one request says", () => {
   it("names the ask, the party size and where the diver is up to", () => {
     row({});
     expect(screen.getByText("Wants to dive: A two-tank on the wrecks")).toBeTruthy();
-    expect(screen.getByText(/2 divers · Certified, can share certification record/)).toBeTruthy();
+    expect(lineOf("2 divers")).toMatch(/^2 divers · Certified, can share certification record/);
   });
 
   it("names the course when the lead came off a course page", () => {
