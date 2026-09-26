@@ -31,6 +31,18 @@ import {
  *     departure starts 16px in from `sm` (`sm:px-4`), a 24px time, a 24px
  *     title over a 20px meta line, and a 24px price. The columns those bars
  *     stand in are the ledger's own (`WeekLedger`'s exported classes).
+ *
+ * **Which shop it draws is a choice, and this is what it costs.** The shell is
+ * served before anything reads the shop (the layout is synchronous: ADR
+ * 20260804-instant-navigation), so it cannot know whether this shop has a
+ * cover photograph, lenses, or a month either side. It draws the demo shop,
+ * which has all three. A shop with no photograph, the shape of every shop
+ * until it uploads one, loads a band about 436px shorter at 1280 than this
+ * skeleton draws (`storefront-sky`: 517px, a 140px sky, and that minted shop
+ * has no rating line or badge chips either), so its week rises when it lands;
+ * the old text skeleton drew that band about 157px too short. A shop with no
+ * lenses loads no pill row, and one with no month either side no month row:
+ * 60px each, both drawn here for every shop.
  */
 export default function TripsLoading() {
   return (

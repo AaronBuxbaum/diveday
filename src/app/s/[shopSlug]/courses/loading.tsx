@@ -15,7 +15,11 @@ import { segmentedTrackClass } from "@/components/ui/segmented";
  * list landed about 111px lower than the skeleton put it, every title 80px
  * further right and every row 9px taller:
  *   - the tabs are the segmented track itself, one 44px option tall (54px),
- *     at the `mt-6` that collapses into the header's `mb-8`, as `AgencyTabs`'s;
+ *     at the `mt-6` that collapses into the header's `mb-8`, as `AgencyTabs`'s.
+ *     The shell cannot read the shop, so it draws the demo shop's two
+ *     agencies. `AgencyTabs` draws nothing for a shop with one, and that
+ *     shop's list lands 86px higher than this skeleton puts it (the track
+ *     and the 32px under it), where the old skeleton was about 24px out;
  *   - the group is `mt-8`, a 16px `text-xs` label, then the list at `mt-2`,
  *     stepped 8px out with each row keeping the room as `px-2`, so its rules
  *     run where the page's do (K-513);
