@@ -23,6 +23,7 @@ export default function Loading() {
           description
           descriptionWidth="w-full max-w-xl"
           descriptionLines={{ base: 5, sm: 3 }}
+          actions
         />
         {/* Shell and rhythm from the same places the page takes them — the
             page's two halves at `space-y-10`, the backups cards at the tighter

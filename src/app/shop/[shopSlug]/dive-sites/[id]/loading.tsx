@@ -26,6 +26,7 @@ export default function DiveSiteLoading() {
             descriptionWidth="w-full max-w-xl"
             // "Changes reach every upcoming dive…" is two lines at 390px.
             descriptionLines={{ base: 2, sm: 1 }}
+            actions
           />
         </div>
 

@@ -313,6 +313,7 @@ export function ShopPageHeaderSkeleton({
   descriptionWidth = "w-80",
   descriptionLines = 1,
   meta,
+  actions = false,
 }: {
   /** Pass `false` for a header with no eyebrow — the `<h1>` then loses its `mt-2`, same as the real one. */
   eyebrow?: boolean;
@@ -333,15 +334,37 @@ export function ShopPageHeaderSkeleton({
   descriptionLines?: SkeletonLines;
   /** Bars for a header that carries `meta` — the trip tabs' seat badge and date line. */
   meta?: React.ReactNode;
+  /**
+   * The header carries `actions`: `true` for one row of doors, or the number
+   * of rows they wrap to on a phone. Below `sm` the header stacks them under
+   * the title, `gap-5` down, each grown to the row at `md`'s 48px — part of
+   * its height, so the skeleton draws them there (K-86: 68px of drop on
+   * Reviews and a dive site's page without). From `sm` they sit beside the
+   * title and add nothing, so the bars are phone-only.
+   */
+  actions?: boolean | number;
 }) {
+  const actionRows = actions === true ? 1 : actions === false ? 0 : actions;
   return (
     <div className="mb-8">
       {eyebrow ? <div className="h-4 w-24 rounded bg-surface-sunken" /> : null}
-      <div className={eyebrow ? "mt-2" : undefined}>{lineBars(titleLines, "h-11", titleWidth)}</div>
+      <div className={eyebrow ? "mt-2" : undefined}>
+        <SkeletonLineBars lines={titleLines} height="h-11" width={titleWidth} />
+      </div>
       {description ? (
-        <div className="mt-2">{lineBars(descriptionLines, "h-6", descriptionWidth)}</div>
+        <div className="mt-2">
+          <SkeletonLineBars lines={descriptionLines} height="h-6" width={descriptionWidth} />
+        </div>
       ) : null}
       {meta ? <div className="mt-3">{meta}</div> : null}
+      {actionRows > 0 ? (
+        <div className="mt-5 flex flex-col gap-2 sm:hidden">
+          {Array.from({ length: actionRows }, (_, row) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: bars, not records — the row number is the only identity a placeholder row has
+            <div key={row} className="h-12 w-full rounded-lg bg-surface-sunken" />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -357,14 +380,26 @@ export function ShopPageHeaderSkeleton({
 export type SkeletonLines = number | { base: number; sm: number };
 
 /**
- * One box per line, each the line's own height (`h-11`, `h-6`) and stacked
- * with no gap, because a paragraph's line boxes have none — so N lines are
- * exactly N line-heights, the one number that decides where the page below
- * lands. A second line's bar is inset `pt-1` inside its box so two lines read
- * as two rather than one tall slab; the box keeps the full height. A line one
- * side of `sm` does not have is hidden on that side.
+ * One box per line, each the line's own height (`h-11`, `h-6`, a meta line's
+ * `h-5`) and stacked with no gap, because a paragraph's line boxes have none —
+ * so N lines are exactly N line-heights, the one number that decides where the
+ * page below lands. A second line's bar is inset `pt-1` inside its box so two
+ * lines read as two rather than one tall slab; the box keeps the full height.
+ * A line one side of `sm` does not have is hidden on that side.
+ *
+ * Exported for a skeleton's own `meta`, whose line can wrap the same way.
  */
-function lineBars(lines: SkeletonLines, height: string, width: string) {
+export function SkeletonLineBars({
+  lines,
+  height,
+  width,
+}: {
+  lines: SkeletonLines;
+  /** The line box's height class: `h-11` a title, `h-6` a description, `h-5` a `text-sm` line. */
+  height: string;
+  /** The bar's width classes. */
+  width: string;
+}) {
   const { base, sm } = typeof lines === "number" ? { base: lines, sm: lines } : lines;
   const bar = `${width} rounded bg-surface-sunken`;
   return Array.from({ length: Math.max(base, sm) }, (_, line) => {

@@ -17,7 +17,7 @@ export default function DiveSitesLoading() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-56" description={false} />
+        <ShopPageHeaderSkeleton titleWidth="w-56" description={false} actions />
         <div className={sectionCardClass({ className: "mt-6 h-24" })} />
         <div className="mt-8 space-y-8">
           {[3, 2].map((rows, group) => (

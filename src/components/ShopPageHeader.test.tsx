@@ -265,6 +265,38 @@ describe("the skeleton's line counts", () => {
 });
 
 /**
+ * **Below `sm` the header's doors are part of its height, so the skeleton
+ * draws them too.** The loaded header stacks its actions under the title on a
+ * phone, `gap-5` below it, each door grown to the row; the skeleton drew only
+ * the title block, so a page with a header button — Reviews' "View public
+ * page", a dive site's "See the dates" — pushed everything under it 68px down
+ * the moment it landed (K-86). From `sm` the doors sit beside the title and
+ * nothing moves, so the bars are phone-only.
+ */
+describe("the skeleton's action bars", () => {
+  it("stand in for one row of 48px doors below sm, 20px under the title block", () => {
+    const { container } = render(<ShopPageHeaderSkeleton description={false} actions />);
+    const band = container.firstElementChild?.lastElementChild;
+    expect(band).toHaveClass("mt-5", "sm:hidden");
+    const rows = Array.from(band?.children ?? []);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveClass("h-12", "w-full", "rounded-lg");
+  });
+
+  it("stand in for as many rows as the doors wrap to", () => {
+    const { container } = render(<ShopPageHeaderSkeleton description={false} actions={2} />);
+    const band = container.firstElementChild?.lastElementChild;
+    expect(band).toHaveClass("flex", "flex-col", "gap-2");
+    expect(band?.children).toHaveLength(2);
+  });
+
+  it("are not drawn for a header with no actions", () => {
+    const { container } = render(<ShopPageHeaderSkeleton description={false} />);
+    expect(container.querySelector(".h-12")).toBeNull();
+  });
+});
+
+/**
  * **A meta that renders nothing takes no room.** Check-in's meta is a
  * connectivity pill that renders `null` while the counter is online — nearly
  * always — and the wrapper around it still carried its `mt-3`: 12px of
