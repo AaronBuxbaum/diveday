@@ -320,8 +320,10 @@ describe("SiteFields — where the station confirmation sits (K-424)", () => {
  * station's two sentences and link, and the conservation note's sentence, rode
  * there, so the form drew help two ways — 14px after a label, or 12px under a
  * control — and "NOAA tide station" stood two lines above "Dives best" beside
- * it. A description is also what a screen reader hears as the box's
- * description rather than as part of its name.
+ * it. The maximum depth, the time in the water and the tips heading carried a
+ * sentence inside their "(optional · …)", which wrapped into a two-line
+ * parenthetical after the label. A description is also what a screen reader
+ * hears as the box's description rather than as part of its name.
  */
 describe("SiteFields — help under the control (K-418)", () => {
   const describedBy = (control: Element | null) =>
@@ -353,6 +355,29 @@ describe("SiteFields — help under the control (K-418)", () => {
     const box = document.querySelector('textarea[name="conservationNote"]') as HTMLTextAreaElement;
     expect(box.labels?.[0]?.textContent).toBe("Conservation note");
     expect(describedBy(box)?.textContent).toBe(t("diveSites.form.conservationNoteHint"));
+  });
+
+  it("keeps only (optional) on a caption, and its sentence under the box", () => {
+    renderFields(null);
+    const fields = [
+      ["maxDepth", "diveSites.form.maxDepthMetersLabel", "diveSites.form.maxDepthHint"],
+      [
+        "expectedBottomTime",
+        "diveSites.form.expectedBottomTimeLabel",
+        "diveSites.form.expectedBottomTimeHint",
+      ],
+      [
+        "fieldGuideTipsHeading",
+        "diveSites.form.tipsHeadingLabel",
+        "diveSites.form.tipsHeadingHint",
+      ],
+    ] as const;
+    for (const [name, label, sentence] of fields) {
+      const box = document.querySelector(`input[name="${name}"]`) as HTMLInputElement;
+      expect(box.labels?.[0]?.textContent).toBe(`${t(label)} ${t("diveSites.form.optionalHint")}`);
+      expect(describedBy(box)?.textContent).toBe(t(sentence));
+      expect(t(sentence)).not.toMatch(/^\(|\)$/);
+    }
   });
 });
 

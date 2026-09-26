@@ -587,7 +587,8 @@ export function SiteFields({
                   ? "diveSites.form.maxDepthFeetLabel"
                   : "diveSites.form.maxDepthMetersLabel",
               )}
-              hint={t("diveSites.form.maxDepthHint")}
+              hint={t("diveSites.form.optionalHint")}
+              description={t("diveSites.form.maxDepthHint")}
             >
               <input
                 name="maxDepth"
@@ -613,7 +614,8 @@ export function SiteFields({
                 standing. */}
             <Field
               label={t("diveSites.form.expectedBottomTimeLabel")}
-              hint={t("diveSites.form.expectedBottomTimeHint")}
+              hint={t("diveSites.form.optionalHint")}
+              description={t("diveSites.form.expectedBottomTimeHint")}
             >
               <input
                 name="expectedBottomTime"
@@ -764,7 +766,8 @@ export function SiteFields({
           <FieldGrid columns={1}>
             <Field
               label={t("diveSites.form.tipsHeadingLabel")}
-              hint={t("diveSites.form.tipsHeadingHint")}
+              hint={t("diveSites.form.optionalHint")}
+              description={t("diveSites.form.tipsHeadingHint")}
             >
               <input
                 name="fieldGuideTipsHeading"
