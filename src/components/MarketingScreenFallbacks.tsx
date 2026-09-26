@@ -17,13 +17,21 @@ import type { DiverLocale } from "@/i18n/settings";
  */
 
 /**
- * **One inset for the whole mock family.** The app bar's shop name and the
- * body's first line share one 20px edge. The bar was `px-4` over bodies at
- * `p-5`, so the two missed each other by 4px on every mock but the roll call,
- * whose body was `p-4` as well (K-51).
+ * **One edge for a mock's bar and body.** The app bar's shop name and the
+ * body's first line start on one inset. The bar was `px-4` over bodies at
+ * `p-5`, so the two missed each other by 4px on the seven card mocks (K-51),
+ * which are all 20px now.
+ *
+ * The roll call is a phone screen and keeps a phone's 16px, bar and body, as
+ * it always had. At 20px its bar no longer held "BLUE MANTIS DIVERS" and
+ * "Offline copy · up to date" on one line in the landing hero's phone at 390
+ * (135 + 136 in 272), and es-ES's "EMBARCADOS" (69.3px) outgrew its stat
+ * tile's 67.3px label box.
  */
 const MOCK_INSET_X = "px-5";
 const MOCK_BODY = `${MOCK_INSET_X} py-5`;
+const PHONE_INSET_X = "px-4";
+const PHONE_BODY = `${PHONE_INSET_X} py-4`;
 
 /**
  * The one primary button the mocks draw ("Mark boarded", "Download", "Leave my
@@ -39,12 +47,14 @@ const MOCK_PRIMARY_BUTTON =
  * themselves ("BLUE MANTIS / DIVERS" beside "Offline copy · up to / date",
  * K-398). Now the label moves under the name whole. Not `truncate`: the
  * ellipsis would land on "up to date", the half of the label that means
- * something.
+ * something. `gap-x-1.5` is only the floor between the two on one line,
+ * where `justify-between` spreads them: the landing hero's phone holds the
+ * pair with 9px to spare, and a 12px floor broke it onto two lines.
  */
-function AppBar({ label }: { label: string }) {
+function AppBar({ label, inset = MOCK_INSET_X }: { label: string; inset?: string }) {
   return (
     <div
-      className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 border-b border-border bg-surface ${MOCK_INSET_X} py-3 text-xs text-muted`}
+      className={`flex flex-wrap items-center justify-between gap-x-1.5 gap-y-0.5 border-b border-border bg-surface ${inset} py-3 text-xs text-muted`}
     >
       {/* i18n-exempt: sample shop name used only in marketing mockups */}
       <span className="font-semibold tracking-wide whitespace-nowrap text-primary uppercase">
@@ -78,8 +88,8 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
   return (
     <div className="bg-background">
-      <AppBar label={t("fallback.offlineCopy")} />
-      <div className={`space-y-4 ${MOCK_BODY}`}>
+      <AppBar label={t("fallback.offlineCopy")} inset={PHONE_INSET_X} />
+      <div className={`space-y-4 ${PHONE_BODY}`}>
         <div>
           <p className={groupLabelClass("primary")}>{t("fallback.boatManifest")}</p>
           <h3 className={`mt-1 ${SECTION_TITLE_CLASS}`}>{t("fallback.tripName")}</h3>

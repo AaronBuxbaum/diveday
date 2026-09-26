@@ -32,28 +32,56 @@ function barAndBody(Mock: (typeof EVERY_MOCK)[number][1]) {
   return { bar, body };
 }
 
+/** The one horizontal inset an element's padding classes give it, in Tailwind steps. */
+function insetOf(element: Element) {
+  const steps = element.className
+    .split(/\s+/)
+    .map((token) => /^p[x]?-(\d+(?:\.\d+)?)$/.exec(token)?.[1])
+    .filter(Boolean);
+  expect(steps).toHaveLength(1);
+  return steps[0];
+}
+
 /**
  * The bar's label sat 16px in over bodies inset 20px, so the shop name and the
- * body's eyebrow missed each other by 4px on every mock but the roll call,
- * whose body was 16px too (K-51). One 20px inset now, bar and body alike.
+ * body's eyebrow missed each other by 4px on the seven card mocks (K-51). Bar
+ * and body share one edge in every mock: 20px in the cards, and 16px in the
+ * roll call, the phone screen, which was already 16 over 16. At 20px its app
+ * bar broke onto two lines in the landing hero's phone at 390, and es-ES's
+ * "EMBARCADOS" (69.3px) outgrew its stat tile's 67.3px label box.
  */
 describe("the mock family's inset", () => {
-  it.each(EVERY_MOCK)("%s starts its bar and its body on one 20px edge", (_name, Mock) => {
+  it.each(EVERY_MOCK)("%s starts its bar and its body on one edge", (_name, Mock) => {
     const { bar, body } = barAndBody(Mock);
-    expect(bar).toHaveClass("px-5");
-    expect(body).toHaveClass("px-5");
-    expect(bar.className).not.toMatch(/(^|\s)p[xl]?-4(\s|$)/);
-    expect(body.className).not.toMatch(/(^|\s)p[xl]?-4(\s|$)/);
+    expect(insetOf(bar)).toBe(insetOf(body));
+  });
+
+  it.each(EVERY_MOCK.filter(([name]) => name !== "CaptainRollCallFallback"))(
+    "%s, a card, is inset 20px",
+    (_name, Mock) => {
+      const { bar, body } = barAndBody(Mock);
+      expect(insetOf(bar)).toBe("5");
+      expect(insetOf(body)).toBe("5");
+    },
+  );
+
+  it("insets the roll call, a phone screen, 16px", () => {
+    const { bar, body } = barAndBody(CaptainRollCallFallback);
+    expect(insetOf(bar)).toBe("4");
+    expect(insetOf(body)).toBe("4");
   });
 
   // In /about's 290px phone screen both halves of the bar wrapped inside
   // themselves: "BLUE MANTIS / DIVERS" beside "Offline copy · up to / date"
   // (K-398). Each half is one unit; when the pair does not fit on one line the
   // label moves under the name whole. Not `truncate`: an ellipsis there would
-  // cut "up to date", which is the half of the label that says anything.
+  // cut "up to date", which is the half of the label that says anything. The
+  // gap is only the floor between the two when they share a line; a 12px one
+  // broke the landing hero's phone bar at 390 (135 + 136 in 280), which had
+  // stood on one line with 9px between them.
   it.each(EVERY_MOCK)("%s never splits the shop name or the bar's label", (_name, Mock) => {
     const { bar } = barAndBody(Mock);
-    expect(bar).toHaveClass("flex-wrap", "gap-x-3");
+    expect(bar).toHaveClass("flex-wrap", "justify-between", "gap-x-1.5");
     const [name, label] = Array.from(bar.children);
     expect(name).toHaveClass("whitespace-nowrap");
     expect(label).toHaveClass("whitespace-nowrap");
