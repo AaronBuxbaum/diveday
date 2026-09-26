@@ -680,14 +680,18 @@ export function LedgerRow({
         // growing a one-line row to 60px. Beside a stacked kind, 4px a side
         // (`max-sm:-my-1`), the room that line has (see above). Not on a
         // stacked phone line of its own (`max-sm:my-0`), where the overhang
-        // would put it on the rule.
+        // would put it on the rule. That line is as wide as the row and sits
+        // over what is under it (`z-10`), so it lets a tap through everywhere
+        // but on what it holds (`pointer-events-none`, back on for its
+        // children): an empty box took the lower 8px of the requests row's
+        // address target, and kept a door row's line out of the door (K-458).
         <div
           data-ledger-fix=""
           className={
             stacked
               ? kind
                 ? "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-2 max-sm:-my-1 max-sm:ms-auto"
-                : "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-3 max-sm:my-0 max-sm:flex max-sm:basis-full max-sm:justify-end"
+                : "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-3 max-sm:my-0 max-sm:flex max-sm:basis-full max-sm:justify-end max-sm:pointer-events-none max-sm:*:pointer-events-auto"
               : "relative z-10 -my-2 min-w-0 max-w-full shrink-0"
           }
         >

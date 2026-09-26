@@ -1131,6 +1131,26 @@ describe("LedgerRow", () => {
     expect(content.parentElement?.querySelector("svg")).toHaveClass("max-sm:order-2");
   });
 
+  /**
+   * **The fix's own line takes a tap only on the fix** (pixel-craft class 7,
+   * K-458). Dropped to a line of its own, the trailing slot is a `relative
+   * z-10` box as wide as the row, 4px under the content. On a request with no
+   * timing and no message it lay over the lower 8px of the address's 44px
+   * target (`after:-inset-y-3`) across the whole width, so a tap there landed
+   * on an empty box and the address was a 36px target; over a door row it
+   * kept the whole line beside the fix out of the door. The box lets a tap
+   * through, and what it holds still takes one.
+   */
+  it("lets a tap through its fix's line everywhere but on the fix", () => {
+    render(
+      <LedgerRow as="div" stacked trailing={<a href="/shop/blue-mantis/bookings/new">Book</a>}>
+        <p>Tomás Ferreira</p>
+      </LedgerRow>,
+    );
+    const trailing = screen.getByRole("link", { name: "Book" }).parentElement as HTMLElement;
+    expect(trailing).toHaveClass("max-sm:pointer-events-none", "max-sm:*:pointer-events-auto");
+  });
+
   it("stays one line when a row is not stacked — the default is unchanged", () => {
     const { container } = render(
       <LedgerRow as="div" kind={{ word: "Waiver", tone: "warning" }}>
