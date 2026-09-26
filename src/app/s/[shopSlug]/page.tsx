@@ -10,6 +10,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { ShopReviews } from "@/components/ShopReviews";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureRowList } from "@/components/ui/disclosure";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
@@ -1315,9 +1316,13 @@ export default async function SchedulePage({
           </h2>
           <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {boats.map((boat) => (
+              // The card itself, not a hand-rolled copy at `px-5 py-4`: its
+              // words started 4px in from every other card's on a phone.
               <li
                 key={boat.id}
-                className="flex min-h-14 flex-col justify-center gap-1 rounded-panel border border-border bg-surface px-5 py-4 shadow-bed"
+                className={sectionCardClass({
+                  className: "flex min-h-14 flex-col justify-center gap-1",
+                })}
               >
                 <div className="flex items-baseline justify-between gap-3">
                   <span className={`font-brand-display ${SECTION_TITLE_CLASS} tracking-tight`}>

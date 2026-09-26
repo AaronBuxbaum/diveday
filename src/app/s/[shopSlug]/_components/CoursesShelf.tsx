@@ -95,7 +95,9 @@ export function CoursesShelf({
               ) : (
                 <CourseWavePlaceholder className="h-32 w-full" />
               )}
-              <div className="flex flex-1 flex-col gap-1 p-4">
+              {/* A card's inset, `SectionCard`'s `p-4 sm:p-5`: at `p-4` alone
+                  the title started 4px left of the cards beside it at 1280. */}
+              <div className="flex flex-1 flex-col gap-1 p-4 sm:p-5">
                 <h3 className="text-base font-semibold group-hover:text-primary">{course.title}</h3>
                 {course.summary ? (
                   <p className="line-clamp-2 text-sm text-muted">{course.summary}</p>

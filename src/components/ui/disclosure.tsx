@@ -149,10 +149,16 @@ export function DisclosureRowList({
 export const LIST_ROW_SUMMARY_RING =
   "focus-visible:focus-ring-inset [details:first-child>&]:rounded-t-panel [details:last-child:not([open])>&]:rounded-b-panel";
 
-const SUMMARY_CLASS = `flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:px-6 ${LIST_ROW_SUMMARY_RING}`;
+/**
+ * The row's inset is `SectionCard`'s own, 16px then 20px from `sm`
+ * (pixel-craft class 5): at `px-5 sm:px-6` the rows' headings started 4px
+ * right of every card on the public schedule they sit among (113 against
+ * 109 at 1280, 37 against 33 at 390). `SettingsRows` keeps the same inset.
+ */
+const SUMMARY_CLASS = `flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:px-5 ${LIST_ROW_SUMMARY_RING}`;
 
 /** The row's body inset — the same horizontal padding as the summary above it. */
-const BODY_CLASS = "px-5 pb-6 sm:px-6";
+const BODY_CLASS = "px-4 pb-6 sm:px-5";
 
 export function DisclosureRow({
   id,
@@ -267,7 +273,7 @@ export function DisclosureRowMessage({
   children: ReactNode;
 }) {
   return (
-    <div id={id} className="rise-in px-5 py-5 sm:px-6">
+    <div id={id} className="rise-in px-4 py-5 sm:px-5">
       <h3 className="text-base font-semibold">{heading}</h3>
       <div className="mt-1 text-sm text-muted">{children}</div>
     </div>

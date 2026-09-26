@@ -2,18 +2,21 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { cardSummaryClass } from "./card";
 import {
   CompactDisclosureRow,
   DangerDisclosure,
   DisclosureRow,
   DisclosureRowList,
+  DisclosureRowMessage,
   SummaryCaret,
 } from "./disclosure";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+afterEach(cleanup);
 
 describe("DisclosureRow's focus ring", () => {
   /**
@@ -121,6 +124,35 @@ describe("DangerDisclosure", () => {
       )
       .map((file) => relative(SRC_DIR, file).split(/[\\/]/).join("/"));
     expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * **A disclosure row's words start where a card's do** — pixel-craft class 5.
+ * The rows were `px-5 sm:px-6` where every card on the page they live on (the
+ * public schedule) is `SectionCard`'s `p-4 sm:p-5`, so their headings started
+ * at 113 against the cards' 105 at 1280 and 37 against 33 at 390. One inset
+ * per width: 16px, then 20px, for the summary, its body and a settled row.
+ */
+describe("DisclosureRow's inset", () => {
+  it("is SectionCard's, at both widths, on every part of the row", () => {
+    const { container, getByText } = render(
+      <DisclosureRowList>
+        <DisclosureRow id="deals" heading="Last-minute deals">
+          <p>Body</p>
+        </DisclosureRow>
+        <DisclosureRowMessage id="found" heading="Check your email">
+          Sent.
+        </DisclosureRowMessage>
+      </DisclosureRowList>,
+    );
+    const summary = container.querySelector("summary");
+    const body = getByText("Body").parentElement;
+    const message = getByText("Check your email").parentElement;
+    for (const part of [summary, body, message]) {
+      expect(part).toHaveClass("px-4", "sm:px-5");
+      expect(part).not.toHaveClass("px-5", "sm:px-6");
+    }
   });
 });
 

@@ -160,7 +160,8 @@ Each class gives its rule, its tolerance, its usual severity, the probe check th
 - **Severity.** S2.
 - **Probe.** `off-centre` (it reports lopsided padding), `fill-tight`, and the census's row insets.
 - **History.** A link's `px-0` lost to its size's `px-4` and rendered 16px inside the text above it
-  (a417831). `SettingsRows` use `px-4 sm:px-5` where `DisclosureRow` uses `px-5 sm:px-6`.
+  (a417831). `DisclosureRow` used `px-5 sm:px-6` where `SettingsRows` and every card use
+  `px-4 sm:px-5`, so the public schedule's rows started 4px right of the cards around them.
 
 ### 6. Boxes, borders and radii
 
