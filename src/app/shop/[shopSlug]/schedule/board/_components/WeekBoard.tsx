@@ -844,7 +844,11 @@ export function WeekBoard({
             {week.asked.map((ask) => (
               <li
                 key={ask.dateIso}
-                className="flex items-start gap-3 border-b border-border px-2 py-3"
+                // On the section's own edges (pixel-craft class 3): the row
+                // paints no fill, so it keeps no room for one, and its words
+                // start where "ASKED FOR" does. The act is centred on them
+                // (class 1), since the names wrap to two lines on a phone.
+                className="flex items-center gap-3 border-b border-border py-3"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm leading-snug font-semibold">{ask.lead}</p>
@@ -856,7 +860,14 @@ export function WeekBoard({
                 {canConfigure ? (
                   <Link
                     href={ask.href}
-                    className={buttonClass({ variant: "ghost", size: "sm", className: "shrink-0" })}
+                    // `flush`: its word ends on the column, under the count
+                    // it answers, not 12px inside it.
+                    className={buttonClass({
+                      variant: "ghost",
+                      size: "sm",
+                      flush: true,
+                      className: "shrink-0",
+                    })}
                   >
                     {copy.addDeparture}
                   </Link>

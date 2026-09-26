@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { tapTargetLinkClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/ledger";
 import {
   type BuilderWeek,
@@ -208,6 +208,30 @@ describe("the day rail (K-326, K-327, K-328)", () => {
     expect(inset(screen.getByText("Thu").closest("h3"))).toEqual(["py-2"]);
     expect(inset(screen.getByText("7:00 AM").closest("li")?.firstElementChild)).toEqual(["py-2"]);
     for (const none of empty) expect(inset(none)).toEqual(["py-2"]);
+  });
+});
+
+describe("an asked-for day's row (K-333, K-338)", () => {
+  const askRow = () => screen.getByText("Fri, Aug 28 · 4 people").closest("li") as HTMLElement;
+
+  it("starts its words on the section's edge, and ends its act on it", () => {
+    // "Sun, Aug 2" started 8px inside "ASKED FOR" (the room a hover fill
+    // needs, on a row that paints none), and "Add a departure" ended 20px
+    // inside the "1 day" above it.
+    board(week(ASKED));
+    expect([...askRow().classList].filter((name) => /^-?[pm][xse]-/.test(name))).toEqual([]);
+    const act = within(askRow()).getByRole("link", { name: "Add a departure" });
+    expect(act.className).toBe(
+      buttonClass({ variant: "ghost", size: "sm", flush: true, className: "shrink-0" }),
+    );
+  });
+
+  it("centres its act on the words beside it, however many lines they wrap to", () => {
+    // On a phone the names wrap to two lines and the 44px act sat at the
+    // row's top: 12px under the first line's centre, 9.5px over the block's.
+    board(week(ASKED));
+    expect(askRow()).toHaveClass("flex", "items-center");
+    expect(askRow()).not.toHaveClass("items-start");
   });
 });
 
