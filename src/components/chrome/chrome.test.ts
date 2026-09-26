@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { declarations, readGlobalsCss, topLevelBlocks } from "@/test/stylesheet";
-import { CHROME_BAR_CLASS } from "./ChromeBar";
+import { CHROME_BAR_CLASS, CHROME_CENTER_SLOT_CLASS } from "./ChromeBar";
 
 /**
  * The chrome bar's rules, as a test — ADR
@@ -276,6 +276,17 @@ describe("the chrome bar", () => {
     // Elevation is earned (decision 1): the bar is always there, so it is not
     // floating, so it carries no shadow.
     expect(CHROME_BAR_CLASS).not.toContain("shadow");
+  });
+
+  it("draws its centre slot only from lg up, where the tab strip it holds is drawn", () => {
+    // Rendered empty below `lg`, the slot still took a flex gap: 16px between
+    // the shop's name and the trailing cluster where every other pair sits 8px
+    // apart, and at 390 those 8px came out of the name, which ellipsized
+    // ("Harbour Lantern Dive …", "Slack Tide Dive Chart…"; the pixel probe).
+    const tokens = CHROME_CENTER_SLOT_CLASS.split(/\s+/);
+    expect(tokens).toContain("hidden");
+    expect(tokens).toContain("lg:flex");
+    expect(tokens.filter((token) => /^(flex|inline-flex|block|grid)$/.test(token))).toEqual([]);
   });
 
   it("is the only bar either shell renders, so both are one height", async () => {

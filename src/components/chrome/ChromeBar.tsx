@@ -65,6 +65,18 @@ import type { ReactNode } from "react";
 export const CHROME_BAR_CLASS =
   "sticky top-0 z-30 h-(--chrome-h) border-b border-border bg-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/85 print:hidden";
 
+/**
+ * **The centre slot is there from `lg` up, and not at all below it**, because
+ * that is where its one tenant, the staff tab strip, is drawn. Rendered empty
+ * below `lg`, it still took a flex gap: 16px of row between the shop's name
+ * and the trailing cluster where every other pair sits 8px apart, and on a
+ * 390px phone, where the switcher's own end padding leaves the row no free
+ * space, those 8px came out of the name, so "Harbour Lantern Dive Co" ended
+ * in an ellipsis that had fitted before (the pixel probe, settings-hospitality
+ * and today-units-unconfirmed).
+ */
+export const CHROME_CENTER_SLOT_CLASS = "hidden min-w-0 flex-1 items-center lg:flex";
+
 export function ChromeBar({
   leading,
   center,
@@ -75,10 +87,11 @@ export function ChromeBar({
   leading: ReactNode;
   /**
    * The destinations that sit beside the identity: the staff tab strip from
-   * `lg` up. The shopfront puts its two-tab nav in `trailing` instead, beside
-   * the language picker, because that is one cluster on that shell — the nav
-   * and the picker are both "which page, which words", and the artboards draw
-   * them together at the right edge.
+   * `lg` up, and nothing below it (`CHROME_CENTER_SLOT_CLASS`). The shopfront
+   * puts its two-tab nav in `trailing` instead, beside the language picker,
+   * because that is one cluster on that shell — the nav and the picker are both
+   * "which page, which words", and the artboards draw them together at the
+   * right edge.
    */
   center?: ReactNode;
   /** Search, language, the reader's own controls — always at the far edge. */
@@ -105,7 +118,7 @@ export function ChromeBar({
           one thing the bar is supposed to hold still. */}
       <div className="mx-auto flex h-full w-full max-w-6xl items-center gap-x-2 px-4 sm:gap-x-3 sm:px-6">
         <div className="flex min-w-0 shrink items-center">{leading}</div>
-        {center ? <div className="flex min-w-0 flex-1 items-center">{center}</div> : null}
+        {center ? <div className={CHROME_CENTER_SLOT_CLASS}>{center}</div> : null}
         {trailing ? (
           <div className="ms-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
             {trailing}
