@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { INSET_NOTE_BOX, INSET_NOTE_CLASS } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import type { TripCrewChange } from "@/db/trips";
 import { fill } from "@/i18n/fill";
@@ -285,26 +286,21 @@ export function CrewSection({
        so anything shallower parks the anchor underneath it, and the pulse's
        "needs an instructor" fact links straight here. */
     <section id="crew" aria-label={copy.heading} className="flex flex-col gap-3 pt-1 scroll-mt-24">
+      {/* The departure's inset notes, one box whether warning or advice
+          (`INSET_NOTE_BOX`): they were 16px in where the requirements and
+          roster notes beside them are 12px. */}
       {crewGapCode === "no_instructor" ? (
-        <p className="rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
+        <p className={`${INSET_NOTE_BOX} bg-warning-tint font-medium text-warning-strong`}>
           {copy.courseNeedsInstructor}
         </p>
       ) : null}
       {crewGapCode === "over_ratio" && copy.overRatioWarning ? (
-        <p className="rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
+        <p className={`${INSET_NOTE_BOX} bg-warning-tint font-medium text-warning-strong`}>
           {copy.overRatioWarning}
         </p>
       ) : null}
-      {copy.underTargetNote ? (
-        <p className="rounded-lg bg-surface-sunken px-4 py-3 text-sm text-muted">
-          {copy.underTargetNote}
-        </p>
-      ) : null}
-      {copy.languageGapNote ? (
-        <p className="rounded-lg bg-surface-sunken px-4 py-3 text-sm text-muted">
-          {copy.languageGapNote}
-        </p>
-      ) : null}
+      {copy.underTargetNote ? <p className={INSET_NOTE_CLASS}>{copy.underTargetNote}</p> : null}
+      {copy.languageGapNote ? <p className={INSET_NOTE_CLASS}>{copy.languageGapNote}</p> : null}
 
       {staff.length === 0 ? (
         // The shared empty-section grammar, not a bare paragraph

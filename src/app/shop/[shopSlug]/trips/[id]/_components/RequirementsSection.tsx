@@ -1,5 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { INSET_NOTE_CLASS } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import {
   CERTIFICATION_LEVEL_KEYS,
@@ -92,7 +93,7 @@ export function RequirementsSection({
     ? cachedListFormat(locale, { style: "long", type: "conjunction" }).format(siteNames)
     : (siteNames[0] ?? t("trips.requirements.thisSite"));
   const siteNote = (kind: "trip" | "course") => (
-    <p className="mt-4 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
+    <p className={`mt-4 ${INSET_NOTE_CLASS}`}>
       {t.rich(siteNoteKey(kind, multipleSites), {
         site: siteNoteSubject,
         list: siteRequirementList,

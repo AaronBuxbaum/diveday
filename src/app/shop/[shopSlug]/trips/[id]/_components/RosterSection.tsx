@@ -10,7 +10,7 @@ import { ScrollToHash } from "@/components/ScrollToHash";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
+import { INSET_NOTE_CLASS, sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -753,9 +753,7 @@ export function RosterSection({
             that as the departure's count on the team builder, never as a row
             per person (#1183's boundary). */}
         {booking.reEntryAsk ? (
-          <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
-            {t(STAFF_RE_ENTRY_KEYS[booking.reEntryAsk])}
-          </p>
+          <p className={`mt-3 ${INSET_NOTE_CLASS}`}>{t(STAFF_RE_ENTRY_KEYS[booking.reEntryAsk])}</p>
         ) : null}
 
         {blockerTexts.length > 0 ? (

@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { INSET_NOTE_BOX, INSET_NOTE_CLASS } from "@/components/ui/card";
 import { CrewSection, type CrewSectionCopy } from "./CrewSection";
 import type { StaffList } from "./types";
 
@@ -41,6 +42,33 @@ describe("the shop's divemaster target", () => {
   it("says nothing at all once the target is met", () => {
     render(<CrewSection {...props} crewGapCode="none" copy={COPY} />);
     expect(screen.queryByText(/target wants/)).toBeNull();
+  });
+
+  /**
+   * **Every note in the crew list sits at one inset** (pixel-craft class 12).
+   * The crew notes were 16px in and 16px down where the requirements and
+   * roster notes beside them are 12px (trip-crew-clash at 1280), so one
+   * departure drew one note two ways. The warning keeps its tone, not its
+   * own box.
+   */
+  it("draws its notes as the departure's other notes are drawn", () => {
+    render(
+      <CrewSection
+        {...props}
+        crewGapCode="no_instructor"
+        copy={{
+          ...COPY,
+          underTargetNote: "9 divers with no divemaster.",
+          languageGapNote: "Nobody on this crew speaks German.",
+        }}
+      />,
+    );
+    for (const text of ["9 divers with no divemaster.", "Nobody on this crew speaks German."]) {
+      expect(screen.getByText(text).className).toBe(INSET_NOTE_CLASS);
+    }
+    const warning = screen.getByText("This course needs an instructor.");
+    expect(warning).toHaveClass(...INSET_NOTE_BOX.split(" "), "bg-warning-tint");
+    expect(warning).not.toHaveClass("px-4", "py-3");
   });
 });
 

@@ -146,6 +146,21 @@ export function sectionCardClass({
 }
 
 /**
+ * **A note carved into a card** — the first of the "not a section card"
+ * objects above: a sentence of advice or context set on the sunken fill
+ * inside a panel (a crew gap, a site's rule, a diver's ask, the model's
+ * outlook). One box, 12px in and 8px down at 14px, the majority spelling
+ * when the departure's panels drew it three ways: 16px in and down beside
+ * 12px, and 12px all round at 12px type (pixel-craft class 12).
+ *
+ * `INSET_NOTE_BOX` is the geometry alone, for a note that carries a tone
+ * instead of the sunken grey (a warning tint): the tone changes, the box does
+ * not. A note's place in its panel (`mt-3`, `mt-4`) stays at the call site.
+ */
+export const INSET_NOTE_BOX = "rounded-lg px-3 py-2 text-sm";
+export const INSET_NOTE_CLASS = `${INSET_NOTE_BOX} bg-surface-sunken text-muted`;
+
+/**
  * **The corner of a fill laid flush inside a panel**: the panel's radius less
  * the one thing between them, its 1px border — 20 − 1 = 19px, a curve that
  * runs parallel to the panel's own (docs/design/pixel-craft.md, class 6).

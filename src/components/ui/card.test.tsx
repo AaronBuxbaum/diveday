@@ -4,7 +4,14 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { cardSummaryClass, PANEL_INNER_RADIUS, SectionCard, sectionCardClass } from "./card";
+import {
+  cardSummaryClass,
+  INSET_NOTE_BOX,
+  INSET_NOTE_CLASS,
+  PANEL_INNER_RADIUS,
+  SectionCard,
+  sectionCardClass,
+} from "./card";
 
 afterEach(cleanup);
 
@@ -176,6 +183,19 @@ describe("cardSummaryClass", () => {
     expect(tokens).toContain("hover:bg-danger/5");
     expect(tokens).not.toContain("hover:bg-surface-sunken");
     expect(tokens).toEqual(expect.arrayContaining(["px-4", "py-3"]));
+  });
+});
+
+/**
+ * **A note carved into a card is one box** — pixel-craft class 12. The
+ * departure's panels spelled it three ways: 16px in and 16px down in the crew
+ * list, 12px in the requirements and roster notes, 12px all round at 12px type
+ * under the conditions. `px-3 py-2 text-sm` was already the majority spelling.
+ */
+describe("the inset note", () => {
+  it("is one geometry, and one sunken spelling of it", () => {
+    expect(INSET_NOTE_BOX).toBe("rounded-lg px-3 py-2 text-sm");
+    expect(INSET_NOTE_CLASS).toBe(`${INSET_NOTE_BOX} bg-surface-sunken text-muted`);
   });
 });
 

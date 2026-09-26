@@ -1,5 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { INSET_NOTE_CLASS } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { compassText } from "@/i18n/compass-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -133,7 +134,7 @@ export function ConditionsSection({
           nothing here to compare a published water temp against. Both
           readings now show, on both states. */}
       {hasAutomatedOutlook ? (
-        <div className="mt-3 rounded-lg bg-surface-sunken p-3 text-xs text-muted">
+        <div className={`mt-3 ${INSET_NOTE_CLASS}`}>
           <p className="font-medium text-foreground">
             {t("trips.conditions.automatedOutlookHeading")}
           </p>
