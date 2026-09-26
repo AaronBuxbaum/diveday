@@ -90,12 +90,17 @@ export type TableMinWidth = keyof typeof MIN_WIDTH;
  * itself. Static strings for the same reason as `MIN_WIDTH` — Tailwind cannot
  * see an interpolated arbitrary value — and deliberately few: this is a hint
  * about a column's *role*, not a layout escape hatch.
+ *
+ * **Released in print**, as `MIN_WIDTH`'s floors are. On screen a table that
+ * pins columns has a floor to scroll against; paper has only its own width,
+ * and the departure log pins one column per checkpoint — five of them at 8rem
+ * are 640px of a ~750px page, which would leave the diver's name 37px.
  */
 const COLUMN_WIDTH = {
-  "8rem": "w-32",
-  "10rem": "w-40",
-  "12rem": "w-48",
-  "14rem": "w-56",
+  "8rem": "w-32 print:w-auto",
+  "10rem": "w-40 print:w-auto",
+  "12rem": "w-48 print:w-auto",
+  "14rem": "w-56 print:w-auto",
 } as const;
 
 export type TableColumnWidth = keyof typeof COLUMN_WIDTH;

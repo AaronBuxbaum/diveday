@@ -197,8 +197,14 @@ export default async function IncidentExportPage({
             <Th>{t("incidentExport.colDiver")}</Th>
             <Th>{t("incidentExport.colEmergencyContact")}</Th>
             <Th>{t("incidentExport.colBuddy")}</Th>
+            {/* Pinned, so fixed layout stops splitting the row into equal
+                columns: "Awaiting roll call" had as much room as a buddy team,
+                which ran four and five lines. The unpinned three keep the rest;
+                `Table` releases the pin on paper. */}
             {doc.meta.checkpoints.map((checkpoint) => (
-              <Th key={checkpoint}>{checkpointText(checkpoint)}</Th>
+              <Th key={checkpoint} width="8rem">
+                {checkpointText(checkpoint)}
+              </Th>
             ))}
           </THead>
           <TBody>
@@ -281,7 +287,9 @@ export default async function IncidentExportPage({
               <Th>{t("incidentExport.colRoles")}</Th>
               <Th>{t("incidentExport.colCrewTeams")}</Th>
               {doc.meta.checkpoints.map((checkpoint) => (
-                <Th key={checkpoint}>{checkpointText(checkpoint)}</Th>
+                <Th key={checkpoint} width="8rem">
+                  {checkpointText(checkpoint)}
+                </Th>
               ))}
             </THead>
             <TBody>
