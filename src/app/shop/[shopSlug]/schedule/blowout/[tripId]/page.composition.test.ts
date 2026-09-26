@@ -41,3 +41,25 @@ describe("the diver cell", () => {
     expect(tableBody()).not.toMatch(/<tr\b/);
   });
 });
+
+/**
+ * **One offer per line, its date whole** (pixel-craft class 8, K-323). The
+ * offers were one string joined with " · " in a ~163px column, so two or
+ * three dates broke across lines on every row ("Wed," / "Jul 22"). Each
+ * offer is a list item now, and its date one unbreakable run: only a title
+ * may wrap.
+ */
+describe("the Offered column", () => {
+  it("lists the offers rather than joining them into one run", () => {
+    expect(tableBody()).not.toMatch(/\.join\(/);
+    expect(tableBody()).toMatch(
+      /diver\.offeredTrips\.map\(\(offer\) => \(\s*<li key=\{offer\.id\}>/,
+    );
+  });
+
+  it("keeps each offer's date on one line", () => {
+    expect(tableBody()).toMatch(
+      /<span className="whitespace-nowrap">\s*\{formatShortDate\(offer\.startsAt, locale, shop\.timezone\)\}\s*<\/span>/,
+    );
+  });
+});

@@ -35,6 +35,12 @@ export const metadata: Metadata = {
   title: "Weather blow-out — DiveDay",
 };
 
+/**
+ * Between an offered departure's title and its date, glued to the title by a
+ * no-break space: a wrap falls after the dash, so a line never starts with one.
+ */
+const TITLE_DATE_JOIN = " — ";
+
 const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey }> = {
   called: { tone: "success", key: "blowout.notices.called" },
   resumed: { tone: "success", key: "blowout.notices.resumed" },
@@ -275,14 +281,25 @@ export default async function BlowoutPage({
                       : t("blowout.record.noPayment")}
                   </Td>
                   <Td muted hideBelow="md" align="baseline">
-                    {diver.offeredTrips.length === 0
-                      ? t("blowout.record.noOffers")
-                      : diver.offeredTrips
-                          .map(
-                            (offer) =>
-                              `${offer.title} — ${formatShortDate(offer.startsAt, locale, shop.timezone)}`,
-                          )
-                          .join(" · ")}
+                    {/* One offer per line, its date one unbroken run: joined
+                        with " · " in this ~163px column, two or three dates
+                        broke across lines on every row (K-323). Only a title
+                        may wrap, and the dash stays with it. */}
+                    {diver.offeredTrips.length === 0 ? (
+                      t("blowout.record.noOffers")
+                    ) : (
+                      <ul className="space-y-1">
+                        {diver.offeredTrips.map((offer) => (
+                          <li key={offer.id}>
+                            {offer.title}
+                            {TITLE_DATE_JOIN}
+                            <span className="whitespace-nowrap">
+                              {formatShortDate(offer.startsAt, locale, shop.timezone)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </Td>
                   <Td align="baseline">
                     {diver.rebooked ? (
