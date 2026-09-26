@@ -41,9 +41,12 @@ export function RestoreDiver({
   t: StaffTranslator;
 }) {
   return (
+    // `mt-8`: the record's first block, so it stands where the first block
+    // stands on every other record — the status ledger's 32px under the acts
+    // row, which is also the gap from this panel down to the ledger.
     <section
       aria-labelledby="removed-heading"
-      className="mt-6 scroll-mt-24 rounded-panel border border-warning/40 bg-warning/5 p-5"
+      className="mt-8 scroll-mt-24 rounded-panel border border-warning/40 bg-warning/5 p-5"
     >
       <div className="flex flex-wrap items-center gap-3">
         <Badge tone="warning">{t("divers.removed.badge")}</Badge>
