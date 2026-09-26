@@ -85,3 +85,18 @@ describe("PersonSheet", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 });
+
+/**
+ * **The caret is sized to the name it opens** (K-549). The trigger's caret
+ * took `DisclosureCaret`'s default `size-3`, a 4×8px tick beside an 18px
+ * semibold name; the About rows' carets are `size-4` beside 14px text.
+ */
+describe("the trigger's caret", () => {
+  it("is drawn at size-4, beside the 18px name", () => {
+    render(<PersonSheet {...props} />);
+    const trigger = screen.getByRole("button", { name: "Open details for Meera Iyer" });
+    const caret = trigger.querySelector("svg:last-child");
+    expect(caret).not.toBeNull();
+    expect(caret).toHaveClass("size-4");
+  });
+});

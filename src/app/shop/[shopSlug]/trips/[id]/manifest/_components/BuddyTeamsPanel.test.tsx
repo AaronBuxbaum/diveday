@@ -112,3 +112,18 @@ describe("a buddy team's row", () => {
     expect(dissolve.className).not.toMatch(/(^|\s)min-h-12(\s|$)/);
   });
 });
+
+/**
+ * **The panel's caret is sized to its heading** (K-549). It took
+ * `DisclosureCaret`'s default `size-3`: a 4×8px tick beside the 18px "Buddy
+ * teams" heading.
+ */
+describe("the panel's disclosure line", () => {
+  it("draws its caret at size-4, beside the section title", () => {
+    renderPanel([]);
+    const summary = document.querySelector("summary");
+    const caret = summary?.querySelector("svg");
+    expect(caret).not.toBeNull();
+    expect(caret).toHaveClass("size-4");
+  });
+});

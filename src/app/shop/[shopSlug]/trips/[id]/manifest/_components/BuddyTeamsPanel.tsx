@@ -134,7 +134,7 @@ export function BuddyTeamsPanel({
         <summary className="-mx-2 flex min-h-11 w-fit cursor-pointer list-none items-start gap-2 rounded-lg px-2 py-2 select-none [&::-webkit-details-marker]:hidden">
           <SummaryCaret
             line={`h-lh ${SECTION_TITLE_CLASS}`}
-            className="text-muted group-open/buddypanel:rotate-90"
+            className="size-4 text-muted group-open/buddypanel:rotate-90"
           />
           <span className="flex flex-wrap items-baseline gap-x-2">
             <h2 id={scopedId(idPrefix, "buddy-teams-heading")} className={SECTION_TITLE_CLASS}>

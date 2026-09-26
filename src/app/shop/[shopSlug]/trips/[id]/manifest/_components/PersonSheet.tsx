@@ -242,7 +242,9 @@ export function PersonSheet({
         onClick={() => setOpen(true)}
       >
         {trigger}
-        <DisclosureCaret className="shrink-0 print:hidden" />
+        {/* `size-4`, not the default `size-3`: a 4×8px tick beside an 18px
+            semibold name read as a stray mark (K-549). */}
+        <DisclosureCaret className="size-4 shrink-0 print:hidden" />
       </button>
       {overlay ? createPortal(overlay, document.body) : null}
     </>
