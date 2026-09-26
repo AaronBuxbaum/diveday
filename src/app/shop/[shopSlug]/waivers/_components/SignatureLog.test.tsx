@@ -347,6 +347,14 @@ describe("a row on a phone", () => {
  * and the doors sink the room below into the block's padding (`outdent`)
  * when they end it; the padding (`pb-5`) is then the same 20px under the
  * doors as under the flagged answers, and keeps the ring 3px clear of the rule.
+ *
+ * The doors share a wrapping row, and at 320px (the reflow width) the column
+ * is 288px against the two English doors' 290, so they wrap. Every door gives
+ * its 12px back, the first line's too, so that line is 32px tall: under a
+ * `gap-y-1` the second door's target started 4px below the first line and
+ * overlapped the first door's by 8px. An outdented row's lines are 16px apart
+ * (`gap-y-4`), which is the 4px the targets had before plus the 12px each gives
+ * back; unwrapped, a row has no line gap and nothing moves.
  */
 describe("the evidence block's rhythm", () => {
   const tokens = (className: string) => className.split(/\s+/).filter(Boolean);
@@ -362,6 +370,11 @@ describe("the evidence block's rhythm", () => {
         ...tokens(buttonClass({ variant: "link", size: "sm", flush: true, outdent: "block-end" })),
       );
     }
+    // Wrapped, the second line's targets stay 4px clear of the first line's.
+    const doorRow = doors[0]?.parentElement;
+    expect(doors[1]?.parentElement).toBe(doorRow);
+    expect(doorRow).toHaveClass("flex-wrap", "gap-y-4");
+    expect(doorRow).not.toHaveClass("gap-y-1");
   });
 
   it("leaves the doors whole when the flagged answers close the block", () => {
@@ -372,8 +385,12 @@ describe("the evidence block's rhythm", () => {
     const block = row.querySelector("summary + div");
     expect(block).toHaveClass("gap-1", "pb-5");
     expect(block?.lastElementChild?.textContent).toMatch(/chest surgery/);
-    for (const door of within(row).getAllByRole("link")) {
+    const doors = within(row).getAllByRole("link");
+    for (const door of doors) {
       expect(door).not.toHaveClass("-mb-3");
     }
+    // Whole doors keep their own 12px, so wrapped lines need only the 4px.
+    expect(doors[0]?.parentElement).toHaveClass("flex-wrap", "gap-y-1");
+    expect(doors[0]?.parentElement).not.toHaveClass("gap-y-4");
   });
 });

@@ -122,12 +122,19 @@ function SignatureRow({
   // the closing rule, the ring 3px clear of it. With `gap-3 pb-4` stacked on
   // that room, the doors sat 34px under the version and 31px over the rule,
   // against the version's 24px under the name.
+  //
+  // Every door gives its 12px back, the first line's too when the row wraps
+  // (320px, the reflow width, wraps the English pair), so an outdented row's
+  // lines are 16px apart: the 4px its targets keep between them plus the 12px
+  // each gives back. Under `gap-y-1` the second line's targets overlapped the
+  // first's by 8px.
   const door = buttonClass({
     variant: "link",
     size: "sm",
     flush: true,
     outdent: flagged ? undefined : "block-end",
   });
+  const doorRow = flagged ? "flex flex-wrap gap-x-4 gap-y-1" : "flex flex-wrap gap-x-4 gap-y-4";
   return (
     // A ledger row's box (`ledgerRowBoxClass`): the rules reach 8px past the
     // column, and the words stay on it.
@@ -200,7 +207,7 @@ function SignatureRow({
           {entry.guardian ? (
             <p className="text-muted">{guardianCoSignedText(t, entry.guardian)}</p>
           ) : null}
-          <div className="flex flex-wrap gap-x-4 gap-y-1">
+          <div className={doorRow}>
             <Link href={`/shop/${shopSlug}/divers/${entry.personId}`} className={door}>
               {t("waiversStaff.signatures.openRecord")}
             </Link>
