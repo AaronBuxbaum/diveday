@@ -252,7 +252,11 @@ export function WaiverSendControl({
   pendingLabel?: string;
   /** An in-page `InlineConfirm` guard before a resend — the roster's already-sent case wants this. */
   confirmMessage?: string;
-  /** Overrides the default secondary-button look — the roster's per-status tone pill. */
+  /**
+   * Overrides the default secondary-button look — the roster's per-status tone
+   * pill. The default is `sm`: its home is a ledger row on Today, beside fixes
+   * that are all `sm` (`button.ts`, "a ledger row … takes `sm`").
+   */
   className?: string;
   /** Overrides the outer `sm:text-right` alignment — the roster's two-column grid wants it left. */
   wrapperClassName?: string;
@@ -283,7 +287,8 @@ export function WaiverSendControl({
     state.links.length === 0 &&
     state.errors.length === 0;
   const buttonClassName =
-    className ?? buttonClass({ variant: "secondary", className: "w-full shrink-0 sm:w-auto" });
+    className ??
+    buttonClass({ variant: "secondary", size: "sm", className: "w-full shrink-0 sm:w-auto" });
   const labelContent = (
     <>
       {label}
