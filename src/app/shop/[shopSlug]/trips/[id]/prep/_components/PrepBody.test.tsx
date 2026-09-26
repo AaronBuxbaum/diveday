@@ -12,6 +12,7 @@ import {
   type RentalFit,
 } from "@/lib/dive-prep";
 import type { SupportNeeds } from "@/lib/support-needs";
+import { rendersFlush } from "@/test/button-flush";
 import { PrepBody } from "./PrepBody";
 
 afterEach(cleanup);
@@ -570,8 +571,10 @@ describe("the packing list's geometry", () => {
     const ticket = within(container).getByRole("link", { name: t("gear.prep.ticketDoor") });
     // (44 − 24) / 2 handed back, and the ring drawn inside the clipping card.
     expect(tokens(ticket)).toEqual(
-      expect.arrayContaining(["-my-2.5", "focus-visible:focus-ring-inset", "-mx-2", "px-2"]),
+      expect.arrayContaining(["-my-2.5", "focus-visible:focus-ring-inset"]),
     );
+    // `flush` asked of `buttonClass`, not spelled as its tokens (K-83).
+    expect(rendersFlush(ticket, "ghost", "sm")).toBe(true);
   });
 
   it("sets the dive-recency mark on the note's first line, not its middle (K-281)", () => {
