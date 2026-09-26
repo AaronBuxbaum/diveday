@@ -49,4 +49,35 @@ describe("PartyClaimPanel", () => {
       screen.getByText("Ask them to finish their waiver from their own link."),
     ).toBeInTheDocument();
   });
+
+  /**
+   * K-343. The summary was a bare `cursor-pointer` line: the browser's black
+   * triangle, and a 20px box beside a 44px "Copy reminder link".
+   */
+  it("opens the raw link from a 44px disclosure with the app's own caret", () => {
+    render(
+      <PartyClaimPanel
+        locale="en-US"
+        seats={[
+          {
+            bookingId: "seat-1",
+            seatName: "Maya Alvarez",
+            claimed: false,
+            waiverSigned: false,
+            claimUrl: "/claim/seat-1",
+          },
+        ]}
+      />,
+    );
+
+    const summary = screen.getByText("Show link").closest("summary");
+    expect(summary).toHaveClass(
+      "flex",
+      "min-h-11",
+      "list-none",
+      "items-center",
+      "[&::-webkit-details-marker]:hidden",
+    );
+    expect(summary?.querySelector("svg")).not.toBeNull();
+  });
 });
