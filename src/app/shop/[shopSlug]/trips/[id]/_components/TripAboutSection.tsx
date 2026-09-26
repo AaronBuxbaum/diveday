@@ -150,6 +150,11 @@ export function TripAboutSection({
   rows: TripAboutRow[];
   /** Fragments that open the panel itself — every row anchor a deep link uses. */
   openOnHash?: string[];
+  /**
+   * Quiet doors in one wrapping row, each `flush` so every word — the first,
+   * and the first of a wrapped line — sits on the column. The row's `gap-x-8`
+   * is the padding they gave up: words 32px apart, fills 16px.
+   */
   actions?: ReactNode;
   /** The rare and destructive acts, as a column of quiet items. */
   more?: ReactNode;
@@ -210,7 +215,7 @@ export function TripAboutSection({
         </span>
       </summary>
       <div className="border-t border-border px-4 pb-4 sm:px-5 sm:pb-5">
-        {actions ? <div className="flex flex-wrap gap-2 py-3">{actions}</div> : null}
+        {actions ? <div className="flex flex-wrap gap-x-8 gap-y-2 py-3">{actions}</div> : null}
         <div className={ROWS_CLASS}>
           {rows.map((row) => (
             <AboutRow key={row.id} row={row} />

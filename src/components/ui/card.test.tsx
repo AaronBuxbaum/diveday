@@ -4,7 +4,16 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { PANEL_INNER_RADIUS, SectionCard, sectionCardClass } from "./card";
+import { Badge } from "./badge";
+import {
+  cardSummaryClass,
+  INSET_NOTE_BOX,
+  INSET_NOTE_CLASS,
+  PANEL_INNER_RADIUS,
+  SectionCard,
+  sectionCardClass,
+  TONE_PANEL_CLASS,
+} from "./card";
 
 afterEach(cleanup);
 
@@ -134,6 +143,130 @@ describe("every panel shell wears the panel radius and the bed", () => {
   });
 });
 
+/**
+ * **The face of a card that is a disclosure** — pixel-craft classes 7 and 12.
+ * Nine summaries were hand-rolled four ways: no radius, so the global ring
+ * drew a square around a 20px card (8px off each corner); `items-center`, so a
+ * wrapped title left its caret floating between lines (12–21px low on the
+ * manifest at 390); two gaps (8 and 12px) and two hovers on one page.
+ */
+describe("cardSummaryClass", () => {
+  it("takes the panel's inner corner, square at the bottom once open", () => {
+    const tokens = cardSummaryClass().split(" ");
+    expect(tokens).toContain(PANEL_INNER_RADIUS);
+    // The open state is spelled against the `<details>`, never `group-open:`:
+    // none of these disclosures names an unnamed `group`.
+    expect(tokens).toContain("[[open]>&]:rounded-b-none");
+    expect(tokens.some((token) => token.startsWith("group-open:"))).toBe(false);
+  });
+
+  it("starts its row at the top, so a caret stays on the first line", () => {
+    const tokens = cardSummaryClass().split(" ");
+    expect(tokens).toEqual(expect.arrayContaining(["flex", "items-start", "gap-3"]));
+    expect(tokens).not.toContain("items-center");
+  });
+
+  it("is a control, with one hover fill, and no marker", () => {
+    const tokens = cardSummaryClass().split(" ");
+    expect(tokens).toEqual(
+      expect.arrayContaining([
+        "cursor-pointer",
+        "list-none",
+        "[&::-webkit-details-marker]:hidden",
+        "hover:bg-surface-sunken",
+      ]),
+    );
+    // The global ring, following the corner: the card does not clip.
+    expect(tokens).not.toContain("focus-visible:focus-ring-inset");
+  });
+
+  it("fills a danger band with its own tint, and appends the caller's padding", () => {
+    const tokens = cardSummaryClass({ tone: "danger", className: "px-4 py-3" }).split(" ");
+    expect(tokens).toContain("hover:bg-danger/5");
+    expect(tokens).not.toContain("hover:bg-surface-sunken");
+    expect(tokens).toEqual(expect.arrayContaining(["px-4", "py-3"]));
+  });
+});
+
+/**
+ * **A tone panel is a card in a tone** — pixel-craft classes 3 and 12. The
+ * roster's minimum-seats and unmet-demand bands hand-rolled `p-5` with no
+ * `sm:` step and no bed, one of them at the 12px inset radius, so on a phone
+ * their words started 4px right of every card above and below them.
+ */
+describe("TONE_PANEL_CLASS", () => {
+  it("is the card's radius, bed and padding, and no colour", () => {
+    expect(TONE_PANEL_CLASS).toBe("rounded-panel border p-4 shadow-bed sm:p-5");
+    // The same inset as SectionCard's default, so a tone panel's words start
+    // where a card's do at every width.
+    for (const token of ["rounded-panel", "shadow-bed", "p-4", "sm:p-5"]) {
+      expect(sectionCardClass().split(" ")).toContain(token);
+    }
+    expect(TONE_PANEL_CLASS).not.toMatch(
+      /\b(border|bg|text)-(border|surface|warning|danger|success|primary)/,
+    );
+  });
+});
+
+/**
+ * **A note carved into a card is one box** — pixel-craft class 12. The
+ * departure's panels spelled it three ways: 16px in and 16px down in the crew
+ * list, 12px in the requirements and roster notes, 12px all round at 12px type
+ * under the conditions. `px-3 py-2 text-sm` was already the majority spelling.
+ */
+describe("the inset note", () => {
+  it("is one geometry, and one sunken spelling of it", () => {
+    expect(INSET_NOTE_BOX).toBe("rounded-lg px-3 py-2 text-sm");
+    expect(INSET_NOTE_CLASS).toBe(`${INSET_NOTE_BOX} bg-surface-sunken text-muted`);
+  });
+});
+
+/**
+ * The tree half: a `<summary>` that is the first thing inside a card —
+ * a `padding="none"` shell, a `SectionCard as="details"`, a `<details>` that
+ * wears the panel radius itself — takes the shared class, or it draws its ring
+ * square and its caret wherever `items-center` leaves it. A clipped card
+ * (`overflow-hidden`) rounds its own fills and rings inside (the About card,
+ * `LIST_ROW_SUMMARY_RING`), so it is not a card face in this sense.
+ */
+describe("every card-face summary wears cardSummaryClass", () => {
+  function files(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) return files(full);
+      return /\.tsx$/.test(entry.name) && !/\.test\.tsx$/.test(entry.name) ? [full] : [];
+    });
+  }
+
+  const CARD_OPENER =
+    /sectionCardClass\(\{[^}]*padding: "none"|<SectionCard\b[^>]*as="details"|<details\b[^>]*rounded-panel/g;
+
+  it("finds none hand-rolled", () => {
+    const offenders: string[] = [];
+    for (const file of files(SRC_DIR)) {
+      const text = readFileSync(file, "utf8");
+      for (const summary of text.matchAll(/<summary\s/g)) {
+        const before = text.slice(0, summary.index);
+        const openers = [...before.matchAll(CARD_OPENER)];
+        const opener = openers.at(-1);
+        if (opener?.index === undefined) continue;
+        // Nothing closed between the card's opening and the summary: the
+        // summary is the card's first child, through a bare `<details>` at most.
+        const between = before.slice(opener.index);
+        if (between.includes("</")) continue;
+        const openingTag = between.slice(0, between.indexOf(">") + 1);
+        if (/\boverflow-hidden\b/.test(openingTag)) continue;
+        const tag = text.slice(summary.index, text.indexOf(">", summary.index));
+        if (!tag.includes("cardSummaryClass(")) {
+          const line = before.split("\n").length;
+          offenders.push(`${relative(SRC_DIR, file).split(/[\\/]/).join("/")}:${line}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
 describe("SectionCard", () => {
   it("wears one radius, whatever the call site asks for", () => {
     const { container } = render(
@@ -210,6 +343,72 @@ describe("SectionCard", () => {
     const header = heading.parentElement?.parentElement;
     expect(header).toHaveClass("justify-between");
     expect(header).toContainElement(screen.getByText("Verified"));
+  });
+
+  /**
+   * **The title and the action share a line** — pixel-craft class 1. The
+   * header top-aligned a 32px title line beside a 44px button, so the two
+   * shared no line at all: "My departures" sat with its baseline 2px above
+   * the button's label and its centre 5.5px above the button's
+   * (settings-calendar at 1280), and "Grab a spot" 10px under "5 spots left"
+   * on the public trip. Baselines are the line text beside a control shares.
+   */
+  it("sets the title and its actions on one baseline", () => {
+    render(
+      <SectionCard title="My departures" actions={<button type="button">Copy link</button>}>
+        body
+      </SectionCard>,
+    );
+    const header = screen.getByRole("heading", { name: "My departures" }).parentElement
+      ?.parentElement;
+    expect(header).toHaveClass("items-baseline");
+    expect(header).not.toHaveClass("items-start");
+  });
+
+  /**
+   * A toned badge is the other action a header carries (the backup
+   * destination, each integration, the WhatsApp number), and its first item
+   * is a drawn mark whose baseline is its bottom edge. The header can only
+   * share a baseline the badge hands it from its word: aligned on the mark,
+   * "Delivery proven" would sit 3px above "Backups are set up"
+   * (settings-export at 1280). The badge owns that (badge.test.tsx); this
+   * pins the pairing.
+   */
+  it("sets the title on a toned badge's word, not on its mark", () => {
+    render(
+      <SectionCard
+        title="Backups are set up"
+        actions={<Badge tone="success">Delivery proven</Badge>}
+      >
+        body
+      </SectionCard>,
+    );
+    const header = screen.getByRole("heading", { name: "Backups are set up" }).parentElement
+      ?.parentElement;
+    expect(header).toHaveClass("items-baseline");
+    const badge = screen.getByText("Delivery proven");
+    expect(header).toContainElement(badge);
+    expect(badge).toHaveClass("inline-flex", "items-baseline");
+    expect(badge).not.toHaveClass("items-center");
+    expect(badge.querySelector("svg")).toHaveClass("self-center");
+  });
+
+  /**
+   * **A wrapped title keeps more than one word on its last line** — class 8.
+   * The 24px title set "No WhatsApp number" on one line and "connected" alone
+   * on the next (settings-whatsapp at 390). Card titles are short, so they
+   * balance, at both levels.
+   */
+  it("balances its title at either level", () => {
+    render(<SectionCard title="No WhatsApp number connected">body</SectionCard>);
+    expect(screen.getByRole("heading", { level: 2 })).toHaveClass("text-balance");
+    cleanup();
+    render(
+      <SectionCard title="Delivery history" titleAs="h3">
+        body
+      </SectionCard>,
+    );
+    expect(screen.getByRole("heading", { level: 3 })).toHaveClass("text-balance");
   });
 });
 

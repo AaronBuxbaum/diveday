@@ -110,6 +110,40 @@ test.describe("the shop on paper", () => {
     // (`e2e/visual.spec.ts`).
     await expect(page.locator(".paper-sheet-blank").first()).toBeVisible();
     await expect(page.getByText("If something goes wrong")).toHaveCount(0);
+
+    // **Every blank is a line a skipper can write on**: from its label to its
+    // column's edge, lying on the baseline the label's words stand on. It was
+    // 8ch of rule ending wherever the label ended (three blanks, three right
+    // edges), then a one-line block whose rule fell 3.4px under the words.
+    // Measured on paper, because the stylesheet test beside `PaperSheet` can
+    // say what the rule asks for and not where it lands.
+    await page.emulateMedia({ media: "print" });
+    const blanks = await page.locator(".paper-sheet-blank").evaluateAll((elements) =>
+      elements.map((blank) => {
+        const definition = blank.closest("dd");
+        const label = definition?.previousElementSibling;
+        // An empty inline block sits on its line's baseline, so its bottom
+        // edge is where the label's first line of words stands.
+        const probe = document.createElement("span");
+        probe.style.display = "inline-block";
+        label?.prepend(probe);
+        const baseline = probe.getBoundingClientRect().bottom;
+        probe.remove();
+        const rule = blank.getBoundingClientRect();
+        return {
+          label: label?.textContent?.trim() || "(no label)",
+          shortOfEdge: (definition?.getBoundingClientRect().right ?? Number.NaN) - rule.right,
+          belowBaseline: rule.bottom - baseline,
+        };
+      }),
+    );
+    expect(blanks.length).toBeGreaterThan(0);
+    expect(
+      blanks.filter(
+        (blank) => !(Math.abs(blank.shortOfEdge) <= 0.5 && Math.abs(blank.belowBaseline) <= 0.5),
+      ),
+    ).toEqual([]);
+    await page.emulateMedia({ media: "screen" });
   });
 
   test("the counter prints a pass for the diver it just checked in", async ({

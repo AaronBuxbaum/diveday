@@ -1,4 +1,4 @@
-import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ShopPageHeaderSkeleton, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
@@ -31,9 +31,14 @@ export default function ReviewsLoading() {
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
+        {/* The aggregate line wraps to two lines at 390px, one at 1280; the
+            "View public page" door stacks under it on a phone (K-86). */}
         <ShopPageHeaderSkeleton
           description={false}
-          meta={<div className="h-5 w-72 max-w-full rounded bg-surface-sunken" />}
+          meta={
+            <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-5" width="w-72 max-w-full" />
+          }
+          actions
         />
         <div className="space-y-10">
           <div>

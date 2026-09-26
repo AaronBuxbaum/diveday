@@ -12,7 +12,14 @@ export default function PublicCoursesLoading() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-48" descriptionWidth="w-full max-w-2xl" />
+        {/* No eyebrow bar: the page's header has none ("COURSES" over
+            "Courses" was cut), and the default drew one anyway. */}
+        <ShopPageHeaderSkeleton
+          eyebrow={false}
+          titleWidth="w-48"
+          description
+          descriptionWidth="w-full max-w-2xl"
+        />
       </div>
       <div className="mt-8 animate-pulse divide-y divide-border border-y border-border">
         {[0, 1, 2, 3].map((i) => (

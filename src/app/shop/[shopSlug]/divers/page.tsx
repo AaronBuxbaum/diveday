@@ -282,7 +282,6 @@ export default async function DiversPage({
             href={pageHref}
             total={t("divers.list.pagination.total", { count: diverPage.total })}
             words={staffPagerWords(t)}
-            className="mt-8"
           />
         }
         copy={{

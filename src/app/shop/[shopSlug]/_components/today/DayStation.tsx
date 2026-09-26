@@ -181,7 +181,13 @@ export function DayStation({
             {stage ? (
               <BoatDrift stage={stage.stage}>
                 <Badge tone={stageTone(stage.stage)} toneMark={false} tabularNums>
-                  <SiteMark mark="boat" size="chip" ground="bare" coral={false} />
+                  <SiteMark
+                    mark="boat"
+                    size="chip"
+                    ground="bare"
+                    coral={false}
+                    className="self-center"
+                  />
                   {t("shopHome.spine.stage.chip", {
                     stage: stageWord,
                     time: formatTime(stage.recordedAt, locale, timeZone),

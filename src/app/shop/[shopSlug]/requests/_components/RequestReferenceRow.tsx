@@ -42,7 +42,7 @@ export function RequestReferenceRow({
   const name = request.name ?? t("requests.anonymous");
   const date = formatCalendarDate(homeDate, locale);
   return (
-    <LedgerRow as="li" className="py-2">
+    <LedgerRow as="li">
       <p className="min-w-0 text-sm text-muted">
         <span className="font-medium">{name}</span>
         {request.divers ? ` · ${t("requests.divers", { count: request.divers })}` : null}

@@ -1,6 +1,13 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import {
+  ChoiceRow,
+  controlClass,
+  Field,
+  FieldActions,
+  FieldGrid,
+  textareaClassFor,
+} from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { supportNeedsLines } from "@/i18n/support-needs-labels";
@@ -95,16 +102,16 @@ export function SupportNeedsPanel({
                   ["diver", "supportDiversOwn"],
                 ] as const
               ).map(([value, key]) => (
-                <label key={key} className="flex min-h-11 items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="supportDiversProvidedBy"
-                    value={value}
-                    defaultChecked={(needs?.supportDiversProvidedBy ?? "") === value}
-                    className="size-4"
-                  />
-                  <span>{t(`divers.support.${key}`)}</span>
-                </label>
+                <ChoiceRow
+                  key={key}
+                  type="radio"
+                  name="supportDiversProvidedBy"
+                  value={value}
+                  defaultChecked={(needs?.supportDiversProvidedBy ?? "") === value}
+                  className="text-sm"
+                >
+                  {t(`divers.support.${key}`)}
+                </ChoiceRow>
               ))}
             </fieldset>
             <Field
@@ -137,15 +144,15 @@ export function SupportNeedsPanel({
                   ["needsWaterLift", "waterLift", needs?.needsWaterLift],
                 ] as const
               ).map(([name, key, checked]) => (
-                <label key={name} className="flex min-h-11 items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    name={name}
-                    defaultChecked={checked ?? false}
-                    className="size-4"
-                  />
-                  <span>{t(`divers.support.${key}`)}</span>
-                </label>
+                <ChoiceRow
+                  key={name}
+                  type="checkbox"
+                  name={name}
+                  defaultChecked={checked ?? false}
+                  className="text-sm"
+                >
+                  {t(`divers.support.${key}`)}
+                </ChoiceRow>
               ))}
             </fieldset>
 
@@ -161,15 +168,15 @@ export function SupportNeedsPanel({
                   ["briefingBySignals", "briefingSignals", needs?.briefingBySignals],
                 ] as const
               ).map(([name, key, checked]) => (
-                <label key={name} className="flex min-h-11 items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    name={name}
-                    defaultChecked={checked ?? false}
-                    className="size-4"
-                  />
-                  <span>{t(`divers.support.${key}`)}</span>
-                </label>
+                <ChoiceRow
+                  key={name}
+                  type="checkbox"
+                  name={name}
+                  defaultChecked={checked ?? false}
+                  className="text-sm"
+                >
+                  {t(`divers.support.${key}`)}
+                </ChoiceRow>
               ))}
             </fieldset>
 
@@ -180,7 +187,7 @@ export function SupportNeedsPanel({
                 rows={2}
                 maxLength={300}
                 defaultValue={needs?.equipmentAdaptation ?? ""}
-                className={controlClass}
+                className={textareaClassFor(2)}
               />
             </Field>
             <Field label={t("divers.support.divesWithLabel")} htmlFor="support-dives-with">

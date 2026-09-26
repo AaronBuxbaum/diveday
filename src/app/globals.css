@@ -82,6 +82,12 @@
    * keyboard user could lose entirely in sun. Undiluted, the worst case across
    * every skin and surface is 4.66:1 (light on --surface-sunken); light 4.66–
    * 5.36, dark 9.05–10.57, boat 6.69–11.38, glare 6.87–12.59.
+   *
+   * **Not on the sky.** A `SkyBand` is dark in both schemes, and lagoon on it
+   * measured 1.02–3.62:1 (1.28 at the day sky's foot), so `.sky` retokens the
+   * ring to its own white ink: 5.24 at worst (dawn's foot), day 7.17–10.62,
+   * dusk 5.70–17.04, night 16.44–20.23, and 17.10 / 17.84 on the flattened
+   * `prefers-contrast` and glare skies.
    */
   --focus-ring: var(--primary);
 
@@ -506,6 +512,28 @@ html:has([data-chrome-bar]) {
   scroll-padding-top: var(--chrome-h);
 }
 
+/*
+ * The same inset at the bottom edge, for a page with a sticky Save bar
+ * (`StickyFormActions`, which marks itself `data-sticky-actions`).
+ *
+ * The bar rides the viewport's bottom while its form is on screen, 95%
+ * opaque, and nothing told the browser it was there: a field Tab moved focus
+ * to, or a fragment a link jumped to, could land under it whole. The pixel
+ * probe measured the dive-site editor at 390 with "Name *" and its box at
+ * 757–817 under a bar at 771–845. Only where the bar is, for the reason the
+ * rule above gives.
+ *
+ * The height is the bar's measured one, `--sticky-actions-h`, which
+ * `StickyActionsInset` writes on `<html>` whenever the bar resizes: the bar is
+ * a wrapping row, and the unsaved-changes sentence beside Save wraps under it
+ * at 390 whenever the form is dirty, standing it about 105px. The fallback is
+ * its one-row height — the md button (3rem), its `py-3` (1.5rem) and its
+ * hairline — for the server's paint and a browser with no `ResizeObserver`.
+ */
+html:has([data-sticky-actions]) {
+  scroll-padding-bottom: var(--sticky-actions-h, calc(3rem + 1.5rem + 1px));
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -558,14 +586,22 @@ body {
 
 /* The live manifest owns the whole phone viewport. Its staff chrome is useful
  * everywhere else, but would consume the roll-call surface here; the deferred
- * /offline-manifest route intentionally stays in the normal staff shell. */
+ * /offline-manifest route intentionally stays in the normal staff shell.
+ *
+ * **A hidden bar is 0px tall.** With the bar gone and `--chrome-h` still 56px,
+ * the count panel (`sticky top-(--chrome-h)`) pinned 56px below nothing, and
+ * the scroll padding and the roll-call rows' scroll margins kept a bar's worth
+ * of air above every jump. Zeroing the token moves every reader at once, the
+ * offline manifest's rejected-write notice (`fixed top-(--chrome-h)`) among
+ * them, which is why that notice has no rule of its own here any more;
+ * `chrome.test.ts` holds it beside the rule that hides the bar. */
 @media (max-width: 1023px) {
   body:has(#shop-main-content > main > div.boat-mode) [data-staff-chrome="true"] {
     display: none;
   }
 
-  body:has(#shop-main-content > main > div.boat-mode) [data-offline-rejected-notice="true"] {
-    top: 0;
+  html:has(#shop-main-content > main > div.boat-mode) {
+    --chrome-h: 0px;
   }
 }
 
@@ -697,6 +733,22 @@ textarea::placeholder {
   color: color-mix(in srgb, var(--muted) 78%, transparent);
 }
 
+/*
+ * The same colour for an empty date, month, time or date-and-time box's mask
+ * (`mm/dd/yyyy`, `--:-- --`), which no `::placeholder` reaches: it drew in
+ * the input's own ink and read as a filled answer (the pixel probe,
+ * schedule-off-season). `DateInput` marks the box `data-empty` while it holds
+ * no value. A rule of its own, not a third selector above: a browser that
+ * does not know the pseudo-element drops the whole rule it sits in.
+ *
+ * Not while the box has focus. Its value stays "" until every segment is
+ * filled, so a person typing "09" into an empty box would see their own
+ * digits in the placeholder's grey and read it as not taking the input.
+ */
+input[data-empty]:not(:focus)::-webkit-datetime-edit {
+  color: color-mix(in srgb, var(--muted) 78%, transparent);
+}
+
 summary {
   user-select: none;
 }
@@ -721,6 +773,20 @@ summary {
   :where(a, button, input, select, textarea, summary):focus-visible {
     outline: 3px solid var(--focus-ring);
     outline-offset: 2px;
+  }
+
+  /* Tailwind v4's Preflight gives a button the arrow. `buttonClass` put the
+     hand back and every hand-written button went without; one rule here, and
+     `disabled:cursor-wait` or any other utility still wins. */
+  :where(button:not(:disabled), summary, [role="button"]) {
+    cursor: pointer;
+  }
+
+  /* Running text never ends on one word. The longhand, not `text-wrap`: the
+     shorthand also sets `text-wrap-mode: wrap`, which would undo the `nowrap`
+     a `<p>` inherits from a `truncate` parent (`text-wrap.test.ts`). */
+  :where(p, li, dd, figcaption) {
+    text-wrap-style: pretty;
   }
 }
 
@@ -810,7 +876,7 @@ textarea {
  * 2. Padding. `@page` margins give each printed page its gutters — but the
  *    print dialog's "None"/"Minimum" margin setting zeroes them, and that is
  *    exactly when content slams into the paper edge. Side padding on the
- *    printed surface itself (the trip layout's `print:px-*`) is content, so it
+ *    printed surface itself (the trip shell's `print:px-*`) is content, so it
  *    survives that setting; `@page` still owns the top/bottom gutter that has
  *    to repeat across a multi-page manifest, which container padding can't.
  *
@@ -942,10 +1008,16 @@ textarea {
   letter-spacing: 0.02em;
 }
 
-/* A ruled blank a skipper fills in by hand - never an invented number. */
+/* A ruled blank a skipper fills in by hand - never an invented number. It
+   runs to its column's edge and lies on its label's baseline. An 8ch inline
+   block was 13mm of rule ending wherever its label ended, three blanks at
+   three x positions; a one-line block reached the edge but dropped its rule
+   to the foot of the line, 3.4px under the words. Inline-level and as wide as
+   its definition, it is both: an empty inline block's bottom edge is the
+   line's baseline (`PaperSheet.test.tsx`, `e2e/shop-on-paper.spec.ts`). */
 .paper-sheet-blank {
   display: inline-block;
-  min-width: 8ch;
+  width: 100%;
   border-bottom: 1px solid var(--sheet-rule);
 }
 
@@ -967,11 +1039,19 @@ textarea {
    *
    * A backstop, not the fix. It is only safe because the packet no longer
    * composes the two tabs that *are* forms: with those gone nothing
-   * value-bearing lives inside a control here, so hiding one loses no fact. The
-   * same rule applied to the old packet would have silently dropped the trip's
-   * title, date and dive plan off the sheet.
+   * value-bearing lives inside a form control here, so hiding one loses no
+   * fact. The same rule applied to the old packet would have silently dropped
+   * the trip's title, date and dive plan off the sheet.
+   *
+   * **One kind of button is the fact.** The roll call's person is a button
+   * (the tap that opens their sheet), and its content is the index and the
+   * name — so under the blanket rule both packets printed every roster row with
+   * no name in it. A button whose content must reach paper says so with
+   * `data-print-content` and keeps only its control-only parts off the sheet
+   * (`PersonSheet`'s caret is `print:hidden`). `print-bundle.test.ts` asks the
+   * DOM what this selector matches.
    */
-  .trip-print-bundle :is(button, select, textarea, input) {
+  .trip-print-bundle :is(button:not([data-print-content]), select, textarea, input) {
     display: none;
   }
 
@@ -1569,6 +1649,10 @@ textarea {
 .sky {
   background: var(--sky-day);
   color: var(--sky-ink);
+  /* Every focusable on a band stands on the sky itself, where lagoon's ring
+     measured under 2:1; the band's white ink clears 5.2:1 on every stop (the
+     ratios are under `--focus-ring`). */
+  --focus-ring: var(--sky-ink);
 }
 
 .sky[data-scheme="dawn"] {
@@ -2145,25 +2229,44 @@ textarea {
   line-height: 1.5rem !important;
 }
 
-/* Force all interactive targets (buttons, inputs, select, links) to be at least 44px high & wide if applicable */
-.glare-mode button,
-.glare-mode select,
-.glare-mode textarea,
-.glare-mode input:not([type="hidden"]),
-.glare-mode summary,
-.glare-mode [role="button"] {
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce touch target min-height */
-  min-height: 44px !important;
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce touch target min-width */
-  min-width: 44px !important;
+/*
+ * Every target at least 44px high and wide: **a floor, never a ceiling.**
+ *
+ * In `@layer base` and without `!important`, and that is load-bearing. It was
+ * unlayered and important, which beats every utility, so it replaced every
+ * *larger* minimum as well as the smaller ones: the roll call's `min-h-19`
+ * person button rendered at 52px beside its 56px mark, the name and index
+ * riding 11–13px above the mark's centre (pixel probe,
+ * `manifest-seen-boat-mode`). Layered, an element with no minimum of its own
+ * still gets 44px, and a component that asks for more keeps it.
+ * `glare-mode.test.ts` holds both halves.
+ */
+@layer base {
+  .glare-mode button,
+  .glare-mode select,
+  .glare-mode textarea,
+  .glare-mode input:not([type="hidden"]),
+  .glare-mode summary,
+  .glare-mode [role="button"],
+  .glare-mode a {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
-/* Standalone navigation links / controls in lists or bars should satisfy the 44px targets too */
-.glare-mode a {
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce touch target min-height */
-  min-height: 44px !important;
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce touch target min-width */
-  min-width: 44px !important;
+/*
+ * Standalone navigation links / controls in lists or bars centre their label
+ * in that box.
+ *
+ * **Not a link that already lays out its own box** (`inline-flex`), for the
+ * reason the prose reset below gives. Every tap-target link carries its own
+ * display and alignment, and this rule's `!important` overrode them: the
+ * eyebrow back link stands its words on its 44px box's bottom edge
+ * (`items-end`, K-395), and forced to centre them it lifted the eyebrow 14px
+ * off its line in glare, further from the title than on land (the pixel
+ * probe, manifest-seen-boat-mode).
+ */
+.glare-mode a:not(.inline-flex) {
   /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce layout display */
   display: inline-flex !important;
   /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to center labels */
@@ -2172,15 +2275,22 @@ textarea {
   justify-content: center !important;
 }
 
-/* If a link is inline, don't force displays that disrupt sentence flow */
-.glare-mode p a,
-.glare-mode span a,
-.glare-mode .inline a {
-  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to restore normal height flow */
-  min-height: auto !important;
-  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to restore normal width flow */
-  min-width: auto !important;
-  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to restore text wrapping */
+/*
+ * A link inside a sentence stays in the sentence: no box, no floor.
+ *
+ * **Not a link that is already a tap target.** `EyebrowBackLink` is an
+ * `inline-flex min-h-11` link whose wrapper is a `<span>`, and `span a` turned
+ * it inline at 33×28, its chevron on a line of its own above "TRIP". Prose
+ * links carry no `inline-flex`; every tap-target link does.
+ *
+ * Unlayered, so its `auto` minimums beat the layered floor above without an
+ * `!important`; `display` keeps one, to beat the one on
+ * `.glare-mode a:not(.inline-flex)`.
+ */
+.glare-mode :is(p, span, .inline) a:not(.inline-flex) {
+  min-height: auto;
+  min-width: auto;
+  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to beat the display forced on .glare-mode a:not(.inline-flex) */
   display: inline !important;
 }
 
@@ -2372,6 +2482,140 @@ details[open]::details-content {
   }
   to {
     opacity: 0;
+  }
+}
+
+/*
+ * **A chip row that scrolls says so at the end it has more at** —
+ * `FilterChips`' phone row (`chip-scroller`; docs/design/pixel-craft.md,
+ * class 9).
+ *
+ * The row's one affordance was a last chip peeking in from the screen's edge,
+ * and whether one peeks depends on the labels: at 390 "Wrecks" ended at 386
+ * and the next chip started at 394, so the public schedule's row read as
+ * complete. Each end now fades over the row's 16px gutter while there is more
+ * to scroll toward it.
+ *
+ * **The scroll is the clock**, as for the bar's fold above: each fade's length
+ * is a registered `<length>` animated on the row's own inline scroll. The
+ * start fade grows over the first gutter of scroll and the end fade shrinks
+ * away over the last, so a row at either end shows its first or last chip,
+ * and that chip's focus ring, whole; a static mask would have faded them. A
+ * row that does not overflow has an inactive scroll timeline, so neither
+ * animation applies and both lengths stay at their initial 0: no fade. The
+ * row a view opens scrolled to (`FilterChipsScroller`) fades at both ends.
+ *
+ * Phone widths only, by the same `max-sm` variant the row's own classes use:
+ * from `sm` the row wraps and never scrolls. Without scroll-driven animations
+ * there is no fade, which is the row as it was.
+ */
+@property --chip-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --chip-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@supports (animation-timeline: scroll()) {
+  .chip-scroller {
+    @variant max-sm {
+      /* A mask reads only alpha: #000 keeps a pixel, transparent drops it. */
+      mask-image: linear-gradient(
+        to right,
+        transparent,
+        #000 var(--chip-fade-start),
+        #000 calc(100% - var(--chip-fade-end)),
+        transparent
+      );
+      animation:
+        chip-fade-start linear both,
+        chip-fade-end linear both;
+      animation-timeline: scroll(self inline);
+      animation-range:
+        0 1rem,
+        calc(100% - 1rem) 100%;
+    }
+  }
+
+  /* Inline-start is the right edge in a right-to-left row. */
+  .chip-scroller:dir(rtl) {
+    @variant max-sm {
+      mask-image: linear-gradient(
+        to left,
+        transparent,
+        #000 var(--chip-fade-start),
+        #000 calc(100% - var(--chip-fade-end)),
+        transparent
+      );
+    }
+  }
+}
+
+@keyframes chip-fade-start {
+  from {
+    --chip-fade-start: 0px;
+  }
+  to {
+    --chip-fade-start: 1rem;
+  }
+}
+
+@keyframes chip-fade-end {
+  from {
+    --chip-fade-end: 1rem;
+  }
+  to {
+    --chip-fade-end: 0px;
+  }
+}
+
+/*
+ * **A table wider than its shell says so at the far edge.** `Table`'s scroll
+ * region (src/components/ui/table.tsx) scrolls sideways by design — at eight
+ * roll-call columns the departure log is wider than the desktop column (#1035,
+ * #1052) — and it cut the last column mid-word at the card edge with nothing to
+ * say more lay past it: 178px hidden at 1280. The region's inline-end edge now
+ * fades out over 2rem, and the fade closes as the reader scrolls to the end.
+ *
+ * The scroll is the clock, as in the title fold above: `scroll(self inline)`
+ * reads the region's own sideways scroll. A table that fits has nothing to
+ * scroll, so its timeline is inactive, the animation applies nothing, and the
+ * mask's stop sits at its `0px` initial value — no fade. Nothing moves here; the
+ * fade follows the hand, so it needs no reduced-motion stop of its own. Paper
+ * prints the whole table (`print:overflow-visible`) and gets no fade.
+ */
+@property --table-scroll-fade {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@supports (animation-timeline: scroll()) {
+  .table-scroll-shell {
+    mask-image: linear-gradient(to left, transparent, #000 var(--table-scroll-fade));
+    animation: table-scroll-fade linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+
+@keyframes table-scroll-fade {
+  from {
+    --table-scroll-fade: 2rem;
+  }
+  to {
+    --table-scroll-fade: 0px;
+  }
+}
+
+@media print {
+  .table-scroll-shell {
+    mask-image: none;
+    animation: none;
   }
 }
 

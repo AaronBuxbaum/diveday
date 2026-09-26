@@ -36,6 +36,19 @@ describe("the mark", () => {
     expect(container.querySelector('[aria-hidden="true"]')).not.toBeNull();
   });
 
+  /**
+   * An inline outer span set the row of stars on a text baseline with the
+   * strut's descent under it, so a parent's `items-center` centred that
+   * taller line box and the stars rode 3px above the "4.3" beside them
+   * (pixel-craft K-57). As a flex box the outer span is exactly the stars'
+   * height, and a parent centres the stars themselves.
+   */
+  it("is a box the height of its stars, so a row centres the stars", () => {
+    const { container } = render(<StarRating rating={4} label="4 out of 5 stars" />);
+
+    expect(container.firstElementChild).toHaveClass("inline-flex", "items-center");
+  });
+
   it("fades the unfilled stars rather than drawing a second shape", () => {
     const { container } = render(<StarRating rating={3} label="3 out of 5 stars" />);
 

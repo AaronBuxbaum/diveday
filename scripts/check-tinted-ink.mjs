@@ -67,9 +67,9 @@ const fillPattern = (hue) => new RegExp(`bg-${hue}\\/\\d+\\b`);
  * A file list rather than fifteen line comments, because the fact is about the
  * *surface*: `manifest/page.tsx` wraps its whole body in `boat-mode` and
  * `OfflineManifestView` renders `<main className="boat-mode …">`, so every
- * component beneath them inherits it. `OFFLINE_CREW_ROW_TONE` is in here for
- * the same reason — its only consumer is the offline manifest, while the
- * app-palette `CHECK_IN_ROW_TONE` beside it already uses an opaque token.
+ * component beneath them inherits it. `row-tones.ts` is in here for the same
+ * reason: its one map, `ROLL_CALL_ROW_TONE`, is read only by those two
+ * surfaces' roll-call rows.
  *
  * The cost of the coarser grain, stated: a component added to one of these
  * folders that somehow renders *outside* boat-mode would be exempt without

@@ -28,14 +28,14 @@ export function YourSessions({
   const t = staffTranslator(locale);
   return (
     <LedgerGroup as="h2" id="your-sessions-heading" label={t("today.yourSessions.heading")}>
-      <ul className="mt-3">
+      <ul>
         {sessions.map((session) => (
           <LedgerRow
             key={session.tripId}
             href={`/shop/${shopSlug}/trips/${session.tripId}`}
             linkLabel={t("today.yourSessions.openRoster")}
           >
-            <div className="min-w-0 py-2">
+            <div className="min-w-0">
               <p className="font-medium">{session.title}</p>
               <p className="mt-0.5 text-sm text-muted tabular-nums">
                 {formatShortDate(session.startsAt, locale, timeZone)} ·{" "}

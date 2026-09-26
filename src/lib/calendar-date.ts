@@ -1,3 +1,4 @@
+import { keepUnitsWhole } from "./date-parts";
 import { cachedFormatter } from "./intl-cache";
 import { toDateInputValue, utcToWallTime } from "./zoned";
 
@@ -40,12 +41,15 @@ export function calendarDateInTimezone(date: Date, timeZone: string): CalendarDa
  */
 export function formatCalendarDate(date: CalendarDate, locale = "en-US"): string {
   const [year, month, day] = date.split("-").map(Number);
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(year, month - 1, day)));
+  // "Jul 18, 2026" with the month bound to its day (src/lib/date-parts.ts).
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    }).formatToParts(new Date(Date.UTC(year, month - 1, day))),
+  );
 }
 
 /** A calendar date as a UTC-midnight instant — for a timestamp column that needs one. */

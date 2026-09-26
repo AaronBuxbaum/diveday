@@ -97,7 +97,7 @@ disagrees with the code, the code wins and the doc is wrong.
 | Nested radii | outer less the inset: on a segmented track or in a menu panel 7 (12 − 1 − 4); flush in a card 19 (20 − 1) | `SEGMENT_CORNER` in `ui/segmented.ts` (`MENU_PANEL` in `ui/menu.ts` takes the track's inset), `PANEL_INNER_RADIUS` in `ui/card.tsx` |
 | Focus ring | 3px outline at a 2px offset, so it reaches **5px** outside the box; `focus-ring-inset` is the same 3px at −3px, for a row flush in a clipping container | `:where(a, button, …):focus-visible` in `@layer base`; `@utility focus-ring`, `focus-ring-inset` |
 | Chrome bar | 56px (`--chrome-h`); anything pinned under it offsets by the token | `--chrome-h` |
-| Buttons | `md` 48px with a 16px label; `sm` 44px with 14px; `icon` a 48px square; `boat` 56px. **One size per row** | `src/components/ui/button.ts` |
+| Buttons | `md` 48px with a 16px label; `sm` 44px with 14px; `icon` a 48px square, `icon-sm` a 44px one; `boat` 56px. **One size per row** | `src/components/ui/button.ts` |
 | Text controls | 16px type; `field` 44px, `md` 48px. **A row with a text control in it is an `md` row** | `controlClassFor` in `src/components/ui/form.tsx` |
 | Targets | ≥ 44px, measured on the element's own box (a stretched `::after` counts only as far as its clipping ancestors let it) | principles.md §2 |
 | Rows | a `LedgerRow` is never under 52px (`md`); `lg` is 56px | `src/components/ui/ledger.tsx` |
@@ -160,7 +160,8 @@ Each class gives its rule, its tolerance, its usual severity, the probe check th
 - **Severity.** S2.
 - **Probe.** `off-centre` (it reports lopsided padding), `fill-tight`, and the census's row insets.
 - **History.** A link's `px-0` lost to its size's `px-4` and rendered 16px inside the text above it
-  (a417831). `SettingsRows` use `px-4 sm:px-5` where `DisclosureRow` uses `px-5 sm:px-6`.
+  (a417831). `DisclosureRow` used `px-5 sm:px-6` where `SettingsRows` and every card use
+  `px-4 sm:px-5`, so the public schedule's rows started 4px right of the cards around them.
 
 ### 6. Boxes, borders and radii
 
@@ -258,7 +259,8 @@ Each class gives its rule, its tolerance, its usual severity, the probe check th
 - **Probe.** The census's near-misses (in `REPORT.md`), `mismatched-controls`,
   `focus-ring-differs`, and the state atlas.
 - **History.** A 16px button beside a 14px one (5a81e94). Group titles inside some cards and
-  outside others (#624). A neutral `Badge` carries a border that toned badges do not.
+  outside others (#624). A neutral `Badge` carried a border the toned badges did not, 30px beside
+  28px, until its edge became an inset ring.
 
 ## Precision
 

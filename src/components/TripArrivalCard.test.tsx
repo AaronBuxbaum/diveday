@@ -208,6 +208,51 @@ describe("the map", () => {
 });
 
 /**
+ * **A rule sits midway between the rows it divides.** The card's column is
+ * `gap-3` and each ruled row opened with `pt-4`, so every rule had 12px above
+ * it and 16px below, and the rows sat low between their rules (pixel-craft
+ * K-480). A ruled row's top padding is the column's gap, whatever it is.
+ */
+describe("the ruled rows", () => {
+  it("pad below each rule exactly what the column keeps above it", () => {
+    const { container } = render(
+      <TripArrivalCard
+        shop={{ ...shop, contactPhone: "+1 305 555 0100" }}
+        trip={trip}
+        locale="en-US"
+        sites={["Molasses Reef"]}
+        stopCodeAction={async () => {}}
+      />,
+    );
+    const ruled = [...container.querySelectorAll(".border-t")];
+
+    expect(ruled).toHaveLength(3);
+    for (const row of ruled) {
+      const gap = row.parentElement?.className.match(/(?:^|\s)gap-(\d+(?:\.\d+)?)(?:\s|$)/)?.[1];
+      expect(gap).toBeDefined();
+      expect(row).toHaveClass(`pt-${gap}`);
+    }
+  });
+
+  it("keeps the contact line a text line, its 44px links overhanging it", () => {
+    // The links' boxes made "Need a hand?" and its links a 44px line: 22px
+    // between the words and the links, 17px under the rule, and 12px more of
+    // card below (K-14 review, readiness@390).
+    render(
+      <TripArrivalCard
+        shop={{ ...shop, contactPhone: "+1 305 555 0100", contactEmail: "hello@reef.test" }}
+        trip={trip}
+        locale="en-US"
+      />,
+    );
+    const phone = screen.getByRole("link", { name: "+1 305 555 0100" });
+    expect(phone).toHaveClass("min-h-11");
+    // (44 − 20) / 2 above and below, handed back by the links' own row.
+    expect(phone.parentElement).toHaveClass("-my-3");
+  });
+});
+
+/**
  * **The way out of a lost printout** — `stopArrivalCodesFromReady`, issue #1729.
  *
  * The page never shows the code, so the control has to say what it is about on

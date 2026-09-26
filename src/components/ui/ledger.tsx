@@ -124,15 +124,24 @@ const FILL_ROOM = "-mx-2 px-2";
 export const ledgerRowRoomClass = FILL_ROOM;
 
 /**
+ * **A ledger row's box in a list that leaves its close to what follows**: its
+ * room and its top rule, without the `last:border-b` that closes a list on the
+ * page ground. For a list inside a card, whose edge is the close, or above a
+ * block that opens with its own rule (pixel-craft class 6) — `LedgerRow`'s
+ * `closed={false}`, and a hand-set line in such a list.
+ */
+export const ledgerRowOpenBoxClass = `${FILL_ROOM} border-t border-border`;
+
+/**
  * **A ledger row's box, for a row `LedgerRow` does not draw**: its room and its
  * two rules. A loading skeleton standing in for a list of `LedgerRow`s takes
  * it, or its rules sit 8px inside the loaded rows' and jump on arrival
  * (docs/design/pixel-craft.md, class 11); so does a hand-set line inside a
- * ledger's list — the public trip's surface interval — or it steps the list's
- * rules. `LedgerRow` spells its own box with it, so there is one string to
- * keep.
+ * ledger's list, or it steps the list's rules. `LedgerRow` spells its own box
+ * with it (or, in a list that does not close, `ledgerRowOpenBoxClass`), so
+ * there is one string to keep.
  */
-export const ledgerRowBoxClass = `${FILL_ROOM} border-t border-border last:border-b`;
+export const ledgerRowBoxClass = `${ledgerRowOpenBoxClass} last:border-b`;
 
 /**
  * A ledger row's focus ring, drawn inside the row instead of 2px outside it:
@@ -157,6 +166,51 @@ const INSET_RING = "focus-visible:focus-ring-inset";
 const HORIZON_SUMMARY_CLASS = `${FILL_ROOM} flex min-h-14 cursor-pointer list-none items-center gap-3 border-t border-border py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken ${INSET_RING}`;
 const HORIZON_LABEL_CLASS = "min-w-0 flex-1 text-base font-semibold tracking-tight";
 const HORIZON_META_CLASS = "shrink-0 text-sm font-medium text-muted tabular-nums";
+
+/**
+ * **The door's glyph**, at the end of a ledger row that opens and of a
+ * horizon row that folds: one glyph, one box, one right edge.
+ *
+ * The chevron's box is cropped to its ink across (`door-chevron`), so the
+ * arrow ends on the edge the rest of its row ends on rather than 5px inside it
+ * (pixel-craft class 2). A horizon's summary draws the same glyph turned a
+ * quarter when open — it drew the 12px disclosure caret, 4×8px of ink beside
+ * the door's 6×10 and 3px further out, two arrows under a comment saying they
+ * read as the same door (class 12).
+ *
+ * Exported for the one fix that wears a door's words and arrow without being
+ * its row — the first-run checklist's Stripe step, whose anchor has to do a
+ * full navigation. `ink="current"` takes that link's colour; a door's own
+ * arrow is muted. Its box is the door's either way, so its arrow ends on the
+ * same edge.
+ */
+export function DoorChevron({
+  className = "",
+  ink = "muted",
+}: {
+  className?: string;
+  ink?: "muted" | "current";
+}) {
+  return (
+    <DiveDayIcon
+      name="door-chevron"
+      className={`h-4 w-auto shrink-0 ${ink === "muted" ? "text-muted" : ""} ${className}`
+        .replace(/\s+/g, " ")
+        .trim()}
+    />
+  );
+}
+
+/**
+ * **An open horizon's arrow ends where a closed one does** (pixel-craft class
+ * 3). Turned a quarter about its box's centre, the chevron's ink — 7.8 units
+ * across and 13.8 tall in its 8.5 × 24 box — lies 13.8 across, 3 units past
+ * its closed ink on each side: 2px at `h-4`, so an open Tomorrow's arrow ended
+ * 2px past the content edge every closed door ends on. Open, it steps back
+ * those 2px (`-translate-x-0.5`); `translate` applies before `rotate`, so the
+ * step runs along the row rather than the turned glyph.
+ */
+const HORIZON_ARROW_OPEN = "group-open/fold:rotate-90 group-open/fold:-translate-x-0.5";
 
 /** Heading levels a group label may be. `p` for chrome that is not page structure (a menu section). */
 type GroupLabelElement = "h2" | "h3" | "h4" | "p";
@@ -232,9 +286,15 @@ export function LedgerGroup({
 }) {
   const SummaryLabel = as;
   if (folded === undefined) {
+    // **The group owns the gap under its label** (pixel-craft class 12): one
+    // `mb-2`, on the label in both of its shapes. It was the lists', and they
+    // disagreed — nothing in the inbox (4px from the label's ink to the first
+    // rule), `mt-2` and `mt-1.5` on the booking form and Today's desk (10px),
+    // `mt-3` elsewhere. `ledger.test.tsx` refuses a margin on a list that opens
+    // a group.
     return (
       <div className={className || undefined}>
-        <GroupLabel as={as} id={id} meta={meta}>
+        <GroupLabel as={as} id={id} meta={meta} className="mb-2">
           {label}
         </GroupLabel>
         {children}
@@ -248,13 +308,14 @@ export function LedgerGroup({
           below so their label, count and door match the sibling week row. */}
       {summaryVariant === "row" ? (
         <summary className={HORIZON_SUMMARY_CLASS}>
-          {/* The caret stays at the edge of a horizon row, beside its counts,
-              so Tomorrow and This week read as the same door. */}
+          {/* The door's own glyph at the edge of a horizon row, beside its
+              counts, so Tomorrow and This week read as the same door — turned
+              a quarter when the fold is open. */}
           <SummaryLabel id={id} className={HORIZON_LABEL_CLASS}>
             {label}
           </SummaryLabel>
           {meta != null ? <span className={HORIZON_META_CLASS}>{meta}</span> : null}
-          <DisclosureCaret className="text-muted group-open/fold:rotate-90" />
+          <DoorChevron className={`transition-transform ${HORIZON_ARROW_OPEN}`} />
         </summary>
       ) : (
         <summary
@@ -281,6 +342,25 @@ export function LedgerGroup({
 }
 
 export type LedgerRowKindTone = "danger" | "warning" | "neutral";
+
+/**
+ * **The kind's column** (pixel-craft class 3): a fixed width every row's kind
+ * word sits in and wraps inside, so every row's sentence starts on one edge.
+ * It was `min-w-23`, a 92px floor sized for "Waiver", and a longer word grew
+ * its own row's gutter instead: "Wed 12:30 PM" (about 97px) pushed its
+ * sentence right of its neighbours', and es-ES's "Contacto de emergencia"
+ * further still. Exported for a hand-set line that indents past an empty kind
+ * (the public trip's surface interval), so the two cannot part.
+ *
+ * **92px on a phone, 104px from `sm` up.** A fixed 104px took 12px from the
+ * sentence beside it at every width, and on a phone that is the sentence's
+ * room: the diver record's waiver line had 70px at 360, wrapped to five lines
+ * and still ran 1.4px past its box on "signature.", and the inbox's sender
+ * address spilled 12px further (the pixel probe, diver-profile-imported and
+ * staff-inbox). Below `sm` the column is the 92px it always had, and a longer
+ * word wraps inside it there too.
+ */
+export const ledgerKindColumnClass = "w-23 sm:w-26";
 
 /**
  * Tone in the ink, never in a fill — a tinted fill here would be a second pill
@@ -364,13 +444,55 @@ export function RowKind({
 type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkLabel?: never };
 
 /**
+ * **The row's vertical inset, owned here** (pixel-craft class 5). A row had
+ * none: any row taller than its floor put its words on its rules (the public
+ * trip's three-line dive rows, cap tops 5px under one rule and descenders 3px
+ * over the next), and callers made up for it four ways — `py-3` on the row,
+ * `py-2` on its content, both, or nothing. `md` is the 8px a padded row
+ * already had; `lg` the 12px of a record with a paragraph to read; `xl` the
+ * 16px a public review stands in, a diver's words set with room round them
+ * (its loading skeletons draw the same); `none` is for a row whose one child
+ * paints its whole box and pads itself (the counter's one-tap button, rule to
+ * rule).
+ *
+ * **The row's inset is the only one.** What a row opens onto adds no vertical
+ * padding of its own, or the inset doubles: Today's station rows went from 52
+ * to 55px, and a wrapped one grew 16px, while their sentence kept the `py-2`
+ * that had stood in for this. `ledger.test.tsx` sweeps the element every row
+ * opens onto, as it sweeps the row's own className.
+ */
+const ROW_PAD = { md: "py-2", lg: "py-3", xl: "py-4", none: "" } as const;
+
+/**
+ * A stacked row's bottom inset when its kind shares its line with a control:
+ * the row's own inset (`ROW_PAD`) plus the 8px the control stands over the
+ * kind's 20px line — (44 − 2 × 4 − 20) / 2 — so the air under the last line
+ * matches the air over the kind. Keyed on the fix's own slot holding a control
+ * (`data-ledger-fix`), never on a button in the sentence.
+ */
+const KIND_LINE_FIX_ROOM = {
+  md: "max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-4",
+  lg: "max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-5",
+  xl: "max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-6",
+  none: "max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-2",
+} as const satisfies Record<keyof typeof ROW_PAD, string>;
+
+/**
  * A hairline row on the page background — the ledger's only row shape.
  *
  * The hairline is `border-t` plus a `last:border-b`, so a group closes itself
  * without any row having to know it is last.
  *
+ * **Unless its list leaves the close to what follows** (`closed={false}`,
+ * pixel-craft class 6). The close is right on the page ground and wrong where
+ * a rule already follows: inside a card, whose edge is the close (Today's
+ * station rows), or above a block that opens with its own rule (the counter's
+ * walk-in door, the public trip's pitch door) — there it drew two parallel
+ * hairlines with nothing between them. It is the list's decision, passed to
+ * each of its rows; only the last one draws anything different.
+ *
  * **A door draws its own chevron.** A row with an `href` ends in the shared
- * `chevron-right` glyph, after whatever `trailing` carries, so the affordance
+ * door glyph (`DoorChevron`), after whatever `trailing` carries, so the affordance
  * that says "this row opens" is one decision rather than one per surface.
  * Before this it was drawn by hand on nine surfaces and left off on five —
  * the orders ledger, the promo ledger, the reports ledger, the course roster
@@ -388,6 +510,30 @@ type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkL
  * day spine's desk rows first ran six lines deep. Every class it adds is a
  * `max-sm:` one, so from `sm` up an opted-in row is byte-for-byte the row it
  * always was.
+ *
+ * **Its lines sit evenly between the rules** (pixel-craft class 5). Wrapped,
+ * the row's `gap-3` became a 12px gap between its lines, and a 44px fix set
+ * the first line's height with the 20px kind word centred in it: the staffing
+ * week's "Needs crew" rows sat 7px low, 24px of air over the kind and 10px
+ * under the last line. The lines are 4px apart (`max-sm:gap-y-1`), and beside
+ * a kind the fix overhangs the kind's line by 4px a side (`max-sm:-my-1`),
+ * which is all the room that line has: the row's 8px inset above it, the 4px
+ * line gap below. A 12px overhang let the word alone set the line, but put an
+ * "Assign" 3px over the row's top rule, its ring across the row above, and a
+ * 48px Send 8px into the sentence under it; an uneven one (8 above, 4 below)
+ * moves the control's centre 2px off the kind word's and sits a bordered
+ * control on the rule. The target is still 44px. The row's own 8px inset is
+ * the room above the first line and below the last.
+ *
+ * **What the control still takes over the kind, the row gives back under its
+ * last line** (`KIND_LINE_FIX_ROOM`). Overhanging 4px a side, a 44px fix still
+ * makes the kind's line 36px, and the 20px word centred in it stands 8px lower
+ * than it would alone: "Needs crew" kept 20px of air over the kind and 10px
+ * under the last line, 5px low. Those 8px are mirrored under the last line, so
+ * the air is 20 over 18, the 2px every ledger row keeps between a cap top and
+ * a baseline. Only when the fix holds a control (`:has(a, button)`): a fix
+ * that is a fact — a date, "3 spots left" — is a 20px line in the kind's own
+ * line and takes nothing back.
  *
  * **A stacked row with no kind leads with its content.** The artboard's first
  * line is *the kind and the fix*; a row that names no kind has nothing to put
@@ -412,6 +558,11 @@ type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkL
  * the room at its end (`CheckInActionForm`'s `ROW_ROOM`). A call site
  * never sets the row's horizontal margin or padding; `ledger.test.tsx` sweeps
  * for it.
+ *
+ * **Its vertical inset is its own too** (`pad`, `ROW_PAD` above), and the same
+ * sweep refuses a `py-*` at a call site. The trailing slot overhangs it
+ * (`-my-2`): the inset is room around the *words*, and a 44px control laid in
+ * it would make every row with a Send or an Assign 60px instead of 52.
  */
 export function LedgerRow({
   leading,
@@ -421,6 +572,9 @@ export function LedgerRow({
   href,
   linkLabel,
   size = "md",
+  pad = "md",
+  align = "center",
+  closed = true,
   stacked = false,
   as: Tag = "li",
   className = "",
@@ -439,6 +593,26 @@ export function LedgerRow({
    * counter's queue and the horizon rows. It read 48 until 2026-09-02.
    */
   size?: "md" | "lg";
+  /**
+   * The inset above and below the words: `md` 8px, `lg` 12px for a record
+   * with a paragraph in it, `xl` 16px for a public review, `none` for a row
+   * whose one child fills its box.
+   */
+  pad?: keyof typeof ROW_PAD;
+  /**
+   * `first-line` for a row whose content is a block of lines (a sender over a
+   * message): from `sm` up its kind, content and fix share the first line's
+   * baseline instead of centring on the whole block, where the inbox's "Email"
+   * sat 23px below the "Unknown sender" it named (pixel-craft class 1). Below
+   * `sm` these rows stack and stay centred. `sm:py-4` keeps a one-line row
+   * centred in its 52px (16 + 20 + 16): baseline alignment starts at the top.
+   */
+  align?: "center" | "first-line";
+  /**
+   * `false` where the row's list leaves its close to what follows — a card's
+   * edge, or a block with a rule of its own. See above.
+   */
+  closed?: boolean;
   /** Below `sm`, drop the sentence to its own full-width line. See above. */
   stacked?: boolean;
   /**
@@ -451,9 +625,13 @@ export function LedgerRow({
 } & LedgerRowDoor) {
   return (
     <Tag
-      className={`relative flex items-center gap-3 ${ledgerRowBoxClass} ${
+      className={`relative flex items-center gap-3 ${
+        closed ? ledgerRowBoxClass : ledgerRowOpenBoxClass
+      } ${ROW_PAD[pad]} ${
         size === "lg" ? "min-h-14" : "min-h-13"
-      } ${stacked ? "max-sm:flex-wrap max-sm:py-2" : ""} ${href ? "pressable-row hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
+      } ${align === "first-line" ? "sm:items-baseline sm:py-4" : ""} ${stacked ? "max-sm:flex-wrap max-sm:gap-y-1" : ""} ${
+        stacked && kind && trailing != null ? KIND_LINE_FIX_ROOM[pad] : ""
+      } ${href ? "pressable-row hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
         .replace(/\s+/g, " ")
         .trim()}
     >
@@ -462,7 +640,7 @@ export function LedgerRow({
         <RowKind
           word={kind.word}
           tone={kind.tone}
-          className={stacked ? "min-w-23 max-sm:order-1" : "min-w-23"}
+          className={stacked ? `${ledgerKindColumnClass} max-sm:order-1` : ledgerKindColumnClass}
         />
       ) : null}
       {/* Every `stacked` class is a `max-sm:` one, deliberately: from `sm` up
@@ -480,13 +658,19 @@ export function LedgerRow({
         {children}
       </div>
       {trailing != null ? (
+        // `-my-2`: a 44px control overhangs the row's 8px inset rather than
+        // growing a one-line row to 60px. Beside a stacked kind, 4px a side
+        // (`max-sm:-my-1`), the room that line has (see above). Not on a
+        // stacked phone line of its own (`max-sm:my-0`), where the overhang
+        // would put it on the rule.
         <div
+          data-ledger-fix=""
           className={
             stacked
               ? kind
-                ? "relative z-10 min-w-0 max-w-full shrink-0 max-sm:order-2 max-sm:ms-auto"
-                : "relative z-10 min-w-0 max-w-full shrink-0 max-sm:order-3 max-sm:flex max-sm:basis-full max-sm:justify-end"
-              : "relative z-10 min-w-0 max-w-full shrink-0"
+                ? "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-2 max-sm:-my-1 max-sm:ms-auto"
+                : "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-3 max-sm:my-0 max-sm:flex max-sm:basis-full max-sm:justify-end"
+              : "relative z-10 -my-2 min-w-0 max-w-full shrink-0"
           }
         >
           {trailing}
@@ -504,16 +688,25 @@ export function LedgerRow({
         // instead of marking the row's own right edge. With a `trailing` it
         // is that element that carries the push (below) and the chevron
         // follows it, as it always has.
-        <DiveDayIcon
-          name="chevron-right"
-          className={`size-4 shrink-0 text-muted ${
-            stacked
-              ? kind && trailing == null
-                ? "max-sm:order-2 max-sm:ms-auto"
-                : "max-sm:order-2"
-              : ""
-          }`.trim()}
-        />
+        //
+        // **On a first-line row it rides in a box with a text baseline**
+        // (pixel-craft class 1). An svg has none, so a baseline-aligned row
+        // made one from its bottom edge and stood the arrow on the first
+        // line's baseline, its ink 2px high of that line's cap centre. A
+        // zero-width space gives the box the line's baseline and its line
+        // box, and the arrow is centred on that line box — whose centre is
+        // the cap centre's to a fraction of a pixel.
+        align === "first-line" ? (
+          <span
+            aria-hidden="true"
+            className={`inline-flex shrink-0 items-center ${doorPlacement(stacked, kind, trailing)}`.trim()}
+          >
+            {ZERO_WIDTH_SPACE}
+            <DoorChevron />
+          </span>
+        ) : (
+          <DoorChevron className={doorPlacement(stacked, kind, trailing)} />
+        )
       ) : null}
       {href ? (
         // The stretched link, the same construction the public schedule's
@@ -572,6 +765,23 @@ export function LedgerRow({
       ) : null}
     </Tag>
   );
+}
+
+/**
+ * The text a first-line door's arrow rides beside, for its baseline and line
+ * box: no width, no ink. By code point, because a literal one is invisible in
+ * the source.
+ */
+const ZERO_WIDTH_SPACE = String.fromCodePoint(0x200b);
+
+/** Where a stacked row's door glyph sits on a phone; nothing from `sm` up. */
+function doorPlacement(
+  stacked: boolean,
+  kind: { word: string; tone: LedgerRowKindTone } | undefined,
+  trailing: ReactNode,
+): string {
+  if (!stacked) return "";
+  return kind && trailing == null ? "max-sm:order-2 max-sm:ms-auto" : "max-sm:order-2";
 }
 
 /**

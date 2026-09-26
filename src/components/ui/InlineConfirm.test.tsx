@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buttonClass } from "./button";
@@ -160,6 +160,72 @@ describe("InlineConfirm", () => {
     expect(screen.getByRole("button", { name: "Cancel my spot" })).toBeInTheDocument();
     expect(screen.queryByText(/free-cancellation window/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Yes, cancel my spot" })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * **A delete beside the Save it shares a row with** (pixel-craft class 12).
+ * Settings' kinds of day, seasons and boats drew each row's Delete in a form
+ * of its own after the edit form, because `InlineConfirm` submits the form it
+ * sits in and forms cannot nest — so at 390px a kind of day became a 180px
+ * block: the name field, Save alone on the right, Delete alone on the left. A
+ * button's `formaction` overrides its form's action, so the confirm can live
+ * in the edit form's own action row and post somewhere else; `formnovalidate`
+ * keeps an edit someone has half-typed from blocking the delete.
+ */
+describe("InlineConfirm with its own formAction", () => {
+  function renderInEditForm(save: () => void, remove: () => void, message?: string) {
+    render(
+      <form action={save}>
+        <input name="lensId" type="hidden" value="lens-1" />
+        {message ? (
+          <InlineConfirm
+            formAction={remove}
+            message={message}
+            triggerLabel="Delete"
+            confirmLabel="Delete it"
+            cancelLabel="Keep it"
+            pendingLabel="Deleting…"
+            triggerClassName="danger"
+          />
+        ) : (
+          <InlineConfirm
+            formAction={remove}
+            triggerLabel="Delete"
+            confirmLabel="Delete it"
+            pendingLabel="Deleting…"
+            triggerClassName="danger"
+          />
+        )}
+      </form>,
+    );
+  }
+
+  it.each([
+    ["compact", undefined],
+    ["with a message", "Wreck dives is on 3 departures. Delete it anyway?"],
+  ])("posts the %s confirm to its own action, never the form's", async (_, message) => {
+    const save = vi.fn();
+    const remove = vi.fn();
+    renderInEditForm(save, remove, message);
+
+    const trigger = screen.getByRole("button", { name: "Delete" });
+    // Unarmed it is a plain button: no action of any kind rides on it.
+    expect(trigger).toHaveAttribute("type", "button");
+    expect(trigger).not.toHaveAttribute("formaction");
+    await userEvent.click(trigger);
+
+    const confirm = screen.getByRole("button", { name: "Delete it" });
+    expect(confirm).toHaveAttribute("type", "submit");
+    expect(confirm).toHaveAttribute("formaction");
+    expect(confirm).toHaveAttribute("formnovalidate");
+    await userEvent.click(confirm);
+
+    await waitFor(() => expect(remove).toHaveBeenCalledTimes(1));
+    // The row's shared fields travel with it: the id is the one it reads.
+    const [posted] = remove.mock.calls[0] as unknown as [FormData];
+    expect(posted.get("lensId")).toBe("lens-1");
+    expect(save).not.toHaveBeenCalled();
   });
 });
 

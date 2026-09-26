@@ -90,7 +90,7 @@ describe("day groups", () => {
       entry({ id: "b", signedAt: new Date("2026-08-26T21:18:00Z"), personName: "Lena Fischer" }),
     ]);
     const labels = [...container.querySelectorAll("section > h3")].map((node) => node.textContent);
-    expect(labels).toEqual(["Aug 27, 2026", "Aug 26, 2026"]);
+    expect(labels).toEqual(["Aug\u00A027, 2026", "Aug\u00A026, 2026"]);
     // The time rides the row; the date does not repeat inside it.
     const row = rowFor(container, "a");
     expect(within(row).getByText("9:41 PM")).toBeInTheDocument();
@@ -130,11 +130,11 @@ describe("the ?record= pin", () => {
 
     const sections = [...container.querySelectorAll("section")];
     expect(sections).toHaveLength(2);
-    expect(sections[0]?.querySelector("h3")?.textContent).toBe("Aug 27, 2026");
+    expect(sections[0]?.querySelector("h3")?.textContent).toBe("Aug\u00A027, 2026");
 
     const yesterday = sections[1];
     if (!yesterday) throw new Error("the second day group did not render");
-    expect(yesterday.querySelector("h3")?.textContent).toBe("Aug 26, 2026");
+    expect(yesterday.querySelector("h3")?.textContent).toBe("Aug\u00A026, 2026");
     const ids = [...yesterday.querySelectorAll("details")].map((node) => node.id);
     expect(ids).toEqual([signatureRowId("pinned"), signatureRowId("later")]);
     // Opened, because reading it is why the reviewer followed the link.

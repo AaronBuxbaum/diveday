@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { cardSummaryClass, SectionCard } from "@/components/ui/card";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { controlClassFor, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportShopData, loadShopExportCounts } from "@/db/export";
@@ -202,14 +202,19 @@ export default async function DataOutSettingsPage({
             closed disclosure is one padded row rather than a row inside a box
             of extra space. */}
         <SectionCard as="details" padding="none" className="group/bundle">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden sm:p-6">
+          <summary
+            className={cardSummaryClass({ className: "min-h-11 justify-between p-5 sm:p-6" })}
+          >
             <div className="min-w-0">
               <h2 className={SECTION_TITLE_CLASS}>{t("settings.export.bundle.heading")}</h2>
               <p className="mt-1 max-w-2xl text-sm text-muted">
                 {t("settings.export.bundle.fileCount", { count: (families ?? []).length })}
               </p>
             </div>
-            <DisclosureCaret className="size-4 text-muted group-open/bundle:rotate-90" />
+            <SummaryCaret
+              line={`h-lh ${SECTION_TITLE_CLASS}`}
+              className="size-4 text-muted group-open/bundle:rotate-90"
+            />
           </summary>
           <div className="border-t border-border p-5 sm:p-6">
             <p className="max-w-2xl text-sm text-muted">

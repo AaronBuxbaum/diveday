@@ -46,6 +46,22 @@ describe("snsSmsProvider (ADR 20260802-sns-sms-adapter)", () => {
     expect(command.input.MessageAttributes).not.toHaveProperty("AWS.SNS.SMS.SenderID");
   });
 
+  it("sends a no-break space as a plain one, so a date does not cost the text its GSM-7 encoding", async () => {
+    // The date and time formatters bind "Jul 21" and "7:05 AM EDT" with U+00A0
+    // so a page never breaks inside them. GSM-7 has no U+00A0: one in the body
+    // would send the whole reminder as UCS-2, 70 characters a segment instead
+    // of 160. A text message does not wrap the way a page does.
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "sns-message-id" }) };
+    const provider = snsSmsProvider(snsConfig, { client });
+
+    await provider.send({
+      to: "+13055551234",
+      body: "Sails Tue, Jul\u00A021, 7:05\u202FAM\u00A0EDT",
+    });
+    const command = client.send.mock.calls[0]?.[0] as PublishCommand;
+    expect(command.input.Message).toBe("Sails Tue, Jul 21, 7:05 AM EDT");
+  });
+
   it("sets a sender ID attribute when one is configured", async () => {
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "sns-message-id" }) };
     const provider = snsSmsProvider({ ...snsConfig, senderId: "DiveDay" }, { client });

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useStatedDiverLevel } from "@/components/stated-diver-level";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { choiceClass, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import {
   DIVER_CERTIFICATION_AGENCY_KEYS,
@@ -111,7 +111,7 @@ export function DiveDeclarationFields({
             disabled={uncertified}
             checked={nitrox && !uncertified}
             onChange={(event) => setNitrox(event.target.checked)}
-            className="mt-0.5 size-4 shrink-0 rounded border-border-strong disabled:opacity-50"
+            className={`${choiceClass} mt-0.5 disabled:opacity-50`}
           />
           <span>{t("common.certification.nitrox")}</span>
         </label>

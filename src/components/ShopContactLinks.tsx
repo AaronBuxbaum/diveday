@@ -12,7 +12,13 @@
  * with a question actually reaches for them. Renders nothing when the shop has
  * published neither — the sentence that introduces it stands alone rather than
  * trailing an empty separator.
+ *
+ * **A thumb can press them because each is a 44px target** (`tapTargetLinkClass`).
+ * They were 20px words, on the trip page and the arrival card, in the one
+ * component whose purpose is to be pressed. The row aligns on the baseline, so
+ * the separator still sits on the words' line inside the taller boxes.
  */
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 
 export function ShopContactLinks({
@@ -25,7 +31,7 @@ export function ShopContactLinks({
   className?: string;
 }) {
   if (!phone && !email) return null;
-  const linkClass = "font-medium text-primary hover:underline";
+  const linkClass = `${tapTargetLinkClass} font-medium text-primary hover:underline`;
   return (
     <span className={`inline-flex flex-wrap items-baseline gap-x-2 ${className}`}>
       {phone ? (

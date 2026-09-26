@@ -394,16 +394,14 @@ export function AddressSearch({
             type="button"
             onClick={() => commit(EMPTY_ADDRESS, "removing")}
             disabled={saving !== "none"}
-            // `-ml-3` cancels the variant's own left padding so the label lines
-            // up with the address above it rather than sitting indented from
-            // it — a borderless button's box is invisible, so its padding reads
-            // as a stray indent instead of as the control's edge. That bleed
-            // leaves the box 4px from the card's `overflow-hidden` on a phone,
-            // a pixel short of the outset ring, so the ring is drawn inside.
+            // `flush` lines the label up with the address above it rather than
+            // indenting it — a borderless button's box is invisible, so its
+            // padding reads as a stray indent instead of as the control's edge.
             className={buttonClass({
               variant: "danger-ghost",
               size: "sm",
-              className: "-ml-3 mt-1 focus-visible:focus-ring-inset",
+              flush: true,
+              className: "mt-1",
             })}
           >
             {saving === "removing" ? copy.removing : copy.removeLabel}

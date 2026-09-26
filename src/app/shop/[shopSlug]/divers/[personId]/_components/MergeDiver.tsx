@@ -1,6 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { choiceClass } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverMergeCandidate } from "@/db/diver-merge";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -74,7 +75,7 @@ export function MergeDiver({
                 value={option.id}
                 defaultChecked={index === 0}
                 required
-                className="mt-1 size-4 accent-primary"
+                className={`${choiceClass} mt-1`}
               />
               <span className="min-w-0">
                 <span className="block font-medium">

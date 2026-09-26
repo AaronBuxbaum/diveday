@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { rendersFlush } from "@/test/button-flush";
 import { SeenGroup, type SeenGroupCopy } from "./SeenGroup";
 
 /**
@@ -83,6 +84,30 @@ describe("SeenGroup", () => {
     expect(screen.getByRole("button", { name: "Delete Green sea turtle" })).toHaveTextContent(
       "Delete",
     );
+  });
+
+  it("ends each tally row's Delete on the rule's end, as the name starts on its start", () => {
+    // "Delete" stopped 12px short of the rule it ends (x 1115 against 1127;
+    // pixel probe, DEPARTURE-5-09, K-06): the padding of a box painted only on
+    // hover.
+    render(
+      <SeenGroup
+        chips={chips}
+        tallies={[
+          {
+            slug: "nurse-shark",
+            name: "Nurse shark",
+            count: 1,
+            deleteLabel: "Delete Nurse shark",
+          },
+        ]}
+        copy={copy}
+        recordAction={noop}
+        deleteAction={noop}
+      />,
+    );
+    const remove = screen.getByRole("button", { name: "Delete Nurse shark" });
+    expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(true);
   });
 
   it("keeps the group off the printed sheet", () => {

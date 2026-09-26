@@ -189,7 +189,6 @@ export default async function PublicReviewsPage({
           next: t("reviews.nextPage"),
           position: (page, pageCount) => t("reviews.pagePosition", { page, pageCount }),
         }}
-        className="mt-6"
       />
     </main>
   );

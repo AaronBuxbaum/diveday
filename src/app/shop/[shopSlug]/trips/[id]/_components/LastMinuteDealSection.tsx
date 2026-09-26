@@ -4,7 +4,7 @@ import { sendHoldCopy } from "@/components/send-hold-copy";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { choiceClass, controlClassFor, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripLastMinutePromo } from "@/db/schema";
 import type { CertificationSummary } from "@/db/self-declared-cards";
@@ -158,7 +158,7 @@ export function LastMinuteDealSection({
                       name="recipientPersonIds"
                       value={recipient.personId}
                       defaultChecked
-                      className="rounded border-border text-primary focus:ring-primary"
+                      className={choiceClass}
                     />
                     <span className="font-medium">{recipient.fullName}</span>
                   </label>
@@ -194,7 +194,9 @@ export function LastMinuteDealSection({
                   step={5}
                   defaultValue={25}
                   aria-label={t("trips.lastMinute.discountPercentAriaLabel")}
-                  className={controlClass}
+                  // `md`, the height of the send button this row
+                  // bottom-aligns it with.
+                  className={controlClassFor("md")}
                 />
                 <span className="text-sm text-muted">%</span>
               </div>

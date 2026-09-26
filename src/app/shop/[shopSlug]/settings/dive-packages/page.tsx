@@ -115,7 +115,7 @@ export default async function DivePackagesSettingsPage({
           as="form"
           action={createDivePackageAction}
           columns={2}
-          className={shopPackages.length > 0 ? "mt-6 gap-x-5 gap-y-5" : "gap-x-5 gap-y-5"}
+          className={shopPackages.length > 0 ? "mt-6" : undefined}
         >
           <Field label={t("settings.main.divePackages.nameLabel")}>
             <input name="name" required maxLength={80} className={controlClass} />

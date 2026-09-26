@@ -81,7 +81,7 @@ export function SiteLibraryLedger({
               id={headingId}
               label={groupWord(group.label, t, diverT)}
             >
-              <ul className="mt-2" aria-labelledby={headingId}>
+              <ul aria-labelledby={headingId}>
                 {group.sites.map((site) => (
                   <SiteRow
                     key={site.id}
@@ -208,7 +208,7 @@ function SiteRow({
         ) : undefined
       }
     >
-      <div className="min-w-0 py-2">
+      <div className="min-w-0">
         <p className="font-medium break-words">{site.name}</p>
         <p className="mt-0.5 text-sm break-words text-muted">{meta.join(" · ")}</p>
         {/* What the shop wants to remember about running this site, while it
@@ -243,9 +243,11 @@ function CatalogDoor({ href, count, t }: { href: string; count: number; t: Staff
         as="div"
         href={href}
         linkLabel={title}
-        leading={<DiveDayIcon name="diveSites" className="size-5 text-muted" />}
+        // Trimmed and sized by height: the pin's ink starts on the column the
+        // row's words start on, 12px (the row's gap) before them.
+        leading={<DiveDayIcon name="diveSites" trim className="h-5 w-auto text-muted" />}
       >
-        <div className="min-w-0 py-2">
+        <div className="min-w-0">
           <p className="font-medium">{title}</p>
           <p className="mt-0.5 text-sm text-muted tabular-nums">
             {t("diveSites.list.catalogSiteCount", { count })}

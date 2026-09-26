@@ -1,6 +1,11 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, openDiverFileGroup, waiverLinkFromToast } from "./helpers";
+import {
+  daysFromNow,
+  openDiverFileGroup,
+  openPaperWaiverForm,
+  waiverLinkFromToast,
+} from "./helpers";
 
 /**
  * **A minor's release is signed twice** (ADR 20260907-guardian-co-signature).
@@ -168,7 +173,7 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
     await row.getByLabel("Relationship").selectOption("parent");
   };
 
-  await row.getByText("Mark signed on paper").click();
+  await openPaperWaiverForm(row);
   // **A minor's attestation names who answered the health questions** (issue
   // #1668). The adult sentence stops at "no answer needs physician sign-off",
   // and on a minor's record that was the only medical assertion there was —
@@ -263,7 +268,7 @@ test("the diver record refuses a namesake co-signer and offers no tick", async (
   await page.goto(record);
   await openDiverFileGroup(page, "Waiver");
   await waiverCard.getByText("Send options", { exact: true }).click();
-  await waiverCard.getByRole("button", { name: "Mark signed on paper" }).click();
+  await openPaperWaiverForm(waiverCard);
   await page.getByLabel("I have this diver’s signed release on file", { exact: false }).check();
   await page.getByLabel("Parent or guardian who signed").fill(diver);
   await page.getByLabel("Relationship").selectOption("parent");

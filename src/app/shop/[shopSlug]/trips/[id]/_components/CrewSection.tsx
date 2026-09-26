@@ -7,7 +7,8 @@ import { EmptyState } from "@/components/EmptyState";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, FormStatus } from "@/components/ui/form";
+import { INSET_NOTE_BOX, INSET_NOTE_CLASS } from "@/components/ui/card";
+import { controlClass, controlClassFor, FormStatus } from "@/components/ui/form";
 import type { TripCrewChange } from "@/db/trips";
 import { fill } from "@/i18n/fill";
 import { TRIP_CREW_ROLES, type TripCrewRole } from "@/lib/crew-roles";
@@ -285,31 +286,27 @@ export function CrewSection({
        so anything shallower parks the anchor underneath it, and the pulse's
        "needs an instructor" fact links straight here. */
     <section id="crew" aria-label={copy.heading} className="flex flex-col gap-3 pt-1 scroll-mt-24">
+      {/* The departure's inset notes, one box whether warning or advice
+          (`INSET_NOTE_BOX`): they were 16px in where the requirements and
+          roster notes beside them are 12px. */}
       {crewGapCode === "no_instructor" ? (
-        <p className="rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
+        <p className={`${INSET_NOTE_BOX} bg-warning-tint font-medium text-warning-strong`}>
           {copy.courseNeedsInstructor}
         </p>
       ) : null}
       {crewGapCode === "over_ratio" && copy.overRatioWarning ? (
-        <p className="rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
+        <p className={`${INSET_NOTE_BOX} bg-warning-tint font-medium text-warning-strong`}>
           {copy.overRatioWarning}
         </p>
       ) : null}
-      {copy.underTargetNote ? (
-        <p className="rounded-lg bg-surface-sunken px-4 py-3 text-sm text-muted">
-          {copy.underTargetNote}
-        </p>
-      ) : null}
-      {copy.languageGapNote ? (
-        <p className="rounded-lg bg-surface-sunken px-4 py-3 text-sm text-muted">
-          {copy.languageGapNote}
-        </p>
-      ) : null}
+      {copy.underTargetNote ? <p className={INSET_NOTE_CLASS}>{copy.underTargetNote}</p> : null}
+      {copy.languageGapNote ? <p className={INSET_NOTE_CLASS}>{copy.languageGapNote}</p> : null}
 
       {staff.length === 0 ? (
         // The shared empty-section grammar, not a bare paragraph
-        // (design/principles.md #4).
-        <EmptyState title={copy.noStaff} />
+        // (design/principles.md #4). `nested`: this sits in the About card
+        // too, and its own bed shadow would fall on the card's white.
+        <EmptyState title={copy.noStaff} nested />
       ) : (
         <div className="flex flex-col gap-3">
           {hasUnassignedStaff ? (
@@ -333,7 +330,7 @@ export function CrewSection({
                   event.currentTarget.value = "";
                   void handleAssign(personId);
                 }}
-                className={`${controlClass} text-sm`}
+                className={controlClass}
               >
                 <option value="">{copy.assignOption}</option>
                 {availableStaff
@@ -353,8 +350,9 @@ export function CrewSection({
             // states follow one rule") — it was a bare `<p>`, so one component
             // said "nothing here" two ways. `icon={false}`: this one sits under
             // the assign picker rather than standing alone, so the bubbles
-            // would outweigh the line of text.
-            <EmptyState title={copy.notAssignedYet} icon={false} />
+            // would outweigh the line of text. `nested`: it sits in the Crew
+            // card, whose white it would otherwise shadow.
+            <EmptyState title={copy.notAssignedYet} icon={false} nested />
           ) : (
             // A sunken inset, not a card in a card — the roster is carved into
             // the Crew card the way ShopStat's `inset` variant is (see
@@ -450,7 +448,9 @@ export function CrewSection({
                           const next = event.currentTarget.value;
                           void handleRole(entry.id, next === "" ? null : (next as TripCrewRole));
                         }}
-                        className={`${controlClass} text-sm`}
+                        // `md`, the height of the `icon` remove square beside
+                        // it: a row with a text control in it is an `md` row.
+                        className={controlClassFor("md")}
                       >
                         <option value="">{copy.roleUnspecified}</option>
                         {TRIP_CREW_ROLES.map((role) => (
@@ -460,7 +460,7 @@ export function CrewSection({
                         ))}
                       </select>
                     </span>
-                    {/* A square 44px target holding one glyph: 44px tall but
+                    {/* A square 48px target holding one glyph: 44px tall but
                         ~24px wide was a sliver of a target for a dockside tap
                         that drops a crew member (design/principles.md #2). The
                         box is `size: "icon"` rather than a hand-spelled
@@ -473,7 +473,7 @@ export function CrewSection({
                       className={buttonClass({ variant: "danger-ghost", size: "icon" })}
                       aria-label={fill(copy.unassignAria, { name: entry.fullName })}
                     >
-                      ×
+                      <DiveDayIcon name="close" className="size-4" />
                     </button>
                   </span>
                 </li>

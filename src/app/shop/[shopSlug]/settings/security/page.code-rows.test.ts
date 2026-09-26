@@ -31,3 +31,17 @@ describe("the security page's code rows", () => {
     expect(SOURCE).not.toContain("className={controlClass}");
   });
 });
+
+/**
+ * **A session row's Revoke rings inside the row.** The word ends on the row's
+ * 12px inset (`flush`, K-06), so its hover fill reaches 4px from the sunken
+ * row's edge and the outset ring, 5px past the fill, a pixel beyond it.
+ */
+describe("the security page's session rows", () => {
+  it("draws Revoke's ring inside its sunken row", () => {
+    const revoke = SOURCE.slice(SOURCE.indexOf("revokeSessionAction.bind"));
+    const call = revoke.slice(revoke.indexOf("buttonClass("), revoke.indexOf("})}") + 3);
+    expect(call).toContain("flush: true");
+    expect(call).toContain("focus-visible:focus-ring-inset");
+  });
+});

@@ -460,7 +460,7 @@ export function TripNoticeBanner({
                   variant: "link",
                   size: "sm",
                   busy: true,
-                  className: "font-semibold underline-offset-2",
+                  className: "underline-offset-2",
                 })}
               >
                 {t("trips.notices.undo")}

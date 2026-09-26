@@ -16,11 +16,14 @@ export function CopyLinkButton({
   label,
   copiedLabel,
   failedLabel,
+  flush = false,
 }: {
   path: string;
   label: string;
   copiedLabel: string;
   failedLabel: string;
+  /** The button starts a line: its word sits on that line's edge (`Copyable`'s `flush`). */
+  flush?: boolean;
 }) {
   const url =
     typeof window === "undefined" ? path : new URL(path, window.location.origin).toString();
@@ -28,6 +31,7 @@ export function CopyLinkButton({
   return (
     <Copyable
       layout="inline"
+      flush={flush}
       value={url}
       copyLabel={label}
       copiedLabel={copiedLabel}

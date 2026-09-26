@@ -49,10 +49,7 @@ export default function GlobalError({
           <button type="button" onClick={() => reset()} className={buttonClass()}>
             Try again
           </button>
-          <a
-            href={`mailto:${SUPPORT_EMAIL}`}
-            className={buttonClass({ variant: "secondary", className: "border-border-strong" })}
-          >
+          <a href={`mailto:${SUPPORT_EMAIL}`} className={buttonClass({ variant: "outline" })}>
             Email {SUPPORT_EMAIL}
           </a>
         </div>

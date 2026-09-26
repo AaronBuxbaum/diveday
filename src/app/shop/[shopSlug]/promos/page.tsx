@@ -14,7 +14,14 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+import {
+  controlClass,
+  DateField,
+  Field,
+  FieldActions,
+  FieldGrid,
+  FormStatus,
+} from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/ledger";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { listShopPromoCodes } from "@/db/shop-promos";
@@ -472,10 +479,10 @@ export default async function PromosPage({
                 hint={t("promos.fields.startsHint")}
                 error={fieldError("startsAt")}
               >
-                <input name="startsAt" type="datetime-local" className={controlClass} />
+                <DateField name="startsAt" type="datetime-local" />
               </Field>
               <Field label={t("promos.fields.expires")} hint={t("promos.fields.expiresHint")}>
-                <input name="expiresAt" type="datetime-local" className={controlClass} />
+                <DateField name="expiresAt" type="datetime-local" />
               </Field>
               {/* The human zone name, never the raw IANA id — "America/New_York"
               with its underscore is implementation surfacing (principle 4). */}
@@ -517,7 +524,7 @@ export default async function PromosPage({
              unconnected the banner above is the only next move there is. */
           action={
             connected ? (
-              <a href="#new-code" className={buttonClass({ className: "mt-4" })}>
+              <a href="#new-code" className={buttonClass()}>
                 {t("promos.empty.action")}
               </a>
             ) : null
@@ -546,7 +553,6 @@ export default async function PromosPage({
         href={promosHref}
         total={t("promos.pagination.total", { count: promoPage.total })}
         words={staffPagerWords(t)}
-        className="mt-4"
       />
 
       {/* One heading over both branches — the list and its empty state stand
@@ -564,7 +570,7 @@ export default async function PromosPage({
           action={
             <Link
               href={`/shop/${shopSlug}/schedule/board`}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
             >
               {t("promos.tripDeals.emptyAction")}
             </Link>
@@ -580,7 +586,6 @@ export default async function PromosPage({
         href={dealsHref}
         total={t("promos.tripDeals.pagination.total", { count: dealPage.total })}
         words={staffPagerWords(t)}
-        className="mt-4"
       />
     </main>
   );

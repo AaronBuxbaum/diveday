@@ -21,17 +21,39 @@ const sizeClass = {
   lg: "size-6",
 } as const;
 
+/**
+ * **The mark as the opening of a line of text**, for `inline`.
+ *
+ * A bare mark is an `<svg>`, and Tailwind's preflight makes every `svg`
+ * `display: block`: written in front of its words it takes a line of its own
+ * above them, and a margin on it spaces it from nothing (K-15 — every toned
+ * `ShopNotice`, and the printed pre-departure list). This box is one line of
+ * the surrounding text tall (`h-lh`), stands at the top of the line it opens
+ * (`align-top`), and centres the mark in it — the middle of a line box, which
+ * is where that line's capitals are centred. Not a `vertical-align` nudge on
+ * the svg itself: the right nudge depends on the mark's size against the
+ * text's, and this box is right at any of them.
+ */
+const INLINE_LINE_BOX = "inline-flex h-lh items-center align-top";
+
 export function StatusMark({
   variant,
   size = "sm",
+  inline = false,
   className = "",
 }: {
   variant: StatusMarkVariant;
   size?: keyof typeof sizeClass;
+  /** Stand in a line of text, centred on it — see `INLINE_LINE_BOX`. */
+  inline?: boolean;
+  /** Classes for the mark itself (its colour, usually), inline or not. */
   className?: string;
 }) {
-  const classes = `${sizeClass[size]} shrink-0 ${className}`.trim();
+  const mark = drawMark(variant, `${sizeClass[size]} shrink-0 ${className}`.trim());
+  return inline ? <span className={INLINE_LINE_BOX}>{mark}</span> : mark;
+}
 
+function drawMark(variant: StatusMarkVariant, classes: string) {
   if (variant === "success" || variant === "checked") {
     return (
       <svg

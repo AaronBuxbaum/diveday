@@ -2,9 +2,17 @@
 
 import { useActionState, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
+import { SummaryCaret } from "@/components/ui/disclosure";
+import {
+  ChoiceRow,
+  controlClass,
+  DateField,
+  Field,
+  FieldGrid,
+  FormStatus,
+  textareaClassFor,
+} from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ExecutedDive } from "@/db/schema";
 import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
@@ -169,8 +177,10 @@ export function ExecutedDiveLog({
                   longer claims the screen while a crew is counting bodies. The
                   same treatment `PreDepartureCheckList` took in slice 5a. */}
               <details className="group/dive print:hidden">
-                <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-2 px-4 py-3 select-none [&::-webkit-details-marker]:hidden">
-                  <DisclosureCaret className="group-open/dive:rotate-90" />
+                <summary
+                  className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}
+                >
+                  <SummaryCaret className="group-open/dive:rotate-90" />
                   <span className="text-base font-semibold group-hover/summary:underline">
                     {summaryLine}
                   </span>
@@ -342,7 +352,7 @@ function ExecutedDiveForm({
             maxLength={PLAN_CHANGE_NOTE_MAX}
             value={planChangeNote}
             onChange={(event) => setPlanChangeNote(event.target.value)}
-            className={controlClass}
+            className={textareaClassFor(2)}
           />
         </Field>
         <Field
@@ -364,24 +374,22 @@ function ExecutedDiveForm({
           label={labels.enteredAt}
           error={timesError ? labels.refusals.times_transposed : undefined}
         >
-          <input
+          <DateField
             name="enteredAt"
             type="datetime-local"
             value={enteredAt}
             onChange={(event) => setEnteredAt(event.target.value)}
-            className={controlClass}
           />
         </Field>
         <Field
           label={labels.exitedAt}
           error={timesError ? labels.refusals.times_transposed : undefined}
         >
-          <input
+          <DateField
             name="exitedAt"
             type="datetime-local"
             value={exitedAt}
             onChange={(event) => setExitedAt(event.target.value)}
-            className={controlClass}
           />
         </Field>
         <Field label={labels.visibility}>
@@ -429,17 +437,16 @@ function ExecutedDiveForm({
           </select>
         </Field>
       </FieldGrid>
-      <label className="mt-4 flex min-h-11 items-center gap-3 text-sm">
-        <input
-          name="notRecorded"
-          type="checkbox"
-          value="depth"
-          checked={depthNotRecorded}
-          onChange={(event) => setDepthNotRecorded(event.target.checked)}
-          className="size-4 accent-primary"
-        />
+      <ChoiceRow
+        name="notRecorded"
+        type="checkbox"
+        value="depth"
+        checked={depthNotRecorded}
+        onChange={(event) => setDepthNotRecorded(event.target.checked)}
+        className="mt-4 text-sm"
+      >
         {labels.notRecordedDepth}
-      </label>
+      </ChoiceRow>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button type="submit" className={buttonClass({ size: "sm" })}>
           {labels.save}

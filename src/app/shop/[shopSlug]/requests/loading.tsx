@@ -33,7 +33,11 @@ export default function RequestsLoading() {
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-72 max-w-full" descriptionWidth="w-64 max-w-full" />
+        <ShopPageHeaderSkeleton
+          titleWidth="w-72 max-w-full"
+          description
+          descriptionWidth="w-64 max-w-full"
+        />
         <div className="space-y-10">
           {[2, 1].map((rows) => (
             <div key={rows}>

@@ -386,9 +386,9 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "dives_recorded" },
     });
     expect(afterDive.text).toContain(
-      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: 24 hours after your last dive with us, following DAN’s guidance.",
+      "Blue Mantis asks you to wait at least until Sunday\u00A010:10\u00A0AM before flying: 24 hours after your last dive with us, following DAN’s guidance.",
     );
-    expect(afterDive.html).toContain("wait at least until Sunday 10:10 AM before flying");
+    expect(afterDive.html).toContain("wait at least until Sunday\u00A010:10\u00A0AM before flying");
 
     const afterReturn = tripRecapEmail({
       ...recapBase,
@@ -421,7 +421,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "earlier_day" },
     });
     expect(afterDive.text).toContain(
-      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: our records show another dive day in the last two days, so 24 hours after your last dive with us, following DAN’s guidance.",
+      "Blue Mantis asks you to wait at least until Sunday\u00A010:10\u00A0AM before flying: our records show another dive day in the last two days, so 24 hours after your last dive with us, following DAN’s guidance.",
     );
 
     const afterReturn = tripRecapEmail({
@@ -429,7 +429,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "scheduled_return", reason: "earlier_day" },
     });
     expect(afterReturn.text).toContain(
-      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: our records show another dive day in the last two days, so 24 hours after the day was due to end, following DAN’s guidance.",
+      "Blue Mantis asks you to wait at least until Sunday\u00A010:10\u00A0AM before flying: our records show another dive day in the last two days, so 24 hours after the day was due to end, following DAN’s guidance.",
     );
 
     const spanish = tripRecapEmail({
@@ -457,7 +457,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "scheduled_return", reason: "dives_planned" },
     });
     expect(planned.text).toContain(
-      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: we planned more than one dive, so 24 hours after the day was due to end, following DAN’s guidance.",
+      "Blue Mantis asks you to wait at least until Sunday\u00A010:10\u00A0AM before flying: we planned more than one dive, so 24 hours after the day was due to end, following DAN’s guidance.",
     );
     // It may not claim the dive it cannot see: the crew logged at most one.
     expect(planned.text).not.toContain("your last dive with us");
@@ -765,7 +765,7 @@ describe("courseInquiryEmail", () => {
       preferredDate: "2026-08-06",
       alternateDate: "2026-08-13",
     });
-    expect(email.text).toContain("Dates asked for: Aug 6, 2026 or Aug 13, 2026");
+    expect(email.text).toContain("Dates asked for: Aug\u00A06, 2026 or Aug\u00A013, 2026");
     // The structured answer leads; the free text qualifies it.
     expect(email.text.indexOf("Dates asked for:")).toBeLessThan(email.text.indexOf("When:"));
   });
@@ -776,7 +776,7 @@ describe("courseInquiryEmail", () => {
       preferredDate: "2026-08-06",
       dateFlexible: true,
     });
-    expect(email.text).toContain("Dates asked for: Aug 6, 2026 (can move a few days)");
+    expect(email.text).toContain("Dates asked for: Aug\u00A06, 2026 (can move a few days)");
     // One date named, so no disjunction to build.
     expect(email.text).not.toContain(" or ");
   });
@@ -792,8 +792,8 @@ describe("courseInquiryEmail", () => {
     // 2026-08-06 is a date, not an instant. A renderer that went through a
     // negative-offset zone would print Aug 5 for every shop west of Greenwich.
     const email = courseInquiryEmail({ ...inquiry, preferredDate: "2026-08-06" });
-    expect(email.text).toContain("Aug 6, 2026");
-    expect(email.text).not.toContain("Aug 5, 2026");
+    expect(email.text).toContain("Aug\u00A06, 2026");
+    expect(email.text).not.toContain("Aug\u00A05, 2026");
   });
 });
 

@@ -1,6 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, FormStatus } from "@/components/ui/form";
+import { FormStatus, textareaClassFor } from "@/components/ui/form";
 import {
   MAX_RECAP_PULSE_NOTE_LENGTH,
   RECAP_PULSE_CATEGORIES,
@@ -123,7 +123,7 @@ export function RecapPulse({
           rows={2}
           maxLength={MAX_RECAP_PULSE_NOTE_LENGTH}
           defaultValue={ownPulse?.note ?? ""}
-          className={controlClass}
+          className={textareaClassFor(2)}
         />
         {/* Beside the form, never a page banner (docs/design/forms-and-controls.md). */}
         {resolved ? (

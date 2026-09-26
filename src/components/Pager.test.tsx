@@ -118,10 +118,23 @@ describe("Pager", () => {
     expect(screen.getByText("Página 2 de 5")).toBeInTheDocument();
   });
 
-  it("adds the caller's spacing without losing its own layout", () => {
-    render(<Pager page={2} pageCount={3} href={href} words={words} className="mt-4" />);
+  /**
+   * K-130. Every caller used to pass its own top margin — `mt-4` on ten lists,
+   * `mt-6` on six, `mt-8` on three — so the one pager sat 16, 24 or 32px under
+   * its list depending on the page it was on. The offset is the pager's.
+   */
+  it("owns its offset from the list above it", () => {
+    render(<Pager page={2} pageCount={3} href={href} words={words} />);
     const nav = screen.getByRole("navigation", { name: "Pages" });
-    expect(nav).toHaveClass("mt-4", "grid", "grid-cols-2", "sm:grid-cols-[1fr_auto_1fr]");
+    expect(nav).toHaveClass("mt-6", "grid", "grid-cols-2", "sm:grid-cols-[1fr_auto_1fr]");
+  });
+
+  it("takes no margin from a caller", () => {
+    // @ts-expect-error — there is no `className` to pass: the offset is the pager's own.
+    render(<Pager page={2} pageCount={3} href={href} words={words} className="mt-8" />);
+    const nav = screen.getByRole("navigation", { name: "Pages" });
+    expect(nav).not.toHaveClass("mt-8");
+    expect(nav).toHaveClass("mt-6");
   });
 
   /**

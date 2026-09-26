@@ -13,7 +13,7 @@ import { isDiverLocale } from "@/i18n/settings";
 import { seaStateText, temperatureText, windText } from "@/i18n/unit-labels";
 import { nowDate } from "@/lib/clock";
 import { boardTitleFor } from "@/lib/display-tokens";
-import { formatShortDate, formatTime } from "@/lib/format";
+import { bindTitleDash, formatShortDate, formatTime } from "@/lib/format";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { stageTone } from "@/lib/trip-stages";
 import { hasReturned } from "@/lib/trips";
@@ -296,7 +296,7 @@ function BoardRow({
       </p>
       <div className="min-w-0">
         <p className="text-[1.75rem] leading-tight font-bold text-balance lg:text-[2.25rem]">
-          {title.kind === "private" ? t("board.privateCharter") : title.title}
+          {title.kind === "private" ? t("board.privateCharter") : bindTitleDash(title.title)}
         </p>
         {row.conditionsHold && !returned ? (
           <p className="mt-1 text-[1.5rem] leading-tight font-bold text-warning">

@@ -28,6 +28,12 @@ import type { FactSource as FactSourceKind } from "@/lib/fact-source";
  * The word takes `groupLabelClass()` rather than a hand-rolled small-caps
  * string: it is the app's one spelling for a label set in small caps, and a
  * copy here would be exactly the drift `ledger.test.tsx` sweeps for.
+ *
+ * **The word sets the chip's baseline** (`items-baseline`, the dot
+ * `self-center`). Centred items hand an `inline-flex` box the baseline of its
+ * first item, here the empty dot, whose baseline is its bottom edge; in a row
+ * that aligns baselines the chip then sat on its dot, 2px under the words
+ * beside it in high contrast (pixel-craft class 1).
  */
 const SOURCE_DOT: Record<FactSourceKind, string> = {
   forecast: "border border-border-strong",
@@ -55,8 +61,11 @@ export function FactSource({
   className?: string;
 }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 ${groupLabelClass()} ${className}`.trim()}>
-      <span aria-hidden="true" className={`size-2 shrink-0 rounded-full ${SOURCE_DOT[kind]}`} />
+    <span className={`inline-flex items-baseline gap-1.5 ${groupLabelClass()} ${className}`.trim()}>
+      <span
+        aria-hidden="true"
+        className={`size-2 shrink-0 self-center rounded-full ${SOURCE_DOT[kind]}`}
+      />
       {at ? `${label} · ${at}` : label}
     </span>
   );

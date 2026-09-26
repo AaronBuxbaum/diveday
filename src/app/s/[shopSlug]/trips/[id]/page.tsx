@@ -81,7 +81,7 @@ import { TripActions } from "./_components/TripActions";
 import { TripAlternatives } from "./_components/TripAlternatives";
 import { TripDayPlan } from "./_components/TripDayPlan";
 import { TripHeader } from "./_components/TripHeader";
-import { TripPitch } from "./_components/TripPitch";
+import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
 import { TripTerms } from "./_components/TripTerms";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { offerHandoff } from "./actions";
@@ -699,7 +699,8 @@ export default async function TripDetailPage({
           <a
             href="#book"
             className={buttonClass({
-              className: "fixed right-4 bottom-4 z-20 rounded-full shadow-lg sm:hidden",
+              shape: "pill",
+              className: "fixed right-4 bottom-4 z-20 shadow-lg sm:hidden",
             })}
           >
             {/* The verb, and nothing else. It carried the seat count too
@@ -725,8 +726,11 @@ export default async function TripDetailPage({
             names a card — which of the day's sites go deeper than that card
             covers. Facts the shop already publishes (issue #1479); the beat
             stays time-neutral, since durations promise no clock. */}
+        {/* Its run closes itself, except over a pitch that opens on its
+            door's own rule (pixel-craft class 6). */}
         <TripDayPlan
           briefings={diveBriefings}
+          nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew)}
           sightings={seenBySite}
           shop={shop}
           startsAt={trip.startsAt}
@@ -748,6 +752,9 @@ export default async function TripDetailPage({
             a section, and `page.composition.test.ts` is what says so. */}
         <TripPitch briefings={diveBriefings} crew={publicCrew} locale={locale} embed={isEmbed} />
         <ConditionsLine
+          // Flush under the pitch's door when there is one, so its rule is the
+          // door's close rather than a second rule 24px below it.
+          underDoor={pitchHasDoor(diveBriefings, publicCrew)}
           shop={shop}
           trip={trip}
           crewPrediction={crewPrediction}
@@ -783,12 +790,16 @@ export default async function TripDetailPage({
             about the reader, which is what makes it safe on an anonymous page
             (DOM-M6), and it still says nothing at all on a course session,
             whose own page states its admission rule. */}
+        {/* The other boats close their own list, and the requirement note
+            under them sits 16px below that closing rule rather than drawing a
+            second one; alone, it opens on a rule of its own (pixel-craft
+            class 6). */}
         <TripAlternatives alternatives={worthALookRows} locale={locale} />
         {requirementNote ? (
-          // The ledger's room, so this rule is as long as the alternatives'
-          // rules just above it.
+          // The ledger's room, so its words start where the alternatives'
+          // do, and its rule is as long as theirs.
           <p
-            className={`mt-8 border-t border-border pt-4 text-sm text-muted ${ledgerRowRoomClass}`}
+            className={`${worthALookRows.length > 0 ? "mt-4" : "mt-8 border-t border-border pt-4"} text-sm text-muted ${ledgerRowRoomClass}`}
           >
             {t("trip.requirementNote", { list: requirementNote })}
           </p>

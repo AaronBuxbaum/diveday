@@ -2,7 +2,7 @@
 
 import { type ReactNode, useActionState, useEffect, useRef } from "react";
 import { vibrate } from "@/components/haptics";
-import { controlClass } from "@/components/ui/form";
+import { textareaClassFor } from "@/components/ui/form";
 
 /**
  * The result a roll-call server action returns instead of redirecting, so the
@@ -194,7 +194,7 @@ export function RollCallButton({
               rows={2}
               maxLength={noteField.maxLength}
               placeholder={noteField.label}
-              className={`${controlClass} text-base`}
+              className={`${textareaClassFor(2)} text-base`}
             />
           </p>
         ) : null}

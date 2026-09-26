@@ -68,7 +68,7 @@ export function ReviewLedgerRow({
     <LedgerRow
       as="li"
       stacked
-      className="py-3"
+      pad="lg"
       trailing={
         <ReviewRowActions
           reviewId={review.id}

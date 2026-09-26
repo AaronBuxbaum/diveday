@@ -18,7 +18,7 @@ export default function CheckInLoading() {
     // footer hugs the skeleton, then drops when the real page lands.
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton descriptionWidth="w-80 max-w-full" />
+        <ShopPageHeaderSkeleton description={false} />
         {/* The departure chips: one sunken track. */}
         <div className="mt-6 h-13 w-full max-w-md rounded-inset bg-surface-sunken" />
         <div className="mt-6">

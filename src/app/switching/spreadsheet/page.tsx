@@ -221,7 +221,7 @@ async function SpreadsheetBody({
             <a
               href="/diveday-diver-import-template.csv"
               download
-              className={buttonClass({ variant: "secondary", className: "border-border-strong" })}
+              className={buttonClass({ variant: "outline" })}
             >
               {t("switching.spreadsheet.downloadTemplate")}
             </a>

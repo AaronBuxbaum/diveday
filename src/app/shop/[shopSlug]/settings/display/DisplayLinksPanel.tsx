@@ -6,7 +6,15 @@ import { Copyable } from "@/components/Copyable";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoicePill,
+  choiceClass,
+  controlClass,
+  Field,
+  FieldGrid,
+  FormStatus,
+} from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { displayLinkAction } from "./actions";
 import {
@@ -34,7 +42,7 @@ function SubmitButton({
       disabled={pending}
       aria-busy={pending}
       aria-label={ariaLabel}
-      className={buttonClass({ variant, size: "sm" })}
+      className={buttonClass({ variant, size: "sm", flush: variant === "ghost" })}
     >
       {pending ? pendingLabel : label}
     </button>
@@ -112,44 +120,32 @@ export function DisplayLinksPanel({
               because the two grant different things: the kiosk *writes*, and a
               shop mounting a TV should have to say so before it gets one. The
               action reads it as a closed set, so an unrecognised value can
-              never fall through to the more capable surface.
-
-              `Field`'s required marker by hand, because a fieldset is not a
-              `Field` — the same shape `MedicalClearanceControl` uses. */}
-          <fieldset>
-            <legend className="text-sm font-medium">
-              {copy.purposeLegend}
-              <span aria-hidden="true" className="text-danger">
-                {" "}
-                *
-              </span>
-            </legend>
-            <div className="mt-2 flex flex-wrap gap-3">
-              <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface">
-                <input
-                  type="radio"
-                  name="purpose"
-                  value="board"
-                  required
-                  checked={purpose === "board"}
-                  onChange={() => setPurpose("board")}
-                />
+              never fall through to the more capable surface. */}
+          <ChoiceFieldset legend={copy.purposeLegend} required bodyClassName="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-3">
+              <ChoicePill
+                type="radio"
+                name="purpose"
+                value="board"
+                required
+                checked={purpose === "board"}
+                onChange={() => setPurpose("board")}
+              >
                 {copy.purposeBoard}
-              </label>
-              <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface">
-                <input
-                  type="radio"
-                  name="purpose"
-                  value="check_in"
-                  required
-                  checked={purpose === "check_in"}
-                  onChange={() => setPurpose("check_in")}
-                />
+              </ChoicePill>
+              <ChoicePill
+                type="radio"
+                name="purpose"
+                value="check_in"
+                required
+                checked={purpose === "check_in"}
+                onChange={() => setPurpose("check_in")}
+              >
                 {copy.purposeCheckIn}
-              </label>
+              </ChoicePill>
             </div>
-            <p className="mt-2 text-sm text-muted">{copy.purposeCheckInDescription}</p>
-          </fieldset>
+            <p className="text-sm text-muted">{copy.purposeCheckInDescription}</p>
+          </ChoiceFieldset>
           {purpose === "board" ? (
             <div className="flex items-start gap-3">
               <input
@@ -157,7 +153,7 @@ export function DisplayLinksPanel({
                 type="checkbox"
                 name="showNames"
                 value="true"
-                className="mt-1 size-5"
+                className={`${choiceClass} mt-1`}
                 aria-describedby={`${namesId}-description`}
               />
               <div>
@@ -243,7 +239,10 @@ export function DisplayLinksPanel({
                       .join(" · ")}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                {/* Renew and Revoke are both `flush`, so whichever edge of the
+                    row they wrap to, the words sit on it; the 32px their
+                    padding used to hold apart is the gap's now. */}
+                <div className="flex items-center gap-8">
                   {/* Only a link that expires has anything to renew, and no
                       `InlineConfirm`: renewing takes nothing away, so a
                       confirmation step would be a question with one answer. */}
@@ -265,7 +264,8 @@ export function DisplayLinksPanel({
                     <InlineConfirm
                       triggerLabel={copy.revoke}
                       ariaLabel={screen.revokeLabel}
-                      triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
+                      triggerClassName={buttonClass({ variant: "ghost", size: "sm", flush: true })}
+                      confirmClassName={buttonClass({ variant: "ghost", size: "sm" })}
                       message={copy.confirmRevoke}
                       confirmLabel={copy.confirmRevokeButton}
                       cancelLabel={copy.cancel}

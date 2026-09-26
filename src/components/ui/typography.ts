@@ -27,7 +27,9 @@
  * `SUB_TITLE_CLASS`. Two of those set their tracking tighter than the app's and
  * balance their wrap, because they are headings that *wrap* at display size; a
  * staff page title is a short label that does not. That is a real difference in
- * the type, not a preserved accident.
+ * the type, not a preserved accident. The sub-title wraps `pretty` rather than
+ * balanced: it sits in narrow grid cells, and it left "sizes" alone on its last
+ * line under a product-page card at 390.
  *
  * ### Figures
  *
@@ -41,7 +43,11 @@
  * and the card shell would drag the whole of it into the browser bundle.
  *
  * `text-balance` is not baked into the app ramp: it belongs to titles that wrap
- * (a trip name), not to the ones that don't, and each shell decides.
+ * (a trip name), not to the ones that don't, and each shell decides. The
+ * reading ramp is the other way round — its rungs carry their wrap rule, and a
+ * call site never adds a second one (`typography.test.ts`): two `text-wrap`
+ * utilities on one element are settled by stylesheet order, not by the order
+ * they are written in.
  */
 
 /**
@@ -102,7 +108,7 @@ export const BANNER_TITLE_CLASS = "text-3xl font-semibold tracking-[-0.035em] te
 export const LEAD_TITLE_CLASS = "text-2xl font-semibold tracking-tight";
 
 /** The step under a lead — a named item in a marketing grid, a legal `<h2>`. */
-export const SUB_TITLE_CLASS = "text-xl font-semibold tracking-tight";
+export const SUB_TITLE_CLASS = "text-xl font-semibold tracking-tight text-pretty";
 
 /**
  * **The app's section heading**, and the workhorse of the whole ramp — 76 of the
@@ -136,3 +142,17 @@ export const FIGURE_INLINE_CLASS = "text-lg font-semibold tabular-nums";
  * carries a warning about in AGENTS.md).
  */
 export const FIGURE_DIAL_CLASS = "text-2xl leading-none font-bold tabular-nums";
+
+/**
+ * **The reading ramp's eyebrow** — the small-caps line over a marketing,
+ * switching or legal heading ("THE PEOPLE BEHIND IT", "LEGAL").
+ *
+ * Not the app's `EYEBROW_CLASS` (`ShopPageHeader.tsx`, 11px bold): this one
+ * sits over a `BANNER_TITLE_CLASS` or `DISPLAY_TITLE_CLASS` heading, so it is
+ * drawn at 14px. It was typed by hand at twenty-one call sites in nine files,
+ * and the one on the legal pages had drifted to 12px (K-207). Named here, so a
+ * step in the eyebrow is one edit; `LegalDocument.test.tsx` refuses a hand
+ * copy anywhere else.
+ */
+export const MARKETING_EYEBROW_CLASS =
+  "text-sm font-semibold tracking-widest text-primary uppercase";

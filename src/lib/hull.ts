@@ -53,12 +53,15 @@ const HULL_BOTTOM = 124;
 /** The transom, and the radius its two corners are cut at. */
 const TRANSOM_X = 6;
 const TRANSOM_RADIUS = 10;
-export const VIEW_HEIGHT = 150;
 /** The waterline the hull is drawn about, and the centre line's own height. */
 const MIDLINE_Y = 75;
-/** How far the bow reaches beyond the last seat, and the room after it. */
+/** How far the bow reaches beyond the last seat. */
 const BOW_LENGTH = 96;
-const BOW_MARGIN = 8;
+/**
+ * The room the box leaves around the outline: its 1.5 stroke reaches 0.75 past
+ * the path, and one unit holds that with a quarter to spare.
+ */
+const STROKE_ROOM = 1;
 /** The wheelhouse: crew inboard of the bow, and the helm ahead of them. */
 const CREW_R = 12;
 const HELM_RING_R = 9;
@@ -94,9 +97,9 @@ export function crewNotDrawn(crewCount: number): number {
  * The hull keeps its aspect — a boat is a shape, not a curve that may flatten —
  * so everything on it scales with the width, the lettering included. The
  * measure is therefore the *text*, not the seat: 390px of phone across a hull
- * of `42·cols + 106` units renders the canvas's 11.5-unit initials at
- * `390 · 11.5 / (42·cols + 106)` pixels — 10.1 at eight columns, 7.1 at twelve,
- * 4.4 at twenty. Above the threshold the seats stay and the letters go, and the
+ * of `42·cols + 118` units renders the canvas's 11.5-unit initials at
+ * `390 · 11.5 / (42·cols + 118)` pixels — 9.9 at eight columns, 7.2 at twelve,
+ * 4.7 at twenty. Above the threshold the seats stay and the letters go, and the
  * picture is still the count made spatial, which is the whole point of drawing
  * it rather than listing it.
  *
@@ -146,8 +149,16 @@ export type HullSeat = {
 };
 
 export type HullGeometry = {
-  width: number;
-  height: number;
+  /**
+   * **The drawing's own box**: the outline and its stroke, and nothing around
+   * it. The canvas's `0 0 w 150` kept 26 units of empty water over the
+   * gunwale, 26 under it and 8 past the bow, and at `w-full` that water scales
+   * with the page — 88px above the hull and 86px below it on the trip page at
+   * 1280, where every other gap is 16–40. The page's own gaps space the hull
+   * now. Everything `Hull` draws sits inside it, a missing diver's ring and a
+   * missing guide's printed ring included (`hull.test.ts`).
+   */
+  viewBox: { x: number; y: number; width: number; height: number };
   /** The hull's outline, transom to bow and back. */
   outline: string;
   /** The dashed line down the middle of the deck. */
@@ -184,7 +195,7 @@ export function hullGeometry(input: { capacity: number; crewCount?: number }): H
   // seat, with room for it to sit inboard of the line. Six columns put it at
   // 278 and four at 194, which is what the canvas drew.
   const bow = COL_PITCH * columns + FIRST_SEAT_X + 2;
-  const width = bow + BOW_LENGTH + BOW_MARGIN;
+  const left = TRANSOM_X - STROKE_ROOM;
 
   const seats: HullSeat[] = [];
   for (let index = 0; index < capacity; index += 1) {
@@ -221,15 +232,25 @@ export function hullGeometry(input: { capacity: number; crewCount?: number }): H
   }));
 
   return {
-    width,
-    height: VIEW_HEIGHT,
+    viewBox: {
+      x: left,
+      y: HULL_TOP - STROKE_ROOM,
+      width: bow + BOW_LENGTH + STROKE_ROOM - left,
+      height: HULL_BOTTOM - HULL_TOP + 2 * STROKE_ROOM,
+    },
     outline: outlinePath(bow),
     midline: { x1: TRANSOM_X + TRANSOM_RADIUS, x2: bow + 20, y: MIDLINE_Y },
     seats,
     crew,
     crewOverflow: crewCount - seated,
     helm: {
-      cx: bow + 56,
+      // `bow + 63`, 7 units forward of where the canvas drew it. At `bow + 56`
+      // the ring sat 22.47 units from each guide's centre, where the two
+      // stroked radii sum to 22.5, so the rings touched at every scale and
+      // merged at 390. Here it clears a guide's ring by 4.4 units, a missing
+      // guide's 3-unit stroke by 3.6, and that guide's printed ring (r + 3) by
+      // 1.6 — and still sits well inside the bow, whose tip is `bow + 96`.
+      cx: bow + 63,
       cy: MIDLINE_Y,
       ringRadius: HELM_RING_R,
       dotRadius: HELM_DOT_R,
@@ -261,8 +282,7 @@ function outlinePath(bow: number): string {
 
 function emptyHull(): HullGeometry {
   return {
-    width: 0,
-    height: VIEW_HEIGHT,
+    viewBox: { x: 0, y: 0, width: 0, height: 0 },
     outline: "",
     midline: { x1: 0, x2: 0, y: MIDLINE_Y },
     seats: [],

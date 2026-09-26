@@ -52,9 +52,16 @@ type PaletteItem = {
  */
 type PaletteGroup = { id: string; heading?: string; items: PaletteItem[] };
 
-/** The palette's own key cap — smaller than the header button's ⌘K badge. */
+/**
+ * The palette's own key cap — smaller than the header button's ⌘K badge.
+ *
+ * A fixed 16px box that centres what it holds, because the caps hold two
+ * kinds of thing: a word or a glyph (↵, esc) and a 12px drawn arrow. Sized by
+ * their content, the arrow caps' line box made them 18px beside the text caps'
+ * 16 in the same legend (the pixel audit, command-palette).
+ */
 const hintKeyClass =
-  "rounded border border-border bg-surface-sunken px-1.5 py-0.5 font-sans text-[0.65rem] leading-none font-semibold";
+  "inline-flex h-4 items-center rounded border border-border bg-surface-sunken px-1.5 font-sans text-[0.65rem] leading-none font-semibold";
 
 const EMPTY: SearchResults = {
   divers: [],
@@ -735,15 +742,27 @@ export function CommandPalette({
                                   </span>
                                 </span>
                               ) : (
-                                <span className="min-w-0 flex-1 truncate font-medium">
-                                  {item.label}
+                                /* **The label and its detail share one column.**
+                                   Side by side on a phone the detail never
+                                   shrank, so a departure's name took all the
+                                   loss — cut to 81px while its date kept 172
+                                   (the pixel audit, command-palette-results).
+                                   Below `sm` the detail is the label's second
+                                   line; from `sm` up the column lays them out
+                                   in a row, the date at its full width as
+                                   before. A card carries its facts in `lines`
+                                   and has no detail. */
+                                <span className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
+                                  <span className="block min-w-0 truncate font-medium sm:flex-1">
+                                    {item.label}
+                                  </span>
+                                  {item.detail ? (
+                                    <span className="block truncate text-sm text-muted sm:shrink-0">
+                                      {item.detail}
+                                    </span>
+                                  ) : null}
                                 </span>
                               )}
-                              {item.detail ? (
-                                <span className="shrink-0 truncate text-sm text-muted">
-                                  {item.detail}
-                                </span>
-                              ) : null}
                             </button>
                           );
                         })}

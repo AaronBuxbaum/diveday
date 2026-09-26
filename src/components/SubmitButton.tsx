@@ -15,6 +15,8 @@ export function SubmitButton({
   disabled = false,
   ariaLabel,
   observabilityAction,
+  formAction,
+  formNoValidate,
 }: {
   children: React.ReactNode;
   pendingLabel: string;
@@ -26,8 +28,19 @@ export function SubmitButton({
   ariaLabel?: string;
   /** Stable, non-identifying action label for client mutation timing. */
   observabilityAction?: string;
+  /**
+   * Posts the form to this action instead of the form's own — a row's Delete
+   * living in its edit form beside Save. The button's in-flight state then
+   * follows this action alone, so a Save and a Delete sharing one form never
+   * both read as pending; a Save beside such a Delete passes its own action
+   * here for the same reason.
+   */
+  formAction?: (formData: FormData) => void | Promise<void>;
+  /** Skips the form's validation: an act the form's own fields do not gate. */
+  formNoValidate?: boolean;
 }) {
-  const { pending } = useFormStatus();
+  const status = useFormStatus();
+  const pending = status.pending && (formAction === undefined || status.action === formAction);
   const startedAt = useRef<number | null>(null);
   const sawPending = useRef(false);
 
@@ -52,6 +65,8 @@ export function SubmitButton({
   return (
     <button
       type="submit"
+      formAction={formAction}
+      formNoValidate={formNoValidate}
       disabled={pending || disabled}
       className={className}
       aria-label={ariaLabel}

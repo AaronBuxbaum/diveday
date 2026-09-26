@@ -79,6 +79,25 @@ describe("SegmentedControl", () => {
     }
   });
 
+  /**
+   * **The floor holds on both axes** (pixel-craft class 7). A target's floor
+   * is 44px in width as well as height, and a three-letter label does not
+   * reach it: on the public courses page "SDI" measured 43.4×44 and "SSI"
+   * 42.3×44 at 390px. The boat size floors its width at its own 56px height,
+   * `min-w-14`, so a short label there is a square, not a sliver.
+   */
+  it("floors every option's width too, so a three-letter label is still a target", () => {
+    const short = [
+      { key: "sdi", label: "SDI", href: "/s/reef/courses?agency=sdi" },
+      { key: "ssi", label: "SSI", href: "/s/reef/courses?agency=ssi" },
+    ];
+    render(<SegmentedControl ariaLabel="Agency" items={short} currentKey="sdi" />);
+    for (const label of ["SDI", "SSI"]) expect(screen.getByText(label)).toHaveClass("min-w-11");
+    cleanup();
+    render(<SegmentedControl ariaLabel="Agency" items={short} currentKey="sdi" size="boat" />);
+    for (const label of ["SDI", "SSI"]) expect(screen.getByText(label)).toHaveClass("min-w-14");
+  });
+
   it("never shifts layout on selection: both states share one weight and size", () => {
     render(<SegmentedControl ariaLabel="Trip" items={items} currentKey="guests" />);
     const current = screen.getByText("Guests");
@@ -171,6 +190,104 @@ describe("SegmentedControl", () => {
         expect(part, size).not.toHaveClass("rounded-lg");
       }
       cleanup();
+    }
+  });
+});
+
+/**
+ * **A track that cannot hold its options on one line lays them on one grid**
+ * (pixel-craft class 3). Wrapping a flex row let every line divide its own
+ * leftover space, so the counter's departure chips split 221–627 | 631–1059 on
+ * the first line and 221–616 | 620–1059 on the second: two lines, two sets of
+ * column edges, labels centred at different x.
+ *
+ * jsdom does no layout, so the boxes are stubbed on the prototype before
+ * render. The component measures the track twice — laid on one line at its
+ * content's width (`width: max-content`), and at the room it has
+ * (`width: 100%`) — so the stub answers by which of the two it was asked.
+ */
+describe("a track too narrow for one line", () => {
+  const five = ["Mon", "Tue", "Wed", "Thu", "Fri"].map((day) => ({
+    key: day,
+    label: day,
+    href: `/shop/reef/check-in?day=${day}`,
+  }));
+
+  function renderInRoom(room: number, option = 100) {
+    const originalRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function stubbed(this: Element) {
+      const nav = this as HTMLElement;
+      const width =
+        this.tagName !== "NAV"
+          ? option
+          : nav.style.width === "max-content"
+            ? five.length * option
+            : room;
+      return {
+        left: 0,
+        top: 0,
+        right: width,
+        bottom: 44,
+        x: 0,
+        y: 0,
+        width,
+        height: 44,
+      } as DOMRect;
+    };
+    try {
+      render(<SegmentedControl ariaLabel="Days" items={five} currentKey="Mon" />);
+    } finally {
+      Element.prototype.getBoundingClientRect = originalRect;
+    }
+    return screen.getByRole("navigation", { name: "Days" });
+  }
+
+  it("keeps one flex line while the options fit", () => {
+    const nav = renderInRoom(800);
+    expect(nav.style.display).toBe("");
+    expect(nav.style.gridTemplateColumns).toBe("");
+    expect(nav).toHaveClass("flex", "flex-wrap");
+    expect(nav).not.toHaveClass("grid");
+  });
+
+  it("lays wrapped options on columns every line shares, balanced across the lines", () => {
+    // Three 100px options fit in 300px; five of them then take two lines, and
+    // three columns give 3 + 2 rather than 4 + 1.
+    const nav = renderInRoom(300);
+    expect(nav).toHaveClass("grid");
+    expect(nav).not.toHaveClass("flex");
+    expect(nav.style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
+    // A grid spans its room; the content-width track's `w-fit` would shrink it.
+    expect(nav).not.toHaveClass("w-fit");
+  });
+
+  /**
+   * **A gridded track still leaves the printed page** (the counter's and the
+   * manifest's tracks are chrome, `print:hidden`). The grid's `display` was an
+   * inline style, and an inline declaration beats a stylesheet rule that is
+   * not `!important`, so every track that had flipped to a grid printed. The
+   * display is a class swapped for the track's `flex`, which `print:hidden`
+   * outranks as it always did; only the column count is inline.
+   */
+  it("keeps its display in a class print:hidden outranks, never in an inline style", () => {
+    const nav = renderInRoom(300);
+    expect(nav.style.display).toBe("");
+    expect(nav.getAttribute("style") ?? "").not.toMatch(/display/);
+    expect(nav).toHaveClass("print:hidden");
+  });
+
+  it("never lays a column narrower than its widest option", () => {
+    // 150px options in 300px: two columns, never three that would overlap.
+    const nav = renderInRoom(300, 150);
+    expect(nav.style.gridTemplateColumns).toBe("repeat(2, minmax(0, 1fr))");
+  });
+
+  it("leaves the track's measuring styles behind it", () => {
+    const nav = renderInRoom(300);
+    expect(nav.style.width).toBe("");
+    expect(nav.style.flexWrap).toBe("");
+    for (const option of nav.querySelectorAll<HTMLElement>("[data-key]")) {
+      expect(option.style.flex).toBe("");
     }
   });
 });

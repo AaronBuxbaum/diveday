@@ -3,6 +3,7 @@
 import { useId, useMemo, useState, useTransition } from "react";
 import { requestMarineLifeSpecies } from "@/app/actions/marine-life-request";
 import { EmptyState } from "@/components/EmptyState";
+import { RepeatingItemCard, repeatingItemRemoveClass } from "@/components/editor/RepeatingItemCard";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
 import { controlClassFor, Field } from "@/components/ui/form";
@@ -228,54 +229,61 @@ export function FieldGuideEditor({
             const entry = bySlug.get(slug);
             if (!entry) return null;
             return (
-              <li
+              // The species is the card's title — its photo, kind and name — and
+              // Remove sits at the head as on every repeating item; the sentence
+              // and the Up/Down pair are the body.
+              <RepeatingItemCard
+                as="li"
                 key={slug}
-                className="flex gap-3 rounded-lg border border-border bg-surface-sunken p-3"
-              >
-                <StoredPhoto
-                  src={entry.imageUrl}
-                  alt=""
-                  className="h-16 w-20 shrink-0 rounded-md"
-                  sizes="80px"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[0.7rem] font-medium tracking-widest text-primary uppercase">
-                    {entry.kind}
-                  </p>
-                  <p className="font-medium leading-tight">{entry.name}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted">{entry.description}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      aria-label={copy.moveUpAriaLabel.replace("{name}", entry.name)}
-                      onClick={() => move(index, -1)}
-                      disabled={index === 0}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {copy.moveUp}
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={copy.moveDownAriaLabel.replace("{name}", entry.name)}
-                      onClick={() => move(index, 1)}
-                      disabled={index === chosen.length - 1}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {copy.moveDown}
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={copy.removeAriaLabel.replace("{name}", entry.name)}
-                      onClick={() =>
-                        setChosen((current) => current.filter((_, at) => at !== index))
-                      }
-                      className={buttonClass({ variant: "ghost", size: "sm" })}
-                    >
-                      {copy.remove}
-                    </button>
+                title={
+                  <div className="flex items-center gap-3">
+                    <StoredPhoto
+                      src={entry.imageUrl}
+                      alt=""
+                      className="h-16 w-20 shrink-0 rounded-md"
+                      sizes="80px"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-[0.7rem] font-medium tracking-widest text-primary uppercase">
+                        {entry.kind}
+                      </p>
+                      <p className="font-medium leading-tight">{entry.name}</p>
+                    </div>
                   </div>
+                }
+                remove={
+                  <button
+                    type="button"
+                    aria-label={copy.removeAriaLabel.replace("{name}", entry.name)}
+                    onClick={() => setChosen((current) => current.filter((_, at) => at !== index))}
+                    className={repeatingItemRemoveClass}
+                  >
+                    {copy.remove}
+                  </button>
+                }
+              >
+                <p className="text-sm leading-relaxed text-muted">{entry.description}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    aria-label={copy.moveUpAriaLabel.replace("{name}", entry.name)}
+                    onClick={() => move(index, -1)}
+                    disabled={index === 0}
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                  >
+                    {copy.moveUp}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={copy.moveDownAriaLabel.replace("{name}", entry.name)}
+                    onClick={() => move(index, 1)}
+                    disabled={index === chosen.length - 1}
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                  >
+                    {copy.moveDown}
+                  </button>
                 </div>
-              </li>
+              </RepeatingItemCard>
             );
           })}
         </ul>

@@ -68,7 +68,7 @@ export function DeparturePicker({
       <div className="mt-4 space-y-6">
         {days.map((day) => (
           <LedgerGroup key={day.day} as="h3" id={`day-${day.day}`} label={day.label}>
-            <ul aria-labelledby={`day-${day.day}`} className="mt-2">
+            <ul aria-labelledby={`day-${day.day}`}>
               {day.rows.map((row) => (
                 <LedgerRow
                   key={row.id}

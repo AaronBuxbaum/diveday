@@ -214,7 +214,7 @@ export function ClosingStation({
             stacked
             kind={{ word: t("shopHome.spine.close.openSeats.label"), tone: "neutral" }}
           >
-            <p className="py-2 text-sm text-muted">{openSeats}</p>
+            <p className="text-sm text-muted">{openSeats}</p>
           </LedgerRow>
         </ul>
       ) : null}

@@ -22,29 +22,68 @@ import { productFeatureGroups } from "@/lib/marketing";
  * **Neither panel in this file is a `SectionCard`, deliberately.**
  * `MarketingMockup` is a *device frame* rather than a section of a page: it is
  * a `role="img"`, it clips its contents (`overflow-hidden`), and
- * `CaptainPhoneFrame` overrides its radius and removes its border outright to
- * sit inside a phone bezel — three things the canonical card has no prop for
- * and should not grow one for. `FeatureGroupsGrid`'s cards are `bg-background`
+ * `CaptainPhoneFrame` draws it as a `screen` — a corner concentric with a phone
+ * bezel and no border — three things the canonical card has no prop for and
+ * should not grow one for. `FeatureGroupsGrid`'s cards are `bg-background`
  * because they render on a `bg-surface` band on the homepage, and `SectionCard`
  * hard-codes `bg-surface`; passing a second background utility through
  * `className` would be resolved by stylesheet order rather than by intent.
  * Converting that one is a decision in `src/components/ui/card.tsx` about what
  * a card on a surface band is, not a call-site override here.
  */
+/**
+ * The phone `CaptainPhoneFrame` draws: a 2.5rem corner, a 9px frame, and
+ * `p-1.5` between the frame and the screen. The screen's corner below is
+ * spelled from these three values, so change one here and re-derive it there;
+ * `MarketingSections.test.tsx` fails until you do.
+ */
+const PHONE_BEZEL = "rounded-[2.5rem] border-[9px] p-1.5";
+
+/**
+ * The two frames a mockup is drawn in — chosen, never overridden. Each names
+ * its one corner and its one shadow, and no caller passes either (or a
+ * border) through `className`, because two utilities for one property on one
+ * element resolve by the order Tailwind emits them, not by intent. The phone
+ * passed `rounded-[1.9rem] border-0` beside the panel's `rounded-panel
+ * border`, and the panel's 20px corner won where the bezel nests one at 25px
+ * (pixel-craft class 6, K-295); every page passed `shadow-xl
+ * shadow-foreground/5` beside the mockup's `shadow-bed`, and the page's lift
+ * won. `MarketingSections.test.tsx` holds both lines.
+ */
+const MOCKUP_FRAME = {
+  /**
+   * A screen on a page: the panel rung, one hairline, and the lift every
+   * page's screenshot has always rendered with. It was passed by each of the
+   * nine callers and silently beat the mockup's own `shadow-bed`; it is the
+   * frame's own now, so the pixels are the ones those pages already had.
+   */
+  panel: "rounded-panel border border-border shadow-xl shadow-foreground/5",
+  /**
+   * The screen inside `PHONE_BEZEL`. No hairline, because the bezel is its
+   * edge, and a corner that runs parallel to the bezel's: its corner less its
+   * frame and its padding, 40 − 9 − 6 = 25px at a 16px root, written as that
+   * subtraction so the two curves move together at any root size, as
+   * `PANEL_INNER_RADIUS` and `SEGMENT_CORNER` are.
+   */
+  screen: "rounded-[calc(2.5rem-9px-var(--spacing)*1.5)] shadow-bed",
+} as const;
+
 export function MarketingMockup({
   label,
   children,
+  frame = "panel",
   className = "",
 }: {
   label: string;
   children: ReactNode;
+  frame?: keyof typeof MOCKUP_FRAME;
   className?: string;
 }) {
   return (
     <div
       role="img"
       aria-label={label}
-      className={`overflow-hidden rounded-panel border border-border bg-surface shadow-bed text-left ${className}`}
+      className={`overflow-hidden ${MOCKUP_FRAME[frame]} bg-surface text-left ${className}`}
     >
       {children}
     </div>
@@ -63,10 +102,10 @@ export function CaptainPhoneFrame({
 }) {
   return (
     <div
-      className={`marketing-roll-call-frame rounded-[2.5rem] border-[9px] border-device-frame bg-device-frame p-1.5 shadow-2xl shadow-device-frame/20 ${className}`}
+      className={`marketing-roll-call-frame ${PHONE_BEZEL} border-device-frame bg-device-frame shadow-2xl shadow-device-frame/20 ${className}`}
     >
       <div className="mx-auto mb-1.5 h-1.5 w-20 rounded-full bg-muted/50" />
-      <MarketingMockup label={label} className="rounded-[1.9rem] border-0">
+      <MarketingMockup label={label} frame="screen">
         <CaptainRollCallFallback locale={locale} />
       </MarketingMockup>
     </div>
@@ -185,7 +224,10 @@ export function FeatureGroupsGrid({ locale }: { locale: DiverLocale }) {
             {index + 1}
           </span>
           <p className={`mt-4 ${groupLabelClass("primary")}`}>{t(group.eyebrow)}</p>
-          <h3 className="mt-3 font-semibold leading-6">{t(group.title)}</h3>
+          {/* Balanced, as the ramp leaves each heading that wraps to decide:
+              in the four-up grid's 246px column one title left "money" alone
+              on its last line. */}
+          <h3 className="mt-3 font-semibold leading-6 text-balance">{t(group.title)}</h3>
           <p className="mt-3 text-sm leading-6 text-muted">{t(group.summary)}</p>
         </li>
       ))}

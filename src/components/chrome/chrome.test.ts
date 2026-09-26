@@ -1,7 +1,8 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { CHROME_BAR_CLASS } from "./ChromeBar";
+import { declarations, readGlobalsCss, topLevelBlocks } from "@/test/stylesheet";
+import { CHROME_BAR_CLASS, CHROME_CENTER_SLOT_CLASS } from "./ChromeBar";
 
 /**
  * The chrome bar's rules, as a test — ADR
@@ -254,8 +255,10 @@ describe("the chrome bar", () => {
     // `h-(--chrome-h)` / `top-(--chrome-h)` utilities to resolve against.
     const theme = css.slice(css.indexOf("@theme {"), css.indexOf("@theme inline"));
     expect(theme).toContain("--chrome-h: 3.5rem;");
-    // Declared once. A second declaration is two bars again, wearing one name.
-    expect(css.match(/--chrome-h:/g)).toHaveLength(1);
+    // Declared once. A second height is two bars again, wearing one name. The
+    // one other declaration is the bar's absence: 0px where the live manifest
+    // hides it (below).
+    expect(css.match(/--chrome-h:[^;]*/g)).toEqual(["--chrome-h: 3.5rem", "--chrome-h: 0px"]);
   });
 
   it("pins itself at one height, one edge and one layer", () => {
@@ -273,6 +276,17 @@ describe("the chrome bar", () => {
     // Elevation is earned (decision 1): the bar is always there, so it is not
     // floating, so it carries no shadow.
     expect(CHROME_BAR_CLASS).not.toContain("shadow");
+  });
+
+  it("draws its centre slot only from lg up, where the tab strip it holds is drawn", () => {
+    // Rendered empty below `lg`, the slot still took a flex gap: 16px between
+    // the shop's name and the trailing cluster where every other pair sits 8px
+    // apart, and at 390 those 8px came out of the name, which ellipsized
+    // ("Harbour Lantern Dive …", "Slack Tide Dive Chart…"; the pixel probe).
+    const tokens = CHROME_CENTER_SLOT_CLASS.split(/\s+/);
+    expect(tokens).toContain("hidden");
+    expect(tokens).toContain("lg:flex");
+    expect(tokens.filter((token) => /^(flex|inline-flex|block|grid)$/.test(token))).toEqual([]);
   });
 
   it("is the only bar either shell renders, so both are one height", async () => {
@@ -344,6 +358,27 @@ describe("the title folds into the bar", () => {
     );
   });
 
+  /**
+   * The folded title replaces the shop's name beside the same mark, so it sits
+   * on the name's line box: 24px, the name's 16px at the body's 1.5. The row
+   * centres both boxes on the mark, and where a box's top lands decides the
+   * pixel row its baseline snaps to. The name's 24px box starts on a half
+   * pixel; the title's own line box — 17px with `leading-none`, and 25.5px
+   * inherited once that went (17px × 1.5) — started on a whole one, and its
+   * cap sat 1px above the mark's centre and the name's (21–32 against 22–33,
+   * chrome-folded-title at 390): the word stepped up as the two cross-faded.
+   * Measured in the browser, every even line box (24, 26, 28px) lands the cap
+   * on 22–33 and every other one on 21–32; the name's own 24px is the one
+   * that says why.
+   */
+  it("sets the folded label on the shop name's own 24px line box", async () => {
+    const staff = withoutComments(await read("src/components/ShopNav.tsx"));
+    const slot = staff.slice(staff.indexOf("data-chrome-title-slot"));
+    const tag = slot.slice(0, slot.indexOf("/>"));
+    expect(tag).toContain("className=");
+    expect(tag.match(/\bleading-[\w[\].-]+/g)).toEqual(["leading-6"]);
+  });
+
   it("drives the fold from the scroll, not from a timer", async () => {
     const css = await read("src/app/globals.css");
     expect(css).toContain("@supports (animation-timeline: scroll())");
@@ -384,6 +419,45 @@ describe("staff chrome marker", () => {
   it("keeps the live manifest selector scoped to the staff shell", async () => {
     const css = await read("src/app/globals.css");
     expect(css).toContain('[data-staff-chrome="true"]');
-    expect(css).toContain("data-offline-rejected-notice");
+  });
+});
+
+/**
+ * **Where the bar is hidden, its height is zero.** Below `lg` the live
+ * manifest hides the staff chrome, and `--chrome-h` stayed 56px: the count
+ * panel (`sticky top-(--chrome-h)`) pinned 56px below nothing, and the
+ * document's scroll padding and the roll-call rows' scroll margins kept a
+ * bar's worth of air above every jump (pixel probe, `manifest` and
+ * `manifest-seen-boat-mode` at 390). Zeroing the token where the bar is hidden
+ * moves all of them at once, which pinning the panel alone would not.
+ */
+describe("the hidden bar's height", () => {
+  it("is zero on the live manifest below lg, where the bar is not drawn", () => {
+    const narrow = topLevelBlocks(readGlobalsCss())
+      .filter((block) => block.prelude === "@media (max-width: 1023px)")
+      .flatMap((block) => topLevelBlocks(block.body));
+    const hides = narrow.find((rule) => rule.prelude.includes('[data-staff-chrome="true"]'));
+    expect(hides?.prelude, "the rule that hides the bar").toContain("div.boat-mode");
+    const zeroes = narrow.find(
+      (rule) =>
+        rule.prelude.includes("div.boat-mode") &&
+        /^0(px|rem)?$/.test(declarations(rule.body)["--chrome-h"] ?? ""),
+    );
+    expect(zeroes, "a rule beside it that sets --chrome-h to 0").toBeDefined();
+  });
+
+  /**
+   * The offline manifest's rejected-write notice is one of the token's
+   * readers (`fixed top-(--chrome-h)`), so the zero pins it to the top of the
+   * phone too. It used to carry a `top: 0` of its own under the same media
+   * query and the same `:has()`: one fact spelled twice, and the second
+   * spelling is the one left behind when the first moves.
+   */
+  it("moves the offline notice with it, which needs no rule of its own", async () => {
+    const manager = await read("src/components/OfflineManifestManager.tsx");
+    expect(manager).toMatch(
+      /data-offline-rejected-notice="true"\s+className="[^"]*\btop-\(--chrome-h\)/,
+    );
+    expect(readGlobalsCss()).not.toContain("data-offline-rejected-notice");
   });
 });

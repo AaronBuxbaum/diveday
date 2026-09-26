@@ -22,6 +22,10 @@ export default function ManifestLoading() {
       <ShopPageHeaderSkeleton
         eyebrow={false}
         titleWidth="w-64 max-w-full"
+        // The page wears TripPageHeader, which has no description line and
+        // which these bars only approximate; left as they were until that
+        // header has a skeleton of its own.
+        description
         descriptionWidth="w-72 max-w-full"
         meta={<div className="h-6 w-56 max-w-full rounded bg-surface-sunken" />}
       />

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { EARNED_MOMENT_SURFACE, EarnedMomentLine } from "./EarnedMoment";
+import { EARNED_MOMENT_SURFACE, EarnedMoment, EarnedMomentLine } from "./EarnedMoment";
+import { sectionCardClass } from "./ui/card";
 
 afterEach(cleanup);
 
@@ -44,6 +45,39 @@ describe("EarnedMomentLine", () => {
   it("supplies no glyph — a moment's mark belongs in its words, where a translator can see it", () => {
     render(<EarnedMomentLine>All home</EarnedMomentLine>);
     expect(screen.getByRole("status").textContent).toBe("All home");
+  });
+});
+
+/**
+ * The whole-page moment's geometry (docs/design/pixel-craft.md). The heading is
+ * the panel's only content on `/ready`'s booking-confirmed card, so a margin it
+ * carries for a missing eyebrow pushes it off the panel's centre.
+ */
+describe("EarnedMoment", () => {
+  it("puts no top margin on the heading when there is no eyebrow to clear", () => {
+    // The heading's own `mt-1` sat it 2px below centre in the booking-confirmed
+    // card: 39px from the panel's inner top to the cap, 35px from the baseline
+    // to its inner bottom.
+    render(<EarnedMoment title="You're booked" />);
+    const heading = screen.getByRole("heading", { name: "You're booked" });
+    expect(heading.className).not.toMatch(/(^|\s)mt-/);
+  });
+
+  it("pads its content on SectionCard's lg rung, so its text starts where the cards beside it start", () => {
+    // `p-6 sm:p-7` put the recap's welcome text 4px right of every card under
+    // it: x 405 against 401 at 1280, 45 against 41 at 390. The rung is read from
+    // `sectionCardClass`, so the two cannot drift apart again.
+    const padding = (classes: string) =>
+      classes.split(/\s+/).filter((token) => /^(?:sm:)?p-/.test(token));
+    const { container } = render(<EarnedMoment title="Welcome back" />);
+    const section = container.querySelector("section");
+    expect(padding(section?.className ?? "")).toEqual(padding(sectionCardClass({ padding: "lg" })));
+  });
+
+  it("keeps the 4px between an eyebrow and the heading on the eyebrow", () => {
+    render(<EarnedMoment eyebrow="Reef Divers" title="You're booked" />);
+    expect(screen.getByText("Reef Divers")).toHaveClass("mb-1");
+    expect(screen.getByRole("heading").className).not.toMatch(/(^|\s)mt-/);
   });
 });
 

@@ -155,7 +155,7 @@ describe("the overdue rows", () => {
       overdue: [unit("REG-03", { reservation: reservation({ reservedUntil: "2026-08-18" }) })],
     });
     const warned = container.querySelector(".text-warning-strong");
-    expect(warned?.textContent).toBe("With Grace Mensah · was due Aug 18, 2026");
+    expect(warned?.textContent).toBe("With Grace Mensah · was due Aug\u00A018, 2026");
     // Drawn, never an emoji: the mark is an inline SVG on the same 24px grid.
     expect(warned?.querySelector("svg")).not.toBeNull();
     expect(container.textContent).not.toMatch(/[⚠✅❌]/);
@@ -255,7 +255,7 @@ describe("the service sentence", () => {
       ]),
     });
     expect(container.querySelector(".text-warning-strong")?.textContent).toBe(
-      "Visual inspection was due Jul 1, 2026",
+      "Visual inspection was due Jul\u00A01, 2026",
     );
     // Informing, not gating: the row is still a door to the unit's record.
     expect(screen.getByRole("link", { name: "REG-01" })).toHaveAttribute(

@@ -1,5 +1,6 @@
 import { Copyable } from "@/components/Copyable";
 import { SectionCard } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { diverTranslator } from "@/i18n/messages";
 
 /** One party seat as the organizer's surfaces render it. */
@@ -68,8 +69,11 @@ export function PartyClaimPanel({
             </p>
             {!seat.claimed && seat.claimUrl ? (
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                {/* It starts the line, so its word sits on the seat's name and
+                    waiver line above it rather than 12px inside them. */}
                 <Copyable
                   layout="inline"
+                  flush
                   value={seat.claimUrl}
                   copyLabel={t("seatClaim.copyReminder")}
                   copiedLabel={t("seatClaim.copiedLabel")}
@@ -81,8 +85,13 @@ export function PartyClaimPanel({
                     make this panel's visual baseline diff on every run. The
                     text stays in the DOM for the clipboard-denied fallback
                     (and for tests), just behind a click. */}
-                <details className="text-sm text-muted">
-                  <summary className="cursor-pointer font-medium text-primary hover:underline">
+                <details className="group/showlink text-sm text-muted">
+                  {/* The app's disclosure, not the browser's: `list-none` and
+                      the WebKit marker rule drop the black triangle, the shared
+                      caret says "this opens", and `min-h-11` gives the summary
+                      the 44px of the Copyable beside it (it was 20px). */}
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 font-medium text-primary hover:underline [&::-webkit-details-marker]:hidden">
+                    <DisclosureCaret className="group-open/showlink:rotate-90" />
                     {t("seatClaim.showLink")}
                   </summary>
                   <p className="mt-1 font-mono text-xs break-all text-foreground">

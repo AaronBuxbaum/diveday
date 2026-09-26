@@ -329,6 +329,13 @@ describe("BookingStoryRow", () => {
     expect(container.textContent).toBe("Jul 12Two-Tank Reef — Benwood & Elbow");
   });
 
+  // K-134: beside a money badge at 390 the title wrapped to leave "Elbow"
+  // alone on its last line. A span, so no base rule for `p` reaches it.
+  it("wraps its title without leaving one word alone on the last line", () => {
+    render(<BookingStoryRow t={t} date="Jul 12" title="Two-Tank Reef — Benwood & Elbow" />);
+    expect(screen.getByText("Two-Tank Reef — Benwood & Elbow")).toHaveClass("text-pretty");
+  });
+
   it("keeps settled money quiet and marks the two states a staffer scans for", () => {
     const { container: paid } = render(
       <BookingStoryRow

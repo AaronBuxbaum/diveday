@@ -651,23 +651,16 @@ export default async function OrdersIndexPage({
               <Link
                 href={clearHref}
                 scroll={false}
-                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {t("orders.index.filters.clear")}
               </Link>
             ) : paymentsConnected ? (
-              <Link
-                href={`/shop/${shopSlug}/orders/new`}
-                className={buttonClass({ className: "mt-4" })}
-              >
+              <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
                 {t("orders.index.newOrder")}
               </Link>
             ) : (
-              <PaymentsConnectCta
-                shopSlug={shopSlug}
-                label={t("shared.payments.connect")}
-                className="mt-4"
-              />
+              <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
             )
           }
           className="mt-8"
@@ -684,7 +677,6 @@ export default async function OrdersIndexPage({
         pageCount={orderPage.pageCount}
         href={(target) => hrefWith({ page: target })}
         words={staffPagerWords(t)}
-        className="mt-8"
       />
 
       {/* One disclosure row at the foot, where a second full table and a second
@@ -805,7 +797,6 @@ export default async function OrdersIndexPage({
               pageCount={importedHistoryPage.pageCount}
               href={(target) => hrefWith({ importedPage: target })}
               words={staffPagerWords(t)}
-              className="mt-4"
             />
           </LedgerGroup>
         </section>

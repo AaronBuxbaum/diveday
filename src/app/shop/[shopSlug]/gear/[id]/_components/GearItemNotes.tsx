@@ -2,7 +2,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass, FieldActions } from "@/components/ui/form";
+import { FieldActions, textareaClassFor } from "@/components/ui/form";
 import type { GearServiceEventRow } from "@/db/gear";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
@@ -98,7 +98,7 @@ export function GearItemNotes({
               rows={3}
               aria-label={t("gear.unit.notes.addLabel")}
               placeholder={t("gear.unit.notes.placeholder")}
-              className={controlClass}
+              className={textareaClassFor(3)}
             />
             <FieldActions>
               <SubmitButton

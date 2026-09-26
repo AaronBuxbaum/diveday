@@ -213,3 +213,56 @@ describe("ShopIdentityMenu — the open panel", () => {
     expect([...armed.classList].filter((token) => /^border/.test(token))).toEqual([]);
   });
 });
+
+/**
+ * The shop's name is the bar's one control with no radius and no hover: its
+ * focus ring came out square beside rounded siblings (the pixel audit,
+ * cda2d480), and a pointer over it changed nothing. And when the name folds
+ * away on scroll, the button shrank to exactly the 36px mark, so the page's
+ * title landed 1px from the mark and the menu's door was under a target.
+ */
+describe("the identity trigger", () => {
+  function trigger() {
+    const { container } = render(
+      <ShopIdentityMenu
+        shopName="Blue Mantis Divers"
+        signOutAction={vi.fn()}
+        locale="en-US"
+        languages={[{ locale: "en-US", label: "English (US)" }]}
+        setLocaleAction={vi.fn()}
+        copy={COPY}
+      />,
+    );
+    return container.querySelector("[data-identity-menu]") as HTMLElement;
+  }
+
+  it("rounds its ring and its hover fill like the bar's other controls", () => {
+    expect(trigger()).toHaveClass("rounded-lg", "hover:bg-surface-sunken");
+  });
+
+  /**
+   * 8px of fill round the mark, handed back at the start so the mark stays on
+   * the bar's gutter. Not at the end below `lg`: when the name folds, the
+   * page's title lands where this box ends, and the end padding is what puts
+   * it 8px past the mark — where the unfolded name's first letter sits. A
+   * negative end margin there would pull the title back onto the mark.
+   *
+   * From `lg` up the bar never folds (globals.css scopes the fold to
+   * `width < 64rem`), and the end padding only widened the leading slot: the
+   * start-aligned Today/Week/Season pills moved 8px right on every staff page,
+   * 20px from the caret where they stood 12px. So from `lg` it is handed back
+   * too, and the pills stand where they stood.
+   */
+  it("gives the fill 8px of room without moving the mark, the folded title, or the pills", () => {
+    const button = trigger();
+    expect(button).toHaveClass("-ms-2", "px-2", "lg:-me-2");
+    expect(button).not.toHaveClass("-mx-2");
+    expect(button).not.toHaveClass("-me-2");
+  });
+
+  it("never folds to less than a 44px target", () => {
+    const button = trigger();
+    expect(button).toHaveClass("min-w-11", "min-h-11");
+    expect(button).not.toHaveClass("min-w-0");
+  });
+});

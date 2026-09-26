@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { INSET_NOTE_BOX, INSET_NOTE_CLASS } from "@/components/ui/card";
 import { CrewSection, type CrewSectionCopy } from "./CrewSection";
 import type { StaffList } from "./types";
 
@@ -42,6 +43,33 @@ describe("the shop's divemaster target", () => {
     render(<CrewSection {...props} crewGapCode="none" copy={COPY} />);
     expect(screen.queryByText(/target wants/)).toBeNull();
   });
+
+  /**
+   * **Every note in the crew list sits at one inset** (pixel-craft class 12).
+   * The crew notes were 16px in and 16px down where the requirements and
+   * roster notes beside them are 12px (trip-crew-clash at 1280), so one
+   * departure drew one note two ways. The warning keeps its tone, not its
+   * own box.
+   */
+  it("draws its notes as the departure's other notes are drawn", () => {
+    render(
+      <CrewSection
+        {...props}
+        crewGapCode="no_instructor"
+        copy={{
+          ...COPY,
+          underTargetNote: "9 divers with no divemaster.",
+          languageGapNote: "Nobody on this crew speaks German.",
+        }}
+      />,
+    );
+    for (const text of ["9 divers with no divemaster.", "Nobody on this crew speaks German."]) {
+      expect(screen.getByText(text).className).toBe(INSET_NOTE_CLASS);
+    }
+    const warning = screen.getByText("This course needs an instructor.");
+    expect(warning).toHaveClass(...INSET_NOTE_BOX.split(" "), "bg-warning-tint");
+    expect(warning).not.toHaveClass("px-4", "py-3");
+  });
 });
 
 const COPY: CrewSectionCopy = {
@@ -70,6 +98,37 @@ const COPY: CrewSectionCopy = {
     crew: "Deck crew",
   },
 };
+
+/**
+ * Both of the Crew section's empty states sit inside the About card, on its
+ * white: a box that also stands on the bed faded a 30px shadow onto the card
+ * (docs/design/pixel-craft.md, class 6). Each is the nested outline alone.
+ */
+describe("CrewSection's empty states", () => {
+  const props = {
+    tripId: "trip-1",
+    crewIds: [],
+    crewRoles: {},
+    onShiftIds: null,
+    shopSlug: "blue-mantis",
+    crewGapCode: "none" as const,
+    copy: COPY,
+    updateCrewAction: async () => ({ ok: true }),
+  };
+  const box = (text: string) => screen.getByText(text).closest(".border-dashed");
+
+  it("casts no shadow onto the card when the shop has no staff on file", () => {
+    render(<CrewSection {...props} staff={[]} />);
+    expect(box("No staff on file yet.")).toHaveClass("bg-transparent");
+    expect(box("No staff on file yet.")).not.toHaveClass("shadow-bed");
+  });
+
+  it("casts no shadow onto the card when nobody is assigned yet", () => {
+    render(<CrewSection {...props} staff={[staffMember("s-1", "Ana Diaz")]} />);
+    expect(box("Nobody assigned yet.")).toHaveClass("bg-transparent");
+    expect(box("Nobody assigned yet.")).not.toHaveClass("shadow-bed");
+  });
+});
 
 function staffMember(id: string, fullName: string, roles: string[] = ["instructor"]) {
   return {
@@ -257,6 +316,44 @@ describe("CrewSection per-trip role picker", () => {
   });
 });
 
+/**
+ * **The role select stands level with the remove square beside it.** The
+ * select was the stacked field's 44px at 14px type beside an `icon` square's
+ * 48px (`trip-crew-clash`; K-10, K-45): a row with a text control in it is an
+ * `md` row, and a control's type is 16px at every size.
+ */
+describe("CrewSection control sizes", () => {
+  it("draws the role select at md beside its md remove square, and every select at 16px", () => {
+    const staff: StaffList = [
+      staffMember("staff-1", "Keiko Tanaka", ["divemaster"]),
+      staffMember("staff-2", "Ana Souza", ["captain"]),
+    ];
+    render(
+      <CrewSection
+        tripId="trip-a"
+        staff={staff}
+        crewRoles={{ "staff-1": null }}
+        crewIds={["staff-1"]}
+        onShiftIds={["staff-1", "staff-2"]}
+        crewGapCode="none"
+        shopSlug="blue-mantis"
+        updateCrewAction={vi.fn(async () => ({ ok: true }))}
+        copy={COPY}
+      />,
+    );
+
+    const role = screen.getByLabelText("Job Keiko Tanaka is doing on this trip");
+    const remove = role.closest("li")?.querySelector("button");
+    expect(role).toHaveClass("min-h-12");
+    expect(role).not.toHaveClass("min-h-11");
+    expect(remove).toHaveClass("min-h-12");
+    for (const select of screen.getAllByRole("combobox")) {
+      expect(select).toHaveClass("text-base");
+      expect(select).not.toHaveClass("text-sm");
+    }
+  });
+});
+
 describe("CrewSection shift coverage", () => {
   it("warns per uncovered crew member at a shop that schedules shifts", () => {
     render(
@@ -378,6 +475,24 @@ describe("CrewSection standing crew clash", () => {
         operation: "unassign",
       }),
     );
+  });
+
+  /**
+   * The unassign mark is drawn, from the app's own icon family, at the size
+   * of the words beside it. It was a typed "×": 8px of ink in the 48px box,
+   * smaller than the name and the job picker on its row (pixel-craft K-545).
+   * The accessible name stays the sentence, never the glyph.
+   */
+  it("draws its remove control as a mark, named by the sentence", () => {
+    render(
+      <CrewSection {...props} updateCrewAction={vi.fn(async () => ({ ok: true }))} copy={COPY} />,
+    );
+    const remove = screen.getByRole("button", { name: "Remove Marisol Vega from crew" });
+    const mark = remove.querySelector("svg");
+    expect(mark).not.toBeNull();
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+    expect(mark).toHaveClass("size-4");
+    expect(remove).not.toHaveTextContent("×");
   });
 
   /**

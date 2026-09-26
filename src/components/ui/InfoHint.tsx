@@ -79,7 +79,6 @@ export function InfoHint({
   const id = useId();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const glyphRef = useRef<HTMLSpanElement>(null);
   const panelRef = useRef<HTMLSpanElement>(null);
   // The portal needs a document, so the first render — the server's, and the
   // client's hydration pass — keeps the panel inline. It carries no position
@@ -95,12 +94,12 @@ export function InfoHint({
   const place = useCallback(() => {
     const trigger = triggerRef.current;
     if (!trigger) return;
-    // **The mark, not the target.** The trigger is a 44px box around a 12px
-    // glyph (`-m-3 size-11 p-3`), so measuring the button put the panel 16px
-    // below and 16px left of the dot somebody was actually pointing at — a
-    // hint that reads as belonging to nothing in particular. The glyph carries
-    // its own ref so the panel hangs off what the eye is on.
-    const rect = (glyphRef.current ?? trigger).getBoundingClientRect();
+    // **The mark, not the target.** The button's box is the glyph's own 20px
+    // box; its 44px target is a stretched `::after`, which a bounding rect does
+    // not include. So measuring the button is measuring the mark, and the
+    // panel hangs off what the eye is on. (When the button *was* the 44px box,
+    // measuring it put the panel 16px below and left of the mark.)
+    const rect = trigger.getBoundingClientRect();
     const width = Math.min(PANEL_WIDTH, window.innerWidth - VIEWPORT_MARGIN * 2);
     // Left-aligned to the trigger where there is room, pulled back so the
     // panel's right edge clears the viewport where there isn't, and never past
@@ -180,21 +179,28 @@ export function InfoHint({
         // looked like a control that had lost its label rather than a marker.
         // Colour alone carries the affordance now; `focus-visible` keeps the
         // keyboard ring, which is the one border that was ever doing work.
-        // **The glyph stays 20px; the target is 44.** `size-5` was the whole
+        // **The glyph is 20px; the target is 44.** `size-5` was the whole
         // control, so the one "why are you asking me this?" affordance on the
         // public booking form was a 20px dot for a thumb (issue #786,
-        // principles.md §2). The mark keeps its size — a bigger dot would
-        // shout beside the label it hangs off — and the box around it grows to
-        // the floor instead, with `-m-3` so the extra reach costs the line no
-        // height and nothing beside it moves.
-        className="-m-3 inline-flex size-11 items-center justify-center rounded-full p-3 text-muted transition-colors hover:text-primary focus-visible:text-primary"
+        // principles.md §2). The mark stays 20px, and the target reaches the
+        // floor through a stretched `::after` (`-inset-3`: 20 + 2 × 12 = 44),
+        // which costs the line no height and moves nothing beside it.
+        //
+        // **The button is the mark's box, not the target's** (pixel-craft
+        // class 7). It was the 44px box itself, pulled back with `-m-3`, and
+        // the global focus ring drew 5px outside that: a 54px circle round
+        // the mark that ran into the "$15.00" beside it on the readiness
+        // page's gear list. Ringing the mark instead would need the button's
+        // own outline off, which `focus-ring.test.ts` refuses; moving the
+        // target off the box puts the same global ring 5px round the 20px
+        // mark. The glyph was drawn at 12px inside this box until then, where
+        // its knockout "i" was under 2px across and read as a grey dot
+        // (class 2); it now fills it.
+        className="relative inline-flex size-5 items-center justify-center rounded-full text-muted transition-colors after:absolute after:-inset-3 after:rounded-full after:content-[''] hover:text-primary focus-visible:text-primary"
       >
         {/* An icon rather than a "?" glyph: a text marker is copy, and copy
-            belongs in a message bundle. This one carries no language at all.
-            The wrapper exists to be measured — see `place`. */}
-        <span ref={glyphRef} className="inline-flex">
-          <DiveDayIcon name="info" className="size-3 shrink-0" />
-        </span>
+            belongs in a message bundle. This one carries no language at all. */}
+        <DiveDayIcon name="info" className="size-5 shrink-0" />
       </button>
       {portalled ? createPortal(panel, document.body) : panel}
     </span>

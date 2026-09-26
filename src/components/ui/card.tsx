@@ -68,7 +68,8 @@ import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
  * - **A tone-carrying operational panel** — a warning, success confirmation,
  *   paid receipt or earned moment. Its border and fill communicate meaning,
  *   and `SectionCard` deliberately has no tone prop that could flatten it into
- *   neutral chrome. Keep that treatment at the call site.
+ *   neutral chrome. Keep that treatment at the call site — on the card's own
+ *   geometry, `TONE_PANEL_CLASS`, so only the colour differs.
  *
  * A card nested directly inside another card at the same radius and fill reads
  * as a rendering bug, not as structure. If that is where you have arrived, the
@@ -146,6 +147,35 @@ export function sectionCardClass({
 }
 
 /**
+ * **A tone panel's geometry**: the card's radius, bed and default (`md`)
+ * padding, with no colour. A tone-carrying panel (above) spells its own
+ * border colour and fill beside it, so it sits on the page as a card does and
+ * differs only in the tone that means something.
+ *
+ * The roster's minimum-seats band and its unmet-demand panel hand-rolled
+ * `p-5` with no `sm:` step and no bed, the second at the 12px inset radius:
+ * on a phone their words started 4px right of every card above and below
+ * them, and the demand panel's corners were visibly tighter (pixel-craft
+ * classes 3 and 12).
+ */
+export const TONE_PANEL_CLASS = "rounded-panel border p-4 shadow-bed sm:p-5";
+
+/**
+ * **A note carved into a card** — the first of the "not a section card"
+ * objects above: a sentence of advice or context set on the sunken fill
+ * inside a panel (a crew gap, a site's rule, a diver's ask, the model's
+ * outlook). One box, 12px in and 8px down at 14px, the majority spelling
+ * when the departure's panels drew it three ways: 16px in and down beside
+ * 12px, and 12px all round at 12px type (pixel-craft class 12).
+ *
+ * `INSET_NOTE_BOX` is the geometry alone, for a note that carries a tone
+ * instead of the sunken grey (a warning tint): the tone changes, the box does
+ * not. A note's place in its panel (`mt-3`, `mt-4`) stays at the call site.
+ */
+export const INSET_NOTE_BOX = "rounded-lg px-3 py-2 text-sm";
+export const INSET_NOTE_CLASS = `${INSET_NOTE_BOX} bg-surface-sunken text-muted`;
+
+/**
  * **The corner of a fill laid flush inside a panel**: the panel's radius less
  * the one thing between them, its 1px border — 20 − 1 = 19px, a curve that
  * runs parallel to the panel's own (docs/design/pixel-craft.md, class 6).
@@ -162,6 +192,57 @@ export function sectionCardClass({
  * card that holds focusable controls near its edge, whose rings it would cut.
  */
 export const PANEL_INNER_RADIUS = "rounded-[calc(var(--radius-panel)-1px)]";
+
+/** The hover fill of a card face, by the band it sits on. */
+const CARD_SUMMARY_HOVER = {
+  neutral: "hover:bg-surface-sunken",
+  // A tinted band keeps its tint under the pointer: a grey fill would paint
+  // the danger out of the one row that is about danger.
+  danger: "hover:bg-danger/5",
+} as const;
+
+/**
+ * **The face of a card that is itself a disclosure**: a `<summary>` that is
+ * the first thing inside a `padding="none"` card, or inside a `<details>` that
+ * wears the panel itself (`SectionCard as="details"`, `DangerDisclosure`).
+ *
+ * Nine of these were hand-rolled four ways (pixel-craft classes 7 and 12):
+ *
+ * - **No radius**, so the global ring, which follows the element's corners,
+ *   drew a square around a 20px card and stood 8px off it at every corner.
+ *   The face takes the panel's inner corner, `PANEL_INNER_RADIUS`, and squares
+ *   its bottom once open, when the body is what meets the card's corner. The
+ *   open state is spelled against the `<details>` (`[[open]>&]`) rather than
+ *   `group-open:`, which would need every call site's group to be unnamed.
+ * - **`items-center`**, so a title that wrapped left its caret floating
+ *   between its lines, or level with the chips under it (12–21px low on the
+ *   manifest at 390). The row starts at the top and the caret sits in a
+ *   `SummaryCaret` (`ui/disclosure.tsx`), a box one first line tall. Top
+ *   alignment means a single line no longer centres itself in a `min-h-*`
+ *   floor, so a call site pads the face to its height: `py-4` round a 24px
+ *   line is the 56px `min-h-14` exactly.
+ * - **Two gaps** (8 and 12px) put two titles on one manifest 4px apart; one
+ *   gap now.
+ * - **Two hovers**, a fill on one card and an underline on the next; the fill
+ *   takes the same corner, so it cannot poke past the card's curve. A heading
+ *   inside may still underline with it.
+ *
+ * The card does not clip — clipping would cut the ring and the focusable
+ * controls in the body — so the ring is the global one, 2px outside the face,
+ * concentric with the card. Padding stays at the call site: a manifest row and
+ * a settings section are different insets of the same face.
+ */
+export function cardSummaryClass({
+  tone = "neutral",
+  className = "",
+}: {
+  tone?: keyof typeof CARD_SUMMARY_HOVER;
+  className?: string;
+} = {}): string {
+  return `flex cursor-pointer list-none items-start gap-3 ${PANEL_INNER_RADIUS} [[open]>&]:rounded-b-none transition-colors select-none [&::-webkit-details-marker]:hidden ${CARD_SUMMARY_HOVER[tone]} ${className}`
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 /** Closed set on purpose — a caller never hands this component an arbitrary tag. */
 type SectionCardElement = "section" | "div" | "article" | "aside" | "ul" | "li" | "details";
@@ -289,10 +370,20 @@ export function SectionCard({
       className={sectionCardClass({ padding, className })}
     >
       {hasHeader ? (
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        // `items-baseline`: the title and whatever sits beside it (a 44px
+        // button, a badge, a count) share the line text beside a control
+        // shares. Top-aligned, a 32px title line and a 44px button shared no
+        // line at all — "My departures" sat 5.5px above its button's centre
+        // (pixel-craft class 1). A toned badge hands the row its word's
+        // baseline, not its mark's (badge.tsx). Once the actions wrap under
+        // the title on a phone they are a line of their own and nothing
+        // aligns across.
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
             {title != null ? (
-              <Heading id={headingId} className={TITLE_CLASS[titleAs]}>
+              // `text-balance`: a card title that wraps keeps more than one
+              // word on its last line ("connected" stood alone on a phone).
+              <Heading id={headingId} className={`${TITLE_CLASS[titleAs]} text-balance`}>
                 {title}
               </Heading>
             ) : null}

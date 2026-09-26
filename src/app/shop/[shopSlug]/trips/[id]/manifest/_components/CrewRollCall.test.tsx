@@ -126,11 +126,11 @@ describe("a crew row obeys the diver row's gestures", () => {
 
 /**
  * **The mark keeps room for its focus ring on the last row.** The roll-call
- * card is `overflow-hidden`. In Boat mode, glare's 44px floor shrinks the name
- * button to 52px (#1981), so the mark column sets the row's height, and the
- * last row's mark ended on the card's bottom edge: its 5px ring lost its
- * bottom (pixel probe, `manifest-seen-boat-mode`). Pinned as structure,
- * because jsdom has no layout; the probe measures the ring.
+ * card is `overflow-hidden`. While glare's 44px floor shrank the name button
+ * to 52px (#1981; a floor now, `glare-mode.test.ts`), the mark column set the
+ * row's height, and the last row's mark ended on the card's bottom edge: its
+ * 5px ring lost its bottom (pixel probe, `manifest-seen-boat-mode`). Pinned as
+ * structure, because jsdom has no layout; the probe measures the ring.
  */
 describe("the mark's room for its focus ring", () => {
   it("pads the mark's column as much below the mark as above it (py-2.5), beside the name button in the same row", () => {
@@ -141,5 +141,16 @@ describe("the mark's room for its focus ring", () => {
     expect(column.querySelector("button")).not.toBeNull();
     expect(column).toHaveClass("py-2.5");
     expect(column.className).not.toMatch(/(^|\s)p[tb]-/);
+  });
+
+  it("takes the tap over the whole mark column, as the diver row's does", () => {
+    // The mark's stretched `::after` reaches as far as the diver row's column
+    // padding (`RollCallControls`); this column must be padded the same.
+    renderCrew({ members: [crew()] });
+    const trigger = screen.getByRole("button", { name: "Open details for Keiko Tanaka" });
+    const column = trigger.parentElement?.lastElementChild as HTMLElement;
+    const mark = column.querySelector("button");
+    expect(column).toHaveClass("py-2.5", "ps-3", "pe-3");
+    expect(mark).toHaveClass("relative", "after:-inset-y-2.5", "after:-inset-x-3");
   });
 });

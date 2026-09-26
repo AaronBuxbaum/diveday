@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { INSET_NOTE_CLASS } from "@/components/ui/card";
 import type { AutomatedMarineForecast } from "@/lib/marine-forecast";
 import { ConditionsSection } from "./ConditionsSection";
 import type { Trip } from "./types";
@@ -90,6 +91,20 @@ describe("ConditionsSection — the automated outlook", () => {
     renderSection(tripRow(), null);
 
     expect(screen.queryByText("Automated outlook")).not.toBeInTheDocument();
+  });
+
+  /**
+   * **The outlook is the departure's inset note** (pixel-craft class 12): it
+   * was 12px all round at 12px type where every other note on the trip is
+   * `px-3 py-2` at 14px. The heading line keeps the foreground ink.
+   */
+  it("sits in the note every departure panel draws", () => {
+    renderSection(tripRow(), forecast());
+
+    const heading = screen.getByText("Automated outlook");
+    expect(heading).toHaveClass("text-foreground");
+    expect(heading.parentElement).toHaveClass(...INSET_NOTE_CLASS.split(" "));
+    expect(heading.parentElement).not.toHaveClass("p-3", "text-xs");
   });
 });
 

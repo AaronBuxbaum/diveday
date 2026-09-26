@@ -69,4 +69,16 @@ describe("RepeatFields", () => {
     expect(screen.queryByLabelText("End date")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Ends")).toHaveValue("never");
   });
+
+  /**
+   * The group's root carried `mt-4` for the one caller that sets it under a
+   * sentence, and the schedule builder, where it is the first thing under its
+   * fieldset's legend, opened 16px lower than the fieldset beside it (43px from
+   * legend to first field against Pay at booking's 27, the pixel audit). The
+   * caller that needs the gap owns it.
+   */
+  it("brings no outer margin of its own", () => {
+    const { container } = renderFields();
+    expect((container.firstElementChild as HTMLElement).className).not.toMatch(/(^|\s)-?m[tby]?-/);
+  });
 });

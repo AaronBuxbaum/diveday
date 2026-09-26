@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { ChoicePill, ChoiceRow } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
@@ -105,24 +106,23 @@ export function BookingGearFields({
             ? t("bookingGear.diverNHeading", { number: index + 1 })
             : t("bookingGear.heading")}
         </legend>
-        <label className="mt-1 flex min-h-11 items-center gap-3 text-sm font-medium">
-          <input
-            type="checkbox"
-            checked={wantsGear}
-            onChange={(event) => {
-              setWantsGear(event.target.checked);
-              // Turning the question back off clears the picks outright, so a
-              // subtotal from a moment ago can never survive as a charge the
-              // diver can no longer see.
-              if (!event.target.checked) {
-                setRentedKinds(new Set());
-                setNitroxRequested(false);
-              }
-            }}
-            className="size-4 accent-primary"
-          />
-          <span>{t("bookingGear.needGear")}</span>
-        </label>
+        <ChoiceRow
+          type="checkbox"
+          checked={wantsGear}
+          onChange={(event) => {
+            setWantsGear(event.target.checked);
+            // Turning the question back off clears the picks outright, so a
+            // subtotal from a moment ago can never survive as a charge the
+            // diver can no longer see.
+            if (!event.target.checked) {
+              setRentedKinds(new Set());
+              setNitroxRequested(false);
+            }
+          }}
+          className="mt-1 text-sm font-medium"
+        >
+          {t("bookingGear.needGear")}
+        </ChoiceRow>
         <p className="mt-1 text-sm text-muted">
           {wantsGear ? t("bookingGear.introBody") : t("bookingGear.skipBody")}
         </p>
@@ -135,68 +135,63 @@ export function BookingGearFields({
                   const hintKey = RENTABLE_ITEM_HINT_KEYS[kind];
                   const itemLabel = t(RENTABLE_ITEM_LABEL_KEYS[kind]);
                   return (
-                    // The hint stays outside the `<label>` — see the same shape
-                    // in `RentalFitForm` for why.
-                    <div
+                    // The hint stays outside the `<label>`, in the pill's
+                    // `aside` — see the same shape in `RentalFitForm` for why.
+                    <ChoicePill
                       key={name}
-                      className="flex min-h-11 items-center gap-2 rounded-lg border border-border pr-3"
+                      type="checkbox"
+                      name={`gear-${index}-${name}`}
+                      checked={rentedKinds.has(kind)}
+                      onChange={(event) => {
+                        setRentedKinds((current) => {
+                          const next = new Set(current);
+                          if (event.target.checked) next.add(kind);
+                          else next.delete(kind);
+                          return next;
+                        });
+                      }}
+                      aside={
+                        <>
+                          {hintKey ? (
+                            <InfoHint
+                              label={t("rental.jargonHintLabel", { item: itemLabel })}
+                              detail={t(hintKey)}
+                            />
+                          ) : null}
+                          {priceCents !== undefined ? (
+                            <span className="text-muted">
+                              {formatMoneyCents(priceCents, currency, locale)}
+                            </span>
+                          ) : null}
+                        </>
+                      }
                     >
-                      <label className="flex min-h-11 flex-1 items-center gap-3 pl-3 text-sm">
-                        <input
-                          name={`gear-${index}-${name}`}
-                          type="checkbox"
-                          checked={rentedKinds.has(kind)}
-                          onChange={(event) => {
-                            setRentedKinds((current) => {
-                              const next = new Set(current);
-                              if (event.target.checked) next.add(kind);
-                              else next.delete(kind);
-                              return next;
-                            });
-                          }}
-                          className="size-4 accent-primary"
-                        />
-                        <span className="flex-1">{itemLabel}</span>
-                      </label>
-                      {hintKey ? (
-                        <InfoHint
-                          label={t("rental.jargonHintLabel", { item: itemLabel })}
-                          detail={t(hintKey)}
-                        />
-                      ) : null}
-                      {priceCents !== undefined ? (
-                        <span className="text-sm text-muted">
-                          {formatMoneyCents(priceCents, currency, locale)}
-                        </span>
-                      ) : null}
-                    </div>
+                      {itemLabel}
+                    </ChoicePill>
                   );
                 })}
               </div>
             ) : null}
             {nitroxOffered ? (
-              <div className="mt-3 flex min-h-11 items-center gap-2 rounded-lg border border-border pr-3">
-                <label className="flex min-h-11 flex-1 items-center gap-3 pl-3 text-sm">
-                  <input
-                    name={`nitrox-${index}`}
-                    type="checkbox"
-                    checked={nitroxRequested}
-                    onChange={(event) => setNitroxRequested(event.target.checked)}
-                    className="size-4 accent-primary"
+              <ChoicePill
+                type="checkbox"
+                name={`nitrox-${index}`}
+                checked={nitroxRequested}
+                onChange={(event) => setNitroxRequested(event.target.checked)}
+                className="mt-3"
+                aside={
+                  <InfoHint
+                    label={t("rental.jargonHintLabel", { item: t("rental.nitroxLegend") })}
+                    detail={t("rental.jargonHints.nitrox")}
                   />
-                  <span className="flex-1">
-                    {pricing.nitroxCents !== null
-                      ? t("rental.nitroxReserveWithPrice", {
-                          price: formatMoneyCents(pricing.nitroxCents, currency, locale),
-                        })
-                      : t("rental.nitroxReserveNoPrice")}
-                  </span>
-                </label>
-                <InfoHint
-                  label={t("rental.jargonHintLabel", { item: t("rental.nitroxLegend") })}
-                  detail={t("rental.jargonHints.nitrox")}
-                />
-              </div>
+                }
+              >
+                {pricing.nitroxCents !== null
+                  ? t("rental.nitroxReserveWithPrice", {
+                      price: formatMoneyCents(pricing.nitroxCents, currency, locale),
+                    })
+                  : t("rental.nitroxReserveNoPrice")}
+              </ChoicePill>
             ) : null}
             {quote.subtotalCents > 0 ? (
               <p className="mt-2 text-sm tabular-nums">

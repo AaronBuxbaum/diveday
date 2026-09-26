@@ -68,6 +68,20 @@ describe("a card's focus ring", () => {
   });
 });
 
+describe("a card's inset", () => {
+  /**
+   * The card's words start where every other card's on the page do — pixel-
+   * craft class 5. The body was `p-4` at every width while the page's cards
+   * step to 20px from `sm` (`SectionCard`'s `p-4 sm:p-5`), so at 1280 a
+   * course's title started at 105 against 109 beside it.
+   */
+  it("pads its body as a card does, 16px then 20px", () => {
+    render(<CoursesShelf courses={[course(1)]} allCoursesHref="/s/blue-mantis/courses" t={t} />);
+    const body = screen.getByRole("heading", { name: "Course 1" }).parentElement;
+    expect(body).toHaveClass("p-4", "sm:p-5");
+  });
+});
+
 describe("the wave placeholder", () => {
   it("stands in for a course with no photo, in the primary tint and never the accent", () => {
     const { container } = render(

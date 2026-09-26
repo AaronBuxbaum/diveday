@@ -25,6 +25,14 @@ type SharedProps = {
   autoResetMs?: number;
   /** Hidden values submitted only after the armed confirmation tap. */
   confirmFields?: Record<string, string>;
+  /**
+   * The action the confirm posts to, when it is not the surrounding form's:
+   * a row's Delete sitting in that row's edit form, beside its Save. Set on
+   * the armed confirm only, with `formNoValidate`, so a half-typed edit never
+   * blocks the delete; the row's hidden id travels with it. Unarmed, the
+   * trigger stays a plain button carrying no action at all.
+   */
+  formAction?: (formData: FormData) => void | Promise<void>;
 };
 
 type MessageModeProps = SharedProps & {
@@ -67,7 +75,11 @@ export type InlineConfirmProps = MessageModeProps | CompactModeProps;
  * edge of any such show/re-show cycle exactly like it does on a normal
  * navigation, so it always lands unarmed.
  *
- * Must be rendered inside the `<form action={...}>` whose submit it guards.
+ * Must be rendered inside the `<form action={...}>` whose submit it guards —
+ * or, given `formAction`, inside another action's form, whose fields it then
+ * shares: a row's Delete in the row's edit form, on one line with its Save
+ * (kinds of day, seasons, boats), where a form of its own had pushed it onto
+ * a line by itself.
  * Unarmed, it's always a plain `type="button"` that never submits anything;
  * no request is sent until a deliberate second tap, and none is sent by
  * backing out. Server-roundtrip pattern: the arm/disarm toggle is local
@@ -94,12 +106,16 @@ export function InlineConfirm(props: InlineConfirmProps) {
     ariaLabel,
     autoResetMs,
     confirmFields,
+    formAction,
     message,
     cancelLabel,
     size = "sm",
   } = props;
   const [armed, setArmed] = useState(false);
-  const { pending } = useFormStatus();
+  // In another action's form, only this action's submit is this control's:
+  // a Save beside it must not read as "Deleting…".
+  const status = useFormStatus();
+  const pending = status.pending && (formAction === undefined || status.action === formAction);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pathname = usePathname();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -187,6 +203,8 @@ export function InlineConfirm(props: InlineConfirmProps) {
           <SubmitButton
             pendingLabel={pendingLabel}
             className={confirmClassName ?? triggerClassName}
+            formAction={formAction}
+            formNoValidate={formAction !== undefined || undefined}
           >
             {confirmLabel}
           </SubmitButton>
@@ -214,6 +232,10 @@ export function InlineConfirm(props: InlineConfirmProps) {
         // Only the confirm tap is a real submit — the arming tap must never
         // fire the form's action, so it stays a plain button until confirmed.
         type={armed ? "submit" : "button"}
+        // Only on the armed submit: a `formaction` on a plain button means
+        // nothing, and React warns about one.
+        formAction={armed ? formAction : undefined}
+        formNoValidate={(armed && formAction !== undefined) || undefined}
         disabled={pending}
         aria-busy={pending}
         className={armed ? (confirmClassName ?? triggerClassName) : triggerClassName}

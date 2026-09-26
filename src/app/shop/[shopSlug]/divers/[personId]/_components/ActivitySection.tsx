@@ -74,7 +74,6 @@ export function ActivitySection({
           }
           total={t("divers.activity.total", { count: page.total })}
           words={staffPagerWords(t)}
-          className="mt-4"
         />
       </div>
     </DiverFileGroupDisclosure>

@@ -411,7 +411,10 @@ async function settlePaint(page: Page) {
         .getAnimations()
         .filter(
           (animation) =>
-            animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY,
+            animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY &&
+            // A scroll-driven animation (the table shell's edge fade) never
+            // finishes: it is positioned by scroll, not a clock.
+            animation.timeline === document.timeline,
         )
         .map((animation) => animation.finished.catch(() => undefined)),
     ),

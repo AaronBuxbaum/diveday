@@ -1,4 +1,12 @@
+import { EditorRailSkeleton } from "@/components/editor/EditorRail";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+
+/**
+ * The editor's sections, counted: the `sections` list in `./page.tsx` names
+ * eight. `src/app/editor-skeletons.test.tsx` reads that list and fails when the
+ * two disagree.
+ */
+const COURSE_EDITOR_SECTIONS = 8;
 
 /**
  * Form-shaped skeleton for the course editor (design principle 1). Without
@@ -17,11 +25,7 @@ export default function EditCourseLoading() {
         <ShopPageHeaderSkeleton description={false} />
         <div className="mt-6 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
           {/* The rail: a jump-row across the top on a phone, a column from `lg`. */}
-          <div className="flex gap-2 overflow-hidden py-2 lg:flex-col lg:py-6">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-11 w-28 shrink-0 rounded-lg bg-surface-sunken lg:w-full" />
-            ))}
-          </div>
+          <EditorRailSkeleton count={COURSE_EDITOR_SECTIONS} />
           <div className="divide-y divide-border">
             {[0, 1, 2].map((i) => (
               <div key={i} className="py-8 first:pt-0">

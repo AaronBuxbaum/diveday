@@ -21,7 +21,7 @@ export async function SwitchingImportCta({ label }: { label: string }) {
     <div className="mt-8">
       <Link
         href={`/shop/${shopSlug}/settings/import`}
-        className={buttonClass({ variant: "secondary", className: "border-border-strong" })}
+        className={buttonClass({ variant: "outline" })}
       >
         {label}
       </Link>

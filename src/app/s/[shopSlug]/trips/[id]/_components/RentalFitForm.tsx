@@ -4,7 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ChoiceFieldset, ChoicePill, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import type { DiverMessageKey } from "@/i18n/messages";
 import { formatMoneyCents } from "@/lib/format";
@@ -324,50 +324,48 @@ export function RentalFitForm({
       ) : null}
       <form action={action} className="mt-4 flex flex-col gap-4">
         {offered.length > 0 ? (
-          <fieldset>
-            <legend className="text-sm font-medium">{t("rental.whatToPlan")}</legend>
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <ChoiceFieldset legend={t("rental.whatToPlan")}>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {offered.map(({ kind, name }) => {
                 const priceCents = pricing.perItemCents[kind];
                 const hintKey = RENTABLE_ITEM_HINT_KEYS[kind];
                 const itemLabel = t(RENTABLE_ITEM_LABEL_KEYS[kind]);
                 return (
-                  // The hint sits *outside* the `<label>`: a label's text is
-                  // the checkbox's accessible name, and clicking a control
-                  // nested inside one toggles the box underneath it.
-                  <div
+                  // The hint sits *outside* the `<label>` — the pill's
+                  // `aside`: a label's text is the checkbox's accessible
+                  // name, and clicking a control nested inside one toggles the
+                  // box underneath it.
+                  <ChoicePill
                     key={name}
-                    className="flex min-h-11 items-center gap-2 rounded-lg border border-border pr-3"
+                    type="checkbox"
+                    name={name}
+                    checked={rentedKinds.has(kind)}
+                    onChange={(event) => {
+                      setRentedKinds((current) => {
+                        const next = new Set(current);
+                        if (event.target.checked) next.add(kind);
+                        else next.delete(kind);
+                        return next;
+                      });
+                    }}
+                    aside={
+                      <>
+                        {hintKey ? (
+                          <InfoHint
+                            label={t("rental.jargonHintLabel", { item: itemLabel })}
+                            detail={t(hintKey)}
+                          />
+                        ) : null}
+                        {showPricing && priceCents !== undefined ? (
+                          <span className="text-muted">
+                            {formatMoneyCents(priceCents, currency, locale)}
+                          </span>
+                        ) : null}
+                      </>
+                    }
                   >
-                    <label className="flex min-h-11 flex-1 items-center gap-3 pl-3 text-sm">
-                      <input
-                        name={name}
-                        type="checkbox"
-                        checked={rentedKinds.has(kind)}
-                        onChange={(event) => {
-                          setRentedKinds((current) => {
-                            const next = new Set(current);
-                            if (event.target.checked) next.add(kind);
-                            else next.delete(kind);
-                            return next;
-                          });
-                        }}
-                        className="size-4 accent-primary"
-                      />
-                      <span className="flex-1">{itemLabel}</span>
-                    </label>
-                    {hintKey ? (
-                      <InfoHint
-                        label={t("rental.jargonHintLabel", { item: itemLabel })}
-                        detail={t(hintKey)}
-                      />
-                    ) : null}
-                    {showPricing && priceCents !== undefined ? (
-                      <span className="text-sm text-muted">
-                        {formatMoneyCents(priceCents, currency, locale)}
-                      </span>
-                    ) : null}
-                  </div>
+                    {itemLabel}
+                  </ChoicePill>
                 );
               })}
             </div>
@@ -410,34 +408,29 @@ export function RentalFitForm({
                 ) : null}
               </p>
             ) : null}
-          </fieldset>
+          </ChoiceFieldset>
         ) : null}
 
+        {/* No "what is nitrox?" hint here any more: this section is only
+            reachable by a diver who has already filed a nitrox card, and the
+            explanation now sits where a diver first meets the word — the "Add
+            your nitrox card" disclosure in the certification row (issue 627).
+            The booking page, where nitrox genuinely can be a first encounter,
+            keeps its own (BookingGearFields.tsx). */}
         {nitroxOffered && !nitroxHidden ? (
-          <fieldset>
-            {/* No "what is nitrox?" hint here any more: this section is only
-                reachable by a diver who has already filed a nitrox card, and
-                the explanation now sits where a diver first meets the word —
-                the "Add your nitrox card" disclosure in the certification row
-                (issue 627). The booking page, where nitrox genuinely can be a
-                first encounter, keeps its own (BookingGearFields.tsx). */}
-            <legend className="text-sm font-medium">{t("rental.nitroxLegend")}</legend>
-            <label className="mt-2 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
-              <input
-                name="nitrox"
-                type="checkbox"
-                checked={nitroxRequested}
-                onChange={(event) => setNitroxRequested(event.target.checked)}
-                className="size-4 accent-primary"
-              />
-              <span className="flex-1">
-                {showPricing && pricing.nitroxCents !== null
-                  ? t("rental.nitroxReserveWithPrice", {
-                      price: formatMoneyCents(pricing.nitroxCents, currency, locale),
-                    })
-                  : t("rental.nitroxReserveNoPrice")}
-              </span>
-            </label>
+          <ChoiceFieldset legend={t("rental.nitroxLegend")}>
+            <ChoicePill
+              type="checkbox"
+              name="nitrox"
+              checked={nitroxRequested}
+              onChange={(event) => setNitroxRequested(event.target.checked)}
+            >
+              {showPricing && pricing.nitroxCents !== null
+                ? t("rental.nitroxReserveWithPrice", {
+                    price: formatMoneyCents(pricing.nitroxCents, currency, locale),
+                  })
+                : t("rental.nitroxReserveNoPrice")}
+            </ChoicePill>
             {/* Speaks only when there is something true to say: what the crew
                 will do about a card they actually have. A request carried in
                 from the booking form with no card behind it says nothing at
@@ -447,7 +440,7 @@ export function RentalFitForm({
                 {t(nitroxCardVerified ? "rental.nitroxVerifiedNote" : "rental.nitroxCardOnFile")}
               </p>
             ) : null}
-          </fieldset>
+          </ChoiceFieldset>
         ) : null}
 
         {/* `weights` rides in this grid rather than in a full-width row of its

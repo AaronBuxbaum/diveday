@@ -6,7 +6,7 @@ export default function WalkInLoading() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-56" descriptionWidth="w-80 max-w-full" />
+        <ShopPageHeaderSkeleton titleWidth="w-56" description descriptionWidth="w-80 max-w-full" />
         <div className={sectionCardClass({ padding: "lg", className: "mt-8" })}>
           {["trip", "trip2", "trip3"].map((slot) => (
             <div key={slot} className="mt-4 first:mt-0">

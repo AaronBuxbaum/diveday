@@ -164,7 +164,7 @@ export function SeriesCadenceEditor({
       ) : null}
 
       <form action={cadenceAction} className="rounded-inset bg-surface-sunken p-4 sm:p-5">
-        <p className="max-w-prose text-sm text-muted">
+        <p className="mb-4 max-w-prose text-sm text-muted">
           {t("tripSeries.panel.editCadenceDescription")}
         </p>
         <RepeatFields

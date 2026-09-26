@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { EditorSection } from "@/components/editor/EditorSection";
 import { ImageFileInput } from "@/components/ImageFileInput";
-import { StoredPhoto } from "@/components/StoredPhoto";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
+import { ChoiceRow, controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
 import { REQUIRABLE_CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -78,41 +78,6 @@ export type SiteFieldValues = {
   /** When it was written, so the editor can say whether it is still on the site list. */
   planningNoteAt: Date | null;
 };
-
-/**
- * One photo the site already holds, with the box that takes it back off.
- *
- * The whole cell is a `<label>` wrapping its own checkbox, so a tap on the
- * photo toggles *that* photo rather than the first one — the same shape the
- * course editor's gallery uses.
- */
-function ExistingPhoto({
-  url,
-  removeName,
-  removeValue = "true",
-  removeLabel,
-}: {
-  url: string;
-  removeName: string;
-  /** The gallery posts the photo's own URL; a single-photo field posts "true". */
-  removeValue?: string;
-  removeLabel: string;
-}) {
-  return (
-    <label className="block cursor-pointer">
-      <input type="checkbox" name={removeName} value={removeValue} className="peer sr-only" />
-      <StoredPhoto
-        src={url}
-        alt=""
-        className="h-24 w-full rounded-lg border-2 border-border transition peer-checked:border-danger peer-checked:opacity-50"
-        sizes="(min-width: 640px) 25vw, 50vw"
-      />
-      <span className="mt-1 block text-xs font-medium text-muted transition peer-checked:text-danger">
-        {removeLabel}
-      </span>
-    </label>
-  );
-}
 
 /** Which sections say something the fields cannot say for themselves. */
 type SectionParts = {
@@ -277,7 +242,7 @@ export function SiteFields({
               rows={3}
               maxLength={1200}
               defaultValue={values?.description ?? ""}
-              className={controlClass}
+              className={textareaClassFor(3)}
             />
           </Field>
         </FieldGrid>
@@ -367,15 +332,14 @@ export function SiteFields({
               subgrid two tracks deep per field, and a checkbox belongs beside
               its own words the way the nitrox box does. */}
           {stationFar ? (
-            <label className="mt-4 flex min-h-11 items-center gap-2 text-sm font-medium">
-              <input
-                name="tideStationConfirmed"
-                type="checkbox"
-                defaultChecked={stationConfirmed}
-                className="size-4 accent-primary"
-              />
+            <ChoiceRow
+              name="tideStationConfirmed"
+              type="checkbox"
+              defaultChecked={stationConfirmed}
+              className="mt-4 text-sm font-medium"
+            >
               {t("diveSites.form.tideStationConfirmedCheckbox")}
-            </label>
+            </ChoiceRow>
           ) : null}
         </>
       ),
@@ -434,10 +398,10 @@ export function SiteFields({
               </Field>
               {values?.satelliteImageUrl ? (
                 <div className="mt-2">
-                  <ExistingPhoto
+                  <RemovablePhoto
                     url={values.satelliteImageUrl}
-                    removeName="removeSatelliteImage"
-                    removeLabel={t("diveSites.form.removeCurrentPhoto")}
+                    name="removeSatelliteImage"
+                    label={t("diveSites.form.removeCurrentPhoto")}
                   />
                 </div>
               ) : null}
@@ -452,10 +416,10 @@ export function SiteFields({
               </Field>
               {values?.routeImageUrl ? (
                 <div className="mt-2">
-                  <ExistingPhoto
+                  <RemovablePhoto
                     url={values.routeImageUrl}
-                    removeName="removeRouteImage"
-                    removeLabel={t("diveSites.form.removeCurrentPhoto")}
+                    name="removeRouteImage"
+                    label={t("diveSites.form.removeCurrentPhoto")}
                   />
                 </div>
               ) : null}
@@ -479,14 +443,14 @@ export function SiteFields({
               />
             </Field>
             {values && values.imageUrls.length > 0 ? (
-              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className={`mt-3 ${removablePhotoGridClass}`}>
                 {values.imageUrls.map((url) => (
-                  <ExistingPhoto
+                  <RemovablePhoto
                     key={url}
                     url={url}
-                    removeName="removeSiteImageUrls"
-                    removeValue={url}
-                    removeLabel={t("diveSites.form.removeLabel")}
+                    name="removeSiteImageUrls"
+                    value={url}
+                    label={t("diveSites.form.removeLabel")}
                   />
                 ))}
               </div>
@@ -514,7 +478,7 @@ export function SiteFields({
               rows={3}
               maxLength={1200}
               defaultValue={values?.marineLifeDescription ?? ""}
-              className={controlClass}
+              className={textareaClassFor(3)}
             />
           </Field>
         </FieldGrid>
@@ -622,7 +586,7 @@ export function SiteFields({
                 rows={2}
                 maxLength={500}
                 defaultValue={values?.currentNote ?? ""}
-                className={controlClass}
+                className={textareaClassFor(2)}
               />
             </Field>
             <Field
@@ -635,7 +599,7 @@ export function SiteFields({
                 maxLength={1200}
                 defaultValue={values?.divePlan ?? ""}
                 placeholder={t("diveSites.form.divePlanPlaceholder")}
-                className={controlClass}
+                className={textareaClassFor(3)}
               />
             </Field>
             <Field
@@ -648,7 +612,7 @@ export function SiteFields({
                 maxLength={600}
                 defaultValue={values?.conservationNote ?? ""}
                 placeholder={t("diveSites.form.conservationNotePlaceholder")}
-                className={controlClass}
+                className={textareaClassFor(3)}
               />
             </Field>
           </FieldGrid>
@@ -688,7 +652,7 @@ export function SiteFields({
               maxLength={MAX_PLANNING_NOTE_LENGTH}
               defaultValue={values?.planningNote ?? ""}
               placeholder={t("diveSites.form.planningNotePlaceholder")}
-              className={controlClass}
+              className={textareaClassFor(3)}
             />
           </Field>
         </FieldGrid>
@@ -719,7 +683,7 @@ export function SiteFields({
               maxLength={400}
               defaultValue={values?.fitNote ?? ""}
               placeholder={t("diveSites.form.fitNotePlaceholder")}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
         </FieldGrid>
@@ -790,28 +754,27 @@ export function SiteFields({
             ) : null}
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
-                <label key={value} className="flex min-h-11 items-center gap-2 text-sm font-medium">
-                  <input
-                    name="specialty"
-                    type="checkbox"
-                    value={value}
-                    defaultChecked={
-                      values?.requiredSpecialties.includes(value as DiveSpecialty) ?? false
-                    }
-                    className="size-4 accent-primary"
-                  />
-                  {t(key)}
-                </label>
-              ))}
-              <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
-                <input
-                  name="requiresNitrox"
+                <ChoiceRow
+                  key={value}
+                  name="specialty"
                   type="checkbox"
-                  defaultChecked={values?.requiresNitrox ?? false}
-                  className="size-4 accent-primary"
-                />
+                  value={value}
+                  defaultChecked={
+                    values?.requiredSpecialties.includes(value as DiveSpecialty) ?? false
+                  }
+                  className="text-sm font-medium"
+                >
+                  {t(key)}
+                </ChoiceRow>
+              ))}
+              <ChoiceRow
+                name="requiresNitrox"
+                type="checkbox"
+                defaultChecked={values?.requiresNitrox ?? false}
+                className="text-sm font-medium"
+              >
                 {t("diveSites.form.nitroxCheckbox")}
-              </label>
+              </ChoiceRow>
             </div>
           </div>
         </>

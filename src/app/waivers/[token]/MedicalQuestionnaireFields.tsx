@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ChoicePill } from "@/components/ui/form";
 import type { MedicalQuestion, MedicalQuestionnaire } from "@/lib/medical";
 import { applicableResponsesOnly, medicalProgress, medicalQuestionField } from "@/lib/medical";
 
@@ -59,35 +60,36 @@ function RadioQuestion({
       <legend className="float-left mb-3 w-full p-0 text-base font-medium">
         {question.prompt}
       </legend>
+      {/* `size="md"`: the diver reads this form at 16px, the answers too. */}
       <div className="clear-both flex gap-3">
-        <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
-          <input
-            type="radio"
-            name={medicalQuestionField(question.id)}
-            // Read by `QuestionnaireProgress`, which counts the page-one
-            // questions the diver was asked up front separately from the
-            // follow-ups their own answers open (`data-*` rather than parsing
-            // ids, which are the published form's numbering, not a contract).
-            data-question-scope={question.section === "primary" ? "primary" : "follow-up"}
-            value="yes"
-            defaultChecked={answer === true}
-            onChange={() => onAnswer(question.id, true)}
-            required
-          />
+        <ChoicePill
+          type="radio"
+          size="md"
+          name={medicalQuestionField(question.id)}
+          // Read by `QuestionnaireProgress`, which counts the page-one
+          // questions the diver was asked up front separately from the
+          // follow-ups their own answers open (`data-*` rather than parsing
+          // ids, which are the published form's numbering, not a contract).
+          data-question-scope={question.section === "primary" ? "primary" : "follow-up"}
+          value="yes"
+          defaultChecked={answer === true}
+          onChange={() => onAnswer(question.id, true)}
+          required
+        >
           {copy.yesLabel}
-        </label>
-        <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
-          <input
-            type="radio"
-            name={medicalQuestionField(question.id)}
-            data-question-scope={question.section === "primary" ? "primary" : "follow-up"}
-            value="no"
-            defaultChecked={answer === false}
-            onChange={() => onAnswer(question.id, false)}
-            required
-          />
+        </ChoicePill>
+        <ChoicePill
+          type="radio"
+          size="md"
+          name={medicalQuestionField(question.id)}
+          data-question-scope={question.section === "primary" ? "primary" : "follow-up"}
+          value="no"
+          defaultChecked={answer === false}
+          onChange={() => onAnswer(question.id, false)}
+          required
+        >
           {copy.noLabel}
-        </label>
+        </ChoicePill>
       </div>
       {answer === true ? <p className="mt-3 text-sm text-muted">{reassurance}</p> : null}
     </fieldset>

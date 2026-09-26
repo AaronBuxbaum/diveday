@@ -141,7 +141,7 @@ export default async function WalkInPage({
               action={
                 <Link
                   href={`/shop/${shopSlug}/schedule/board`}
-                  className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
                 >
                   {t("checkIn.walkIn.tripEmptyAction")}
                 </Link>

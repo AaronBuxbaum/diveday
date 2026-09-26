@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PANEL_INNER_RADIUS } from "@/components/ui/card";
+import { cardSummaryClass, PANEL_INNER_RADIUS } from "@/components/ui/card";
 import {
   loadOfflineManifest,
   primeOfflineManifestShell,
@@ -281,7 +281,9 @@ describe("OfflineManifestManager", () => {
    * corner (20 less the 1px border) wherever it touches the panel: all four
    * while closed, when the summary is the whole card; the top two once open,
    * when its bottom edge meets the body and a curve there would float the band
-   * off the rows beneath it.
+   * off the rows beneath it. It is the card face every card disclosure wears
+   * (`cardSummaryClass`), so the manifest's three cards fill, ring and space
+   * their carets one way.
    */
   it("gives the summary's hover fill the panel's inner corner where it touches the panel", async () => {
     setOnline(false);
@@ -291,7 +293,8 @@ describe("OfflineManifestManager", () => {
 
     const heading = await screen.findByRole("heading", { name: "On this phone" });
     const summary = heading.closest("summary");
-    expect(summary).toHaveClass(PANEL_INNER_RADIUS, "group-open/phone:rounded-b-none");
+    expect(summary).toHaveClass(PANEL_INNER_RADIUS, "[[open]>&]:rounded-b-none");
+    for (const token of cardSummaryClass().split(" ")) expect(summary).toHaveClass(token);
     expect(summary).not.toHaveClass("rounded-lg");
   });
 });

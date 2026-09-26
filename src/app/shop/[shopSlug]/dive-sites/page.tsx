@@ -35,6 +35,7 @@ import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-label
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
+import { joinFacts } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
@@ -210,8 +211,10 @@ export default async function DiveSitesPage({
               // header drops its actions when the library is empty precisely so
               // this card owns them, and a shop reading "start with a site your
               // crew knows well" can start from that sentence.
-              // Same pair, same order as the header's: the primary last.
-              <div className="mt-4 flex flex-wrap justify-center gap-3">
+              // Same pair, same order as the header's: the primary last. A
+              // fragment, not a row of its own: the card's action row already
+              // is one, with its own gap under the body.
+              <>
                 <Link
                   href={catalogHref}
                   scroll={false}
@@ -222,7 +225,7 @@ export default async function DiveSitesPage({
                 <Link href={`/shop/${shopSlug}/dive-sites/new`} className={buttonClass()}>
                   {t("diveSites.list.createSite")}
                 </Link>
-              </div>
+              </>
             )
           }
           className="mt-4"
@@ -247,7 +250,6 @@ export default async function DiveSitesPage({
         href={pageHref}
         total={t("diveSites.list.pagination.total", { count: sitePage.total })}
         words={staffPagerWords(t)}
-        className="mt-4"
       />
     </main>
   );
@@ -376,6 +378,9 @@ async function CatalogView({
             // leaves the paragraph a column two words wide; `stacked` gives the
             // act the first line and the briefing the full width beneath.
             stacked
+            // 12px, as it always stood: a name, a line of facts and a
+            // paragraph to choose on.
+            pad="lg"
             trailing={
               <form action={importAction}>
                 <input type="hidden" name="templateId" value={template.id} />
@@ -388,15 +393,13 @@ async function CatalogView({
               </form>
             }
           >
-            <div className="min-w-0 py-3">
+            <div className="min-w-0">
               <p className="font-medium">{version.briefing.name}</p>
               <p className="mt-0.5 text-sm text-muted">
-                {[
+                {joinFacts([
                   version.briefing.locationName,
                   t("diveSites.catalog.templateVersion", { version: version.version }),
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
+                ])}
               </p>
               {/* The one paragraph that earns a row of its own: a shop choosing
                   among thirty-four reefs it has never dived has nothing else to
@@ -414,7 +417,6 @@ async function CatalogView({
         href={pageHref}
         total={t("diveSites.catalog.pagination.total", { count: catalog.total })}
         words={staffPagerWords(t)}
-        className="mt-6"
       />
     </main>
   );

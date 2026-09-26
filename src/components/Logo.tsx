@@ -70,9 +70,12 @@ export function LogoMark({ className }: { className?: string }) {
  *    the punctuation it is in that sentence rather than as a coral speck.
  *
  * Pass `href` to render the lockup as a link (the header's way home);
- * otherwise it is a `<p>`. `children` follows the name inside the same text
- * flow, so a trailing tagline wraps with it instead of becoming its own flex
- * item.
+ * otherwise it is a `<p>`. The link is a target, so it takes the header CTA's
+ * 48px floor and the control radius its focus ring follows; it was a 24px box
+ * with a square ring beside 44px nav links (K-32), and the floor is also what
+ * keeps the marketing header one height when the CTA is hidden. `children`
+ * follows the name inside the same text flow, so a trailing tagline wraps with
+ * it instead of becoming its own flex item.
  */
 export function Wordmark({
   variant = "lockup",
@@ -115,7 +118,7 @@ export function Wordmark({
     </>
   );
   return href ? (
-    <Link href={href} className={rootClass}>
+    <Link href={href} className={`${rootClass} min-h-12 rounded-lg`}>
       {content}
     </Link>
   ) : (

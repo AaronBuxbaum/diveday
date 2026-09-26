@@ -107,8 +107,11 @@ export function RepeatFields({
     );
   };
 
+  // No outer margin: the schedule builder sets this group first under its
+  // fieldset's legend, where an `mt-4` opened it 16px lower than the fieldset
+  // beside it. A caller that puts something above it spaces it itself.
   return (
-    <div className="mt-4 flex flex-col gap-5">
+    <div className="flex flex-col gap-5">
       <FieldGrid columns={2} className="gap-y-5">
         <Field label={copy.howOftenLabel}>
           <select
@@ -167,7 +170,8 @@ export function RepeatFields({
                 className={buttonClass({
                   variant: on ? "primary" : "secondary",
                   size: "sm",
-                  className: "min-w-12 rounded-full has-[:focus-visible]:focus-ring",
+                  shape: "pill",
+                  className: "min-w-12 has-[:focus-visible]:focus-ring",
                 })}
               >
                 {/* The checkbox itself is the state — visually replaced by the
@@ -192,7 +196,7 @@ export function RepeatFields({
               setTouched(true);
               setWeekdays(everyDay ? (startWeekday === null ? [] : [startWeekday]) : [...WEEKDAYS]);
             }}
-            className={buttonClass({ variant: "ghost", size: "sm", className: "rounded-full" })}
+            className={buttonClass({ variant: "ghost", size: "sm", shape: "pill" })}
           >
             {copy.everyDay}
           </button>

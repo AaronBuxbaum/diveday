@@ -831,9 +831,10 @@ export function DiverRollCall({
                     it, which would walk the mark down the row as it opens.
                     The bottom 10px is the room its 5px focus ring needs on
                     the last row, flush with the card's `overflow-hidden`:
-                    in Boat mode glare's 44px floor shrinks the summary to
-                    52px, the mark column sets the row's height, and with no
-                    padding below it the ring lost its bottom 5px (#1981). */}
+                    while glare's 44px floor shrank the summary to 52px (a
+                    floor now, `glare-mode.test.ts`), the mark column set the
+                    row's height, and with no padding below it the ring lost
+                    its bottom 5px (#1981). */}
                   <div className="shrink-0 py-2.5 ps-3 pe-3 print:hidden">
                     {rowState.notBackAboard ? (
                       <RollCallMark state="notBack" />

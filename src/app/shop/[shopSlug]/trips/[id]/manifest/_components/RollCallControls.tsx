@@ -68,12 +68,23 @@ export const BOAT_TARGET_CLASS = buttonClass({
  * The affirmative tap itself: a bare 56px circle, no box, no label text. The
  * `RollCallMark` inside it is the drawn state and the button's accessible name
  * is the words, so nothing is carried by colour alone (decision 5).
+ *
+ * **Drawn round, tapped square — the whole column.** A browser clips an
+ * element's hit area to its border radius, so the round button (K-44, for a
+ * round focus ring) stopped taking a tap in the 56px square's corners, about a
+ * fifth of what had been its target, and a thumb landing there met the
+ * column's bare padding. This is the one-tap-per-person control, worked
+ * one-handed on a pitching deck. A square stretched `::after` takes the tap
+ * for the button over the whole mark column: `-inset-y-2.5` and `-inset-x-3`
+ * are that column's `py-2.5 ps-3 pe-3` on both rows (the roll-call tests hold
+ * the two together). It paints nothing, and radius is not inherited, so the
+ * ring stays a circle.
  */
 const MARK_BUTTON_CLASS = buttonClass({
   variant: "bare",
   size: "mark",
   busy: true,
-  className: "rounded-full",
+  className: "relative after:absolute after:-inset-x-3 after:-inset-y-2.5",
 });
 
 /**
@@ -96,9 +107,10 @@ export {
 } from "@/lib/manifests";
 /**
  * The fills themselves live in the shared row-tone vocabulary
- * (`src/components/row-tones.ts`), beside the offline manifest's crew map —
- * one module so the two surfaces a crew reads minutes apart, often on two
- * devices at once, can never drift into two meanings for one colour.
+ * (`src/components/row-tones.ts`), which the offline manifest's diver and crew
+ * rows read too — one map so the two surfaces a crew reads minutes apart,
+ * often on two devices at once, can never drift into two meanings for one
+ * colour.
  * Re-exported here because this file is where every roll-call consumer
  * already looks for them.
  */
@@ -169,9 +181,16 @@ export function rollCallScrollMargin(isDeparture: boolean): string {
  * corners nest in the card's without the row having to know it is an end —
  * which it cannot by `:first-child`, since an alarmed row is `order-first`.
  * The button paints nothing, so the radius shapes the ring and nothing else.
+ *
+ * **On paper it is one line of name** (`print:min-h-0 print:py-1`). The 76px
+ * floor and 12px inset are the 56px mark's row on a deck; the mark does not
+ * print, and once the name reached paper (it is `data-print-content`) the
+ * button carried its screen height there too, about 16mm a row at the 13px
+ * print root, adding pages to a day packet's roll call — the sheet whose page
+ * count a captain checks for a missing one. `paper-day.spec.ts` measures it.
  */
 export const ROW_DISCLOSURE_SUMMARY_CLASS =
-  "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 rounded-panel py-3 ps-4 pe-2 text-start select-none focus-visible:focus-ring-inset [&::-webkit-details-marker]:hidden";
+  "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 rounded-panel py-3 ps-4 pe-2 text-start select-none focus-visible:focus-ring-inset print:min-h-0 print:py-1 [&::-webkit-details-marker]:hidden";
 export const ROW_DISCLOSURE_PANEL_CLASS =
   "mx-4 mb-4 rounded-inset border border-border/70 bg-surface-sunken/50 p-3";
 

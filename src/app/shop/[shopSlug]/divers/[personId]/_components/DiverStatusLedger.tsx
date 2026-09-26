@@ -143,7 +143,7 @@ export function DiverStatusLedger({
           <LedgerRow
             key={`${row.kind}-${row.tone}`}
             kind={{ word: t(KIND_WORD[row.kind]), tone: row.tone }}
-            className="py-3"
+            pad="lg"
             trailing={
               row.action ? (
                 <FixLink

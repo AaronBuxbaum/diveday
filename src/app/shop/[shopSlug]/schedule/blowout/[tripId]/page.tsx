@@ -142,8 +142,13 @@ export default async function BlowoutPage({
           <p className="text-sm">{t("blowout.confirm.lead", { tripTitle: trip.title })}</p>
           <p className="mt-3 text-sm text-muted">{t("blowout.confirm.moneyNote")}</p>
           {roster.length === 0 ? (
-            // Nested inside the confirm card, so no icon.
-            <EmptyState title={t("blowout.confirm.noDivers")} icon={false} className="mt-5" />
+            // Nested inside the confirm card, so no icon, fill or shadow.
+            <EmptyState
+              title={t("blowout.confirm.noDivers")}
+              icon={false}
+              nested
+              className="mt-5"
+            />
           ) : (
             <div className="mt-5">
               <h2 className="text-sm font-semibold">
@@ -239,8 +244,10 @@ export default async function BlowoutPage({
             {divers.map((diver) => {
               const message = MESSAGE_BADGE[diver.messageStatus];
               return (
+                // `align="baseline"` on every cell: the two Badge columns put
+                // their word on the row's line, not under it.
                 <tr key={diver.id}>
-                  <Td>
+                  <Td align="baseline">
                     <Link
                       href={shopPath(shopSlug, "divers", diver.personId)}
                       className="font-medium text-foreground hover:text-primary hover:underline"
@@ -255,17 +262,17 @@ export default async function BlowoutPage({
                       </div>
                     ) : null}
                   </Td>
-                  <Td>
+                  <Td align="baseline">
                     <Badge tone={message.tone} size="sm">
                       {t(message.key)}
                     </Badge>
                   </Td>
-                  <Td muted hideBelow="sm">
+                  <Td muted hideBelow="sm" align="baseline">
                     {diver.paymentStatus
                       ? t(PAYMENT_KEY[diver.paymentStatus])
                       : t("blowout.record.noPayment")}
                   </Td>
-                  <Td muted hideBelow="md">
+                  <Td muted hideBelow="md" align="baseline">
                     {diver.offeredTrips.length === 0
                       ? t("blowout.record.noOffers")
                       : diver.offeredTrips
@@ -275,7 +282,7 @@ export default async function BlowoutPage({
                           )
                           .join(" · ")}
                   </Td>
-                  <Td>
+                  <Td align="baseline">
                     {diver.rebooked ? (
                       <Badge tone="success" size="sm">
                         {t("blowout.record.rebookedBadge")}

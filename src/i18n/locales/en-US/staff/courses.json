@@ -30,7 +30,7 @@
     "errorNotAuthorized": "Hiding or showing a course is limited to owners, managers, and instructors.",
     "errorFaqIncomplete": "Every question needs an answer, and every answer a question.",
     "errorImages": "You can keep up to eight gallery photos. Remove one before adding more.",
-    "errorUpload": "That photo didn’t upload. Try a JPG, PNG, or WebP under 5 MB.",
+    "errorUpload": "That photo didn’t upload. Try a JPG, PNG, or WebP under 5\u00a0MB.",
     "errorTooManyPhotos": "Add up to {max} new gallery photos per save. Save this batch, then add more.",
     "errorDepthPlaceholder": "One of your depth markers is broken, so nothing saved. Write it exactly as '{depth18}'. The choices are '{depth12}', '{depth18}', '{depth21}', '{depth30}' and '{depth40}'. If you would rather write the depth in your own words, delete the marker instead.",
     "pitchLegend": "The pitch",

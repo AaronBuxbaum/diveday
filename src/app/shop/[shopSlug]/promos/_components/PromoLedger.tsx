@@ -92,9 +92,9 @@ export function PromoCodeLedger({
         const labelId = `promo-shelf-${group.group}-${index}`;
         return (
           <LedgerGroup key={labelId} as="h2" id={labelId} label={labels[group.group]}>
-            <ul aria-labelledby={labelId} className="mt-2">
+            <ul aria-labelledby={labelId}>
               {group.rows.map((row) => (
-                <LedgerRow key={row.id} trailing={row.actions} className="py-3">
+                <LedgerRow key={row.id} trailing={row.actions} pad="lg">
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span className="font-mono font-semibold">{row.code}</span>
@@ -165,7 +165,7 @@ export function TripDealLedger({
   return (
     <ul aria-labelledby={labelledBy} className={className || undefined}>
       {rows.map((row) => (
-        <LedgerRow key={row.id} href={row.href} linkLabel={row.tripTitle} className="py-3">
+        <LedgerRow key={row.id} href={row.href} linkLabel={row.tripTitle} pad="lg">
           <div className="min-w-0">
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="font-mono font-semibold">{row.code}</span>

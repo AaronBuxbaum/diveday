@@ -8,6 +8,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManagePaymentSettings, canPersonRefund } from "@/db/authz";
@@ -840,7 +841,10 @@ export default async function ManageTripPage({
       <TripNoticeBanner notice={rootPageNotice} locale={locale} />
 
       {cancelled && (canConfigure || blowoutCalled || lifecycleStatus) ? (
-        <section className="mt-6 rounded-panel border border-danger/40 bg-danger/10 p-5">
+        // A card in a tone: the card's radius, bed and inset, so its words
+        // start where the cards around it do; only the border and fill are its
+        // own (pixel-craft classes 3 and 12).
+        <section className={`mt-6 ${TONE_PANEL_CLASS} border-danger/40 bg-danger/10`}>
           <FormStatus tone={lifecycleStatus?.tone} className="mb-3">
             {lifecycleStatus?.text}
           </FormStatus>
@@ -1091,17 +1095,21 @@ export default async function ManageTripPage({
         ]}
         actions={
           <>
+            {/* All three flush, so whichever starts a line — the first, or one
+                wrapped on a phone — puts its word on the panel's column; the
+                row's gap hands back what they gave up (TripAboutSection). */}
             <CopyLinkButton
               path={publicTripPath(shopSlug, tripId)}
               label={t("trips.detail.copyBookingLink")}
               copiedLabel={t("trips.detail.linkCopied")}
               failedLabel={t("trips.detail.linkCopyFailed")}
+              flush
             />
             <Link
               href={publicTripPath(shopSlug, tripId)}
               target="_blank"
               rel="noreferrer"
-              className={buttonClass({ variant: "ghost", size: "sm" })}
+              className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
             >
               {t("trips.about.viewPublic")}
             </Link>
@@ -1110,6 +1118,7 @@ export default async function ManageTripPage({
               label={t("trips.about.printPacket")}
               popupBlockedLabel={t("shared.printButton.popupBlocked")}
               recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
+              flush
             />
           </>
         }

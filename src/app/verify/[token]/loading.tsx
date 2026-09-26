@@ -6,5 +6,5 @@ import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
  * centered block it lands in rather than a spinner.
  */
 export default function VerifyLoading() {
-  return <EntryShellSkeleton wordmark panel={false} footnote={false} />;
+  return <EntryShellSkeleton wordmark description={false} panel={false} footnote={false} />;
 }

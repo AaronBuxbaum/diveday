@@ -9,6 +9,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { DangerDisclosure } from "@/components/ui/disclosure";
 import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
@@ -592,32 +593,25 @@ export default async function EditDiveSitePage({
           </SiteFormShell>
         </div>
       </div>
-      <details
+      <DangerDisclosure
         open={Boolean(error)}
-        className="mt-10 rounded-panel border border-danger/30 bg-danger/5"
+        className="mt-10"
+        summary={t("diveSites.edit.deleteSite")}
       >
-        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-semibold text-danger [&::-webkit-details-marker]:hidden sm:px-5">
-          <span>{t("diveSites.edit.deleteSite")}</span>
-          <span aria-hidden="true" className="text-lg font-normal">
-            +
-          </span>
-        </summary>
-        <div className="border-t border-danger/20 p-4 text-sm sm:p-5">
-          <h2 className="font-semibold">{t("diveSites.edit.deleteConfirmTitle")}</h2>
-          <p className="mt-1 max-w-2xl text-muted">{t("diveSites.edit.deleteConfirmBody")}</p>
-          <form action={deleteAction} className="mt-4">
-            <SubmitButton
-              pendingLabel={t("diveSites.edit.deleting")}
-              className={buttonClass({ variant: "danger-solid" })}
-            >
-              {t("diveSites.edit.deleteSite")}
-            </SubmitButton>
-            <FormStatus tone="danger" className="mt-2">
-              {error ? t(errorKey ?? "diveSites.edit.errorInvalid") : undefined}
-            </FormStatus>
-          </form>
-        </div>
-      </details>
+        <h2 className="font-semibold">{t("diveSites.edit.deleteConfirmTitle")}</h2>
+        <p className="mt-1 max-w-2xl text-muted">{t("diveSites.edit.deleteConfirmBody")}</p>
+        <form action={deleteAction} className="mt-4">
+          <SubmitButton
+            pendingLabel={t("diveSites.edit.deleting")}
+            className={buttonClass({ variant: "danger-solid" })}
+          >
+            {t("diveSites.edit.deleteSite")}
+          </SubmitButton>
+          <FormStatus tone="danger" className="mt-2">
+            {error ? t(errorKey ?? "diveSites.edit.errorInvalid") : undefined}
+          </FormStatus>
+        </form>
+      </DangerDisclosure>
     </main>
   );
 }

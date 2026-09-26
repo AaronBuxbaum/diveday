@@ -6,7 +6,7 @@ export default function NewDiverLoading() {
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-48" descriptionWidth="w-full max-w-xl" />
+        <ShopPageHeaderSkeleton titleWidth="w-48" description={false} />
         <div className={sectionCardClass({ padding: "lg", className: "mt-8" })}>
           {["fullName", "email", "phone"].map((slot) => (
             <div key={slot} className="mt-4 first:mt-0">

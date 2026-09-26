@@ -1,7 +1,89 @@
 import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
-import { SectionCard } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { cardSummaryClass, SectionCard } from "@/components/ui/card";
+import { DisclosureCaret, type DisclosureCaretDirection } from "@/components/ui/DisclosureCaret";
+
+/**
+ * **A summary's caret, on the summary's first line** — pixel-craft classes 1
+ * and 2. A leading caret centred on its summary's whole block floats between
+ * the lines of a title that wraps, or sits level with the chips under it: on
+ * the manifest at 390 the dock checklist's caret hung 12.5px below its first
+ * line, "On this phone"'s 21px. The caret goes in a box one first line tall,
+ * in a summary whose row starts at the top (`cardSummaryClass`).
+ *
+ * `line` is what makes the box one first line tall. `h-lh` is the summary's
+ * own line, which is right when the title is set in the summary's type; a
+ * larger title passes its type class beside `h-lh`, so `1lh` is the title's
+ * line; a first line that is a row of 36px chips passes `h-9`.
+ */
+export function SummaryCaret({
+  direction = "right",
+  line = "h-lh",
+  className = "",
+}: {
+  direction?: DisclosureCaretDirection;
+  line?: string;
+  /** The caret's own classes: its size, its colour, its open-state turn. */
+  className?: string;
+}) {
+  return (
+    <span className={`flex shrink-0 items-center ${line}`}>
+      <DisclosureCaret direction={direction} className={className} />
+    </span>
+  );
+}
+
+/**
+ * **A danger zone: the one irreversible or record-ending act on a page,
+ * behind a disclosure** — "Delete site" on a dive site, "Erase … personal
+ * data" on a deleted diver's record.
+ *
+ * The two were hand-rolled two ways (pixel-craft class 12): a 20px band with a
+ * 16px semibold label and a typed "+", which reads as "add" and stays "+" when
+ * open; and a 12px box in a different red, its 14px medium label inset 16px on
+ * a 44px row with no affordance at all, because `display: flex` on a
+ * `<summary>` drops the browser's marker. One band now: the panel radius, one
+ * border, a card face (`cardSummaryClass`) with one label and the shared caret.
+ *
+ * It opens on its own outcome (`open`): a refusal inside a shut disclosure is
+ * invisible, which on these controls reads as the act having happened. The
+ * record's reversible "Delete <name>" is deliberately not one of these — it is
+ * a quiet ghost button in the record's foot, not a danger zone.
+ */
+export function DangerDisclosure({
+  summary,
+  open,
+  className = "",
+  children,
+}: {
+  /** The act, in the caller's words: "Delete site". */
+  summary: ReactNode;
+  open?: boolean;
+  /** The band's place on its page — a margin; never a second shape. */
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <details
+      open={open}
+      className={`group/danger rounded-panel border border-danger/30 bg-danger/5 ${className}`.trim()}
+    >
+      {/* `py-3` round a 24px line is the `min-h-12` exactly, so the label
+          centres in the row that starts at the top. */}
+      <summary
+        className={cardSummaryClass({
+          tone: "danger",
+          className:
+            "min-h-12 justify-between px-4 py-3 text-base font-semibold text-danger sm:px-5",
+        })}
+      >
+        <span className="min-w-0">{summary}</span>
+        <SummaryCaret direction="down" className="size-4 group-open/danger:rotate-180" />
+      </summary>
+      <div className="border-t border-danger/20 p-4 text-sm sm:p-5">{children}</div>
+    </details>
+  );
+}
 
 /**
  * A group of collapsables as **one object**: a card-shaped shell of hairline-
@@ -67,10 +149,16 @@ export function DisclosureRowList({
 export const LIST_ROW_SUMMARY_RING =
   "focus-visible:focus-ring-inset [details:first-child>&]:rounded-t-panel [details:last-child:not([open])>&]:rounded-b-panel";
 
-const SUMMARY_CLASS = `flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:px-6 ${LIST_ROW_SUMMARY_RING}`;
+/**
+ * The row's inset is `SectionCard`'s own, 16px then 20px from `sm`
+ * (pixel-craft class 5): at `px-5 sm:px-6` the rows' headings started 4px
+ * right of every card on the public schedule they sit among (113 against
+ * 109 at 1280, 37 against 33 at 390). `SettingsRows` keeps the same inset.
+ */
+const SUMMARY_CLASS = `flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:px-5 ${LIST_ROW_SUMMARY_RING}`;
 
 /** The row's body inset — the same horizontal padding as the summary above it. */
-const BODY_CLASS = "px-5 pb-6 sm:px-6";
+const BODY_CLASS = "px-4 pb-6 sm:px-5";
 
 export function DisclosureRow({
   id,
@@ -106,6 +194,17 @@ export function DisclosureRow({
  * A compact secondary-detail row (ADR 20260830-responsive-surface-consistency). The settled value stays visible at rest;
  * the editable form opens in place behind one native disclosure control.
  * Labels and values stack below sm so the row remains legible on narrow phones.
+ *
+ * **Stacked, the value sits under the label, not under the caret**
+ * (pixel-craft class 3). A column put it at the summary's edge, 20px left of
+ * the words it answers (staffing at 390). Below `sm` the summary is a grid of
+ * two columns, the caret and the words; the caret-and-label wrapper is
+ * `contents`, so both are the first row, and the value takes the words'
+ * column on the second. It starts where the label does whatever the caret's
+ * width, with no indent to keep in step with it. From `sm` up the wrapper is
+ * the row's leading group and the value its end, as before. The caret sits
+ * on the label's first line (`SummaryCaret`); `content-center` still centres
+ * a single line in the 44px floor.
  */
 export function CompactDisclosureRow({
   id,
@@ -139,13 +238,13 @@ export function CompactDisclosureRow({
       onToggle={onToggle ? (event) => onToggle(event.currentTarget.open) : undefined}
       className={`group/compact-row ${className}`.trim()}
     >
-      <summary className="-mx-2 flex min-h-11 cursor-pointer list-none flex-col items-start justify-center gap-1 rounded-lg px-2 py-2 text-sm select-none transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-primary sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <span className="flex min-w-0 items-center gap-2">
-          <DisclosureCaret className="shrink-0 text-muted group-open/compact-row:rotate-90" />
-          <span className="font-medium">{label}</span>
+      <summary className="-mx-2 grid min-h-11 cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)] content-center items-start gap-x-2 gap-y-1 rounded-lg px-2 py-2 text-sm select-none transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-primary sm:flex sm:items-center sm:justify-between sm:gap-3">
+        <span className="contents sm:flex sm:min-w-0 sm:items-center sm:gap-2">
+          <SummaryCaret className="text-muted group-open/compact-row:rotate-90" />
+          <span className="min-w-0 font-medium">{label}</span>
         </span>
         {value != null ? (
-          <span className="min-w-0 max-w-full whitespace-normal break-words text-muted sm:truncate sm:text-end">
+          <span className="col-start-2 min-w-0 max-w-full whitespace-normal break-words text-muted sm:truncate sm:text-end">
             {value}
           </span>
         ) : null}
@@ -174,7 +273,7 @@ export function DisclosureRowMessage({
   children: ReactNode;
 }) {
   return (
-    <div id={id} className="rise-in px-5 py-5 sm:px-6">
+    <div id={id} className="rise-in px-4 py-5 sm:px-5">
       <h3 className="text-base font-semibold">{heading}</h3>
       <div className="mt-1 text-sm text-muted">{children}</div>
     </div>

@@ -16,7 +16,15 @@ export default function Loading() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-56" descriptionWidth="w-full max-w-xl" />
+        {/* The bundle's one-paragraph inventory is five lines at 390px and
+            three at 1280, beside the download button. */}
+        <ShopPageHeaderSkeleton
+          titleWidth="w-56"
+          description
+          descriptionWidth="w-full max-w-xl"
+          descriptionLines={{ base: 5, sm: 3 }}
+          actions
+        />
         {/* Shell and rhythm from the same places the page takes them — the
             page's two halves at `space-y-10`, the backups cards at the tighter
             within-a-section gap. */}

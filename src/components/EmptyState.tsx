@@ -39,6 +39,7 @@ export function EmptyState({
   action,
   className,
   icon = true,
+  nested = false,
 }: {
   /** The teaching line. One sentence: what is not here, and usually why. */
   title: ReactNode;
@@ -51,21 +52,34 @@ export function EmptyState({
   /** The next step, where there is one. A link or a button, never a paragraph. */
   action?: ReactNode;
   className?: string;
-  /** Pass `false` for a tighter or nested card. */
+  /**
+   * Pass `false` where the bubbles would outweigh one line of text. It drops
+   * the icon and nothing else: a card inside another panel is `nested`, which
+   * this is not.
+   */
   icon?: boolean;
+  /**
+   * The card sits inside another panel: the dashed outline alone, with no fill
+   * or bed shadow of its own. A card in a card that stands on the bed casts its
+   * shadow onto the panel's own white (docs/design/pixel-craft.md, class 6).
+   */
+  nested?: boolean;
 }) {
   const Heading = TITLE_TAG[titleAs];
   return (
     <div
-      className={`rounded-panel border border-dashed border-border-strong bg-surface shadow-bed p-10 text-center${
-        className ? ` ${className}` : ""
-      }`}
+      className={`rounded-panel border border-dashed border-border-strong ${
+        nested ? "bg-transparent" : "bg-surface shadow-bed"
+      } p-10 text-center${className ? ` ${className}` : ""}`}
     >
-      {icon ? <DiveDayIcon name="empty" className="mx-auto mb-3 size-10 text-muted" /> : null}
+      {/* 28px: the bubbles fill their box, so this is 24px of ink with 2px of
+          box above it, and the panel's top air matches its bottom air. */}
+      {icon ? <DiveDayIcon name="empty" className="mx-auto mb-3 size-7 text-muted" /> : null}
       <Heading id={titleId} className="font-medium">
         {title}
       </Heading>
-      {body ? <p className="mx-auto mt-1 max-w-md text-sm text-muted">{body}</p> : null}
+      {/* `text-pretty`: a centred body left "booking." alone on its last line. */}
+      {body ? <p className="mx-auto mt-1 max-w-md text-pretty text-sm text-muted">{body}</p> : null}
       {action ? <div className="mt-4 flex flex-wrap justify-center gap-3">{action}</div> : null}
     </div>
   );

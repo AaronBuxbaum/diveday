@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 import { motionMs } from "@/lib/motion";
 
 // Matches the `.toast-dismiss` keyframe duration in globals.css. Kept as a
@@ -86,6 +87,9 @@ export function UndoToast({
   }
 
   if (!visible) return null;
+  // `ps-4 pe-1`, not `px-4`: Undo's own `px-3` supplies the rest of the end
+  // inset, so the word ends 16px inside the toast as the message starts 16px
+  // inside it. Both sides at `px-4` put Undo 7px further in (pixel-craft K-102).
   return (
     <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 print:hidden">
       <div
@@ -94,7 +98,7 @@ export function UndoToast({
         onMouseLeave={resume}
         onFocusCapture={pause}
         onBlurCapture={resume}
-        className={`flex items-center gap-4 rounded-inset border border-border bg-surface px-4 py-3 shadow-2xl ${
+        className={`flex items-center gap-4 rounded-inset border border-border bg-surface py-3 ps-4 pe-1 shadow-2xl ${
           dismissing ? "toast-dismiss" : "rise-in"
         }`}
       >
@@ -103,9 +107,20 @@ export function UndoToast({
           {Object.entries(fields).map(([name, value]) => (
             <input key={name} type="hidden" name={name} value={value} />
           ))}
+          {/* The shared link button at `sm`: a 44px target with the press and
+              the pointer every button has. It was hand-rolled at 52×36, under
+              the floor (pixel-craft K-347). `busy`: a SubmitButton disables
+              itself while its own undo is in flight. Its ring is drawn inside
+              its box: the toast's `pe-1` leaves 4px of room at the end, and the
+              outset ring's 5px ran over the toast's border (K-102). */}
           <SubmitButton
             pendingLabel={pendingLabel}
-            className="inline-flex min-h-9 items-center rounded-lg px-2 text-sm font-semibold text-primary underline-offset-2 hover:underline"
+            className={buttonClass({
+              variant: "link",
+              size: "sm",
+              busy: true,
+              className: "focus-visible:focus-ring-inset",
+            })}
           >
             {undoLabel}
           </SubmitButton>

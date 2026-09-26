@@ -156,6 +156,12 @@ async function expectNoA11yViolations(page: Page) {
           if (animation.effect?.getComputedTiming().iterations === Number.POSITIVE_INFINITY) {
             return false;
           }
+          // A scroll-driven animation (the table shell's edge fade,
+          // `animation-timeline: scroll(self inline)`) is positioned by a
+          // scroll offset, not a clock: its `finished` never settles, so
+          // waiting on it held every scan of a page with a `Table` until the
+          // test timed out. visual.spec.ts's settle skips it the same way.
+          if (animation.timeline !== document.timeline) return false;
           const target =
             animation.effect instanceof KeyframeEffect ? animation.effect.target : null;
           return !(target instanceof Element) || target.checkVisibility();

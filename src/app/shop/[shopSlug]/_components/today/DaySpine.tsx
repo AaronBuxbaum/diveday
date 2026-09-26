@@ -165,7 +165,16 @@ const ROW_GLYPH_INK = {
   neutral: "text-muted",
 } as const;
 
-function StationRow({ action, controls }: { action: TodayAction; controls: RowControls }) {
+function StationRow({
+  action,
+  controls,
+  closed = true,
+}: {
+  action: TodayAction;
+  controls: RowControls;
+  /** `false` inside a station's panel, whose own edge closes the list. */
+  closed?: boolean;
+}) {
   const { t } = controls;
   const performs = Boolean(
     action.waiver ||
@@ -185,7 +194,7 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
   // span renders — a dangling " · " is the shape of a sentence that was
   // deleted rather than one that never existed.
   const body = (
-    <p className="min-w-0 py-2 text-base leading-snug">
+    <p className="min-w-0 text-base leading-snug">
       {action.aboutDeparture ? null : (
         <>
           <span className="font-medium">{action.subject}</span>
@@ -287,6 +296,7 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
         tone,
       }}
       trailing={control}
+      closed={closed}
       {...door}
     >
       {body}
@@ -297,9 +307,11 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
 function StationRows({ rows, controls }: { rows: readonly TodayAction[]; controls: RowControls }) {
   if (rows.length === 0) return null;
   return (
+    // The panel's own edge closes the list: a closing rule its padding above
+    // the panel's border was two parallel lines with nothing between them.
     <ul className="mt-4">
       {rows.map((action) => (
-        <StationRow key={rowKey(action)} action={action} controls={controls} />
+        <StationRow key={rowKey(action)} action={action} controls={controls} closed={false} />
       ))}
     </ul>
   );
@@ -675,7 +687,7 @@ export function DaySpine({
               href={`/shop/${shopSlug}/trips/${firstBooking.tripId}`}
               linkLabel={firstBooking.tripTitle}
             >
-              <div className="min-w-0 py-2">
+              <div className="min-w-0">
                 <p className="text-base font-medium break-words">
                   {firstBooking.diverName}{" "}
                   <span className="font-normal text-muted">· {firstBooking.tripTitle}</span>
@@ -819,7 +831,7 @@ export function DaySpine({
 
       {deskActions.length > 0 || showPaymentsRow || drafts.length > 0 ? (
         <LedgerGroup as="h2" label={t("shopHome.spine.deskLabel")}>
-          <ul className="mt-1.5">
+          <ul>
             {/* A closing leftover owns the row once the day settles. Keep
                 standing desk work here, but never paint one action twice. */}
             {deskActions.map((action) => (
@@ -834,7 +846,7 @@ export function DaySpine({
                 href={draft.href}
                 linkLabel={t("today.unfinished.resume")}
               >
-                <p className="py-2 text-sm text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</p>
+                <p className="text-sm text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</p>
               </LedgerRow>
             ))}
             {showPaymentsRow ? (
@@ -842,7 +854,7 @@ export function DaySpine({
                 href={`/shop/${shopSlug}/settings#stripe`}
                 linkLabel={t("shopHome.spine.deskPaymentsAction")}
               >
-                <p className="py-2 text-sm text-muted">{t("shopHome.spine.deskPaymentsRow")}</p>
+                <p className="text-sm text-muted">{t("shopHome.spine.deskPaymentsRow")}</p>
               </LedgerRow>
             ) : null}
           </ul>

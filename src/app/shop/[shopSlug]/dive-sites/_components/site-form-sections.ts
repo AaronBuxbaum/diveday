@@ -55,6 +55,40 @@ export const SITE_FORM_SECTION_ORDER = [
 ] as const satisfies readonly SiteFormSection[];
 
 /**
+ * **Each section's rail entry, as the loading skeleton draws it** before the
+ * words arrive (`EditorRailSkeleton`, docs/design/pixel-craft.md class 11: a
+ * skeleton has the loaded page's geometry).
+ *
+ * Below `lg` the rail is a wrap of 44px links, so how many rows it takes, and
+ * how far the form under it sits, depends on how wide the words are. Eleven
+ * uniform stubs wrapped three to a row at 390, four rows, where these labels
+ * wrap 3/3/2/2/1, five, and the form dropped 44px when the editor arrived.
+ * Each width here is its en-US label at 14px medium plus the link's `px-3`
+ * either side, rounded up to the 4px step, measured on dive-site-new's 390
+ * capture: that wraps 2/2/2/2/2/1 at 360, 3/3/2/2/1 at 390, 5/5/1 at 640 and
+ * 6/5 at 768, the loaded rail's rows at each. A section whose en-US label
+ * changes is re-measured here.
+ */
+export const SITE_FORM_RAIL_STUB_WIDTHS = {
+  about: "w-20", // The site, 77px
+  forecast: "w-28", // GPS location, 108px
+  route: "w-38", // The route you swim, 152px
+  photos: "w-18", // Photos, 71px
+  underwater: "w-37", // What's down there, 148px
+  dive: "w-20", // The dive, 80px
+  planning: "w-31", // Planning notes, 122px
+  fit: "w-36", // Who this site suits, 144px
+  landmarks: "w-25", // Landmarks, 97px
+  fieldGuide: "w-24", // Field guide, 95px
+  certification: "w-49", // Certification requirements, 196px
+} as const satisfies Record<SiteFormSection, string>;
+
+/** The skeleton's stubs, in page order. */
+export const SITE_FORM_RAIL_STUBS: readonly string[] = SITE_FORM_SECTION_ORDER.map(
+  (section) => SITE_FORM_RAIL_STUB_WIDTHS[section],
+);
+
+/**
  * Each section's name, in the staffer's language.
  *
  * Seven of the ten reuse the legend the bordered fieldset they replaced already

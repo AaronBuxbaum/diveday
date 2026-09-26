@@ -4,6 +4,7 @@ import {
   daysFromNow,
   e2eNow,
   HELD_SEND_TIMEOUT_MS,
+  openPaperWaiverForm,
   openTripFromBoard,
   publicTripUrl,
   seededTripId,
@@ -438,7 +439,7 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
   const searchIsShowing = page.getByRole("heading", { name: /Search results for .Priya Sharma./ });
   await expect(searchIsShowing).toBeVisible();
 
-  await card.getByText("Mark signed on paper").click();
+  await openPaperWaiverForm(card);
   // The medical attestation is the control, not a buried confirm. The
   // browser's own `required` already blocks an unchecked submit; strip it to
   // prove the *server* refuses too, rather than trusting client convenience
@@ -686,7 +687,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
     .filter({ hasText: "Odile Marchand" })
     .filter({ visible: true });
   await expect(odile).toHaveCount(1);
-  await odile.getByText("Mark signed on paper").click();
+  await openPaperWaiverForm(odile);
   await odile
     .getByLabel("I have this diver’s signed release on file", { exact: false })
     .filter({ visible: true })

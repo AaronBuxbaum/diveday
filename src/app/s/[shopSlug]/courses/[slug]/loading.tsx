@@ -16,6 +16,7 @@ export default function CoursePageLoading() {
           <div className="p-6 sm:p-8">
             <ShopPageHeaderSkeleton
               titleWidth="w-80 max-w-full"
+              description
               descriptionWidth="w-64 max-w-full"
             />
             <div className="h-8 w-44 max-w-full rounded bg-surface-sunken" />

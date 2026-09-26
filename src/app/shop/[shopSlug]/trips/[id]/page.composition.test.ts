@@ -34,3 +34,22 @@ describe("the departure page's packing-list anchor", () => {
     expect(inside.endsWith("</Suspense>")).toBe(true);
   });
 });
+
+describe("the cancelled departure's band", () => {
+  /**
+   * **A tone panel is a card in a tone** (card.tsx's `TONE_PANEL_CLASS`,
+   * pixel-craft classes 3 and 12). The band hand-rolled `p-5` with no `sm:`
+   * step and no bed, the geometry K-351 took off the minimum-seats band on
+   * this same page: on a phone its words started 4px right of every card
+   * above and below it. Only its danger border and fill are its own.
+   */
+  it("sits on the card's geometry, in its own danger tone", () => {
+    const open = SOURCE.indexOf("{cancelled && (canConfigure");
+    expect(open).toBeGreaterThan(-1);
+    const section = SOURCE.indexOf("<section", open);
+    const tag = SOURCE.slice(section, SOURCE.indexOf(">", section) + 1);
+    expect(tag).toMatch(/\$\{TONE_PANEL_CLASS\}/);
+    expect(tag).toContain("border-danger/40");
+    expect(tag).not.toMatch(/\b(rounded-panel|p-5)\b/);
+  });
+});

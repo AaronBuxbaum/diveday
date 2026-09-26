@@ -22,6 +22,7 @@ import {
   openDiverFileGroup,
   openManifestPerson,
   openOnThisPhone,
+  openPaperWaiverForm,
   openRosterDetails,
   openRosterNotes,
   openSettingsRow,
@@ -4360,7 +4361,7 @@ for (const scheme of ["light", "dark"] as const) {
           .locator("article")
           .filter({ hasText: "Odile Marchand" })
           .filter({ visible: true });
-        await row.getByText("Mark signed on paper").click();
+        await openPaperWaiverForm(row);
         await row
           .getByLabel("I have this diver’s signed release on file", { exact: false })
           .filter({ visible: true })
@@ -5216,8 +5217,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("region", { name: "Waiver" })
           .getByText("Send options", { exact: true })
           .click();
-        await expect(page.getByRole("button", { name: "Mark signed on paper" })).toBeVisible();
-        await page.getByRole("button", { name: "Mark signed on paper" }).click();
+        await openPaperWaiverForm(page);
         await page
           .getByLabel("I have this diver’s signed release on file", { exact: false })
           .check();
@@ -5354,7 +5354,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openDiverProfile(page, "Priya", "Priya Sharma");
         await openDiverFileGroup(page, "Waiver");
         await page.getByRole("region", { name: "Waiver" }).getByText("Send options").click();
-        await page.getByRole("button", { name: "Mark signed on paper" }).click();
+        await openPaperWaiverForm(page);
         // The panel itself, not the trigger that opened it — so the capture can
         // never photograph the row mid-swap.
         await page.getByRole("button", { name: "Record paper signature" }).waitFor();
@@ -5772,7 +5772,7 @@ for (const scheme of ["light", "dark"] as const) {
           page.locator("article").filter({ hasText: name }).filter({ visible: true });
         for (const name of ["Odile Marchand", "Hana Kobayashi"]) {
           const row = counterRow(name);
-          await row.getByText("Mark signed on paper").click();
+          await openPaperWaiverForm(row);
           await row
             .getByLabel("I have this diver’s signed release on file", { exact: false })
             .filter({ visible: true })
@@ -7909,7 +7909,7 @@ for (const scheme of ["light", "dark"] as const) {
          * the offline page's qualified readiness word — "Blocked when saved",
          * which was measured and accepted at two wrapped lines — and the
          * Spanish is "Bloqueado cuando se guardó", four words and none of them
-         * short, in a tile capped at `max-w-20`. The chip **wraps** rather than
+         * short, in a tile a fixed 80px wide (`w-20`). The chip **wraps** rather than
          * truncating, on purpose (`MissingDiversGrid.tsx`: a clipped
          * "Blocked wh…" says less than the bare word it replaced), so the cost
          * lands as tile height inside a `flex-wrap` row.
@@ -7937,6 +7937,38 @@ for (const scheme of ["light", "dark"] as const) {
             page.getByRole("heading", { name: /^Pendientes de embarcar/ }),
           ).toBeVisible();
           await capture(page, "offline-manifest-roll-call", scheme, { locale: SPANISH });
+        });
+
+        /**
+         * **The same roll call in Boat mode**, the way it is read at the rail
+         * in sun. Glare mode floors every `text-xs` at 16px, so the stat
+         * tiles' "Embarcados" / "Buceadores" / "Pendientes" are wider than any
+         * inset a phone tile can give them: they measured fine in the capture
+         * above and spilled past the 8px gap into the next tile here (K-473
+         * review). The probe sweeps this at 360 as well. Switched by the
+         * control's own change event, which is what the Boat mode button
+         * sends, so the capture does not depend on a light sensor.
+         */
+        test(`the offline roll call in Boat mode reads in Spanish (${scheme})`, async ({
+          page,
+        }) => {
+          test.setTimeout(FLOW_TIMEOUT_MS);
+          await openReefTrip(page);
+          await page.goto(`${new URL(page.url()).pathname}/manifest`);
+          await settleOfflineShellWorker(page);
+          await openOnThisPhone(page);
+          await page.getByRole("link", { name: "Abrir pase de lista sin conexión" }).click();
+          await page.waitForURL(/offline-manifest/);
+          await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
+          await page.evaluate(() =>
+            window.dispatchEvent(
+              new CustomEvent("diveday:contrast-mode-change", { detail: { mode: "full" } }),
+            ),
+          );
+          await expect(page.locator("html")).toHaveClass(/glare-mode/);
+          await capture(page, "offline-manifest-roll-call-high-contrast", scheme, {
+            locale: SPANISH,
+          });
         });
 
         /**

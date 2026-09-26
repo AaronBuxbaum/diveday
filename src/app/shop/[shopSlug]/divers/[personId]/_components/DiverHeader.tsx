@@ -106,12 +106,7 @@ export function DiverHeader({
             {diver.person.email ? (
               <a
                 href={mailtoHref(diver.person.email)}
-                className={buttonClass({
-                  variant: "link",
-                  size: "sm",
-                  flush: true,
-                  className: "hover:underline",
-                })}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
               >
                 {diver.person.email}
               </a>
@@ -119,12 +114,7 @@ export function DiverHeader({
             {diver.person.phone ? (
               <a
                 href={telHref(diver.person.phone)}
-                className={buttonClass({
-                  variant: "link",
-                  size: "sm",
-                  flush: true,
-                  className: "hover:underline",
-                })}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
               >
                 {displayStoredPhone(diver.person.phone)}
               </a>

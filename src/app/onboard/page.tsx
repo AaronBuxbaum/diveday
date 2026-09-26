@@ -9,7 +9,7 @@ import { SuggestShopLink } from "@/components/SuggestShopLink";
 import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneOptions";
 import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/ledger";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -417,12 +417,7 @@ export default async function OnboardPage({
                 />
               </Field>
               <Field label={t("account.onboard.firstDepartureLabel")} hint={t("common.optional")}>
-                <input
-                  name="departure"
-                  type="time"
-                  defaultValue={firstDay.departure ?? ""}
-                  className={controlClass}
-                />
+                <DateField name="departure" type="time" defaultValue={firstDay.departure ?? ""} />
               </Field>
             </FieldGrid>
           </section>

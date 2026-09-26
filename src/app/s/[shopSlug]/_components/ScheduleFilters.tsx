@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 
 export type ScheduleFiltersCopy = {
@@ -167,17 +167,16 @@ export function ScheduleFilters({
               </select>
             </Field>
           </FieldGrid>
-          <label className="flex min-h-11 items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="hasSpace"
-              value="1"
-              defaultChecked={hasSpaceFilter}
-              onChange={submit}
-              className="size-4"
-            />
+          <ChoiceRow
+            type="checkbox"
+            name="hasSpace"
+            value="1"
+            defaultChecked={hasSpaceFilter}
+            onChange={submit}
+            className="text-sm"
+          >
             {copy.hasSpace}
-          </label>
+          </ChoiceRow>
           {/* Opt-in, and only once a level is stated. Marking rather than hiding is
               the default because a shop will happily take an Open Water diver on an
               Advanced charter as a guided dive, or sell them the specialty — a
@@ -185,17 +184,16 @@ export function ScheduleFilters({
               the diver the option. This is for the reader who wants the shorter
               list anyway. */}
           {canDiveFilter ? (
-            <label className="flex min-h-11 items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="hideAbove"
-                value="1"
-                defaultChecked={hideAboveFilter}
-                onChange={submit}
-                className="size-4"
-              />
+            <ChoiceRow
+              type="checkbox"
+              name="hideAbove"
+              value="1"
+              defaultChecked={hideAboveFilter}
+              onChange={submit}
+              className="text-sm"
+            >
               {copy.hideAboveLevel}
-            </label>
+            </ChoiceRow>
           ) : null}
         </div>
       </details>

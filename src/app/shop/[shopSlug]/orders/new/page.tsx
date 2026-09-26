@@ -6,7 +6,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus, legendClass } from "@/components/ui/form";
 import { canPersonManageOrders } from "@/db/authz";
 import { getBookingContext, listOrderableCustomers } from "@/db/orders";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -240,7 +240,7 @@ export default async function NewOrderPage({
               looks answered. A real shop still types it. */}
           {shop.taxEnabled ? (
             <fieldset className="rounded-lg border border-border p-4">
-              <legend className="px-1 text-sm font-medium">
+              <legend className={`${legendClass} text-sm font-medium`}>
                 {t("orders.new.taxLocationLegend")}
               </legend>
               <p className="mt-1 text-sm text-muted">{t("orders.new.taxLocationHint")}</p>

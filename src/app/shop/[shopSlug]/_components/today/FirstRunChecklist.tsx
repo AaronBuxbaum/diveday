@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { Copyable } from "@/components/Copyable";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
-import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
+import { DoorChevron, LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 
 /**
@@ -85,13 +84,21 @@ export type FirstRunChecklistCopy = {
  * name and a chevron, in the row's own type.
  *
  * Every other open step ends in nothing at all — the row is the door, and
- * `LedgerRow` draws that chevron itself (ADR 20260911-clear-the-deck).
+ * `LedgerRow` draws that chevron itself (ADR 20260911-clear-the-deck). This
+ * one draws the same glyph in the same box (`DoorChevron`), so its arrow ends
+ * on the content edge the doors' arrows end on; the square `chevron-right` it
+ * drew stopped 5px short of it (pixel-craft class 2).
+ *
+ * **And as far from its words as a door's arrow is from its row's** (`gap-3`,
+ * the row's own gap). The cropped glyph has no side bearing left to stand in
+ * for a gap: at `gap-1` "payments" and its arrow sat 4px apart where every
+ * door's arrow stands 11-12px clear of its words (K-118 review, today-empty).
  */
 function StepDoorLabel({ label }: { label: string }) {
   return (
-    <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
+    <span className="flex shrink-0 items-center gap-3 text-sm font-medium text-primary">
       {label}
-      <DiveDayIcon name="chevron-right" className="size-4" />
+      <DoorChevron ink="current" />
     </span>
   );
 }
@@ -147,7 +154,7 @@ function ChecklistStep({
       }
       {...door}
     >
-      <div className="min-w-0 py-2">
+      <div className="min-w-0">
         <p className="font-medium">{title}</p>
         <p className="mt-0.5 text-sm text-muted">{done ? doneLabel : body}</p>
       </div>
@@ -191,7 +198,7 @@ export function FirstRunChecklist({
 
   return (
     <LedgerGroup as="h2" id="first-run-heading" label={copy.groupLabel} meta={copy.progress}>
-      <p className="mt-2 text-sm text-muted">{copy.subtitle}</p>
+      <p className="text-sm text-muted">{copy.subtitle}</p>
       <ol className="mt-3">
         <ChecklistStep
           title={copy.contactTitle}
@@ -274,7 +281,7 @@ export function FirstRunChecklist({
               defaults to `min-width:auto`, so the row grows to its widest child
               — the URL — and pushes the page wider than the viewport instead of
               clipping it. */}
-          <div className="min-w-0 py-2">
+          <div className="min-w-0">
             <p className="font-medium">{copy.scheduleTitle}</p>
             <p className="mt-0.5 text-sm text-muted">{copy.scheduleBody}</p>
             <p className="mt-1 max-w-full truncate font-mono text-xs text-muted">{scheduleUrl}</p>
@@ -298,7 +305,7 @@ export function FirstRunChecklist({
             )
           }
         >
-          <div className="min-w-0 py-2">
+          <div className="min-w-0">
             <p className="font-medium">{copy.stripeTitle}</p>
             <p className="mt-0.5 text-sm text-muted">
               {stripeDone ? copy.stripeDone : copy.stripeBody}

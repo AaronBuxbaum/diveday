@@ -379,9 +379,12 @@ describe("flySafeFrom", () => {
     });
     if (!result) throw new Error("expected a result");
     // 20:10Z + 18h = 14:10Z on the 26th, a Sunday, which is 10:10 AM in Key Largo.
-    expect(formatWeekdayTime(result.from, "en-US", "America/New_York")).toBe("Sunday 10:10 AM");
+    // One unit on the line (src/lib/date-parts.ts): U+00A0 where Intl had a space.
+    expect(formatWeekdayTime(result.from, "en-US", "America/New_York")).toBe(
+      "Sunday\u00A010:10\u00A0AM",
+    );
     expect(formatWeekdayTime(result.from, "es-ES", "America/New_York")).toBe("domingo, 10:10");
-    expect(formatWeekdayTime(result.from, "en-US", "UTC")).toBe("Sunday 2:10 PM");
+    expect(formatWeekdayTime(result.from, "en-US", "UTC")).toBe("Sunday\u00A02:10\u00A0PM");
   });
 });
 

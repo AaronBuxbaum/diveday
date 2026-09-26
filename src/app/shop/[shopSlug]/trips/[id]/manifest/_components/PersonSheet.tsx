@@ -222,9 +222,14 @@ export function PersonSheet({
 
   return (
     <>
+      {/* `data-print-content`: the trigger's content is the person, and the
+          packet's print backstop hides every other button (`globals.css`,
+          `.trip-print-bundle`). The caret is the control part, so it alone
+          stays off paper. */}
       <button
         ref={triggerRef}
         type="button"
+        data-print-content
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={sheetId}
@@ -233,7 +238,7 @@ export function PersonSheet({
         onClick={() => setOpen(true)}
       >
         {trigger}
-        <DisclosureCaret className="shrink-0" />
+        <DisclosureCaret className="shrink-0 print:hidden" />
       </button>
       {overlay ? createPortal(overlay, document.body) : null}
     </>

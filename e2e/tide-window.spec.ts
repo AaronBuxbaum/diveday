@@ -18,7 +18,9 @@ import { openSettingsRow, openTripAbout } from "./helpers";
  * the same seeded Molasses Reef and keeps both tests on one fixture.
  */
 
-const TURN = /(Next|Last) (high|low) water at \d{1,2}:\d{2} [AP]M/;
+/** `\s` before the meridiem: a formatted time keeps "7:05 AM" whole with
+ *  U+00A0, and `getByText` matches a regex against the raw text. */
+const TURN = /(Next|Last) (high|low) water at \d{1,2}:\d{2}\s[AP]M/;
 const STAFF_LINE = new RegExp(`${TURN.source}; this departure reaches the site`);
 const DIVER_LINE = new RegExp(`${TURN.source}; the boat reaches the site`);
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";

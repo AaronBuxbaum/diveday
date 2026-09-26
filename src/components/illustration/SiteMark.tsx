@@ -132,16 +132,22 @@ function Drawing({ mark, coral }: { mark: ReefDrawingCode; coral: boolean }) {
       // rule 2): a hull, a wheelhouse and the swell under it. The only drawing
       // that ever moves, and only once, when the crew says the boat is
       // underway — see `BoatDrift`.
+      //
+      // Its lines run x 3–117 and y 13–67, centred on the canvas's (60, 40).
+      // They ran x 6–120 and y 22–76, which sat the ink 2.5px low in the 44×30
+      // tile and ran the swell's stroke into the canvas's right edge. Centre a
+      // redrawn boat the same way, in its own coordinates, never by nudging
+      // the tile.
       return (
         <>
-          <path d="M18 50h84l-10 14H30Z" fill={FILL} />
-          <path d="M46 50V36h26v14M58 36V22" />
-          <path d="M6 70c14-8 28-8 42 0s28 8 42 0 20-6 30-2" />
-          <path d="M96 30c3 2 3 6 0 8" opacity="0.5" />
+          <path d="M15 41h84l-10 14H27Z" fill={FILL} />
+          <path d="M43 41V27h26v14M55 27V13" />
+          <path d="M3 61c14-8 28-8 42 0s28 8 42 0 20-6 30-2" />
+          <path d="M93 21c3 2 3 6 0 8" opacity="0.5" />
           {/* The boat's own coral detail: the buoy it moors to. Budgeted like
               every other drawing's, and dropped when the surface has spent its
               coral somewhere else. */}
-          <CoralDetail cx={110} cy={56} coral={coral} />
+          <CoralDetail cx={107} cy={47} coral={coral} />
         </>
       );
     case "turtle":

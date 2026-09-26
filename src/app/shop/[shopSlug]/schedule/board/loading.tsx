@@ -14,7 +14,10 @@ export default function ScheduleBoardLoading() {
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-48" descriptionWidth="w-56" />
+        {/* Two rows of doors on a phone: "View public page", "Add a
+            departure" and "Add a booking" wrap to two at 390px for anyone
+            who can configure the board. */}
+        <ShopPageHeaderSkeleton titleWidth="w-48" description={false} actions={2} />
         <div className="mt-4 hidden xl:block">
           <div className="flex items-center gap-2">
             <div className="size-10 rounded-lg bg-surface-sunken" />

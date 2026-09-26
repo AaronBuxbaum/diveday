@@ -317,6 +317,42 @@ describe("one primary, and the rest are the rows themselves", () => {
     expect(stripe.className).not.toContain("absolute");
   });
 
+  /**
+   * **Its arrow is the doors' arrow** (pixel-craft class 2). It wears the
+   * doors' words and chevron, and drew the square `chevron-right`, whose ink
+   * stops 5px inside its 16px box: on today-empty the doors' arrows ended on
+   * the content edge and this one 5px short of it, two right edges in one
+   * list. It draws the doors' ink-cropped chevron, in its link's colour.
+   */
+  it("ends Stripe's arrow on the edge the doors' arrows end on", () => {
+    const { container } = renderFresh();
+    const stripe = screen.getByRole("link", { name: "Connect Stripe" }).querySelector("svg");
+    const door = container.querySelector("li > svg");
+    expect(door).not.toBeNull();
+    expect(stripe?.getAttribute("viewBox")).toBe(door?.getAttribute("viewBox"));
+    expect(stripe?.innerHTML).toBe(door?.innerHTML);
+    expect(stripe).toHaveClass("h-4", "w-auto", "shrink-0");
+    expect(stripe).not.toHaveClass("size-4");
+    // The link's primary ink, not the door's muted one.
+    expect(stripe).not.toHaveClass("text-muted");
+  });
+
+  it("sets Stripe's arrow as far from its words as a door's is from its row", () => {
+    // The ink-cropped chevron has no side bearing left to act as a gap, so the
+    // label's `gap-1` put "payments" and its arrow 4px apart where every
+    // door's arrow stands clear of its words by the row's own gap (K-118
+    // review, today-empty).
+    const { container } = renderFresh();
+    const gaps = (element: Element | null | undefined) =>
+      [...(element?.classList ?? [])].filter((token) => token.startsWith("gap-"));
+    const label = screen
+      .getByRole("link", { name: "Connect Stripe" })
+      .querySelector("svg")?.parentElement;
+    const door = container.querySelector("li > svg")?.parentElement;
+    expect(gaps(label)).toEqual(["gap-3"]);
+    expect(gaps(label)).toEqual(gaps(door));
+  });
+
   it("leaves a settled step nothing at all to press", () => {
     renderFresh({ contactDone: true, profileDone: true, stripeDone: true });
     expect(screen.queryByRole("link", { name: "Add contact details" })).not.toBeInTheDocument();

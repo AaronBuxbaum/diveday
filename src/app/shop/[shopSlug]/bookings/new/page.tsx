@@ -249,10 +249,7 @@ export default async function NewBookingPage({
         <EmptyState
           title={t("bookings.new.tripEmpty")}
           action={
-            <Link
-              href={`/shop/${shopSlug}/schedule/board`}
-              className={buttonClass({ className: "mt-4" })}
-            >
+            <Link href={`/shop/${shopSlug}/schedule/board`} className={buttonClass()}>
               {t("bookings.new.tripEmptyAction")}
             </Link>
           }
@@ -272,7 +269,6 @@ export default async function NewBookingPage({
             href={pageHref}
             total={t("bookings.new.pagination.total", { count: tripPage.total })}
             words={staffPagerWords(t)}
-            className="mt-4"
           />
           {/* Under the list rather than over it: it explains an absence, and
               an absence is only noticed once the reader has looked for it. */}

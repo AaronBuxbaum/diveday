@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { crewReadingFor, hullGeometry, seatReadingFor, VIEW_HEIGHT } from "./hull";
+import { crewReadingFor, hullGeometry, seatReadingFor } from "./hull";
 
 /**
  * **The two hulls the canvas drew**, copied out of
@@ -18,6 +18,8 @@ const DRAWN = {
       { cx: 322, cy: 94 },
     ],
     helm: { cx: 334, cy: 75 },
+    /** The canvas's `viewBox`, around the drawing and the water beside it. */
+    viewBox: "0 0 382 150",
   },
   8: {
     width: 298,
@@ -26,24 +28,98 @@ const DRAWN = {
     midline: { x1: 16, x2: 214 },
     crew: [{ cx: 238, cy: 56 }],
     helm: { cx: 250, cy: 75 },
+    viewBox: "0 0 298 150",
   },
 } as const;
 
+/**
+ * **Where the built hull leaves the drawing, on purpose.** The box around it:
+ * the canvas's `viewBox` kept 26 units of empty water above the gunwale, 26
+ * below it and 8 past the bow, and on a full-width hull that scales with the
+ * page — 88px above it and 86px below it at 1280, where every other gap on the
+ * trip page is 16–40 (pixel-craft K-39). The built box is the drawing's own:
+ * the outline and its 1.5 stroke, one unit of room each side.
+ *
+ * And the helm: 7 units further forward than the canvas put it. At the
+ * canvas's `bow + 56` its ring sat 22.47 units from each crew circle's centre,
+ * where the two stroked radii sum to 22.5 — the rings touched at every scale
+ * and merged at 390 (pixel-craft K-124).
+ */
+const HELM_MOVED_FORWARD = 7;
+const CROPPED = {
+  12: { x: 5, y: 25, width: 370, height: 100 },
+  8: { x: 5, y: 25, width: 286, height: 100 },
+} as const;
+
 describe("the hull", () => {
-  it("is the one the canvas drew, to the unit", () => {
+  it("is the one the canvas drew, to the unit, but for its box and its helm", () => {
     for (const [capacity, drawn] of Object.entries(DRAWN)) {
       const geometry = hullGeometry({
         capacity: Number(capacity),
         crewCount: drawn.crew.length,
       });
-      expect(geometry.width, `capacity ${capacity} width`).toBe(drawn.width);
-      expect(geometry.height).toBe(VIEW_HEIGHT);
+      expect(geometry.viewBox, `capacity ${capacity} box`).toEqual(
+        CROPPED[Number(capacity) as keyof typeof CROPPED],
+      );
+      // A crop of the canvas's box, never a box of its own: only water went.
+      const [, , drawnWidth, drawnHeight] = drawn.viewBox.split(" ").map(Number);
+      expect(geometry.viewBox.x + geometry.viewBox.width).toBeLessThanOrEqual(drawnWidth);
+      expect(geometry.viewBox.y + geometry.viewBox.height).toBeLessThanOrEqual(drawnHeight);
       expect(geometry.outline, `capacity ${capacity} outline`).toBe(drawn.outline);
       expect(geometry.midline.x1).toBe(drawn.midline.x1);
       expect(geometry.midline.x2).toBe(drawn.midline.x2);
       expect(geometry.crew.map(({ cx, cy }) => ({ cx, cy }))).toEqual(drawn.crew);
-      expect(geometry.helm.cx).toBe(drawn.helm.cx);
+      expect(geometry.helm.cx).toBe(drawn.helm.cx + HELM_MOVED_FORWARD);
       expect(geometry.helm.cy).toBe(drawn.helm.cy);
+    }
+  });
+
+  it("keeps its box to the drawing, with nothing it draws outside it", () => {
+    for (const capacity of [1, 2, 7, 8, 12, 16, 40]) {
+      const geometry = hullGeometry({ capacity, crewCount: 2 });
+      const { x, y, width, height } = geometry.viewBox;
+      const bow = Number(geometry.outline.match(/^M\d+,\d+ L(\d+),/)?.[1]);
+      // The outline runs transom (6) to bow tip (bow + 96) and gunwale (26) to
+      // gunwale (124); its 1.5 stroke reaches 0.75 past each, inside the box.
+      expect(x).toBeLessThanOrEqual(6 - 0.75);
+      expect(x + width).toBeGreaterThanOrEqual(bow + 96 + 0.75);
+      expect(x + width).toBeLessThanOrEqual(bow + 96 + 1);
+      expect(y).toBeLessThanOrEqual(26 - 0.75);
+      expect(y + height).toBeGreaterThanOrEqual(124 + 0.75);
+      // A missing diver's ring is the widest mark on a seat: 3.5 out, 2.5 wide.
+      for (const seat of geometry.seats) {
+        expect(seat.y - 4.75).toBeGreaterThanOrEqual(y);
+        expect(seat.y + seat.height + 4.75).toBeLessThanOrEqual(y + height);
+      }
+      // And a missing guide's printed ring is the widest on a crew circle: r + 3, 1 wide.
+      for (const member of geometry.crew) {
+        expect(member.cy - (member.r + 3.5)).toBeGreaterThanOrEqual(y);
+        expect(member.cy + member.r + 3.5).toBeLessThanOrEqual(y + height);
+      }
+    }
+  });
+
+  /**
+   * **The helm never touches a guide.** The widest line a crew circle wears is
+   * a missing guide's: a 3-unit stroke on screen, and on paper a ring at
+   * r + 3, 1 wide. The helm's ring is r 9 at 1.5. Each of those clears the
+   * helm by at least 1.5 units of hull, for one guide and for two.
+   */
+  it("keeps the helm's ring clear of every crew circle, a missing guide's rings included", () => {
+    for (const crewCount of [1, 2]) {
+      const { crew, helm } = hullGeometry({ capacity: 12, crewCount });
+      const helmReach = helm.ringRadius + 0.75;
+      for (const member of crew) {
+        const apart = Math.hypot(helm.cx - member.cx, helm.cy - member.cy);
+        expect(
+          apart - (member.r + 1.5) - helmReach,
+          `screen, crew ${crewCount}`,
+        ).toBeGreaterThanOrEqual(1.5);
+        expect(
+          apart - (member.r + 3 + 0.5) - helmReach,
+          `paper, crew ${crewCount}`,
+        ).toBeGreaterThanOrEqual(1.5);
+      }
     }
   });
 
@@ -98,8 +174,8 @@ describe("the hull", () => {
 
   it("keeps two initials only while they are big enough to read", () => {
     // The hull keeps its aspect, so the lettering scales with the width: at 390
-    // a boat of sixteen renders its initials at 10.1px and a boat of
-    // twenty-four at 7.1px, which is texture rather than letters.
+    // a boat of sixteen renders its initials at 9.9px and a boat of
+    // twenty-four at 7.2px, which is texture rather than letters.
     expect(hullGeometry({ capacity: 12 }).showsInitials).toBe(true);
     expect(hullGeometry({ capacity: 16 }).showsInitials).toBe(true);
     expect(hullGeometry({ capacity: 24 }).showsInitials).toBe(false);

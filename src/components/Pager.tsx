@@ -49,6 +49,12 @@ export function staffPagerWords(t: StaffTranslator): PagerWords {
  * invoices should never be told it is on "page 1 of 1", so callers need no
  * `pageCount > 1` guard of their own.
  *
+ * **Its offset from the list above is its own**, and there is no `className`
+ * to change it. Every caller used to pass a top margin — `mt-4` on ten lists,
+ * `mt-6` on six, `mt-8` on three — so one pager sat 16, 24 or 32px under its
+ * list depending on the page (docs/design/pixel-craft.md, class 12). Nothing
+ * else about it was ever a caller's to set.
+ *
  * A Server Component, deliberately — staff copy never crosses to the client
  * (`src/i18n/staff-messages.ts`). A Client Component that needs a pager takes
  * the rendered element as a prop; see the diver roster's `pager`.
@@ -59,7 +65,6 @@ export function Pager({
   href,
   words,
   total,
-  className,
 }: {
   /** The page being shown, 1-based and already clamped by the query. */
   page: number;
@@ -74,7 +79,6 @@ export function Pager({
    * into a shared sentence does not survive translation.
    */
   total?: string;
-  className?: string;
 }) {
   if (pageCount <= 1) return null;
   const position = words.position(page, pageCount);
@@ -116,7 +120,7 @@ export function Pager({
   return (
     <nav
       aria-label={words.label}
-      className={`grid grid-cols-2 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]${className ? ` ${className}` : ""}`}
+      className="mt-6 grid grid-cols-2 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]"
     >
       {page > 1 ? (
         <Link

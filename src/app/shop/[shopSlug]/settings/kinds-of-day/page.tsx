@@ -104,44 +104,67 @@ export default async function KindsOfDaySettingsPage({
                         className={controlClassFor("md")}
                       />
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    {/* **Save and Delete on one line**, in the rename form's
+                        own action row. Delete had a form of its own after this
+                        one, and at 390px a word became a 180px block: the box,
+                        Save alone on the right, Delete alone on the left. The
+                        confirm posts to the delete through `formAction`, taking
+                        the row's hidden `lensId` with it; Save comes first, so
+                        Enter in the box renames and never deletes, and names
+                        its own action so a delete in flight never reads as a
+                        save. `flex-wrap` gives an armed confirm's message a
+                        line of its own. Delete is `flush` (below), so the
+                        row's gap hands back the 16px it gave up beside Save:
+                        `gap-x-6`, the words 24px from Save's box as before. */}
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 w-full sm:w-auto justify-end">
                       <SubmitButton
                         pendingLabel={t("lenses.submitting")}
                         className={buttonClass({ variant: "secondary" })}
+                        formAction={updateTripLensAction}
                       >
                         {t("lenses.submit")}
                       </SubmitButton>
+                      {/* The confirm says what the delete touches. A word
+                          nothing carries goes quietly, with no message to read.
+                          Nothing is destroyed either way; the word on screen is
+                          still "Delete" (ADR 20260820-every-delete-is-soft). */}
+                      {lensDepartures.get(lens.id) ? (
+                        <InlineConfirm
+                          formAction={deleteTripLensAction}
+                          triggerLabel={t("lenses.delete")}
+                          message={t("lenses.deleteDepartures", {
+                            count: lensDepartures.get(lens.id) ?? 0,
+                          })}
+                          cancelLabel={t("lenses.deleteCancel")}
+                          confirmLabel={t("lenses.deleteConfirm")}
+                          pendingLabel={t("lenses.deletePending")}
+                          // `flush` puts "Delete" on the row's edge, which it
+                          // ends; the row's `p-3` in an `overflow-hidden` list
+                          // is a pixel short of an outset ring past the flush
+                          // fill, so it is inside. The armed block's confirm is
+                          // not on that edge.
+                          triggerClassName={buttonClass({
+                            variant: "danger-ghost",
+                            flush: true,
+                            className: "focus-visible:focus-ring-inset",
+                          })}
+                          confirmClassName={buttonClass({ variant: "danger-ghost" })}
+                          size="md"
+                        />
+                      ) : (
+                        <InlineConfirm
+                          formAction={deleteTripLensAction}
+                          triggerLabel={t("lenses.delete")}
+                          confirmLabel={t("lenses.deleteConfirm")}
+                          pendingLabel={t("lenses.deletePending")}
+                          triggerClassName={buttonClass({
+                            variant: "danger-ghost",
+                            flush: true,
+                            className: "focus-visible:focus-ring-inset",
+                          })}
+                        />
+                      )}
                     </div>
-                  </form>
-                  {/* Its own form beside the rename, never inside it:
-                      `InlineConfirm` submits the form it sits in, and forms
-                      cannot nest. */}
-                  <form action={deleteTripLensAction} className="shrink-0">
-                    <input type="hidden" name="lensId" value={lens.id} />
-                    {/* The confirm says what the delete touches. A word nothing
-                        carries goes quietly, with no message to read. Nothing
-                        is destroyed either way; the word on screen is still
-                        "Delete" (ADR 20260820-every-delete-is-soft). */}
-                    {lensDepartures.get(lens.id) ? (
-                      <InlineConfirm
-                        triggerLabel={t("lenses.delete")}
-                        message={t("lenses.deleteDepartures", {
-                          count: lensDepartures.get(lens.id) ?? 0,
-                        })}
-                        cancelLabel={t("lenses.deleteCancel")}
-                        confirmLabel={t("lenses.deleteConfirm")}
-                        pendingLabel={t("lenses.deletePending")}
-                        triggerClassName={buttonClass({ variant: "danger-ghost" })}
-                        size="md"
-                      />
-                    ) : (
-                      <InlineConfirm
-                        triggerLabel={t("lenses.delete")}
-                        confirmLabel={t("lenses.deleteConfirm")}
-                        pendingLabel={t("lenses.deletePending")}
-                        triggerClassName={buttonClass({ variant: "danger-ghost" })}
-                      />
-                    )}
                   </form>
                 </div>
               ))}

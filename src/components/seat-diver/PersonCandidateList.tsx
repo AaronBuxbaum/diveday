@@ -75,7 +75,8 @@ export function PersonCandidateList({
         return (
           <LedgerRow
             key={person.id}
-            className={`py-3 ${rowClassName}`.trim()}
+            pad="lg"
+            className={rowClassName}
             trailing={
               <div className="flex flex-wrap items-center gap-2">
                 {inviteAction && inviteLabel ? (

@@ -11,8 +11,10 @@ import {
 import { StatusInView } from "@/components/ui/StatusInView";
 import { currencySymbol, minorToMajor } from "@/lib/money";
 import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
+import { DateInput } from "./DateInput";
 import { type ForgivingCopy, ForgivingInput } from "./ForgivingInput";
 import { StatusMark } from "./StatusMark";
+import { StickyActionsInset } from "./StickyActionsInset";
 import { toneMark } from "./tone";
 
 /**
@@ -63,16 +65,73 @@ const controlSizes = {
 
 export type ControlSize = keyof typeof controlSizes;
 
+/**
+ * `placeholder-shown:text-ellipsis`: a placeholder longer than its box ends
+ * in "…" rather than being cut mid-word at the padding edge ("…along the c"
+ * on the dive-site editor at 390, the pixel probe). Only while the
+ * placeholder shows — typed text scrolls as it always has.
+ */
 const controlBody =
-  "w-full rounded-lg border border-border-strong bg-surface px-3 text-base font-normal transition-colors focus:border-primary";
+  "w-full rounded-lg border border-border-strong bg-surface px-3 text-base font-normal transition-colors placeholder-shown:text-ellipsis focus:border-primary";
 
 /** Shared control styling at a size — see `controlSizes` for which size a row takes. */
 export function controlClassFor(size: ControlSize): string {
   return `${controlSizes[size]} ${controlBody}`;
 }
 
-/** Shared control styling for inputs, selects, and textareas, at the `field` size. */
+/** Shared control styling for inputs and selects, at the `field` size. */
 export const controlClass = controlClassFor("field");
+
+/**
+ * The fewest lines each textarea shows: its `rows`, as a minimum height of
+ * that many of its own lines plus `py-2` (16px) and the border (2px). Spelled
+ * out per count so Tailwind can see every class; a count nobody uses has no
+ * rung.
+ */
+const textareaMinHeight = {
+  2: "min-h-[calc(2lh+1.125rem)]",
+  3: "min-h-[calc(3lh+1.125rem)]",
+  4: "min-h-[calc(4lh+1.125rem)]",
+  6: "min-h-[calc(6lh+1.125rem)]",
+  8: "min-h-[calc(8lh+1.125rem)]",
+  14: "min-h-[calc(14lh+1.125rem)]",
+} as const;
+
+export type TextareaRows = keyof typeof textareaMinHeight;
+
+/**
+ * **A textarea that grows with what is in it**, never shorter than `rows`.
+ *
+ * Every textarea picked a fixed `rows` for a typical value, so a longer one
+ * scrolled inside its box and its next line showed as a sliver on the bottom
+ * border: the course FAQ answer (1,200 characters in three rows) with a
+ * fourth line's ink 2px above the border at 390, the seasons notes (280
+ * characters in two) with a third line's ascenders on it (the pixel probe,
+ * course-edit-save-bar and settings-seasons). `field-sizing: content` grows
+ * the box with its text; the minimum keeps the rows it had, so an empty box
+ * reads as the size of answer it asks for.
+ *
+ * Pass the same number as the textarea's own `rows`, which is what a browser
+ * without `field-sizing` still draws. `form.test.tsx` refuses a textarea on
+ * `controlClass` itself.
+ *
+ * **It grows to a screenful and no further** (`max-h-[60svh]`), then scrolls.
+ * Unbounded, the waiver editor opened on the default release, about 5,700
+ * characters, grew to some 80 lines at 1280 and put Publish a thousand pixels
+ * below where it sat. A minimum taller than the cap wins, as CSS has it.
+ *
+ * **It grows down, never across** (`contain-inline-size`). `field-sizing:
+ * content` sizes both axes, so the box's min-content width became its longest
+ * unbroken run: the settings embed snippet's `src="https://…/embed.js">` is
+ * 337px with its padding, `Field`'s control column took that width, and at 360
+ * the page ran 13px wider than the phone (the pixel probe, settings-embed). A
+ * URL pasted into any notes box would do the same. Inline-size containment
+ * takes the content out of the width, so the box is its column's width and
+ * only its height follows the text.
+ */
+export function textareaClassFor(rows: TextareaRows): string {
+  return `py-2 ${controlBody} field-sizing-content contain-inline-size ${textareaMinHeight[rows]} max-h-[60svh]`;
+}
 
 /**
  * **The one search box** — a `type="search"` control wearing `controlClass`,
@@ -180,27 +239,48 @@ export function SearchField({
  * Every native prop passes through — `min`/`max`, `value`/`onChange`,
  * `defaultValue`, and a callback `ref` (the schedule builder focuses one on
  * mount) — so a surface never has a reason to reach past this.
+ *
+ * **Every temporal box, not only a date.** `type` takes `month`, `time` and
+ * `datetime-local` too: spelled bare, those kept the platform's solid black
+ * indicator, further in than a date box's muted outline on the same form,
+ * and an empty one on iOS showed nothing at all (the pixel probe's state
+ * atlas, K-54). A time draws a clock; the rest draw the calendar. `size` is
+ * `controlClassFor`'s: `md` for a box on a line with `md` buttons, as the
+ * reports month picker's is between its arrows.
+ *
+ * **An empty box looks empty.** The input is `DateInput`, a client leaf that
+ * marks itself `data-empty` while it holds no value, and `globals.css` paints
+ * the platform's `mm/dd/yyyy` mask in the placeholder's colour when it does —
+ * it used to draw in the ink of a filled answer (K-69).
  */
 export function DateField({
+  type = "date",
+  size = "field",
   className = "",
   wrapperClassName = "",
   ...input
 }: {
+  /** Which temporal control. Default `date`. */
+  type?: TemporalType;
+  /** The row's size: `md` beside an `md` button, the default anywhere else. */
+  size?: ControlSize;
   /** Extra classes on the input itself, e.g. `tabular-nums`. */
   className?: string;
   /** Sizes the wrapper; `controlClass` already sets `w-full` on the input. */
   wrapperClassName?: string;
-} & Omit<ComponentPropsWithRef<"input">, "type" | "className">) {
+} & Omit<ComponentPropsWithRef<"input">, "type" | "className" | "size">) {
   return (
     <div className={`relative ${wrapperClassName}`.trim()}>
-      <input
+      <DateInput
         {...input}
-        type="date"
-        className={`${controlClass} pe-9 [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`.trim()}
+        type={type}
+        className={`peer ${controlClassFor(size)} pe-9 data-[fallback]:pe-3 [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`.trim()}
       />
       {/* Inert and aria-hidden, like SearchField's magnifier: the input's own
           accessible name says what it is, and a tap here must reach the
-          control rather than the decoration. */}
+          control rather than the decoration. Gone, with its inset, where the
+          browser drew a text box instead (`data-fallback`): a glyph over a
+          month typed as "2026-09" would promise a picker that never opens. */}
       <svg
         aria-hidden="true"
         viewBox="0 0 24 24"
@@ -209,14 +289,36 @@ export function DateField({
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+        className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted peer-data-[fallback]:hidden"
       >
-        <rect x="3" y="5" width="18" height="16" rx="2" />
-        <path d="M8 3v4M16 3v4M3 11h18" />
+        {type === "time" ? (
+          <>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </>
+        ) : (
+          <>
+            <rect x="3" y="5" width="18" height="16" rx="2" />
+            <path d="M8 3v4M16 3v4M3 11h18" />
+          </>
+        )}
       </svg>
     </div>
   );
 }
+
+/** The temporal controls `DateField` draws. */
+export type TemporalType = "date" | "month" | "time" | "datetime-local";
+
+/**
+ * **The legend of a bordered `<fieldset>`**, whose words sit in a notch cut
+ * in the box's top border. `px-1` pads the notch so the border stops short of
+ * the words; `-ms-1` pulls the whole legend back by the same 4px, so the
+ * words start on the content edge every field under them starts on. `px-1`
+ * alone moved them 4px right of the fields (the pixel probe, orders-new:
+ * legend text at 326, fields at 322). Type classes stay the caller's.
+ */
+export const legendClass = "-ms-1 px-1";
 
 const columnClass = {
   1: "",
@@ -230,6 +332,13 @@ export type FieldGridColumns = keyof typeof columnClass;
 /**
  * Grid wrapper for a row (or block) of `Field`s. Each field occupies two rows —
  * caption and control — which is what lets `Field` subgrid onto them.
+ *
+ * **The column gutter is this component's, and only this component's.** Call
+ * sites that appended `gap-x-5` won by stylesheet order, so two forms on one
+ * settings page stood their columns 20px and 16px apart (the pixel probe,
+ * settings-dock-day-rhythm against settings-emergency). A form that ever
+ * wants another gutter gets a prop here; `form.test.tsx` refuses a `gap-x-*`
+ * on a `FieldGrid`'s `className`.
  */
 export function FieldGrid({
   columns = 1,
@@ -453,10 +562,15 @@ export function Field({
   // matching doesn't uniformly respect aria-hidden the way real accessible-
   // name computation does — nesting it inside would make an exact-text
   // match against "Name" miss a required field labelled "Name *".
+  //
+  // A no-break space before it, so the marker is part of the caption's last
+  // word. After an ordinary space it was a word of its own, and "diving *"
+  // counted as two words on a last line: `text-pretty` repairs a last line of
+  // one word and left the fly-safe caption's "diving *" alone under 280px of
+  // text (the pixel probe, settings-fly-safe, K-586).
   const requiredMarker = isRequired ? (
     <span aria-hidden="true" className="text-danger">
-      {" "}
-      *
+      {"\u00A0"}*
     </span>
   ) : null;
   const captionContent = (
@@ -506,7 +620,7 @@ export function Field({
     );
     return htmlFor ? (
       <div className={rows}>
-        <span className="self-end">
+        <span className="self-end text-pretty">
           <label htmlFor={htmlFor}>{captionContent}</label>
           {aside}
         </span>
@@ -515,7 +629,7 @@ export function Field({
     ) : (
       // biome-ignore lint/a11y/noLabelWithoutControl: the wrapping branch — the control is `children`, which the rule cannot see through
       <label className={rows}>
-        <span className="self-end">
+        <span className="self-end text-pretty">
           {captionContent}
           {aside}
         </span>
@@ -539,7 +653,11 @@ export function Field({
     <div
       className={`row-span-2 grid min-w-0 grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`}
     >
-      <span className="self-end">
+      {/* `text-pretty` on every branch's caption row: a caption that wraps
+          keeps company on its last line. The fly-safe label left "diving *"
+          alone there, 49px of a 329px column (the pixel probe,
+          settings-fly-safe). */}
+      <span className="self-end text-pretty">
         <label htmlFor={controlId}>{captionContent}</label>
         {requiredMarker}
         {aside ? <span className="ml-1.5">{aside}</span> : null}
@@ -556,6 +674,188 @@ export function Field({
         {errorSpan}
       </span>
     </div>
+  );
+}
+
+/**
+ * **The one checkbox and radio box: 16px, and never squashed.**
+ *
+ * The platform draws a radio at 13px and a checkbox at 13px or so, and this
+ * app sized its checkboxes and not its radios, so a waiver's answer radio
+ * stood 13×13 on a page whose checkbox was 16×16 (the pixel probe,
+ * waiver-active). `shrink-0` because a flex or grid row shrinks a box beside
+ * a label long enough to wrap, and a squashed box is a sliver. The colour is
+ * not here: `globals.css` gives every input `accent-color: var(--primary)`,
+ * unlayered, so a utility would say it twice and lose.
+ *
+ * Reach for `ChoiceRow` or `ChoicePill`, which carry this; the bare class is
+ * for a box whose row is its own business (a selectable card, a box beside a
+ * label of its own). `form.test.tsx` refuses a visible box that does not
+ * wear it, two deliberate 20px targets named there aside, or that wears the
+ * forms plugin's `rounded border-* text-primary focus:ring-*`, which this app
+ * does not load and which do nothing to a native box.
+ */
+export const choiceClass = "size-4 shrink-0";
+
+type ChoiceProps = {
+  type: "checkbox" | "radio";
+  /** The words, which are the box's accessible name and part of its target. */
+  children: ReactNode;
+  /** Classes on the row itself: its margin, and its type size where it is not the pill's. */
+  className?: string;
+} & Omit<ComponentPropsWithRef<"input">, "type" | "className" | "children" | "size">;
+
+/**
+ * Where the box sits in both: in a box one line tall and centred
+ * (`CHOICE_BOX_LINE`), so it sits on the middle of its words' first line
+ * however many lines they wrap to — the reason the row is `items-start` and
+ * not `items-center`, which would hang the box beside the middle of a
+ * paragraph. The input is written out in each, not in a shared child, so
+ * the label visibly holds its control (Biome's `noLabelWithoutControl`
+ * cannot see through a component). The words' column is `1fr`, whose floor
+ * is their longest word: a pill in a wrapping flex row never shrinks below
+ * its words and spills them over its border.
+ */
+const CHOICE_BOX_LINE = "flex h-lh items-center";
+
+/**
+ * **A checkbox or radio with its words beside it** — a waiver's agreement, a
+ * readiness answer, a publish choice.
+ *
+ * The label is the whole row, so the words are part of the target, and the
+ * row is never under 44px (principles §2): a one-line row centres its line in
+ * that height (`content-center`) and a longer one grows. Label rows had no
+ * such floor, and the ready page's answers were 20px targets (K-13). Every
+ * native input prop passes through to the box, `ref` and `aria-*` included.
+ */
+export function ChoiceRow({ type, className = "", children, ...input }: ChoiceProps) {
+  return (
+    <label
+      className={`grid min-h-11 cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-3 ${className}`.trim()}
+    >
+      <span className={CHOICE_BOX_LINE}>
+        <input type={type} {...input} className={choiceClass} />
+      </span>
+      <span>{children}</span>
+    </label>
+  );
+}
+
+/**
+ * **A bordered answer pill** — one of a few short answers set side by side
+ * or in a grid: Yes / No on the medical questionnaire, a call's outcome, a
+ * staffer's roles, the events a hook sends.
+ *
+ * It was spelled by hand in a dozen places, four ways: `px-3` or `px-4`, a
+ * `gap-2` or `gap-3` between box and words, a hover to `bg-surface` (the
+ * colour of the card under it, so no hover at all) or to `bg-surface-sunken`
+ * or none, and an unsized 13px radio (K-13). This is the one. It paints
+ * `bg-surface` so it reads as a control on a sunken form as it does on a
+ * card, the way a text box does, and its one hover is the sunken fill.
+ *
+ * `size="md"` sets the words at 16px, for a diver-facing form whose own copy
+ * is 16px (the waiver); the default is a staff form's 14px. The height is
+ * 44px either way.
+ *
+ * `aside` is what sits beside the words and must not be part of them — a
+ * rental item's explainer and its price. A label's text is the box's
+ * accessible name, and a click on a button inside a label toggles the box, so
+ * the pill becomes a bordered `<div>` holding the label and then the aside;
+ * the label keeps the plain pill's inset and gap, so a column of pills with
+ * and without asides stands its boxes on one edge. Those pills were spelled
+ * by hand at `pl-3 gap-3`, 4px off the plain pill beside them, with no fill
+ * and no hover (RentalFitForm, K-13 review).
+ */
+export function ChoicePill({
+  type,
+  size = "sm",
+  aside,
+  className = "",
+  children,
+  ...input
+}: ChoiceProps & { size?: "sm" | "md"; aside?: ReactNode }) {
+  const pill = `rounded-lg border border-border bg-surface transition-colors hover:bg-surface-sunken ${size === "md" ? "text-base" : "text-sm"}`;
+  const row = "grid cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-2 py-2";
+  if (aside === undefined || aside === null || aside === false) {
+    return (
+      <label className={`${row} min-h-11 ${pill} px-4 ${className}`.trim()}>
+        <span className={CHOICE_BOX_LINE}>
+          <input type={type} {...input} className={choiceClass} />
+        </span>
+        <span>{children}</span>
+      </label>
+    );
+  }
+  // The label stretches to the pill's height (`self-stretch`, no floor of its
+  // own), so the pill is 44px like a plain one rather than 44px of label
+  // inside two borders, and the whole height left of the aside is its target.
+  //
+  // **And over the pill's borders** (`-my-px`). A stretched item fills the
+  // line, and the line is the pill's content box: 44px less two 1px borders,
+  // so the label was 42px and every rental and nitrox box fell back to its own
+  // 16px square as a target (the pixel probe, thread-prep-current-step). A
+  // stretched item's margin box is the line's, so a 1px negative margin top
+  // and bottom makes its border box the pill's full 44px. Not across the start
+  // border: that would move the box 1px off the plain pills' column.
+  return (
+    <div className={`flex min-h-11 items-center gap-2 ${pill} pe-4 ${className}`.trim()}>
+      <label className={`${row} -my-px flex-1 self-stretch ps-4`}>
+        <span className={CHOICE_BOX_LINE}>
+          <input type={type} {...input} className={choiceClass} />
+        </span>
+        <span>{children}</span>
+      </label>
+      {aside}
+    </div>
+  );
+}
+
+/**
+ * **A captioned group of choices** — the `<fieldset>` + `<legend>` a set of
+ * `ChoicePill`s or `ChoiceRow`s answers together, which `Field`'s single
+ * `htmlFor` caption cannot describe.
+ *
+ * It captions the way `Field` does: the legend is `text-sm font-medium` and
+ * the body starts 4px under it, the `gap-y-1` between a field's caption and
+ * its control. Hand-rolled legends put 8px there (`mb-2`, `mt-2`), so a
+ * group's caption sat further from its choices than every field caption
+ * around it (the pixel probe, settings-integrations: 9px against 13px from
+ * caption to control; took-a-call: 19px against 23px).
+ *
+ * `required` draws the same aria-hidden `*` `Field` draws, since a group with
+ * no default answer is mandatory and should say so; the `required` on the
+ * inputs themselves is what enforces it. `className` is the fieldset's (its
+ * margin, a grid span), `bodyClassName` lays out the choices (`grid gap-2`,
+ * `flex flex-wrap gap-3`), and every other fieldset prop passes through — an
+ * `onChange` that listens to the group, `disabled`.
+ */
+export function ChoiceFieldset({
+  legend,
+  required = false,
+  className = "",
+  bodyClassName = "",
+  children,
+  ...fieldset
+}: {
+  legend: ReactNode;
+  required?: boolean;
+  className?: string;
+  bodyClassName?: string;
+  children: ReactNode;
+} & Omit<ComponentPropsWithoutRef<"fieldset">, "className" | "children">) {
+  return (
+    <fieldset className={className || undefined} {...fieldset}>
+      <legend className="text-sm font-medium text-pretty">
+        {legend}
+        {/* Bound to the legend's last word, as `Field`'s marker is. */}
+        {required ? (
+          <span aria-hidden="true" className="text-danger">
+            {"\u00A0"}*
+          </span>
+        ) : null}
+      </legend>
+      <div className={`mt-1 ${bodyClassName}`.trim()}>{children}</div>
+    </fieldset>
   );
 }
 
@@ -577,9 +877,25 @@ export function Field({
  * 20260919-one-idea, slice 23b).
  *
  * The negative margins let it span the full width of a padded container while
- * its own padding keeps the buttons where the fields are. Reach for it when a
- * form is taller than a phone screen with content still to come — a two-field
- * panel wearing one is a bar hovering over nothing.
+ * its own padding keeps the buttons where the fields are. They are spelled for
+ * the one container it sits in: `<main className="… px-4 sm:px-6">` below
+ * `lg`, where the bar bleeds to the screen's edges, and from `lg` the editor
+ * rail grid's form cell, which has no padding, where the bar is exactly the
+ * form's column. It used to bleed `sm:-mx-5` for a `px-5` card nobody put it
+ * in: at 1280 its rule ran 408–1147 against a column of 428–1127, 20px into
+ * the rail's gutter, and from 640 to 1023 it stopped 4px short of both screen
+ * edges (the pixel probe, course-edit and dive-site-edit). A caller in some
+ * other container needs its own bleed, not this one.
+ *
+ * Reach for it when a form is taller than a phone screen with content still
+ * to come — a two-field panel wearing one is a bar hovering over nothing.
+ *
+ * `data-sticky-actions` is what `globals.css` pads the viewport's bottom by
+ * (`html:has([data-sticky-actions])`), so a field focus or a fragment jump
+ * lands above the bar rather than under it. The padding is the bar's own
+ * measured height, which `StickyActionsInset` keeps in `--sticky-actions-h`:
+ * the row wraps to two lines when the note beside Save is long, and a fixed
+ * one-row inset then left a focused field half under it.
  */
 export function StickyFormActions({
   className = "",
@@ -590,8 +906,10 @@ export function StickyFormActions({
 }) {
   return (
     <div
-      className={`sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5 ${className}`}
+      data-sticky-actions=""
+      className={`sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 ${className}`}
     >
+      <StickyActionsInset />
       {children}
     </div>
   );
@@ -654,6 +972,12 @@ const STATUS_TONE: Record<NoticeTone, string> = {
  * `role` follows the shared tone→role rule (`noticeRole`): a refusal is an
  * `alert`, a confirmation is a `status`. Nothing renders when there is no
  * message, so a form's action row keeps its exact resting layout.
+ *
+ * **The mark centres on the first line.** It sits in a box one line tall
+ * (`h-lh`), centred, beside the message at `items-start`. `items-baseline`
+ * put it 2px high: an inline SVG's baseline is its own bottom edge, so the
+ * glyph stood on the text's baseline instead of on the line's middle (the
+ * pixel probe, `trip-guests-refusal-card`: ink 806–819 against caps 810–820).
  */
 export function FormStatus({
   tone = "danger",
@@ -681,9 +1005,13 @@ export function FormStatus({
       <p
         id={id}
         role={noticeRole(tone)}
-        className={`flex items-baseline gap-1.5 text-sm font-medium ${STATUS_TONE[tone]} ${className}`}
+        className={`flex items-start gap-1.5 text-sm font-medium ${STATUS_TONE[tone]} ${className}`}
       >
-        {mark ? <StatusMark variant={mark} /> : null}
+        {mark ? (
+          <span className="flex h-lh shrink-0 items-center">
+            <StatusMark variant={mark} />
+          </span>
+        ) : null}
         <span>{children}</span>
       </p>
       {/* An outcome that lands below the fold says nothing at all. Every tone
@@ -701,8 +1029,8 @@ export function FormStatus({
  * shop never sees `type="number"` inputs in one place and free-text decimals
  * in another.
  *
- * Everything currency-dependent here is derived, never assumed: the prefix is
- * the currency's own symbol rather than a literal `$`, the prefill divides by
+ * Everything currency-dependent here is derived, never assumed: the symbol is
+ * the currency's own rather than a literal `$`, the prefill divides by
  * the currency's minor unit rather than 100, and `step` follows the currency's
  * decimal places — a zero-decimal currency like JPY gets whole-number entry,
  * because `step="0.01"` would invite ¥1,234.56, which does not exist.
@@ -712,6 +1040,12 @@ export function FormStatus({
  * switched (ADR 20260731-shop-currency), and a defaulted locale is the hard-coded
  * formatting `pnpm check:locale` exists to keep out — the caller has the
  * negotiated one in hand either way.
+ *
+ * **The symbol is in the box, once.** A money box settles to a label that
+ * already carries it ("$45"), and an empty one shows it as its placeholder.
+ * A prefix beside the box used to print it a second time ("$ $45") and push
+ * the box 17px right of its caption, where every other control starts on its
+ * own (the pixel probe, settings-payments at 1280).
  */
 export function PriceField({
   id,
@@ -738,20 +1072,17 @@ export function PriceField({
   // form, and the hidden control submits the major-unit figure the old number
   // input sent, so the server sees no difference.
   return (
-    <Field label={label} htmlFor={id} hint={hint}>
-      <div className="flex items-start gap-2">
-        <span className="pt-3 text-sm text-muted">{currencySymbol(currency, locale)}</span>
-        <ForgivingInput
-          kind="money"
-          id={id}
-          name={name}
-          locale={locale}
-          currency={currency}
-          copy={copy}
-          defaultValue={cents === null ? "" : String(minorToMajor(cents, currency))}
-          placeholder="—"
-        />
-      </div>
+    <Field label={label} hint={hint}>
+      <ForgivingInput
+        kind="money"
+        id={id}
+        name={name}
+        locale={locale}
+        currency={currency}
+        copy={copy}
+        defaultValue={cents === null ? "" : String(minorToMajor(cents, currency))}
+        placeholder={currencySymbol(currency, locale)}
+      />
     </Field>
   );
 }

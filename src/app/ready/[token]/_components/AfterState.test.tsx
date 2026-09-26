@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { ShelfDoor } from "@/components/ShelfDoor";
 import type { RecapSite } from "@/db/recap";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
@@ -752,6 +753,30 @@ describe("the doors stay quiet", () => {
       />,
     );
     expect(screen.getByText("recap.tipCrew")).toBeInTheDocument();
+  });
+});
+
+/**
+ * The footer's two ways onward were drawn two ways: "See what's next" a bare
+ * 20px link and the shelf door a 48px link button whose 16px padding opened a
+ * 33px gap where the footer's gap is 16 (the pixel audit, recap). One drawing
+ * now — the flush link button, whose box is a target and whose words sit where
+ * the footer's gap puts them.
+ */
+describe("the footer's two doors", () => {
+  it("draws the way back to the board and the shelf door as one control", () => {
+    render(
+      <AfterState
+        {...props({
+          shelfDoor: <ShelfDoor action={async () => {}} label="shelf.doorSend" />,
+        })}
+      />,
+    );
+
+    const board = screen.getByRole("link", { name: "recap.seeWhatsNext" });
+    const shelf = screen.getByRole("button", { name: "shelf.doorSend" });
+    expect(board.className).toBe(shelf.className);
+    expect(board).toHaveClass("min-h-12", "px-0", "text-primary");
   });
 });
 

@@ -148,48 +148,71 @@ export default async function BoatsSettingsPage({
                         })}
                       />
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    {/* **Save and Delete on one line**, in the update form's
+                        own action row rather than a form of their own apart.
+                        The confirm posts to the delete through `formAction`,
+                        taking the row's hidden `boatId` with it; Save comes
+                        first, so Enter in a field saves and never deletes, and
+                        names its own action so a delete in flight never reads
+                        as a save. `flex-wrap` gives an armed confirm's message
+                        a line of its own. Delete is `flush` (below), so the
+                        row's gap hands back the 12px it gave up beside Save:
+                        `gap-x-5`, the words 20px from Save's box as before. */}
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 w-full sm:w-auto justify-end">
                       <SubmitButton
                         pendingLabel={t("boats.submitting")}
                         className={buttonClass({ variant: "secondary", size: "sm" })}
+                        formAction={updateBoatAction}
                       >
                         {t("boats.submit")}
                       </SubmitButton>
+                      {/* **The confirm says what the delete touches.** A hull
+                          that has carried departures is history an insurer
+                          asks about — the count is the fact a shop cannot get
+                          from this row, and it is why this is a blocking
+                          confirm rather than a bare button. A boat that never
+                          sailed goes quietly, with no message to read. Nothing
+                          is destroyed either way; the word is still "Delete"
+                          and the shop is never told about a column (ADR
+                          20260820-every-delete-is-soft). */}
+                      {boatDepartures.get(boat.id) ? (
+                        <InlineConfirm
+                          formAction={deleteBoatAction}
+                          triggerLabel={t("boats.deleteBoat")}
+                          message={t("boats.deleteBoatDepartures", {
+                            count: boatDepartures.get(boat.id) ?? 0,
+                          })}
+                          cancelLabel={t("boats.deleteBoatCancel")}
+                          confirmLabel={t("boats.deleteBoatConfirm")}
+                          pendingLabel={t("boats.deleteBoatPending")}
+                          // `flush` puts "Delete boat" on the row's edge where
+                          // it ends the row (a phone); the row's `p-3` in an
+                          // `overflow-hidden` list is a pixel short of an outset
+                          // ring past the flush fill, so it is inside. The armed
+                          // block's confirm is not on that edge.
+                          triggerClassName={buttonClass({
+                            variant: "danger-ghost",
+                            size: "sm",
+                            flush: true,
+                            className: "focus-visible:focus-ring-inset",
+                          })}
+                          confirmClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                        />
+                      ) : (
+                        <InlineConfirm
+                          formAction={deleteBoatAction}
+                          triggerLabel={t("boats.deleteBoat")}
+                          confirmLabel={t("boats.deleteBoatConfirm")}
+                          pendingLabel={t("boats.deleteBoatPending")}
+                          triggerClassName={buttonClass({
+                            variant: "danger-ghost",
+                            size: "sm",
+                            flush: true,
+                            className: "focus-visible:focus-ring-inset",
+                          })}
+                        />
+                      )}
                     </div>
-                  </form>
-                  {/* Its own form, beside the update rather than inside it:
-                      `InlineConfirm` submits the form it sits in, and forms
-                      cannot nest. */}
-                  <form action={deleteBoatAction} className="shrink-0">
-                    <input type="hidden" name="boatId" value={boat.id} />
-                    {/* **The confirm says what the delete touches.** A hull
-                        that has carried departures is history an insurer asks
-                        about — the count is the fact a shop cannot get from
-                        this row, and it is why this is a blocking confirm
-                        rather than a bare button. A boat that never sailed
-                        goes quietly, with no message to read. Nothing is
-                        destroyed either way; the word is still "Delete" and
-                        the shop is never told about a column (ADR
-                        20260820-every-delete-is-soft). */}
-                    {boatDepartures.get(boat.id) ? (
-                      <InlineConfirm
-                        triggerLabel={t("boats.deleteBoat")}
-                        message={t("boats.deleteBoatDepartures", {
-                          count: boatDepartures.get(boat.id) ?? 0,
-                        })}
-                        cancelLabel={t("boats.deleteBoatCancel")}
-                        confirmLabel={t("boats.deleteBoatConfirm")}
-                        pendingLabel={t("boats.deleteBoatPending")}
-                        triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
-                      />
-                    ) : (
-                      <InlineConfirm
-                        triggerLabel={t("boats.deleteBoat")}
-                        confirmLabel={t("boats.deleteBoatConfirm")}
-                        pendingLabel={t("boats.deleteBoatPending")}
-                        triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
-                      />
-                    )}
                   </form>
                 </div>
               ))}

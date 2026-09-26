@@ -3,7 +3,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { FieldActions, FieldGrid } from "@/components/ui/form";
+import { ChoiceRow, FieldActions, FieldGrid } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { listDisplayTokens } from "@/db/display-tokens";
@@ -210,15 +210,14 @@ export default async function LobbyDisplayPage({
           className="mt-4"
           aria-labelledby={YEAR_SECTION_ID}
         >
-          <label className="flex min-h-11 items-center gap-3 text-sm">
-            <input
-              name="showYearOnDiveday"
-              type="checkbox"
-              defaultChecked={shop.showYearOnDiveday}
-              className="size-4 accent-primary"
-            />
+          <ChoiceRow
+            name="showYearOnDiveday"
+            type="checkbox"
+            defaultChecked={shop.showYearOnDiveday}
+            className="text-sm"
+          >
             {t("display.year.label")}
-          </label>
+          </ChoiceRow>
           <FieldActions>
             <SubmitButton
               pendingLabel={t("display.year.submitting")}

@@ -92,7 +92,7 @@ describe("paletteAnswerView", () => {
       },
       ctx,
     );
-    expect(view.title).toBe("Grace Mensah on the 7:00 AM Thu, Aug 27 · Two-Tank Reef");
+    expect(view.title).toBe("Grace Mensah on the 7:00\u00A0AM Thu, Aug\u00A027 · Two-Tank Reef");
     expect(view.lines[0]).toMatch(/^Blocked · /);
     // The home's row would send the waiver in place; the palette never
     // mutates, so the act is the roster row that does.
@@ -160,8 +160,8 @@ describe("paletteAnswerView", () => {
       },
       ctx,
     );
-    expect(view.title).toBe("7:00 AM Night Skiff");
-    expect(view.lines).toEqual(["Thu, Aug 27 · 5 of 10 booked · everyone ready"]);
+    expect(view.title).toBe("7:00\u00A0AM Night Skiff");
+    expect(view.lines).toEqual(["Thu, Aug\u00A027 · 5 of 10 booked · everyone ready"]);
     expect(view.act.href).toBe("/shop/blue-mantis/trips/t-1");
     expect(view.more?.href).toBe("/shop/blue-mantis/trips/t-1/manifest");
   });

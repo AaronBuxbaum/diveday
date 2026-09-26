@@ -60,6 +60,20 @@ function hostWithClasses(node: unknown, classes: string[]): ReactElement<HostPro
   return hostWithClasses(node.props.children, classes);
 }
 
+/** Every `SubmitButton` (the one element with a `pendingLabel`) in a tree, in render order. */
+function submitButtons(node: unknown, found: ReactElement<HostProps>[] = []) {
+  if (node === null || typeof node !== "object") return found;
+  if (Array.isArray(node)) {
+    for (const child of node) submitButtons(child, found);
+    return found;
+  }
+  if (isValidElement<HostProps & { pendingLabel?: unknown }>(node)) {
+    if (typeof node.props.pendingLabel === "string") found.push(node);
+    submitButtons(node.props.children, found);
+  }
+  return found;
+}
+
 /** A staff row's own tree, rendered one level: `StaffRow` is a plain function of its props. */
 function rowTree(row: ReactElement<StaffRowProps>, member: StaffMember = row.props.member) {
   const render = row.type as (props: StaffRowProps) => ReactNode;
@@ -118,5 +132,27 @@ describe("a staff card's account row", () => {
         }
       }
     }
+  });
+
+  /**
+   * "Disable" gives the unseen lower half of its 44px box to the card's 16px
+   * padding (`outdent`), so the box ends 4px above the row's rule: the outset
+   * ring, 5px past the box, painted over the `divide-y` hairline on every card
+   * and lost its bottom pixel to the list's `overflow-hidden` on the last
+   * (K-43). It rings inside instead. "Enable" is a bordered box with no
+   * outdent, 16px clear of the rule, and keeps the app's ring.
+   */
+  it("rings Disable inside the card, whose padding its outdent leaves 4px of", async () => {
+    const [row] = staffRows(await renderTeam());
+    const toggle = (accountStatus: StaffMember["accountStatus"]) => {
+      const tree = rowTree(row, { ...row.props.member, accountStatus });
+      const [first] = submitButtons(hostWithClasses(tree, ACCOUNT_ROW));
+      expect(first, accountStatus).toBeDefined();
+      return String(first?.props.className ?? "").split(" ");
+    };
+    const disable = toggle("active");
+    expect(disable).toContain("focus-visible:focus-ring-inset");
+    const enable = toggle("disabled");
+    expect(enable).not.toContain("focus-visible:focus-ring-inset");
   });
 });
