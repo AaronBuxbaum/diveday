@@ -172,17 +172,21 @@ export function SettingsDoorRow({
   /** A `mailto:`/`https:` destination rather than an app route. */
   external?: boolean;
 }) {
-  // The global :focus-visible ring stays on the link itself (a keyboard
-  // reader sees the ring around the row's name), while the stretched overlay
-  // makes the whole row the pointer target.
-  const linkClass = "font-medium after:absolute after:inset-0 after:content-['']";
+  // **Focus is ringed on the stretched overlay, the row a pointer has**, drawn
+  // inset like a setting's summary (`LIST_ROW_SUMMARY_RING`) and bent into the
+  // group's corners at either end, so a keyboard reader sees one ring shape
+  // down the whole hub. The link's own ring is off, so focus is drawn once —
+  // `RowLink` (src/components/ui/table.tsx) is the same pattern, and both are
+  // named in `FOCUS_SHOWN_ELSEWHERE` (src/app/focus-ring.test.ts).
+  const linkClass =
+    "font-medium after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:focus-ring-inset group-first/door:after:rounded-t-panel group-last/door:after:rounded-b-panel";
   // The outer box is what the group's `divide-y` hangs its rule on, and the
   // row's height lives on the box inside it — the shape a setting has, whose
   // `<details>` takes the rule and whose `<summary>` is 56px. With `min-h-14`
   // on the bordered box, the rule came out of the 56px and every door drew 1px
   // shorter than the settings it sits among.
   return (
-    <div>
+    <div className="group/door">
       <div className="relative flex min-h-14 items-center justify-between gap-4 px-4 py-3 transition-brand hover:bg-surface-sunken sm:px-5">
         <h3 className="min-w-0 text-base">
           {external ? (

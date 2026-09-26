@@ -228,6 +228,12 @@ const FOCUS_SHOWN_ELSEWHERE: readonly (readonly [file: string, anchor: string, s
       "after:absolute after:inset-0",
       "focus-visible:after:focus-ring-inset",
     ],
+    // A settings door row: the same overlay, stretched over the whole row.
+    [
+      "app/shop/[shopSlug]/settings/_components/SettingsRows.tsx",
+      "after:absolute after:inset-0",
+      "focus-visible:after:focus-ring-inset",
+    ],
     // The tip picker's amount field: the bordered label around it is ringed.
     [
       "app/ready/[token]/_components/TipAmountPicker.tsx",
