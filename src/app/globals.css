@@ -2435,6 +2435,95 @@ details[open]::details-content {
   }
 }
 
+/*
+ * **A chip row that scrolls says so at the end it has more at** —
+ * `FilterChips`' phone row (`chip-scroller`; docs/design/pixel-craft.md,
+ * class 9).
+ *
+ * The row's one affordance was a last chip peeking in from the screen's edge,
+ * and whether one peeks depends on the labels: at 390 "Wrecks" ended at 386
+ * and the next chip started at 394, so the public schedule's row read as
+ * complete. Each end now fades over the row's 16px gutter while there is more
+ * to scroll toward it.
+ *
+ * **The scroll is the clock**, as for the bar's fold above: each fade's length
+ * is a registered `<length>` animated on the row's own inline scroll. The
+ * start fade grows over the first gutter of scroll and the end fade shrinks
+ * away over the last, so a row at either end shows its first or last chip,
+ * and that chip's focus ring, whole; a static mask would have faded them. A
+ * row that does not overflow has an inactive scroll timeline, so neither
+ * animation applies and both lengths stay at their initial 0: no fade. The
+ * row a view opens scrolled to (`FilterChipsScroller`) fades at both ends.
+ *
+ * Phone widths only, by the same `max-sm` variant the row's own classes use:
+ * from `sm` the row wraps and never scrolls. Without scroll-driven animations
+ * there is no fade, which is the row as it was.
+ */
+@property --chip-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --chip-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@supports (animation-timeline: scroll()) {
+  .chip-scroller {
+    @variant max-sm {
+      /* A mask reads only alpha: #000 keeps a pixel, transparent drops it. */
+      mask-image: linear-gradient(
+        to right,
+        transparent,
+        #000 var(--chip-fade-start),
+        #000 calc(100% - var(--chip-fade-end)),
+        transparent
+      );
+      animation:
+        chip-fade-start linear both,
+        chip-fade-end linear both;
+      animation-timeline: scroll(self inline);
+      animation-range:
+        0 1rem,
+        calc(100% - 1rem) 100%;
+    }
+  }
+
+  /* Inline-start is the right edge in a right-to-left row. */
+  .chip-scroller:dir(rtl) {
+    @variant max-sm {
+      mask-image: linear-gradient(
+        to left,
+        transparent,
+        #000 var(--chip-fade-start),
+        #000 calc(100% - var(--chip-fade-end)),
+        transparent
+      );
+    }
+  }
+}
+
+@keyframes chip-fade-start {
+  from {
+    --chip-fade-start: 0px;
+  }
+  to {
+    --chip-fade-start: 1rem;
+  }
+}
+
+@keyframes chip-fade-end {
+  from {
+    --chip-fade-end: 1rem;
+  }
+  to {
+    --chip-fade-end: 0px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

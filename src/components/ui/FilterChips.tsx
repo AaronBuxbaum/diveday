@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FilterChipsScroller } from "@/components/ui/FilterChipsScroller";
 
 /**
  * Canonical view-narrowing chip row for a filtered staff list.
@@ -67,8 +68,28 @@ export function FilterChips({
           list at 390px). `py-1.5` gives it room and `-my-1.5` takes the
           room back, so nothing around the row moves. That is also why the
           scroller is its own box inside the nav: a caller's `mb-5` on the
-          same element would lose to the negative margin. */}
-      <div className="flex items-center gap-2 max-sm:-mx-4 max-sm:-my-1.5 max-sm:overflow-x-auto max-sm:px-4 max-sm:py-1.5 max-sm:[scrollbar-width:none] sm:flex-wrap">
+          same element would lose to the negative margin.
+
+          Whether a last chip peeks in depends on the labels, though — at 390
+          "Wrecks" ended at 386 and the next chip started off screen, so the
+          row read as complete. `chip-scroller` fades whichever end has more
+          to show, animated on the row's own scroll so the last chip and its
+          ring are whole once the row reaches its end (globals.css).
+
+          `scroll-px-6` is where a focused chip is scrolled to: the 16px fade
+          and the ring's 5px reach clear of the row's end. Without it
+          "Wrecks", whole on screen 3.6px from the edge, took focus where it
+          stood and its ring lost 1.5px to the row's clip. The pixel probe
+          forces `:focus-visible` without the scroll a real focus makes, so
+          it still sees that one cut (scripts/pixel-probe-settled.json).
+
+          `FilterChipsScroller` scrolls the row so the current chip is on
+          screen when the row arrives: a view whose chip sits past the edge
+          loaded with nothing naming it. */}
+      <FilterChipsScroller
+        activeKey={chips.find((chip) => chip.active)?.key}
+        className="chip-scroller flex items-center gap-2 max-sm:-mx-4 max-sm:-my-1.5 max-sm:scroll-px-6 max-sm:overflow-x-auto max-sm:px-4 max-sm:py-1.5 max-sm:[scrollbar-width:none] sm:flex-wrap"
+      >
         {chips.map((chip) => (
           <Link
             key={chip.key}
@@ -83,7 +104,7 @@ export function FilterChips({
             {chip.label}
           </Link>
         ))}
-      </div>
+      </FilterChipsScroller>
     </nav>
   );
 }
