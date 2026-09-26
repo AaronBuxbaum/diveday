@@ -95,7 +95,12 @@ export function RequestDayGroup({
 }) {
   return (
     <section aria-labelledby={id}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+      {/* From `sm` up the header is the act's 44px with the label centred in
+          it, whether or not there is an act: the undated tail has none, and
+          its label sat 15px higher in its section and 13px nearer its rows
+          than every dated one (K-463). Below `sm` the act wraps onto its own
+          line, so the label keeps its baseline and its own line's height. */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 sm:min-h-11 sm:items-center">
         <GroupLabel as="h2" id={id}>
           {label}
         </GroupLabel>

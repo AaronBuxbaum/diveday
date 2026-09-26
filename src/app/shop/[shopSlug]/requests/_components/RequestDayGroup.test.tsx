@@ -101,6 +101,42 @@ describe("the add-a-departure link", () => {
 });
 
 /**
+ * **Every group's label sits at one height, act or no act** (pixel-craft
+ * class 4, K-463). A dated group's act is a 44px link, so its header was 44px
+ * with the label about 15px down it; the undated tail has no act and its
+ * header was the label's own line — so "No date named" sat 15px higher in its
+ * section and 13px nearer its rows than every dated label (59 against 44px
+ * from the rule above, 34 against 21 to the rule below, at 1280). From `sm`
+ * up the header is the act's height either way, with the label centred in it;
+ * below `sm` the act wraps onto its own line and the label keeps its baseline.
+ */
+describe("the group header's height", () => {
+  const HEADER_ROW = ["sm:min-h-11", "sm:items-center"];
+
+  it("is the act's height with the label centred, on a dated group", () => {
+    render(
+      <RequestDayGroup
+        id="date-2027-03-06"
+        label="Mar 6, 2027 — 2 groups · 5 divers"
+        add={{ href: addDepartureHref("blue-mantis", "2027-03-06", ["r1"]), label: "Add" }}
+      >
+        <li>a request</li>
+      </RequestDayGroup>,
+    );
+    expect(screen.getByRole("heading", { level: 2 }).parentElement).toHaveClass(...HEADER_ROW);
+  });
+
+  it("is the same height on the undated tail, which has no act", () => {
+    render(
+      <RequestDayGroup id="no-date" label="No date named: 1 request">
+        <li>a request</li>
+      </RequestDayGroup>,
+    );
+    expect(screen.getByRole("heading", { level: 2 }).parentElement).toHaveClass(...HEADER_ROW);
+  });
+});
+
+/**
  * **The group header owns the shared facts, so the advice states only what the
  * label cannot.** The retired "Planning suggestion" card opened by counting the
  * divers and the requests — the two numbers now in the label one line above it.
