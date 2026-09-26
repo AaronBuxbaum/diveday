@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { Badge } from "@/components/ui/badge";
 import { SettingsDoorRow, SettingsRow } from "./SettingsRows";
 
 /**
@@ -49,6 +50,37 @@ describe("one row height, whichever kind of row", () => {
       expect(row).not.toHaveClass("min-h-14");
       expect(row.firstElementChild).toHaveClass("min-h-14");
     }
+  });
+});
+
+describe("where a row states its value", () => {
+  /** The boxes that take part in the phone's column: `hidden` ones do not. */
+  function phoneLines(row: HTMLElement) {
+    return row.querySelectorAll("summary > :not(.hidden)");
+  }
+
+  /**
+   * On a phone the summary stacks its value under the heading with a
+   * symmetric `py-3`. A text value's 20px line carries half-leading under its
+   * baseline, so the stack looks centred; a `Badge` paints its whole 28px box,
+   * so that air is gone and "Online payments" over "Not connected" sat 2.5px
+   * low in its 80px row (K-76, SETTINGS-2-33). A badge is a word-sized status,
+   * which fits beside the heading where it already sits from `sm` up.
+   */
+  it("keeps a badge value on the heading's own line when asked to, on a phone too", () => {
+    const row = settingRow({
+      value: <Badge tone="warning">Not connected</Badge>,
+      valuePlacement: "inline",
+    });
+    const heading = row.querySelector("h3");
+    expect(heading?.parentElement?.contains(within(row).getByText("Not connected"))).toBe(true);
+    expect(phoneLines(row)).toHaveLength(1);
+  });
+
+  it("still stacks a value under its heading on a phone by default", () => {
+    const row = settingRow({ value: "12 Harbour Rd" });
+    expect(row.querySelector("h3")?.parentElement).not.toHaveTextContent("12 Harbour Rd");
+    expect(phoneLines(row)).toHaveLength(2);
   });
 });
 
