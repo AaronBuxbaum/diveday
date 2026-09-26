@@ -645,7 +645,11 @@ describe("StaffingWeek geometry", () => {
    * copy of their own fill, which over the page's ground is lighter, not
    * deeper — `#e6f0ff` to `#eaf1fd` on the crew chip, `#ececf1` to `#eeeef3`
    * on the shift chip, 0px changed at the state atlas's threshold. Each now
-   * hovers one step past where it rests.
+   * hovers one step past where it rests, and the step is the chip's edge,
+   * never its fill: a fill under the words moves their contrast, and
+   * `bg-border` did — under `prefers-contrast: more` (light) the hovered
+   * shift's time fell to 3.10:1 and a past shift's to 1.84:1, for exactly the
+   * readers who asked for more.
    */
   it("hovers each chip a person can press a step past its rest, never a fainter copy of it", () => {
     const { chips } = renderEveryChip();
@@ -657,6 +661,10 @@ describe("StaffingWeek geometry", () => {
       const rest = tokens.filter((token) => /^(?:bg|border)-/.test(token));
       const hover = tokens.filter((token) => token.startsWith("hover:"));
       expect(hover.length, kind).toBeGreaterThan(0);
+      expect(
+        hover.filter((token) => token.startsWith("hover:bg-")),
+        kind,
+      ).toEqual([]);
       for (const paint of rest) {
         for (const token of hover) {
           expect(token, kind).not.toBe(`hover:${paint}`);
@@ -664,7 +672,7 @@ describe("StaffingWeek geometry", () => {
         }
       }
     }
-    expect(chips.shift).toHaveClass("hover:bg-border");
+    expect(chips.shift).toHaveClass("hover:border-border-strong");
     expect(chips.crew).toHaveClass("hover:border-primary/50");
   });
 

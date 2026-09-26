@@ -204,12 +204,18 @@ function chipClass(kind: keyof typeof CHIP_KIND) {
  * Both hovered to a translucent copy of their own fill, which over the page's
  * ground is lighter, not deeper: `#e6f0ff` to `#eaf1fd` on the crew chip,
  * `#ececf1` to `#eeeef3` on the shift chip, 0px changed at the state atlas's
- * threshold. The shift chip steps to the next well down the surface ladder,
- * opaque so the step is the same on any ground (`#e3e3e8` light, `#2c2c2e`
- * dark); the crew chip deepens the rule it already draws.
+ * threshold. Each now steps the 1px edge every chip reserves (`CHIP_BOX`):
+ * the crew chip deepens the rule it already draws, and the shift chip draws
+ * `--border-strong` where it rests transparent, visible in every scheme.
+ *
+ * The edge, never the fill: a fill under the words moves their contrast.
+ * `bg-border` did. `--border` is a hairline, not a well, and under
+ * `prefers-contrast: more` (light) it is `#6b6a63`, where the hovered time
+ * measured 3.10:1 and a past shift's muted time 1.84:1; even in the default
+ * light scheme muted ink on it is 4.46:1, under AA for this 12px type.
  */
 const CHIP_HOVER = {
-  shift: "hover:bg-border",
+  shift: "hover:border-border-strong",
   crew: "hover:border-primary/50",
 } as const;
 
