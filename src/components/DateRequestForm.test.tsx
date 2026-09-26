@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DateRequestCopy, InquiryFormState } from "@/lib/course-inquiry";
 import { renderDiver } from "@/test/intl";
 import { DateRequestForm } from "./DateRequestForm";
@@ -542,6 +543,33 @@ describe("DateRequestForm — its place on the page", () => {
   it("carries no margin of its own", () => {
     const { container } = renderSection();
     expect(container.querySelector("section")?.className).not.toMatch(/(^|\s)mt-/);
+  });
+
+  /**
+   * **The host picks the heading's rung** (class 12). The section headed
+   * itself with `LEAD_TITLE_CLASS`, 24px, which is its course page's rung; on
+   * the off-season storefront every other heading is the brand face at
+   * `SECTION_TITLE_CLASS`, 18px, so "Ask us for a day" stood a size above
+   * "What divers say" and "Other ways we can help".
+   */
+  it("heads its section at the rung its host passes", () => {
+    renderDiver(
+      <DateRequestForm
+        submitRequest={vi.fn()}
+        contactEmail="hello@example.com"
+        contactPhone={null}
+        headingClassName={`font-brand-display ${SECTION_TITLE_CLASS}`}
+        copy={copy}
+      />,
+    );
+    const heading = screen.getByRole("heading", { level: 2, name: "Get in touch" });
+    expect(heading.className).toBe(`font-brand-display ${SECTION_TITLE_CLASS}`);
+  });
+
+  it("heads its section as a lead when the host says nothing", () => {
+    renderSection();
+    const heading = screen.getByRole("heading", { level: 2, name: "Get in touch" });
+    expect(heading.className).toBe(LEAD_TITLE_CLASS);
   });
 
   it("stands 56px under the course page's FAQ, like every course section", () => {

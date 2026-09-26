@@ -46,6 +46,24 @@ describe("the public schedule identity composition", () => {
  * them, and nothing about that failure names the rail. So the order is a
  * source-level assertion here, where a later edit meets it first.
  */
+/**
+ * **One rung for the storefront's section heads** (docs/design/pixel-craft.md,
+ * class 12). The off-season "Ask us for a day" is a `DateRequestForm` section,
+ * which heads itself as a lead (24px) unless told otherwise; every other h2
+ * here is the brand face at `SECTION_TITLE_CLASS` (18px).
+ */
+describe("the off-season ask's heading", () => {
+  it("is handed the rung the page's other section heads use", () => {
+    const start = positionOf("<DateRequestForm");
+    const end = SOURCE.indexOf("/>", start);
+    const call = SOURCE.slice(start, end);
+    expect(call).toContain("headingClassName={`font-brand-display ${SECTION_TITLE_CLASS}`}");
+    expect(SOURCE).toContain(
+      '<h2 id="boats-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>',
+    );
+  });
+});
+
 describe("the lens rail's place", () => {
   it("renders once, after the month nav and above the filter form", () => {
     const monthNav = positionOf('aria-label={t("schedule.monthNav")}');

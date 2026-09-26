@@ -77,6 +77,7 @@ export function DateRequestForm({
   contactPhone,
   collapsible = false,
   className = "",
+  headingClassName = LEAD_TITLE_CLASS,
   copy,
 }: {
   submitRequest: (prevState: InquiryFormState, formData: FormData) => Promise<InquiryFormState>;
@@ -104,6 +105,15 @@ export function DateRequestForm({
    * collapsible row, which is one row of its host's group.
    */
   className?: string;
+  /**
+   * The section heading's rung, which is the host's: a lead (24px) on the
+   * course page, whose sections all head themselves that way, and the brand
+   * face at `SECTION_TITLE_CLASS` (18px) on the storefront, where every other
+   * section head is. Hard-coded, it made "Ask us for a day" the one 24px head
+   * on an off-season storefront. Ignored by the collapsible row, whose
+   * `DisclosureRow` owns its heading.
+   */
+  headingClassName?: string;
   copy: DateRequestCopy;
 }) {
   const t = useTranslations();
@@ -471,7 +481,7 @@ export function DateRequestForm({
       aria-labelledby={headingId}
       className={`scroll-mt-8 ${className}`.trim()}
     >
-      <h2 id={headingId} className={LEAD_TITLE_CLASS}>
+      <h2 id={headingId} className={headingClassName}>
         {copy.heading}
       </h2>
       {body}
