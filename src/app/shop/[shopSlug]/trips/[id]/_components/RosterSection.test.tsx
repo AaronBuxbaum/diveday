@@ -584,3 +584,30 @@ describe("the seat's foot row sits on the text column through flush", () => {
     expect(remove).not.toHaveClass("focus-visible:focus-ring-inset");
   });
 });
+
+/**
+ * Pixel-craft geometry the audit measured on the roster
+ * (docs/design/pixel-craft.md). jsdom has no layout, so each case pins the
+ * class arithmetic that puts the pixels where they belong; the pixel probe
+ * re-measures the rendered rows.
+ */
+describe("the roster's row geometry", () => {
+  /**
+   * K-157: the mark was pinned at `top-2.5`, the row's top padding when the
+   * `li` was `py-2.5`. The `li` went to `py-1` and the 44px name line moved up
+   * 6px; the mark stayed, 6px under the name and the "Blocked" pill on every
+   * row. The mark's top is the `li`'s own padding, so the two 44px boxes share
+   * one band.
+   */
+  it("pins each row's mark to the name line's band, at the row's own top padding", () => {
+    const { container } = renderRoster(fixtures);
+
+    for (const seat of fixtures.roster) {
+      const row = container.querySelector(`#booking-${seat.booking.id}`);
+      expect(row).toHaveClass("py-1");
+      const mark = row?.querySelector("summary[aria-label]");
+      expect(mark).toHaveClass("absolute", "top-1", "size-11");
+      expect(mark).not.toHaveClass("top-2.5");
+    }
+  });
+});

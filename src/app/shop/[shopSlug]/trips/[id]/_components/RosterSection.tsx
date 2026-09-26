@@ -1413,10 +1413,14 @@ export function RosterSection({
     // diver-name link beside it is never an interactive element nested in
     // another (axe nested-interactive); the accessible name says whose
     // details these are.
+    //
+    // `top-1` is the `li`'s own top padding (`py-1`), so this 44px box and the
+    // header line's 44px name link share one band and the mark centres on the
+    // name and the pills (K-157: a stale `top-2.5` sat it 6px low).
     const markSummary = (
       <summary
         aria-label={t("trips.roster.detailsSummaryLabel", { name: person.fullName })}
-        className={`absolute top-2.5 end-2 flex size-11 cursor-pointer list-none items-center justify-center rounded-lg transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:end-3 ${
+        className={`absolute top-1 end-2 flex size-11 cursor-pointer list-none items-center justify-center rounded-lg transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:end-3 ${
           settledRow ? "text-success" : "text-muted hover:text-foreground"
         }`}
       >
