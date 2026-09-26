@@ -2254,8 +2254,19 @@ textarea {
   }
 }
 
-/* Standalone navigation links / controls in lists or bars centre their label in that box */
-.glare-mode a {
+/*
+ * Standalone navigation links / controls in lists or bars centre their label
+ * in that box.
+ *
+ * **Not a link that already lays out its own box** (`inline-flex`), for the
+ * reason the prose reset below gives. Every tap-target link carries its own
+ * display and alignment, and this rule's `!important` overrode them: the
+ * eyebrow back link stands its words on its 44px box's bottom edge
+ * (`items-end`, K-395), and forced to centre them it lifted the eyebrow 14px
+ * off its line in glare, further from the title than on land (the pixel
+ * probe, manifest-seen-boat-mode).
+ */
+.glare-mode a:not(.inline-flex) {
   /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce layout display */
   display: inline-flex !important;
   /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to center labels */
@@ -2273,12 +2284,13 @@ textarea {
  * links carry no `inline-flex`; every tap-target link does.
  *
  * Unlayered, so its `auto` minimums beat the layered floor above without an
- * `!important`; `display` keeps one, to beat the one on `.glare-mode a`.
+ * `!important`; `display` keeps one, to beat the one on
+ * `.glare-mode a:not(.inline-flex)`.
  */
 .glare-mode :is(p, span, .inline) a:not(.inline-flex) {
   min-height: auto;
   min-width: auto;
-  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to beat the display forced on .glare-mode a */
+  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to beat the display forced on .glare-mode a:not(.inline-flex) */
   display: inline !important;
 }
 

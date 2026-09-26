@@ -88,3 +88,33 @@ describe("glare mode's prose-link reset", () => {
     expect(document.querySelector("a")?.matches(reset?.prelude ?? "*")).toBe(false);
   });
 });
+
+/**
+ * **Glare centres a bare link in its box, and leaves a laid-out one alone.**
+ * The forced `inline-flex` and centring are `!important`, so they overrode a
+ * tap-target link's own alignment: the eyebrow back link stands its words on
+ * its 44px box's bottom edge (`items-end`), and centred in glare they rode
+ * 14px above the eyebrow's line, further from the page title than on land
+ * (K-73 review, manifest-seen-boat-mode). A link that is already `inline-flex`
+ * brings its own alignment, the same test the prose reset uses.
+ */
+describe("glare mode's forced link centring", () => {
+  const centring = glareRules(unlayeredRules(CSS)).find(
+    (rule) =>
+      /display:\s*inline-flex\s*!important/.test(rule.body) &&
+      /align-items:\s*center\s*!important/.test(rule.body),
+  );
+
+  it("still centres a plain link's label in its 44px box", () => {
+    expect(centring, "a .glare-mode rule forcing inline-flex and centring").toBeDefined();
+    document.documentElement.className = "glare-mode";
+    document.body.innerHTML = `<nav><a href="/board">Board</a></nav>`;
+    expect(document.querySelector("a")?.matches(centring?.prelude ?? ":not(*)")).toBe(true);
+  });
+
+  it("leaves a link's own inline-flex alignment alone (the eyebrow's items-end)", () => {
+    document.documentElement.className = "glare-mode";
+    document.body.innerHTML = `<span class="flex h-4 items-end"><a class="inline-flex min-h-11 items-end" href="/board">Trip</a></span>`;
+    expect(document.querySelector("a")?.matches(centring?.prelude ?? "*")).toBe(false);
+  });
+});
