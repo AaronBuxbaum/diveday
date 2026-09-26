@@ -122,3 +122,29 @@ describe("the opened sheet's geometry", () => {
     expect(screen.getByText("Diver · Own kit")).toHaveClass("col-span-2");
   });
 });
+
+/**
+ * **The row's trailing mark is the sheet's slot** (K-266): one `items-center`
+ * row holding the trigger and the mark, so the mark centres on the trigger's
+ * real height however the name wraps, with the gap and ring room the mark
+ * needs on its own box, and off paper.
+ */
+describe("the trailing mark", () => {
+  it("rides beside the trigger in one items-center row, outside the trigger", () => {
+    render(<PersonSheet {...props} mark={<button type="button">Mark boarded</button>} />);
+    const trigger = screen.getByRole("button", { name: "Open details for Meera Iyer" });
+    const mark = screen.getByRole("button", { name: "Mark boarded" });
+    const row = trigger.parentElement as HTMLElement;
+    expect(row).toHaveClass("flex", "items-center");
+    expect(trigger).not.toContainElement(mark);
+    const slot = mark.parentElement as HTMLElement;
+    expect(slot.parentElement).toBe(row);
+    expect(slot).toHaveClass("shrink-0", "py-2.5", "ps-3", "print:hidden");
+  });
+
+  it("draws no slot when there is no mark", () => {
+    render(<PersonSheet {...props} />);
+    const trigger = screen.getByRole("button", { name: "Open details for Meera Iyer" });
+    expect(trigger.nextElementSibling).toBeNull();
+  });
+});

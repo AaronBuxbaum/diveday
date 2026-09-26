@@ -194,10 +194,12 @@ export const ROLL_CALL_ROW_CLASS =
  *
  * `list-none` and the webkit marker reset because the row draws its own caret
  * at the trailing edge; `min-h-19` is the 76px row the canvas measures, which
- * keeps a 56px mark centred beside it with room above and below.
+ * keeps a 56px mark centred beside it with room above and below — and when a
+ * wrapped name grows it past 76px, the mark centres on that height instead
+ * (`PersonSheet`'s row is `items-center`).
  *
  * **A real gap separates it from the mark**, and it belongs to the mark's own
- * container (`ps-3` at the call sites) rather than to this padding — padding is
+ * container (`ps-3` on `PersonSheet`'s mark slot) rather than to this padding — padding is
  * *inside* a hit box, so `pe-*` here would still be summary-clickable and buy
  * nothing. The two targets are adjacent and do opposite things: one opens a
  * person, one records a result. With their boxes touching, a tap that lands a

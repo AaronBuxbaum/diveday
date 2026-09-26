@@ -216,3 +216,19 @@ describe("the crew list's hairlines", () => {
     expect(rows[1]?.className).toContain("border-danger");
   });
 });
+
+/**
+ * **The mark centres on the row it sits in** (K-266): the diver row's rule, on
+ * the crew row that repeats it. A crew member's clash line wraps the name
+ * button past 76px, and a mark held 10px from the top stayed above it.
+ */
+describe("the mark beside a name that wraps", () => {
+  it("sits in the name button's own items-center row", () => {
+    renderCrew({ members: [crew()] });
+    const trigger = screen.getByRole("button", { name: "Open details for Keiko Tanaka" });
+    const row = trigger.parentElement as HTMLElement;
+    expect(row).toHaveClass("flex", "items-center");
+    expect(row.className).not.toMatch(/items-start/);
+    expect(row).toContainElement(screen.getByRole("button", { name: "Mark aboard" }));
+  });
+});

@@ -248,11 +248,15 @@ export function CrewRollCall({
                     recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : ROLL_CALL_ROW_TONE.awaiting
                   }`}
                 >
+                  {/* The row's hairline sits on this box, in the rule colour and
+                      off whichever row is first on screen or on paper
+                      (`rollCallRuleClass`, K-165); the sheet lays the name and
+                      the mark out inside it as one centred row (K-266). */}
                   <div
-                    className={`flex items-start ${rollCallRuleClass({
+                    className={rollCallRuleClass({
                       firstOnScreen: index === 0,
                       firstOnPaper: index === 0,
-                    })}`}
+                    })}
                   >
                     <PersonSheet
                       name={member.fullName}
@@ -293,6 +297,22 @@ export function CrewRollCall({
                       }
                       closeLabel={t("manifest.closePersonDetails")}
                       triggerClassName={ROW_DISCLOSURE_SUMMARY_CLASS}
+                      mark={
+                        rowState.notBackAboard ? (
+                          <RollCallMark state="notBack" />
+                        ) : (
+                          <RollCallMarkButton
+                            kind="crew"
+                            subjectId={member.id}
+                            checkpoint={checkpoint}
+                            rollCall={rc}
+                            action={crewRollCallAction}
+                            copy={crewRollCallButtonCopy}
+                            markState={rollCallMarkState(rowState)}
+                            t={t}
+                          />
+                        )
+                      }
                       trigger={
                         <span className="min-w-0 flex-1">
                           <span className="flex flex-wrap items-center gap-2">
@@ -356,26 +376,6 @@ export function CrewRollCall({
                         />
                       </div>
                     </PersonSheet>
-                    {/* `py-2.5`, as on the diver row: 10px above centres the
-                      mark on the 76px summary line, and 10px below is its
-                      focus ring's room whenever the mark sets the row's
-                      height (#1981). */}
-                    <div className="shrink-0 py-2.5 ps-3 pe-3 print:hidden">
-                      {rowState.notBackAboard ? (
-                        <RollCallMark state="notBack" />
-                      ) : (
-                        <RollCallMarkButton
-                          kind="crew"
-                          subjectId={member.id}
-                          checkpoint={checkpoint}
-                          rollCall={rc}
-                          action={crewRollCallAction}
-                          copy={crewRollCallButtonCopy}
-                          markState={rollCallMarkState(rowState)}
-                          t={t}
-                        />
-                      )}
-                    </div>
                   </div>
                   {/* Paper keeps what the sheet hides: the recorded state as a
                       word, the team, and the contact. The summary above prints

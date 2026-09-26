@@ -829,3 +829,26 @@ describe("the person panel's spacing", () => {
     expect(rule?.className).not.toMatch(/(^|\s)my-/);
   });
 });
+
+/**
+ * **The mark centres on the row it sits in** (K-266). The row was
+ * `flex items-start` and the mark's column held it 10px from the top, which
+ * centres a 56px mark only on a 76px name button. A name that wraps grows the
+ * button, its index and caret move to the new middle, and the mark stayed up:
+ * 19px above them on a phone. The mark rides in `PersonSheet`'s trailing slot,
+ * one `items-center` row with the button, so it centres on the button's real
+ * height.
+ */
+describe("the mark beside a name that wraps", () => {
+  it("sits in the name button's own items-center row", () => {
+    renderList({ divers: [diver()] });
+    const trigger = screen.getByRole("button", { name: "Open details for Meera Iyer" });
+    const row = trigger.parentElement as HTMLElement;
+    expect(row).toHaveClass("flex", "items-center");
+    expect(row.className).not.toMatch(/items-start/);
+    const mark = within(screen.getByRole("listitem")).getByRole("button", {
+      name: "Mark boarded",
+    });
+    expect(row).toContainElement(mark);
+  });
+});

@@ -573,66 +573,81 @@ export function DiverRollCall({
           return (
             <li key={diver.bookingId} id={diverRowId(diver.bookingId)} className={rowClass}>
               <div className={ruleClass}>
-                <div className="flex items-start">
-                  {/* The name column *is* the disclosure. One tap on the person
+                {/* The name column *is* the disclosure. One tap on the person
                     opens everything the rail does not need this second — the
                     "one tap away" tier of decision 2 — which is what lets the
                     row at rest be a name and a mark instead of the name, two
                     badges, a blocker list, a link, a note thread and two
                     summary lines it used to be. */}
-                  <PersonSheet
-                    name={diver.fullName}
-                    triggerLabel={t("manifest.openPersonDetails", { name: diver.fullName })}
-                    subtitle={t("manifest.personSheetDiverSubtitle", {
-                      rental: rentalFitLineText(t, locale, diver.rentalFit),
-                    })}
-                    status={
-                      <Badge
-                        tone={
-                          rowState.notBackAboard
-                            ? "danger"
-                            : rowState.boarded
-                              ? "success"
-                              : rowState.recordedNotBoarded || rowState.impliedNotBoarded
-                                ? "warning"
-                                : "neutral"
-                        }
-                        size="sm"
-                      >
-                        {auditLabel}
-                      </Badge>
-                    }
-                    trail={personTrail}
-                    todayLabel={t("manifest.personSheetToday")}
-                    noTodayEventsLabel={t("manifest.personSheetNoTodayEvents")}
-                    buddyLabel={t("manifest.personSheetBuddyTeam")}
-                    buddy={
-                      diver.buddyTeam ? (
-                        <PersonBuddyList
-                          teammates={diver.buddyTeam.others}
-                          divers={divers}
-                          crew={crew ?? []}
-                          checkpoint={checkpoint}
-                          t={t}
-                        />
-                      ) : null
-                    }
-                    closeLabel={t("manifest.closePersonDetails")}
-                    triggerClassName={ROW_DISCLOSURE_SUMMARY_CLASS}
-                    trigger={
-                      <>
-                        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="flex flex-wrap items-center gap-2">
-                            <span
-                              className={`${SECTION_TITLE_CLASS} group-hover/summary:underline`}
-                            >
-                              {diver.fullName}
-                            </span>
-                            {capsule}
-                            {/* **The desk wrote this one off** (#1209). On the
+                <PersonSheet
+                  name={diver.fullName}
+                  triggerLabel={t("manifest.openPersonDetails", { name: diver.fullName })}
+                  subtitle={t("manifest.personSheetDiverSubtitle", {
+                    rental: rentalFitLineText(t, locale, diver.rentalFit),
+                  })}
+                  status={
+                    <Badge
+                      tone={
+                        rowState.notBackAboard
+                          ? "danger"
+                          : rowState.boarded
+                            ? "success"
+                            : rowState.recordedNotBoarded || rowState.impliedNotBoarded
+                              ? "warning"
+                              : "neutral"
+                      }
+                      size="sm"
+                    >
+                      {auditLabel}
+                    </Badge>
+                  }
+                  trail={personTrail}
+                  todayLabel={t("manifest.personSheetToday")}
+                  noTodayEventsLabel={t("manifest.personSheetNoTodayEvents")}
+                  buddyLabel={t("manifest.personSheetBuddyTeam")}
+                  buddy={
+                    diver.buddyTeam ? (
+                      <PersonBuddyList
+                        teammates={diver.buddyTeam.others}
+                        divers={divers}
+                        crew={crew ?? []}
+                        checkpoint={checkpoint}
+                        t={t}
+                      />
+                    ) : null
+                  }
+                  closeLabel={t("manifest.closePersonDetails")}
+                  triggerClassName={ROW_DISCLOSURE_SUMMARY_CLASS}
+                  mark={
+                    rowState.notBackAboard ? (
+                      <RollCallMark state="notBack" />
+                    ) : boardingControlShown ? (
+                      <RollCallMarkButton
+                        kind="diver"
+                        subjectId={diver.bookingId}
+                        checkpoint={checkpoint}
+                        rollCall={rc}
+                        action={rollCallAction}
+                        copy={rollCallButtonCopy(diver.bookingId)}
+                        markState={rollCallMarkState(rowState)}
+                        t={t}
+                      />
+                    ) : (
+                      <RollCallMark state="held" />
+                    )
+                  }
+                  trigger={
+                    <>
+                      <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className={`${SECTION_TITLE_CLASS} group-hover/summary:underline`}>
+                            {diver.fullName}
+                          </span>
+                          {capsule}
+                          {/* **The desk wrote this one off** (#1209). On the
                               row and not in the sheet, unlike "Checked in":
                               that one is routine and a tap away is fine, this
                               is the reason a crew member should stop looking.
@@ -651,11 +666,11 @@ export function DiverRollCall({
                               nothing here refuses a boarding, and a diver who
                               turns up after all is tapped aboard exactly as
                               before. */}
-                            {diver.notHere ? (
-                              <Badge tone="neutral">{t("manifest.notHerePill")}</Badge>
-                            ) : null}
-                          </span>
-                          {/* **The welcome word** (issue #1182, delight report
+                          {diver.notHere ? (
+                            <Badge tone="neutral">{t("manifest.notHerePill")}</Badge>
+                          ) : null}
+                        </span>
+                        {/* **The welcome word** (issue #1182, delight report
                             D22; ADR 20260904-reef-all-the-way-down slice 16d):
                             "first time with us", "back after 3 years".
 
@@ -673,76 +688,76 @@ export function DiverRollCall({
                             legibility for restraint stops. It costs a second
                             line on some rows, which is the price of it being
                             readable at the rail. */}
-                          {diver.welcomeCue ? (
-                            <span className="mt-0.5 block text-base text-muted">
-                              {welcomeCueText(t, diver.welcomeCue)}
-                            </span>
-                          ) : null}
-                        </span>
-                      </>
-                    }
-                  >
-                    <div className={ROW_DISCLOSURE_PANEL_CLASS}>
-                      {/* Blockers, and their one fix, at the dock only. After a
+                        {diver.welcomeCue ? (
+                          <span className="mt-0.5 block text-base text-muted">
+                            {welcomeCueText(t, diver.welcomeCue)}
+                          </span>
+                        ) : null}
+                      </span>
+                    </>
+                  }
+                >
+                  <div className={ROW_DISCLOSURE_PANEL_CLASS}>
+                    {/* Blockers, and their one fix, at the dock only. After a
                         dive readiness gates nothing — the diver is already
                         aboard — so a red list here would be worrying about a
                         paperwork state at the checkpoint where the only thing
                         that matters is bodies (decision 4). The count panel
                         says nothing about it either, for the same reason. */}
-                      {!ready && isDeparture ? (
-                        <>
-                          <ul className="flex flex-col gap-1 text-base text-danger">
-                            {/* Keyed on the sentence, not the code: a trip
+                    {!ready && isDeparture ? (
+                      <>
+                        <ul className="flex flex-col gap-1 text-base text-danger">
+                          {/* Keyed on the sentence, not the code: a trip
                               requiring two specialties yields two blockers with
                               one code and different params. */}
-                            {diver.readiness.blockers.map((blocker) => {
-                              const text = readinessBlockerText(t, blocker);
-                              return <li key={text}>• {text}</li>;
-                            })}
-                          </ul>
-                          {/* The Guests ledger groups its blocked divers under
+                          {diver.readiness.blockers.map((blocker) => {
+                            const text = readinessBlockerText(t, blocker);
+                            return <li key={text}>• {text}</li>;
+                          })}
+                        </ul>
+                        {/* The Guests ledger groups its blocked divers under
                             "Still to clear" at the top of the list (ADR
                             20260827-the-departure-is-two-working-surfaces,
                             slice 5d), so the anchor alone lands the captain on
                             this diver's row with the group band saying why —
                             the `?rf=blocked` filter this link used to carry is
                             retired with the chips. */}
-                          <Link
-                            href={`/shop/${shopSlug}/trips/${tripId}#booking-${diver.bookingId}`}
-                            className="mt-2 inline-flex min-h-11 items-center text-base font-semibold text-primary hover:underline"
-                          >
-                            {t("manifest.resolveBlockersLink")}
-                          </Link>
-                          {/* **Even by ink, not by box** (pixel-craft class
+                        <Link
+                          href={`/shop/${shopSlug}/trips/${tripId}#booking-${diver.bookingId}`}
+                          className="mt-2 inline-flex min-h-11 items-center text-base font-semibold text-primary hover:underline"
+                        >
+                          {t("manifest.resolveBlockersLink")}
+                        </Link>
+                        {/* **Even by ink, not by box** (pixel-craft class
                             4). The link above is a 44px target round a 24px
                             line, so about 15px of its box is already air under
                             its words; a `my-3` rule added 12px more, 27px of
                             ink to rule against 18 from the rule to the next
                             line. The link's own air is the space above, so
                             the rule's margin is below only. */}
-                          <hr className="mt-0 mb-3 border-border" />
-                        </>
-                      ) : null}
-                      {/* A diver whose advisory the strip above does not already
+                        <hr className="mt-0 mb-3 border-border" />
+                      </>
+                    ) : null}
+                    {/* A diver whose advisory the strip above does not already
                         state by name keeps the full sentence — here, where the
                         plan for dive two is read during the surface interval.
                         Warning tone, never a gate (H-08). */}
-                      {diver.depthAdvisory?.status === "exceeds" &&
-                      !sharedAdvisoryTexts.has(depthWarningText(t, diver.depthAdvisory)) ? (
-                        <p className="mb-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong">
-                          <StatusMark variant="warning" size="md" />
-                          <span>{depthWarningText(t, diver.depthAdvisory)}</span>
-                        </p>
-                      ) : null}
-                      <DiverFacts
-                        diver={diver}
-                        locale={locale}
-                        timezone={timezone}
-                        columns={1}
-                        rosterNames={rosterNames}
-                        t={t}
-                      />
-                      {/* The facts the row's one capsule could not carry — who
+                    {diver.depthAdvisory?.status === "exceeds" &&
+                    !sharedAdvisoryTexts.has(depthWarningText(t, diver.depthAdvisory)) ? (
+                      <p className="mb-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong">
+                        <StatusMark variant="warning" size="md" />
+                        <span>{depthWarningText(t, diver.depthAdvisory)}</span>
+                      </p>
+                    ) : null}
+                    <DiverFacts
+                      diver={diver}
+                      locale={locale}
+                      timezone={timezone}
+                      columns={1}
+                      rosterNames={rosterNames}
+                      t={t}
+                    />
+                    {/* The facts the row's one capsule could not carry — who
                         this diver is paired with, the counter's arrival, the age
                         the crew is entitled to know. Quiet, in words, one tap
                         away: a team label is not an exception, so it does not
@@ -754,8 +769,8 @@ export function DiverRollCall({
                         diver with neither rendered the list empty, and its
                         `mt-3` stood on the note form's, 24px where the panel's
                         blocks sit 12 apart (pixel-craft class 4). */}
-                      <ul className="mt-3 flex flex-wrap gap-2 empty:hidden">
-                        {/* **A sighting and a claim wear different words.**
+                    <ul className="mt-3 flex flex-wrap gap-2 empty:hidden">
+                      {/* **A sighting and a claim wear different words.**
                           A staffer's tap means the desk has seen this person;
                           a lobby-tablet tap means somebody typed a surname,
                           quite possibly on their behalf, which is the ordinary
@@ -763,16 +778,16 @@ export function DiverRollCall({
                           into one badge is how a crew member at the rail stops
                           looking for a diver who never arrived (N-24,
                           `dive-domain-expert` review). */}
-                        {diver.checkedIn ? (
-                          <li>
-                            <Badge tone="neutral">
-                              {diver.checkedInSelfReported
-                                ? t("manifest.selfCheckedInPill")
-                                : t("manifest.checkedInPill")}
-                            </Badge>
-                          </li>
-                        ) : null}
-                        {/* The age, and — when something louder took the row's
+                      {diver.checkedIn ? (
+                        <li>
+                          <Badge tone="neutral">
+                            {diver.checkedInSelfReported
+                              ? t("manifest.selfCheckedInPill")
+                              : t("manifest.checkedInPill")}
+                          </Badge>
+                        </li>
+                      ) : null}
+                      {/* The age, and — when something louder took the row's
                           one capsule — **the minor flag with it**. A blocked
                           diver and a split team are exactly the cases where a
                           13-year-old is most likely to be on the row that lost
@@ -780,100 +795,69 @@ export function DiverRollCall({
                           other way to know a booked diver is 12 (H-21). Gated
                           on which capsule the row actually rendered, never on
                           `minor` itself (dive-domain review, slice 5a). */}
-                        {diver.age !== null &&
-                        diver.age !== undefined &&
-                        capsuleKind !== "minor" ? (
-                          <li>
-                            <Badge tone={diver.minor ? "warning" : "neutral"} tabularNums>
-                              {diver.minor
-                                ? t("manifest.minorAge", { age: diver.age })
-                                : t("manifest.age", { age: diver.age })}
-                            </Badge>
-                          </li>
-                        ) : null}
-                      </ul>
-                      <StaffNotes notes={bookingNotes} locale={locale} timezone={timezone} t={t} />
-                      {/* `print:hidden` like the notes above it: an unsaved
+                      {diver.age !== null && diver.age !== undefined && capsuleKind !== "minor" ? (
+                        <li>
+                          <Badge tone={diver.minor ? "warning" : "neutral"} tabularNums>
+                            {diver.minor
+                              ? t("manifest.minorAge", { age: diver.age })
+                              : t("manifest.age", { age: diver.age })}
+                          </Badge>
+                        </li>
+                      ) : null}
+                    </ul>
+                    <StaffNotes notes={bookingNotes} locale={locale} timezone={timezone} t={t} />
+                    {/* `print:hidden` like the notes above it: an unsaved
                         sentence a staffer was mid-way through typing about a
                         customer is the last thing that should ride the sheet
                         that goes ashore, and the packet's own stylesheet only
                         covers the packet (security review, slice 5a). */}
-                      <div className="mt-3 print:hidden">
-                        <PrivateNoteForm
-                          action={addPrivateNoteAction}
-                          hiddenFields={{ bookingId: diver.bookingId }}
-                          resetKey={bookingNotes.filter((note) => note.scope === "booking").length}
-                          rows={2}
-                          copy={{
-                            label: t("trips.roster.addNoteLabel"),
-                            placeholder: t("trips.roster.addNotePlaceholder"),
-                            add: t("trips.roster.addPrivateNote"),
-                            adding: t("trips.roster.adding"),
-                          }}
-                        />
-                      </div>
-                      {/* Both directions out of a stated "not back aboard", at
+                    <div className="mt-3 print:hidden">
+                      <PrivateNoteForm
+                        action={addPrivateNoteAction}
+                        hiddenFields={{ bookingId: diver.bookingId }}
+                        resetKey={bookingNotes.filter((note) => note.scope === "booking").length}
+                        rows={2}
+                        copy={{
+                          label: t("trips.roster.addNoteLabel"),
+                          placeholder: t("trips.roster.addNotePlaceholder"),
+                          add: t("trips.roster.addPrivateNote"),
+                          adding: t("trips.roster.adding"),
+                        }}
+                      />
+                    </div>
+                    {/* Both directions out of a stated "not back aboard", at
                         the same cost: "Mark back aboard" here, and the
                         retraction on the settled control below it. Neither is
                         on the row (ADR 20260815-offline-can-unsay-a-missing-diver
                         — retracting a mark may never be harder than making
                         one, and asserting aboard over a missing mark is not a
                         thumb-under-a-list act). */}
-                      {rowState.notBackAboard ? (
-                        <RollCallBackAboardControl
-                          kind="diver"
-                          subjectId={diver.bookingId}
-                          checkpoint={checkpoint}
-                          subjectName={diver.fullName}
-                          action={rollCallAction}
-                          copy={rollCallButtonCopy(diver.bookingId)}
-                          t={t}
-                        />
-                      ) : null}
-                      {/* The deliberate second step. It is here, and nowhere
+                    {rowState.notBackAboard ? (
+                      <RollCallBackAboardControl
+                        kind="diver"
+                        subjectId={diver.bookingId}
+                        checkpoint={checkpoint}
+                        subjectName={diver.fullName}
+                        action={rollCallAction}
+                        copy={rollCallButtonCopy(diver.bookingId)}
+                        t={t}
+                      />
+                    ) : null}
+                    {/* The deliberate second step. It is here, and nowhere
                         else on this page, because reaching it has to cost a
                         tap on the person's own name first (decision 3). */}
-                      <RollCallExceptionControl
-                        kind="diver"
-                        subjectId={diver.bookingId}
-                        checkpoint={checkpoint}
-                        isDeparture={isDeparture}
-                        rollCall={rc}
-                        action={rollCallAction}
-                        copy={rollCallButtonCopy(diver.bookingId)}
-                        t={t}
-                      />
-                    </div>
-                  </PersonSheet>
-                  {/* The row's one tap, at the trailing edge where every row's
-                    mark lands. The top 10px centres the 56px circle against
-                    the 76px summary line rather than against the panel below
-                    it, which would walk the mark down the row as it opens.
-                    The bottom 10px is the room its 5px focus ring needs on
-                    the last row, flush with the card's `overflow-hidden`:
-                    while glare's 44px floor shrank the summary to 52px (a
-                    floor now, `glare-mode.test.ts`), the mark column set the
-                    row's height, and with no padding below it the ring lost
-                    its bottom 5px (#1981). */}
-                  <div className="shrink-0 py-2.5 ps-3 pe-3 print:hidden">
-                    {rowState.notBackAboard ? (
-                      <RollCallMark state="notBack" />
-                    ) : boardingControlShown ? (
-                      <RollCallMarkButton
-                        kind="diver"
-                        subjectId={diver.bookingId}
-                        checkpoint={checkpoint}
-                        rollCall={rc}
-                        action={rollCallAction}
-                        copy={rollCallButtonCopy(diver.bookingId)}
-                        markState={rollCallMarkState(rowState)}
-                        t={t}
-                      />
-                    ) : (
-                      <RollCallMark state="held" />
-                    )}
+                    <RollCallExceptionControl
+                      kind="diver"
+                      subjectId={diver.bookingId}
+                      checkpoint={checkpoint}
+                      isDeparture={isDeparture}
+                      rollCall={rc}
+                      action={rollCallAction}
+                      copy={rollCallButtonCopy(diver.bookingId)}
+                      t={t}
+                    />
                   </div>
-                </div>
+                </PersonSheet>
                 {/* **Paper keeps everything the screen tucks away** (decision 2).
                   The person sheet contributes nothing to print, so every
                   fact behind the tap above is restated here unconditionally:

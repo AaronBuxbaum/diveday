@@ -78,6 +78,7 @@ export function PersonSheet({
   children,
   closeLabel,
   triggerClassName,
+  mark,
 }: {
   name: string;
   trigger: React.ReactNode;
@@ -92,6 +93,12 @@ export function PersonSheet({
   children: React.ReactNode;
   closeLabel: string;
   triggerClassName: string;
+  /**
+   * The row's one tap, at the trailing edge where every row's mark lands —
+   * a separate control from the trigger, which it sits beside and never
+   * inside. See the slot below.
+   */
+  mark?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -224,26 +231,43 @@ export function PersonSheet({
 
   return (
     <>
-      {/* `data-print-content`: the trigger's content is the person, and the
-          packet's print backstop hides every other button (`globals.css`,
-          `.trip-print-bundle`). The caret is the control part, so it alone
-          stays off paper. */}
-      <button
-        ref={triggerRef}
-        type="button"
-        data-print-content
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={sheetId}
-        aria-label={triggerLabel}
-        className={triggerClassName}
-        onClick={() => setOpen(true)}
-      >
-        {trigger}
-        {/* `size-4`, not the default `size-3`: a 4×8px tick beside an 18px
-            semibold name read as a stray mark (K-549). */}
-        <DisclosureCaret className="size-4 shrink-0 print:hidden" />
-      </button>
+      {/* **One row: the trigger, then the mark, sharing a centre**
+          (`items-center`). The mark centres on the trigger's real height —
+          76px at rest, taller when a long name or its line under it wraps —
+          where a mark hung 10px from the top of an `items-start` row stayed
+          put while the index and caret moved to the new middle: 19px above
+          them on a phone (K-266). The sheet itself is portalled, so nothing
+          else shares this row. */}
+      <div className="flex items-center">
+        {/* `data-print-content`: the trigger's content is the person, and the
+            packet's print backstop hides every other button (`globals.css`,
+            `.trip-print-bundle`). The caret is the control part, so it alone
+            stays off paper. */}
+        <button
+          ref={triggerRef}
+          type="button"
+          data-print-content
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-controls={sheetId}
+          aria-label={triggerLabel}
+          className={triggerClassName}
+          onClick={() => setOpen(true)}
+        >
+          {trigger}
+          {/* `size-4`, not the default `size-3`: a 4×8px tick beside an 18px
+              semibold name read as a stray mark (K-549). */}
+          <DisclosureCaret className="size-4 shrink-0 print:hidden" />
+        </button>
+        {/* The mark's own box. `ps-3` is the real gap between two adjacent
+            targets that do opposite things (`ROW_DISCLOSURE_SUMMARY_CLASS`).
+            `py-2.5` is the same above and below, so it centres nothing off
+            the row's middle: it is the room the mark's 5px focus ring needs
+            whenever the mark sets the row's height — on the last row, flush
+            with the card's `overflow-hidden`, the ring lost its bottom 5px
+            without it (#1981). */}
+        {mark ? <div className="shrink-0 py-2.5 ps-3 pe-3 print:hidden">{mark}</div> : null}
+      </div>
       {overlay ? createPortal(overlay, document.body) : null}
     </>
   );
