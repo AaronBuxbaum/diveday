@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
@@ -488,6 +490,45 @@ describe("TripLookFor", () => {
       <TripLookFor briefings={[briefing()]} locale={DEFAULT_DIVER_LOCALE} />,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+/**
+ * **Every beat's label sits 8px over what it labels** (pixel-craft class 4,
+ * K-509). The route and the site notes open `mt-2` under their `GroupLabel`;
+ * "Look for" and "Moments from divers" opened `mt-3`, and floated 12–13px
+ * above their content on the trip's door and the dive-site page alike. The
+ * site page's departures stood `mt-8` under beats that stand `mt-6`.
+ */
+describe("the day's beats", () => {
+  const creatures = [
+    { id: "c1", slug: "green-sea-turtle", name: "Green turtle", imageUrl: "/turtle.jpg" },
+  ] as unknown as DiveBriefing["creatures"];
+  const moments = [
+    { id: "m1", caption: "A ray disappearing into the blue.", imageUrl: "/dive-sites/ray.jpg" },
+  ] as unknown as DiveBriefing["moments"];
+
+  it.each([
+    ["Look for", () => <TripLookFor briefings={[briefing({ creatures })]} locale="en-US" />],
+    [
+      "Moments from divers",
+      () => <TripMoments briefings={[briefing({ moments })]} locale="en-US" />,
+    ],
+  ])("opens %s's content 8px under its label", (label, Beat) => {
+    render(<Beat />);
+    const heading = screen.getByRole("heading", { level: 2, name: label });
+    expect(heading.nextElementSibling).toHaveClass("mt-2");
+    expect(heading.nextElementSibling).not.toHaveClass("mt-3");
+    expect(heading.closest("section")).toHaveClass("mt-6");
+  });
+
+  it("stands the dive-site page's departures where its other beats stand", () => {
+    const page = readFileSync(
+      join(__dirname, "..", "..", "..", "sites", "[siteSlug]", "page.tsx"),
+      "utf8",
+    );
+    const departures = page.match(/<section id="departures" className="([^"]*)"/)?.[1];
+    expect(departures).toBe("mt-6 scroll-mt-8");
   });
 });
 

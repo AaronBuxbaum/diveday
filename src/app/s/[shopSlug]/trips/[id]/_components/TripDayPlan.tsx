@@ -511,8 +511,10 @@ export function TripLookFor({ briefings, locale }: { briefings: SiteBriefing[]; 
   if (cards.length === 0) return null;
   return (
     <section className="mt-6">
+      {/* `mt-2`, as every beat opens under its label (pixel-craft class 4,
+          K-509): at `mt-3` this one floated 12px above its faces. */}
       <GroupLabel as="h2">{t("trip.lookFor")}</GroupLabel>
-      <ul className="mt-3 grid gap-x-6 gap-y-5 sm:grid-cols-2">
+      <ul className="mt-2 grid gap-x-6 gap-y-5 sm:grid-cols-2">
         {cards.map((card) => (
           <li key={card.slug ?? card.name} className="flex min-w-0 gap-3">
             <StoredPhoto
@@ -577,7 +579,7 @@ export function TripMoments({ briefings, locale }: { briefings: SiteBriefing[]; 
   return (
     <section className="mt-6">
       <GroupLabel as="h2">{t("trip.momentsHeading")}</GroupLabel>
-      <ul className={`mt-3 grid gap-4${shown.length > 1 ? " sm:grid-cols-2" : ""}`}>
+      <ul className={`mt-2 grid gap-4${shown.length > 1 ? " sm:grid-cols-2" : ""}`}>
         {shown.map((moment) => (
           <li key={moment.id}>
             <figure>
