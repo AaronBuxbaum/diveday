@@ -4,9 +4,17 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { DIVER_MESSAGES } from "@/i18n/messages";
 import { DIVER_LOCALES } from "@/i18n/settings";
-import { DOOR_GLYPH_IDS, type DoorGlyphId, EntryDone, entryPanelClass } from "./EntryShell";
+import {
+  DOOR_GLYPH_IDS,
+  type DoorGlyphId,
+  EntryDone,
+  EntryShell,
+  entryPanelClass,
+} from "./EntryShell";
+import { EntryShellSkeleton } from "./EntryShellSkeleton";
 
 /**
  * **Slice 10a of ADR 20260827-first-light: the door speaks Clearwater.**
@@ -180,6 +188,70 @@ describe("the door's panel", () => {
 
   it("hands the skeleton the same frame, so neither can drift", () => {
     expect(read("components/account/EntryShellSkeleton.tsx")).toContain("entryPanelClass");
+  });
+});
+
+/**
+ * **The way out is a target, not a word** (docs/design/pixel-craft.md, class
+ * 7). Every door hands its "Back to sign in" to one of two slots — the shell's
+ * footer or a terminal door's action — and each page typed the link as bare
+ * text, so the pixel probe measured it at 96.3 × 17px on forgot-password, the
+ * staff invite, reset-password and verify. The slot owns the floor, so a link
+ * passed into it is 44px tall whatever the page typed.
+ */
+describe("a door's links are tap targets", () => {
+  /**
+   * `tapTargetLinkClass`, applied by the slot to every link inside it — under
+   * `:where(&)`, so the rule weighs (0,0,1) and a link's own class wins. The
+   * plain `[&_a]:` form weighs (0,1,1) and would cut a `buttonClass()` link's
+   * `min-h-12` to 44px (ExpiredLinkCard hands this slot one on `/ready`).
+   */
+  const SLOT_FLOOR = tapTargetLinkClass.split(" ").map((utility) => `[:where(&)_a]:${utility}`);
+
+  it("floors every link in the shell's footer", () => {
+    render(
+      <EntryShell title="Reset your password" footer={<a href="/sign-in">Back to sign in</a>}>
+        <form />
+      </EntryShell>,
+    );
+    const footer = screen.getByRole("link", { name: "Back to sign in" }).closest("footer");
+    for (const utility of SLOT_FLOOR) expect(footer).toHaveClass(utility);
+  });
+
+  it("floors the one link a terminal door offers", () => {
+    render(
+      <EntryDone
+        glyph="expired"
+        title="This link has expired"
+        text="Ask for a fresh one."
+        action={<a href="/sign-in">Back to sign in</a>}
+      />,
+    );
+    const slot = screen.getByRole("link", { name: "Back to sign in" }).parentElement;
+    for (const utility of SLOT_FLOOR) expect(slot).toHaveClass(utility);
+  });
+
+  /**
+   * The 44px box is 24px taller than the 20px line it replaced, 12px above the
+   * words and 12px below. The footer's margin gives the upper 12px back, so its
+   * words sit where they sat and only the invisible target grew; the skeleton
+   * stands its footnote in the same 44px row at the same margin, so nothing
+   * shifts when the door streams in (class 11).
+   */
+  it("keeps the words where they were, in the shell and in its skeleton", () => {
+    render(
+      <EntryShell title="Reset your password" footer={<a href="/sign-in">Back to sign in</a>}>
+        <form />
+      </EntryShell>,
+    );
+    const footer = screen.getByRole("link", { name: "Back to sign in" }).closest("footer");
+    expect(footer).toHaveClass("mt-5");
+    expect(footer).not.toHaveClass("mt-8");
+    cleanup();
+
+    const { container } = render(<EntryShellSkeleton fields={["email"]} />);
+    const footnote = container.querySelector("main > div")?.lastElementChild;
+    expect(footnote).toHaveClass("mt-5", "h-11");
   });
 });
 

@@ -87,13 +87,45 @@ export function EntryShell({
         <div className="mt-8 flex flex-col items-center gap-4 text-center">{children}</div>
       )}
       {footer ? (
-        <footer className="mt-8 flex flex-col items-center gap-2 text-center text-sm text-muted">
+        <footer
+          className={`mt-5 flex flex-col items-center text-center text-sm text-muted ${DOOR_LINK_SLOT}`}
+        >
           {footer}
         </footer>
       ) : null}
     </main>
   );
 }
+
+/**
+ * **A link a door hands on is a tap target**, whatever the page typed.
+ *
+ * Every door's way out — the footer's "Back to sign in", a terminal door's one
+ * action — arrived from its page as a bare `font-medium text-primary` link:
+ * 96.3 × 17px, under the 44px floor, on forgot-password, the staff invite,
+ * reset-password, verify and sign-in (the pixel probe's `small-target`). The
+ * slot is the layer that owns them all, so it lays `tapTargetLinkClass`'s floor
+ * on every link inside it and no page has to remember.
+ *
+ * Spelled out rather than built from `tapTargetLinkClass`, because Tailwind
+ * only generates a class it can read whole in the source; `EntryShell.test.tsx`
+ * holds the two in step.
+ *
+ * **A floor, never a ceiling.** `:where(&)` takes the slot's class out of the
+ * selector's weight, so the rule is `:where(.slot) a` at (0,0,1) and any class
+ * on the link itself outranks it. The plain `[&_a]:` spelling is `.slot a` at
+ * (0,1,1), which beats a link's own `min-h-12`: the stranded diver's and the
+ * recap's "See the schedule", a `buttonClass()` link handed to this slot
+ * through `ExpiredLinkCard`, would have shrunk from 48px to 44px.
+ *
+ * The footer holds text links only, so its top margin gives back the 12px the
+ * 44px box adds above a 20px line (`mt-8` → `mt-5`) and its words sit where
+ * they sat; its `gap-2` went too, since two 44px rows already clear each other.
+ * EntryDone's action keeps its `mt-6`, because a button handed to it is 48px
+ * already and would otherwise move up.
+ */
+const DOOR_LINK_SLOT =
+  "[:where(&)_a]:inline-flex [:where(&)_a]:min-h-11 [:where(&)_a]:items-center";
 
 /**
  * The centered column every door shares. Exported so `EntryShellSkeleton`
@@ -233,7 +265,7 @@ export function EntryDone({
       </div>
       <h1 className={`mt-6 ${SHELL_TITLE_CLASS} text-balance`}>{title}</h1>
       <p className="mt-3 max-w-prose text-muted">{text}</p>
-      {action ? <div className="mt-6 text-sm">{action}</div> : null}
+      {action ? <div className={`mt-6 text-sm ${DOOR_LINK_SLOT}`}>{action}</div> : null}
     </main>
   );
 }

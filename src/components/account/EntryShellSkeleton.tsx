@@ -55,7 +55,14 @@ export function EntryShellSkeleton({
         ) : (
           <div className="mx-auto mt-8 h-11 w-44 rounded-lg bg-surface-sunken" />
         )}
-        {footnote ? <div className="mx-auto mt-8 h-4 w-44 rounded bg-surface-sunken" /> : null}
+        {/* The footer's row: `EntryShell`'s footer is `mt-5` over links that
+            are 44px targets (`DOOR_LINK_SLOT`), so the bar stands centred in
+            an `h-11` row at the same margin rather than at `mt-8 h-4`. */}
+        {footnote ? (
+          <div className="mt-5 flex h-11 items-center justify-center">
+            <div className="h-4 w-44 rounded bg-surface-sunken" />
+          </div>
+        ) : null}
       </div>
     </main>
   );
