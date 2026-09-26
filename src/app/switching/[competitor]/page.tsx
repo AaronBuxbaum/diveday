@@ -8,6 +8,7 @@ import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingN
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { SWITCH_EMAIL, SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/ledger";
 import {
   BANNER_TITLE_CLASS,
@@ -138,6 +139,16 @@ async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
 }
 
 /**
+ * The one link inside the coexist and website callouts: a 44px target
+ * (`tapTargetLinkClass`) whose underline thickens on hover. They were 24px
+ * `inline-block` words, already underlined, so a hover changed no pixel
+ * (K-258). Each sits in a `flex h-6 items-center` line, the 16px text's own
+ * 24px, so the target bleeds 10px into the gap above and the callout's
+ * padding below and the callout keeps its shape.
+ */
+const CALLOUT_LINK_CLASS = `${tapTargetLinkClass} font-medium text-primary underline underline-offset-4 hover:decoration-2`;
+
+/**
  * Cached per (negotiated locale, guide) — `guide` is a plain, serializable
  * data object (`src/lib/migration-guides.ts`), safe as a `"use cache"`
  * argument. `importCta` carries {@link SwitchingImportCta} (session-scoped —
@@ -215,12 +226,11 @@ async function GuideBody({
                   src/lib/marketing.ts (marketing.md's claims policy), and
                   /pricing already links back here for the fee citation -- this
                   is what closes that loop in the other direction. */}
-              <Link
-                href="/pricing"
-                className="mt-4 inline-block font-medium text-primary underline underline-offset-4"
-              >
-                {t("switching.common.seePricing")}
-              </Link>
+              <p className="mt-4 flex h-6 items-center">
+                <Link href="/pricing" className={CALLOUT_LINK_CLASS}>
+                  {t("switching.common.seePricing")}
+                </Link>
+              </p>
             </div>
           </div>
         </section>
@@ -273,12 +283,11 @@ async function GuideBody({
               <p className="mt-2 leading-7 text-muted">{t(guide.website.offer.body)}</p>
               {/* The concierge's own door, reused word for word: one address
                   for the switch and the website, said the same way twice. */}
-              <a
-                href={`mailto:${SWITCH_EMAIL}`}
-                className="mt-4 inline-block font-medium text-primary underline underline-offset-4"
-              >
-                {t("switching.concierge.emailCta", { email: SWITCH_EMAIL })}
-              </a>
+              <p className="mt-4 flex h-6 items-center">
+                <a href={`mailto:${SWITCH_EMAIL}`} className={CALLOUT_LINK_CLASS}>
+                  {t("switching.concierge.emailCta", { email: SWITCH_EMAIL })}
+                </a>
+              </p>
             </div>
           </div>
         </section>

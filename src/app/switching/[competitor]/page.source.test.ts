@@ -61,3 +61,36 @@ describe("the guide's own bands", () => {
     expect(SOURCE).not.toContain("max-w-2xl text-lg leading-8 text-muted");
   });
 });
+
+/**
+ * **The callout links are 44px targets that answer a hover** (K-258).
+ *
+ * "See what DiveDay costs →" and "Email us at switch@dive.day" were
+ * `inline-block` 24px words, and already underlined, so hovering them changed
+ * nothing (the state atlas found 0 pixels between rest and hover). Each now
+ * takes `tapTargetLinkClass` and thickens its underline on hover, on a line the
+ * text's own 24px tall so the callout keeps its padding.
+ */
+describe("the coexist and website callout links", () => {
+  const constant = SOURCE.match(/const CALLOUT_LINK_CLASS = `([^`]*)`;/);
+
+  it("share one class: a 44px target whose underline thickens on hover", () => {
+    expect(constant, "CALLOUT_LINK_CLASS is declared in the page").not.toBeNull();
+    expect(constant?.[1]).toMatch(/^\$\{tapTargetLinkClass\} /);
+    expect(constant?.[1]).toContain("hover:decoration-2");
+  });
+
+  it("each sits on a 24px line of its own, the target bleeding into the gap and padding", () => {
+    for (const marker of ['href="/pricing"', "href={`mailto:"]) {
+      const at = SOURCE.indexOf(marker);
+      expect(at, `${marker} is where this test looks`).toBeGreaterThan(-1);
+      const link = SOURCE.slice(at, SOURCE.indexOf(">", at));
+      expect(link).toContain("className={CALLOUT_LINK_CLASS}");
+      const line = SOURCE.lastIndexOf("<p ", at);
+      expect(SOURCE.slice(line, SOURCE.indexOf(">", line) + 1)).toBe(
+        '<p className="mt-4 flex h-6 items-center">',
+      );
+    }
+    expect(SOURCE).not.toContain("inline-block font-medium text-primary underline");
+  });
+});
