@@ -208,7 +208,7 @@ function SiteRow({
         ) : undefined
       }
     >
-      <div className="min-w-0 py-2">
+      <div className="min-w-0">
         <p className="font-medium break-words">{site.name}</p>
         <p className="mt-0.5 text-sm break-words text-muted">{meta.join(" · ")}</p>
         {/* What the shop wants to remember about running this site, while it

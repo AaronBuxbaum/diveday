@@ -100,7 +100,9 @@ export function ReviewLedger({
   return (
     <ul className="mt-4 flex flex-col">
       {reviews.map((review) => (
-        <LedgerRow key={review.id} pad="lg">
+        // 16px, the room a diver's words have always stood in here, and the
+        // room its loading skeletons draw.
+        <LedgerRow key={review.id} pad="xl">
           <StarRating
             rating={review.rating}
             label={t("reviews.ratingOption", { rating: review.rating })}

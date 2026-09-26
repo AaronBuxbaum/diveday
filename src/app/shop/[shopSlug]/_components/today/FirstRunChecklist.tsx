@@ -147,7 +147,7 @@ function ChecklistStep({
       }
       {...door}
     >
-      <div className="min-w-0 py-2">
+      <div className="min-w-0">
         <p className="font-medium">{title}</p>
         <p className="mt-0.5 text-sm text-muted">{done ? doneLabel : body}</p>
       </div>
@@ -274,7 +274,7 @@ export function FirstRunChecklist({
               defaults to `min-width:auto`, so the row grows to its widest child
               — the URL — and pushes the page wider than the viewport instead of
               clipping it. */}
-          <div className="min-w-0 py-2">
+          <div className="min-w-0">
             <p className="font-medium">{copy.scheduleTitle}</p>
             <p className="mt-0.5 text-sm text-muted">{copy.scheduleBody}</p>
             <p className="mt-1 max-w-full truncate font-mono text-xs text-muted">{scheduleUrl}</p>
@@ -298,7 +298,7 @@ export function FirstRunChecklist({
             )
           }
         >
-          <div className="min-w-0 py-2">
+          <div className="min-w-0">
             <p className="font-medium">{copy.stripeTitle}</p>
             <p className="mt-0.5 text-sm text-muted">
               {stripeDone ? copy.stripeDone : copy.stripeBody}

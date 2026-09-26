@@ -200,7 +200,7 @@ export function ClosingBlock({
                   </div>
                 }
               >
-                <div className="min-w-0 py-2">
+                <div className="min-w-0">
                   <p className="text-sm font-medium">{action.subject}</p>
                   {/* A row whose subject is the whole fact renders no second
                       line rather than an empty one. */}

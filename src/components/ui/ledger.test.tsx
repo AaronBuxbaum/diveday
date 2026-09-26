@@ -114,6 +114,37 @@ function listsOpeningAGroup(source: string): { tag: string; className: string }[
 }
 
 /**
+ * The element each `<LedgerRow>` opens onto — its first child, past comments
+ * and whitespace — as the class literals of its opening tag, beside the row's
+ * own attributes. A child the file names once and hands over as a variable
+ * (`{body}`, Today's station rows) is read where the same file declares it
+ * (`const body = (<p …>`).
+ */
+function ledgerRowContents(source: string): { row: string; className: string }[] {
+  return openingTags(source, "LedgerRow")
+    .filter(({ own }) => !own.trimEnd().endsWith("/"))
+    .flatMap(({ own, end }) => {
+      const rest = source.slice(end).replace(/^(?:\s|\{\/\*[\s\S]*?\*\/\})*/, "");
+      const named = rest.match(/^\{\s*([A-Za-z_$][\w$]*)\s*\}/);
+      const declared = named
+        ? source.slice(
+            Math.max(0, source.search(new RegExp(`const ${named[1]}\\s*=\\s*\\(?\\s*<`))),
+          )
+        : null;
+      const from =
+        named && declared !== null
+          ? /^const /.test(declared)
+            ? declared.replace(/^[^<]*/, "")
+            : ""
+          : rest;
+      const child = from.match(/^<([A-Za-z][\w.]*)/);
+      if (!child) return [];
+      const [tag] = openingTags(from, child[1]);
+      return [{ row: own, className: tag?.own.match(/className="([^"]*)"/)?.[1] ?? "" }];
+    });
+}
+
+/**
  * These are small-caps by design but are not group labels: the public eyebrow,
  * the earned-moment eyebrow, the shop initials, the schedule's calendar header,
  * the print and legal eyebrows, the demo chip, the held-water status, the
@@ -592,11 +623,59 @@ describe("LedgerRow", () => {
     expect(row()).toHaveClass("py-3");
     expect(row()).not.toHaveClass("py-2");
     rerender(
+      <LedgerRow as="div" pad="xl">
+        Grace Mensah
+      </LedgerRow>,
+    );
+    // A public review's 16px, which its loading skeleton draws too.
+    expect(row()).toHaveClass("py-4");
+    rerender(
       <LedgerRow as="div" pad="none">
         Grace Mensah
       </LedgerRow>,
     );
     expect(row().className).not.toMatch(/(?:^|\s)py-/);
+  });
+
+  /**
+   * **The row's inset is the only one** (pixel-craft class 5). Once the row
+   * owned its 8px, nine rows still opened onto an element carrying the `py-2`
+   * (or `py-3`) that had stood in for it, so their inset doubled: every Today
+   * station row went from 52 to 55px and a wrapped one grew 16px, the
+   * first-run steps from 62 to 78, the dive-site catalog's to 20px a side. The
+   * sweep above reads only the row's own tag, so it saw none of them. A row
+   * whose one child paints its whole box (`pad="none"`) is that child's to pad.
+   */
+  it("opens onto content with no vertical padding of its own, anywhere in src/", () => {
+    const offenders = sourceFiles(SRC_DIR)
+      .filter((file) => file.endsWith(".tsx") && !SWEEP_EXEMPT.has(file))
+      .flatMap((file) =>
+        ledgerRowContents(readFileSync(file, "utf8"))
+          .filter(({ row }) => !/\spad="none"/.test(row))
+          .flatMap(({ className }) =>
+            className
+              .split(/\s+/)
+              .filter((token) => /^(?:\S*:)?p[ytb]-/.test(token))
+              .map((token) => `${relative(SRC_DIR, file)}: ${token}`),
+          ),
+      );
+    // Listed, not counted — nothing on screen will name the file.
+    expect(offenders).toEqual([]);
+  });
+
+  it("reads what a row opens onto, past comments, and through a variable the file declares", () => {
+    const source = [
+      "const body = (",
+      '  <p className="min-w-0 py-2 text-base">x</p>',
+      ");",
+      "<LedgerRow stacked>{body}</LedgerRow>",
+      '<LedgerRow pad="none">{/* why */}<div className="py-3">y</div></LedgerRow>',
+      "<LedgerRow>{rows.map((r) => r)}</LedgerRow>",
+    ].join("\n");
+    expect(ledgerRowContents(source)).toEqual([
+      { row: expect.stringContaining("stacked"), className: "min-w-0 py-2 text-base" },
+      { row: expect.stringContaining('pad="none"'), className: "py-3" },
+    ]);
   });
 
   it("lets a 44px control overhang that inset, so a one-line row stays 52px", () => {
@@ -773,7 +852,7 @@ describe("LedgerRow", () => {
    * and the fix overhangs the kind's line instead of sizing it — its target
    * stays 44px.
    */
-  it("wraps its lines 4px apart and lets the fix overhang the kind's line", () => {
+  it("wraps its lines 4px apart", () => {
     render(
       <LedgerRow
         as="div"
@@ -786,7 +865,53 @@ describe("LedgerRow", () => {
     );
     const trailing = screen.getByRole("button", { name: "Assign" }).parentElement as HTMLElement;
     expect(trailing.parentElement).toHaveClass("max-sm:flex-wrap", "max-sm:gap-y-1");
-    expect(trailing).toHaveClass("max-sm:-my-3");
+  });
+
+  /**
+   * **The fix overhangs the kind's line only by the room there is** (classes
+   * 1, 5 and 7). A 12px overhang (`max-sm:-my-3`) let the kind word set the
+   * line, but the room above that line is the row's inset (8px at `md`) and
+   * the room below it the 4px line gap: the staffing week's "Assign" started
+   * 3px above its row's top rule, its ring over the row above, and Today's
+   * 48px Send reached 8px into the sentence under it. The overhang is capped at
+   * the smaller room and kept even on both sides — uneven, the control's
+   * centre leaves the kind word's (by 2px for `-mt-2 -mb-1`) and a bordered
+   * control sits on the rule.
+   */
+  it("overhangs the kind's line by no more than the room above and below it, evenly", () => {
+    const px = (token: string | undefined) =>
+      token === undefined ? 0 : Number(token.replace(/^.*?-(?=[\d.]+$)/, "")) * 4;
+    /** A side's phone value: its own `max-sm:` token, else its axis's, else the base. */
+    const phone = (element: HTMLElement, box: "m" | "p", side: "t" | "b", sign: "" | "-") => {
+      const tokens = [...element.classList];
+      const find = (prefix: string, axis: string) =>
+        tokens.find((token) => new RegExp(`^${prefix}${sign}${box}${axis}-[\\d.]+$`).test(token));
+      return px(find("max-sm:", side) ?? find("max-sm:", "y") ?? find("", side) ?? find("", "y"));
+    };
+    for (const pad of ["md", "lg"] as const) {
+      render(
+        <LedgerRow
+          as="div"
+          stacked
+          pad={pad}
+          kind={{ word: "Needs crew", tone: "warning" }}
+          trailing={<button type="button">Assign</button>}
+        >
+          <p>5:30 AM Dawn Two-Tank</p>
+        </LedgerRow>,
+      );
+      const trailing = screen.getByRole("button", { name: "Assign" }).parentElement as HTMLElement;
+      const row = trailing.parentElement as HTMLElement;
+      const inset = phone(row, "p", "t", "");
+      const gap = px([...row.classList].find((token) => /^max-sm:gap-y-[\d.]+$/.test(token)));
+      const above = phone(trailing, "m", "t", "-");
+      const below = phone(trailing, "m", "b", "-");
+      expect(above, pad).toBeGreaterThan(0);
+      expect(above, pad).toBeLessThanOrEqual(inset);
+      expect(below, pad).toBeLessThanOrEqual(gap);
+      expect(above, pad).toBe(below);
+      cleanup();
+    }
   });
 
   it("gives a stacked fix on a line of its own its whole height", () => {

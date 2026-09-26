@@ -416,11 +416,19 @@ type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkL
  * trip's three-line dive rows, cap tops 5px under one rule and descenders 3px
  * over the next), and callers made up for it four ways — `py-3` on the row,
  * `py-2` on its content, both, or nothing. `md` is the 8px a padded row
- * already had; `lg` the 12px of a record with a paragraph to read; `none` is
- * for a row whose one child paints its whole box and pads itself (the
- * counter's one-tap button, rule to rule).
+ * already had; `lg` the 12px of a record with a paragraph to read; `xl` the
+ * 16px a public review stands in, a diver's words set with room round them
+ * (its loading skeletons draw the same); `none` is for a row whose one child
+ * paints its whole box and pads itself (the counter's one-tap button, rule to
+ * rule).
+ *
+ * **The row's inset is the only one.** What a row opens onto adds no vertical
+ * padding of its own, or the inset doubles: Today's station rows went from 52
+ * to 55px, and a wrapped one grew 16px, while their sentence kept the `py-2`
+ * that had stood in for this. `ledger.test.tsx` sweeps the element every row
+ * opens onto, as it sweeps the row's own className.
  */
-const ROW_PAD = { md: "py-2", lg: "py-3", none: "" } as const;
+const ROW_PAD = { md: "py-2", lg: "py-3", xl: "py-4", none: "" } as const;
 
 /**
  * A hairline row on the page background — the ledger's only row shape.
@@ -461,9 +469,14 @@ const ROW_PAD = { md: "py-2", lg: "py-3", none: "" } as const;
  * the first line's height with the 20px kind word centred in it: the staffing
  * week's "Needs crew" rows sat 7px low, 24px of air over the kind and 10px
  * under the last line. The lines are 4px apart (`max-sm:gap-y-1`), and beside
- * a kind the fix overhangs the kind's line (`max-sm:-my-3`, 44 − 24 = 20) so
- * the word sets it; the target is still 44px. The row's own 8px inset is the
- * room above the first line and below the last.
+ * a kind the fix overhangs the kind's line by 4px a side (`max-sm:-my-1`),
+ * which is all the room that line has: the row's 8px inset above it, the 4px
+ * line gap below. A 12px overhang let the word alone set the line, but put an
+ * "Assign" 3px over the row's top rule, its ring across the row above, and a
+ * 48px Send 8px into the sentence under it; an uneven one (8 above, 4 below)
+ * moves the control's centre 2px off the kind word's and sits a bordered
+ * control on the rule. The target is still 44px. The row's own 8px inset is
+ * the room above the first line and below the last.
  *
  * **A stacked row with no kind leads with its content.** The artboard's first
  * line is *the kind and the fix*; a row that names no kind has nothing to put
@@ -525,7 +538,8 @@ export function LedgerRow({
   size?: "md" | "lg";
   /**
    * The inset above and below the words: `md` 8px, `lg` 12px for a record
-   * with a paragraph in it, `none` for a row whose one child fills its box.
+   * with a paragraph in it, `xl` 16px for a public review, `none` for a row
+   * whose one child fills its box.
    */
   pad?: keyof typeof ROW_PAD;
   /**
@@ -586,13 +600,15 @@ export function LedgerRow({
       </div>
       {trailing != null ? (
         // `-my-2`: a 44px control overhangs the row's 8px inset rather than
-        // growing a one-line row to 60px. Not on a stacked phone line of its
-        // own (`max-sm:my-0`), where the overhang would put it on the rule.
+        // growing a one-line row to 60px. Beside a stacked kind, 4px a side
+        // (`max-sm:-my-1`), the room that line has (see above). Not on a
+        // stacked phone line of its own (`max-sm:my-0`), where the overhang
+        // would put it on the rule.
         <div
           className={
             stacked
               ? kind
-                ? "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-2 max-sm:-my-3 max-sm:ms-auto"
+                ? "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-2 max-sm:-my-1 max-sm:ms-auto"
                 : "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-3 max-sm:my-0 max-sm:flex max-sm:basis-full max-sm:justify-end"
               : "relative z-10 -my-2 min-w-0 max-w-full shrink-0"
           }

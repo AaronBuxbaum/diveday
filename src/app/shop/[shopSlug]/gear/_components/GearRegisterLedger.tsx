@@ -272,7 +272,7 @@ function GearUnitRow({
         )
       }
     >
-      <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1 py-2">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="font-mono text-sm font-medium">{item.label}</span>
         {descriptor ? <span className="min-w-0 text-sm text-muted">{descriptor}</span> : null}
         {where ? (

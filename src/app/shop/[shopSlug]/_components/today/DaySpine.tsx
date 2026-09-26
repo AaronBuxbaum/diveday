@@ -194,7 +194,7 @@ function StationRow({
   // span renders — a dangling " · " is the shape of a sentence that was
   // deleted rather than one that never existed.
   const body = (
-    <p className="min-w-0 py-2 text-base leading-snug">
+    <p className="min-w-0 text-base leading-snug">
       {action.aboutDeparture ? null : (
         <>
           <span className="font-medium">{action.subject}</span>

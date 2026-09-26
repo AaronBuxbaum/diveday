@@ -376,6 +376,9 @@ async function CatalogView({
             // leaves the paragraph a column two words wide; `stacked` gives the
             // act the first line and the briefing the full width beneath.
             stacked
+            // 12px, as it always stood: a name, a line of facts and a
+            // paragraph to choose on.
+            pad="lg"
             trailing={
               <form action={importAction}>
                 <input type="hidden" name="templateId" value={template.id} />
@@ -388,7 +391,7 @@ async function CatalogView({
               </form>
             }
           >
-            <div className="min-w-0 py-3">
+            <div className="min-w-0">
               <p className="font-medium">{version.briefing.name}</p>
               <p className="mt-0.5 text-sm text-muted">
                 {[

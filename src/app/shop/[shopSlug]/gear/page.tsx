@@ -492,7 +492,7 @@ function DeletedList({
             </form>
           }
         >
-          <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1 py-2">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="font-mono text-sm font-medium">{row.label}</span>
             <span className="text-sm text-muted">
               {[gearItemKindLabel(t, row.kind), row.size].filter(Boolean).join(" · ")}
