@@ -1457,6 +1457,59 @@ describe("the evening reading", () => {
     expect(row?.querySelector("svg path")).toBeNull();
   });
 
+  /**
+   * The rest of the states that are not "All home" share that line: a boat
+   * still out and an open dock count in warning ink, a boat that never left in
+   * muted ink. Each keeps its word and its sentence beside the hollow mark, and
+   * none of them names who closed a head count nobody closed.
+   */
+  it.each([
+    {
+      word: "Still out",
+      ink: "text-warning-strong",
+      station: {
+        status: "still_out",
+        startsAt: hoursFromNow(-2),
+        endsAt: hoursFromNow(1),
+        ended: false,
+      },
+    },
+    {
+      word: "Dock count open",
+      ink: "text-warning-strong",
+      station: { status: "count_open", gapReason: "no_roll_call" },
+    },
+    {
+      word: "Not departed",
+      ink: "text-muted",
+      station: {
+        status: "not_departed",
+        startsAt: hoursFromNow(6),
+        endsAt: hoursFromNow(9),
+        ended: false,
+      },
+    },
+  ] as const)(
+    "hangs a $word station's sentence beside the hollow mark, in its tone",
+    ({ word, ink, station }) => {
+      renderSpine({
+        departures: [],
+        evening: evening([closed({ tripId: "t1", ...station })], {
+          headCountCloses: new Map([
+            ["t1", { closedAt: hoursFromNow(-3), closedBy: "Sal Moretti" }],
+          ]),
+        }),
+      });
+      const block = screen.getByText(word).parentElement;
+      expect(block?.querySelector(`.${ink}`)?.textContent).toBeTruthy();
+      expect(block?.querySelector("svg")).toBeNull();
+      const row = block?.parentElement;
+      expect(row?.querySelector("svg circle")).not.toBeNull();
+      expect(row?.querySelector("svg path")).toBeNull();
+      expect(screen.queryByText(/closed by/)).toBeNull();
+    },
+  );
+
   it("offers the departure log only to a reader who may generate one", () => {
     renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
     expect(screen.getByRole("link", { name: "Generate log" })).toBeInTheDocument();
