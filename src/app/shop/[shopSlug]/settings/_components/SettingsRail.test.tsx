@@ -494,6 +494,74 @@ describe("the rail keeps the current row in view", () => {
     expect(scroller.scrollTop).toBe(254);
   });
 
+  /**
+   * **It lands a whole row under the stuck label, never half of one** (K-221).
+   * Centring the row put the box's scroll wherever the arithmetic fell, and
+   * the label stuck at the box's top cut the row that happened to be passing
+   * under it: on Kinds of day and Seasons the bottom half of "Trip packing
+   * checklist" showed under "YOUR SHOP", a state only a hand could have left
+   * the rail in. The rail finishes the move on a row's edge: the first row
+   * the label would cut starts where a row starts under its label at rest.
+   */
+  it("lands a whole row under the label stuck at the box's top", () => {
+    // The deepest sub-route on the map, far below the box's fold.
+    const deepest = railGroups()
+      .flatMap((group) => group.rows)
+      .filter((row) => row.target.kind === "route" && row.target.path.startsWith("/settings/"))
+      .at(-1);
+    if (deepest?.target.kind !== "route") throw new Error("no sub-route row");
+    pathname = `${BASE}${deepest.target.path}`;
+    const BOX = { top: 56, height: 744 };
+    const LABEL_H = 28;
+    const FIRST_ROW = 60; // the first row's top in the box's content, under its label
+    const ROW_H = 44;
+    const scroller = () => railScroller();
+    const rect = (top: number, height: number) =>
+      ({
+        x: 88,
+        y: top,
+        top,
+        left: 88,
+        width: 256,
+        height,
+        bottom: top + height,
+        right: 344,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    // One group's worth of layout, read at call time so it follows scrollTop:
+    // rows 44px apart, and the group's label stuck at the box's top once the
+    // box has scrolled past where it rests.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const box = scroller();
+      const scrolled = box.scrollTop;
+      if (this === box) return rect(BOX.top, BOX.height);
+      if (this.classList.contains("settings-rail-label")) {
+        const rest = BOX.top + 24 - scrolled;
+        return rect(Math.max(BOX.top, rest), LABEL_H);
+      }
+      const li = this.closest("li");
+      if (li && box.contains(li)) {
+        const index = [...box.querySelectorAll("li")].indexOf(li);
+        return rect(BOX.top + FIRST_ROW + index * ROW_H - scrolled, ROW_H);
+      }
+      return rect(0, 0);
+    });
+    renderRail();
+
+    const top = scroller().scrollTop;
+    expect(top, "the box never moved").toBeGreaterThan(0);
+    const labelBottom = BOX.top + LABEL_H;
+    const rows = [...scroller().querySelectorAll("li")].map((li) => li.getBoundingClientRect());
+    const cut = rows.find((row) => row.bottom > labelBottom);
+    expect(cut?.top, "a row stands half under the stuck label").toBeGreaterThanOrEqual(labelBottom);
+    // And the row the reader came for is still in the box.
+    const current = scroller().querySelector<HTMLElement>('[aria-current="true"]');
+    const at = current?.getBoundingClientRect();
+    expect(at && at.top >= labelBottom && at.bottom <= BOX.top + BOX.height).toBe(true);
+  });
+
   it("does nothing while the rail is not drawn", () => {
     // Below `lg` the rail is `hidden`, and every box measures zero.
     pathname = `${BASE}/settings/team`;
