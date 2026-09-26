@@ -17,7 +17,7 @@ export default function RegionLoading() {
   return (
     <div className="flex flex-1 flex-col">
       <MarketingNavFallback hideCta />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-8 sm:py-10">
         <div className="animate-pulse">
           <ShopPageHeaderSkeleton
             titleWidth="w-72 max-w-full"
@@ -27,9 +27,9 @@ export default function RegionLoading() {
             descriptionLines={{ base: 2, sm: 1 }}
           />
         </div>
-        <div className="animate-pulse divide-y divide-border border-y border-border">
+        <div className="-mx-2 animate-pulse divide-y divide-border border-y border-border">
           {[0, 1, 2].map((row) => (
-            <div key={row} className="flex items-center gap-4 py-5">
+            <div key={row} className="flex items-center gap-4 px-2 py-5">
               <div className="min-w-0 flex-1">
                 <div className="h-7 w-52 max-w-full rounded bg-surface-sunken" />
                 <div className="mt-1 h-5 w-full max-w-sm rounded bg-surface-sunken" />

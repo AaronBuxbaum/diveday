@@ -17,6 +17,23 @@ afterEach(cleanup);
  * skeletons drew one of each.
  */
 describe("the /dive skeletons", () => {
+  it("sits both bodies on the chrome's 24px gutter, as the pages do (K-293)", () => {
+    for (const Skeleton of [RegionsLoading, RegionLoading]) {
+      const { container } = render(<Skeleton />);
+      const main = container.querySelector("main");
+      expect(main).toHaveClass("px-6");
+      expect(main).not.toHaveClass("px-4");
+      cleanup();
+    }
+  });
+
+  it("wraps the index's title to two lines below sm, on the 342px column that gutter leaves", () => {
+    const { container } = render(<RegionsLoading />);
+    const header = container.querySelector("main .animate-pulse");
+    expect(header?.querySelectorAll(".h-11")).toHaveLength(2);
+    expect(header?.querySelectorAll(".h-11.sm\\:hidden")).toHaveLength(1);
+  });
+
   it("draws no logo square on a town's shop rows", () => {
     const { container } = render(<RegionLoading />);
     expect(container.querySelector(".size-14")).toBeNull();

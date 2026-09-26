@@ -453,15 +453,18 @@ const CUT_RINGS: readonly (readonly [file: string, anchor: string, needs: readon
     "absolute inset-0 z-0 rounded-inset",
     ["focus-visible:focus-ring-inset"],
   ],
+  // The public lists' rows fill rule to rule, 8px past the column (K-513):
+  // a ring outside the row would cross the rules and the rows either side,
+  // as a ledger door's would, so it is drawn inside.
   [
     "app/s/[shopSlug]/courses/page.tsx",
-    "group -mx-3 flex gap-4",
+    "group flex gap-4 px-2",
     ["focus-visible:focus-ring-inset"],
   ],
-  ["app/dive/page.tsx", "group -mx-3 flex items-baseline", ["focus-visible:focus-ring-inset"]],
+  ["app/dive/page.tsx", "group flex items-baseline", ["focus-visible:focus-ring-inset"]],
   [
     "app/dive/[region]/page.tsx",
-    "group -mx-3 flex items-center",
+    "group flex items-center gap-4 px-2",
     ["focus-visible:focus-ring-inset"],
   ],
   // The page rail's one row: the editor's section rail and the settings map

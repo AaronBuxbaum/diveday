@@ -21,9 +21,9 @@ export default function PublicCoursesLoading() {
           descriptionWidth="w-full max-w-2xl"
         />
       </div>
-      <div className="mt-8 animate-pulse divide-y divide-border border-y border-border">
+      <div className="-mx-2 mt-8 animate-pulse divide-y divide-border border-y border-border">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="flex items-start justify-between gap-6 py-5">
+          <div key={i} className="flex items-start justify-between gap-6 px-2 py-5">
             <div className="min-w-0 flex-1">
               <div className="h-6 w-56 max-w-full rounded bg-surface-sunken" />
               <div className="mt-2 h-4 w-full max-w-md rounded bg-surface-sunken" />

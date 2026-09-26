@@ -58,7 +58,9 @@ export default async function RegionsPage() {
       <Suspense fallback={<MarketingNavFallback hideCta />}>
         <MarketingNav hideCta />
       </Suspense>
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      {/* `px-6` at every width: the marketing chrome's gutter, so the page's
+          words start where the wordmark and the footer's do (K-293). */}
+      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-8 sm:py-10">
         <ShopPageHeader
           title={t("regions.index.title")}
           description={t("regions.index.description")}
@@ -66,12 +68,16 @@ export default async function RegionsPage() {
         {regions.length === 0 ? (
           <EmptyState title={t("regions.index.emptyTitle")} body={t("regions.index.emptyBody")} />
         ) : (
-          <ul className="divide-y divide-border border-y border-border">
+          // The ledger's geometry (`FILL_ROOM`, src/components/ui/ledger.tsx):
+          // the list steps 8px out so its rules run with the row's fill, the
+          // row keeps that room as its `px-2` so its words stay on the column,
+          // and the fill is square, the row between two rules (K-513).
+          <ul className="-mx-2 divide-y divide-border border-y border-border">
             {regions.map((region) => (
               <li key={region.slug}>
                 <Link
                   href={regionPath(region.slug)}
-                  className="group -mx-3 flex items-baseline justify-between gap-6 rounded-lg px-3 py-5 transition-colors hover:bg-surface-sunken focus-visible:focus-ring-inset"
+                  className="group flex items-baseline justify-between gap-6 px-2 py-5 transition-colors hover:bg-surface-sunken focus-visible:focus-ring-inset"
                 >
                   <h2 className={`${SECTION_TITLE_CLASS} min-w-0 group-hover:text-primary`}>
                     {region.name}
