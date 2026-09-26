@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BoatDrift } from "@/components/illustration/BoatDrift";
 import { SiteMark } from "@/components/illustration/SiteMark";
+import { buttonClass, tapTargetLineClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -55,12 +56,16 @@ export function LiveBoatPanel({
             // One quiet door, at link weight. A panel about a boat that is
             // already out is not a place for a button competing with the
             // page's one primary, which is the seat on the next departure.
-            <Link
-              href={follow.href}
-              className="mt-2 inline-flex min-h-11 items-center font-medium text-primary hover:underline"
-            >
-              {follow.label}
-            </Link>
+            // Drawn as the season band's link beside it is, on a line its
+            // words' height, so its 44px target adds nothing under the card.
+            <p className={`mt-2 ${tapTargetLineClass}`}>
+              <Link
+                href={follow.href}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
+              >
+                {follow.label}
+              </Link>
+            </p>
           ) : null}
         </div>
       </div>

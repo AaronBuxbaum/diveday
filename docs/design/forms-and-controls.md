@@ -768,6 +768,13 @@ rise by half the margin. The box then ends `padding − 12px` from the container
 under 17px of padding its 5px ring needs drawing inside (the team card, 16px) or the container
 needs the padding (the safety checklist's rows, `max-sm:py-5`).
 
+**A `text-sm` link with a line of its own stands on `tapTargetLineClass`.** A block exactly the
+words' 20px line box, centring the 44px link on it, so the target bleeds 12px either way and the
+flow pays 20px: the storefront's "Follow" and season link at the end of their cards (which
+`outdent` would only half fix, leaving 12px of box between each and the sentence above it), and a
+section header's "All courses" beside its heading, where the bare target would stand the row 44px
+tall. It is `EYEBROW_TAP_WRAPPER`'s trade at the `sm` line.
+
 The same trap applies to the type scale, which is why it lives on the sizes: a `text-base` passed
 through `className` cannot reliably beat a size's `text-sm`. Pick the size that already says it.
 

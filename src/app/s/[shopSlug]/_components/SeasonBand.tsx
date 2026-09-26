@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLineClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -58,18 +58,18 @@ export function SeasonBand({
             <p className="mt-0.5 text-sm text-muted">{entry.through}</p>
             {entry.note ? <p className="mt-2 text-sm">{entry.note}</p> : null}
             {entry.lens ? (
-              <Link
-                href={entry.lens.href}
-                scroll={false}
-                className={buttonClass({
-                  variant: "link",
-                  size: "sm",
-                  flush: true,
-                  className: "mt-2",
-                })}
-              >
-                {entry.lens.label}
-              </Link>
+              // On a line its words' height: the 44px target bleeds into the
+              // card's padding and the gap to the next season, not adding to
+              // either.
+              <p className={`mt-2 ${tapTargetLineClass}`}>
+                <Link
+                  href={entry.lens.href}
+                  scroll={false}
+                  className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                >
+                  {entry.lens.label}
+                </Link>
+              </p>
             ) : null}
           </li>
         ))}

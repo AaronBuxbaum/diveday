@@ -354,6 +354,34 @@ export const tapTargetLinkClass = "inline-flex min-h-11 items-center";
  */
 export const proseLinkClass = "underline hover:text-primary";
 
+/**
+ * **The 20px line a 44px link stands on**, for a `text-sm` link with a line of
+ * its own: the last line of a card, the "All courses" beside a section's
+ * heading.
+ *
+ * The link's floor is 44px around a 20px line, and as its own line that box
+ * *is* the flow, 12px of it nobody sees above the words and 12px below. Last
+ * in a card, the half below added to the card's padding: the storefront's
+ * "Right now" card measured 16px over its icon and 32px under "Follow", the
+ * season card 19px over its eyebrow and 30px under its link (pixel-craft
+ * K-185). Beside a heading, the box would stand the header row 44px tall and
+ * push the heading down 7px (K-237).
+ *
+ * So the link stands on a block exactly its words' line box, which centres it:
+ * the words land where a plain line's would, the flow is 20px, and the target
+ * bleeds 12px either way into space nothing else uses. It is the trade
+ * `EYEBROW_TAP_WRAPPER` (`ShopPageHeader.tsx`) makes at the eyebrow's 16px
+ * line, for the reason that constant records (#1857): a negative margin on the
+ * inline-flex link itself is not what gives its line back. Not `outdent`,
+ * which returns only the half below: a link that follows a line of text keeps
+ * the 12px above its words too, and "See After dark departures" sat 20px under
+ * its note where the note's own lines are 8px apart.
+ *
+ * Only for a link set in `text-sm` (`buttonClass`'s `sm`, or
+ * `tapTargetLinkClass` with `text-sm`); the line is that size's 20px.
+ */
+export const tapTargetLineClass = "flex h-5 items-center";
+
 export type ButtonVariant = keyof typeof variants;
 export type ButtonSize = keyof typeof sizes;
 

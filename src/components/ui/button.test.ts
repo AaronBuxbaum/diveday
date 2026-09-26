@@ -2,7 +2,13 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { type ButtonSize, type ButtonVariant, buttonClass, proseLinkClass } from "./button";
+import {
+  type ButtonSize,
+  type ButtonVariant,
+  buttonClass,
+  proseLinkClass,
+  tapTargetLineClass,
+} from "./button";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -331,6 +337,20 @@ describe("buttonClass", () => {
       expect(tokens).not.toContain("min-h-12");
       expect(tokens).toContain("text-sm");
       expect(horizontalPadding(tokens.join(" "))).toEqual(["px-0"]);
+    });
+  });
+
+  /**
+   * **A 44px link on a line of its own costs the flow its words' 20px**
+   * (pixel-craft K-185, K-237). As its own line the box was the flow: 12px of
+   * target under "Follow" added to the card's padding, and a header's "All
+   * courses" would have stood its row 44px tall.
+   */
+  describe("tapTargetLineClass", () => {
+    it("is a block exactly the sm link's 20px line box, centring the target on it", () => {
+      expect(tapTargetLineClass.split(" ")).toEqual(["flex", "h-5", "items-center"]);
+      // `h-5` is `text-sm`'s line box, which is the `sm` size's type.
+      expect(buttonClass({ variant: "link", size: "sm" }).split(" ")).toContain("text-sm");
     });
   });
 
