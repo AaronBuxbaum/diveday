@@ -298,7 +298,9 @@ export function SectionCard({
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
             {title != null ? (
-              <Heading id={headingId} className={TITLE_CLASS[titleAs]}>
+              // `text-balance`: a card title that wraps keeps more than one
+              // word on its last line ("connected" stood alone on a phone).
+              <Heading id={headingId} className={`${TITLE_CLASS[titleAs]} text-balance`}>
                 {title}
               </Heading>
             ) : null}

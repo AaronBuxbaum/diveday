@@ -231,6 +231,24 @@ describe("SectionCard", () => {
     expect(header).toHaveClass("items-baseline");
     expect(header).not.toHaveClass("items-start");
   });
+
+  /**
+   * **A wrapped title keeps more than one word on its last line** — class 8.
+   * The 24px title set "No WhatsApp number" on one line and "connected" alone
+   * on the next (settings-whatsapp at 390). Card titles are short, so they
+   * balance, at both levels.
+   */
+  it("balances its title at either level", () => {
+    render(<SectionCard title="No WhatsApp number connected">body</SectionCard>);
+    expect(screen.getByRole("heading", { level: 2 })).toHaveClass("text-balance");
+    cleanup();
+    render(
+      <SectionCard title="Delivery history" titleAs="h3">
+        body
+      </SectionCard>,
+    );
+    expect(screen.getByRole("heading", { level: 3 })).toHaveClass("text-balance");
+  });
 });
 
 describe("naming the region", () => {
