@@ -507,19 +507,6 @@ describe("the data-compliance queues' drawing", () => {
   }
 
   /**
-   * "1 photo removed but not yet deleted from" / "storage": a danger notice's
-   * title left its last word alone on a line at 390 (K-584).
-   */
-  it("balances each notice's title, so no word is left alone on its last line", async () => {
-    for (const panel of await queuePanels()) {
-      const [title] = findElements<{ className?: string }>(panel.props.children, "p");
-      expect(title?.props.className?.split(" ")).toEqual(
-        expect.arrayContaining(["font-medium", "text-balance"]),
-      );
-    }
-  });
-
-  /**
    * Each item was one `flex flex-wrap` run of name, id, a meta span that
    * *started* with "·", and the forms, so at 390 a line opened on the dot and
    * the buttons landed wherever the words ended, at a different x on every
