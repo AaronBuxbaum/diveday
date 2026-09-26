@@ -37,7 +37,10 @@ export function LegalDocument({
 }) {
   return (
     <main className="flex-1">
-      <div className="mx-auto w-full max-w-3xl px-6 py-16 lg:py-24">
+      {/* `text-pretty` on the column, not per paragraph: `text-wrap` inherits,
+          and a term list's inline `<dt>`/`<dd>` pair has no block of its own
+          to carry it. Without it the policy ended lines on "it." (K-484). */}
+      <div className="mx-auto w-full max-w-3xl px-6 py-16 text-pretty lg:py-24">
         <p className={MARKETING_EYEBROW_CLASS}>{eyebrow}</p>
         <h1 className={`mt-4 ${BANNER_TITLE_CLASS} leading-tight sm:text-4xl`}>{title}</h1>
         <p className="mt-3 text-sm text-muted">{updated}</p>

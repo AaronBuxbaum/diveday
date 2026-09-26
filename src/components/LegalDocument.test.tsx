@@ -57,3 +57,21 @@ describe("the marketing eyebrow", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * These two pages are read straight through, and they were ending paragraphs
+ * on a lone word: "States.", "metrics." and "it." on /privacy at 1280 (K-484).
+ * Three of those sit in a term list, whose `<dt>` and `<dd>` are inline in a
+ * `<div>` — a line box no `p`/`dd` rule can reach. `text-wrap` inherits, so
+ * one `text-pretty` on the reading column covers the intro, every paragraph,
+ * every term list and every bullet.
+ */
+describe("the reading column", () => {
+  it("wraps its prose with text-pretty, term lists included", () => {
+    renderDocument();
+    const column = screen.getByText("Intro.").parentElement;
+    expect(column).toHaveClass("text-pretty");
+    expect(column).toContainElement(screen.getByText("A paragraph of policy."));
+    expect(column).toContainElement(screen.getByText("Stripe"));
+  });
+});
