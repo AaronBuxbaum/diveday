@@ -2,6 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { Badge } from "@/components/ui/badge";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { SettingsDoorRow, SettingsRow } from "./SettingsRows";
 
 /**
@@ -75,6 +76,35 @@ describe("where a row states its value", () => {
     const heading = row.querySelector("h3");
     expect(heading?.parentElement?.contains(within(row).getByText("Not connected"))).toBe(true);
     expect(phoneLines(row)).toHaveLength(1);
+  });
+
+  /**
+   * Beside the heading on a phone, the pill and the heading both shrank when
+   * the line was short for the two: the heading wrapped, and so did the pill's
+   * own words, inside a `rounded-full` box. "Pagos en línea" and "Todavía no
+   * está lista" need ~358px of a 390px phone's ~324px row, and in English at
+   * 360 "Online payments" and "Not connected" need ~306px of ~296px. The pill
+   * is kept whole, and the heading's line wraps instead: a pill that does not
+   * fit drops under its heading, where a stacked value sits.
+   */
+  it("keeps an inline pill whole, dropping it under its heading when the line is too short", () => {
+    const t = staffTranslator("es-ES");
+    const row = settingRow({
+      heading: t("settings.main.stripe.rowHeading"),
+      value: <Badge tone="warning">{t("settings.main.stripe.notReadyBadge")}</Badge>,
+      valuePlacement: "inline",
+    });
+    const heading = within(row).getByRole("heading", {
+      name: t("settings.main.stripe.rowHeading"),
+    });
+    const pill = within(row).getByText(t("settings.main.stripe.notReadyBadge"));
+    const valueBox = pill.parentElement as HTMLElement;
+    expect(valueBox).toHaveClass("shrink-0", "whitespace-nowrap");
+    // The heading and the pill are the two items of one wrapping line, so the
+    // pill moves under the heading whole rather than squeezing beside it.
+    expect(valueBox.parentElement).toBe(heading.parentElement);
+    expect(heading.parentElement).toHaveClass("flex-wrap");
+    expect(heading).toHaveClass("min-w-0");
   });
 
   it("still stacks a value under its heading on a phone by default", () => {

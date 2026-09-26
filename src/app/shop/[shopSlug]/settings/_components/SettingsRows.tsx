@@ -83,6 +83,11 @@ function RowSummary({
   // its row. A status pill is word-sized, so it takes the heading line's end
   // on a phone — the place it holds from `sm` up, where the heading line then
   // fills the row so the value and its caret end where every other row's do.
+  // The pill is kept whole: the heading and it are one wrapping line, so where
+  // the two do not fit ("Pagos en línea" and "Todavía no está lista" at 390,
+  // "Online payments" and "Not connected" at 360) the pill drops under the
+  // heading, where a stacked value sits, instead of both shrinking and the
+  // pill's words breaking inside its rounded box. The caret stays at the end.
   const desktopCaret = (
     <DisclosureCaret
       direction="down"
@@ -93,24 +98,33 @@ function RowSummary({
     <DisclosureCaret direction="down" className="text-muted group-open:rotate-180 sm:hidden" />
   );
   const inline = value != null && valuePlacement === "inline";
+  const headingElement = (
+    <h3
+      id={anchorId}
+      className={`scroll-mt-24 text-base font-medium ${inline ? "min-w-0" : "sm:shrink-0"}`}
+    >
+      {heading}
+    </h3>
+  );
   return (
     <summary
       className={`flex min-h-14 cursor-pointer list-none flex-col justify-center gap-1 px-4 py-3 transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 ${LIST_ROW_SUMMARY_RING}`}
     >
-      <span className={`flex items-center justify-between gap-4${inline ? " sm:flex-1" : ""}`}>
-        <h3 id={anchorId} className="scroll-mt-24 text-base font-medium sm:shrink-0">
-          {heading}
-        </h3>
-        {inline ? (
-          <span className="flex items-center gap-3">
-            <span className="text-sm text-muted">{value}</span>
-            {phoneCaret}
-            {desktopCaret}
+      {inline ? (
+        <span className="flex items-center gap-3 sm:flex-1">
+          <span className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            {headingElement}
+            <span className="shrink-0 whitespace-nowrap text-sm text-muted">{value}</span>
           </span>
-        ) : (
-          phoneCaret
-        )}
-      </span>
+          {phoneCaret}
+          {desktopCaret}
+        </span>
+      ) : (
+        <span className="flex items-center justify-between gap-4">
+          {headingElement}
+          {phoneCaret}
+        </span>
+      )}
       {inline ? null : value != null ? (
         <span className="flex min-w-0 items-center gap-3">
           <span className="text-sm text-muted sm:text-end">{value}</span>
