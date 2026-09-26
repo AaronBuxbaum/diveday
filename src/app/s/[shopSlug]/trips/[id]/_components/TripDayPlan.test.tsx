@@ -560,6 +560,38 @@ describe("TripMoments", () => {
     expect(screen.getByRole("presentation")).toHaveAttribute("alt", "");
   });
 
+  /**
+   * **A photo that fills the measure takes the panel's corner** (pixel-craft
+   * class 12, K-510). One moment is the column's full width, beside the hero
+   * and the route card's 20px corners, and drew the two-up grid's 12px inset
+   * corner there; in a pair it is a tile, and keeps it.
+   */
+  it("rounds a lone photo as a panel and a pair as tiles", () => {
+    const photo = (id: string) => ({ id, caption: `Moment ${id}`, imageUrl: `/m/${id}.jpg` });
+    const { rerender } = render(
+      <TripMoments
+        briefings={[briefing({ moments: [photo("a")] } as unknown as Partial<DiveBriefing>)]}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    // `StoredPhoto` draws the corner on the box round the image.
+    const box = (image: HTMLElement) => image.parentElement;
+    expect(box(screen.getByRole("presentation"))).toHaveClass("rounded-panel");
+    expect(box(screen.getByRole("presentation"))).not.toHaveClass("rounded-inset");
+    rerender(
+      <TripMoments
+        briefings={[
+          briefing({ moments: [photo("a"), photo("b")] } as unknown as Partial<DiveBriefing>),
+        ]}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    for (const tile of screen.getAllByRole("presentation")) {
+      expect(box(tile)).toHaveClass("rounded-inset");
+      expect(box(tile)).not.toHaveClass("rounded-panel");
+    }
+  });
+
   it("renders nothing when no site has a published photo", () => {
     const { container } = render(
       <TripMoments briefings={[briefing()]} locale={DEFAULT_DIVER_LOCALE} />,

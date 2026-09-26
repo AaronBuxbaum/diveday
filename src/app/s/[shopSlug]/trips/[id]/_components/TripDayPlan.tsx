@@ -586,7 +586,12 @@ export function TripMoments({ briefings, locale }: { briefings: SiteBriefing[]; 
               <StoredPhoto
                 src={moment.imageUrl}
                 alt=""
-                className="aspect-[3/2] w-full rounded-inset"
+                // The corner follows the layout, as `sizes` below does. A lone
+                // moment fills the measure beside the hero's and the route
+                // card's 20px corners and takes the panel's; in the two-up
+                // grid each is a tile at the inset's 12px (pixel-craft class
+                // 12, K-510).
+                className={`aspect-[3/2] w-full ${shown.length > 1 ? "rounded-inset" : "rounded-panel"}`}
                 // Tracks the grid above it, which is only two-column when
                 // there is more than one moment. Declared flat at `17rem` it
                 // was right for a pair and half the truth for a single
