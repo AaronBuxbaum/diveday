@@ -305,24 +305,34 @@ export function BackupsSection({
                       key={delivery.id}
                       className="flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3 sm:table-row sm:gap-0 sm:p-0"
                     >
+                      {/* `align="baseline"` on every cell: the status Badge's
+                        word sits on the row's line rather than 4px under it.
+                        Below `sm` the row is a flex line, where it does
+                        nothing. */}
                       <Td
                         pad={false}
+                        align="baseline"
                         className="basis-full font-medium sm:basis-auto sm:px-4 sm:py-3 sm:font-normal sm:whitespace-nowrap"
                       >
                         {formatDateTimeTz(delivery.startedAt, locale, timeZone)}
                       </Td>
-                      <Td pad={false} className="text-muted sm:px-4 sm:py-3 sm:text-foreground">
+                      <Td
+                        pad={false}
+                        align="baseline"
+                        className="text-muted sm:px-4 sm:py-3 sm:text-foreground"
+                      >
                         {delivery.trigger === "scheduled"
                           ? t("backup.history.trigger.scheduled")
                           : t("backup.history.trigger.manual")}
                       </Td>
-                      <Td pad={false} className="sm:px-4 sm:py-3">
+                      <Td pad={false} align="baseline" className="sm:px-4 sm:py-3">
                         <Badge tone={STATUS_TONE[delivery.status]}>
                           {statusText(t, delivery.status)}
                         </Badge>
                       </Td>
                       <Td
                         pad={false}
+                        align="baseline"
                         className="text-muted tabular-nums sm:px-4 sm:py-3 sm:text-right sm:whitespace-nowrap sm:text-foreground"
                       >
                         {delivery.byteCount === null
@@ -331,7 +341,12 @@ export function BackupsSection({
                       </Td>
                       {/* Its own line below `sm`: this is the cell a shop came
                         for on a failed row, and it is a sentence, not a chip. */}
-                      <Td pad={false} muted className="basis-full sm:basis-auto sm:px-4 sm:py-3">
+                      <Td
+                        pad={false}
+                        muted
+                        align="baseline"
+                        className="basis-full sm:basis-auto sm:px-4 sm:py-3"
+                      >
                         {delivery.status === "failed" ? (
                           deliveryErrorText(t, delivery.errorCode)
                         ) : delivery.objectKey ? (

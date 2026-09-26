@@ -207,6 +207,26 @@ describe("Table", () => {
     expect(screen.getByRole("cell", { name: "Reflowed" })).not.toHaveClass("sm:first:ps-5");
   });
 
+  it("lines a row's cells up on their first baselines when asked", () => {
+    // A md Badge's text sits 4px under a bare line of text in the next cell
+    // when both cells align to the top (K-107); baseline alignment is what
+    // puts the badge's word on the row's line. Top stays the default.
+    render(
+      <Table>
+        <TBody>
+          <tr>
+            <Td align="baseline">Weekly</Td>
+            <Td>Default</Td>
+          </tr>
+        </TBody>
+      </Table>,
+    );
+    const baseline = screen.getByRole("cell", { name: "Weekly" });
+    expect(baseline).toHaveClass("align-baseline");
+    expect(baseline).not.toHaveClass("align-top");
+    expect(screen.getByRole("cell", { name: "Default" })).toHaveClass("align-top");
+  });
+
   it("keeps a printed row on one page", () => {
     render(
       <Table>

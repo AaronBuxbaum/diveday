@@ -112,6 +112,14 @@ export type TableColumnWidth = keyof typeof COLUMN_WIDTH;
  */
 const CELL_PAD = "px-4 py-3 sm:first:ps-5 sm:last:pe-5";
 
+const CELL_ALIGN = {
+  top: "align-top",
+  middle: "align-middle",
+  // First-line baselines across the row: a `Badge` in one cell and bare text
+  // in the next. Top alignment put a md badge's word 4px under its row's line.
+  baseline: "align-baseline",
+} as const;
+
 /**
  * The table plus its shell, as one piece so neither can be forgotten or
  * hand-rolled. The outer shell clips rounded corners; its inner scroll region
@@ -338,7 +346,8 @@ export function Td({
   numeric?: boolean;
   /** Secondary ink for a supporting cell. */
   muted?: boolean;
-  align?: "top" | "middle";
+  /** `baseline` when one cell holds a badge or a control beside text in the next. */
+  align?: keyof typeof CELL_ALIGN;
   hideBelow?: keyof typeof HIDE_BELOW;
   /**
    * Opt out of the cell padding **only** for a tbody that reflows its rows to
@@ -374,7 +383,7 @@ export function Td({
 }) {
   return (
     <td
-      className={`${clip ? "overflow-hidden" : ""} bg-clip-padding ${align === "middle" ? "align-middle" : "align-top"} ${pad ? CELL_PAD : ""} ${
+      className={`${clip ? "overflow-hidden" : ""} bg-clip-padding ${CELL_ALIGN[align]} ${pad ? CELL_PAD : ""} ${
         numeric ? "text-right whitespace-nowrap tabular-nums" : ""
       } ${muted ? "text-muted" : ""} ${hideBelow ? HIDE_BELOW[hideBelow] : ""} ${className}`
         .replace(/\s+/g, " ")
