@@ -601,12 +601,6 @@ describe("the diving options a shop runs", () => {
   });
 });
 
-/*
- * The dock-day preview describes the shop's own six numbers, and a dive site
- * may override one of them (`dive_sites.expected_bottom_time_minutes`). The
- * preview used to say nothing about that, so a shop reading it had no way to
- * know which departures it did not describe.
- */
 /**
  * **One beat per line on a phone** (K-585). The preview was a greedy
  * `flex-wrap` strip, so at 390 five lines held one beat each and the third
@@ -628,6 +622,12 @@ describe("the dock-day preview's layout", () => {
   });
 });
 
+/*
+ * The dock-day preview describes the shop's own six numbers, and a dive site
+ * may override one of them (`dive_sites.expected_bottom_time_minutes`). The
+ * preview used to say nothing about that, so a shop reading it had no way to
+ * know which departures it did not describe.
+ */
 describe("the dock-day preview and the sites that override it", () => {
   it("says nothing extra when no site sets its own bottom time", async () => {
     const hrefs = hrefsIn(await renderSettings("owner"));

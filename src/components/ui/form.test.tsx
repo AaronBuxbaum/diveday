@@ -1747,13 +1747,6 @@ describe("source sweeps", () => {
   });
 
   /**
-   * **One gutter between a form's columns.** `FieldGrid` draws 16px, and call
-   * sites appended `gap-x-5 gap-y-5`, which won by stylesheet order: on one
-   * settings page the dock-day and fly-safe columns stood 20px apart and the
-   * emergency and rental-price columns 16px (K-42). A form that ever wants a
-   * different gutter gets it as a prop on `FieldGrid`, not as a class.
-   */
-  /**
    * **A `Field` wraps one control, never another label.** Without `htmlFor`,
    * a `Field` whose child is not one native control wraps it in its caption's
    * `<label>`; handed a composite holding labels of its own, it nested a label
@@ -1779,6 +1772,13 @@ describe("source sweeps", () => {
     expect(offenders).toEqual([]);
   });
 
+  /**
+   * **One gutter between a form's columns.** `FieldGrid` draws 16px, and call
+   * sites appended `gap-x-5 gap-y-5`, which won by stylesheet order: on one
+   * settings page the dock-day and fly-safe columns stood 20px apart and the
+   * emergency and rental-price columns 16px (K-42). A form that ever wants a
+   * different gutter gets it as a prop on `FieldGrid`, not as a class.
+   */
   it("never overrides FieldGrid's column gutter at a call site", () => {
     const offenders: string[] = [];
     for (const { file, source } of sourceFiles()) {
