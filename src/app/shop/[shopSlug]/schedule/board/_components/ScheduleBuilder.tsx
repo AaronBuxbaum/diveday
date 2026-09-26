@@ -847,7 +847,7 @@ function AddPanel({
           min={more.minDays}
           max={more.maxDays}
           defaultValue={more.minDays}
-          className={`${controlClass} tabular-nums sm:w-40`}
+          className={`${controlClass} tabular-nums max-w-40`}
         />
       </Field>
       {offeredModes.length > 1 ||
@@ -985,12 +985,16 @@ function AddPanel({
             min={0}
             max={price.max}
             placeholder={price.placeholder}
-            className={`${controlClass} tabular-nums sm:w-40`}
+            className={`${controlClass} tabular-nums max-w-40`}
           />
         </Field>
       </FieldGrid>
       {/* `<fieldset disabled>` reaches every control inside it, so this whole
-          block leaves the submission in one attribute while it is hidden. */}
+          block leaves the submission in one attribute while it is hidden.
+          Its number boxes are capped at every width, a `max-w-*` beside
+          `controlClass`'s `w-full` (two `w-*` would race by stylesheet
+          order): `sm:w-*` alone let each box on a phone fill whatever its
+          suffix left, four widths in one stack (K-332). */}
       {/* A legend names this payment control group; it must remain a
           fieldset rather than becoming a generic SectionCard. */}
       <fieldset hidden={!expanded} disabled={!expanded} className={GROUP_FRAME}>
@@ -1010,7 +1014,7 @@ function AddPanel({
               max={price.max}
               placeholder={price.placeholder}
               title={copy.depositTitle}
-              className={`${controlClass} tabular-nums sm:w-40`}
+              className={`${controlClass} tabular-nums max-w-40`}
             />
           </Field>
           <Field
@@ -1026,9 +1030,9 @@ function AddPanel({
                 min={0}
                 max={720}
                 placeholder="48"
-                className={`${controlClass} tabular-nums sm:w-28`}
+                className={`${controlClass} tabular-nums max-w-28`}
               />
-              <span className="text-sm text-muted">{copy.hoursSuffix}</span>
+              <span className="whitespace-nowrap text-sm text-muted">{copy.hoursSuffix}</span>
             </div>
           </Field>
           <Field
@@ -1044,9 +1048,9 @@ function AddPanel({
                 min={1}
                 max={MAX_MINIMUM_BOOKINGS}
                 placeholder="4"
-                className={`${controlClass} tabular-nums sm:w-28`}
+                className={`${controlClass} tabular-nums max-w-28`}
               />
-              <span className="text-sm text-muted">{copy.diversSuffix}</span>
+              <span className="whitespace-nowrap text-sm text-muted">{copy.diversSuffix}</span>
             </div>
           </Field>
           <Field
@@ -1062,9 +1066,9 @@ function AddPanel({
                 min={MIN_DECISION_HOURS}
                 max={MAX_DECISION_HOURS}
                 placeholder={String(MINIMUM_SEATS_DECISION_HOURS_DEFAULT)}
-                className={`${controlClass} tabular-nums sm:w-28`}
+                className={`${controlClass} tabular-nums max-w-28`}
               />
-              <span className="text-sm text-muted">{copy.hoursBeforeSuffix}</span>
+              <span className="whitespace-nowrap text-sm text-muted">{copy.hoursBeforeSuffix}</span>
             </div>
           </Field>
         </FieldGrid>
