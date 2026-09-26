@@ -52,14 +52,22 @@ describe("MarketingFooterView", () => {
   // Nine 20px-tall words with a square ring on the text, 36px apart when the
   // row wraps on a phone (K-19). Each is a 44px target with the control radius
   // now, and the wrapped rows stack at that 44px pitch rather than 44 + 16.
-  it("makes every link a 44px target with a rounded ring", () => {
+  // Height alone was not the floor: "About" is 38.8px wide and "Terms" 39.7,
+  // so five of the nine were still narrower than 44. Each link carries 8px a
+  // side (every link at least 54.8px wide), which is the 16px between words,
+  // and the row hangs that padding into the gutter, so the first word stays
+  // on x 24 and at lg the last one ends on 1256.
+  it("makes every link a 44px target both ways, with a rounded ring", () => {
     render(<MarketingFooterView locale={DEFAULT_DIVER_LOCALE} shopSlug={null} />);
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(9);
     for (const link of links) {
-      expect(link).toHaveClass("inline-flex", "min-h-11", "items-center", "rounded-lg");
+      expect(link).toHaveClass("inline-flex", "min-h-11", "items-center", "rounded-lg", "px-2");
     }
-    expect(links[0].parentElement).toHaveClass("gap-x-4", "gap-y-0");
+    const row = links[0].parentElement;
+    expect(row).toHaveClass("-mx-2", "flex", "flex-wrap");
+    // The links' padding is the spacing; a gap on top of it would double it.
+    expect(row?.className).not.toMatch(/\bgap-(?:[xy]-)?[1-9]/);
   });
 
   // Tagline and links need 897px on one row (286 + 595 + a 16px gap). Going
