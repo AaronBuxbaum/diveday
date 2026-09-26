@@ -1107,8 +1107,8 @@ export function RosterSection({
             its fix riding the line's end: the whole line is the disclosure
             that opens the form (`keepOpenBookingId` reopens the row a
             just-saved contact settled). It hovers a step deeper than its
-            tint (`bg-warning/15`, the roll call's warning fill): it hovered
-            to the tint it rests on, 0px changed (K-501).
+            tint: it hovered to the tint it rests on, 0px changed (K-501),
+            and the palette has no opaque warning fill deeper than the tint.
 
             Withheld on an unconfirmed row (`showsPersonDetail`) in both
             directions: the form is prefilled from the matched person and
@@ -1116,6 +1116,7 @@ export function RosterSection({
             contact and let a guess edit a real diver's next-of-kin. */}
         {hasEmergencyContact || !showsPersonDetail ? null : (
           <details className="group/missing-contact mt-3">
+            {/* diveday:allow-tinted-ink: the hover step only, and the roster sits on a card: `text-warning-strong` on `warning/15` over `--surface` measures 4.83:1 light and 5.51:1 dark */}
             <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong transition-colors hover:bg-warning/15 [&::-webkit-details-marker]:hidden">
               <StatusMark variant="warning" />
               <span>
