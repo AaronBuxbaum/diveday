@@ -42,6 +42,19 @@ describe("SiteMark", () => {
     }
   });
 
+  it("centres the boat in its canvas", () => {
+    // The boat's lines ran x 6–120 and y 22–76 of the 120×80 canvas, whose
+    // centre is (60, 40): its ink sat 2.5px low and 1.5px right in the 44×30
+    // tile, and the swell's right end ran into the canvas edge, which cut its
+    // stroke. Moved (−3, −9) in its own coordinates, the lines run x 3–117 and
+    // y 13–67, centred both ways. The tile is not nudged.
+    const { container } = render(<SiteMark mark="boat" coral={false} />);
+    const paths = [...container.querySelectorAll("path")].map((path) => path.getAttribute("d"));
+    expect(paths[0]).toBe("M15 41h84l-10 14H27Z");
+    expect(paths[1]).toBe("M43 41V27h26v14M55 27V13");
+    expect(paths[2]).toBe("M3 61c14-8 28-8 42 0s28 8 42 0 20-6 30-2");
+  });
+
   it("keeps the four departure marks inside the hand", () => {
     for (const mark of SITE_MARKS) expect(REEF_DRAWINGS).toContain(mark);
     // The turtle is the all-clear and the brain coral is a site, never a trip.
