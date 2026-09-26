@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { ScrollToHash } from "@/components/ScrollToHash";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/ledger";
 import {
@@ -69,9 +70,17 @@ export function GuideHero({
   return (
     <section className="border-b border-border">
       <div className="mx-auto max-w-4xl px-6 py-16 lg:py-24">
-        <Link href="/switching" className="text-sm font-medium text-primary hover:underline">
-          {t("switching.common.backToGuides")}
-        </Link>
+        {/* A 44px target on a line the 14px text's own 20px tall: the target
+            bleeds 12px above and below, into the hero's padding and the
+            eyebrow's `mt-6`, and the hero keeps its rhythm (K-192). */}
+        <p className="flex h-5 items-center">
+          <Link
+            href="/switching"
+            className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}
+          >
+            {t("switching.common.backToGuides")}
+          </Link>
+        </p>
         <p className={`mt-6 ${MARKETING_EYEBROW_CLASS}`}>{eyebrow}</p>
         <h1 className={`mt-4 ${DISPLAY_TITLE_CLASS} sm:text-5xl`}>{title}</h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">{lede}</p>
@@ -459,7 +468,10 @@ export function ClosingCta({
       </div>
       <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:shrink-0 sm:items-end">
         <FunnelCtas locale={locale} source={source} />
-        <Link href="/switching" className="text-sm font-medium text-primary hover:underline">
+        <Link
+          href="/switching"
+          className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}
+        >
           {backLabel}
         </Link>
       </div>
@@ -480,14 +492,16 @@ export function SourcesFootnote({
     <section className="border-t border-border">
       <div className="mx-auto max-w-4xl px-6 py-8">
         <h2 className={groupLabelClass()}>{t("switching.competitor.sources")}</h2>
-        <ul className="mt-3 flex flex-col gap-1.5 text-sm text-muted">
+        {/* Each link is a 44px target, and the targets are the list's rhythm:
+            no gap on top of them (K-192). */}
+        <ul className="mt-3 flex flex-col text-sm text-muted">
           {sources.map((source) => (
             <li key={source.url}>
               <a
                 href={source.url}
                 target="_blank"
                 rel="noreferrer nofollow"
-                className="hover:text-foreground hover:underline"
+                className={`${tapTargetLinkClass} hover:text-foreground hover:underline`}
               >
                 {/* A no-break space: the arrow wraps with the last word, never alone
                     on a line of its own (K-232). */}
