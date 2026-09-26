@@ -365,8 +365,18 @@ export function DiverRollCall({
     divers.find((diver) => rollCallRowState(checkpoint, diver.rollCall).notBackAboard)?.bookingId ??
     divers[0]?.bookingId;
   return (
-    <section id={scopedId(idPrefix, "roll-call-list")} tabIndex={-1} className="mt-8 outline-none">
-      {/* No "Shop time: Eastern Daylight Time" beside the heading. Every time
+    <section
+      id={scopedId(idPrefix, "roll-call-list")}
+      tabIndex={-1}
+      className={`mt-8 outline-none ${rollCallScrollMargin(isDeparture)}`}
+    >
+      {/* **"Skip to roll call" lands here, below the pinned count card**
+          (pixel-craft class 9). With no scroll margin the section landed on
+          the chrome bar, under the sticky card — 113px tall at 1280, 173 at
+          390 — which hid the heading and the first names. It wears the margin
+          its own rows do, which reads the card's published height.
+
+          No "Shop time: Eastern Daylight Time" beside the heading. Every time
           on this page is already the shop's own — that is the app's rule
           everywhere (`shops.timezone`, `pnpm check:timezone`), not a property
           of this screen — and a crew reading a roll call at their own dock has

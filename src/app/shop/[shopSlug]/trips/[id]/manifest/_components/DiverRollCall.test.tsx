@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { RollCallCheckpoint, RollCallRecord, TripManifest } from "@/lib/manifests";
 import { DiverRollCall } from "./DiverRollCall";
+import { rollCallScrollMargin } from "./RollCallControls";
 
 /**
  * **The two rules slice 5a owes ADR
@@ -764,5 +765,25 @@ describe("the roll call on paper", () => {
     renderList({ divers: [diver()] });
     const trigger = screen.getByRole("button", { name: "Open details for Meera Iyer" });
     expect(trigger).toHaveClass("print:min-h-0", "print:py-1");
+  });
+});
+
+describe("the skip link's landing", () => {
+  /**
+   * **"Skip to roll call" lands the list below the pinned count card**
+   * (pixel-craft class 9, K-140). The section it jumps to had no scroll margin,
+   * so it landed on the chrome bar's 56px, under the sticky count card (113px
+   * tall at 1280, 173 at 390): the heading and the first names were under it.
+   * The section takes the margin its own rows already wear, which reads the
+   * card's published height.
+   */
+  it.each([
+    ["departure", true],
+    ["after_dive_1", false],
+  ] as const)("clears the count card at %s", (checkpoint, isDeparture) => {
+    const { container } = renderList({ divers: [diver()], checkpoint });
+    const section = container.querySelector<HTMLElement>("[id$='roll-call-list']");
+    expect(section?.tagName).toBe("SECTION");
+    expect(section).toHaveClass(rollCallScrollMargin(isDeparture));
   });
 });
