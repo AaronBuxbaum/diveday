@@ -79,6 +79,22 @@ describe("buttonClass", () => {
     }
   });
 
+  it("draws every filled or bordered box with the same 1px border, so a toggle keeps its label still", () => {
+    // `primary` and `danger-solid` had no border and `secondary` had one, so a
+    // filled button was 2px narrower than a bordered one with the same label
+    // (settings-calendar: 180px against 182px), and a toggle that swaps the
+    // two moved its label and its box 1px sideways (the offline counter's
+    // "Check in" / "Checked in", K-83). A transparent border keeps the box;
+    // the fill paints under it, edge to edge.
+    for (const variant of ["primary", "secondary", "danger", "danger-solid"] as const) {
+      const tokens = buttonClass({ variant }).split(" ");
+      expect(tokens, variant).toContain("border");
+    }
+    for (const variant of ["primary", "danger-solid"] as const) {
+      expect(buttonClass({ variant }).split(" "), variant).toContain("border-transparent");
+    }
+  });
+
   it("emits no empty or malformed class tokens", () => {
     // A dangling variant prefix (`sm:`) is not a class, and a double space is
     // how one gets built by string surgery. Cheap to assert, and it is the

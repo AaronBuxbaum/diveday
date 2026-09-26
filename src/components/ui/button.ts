@@ -93,8 +93,18 @@ const DISABLED = {
   busy: "disabled:cursor-wait disabled:opacity-70",
 } as const;
 
+/**
+ * **Every box carries the same 1px border, transparent where the variant is a
+ * fill.** `primary` and `danger-solid` had none while `secondary` and `danger`
+ * did, so a filled button stood 2px narrower than a bordered one with the same
+ * label (182px against 180px on the calendar settings), and a toggle that swaps
+ * the two — the pre-departure checklist, the offline counter's "Check in" /
+ * "Checked in" — moved its label 1px sideways. The fill still paints under a
+ * transparent border (`background-clip` is `border-box`), edge to edge.
+ */
 const variants = {
-  primary: "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover",
+  primary:
+    "border border-transparent bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover",
   /**
    * The demoted-but-real action: a bordered surface box whose label is **body
    * text**, not link blue.
@@ -119,7 +129,7 @@ const variants = {
    * inside a small menu; this keeps the warning hue without the box.
    */
   "danger-ghost": "text-danger hover:bg-danger-tint",
-  "danger-solid": "bg-danger text-primary-foreground hover:bg-danger/90",
+  "danger-solid": "border border-transparent bg-danger text-primary-foreground hover:bg-danger/90",
   /** Reads as inline text, but still claims a full touch target. */
   link: "text-primary hover:underline",
   /**
