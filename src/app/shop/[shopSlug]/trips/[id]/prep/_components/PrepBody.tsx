@@ -669,11 +669,9 @@ export function PrepBody({
               </div>
               <Table shellClassName="mt-3 hidden sm:block">
                 <THead>
-                  <tr>
-                    <Th>{t("tripPrep.pickupTimeColumn")}</Th>
-                    <Th>{t("tripPrep.pickupHotelColumn")}</Th>
-                    <Th>{t("tripPrep.pickupDiverColumn")}</Th>
-                  </tr>
+                  <Th>{t("tripPrep.pickupTimeColumn")}</Th>
+                  <Th>{t("tripPrep.pickupHotelColumn")}</Th>
+                  <Th>{t("tripPrep.pickupDiverColumn")}</Th>
                 </THead>
                 <TBody>
                   {hotelPickups.map((pickup) => (

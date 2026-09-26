@@ -564,4 +564,17 @@ describe("the packing list's geometry", () => {
     expect(byItem).toHaveClass("min-w-[40rem]");
     expect(byItem).not.toHaveClass("min-w-[45rem]");
   });
+
+  it("heads the hotel pickups table with the one row THead draws", () => {
+    // `THead` wraps its cells in its own `<tr>`; a second one inside it makes
+    // a row in a row, which a browser draws as a table squeezed into the
+    // first column, under a header row that has lost its column voice.
+    const { container } = renderPrep(everyPanelPrep());
+    const hotel = within(container).getByRole("columnheader", {
+      name: t("tripPrep.pickupHotelColumn"),
+    });
+    const head = hotel.closest("thead") as HTMLElement;
+    expect(head.querySelectorAll("tr")).toHaveLength(1);
+    expect(hotel.parentElement?.parentElement).toBe(head);
+  });
 });
