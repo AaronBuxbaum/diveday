@@ -27,11 +27,18 @@ describe("the /dive skeletons", () => {
     }
   });
 
-  it("wraps the index's title to two lines below sm, on the 342px column that gutter leaves", () => {
+  /**
+   * "Dive shops by town" is about 344px of 40px type. The 24px gutter leaves
+   * a 342px column on a 390px phone, which wraps it, and 345px or more from
+   * 393px (iPhone 15 and 16, 16 Pro and Pro Max, 412px Android), which does
+   * not. No one count serves both sides of 392px; the skeleton draws the one
+   * line most phones land on, where a two-line bar dropped the page 44px on
+   * every phone from 393 up.
+   */
+  it("draws the index's title on the one line a 393px-or-wider phone sets it on", () => {
     const { container } = render(<RegionsLoading />);
     const header = container.querySelector("main .animate-pulse");
-    expect(header?.querySelectorAll(".h-11")).toHaveLength(2);
-    expect(header?.querySelectorAll(".h-11.sm\\:hidden")).toHaveLength(1);
+    expect(header?.querySelectorAll(".h-11")).toHaveLength(1);
   });
 
   it("draws no logo square on a town's shop rows", () => {

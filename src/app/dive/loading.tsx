@@ -20,13 +20,13 @@ export default function RegionsLoading() {
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-8 sm:py-10">
         <div className="animate-pulse">
           {/* The description is three lines on a phone and two from `sm`
-              (K-292). The title is two below `sm`: "Dive shops by town" is
-              342px of 40px ink, and the chrome's 24px gutter (K-293) leaves a
-              390px phone a 342px column. */}
+              (K-292). The title is one line: "Dive shops by town" is about
+              344px of 40px type, which the chrome's 24px gutter (K-293)
+              leaves room for from a 393px phone up. A 390px phone and
+              narrower wrap it to two, and no one count serves both sides. */}
           <ShopPageHeaderSkeleton
             eyebrow={false}
             titleWidth="w-64"
-            titleLines={{ base: 2, sm: 1 }}
             description
             descriptionWidth="w-full max-w-2xl"
             descriptionLines={{ base: 3, sm: 2 }}
