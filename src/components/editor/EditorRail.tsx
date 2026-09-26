@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RAIL_ROW_CLASS, RAIL_ROW_IDLE } from "@/components/ui/rail";
 import type { EditorSectionRef, EditorUnsavedCopy } from "./EditorSection";
 
 /** The rail's outer box, shared with `EditorRailSkeleton`. */
@@ -62,23 +63,24 @@ export function EditorRail({
           const active = section.id === current;
           return (
             <li key={section.id} className="flex">
-              {/* The ring is inside the row, as on the settings rail: from
-                  `lg` up this is a column of stacked rows, and below it the
-                  row's `-ms-3` puts the first link 4px from a 390px screen's
-                  edge, which cut an outset ring by a pixel.
+              {/* The page rail's one row, the settings rail's too
+                  (`ui/rail.ts`), ringed inside itself: from `lg` up this is a
+                  column of stacked rows, and below it the row's `-ms-3` puts
+                  the first link 4px from a 390px screen's edge, which cut an
+                  outset ring by a pixel.
 
                   Hover lives in each branch, not on every row: a bare
-                  `hover:bg-surface-sunken` outranked the current row's
-                  `lg:bg-primary-tint`, so the one tinted row went grey under
-                  the pointer. Below `lg` the current row carries no tint, so
-                  there it hovers like the rest. */}
+                  `hover:bg-surface-sunken` (`RAIL_ROW_IDLE`'s) outranked the
+                  current row's `lg:bg-primary-tint`, so the one tinted row
+                  went grey under the pointer. Below `lg` the current row
+                  carries no tint, so there it hovers like the rest. */}
               <a
                 href={`#${section.id}`}
                 aria-current={active ? "true" : undefined}
-                className={`flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:focus-ring-inset lg:w-full ${
+                className={`${RAIL_ROW_CLASS} lg:w-full ${
                   active
                     ? "text-muted max-lg:hover:bg-surface-sunken max-lg:hover:text-foreground lg:bg-primary-tint lg:text-primary"
-                    : "text-muted hover:bg-surface-sunken hover:text-foreground"
+                    : RAIL_ROW_IDLE
                 }`}
               >
                 {section.label}

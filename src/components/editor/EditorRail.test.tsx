@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { RAIL_ROW_CLASS } from "@/components/ui/rail";
 import { EditorRail, EditorRailSkeleton, UnsavedSections } from "./EditorRail";
 import { EditorSection, type EditorSectionRef, type EditorUnsavedCopy } from "./EditorSection";
 
@@ -82,6 +83,18 @@ describe("the editor rail", () => {
    * measured offset; this is the same rule stated where the rail lives, so a
    * rail that stops pinning at all is caught too.
    */
+  /**
+   * One page rail, one row: the settings map draws the same `RAIL_ROW_CLASS`
+   * (its test asserts on the same export), so the two rails cannot drift to
+   * two heights, two insets or two type sizes again.
+   */
+  it("draws every link as the page rail's one row", () => {
+    render(<Editor />);
+    for (const link of railNav().querySelectorAll("a")) {
+      expect(link).toHaveClass(...RAIL_ROW_CLASS.split(" "));
+    }
+  });
+
   it("pins under the chrome bar by reading its height", () => {
     render(<Editor />);
 
