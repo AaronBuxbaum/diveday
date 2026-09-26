@@ -14,7 +14,7 @@ import { staffShopRoot } from "@/lib/staff-destinations";
  * the nav links' pattern. The row below has no gap and hangs that padding
  * into the gutter with `-mx-2`: the targets are their own spacing, 16px
  * between words and 44px between wrapped lines, the first word on the page
- * gutter and, at lg, the last one on the far gutter.
+ * gutter and, beside the tagline, the last one on the far gutter.
  */
 const footerLinkClass = `${tapTargetLinkClass} rounded-lg px-2 hover:text-foreground hover:underline`;
 
@@ -28,10 +28,12 @@ export function MarketingFooterView({
   const t = diverTranslator(locale);
   return (
     <footer className="border-t border-border">
-      {/* One row from lg, not sm: tagline and links need 897px side by side,
-          and between 640 and ~944 the tagline wrapped and the address dropped
-          alone onto a second line (K-133). Below lg they stack. */}
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-6 py-8 text-sm text-muted lg:flex-row lg:items-center lg:justify-between">
+      {/* One row only when the tagline and the links fit side by side, which
+          no breakpoint says for every language: en-US needs 897px, es-ES
+          about 1173. Switching at sm, and then at lg, wrapped the tagline and
+          dropped the address alone onto a second line (K-133). As a wrapping
+          row the links, one item, go under the tagline whole instead. */}
+      <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-8 text-sm text-muted">
         <Wordmark variant="inline"> {t("nav.tagline")}</Wordmark>
         <div className="-mx-2 flex flex-wrap">
           <Link href="/product" className={footerLinkClass}>

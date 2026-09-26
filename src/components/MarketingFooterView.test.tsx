@@ -70,16 +70,19 @@ describe("MarketingFooterView", () => {
     expect(row?.className).not.toMatch(/\bgap-(?:[xy]-)?[1-9]/);
   });
 
-  // Tagline and links need 897px on one row (286 + 595 + a 16px gap). Going
-  // one-row at sm put them side by side from 640, so up to about 944 the
-  // tagline wrapped and "support@dive.day" dropped alone onto a second line
-  // (K-133). From lg the column is 976px wide, which holds the row.
-  it("puts the tagline and links on one row only from lg, where they fit", () => {
+  // Tagline and links need 897px side by side in en-US (286 + 595 + a 16px
+  // gap) and about 1173 in es-ES (404 + 753 + 16). Going one-row at sm put
+  // them side by side from 640, so the tagline wrapped and
+  // "support@dive.day" dropped alone onto a second line (K-133); going
+  // one-row at lg still did that in es-ES from 1024 to about 1220. No
+  // breakpoint holds every language, so the row wraps: the links go under
+  // the tagline whenever the two do not fit side by side.
+  it("puts the tagline and links on one row only when they fit", () => {
     const { container } = render(
       <MarketingFooterView locale={DEFAULT_DIVER_LOCALE} shopSlug={null} />,
     );
     const row = container.querySelector("footer > div");
-    expect(row).toHaveClass("flex-col", "lg:flex-row", "lg:items-center", "lg:justify-between");
-    expect(row?.className).not.toMatch(/\bsm:/);
+    expect(row).toHaveClass("flex", "flex-wrap", "items-center", "justify-between", "gap-4");
+    expect(row?.className).not.toMatch(/(?:^|\s)(?:[a-z0-9]+:)?flex-(?:row|col)\b/);
   });
 });
