@@ -90,7 +90,6 @@ export function TripArrivalCard({
   downloadHref,
   stopCodeAction,
   showMap = false,
-  className = "",
 }: {
   shop: ArrivalCardShop;
   trip: ArrivalCardTrip;
@@ -134,14 +133,12 @@ export function TripArrivalCard({
    * better than a street map does; a shop that uploaded none gets the map.
    */
   showMap?: boolean;
-  className?: string;
 }) {
   const t = diverTranslator(locale);
   const facts = arrivalCardFacts(shop, trip);
   return (
     <SectionCard
       title={t("trip.arrivalHeading")}
-      className={className}
       actions={
         downloadHref ? (
           <a

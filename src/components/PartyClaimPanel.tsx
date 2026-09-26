@@ -29,12 +29,10 @@ export type PartyClaimSeat = {
 export function PartyClaimPanel({
   locale,
   seats,
-  className = "",
 }: {
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
   seats: PartyClaimSeat[];
-  className?: string;
 }) {
   if (seats.length === 0) return null;
   const t = diverTranslator(locale);
@@ -42,7 +40,7 @@ export function PartyClaimPanel({
   // above it on /ready, so the thread's card titles share one left edge.
   return (
     <SectionCard
-      className={`text-left ${className}`}
+      className="text-left"
       title={t("seatClaim.panelHeading")}
       description={t("seatClaim.panelBody")}
     >

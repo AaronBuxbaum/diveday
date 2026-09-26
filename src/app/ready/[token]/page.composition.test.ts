@@ -153,6 +153,22 @@ describe("the thread's sections under the spine", () => {
     const doorTag = SOURCE.slice(door, SOURCE.indexOf(">", door));
     expect(doorTag).not.toMatch(/\bmt-\d/);
   });
+
+  it("leave no door open for one: the arrival card and the party panel take no className", () => {
+    // This page was the only caller that passed either one, and all it ever
+    // passed was the top margin the run now owns (K-233 review). A prop no
+    // caller uses is an invitation to put that margin back.
+    for (const component of ["TripArrivalCard", "PartyClaimPanel"]) {
+      const source = readFileSync(
+        join(__dirname, "..", "..", "..", "components", `${component}.tsx`),
+        "utf8",
+      );
+      const start = source.indexOf(`export function ${component}(`);
+      expect(start, component).toBeGreaterThan(-1);
+      const props = source.slice(start, source.indexOf("}) {", start));
+      expect(props, component).not.toMatch(/\bclassName\b/);
+    }
+  });
 });
 
 /**
