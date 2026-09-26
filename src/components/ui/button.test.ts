@@ -16,6 +16,7 @@ const SIZES = ["sm", "md", "boat", "icon", "icon-sm"] as const satisfies readonl
 const EVERY_VARIANT: Record<ButtonVariant, true> = {
   primary: true,
   secondary: true,
+  outline: true,
   ghost: true,
   danger: true,
   "danger-ghost": true,
@@ -39,6 +40,7 @@ const HOVER_FILL_VARIANTS = ["ghost", "danger-ghost"] as const satisfies readonl
 const PAINTED_AT_REST = [
   "primary",
   "secondary",
+  "outline",
   "danger",
   "danger-solid",
   "sky",
@@ -86,7 +88,7 @@ describe("buttonClass", () => {
     // two moved its label and its box 1px sideways (the offline counter's
     // "Check in" / "Checked in", K-83). A transparent border keeps the box;
     // the fill paints under it, edge to edge.
-    for (const variant of ["primary", "secondary", "danger", "danger-solid"] as const) {
+    for (const variant of ["primary", "secondary", "outline", "danger", "danger-solid"] as const) {
       const tokens = buttonClass({ variant }).split(" ");
       expect(tokens, variant).toContain("border");
     }
@@ -187,6 +189,21 @@ describe("buttonClass", () => {
 
     it("carries no horizontal padding to fight the fixed width", () => {
       expect(horizontalPadding(buttonClass({ size: "icon" }))).toEqual(["px-0"]);
+    });
+  });
+
+  describe("outline", () => {
+    it("is secondary with the border that holds 3:1 against the ground, for the public pages", () => {
+      // The public pages had each chosen `border-border-strong` by hand; the
+      // staff `secondary` keeps its hairline. One decision, in one place.
+      const outline = buttonClass({ variant: "outline" }).split(" ");
+      expect(outline).toContain("border-border-strong");
+      expect(outline).not.toContain("border-border");
+      expect(outline).toContain("bg-surface");
+      expect(outline).toContain("text-foreground");
+      const secondary = buttonClass({ variant: "secondary" }).split(" ");
+      expect(secondary).toContain("border-border");
+      expect(secondary).not.toContain("border-border-strong");
     });
   });
 
@@ -387,11 +404,11 @@ describe("buttonClass", () => {
      * alignment (`text-center`) and wrapping (`text-balance`) are not in that
      * block and are therefore not matched.
      */
-    const colourTokens = () => {
+    const colourTokens = (prefix = "text") => {
       const css = readFileSync(join(SRC_DIR, "app", "globals.css"), "utf8");
       const theme = css.slice(css.indexOf("@theme inline"));
       return new Set(
-        [...theme.matchAll(/--color-([a-z0-9-]+):/g)].map((match) => `text-${match[1]}`),
+        [...theme.matchAll(/--color-([a-z0-9-]+):/g)].map((match) => `${prefix}-${match[1]}`),
       );
     };
 
@@ -441,6 +458,48 @@ describe("buttonClass", () => {
 
       // Listed, not counted: the message has to name the file, because the
       // whole point is that nothing on screen will.
+      expect(offenders).toEqual([]);
+    });
+
+    it("hands no border or fill colour to buttonClass: the box is the variant's", () => {
+      // Eight public call sites wrote `border-border-strong` over `secondary`'s
+      // own `border-border` while the marketing header's did not, so the
+      // header's "Try the demo" and the hero's "Get set up" were one button
+      // drawn with two borders on the same screen (#e3e3e8 against #86868b,
+      // K-38). A border a page needs is a variant (`outline`), decided once.
+      const colours = new Set([...colourTokens("border"), ...colourTokens("bg")]);
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(/(?<![\w-])(?:[\w-]+:)*(?:border|bg)-[a-z0-9-]+/g) ?? []) {
+            if (colours.has(token.replace(/^(?:[\w-]+:)+/, ""))) {
+              offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+            }
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    it("hands no font weight to buttonClass: the weight is the size's", () => {
+      // The marketing header's CTA passed `font-semibold` over `md`'s
+      // `font-medium` and rendered at 600 beside the hero's 500 (K-38). Two
+      // weights resolve by stylesheet order, so this one won by luck, and a
+      // size is the one place a button's type is decided.
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(
+            /(?<![\w-])(?:[\w-]+:)*font-(?:thin|extralight|light|normal|medium|semibold|bold|extrabold|black)(?![\w-])/g,
+          ) ?? []) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
       expect(offenders).toEqual([]);
     });
 

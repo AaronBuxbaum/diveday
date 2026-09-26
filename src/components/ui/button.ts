@@ -154,6 +154,18 @@ const variants = {
    * way (light 5.36 -> 15.02, dark 9.05 -> 14.48 on `bg-surface`).
    */
   secondary: "border border-border bg-surface text-foreground not-disabled:hover:bg-foreground/8",
+  /**
+   * **`secondary` for the public pages: the same box, with the border that
+   * holds 3:1 against the ground** (`--border-strong`, the form controls'
+   * edge). The marketing pages had each chosen it by hand through
+   * `className`, eight call sites, while the header's CTA kept the staff
+   * hairline and a `font-semibold` of its own — one button drawn with two
+   * borders and two weights on the same screen (pixel probe, 2026-09-25).
+   * Staff surfaces keep `secondary`'s hairline, which sits on a card rather
+   * than on the page's ground.
+   */
+  outline:
+    "border border-border-strong bg-surface text-foreground not-disabled:hover:bg-foreground/8",
   ghost: "text-muted not-disabled:hover:bg-foreground/8 not-disabled:hover:text-foreground",
   danger: "border border-danger/40 text-danger not-disabled:hover:bg-danger-tint",
   /**
@@ -363,7 +375,7 @@ const HOVER_FILL: ReadonlySet<ButtonVariant> = new Set(["ghost", "danger-ghost"]
  * no label for `flush` to line up: the type refuses `flush` on them, and at
  * runtime it changes nothing.
  */
-type PaintedAtRest = "primary" | "secondary" | "danger" | "danger-solid" | "sky";
+type PaintedAtRest = "primary" | "secondary" | "outline" | "danger" | "danger-solid" | "sky";
 
 /**
  * The horizontal padding a button renders with. A size that carries none — the

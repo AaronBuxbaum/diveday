@@ -94,8 +94,8 @@ export function MarketingNavView({
           <Link
             href={staffShopRoot(shopSlug)}
             className={buttonClass({
-              variant: "secondary",
-              className: `ml-auto font-semibold whitespace-nowrap sm:ml-0 ${compactMobile ? "max-sm:hidden" : ""}`,
+              variant: "outline",
+              className: `ml-auto whitespace-nowrap sm:ml-0 ${compactMobile ? "max-sm:hidden" : ""}`,
             })}
           >
             {t("nav.goToShop")}
@@ -115,9 +115,9 @@ export function MarketingNavView({
             <SubmitButton
               pendingLabel={t("nav.gettingReady")}
               className={buttonClass({
-                variant: "secondary",
+                variant: "outline",
                 busy: true,
-                className: "font-semibold whitespace-nowrap",
+                className: "whitespace-nowrap",
               })}
             >
               {t("nav.tryDemo")}

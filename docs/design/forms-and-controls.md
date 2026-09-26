@@ -666,10 +666,12 @@ import { buttonClass } from "@/components/ui/button";
 <button type="submit" className={buttonClass({ variant: "danger" })}>Refund</button>
 ```
 
-Variants: `primary`, `secondary`, `ghost`, `danger`, `danger-ghost` (the danger hue without the
-box, for a destructive row in a quiet menu), `danger-solid`, `link` (reads as inline text but still
-claims a full target), `sky` (a translucent chip for a control standing on a `SkyBand`), and `bare`
-(shape and target only, for a control whose fill is the state of its row). Sizes: `md` (the
+Variants: `primary`, `secondary`, `outline` (`secondary` with the `--border-strong` edge that holds
+3:1 against the page's ground, for the public pages; staff keep the hairline), `ghost`, `danger`,
+`danger-ghost` (the danger hue without the box, for a destructive row in a quiet menu),
+`danger-solid`, `link` (reads as inline text but still claims a full target), `sky` (a translucent
+chip for a control standing on a `SkyBand`), and `bare` (shape and target only, for a control whose
+fill is the state of its row). Sizes: `md` (the
 default, 48px with a 16px label), `sm` (44px with a 14px label), `boat` (56px with a 16px
 semibold label), `icon` (a 48px square), `icon-sm` (a 44px square, for a glyph in a row of `sm`
 controls), and `mark` (a 56px circle, for the roll call). The corner is the control rung,
@@ -725,7 +727,7 @@ and `danger-ghost` paint only on hover, and their tint with the padding gone sat
 side of "Delete Morgan Vale" (pixel probe, 2026-09-25), so they get `-mx-2 px-2`: the label sits
 where a padless one would, and the tint reaches 8px past it. A ledger row keeps the same 8px, for
 the same reason (`FILL_ROOM` in `src/components/ui/ledger.tsx`). The variants painted at rest
-(`primary`, `secondary`, `danger`, `danger-solid`, `sky`) are boxes, and a box lines up by its edge,
+(`primary`, `secondary`, `outline`, `danger`, `danger-solid`, `sky`) are boxes, and a box lines up by its edge,
 not its label, so the type refuses `flush` on them.
 
 The same trap applies to the type scale, which is why it lives on the sizes: a `text-base` passed
