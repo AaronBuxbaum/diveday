@@ -6,6 +6,179 @@ import { SITE_MARK_GROUNDS, SITE_MARK_MIN_PX, SITE_MARK_SIZES, SiteMark } from "
 
 afterEach(cleanup);
 
+type Extent = { minX: number; maxX: number; minY: number; maxY: number };
+
+/**
+ * Where a drawing's lines actually run in its 120×80 canvas: every path's
+ * points and curve extremes, and every circle's edge. Absolute and relative
+ * `M L H V C S Q T Z`, which is what the hand draws in; an arc throws, so a
+ * redraw that reaches for one fails here rather than measuring wrong.
+ */
+function inkExtent(svg: Element): Extent {
+  const xs: number[] = [];
+  const ys: number[] = [];
+  const add = (x: number, y: number) => {
+    xs.push(x);
+    ys.push(y);
+  };
+  // The extremes of one axis of a cubic from p0 to p3, where its derivative is 0.
+  const cubicExtremes = (p0: number, p1: number, p2: number, p3: number) => {
+    const a = -p0 + 3 * p1 - 3 * p2 + p3;
+    const b = 2 * (p0 - 2 * p1 + p2);
+    const c = p1 - p0;
+    const roots =
+      Math.abs(a) < 1e-9
+        ? Math.abs(b) < 1e-9
+          ? []
+          : [-c / b]
+        : b * b - 4 * a * c < 0
+          ? []
+          : [1, -1].map((sign) => (-b + sign * Math.sqrt(b * b - 4 * a * c)) / (2 * a));
+    return roots
+      .filter((t) => t > 0 && t < 1)
+      .map(
+        (t) =>
+          (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3 * p3,
+      );
+  };
+  const cubic = (
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    x: number,
+    y: number,
+  ) => {
+    add(x, y);
+    for (const ex of cubicExtremes(x0, x1, x2, x)) xs.push(ex);
+    for (const ey of cubicExtremes(y0, y1, y2, y)) ys.push(ey);
+  };
+
+  for (const path of svg.querySelectorAll("path")) {
+    const tokens = path.getAttribute("d")?.match(/[a-zA-Z]|-?(?:\d+\.?\d*|\.\d+)/g) ?? [];
+    let x = 0;
+    let y = 0;
+    let startX = 0;
+    let startY = 0;
+    let lastControl: [number, number] | null = null;
+    let lastQuad: [number, number] | null = null;
+    let command = "";
+    let index = 0;
+    const next = () => Number(tokens[index++]);
+    while (index < tokens.length) {
+      if (/[a-zA-Z]/.test(tokens[index] ?? "")) command = tokens[index++] ?? "";
+      const relative = command === command.toLowerCase();
+      const ox = relative ? x : 0;
+      const oy = relative ? y : 0;
+      switch (command.toUpperCase()) {
+        case "M":
+          x = ox + next();
+          y = oy + next();
+          startX = x;
+          startY = y;
+          add(x, y);
+          // Pairs after a moveto are linetos.
+          command = relative ? "l" : "L";
+          lastControl = lastQuad = null;
+          continue;
+        case "L":
+          x = ox + next();
+          y = oy + next();
+          add(x, y);
+          lastControl = lastQuad = null;
+          continue;
+        case "H":
+          x = ox + next();
+          add(x, y);
+          lastControl = lastQuad = null;
+          continue;
+        case "V":
+          y = oy + next();
+          add(x, y);
+          lastControl = lastQuad = null;
+          continue;
+        case "C": {
+          const [x1, y1, x2, y2, ex, ey] = [
+            ox + next(),
+            oy + next(),
+            ox + next(),
+            oy + next(),
+            ox + next(),
+            oy + next(),
+          ];
+          cubic(x, y, x1, y1, x2, y2, ex, ey);
+          lastControl = [x2, y2];
+          lastQuad = null;
+          x = ex;
+          y = ey;
+          continue;
+        }
+        case "S": {
+          const [x1, y1] = lastControl ? [2 * x - lastControl[0], 2 * y - lastControl[1]] : [x, y];
+          const [x2, y2, ex, ey] = [ox + next(), oy + next(), ox + next(), oy + next()];
+          cubic(x, y, x1, y1, x2, y2, ex, ey);
+          lastControl = [x2, y2];
+          lastQuad = null;
+          x = ex;
+          y = ey;
+          continue;
+        }
+        case "Q":
+        case "T": {
+          // Declared, not inferred: `lastQuad` is assigned from these below,
+          // so an inferred type would be read through its own initializer.
+          let qx: number = x;
+          let qy: number = y;
+          if (command.toUpperCase() === "Q") {
+            qx = ox + next();
+            qy = oy + next();
+          } else if (lastQuad) {
+            qx = 2 * x - lastQuad[0];
+            qy = 2 * y - lastQuad[1];
+          }
+          const [ex, ey] = [ox + next(), oy + next()];
+          // A quadratic is the cubic with control points two thirds of the way.
+          cubic(
+            x,
+            y,
+            x + (2 / 3) * (qx - x),
+            y + (2 / 3) * (qy - y),
+            ex + (2 / 3) * (qx - ex),
+            ey + (2 / 3) * (qy - ey),
+            ex,
+            ey,
+          );
+          lastQuad = [qx, qy];
+          lastControl = null;
+          x = ex;
+          y = ey;
+          continue;
+        }
+        case "Z":
+          x = startX;
+          y = startY;
+          lastControl = lastQuad = null;
+          continue;
+        default:
+          throw new Error(`inkExtent cannot measure the path command "${command}"`);
+      }
+    }
+  }
+  for (const circle of svg.querySelectorAll("circle")) {
+    const [cx, cy, r] = ["cx", "cy", "r"].map((name) => Number(circle.getAttribute(name)));
+    add(cx - r, cy - r);
+    add(cx + r, cy + r);
+  }
+  return {
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
+  };
+}
+
 /**
  * The illustration rule (ADR 20260901-diveday-reimagined, decision 1): one
  * hand, at most one coral detail per drawing and only where the caller spent
@@ -42,17 +215,26 @@ describe("SiteMark", () => {
     }
   });
 
-  it("centres the boat in its canvas", () => {
+  it("centres the boat in its canvas, and keeps its stroke inside it", () => {
     // The boat's lines ran x 6–120 and y 22–76 of the 120×80 canvas, whose
     // centre is (60, 40): its ink sat 2.5px low and 1.5px right in the 44×30
     // tile, and the swell's right end ran into the canvas edge, which cut its
-    // stroke. Moved (−3, −9) in its own coordinates, the lines run x 3–117 and
-    // y 13–67, centred both ways. The tile is not nudged.
-    const { container } = render(<SiteMark mark="boat" coral={false} />);
-    const paths = [...container.querySelectorAll("path")].map((path) => path.getAttribute("d"));
-    expect(paths[0]).toBe("M15 41h84l-10 14H27Z");
-    expect(paths[1]).toBe("M43 41V27h26v14M55 27V13");
-    expect(paths[2]).toBe("M3 61c14-8 28-8 42 0s28 8 42 0 20-6 30-2");
+    // stroke. Measured, not pinned: any redraw may move every point, so long as
+    // everything it draws, the buoy and the wake mark included, is centred on
+    // the canvas in its own coordinates. The tile is never nudged instead.
+    const { container } = render(<SiteMark mark="boat" />);
+    const svg = container.querySelector("svg");
+    if (!svg) throw new Error("no svg drawn");
+    const ink = inkExtent(svg);
+
+    expect((ink.minX + ink.maxX) / 2).toBeCloseTo(60, 0);
+    expect((ink.minY + ink.maxY) / 2).toBeCloseTo(40, 0);
+    // Half the 1.7 stroke, and the round caps, reach past the lines' ends.
+    const half = 1.7 / 2;
+    expect(ink.minX - half).toBeGreaterThanOrEqual(0);
+    expect(ink.maxX + half).toBeLessThanOrEqual(120);
+    expect(ink.minY - half).toBeGreaterThanOrEqual(0);
+    expect(ink.maxY + half).toBeLessThanOrEqual(80);
   });
 
   it("keeps the four departure marks inside the hand", () => {
