@@ -18,12 +18,21 @@ import { ledgerRowBoxClass } from "@/components/ui/ledger";
  * Copy button hangs outside it), the shop's note and the line of facts, 20px
  * each at `mt-0.5`. A shelf's label is the group label's 16px line and its
  * `mb-2`.
+ *
+ * **And the header at the lines it wraps to.** "Discounts a diver can type"
+ * is two lines at 390, and the description is two at 390 and at 1280; one bar
+ * of each dropped the page 68px on a phone and 24px on a desk when it landed.
  */
 export default function PromosLoading() {
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton description descriptionWidth="w-80 max-w-full" />
+        <ShopPageHeaderSkeleton
+          titleLines={{ base: 2, sm: 1 }}
+          description
+          descriptionWidth="w-80 max-w-full"
+          descriptionLines={2}
+        />
         <div className="mt-8 h-12 w-36 rounded-lg bg-surface-sunken" />
         <div className="mt-10 space-y-8">
           {[0, 1].map((shelf) => (

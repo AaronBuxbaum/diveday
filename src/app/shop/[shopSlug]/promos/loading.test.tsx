@@ -48,6 +48,22 @@ describe("the promos skeleton", () => {
     }
   });
 
+  /**
+   * The loaded header wraps: "Discounts a / diver can type" is two lines at
+   * 390, and the description ("A code works across your whole schedule,
+   * unlike the one-trip deal you send from / a departure.") is two at 390 and
+   * at 1280. One bar of each dropped the page 68px at 390 and 24px at 1280.
+   */
+  it("draws the header's title and description at the lines they wrap to", () => {
+    const header = skeleton().querySelector(":scope > .mb-8");
+    const bars = (height: string) =>
+      [...(header?.querySelectorAll(`.${height}`) ?? [])].map((bar) =>
+        bar.classList.contains("sm:hidden") ? "phone" : "both",
+      );
+    expect(bars("h-11")).toEqual(["both", "phone"]);
+    expect(bars("h-6")).toEqual(["both", "both"]);
+  });
+
   it("stands each shelf's label in the 16px line a group label is", () => {
     const pulse = skeleton();
     const labels = [...pulse.querySelectorAll(".mb-2")];
