@@ -348,6 +348,9 @@ export const tapTargetLinkClass = "inline-flex min-h-11 items-center";
  * in a sentence is exempt from the 44px target, WCAG 2.5.8). The underline
  * says "link" at rest; the colour change says "this one" under the pointer.
  * These were bare `underline` and looked the same hovered as at rest (K-500).
+ * A link already in the link colour is a different case: `text-primary` with
+ * `hover:underline` (the `link` variant's own pair) is how most inline links
+ * are spelled.
  */
 export const proseLinkClass = "underline hover:text-primary";
 

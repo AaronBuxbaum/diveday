@@ -750,9 +750,14 @@ describe("buttonClass", () => {
  * "support@dive.day" on /privacy and /terms, and the three guide links in
  * Import's "coming from" line, were `className="underline"` and nothing else:
  * under the pointer they looked exactly as they did at rest (the state atlas
- * measured no pixel over threshold), where every other link on the site
- * changes colour or gains its underline. `proseLinkClass` is the one spelling
- * of an underlined link in running text, and the sweep keeps a bare copy out.
+ * measured no pixel over threshold), where most links on the site change
+ * colour or gain their underline. `proseLinkClass` is the spelling for a link
+ * that keeps its sentence's ink, and the sweep keeps a bare `underline` out.
+ * It is not the only spelling of an inline link: most are
+ * `font-medium text-primary hover:underline`, and the ones underlined in the
+ * link colour at rest (Orders, Reports, the switching guides, WaiverGroup,
+ * ConflictGuardedForm) have no hover step yet and are not what this sweep
+ * reads — that is a follow-up filed from K-500.
  */
 describe("proseLinkClass", () => {
   it("underlines at rest and paints a colour under the pointer", () => {
