@@ -506,21 +506,34 @@ describe("a drysuit going out with no drysuit card", () => {
 });
 
 /**
- * The seat's foot row bleeds `-mx-3` so its padded controls sit on the
- * panel's text column, which leaves whichever control comes first 4px from
- * the card's `overflow-hidden` on a phone: the outset ring lost its left
- * pixel on "Remove booking" (pixel probe, `trip-guests-identity-open` at 390),
- * and "Create order" takes that place once payments are connected. jsdom has
- * no layout, so this pins which elements carry the inset ring.
+ * The seat's foot row put its controls on the panel's text column with a hand
+ * `-mx-3`, which left whichever came first 4px from the card's
+ * `overflow-hidden` on a phone, so both drew an inset ring
+ * (`trip-guests-identity-open` at 390). Now the first control is `flush`: a
+ * link's box is its label, a ghost's box reaches 8px past it, and either way
+ * the app's own ring fits inside the clip (K-06). jsdom has no layout, so
+ * this pins the classes that decide it.
  */
-describe("the seat's foot row rings inside the card", () => {
-  it("draws the focus ring inset on both controls of the -mx-3 row, Create order and Remove booking", () => {
+describe("the seat's foot row sits on the text column through flush", () => {
+  it("flushes Create order, the first control, and leaves Remove booking its padding", () => {
     renderRoster({ ...fixtures, roster: [ready], paymentsConnected: true });
 
     const remove = screen.getByRole("button", { name: "Remove booking" });
     const order = screen.getByRole("link", { name: "Create order" });
-    expect(remove.closest(".-mx-3")).toBe(order.closest(".-mx-3"));
-    expect(remove).toHaveClass("focus-visible:focus-ring-inset");
-    expect(order).toHaveClass("focus-visible:focus-ring-inset");
+    expect(order).toHaveClass("px-0");
+    expect(remove).toHaveClass("px-3");
+    expect(remove.closest(".-mx-3")).toBeNull();
+    for (const control of [order, remove]) {
+      expect(control).not.toHaveClass("focus-visible:focus-ring-inset");
+    }
+  });
+
+  it("flushes Remove booking when it is the only control on the row", () => {
+    renderRoster({ ...fixtures, roster: [ready], paymentsConnected: false });
+
+    const remove = screen.getByRole("button", { name: "Remove booking" });
+    expect(screen.queryByRole("link", { name: "Create order" })).toBeNull();
+    expect(remove).toHaveClass("-mx-2", "px-2");
+    expect(remove).not.toHaveClass("focus-visible:focus-ring-inset");
   });
 });

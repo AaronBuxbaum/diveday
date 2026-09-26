@@ -268,7 +268,7 @@ export default async function SecurityPage({
                   <input type="hidden" name="sessionId" value={item.id} />
                   <SubmitButton
                     pendingLabel={t("settings.security.revoking")}
-                    className={buttonClass({ variant: "ghost", size: "sm" })}
+                    className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
                   >
                     {t("settings.security.revoke")}
                   </SubmitButton>

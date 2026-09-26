@@ -1358,24 +1358,18 @@ export function RosterSection({
           </div>
         </div>
 
-        {/* `-mx-3` on the row, and both controls at the same `sm` padding, so
-            the padded pair sits on the text column every other line in this
-            panel sits on. The bleed puts whichever control comes first 4px
-            from the card's `overflow-hidden` on a phone, a pixel short of the
-            outset ring, so both draw their ring inside. */}
+        {/* Whichever control comes first is `flush`, so its word sits on the
+            text column every other line in this panel sits on; the 16px gap
+            is the room the first one's padding used to give the second. */}
         <div className="mt-4 border-t border-border pt-4">
-          <div className="-mx-3 flex flex-wrap items-center gap-x-1 gap-y-2">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {/* One orders door per row, and only when the shop can take money
                 at all (principle 9 — Settings and the Orders index own the
                 "Connect payments" door). */}
             {paymentsConnected ? (
               <Link
                 href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
-                className={buttonClass({
-                  variant: "link",
-                  size: "sm",
-                  className: "focus-visible:focus-ring-inset",
-                })}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
               >
                 {t("trips.roster.createOrder")}
               </Link>
@@ -1401,7 +1395,7 @@ export function RosterSection({
                 triggerClassName={buttonClass({
                   variant: "danger-ghost",
                   size: "sm",
-                  className: "focus-visible:focus-ring-inset",
+                  flush: !paymentsConnected,
                 })}
                 confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
               />

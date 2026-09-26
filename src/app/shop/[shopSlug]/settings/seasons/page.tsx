@@ -163,7 +163,16 @@ export default async function SeasonsSettingsPage({
                       triggerLabel={t("seasonEvents.delete")}
                       confirmLabel={t("seasonEvents.deleteConfirm")}
                       pendingLabel={t("seasonEvents.deletePending")}
-                      triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                      // `flush` puts "Delete" on the fields' edge. The row's
+                      // `p-3` leaves 12px to the list's `overflow-hidden`, a
+                      // pixel short of an outset ring past the flush fill, so
+                      // the ring is drawn inside.
+                      triggerClassName={buttonClass({
+                        variant: "danger-ghost",
+                        size: "sm",
+                        flush: true,
+                        className: "focus-visible:focus-ring-inset",
+                      })}
                     />
                   </form>
                 </div>

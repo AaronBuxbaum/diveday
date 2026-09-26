@@ -105,7 +105,13 @@ export function Copyable({
     status === "copied" ? copiedLabel : status === "failed" ? failedLabel : copyLabel;
 
   const button = (
-    <button type="button" onClick={copy} className={buttonClass({ variant: "ghost", size: "sm" })}>
+    <button
+      type="button"
+      onClick={copy}
+      // In the panel the button starts or ends the label's line, so its word
+      // sits on the panel's edge; inline, it is a word among others.
+      className={buttonClass({ variant: "ghost", size: "sm", flush: layout === "panel" })}
+    >
       <span aria-live="polite" className={status === "failed" ? "text-danger" : undefined}>
         {buttonText}
       </span>

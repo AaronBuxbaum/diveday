@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
 
@@ -118,7 +119,7 @@ export function ManifestMoreMenu({
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
-        className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
+        className={buttonClass({ variant: "ghost", size: "sm", flush: true, className: "gap-2" })}
         onClick={() => setOpen((current) => !current)}
       >
         {label}

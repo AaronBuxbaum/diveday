@@ -131,7 +131,16 @@ export default async function KindsOfDaySettingsPage({
                         cancelLabel={t("lenses.deleteCancel")}
                         confirmLabel={t("lenses.deleteConfirm")}
                         pendingLabel={t("lenses.deletePending")}
-                        triggerClassName={buttonClass({ variant: "danger-ghost" })}
+                        // `flush` puts "Delete" on the row's edge; the row's
+                        // `p-3` in an `overflow-hidden` list is a pixel short of
+                        // an outset ring past the flush fill, so it is inside.
+                        // The armed block's confirm is not on that edge.
+                        triggerClassName={buttonClass({
+                          variant: "danger-ghost",
+                          flush: true,
+                          className: "focus-visible:focus-ring-inset",
+                        })}
+                        confirmClassName={buttonClass({ variant: "danger-ghost" })}
                         size="md"
                       />
                     ) : (
@@ -139,7 +148,11 @@ export default async function KindsOfDaySettingsPage({
                         triggerLabel={t("lenses.delete")}
                         confirmLabel={t("lenses.deleteConfirm")}
                         pendingLabel={t("lenses.deletePending")}
-                        triggerClassName={buttonClass({ variant: "danger-ghost" })}
+                        triggerClassName={buttonClass({
+                          variant: "danger-ghost",
+                          flush: true,
+                          className: "focus-visible:focus-ring-inset",
+                        })}
                       />
                     )}
                   </form>

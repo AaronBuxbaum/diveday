@@ -122,7 +122,7 @@ export function FaqEditor({
             <button
               type="button"
               onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))}
-              className={buttonClass({ variant: "danger-ghost", size: "sm" })}
+              className={buttonClass({ variant: "danger-ghost", size: "sm", flush: true })}
             >
               {fill(copy.removeFaq, { number: index + 1 })}
             </button>

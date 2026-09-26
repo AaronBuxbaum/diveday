@@ -169,7 +169,7 @@ export function PaperWaiverControl({
         className={buttonClass({
           variant,
           size: "sm",
-          flush: variant === "link",
+          flush: variant !== "secondary",
           className: `gap-2 ${className}`,
         })}
       >

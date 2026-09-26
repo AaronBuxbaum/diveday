@@ -462,6 +462,9 @@ function StaffRow({
                 className={buttonClass({
                   variant: isDisabled ? "secondary" : "danger-ghost",
                   size: "sm",
+                  // On `danger-ghost`, the word ends on the card's edge (the
+                  // rows' values above end there); a `secondary` box ignores it.
+                  flush: true,
                 })}
               >
                 {isDisabled

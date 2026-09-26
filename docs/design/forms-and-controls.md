@@ -618,8 +618,9 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
   `has-[:focus-visible]` rather than `focus-within`, so it lights for the keyboard the way the
   global rule does.
 - **`focus-visible:focus-ring-inset`** is for an element flush with an `overflow-hidden` or
-  scrolling edge: a list card's rows, a scroll box's options, the command palette's field, a row
-  or a control bled `-mx-3` or `-ml-3` to 4px from a clipping edge. A ledger row's door and a
+  scrolling edge: a list card's rows, a scroll box's options, the command palette's field, a
+  `flush` ghost whose 8px of fill leave less than the ring's 5px to a clipping edge (a `p-3` row in
+  a clipped list: seasons, kinds of day, boats). A ledger row's door and a
   folded horizon's `<summary>` take it too: each is the row's whole box, rule to rule, so the
   outset ring crossed both hairlines. It is the same 3px, drawn
   wholly inside the box, and on the element's own fill (the contrast of each fill is in the

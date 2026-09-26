@@ -34,7 +34,7 @@ function SubmitButton({
       disabled={pending}
       aria-busy={pending}
       aria-label={ariaLabel}
-      className={buttonClass({ variant, size: "sm" })}
+      className={buttonClass({ variant, size: "sm", flush: variant === "ghost" })}
     >
       {pending ? pendingLabel : label}
     </button>
@@ -243,7 +243,10 @@ export function DisplayLinksPanel({
                       .join(" · ")}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                {/* Renew and Revoke are both `flush`, so whichever edge of the
+                    row they wrap to, the words sit on it; the 32px their
+                    padding used to hold apart is the gap's now. */}
+                <div className="flex items-center gap-8">
                   {/* Only a link that expires has anything to renew, and no
                       `InlineConfirm`: renewing takes nothing away, so a
                       confirmation step would be a question with one answer. */}
@@ -265,7 +268,8 @@ export function DisplayLinksPanel({
                     <InlineConfirm
                       triggerLabel={copy.revoke}
                       ariaLabel={screen.revokeLabel}
-                      triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
+                      triggerClassName={buttonClass({ variant: "ghost", size: "sm", flush: true })}
+                      confirmClassName={buttonClass({ variant: "ghost", size: "sm" })}
                       message={copy.confirmRevoke}
                       confirmLabel={copy.confirmRevokeButton}
                       cancelLabel={copy.cancel}

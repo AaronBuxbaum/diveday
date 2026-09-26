@@ -503,6 +503,27 @@ describe("buttonClass", () => {
       expect(offenders).toEqual([]);
     });
 
+    it("hands no negative inline margin to buttonClass: the outdent is `flush`", () => {
+      // A ghost's invisible padding put its label 12px inside the column it
+      // started or ended — seasons' Delete at x 478 against the fields' 466 —
+      // and the answer at call sites was a hand cancel (`-ml-3`, `-mr-4`,
+      // `-ms-2`), which only ever cancelled one side, clipped rings in
+      // `overflow-hidden` cards, and left the next site to find its own
+      // number (pixel probe, K-06). `flush` is the one outdent: it knows the
+      // size's padding and keeps 8px of room for a hover fill.
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(/(?<![\w-])(?:[\w-]+:)*-m[xlrse]-[\w.[\]]+/g) ?? []) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
     it("hands no radius to buttonClass: the corner is `shape`'s", () => {
       // Two radius utilities resolve by stylesheet order, and `.rounded-full`
       // is emitted before `.rounded-lg`, so a pill asked for through

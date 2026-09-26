@@ -180,14 +180,29 @@ export default async function BoatsSettingsPage({
                         cancelLabel={t("boats.deleteBoatCancel")}
                         confirmLabel={t("boats.deleteBoatConfirm")}
                         pendingLabel={t("boats.deleteBoatPending")}
-                        triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                        // `flush` puts "Delete boat" on the row's edge; the
+                        // row's `p-3` in an `overflow-hidden` list is a pixel
+                        // short of an outset ring past the flush fill, so it is
+                        // inside. The armed block's confirm is not on that edge.
+                        triggerClassName={buttonClass({
+                          variant: "danger-ghost",
+                          size: "sm",
+                          flush: true,
+                          className: "focus-visible:focus-ring-inset",
+                        })}
+                        confirmClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
                       />
                     ) : (
                       <InlineConfirm
                         triggerLabel={t("boats.deleteBoat")}
                         confirmLabel={t("boats.deleteBoatConfirm")}
                         pendingLabel={t("boats.deleteBoatPending")}
-                        triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                        triggerClassName={buttonClass({
+                          variant: "danger-ghost",
+                          size: "sm",
+                          flush: true,
+                          className: "focus-visible:focus-ring-inset",
+                        })}
                       />
                     )}
                   </form>

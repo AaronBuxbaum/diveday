@@ -122,7 +122,7 @@ export function StaffCredentials({
                 <input type="hidden" name="status" value={row.reviewed ? "pending" : "verified"} />
                 <SubmitButton
                   pendingLabel={words.saving}
-                  className={buttonClass({ variant: "ghost", size: "sm", className: "-ms-2" })}
+                  className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
                 >
                   {row.reviewLabel}
                 </SubmitButton>

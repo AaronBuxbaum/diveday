@@ -222,7 +222,7 @@ function ShiftChip({
           <input type="hidden" name="shiftId" value={shift.id} />
           <SubmitButton
             pendingLabel={words.removing}
-            className={buttonClass({ variant: "ghost", size: "sm", className: "-ms-2" })}
+            className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
           >
             {words.remove}
           </SubmitButton>

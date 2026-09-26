@@ -360,6 +360,15 @@ const FLUSH = "px-0";
  * 8px, not the size's own padding, so the tint and the 5px focus ring around
  * it stay inside a phone's 16px gutter. It is the room `ledger.tsx` gives a
  * row's fill, and for the same reason.
+ *
+ * `flush` is the one outdent: `button.test.ts` refuses a negative inline
+ * margin at a call site, where `-ml-3`, `-mr-4` and `-ms-2` each cancelled one
+ * side of one size by hand. Two things stay the call site's to decide. A pair
+ * of controls that both go flush has given up the padding that spaced them, so
+ * its gap takes that room back (the display links' Renew and Revoke). And a
+ * flush fill reaches 8px out and its ring 13px, so a row with less than that
+ * between the label and an `overflow-hidden` edge — a `p-3` row in a clipped
+ * list — draws the ring inside (`focus-visible:focus-ring-inset`).
  */
 const FLUSH_HOVER_FILL = "-mx-2 px-2";
 

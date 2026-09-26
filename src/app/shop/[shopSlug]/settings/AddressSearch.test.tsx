@@ -218,17 +218,19 @@ describe("the address card with a geocoder", () => {
   });
 
   /**
-   * A negative start margin lines the label up with the address, and leaves
-   * the button 4px from the settings card's `overflow-hidden` on a phone,
-   * where the outset ring lost its left pixel (pixel probe, `settings-address`
-   * at 390). jsdom has no layout, so this pins which element carries the
-   * inset ring.
+   * The label lines up with the address above it through `flush`, not a hand
+   * `-ml-3`: that cancel left the button 4px from the settings card's
+   * `overflow-hidden` on a phone and needed an inset ring to survive
+   * (`settings-address` at 390). Flush keeps 8px of room outside the label,
+   * so the box sits 8px from the clip and the app's own ring fits (K-06).
+   * jsdom has no layout, so this pins the classes that decide it.
    */
-  it("draws the Remove address button's focus ring inset, since its margin bleeds it to 4px from the card's edge", () => {
+  it("lines the Remove address label up with the address through flush, clear of the card's clip", () => {
     renderCard({ initial: KEY_LARGO_ADDRESS });
-    expect(screen.getByRole("button", { name: copy.removeLabel })).toHaveClass(
-      "focus-visible:focus-ring-inset",
-    );
+    const remove = screen.getByRole("button", { name: copy.removeLabel });
+    expect(remove).toHaveClass("-mx-2", "px-2");
+    expect(remove).not.toHaveClass("-ml-3");
+    expect(remove).not.toHaveClass("focus-visible:focus-ring-inset");
   });
 
   /**
