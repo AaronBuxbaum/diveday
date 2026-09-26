@@ -13,8 +13,9 @@
  * The day packet rendered its bundle straight into the shop shell, with no
  * `<main>` and so no gutter: its ink started at x 1, the roll call's tone rule
  * on the paper's edge, where the trip packet's started at x 33 (pixel probe,
- * `day-packet-print`). `trip-shell.test.ts` holds every wearer to this class
- * and refuses a second spelling of the gutter.
+ * `day-packet-print`). `trip-shell.test.ts` holds every wearer to this class,
+ * refuses a packet rendered outside a wearer, and refuses a packet that pads
+ * itself, which would be a second gutter.
  */
 export const TRIP_SHELL_CLASS =
   "mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10 print:max-w-none print:px-10 print:py-8";

@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { declarations, readGlobalsCss, unlayeredRules } from "@/test/stylesheet";
 import { TRIP_SHELL_CLASS } from "./trip-shell";
 
 /**
@@ -49,10 +50,47 @@ describe("the trip shell", () => {
     expect(source).toMatch(/<main className=\{TRIP_SHELL_CLASS\}>/);
   });
 
-  it("is the one place a paper gutter is spelled", () => {
-    const spelled = sourceFiles(path.join(SHOP, "..", "..")).filter((file) =>
-      /\bprint:p[xy]-(?:8|10)\b/.test(readFileSync(file, "utf8")),
+  /**
+   * **One gutter means every packet prints inside the shell, and none pads
+   * itself.** A bundle rendered outside a wearer is a packet with no gutter
+   * (the day packet's ink at x 1), and a bundle with padding of its own is a
+   * second gutter, whatever numbers it spells. Not a scan for `print:px-*`
+   * numbers: a section may want print spacing of its own, and a second gutter
+   * need not use the shell's numbers to be one.
+   */
+  const packets = sourceFiles(path.join(SHOP, "..", ".."))
+    .filter((file) =>
+      /className=["{`][^"}`]*\btrip-print-bundle\b/.test(readFileSync(file, "utf8")),
+    )
+    .map((file) => path.relative(SHOP, file).split(path.sep).join("/"));
+
+  it("wraps every packet the app renders", () => {
+    const inside = (where: string) =>
+      WEARERS.some((wearer) =>
+        wearer.endsWith("/layout.tsx")
+          ? where.startsWith(`${path.dirname(wearer)}/`)
+          : where === wearer,
+      );
+    expect(packets.length, "no file renders a .trip-print-bundle").toBeGreaterThan(0);
+    expect(packets.filter((where) => !inside(where))).toEqual([]);
+  });
+
+  it("is the only gutter a packet has on paper", () => {
+    for (const where of packets) {
+      const source = readFileSync(path.join(SHOP, where), "utf8");
+      for (const [, classes] of source.matchAll(/className="([^"]*\btrip-print-bundle\b[^"]*)"/g)) {
+        expect(classes, `${where}: the bundle's own classes`).toBe("trip-print-bundle");
+      }
+    }
+    const bundle = unlayeredRules(readGlobalsCss()).filter((rule) =>
+      rule.prelude.split(",").some((selector) => selector.trim() === ".trip-print-bundle"),
     );
-    expect(spelled.map((file) => path.basename(file))).toEqual(["trip-shell.ts"]);
+    expect(bundle.length, "a .trip-print-bundle rule in globals.css").toBeGreaterThan(0);
+    for (const rule of bundle) {
+      expect(
+        Object.keys(declarations(rule.body)).filter((property) => property.startsWith("padding")),
+        rule.prelude,
+      ).toEqual([]);
+    }
   });
 });
