@@ -565,13 +565,13 @@ describe("buttonClass", () => {
       expect(offenders).toEqual([]);
     });
 
-    it("hands no negative inline margin to buttonClass: the outdent is `flush`", () => {
+    it("hands no negative inline margin to buttonClass: the sideways outdent is `flush`", () => {
       // A ghost's invisible padding put its label 12px inside the column it
       // started or ended — seasons' Delete at x 478 against the fields' 466 —
       // and the answer at call sites was a hand cancel (`-ml-3`, `-mr-4`,
       // `-ms-2`), which only ever cancelled one side, clipped rings in
       // `overflow-hidden` cards, and left the next site to find its own
-      // number (pixel probe, K-06). `flush` is the one outdent: it knows the
+      // number (pixel probe, K-06). `flush` is the one sideways outdent: it knows the
       // size's padding and keeps 8px of room for a hover fill.
       const offenders: string[] = [];
       for (const file of sourceFiles(SRC_DIR)) {

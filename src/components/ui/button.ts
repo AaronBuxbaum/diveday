@@ -361,7 +361,7 @@ const FLUSH = "px-0";
  * it stay inside a phone's 16px gutter. It is the room `ledger.tsx` gives a
  * row's fill, and for the same reason.
  *
- * `flush` is the one outdent: `button.test.ts` refuses a negative inline
+ * `flush` is the one sideways outdent: `button.test.ts` refuses a negative inline
  * margin at a call site, where `-ml-3`, `-mr-4` and `-ms-2` each cancelled one
  * side of one size by hand. Two things stay the call site's to decide. A pair
  * of controls that both go flush has given up the padding that spaced them, so
