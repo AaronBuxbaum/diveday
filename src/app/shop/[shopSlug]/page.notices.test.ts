@@ -92,3 +92,21 @@ describe("the shop home's notice maps", () => {
     }
   });
 });
+
+/**
+ * **The notice stack stands off the spine by the spine's own gap** (pixel-craft
+ * class 4, K-316). `DaySpine` spaces its sections `gap-10`; the stack sat
+ * `mb-6` above the first of them, so "Day closed" sat 24px over the settled
+ * card where every other block in the column is 40px from the next. Read from
+ * the source for the reason the maps above are: the page is a server component
+ * with nothing to render without a database, a session and a shop.
+ */
+describe("the shop home's notice stack", () => {
+  it("leaves the spine's 40px under it", () => {
+    const stack = /<div className="([^"]*)">\s*\{created && !firstBookableMoment \?/.exec(PAGE);
+    expect(stack, "the notice stack's wrapper").not.toBeNull();
+    const classes = stack?.[1].split(/\s+/) ?? [];
+    expect(classes).toContain("mb-10");
+    expect(classes).not.toContain("mb-6");
+  });
+});

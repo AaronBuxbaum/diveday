@@ -1016,14 +1016,15 @@ async function TodayBody({
 
       {/* One notice surface. A visit rarely carries more than one of these;
           when it does, they read as one stack of arrivals rather than four
-          competing banners. */}
+          competing banners. `mb-10` is the spine's own `gap-10`: the stack is
+          one more block in that column, not closer to it (K-316). */}
       {(created && !firstBookableMoment) ||
       reset ||
       email ||
       authNoticeKey ||
       closed ||
       eveningNotice ? (
-        <div className="mb-6 flex flex-col gap-2">
+        <div className="mb-10 flex flex-col gap-2">
           {created && !firstBookableMoment ? (
             <ShopNotice>
               {seriesCount > 1
