@@ -108,12 +108,17 @@ export async function DiverSheetSection({
       {/* **The one door out.** Everything this sheet does not hold — the
           certifications, the waiver, the fit, the notes, and every form — is on
           the record, and a form here would redirect with a `?notice=` and take
-          the sheet off the screen with it. */}
+          the sheet off the screen with it.
+
+          `gap-1`, not a space before the arrow: in an `inline-flex` link that
+          space ends the label's anonymous flex item and is dropped, which set
+          the arrow 2px from "record" (pixel-craft K-591). */}
       <Link
         href={recordPath}
-        className="mt-6 inline-flex min-h-11 items-center font-semibold text-primary text-sm hover:underline"
+        className="mt-6 inline-flex min-h-11 items-center gap-1 font-semibold text-primary text-sm hover:underline"
       >
-        {t("shared.diverSheet.openRecord")} <span aria-hidden="true">→</span>
+        {t("shared.diverSheet.openRecord")}
+        <span aria-hidden="true">→</span>
       </Link>
     </DiverSheet>
   );

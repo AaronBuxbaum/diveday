@@ -1,4 +1,5 @@
 import { and, eq, isNotNull } from "drizzle-orm";
+import Link from "next/link";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { bookings, people } from "@/db/schema";
@@ -90,5 +91,35 @@ describe("DiverSheetSection", () => {
     expect(number).toMatch(/\u00a0/);
     expect(number).not.toMatch(/ /);
     expect(number?.replaceAll("\u00a0", " ")).toBe(displayStoredPhone(reachable.phone));
+  });
+
+  /**
+   * **The arrow keeps a word's distance from the words** (pixel-craft class 2,
+   * K-591). The link is `inline-flex`, so the JSX space before the arrow ended
+   * the label's anonymous flex item and was dropped: "record→", 2px apart,
+   * where the link's own word spaces are 4–5px. The gap is the container's.
+   */
+  it("spaces the record door's arrow with the link's own gap, not a dropped space", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const [booked] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.shopId, shop.id))
+      .limit(1);
+    if (!booked) throw new Error("seeded shop has no booked diver");
+
+    const tree = await DiverSheetSection({ shop, personId: booked.personId, locale: "en-US" });
+    const door = findElements<{ href?: unknown; className?: string; children?: ReactNode }>(
+      tree,
+      Link,
+    ).find((link) => link.props.href === `/shop/${shop.slug}/divers/${booked.personId}`);
+    if (!door) throw new Error("the sheet rendered no door to the record");
+
+    expect(door.props.className?.split(/\s+/)).toContain("gap-1");
+    const blanks = [door.props.children]
+      .flat()
+      .filter((child) => typeof child === "string" && child.trim() === "");
+    expect(blanks).toEqual([]);
   });
 });
