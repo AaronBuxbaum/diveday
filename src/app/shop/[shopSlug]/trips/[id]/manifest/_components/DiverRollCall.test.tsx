@@ -668,11 +668,11 @@ describe("the counter's write-off is on the row", () => {
 
 /**
  * **The mark keeps room for its focus ring on the last row.** The roll-call
- * card is `overflow-hidden`. In Boat mode, glare's 44px floor shrinks the name
- * button to 52px (#1981), so the mark column sets the row's height, and the
- * last row's mark ended on the card's bottom edge: its 5px ring lost its
- * bottom (pixel probe, `manifest-seen-boat-mode`). Pinned as structure,
- * because jsdom has no layout; the probe measures the ring.
+ * card is `overflow-hidden`. While glare's 44px floor shrank the name button
+ * to 52px (#1981; a floor now, `glare-mode.test.ts`), the mark column set the
+ * row's height, and the last row's mark ended on the card's bottom edge: its
+ * 5px ring lost its bottom (pixel probe, `manifest-seen-boat-mode`). Pinned as
+ * structure, because jsdom has no layout; the probe measures the ring.
  */
 describe("the mark's room for its focus ring", () => {
   it("pads the mark's column as much below the mark as above it (py-2.5), beside the name button in the same row", () => {
@@ -683,5 +683,67 @@ describe("the mark's room for its focus ring", () => {
     expect(column.querySelector("button")).not.toBeNull();
     expect(column).toHaveClass("py-2.5");
     expect(column.className).not.toMatch(/(^|\s)p[tb]-/);
+  });
+
+  it("draws the mark as a circle, so the ring around it is one too", () => {
+    // It asked for `rounded-full` through `className`, which lost to the
+    // button's own `rounded-lg`: a 56px rounded square with a rounded-square
+    // ring (pixel probe, K-44). A radius the class list carries twice is the
+    // defect, whichever one wins.
+    renderList({ divers: [diver()] });
+    const mark = within(screen.getByRole("listitem")).getByRole("button", {
+      name: "Mark boarded",
+    });
+    expect(mark).toHaveClass("rounded-full");
+    expect(mark).not.toHaveClass("rounded-lg");
+  });
+
+  it("takes the tap over the whole mark column, not only inside its circle", () => {
+    // A browser clips a hit area to the border radius, so the round mark lost
+    // its square's corners as a target, and a thumb there met the column's
+    // bare padding (K-44 review). A stretched `::after` is the target, reaching
+    // exactly as far as the column's own padding.
+    renderList({ divers: [diver()] });
+    const mark = within(screen.getByRole("listitem")).getByRole("button", {
+      name: "Mark boarded",
+    });
+    const column = mark.closest("div.shrink-0") as HTMLElement;
+    expect(column).toHaveClass("py-2.5", "ps-3", "pe-3");
+    expect(mark).toHaveClass(
+      "relative",
+      "after:absolute",
+      "after:-inset-y-2.5",
+      "after:-inset-x-3",
+    );
+    expect(mark.className).not.toMatch(/after:rounded/);
+  });
+});
+
+/**
+ * **The name prints.** The name is the trigger that opens the person's sheet,
+ * so it lives inside a `<button>`, and the packet's print backstop hides every
+ * button in `.trip-print-bundle` (`globals.css`). Both packets printed every
+ * roll-call row without its name until the trigger declared that its content
+ * is the fact (`print-bundle.test.ts` reads the rule). The caret is the one
+ * part of it that is only a control, so it stays off paper.
+ */
+describe("the roll call on paper", () => {
+  it("marks the name trigger as content the packet prints, and keeps its caret off paper", () => {
+    renderList({ divers: [diver()] });
+    const trigger = screen.getByRole("button", { name: "Open details for Meera Iyer" });
+    expect(trigger).toHaveAttribute("data-print-content");
+    expect(within(trigger).getByText("Meera Iyer")).toBeVisible();
+    const caret = trigger.querySelector("svg:last-child");
+    expect(caret).not.toBeNull();
+    expect(caret).toHaveClass("print:hidden");
+  });
+
+  it("prints the name as one line, not at the deck's 76px row", () => {
+    // The mark does not print, so its 76px row and 12px inset have nothing to
+    // hold on paper; carried there, every name was a 16mm band and a full
+    // boat's roll call ran to extra pages (K-02 review).
+    renderList({ divers: [diver()] });
+    const trigger = screen.getByRole("button", { name: "Open details for Meera Iyer" });
+    expect(trigger).toHaveClass("print:min-h-0", "print:py-1");
   });
 });

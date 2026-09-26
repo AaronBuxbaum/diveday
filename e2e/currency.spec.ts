@@ -86,10 +86,12 @@ test.describe("shop currency", () => {
   }) => {
     await setCurrency(page, privateShop.slug, "eur");
     // Staff price entry first — we're already on settings; the price boxes
-    // wait behind the "Rental prices" row. The box is prefixed with the
-    // shop's own symbol, not a literal `$`.
+    // wait behind the "Rental prices" row. An empty box shows the shop's own
+    // symbol as its placeholder (a filled one settles to "€45"), never a
+    // literal `$`.
     await openSettingsRow(page, "Rental prices");
-    await expect(page.getByText("€", { exact: true }).first()).toBeVisible();
+    await expect(page.getByPlaceholder("€", { exact: true }).first()).toBeVisible();
+    await expect(page.getByPlaceholder("$", { exact: true })).toHaveCount(0);
     await expect(page.getByText("$", { exact: true })).toHaveCount(0);
 
     await page.goto(`/shop/${privateShop.slug}/reports`);

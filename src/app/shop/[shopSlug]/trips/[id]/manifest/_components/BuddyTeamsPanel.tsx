@@ -2,8 +2,8 @@ import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass, Field, FormStatus } from "@/components/ui/form";
+import { SummaryCaret } from "@/components/ui/disclosure";
+import { controlClassFor, Field, FormStatus } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
@@ -109,15 +109,20 @@ export function BuddyTeamsPanel({
           when a refusal needs reading — a submit's answer must never hide
           behind the fold it came from. */}
       <details className="group/buddypanel" open={buddyErrorText || defaultOpen ? true : undefined}>
-        {/* Two alignments, not one: the caret centres on the *block* of text
-            (`items-center`), while the heading and its count share a baseline
-            inside that block. Flattened into a single baseline row the caret
-            hung off the text's baseline like a stray comma — a 12px mark
-            baseline-aligned to an 18px heading sits well below its optical
-            centre, which is how it read as misaligned rather than as the
-            control it is. */}
-        <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 select-none [&::-webkit-details-marker]:hidden">
-          <DisclosureCaret className="text-muted group-open/buddypanel:rotate-90" />
+        {/* Two alignments, not one: the caret centres on the heading's *first
+            line* (`SummaryCaret`, a box one title line tall, in a row that
+            starts at the top), while the heading and its count share a
+            baseline beside it. Flattened into a single baseline row the caret
+            hung off the text's baseline like a stray comma; centred on the
+            whole block it floated between the lines once the count wrapped
+            (9.5–20px low at 390, most in Spanish). `py-2` round the 28px title
+            line is the 44px floor, so one line still centres; `-mx-2 px-2
+            rounded-lg` gives the ring room off the words. */}
+        <summary className="-mx-2 flex min-h-11 w-fit cursor-pointer list-none items-start gap-2 rounded-lg px-2 py-2 select-none [&::-webkit-details-marker]:hidden">
+          <SummaryCaret
+            line={`h-lh ${SECTION_TITLE_CLASS}`}
+            className="text-muted group-open/buddypanel:rotate-90"
+          />
           <span className="flex flex-wrap items-baseline gap-x-2">
             <h2 id={scopedId(idPrefix, "buddy-teams-heading")} className={SECTION_TITLE_CLASS}>
               {t("manifest.buddyHeading")}
@@ -250,13 +255,18 @@ export function BuddyTeamsPanel({
                                     a word, because the label lives inside a
                                     44px circle that a word would burst; the
                                     disabled + `aria-busy` state is what says
-                                    the tap landed. */}
+                                    the tap landed.
+
+                                    Ringed inside its own circle
+                                    (`focus-ring-inset`): the global ring's
+                                    5px reach put its left arm on the last
+                                    letter of the name 4px before it. */}
                                   <SubmitButton
                                     pendingLabel="×"
                                     ariaLabel={t("manifest.buddyRemoveMember", {
                                       name: member.fullName,
                                     })}
-                                    className="flex size-11 cursor-pointer items-center justify-center rounded-full text-lg leading-none text-muted disabled:cursor-wait disabled:opacity-70 hover:bg-danger-tint hover:text-danger"
+                                    className="flex size-11 cursor-pointer items-center justify-center rounded-full text-lg leading-none text-muted disabled:cursor-wait disabled:opacity-70 hover:bg-danger-tint hover:text-danger focus-visible:focus-ring-inset"
                                   >
                                     <span aria-hidden="true">×</span>
                                   </SubmitButton>
@@ -319,7 +329,14 @@ export function BuddyTeamsPanel({
                           `<select>` keeps `required`; the server refusal it
                           pairs with is real. */}
                       <Field label={t("manifest.buddyAddMemberLabel")} markRequired={false}>
-                        <select name="member" required defaultValue="" className={controlClass}>
+                        {/* `md`, the height of the Add button this row
+                            bottom-aligns it with. */}
+                        <select
+                          name="member"
+                          required
+                          defaultValue=""
+                          className={controlClassFor("md")}
+                        >
                           <option value="" disabled>
                             {t("manifest.buddySelectPlaceholder")}
                           </option>
@@ -370,8 +387,10 @@ export function BuddyTeamsPanel({
             className="group/buddies mt-4"
             open={builderError || buddyTeamsList.length === 0 ? true : undefined}
           >
-            <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm font-semibold select-none [&::-webkit-details-marker]:hidden">
-              <DisclosureCaret className="text-muted group-open/buddies:rotate-90" />
+            {/* The panel summary's grammar at the body's size: the caret on
+                the first line, `py-3` round a 20px line for the 44px floor. */}
+            <summary className="-mx-2 flex min-h-11 w-fit cursor-pointer list-none items-start gap-2 rounded-lg px-2 py-3 text-sm font-semibold select-none [&::-webkit-details-marker]:hidden">
+              <SummaryCaret className="text-muted group-open/buddies:rotate-90" />
               {t("manifest.buddyNewTeamHeading")}
             </summary>
             <form action={formBuddyTeamAction} className="mt-2 max-w-4xl">

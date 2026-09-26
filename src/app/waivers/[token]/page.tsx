@@ -14,7 +14,7 @@ import { THREAD_MEASURE_CLASS, ThreadShell } from "@/components/thread/ThreadShe
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { ChoiceRow, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
@@ -1222,25 +1222,24 @@ export default async function WaiverPage({
                 />
               </Field>
             </FieldGrid>
-            <label className="mt-4 flex min-h-11 items-center gap-3 text-base">
-              <input
-                id="acknowledged"
-                name="acknowledged"
-                type="checkbox"
-                value="on"
-                required
-                defaultChecked={record.draftAcknowledged}
-                // The checkbox isn't a `Field`, so its refusal wiring is by
-                // hand: the same aria pair `Field`'s `error` prop provides,
-                // pointing at the message rendered just below.
-                aria-invalid={namedFieldError?.anchor === "acknowledged" ? "true" : undefined}
-                aria-describedby={
-                  namedFieldError?.anchor === "acknowledged" ? "acknowledged-error" : undefined
-                }
-                className="size-4 accent-primary"
-              />
-              <span>{t("waiver.agreementCheckbox")}</span>
-            </label>
+            <ChoiceRow
+              type="checkbox"
+              id="acknowledged"
+              name="acknowledged"
+              value="on"
+              required
+              defaultChecked={record.draftAcknowledged}
+              // The checkbox isn't a `Field`, so its refusal wiring is by
+              // hand: the same aria pair `Field`'s `error` prop provides,
+              // pointing at the message rendered just below.
+              aria-invalid={namedFieldError?.anchor === "acknowledged" ? "true" : undefined}
+              aria-describedby={
+                namedFieldError?.anchor === "acknowledged" ? "acknowledged-error" : undefined
+              }
+              className="mt-4 text-base"
+            >
+              {t("waiver.agreementCheckbox")}
+            </ChoiceRow>
             {namedFieldError?.anchor === "acknowledged" ? (
               <FormStatus id="acknowledged-error" className="mt-2">
                 {t(namedFieldError.textKey)}
@@ -1335,29 +1334,28 @@ export default async function WaiverPage({
                   </select>
                 </Field>
               </FieldGrid>
-              <label className="mt-4 flex min-h-11 items-start gap-3 text-base">
-                <input
-                  id="guardianAcknowledged"
-                  name="guardianAcknowledged"
-                  type="checkbox"
-                  value="on"
-                  required
-                  // Kept across a refusal, like the diver's own box above: a
-                  // family that hit one refusal should not have to re-read and
-                  // re-tick the agreement to try the next answer.
-                  defaultChecked={draftGuardian?.acknowledged ?? false}
-                  aria-invalid={
-                    namedFieldError?.anchor === "guardianAcknowledged" ? "true" : undefined
-                  }
-                  aria-describedby={
-                    namedFieldError?.anchor === "guardianAcknowledged"
-                      ? "guardianAcknowledged-error"
-                      : undefined
-                  }
-                  className="mt-1 size-4 shrink-0 accent-primary"
-                />
-                <span>{t("waiver.guardianAgreementCheckbox")}</span>
-              </label>
+              <ChoiceRow
+                type="checkbox"
+                id="guardianAcknowledged"
+                name="guardianAcknowledged"
+                value="on"
+                required
+                // Kept across a refusal, like the diver's own box above: a
+                // family that hit one refusal should not have to re-read and
+                // re-tick the agreement to try the next answer.
+                defaultChecked={draftGuardian?.acknowledged ?? false}
+                aria-invalid={
+                  namedFieldError?.anchor === "guardianAcknowledged" ? "true" : undefined
+                }
+                aria-describedby={
+                  namedFieldError?.anchor === "guardianAcknowledged"
+                    ? "guardianAcknowledged-error"
+                    : undefined
+                }
+                className="mt-4 text-base"
+              >
+                {t("waiver.guardianAgreementCheckbox")}
+              </ChoiceRow>
               {namedFieldError?.anchor === "guardianAcknowledged" ? (
                 <FormStatus id="guardianAcknowledged-error" className="mt-2">
                   {t(namedFieldError.textKey)}

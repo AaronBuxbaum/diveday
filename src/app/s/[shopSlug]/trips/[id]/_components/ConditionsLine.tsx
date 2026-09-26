@@ -37,6 +37,7 @@ export function ConditionsLine({
   crewLanguages,
   tideLines,
   locale,
+  underDoor = false,
 }: {
   shop: Shop;
   trip: Trip;
@@ -70,6 +71,13 @@ export function ConditionsLine({
    */
   tideLines?: { site: string; text: string; station?: string | null }[];
   locale: string;
+  /**
+   * Directly under the pitch's door (`pitchHasDoor`): the line sits flush, so
+   * its rule is the door's close. 24px below, the door's label sat in an 80px
+   * band between two rules, 29px under one and 51px over the other
+   * (pixel-craft class 6).
+   */
+  underDoor?: boolean;
 }) {
   const t = diverTranslator(locale);
   // Stored metric, displayed in the shop's own units (src/lib/depth-units.ts,
@@ -123,7 +131,9 @@ export function ConditionsLine({
   return (
     // The ledger's room: its rule ends where the day's rows' rules end, and
     // its words stay on the column.
-    <section className={`mt-6 border-t border-border pt-4 ${ledgerRowRoomClass}`}>
+    <section
+      className={`${underDoor ? "" : "mt-6 "}border-t border-border pt-4 ${ledgerRowRoomClass}`}
+    >
       {parts.length > 0 ? (
         <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
           {parts.map((part, index) => (

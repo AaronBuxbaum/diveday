@@ -6,7 +6,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import {
+  controlClass,
+  DateField,
+  Field,
+  FieldActions,
+  FieldGrid,
+  textareaClassFor,
+} from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { listSeasonEvents } from "@/db/season-events";
@@ -142,30 +149,35 @@ export default async function SeasonsSettingsPage({
                         rows={2}
                         maxLength={SEASON_EVENT_NOTE_MAX}
                         defaultValue={season.note ?? ""}
-                        className={controlClass}
+                        className={textareaClassFor(2)}
                       />
                     </Field>
+                    {/* **Save and Delete on one line.** Delete had a form of
+                        its own under this one, a line by itself that cost 56px
+                        per season. The confirm posts to the delete through
+                        `formAction`, taking the row's hidden `eventId` with it;
+                        Save comes first, so Enter in a field saves and never
+                        deletes, and names its own action so a delete in flight
+                        never reads as a save. Save's box now starts the line
+                        on the fields' edge, so Delete, after it, keeps its
+                        padding: it starts no column for `flush` to meet. */}
                     <FieldActions>
                       <SubmitButton
                         pendingLabel={t("seasonEvents.submitting")}
                         className={buttonClass({ variant: "secondary", size: "sm" })}
+                        formAction={updateSeasonEventAction}
                       >
                         {t("seasonEvents.submit")}
                       </SubmitButton>
+                      <InlineConfirm
+                        formAction={deleteSeasonEventAction}
+                        triggerLabel={t("seasonEvents.delete")}
+                        confirmLabel={t("seasonEvents.deleteConfirm")}
+                        pendingLabel={t("seasonEvents.deletePending")}
+                        triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                      />
                     </FieldActions>
                   </FieldGrid>
-                  {/* Its own form beside the edit, never inside it:
-                      `InlineConfirm` submits the form it sits in, and forms
-                      cannot nest. */}
-                  <form action={deleteSeasonEventAction}>
-                    <input type="hidden" name="eventId" value={season.id} />
-                    <InlineConfirm
-                      triggerLabel={t("seasonEvents.delete")}
-                      confirmLabel={t("seasonEvents.deleteConfirm")}
-                      pendingLabel={t("seasonEvents.deletePending")}
-                      triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
-                    />
-                  </form>
                 </div>
               ))}
             </div>
@@ -212,7 +224,7 @@ export default async function SeasonsSettingsPage({
                   name="note"
                   rows={2}
                   maxLength={SEASON_EVENT_NOTE_MAX}
-                  className={controlClass}
+                  className={textareaClassFor(2)}
                 />
               </Field>
               <FieldActions>

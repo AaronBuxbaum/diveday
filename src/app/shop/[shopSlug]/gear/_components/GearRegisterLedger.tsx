@@ -211,7 +211,7 @@ function GearGroup({
   const headingId = `gear-group-${name}`;
   return (
     <LedgerGroup as="h2" id={headingId} label={t(GROUP_LABEL_KEYS[name], { count })}>
-      <ul className="mt-2" aria-labelledby={headingId}>
+      <ul aria-labelledby={headingId}>
         {rows.map((row) => (
           <GearUnitRow key={row.item.id} row={row} group={name} t={t} {...rowProps} />
         ))}
@@ -272,7 +272,7 @@ function GearUnitRow({
         )
       }
     >
-      <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1 py-2">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="font-mono text-sm font-medium">{item.label}</span>
         {descriptor ? <span className="min-w-0 text-sm text-muted">{descriptor}</span> : null}
         {where ? (

@@ -53,6 +53,7 @@ function renderQueue(
   confirmIdentityAction: (formData: FormData) => Promise<void> = vi
     .fn()
     .mockResolvedValue(undefined),
+  endsOpen = false,
 ) {
   return render(
     <CounterQueue
@@ -78,10 +79,64 @@ function renderQueue(
       salvageFor={() => undefined}
       settledOpen={settledOpen}
       settledHeadingLevel="h3"
+      endsOpen={endsOpen}
       t={t}
     />,
   );
 }
+
+/**
+ * **The walk-in door is the queue's last line** (pixel-craft class 6). The
+ * queue closed its last row with a rule and the door opened with its own 24px
+ * below it: two parallel hairlines with nothing between them. With `endsOpen`
+ * the queue leaves its last list's close to the door, which sits flush.
+ */
+describe("a queue with the walk-in door under it", () => {
+  const article = (name: string) => screen.getByText(name).closest("article");
+
+  it("leaves its last list open, and only its last", () => {
+    renderQueue([row("Tom Okafor"), settled("Nadia Petrov")], true, true, undefined, true);
+    // The working list is followed by the settled group's label, not a rule.
+    expect(article("Tom Okafor")).toHaveClass("last:border-b");
+    expect(article("Nadia Petrov")).not.toHaveClass("last:border-b");
+    expect(article("Nadia Petrov")).toHaveClass("border-t");
+  });
+
+  it("closes itself on its own", () => {
+    renderQueue([row("Tom Okafor")]);
+    expect(article("Tom Okafor")).toHaveClass("last:border-b");
+  });
+
+  /**
+   * **Folded, the settled group keeps the door off its summary.** Until the
+   * boat sails the receipts are a folded `<details>`, which is the counter's
+   * ordinary mid-morning state: the door's rule sat flush under "Checked in —
+   * N" and read as the fold's first row. The fold toggles on the client, so the
+   * page cannot decide it; the group keeps 24px under itself while it is
+   * closed, and none once open, where the door's rule closes its rows.
+   */
+  it("keeps the door 24px below a folded settled group, and flush under an open one", () => {
+    const { container } = renderQueue(
+      [row("Tom Okafor"), settled("Nadia Petrov")],
+      false,
+      true,
+      undefined,
+      true,
+    );
+    const fold = container.querySelector("details");
+    expect(fold).not.toHaveAttribute("open");
+    expect(fold).toHaveClass("mt-6", "[&:not([open])]:mb-6");
+    expect(fold?.className).not.toMatch(/(?:^|\s)mb-/);
+    cleanup();
+    const { container: alone } = renderQueue(
+      [row("Tom Okafor"), settled("Nadia Petrov")],
+      false,
+      true,
+    );
+    // With nothing under it, the fold needs no room of its own.
+    expect(alone.querySelector("details")?.className).not.toMatch(/mb-6/);
+  });
+});
 
 describe("a send that does not go through", () => {
   /**

@@ -748,7 +748,7 @@
     "photoAdded": "Added to your recap. Thanks for sharing!",
     "photoMissing": "Pick a photo first, then add it.",
     "photoUnsupported": "Photo uploads aren’t set up for this shop yet, so tag them when you post.",
-    "photoFailed": "That photo didn’t upload. Try a JPEG or PNG under 5 MB.",
+    "photoFailed": "That photo didn’t upload. Try a JPEG or PNG under 5\u00a0MB.",
     "photoCancelled": "There’s no recap for this booking to add a photo to.",
     "tipCancelled": "No worries, the tip wasn’t charged.",
     "tipRange": "Enter a tip amount between $1 and $500.",
@@ -768,7 +768,7 @@
     "addAPhoto": "Add a photo",
     "addAnotherPhoto": "Add another photo",
     "photoWrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
-    "photoTooBigSuffix": ": that’s over {maxMb} MB. Try a smaller photo.",
+    "photoTooBigSuffix": ": that’s over {maxMb}\u00a0MB. Try a smaller photo.",
     "photoTooMany": "Pick up to {max, plural, one {# photo} other {# photos}} at a time.",
     "addingPhoto": "Adding…",
     "addToMyRecap": "Add to my recap",
@@ -2953,7 +2953,7 @@
           },
           "waiverDocuments": {
             "what": "Waiver / medical documents",
-            "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5 MB."
+            "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5\u00a0MB."
           },
           "role": {
             "what": "Role",

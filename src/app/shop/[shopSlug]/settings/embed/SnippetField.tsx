@@ -1,7 +1,7 @@
 "use client";
 
 import { Copyable } from "@/components/Copyable";
-import { controlClass, Field } from "@/components/ui/form";
+import { Field, type TextareaRows, textareaClassFor } from "@/components/ui/form";
 
 /**
  * A labeled, read-only, select-on-focus snippet box with a copy button.
@@ -19,7 +19,8 @@ export function SnippetField({
   failedLabel,
 }: {
   label: string;
-  rows: number;
+  /** The box's fewest lines; it grows to show the whole snippet. */
+  rows: TextareaRows;
   snippet: string;
   copyLabel: string;
   copiedLabel: string;
@@ -33,11 +34,13 @@ export function SnippetField({
           rows={rows}
           value={snippet}
           onFocus={(event) => event.currentTarget.select()}
-          className={`${controlClass} font-mono text-xs`}
+          className={`${textareaClassFor(rows)} font-mono text-xs`}
         />
         <div>
+          {/* Alone on the line under the box: its word sits on the box's edge. */}
           <Copyable
             layout="inline"
+            flush
             value={snippet}
             copyLabel={copyLabel}
             copiedLabel={copiedLabel}

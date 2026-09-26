@@ -63,10 +63,7 @@ export function FunnelCtas({
       </form>
       <a
         href={setUpMailto(t("marketing.common.setUpSubject"))}
-        className={buttonClass({
-          variant: "secondary",
-          className: `border-border-strong ${width}`,
-        })}
+        className={buttonClass({ variant: "outline", className: width })}
       >
         {t("marketing.common.getSetUp")}
       </a>

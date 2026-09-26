@@ -66,6 +66,12 @@
       "container": "li.border-border border-t flex gap-3 items-center last:border-b min-h-13 px-2 relative",
       "reason": "The first-run checklist's storefront link is cut to fit its row: it sits beside its own Copy control, which copies it whole, and uncut it would push the page wider than a phone.",
       "pointer": "src/app/shop/[shopSlug]/_components/today/FirstRunChecklist.tsx, the comment on the link's min-w-0 wrapper; docs/design/settled-questions.md"
+    },
+    {
+      "check": "focus-ring-clipped",
+      "container": "div.chip-scroller flex gap-2 items-center max-sm:[scrollbar-width:none] max-sm:overflow-x-auto max-sm:px-4 max-sm:py-1.5 max-sm:scroll-px-6 sm:flex-wrap",
+      "reason": "A filter chip that ends within the ring's 5px of the phone row's scrolling edge (\"Wrecks\", 3.6px from it at 390) loses the ring's edge to the row's clip only while the probe forces :focus-visible without focusing. A real focus scrolls the chip into the row's scroll padding (max-sm:scroll-px-6, the edge fade plus the ring's reach), clear of the edge. The ring's room above and below is padding FilterChips.test.tsx pins.",
+      "pointer": "src/components/ui/FilterChips.tsx, the comment on the phone scroller; docs/design/settled-questions.md"
     }
   ]
 }

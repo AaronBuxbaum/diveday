@@ -512,13 +512,7 @@ async function HomeBody({
               <FeatureGroupsGrid locale={locale} />
             </div>
             <div className="mt-10 text-center">
-              <Link
-                href="/product"
-                className={buttonClass({
-                  variant: "secondary",
-                  className: "border-border-strong",
-                })}
-              >
+              <Link href="/product" className={buttonClass({ variant: "outline" })}>
                 {t("marketing.home.seeFullProduct")}
               </Link>
             </div>
@@ -672,10 +666,7 @@ async function HomeBody({
               </div>
               <a
                 href={`mailto:${SUPPORT_EMAIL}`}
-                className={buttonClass({
-                  variant: "secondary",
-                  className: "shrink-0 border-border-strong",
-                })}
+                className={buttonClass({ variant: "outline", className: "shrink-0" })}
               >
                 {t("marketing.home.contactCta", { email: SUPPORT_EMAIL })}
               </a>

@@ -38,7 +38,7 @@
     "endpointLabel": "Endpoint",
     "endpointHint": "El origen de la API S3 de tu proveedor: HTTPS, sin bucket ni ruta.",
     "regionLabel": "Región",
-    "regionHint": "La región de firma: “auto” en Cloudflare R2, del estilo “us-east-1” en AWS.",
+    "regionHint": "La región de firma: “auto” en Cloudflare R2, del estilo “<nowrap>us-east-1</nowrap>” en AWS.",
     "bucketLabel": "Bucket",
     "prefixLabel": "Prefijo de carpeta",
     "optionalHint": "(opcional)",

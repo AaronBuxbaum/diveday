@@ -26,6 +26,25 @@ function alternative(over: Partial<TripAlternative> = {}): TripAlternative {
 }
 
 describe("TripAlternatives", () => {
+  /**
+   * **The list closes itself, always** (pixel-craft class 6). Left open over
+   * the requirement note, its last row stood in an 89px band ruled only by the
+   * note's rule 33px lower: 13px over its words and 46px under them (K-16
+   * review, site-briefing). The note under it drops its own rule instead
+   * (`page.composition.test.ts`).
+   */
+  it("closes its list with a rule under the last row", () => {
+    render(
+      <TripAlternatives
+        alternatives={[alternative(), alternative({ tripId: "trip-3" })]}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    for (const row of screen.getAllByRole("listitem")) {
+      expect(row).toHaveClass("border-t", "last:border-b");
+    }
+  });
+
   it("renders nothing when nothing is worth offering", () => {
     const { container } = render(
       <TripAlternatives alternatives={[]} locale={DEFAULT_DIVER_LOCALE} />,

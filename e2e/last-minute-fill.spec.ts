@@ -333,11 +333,15 @@ test("a self-declared card cannot be certified without verified evidence", async
 /**
  * **The hint panel belongs to the mark you are pointing at.**
  *
- * `InfoHint`'s trigger is a 44px box around a 12px glyph (`-m-3 size-11 p-3`,
+ * `InfoHint`'s trigger was a 44px box around a 12px glyph (`-m-3 size-11 p-3`,
  * the tap-target floor from principles.md §2) and the panel was placed from
  * that box — so it opened 16px below and 16px left of the dot under the
  * pointer, reading as a note about nothing in particular rather than about the
- * question it hangs off. Underneath that, the panel is `position: fixed` and
+ * question it hangs off. The trigger is now the 20px mark's own box and the
+ * 44px target a stretched `::after` (pixel-craft class 7: the ring belongs to
+ * the mark), so the box a bounding rect reports *is* the mark; this still
+ * checks the target reaches the floor.
+ * Underneath that, the panel is `position: fixed` and
  * every `<details>` is a containing block for one in Chromium (through the
  * `::details-content` pseudo the UA wraps its body in), which put it hundreds
  * of pixels away; it is portalled to `document.body` for that.
@@ -349,11 +353,10 @@ test("a self-declared card cannot be certified without verified evidence", async
  * `place()` flips the panel *above* its trigger when it would not fit below,
  * and this test used to pin the below branch — on the argument that an
  * assertion accepting both would prove less. It does not. The relationship
- * under test is that the panel hangs off the 12px glyph rather than the padded
- * box, the padding is symmetric, so the same two comparisons hold in either
- * direction: the gap is `panel.top - mark.bottom` below and
- * `mark.top - panel.bottom` above, and `targetGap < markGap` — the actual
- * regression guard — is true in both. Accepting both branches proves exactly as
+ * under test is that the panel hangs off the 20px mark rather than the 44px
+ * target, and the target is symmetric round the mark, so the same comparison
+ * holds in either direction: the gap is `panel.top - mark.bottom` below and
+ * `mark.top - panel.bottom` above. Accepting both branches proves exactly as
  * much and stops the test depending on how tall the document happens to be.
  *
  * **That dependency was the whole failure history**, and none of it was ever
@@ -396,10 +399,9 @@ test("the certification hint opens beside the mark, not beside its tap target", 
   const geometry = await page.evaluate((id) => {
     const note = document.getElementById(id);
     const button = document.querySelector(`button[aria-controls="${id}"]`);
-    const glyph = button?.querySelector("span");
+    const glyph = button?.querySelector("svg");
     if (!note || !button || !glyph) throw new Error("no hint on the page");
     const mark = glyph.getBoundingClientRect();
-    const target = button.getBoundingClientRect();
     const panel = note.getBoundingClientRect();
     // Which way `place()` went — read off the result rather than predicted from
     // the geometry that produced it.
@@ -408,27 +410,25 @@ test("the certification hint opens beside the mark, not beside its tap target", 
       open: getComputedStyle(note).visibility,
       below,
       markGap: below ? panel.top - mark.bottom : mark.top - panel.bottom,
-      // What the gap would have been measured from the tap target instead —
-      // the regression this test exists for. Symmetric padding, so the same
-      // subtraction in whichever direction the panel went.
-      targetGap: below ? panel.top - target.bottom : target.top - panel.bottom,
       dx: panel.left - mark.left,
       markWidth: mark.width,
-      targetWidth: target.width,
+      // The button's own box is the mark's; the target is its stretched
+      // `::after`, which a bounding rect cannot see.
+      buttonWidth: button.getBoundingClientRect().width,
+      targetWidth: Number.parseFloat(getComputedStyle(button, "::after").width),
     };
   }, panelId ?? "");
 
   expect(geometry.open).toBe("visible");
-  // The mark really is the small dot and the target really is the 44px box —
-  // the whole reason measuring the wrong one moved the panel.
+  // The mark really is the small dot, the button is the mark's box, and the
+  // target still reaches the 44px floor.
   expect(geometry.markWidth).toBeLessThan(24);
-  expect(geometry.targetWidth).toBeGreaterThanOrEqual(40);
-  // `PANEL_GAP` is 8; a couple of pixels of slack for sub-pixel layout.
+  expect(Math.abs(geometry.buttonWidth - geometry.markWidth)).toBeLessThanOrEqual(1);
+  expect(geometry.targetWidth).toBeGreaterThanOrEqual(44);
+  // `PANEL_GAP` is 8; a couple of pixels of slack for sub-pixel layout. Hung
+  // off the 44px target instead it would sit 12px further away.
   expect(geometry.markGap).toBeGreaterThanOrEqual(6);
   expect(geometry.markGap).toBeLessThanOrEqual(12);
-  // And it is the *mark* the panel hangs off: anchored to the padded box it
-  // would sit a padding's worth further away, which is what this used to do.
-  expect(geometry.targetGap).toBeLessThan(geometry.markGap);
   // Left-aligned to the mark wherever there is room for it.
   expect(Math.abs(geometry.dx)).toBeLessThanOrEqual(2);
 });

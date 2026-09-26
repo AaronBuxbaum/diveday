@@ -38,7 +38,10 @@ export function WeekPager({
   className?: string;
 }) {
   return (
-    <div className={`flex items-center gap-2 ${className}`.trim()}>
+    // `flex-wrap`, with the range and the way back each `whitespace-nowrap`:
+    // at 390 the row could not wrap, so both shrank and broke inside
+    // themselves ("This / week"). Now the link drops to a line of its own.
+    <div className={`flex flex-wrap items-center gap-2 ${className}`.trim()}>
       <Link
         href={previousHref}
         scroll={false}
@@ -60,12 +63,14 @@ export function WeekPager({
       >
         <DiveDayIcon name="chevron-right" />
       </Link>
-      <p className="ms-2 text-base font-semibold tracking-tight tabular-nums">{rangeLabel}</p>
+      <p className="ms-2 text-base font-semibold tracking-tight whitespace-nowrap tabular-nums">
+        {rangeLabel}
+      </p>
       {thisWeekHref ? (
         <Link
           href={thisWeekHref}
           scroll={false}
-          className={buttonClass({ variant: "link", size: "sm" })}
+          className={buttonClass({ variant: "link", size: "sm", className: "whitespace-nowrap" })}
         >
           {words.thisWeek}
         </Link>

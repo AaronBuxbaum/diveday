@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { BOAT_CARD_DAY, BOAT_CARD_NIGHT, PRINT_SHEET_BOX_MM } from "@/lib/print-sheets";
+import { declarations, readGlobalsCss, unlayeredRules } from "@/test/stylesheet";
 import { PaperSheet, SheetMark, SheetValue } from "./PaperSheet";
 
 /**
@@ -104,5 +105,44 @@ describe("the mark in the band", () => {
   it("survives a one-word name", () => {
     render(<SheetMark name="Reeflight" />);
     expect(screen.getByText("R")).toBeTruthy();
+  });
+});
+
+/**
+ * **A blank is a rule under the line, from its label to the column's edge.**
+ *
+ * It was an 8ch inline block, so each rule was about 13mm long and ended
+ * wherever its label happened to end: the boat card's three oxygen and
+ * first-aid blanks stopped at three x positions 25px apart, in a column that
+ * ran on to its edge (pixel probe, `boat-card-print`). A skipper writing a
+ * location needs the width, and one right edge is what makes three rules read
+ * as a form.
+ *
+ * And it lies on the baseline its label's words stand on, as the 8ch one did. An
+ * empty inline block's bottom edge *is* its line's baseline, so an inline-level
+ * blank puts its rule there. As a one-line `block` it ran to the edge but its
+ * rule fell to the foot of the line box, 3.4px under the label in print.
+ *
+ * This half reads the stylesheet and can only say what the rule asks for;
+ * `e2e/shop-on-paper.spec.ts` measures both edges on the printed card.
+ */
+describe("the ruled blank", () => {
+  const style = declarations(
+    unlayeredRules(readGlobalsCss()).find((rule) => rule.prelude === ".paper-sheet-blank")?.body ??
+      "",
+  );
+
+  it("lies on its label's baseline", () => {
+    expect(style.display, "inline-level, so the line sets it on its baseline").toBe("inline-block");
+    expect(style["vertical-align"] ?? "baseline").toBe("baseline");
+  });
+
+  it("runs to its column's edge", () => {
+    expect(style.width).toBe("100%");
+    expect(style).not.toHaveProperty("min-width");
+  });
+
+  it("is ruled in the sheet's ink", () => {
+    expect(style["border-bottom"]).toBe("1px solid var(--sheet-rule)");
   });
 });

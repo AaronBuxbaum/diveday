@@ -38,7 +38,14 @@ import { ThreadShell } from "@/components/thread/ThreadShell";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoiceRow,
+  controlClass,
+  Field,
+  FieldGrid,
+  textareaClassFor,
+} from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -148,13 +155,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * One tick-box in the support-needs question, worded on its right.
- *
- * A local helper rather than a `src/components/ui` addition: `form.tsx`'s
- * vocabulary is stacked fields and controls, and there is exactly one grouped
- * set of checkboxes in the app. It matches the diver-facing markup already in
- * `DiveDeclarationFields` — same size, same border token, same `items-start` so
- * a label that wraps stays aligned to the box rather than centring on it.
+ * One tick-box in the support-needs question, worded on its right: a
+ * `ChoiceRow`, whose box sits on the first line of a label that wraps and
+ * whose row is never under 44px (these were 20px targets).
  *
  * `value="on"` is explicit rather than relied on: the action's schema reads an
  * unticked box as an absent key, which is how HTML posts one, and a diver
@@ -170,16 +173,15 @@ function CheckboxRow({
   defaultChecked: boolean;
 }) {
   return (
-    <label className="flex items-start gap-2 text-base">
-      <input
-        type="checkbox"
-        name={name}
-        value="on"
-        defaultChecked={defaultChecked}
-        className="mt-1 size-4 shrink-0 rounded border-border-strong"
-      />
-      <span>{label}</span>
-    </label>
+    <ChoiceRow
+      type="checkbox"
+      name={name}
+      value="on"
+      defaultChecked={defaultChecked}
+      className="text-base"
+    >
+      {label}
+    </ChoiceRow>
   );
 }
 
@@ -196,16 +198,15 @@ function RadioRow({
   defaultChecked: boolean;
 }) {
   return (
-    <label className="flex items-start gap-2 text-base">
-      <input
-        type="radio"
-        name={name}
-        value={value}
-        defaultChecked={defaultChecked}
-        className="mt-1 size-4 shrink-0 border-border-strong"
-      />
-      <span>{label}</span>
-    </label>
+    <ChoiceRow
+      type="radio"
+      name={name}
+      value={value}
+      defaultChecked={defaultChecked}
+      className="text-base"
+    >
+      {label}
+    </ChoiceRow>
   );
 }
 
@@ -1072,26 +1073,20 @@ function DayOfDetails({
           action={saveReEntryAskFromReady.bind(null, token)}
           className="flex flex-col gap-3 py-5"
         >
-          <fieldset>
-            <legend className="text-sm font-medium">{t("booking.reEntry.legend")}</legend>
-            <div className="mt-2 flex flex-col gap-1">
-              {reEntryOffersFor(data.refresherCourseOffered).map((ask) => (
-                <label
-                  key={ask}
-                  className="flex min-h-11 cursor-pointer items-center gap-2 text-sm"
-                >
-                  <input
-                    type="radio"
-                    name="reEntryAsk"
-                    value={ask}
-                    defaultChecked={data.reEntryAsk === ask}
-                    className="size-4"
-                  />
-                  {t(DIVER_RE_ENTRY_KEYS[ask])}
-                </label>
-              ))}
-            </div>
-          </fieldset>
+          <ChoiceFieldset legend={t("booking.reEntry.legend")} bodyClassName="flex flex-col gap-1">
+            {reEntryOffersFor(data.refresherCourseOffered).map((ask) => (
+              <ChoiceRow
+                key={ask}
+                type="radio"
+                name="reEntryAsk"
+                value={ask}
+                defaultChecked={data.reEntryAsk === ask}
+                className="text-sm"
+              >
+                {t(DIVER_RE_ENTRY_KEYS[ask])}
+              </ChoiceRow>
+            ))}
+          </ChoiceFieldset>
           {/* The one sentence here that has to exist: an offer of help on a
               readiness checklist reads as a condition unless it says it is
               not one. */}
@@ -1114,7 +1109,7 @@ function DayOfDetails({
             rows={2}
             maxLength={300}
             defaultValue={data.rentalFit?.note ?? ""}
-            className={controlClass}
+            className={textareaClassFor(2)}
           />
         </Field>
         <div>
@@ -1348,7 +1343,7 @@ function DayOfDetails({
               rows={2}
               maxLength={300}
               defaultValue={data.supportNeeds?.equipmentAdaptation ?? ""}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
           <Field label={t("ready.supportDivesWithLabel")} htmlFor="support-dives-with">

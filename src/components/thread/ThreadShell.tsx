@@ -6,6 +6,7 @@ import {
 } from "@/components/AmbientGlareDetector";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
+import { bindTitleDash } from "@/lib/format";
 
 /**
  * The thread's column, exported so the things that must not drift from it
@@ -105,7 +106,9 @@ export function ThreadShell({
         {/* `text-balance` because the titles that wrap here are trip names
             ("Two-Tank Reef — Molasses & French"), and an even two lines reads
             better on a phone than a full line plus one orphaned word. */}
-        <h1 className={`mt-2 ${SHELL_TITLE_CLASS} text-balance`}>{title}</h1>
+        <h1 className={`mt-2 ${SHELL_TITLE_CLASS} text-balance`}>
+          {typeof title === "string" ? bindTitleDash(title) : title}
+        </h1>
         {meta}
       </header>
       {children}

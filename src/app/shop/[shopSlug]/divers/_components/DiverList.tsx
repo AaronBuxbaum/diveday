@@ -453,7 +453,7 @@ export function DiverList({
                   id={labelId}
                   label={group.letter ?? copy.letterOther}
                 >
-                  <ul className="mt-2" aria-labelledby={labelId}>
+                  <ul aria-labelledby={labelId}>
                     {group.rows.map((row) => (
                       // Everything sits in the row's own content rather than in
                       // `LedgerRow`'s `trailing` slot, and the row carries no
@@ -463,7 +463,7 @@ export function DiverList({
                       // down the right of every row on a page whose whole
                       // interaction is "tap the row".
                       <LedgerRow key={row.personId} href={row.href} linkLabel={row.fullName}>
-                        <div className="min-w-0 flex-1 py-2 sm:flex sm:items-center sm:gap-3">
+                        <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
                           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                             <span className="break-words font-semibold">{row.fullName}</span>
                             {row.badges.map((badge) => (

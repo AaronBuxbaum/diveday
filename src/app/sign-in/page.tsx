@@ -172,13 +172,15 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
             </Field>
           ) : null}
         </FieldGrid>
-        {/* The link claims a full touch target (dock test); negative margins
-            keep the visual rhythm of the stack it sits in. */}
+        {/* The link claims a full touch target (dock test); `-my-2` keeps the
+            visual rhythm of the stack it sits in, and `flush` puts its end on
+            the fields' edge. */}
         <Link
           href="/forgot-password"
           className={buttonClass({
             variant: "link",
-            className: "-my-2 -mr-4 self-end",
+            flush: true,
+            className: "-my-2 self-end",
           })}
         >
           {t("account.signIn.forgotPassword")}

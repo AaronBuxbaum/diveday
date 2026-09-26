@@ -153,6 +153,28 @@ describe("ConditionsLine — with no forecast at all", () => {
     expect(screen.queryByText(/water/)).not.toBeInTheDocument();
   });
 
+  /**
+   * **Flush under the pitch's door, its rule is the door's close** (pixel-craft
+   * class 6). 24px below it, the door's label sat in an 80px band between two
+   * rules, 29px under one and 51px over the other.
+   */
+  it("stands 24px below the page above it, or flush under the pitch's door", () => {
+    const props = {
+      shop,
+      trip: { waterTemperatureC: null } as Trip,
+      crewPrediction: false,
+      automatedForecast: automated(),
+      crewLanguages: null,
+      locale: DEFAULT_DIVER_LOCALE,
+    };
+    const { container, rerender } = render(<ConditionsLine {...props} />);
+    const section = () => container.querySelector("section");
+    expect(section()).toHaveClass("mt-6", "border-t");
+    rerender(<ConditionsLine {...props} underDoor />);
+    expect(section()).toHaveClass("border-t");
+    expect(section()).not.toHaveClass("mt-6");
+  });
+
   it("renders nothing at all when there is neither a forecast nor a language", () => {
     const { container } = render(
       <ConditionsLine

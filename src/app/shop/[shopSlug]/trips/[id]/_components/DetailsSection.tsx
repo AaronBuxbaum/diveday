@@ -3,7 +3,16 @@ import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import {
+  ChoiceRow,
+  controlClass,
+  DateField,
+  Field,
+  FieldGrid,
+  FormStatus,
+  legendClass,
+  textareaClassFor,
+} from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
 import {
@@ -98,7 +107,7 @@ export function DetailsSection({
             rows={2}
             maxLength={500}
             defaultValue={trip.description ?? ""}
-            className={controlClass}
+            className={textareaClassFor(2)}
           />
         </Field>
       </FieldGrid>
@@ -109,7 +118,7 @@ export function DetailsSection({
               renders. Free text, not the shop's own address-search box: a
               meeting point is casual by nature, and geocoding one would guess
               wrong coordinates for exactly the kind of place this names. */}
-      <FieldGrid columns={2} className="gap-x-5 gap-y-5">
+      <FieldGrid columns={2}>
         <Field
           label={t("trips.details.meetingPointLabelLabel")}
           hint={t("trips.details.optionalHint")}
@@ -136,11 +145,11 @@ export function DetailsSection({
         </Field>
       </FieldGrid>
       <fieldset className="rounded-inset bg-surface-sunken p-4 sm:p-5">
-        <legend className="px-1 text-sm font-medium">
+        <legend className={`${legendClass} text-sm font-medium`}>
           {t("trips.details.arrivalGuidanceLegend")}
         </legend>
         <p className="text-sm text-muted">{t("trips.details.arrivalGuidanceDescription")}</p>
-        <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
+        <FieldGrid columns={2} className="mt-4">
           <Field
             label={t("trips.details.arrivalLandmarkLabel")}
             hint={t("trips.details.optionalHint")}
@@ -151,7 +160,7 @@ export function DetailsSection({
               rows={2}
               maxLength={300}
               defaultValue={trip.arrivalLandmark ?? ""}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
           <Field
@@ -164,7 +173,7 @@ export function DetailsSection({
               rows={2}
               maxLength={300}
               defaultValue={trip.arrivalLookFor ?? ""}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
           <Field
@@ -177,7 +186,7 @@ export function DetailsSection({
               rows={2}
               maxLength={300}
               defaultValue={trip.arrivalFirstInteraction ?? ""}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
           <Field
@@ -189,7 +198,7 @@ export function DetailsSection({
               rows={2}
               maxLength={300}
               defaultValue={trip.arrivalParkingNote ?? ""}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
           <Field
@@ -201,7 +210,7 @@ export function DetailsSection({
               rows={2}
               maxLength={300}
               defaultValue={trip.arrivalTransitNote ?? ""}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
           <Field
@@ -218,10 +227,9 @@ export function DetailsSection({
                   className="h-20 w-32 rounded-lg border border-border"
                   sizes="128px"
                 />
-                <label className="flex min-h-11 items-center gap-2 text-sm">
-                  <input type="checkbox" name="removeArrivalPhoto" className="size-4" />
+                <ChoiceRow type="checkbox" name="removeArrivalPhoto" className="text-sm">
                   {t("trips.details.arrivalPhotoRemove")}
-                </label>
+                </ChoiceRow>
               </div>
             ) : null}
             <ImageFileInput
@@ -276,30 +284,23 @@ export function DetailsSection({
               and the whole caption row went ragged. Three columns is also the
               shape the schedule builder's own add panel uses, so the two places
               a departure's when-and-how-many is typed now look alike. */}
-      <FieldGrid columns={3} className="gap-x-5 gap-y-5">
+      <FieldGrid columns={3}>
         <Field label={t("trips.details.dateLabel")}>
           <DateField name="date" required defaultValue={toDateInputValue(startWall)} />
         </Field>
         <Field label={t("trips.details.departsLabel")}>
-          <input
+          <DateField
             name="startTime"
             type="time"
             required
             defaultValue={toTimeInputValue(startWall)}
-            className={controlClass}
           />
         </Field>
         <Field label={t("trips.details.returnsLabel")}>
-          <input
-            name="endTime"
-            type="time"
-            required
-            defaultValue={toTimeInputValue(endWall)}
-            className={controlClass}
-          />
+          <DateField name="endTime" type="time" required defaultValue={toTimeInputValue(endWall)} />
         </Field>
       </FieldGrid>
-      <FieldGrid columns={3} className="gap-x-5 gap-y-5">
+      <FieldGrid columns={3}>
         <Field label={t("trips.details.capacityLabel")}>
           <input
             name="capacity"
@@ -347,7 +348,7 @@ export function DetailsSection({
 
               Course is deliberately absent: a departure's curriculum is what
               its divers bought. */}
-      <FieldGrid columns={3} className="gap-x-5 gap-y-5">
+      <FieldGrid columns={3}>
         {modeOptions.length > 1 ? (
           // The same words the board's add panel uses, from the same keys:
           // the two forms describe one departure and must not call its
@@ -390,16 +391,20 @@ export function DetailsSection({
             </select>
           </Field>
         ) : null}
-        <Field label={t("schedule.builder.isPrivateLabel")}>
-          <label className="flex min-h-11 items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="isPrivate"
-              defaultChecked={trip.isPrivate}
-              className="size-4"
-            />
+        {/* `htmlFor`, so the caption is a label beside the row's own rather
+            than a label wrapped around it: `Field` wraps a child that is not
+            one control in a `<label>`, and a label in a label is invalid HTML
+            with two targets for one click (K-13). */}
+        <Field label={t("schedule.builder.isPrivateLabel")} htmlFor="trip-details-is-private">
+          <ChoiceRow
+            type="checkbox"
+            id="trip-details-is-private"
+            name="isPrivate"
+            defaultChecked={trip.isPrivate}
+            className="text-sm"
+          >
             {t("schedule.builder.isPrivateHint")}
-          </label>
+          </ChoiceRow>
         </Field>
         {/* Silences the shop's own divemaster target for this departure and
                 nothing else — an agency training ratio is a safety cap with its
@@ -419,16 +424,16 @@ export function DetailsSection({
                 action parses an absent checkbox as `false` rather than
                 `undefined`, so `updateTrip` writes the correction. */}
         {trip.courseId ? null : (
-          <Field label={t("schedule.builder.selfGuidedLabel")}>
-            <label className="flex min-h-11 items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="selfGuided"
-                defaultChecked={trip.selfGuided}
-                className="size-4"
-              />
+          <Field label={t("schedule.builder.selfGuidedLabel")} htmlFor="trip-details-self-guided">
+            <ChoiceRow
+              type="checkbox"
+              id="trip-details-self-guided"
+              name="selfGuided"
+              defaultChecked={trip.selfGuided}
+              className="text-sm"
+            >
               {t("schedule.builder.selfGuidedHint")}
-            </label>
+            </ChoiceRow>
           </Field>
         )}
       </FieldGrid>
@@ -436,11 +441,11 @@ export function DetailsSection({
               Details card, and surface never stacks on surface (see
               SectionCard's "what is not a section card"). */}
       <fieldset className="rounded-inset bg-surface-sunken p-4 sm:p-5">
-        <legend className="px-1 text-sm font-medium">
+        <legend className={`${legendClass} text-sm font-medium`}>
           {t("trips.details.payAtBookingLegend")}
         </legend>
         <p className="text-sm text-muted">{t("trips.details.payAtBookingDescription")}</p>
-        <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
+        <FieldGrid columns={2} className="mt-4">
           <Field
             label={t("trips.details.depositLabel")}
             description={t("trips.details.depositDescription")}

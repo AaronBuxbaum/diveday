@@ -6,7 +6,26 @@ import { type ButtonSize, type ButtonVariant, buttonClass } from "./button";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-const SIZES = ["sm", "md", "boat", "icon"] as const satisfies readonly ButtonSize[];
+const SIZES = ["sm", "md", "boat", "icon", "icon-sm"] as const satisfies readonly ButtonSize[];
+
+/**
+ * Every variant, as a record keyed by the type so that a variant added to
+ * `button.ts` fails the typecheck here until it is listed, and every sweep
+ * below reaches it.
+ */
+const EVERY_VARIANT: Record<ButtonVariant, true> = {
+  primary: true,
+  secondary: true,
+  outline: true,
+  ghost: true,
+  danger: true,
+  "danger-ghost": true,
+  "danger-solid": true,
+  link: true,
+  sky: true,
+  bare: true,
+};
+const VARIANTS = Object.keys(EVERY_VARIANT) as ButtonVariant[];
 
 /** The sizes that carry a horizontal padding for `flush` to act on. */
 const PADDED_SIZES = ["sm", "md", "boat"] as const satisfies readonly ButtonSize[];
@@ -21,6 +40,7 @@ const HOVER_FILL_VARIANTS = ["ghost", "danger-ghost"] as const satisfies readonl
 const PAINTED_AT_REST = [
   "primary",
   "secondary",
+  "outline",
   "danger",
   "danger-solid",
   "sky",
@@ -47,6 +67,91 @@ describe("buttonClass", () => {
       expect(classes, variant).toContain("min-h-11");
       expect(classes, variant).toContain("items-center");
     }
+  });
+
+  it("centres a wrapped label's lines, not only the box", () => {
+    // `justify-center` centres the label's box, and a label that wraps fills
+    // the box, so its lines fell back to start alignment: "One flat $99 per
+    // location / month. See the full list" on /about at 390 started 17px
+    // inside the left border and ended 43px inside the right (pixel probe,
+    // K-84). `text-center` sorts before `text-start` and `text-left`, so a
+    // row-shaped button that passes one of those still aligns to the start.
+    for (const variant of VARIANTS) {
+      expect(buttonClass({ variant }).split(" "), variant).toContain("text-center");
+    }
+  });
+
+  it("draws every filled or bordered box with the same 1px border, so a toggle keeps its label still", () => {
+    // `primary` and `danger-solid` had no border and `secondary` had one, so a
+    // filled button was 2px narrower than a bordered one with the same label
+    // (settings-calendar: 180px against 182px), and a toggle that swaps the
+    // two moved its label and its box 1px sideways (the offline counter's
+    // "Check in" / "Checked in", K-83). A transparent border keeps the box;
+    // the fill paints under it, edge to edge.
+    for (const variant of ["primary", "secondary", "outline", "danger", "danger-solid"] as const) {
+      const tokens = buttonClass({ variant }).split(" ");
+      expect(tokens, variant).toContain("border");
+    }
+    for (const variant of ["primary", "danger-solid"] as const) {
+      expect(buttonClass({ variant }).split(" "), variant).toContain("border-transparent");
+    }
+  });
+
+  describe("hover", () => {
+    const hoverTokens = (classes: string) =>
+      classes.split(" ").filter((token) => /(^|:)hover:/.test(token));
+
+    it("paints nothing on a disabled control, nor on a label standing in for one", () => {
+      // Tailwind v4's `hover:` still matches a disabled button, and `DISABLED`
+      // only dims it, so "Every day" inside `RepeatFields`'s `<fieldset
+      // disabled>` took the sunken fill under the pointer (the state atlas,
+      // K-137). Its seven weekday chips beside it are `<label>`s round a
+      // hidden checkbox: a label is never `:disabled`, so they kept their
+      // hover after `not-disabled:` alone. The control they stand in for is
+      // what is disabled, and that is what the guard reads too. Not
+      // `enabled:`: an `<a>` styled by `buttonClass` is never `:enabled` and
+      // would lose its hover altogether.
+      for (const variant of VARIANTS) {
+        const tokens = hoverTokens(buttonClass({ variant }));
+        for (const token of tokens) {
+          expect(token, variant).toMatch(/^not-disabled:not-has-\[input:disabled\]:hover:/);
+        }
+      }
+    });
+
+    it("draws a label round a disabled control the way it draws a disabled button", () => {
+      // The chips kept `cursor-pointer` and full strength beside a dimmed,
+      // not-allowed "Every day". Whatever `DISABLED` does to a disabled
+      // button, a label wrapping a disabled input does too, busy or not.
+      for (const busy of [false, true]) {
+        const tokens = buttonClass({ variant: "secondary", busy }).split(" ");
+        const disabled = tokens.filter((token) => token.startsWith("disabled:"));
+        expect(disabled.length, `busy: ${busy}`).toBeGreaterThan(0);
+        for (const token of disabled) {
+          expect(tokens, `busy: ${busy}`).toContain(
+            token.replace(/^disabled:/, "has-[input:disabled]:"),
+          );
+        }
+      }
+    });
+
+    it("steps the fill down from whatever ground the button stands on", () => {
+      // `secondary` and `ghost` hovered to `bg-surface-sunken`, which is the
+      // ground of every sunken card and board — on one, the hover painted the
+      // card's own colour (#ececf1 on #ececf1, delta 0; the recap plan and the
+      // schedule builder, K-123). A wash of the ink colour is a step darker than
+      // any ground in light, a step lighter in dark.
+      for (const variant of ["secondary", "ghost"] as const) {
+        const tokens = hoverTokens(buttonClass({ variant }));
+        expect(
+          tokens.filter((token) => token.endsWith("bg-surface-sunken")),
+          variant,
+        ).toEqual([]);
+        expect(tokens, variant).toContain(
+          "not-disabled:not-has-[input:disabled]:hover:bg-foreground/8",
+        );
+      }
+    });
   });
 
   it("emits no empty or malformed class tokens", () => {
@@ -106,6 +211,126 @@ describe("buttonClass", () => {
 
     it("carries no horizontal padding to fight the fixed width", () => {
       expect(horizontalPadding(buttonClass({ size: "icon" }))).toEqual(["px-0"]);
+    });
+  });
+
+  describe("outdent", () => {
+    // A quiet `sm` button is a 44px box around a 20px line: 12px of box under
+    // its word that nobody sees. Last in a padded card, that box adds to the
+    // padding: the team card measured 21px above the name and 33px under
+    // "Disable", the safety checklist at 390 16px against 28px (pixel probe,
+    // K-43). `outdent` sinks the unseen half into the padding and keeps the
+    // target whole.
+    const tokens = (classes: string) => classes.split(" ");
+
+    it("pulls the box's end up by the half of it nobody sees, at every width or below sm", () => {
+      const always = tokens(
+        buttonClass({ variant: "danger-ghost", size: "sm", outdent: "block-end" }),
+      );
+      expect(always).toContain("-mb-3");
+      // An inline-flex button's margin box sits on its line's baseline, and the
+      // line's own strut would keep a pixel of the height the margin gave
+      // back; aligned to the line's bottom, the line is exactly the margin box.
+      expect(always).toContain("align-bottom");
+      expect(always).toContain("min-h-11");
+
+      const phone = tokens(
+        buttonClass({ variant: "ghost", size: "icon-sm", outdent: "block-end-phone" }),
+      );
+      expect(phone).toContain("max-sm:-mb-3");
+      expect(phone).toContain("max-sm:align-bottom");
+      expect(phone).not.toContain("-mb-3");
+    });
+
+    it("measures the unseen half from the size: 12px on sm and md, 16px on the 56px dock target", () => {
+      for (const size of ["sm", "md", "icon", "icon-sm"] as const) {
+        expect(
+          tokens(buttonClass({ variant: "ghost", size, outdent: "block-end" })),
+          size,
+        ).toContain("-mb-3");
+      }
+      expect(
+        tokens(buttonClass({ variant: "ghost", size: "boat", outdent: "block-end" })),
+      ).toContain("-mb-4");
+    });
+
+    it("refuses outdent on a variant painted at rest, whose box is what the eye measures", () => {
+      // @ts-expect-error — a bordered box's end is its border, not its word.
+      buttonClass({ variant: "secondary", outdent: "block-end" });
+      const forced = "block-end" as unknown as undefined;
+      for (const variant of PAINTED_AT_REST) {
+        expect(buttonClass({ variant, size: "sm", outdent: forced }), variant).toBe(
+          buttonClass({ variant, size: "sm" }),
+        );
+      }
+      // A control that swaps between a box and a ghost (the team card's
+      // Enable / Disable) passes it always; only the ghost takes it.
+      const swap = (disabled: boolean) =>
+        buttonClass({
+          variant: disabled ? "secondary" : "danger-ghost",
+          size: "sm",
+          outdent: "block-end",
+        });
+      expect(tokens(swap(false))).toContain("-mb-3");
+      expect(tokens(swap(true))).not.toContain("-mb-3");
+    });
+  });
+
+  describe("outline", () => {
+    it("is secondary with the border that holds 3:1 against the ground, for the public pages", () => {
+      // The public pages had each chosen `border-border-strong` by hand; the
+      // staff `secondary` keeps its hairline. One decision, in one place.
+      const outline = buttonClass({ variant: "outline" }).split(" ");
+      expect(outline).toContain("border-border-strong");
+      expect(outline).not.toContain("border-border");
+      expect(outline).toContain("bg-surface");
+      expect(outline).toContain("text-foreground");
+      const secondary = buttonClass({ variant: "secondary" }).split(" ");
+      expect(secondary).toContain("border-border");
+      expect(secondary).not.toContain("border-border-strong");
+    });
+  });
+
+  describe("shape", () => {
+    const radii = (classes: string) =>
+      classes.split(" ").filter((token) => /^(?:[\w-]+:)*rounded(?:-|$)/.test(token));
+
+    it("draws the control rung by default, and exactly one radius", () => {
+      for (const size of SIZES) {
+        expect(radii(buttonClass({ size })), size).toEqual(["rounded-lg"]);
+      }
+    });
+
+    it("draws a pill when asked, instead of the rung rather than beside it", () => {
+      // `rounded-full` through `className` lost to the base's `rounded-lg`:
+      // Tailwind emits `.rounded-full` first, so the later rule wins whatever
+      // the attribute says. The weekday chips and the public trip's floating
+      // Book asked for a pill and drew 12px corners (pixel probe, K-44).
+      expect(radii(buttonClass({ shape: "pill" }))).toEqual(["rounded-full"]);
+      expect(radii(buttonClass({ variant: "ghost", size: "sm", shape: "pill" }))).toEqual([
+        "rounded-full",
+      ]);
+    });
+
+    it("draws the roll-call mark as the circle it is documented to be", () => {
+      // The mark's focus ring measured a rounded square (17px outer radius on
+      // the 56px box) because its `rounded-full` never applied.
+      expect(radii(buttonClass({ variant: "bare", size: "mark" }))).toEqual(["rounded-full"]);
+    });
+  });
+
+  describe("icon-sm", () => {
+    it("is a 44px square, level with the `sm` buttons beside it", () => {
+      // A glyph-only `sm` was `px-3` around a 16px glyph: 40 wide against a
+      // 44px floor, on every review row's "more", the week board's departure
+      // menu and the safety checklist's arrows (pixel probe, K-41). `icon` is
+      // 48 and would stand 4px above its `sm` neighbours.
+      const tokens = buttonClass({ variant: "ghost", size: "icon-sm" }).split(" ");
+      expect(tokens).toContain("w-11");
+      expect(tokens).toContain("min-h-11");
+      expect(tokens).not.toContain("min-h-12");
+      expect(tokens).toContain("text-sm");
+      expect(horizontalPadding(tokens.join(" "))).toEqual(["px-0"]);
     });
   });
 
@@ -201,7 +426,7 @@ describe("buttonClass", () => {
     it("leaves a size with no horizontal padding exactly as it was", () => {
       // An icon square has no padding to drop and no text to line up: `flush`
       // on it must not shove the square 8px out of place.
-      for (const size of ["icon", "mark"] as const) {
+      for (const size of ["icon", "icon-sm", "mark"] as const) {
         for (const variant of ["link", "danger-ghost"] as const) {
           expect(buttonClass({ variant, size, flush: true }), `${variant}/${size}`).toBe(
             buttonClass({ variant, size }),
@@ -263,11 +488,11 @@ describe("buttonClass", () => {
      * alignment (`text-center`) and wrapping (`text-balance`) are not in that
      * block and are therefore not matched.
      */
-    const colourTokens = () => {
+    const colourTokens = (prefix = "text") => {
       const css = readFileSync(join(SRC_DIR, "app", "globals.css"), "utf8");
       const theme = css.slice(css.indexOf("@theme inline"));
       return new Set(
-        [...theme.matchAll(/--color-([a-z0-9-]+):/g)].map((match) => `text-${match[1]}`),
+        [...theme.matchAll(/--color-([a-z0-9-]+):/g)].map((match) => `${prefix}-${match[1]}`),
       );
     };
 
@@ -317,6 +542,203 @@ describe("buttonClass", () => {
 
       // Listed, not counted: the message has to name the file, because the
       // whole point is that nothing on screen will.
+      expect(offenders).toEqual([]);
+    });
+
+    it("hands no border or fill colour to buttonClass: the box is the variant's", () => {
+      // Eight public call sites wrote `border-border-strong` over `secondary`'s
+      // own `border-border` while the marketing header's did not, so the
+      // header's "Try the demo" and the hero's "Get set up" were one button
+      // drawn with two borders on the same screen (#e3e3e8 against #86868b,
+      // K-38). A border a page needs is a variant (`outline`), decided once.
+      const colours = new Set([...colourTokens("border"), ...colourTokens("bg")]);
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(/(?<![\w-])(?:[\w-]+:)*(?:border|bg)-[a-z0-9-]+/g) ?? []) {
+            if (colours.has(token.replace(/^(?:[\w-]+:)+/, ""))) {
+              offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+            }
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    it("hands no font weight to buttonClass: the weight is the size's", () => {
+      // The marketing header's CTA passed `font-semibold` over `md`'s
+      // `font-medium` and rendered at 600 beside the hero's 500 (K-38). Two
+      // weights resolve by stylesheet order, so this one won by luck, and a
+      // size is the one place a button's type is decided.
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(
+            /(?<![\w-])(?:[\w-]+:)*font-(?:thin|extralight|light|normal|medium|semibold|bold|extrabold|black)(?![\w-])/g,
+          ) ?? []) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    it("hands no negative inline margin to buttonClass: the sideways outdent is `flush`", () => {
+      // A ghost's invisible padding put its label 12px inside the column it
+      // started or ended — seasons' Delete at x 478 against the fields' 466 —
+      // and the answer at call sites was a hand cancel (`-ml-3`, `-mr-4`,
+      // `-ms-2`), which only ever cancelled one side, clipped rings in
+      // `overflow-hidden` cards, and left the next site to find its own
+      // number (pixel probe, K-06). `flush` is the one sideways outdent: it knows the
+      // size's padding and keeps 8px of room for a hover fill.
+      //
+      // This reads what is written in the call. A class that reaches
+      // `buttonClass` through a prop is outside it — the week board's
+      // `RowActions` takes `-me-2` that way, on an `icon-sm` square, which has
+      // no label to line up and which `flush` leaves alone.
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(/(?<![\w-])(?:[\w-]+:)*-m[xlrse]-[\w.[\]]+/g) ?? []) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    /**
+     * Every element whose own `className` literal pulls it sideways with a
+     * negative inline margin and which wraps a quiet button — the hand cancel
+     * of the test above, one level up. A margin the same element hands back as
+     * padding (`-mx-2 px-2`, a fill's room) moves no word and is not one.
+     *
+     * Read by indentation, which Biome keeps honest: an element runs from its
+     * opening `<tag` to the first `</tag>` at the same indent. A quiet button
+     * is a `buttonClass({ variant: "ghost" | "danger-ghost" … })` written
+     * inside it; one drawn by a component (`Copyable`) is not seen.
+     */
+    function bleedingWrappers(source: string): string[] {
+      const lines = source.split("\n");
+      const found: string[] = [];
+      const negativeInline = /(?<![\w-])((?:[\w-]+:)*)-m([xlrse])-([\w.[\]]+)/g;
+      for (const [at, line] of lines.entries()) {
+        for (const literal of line.match(/className=(?:"[^"]*"|\{`[^`]*`\})/g) ?? []) {
+          const classes = literal.split(/[\s"`{}=]+/);
+          for (const [token, prefix, side, size] of literal.matchAll(negativeInline)) {
+            if (classes.includes(`${prefix}p${side}-${size}`)) continue;
+            let open = at;
+            while (open >= 0 && !/^\s*<[A-Za-z]/.test(lines[open])) open -= 1;
+            const [, indent, tag] = lines[open]?.match(/^(\s*)<([\w.]+)/) ?? [];
+            if (!tag) continue;
+            let end = at;
+            while (end < lines.length && !/[^=]>\s*$|^\s*>\s*$/.test(lines[end])) end += 1;
+            if (/\/>\s*$/.test(lines[end] ?? "")) continue;
+            const close = lines.findIndex((l, i) => i > end && l.startsWith(`${indent}</${tag}>`));
+            if (close < 0) continue;
+            const body = lines.slice(open, close).join("\n");
+            if (/buttonClass\(\{[^}]*variant: "(?:danger-)?ghost"/.test(body)) {
+              found.push(`${token} on line ${at + 1}`);
+            }
+          }
+        }
+      }
+      return found;
+    }
+
+    it("bleeds no wrapper of a quiet button sideways: the row's first control goes `flush`", () => {
+      // The roster's foot row was `-mx-3` around a link and a danger-ghost, so
+      // the pair sat on the text column and the first control stood 4px from
+      // the card's clip, where its ring needed drawing inside (K-06). The
+      // shape as it was, so the sweep is known to see it:
+      const roster = [
+        '        <div className="mt-4 border-t border-border pt-4">',
+        '          <div className="-mx-3 flex flex-wrap items-center gap-x-1 gap-y-2">',
+        "            <form action={removeBookingAction}>",
+        "              <InlineConfirm",
+        "                triggerClassName={buttonClass({",
+        '                  variant: "danger-ghost",',
+        '                  size: "sm",',
+        "                })}",
+        "              />",
+        "            </form>",
+        "          </div>",
+        "        </div>",
+      ].join("\n");
+      expect(bleedingWrappers(roster)).toEqual(["-mx-3 on line 2"]);
+      // A fill's room is handed straight back and moves nothing.
+      expect(bleedingWrappers(roster.replace("-mx-3 ", "-mx-2 px-2 "))).toEqual([]);
+
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const hit of bleedingWrappers(source)) {
+          offenders.push(`${relative(SRC_DIR, file)}: ${hit}`);
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    it("hands no 44px or 48px square to buttonClass: a glyph with no label is `icon-sm` or `icon`", () => {
+      // The public schedule's month arrows were `sm` with `min-w-11` passed
+      // by hand, the square `icon-sm` exists for, and a `text-base` beside it
+      // that did nothing: `.text-sm` is emitted after `.text-base`, so the
+      // size's won (K-41). A square spelled at a call site is the four-way
+      // drift `icon` was written to end. (A labelled chip's floor is not a
+      // square: the weekday pills' `min-w-12` keeps "M" from a sliver.)
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(
+            /(?<![\w-])(?:[\w-]+:)*(?:(?:w|size)-1[12]|min-w-11)(?![\w.-])/g,
+          ) ?? []) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    it("hands no radius to buttonClass: the corner is `shape`'s", () => {
+      // Two radius utilities resolve by stylesheet order, and `.rounded-full`
+      // is emitted before `.rounded-lg`, so a pill asked for through
+      // `className` drew the rung's 12px corners (K-44).
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(/(?<![\w-])(?:[\w-]+:)*rounded(?:-[\w[\]/.-]+)?/g) ?? []) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    it("hands no bare `hover:` to buttonClass, which would paint on a disabled button", () => {
+      // The variants guard their hovers against a disabled control; a caller's own
+      // `hover:` would not be, and would bring back the fill on a disabled
+      // control that K-137 took away.
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(/(?<![\w:-])hover:[^\s"'`]+/g) ?? []) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
       expect(offenders).toEqual([]);
     });
   });

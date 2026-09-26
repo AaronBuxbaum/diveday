@@ -262,11 +262,7 @@ export function BookingStoryRow({
   const door = imported || !href ? {} : { href, linkLabel: linkLabel ?? title };
   const marker = imported ? t("divers.history.imported") : null;
   return (
-    <LedgerRow
-      {...door}
-      trailing={money ? <BookingMoneyFact money={money} /> : null}
-      className="py-3"
-    >
+    <LedgerRow {...door} trailing={money ? <BookingMoneyFact money={money} /> : null} pad="lg">
       <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-4">
         <span className="shrink-0 text-sm text-muted tabular-nums sm:w-28">{date}</span>
         <span className="min-w-0">

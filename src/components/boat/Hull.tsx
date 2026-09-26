@@ -339,7 +339,7 @@ export function Hull({
   return (
     <>
       <svg
-        viewBox={`0 0 ${geometry.width} ${geometry.height}`}
+        viewBox={`${geometry.viewBox.x} ${geometry.viewBox.y} ${geometry.viewBox.width} ${geometry.viewBox.height}`}
         // **The hull prints.** It used to carry `print:hidden`, because the print
         // palette collapses `--success` and `--warning` onto one near-black and
         // leaves the tints alone, so `aboard` and `ashore` — the two answers a

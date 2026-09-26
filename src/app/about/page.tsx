@@ -287,22 +287,10 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
               source, and `src/lib/marketing.test.ts` counts this key among the
               sentences that must carry `{price}` and `{cadence}`. */}
           <div className="mt-8 flex flex-wrap gap-3">
-            <a
-              href={`mailto:${SUPPORT_EMAIL}`}
-              className={buttonClass({
-                variant: "secondary",
-                className: "border-border-strong",
-              })}
-            >
+            <a href={`mailto:${SUPPORT_EMAIL}`} className={buttonClass({ variant: "outline" })}>
               {t("marketing.about.emailCta", { email: SUPPORT_EMAIL })}
             </a>
-            <Link
-              href="/pricing"
-              className={buttonClass({
-                variant: "secondary",
-                className: "border-border-strong",
-              })}
-            >
+            <Link href="/pricing" className={buttonClass({ variant: "outline" })}>
               {t("marketing.about.seeCost", {
                 price: earlyAccessPrice.price,
                 cadence: t(earlyAccessPrice.cadenceKey),

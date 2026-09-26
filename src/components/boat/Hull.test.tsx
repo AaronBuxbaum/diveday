@@ -55,6 +55,15 @@ describe("Hull", () => {
     expect(screen.getByRole("img", { name: "Reef Runner: six of eight aboard." })).toBeTruthy();
   });
 
+  it("draws in the drawing's own box, not a box of empty water around it", () => {
+    // A 0 0 w 150 box put 88px of nothing above the hull and 86px under it on
+    // the trip page at 1280 (K-39).
+    render(<Hull geometry={geometry} label="the boat" />);
+    expect(screen.getByRole("img", { name: "the boat" }).getAttribute("viewBox")).toBe(
+      "5 25 286 100",
+    );
+  });
+
   it("draws one seat per place the boat has, however short the roster", () => {
     const { container } = render(<Hull geometry={geometry} label="the boat" seats={roster} />);
     // Eight places: six named, two still open.

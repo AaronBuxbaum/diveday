@@ -92,7 +92,12 @@ export default async function SafetyChecklistPage({
             {items.map((item, index) => (
               <li
                 key={item.id}
-                className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-3"
+                // `max-sm:py-5`: below `sm` the actions drop to the row's last
+                // line and sink their unseen 12px into its padding. At `p-3`
+                // that put their boxes on the border, the hover fill against
+                // the hairline and the ring across it; 20px leaves the boxes
+                // 8px clear and the text over and the ink under both ~24px.
+                className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-3 max-sm:py-5"
               >
                 <span className="min-w-0 flex-1 break-words text-sm">{item.label}</span>
                 <ListItemActions>
@@ -103,7 +108,13 @@ export default async function SafetyChecklistPage({
                       type="submit"
                       disabled={index === 0}
                       aria-label={t("settings.safetyChecklist.moveUp")}
-                      className={buttonClass({ variant: "ghost", size: "sm" })}
+                      // Below `sm` the actions are the row's last line, and
+                      // their unseen lower half sinks into its padding.
+                      className={buttonClass({
+                        variant: "ghost",
+                        size: "icon-sm",
+                        outdent: "block-end-phone",
+                      })}
                     >
                       <DiveDayIcon name="arrow-up" className="size-4" />
                     </button>
@@ -115,7 +126,11 @@ export default async function SafetyChecklistPage({
                       type="submit"
                       disabled={index === items.length - 1}
                       aria-label={t("settings.safetyChecklist.moveDown")}
-                      className={buttonClass({ variant: "ghost", size: "sm" })}
+                      className={buttonClass({
+                        variant: "ghost",
+                        size: "icon-sm",
+                        outdent: "block-end-phone",
+                      })}
                     >
                       <DiveDayIcon name="arrow-down" className="size-4" />
                     </button>
@@ -129,7 +144,11 @@ export default async function SafetyChecklistPage({
                         (ADR 20260820-every-delete-is-soft). */}
                     <button
                       type="submit"
-                      className={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                      className={buttonClass({
+                        variant: "danger-ghost",
+                        size: "sm",
+                        outdent: "block-end-phone",
+                      })}
                     >
                       {t("settings.safetyChecklist.delete")}
                     </button>

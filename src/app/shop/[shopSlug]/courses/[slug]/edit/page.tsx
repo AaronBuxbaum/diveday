@@ -15,12 +15,14 @@ import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import {
+  ChoiceRow,
   controlClass,
   Field,
   FieldGrid,
   FormStatus,
   PriceField,
   StickyFormActions,
+  textareaClassFor,
 } from "@/components/ui/form";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -382,7 +384,7 @@ export default async function EditCoursePage({
                         rows={8}
                         maxLength={6000}
                         defaultValue={course.overview ?? ""}
-                        className={controlClass}
+                        className={textareaClassFor(8)}
                       />
                     </Field>
                     {/* Beside the boxes it governs rather than in a panel above the
@@ -455,15 +457,14 @@ export default async function EditCoursePage({
                             className="h-16 w-24 shrink-0 rounded-lg border border-border"
                             sizes="96px"
                           />
-                          <label className="flex min-h-11 items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              name="removeHero"
-                              value="true"
-                              className="size-4"
-                            />
+                          <ChoiceRow
+                            type="checkbox"
+                            name="removeHero"
+                            value="true"
+                            className="text-sm"
+                          >
                             {t("courses.edit.removeCurrentPhoto")}
-                          </label>
+                          </ChoiceRow>
                         </div>
                       ) : null}
                       <ImageFileInput
@@ -547,7 +548,7 @@ export default async function EditCoursePage({
                                   placeholder={t("courses.edit.photoCaptionPlaceholder", {
                                     n: index + 2,
                                   })}
-                                  className={`${controlClass} text-xs`}
+                                  className={controlClass}
                                 />
                               </Field>
                             </div>
@@ -605,16 +606,15 @@ export default async function EditCoursePage({
                 session of this course offers the nitrox box at all — on the
                 booking page or on the pre-trip form — however much nitrox the
                 shop fills (`nitroxAvailableOn`, src/lib/rentals.ts). */}
-                  <label className="mt-5 flex min-h-11 items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      name="nitroxCompatible"
-                      value="true"
-                      defaultChecked={course.nitroxCompatible}
-                      className="size-4"
-                    />
+                  <ChoiceRow
+                    type="checkbox"
+                    name="nitroxCompatible"
+                    value="true"
+                    defaultChecked={course.nitroxCompatible}
+                    className="mt-5 text-sm"
+                  >
                     {t("courses.edit.nitroxCompatibleLabel")}
-                  </label>
+                  </ChoiceRow>
                   <p className="mt-1 text-sm text-muted">
                     {t("courses.edit.nitroxCompatibleHint")}
                   </p>
@@ -651,7 +651,7 @@ export default async function EditCoursePage({
                         maxLength={400}
                         defaultValue={course.prerequisiteNote ?? ""}
                         placeholder={t("courses.edit.prerequisitePlaceholder")}
-                        className={controlClass}
+                        className={textareaClassFor(4)}
                       />
                     </Field>
                   </FieldGrid>
@@ -670,7 +670,7 @@ export default async function EditCoursePage({
                         maxLength={2000}
                         defaultValue={course.includes.join("\n")}
                         placeholder={t("courses.edit.includedPlaceholder")}
-                        className={controlClass}
+                        className={textareaClassFor(6)}
                       />
                     </Field>
                     <Field
@@ -684,7 +684,7 @@ export default async function EditCoursePage({
                         maxLength={2000}
                         defaultValue={course.excludes.join("\n")}
                         placeholder={t("courses.edit.notIncludedPlaceholder")}
-                        className={controlClass}
+                        className={textareaClassFor(6)}
                       />
                     </Field>
                   </FieldGrid>

@@ -1,4 +1,7 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "./table";
@@ -167,6 +170,92 @@ describe("Table", () => {
     expect(cell).not.toHaveClass("py-3");
     // Row dividers stay with the tbody even when it reflows.
     expect(cell.closest("tbody")).toHaveClass("divide-y", "block");
+  });
+
+  it("puts a table's outer text on the card column from sm, without widening the inner gaps", () => {
+    // A card pads `p-4 sm:p-5` (sectionCardClass md). The cells padded `px-4`
+    // at every width, so from sm a table's first column sat 4px left of every
+    // card row around it ("ITEM" at 170 against "Dive support" at 174, K-20).
+    // Only the outer edges step up; the gap between two columns stays 32px.
+    render(
+      <Table>
+        <THead>
+          <Th>Item</Th>
+          <Th numeric>Qty</Th>
+        </THead>
+        <TBody>
+          <tr>
+            <Td>BCD</Td>
+            <Td numeric>2</Td>
+            <Td pad={false}>Reflowed</Td>
+          </tr>
+        </TBody>
+      </Table>,
+    );
+    for (const name of ["Item", "Qty"]) {
+      expect(screen.getByRole("columnheader", { name })).toHaveClass(
+        "px-4",
+        "sm:first:ps-5",
+        "sm:last:pe-5",
+      );
+    }
+    for (const name of ["BCD", "2"]) {
+      expect(screen.getByRole("cell", { name })).toHaveClass(
+        "px-4",
+        "sm:first:ps-5",
+        "sm:last:pe-5",
+      );
+    }
+    // A cell whose row owns the padding is left to its row.
+    expect(screen.getByRole("cell", { name: "Reflowed" })).not.toHaveClass("sm:first:ps-5");
+  });
+
+  it("lines a row's cells up on their first baselines when asked", () => {
+    // A md Badge's text sits 4px under a bare line of text in the next cell
+    // when both cells align to the top (K-107); baseline alignment is what
+    // puts the badge's word on the row's line. Top stays the default.
+    render(
+      <Table>
+        <TBody>
+          <tr>
+            <Td align="baseline">Weekly</Td>
+            <Td>Default</Td>
+          </tr>
+        </TBody>
+      </Table>,
+    );
+    const baseline = screen.getByRole("cell", { name: "Weekly" });
+    expect(baseline).toHaveClass("align-baseline");
+    expect(baseline).not.toHaveClass("align-top");
+    expect(screen.getByRole("cell", { name: "Default" })).toHaveClass("align-top");
+  });
+
+  it("fades the scroll region's far edge while there is more table to scroll to", () => {
+    // A 1152px log table in a 974px shell was cut mid-word at the card edge
+    // with nothing to say it scrolls (K-91). The fade is a scroll-driven
+    // animation on the region's own inline scroll, so a table that fits has an
+    // inactive timeline and no fade, and paper never gets one.
+    render(
+      <Table minWidth="72rem">
+        <TBody>
+          <tr>
+            <Td>Row</Td>
+          </tr>
+        </TBody>
+      </Table>,
+    );
+    const scrollRegion = screen.getByRole("table").parentElement;
+    expect(scrollRegion).toHaveClass("overflow-x-auto", "table-scroll-shell");
+
+    const css = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../../app/globals.css"),
+      "utf8",
+    ).replace(/\/\*[\s\S]*?\*\//g, "");
+    const rule = css.match(/\.table-scroll-shell\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(rule).toMatch(/animation-timeline:\s*scroll\(self inline\)/);
+    expect(rule).toMatch(/mask-image:/);
+    const print = css.match(/@media print\s*\{\s*\.table-scroll-shell\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(print).toMatch(/mask-image:\s*none/);
   });
 
   it("keeps a printed row on one page", () => {

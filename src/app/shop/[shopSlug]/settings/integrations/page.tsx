@@ -5,7 +5,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoicePill,
+  controlClass,
+  Field,
+  FieldActions,
+  FieldGrid,
+} from "@/components/ui/form";
 import { canPersonManageShopSettings } from "@/db/authz";
 import {
   listIntegrationSummaries,
@@ -71,25 +78,22 @@ function noticeMessages(t: StaffTranslator) {
 
 function EventCheckboxes({ t, selected }: { t: StaffTranslator; selected: readonly string[] }) {
   return (
-    <fieldset className="grid gap-2 sm:grid-cols-3">
-      <legend className="mb-2 text-sm font-medium">
-        {t("integrations.common.selectedEvents")}
-      </legend>
+    <ChoiceFieldset
+      legend={t("integrations.common.selectedEvents")}
+      bodyClassName="grid gap-2 sm:grid-cols-3"
+    >
       {EVENT_OPTIONS.map((event) => (
-        <label
+        <ChoicePill
           key={event.value}
-          className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm"
+          type="checkbox"
+          name="eventType"
+          value={event.value}
+          defaultChecked={selected.includes(event.value)}
         >
-          <input
-            type="checkbox"
-            name="eventType"
-            value={event.value}
-            defaultChecked={selected.includes(event.value)}
-          />
           {t(event.label as EventLabelKey)}
-        </label>
+        </ChoicePill>
       ))}
-    </fieldset>
+    </ChoiceFieldset>
   );
 }
 

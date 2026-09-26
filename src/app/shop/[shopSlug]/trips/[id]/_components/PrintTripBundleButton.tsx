@@ -16,11 +16,14 @@ export function PrintTripBundleButton({
   label,
   popupBlockedLabel,
   recordAction,
+  flush = false,
 }: {
   href: string;
   label: string;
   popupBlockedLabel: string;
   recordAction: RecordPrintAction;
+  /** The button may start a line: its word sits on that line's edge (`buttonClass`'s `flush`). */
+  flush?: boolean;
 }) {
   const [popupBlocked, setPopupBlocked] = useState(false);
   return (
@@ -36,7 +39,7 @@ export function PrintTripBundleButton({
           rarest of the three doors was the only one wearing a bordered box,
           which put the heaviest chrome on the least-used action (principle 8).
           The 44px touch floor comes from the base either way. */}
-      <button type="submit" className={buttonClass({ variant: "ghost", size: "sm" })}>
+      <button type="submit" className={buttonClass({ variant: "ghost", size: "sm", flush })}>
         {label}
       </button>
       {popupBlocked ? (

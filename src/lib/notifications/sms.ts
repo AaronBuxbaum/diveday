@@ -120,7 +120,11 @@ export function snsSmsProvider(config: SnsConfig, options: SnsProviderOptions = 
         const result = await client.send(
           new PublishCommand({
             PhoneNumber: message.to,
-            Message: message.body,
+            // A no-break space (the date formatters bind "Jul 21" and
+            // "7:05 AM EDT" with one) is not in GSM-7, and one would send the
+            // whole text as UCS-2: 70 characters a segment, not 160. A text
+            // message does not wrap the way a page does, so it goes plain.
+            Message: message.body.replace(/[\u00A0\u202F]/g, " "),
             MessageAttributes: {
               "AWS.SNS.SMS.SMSType": { DataType: "String", StringValue: "Transactional" },
               ...(config.senderId

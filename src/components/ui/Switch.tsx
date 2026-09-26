@@ -12,10 +12,10 @@ import type { ReactNode } from "react";
  * **A switch is not a checkbox, and the difference is when it takes effect.**
  * This is for a setting that applies the moment it is tapped: the device is
  * locked *now*, the phone stops buzzing *now*. A choice that only means
- * something once a form is submitted stays a plain
- * `<input type="checkbox" className="size-4 accent-primary">` — Settings →
- * Team's role boxes, a departure's requirement toggles, the buddy-team and
- * waiver boxes. Roughly 25 of those, and none of them should slide: a control
+ * something once a form is submitted stays a plain checkbox (`ChoiceRow`,
+ * `ChoicePill` or `choiceClass` in `./form`) — Settings → Team's role boxes,
+ * a departure's requirement toggles, the buddy-team and waiver boxes.
+ * Roughly 25 of those, and none of them should slide: a control
  * that animates into its new state is telling the reader something happened,
  * and for a form field nothing has.
  *

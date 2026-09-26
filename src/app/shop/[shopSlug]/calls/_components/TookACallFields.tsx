@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoicePill,
+  controlClass,
+  DateField,
+  Field,
+  FieldGrid,
+  textareaClassFor,
+} from "@/components/ui/form";
 import {
   CALL_OUTCOMES,
   type CallOutcome,
@@ -60,43 +68,32 @@ export function TookACallFields({
 
   return (
     <>
-      <fieldset
+      {/* `required`: a choice with no default is the one control on this form
+          that must say it is mandatory. */}
+      <ChoiceFieldset
+        legend={copy.outcomeHeading}
+        required
         className="mt-6"
+        bodyClassName="grid gap-2"
         onChange={(event) => {
           const target = event.target;
           if (!(target instanceof HTMLInputElement) || target.name !== "outcome") return;
           if (isCallOutcome(target.value)) setOutcome(target.value);
         }}
       >
-        <legend className="text-sm font-medium">
-          {copy.outcomeHeading}
-          {/* `Field`'s own required marker, by hand: a fieldset is not a
-              `Field`, and a choice with no default is the one control on this
-              form that must say it is mandatory. Aria-hidden and outside the
-              accessible name, the same shape `Field` uses. */}
-          <span aria-hidden="true" className="text-danger">
-            {" "}
-            *
-          </span>
-        </legend>
-        <div className="mt-2 grid gap-2">
-          {CALL_OUTCOMES.map((option) => (
-            <label
-              key={option}
-              className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface"
-            >
-              <input
-                type="radio"
-                name="outcome"
-                value={option}
-                required
-                defaultChecked={option === defaultOutcome}
-              />
-              {copy.outcome[option]}
-            </label>
-          ))}
-        </div>
-      </fieldset>
+        {CALL_OUTCOMES.map((option) => (
+          <ChoicePill
+            key={option}
+            type="radio"
+            name="outcome"
+            value={option}
+            required
+            defaultChecked={option === defaultOutcome}
+          >
+            {copy.outcome[option]}
+          </ChoicePill>
+        ))}
+      </ChoiceFieldset>
 
       <fieldset disabled={!needsDeparture} className={needsDeparture ? "mt-6" : "hidden"}>
         {departures.length === 0 ? (
@@ -144,7 +141,7 @@ export function TookACallFields({
             />
           </Field>
           <Field label={copy.noteLabel} hint={copy.optionalHint} className="sm:col-span-2">
-            <textarea name="message" rows={3} maxLength={1500} className={controlClass} />
+            <textarea name="message" rows={3} maxLength={1500} className={textareaClassFor(3)} />
           </Field>
         </FieldGrid>
       </fieldset>

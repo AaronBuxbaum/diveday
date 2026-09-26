@@ -1,3 +1,4 @@
+import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
@@ -38,8 +39,10 @@ export function MinimumSeatsBand({
   const due = state.kind === "due";
   const deadline = formatDateTimeTz(state.decidesAt, locale, timeZone);
   return (
+    // A card in a tone (`TONE_PANEL_CLASS`): at a hand-rolled `p-5` its words
+    // started 4px right of the cards around it on a phone.
     <section
-      className={`mt-6 rounded-panel border p-5 ${
+      className={`mt-6 ${TONE_PANEL_CLASS} ${
         due ? "border-danger/40 bg-danger/10" : "border-warning/40 bg-warning/10"
       }`}
     >

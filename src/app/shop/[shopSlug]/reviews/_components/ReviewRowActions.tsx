@@ -49,6 +49,13 @@ const REVIEW_GHOST_ACTION_CLASS = buttonClass({
   className: "whitespace-nowrap",
 });
 
+/** The "more" disclosure: one glyph, on the same 44px square as its row. */
+const REVIEW_MORE_CLASS = buttonClass({
+  variant: "ghost",
+  size: "icon-sm",
+  className: "list-none [&::-webkit-details-marker]:hidden",
+});
+
 /** The release control shares the same height and label protection. */
 const REVIEW_SECONDARY_ACTION_CLASS = buttonClass({
   variant: "secondary",
@@ -203,10 +210,7 @@ export function ReviewRowActions({
              §10). Publish keeps its own place outside: it is the one act a
              waiting row is on the page for. */
           <details className="shrink-0">
-            <summary
-              aria-label={moreLabel}
-              className={`${REVIEW_GHOST_ACTION_CLASS} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
-            >
+            <summary aria-label={moreLabel} className={REVIEW_MORE_CLASS}>
               <DiveDayIcon name="more" className="size-4" />
             </summary>
             <div className="mt-3 flex flex-col items-end gap-2">

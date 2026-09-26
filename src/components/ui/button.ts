@@ -60,8 +60,37 @@
  * over `--motion-quick`, and carries the same three colour transitions this
  * string used to name.
  */
+/**
+ * **`text-center` is the other half of `justify-center`.** That centres the
+ * label's box; a label that wraps fills the box, and its lines fell back to
+ * start alignment — "One flat $99 per location / month. See the full list" on
+ * /about at 390 started 17px inside the left border and ended 43px inside the
+ * right (pixel probe, 2026-09-25). Tailwind emits `text-center` before
+ * `text-start` and `text-left`, so a row-shaped button that passes one of those
+ * through `className` (the pre-departure checklist, the offline counter) still
+ * aligns to the start.
+ */
 const base =
-  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-lg pressable";
+  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 text-center pressable";
+
+/**
+ * **The corner is an option, not something a caller passes through
+ * `className`**, for the reason the type scale and `flush` give: two radius
+ * utilities resolve by stylesheet order, and Tailwind emits `.rounded-full`
+ * before `.rounded-lg`. The corner lived in the base as `rounded-lg`, so four
+ * call sites that asked for `rounded-full` — the roll-call mark, the schedule
+ * builder's weekday chips and "Every day", the public trip's floating Book —
+ * all drew 12px corners and rounded-square focus rings (pixel probe,
+ * 2026-09-25). `rounded` is the control rung every button takes; `pill` is
+ * the one other shape the app draws. `button.test.ts` refuses a radius at a
+ * call site.
+ */
+const SHAPES = { rounded: "rounded-lg", pill: "rounded-full" } as const;
+
+export type ButtonShape = keyof typeof SHAPES;
+
+/** The sizes that are a circle by definition, whatever `shape` says: the roll-call mark. */
+const CIRCLES: ReadonlySet<ButtonSize> = new Set(["mark"]);
 
 /**
  * What a disabled state *means*, which is two different things this app renders
@@ -77,14 +106,49 @@ const base =
  * They are two spellings of one property rather than a `className` addition
  * because two utilities for one property resolve by stylesheet order, not by
  * the order you wrote them — the same reason `flush` exists (see below).
+ *
+ * Each is said twice: for the control itself, and for a `<label>` wearing
+ * `buttonClass` round the input it stands in for — a weekday chip round its
+ * hidden checkbox. A label is never `:disabled`; the input inside it is,
+ * whether by its own attribute or a `<fieldset disabled>` above, so the
+ * label reads it with `has-[input:disabled]:`. Only a label holds an input:
+ * a `<button>` or an `<a>` cannot, so nothing else is touched.
  */
 const DISABLED = {
-  default: "disabled:cursor-not-allowed disabled:opacity-60",
-  busy: "disabled:cursor-wait disabled:opacity-70",
+  default:
+    "disabled:cursor-not-allowed disabled:opacity-60 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:opacity-60",
+  busy: "disabled:cursor-wait disabled:opacity-70 has-[input:disabled]:cursor-wait has-[input:disabled]:opacity-70",
 } as const;
 
+/**
+ * **Every box carries the same 1px border, transparent where the variant is a
+ * fill.** `primary` and `danger-solid` had none while `secondary` and `danger`
+ * did, so a filled button stood 2px narrower than a bordered one with the same
+ * label (182px against 180px on the calendar settings), and a toggle that swaps
+ * the two — the pre-departure checklist, the offline counter's "Check in" /
+ * "Checked in" — moved its label 1px sideways. The fill still paints under a
+ * transparent border (`background-clip` is `border-box`), edge to edge.
+ *
+ * **Every hover is `not-disabled:not-has-[input:disabled]:hover:`.** Tailwind
+ * v4's `hover:` still matches a disabled button, and `DISABLED` above only
+ * dims it, so "Every day" inside `RepeatFields`'s `<fieldset disabled>` took
+ * its fill under the pointer. The weekday chips beside it are labels round a
+ * hidden checkbox, never `:disabled` themselves, so the guard also asks
+ * whether the input a label stands in for is (see `DISABLED`). Not
+ * `enabled:`: an `<a>` styled here is never `:enabled`, and a link would
+ * lose its hover altogether. `button.test.ts` refuses a bare `hover:`, here
+ * and at a call site.
+ *
+ * **A quiet hover is a wash of the ink, not a surface.** `secondary` and
+ * `ghost` hovered to `bg-surface-sunken`, which is also the ground of every
+ * sunken card and board, so on one the hover painted the card's own colour
+ * (#ececf1 on #ececf1 on the recap's plan and the schedule builder).
+ * `bg-foreground/8` is a step off whatever the button stands on — #ededed on
+ * white, as the sunken fill was, and a visible step on the sunken ground too.
+ */
 const variants = {
-  primary: "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover",
+  primary:
+    "border border-transparent bg-primary text-primary-foreground shadow-sm not-disabled:not-has-[input:disabled]:hover:bg-primary-hover",
   /**
    * The demoted-but-real action: a bordered surface box whose label is **body
    * text**, not link blue.
@@ -100,18 +164,34 @@ const variants = {
    * variants no longer say the same thing in colour. Contrast improves either
    * way (light 5.36 -> 15.02, dark 9.05 -> 14.48 on `bg-surface`).
    */
-  secondary: "border border-border bg-surface text-foreground hover:bg-surface-sunken",
-  ghost: "text-muted hover:bg-surface-sunken hover:text-foreground",
-  danger: "border border-danger/40 text-danger hover:bg-danger-tint",
+  secondary:
+    "border border-border bg-surface text-foreground not-disabled:not-has-[input:disabled]:hover:bg-foreground/8",
+  /**
+   * **`secondary` for the public pages: the same box, with the border that
+   * holds 3:1 against the ground** (`--border-strong`, the form controls'
+   * edge). The marketing pages had each chosen it by hand through
+   * `className`, eight call sites, while the header's CTA kept the staff
+   * hairline and a `font-semibold` of its own — one button drawn with two
+   * borders and two weights on the same screen (pixel probe, 2026-09-25).
+   * Staff surfaces keep `secondary`'s hairline, which sits on a card rather
+   * than on the page's ground.
+   */
+  outline:
+    "border border-border-strong bg-surface text-foreground not-disabled:not-has-[input:disabled]:hover:bg-foreground/8",
+  ghost:
+    "text-muted not-disabled:not-has-[input:disabled]:hover:bg-foreground/8 not-disabled:not-has-[input:disabled]:hover:text-foreground",
+  danger:
+    "border border-danger/40 text-danger not-disabled:not-has-[input:disabled]:hover:bg-danger-tint",
   /**
    * A destructive choice sitting among quiet siblings — a disclosed action
    * list's "Remove" next to ghost-weight items. The bordered `danger` shouts
    * inside a small menu; this keeps the warning hue without the box.
    */
-  "danger-ghost": "text-danger hover:bg-danger-tint",
-  "danger-solid": "bg-danger text-primary-foreground hover:bg-danger/90",
+  "danger-ghost": "text-danger not-disabled:not-has-[input:disabled]:hover:bg-danger-tint",
+  "danger-solid":
+    "border border-transparent bg-danger text-primary-foreground not-disabled:not-has-[input:disabled]:hover:bg-danger/90",
   /** Reads as inline text, but still claims a full touch target. */
-  link: "text-primary hover:underline",
+  link: "text-primary not-disabled:not-has-[input:disabled]:hover:underline",
   /**
    * **A control standing on the sky** — a `SkyBand`'s own chip.
    *
@@ -127,7 +207,7 @@ const variants = {
    * object, and the label on it is the band's own ink, so it can never drift
    * from the sentence beside it.
    */
-  sky: "bg-white/18 text-(--sky-ink) backdrop-blur-sm hover:bg-white/28",
+  sky: "bg-white/18 text-(--sky-ink) backdrop-blur-sm not-disabled:not-has-[input:disabled]:hover:bg-white/28",
   /**
    * Shape and touch target only — no colour of its own.
    *
@@ -204,27 +284,39 @@ const sizes = {
    * leading-none`. A wrapper gap is why a control drifts four ways, so the
    * gap is what gets closed.
    *
-   * The width is `w-11` against the base's `min-h-11` rather than `size-11`:
-   * a fixed height would clip a glyph whose line box is taller than 44px,
-   * where a floor grows with it.
+   * The width is `w-12` against `min-h-12` rather than `size-12`: a fixed
+   * height would clip a glyph whose line box is taller than 48px, where a
+   * floor grows with it. 48px, not the 44px floor, so the square stands level
+   * with `md` and with a `controlClassFor("md")` box on the same line.
    */
   icon: { x: "px-0", rest: "w-12 min-h-12 text-base" },
+  /**
+   * `icon`'s square at `sm`'s height: 44px, for a glyph with no label in a row
+   * of `sm` controls — a review row's "more", the week board's departure
+   * menu, the safety checklist's arrows. A glyph-only `sm` was `px-3` around a
+   * 16px glyph, 40px wide against the 44px floor (pixel probe, 2026-09-25),
+   * and `icon` would stand 4px taller than the buttons beside it. `w-11`
+   * against the base's `min-h-11`, for the reason `icon` gives.
+   */
+  "icon-sm": { x: "px-0", rest: "w-11 text-sm" },
   /**
    * The roll-call mark: a **circular 56px** target holding one drawn glyph and
    * no label at all, for the manifest's one-tap-per-person row (ADR
    * 20260827-the-departure-is-two-working-surfaces, decision 3).
    *
-   * Not `icon` and not `boat`, for a reason each. `icon` is the 44px desk
+   * Not `icon` and not `boat`, for a reason each. `icon` is the 48px desk
    * target, and this is worked one-handed on a wet deck where 56px is the
    * floor. `boat` is that 56px — but as a *minimum height* on a label-shaped
    * box, so a glyph-only button on it comes out 56 tall and about 60 wide, an
-   * almost-circle. `size-14` fixes both axes, which is what lets the caller
-   * round it to a true circle.
+   * almost-circle. `size-14` fixes both axes, which is what lets it be a true
+   * circle.
    *
    * `touch-manipulation` for the same reason `boat` carries it: it drops the
    * browser's ~300ms double-tap-to-zoom wait, and this is the exact control
    * where a tap that seems not to have registered gets tapped again — which on
    * a roll call is how one person gets marked aboard twice.
+   *
+   * It is always drawn round (`CIRCLES`), whatever `shape` says.
    */
   mark: { x: "px-0", rest: "size-14 touch-manipulation" },
 } as const;
@@ -283,6 +375,21 @@ const FLUSH = "px-0";
  * 8px, not the size's own padding, so the tint and the 5px focus ring around
  * it stay inside a phone's 16px gutter. It is the room `ledger.tsx` gives a
  * row's fill, and for the same reason.
+ *
+ * `flush` is the one sideways outdent: `button.test.ts` refuses a negative inline
+ * margin written into a `buttonClass` call, where `-ml-3`, `-mr-4` and `-ms-2`
+ * each cancelled one side of one size by hand, and on the element wrapping a
+ * quiet button, where a `-mx-3` row did the same for the whole row. Two things
+ * stay the call site's to decide. A flush control has given up the padding
+ * that spaced it from its neighbours, so the row's gap takes that room back —
+ * 12px more beside a padded neighbour (the staff credentials' review and
+ * Remove), 24px more between two flush ones (the display links' Renew and
+ * Revoke) — or its fill ends where the next box begins. And a flush fill
+ * reaches 8px out and its ring 13px, so a box with less than 13px between the
+ * label and its edge — an `overflow-hidden` card, which cuts the ring, or a
+ * bordered or sunken box, which the ring would cross — draws the ring inside
+ * (`focus-visible:focus-ring-inset`) or gains the padding (the FAQ editor's
+ * cards, `p-4`).
  */
 const FLUSH_HOVER_FILL = "-mx-2 px-2";
 
@@ -298,7 +405,7 @@ const HOVER_FILL: ReadonlySet<ButtonVariant> = new Set(["ghost", "danger-ghost"]
  * no label for `flush` to line up: the type refuses `flush` on them, and at
  * runtime it changes nothing.
  */
-type PaintedAtRest = "primary" | "secondary" | "danger" | "danger-solid" | "sky";
+type PaintedAtRest = "primary" | "secondary" | "outline" | "danger" | "danger-solid" | "sky";
 
 /**
  * The horizontal padding a button renders with. A size that carries none — the
@@ -312,15 +419,74 @@ function horizontalPadding(variant: ButtonVariant, x: string, flush: boolean) {
   return x;
 }
 
+/**
+ * **`outdent` is `flush`'s vertical twin, for a quiet button that ends a padded
+ * box.** A `ghost` `sm` is a 44px box around a 20px line, so 12px of box sits
+ * under its word that nobody sees; last in a card, that box adds to the card's
+ * padding, and the card reads bottom-heavy — the team card measured 21px above
+ * the name and 33px under "Disable", the safety checklist at 390 16px against
+ * 28px (pixel probe, 2026-09-25). `block-end` gives the unseen half back as a
+ * negative bottom margin, so the target stays whole while that half sits in
+ * the padding; `block-end-phone` does it below `sm` only, for a button that
+ * drops to a line of its own there (`ListItemActions`).
+ *
+ * `align-bottom` rides with it: a button in a `<form>` is an inline box on the
+ * form's line, and the line's strut would keep a pixel of the height the
+ * margin gave back. Aligned to the line's bottom, the line is the margin box.
+ *
+ * The box then ends `padding − 12px` from the container's edge (`− 16px` on
+ * the 56px sizes). The outset ring reaches 5px past the box, so a container
+ * with under 17px of padding draws the ring inside
+ * (`focus-visible:focus-ring-inset`) — the team card's 16px left the box 4px
+ * above a `divide-y` rule in a list that clips — or gains the padding, as the
+ * safety checklist's rows do below `sm` (20px, the box 8px clear of the border
+ * and its hover fill with it).
+ *
+ * Only on a variant that paints nothing at rest — a bordered box's end is its
+ * border, not its word — and never where the button shares its line with a
+ * visible box: centred in a row, the pulled-up margin would lift it 6px.
+ */
+export type ButtonOutdent = "block-end" | "block-end-phone";
+
+/**
+ * The unseen half of each size's box, (height − line) / 2: 12px on the 44px
+ * and 48px sizes, 16px on the 56px ones. Spelled whole, for Tailwind to find.
+ */
+const OUTDENT_12 = {
+  "block-end": "-mb-3 align-bottom",
+  "block-end-phone": "max-sm:-mb-3 max-sm:align-bottom",
+} as const;
+const OUTDENT_16 = {
+  "block-end": "-mb-4 align-bottom",
+  "block-end-phone": "max-sm:-mb-4 max-sm:align-bottom",
+} as const;
+const OUTDENT: Record<ButtonSize, Record<ButtonOutdent, string>> = {
+  sm: OUTDENT_12,
+  md: OUTDENT_12,
+  icon: OUTDENT_12,
+  "icon-sm": OUTDENT_12,
+  boat: OUTDENT_16,
+  mark: OUTDENT_16,
+};
+
+function blockEndOutdent(variant: ButtonVariant, size: ButtonSize, outdent?: ButtonOutdent) {
+  if (!outdent || !(PAINTS_NOTHING.has(variant) || HOVER_FILL.has(variant))) return "";
+  return OUTDENT[size][outdent];
+}
+
 export function buttonClass<V extends ButtonVariant = "primary">({
   variant = "primary" as V,
   size = "md",
   flush = false,
+  outdent,
   busy = false,
+  shape = "rounded",
   className = "",
 }: {
   variant?: V;
   size?: ButtonSize;
+  /** The corner: the control rung (`rounded`, the default) or a `pill`. See `SHAPES`. */
+  shape?: ButtonShape;
   /**
    * Line the label up with adjacent text: the size's horizontal padding is
    * dropped (`link`, `bare`), or traded for 8px of room and an equal negative
@@ -328,6 +494,12 @@ export function buttonClass<V extends ButtonVariant = "primary">({
    * variant painted at rest, whose box is what lines up.
    */
   flush?: V extends PaintedAtRest ? false : boolean;
+  /**
+   * Sink the unseen lower half of a quiet button's target into the padding of
+   * the box it ends, everywhere (`block-end`) or below `sm` (`block-end-phone`).
+   * Refused on a variant painted at rest. See `OUTDENT`.
+   */
+  outdent?: V extends PaintedAtRest ? undefined : ButtonOutdent;
   /**
    * This control's disabled state means "in flight", not "unavailable" — every
    * `SubmitButton`, which disables itself for the duration of its own submit.
@@ -337,9 +509,11 @@ export function buttonClass<V extends ButtonVariant = "primary">({
   className?: string;
 } = {}) {
   const { x, rest } = sizes[size];
-  return `${base} ${DISABLED[busy ? "busy" : "default"]} ${variants[variant]} ${rest} ${horizontalPadding(
+  const corner = SHAPES[CIRCLES.has(size) ? "pill" : shape];
+  const end = blockEndOutdent(variant, size, outdent);
+  return `${base} ${DISABLED[busy ? "busy" : "default"]} ${variants[variant]} ${rest} ${corner} ${horizontalPadding(
     variant,
     x,
     flush,
-  )} ${className}`.trim();
+  )}${end ? ` ${end}` : ""} ${className}`.trim();
 }

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { controlClass, Field } from "@/components/ui/form";
+import { ChoiceFieldset, ChoicePill, controlClass, Field } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 
 /** One "rents from the shop" tick — the shop's catalog, not the diver's answer. */
@@ -72,31 +72,28 @@ export function RentalFitFields({
   return (
     <>
       {toggles.length > 0 ? (
-        <fieldset className="sm:col-span-2">
-          <legend className="text-sm font-medium">{legend}</legend>
-          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-            {toggles.map((toggle) => (
-              <label
-                key={toggle.name}
-                className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
-              >
-                <input
-                  name={toggle.name}
-                  type="checkbox"
-                  checked={rented[toggle.name] ?? false}
-                  onChange={(event) =>
-                    setRented((previous) => ({
-                      ...previous,
-                      [toggle.name]: event.target.checked,
-                    }))
-                  }
-                  className="size-4 accent-primary"
-                />
-                {toggle.label}
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <ChoiceFieldset
+          legend={legend}
+          className="sm:col-span-2"
+          bodyClassName="grid grid-cols-1 gap-2 sm:grid-cols-3"
+        >
+          {toggles.map((toggle) => (
+            <ChoicePill
+              key={toggle.name}
+              type="checkbox"
+              name={toggle.name}
+              checked={rented[toggle.name] ?? false}
+              onChange={(event) =>
+                setRented((previous) => ({
+                  ...previous,
+                  [toggle.name]: event.target.checked,
+                }))
+              }
+            >
+              {toggle.label}
+            </ChoicePill>
+          ))}
+        </ChoiceFieldset>
       ) : null}
       {sizes.map((size) =>
         size.requires.some((name) => rented[name]) ? (

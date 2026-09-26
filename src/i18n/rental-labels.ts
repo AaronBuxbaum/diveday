@@ -48,6 +48,55 @@ export function catalogItemLabel(t: StaffTranslator, kind: ShopCatalogKind): str
   return rentableItemLabel(t, kind);
 }
 
+const NBSP = "\u00A0";
+
+/** Where a size is spliced into its piece after the piece's own words are bound. */
+const SIZE_SLOT = "\uE000";
+
+/** Every space in `text` becomes U+00A0. Only for words the bundle wrote. */
+function oneUnit(text: string): string {
+  return text.replace(/\s+/g, NBSP);
+}
+
+/**
+ * **A size keeps its measurements whole, and nothing else it does not need to.**
+ *
+ * Free-text sizes broke inside themselves on the manifest's person panel at
+ * 390 — "Weights 6" at the end of one line, "kg" on the next — where the
+ * subtitle column is about 165px wide. A short size ("M", "6 kg", "US 9", "5mm
+ * M": two words at most) is one unit. A longer one is a sentence the diver
+ * typed ("e.g. 16 lb with a 3 mm suit"; the weights field holds 120
+ * characters), and glued whole it ran about 250px in that 165px column and the
+ * sheet scrolled sideways. So inside a longer size only a number and the word
+ * after it ("3 mm", "16 lb") and a size system and its number ("US 9", "EU
+ * 42") hold together; every other space is still a place the line may end.
+ */
+function sizeText(size: string): string {
+  const words = size.trim().split(/\s+/);
+  if (words.length <= 2) return words.join(NBSP);
+  return words
+    .join(" ")
+    .replace(/(\d) (?=\p{L})/gu, `$1${NBSP}`)
+    .replace(/(?<!\p{L})(\p{Lu}{1,3}) (?=\d)/gu, `$1${NBSP}`);
+}
+
+/**
+ * **One rental piece: an item and its size, as the line may break them.**
+ *
+ * The words the bundle wrote — the item ("Mask & fins") and the template around
+ * it — are one unit, and that unit holds on to the size's first word, so an
+ * item never ends a line with its size on the next. The size keeps whatever
+ * breaks `sizeText` leaves it. A list of pieces then breaks at its own
+ * separators and, in a long size, between the diver's words.
+ */
+function sizedPiece(t: StaffTranslator, item: string, size: string): string {
+  // A function, not a string: a diver's "$&" is text, not a replacement pattern.
+  return oneUnit(t("shared.rentalFit.itemWithSize", { item, size: SIZE_SLOT })).replace(
+    SIZE_SLOT,
+    () => sizeText(size),
+  );
+}
+
 /**
  * A staff-fit diver's stated sizes, one piece per item — "BCD L, Wetsuit M" —
  * for the packing line the captain reads with no way to open the profile.
@@ -60,9 +109,7 @@ export function statedSizesText(
   locale: string,
   items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[],
 ): string {
-  const parts = items.map((item) =>
-    t("shared.rentalFit.itemWithSize", { item: rentalItemLabel(t, item.kind), size: item.size }),
-  );
+  const parts = items.map((item) => sizedPiece(t, rentalItemLabel(t, item.kind), item.size));
   return cachedListFormat(locale, { style: "long", type: "unit" }).format(parts);
 }
 
@@ -93,14 +140,18 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
         // A drysuit diver's fins. The stated size is the shoe size the fit
         // forms ask for, and the pair has to clear a vulcanised boot two to
         // three sizes bigger, so the rail reads the job rather than a number
-        // to hand over (src/lib/dive-prep.ts's `rentedItems`).
+        // to hand over (src/lib/dive-prep.ts's `rentedItems`). A sentence, so
+        // the words around the size can still wrap.
         const piece = item.drysuitFinFit
           ? item.size
-            ? t("shared.rentalFit.itemOverDrysuitBootWithSize", { item: label, size: item.size })
+            ? t("shared.rentalFit.itemOverDrysuitBootWithSize", {
+                item: label,
+                size: sizeText(item.size),
+              })
             : t("shared.rentalFit.itemOverDrysuitBoot", { item: label })
           : item.size
-            ? t("shared.rentalFit.itemWithSize", { item: label, size: item.size })
-            : label;
+            ? sizedPiece(t, label, item.size)
+            : oneUnit(label);
         // Wrapped rather than substituted, so the piece keeps whatever it
         // already said and gains the contradiction. A staffer reading the rail
         // is about to go and fetch this: "Drysuit ML" with nothing on it sends

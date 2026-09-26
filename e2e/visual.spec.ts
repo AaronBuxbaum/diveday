@@ -22,6 +22,7 @@ import {
   openDiverFileGroup,
   openManifestPerson,
   openOnThisPhone,
+  openPaperWaiverForm,
   openRosterDetails,
   openRosterNotes,
   openSettingsRow,
@@ -4360,7 +4361,7 @@ for (const scheme of ["light", "dark"] as const) {
           .locator("article")
           .filter({ hasText: "Odile Marchand" })
           .filter({ visible: true });
-        await row.getByText("Mark signed on paper").click();
+        await openPaperWaiverForm(row);
         await row
           .getByLabel("I have this diver’s signed release on file", { exact: false })
           .filter({ visible: true })
@@ -5216,8 +5217,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("region", { name: "Waiver" })
           .getByText("Send options", { exact: true })
           .click();
-        await expect(page.getByRole("button", { name: "Mark signed on paper" })).toBeVisible();
-        await page.getByRole("button", { name: "Mark signed on paper" }).click();
+        await openPaperWaiverForm(page);
         await page
           .getByLabel("I have this diver’s signed release on file", { exact: false })
           .check();
@@ -5354,7 +5354,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openDiverProfile(page, "Priya", "Priya Sharma");
         await openDiverFileGroup(page, "Waiver");
         await page.getByRole("region", { name: "Waiver" }).getByText("Send options").click();
-        await page.getByRole("button", { name: "Mark signed on paper" }).click();
+        await openPaperWaiverForm(page);
         // The panel itself, not the trigger that opened it — so the capture can
         // never photograph the row mid-swap.
         await page.getByRole("button", { name: "Record paper signature" }).waitFor();
@@ -5772,7 +5772,7 @@ for (const scheme of ["light", "dark"] as const) {
           page.locator("article").filter({ hasText: name }).filter({ visible: true });
         for (const name of ["Odile Marchand", "Hana Kobayashi"]) {
           const row = counterRow(name);
-          await row.getByText("Mark signed on paper").click();
+          await openPaperWaiverForm(row);
           await row
             .getByLabel("I have this diver’s signed release on file", { exact: false })
             .filter({ visible: true })

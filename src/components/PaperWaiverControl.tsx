@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import type { PaperWaiverCopy } from "@/components/paper-waiver-copy";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { choiceClass, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { WaiverActionIcon } from "@/components/WaiverActionIcon";
 import {
   PAPER_WAIVER_IDLE,
@@ -157,6 +157,12 @@ export function PaperWaiverControl({
     if (defaultOpen) setOpen(true);
   }, [defaultOpen]);
 
+  // The trigger opens its form client-side only, so a click that lands before
+  // React owns it is swallowed with nothing to show for it. It publishes the
+  // staff surfaces' `data-hydrated` flag, which the e2e suite waits on.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+
   // No wrapper element in either state: on the diver record this control is one
   // item of a wrapping flex row of peer actions, and a wrapper would take the
   // trigger out of that row. The open panel is `w-full` so it drops onto its own
@@ -166,10 +172,11 @@ export function PaperWaiverControl({
       <button
         type="button"
         onClick={() => setOpen(true)}
+        data-hydrated={hydrated ? "true" : undefined}
         className={buttonClass({
           variant,
           size: "sm",
-          flush: variant === "link",
+          flush: variant !== "secondary",
           className: `gap-2 ${className}`,
         })}
       >
@@ -195,7 +202,7 @@ export function PaperWaiverControl({
           // refusal restores these from what it handed back rather than from
           // the DOM, which no longer holds them.
           defaultChecked={refused?.typed.medicalAttested ?? false}
-          className="mt-0.5 size-4 shrink-0"
+          className={`${choiceClass} mt-0.5`}
         />
         {/* **A minor's version says who answered the questions.** For an adult
             the sentence above is exactly right. For a minor it was the only
@@ -277,7 +284,7 @@ export function PaperWaiverControl({
           <input
             type="checkbox"
             name="guardianNamesakeAttested"
-            className="mt-0.5 size-4 shrink-0"
+            className={`${choiceClass} mt-0.5`}
           />
           <span>{copy.guardian.namesakeLabel}</span>
         </label>

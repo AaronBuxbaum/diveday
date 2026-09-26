@@ -10,7 +10,14 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+import {
+  ChoicePill,
+  controlClass,
+  Field,
+  FieldActions,
+  FieldGrid,
+  FormStatus,
+} from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManageStaffAccounts } from "@/db/authz";
@@ -133,18 +140,14 @@ function RoleCheckboxes({
     <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       <legend className="sr-only">{t("settings.team.rolesLegend")}</legend>
       {STAFF_ROLES.map((role) => (
-        <label
+        <ChoicePill
           key={role}
-          className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm"
+          type="checkbox"
+          name={`${name}_${role}`}
+          defaultChecked={defaultRoles.includes(role)}
         >
-          <input
-            name={`${name}_${role}`}
-            type="checkbox"
-            defaultChecked={defaultRoles.includes(role)}
-            className="size-4 accent-primary"
-          />
           {labels[role]}
-        </label>
+        </ChoicePill>
       ))}
     </fieldset>
   );
@@ -169,18 +172,14 @@ function LanguageCheckboxes({
     <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       <legend className="sr-only">{t("settings.team.languagesLegend")}</legend>
       {COMMON_SPOKEN_LANGUAGES.map((language) => (
-        <label
+        <ChoicePill
           key={language}
-          className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm"
+          type="checkbox"
+          name={`language_${language}`}
+          defaultChecked={defaultLanguages.includes(language)}
         >
-          <input
-            name={`language_${language}`}
-            type="checkbox"
-            defaultChecked={defaultLanguages.includes(language)}
-            className="size-4 accent-primary"
-          />
           {languageNameIn(language, locale) ?? language}
-        </label>
+        </ChoicePill>
       ))}
     </fieldset>
   );
@@ -462,6 +461,18 @@ function StaffRow({
                 className={buttonClass({
                   variant: isDisabled ? "secondary" : "danger-ghost",
                   size: "sm",
+                  // On `danger-ghost`, the word ends on the card's edge (the
+                  // rows' values above end there), and the unseen half of its
+                  // target sinks into the card's padding, so the card has as
+                  // much room under "Disable" as over the name. A `secondary`
+                  // box ignores both.
+                  flush: true,
+                  outdent: "block-end",
+                  // The outdent leaves the box 4px above the row's rule, inside
+                  // a list that clips: the outset ring would paint over the
+                  // hairline, and lose its last pixel on the last card. The
+                  // Enable box sits 16px clear and keeps the app's ring.
+                  className: isDisabled ? undefined : "focus-visible:focus-ring-inset",
                 })}
               >
                 {isDisabled

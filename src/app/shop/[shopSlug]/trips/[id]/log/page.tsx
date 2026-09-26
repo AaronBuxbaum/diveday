@@ -370,7 +370,7 @@ export default async function IncidentExportPage({
           })}
         >
           {doc.roster.map((diver) => (
-            <li key={diver.bookingId} className="break-inside-avoid px-4 py-3">
+            <li key={diver.bookingId} className="break-inside-avoid px-4 py-3 sm:px-5">
               <p className="font-semibold">{diver.fullName}</p>
               <p className="mt-1 text-sm">
                 <WaiverLine t={t} waiver={diver.waiver} dateTime={dateTime} />
@@ -493,7 +493,7 @@ export default async function IncidentExportPage({
                 // Append-only history has no natural key; index order is the record.
                 // biome-ignore lint/suspicious/noArrayIndexKey: static, never reordered
                 key={index}
-                className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm"
+                className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-5"
               >
                 <span className="font-mono text-xs text-muted tabular-nums">
                   {dateTime(entry.occurredAt)}

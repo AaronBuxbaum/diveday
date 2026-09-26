@@ -1,5 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { DangerDisclosure } from "@/components/ui/disclosure";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClassFor, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -49,15 +50,15 @@ export function ErasePersonalData({
       </h2>
       <p className="mt-1 max-w-2xl text-sm text-muted">{t("divers.erase.description")}</p>
       {/* Opened by its own outcome — a refusal inside a shut disclosure is
-          invisible, and on this control that reads as "nothing happened". */}
-      <details
+          invisible, and on this control that reads as "nothing happened".
+          The app's one danger band, drawn as the dive site's "Delete site"
+          is (pixel-craft class 12). */}
+      <DangerDisclosure
         open={Boolean(status)}
-        className="mt-4 rounded-lg border border-danger/40 bg-danger/5 p-4"
+        className="mt-4"
+        summary={t("divers.erase.summary", { name: diver.person.fullName })}
       >
-        <summary className="flex min-h-11 cursor-pointer items-center py-2 text-sm font-medium text-danger">
-          {t("divers.erase.summary", { name: diver.person.fullName })}
-        </summary>
-        <p className="mt-3 max-w-2xl text-sm text-muted">{t("divers.erase.destroyedNote")}</p>
+        <p className="max-w-2xl text-sm text-muted">{t("divers.erase.destroyedNote")}</p>
         <p className="mt-2 max-w-2xl text-sm text-muted">{t("divers.erase.keptNote")}</p>
         <p className="mt-2 max-w-2xl text-sm font-medium text-danger">
           {t("divers.erase.noUndoNote")}
@@ -91,7 +92,7 @@ export function ErasePersonalData({
               this section can say lands here, beside the button. */}
           {status?.field ? null : <DiverFormStatus status={status} />}
         </form>
-      </details>
+      </DangerDisclosure>
       {status?.field ? <FieldErrorFocus key={status.text} field={status.field} /> : null}
     </section>
   );

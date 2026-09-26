@@ -219,7 +219,8 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
   is as tall as the longest neighbouring field's `description`; `Field` pins the control to the top
   of that track (`content-start`) so a 44px input never renders as a 52px box beside its sibling.
 - `FieldActions` spans every column, so the submit button never becomes a lopsided extra field.
-- Horizontal checkbox/radio rows are not stacked fields — leave them as plain labels.
+- Horizontal checkbox/radio rows are not stacked fields — they are `ChoiceRow`s or `ChoicePill`s
+  (below), never a `Field`.
 
 ### Required fields
 
@@ -308,6 +309,16 @@ to the window.
 
 Reach for it when a form is taller than a phone screen with content still below the fold. A
 two-field panel wearing one is a bar hovering over nothing.
+
+**Nothing lands under it.** The bar marks itself `data-sticky-actions`, and `globals.css` pads the
+viewport's bottom by its height (`html:has([data-sticky-actions]) { scroll-padding-bottom }`), the
+twin of the chrome bar's `scroll-padding-top`, so a field that takes focus or a fragment a link
+jumps to scrolls into view above it. The height is measured, not assumed: the bar is a wrapping row,
+and the unsaved-changes sentence beside Save wraps under it at 390 whenever the form is dirty, so
+`StickyActionsInset` writes the bar's live height to `--sticky-actions-h` and the rule falls back to
+the one-row 73px only until it has. Its bleed is spelled for the containers it sits in — a
+`<main>` padded `px-4 sm:px-6`, and from `lg` the editor rail's unpadded form cell — so its rule
+runs to the screen's edges on a phone and with the form's column on a desk.
 
 **Say what the form is holding, not what it did.** "Unsaved changes" beside the button is a state
 the surface cannot show on its own; a confirmation that the save worked belongs in `FormStatus` or
@@ -618,8 +629,11 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
   `has-[:focus-visible]` rather than `focus-within`, so it lights for the keyboard the way the
   global rule does.
 - **`focus-visible:focus-ring-inset`** is for an element flush with an `overflow-hidden` or
-  scrolling edge: a list card's rows, a scroll box's options, the command palette's field, a row
-  or a control bled `-mx-3` or `-ml-3` to 4px from a clipping edge. A ledger row's door and a
+  scrolling edge: a list card's rows, a scroll box's options, the command palette's field, a
+  `flush` ghost whose 8px of fill leave less than the ring's 5px to a clipping edge (a `p-3` row in
+  a clipped list: kinds of day, boats) or to a visible one the ring would cross (a
+  `Copyable` panel's 12px inset, a security session row), and an `outdent` button whose box ends
+  4px above a clipped list's rule (the team card's Disable). A ledger row's door and a
   folded horizon's `<summary>` take it too: each is the row's whole box, rule to rule, so the
   outset ring crossed both hairlines. It is the same 3px, drawn
   wholly inside the box, and on the element's own fill (the contrast of each fill is in the
@@ -666,15 +680,19 @@ import { buttonClass } from "@/components/ui/button";
 <button type="submit" className={buttonClass({ variant: "danger" })}>Refund</button>
 ```
 
-Variants: `primary`, `secondary`, `ghost`, `danger`, `danger-ghost` (the danger hue without the
-box, for a destructive row in a quiet menu), `danger-solid`, `link` (reads as inline text but still
-claims a full target), `sky` (a translucent chip for a control standing on a `SkyBand`), and `bare`
-(shape and target only, for a control whose fill is the state of its row). Sizes: `md` (the
+Variants: `primary`, `secondary`, `outline` (`secondary` with the `--border-strong` edge that holds
+3:1 against the page's ground, for the public pages; staff keep the hairline), `ghost`, `danger`,
+`danger-ghost` (the danger hue without the box, for a destructive row in a quiet menu),
+`danger-solid`, `link` (reads as inline text but still claims a full target), `sky` (a translucent
+chip for a control standing on a `SkyBand`), and `bare` (shape and target only, for a control whose
+fill is the state of its row). Sizes: `md` (the
 default, 48px with a 16px label), `sm` (44px with a 14px label), `boat` (56px with a 16px
-semibold label), `icon` (a 48px square), and `mark` (a 56px square the roll call rounds to a
-circle). The base's corner is the control rung, `rounded-lg` (12px). Pass one-off adjustments
-through `className`; do not rebuild the base. If you find yourself cancelling a variant's own
-styles, the variant is wrong — add one.
+semibold label), `icon` (a 48px square), `icon-sm` (a 44px square, for a glyph in a row of `sm`
+controls), and `mark` (a 56px circle, for the roll call). The corner is the control rung,
+`rounded-lg` (12px), unless `shape: "pill"` asks for a pill; `mark` is always round. A radius
+passed through `className` loses to the rung by stylesheet order, so `button.test.ts` refuses one.
+Pass one-off adjustments through `className`; do not rebuild the base. If you find yourself
+cancelling a variant's own styles, the variant is wrong — add one.
 
 **`primary` is the one thing in the app that carries a `shadow-sm` at rest**, and it is an
 exception stated at the rule rather than a second rule: ADR
@@ -723,8 +741,28 @@ and `danger-ghost` paint only on hover, and their tint with the padding gone sat
 side of "Delete Morgan Vale" (pixel probe, 2026-09-25), so they get `-mx-2 px-2`: the label sits
 where a padless one would, and the tint reaches 8px past it. A ledger row keeps the same 8px, for
 the same reason (`FILL_ROOM` in `src/components/ui/ledger.tsx`). The variants painted at rest
-(`primary`, `secondary`, `danger`, `danger-solid`, `sky`) are boxes, and a box lines up by its edge,
-not its label, so the type refuses `flush` on them.
+(`primary`, `secondary`, `outline`, `danger`, `danger-solid`, `sky`) are boxes, and a box lines up
+by its edge, not its label, so the type refuses `flush` on them.
+
+**`flush` is for the button that starts or ends a line, and the row gives back what it gave up.**
+Mid-row, among other words, a quiet button keeps its padding: that is what keeps its hover fill
+off its neighbours. Where it starts a line, its padding was part of the space to the next control,
+so the row's gap takes it back — 12px more beside a padded neighbour (the staff credentials' review
+and Remove, `gap-2` to `gap-5`), 24px more between two flush ones (the display links' Renew and
+Revoke) — or the fill ends where the next box begins. A component that draws the button for many
+callers takes `flush` as a prop (`Copyable`), because only the caller knows where it sits. The
+button test refuses the hand cancels `flush` replaced, in a `buttonClass` call and on a row that
+wraps a quiet button.
+
+**A quiet button that ends a padded box passes `outdent`, `flush`'s vertical twin.** A `ghost`
+`sm` is a 44px box around a 20px line, so 12px of box sits under its word; last in a card, that box
+adds to the card's padding (the team card measured 21px over the name and 33px under "Disable").
+`outdent: "block-end"` gives the unseen half back as a negative bottom margin and keeps the target
+whole; `"block-end-phone"` does it below `sm` only, for actions that drop to a line of their own
+there. Never on a button that shares its line with a visible box: centred in the row, it would
+rise by half the margin. The box then ends `padding − 12px` from the container's edge, so with
+under 17px of padding its 5px ring needs drawing inside (the team card, 16px) or the container
+needs the padding (the safety checklist's rows, `max-sm:py-5`).
 
 The same trap applies to the type scale, which is why it lives on the sizes: a `text-base` passed
 through `className` cannot reliably beat a size's `text-sm`. Pick the size that already says it.
@@ -756,11 +794,54 @@ label is `min-h-11` around a 44×24 track and a 16px thumb, and the whole contro
 `print:hidden`.
 
 **A checkbox is not a switch, and the difference is when it takes effect.** A choice that only means
-something once a form is submitted stays a plain `<input type="checkbox" className="size-4
-accent-primary">` — Settings → Team's role and language boxes, a departure's requirement toggles,
-the buddy-team and waiver boxes, roughly 25 sites. None of those should slide: a control that
-animates into its new state is telling the reader something happened, and until the form is
-submitted nothing has.
+something once a form is submitted stays a plain checkbox — Settings → Team's role and language
+boxes, a departure's requirement toggles, the buddy-team and waiver boxes, roughly 25 sites. None of
+those should slide: a control that animates into its new state is telling the reader something
+happened, and until the form is submitted nothing has.
+
+## Checkboxes and radios: `ChoiceRow`, `ChoicePill`, `choiceClass`
+
+A checkbox or radio a person sees is drawn one way, from `src/components/ui/form.tsx`:
+
+- **`choiceClass`** is the box: `size-4 shrink-0`, 16px and never squashed beside a label that
+  wraps. The colour is `globals.css`'s `accent-color` on every input, not a utility.
+- **`ChoiceRow`** is a box with its words beside it — a waiver's agreement, a readiness answer, a
+  publish choice. The label is the whole row, at least 44px tall, and the box sits on the middle of
+  the words' first line however many lines they wrap to.
+- **`ChoicePill`** is the bordered answer pill — Yes / No on the medical questionnaire, a call's
+  outcome, a staffer's roles — 44px, `px-4`, one hover. `size="md"` sets its words at 16px for a
+  diver-facing form whose copy is 16px. `aside` holds what sits beside the words and must stay out
+  of the box's name — a rental item's explainer and price: the pill becomes a bordered `<div>`
+  around its label and the aside, with the box on the plain pill's 16px inset.
+- **`ChoiceFieldset`** captions a group of them the way `Field` captions a control: a
+  `text-sm font-medium` legend, then 4px, then the body (`bodyClassName` lays the choices out).
+  `required` draws `Field`'s aria-hidden `*`. Hand-rolled legends put 8px there (`mb-2`, `mt-2`),
+  so a group sat further from its caption than every field around it; `form.test.tsx` refuses a
+  legend with its own bottom margin (a floated legend aside), and a legend spelled as this caption
+  (`text-sm font-medium`) anywhere else. Three files that have not been touched since are named in
+  that rule and leave the list the day they are.
+
+```tsx
+<ChoicePill type="radio" name="outcome" value="cleared" required>
+  {copy.outcomeCleared}
+</ChoicePill>
+<ChoiceRow type="checkbox" name="acknowledged" value="on" required className="mt-4 text-base">
+  {t("waiver.agreementCheckbox")}
+</ChoiceRow>
+```
+
+Both pass every input prop to the box (`name`, `value`, `checked`/`onChange`, `aria-*`, `ref`) and
+take `className` for the row. Before them the pill was spelled by hand a dozen ways and radios were
+left at the platform's 13px beside 16px checkboxes (the pixel probe, waiver-active). `form.test.tsx`
+refuses a visible box that does not wear `choiceClass` (the conditions hold and the buddy builder's
+drag rows are 20px on purpose, and named there), one wearing the forms plugin's `rounded border-*
+text-primary focus:ring-*` (not loaded here, and inert on a native box), and a pill spelled by hand,
+a bordered `<div>` around a label included.
+
+A box with words is a `ChoiceRow`, not a `Field`: `Field` wraps a child that is not one control in
+a `<label>`, so a row inside it is a label in a label. Where a row needs a field's caption beside
+it, give the `Field` `htmlFor` and the row's box that `id`, as the departure's private and
+self-guided boxes do.
 
 ## Segmented choices: `SegmentedControl`
 
@@ -865,6 +946,18 @@ radii on 2026-09-19. They are these now:
 - **`Field`'s `hint` vs `description`**: the sheet's "On the back of the card, under the name" is
   the *below* slot, which is `description`; `hint` rides inline inside the label.
 
+## A box for a paragraph: `textareaClassFor`
+
+A `<textarea>` wears `textareaClassFor(rows)`, never `controlClass`, and passes the same number as
+its own `rows`. It grows with its text (`field-sizing: content`) and never stands shorter than
+`rows` lines, which is also what a browser without `field-sizing` draws; past 60% of the
+viewport's height it stops and scrolls, so a 5,700-character waiver does not push Publish a
+thousand pixels down. A fixed box scrolled a
+longer answer inside itself and showed its next line as a sliver on the bottom border — the course
+FAQ answer, 1,200 characters in three rows, with a fourth line's ink 2px above the border at 390.
+`form.test.tsx` refuses a textarea on `controlClass`, and one whose minimum disagrees with its
+`rows`.
+
 ## Searching a list: `SearchField`
 
 A staff list that can be searched renders **one search box and nothing around it** —
@@ -899,6 +992,12 @@ and "Add diver" is the band's one primary again.
 ## Date entry: `DateField`
 
 A date is entered through **`DateField`** in `src/components/ui/form.tsx`, never a bare `<input type="date">`. It is a `type="date"` control wearing `controlClass` with a calendar glyph in its trailing inset, and it goes inside a `Field` like any other control.
+
+So are a month, a time and a date-and-time: `type="month" | "time" | "datetime-local"` (a time draws a clock). Spelled bare they kept the platform's solid black indicator beside a date box's muted outline, and iOS paints nothing in an empty one; `form.test.tsx` refuses a bare temporal `<input>` anywhere else. `size="md"` stands one on a line with `md` buttons, as `controlClassFor("md")` does.
+
+An empty one looks empty. No temporal box matches `::placeholder`, so its `mm/dd/yyyy` mask drew in the ink of a filled answer beside muted placeholders; the input `DateField` renders is `DateInput` (`src/components/ui/DateInput.tsx`), a client leaf that marks itself `data-empty` while it holds no value, and `globals.css` paints `input[data-empty]:not(:focus)::-webkit-datetime-edit` in the placeholder's colour. Not while it has focus: the value stays "" until every segment is filled, so the digits a person has typed would draw grey; and a box left half-typed (`validity.badInput`) stops saying it is empty.
+
+A box the browser does not have gets no glyph. Safari and Firefox on a desk draw `type="month"` as a text box, which reads its type back as `text`; `DateInput` marks it `data-fallback` and the calendar glyph and its inset go, since there is no picker for it to promise.
 
 ```tsx
 import { DateField, Field } from "@/components/ui/form";

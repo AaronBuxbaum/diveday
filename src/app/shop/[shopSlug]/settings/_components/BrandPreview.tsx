@@ -72,7 +72,7 @@ export function BrandPreview({
             style={{ backgroundColor: ground, color: ink }}
             className="flex min-h-24 flex-col justify-between gap-3 rounded-inset border border-border p-4"
           >
-            <p className={`${SUB_TITLE_CLASS} text-balance`} style={{ fontFamily }}>
+            <p className={SUB_TITLE_CLASS} style={{ fontFamily }}>
               {shopName}
             </p>
             <div className="flex flex-wrap items-center gap-2">

@@ -9,7 +9,9 @@ import {
   InsetGroup,
   LedgerGroup,
   LedgerRow,
+  ledgerKindColumnClass,
   ledgerRowBoxClass,
+  ledgerRowOpenBoxClass,
   RowKind,
 } from "./ledger";
 
@@ -58,12 +60,21 @@ function classLiterals(expression: string): string {
  * value may be a ternary, a template string or a whole element.
  */
 function ledgerRowTags(source: string): string[] {
-  const tags: string[] = [];
-  for (const opening of source.matchAll(/<LedgerRow(?=[\s>/])/g)) {
+  return openingTags(source, "LedgerRow").map((tag) => tag.own);
+}
+
+/**
+ * Every `<Name …>` opening tag in a source file: its own attributes, read as
+ * `ledgerRowTags` reads a row's, and the index just past its closing `>`.
+ */
+function openingTags(source: string, name: string): { own: string; end: number }[] {
+  const tags: { own: string; end: number }[] = [];
+  for (const opening of source.matchAll(new RegExp(`<${name}(?=[\\s>/])`, "g"))) {
     let depth = 0;
     let own = "";
     let expression: string | null = null;
-    for (let cursor = opening.index ?? 0; cursor < source.length; cursor++) {
+    let cursor = opening.index ?? 0;
+    for (; cursor < source.length; cursor++) {
       const char = source[cursor];
       if (char === "{") {
         if (depth === 0 && own.endsWith("className=")) expression = "";
@@ -79,9 +90,58 @@ function ledgerRowTags(source: string): string[] {
       else if (depth === 0 && char === ">" && source[cursor - 1] !== "=") break;
       else if (depth === 0) own += char;
     }
-    tags.push(own);
+    tags.push({ own, end: cursor + 1 });
   }
   return tags;
+}
+
+/**
+ * The first element a `<LedgerGroup>` that does not fold opens onto, as the
+ * name and the class literals of its opening tag: JSX comments and whitespace
+ * before it are skipped, and a group whose first child is an expression
+ * (`{rows.map(…)}`) reports nothing.
+ */
+function listsOpeningAGroup(source: string): { tag: string; className: string }[] {
+  return openingTags(source, "LedgerGroup")
+    .filter(({ own }) => !/\sfolded\b/.test(own) && !own.trimEnd().endsWith("/"))
+    .flatMap(({ end }) => {
+      const rest = source.slice(end).replace(/^(?:\s|\{\/\*[\s\S]*?\*\/\})*/, "");
+      const child = rest.match(/^<([A-Za-z][\w.]*)/);
+      if (!child) return [];
+      const [tag] = openingTags(rest, child[1]);
+      return [{ tag: child[1], className: tag?.own.match(/className="([^"]*)"/)?.[1] ?? "" }];
+    });
+}
+
+/**
+ * The element each `<LedgerRow>` opens onto — its first child, past comments
+ * and whitespace — as the class literals of its opening tag, beside the row's
+ * own attributes. A child the file names once and hands over as a variable
+ * (`{body}`, Today's station rows) is read where the same file declares it
+ * (`const body = (<p …>`).
+ */
+function ledgerRowContents(source: string): { row: string; className: string }[] {
+  return openingTags(source, "LedgerRow")
+    .filter(({ own }) => !own.trimEnd().endsWith("/"))
+    .flatMap(({ own, end }) => {
+      const rest = source.slice(end).replace(/^(?:\s|\{\/\*[\s\S]*?\*\/\})*/, "");
+      const named = rest.match(/^\{\s*([A-Za-z_$][\w$]*)\s*\}/);
+      const declared = named
+        ? source.slice(
+            Math.max(0, source.search(new RegExp(`const ${named[1]}\\s*=\\s*\\(?\\s*<`))),
+          )
+        : null;
+      const from =
+        named && declared !== null
+          ? /^const /.test(declared)
+            ? declared.replace(/^[^<]*/, "")
+            : ""
+          : rest;
+      const child = from.match(/^<([A-Za-z][\w.]*)/);
+      if (!child) return [];
+      const [tag] = openingTags(from, child[1]);
+      return [{ row: own, className: tag?.own.match(/className="([^"]*)"/)?.[1] ?? "" }];
+    });
 }
 
 /**
@@ -305,6 +365,99 @@ describe("LedgerGroup", () => {
     expect(screen.getByText("3 departures")).toHaveClass("max-sm:basis-full", "max-sm:text-end");
   });
 
+  /**
+   * **A horizon and a door are one door** (pixel-craft class 12). Tomorrow's
+   * summary drew the 12px disclosure caret, 4×8px of ink, and the door row
+   * under it the 16px chevron, 6×10px, ending 3px further in: two arrows at
+   * two sizes on two right edges, under a comment saying they read as the
+   * same door. The summary draws the door's glyph, turned when open.
+   */
+  it("draws a horizon row's arrow as the door's chevron, turned when open", () => {
+    const { container } = render(
+      <>
+        <LedgerGroup label="Tomorrow" folded summaryVariant="row">
+          <p>a row</p>
+        </LedgerGroup>
+        <LedgerRow as="div" href="/shop/blue-mantis/trips/1" linkLabel="Open the trip">
+          Reef Dive
+        </LedgerRow>
+      </>,
+    );
+    const horizon = container.querySelector("summary svg");
+    const door = container.querySelector("div > svg");
+    expect(horizon).not.toBeNull();
+    expect(door).not.toBeNull();
+    for (const attribute of ["viewBox", "stroke-width"]) {
+      expect(horizon?.getAttribute(attribute), attribute).toBe(door?.getAttribute(attribute));
+    }
+    expect(horizon?.innerHTML).toBe(door?.innerHTML);
+    for (const token of ["h-4", "w-auto", "shrink-0", "text-muted"]) {
+      expect(horizon, token).toHaveClass(token);
+      expect(door, token).toHaveClass(token);
+    }
+    expect(horizon).toHaveClass("group-open/fold:rotate-90");
+  });
+
+  /**
+   * **An open horizon's arrow ends where a closed one does** (pixel-craft
+   * class 3). Turned a quarter about its box's centre, the cropped chevron's
+   * ink lies 13.8 units across where its box is 8.5: 2px past the content edge
+   * each closed door ends on, at `h-4`. Open, it steps back those 2px.
+   */
+  it("keeps an open horizon's arrow on the edge a closed one ends on", () => {
+    const { container } = render(
+      <LedgerGroup label="Tomorrow" folded={false} summaryVariant="row">
+        <p>a row</p>
+      </LedgerGroup>,
+    );
+    const arrow = container.querySelector("summary svg");
+    expect(arrow).toHaveClass("group-open/fold:rotate-90", "group-open/fold:-translate-x-0.5");
+    // Turned in the same stroke as it steps, or the step jumps.
+    expect(arrow).toHaveClass("transition-transform");
+  });
+
+  /**
+   * **The group owns the gap under its label** (pixel-craft class 12). Its
+   * label sat at three distances from its first hairline: 4px in the inbox,
+   * whose lists add nothing, and 10px on the booking form and Today's desk,
+   * whose lists added `mt-2` and `mt-1.5`; others added `mt-3`. The label now
+   * carries `mb-2`, in both of its shapes, and no list under one adds its own.
+   */
+  it("keeps one 8px gap under its label, with or without meta", () => {
+    const { rerender } = render(
+      <LedgerGroup label="Unknown senders">
+        <ul />
+      </LedgerGroup>,
+    );
+    expect(screen.getByText("Unknown senders")).toHaveClass("mb-2");
+    rerender(
+      <LedgerGroup label="Thursday" meta="3 departures">
+        <ul />
+      </LedgerGroup>,
+    );
+    expect(screen.getByText("Thursday")).toHaveClass("mb-2");
+  });
+
+  it("opens onto its list with no margin of the list's own, anywhere in src/", () => {
+    const offenders = sourceFiles(SRC_DIR)
+      .filter((file) => file.endsWith(".tsx") && !SWEEP_EXEMPT.has(file))
+      .flatMap((file) =>
+        listsOpeningAGroup(readFileSync(file, "utf8"))
+          .filter(({ className }) => /(?:^|\s)(?:\S*:)?-?m[ty]-/.test(className))
+          .map(({ tag, className }) => `${relative(SRC_DIR, file)}: <${tag} ${className}>`),
+      );
+    // Listed, not counted — nothing on screen will name the file.
+    expect(offenders).toEqual([]);
+  });
+
+  it("reads the first element under a group, past comments, and not a folded one", () => {
+    const source = [
+      '<LedgerGroup label="A">{/* why */}<ul className="mt-2 divide-y" /></LedgerGroup>',
+      '<LedgerGroup label="B" folded><ul className="mt-3" /></LedgerGroup>',
+    ].join("\n");
+    expect(listsOpeningAGroup(source)).toEqual([{ tag: "ul", className: "mt-2 divide-y" }]);
+  });
+
   it("rings a horizon row's summary inside itself, as a ledger row's door is ringed", () => {
     // The summary is a ledger row's box, rule to rule. The outset ring crossed
     // the hairlines, and inside an embed frame, whose column is 12px from the
@@ -330,6 +483,28 @@ describe("LedgerRow", () => {
     expect(row?.className).not.toMatch(/rounded|shadow|bg-surface\b/);
   });
 
+  /**
+   * **A list decides whether it closes** (pixel-craft class 6). `last:border-b`
+   * is right on the page ground and wrong where a rule already follows: inside
+   * a card whose edge is the close, or above a block that opens with its own
+   * rule — the counter's walk-in door, the public trip's pitch door — where it
+   * left two parallel hairlines with nothing between them.
+   */
+  it("leaves its close to what follows when its list does not close", () => {
+    const { container, rerender } = render(
+      <LedgerRow as="div" closed={false}>
+        Tom Okafor
+      </LedgerRow>,
+    );
+    const row = () => container.firstElementChild as HTMLElement;
+    expect(row()).toHaveClass(...ledgerRowOpenBoxClass.split(" "));
+    expect(row()).not.toHaveClass("last:border-b");
+    rerender(<LedgerRow as="div">Tom Okafor</LedgerRow>);
+    expect(row()).toHaveClass("last:border-b");
+    // One box, with and without its close.
+    expect(ledgerRowBoxClass).toBe(`${ledgerRowOpenBoxClass} last:border-b`);
+  });
+
   it("takes the counter's taller target at size lg", () => {
     const { container } = render(
       <LedgerRow as="div" size="lg">
@@ -353,6 +528,42 @@ describe("LedgerRow", () => {
     // docs/design/forms-and-controls.md.
     expect(kind).toHaveClass("text-warning-strong");
     expect(kind.className).not.toMatch(/rounded-full|\bborder\b|\bbg-/);
+  });
+
+  /**
+   * **The kind is a column, not a floor** (pixel-craft class 3). It was
+   * `min-w-23`, 92px, sized for "Waiver": a longer word grew its own row's
+   * gutter and pushed that row's sentence right of every other row's — "Wed
+   * 12:30 PM" is about 97px, es-ES's "Contacto de emergencia" far more. The
+   * column is a fixed width and a longer word wraps inside it.
+   *
+   * **92px on a phone, 104px from `sm` up.** A fixed 104px everywhere took
+   * 12px from the sentence on a phone: the diver record's waiver line had
+   * 70px at 360 and ran 1.4px out of its box, and the inbox's sender address
+   * spilled 12px further (the pixel probe, diver-profile-imported and
+   * staff-inbox).
+   */
+  it("sets the kind in a fixed column its word wraps inside, 92px on a phone", () => {
+    render(
+      <LedgerRow as="div" kind={{ word: "Contacto de emergencia", tone: "warning" }}>
+        Priya Sharma
+      </LedgerRow>,
+    );
+    const kind = screen.getByText("Contacto de emergencia");
+    expect(kind).toHaveClass(...ledgerKindColumnClass.split(" "));
+    expect(ledgerKindColumnClass.split(" ").sort()).toEqual(["sm:w-26", "w-23"]);
+    expect(kind.className).not.toMatch(/(^|\s)(sm:)?(min|max)-w-/);
+  });
+
+  it("is the only width a hand-set line indents past the kind by", () => {
+    // The public trip's surface interval and "seen" lines sit under the
+    // sentence column, past an empty kind: they take the column's class, or
+    // they stop lining up the day the column moves.
+    const offenders = sourceFiles(SRC_DIR)
+      .filter((file) => !SWEEP_EXEMPT.has(file))
+      .filter((file) => /\bmin-w-23\b/.test(readFileSync(file, "utf8")))
+      .map((file) => relative(SRC_DIR, file));
+    expect(offenders).toEqual([]);
   });
 
   it("makes the whole row the target when the row is a door", () => {
@@ -406,6 +617,166 @@ describe("LedgerRow", () => {
     expect(link).not.toHaveAttribute("style");
   });
 
+  /**
+   * **The row owns its vertical inset** (pixel-craft class 5). It had none, so
+   * any row taller than its 52px floor put its words on its rules: the public
+   * trip's three-line dive rows set their cap tops 5px under one rule and their
+   * last descender 3px over the next. Callers padded four ways — `py-3` on the
+   * row, `py-2` on its content, `py-1` and `py-2` stacked, or nothing. The row
+   * now keeps 8px (`md`), or 12px for a record with room to read (`lg`), or
+   * none for a row whose one child paints its whole box (the counter's tap).
+   */
+  it("keeps 8px above and below its words, and 12px or none when asked", () => {
+    const { container, rerender } = render(<LedgerRow as="div">Grace Mensah</LedgerRow>);
+    const row = () => container.firstElementChild as HTMLElement;
+    expect(row()).toHaveClass("py-2");
+    rerender(
+      <LedgerRow as="div" stacked kind={{ word: "Waiver", tone: "warning" }}>
+        Priya Sharma
+      </LedgerRow>,
+    );
+    // The stacked phone reading took `max-sm:py-2` as the only inset any row
+    // had; the base inset makes it one.
+    expect(row()).toHaveClass("py-2");
+    expect(row()).not.toHaveClass("max-sm:py-2");
+    rerender(
+      <LedgerRow as="div" pad="lg">
+        Grace Mensah
+      </LedgerRow>,
+    );
+    expect(row()).toHaveClass("py-3");
+    expect(row()).not.toHaveClass("py-2");
+    rerender(
+      <LedgerRow as="div" pad="xl">
+        Grace Mensah
+      </LedgerRow>,
+    );
+    // A public review's 16px, which its loading skeleton draws too.
+    expect(row()).toHaveClass("py-4");
+    rerender(
+      <LedgerRow as="div" pad="none">
+        Grace Mensah
+      </LedgerRow>,
+    );
+    expect(row().className).not.toMatch(/(?:^|\s)py-/);
+  });
+
+  /**
+   * **The row's inset is the only one** (pixel-craft class 5). Once the row
+   * owned its 8px, nine rows still opened onto an element carrying the `py-2`
+   * (or `py-3`) that had stood in for it, so their inset doubled: every Today
+   * station row went from 52 to 55px and a wrapped one grew 16px, the
+   * first-run steps from 62 to 78, the dive-site catalog's to 20px a side. The
+   * sweep above reads only the row's own tag, so it saw none of them. A row
+   * whose one child paints its whole box (`pad="none"`) is that child's to pad.
+   */
+  it("opens onto content with no vertical padding of its own, anywhere in src/", () => {
+    const offenders = sourceFiles(SRC_DIR)
+      .filter((file) => file.endsWith(".tsx") && !SWEEP_EXEMPT.has(file))
+      .flatMap((file) =>
+        ledgerRowContents(readFileSync(file, "utf8"))
+          .filter(({ row }) => !/\spad="none"/.test(row))
+          .flatMap(({ className }) =>
+            className
+              .split(/\s+/)
+              .filter((token) => /^(?:\S*:)?p[ytb]-/.test(token))
+              .map((token) => `${relative(SRC_DIR, file)}: ${token}`),
+          ),
+      );
+    // Listed, not counted — nothing on screen will name the file.
+    expect(offenders).toEqual([]);
+  });
+
+  it("reads what a row opens onto, past comments, and through a variable the file declares", () => {
+    const source = [
+      "const body = (",
+      '  <p className="min-w-0 py-2 text-base">x</p>',
+      ");",
+      "<LedgerRow stacked>{body}</LedgerRow>",
+      '<LedgerRow pad="none">{/* why */}<div className="py-3">y</div></LedgerRow>',
+      "<LedgerRow>{rows.map((r) => r)}</LedgerRow>",
+    ].join("\n");
+    expect(ledgerRowContents(source)).toEqual([
+      { row: expect.stringContaining("stacked"), className: "min-w-0 py-2 text-base" },
+      { row: expect.stringContaining('pad="none"'), className: "py-3" },
+    ]);
+  });
+
+  it("lets a 44px control overhang that inset, so a one-line row stays 52px", () => {
+    // 8 + 44 + 8 is 60: without the overhang every row with a Send or an
+    // Assign in it would grow by 8px. The control keeps its whole target; the
+    // row's padding is the room around the *words*.
+    render(
+      <LedgerRow as="div" trailing={<button type="button">Send waiver</button>}>
+        Priya Sharma
+      </LedgerRow>,
+    );
+    expect(screen.getByRole("button", { name: "Send waiver" }).parentElement).toHaveClass("-my-2");
+  });
+
+  /**
+   * **A tall row can set its kind and its fix on its first line** (pixel-craft
+   * class 1). The inbox's rows are a sender over a message, and the row centred
+   * its kind word and its date on the whole block: "Email" sat 23px below
+   * "Unknown sender" it named. `first-line` sets the parts on one baseline from
+   * `sm` up (below it the row stacks, and centring stays), and pads the row so
+   * a one-line row is still centred in its 52px: 16 + 20 + 16.
+   */
+  it("sets its parts on the first line's baseline when asked, from sm up", () => {
+    const { container, rerender } = render(
+      <LedgerRow
+        as="div"
+        align="first-line"
+        kind={{ word: "Email", tone: "neutral" }}
+        trailing={<span>Sep 25</span>}
+      >
+        <p>Unknown sender</p>
+        <p>Is the Saturday boat still on?</p>
+      </LedgerRow>,
+    );
+    const row = () => container.firstElementChild as HTMLElement;
+    expect(row()).toHaveClass("items-center", "sm:items-baseline", "sm:py-4");
+    rerender(
+      <LedgerRow as="div" kind={{ word: "Email", tone: "neutral" }}>
+        Unknown sender
+      </LedgerRow>,
+    );
+    expect(row()).toHaveClass("items-center");
+    expect(row().className).not.toMatch(/items-baseline|sm:py-4/);
+  });
+
+  /**
+   * **A first-line door's arrow sits on that line** (pixel-craft class 1). An
+   * svg has no baseline, so on a baseline-aligned row the flex box made one
+   * from its bottom edge: the known diver's inbox arrow stood on the name's
+   * baseline, its ink 12.6 to 3.4px above it, 2px high of the line's cap
+   * centre. The arrow rides in a box that carries a text baseline (a
+   * zero-width space), centred on that line's box, whose centre is the cap
+   * centre's within a fraction of a pixel.
+   */
+  it("gives a first-line door's arrow a text baseline to sit on", () => {
+    const { container } = render(
+      <LedgerRow
+        as="div"
+        align="first-line"
+        href="/shop/blue-mantis/inbox/1"
+        linkLabel="Open the message"
+        kind={{ word: "Email", tone: "neutral" }}
+      >
+        <p>Priya Sharma</p>
+        <p>Is the Saturday boat still on?</p>
+      </LedgerRow>,
+    );
+    const arrow = container.querySelector("svg") as SVGElement;
+    const line = arrow.parentElement as HTMLElement;
+    expect(line.parentElement).toBe(container.firstElementChild);
+    expect(line).toHaveClass("inline-flex", "items-center", "shrink-0");
+    expect(line).toHaveAttribute("aria-hidden", "true");
+    // A zero-width space, spelled by code point: a literal one is invisible here.
+    expect(line.textContent).toBe(String.fromCodePoint(0x200b));
+    expect(arrow).toHaveClass("h-4", "w-auto");
+  });
+
   it("owns its horizontal box: no call site sets a row's horizontal margin or padding", () => {
     // Today's spine and the first-run checklist each spelled `-mx-2 px-2` on
     // their rows by hand, and the week row then took it back from `sm` up
@@ -414,14 +785,16 @@ describe("LedgerRow", () => {
     // sm:px-5`, which outranks the row's own `px-2` by stylesheet order. The
     // room is the component's: any horizontal margin or padding on a
     // `<LedgerRow>`, in a string or a `className={…}` expression, is a second
-    // copy of it or a cancellation of it.
+    // copy of it or a cancellation of it. The same holds for its vertical
+    // padding (the test above): a `py-3` on a row races the row's own `py-2`
+    // by stylesheet order, where `pad` says which one it is.
     const offenders = sourceFiles(SRC_DIR)
       .filter((file) => file.endsWith(".tsx") && !SWEEP_EXEMPT.has(file))
       .flatMap((file) =>
         ledgerRowTags(readFileSync(file, "utf8")).flatMap((tag) =>
           [...tag.matchAll(/className="([^"]*)"/g)]
             .flatMap((match) => match[1].split(/\s+/))
-            .filter((token) => /^(?:\S*:)?-?(?:m|p)[xse]-/.test(token))
+            .filter((token) => /^(?:\S*:)?-?(?:m[xse]|p[xseytb])-/.test(token))
             .map((token) => `${relative(SRC_DIR, file)}: ${token}`),
         ),
       );
@@ -465,8 +838,27 @@ describe("LedgerRow", () => {
     const chevron = children[children.indexOf(link) - 1];
     expect(chevron?.tagName).toBe("svg");
     expect(chevron).toHaveAttribute("aria-hidden", "true");
-    expect(chevron).toHaveClass("size-4", "shrink-0", "text-muted");
+    expect(chevron).toHaveClass("h-4", "w-auto", "shrink-0", "text-muted");
     expect(screen.getByText("$148.00").parentElement?.nextElementSibling).toBe(chevron);
+  });
+
+  /**
+   * **The chevron ends where the row's words end** (pixel-craft class 2). The
+   * 24-unit `chevron-right` drawn in a 16px square left about 5px of empty box
+   * right of its ink, so every door's arrow stopped 5px inside the edge the
+   * header button, the hairline's column and "0 of 5 done" all end on. The
+   * door draws the same stroke from a box cropped to its ink across (the
+   * height stays 24 units, so the glyph is the size it was).
+   */
+  it("draws the door's chevron from a box cropped to its ink across", () => {
+    const { container } = render(
+      <LedgerRow as="div" href="/shop/blue-mantis/courses/1" linkLabel="Open Discover Scuba">
+        Discover Scuba
+      </LedgerRow>,
+    );
+    const chevron = container.querySelector("svg");
+    expect(chevron).toHaveAttribute("viewBox", "7.75 0 8.5 24");
+    expect(chevron).not.toHaveClass("size-4");
   });
 
   it("draws no chevron on a row that is not a door", () => {
@@ -505,6 +897,146 @@ describe("LedgerRow", () => {
       "max-sm:order-2",
       "max-sm:ms-auto",
     );
+  });
+
+  /**
+   * **A stacked row's lines sit evenly between its rules** (pixel-craft class
+   * 5). Wrapped, the row's `gap-3` became a 12px gap between its lines, and a
+   * 44px "Assign" set the height of the first line with the 20px kind word
+   * centred in it: the staffing week's "Needs crew" rows put 24px of air over
+   * the kind word and 10px under the last line, 7px low. The line gap is 4px,
+   * and the fix overhangs the kind's line instead of sizing it — its target
+   * stays 44px.
+   */
+  it("wraps its lines 4px apart", () => {
+    render(
+      <LedgerRow
+        as="div"
+        stacked
+        kind={{ word: "Needs crew", tone: "warning" }}
+        trailing={<button type="button">Assign</button>}
+      >
+        <p>5:30 AM Dawn Two-Tank</p>
+      </LedgerRow>,
+    );
+    const trailing = screen.getByRole("button", { name: "Assign" }).parentElement as HTMLElement;
+    expect(trailing.parentElement).toHaveClass("max-sm:flex-wrap", "max-sm:gap-y-1");
+  });
+
+  /**
+   * **The fix overhangs the kind's line only by the room there is** (classes
+   * 1, 5 and 7). A 12px overhang (`max-sm:-my-3`) let the kind word set the
+   * line, but the room above that line is the row's inset (8px at `md`) and
+   * the room below it the 4px line gap: the staffing week's "Assign" started
+   * 3px above its row's top rule, its ring over the row above, and Today's
+   * 48px Send reached 8px into the sentence under it. The overhang is capped at
+   * the smaller room and kept even on both sides — uneven, the control's
+   * centre leaves the kind word's (by 2px for `-mt-2 -mb-1`) and a bordered
+   * control sits on the rule.
+   */
+  it("overhangs the kind's line by no more than the room above and below it, evenly", () => {
+    const px = (token: string | undefined) =>
+      token === undefined ? 0 : Number(token.replace(/^.*?-(?=[\d.]+$)/, "")) * 4;
+    /** A side's phone value: its own `max-sm:` token, else its axis's, else the base. */
+    const phone = (element: HTMLElement, box: "m" | "p", side: "t" | "b", sign: "" | "-") => {
+      const tokens = [...element.classList];
+      const find = (prefix: string, axis: string) =>
+        tokens.find((token) => new RegExp(`^${prefix}${sign}${box}${axis}-[\\d.]+$`).test(token));
+      return px(find("max-sm:", side) ?? find("max-sm:", "y") ?? find("", side) ?? find("", "y"));
+    };
+    for (const pad of ["md", "lg"] as const) {
+      render(
+        <LedgerRow
+          as="div"
+          stacked
+          pad={pad}
+          kind={{ word: "Needs crew", tone: "warning" }}
+          trailing={<button type="button">Assign</button>}
+        >
+          <p>5:30 AM Dawn Two-Tank</p>
+        </LedgerRow>,
+      );
+      const trailing = screen.getByRole("button", { name: "Assign" }).parentElement as HTMLElement;
+      const row = trailing.parentElement as HTMLElement;
+      const inset = phone(row, "p", "t", "");
+      const gap = px([...row.classList].find((token) => /^max-sm:gap-y-[\d.]+$/.test(token)));
+      const above = phone(trailing, "m", "t", "-");
+      const below = phone(trailing, "m", "b", "-");
+      expect(above, pad).toBeGreaterThan(0);
+      expect(above, pad).toBeLessThanOrEqual(inset);
+      expect(below, pad).toBeLessThanOrEqual(gap);
+      expect(above, pad).toBe(below);
+      cleanup();
+    }
+  });
+
+  /**
+   * **A control on the kind's line gives back under the last line the room it
+   * takes over the kind** (pixel-craft class 5). Overhanging 4px a side, a 44px
+   * "Assign" still makes the kind's line 36px, and the 20px kind word centred
+   * in it stands 8px lower than it would alone: the staffing week's "Needs
+   * crew" rows kept 20px of air over the kind and 10px under the last line, 5px
+   * low. The overhang cannot grow (above), so the room is mirrored instead: a
+   * row whose fix holds a control takes those 8px again under its last line.
+   * Only a control: a fix that is a fact ("3 spots left", a date) sits in the
+   * kind's own line and leaves that line 20px, so it takes nothing back.
+   */
+  it("mirrors under its last line the room a control takes over the kind's line", () => {
+    const px = (token: string | undefined) =>
+      token === undefined ? 0 : Number(token.replace(/^.*?-(?=[\d.]+$)/, "")) * 4;
+    const CONTROL = 44;
+    const KIND_LINE = 20;
+    for (const [pad, inset] of [
+      ["md", 8],
+      ["lg", 12],
+    ] as const) {
+      render(
+        <LedgerRow
+          as="div"
+          stacked
+          pad={pad}
+          kind={{ word: "Needs crew", tone: "warning" }}
+          trailing={<button type="button">Assign</button>}
+        >
+          <p>5:30 AM Dawn Two-Tank</p>
+        </LedgerRow>,
+      );
+      const fix = screen.getByRole("button", { name: "Assign" }).parentElement as HTMLElement;
+      const row = fix.parentElement as HTMLElement;
+      expect(fix, pad).toHaveAttribute("data-ledger-fix");
+      const overhang = px([...fix.classList].find((token) => /^max-sm:-my-[\d.]+$/.test(token)));
+      const over = (CONTROL - 2 * overhang - KIND_LINE) / 2;
+      const mirrored = [...row.classList].filter((token) =>
+        token.startsWith("max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-"),
+      );
+      expect(mirrored, pad).toHaveLength(1);
+      expect(px(mirrored[0]), pad).toBe(inset + over);
+      cleanup();
+    }
+  });
+
+  it("mirrors nothing on a stacked row with no kind, whose fix has a line of its own", () => {
+    render(
+      <LedgerRow as="div" stacked trailing={<button type="button">Hide</button>}>
+        <p>Pickles Reef</p>
+      </LedgerRow>,
+    );
+    const row = screen.getByRole("button", { name: "Hide" }).parentElement
+      ?.parentElement as HTMLElement;
+    expect([...row.classList].some((token) => token.includes("data-ledger-fix"))).toBe(false);
+  });
+
+  it("gives a stacked fix on a line of its own its whole height", () => {
+    // Without a kind the fix drops to a line of its own under the content; an
+    // overhang there would put a 44px control on the row's bottom rule.
+    render(
+      <LedgerRow as="div" stacked trailing={<button type="button">Hide</button>}>
+        <p>Pickles Reef</p>
+      </LedgerRow>,
+    );
+    const trailing = screen.getByRole("button", { name: "Hide" }).parentElement as HTMLElement;
+    expect(trailing).toHaveClass("max-sm:my-0");
+    expect(trailing.className).not.toMatch(/max-sm:-my-3/);
   });
 
   it("leads with its content when stacked without a kind", () => {

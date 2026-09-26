@@ -147,7 +147,7 @@ export function ClosingBlock({
           been closed still hands back everything it was closed over. */}
       {leftovers.length > 0 ? (
         <LedgerGroup as="h3" label={t("closeout.leftovers.groupLabel")} className="mt-6">
-          <ul className="mt-3">
+          <ul>
             {leftovers.map((action) => (
               <LedgerRow
                 key={action.id}
@@ -200,7 +200,7 @@ export function ClosingBlock({
                   </div>
                 }
               >
-                <div className="min-w-0 py-2">
+                <div className="min-w-0">
                   <p className="text-sm font-medium">{action.subject}</p>
                   {/* A row whose subject is the whole fact renders no second
                       line rather than an empty one. */}

@@ -1,5 +1,5 @@
 import { type CalendarDate, calendarDateWeekday, isValidCalendarDate } from "./calendar-date";
-import { formatMoneyScanned, formatTime, weekdayNames } from "./format";
+import { formatMoneyScanned, weekdayNames } from "./format";
 import { cachedFormatter } from "./intl-cache";
 import { currencyFractionDigits, majorToMinor, maxPriceMajor } from "./money";
 import { CALLING_CODES, isE164 } from "./phone";
@@ -100,10 +100,21 @@ export function readTypedTime(raw: string, locale = "en-US"): TypedReading | nul
   return { canonical, label: formatWallTime(canonical, locale) };
 }
 
-/** The label a `HH:MM` wall-clock time reads as, for the field's settled state. */
+/**
+ * The label a `HH:MM` wall-clock time reads as, for the field's settled state.
+ *
+ * `Intl`'s own string, with its plain space, and not `formatTime`'s: this is a
+ * field's value, text a staffer edits and copies, and never a line that wraps,
+ * so the U+00A0 `formatTime` binds "7:00 AM" with has nothing to do here. Same
+ * reason `formatTypedDate` below formats for itself.
+ */
 export function formatWallTime(canonical: string, locale = "en-US"): string {
   const [hour, minute] = canonical.split(":").map(Number);
-  return formatTime(new Date(Date.UTC(2000, 0, 1, hour, minute)), locale, "UTC");
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(2000, 0, 1, hour, minute)));
 }
 
 // ---------------------------------------------------------------------------

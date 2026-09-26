@@ -129,7 +129,7 @@ describe("nightSkyText", () => {
   it("names the light and the moon in the reader's own clock", () => {
     // 7:30 PM Eastern on 2026-01-02, the demo shop's night charter hour.
     expect(nightSkyText(t, "en-US", skyFor("2026-01-03T00:30:00Z"), KEY_LARGO.timeZone)).toBe(
-      "Sunset 5:44 PM, dark by 6:09 PM. Full moon, 100% lit.",
+      "Sunset 5:44\u00A0PM, dark by 6:09\u00A0PM. Full moon, 100% lit.",
     );
   });
 

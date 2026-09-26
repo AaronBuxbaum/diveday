@@ -304,6 +304,19 @@ test.describe("trip print packet", () => {
     await expect(popup.getByRole("heading", { name: "Prep", exact: true })).toHaveCount(1);
     await expect(popup.getByRole("heading", { name: "Overview", exact: true })).toHaveCount(0);
     await expect(popup.getByRole("heading", { name: "Guests", exact: true })).toHaveCount(0);
+
+    // **And the roster's names reach the paper.** A roll-call person is the
+    // one button the packet prints on purpose (`data-print-content`): its
+    // content is the index and the name, and while the print backstop hid it
+    // with every other button this packet printed nine diver rows and two crew
+    // rows with no name in any of them. Priya Sharma is on this departure's
+    // roster (the trip pulse above lands on her). A CSS locator, because a
+    // role locator cannot see what `display: none` removed.
+    await popup.emulateMedia({ media: "print" });
+    await expect(
+      popup.locator(".trip-print-bundle button[data-print-content]", { hasText: "Priya Sharma" }),
+    ).toBeVisible();
+    await popup.emulateMedia({ media: "screen" });
     await popup.close();
 
     // Printing is intentionally owned by Trip. The packet is the one
@@ -602,9 +615,12 @@ test.describe("the printed trip packet", () => {
           box.height > 0
         );
       };
-      const found = [...document.querySelectorAll("button, select, textarea, input")].filter(
-        visible,
-      );
+      // `button[data-print-content]` is the roll call's person: a button
+      // whose content is the name, which the packet exists to print
+      // (`globals.css`'s backstop lets it through; its caret stays off paper).
+      const found = [
+        ...document.querySelectorAll("button:not([data-print-content]), select, textarea, input"),
+      ].filter(visible);
       // Named, not counted: a failure that says "3" sends the next reader
       // hunting, and one that says "Cancel trip" sends them to the section.
       return found.map(

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SEGMENT_CORNER, segmentedTrackClass } from "@/components/ui/segmented";
 import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
 import { EMBED_KINDS, PLATFORMS } from "@/lib/embed-snippets";
+import { rendersFlush } from "@/test/button-flush";
 import { EmbedGenerator, type EmbedGeneratorCopy } from "./EmbedGenerator";
 
 vi.mock("qrcode", () => ({ toDataURL: vi.fn(async () => "data:image/png;base64,QUJD") }));
@@ -189,6 +190,18 @@ describe("EmbedGenerator", () => {
    * clears (principles.md §2). jsdom lays nothing out, so this pins the floor
    * the label carries; the probe's `small-target` check measures it.
    */
+  /**
+   * Each snippet's Copy starts the line under its box, so its word sits on the
+   * box's edge. It sat 12px inside it, at x 446 against 433 (pixel probe,
+   * SETTINGS-2-20, K-06).
+   */
+  it("puts each snippet's Copy on the edge of the box above it", () => {
+    renderGenerator();
+    const triggers = screen.getAllByRole("button", { name: "Copy" });
+    expect(triggers.length).toBeGreaterThan(0);
+    for (const trigger of triggers) expect(rendersFlush(trigger, "ghost", "sm")).toBe(true);
+  });
+
   it("gives both look labels, the radios' tap targets, the 44px floor and not the 36px one", () => {
     const { container } = renderGenerator();
     const labels = [...container.querySelectorAll('input[type="radio"]')]

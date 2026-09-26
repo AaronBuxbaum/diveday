@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
 import { MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "@/lib/course-limits";
 import type { CourseScheduleDay } from "@/lib/courses";
@@ -147,19 +147,17 @@ export function DayByDayEditor({
               </Field>
               <FieldGrid columns={2}>
                 <Field label={fill(copy.startTimeLabel, { number: dayNumber })}>
-                  <input
+                  <DateField
                     type="time"
                     value={day.startTime ?? ""}
                     onChange={(event) => updateDay(dayIndex, { startTime: event.target.value })}
-                    className={controlClass}
                   />
                 </Field>
                 <Field label={fill(copy.endTimeLabel, { number: dayNumber })}>
-                  <input
+                  <DateField
                     type="time"
                     value={day.endTime ?? ""}
                     onChange={(event) => updateDay(dayIndex, { endTime: event.target.value })}
-                    className={controlClass}
                   />
                 </Field>
               </FieldGrid>
@@ -211,7 +209,7 @@ export function DayByDayEditor({
                   rows={6}
                   maxLength={MAX_SCHEDULE_DAY_ITEMS * 200}
                   placeholder={copy.itemsPlaceholder}
-                  className={controlClass}
+                  className={textareaClassFor(6)}
                 />
               </Field>
             </FieldGrid>

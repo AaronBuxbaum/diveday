@@ -13,7 +13,7 @@ import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass, FormStatus } from "@/components/ui/form";
+import { controlClass, FormStatus, textareaClassFor } from "@/components/ui/form";
 import {
   SECTION_TITLE_CLASS,
   SHELL_TITLE_CLASS,
@@ -517,7 +517,7 @@ export function AfterState({
             maxLength={MAX_REVIEW_COMMENT_LENGTH}
             defaultValue={ownReview?.comment ?? ""}
             placeholder={t("reviews.commentPlaceholder")}
-            className={controlClass}
+            className={textareaClassFor(3)}
           />
           <div>
             <SubmitButton
@@ -934,10 +934,7 @@ function DiveRecord({
           <span data-postcard-mark className="contents">
             <SiteMark mark={siteMark} size="lg" ground="surface" className="print:hidden" />
           </span>
-          <h2
-            id="dive-record-heading"
-            className={`font-brand-display ${SUB_TITLE_CLASS} text-pretty`}
-          >
+          <h2 id="dive-record-heading" className={`font-brand-display ${SUB_TITLE_CLASS}`}>
             {t("recap.logbookHeading")}
           </h2>
         </div>

@@ -9,6 +9,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import {
+  ChoiceRow,
   controlClass,
   DateField,
   Field,
@@ -476,22 +477,10 @@ export default async function StaffingPage({
                   <DateField name="date" required defaultValue={defaultShiftDate} />
                 </Field>
                 <Field label={t("staffing.addShift.starts")}>
-                  <input
-                    name="startTime"
-                    type="time"
-                    required
-                    defaultValue="07:00"
-                    className={controlClass}
-                  />
+                  <DateField name="startTime" type="time" required defaultValue="07:00" />
                 </Field>
                 <Field label={t("staffing.addShift.ends")}>
-                  <input
-                    name="endTime"
-                    type="time"
-                    required
-                    defaultValue="15:00"
-                    className={controlClass}
-                  />
+                  <DateField name="endTime" type="time" required defaultValue="15:00" />
                 </Field>
                 <Field label={t("staffing.addShift.note")} hint={t("staffing.addShift.noteHint")}>
                   <input
@@ -622,15 +611,14 @@ export default async function StaffingPage({
           >
             <form action={saveCrewConsent} className="flex flex-col gap-3">
               <input type="hidden" name="personId" value={session.user.personId} />
-              <label className="flex items-start gap-3 text-sm">
-                <input
-                  type="checkbox"
-                  name="consented"
-                  defaultChecked={crewConsented}
-                  className="mt-0.5 size-4 accent-primary"
-                />
-                <span>{t("staffing.crewConsent.label")}</span>
-              </label>
+              <ChoiceRow
+                type="checkbox"
+                name="consented"
+                defaultChecked={crewConsented}
+                className="text-sm"
+              >
+                {t("staffing.crewConsent.label")}
+              </ChoiceRow>
               {/* **The box is the disclosure.** Before this, the published name
                   was `full_name.split(/\s+/)[0]` computed at render time, so a
                   person typed into the shop's records as "Tanaka Keiko" agreed

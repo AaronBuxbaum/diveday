@@ -15,6 +15,7 @@
  */
 import { type CalendarDate, calendarDateToUtcMidnight } from "./calendar-date";
 import { nowDate } from "./clock";
+import { keepUnitsWhole } from "./date-parts";
 import { cachedFormatter } from "./intl-cache";
 import { minorToMajor } from "./money";
 
@@ -102,12 +103,14 @@ export function formatMoneyScanned(cents: number, currency = "usd", locale = "en
  * purpose — not here with the argument dropped.
  */
 export function formatShortDate(date: Date, locale = "en-US", timeZone: string): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone,
-  }).format(date);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      timeZone,
+    }).formatToParts(date),
+  );
 }
 
 /**
@@ -122,20 +125,30 @@ export function formatShortDate(date: Date, locale = "en-US", timeZone: string):
  * `timeZone` stays required for the reason stated above `formatShortDate`.
  */
 export function formatDateWithYear(date: Date, locale = "en-US", timeZone: string): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone,
-  }).format(date);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone,
+    }).formatToParts(date),
+  );
 }
 
+/**
+ * "7:30 AM", with U+00A0 before the day period so it never wraps away from the
+ * time (`keepUnitsWhole`, src/lib/date-parts.ts). Every formatter here that
+ * prints a time with its day period or zone, or a month with its day, joins
+ * its parts the same way; `formatTimeZoneName` is a name, and stays words.
+ */
 export function formatTime(date: Date, locale = "en-US", timeZone: string): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone,
-  }).format(date);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone,
+    }).formatToParts(date),
+  );
 }
 
 /**
@@ -146,12 +159,14 @@ export function formatTime(date: Date, locale = "en-US", timeZone: string): stri
  * would be more to read for nothing more to know.
  */
 export function formatWeekdayTime(date: Date, locale = "en-US", timeZone: string): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    weekday: "long",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone,
-  }).format(date);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      weekday: "long",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone,
+    }).formatToParts(date),
+  );
 }
 
 /**
@@ -212,10 +227,12 @@ export function formatHourOfDay(hour: number, locale = "en-US"): string {
  * {@link formatHourOfDay}, which this is the short form of.
  */
 export function formatHourShort(hour: number, locale = "en-US"): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    hour: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(2000, 0, 1, hour)));
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      hour: "numeric",
+      timeZone: "UTC",
+    }).formatToParts(new Date(Date.UTC(2000, 0, 1, hour))),
+  );
 }
 
 export function formatTimeZoneName(locale = "en-US", timeZone: string, now = nowDate()): string {
@@ -264,14 +281,16 @@ export function formatByteSize(bytes: number, locale = "en-US"): string {
  * nothing downstream would notice.
  */
 export function formatDateTimeTz(date: Date, locale = "en-US", timeZone: string): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-    timeZone,
-  }).format(date);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone,
+    }).formatToParts(date),
+  );
 }
 
 /** "7:30 AM – 11:00 AM" — en dash, no repeated day. */
@@ -295,13 +314,7 @@ export function formatTimeRangeTz(
   locale = "en-US",
   timeZone: string,
 ): string {
-  const endWithZone = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-    timeZone,
-  }).format(end);
-  return `${formatTime(start, locale, timeZone)} – ${endWithZone}`;
+  return `${formatTime(start, locale, timeZone)} – ${formatTimeTz(end, locale, timeZone)}`;
 }
 
 /**
@@ -315,12 +328,14 @@ export function formatTimeRangeTz(
  * leave for the dock.
  */
 export function formatTimeTz(date: Date, locale = "en-US", timeZone: string): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-    timeZone,
-  }).format(date);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone,
+    }).formatToParts(date),
+  );
 }
 
 /**
@@ -450,11 +465,13 @@ export function shortMonthNames(locale = "en-US"): string[] {
 }
 
 export function formatMonthDay(month: number, day: number, locale = "en-US"): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(2025, month - 1, day)));
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      month: "long",
+      day: "numeric",
+      timeZone: "UTC",
+    }).formatToParts(new Date(Date.UTC(2025, month - 1, day))),
+  );
 }
 
 /**
@@ -473,12 +490,75 @@ export function formatCalendarDateRange(
   to: CalendarDate,
   locale = "en-US",
 ): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).formatRange(calendarDateToUtcMidnight(from), calendarDateToUtcMidnight(to));
+  // Each end whole ("Aug 24"), the dash between them still a place to break.
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    }).formatRangeToParts(calendarDateToUtcMidnight(from), calendarDateToUtcMidnight(to)),
+  );
+}
+
+/**
+ * **A title's em dash stays with the word before it** — "Two-Tank Reef — Benwood
+ * & Elbow" becomes "Two-Tank Reef\u00A0— Benwood & Elbow".
+ *
+ * Trip titles are free text a shop types, and they are "X — Y" throughout. A
+ * balanced heading (`text-balance`) breaks at whichever space evens its lines,
+ * and the space before the dash is often it: the departures board and the
+ * thread's pages opened line two with "— Benwood & Elbow". Binding the space
+ * before the dash leaves the one after it free, so a line may end on the dash
+ * and never begin with it. For a title rendered as a balanced heading; a title
+ * in running text needs nothing.
+ */
+export function bindTitleDash(title: string): string {
+  return title.replaceAll(" — ", "\u00A0— ");
+}
+
+/**
+ * **A row's quiet line of facts, joined so it wraps only where a reader would**
+ * — "Not scheduled · Advanced or higher · 1 day · 2 dives · $225".
+ *
+ * Three glues, all U+00A0, and nothing else touched:
+ *
+ * - **A number and the word beside it**: "2 dives", "Jul 21", "Version 3".
+ *   It runs over the facts themselves, not only the joins, because most of the
+ *   split units came from the shop's own `durationText` ("1 day · 2 dives"):
+ *   six course rows broke "2 / dives" at 390.
+ * - **Every separator to the word before it**, the shop's own " · " included,
+ *   so no line starts with "·".
+ * - **The last fact to the one before it**, so "$225" never sits alone on a
+ *   line under a "·" that ended the one above (the course list at 1280).
+ *
+ * **And a numeric range is one number** — a word joiner (U+2060) after the en
+ * dash of "1–2" or "4–8". The line may break after an en dash, and once the
+ * glues above left a range's dash the only break inside a run, Chrome took it:
+ * "1– / 2 days · 3 dives · $225" on the course list at 390, and "4– / 8
+ * weeks" (K-246 review).
+ *
+ * Ordinary words keep their breaking spaces on purpose: a fact is free text a
+ * shop typed, and a fact glued whole could run off a 390px row. A missing or
+ * blank fact is dropped, not printed as an empty separator.
+ */
+export function joinFacts(facts: readonly (string | null | undefined | false)[]): string {
+  const kept = facts
+    .map((fact) => (fact ? fact.trim() : ""))
+    .filter((fact) => fact.length > 0)
+    .map((fact) =>
+      fact
+        .replace(/(\d)\s+(?=\S)/g, "$1\u00A0")
+        .replace(/([^\s·])\s+(?=\d)/g, "$1\u00A0")
+        .replace(/\s+·(?=\s)/g, "\u00A0·")
+        .replace(/(\d)–(?=\d)/g, "$1–\u2060"),
+    );
+  return kept
+    .map((fact, index) => {
+      if (index === 0) return fact;
+      return `${index === kept.length - 1 ? "\u00A0·\u00A0" : "\u00A0· "}${fact}`;
+    })
+    .join("");
 }
 
 /**

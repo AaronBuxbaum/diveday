@@ -56,6 +56,23 @@ describe("FactSource", () => {
     }
   });
 
+  /**
+   * **The word sets the chip's baseline, never the dot.** An `inline-flex`
+   * chip with no baseline-aligned item takes its baseline from its first item,
+   * and the first item is an empty 8px dot, whose baseline is its bottom edge.
+   * Beside "Sites" in a `flex items-baseline` row (TripArrivalCard), the high
+   * contrast type put PLAN's baseline 2px under Sites' (the pixel probe,
+   * thread-high-contrast at 1280 and 390). Aligning the chip's items on their
+   * baselines makes the word the item that sets it; the dot centres itself.
+   */
+  it("hands its row the word's baseline, with the dot centred beside it", () => {
+    const { container } = render(<FactSource kind="plan" label="Plan" />);
+    const chip = container.firstElementChild;
+    expect(chip).toHaveClass("inline-flex", "items-baseline");
+    expect(chip).not.toHaveClass("items-center");
+    expect(dot(container)).toHaveClass("self-center");
+  });
+
   it("renders a time only when one is given", () => {
     const { container: bare } = render(<FactSource kind="crew" label="Crew" />);
     expect(bare.textContent).toBe("Crew");

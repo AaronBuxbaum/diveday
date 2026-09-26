@@ -268,7 +268,14 @@ export default async function SecurityPage({
                   <input type="hidden" name="sessionId" value={item.id} />
                   <SubmitButton
                     pendingLabel={t("settings.security.revoking")}
-                    className={buttonClass({ variant: "ghost", size: "sm" })}
+                    className={buttonClass({
+                      variant: "ghost",
+                      size: "sm",
+                      flush: true,
+                      // The row's 12px inset leaves the flush fill 4px from
+                      // the sunken row's edge; the outset ring would cross it.
+                      className: "focus-visible:focus-ring-inset",
+                    })}
                   >
                     {t("settings.security.revoke")}
                   </SubmitButton>

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { EditorSection } from "@/components/editor/EditorSection";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { StoredPhoto } from "@/components/StoredPhoto";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ChoiceRow, controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
 import { REQUIRABLE_CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -277,7 +277,7 @@ export function SiteFields({
               rows={3}
               maxLength={1200}
               defaultValue={values?.description ?? ""}
-              className={controlClass}
+              className={textareaClassFor(3)}
             />
           </Field>
         </FieldGrid>
@@ -367,15 +367,14 @@ export function SiteFields({
               subgrid two tracks deep per field, and a checkbox belongs beside
               its own words the way the nitrox box does. */}
           {stationFar ? (
-            <label className="mt-4 flex min-h-11 items-center gap-2 text-sm font-medium">
-              <input
-                name="tideStationConfirmed"
-                type="checkbox"
-                defaultChecked={stationConfirmed}
-                className="size-4 accent-primary"
-              />
+            <ChoiceRow
+              name="tideStationConfirmed"
+              type="checkbox"
+              defaultChecked={stationConfirmed}
+              className="mt-4 text-sm font-medium"
+            >
               {t("diveSites.form.tideStationConfirmedCheckbox")}
-            </label>
+            </ChoiceRow>
           ) : null}
         </>
       ),
@@ -514,7 +513,7 @@ export function SiteFields({
               rows={3}
               maxLength={1200}
               defaultValue={values?.marineLifeDescription ?? ""}
-              className={controlClass}
+              className={textareaClassFor(3)}
             />
           </Field>
         </FieldGrid>
@@ -622,7 +621,7 @@ export function SiteFields({
                 rows={2}
                 maxLength={500}
                 defaultValue={values?.currentNote ?? ""}
-                className={controlClass}
+                className={textareaClassFor(2)}
               />
             </Field>
             <Field
@@ -635,7 +634,7 @@ export function SiteFields({
                 maxLength={1200}
                 defaultValue={values?.divePlan ?? ""}
                 placeholder={t("diveSites.form.divePlanPlaceholder")}
-                className={controlClass}
+                className={textareaClassFor(3)}
               />
             </Field>
             <Field
@@ -648,7 +647,7 @@ export function SiteFields({
                 maxLength={600}
                 defaultValue={values?.conservationNote ?? ""}
                 placeholder={t("diveSites.form.conservationNotePlaceholder")}
-                className={controlClass}
+                className={textareaClassFor(3)}
               />
             </Field>
           </FieldGrid>
@@ -688,7 +687,7 @@ export function SiteFields({
               maxLength={MAX_PLANNING_NOTE_LENGTH}
               defaultValue={values?.planningNote ?? ""}
               placeholder={t("diveSites.form.planningNotePlaceholder")}
-              className={controlClass}
+              className={textareaClassFor(3)}
             />
           </Field>
         </FieldGrid>
@@ -719,7 +718,7 @@ export function SiteFields({
               maxLength={400}
               defaultValue={values?.fitNote ?? ""}
               placeholder={t("diveSites.form.fitNotePlaceholder")}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
         </FieldGrid>
@@ -790,28 +789,27 @@ export function SiteFields({
             ) : null}
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
-                <label key={value} className="flex min-h-11 items-center gap-2 text-sm font-medium">
-                  <input
-                    name="specialty"
-                    type="checkbox"
-                    value={value}
-                    defaultChecked={
-                      values?.requiredSpecialties.includes(value as DiveSpecialty) ?? false
-                    }
-                    className="size-4 accent-primary"
-                  />
-                  {t(key)}
-                </label>
-              ))}
-              <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
-                <input
-                  name="requiresNitrox"
+                <ChoiceRow
+                  key={value}
+                  name="specialty"
                   type="checkbox"
-                  defaultChecked={values?.requiresNitrox ?? false}
-                  className="size-4 accent-primary"
-                />
+                  value={value}
+                  defaultChecked={
+                    values?.requiredSpecialties.includes(value as DiveSpecialty) ?? false
+                  }
+                  className="text-sm font-medium"
+                >
+                  {t(key)}
+                </ChoiceRow>
+              ))}
+              <ChoiceRow
+                name="requiresNitrox"
+                type="checkbox"
+                defaultChecked={values?.requiresNitrox ?? false}
+                className="text-sm font-medium"
+              >
                 {t("diveSites.form.nitroxCheckbox")}
-              </label>
+              </ChoiceRow>
             </div>
           </div>
         </>

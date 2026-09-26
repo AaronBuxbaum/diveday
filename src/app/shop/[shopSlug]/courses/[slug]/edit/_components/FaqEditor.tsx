@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
 import { MAX_FAQS } from "@/lib/course-limits";
 import type { CourseFaq } from "@/lib/courses";
@@ -94,7 +94,10 @@ export function FaqEditor({
       {rows.map((row, index) => (
         <div
           key={row.key}
-          className="rounded-inset border border-border bg-surface-sunken p-3 sm:p-4"
+          // `p-4` at every width: Remove is flush, so its fill reaches 8px
+          // past its word and its ring 13px. At a phone's `p-3` the ring's
+          // outer pixel lay on this card's border.
+          className="rounded-inset border border-border bg-surface-sunken p-4"
         >
           <FieldGrid columns={1} className="gap-y-3">
             <Field label={fill(copy.questionLabel, { number: index + 1 })}>
@@ -114,7 +117,7 @@ export function FaqEditor({
                 value={row.answer}
                 placeholder={copy.answerPlaceholder}
                 onChange={(event) => update(row.key, { answer: event.target.value })}
-                className={controlClass}
+                className={textareaClassFor(3)}
               />
             </Field>
           </FieldGrid>
@@ -122,7 +125,7 @@ export function FaqEditor({
             <button
               type="button"
               onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))}
-              className={buttonClass({ variant: "danger-ghost", size: "sm" })}
+              className={buttonClass({ variant: "danger-ghost", size: "sm", flush: true })}
             >
               {fill(copy.removeFaq, { number: index + 1 })}
             </button>

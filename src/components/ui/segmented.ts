@@ -25,13 +25,24 @@
  * draws on a label that wraps a visually hidden radio.
  */
 
+/** The well every track is, whatever lays its segments out. */
+const TRACK_WELL = "gap-1 rounded-inset border border-border bg-surface-sunken p-1";
+
 /**
  * The track: a sunken well with one hairline and one step of padding, its
  * segments a step apart. Block-level `flex` — see `SegmentedControl` for why
  * never `inline-flex`.
  */
-export const segmentedTrackClass =
-  "flex gap-1 rounded-inset border border-border bg-surface-sunken p-1";
+export const segmentedTrackClass = `flex ${TRACK_WELL}`;
+
+/**
+ * The same well laid out as a grid — `SegmentedControl`'s shape once its
+ * options wrap, so every line shares its column edges. A class swapped for
+ * the track's `flex`, never an inline `display`: an inline declaration beats a
+ * stylesheet rule that is not `!important`, so a gridded track stopped obeying
+ * `print:hidden` and printed on the counter's and the manifest's pages.
+ */
+export const segmentedGridTrackClass = `grid ${TRACK_WELL}`;
 
 /**
  * **The corner of anything laid on the track: the track's corner less the

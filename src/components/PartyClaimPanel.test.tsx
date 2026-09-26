@@ -2,6 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { rendersFlush } from "@/test/button-flush";
 import { PartyClaimPanel } from "./PartyClaimPanel";
 
 afterEach(cleanup);
@@ -37,7 +38,11 @@ describe("PartyClaimPanel", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Copy reminder link" })).toBeInTheDocument();
+    // The copy button starts its line, so its word sits on the seat's name
+    // and waiver line above it, not 12px inside them (TOKEN-2-08, K-06).
+    expect(
+      rendersFlush(screen.getByRole("button", { name: "Copy reminder link" }), "ghost", "sm"),
+    ).toBe(true);
     expect(screen.getAllByText("Waiver still needed")).toHaveLength(2);
     expect(screen.getByText("Waiver complete")).toBeInTheDocument();
     expect(
