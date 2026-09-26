@@ -610,8 +610,10 @@ export function PrepBody({
                         {/* One line per fact rather than a comma-separated run:
                         two of them carry the diver's own free text, and a
                         sentence inside a joined list is where a crew loses
-                        track of which fact is which. */}
-                        <ul className="mt-0.5 flex flex-col text-muted">
+                        track of which fact is which. `gap-1` keeps that true
+                        when a fact wraps: its second line sits 20px under it
+                        and the next fact 24px, where both used to be 20. */}
+                        <ul className="mt-0.5 flex flex-col gap-1 text-muted">
                           {supportNeedsLines(
                             t,
                             diver.needs,

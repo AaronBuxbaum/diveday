@@ -547,4 +547,12 @@ describe("the packing list's geometry", () => {
       );
     }
   });
+
+  it("sets a diver's support facts apart from each other, so a wrapped fact reads as one (K-366)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const link = diverLinks(container).find((a) => a.getAttribute("href")?.endsWith("#support"));
+    const facts = link?.parentElement?.querySelector("ul");
+    expect(facts?.children.length).toBeGreaterThan(1);
+    expect(tokens(facts)).toContain("gap-1");
+  });
 });
