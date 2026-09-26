@@ -107,7 +107,7 @@ export function CourseRoster({
             // upper-cased, never translated.
             label={group.agency.toUpperCase()}
           >
-            <ul aria-labelledby={labelId} className="mt-2">
+            <ul aria-labelledby={labelId}>
               {group.courses.map((course) => (
                 <LedgerRow
                   key={course.id}

@@ -191,7 +191,7 @@ export function FirstRunChecklist({
 
   return (
     <LedgerGroup as="h2" id="first-run-heading" label={copy.groupLabel} meta={copy.progress}>
-      <p className="mt-2 text-sm text-muted">{copy.subtitle}</p>
+      <p className="text-sm text-muted">{copy.subtitle}</p>
       <ol className="mt-3">
         <ChecklistStep
           title={copy.contactTitle}

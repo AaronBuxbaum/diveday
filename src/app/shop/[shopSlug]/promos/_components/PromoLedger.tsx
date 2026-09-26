@@ -92,7 +92,7 @@ export function PromoCodeLedger({
         const labelId = `promo-shelf-${group.group}-${index}`;
         return (
           <LedgerGroup key={labelId} as="h2" id={labelId} label={labels[group.group]}>
-            <ul aria-labelledby={labelId} className="mt-2">
+            <ul aria-labelledby={labelId}>
               {group.rows.map((row) => (
                 <LedgerRow key={row.id} trailing={row.actions} pad="lg">
                   <div className="min-w-0">

@@ -59,12 +59,21 @@ function classLiterals(expression: string): string {
  * value may be a ternary, a template string or a whole element.
  */
 function ledgerRowTags(source: string): string[] {
-  const tags: string[] = [];
-  for (const opening of source.matchAll(/<LedgerRow(?=[\s>/])/g)) {
+  return openingTags(source, "LedgerRow").map((tag) => tag.own);
+}
+
+/**
+ * Every `<Name …>` opening tag in a source file: its own attributes, read as
+ * `ledgerRowTags` reads a row's, and the index just past its closing `>`.
+ */
+function openingTags(source: string, name: string): { own: string; end: number }[] {
+  const tags: { own: string; end: number }[] = [];
+  for (const opening of source.matchAll(new RegExp(`<${name}(?=[\\s>/])`, "g"))) {
     let depth = 0;
     let own = "";
     let expression: string | null = null;
-    for (let cursor = opening.index ?? 0; cursor < source.length; cursor++) {
+    let cursor = opening.index ?? 0;
+    for (; cursor < source.length; cursor++) {
       const char = source[cursor];
       if (char === "{") {
         if (depth === 0 && own.endsWith("className=")) expression = "";
@@ -80,9 +89,27 @@ function ledgerRowTags(source: string): string[] {
       else if (depth === 0 && char === ">" && source[cursor - 1] !== "=") break;
       else if (depth === 0) own += char;
     }
-    tags.push(own);
+    tags.push({ own, end: cursor + 1 });
   }
   return tags;
+}
+
+/**
+ * The first element a `<LedgerGroup>` that does not fold opens onto, as the
+ * name and the class literals of its opening tag: JSX comments and whitespace
+ * before it are skipped, and a group whose first child is an expression
+ * (`{rows.map(…)}`) reports nothing.
+ */
+function listsOpeningAGroup(source: string): { tag: string; className: string }[] {
+  return openingTags(source, "LedgerGroup")
+    .filter(({ own }) => !/\sfolded\b/.test(own) && !own.trimEnd().endsWith("/"))
+    .flatMap(({ end }) => {
+      const rest = source.slice(end).replace(/^(?:\s|\{\/\*[\s\S]*?\*\/\})*/, "");
+      const child = rest.match(/^<([A-Za-z][\w.]*)/);
+      if (!child) return [];
+      const [tag] = openingTags(rest, child[1]);
+      return [{ tag: child[1], className: tag?.own.match(/className="([^"]*)"/)?.[1] ?? "" }];
+    });
 }
 
 /**
@@ -337,6 +364,48 @@ describe("LedgerGroup", () => {
       expect(door, token).toHaveClass(token);
     }
     expect(horizon).toHaveClass("group-open/fold:rotate-90");
+  });
+
+  /**
+   * **The group owns the gap under its label** (pixel-craft class 12). Its
+   * label sat at three distances from its first hairline: 4px in the inbox,
+   * whose lists add nothing, and 10px on the booking form and Today's desk,
+   * whose lists added `mt-2` and `mt-1.5`; others added `mt-3`. The label now
+   * carries `mb-2`, in both of its shapes, and no list under one adds its own.
+   */
+  it("keeps one 8px gap under its label, with or without meta", () => {
+    const { rerender } = render(
+      <LedgerGroup label="Unknown senders">
+        <ul />
+      </LedgerGroup>,
+    );
+    expect(screen.getByText("Unknown senders")).toHaveClass("mb-2");
+    rerender(
+      <LedgerGroup label="Thursday" meta="3 departures">
+        <ul />
+      </LedgerGroup>,
+    );
+    expect(screen.getByText("Thursday")).toHaveClass("mb-2");
+  });
+
+  it("opens onto its list with no margin of the list's own, anywhere in src/", () => {
+    const offenders = sourceFiles(SRC_DIR)
+      .filter((file) => file.endsWith(".tsx") && !SWEEP_EXEMPT.has(file))
+      .flatMap((file) =>
+        listsOpeningAGroup(readFileSync(file, "utf8"))
+          .filter(({ className }) => /(?:^|\s)(?:\S*:)?-?m[ty]-/.test(className))
+          .map(({ tag, className }) => `${relative(SRC_DIR, file)}: <${tag} ${className}>`),
+      );
+    // Listed, not counted — nothing on screen will name the file.
+    expect(offenders).toEqual([]);
+  });
+
+  it("reads the first element under a group, past comments, and not a folded one", () => {
+    const source = [
+      '<LedgerGroup label="A">{/* why */}<ul className="mt-2 divide-y" /></LedgerGroup>',
+      '<LedgerGroup label="B" folded><ul className="mt-3" /></LedgerGroup>',
+    ].join("\n");
+    expect(listsOpeningAGroup(source)).toEqual([{ tag: "ul", className: "mt-2 divide-y" }]);
   });
 
   it("rings a horizon row's summary inside itself, as a ledger row's door is ringed", () => {

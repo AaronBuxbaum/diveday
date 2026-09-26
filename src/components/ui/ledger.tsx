@@ -252,9 +252,15 @@ export function LedgerGroup({
 }) {
   const SummaryLabel = as;
   if (folded === undefined) {
+    // **The group owns the gap under its label** (pixel-craft class 12): one
+    // `mb-2`, on the label in both of its shapes. It was the lists', and they
+    // disagreed — nothing in the inbox (4px from the label's ink to the first
+    // rule), `mt-2` and `mt-1.5` on the booking form and Today's desk (10px),
+    // `mt-3` elsewhere. `ledger.test.tsx` refuses a margin on a list that opens
+    // a group.
     return (
       <div className={className || undefined}>
-        <GroupLabel as={as} id={id} meta={meta}>
+        <GroupLabel as={as} id={id} meta={meta} className="mb-2">
           {label}
         </GroupLabel>
         {children}

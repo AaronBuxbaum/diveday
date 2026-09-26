@@ -211,7 +211,7 @@ function GearGroup({
   const headingId = `gear-group-${name}`;
   return (
     <LedgerGroup as="h2" id={headingId} label={t(GROUP_LABEL_KEYS[name], { count })}>
-      <ul className="mt-2" aria-labelledby={headingId}>
+      <ul aria-labelledby={headingId}>
         {rows.map((row) => (
           <GearUnitRow key={row.item.id} row={row} group={name} t={t} {...rowProps} />
         ))}

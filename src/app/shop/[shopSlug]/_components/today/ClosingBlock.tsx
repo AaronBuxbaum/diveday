@@ -147,7 +147,7 @@ export function ClosingBlock({
           been closed still hands back everything it was closed over. */}
       {leftovers.length > 0 ? (
         <LedgerGroup as="h3" label={t("closeout.leftovers.groupLabel")} className="mt-6">
-          <ul className="mt-3">
+          <ul>
             {leftovers.map((action) => (
               <LedgerRow
                 key={action.id}

@@ -819,7 +819,7 @@ export function DaySpine({
 
       {deskActions.length > 0 || showPaymentsRow || drafts.length > 0 ? (
         <LedgerGroup as="h2" label={t("shopHome.spine.deskLabel")}>
-          <ul className="mt-1.5">
+          <ul>
             {/* A closing leftover owns the row once the day settles. Keep
                 standing desk work here, but never paint one action twice. */}
             {deskActions.map((action) => (

@@ -81,7 +81,7 @@ export function SiteLibraryLedger({
               id={headingId}
               label={groupWord(group.label, t, diverT)}
             >
-              <ul className="mt-2" aria-labelledby={headingId}>
+              <ul aria-labelledby={headingId}>
                 {group.sites.map((site) => (
                   <SiteRow
                     key={site.id}

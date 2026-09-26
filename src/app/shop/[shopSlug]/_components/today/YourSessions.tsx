@@ -28,7 +28,7 @@ export function YourSessions({
   const t = staffTranslator(locale);
   return (
     <LedgerGroup as="h2" id="your-sessions-heading" label={t("today.yourSessions.heading")}>
-      <ul className="mt-3">
+      <ul>
         {sessions.map((session) => (
           <LedgerRow
             key={session.tripId}

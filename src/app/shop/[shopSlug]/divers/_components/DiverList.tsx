@@ -453,7 +453,7 @@ export function DiverList({
                   id={labelId}
                   label={group.letter ?? copy.letterOther}
                 >
-                  <ul className="mt-2" aria-labelledby={labelId}>
+                  <ul aria-labelledby={labelId}>
                     {group.rows.map((row) => (
                       // Everything sits in the row's own content rather than in
                       // `LedgerRow`'s `trailing` slot, and the row carries no
