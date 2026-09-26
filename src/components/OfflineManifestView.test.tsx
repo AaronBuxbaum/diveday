@@ -2891,10 +2891,13 @@ describe("OfflineManifestView — one column, one text edge", () => {
     expect(stateWord).toHaveClass("font-semibold");
     expect(stateWord).not.toHaveClass("text-muted");
     expect(stateWord).not.toHaveClass("bg-surface-sunken");
+    // The neutral Badge's edge is an inset ring (K-25), the same line as a
+    // border, so the chip's box shows on the sunken row.
     expect(within(row).getByText(/Buddy team:/)).toHaveClass(
       "rounded-full",
-      "border",
-      "border-border",
+      "ring-1",
+      "ring-inset",
+      "ring-border",
     );
   });
 

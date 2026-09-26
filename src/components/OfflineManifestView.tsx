@@ -2855,7 +2855,7 @@ function DiscardedRecordsNotice({
  * never look like it is telling you (ADR 20260804-buddy-teams).
  *
  * The neutral `Badge` for the same reason as the state word beside it: its
- * border is what shows the chip's box on the sunken awaiting row.
+ * edge, an inset ring, is what shows the chip's box on the sunken awaiting row.
  */
 function OfflineBuddyTeamChip({
   t,
