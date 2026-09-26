@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buttonClass } from "./button";
 import { ForgivingInput } from "./ForgivingInput";
@@ -742,6 +742,21 @@ describe("ChoiceFieldset", () => {
     expect(screen.getByText("*")).toHaveAttribute("aria-hidden", "true");
   });
 
+  it("sets a hint after its legend the way Field sets one after its caption", () => {
+    render(
+      <ChoiceFieldset legend="Badges" hint="(optional)">
+        <ChoiceRow type="checkbox" name="badge" value="padi">
+          PADI 5 Star
+        </ChoiceRow>
+      </ChoiceFieldset>,
+    );
+    // jsdom's name computation drops the hint's leading space; a browser keeps it.
+    const group = screen.getByRole("group", { name: /^Badges\s*\(optional\)$/ });
+    const hint = group.querySelector("legend > span");
+    expect(hint).toHaveClass("font-normal", "text-muted");
+    expect(hint).toHaveTextContent("(optional)");
+  });
+
   it("passes the fieldset's own props through, so a group can listen and be disabled", () => {
     render(
       <ChoiceFieldset legend="Departure" disabled data-testid="departure">
@@ -888,6 +903,55 @@ describe("Field around a child that labels itself", () => {
     expect(container.querySelector("label label")).toBeNull();
     // And it still names the control — both labels do, caption first.
     expect(screen.getByLabelText(/Map image/)).toHaveAttribute("name", "mapImage");
+  });
+
+  /**
+   * A pair of radios beside a select in a two-column `FieldGrid` (the embed
+   * generator's look) is a group, not one control, and wrapped in the
+   * caption's label the caption labelled the first radio: its name was the
+   * caption and its own words together, and a click on "Look" chose it (K-13
+   * review). A `<fieldset>`'s rendered legend sits in the box's border, outside
+   * any subgrid, so it cannot keep the row's caption line; `group` names the
+   * body by id instead and wraps nothing.
+   */
+  it("names a group of self-labelled controls by id, keeping the field's two rows", () => {
+    const { container } = render(
+      <Field label="Look" hint="Reads your page" group>
+        <div>
+          <label>
+            <input type="radio" name="look" value="site" />
+            Your site
+          </label>
+          <label>
+            <input type="radio" name="look" value="light" />
+            DiveDay
+          </label>
+        </div>
+      </Field>,
+    );
+    expect(container.querySelector("label label")).toBeNull();
+    const group = screen.getByRole("group", { name: /^Look\s*Reads your page$/ });
+    expect(group).toHaveClass("row-span-2", "grid", "grid-rows-subgrid", "gap-y-1");
+    expect(group.querySelectorAll('input[type="radio"]')).toHaveLength(2);
+    // Each radio is named by its own words and nothing else.
+    expect(screen.getByRole("radio", { name: "Your site" })).toHaveAttribute("value", "site");
+    // The caption is not a label, so a click on it chooses nothing.
+    expect(within(group).getByText("Look").closest("label")).toBeNull();
+  });
+
+  it("describes a group by its description and its refusal", () => {
+    render(
+      <Field label="Look" group description="How the embed is coloured" error="Pick one">
+        <div>
+          <label>
+            <input type="radio" name="look" value="site" />
+            Your site
+          </label>
+        </div>
+      </Field>,
+    );
+    const group = screen.getByRole("group", { name: "Look" });
+    expect(group).toHaveAccessibleDescription("How the embed is coloured Pick one");
   });
 });
 
@@ -1456,6 +1520,30 @@ function openingTags(source: string, tag: string): { index: number; text: string
   return tags;
 }
 
+/**
+ * Where the element opened at `start` closes: the `</tag>` that brings the
+ * count of open `<tag …>`s back to zero, stepping over self-closing ones. The
+ * end of the source when it never closes.
+ */
+function closingTagIndex(source: string, tag: string, start: number): number {
+  const edge = new RegExp(`<${tag}(?![A-Za-z0-9_])|</${tag}>`, "g");
+  edge.lastIndex = start;
+  let depth = 0;
+  for (const match of source.matchAll(edge)) {
+    if (match.index < start) continue;
+    if (match[0] === `</${tag}>`) {
+      depth--;
+      if (depth === 0) return match.index;
+    } else {
+      // Bounded: an opening tag is never longer than this, and reading the
+      // whole rest of the file for every tag would be quadratic.
+      const [opening] = openingTags(source.slice(match.index, match.index + 5000), tag);
+      if (!opening?.text.endsWith("/>")) depth++;
+    }
+  }
+  return source.length;
+}
+
 describe("source sweeps", () => {
   it("reads enough of the app to be worth asserting on", () => {
     expect(sourceFiles().length).toBeGreaterThan(300);
@@ -1665,6 +1753,32 @@ describe("source sweeps", () => {
    * emergency and rental-price columns 16px (K-42). A form that ever wants a
    * different gutter gets it as a prop on `FieldGrid`, not as a class.
    */
+  /**
+   * **A `Field` wraps one control, never another label.** Without `htmlFor`,
+   * a `Field` whose child is not one native control wraps it in its caption's
+   * `<label>`; handed a composite holding labels of its own, it nested a label
+   * in a label, which is invalid HTML, and the caption named whatever came
+   * first. With a logo on file, "Logo" labelled the "Remove logo" box, so a
+   * click on the caption ticked it; "Badges" labelled the first badge; the
+   * embed's "Look" the first radio (K-13 review). Name the control with
+   * `htmlFor`, caption a group of choices with `ChoiceFieldset`, or, where the
+   * group must keep a `FieldGrid` row's caption line, pass `group`.
+   */
+  it("never wraps a label in a Field's caption label", () => {
+    const labels = /<(label|ChoiceRow|ChoicePill|ImageFileInput|RemovablePhoto)\b/;
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      if (file === "src/components/ui/form.tsx") continue;
+      for (const { index, text } of openingTags(source, "Field")) {
+        if (text.endsWith("/>") || /\shtmlFor=/.test(text) || /\sgroup[\s/>]/.test(text)) continue;
+        const body = source.slice(index + text.length, closingTagIndex(source, "Field", index));
+        const hit = body.match(labels);
+        if (hit) offenders.push(`${file}:${lineOf(source, index)} wraps <${hit[1]}>`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   it("never overrides FieldGrid's column gutter at a call site", () => {
     const offenders: string[] = [];
     for (const { file, source } of sourceFiles()) {

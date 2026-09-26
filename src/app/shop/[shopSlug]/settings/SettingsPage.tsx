@@ -11,6 +11,7 @@ import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import {
+  ChoiceFieldset,
   ChoicePill,
   ChoiceRow,
   choiceClass,
@@ -956,9 +957,13 @@ export default async function SettingsPage({
                     className={textareaClassFor(3)}
                   />
                 </Field>
+                {/* `htmlFor` the picker: wrapped in the caption's label, with a
+                    logo on file "Logo" labelled the remove box before it, and
+                    a click on the caption ticked it (K-13 review). */}
                 <Field
                   label={t("settings.main.profile.logo")}
                   hint={t("settings.main.profile.logoHint")}
+                  htmlFor="settings-logo-file"
                 >
                   <div className="flex flex-col gap-3">
                     {shop.logoUrl ? (
@@ -981,6 +986,7 @@ export default async function SettingsPage({
                       </div>
                     ) : null}
                     <input
+                      id="settings-logo-file"
                       name="logoFile"
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
@@ -1034,6 +1040,7 @@ export default async function SettingsPage({
                 <Field
                   label={t("settings.main.profile.heroPhoto")}
                   hint={t("settings.main.profile.heroHint")}
+                  htmlFor="settings-cover-photo-file"
                 >
                   <div className="flex flex-col gap-3">
                     {shop.brandHeroImageUrl ? (
@@ -1056,6 +1063,7 @@ export default async function SettingsPage({
                       </div>
                     ) : null}
                     <input
+                      id="settings-cover-photo-file"
                       name="brandHeroFile"
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
@@ -1086,25 +1094,27 @@ export default async function SettingsPage({
                     />
                   </Field>
                 </FieldGrid>
-                <Field
-                  label={t("settings.main.profile.badges")}
+                {/* A group of choices, so a legend over them: as a `Field` the
+                    caption's label wrapped every badge and named the first
+                    (K-13 review). */}
+                <ChoiceFieldset
+                  legend={t("settings.main.profile.badges")}
                   hint={t("settings.main.profile.badgesHint")}
+                  bodyClassName="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
                 >
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                    {BRAND_BADGE_CODES.map((code) => (
-                      <ChoiceRow
-                        key={code}
-                        name="badge"
-                        type="checkbox"
-                        value={code}
-                        defaultChecked={shop.brandBadges.includes(code)}
-                        className="text-sm"
-                      >
-                        {t(`settings.main.profile.badgeLabels.${code}`)}
-                      </ChoiceRow>
-                    ))}
-                  </div>
-                </Field>
+                  {BRAND_BADGE_CODES.map((code) => (
+                    <ChoiceRow
+                      key={code}
+                      name="badge"
+                      type="checkbox"
+                      value={code}
+                      defaultChecked={shop.brandBadges.includes(code)}
+                      className="text-sm"
+                    >
+                      {t(`settings.main.profile.badgeLabels.${code}`)}
+                    </ChoiceRow>
+                  ))}
+                </ChoiceFieldset>
                 <FieldActions>
                   <SubmitButton
                     pendingLabel={t("settings.main.profile.submitting")}

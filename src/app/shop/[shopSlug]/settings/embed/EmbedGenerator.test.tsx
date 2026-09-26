@@ -168,10 +168,8 @@ describe("EmbedGenerator", () => {
    * `nested-corners` flag on `settings-embed` at both widths.
    */
   it("draws the look toggle from the segmented recipe, nested in its track's corner", () => {
-    const { container } = renderGenerator();
-    // By value: the first radio also answers to the field's own label, so its
-    // accessible name is not "Your site" alone (#1972).
-    const site = container.querySelector('input[type="radio"][value="site"]')?.closest("label");
+    renderGenerator();
+    const site = screen.getByRole("radio", { name: "Your site" }).closest("label");
     const light = screen.getByRole("radio", { name: "DiveDay" }).closest("label");
     const track = site?.parentElement;
     for (const token of segmentedTrackClass.split(" ")) expect(track).toHaveClass(token);
@@ -200,6 +198,24 @@ describe("EmbedGenerator", () => {
     const triggers = screen.getAllByRole("button", { name: "Copy" });
     expect(triggers.length).toBeGreaterThan(0);
     for (const trigger of triggers) expect(rendersFlush(trigger, "ghost", "sm")).toBe(true);
+  });
+
+  /**
+   * The look's caption wrapped both radios in its `<label>`, so it labelled the
+   * first: "Your site" was named by the caption and its own words together, and
+   * a click on "Look" chose it (#1972, K-13 review). The caption names the pair
+   * as a group now and labels neither.
+   */
+  it("captions the two looks as a group, each radio named by its own words", () => {
+    const { container } = renderGenerator();
+    expect(container.querySelector("label label")).toBeNull();
+    const group = screen.getByRole("group", { name: /^Look/ });
+    expect(within(group).getByRole("radio", { name: "Your site" })).toHaveAttribute(
+      "value",
+      "site",
+    );
+    expect(within(group).getByRole("radio", { name: "DiveDay" })).toHaveAttribute("value", "light");
+    expect(within(group).getByText("Look").closest("label")).toBeNull();
   });
 
   it("gives both look labels, the radios' tap targets, the 44px floor and not the 36px one", () => {

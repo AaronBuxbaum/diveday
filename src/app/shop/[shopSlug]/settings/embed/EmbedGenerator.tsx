@@ -231,7 +231,10 @@ export function EmbedGenerator({
               // 44px select (K-445). Stacked, each control has the column's
               // width and a row of its own.
               <FieldGrid columns={1}>
-                <Field label={copy.look} hint={look === "site" ? copy.lookNote : undefined}>
+                {/* `group`: two radios are not one control, and wrapped in the
+                    caption's label the caption named the first radio and a
+                    click on it chose "Your site" (#1972, K-13 review). */}
+                <Field label={copy.look} hint={look === "site" ? copy.lookNote : undefined} group>
                   {/* Two radios, so the segmented recipe rather than
                       `SegmentedControl` (a `<nav>` of links): the look is a
                       form value, not a destination. The recipe is what nests

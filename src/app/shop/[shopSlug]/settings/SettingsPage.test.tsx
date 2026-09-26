@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { type Fact, FactLine } from "@/components/ui/FactLine";
-import { Field, FieldActions } from "@/components/ui/form";
+import { ChoiceFieldset, ChoiceRow, Field, FieldActions } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
@@ -237,6 +237,74 @@ describe("the units card", () => {
     // The colour is a Client Component (picker + hex field), so it appears in
     // the server tree as an element rather than as an `<input name>`.
     expect(findElements(element, BrandColorField)).toHaveLength(1);
+  });
+});
+
+/**
+ * **No caption label wraps another label** (K-13 review). The profile row's
+ * logo, cover photo and badges were `Field`s around composites holding labels
+ * of their own, so the page nested a label in a label: with a logo on file the
+ * caption "Logo" labelled the "Remove logo" box and a click on it ticked the
+ * box, and "Badges" labelled the first badge.
+ */
+describe("the profile row's captions", () => {
+  const PROFILE = STAFF_MESSAGES["en-US"].settings.main.profile;
+
+  /** Every element in a tree carrying `name`, whatever renders it. */
+  function named(node: unknown, name: string, found: ReactElement<{ id?: string }>[] = []) {
+    if (node === null || typeof node !== "object") return found;
+    if (Array.isArray(node)) {
+      for (const child of node) named(child, name, found);
+      return found;
+    }
+    if ("props" in node) {
+      const element = node as ReactElement<{ name?: unknown; id?: string; children?: unknown }>;
+      if (element.props?.name === name) found.push(element);
+      named(element.props?.children, name, found);
+    }
+    return found;
+  }
+
+  async function profileBody() {
+    const [row] = findElements<{ sectionId?: string; children?: unknown }>(
+      await renderSettings("owner", async (db, session) => {
+        await db
+          .update(shops)
+          .set({ logoUrl: "/dive-sites/logo.png" })
+          .where(eq(shops.id, session.user.shopId));
+      }),
+      settingsRowsModule.SettingsRow,
+    ).filter((candidate) => candidate.props.sectionId === "profile");
+    return row?.props.children;
+  }
+
+  it("names the logo and cover-photo pickers with their captions, never the remove box", async () => {
+    const body = await profileBody();
+    const fields = findElements<{ label?: unknown; htmlFor?: string }>(body, Field);
+    for (const [label, input] of [
+      [PROFILE.logo, "logoFile"],
+      [PROFILE.heroPhoto, "brandHeroFile"],
+    ] as const) {
+      const [field] = fields.filter((candidate) => candidate.props.label === label);
+      expect(field?.props.htmlFor, label).toBeTruthy();
+      const [picker] = named(body, input);
+      expect(picker?.props.id, input).toBe(field?.props.htmlFor);
+    }
+  });
+
+  it("captions the badges as a group of choices, not with a field's label", async () => {
+    const body = await profileBody();
+    const groups = findElements<{ legend?: unknown; hint?: unknown; children?: unknown }>(
+      body,
+      ChoiceFieldset,
+    ).filter((group) => group.props.legend === PROFILE.badges);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.props.hint).toBe(PROFILE.badgesHint);
+    expect(inputNamesIn(groups[0]?.props.children)).toContain("badge");
+    const wrapping = findElements<{ children?: unknown }>(body, Field).filter(
+      (field) => findElements(field.props.children, ChoiceRow).length > 0,
+    );
+    expect(wrapping).toHaveLength(0);
   });
 });
 

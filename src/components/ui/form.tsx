@@ -482,6 +482,7 @@ export function Field({
   description,
   error,
   htmlFor,
+  group = false,
   markRequired = true,
   className = "",
   children,
@@ -525,6 +526,20 @@ export function Field({
    */
   error?: ReactNode;
   htmlFor?: string;
+  /**
+   * **The body is a group of controls that label themselves** — a segmented
+   * pair of radios beside a select in a two-column `FieldGrid` (the embed
+   * generator's look). The caption names the group by id (`role="group"` and
+   * `aria-labelledby`, the ARIA spelling of a fieldset and its legend) and
+   * wraps nothing. Wrapped in the caption's `<label>`, a group nested labels
+   * and the caption named its first control (K-13 review).
+   *
+   * A group of choices on a row of its own is a `ChoiceFieldset`. This is for
+   * one that must keep a `FieldGrid` row's caption line, which a rendered
+   * `<legend>` cannot: it is laid out in the fieldset's border, outside the
+   * subgrid the caption row is a track of.
+   */
+  group?: boolean;
   className?: string;
   children: ReactNode;
 }) {
@@ -607,6 +622,33 @@ export function Field({
       {error}
     </span>
   ) : null;
+
+  if (group) {
+    // `role="group"` rather than a `<fieldset>`: its legend would leave the
+    // subgrid (see the prop). The description and the refusal describe the
+    // group, since no one control inside it owns them.
+    const captionId = `${fieldId}-caption`;
+    const describedBy = [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
+    return (
+      // biome-ignore lint/a11y/useSemanticElements: a fieldset's rendered legend cannot take the FieldGrid row's caption track
+      <div
+        role="group"
+        aria-labelledby={captionId}
+        aria-describedby={describedBy}
+        className={`row-span-2 grid min-w-0 grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`}
+      >
+        <span className="self-end text-pretty">
+          <span id={captionId}>{captionContent}</span>
+          {aside}
+        </span>
+        <span className="grid content-start gap-1">
+          {children}
+          {descriptionSpan}
+          {errorSpan}
+        </span>
+      </div>
+    );
+  }
 
   if (!isControl) {
     // No single control element to clone an id/aria-describedby onto. An
@@ -863,6 +905,7 @@ export function ChoicePill({
  */
 export function ChoiceFieldset({
   legend,
+  hint,
   required = false,
   className = "",
   bodyClassName = "",
@@ -870,6 +913,8 @@ export function ChoiceFieldset({
   ...fieldset
 }: {
   legend: ReactNode;
+  /** A short qualifier after the legend, set the way `Field` sets its `hint`. */
+  hint?: ReactNode;
   required?: boolean;
   className?: string;
   bodyClassName?: string;
@@ -879,7 +924,8 @@ export function ChoiceFieldset({
     <fieldset className={className || undefined} {...fieldset}>
       <legend className="text-sm font-medium text-pretty">
         {legend}
-        {/* Bound to the legend's last word, as `Field`'s marker is. */}
+        {hint ? <span className="font-normal text-muted"> {hint}</span> : null}
+        {/* Bound to the caption's last word, as `Field`'s marker is. */}
         {required ? (
           <span aria-hidden="true" className="text-danger">
             {"\u00A0"}*
