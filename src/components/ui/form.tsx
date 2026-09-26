@@ -734,23 +734,49 @@ export function ChoiceRow({ type, className = "", children, ...input }: ChoicePr
  * `size="md"` sets the words at 16px, for a diver-facing form whose own copy
  * is 16px (the waiver); the default is a staff form's 14px. The height is
  * 44px either way.
+ *
+ * `aside` is what sits beside the words and must not be part of them — a
+ * rental item's explainer and its price. A label's text is the box's
+ * accessible name, and a click on a button inside a label toggles the box, so
+ * the pill becomes a bordered `<div>` holding the label and then the aside;
+ * the label keeps the plain pill's inset and gap, so a column of pills with
+ * and without asides stands its boxes on one edge. Those pills were spelled
+ * by hand at `pl-3 gap-3`, 4px off the plain pill beside them, with no fill
+ * and no hover (RentalFitForm, K-13 review).
  */
 export function ChoicePill({
   type,
   size = "sm",
+  aside,
   className = "",
   children,
   ...input
-}: ChoiceProps & { size?: "sm" | "md" }) {
+}: ChoiceProps & { size?: "sm" | "md"; aside?: ReactNode }) {
+  const pill = `rounded-lg border border-border bg-surface transition-colors hover:bg-surface-sunken ${size === "md" ? "text-base" : "text-sm"}`;
+  const row = "grid cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-2 py-2";
+  if (aside === undefined || aside === null || aside === false) {
+    return (
+      <label className={`${row} min-h-11 ${pill} px-4 ${className}`.trim()}>
+        <span className={CHOICE_BOX_LINE}>
+          <input type={type} {...input} className={choiceClass} />
+        </span>
+        <span>{children}</span>
+      </label>
+    );
+  }
+  // The label stretches to the pill's height (`self-stretch`, no floor of its
+  // own), so the pill is 44px like a plain one rather than 44px of label
+  // inside two borders, and the whole height left of the aside is its target.
   return (
-    <label
-      className={`grid min-h-11 cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-2 rounded-lg border border-border bg-surface px-4 py-2 transition-colors hover:bg-surface-sunken ${size === "md" ? "text-base" : "text-sm"} ${className}`.trim()}
-    >
-      <span className={CHOICE_BOX_LINE}>
-        <input type={type} {...input} className={choiceClass} />
-      </span>
-      <span>{children}</span>
-    </label>
+    <div className={`flex min-h-11 items-center gap-2 ${pill} pe-4 ${className}`.trim()}>
+      <label className={`${row} flex-1 self-stretch ps-4`}>
+        <span className={CHOICE_BOX_LINE}>
+          <input type={type} {...input} className={choiceClass} />
+        </span>
+        <span>{children}</span>
+      </label>
+      {aside}
+    </div>
   );
 }
 

@@ -810,7 +810,9 @@ A checkbox or radio a person sees is drawn one way, from `src/components/ui/form
   the words' first line however many lines they wrap to.
 - **`ChoicePill`** is the bordered answer pill — Yes / No on the medical questionnaire, a call's
   outcome, a staffer's roles — 44px, `px-4`, one hover. `size="md"` sets its words at 16px for a
-  diver-facing form whose copy is 16px.
+  diver-facing form whose copy is 16px. `aside` holds what sits beside the words and must stay out
+  of the box's name — a rental item's explainer and price: the pill becomes a bordered `<div>`
+  around its label and the aside, with the box on the plain pill's 16px inset.
 - **`ChoiceFieldset`** captions a group of them the way `Field` captions a control: a
   `text-sm font-medium` legend, then 4px, then the body (`bodyClassName` lays the choices out).
   `required` draws `Field`'s aria-hidden `*`. Hand-rolled legends put 8px there (`mb-2`, `mt-2`),

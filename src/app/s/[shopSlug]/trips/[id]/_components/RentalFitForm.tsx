@@ -332,42 +332,41 @@ export function RentalFitForm({
                 const hintKey = RENTABLE_ITEM_HINT_KEYS[kind];
                 const itemLabel = t(RENTABLE_ITEM_LABEL_KEYS[kind]);
                 return (
-                  // The hint sits *outside* the `<label>`: a label's text is
-                  // the checkbox's accessible name, and clicking a control
-                  // nested inside one toggles the box underneath it.
-                  <div
+                  // The hint sits *outside* the `<label>` — the pill's
+                  // `aside`: a label's text is the checkbox's accessible
+                  // name, and clicking a control nested inside one toggles the
+                  // box underneath it.
+                  <ChoicePill
                     key={name}
-                    className="flex min-h-11 items-center gap-2 rounded-lg border border-border pr-3"
+                    type="checkbox"
+                    name={name}
+                    checked={rentedKinds.has(kind)}
+                    onChange={(event) => {
+                      setRentedKinds((current) => {
+                        const next = new Set(current);
+                        if (event.target.checked) next.add(kind);
+                        else next.delete(kind);
+                        return next;
+                      });
+                    }}
+                    aside={
+                      <>
+                        {hintKey ? (
+                          <InfoHint
+                            label={t("rental.jargonHintLabel", { item: itemLabel })}
+                            detail={t(hintKey)}
+                          />
+                        ) : null}
+                        {showPricing && priceCents !== undefined ? (
+                          <span className="text-muted">
+                            {formatMoneyCents(priceCents, currency, locale)}
+                          </span>
+                        ) : null}
+                      </>
+                    }
                   >
-                    <label className="flex min-h-11 flex-1 items-center gap-3 pl-3 text-sm">
-                      <input
-                        name={name}
-                        type="checkbox"
-                        checked={rentedKinds.has(kind)}
-                        onChange={(event) => {
-                          setRentedKinds((current) => {
-                            const next = new Set(current);
-                            if (event.target.checked) next.add(kind);
-                            else next.delete(kind);
-                            return next;
-                          });
-                        }}
-                        className="size-4 accent-primary"
-                      />
-                      <span className="flex-1">{itemLabel}</span>
-                    </label>
-                    {hintKey ? (
-                      <InfoHint
-                        label={t("rental.jargonHintLabel", { item: itemLabel })}
-                        detail={t(hintKey)}
-                      />
-                    ) : null}
-                    {showPricing && priceCents !== undefined ? (
-                      <span className="text-sm text-muted">
-                        {formatMoneyCents(priceCents, currency, locale)}
-                      </span>
-                    ) : null}
-                  </div>
+                    {itemLabel}
+                  </ChoicePill>
                 );
               })}
             </div>

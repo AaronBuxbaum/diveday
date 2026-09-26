@@ -460,6 +460,53 @@ describe("ChoicePill and ChoiceRow", () => {
     expect(pill).not.toHaveClass("text-sm");
   });
 
+  /**
+   * **A pill with something beside its words keeps one box column.** A rental
+   * item carries an explainer and a price, which must stay outside the label
+   * (a label's text is the box's name, and a click on a button inside one
+   * toggles the box). Those pills were a bordered `<div>` around a label,
+   * spelled by hand at `pl-3 gap-3` beside the nitrox `ChoicePill`'s `px-4
+   * gap-x-2`, so the boxes in one form stood 4px apart and only one pill had
+   * the fill and the hover (RentalFitForm, K-13 review).
+   */
+  it("keeps an aside outside the label, with the box where a plain pill puts it", () => {
+    render(
+      <ChoicePill
+        type="checkbox"
+        name="fins"
+        checked={false}
+        onChange={() => {}}
+        aside={
+          <>
+            <button type="button">What are fins?</button>
+            <span>$8</span>
+          </>
+        }
+      >
+        Fins
+      </ChoicePill>,
+    );
+    const box = screen.getByRole("checkbox", { name: "Fins" });
+    expect(box).toHaveAttribute("name", "fins");
+    expect(box).toHaveClass("size-4", "shrink-0");
+    const label = box.closest("label");
+    expect(label).not.toContainElement(screen.getByRole("button", { name: "What are fins?" }));
+    expect(label).not.toHaveTextContent("$8");
+    // The box's inset and the words' gap are the plain pill's.
+    expect(label).toHaveClass("ps-4", "gap-x-2", "flex-1");
+    const pill = label?.parentElement;
+    expect(pill).toHaveClass(
+      "min-h-11",
+      "rounded-lg",
+      "border",
+      "bg-surface",
+      "pe-4",
+      "text-sm",
+      "hover:bg-surface-sunken",
+    );
+    expect(pill).toContainElement(screen.getByRole("button", { name: "What are fins?" }));
+  });
+
   it("puts a 16px checkbox on the first line of a 44px row, and passes every input prop", () => {
     let node: HTMLInputElement | null = null;
     render(
@@ -1308,17 +1355,28 @@ describe("source sweeps", () => {
   // A pill is a 44px bordered row padded at its sides. A bordered *card*
   // padded all round (`p-3`), holding a title and a sentence — the merge
   // picker, the conditions hold — is another component and not this rule's.
+  // The pill with something beside its words is a bordered `<div>` around its
+  // label, so the rule reads those too: a hand-spelled one stood its box 4px
+  // off the plain pill's beside it (RentalFitForm, K-13 review).
   it("draws every bordered answer pill with ChoicePill", () => {
     const offenders: string[] = [];
+    const bordered = (text: string) =>
+      ["rounded-lg", "border", "min-h-11"].every((token) =>
+        new RegExp(`\\b${token}\\b`).test(text),
+      );
+    const holdsABox = (body: string) =>
+      /type=(?:"|\{")(checkbox|radio)"/.test(body) && !/\bsr-only\b/.test(body);
     for (const { file, source } of sourceFiles()) {
       for (const { index, text } of openingTags(source, "label")) {
-        const pill = ["rounded-lg", "border", "min-h-11", "px-\\d"].every((token) =>
-          new RegExp(`\\b${token}\\b`).test(text),
-        );
-        if (!pill) continue;
+        if (!bordered(text) || !/\bpx-\d/.test(text)) continue;
         const body = source.slice(index + text.length, source.indexOf("</label>", index));
-        if (/type=(?:"|\{")(checkbox|radio)"/.test(body) && !/\bsr-only\b/.test(body))
-          offenders.push(`${file}:${lineOf(source, index)}`);
+        if (holdsABox(body)) offenders.push(`${file}:${lineOf(source, index)}`);
+      }
+      for (const { index, text } of openingTags(source, "div")) {
+        if (!bordered(text)) continue;
+        const body = source.slice(index + text.length, source.indexOf("</div>", index));
+        if (/<label\b/.test(body) && holdsABox(body))
+          offenders.push(`${file}:${lineOf(source, index)} (a bordered div around a label)`);
       }
     }
     expect(offenders).toEqual([]);
