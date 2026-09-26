@@ -337,6 +337,22 @@ describe("one primary, and the rest are the rows themselves", () => {
     expect(stripe).not.toHaveClass("text-muted");
   });
 
+  it("sets Stripe's arrow as far from its words as a door's is from its row", () => {
+    // The ink-cropped chevron has no side bearing left to act as a gap, so the
+    // label's `gap-1` put "payments" and its arrow 4px apart where every
+    // door's arrow stands clear of its words by the row's own gap (K-118
+    // review, today-empty).
+    const { container } = renderFresh();
+    const gaps = (element: Element | null | undefined) =>
+      [...(element?.classList ?? [])].filter((token) => token.startsWith("gap-"));
+    const label = screen
+      .getByRole("link", { name: "Connect Stripe" })
+      .querySelector("svg")?.parentElement;
+    const door = container.querySelector("li > svg")?.parentElement;
+    expect(gaps(label)).toEqual(["gap-3"]);
+    expect(gaps(label)).toEqual(gaps(door));
+  });
+
   it("leaves a settled step nothing at all to press", () => {
     renderFresh({ contactDone: true, profileDone: true, stripeDone: true });
     expect(screen.queryByRole("link", { name: "Add contact details" })).not.toBeInTheDocument();

@@ -88,10 +88,15 @@ export type FirstRunChecklistCopy = {
  * one draws the same glyph in the same box (`DoorChevron`), so its arrow ends
  * on the content edge the doors' arrows end on; the square `chevron-right` it
  * drew stopped 5px short of it (pixel-craft class 2).
+ *
+ * **And as far from its words as a door's arrow is from its row's** (`gap-3`,
+ * the row's own gap). The cropped glyph has no side bearing left to stand in
+ * for a gap: at `gap-1` "payments" and its arrow sat 4px apart where every
+ * door's arrow stands 11-12px clear of its words (K-118 review, today-empty).
  */
 function StepDoorLabel({ label }: { label: string }) {
   return (
-    <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
+    <span className="flex shrink-0 items-center gap-3 text-sm font-medium text-primary">
       {label}
       <DoorChevron ink="current" />
     </span>
