@@ -489,7 +489,10 @@ export function SourcesFootnote({
                 rel="noreferrer nofollow"
                 className="hover:text-foreground hover:underline"
               >
-                {source.label} ↗
+                {/* A no-break space: the arrow wraps with the last word, never alone
+                    on a line of its own (K-232). */}
+                {source.label}
+                {"\u00A0"}↗
               </a>
             </li>
           ))}
