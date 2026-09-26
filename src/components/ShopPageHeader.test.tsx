@@ -10,6 +10,7 @@ import {
   ShopPageHeader,
   ShopPageHeaderSkeleton,
   ShopStat,
+  ShopStatSkeleton,
 } from "./ShopPageHeader";
 
 afterEach(cleanup);
@@ -466,6 +467,33 @@ describe("ShopStat's figure", () => {
     const tile = container.querySelector("dl > div");
     expect(Array.from(tile?.children ?? []).map((child) => child.tagName)).toEqual(["DT", "DD"]);
     expect(tile?.querySelector("dd")?.className).not.toMatch(/(?:^|\s)mt-/);
+  });
+});
+
+describe("ShopStat's skeleton", () => {
+  /**
+   * **The tile's own box and rows, one bar per row at that row's line box**
+   * (K-188). The packing list stood its tank tiles in with `h-28` boxes: 112px
+   * against the tile's 98 on a phone and 106 from `sm`, so every tile shrank
+   * and everything under it moved when the list arrived. A bar that is the
+   * text's own line box (`h-lh` at the text's size) moves with the type.
+   */
+  it("wears the loaded tile's classes, and a label bar and a figure bar at their line boxes", () => {
+    const loaded = render(<ShopStat label="Total" value={20} />).container.firstElementChild;
+    const skeleton = render(<ShopStatSkeleton />).container.firstElementChild;
+    expect(skeleton?.className).toBe(loaded?.className);
+
+    const typeSize = (element: Element | null | undefined) =>
+      (element?.className ?? "")
+        .split(" ")
+        .filter((token) => /^text-(?:xs|sm|base|lg|\d?xl)$/.test(token));
+    const [label, figureRow] = Array.from(loaded?.children ?? []);
+    const [labelBar, figureBar] = Array.from(skeleton?.children ?? []);
+    expect(skeleton?.children).toHaveLength(2);
+    expect(typeSize(label)).toHaveLength(1);
+    expect(labelBar).toHaveClass("h-lh", ...typeSize(label));
+    expect(typeSize(figureRow.firstElementChild)).toHaveLength(1);
+    expect(figureBar).toHaveClass("h-lh", ...typeSize(figureRow.firstElementChild));
   });
 });
 

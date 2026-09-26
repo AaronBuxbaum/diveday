@@ -455,6 +455,39 @@ export function SkeletonLineBars({
 }
 
 /**
+ * **Two rows of the grid the tile stands in: labels, then figures** (K-75).
+ * In block flow a label that wrapped ("Divers on the / manifest") pushed its
+ * own figure 20px below the figures beside it. Subgridding onto the parent's
+ * rows — the mechanism `Field` uses for captions over controls
+ * (`ui/form.tsx`) — makes the label row as tall as the row's longest label,
+ * so every figure starts on one line. Not `flex-col` with the figure
+ * `mt-auto`: that aligns figures only when every tile carries the same lines
+ * under them, and the blowout record's first tile has no detail where its
+ * neighbours do. The row gap is the space the figure's `mt-2` / `mt-0.5`
+ * gave. Outside a grid, `subgrid` falls back to plain rows and the tile
+ * reads exactly as it did.
+ */
+function statRowsClass(inset: boolean) {
+  return `grid row-span-2 grid-rows-subgrid ${inset ? "gap-y-0.5" : "gap-y-2"}`;
+}
+
+/** The raised tile's chrome, or the sunken inset's, around its two rows. */
+function statTileClass(inset: boolean) {
+  // The raised tile takes its chrome from the card, not from a copy of the
+  // card's spelling: a stat tile and a section card are the same object
+  // (docs/design/forms-and-controls.md), so neither can drift from the
+  // other. `inset` is the sunken, chrome-less variant and has none of it.
+  const rows = statRowsClass(inset);
+  return inset
+    ? `${rows} rounded-inset bg-surface-sunken px-4 py-3`
+    : sectionCardClass({ className: rows });
+}
+
+/** The label's and the figure's type sizes, raised and inset — read by `ShopStatSkeleton` too. */
+const STAT_LABEL_SIZE = { card: "text-sm", inset: "text-xs" } as const;
+const STAT_FIGURE_SIZE = { card: "text-3xl", inset: "text-2xl" } as const;
+
+/**
  * The one stat tile: a quiet label, the figure at headline size, and an
  * optional plain-language line under it. This anatomy used to exist twice —
  * here as a label-plus-pill card, and on Reports as a local `Metric` with the
@@ -532,40 +565,11 @@ export function ShopStat({
   const Label = definition ? "dt" : "p";
   const Value = definition ? "dd" : "p";
   const inset = variant === "inset";
-  const valueClass = `font-semibold tracking-tight tabular-nums ${
-    inset ? "text-2xl" : "text-3xl"
-  } ${toneClass}`;
-
-  // **Two rows of the grid the tile stands in: labels, then figures** (K-75).
-  // In block flow a label that wrapped ("Divers on the / manifest") pushed its
-  // own figure 20px below the figures beside it. Subgridding onto the parent's
-  // rows — the mechanism `Field` uses for captions over controls
-  // (`ui/form.tsx`) — makes the label row as tall as the row's longest label,
-  // so every figure starts on one line. Not `flex-col` with the figure
-  // `mt-auto`: that aligns figures only when every tile carries the same lines
-  // under them, and the blowout record's first tile has no detail where its
-  // neighbours do. The row gap is the space the figure's `mt-2` / `mt-0.5`
-  // gave. Outside a grid, `subgrid` falls back to plain rows and the tile
-  // reads exactly as it did.
-  const rows = `grid row-span-2 grid-rows-subgrid ${inset ? "gap-y-0.5" : "gap-y-2"}`;
+  const valueClass = `font-semibold tracking-tight tabular-nums ${STAT_FIGURE_SIZE[variant]} ${toneClass}`;
 
   return (
-    <div
-      // The raised tile takes its chrome from the card, not from a copy of the
-      // card's spelling: a stat tile and a section card are the same object
-      // (docs/design/forms-and-controls.md), so neither can drift from the
-      // other. `inset` is the sunken, chrome-less variant and has none of it.
-      className={
-        inset
-          ? `${rows} rounded-inset bg-surface-sunken px-4 py-3`
-          : sectionCardClass({ className: rows })
-      }
-    >
-      <Label
-        className={inset ? "text-xs font-medium text-muted" : "text-sm font-medium text-muted"}
-      >
-        {label}
-      </Label>
+    <div className={statTileClass(inset)}>
+      <Label className={`${STAT_LABEL_SIZE[variant]} font-medium text-muted`}>{label}</Label>
       {definition ? (
         <Value className={valueClass}>
           {value}
@@ -640,6 +644,26 @@ function statDetail({
         </Link>
       ) : null}
     </>
+  );
+}
+
+/**
+ * {@link ShopStat} drawn as bars — the raised tile's own box and rows, holding
+ * one bar per row, each the line box of the text it stands in for (`h-lh` at
+ * the label's and the figure's own sizes).
+ *
+ * The packing list stood its tank tiles in with `h-28` boxes: 112px against
+ * the tile's 98 on a phone and 106 from `sm`, so the tiles shrank and the
+ * list below them moved when it arrived (K-188). A fixed height is a guess at
+ * the padding, the border and two line boxes; this reads all of them from the
+ * tile. Like the tile, it subgrids onto the rows of the grid it stands in.
+ */
+export function ShopStatSkeleton() {
+  return (
+    <div className={statTileClass(false)}>
+      <div className={`h-lh ${STAT_LABEL_SIZE.card} w-16 rounded bg-surface-sunken`} />
+      <div className={`h-lh ${STAT_FIGURE_SIZE.card} w-12 rounded bg-surface-sunken`} />
+    </div>
   );
 }
 
