@@ -246,17 +246,34 @@ describe("a track too narrow for one line", () => {
     const nav = renderInRoom(800);
     expect(nav.style.display).toBe("");
     expect(nav.style.gridTemplateColumns).toBe("");
-    expect(nav).toHaveClass("flex-wrap");
+    expect(nav).toHaveClass("flex", "flex-wrap");
+    expect(nav).not.toHaveClass("grid");
   });
 
   it("lays wrapped options on columns every line shares, balanced across the lines", () => {
     // Three 100px options fit in 300px; five of them then take two lines, and
     // three columns give 3 + 2 rather than 4 + 1.
     const nav = renderInRoom(300);
-    expect(nav.style.display).toBe("grid");
+    expect(nav).toHaveClass("grid");
+    expect(nav).not.toHaveClass("flex");
     expect(nav.style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
     // A grid spans its room; the content-width track's `w-fit` would shrink it.
     expect(nav).not.toHaveClass("w-fit");
+  });
+
+  /**
+   * **A gridded track still leaves the printed page** (the counter's and the
+   * manifest's tracks are chrome, `print:hidden`). The grid's `display` was an
+   * inline style, and an inline declaration beats a stylesheet rule that is
+   * not `!important`, so every track that had flipped to a grid printed. The
+   * display is a class swapped for the track's `flex`, which `print:hidden`
+   * outranks as it always did; only the column count is inline.
+   */
+  it("keeps its display in a class print:hidden outranks, never in an inline style", () => {
+    const nav = renderInRoom(300);
+    expect(nav.style.display).toBe("");
+    expect(nav.getAttribute("style") ?? "").not.toMatch(/display/);
+    expect(nav).toHaveClass("print:hidden");
   });
 
   it("never lays a column narrower than its widest option", () => {

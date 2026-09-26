@@ -6,6 +6,7 @@ import {
   SEGMENT_CORNER,
   SEGMENT_RAISED,
   segmentClass,
+  segmentedGridTrackClass,
   segmentedTrackClass,
 } from "@/components/ui/segmented";
 
@@ -340,11 +341,15 @@ export function SegmentedControl({
   // with `mb-*` would stack the two margins instead of taking the larger —
   // +28px of phantom space the old hand-rolled navs (all block-level) never
   // had. Content width comes from `w-fit`, not from being inline. A grid
-  // spans its room, like the wrapped row it replaces; its `display` is inline
-  // style because `grid` and the track's own `flex` are one property, and two
-  // utilities for it would be settled by stylesheet order rather than intent.
-  const track = `relative ${segmentedTrackClass} ${
-    columns !== null ? "" : fill ? "flex-wrap" : "w-fit max-w-full flex-wrap"
+  // spans its room, like the wrapped row it replaces. Its `display` is a class
+  // swapped for the track's `flex` (`segmentedGridTrackClass`), never added
+  // beside it — two utilities for one property are settled by stylesheet
+  // order, not intent — and never an inline style, which outranks
+  // `print:hidden` and printed the track. Only the column count is inline.
+  const track = `relative ${
+    columns !== null
+      ? segmentedGridTrackClass
+      : `${segmentedTrackClass} ${fill ? "flex-wrap" : "w-fit max-w-full flex-wrap"}`
   } print:hidden ${className}`
     .replace(/\s+/g, " ")
     .trim();
@@ -354,9 +359,7 @@ export function SegmentedControl({
       aria-label={ariaLabel}
       className={track}
       style={
-        columns !== null
-          ? { display: "grid", gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
-          : undefined
+        columns !== null ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` } : undefined
       }
     >
       {/* First in the tree so every option paints above it; `relative` on the
