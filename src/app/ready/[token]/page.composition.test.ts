@@ -217,9 +217,11 @@ describe("day-of details", () => {
       "saveDiveIntentFromReady.bind(null, token)",
     ]) {
       const form = formFor(action);
-      const save = form.indexOf("<SubmitButton");
-      expect(save, action).toBeGreaterThan(-1);
-      expect(form.slice(form.lastIndexOf("</Field>", save), save), action).toContain("<div>");
+      expect(form.split("<SubmitButton").length - 1, action).toBe(1);
+      // The wrapper as the Save's own parent element, opened right before it
+      // and closed right after it: the word `<div>` in the comment above the
+      // Save is not a wrapper, and would outlive one that was taken away.
+      expect(form, action).toMatch(/<div>\s*<SubmitButton\b[\s\S]*?<\/SubmitButton>\s*<\/div>/);
     }
   });
 });
