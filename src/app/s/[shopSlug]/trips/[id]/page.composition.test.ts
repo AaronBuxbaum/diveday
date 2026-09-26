@@ -243,7 +243,9 @@ describe("the trip page's order", () => {
    * the shop's footer scroll clear of it and a field or fragment lands above it.
    */
   it("pins the phone's Book as a bar the document ends clear of", () => {
-    expect(SOURCE.includes("fixed right-4 bottom-4")).toBe(false);
+    // No control pinned by a corner offset any more: the pill was `fixed`
+    // 16px off the screen's bottom corner.
+    expect(SOURCE.match(/\bfixed (?:[\w-]+ )*bottom-4\b/g) ?? []).toEqual([]);
     const bar = SOURCE.match(
       /<div\s+data-foot-bar=""\s+className="([^"]*)"\s*>\s*(?:\{\/\*[\s\S]*?\*\/\}\s*)?<a href="#book" className=\{buttonClass\(\{ className: "w-full" \}\)\}>/,
     );
