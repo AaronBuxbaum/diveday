@@ -43,7 +43,9 @@ const latest: DayCloseoutRecord = {
         decision: "carry",
       },
     ],
-    adminTasks: [{ id: "a1", status: "pending", total: 3, completed: 1, pending: 2, failed: 0 }],
+    adminTasks: [
+      { id: "post_dive_reports", status: "pending", total: 3, completed: 1, pending: 2, failed: 0 },
+    ],
   },
 };
 
