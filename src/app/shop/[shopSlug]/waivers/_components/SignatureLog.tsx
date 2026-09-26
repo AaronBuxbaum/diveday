@@ -139,8 +139,14 @@ function SignatureRow({
             52: its `min-h-13` sits on the element carrying its rule. The old
             `min-h-12` stood these rows 49px apart in an app of 52px ledgers. */}
         <summary className="-mx-2 flex min-h-12.75 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/60 focus-visible:focus-ring-inset">
-          <span className="font-medium sm:w-52 sm:shrink-0">{entry.personName}</span>
-          <span className="min-w-0 flex-1 truncate text-sm text-muted">{trip}</span>
+          {/* On a phone the departure takes a line of its own under the name,
+              `LedgerRow`'s `stacked` grammar: beside the name, time and caret
+              it truncated to a few words and the date never showed. The name
+              then pushes the badges, time and caret to the first line's end. */}
+          <span className="font-medium max-sm:me-auto sm:w-52 sm:shrink-0">{entry.personName}</span>
+          <span className="min-w-0 flex-1 text-sm text-muted max-sm:order-last max-sm:basis-full sm:truncate">
+            {trip}
+          </span>
           <IntegrityBadge entry={entry} t={t} />
           {/* The summary badge only — never the answers, which sit in the
               block below and are read by opening the row. */}

@@ -276,3 +276,25 @@ describe("a row's height", () => {
     expect(summary).not.toHaveClass("min-h-12");
   });
 });
+
+/**
+ * **On a phone the departure is read whole, on a line of its own** (class 8).
+ * The pixel probe (staff-waivers@390): the departure shared the first line
+ * with the name, the time and the caret, and truncated to 38–182px of its
+ * 276–351px on every row — the date never showed, and a "Not sealed" row kept
+ * only "Two-…". The column is 358px, wider than the longest seeded value, so
+ * below `sm` the row takes `LedgerRow`'s `stacked` grammar: the name, badges,
+ * time and caret on the first line, the departure under them at full width.
+ * From `sm` up it is the one-line row it was.
+ */
+describe("a row on a phone", () => {
+  it("drops the departure to a full-width line under the name instead of cutting it", () => {
+    const { container } = renderLog([entry({ id: "a", integrity: "unsealed" })]);
+    const summary = summaryOf(container, "a");
+    const trip = within(summary).getByText(/Two-Tank Reef/);
+    expect(trip).toHaveClass("max-sm:order-last", "max-sm:basis-full", "sm:truncate");
+    expect(trip).not.toHaveClass("truncate");
+    // The name pushes the badge, time and caret to the first line's end.
+    expect(within(summary).getByText("Grace Mensah")).toHaveClass("max-sm:me-auto");
+  });
+});
