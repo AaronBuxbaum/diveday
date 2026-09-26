@@ -339,7 +339,10 @@ function TheFile({
         ) : null}
       </dl>
 
-      <form action={saveShelfSizesAction.bind(null, token)} className="mt-6">
+      {/* `mt-8`, as the contact form below opens after its Save: the last
+          fact row above adds no padding of its own (`Row`), so both
+          subheads open one gap under what precedes them (K-597). */}
+      <form action={saveShelfSizesAction.bind(null, token)} className="mt-8">
         <h3 className="text-base font-semibold">{t("shelf.sizes")}</h3>
         <FieldGrid columns={2} className="mt-3">
           {sizeBoxes.map((box) => (
@@ -425,9 +428,15 @@ function TheFile({
   );
 }
 
+/**
+ * One fact of the file. The last row gives up its bottom padding and its
+ * floor: the rule-less foot of the list is not space to hold, and its `py-3`
+ * put 12px of nothing between the last fact and the "Sizes" subhead — the
+ * floor alone hands back 8 of those 12 (K-597).
+ */
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-h-11 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
+    <div className="flex min-h-11 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 last:min-h-0 last:pb-0">
       <dt className="text-base font-medium">{label}</dt>
       <dd className="text-sm text-muted">{children}</dd>
     </div>
