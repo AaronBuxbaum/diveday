@@ -624,11 +624,10 @@ export function CounterQueueRow({
           </Badge>
         </div>
       </div>
-      {/* The one blocked-diver presentation, shared with the by-departure view.
-          It shows *every* blocker; a single sayable reason sits open on the row
-          and the rest name their first one in the summary (#759, #890). */}
+      {/* The one blocked-diver presentation. It shows *every* blocker; a
+          single sayable reason sits open on the row and the rest name their
+          first one in the summary (#759, #890). */}
       <BlockedDiverRow
-        layout="below"
         surface="check_in"
         waiverCopy={waiverSendCopy(t)}
         blockers={row.readiness.blockers}
@@ -648,8 +647,8 @@ export function CounterQueueRow({
           // `?notice=…` alone rendered the banner, `?notice=…&bid=…` rendered
           // neither (issue 1574).
           //
-          // `BlockedDiverRow` renders `extra` unconditionally in both layouts,
-          // so a refusal routed to a rendered row always has somewhere to land.
+          // `BlockedDiverRow` renders `extra` unconditionally, so a refusal
+          // routed to a rendered row always has somewhere to land.
           identityControl ? (
             // The confirm sits *after* the waiver control, in the order the
             // desk works them: the identity is what releases the matched

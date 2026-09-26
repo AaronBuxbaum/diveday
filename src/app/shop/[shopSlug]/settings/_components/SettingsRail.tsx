@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { GroupLabel } from "@/components/ui/ledger";
+import { RAIL_ROW_CLASS, RAIL_ROW_CURRENT, RAIL_ROW_IDLE } from "@/components/ui/rail";
 import {
   currentSettingsRailRowId,
   type SettingsRailRow,
@@ -19,10 +20,10 @@ import {
  *
  * It renders from `lg` up and **nowhere else**: below that the phone keeps the
  * grouped list, which is already the right anatomy, and a directory stacked
- * above the content is the sub-nav card this repo deleted once already. That
- * is also why a row is 36px rather than the app's 44px touch floor — no finger
- * ever reaches this control, and the floor is the dock test's, an operating
- * condition for a wet hand on a phone.
+ * above the content is the sub-nav card this repo deleted once already. Its
+ * rows are the page rail's one row (`RAIL_ROW_CLASS`, shared with the long
+ * editor's section rail) at the 44px floor: `lg` starts at 1024px, which is a
+ * landscape tablet held in the hand.
  *
  * **The selection model is one thing, decided in `settings-groups.ts`.** A row
  * pointing at a sub-route selects by pathname; a row pointing at a hub section
@@ -30,9 +31,9 @@ import {
  * blur, and neither ever turns a hub section into a route.
  *
  * **Three groups, and the reader can always tell which one they are in.** The
- * map is 42 rows — about 1,700px at the settings ramp's 36px row — against
- * roughly 740px of viewport beside the bar, so it has always been a *scrolling*
- * map and no legible row height changes that. What it was missing is the part
+ * map is 42 rows — about 2,000px at the rail's 44px row — against roughly
+ * 740px of viewport beside the bar, so it has always been a *scrolling* map
+ * and no legible row height changes that. What it was missing is the part
  * that makes a long map usable: a reader landed on "Your shop" and had no
  * signal that Money and Data & integrations existed at all below the fold.
  * Each group label is sticky inside the rail's own scroll area now, so the
@@ -78,6 +79,18 @@ export function SettingsRail({
   });
   const hubPath = `${shopBasePath}/settings`;
   const onHub = pathname === hubPath;
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  // The rail scrolls in a box of its own, and the layout keeps that box across
+  // a click inside the rail. Every other way in (a direct link, ⌘K's "Go to",
+  // the hub's own rows) landed with it at the top: on Kinds of day, Seasons,
+  // Print or WhatsApp that is 19 grey rows and no selected one, the row itself
+  // 140–750px below the box's fold. So whenever the current row changes, the
+  // box comes to it — when it is out of sight, and only then.
+  useEffect(() => {
+    if (currentId && scrollerRef.current) revealCurrentRow(scrollerRef.current);
+  }, [currentId]);
+  useLabelWashDepth(scrollerRef);
 
   return (
     <nav aria-label={ariaLabel} className="hidden lg:block lg:w-[264px] lg:shrink-0">
@@ -88,61 +101,175 @@ export function SettingsRail({
           so the rail hung in a gap on every viewport and its scroll area was
           short by the same amount (ADR
           20260827-clearwater-surface-language, decision 10). */}
-      <div className="sticky top-(--chrome-h) max-h-[calc(100svh-var(--chrome-h))] space-y-5 overflow-y-auto py-6 pe-2">
-        {groups.map((group) => {
-          const isCurrentGroup = group.rows.some((row) => row.id === currentId);
-          return (
-            <div key={group.id}>
-              {/* Prefixed rather than reusing the group's own id: the pane
+      <div
+        ref={scrollerRef}
+        className="sticky top-(--chrome-h) max-h-[calc(100svh-var(--chrome-h))] overflow-y-auto pe-2"
+      >
+        {/* The inset is on what the box scrolls, never on the box: a sticky
+            `top-0` sticks at its scroller's padding edge, so with `py-6` on
+            the box a stuck label stood 24px under its top, and the rows
+            scrolled past it showed through that strip — a sliver of "Trip
+            packing checklist" over "YOUR SHOP" whenever the rail opened on a
+            row further down (K-221). */}
+        <div className="space-y-5 py-6">
+          {groups.map((group) => {
+            const isCurrentGroup = group.rows.some((row) => row.id === currentId);
+            return (
+              <div key={group.id}>
+                {/* Prefixed rather than reusing the group's own id: the pane
                   already renders that id on its `<h2>`, and two of them would
                   make the fragment ambiguous.
 
-                  Sticky inside the rail's scroll area, and opaque, so the rows
-                  slide under their own group's name rather than past it. The
-                  background is the page's, because the rail sits directly on
-                  it — there is no card here to borrow a surface from. */}
-              <GroupLabel
-                id={`settings-rail-${group.id}`}
-                tone={isCurrentGroup ? "primary" : "muted"}
-                className="sticky top-0 z-10 mb-2 bg-background px-2 py-1"
-              >
-                {group.label}
-              </GroupLabel>
-              <ul aria-labelledby={`settings-rail-${group.id}`}>
-                {group.rows.map((row) => {
-                  const selected = row.id === currentId;
-                  const badge = badges?.[row.id];
-                  return (
-                    <li key={row.id}>
-                      <RailLink
-                        href={
-                          row.target.kind === "route"
-                            ? `${shopBasePath}${row.target.path}`
-                            : `${onHub ? "" : hubPath}#${settingsSectionFragment(row.target.id)}`
-                        }
-                        sameDocument={row.target.kind === "section" && onHub}
-                        selected={selected}
-                      >
-                        <span className="truncate">{labels[row.id]}</span>
-                        {/* At most one badge per row, and only for a warning —
+                  Sticky inside the rail's scroll area, and opaque while it is
+                  stuck, so the rows slide under their own group's name rather
+                  than past it. Only then: at rest the first label sits on the
+                  staff page's water-band wash, where an always-opaque label
+                  was a grey slab across the blue. `settings-rail-label`
+                  (globals.css) paints the words' box from a scroll-state
+                  query, which is why they sit in a span of their own: a
+                  container cannot style itself. And the fill is that wash,
+                  lined up by `useLabelWashDepth`, because a label stuck at the
+                  box's top is still inside it. */}
+                <GroupLabel
+                  id={`settings-rail-${group.id}`}
+                  tone={isCurrentGroup ? "primary" : "muted"}
+                  className="settings-rail-label sticky top-0 z-10 mb-2"
+                >
+                  <span className="block px-3 py-1">{group.label}</span>
+                </GroupLabel>
+                <ul aria-labelledby={`settings-rail-${group.id}`}>
+                  {group.rows.map((row) => {
+                    const selected = row.id === currentId;
+                    const badge = badges?.[row.id];
+                    return (
+                      <li key={row.id}>
+                        <RailLink
+                          href={
+                            row.target.kind === "route"
+                              ? `${shopBasePath}${row.target.path}`
+                              : `${onHub ? "" : hubPath}#${settingsSectionFragment(row.target.id)}`
+                          }
+                          sameDocument={row.target.kind === "section" && onHub}
+                          selected={selected}
+                        >
+                          {/* Wrapped, never cut: the rail is 264px by its
+                            design, and its rows inset their words 12px a
+                            side, which left "Shopify, QuickBooks, Xero &
+                            Zapier" 208px for 216px of words. The row's 44px
+                            is a floor, so a second line just grows it. */}
+                          <span className="min-w-0 text-pretty">{labels[row.id]}</span>
+                          {/* At most one badge per row, and only for a warning —
                             the settled states of these rows are quiet text on
                             the pane, not a pill on the map. */}
-                        {badge ? (
-                          <Badge tone="warning" size="sm" toneMark={false}>
-                            {badge}
-                          </Badge>
-                        ) : null}
-                      </RailLink>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          );
-        })}
+                          {badge ? (
+                            <Badge tone="warning" size="sm" toneMark={false}>
+                              {badge}
+                            </Badge>
+                          ) : null}
+                        </RailLink>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );
+}
+
+/**
+ * Scroll the rail's own box so its current row is in sight, centred, when it
+ * is not: below the box's fold, or under its group's label stuck at the top.
+ * A row already in sight is left where it is, so a click inside the rail keeps
+ * the reader's place.
+ *
+ * `scrollTop` on the box, never `scrollIntoView`: that scrolls every scrolling
+ * ancestor to the row, the page included, and the reader came to the pane.
+ * A rail that is not drawn (`hidden` below `lg`) measures zero and is left
+ * alone.
+ */
+function revealCurrentRow(scroller: HTMLElement) {
+  const row = scroller.querySelector<HTMLElement>('[aria-current="true"]');
+  if (!row) return;
+  const box = scroller.getBoundingClientRect();
+  if (box.height === 0) return;
+  const rect = row.getBoundingClientRect();
+  const label = row.closest("ul")?.previousElementSibling;
+  const cover = label instanceof HTMLElement ? label.getBoundingClientRect().height : 0;
+  if (rect.top >= box.top + cover && rect.bottom <= box.bottom) return;
+  scroller.scrollTop += rect.top + rect.height / 2 - (box.top + box.height / 2);
+  settleOnRowEdge(scroller, box);
+}
+
+/**
+ * Finish the move on a row's edge (K-221). Centring put the box's scroll
+ * wherever the arithmetic fell, and the label stuck at its top cut whichever
+ * row was passing under it — half of "Trip packing checklist" under "YOUR
+ * SHOP", a state only a hand could have left the rail in. So the first row the
+ * stuck label would cut is brought down to where a row starts under its label
+ * at rest, the label's own bottom margin below it. That is less than a row, so
+ * the centred row stays in the box.
+ */
+function settleOnRowEdge(scroller: HTMLElement, box: DOMRect) {
+  const stuck = Array.from(scroller.querySelectorAll<HTMLElement>(".settings-rail-label")).find(
+    (label) => Math.abs(label.getBoundingClientRect().top - box.top) < 1,
+  );
+  if (!stuck) return;
+  const labelBottom = stuck.getBoundingClientRect().bottom;
+  const edge = labelBottom + (Number.parseFloat(getComputedStyle(stuck).marginBottom) || 0);
+  const cut = Array.from(scroller.querySelectorAll("li"))
+    .map((item) => item.getBoundingClientRect())
+    .find((item) => item.bottom > labelBottom);
+  if (cut && cut.top < edge) scroller.scrollTop -= edge - cut.top;
+}
+
+/**
+ * Publish each group label's depth into the page's water band as
+ * `--rail-label-depth`, so a filled label paints the stretch of the wash that
+ * is behind it (globals.css, `.settings-rail-label`) rather than a flat slab of
+ * ground across the blue.
+ *
+ * Measured, because no stylesheet can know it: the band is the shop layout's
+ * background and scrolls with the page, while the rail's box is sticky and
+ * scrolls on its own. So it is read on landing and again whenever the page or
+ * the rail scrolls or the window resizes, one frame at a time. A page with no
+ * band, or a rail that is not drawn (`hidden` below `lg`), publishes nothing,
+ * and the fill stays the plain ground.
+ */
+function useLabelWashDepth(scrollerRef: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    const band = scroller?.closest<HTMLElement>(".water-band");
+    if (!scroller || !band) return;
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      if (scroller.getBoundingClientRect().height === 0) return;
+      const bandTop = band.getBoundingClientRect().top;
+      const labels = Array.from(scroller.querySelectorAll<HTMLElement>(".settings-rail-label"));
+      // Every read before any write, so the frame lays out once.
+      const depths = labels.map((label) => `${label.getBoundingClientRect().top - bandTop}px`);
+      labels.forEach((label, index) => {
+        label.style.setProperty("--rail-label-depth", depths[index] ?? null);
+      });
+    };
+    const schedule = () => {
+      if (!frame) frame = window.requestAnimationFrame(measure);
+    };
+    measure();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    scroller.addEventListener("scroll", schedule, { passive: true });
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      scroller.removeEventListener("scroll", schedule);
+    };
+  }, [scrollerRef]);
 }
 
 function RailLink({
@@ -158,15 +285,10 @@ function RailLink({
   selected: boolean;
   children: React.ReactNode;
 }) {
-  // The ring is drawn inside the row. The rows sit flush with the left edge
-  // of the rail's own scroll box, which cut the outset ring's left 5px on
-  // every one of them; and they are 36px rows with no gap between, so an
-  // outset ring would also paint over the row above and the row below.
-  // Inside, it traces the row's own rounded fill.
-  const className = `flex h-9 items-center justify-between gap-2 rounded-lg px-2 text-sm font-medium transition-brand focus-visible:focus-ring-inset ${
-    selected
-      ? "bg-primary-tint text-primary"
-      : "text-muted hover:bg-surface-sunken hover:text-foreground"
+  // The page rail's one row, ringed inside itself (`ui/rail.ts` says why);
+  // `justify-between` keeps a warning badge on the row's far edge.
+  const className = `${RAIL_ROW_CLASS} justify-between gap-2 ${
+    selected ? RAIL_ROW_CURRENT : RAIL_ROW_IDLE
   }`;
   const current = selected ? ("true" as const) : undefined;
   if (sameDocument) {

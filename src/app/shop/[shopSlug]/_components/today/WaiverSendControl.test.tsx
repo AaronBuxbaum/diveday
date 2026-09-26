@@ -91,6 +91,17 @@ describe("WaiverSendControl", () => {
     expect(screen.getByRole("button", { name: "Resend waiver link" })).toBeInTheDocument();
   });
 
+  // Today's queue seats this in a `LedgerRow` beside fixes that are all `sm`
+  // (44px, 14px). At the default `md` the pixel probe measured it 48px tall in
+  // a row ruled 52px apart: 2px under the top hairline, 1px over the bottom.
+  it("draws its default button at the ledger row's size", () => {
+    renderControl();
+    const button = screen.getByRole("button", { name: "Resend waiver link" });
+    expect(button).toHaveClass("text-sm", "py-2");
+    expect(button).not.toHaveClass("min-h-12");
+    expect(button).not.toHaveClass("text-base");
+  });
+
   it("holds the send with the booking and surface as its payload, never sending on the tap", async () => {
     renderControl();
     await tapSend();

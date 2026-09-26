@@ -3,6 +3,7 @@ import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
 import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
 import { diverTranslator } from "@/i18n/messages";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
+import { PublicShopMainContent } from "./_components/PublicShopMainContent";
 import {
   PublicShopBrand,
   PublicShopChrome,
@@ -69,7 +70,7 @@ export default function PublicShopLayout({
       <Suspense fallback={<PublicShopChromePlaceholder label={fallbackT} />}>
         <PublicShopChrome params={params} />
       </Suspense>
-      <div id="public-shop-main-content" tabIndex={-1} className="flex-1 outline-none">
+      <PublicShopMainContent>
         {/* Words for `error.tsx`, which renders below this layout and above the
             page (ADR 20260803-error-boundary-copy-bridge). A boundary is a file
             convention with a fixed {error, reset} signature, so it can only read
@@ -80,7 +81,7 @@ export default function PublicShopLayout({
         <ErrorBoundaryIntlProvider messagesByLocale={ERROR_BOUNDARY_MESSAGES_BY_LOCALE}>
           {children}
         </ErrorBoundaryIntlProvider>
-      </div>
+      </PublicShopMainContent>
       {/* No placeholder: the footer is the last thing on the page, so arriving
           late moves nothing that is already on screen. Reserving space for it
           would only mean an empty bar to look at, and an embed — which drops

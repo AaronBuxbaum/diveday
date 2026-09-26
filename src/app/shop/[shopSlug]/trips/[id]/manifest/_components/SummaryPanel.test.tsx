@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { TripManifest } from "@/lib/manifests";
 import { DiverRollCall } from "./DiverRollCall";
+import { rollCallScrollMargin } from "./RollCallControls";
 import { SummaryPanel } from "./SummaryPanel";
 
 /**
@@ -376,6 +377,83 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
       expect(row?.textContent, `${chip.textContent}'s chip points at another row`).toContain(
         chip.textContent,
       );
+    }
+  });
+
+  /**
+   * **And the jump lands below the card, however tall the card grows**
+   * (pixel-craft class 9). The card publishes its measured height on the
+   * column it pins in, the same column the rows sit in, and every row's
+   * scroll margin reads it. Asserted as that relationship, because jsdom has
+   * no layout: the stubbed observer stands in for the phone's 426px card.
+   */
+  it("hands the rows the card's measured height, on the column they share", () => {
+    const observed: Array<(entries: Array<Partial<ResizeObserverEntry>>) => void> = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: (entries: Array<Partial<ResizeObserverEntry>>) => void) {
+          observed.push(callback);
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    try {
+      const { container } = render(
+        <div data-testid="column">
+          <SummaryPanel
+            checkpoint="after_dive_1"
+            isDeparture={false}
+            rollCallComplete={false}
+            completeness={completeness()}
+            summary={summary()}
+            separatedTeams={0}
+            uncalled={[]}
+            uncalledCrew={[]}
+            notBackAboardDivers={[{ bookingId: "b-3", fullName: "Priya Sharma" }]}
+            notBackAboardCrew={[]}
+            t={t}
+          />
+          <DiverRollCall
+            divers={[diver("b-1", "Ana Ruiz"), diver("b-3", "Priya Sharma")]}
+            crewNames={[]}
+            checkpoint="after_dive_1"
+            isDeparture={false}
+            shopSlug="blue-mantis"
+            tripId="00000000-0000-4000-8000-0000000000ff"
+            locale="en-US"
+            timezone="America/New_York"
+            notesByBooking={new Map()}
+            rollCallAction={vi.fn(async () => ({ ok: true }) as const)}
+            addPrivateNoteAction={vi.fn(async () => undefined) as never}
+            rollCallButtonCopy={() => ({
+              errorRefusal: "Try again",
+              blockedMessage: "Still blocked",
+            })}
+            buddyTeamLabel={() => null}
+            t={t}
+          />
+        </div>,
+      );
+      const column = screen.getByTestId("column");
+      const card = screen.getByRole("region", { name: "After dive 1" });
+      // Still the column's own child: a wrapper would un-pin the card (see
+      // `SummaryPanel`), and it would publish the height where no row reads it.
+      expect(card.parentElement).toBe(column);
+      expect(card).toHaveClass("sticky", "top-(--chrome-h)");
+
+      expect(observed).toHaveLength(1);
+      observed[0]?.([{ target: card, borderBoxSize: [{ blockSize: 425.4, inlineSize: 350 }] }]);
+      expect(column.style.getPropertyValue("--roll-call-panel-h")).toBe("426px");
+      const rows = [...container.querySelectorAll<HTMLElement>("li[id^='diver-row-']")];
+      expect(rows).toHaveLength(2);
+      for (const row of rows) {
+        expect(row).toHaveClass(...rollCallScrollMargin(false).split(" "));
+      }
+    } finally {
+      vi.unstubAllGlobals();
     }
   });
 });

@@ -228,6 +228,12 @@ const FOCUS_SHOWN_ELSEWHERE: readonly (readonly [file: string, anchor: string, s
       "after:absolute after:inset-0",
       "focus-visible:after:focus-ring-inset",
     ],
+    // A settings door row: the same overlay, stretched over the whole row.
+    [
+      "app/shop/[shopSlug]/settings/_components/SettingsRows.tsx",
+      "after:absolute after:inset-0",
+      "focus-visible:after:focus-ring-inset",
+    ],
     // The tip picker's amount field: the bordered label around it is ringed.
     [
       "app/ready/[token]/_components/TipAmountPicker.tsx",
@@ -458,8 +464,10 @@ const CUT_RINGS: readonly (readonly [file: string, anchor: string, needs: readon
     "group -mx-3 flex items-center",
     ["focus-visible:focus-ring-inset"],
   ],
+  // The page rail's one row: the editor's section rail and the settings map
+  // both draw it (EditorRail.test.tsx, SettingsRail.test.tsx).
   [
-    "components/editor/EditorRail.tsx",
+    "components/ui/rail.ts",
     "min-h-11 items-center rounded-lg px-3 py-2",
     ["focus-visible:focus-ring-inset"],
   ],

@@ -991,6 +991,21 @@ textarea {
   padding: 1.25rem;
 }
 
+/*
+ * A sign rather than a document (`PaperSheet`'s `layout="poster"`): the dock
+ * sign and the window sticker hold a few fixed things and none of the shop's
+ * prose, so their content is centred on the paper instead of running from the
+ * band and leaving the rest of the sheet blank. The body already fills the
+ * sheet's height, so this is the only place the centring can live: a child's
+ * `h-full` has no definite height to resolve against in a sheet whose height
+ * is a floor.
+ */
+.paper-sheet-body-poster {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 .paper-sheet-muted {
   color: var(--sheet-muted);
 }
@@ -1714,16 +1729,25 @@ textarea {
      which water it is. The 55% stop stays a mix *of the crest with the
      ground*, which is what makes the band fade rather than end, and is why
      each skin (boat, glare, print, high contrast) still gets its own water
-     without naming a colour of its own. */
+     without naming a colour of its own.
+
+     The wash and its height are published as properties as well as painted,
+     because one thing inside the band has to repaint it: the settings rail's
+     sticky group label (`.settings-rail-label`, below), which covers the rows
+     scrolling under it with the water that is behind it. A custom property's
+     `var()`s resolve where it is declared, so a descendant reads the gradient
+     in this element's crest, whichever hour `WaterBandStyle` set. */
   --water-crest: var(--water-day);
-  background-image: linear-gradient(
+  --water-wash: linear-gradient(
     180deg,
     var(--water-crest) 0%,
     color-mix(in srgb, var(--water-crest) 40%, var(--background)) 55%,
     var(--background) 100%
   );
+  --water-band-h: 168px;
+  background-image: var(--water-wash);
   background-repeat: no-repeat;
-  background-size: 100% 168px;
+  background-size: 100% var(--water-band-h);
 }
 
 /* The other three hours are re-pointed by `src/components/WaterBandStyle.tsx`,
@@ -2348,6 +2372,14 @@ textarea {
  * closed-state rule carries the exit curve because that is the direction it
  * describes.
  *
+ * **The rise lands on `none`, never `0 0`.** Any other `translate` makes the
+ * body a stacking context, painted after the normal-flow content around it,
+ * and that includes its own summary's outset focus ring: wherever an open
+ * body starts flush with a filled card, the card covered the ring's bottom
+ * arm (the atlas caught the diver record's groups with three-sided rings). A
+ * body at rest is no layer of its own; `none` interpolates as the identity,
+ * so the rise still runs.
+ *
  * A browser without `::details-content` matches none of this and opens
  * instantly, which is the honest fallback. So does one that has it while a row
  * is deep-linked open (`AutoOpenDetails`): an element rendered already-open
@@ -2364,8 +2396,60 @@ details::details-content {
 
 details[open]::details-content {
   opacity: 1;
-  translate: 0 0;
+  translate: none;
   transition-timing-function: var(--ease-out-soft);
+}
+
+/*
+ * **The settings rail's group label is filled only while it is stuck, and
+ * filled with the water behind it.**
+ *
+ * The label is sticky inside the rail's own scroll box, and it needs a fill so
+ * the rows slide under the group's name rather than through it. At rest it
+ * needs none, and there it sits on the staff page's water-band wash: an
+ * always-opaque label painted a flat grey slab across the blue (the pixel
+ * probe measured it 256x24 at the top of every settings page). So the fill
+ * belongs to the stuck state, which only a scroll-state container query can
+ * see. The label is the container and its words' box takes the fill, since a
+ * container cannot style itself.
+ *
+ * **The fill is the band's own gradient, never a flat `--background`.** The
+ * rail opens on the current row (`SettingsRail.tsx`), so on every page whose
+ * row is below the box's fold a label is stuck at the box's top on landing,
+ * and the box's top is inside the wash: a flat ground fill was the same slab,
+ * 24px higher. The rail publishes each label's depth into the band as
+ * `--rail-label-depth` (it cannot be read from here: the band scrolls with
+ * the page and the rail's box does not), and the fill shifts the gradient up
+ * by that much over the ground's own colour, which is what shows once the
+ * label is deeper than the band. Until the rail has measured (before it
+ * hydrates, or on a page with no band) the depth defaults to the band's full
+ * height, which leaves the plain ground. A browser without scroll-state
+ * queries fills every label this way, which is as right at rest as stuck.
+ */
+.settings-rail-label {
+  --rail-label-fill:
+    var(--background) var(--water-wash, none) no-repeat 0
+    calc(-1 * var(--rail-label-depth, var(--water-band-h, 0px))) / 100% var(--water-band-h, 0px);
+}
+
+.settings-rail-label > span {
+  background: var(--rail-label-fill);
+}
+
+@supports (container-type: scroll-state) {
+  .settings-rail-label {
+    container-type: scroll-state;
+  }
+
+  .settings-rail-label > span {
+    background: transparent;
+  }
+
+  @container scroll-state(stuck: top) {
+    .settings-rail-label > span {
+      background: var(--rail-label-fill);
+    }
+  }
 }
 
 /*

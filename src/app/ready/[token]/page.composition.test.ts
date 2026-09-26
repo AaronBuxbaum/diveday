@@ -86,6 +86,36 @@ describe("the thread page's order", () => {
   });
 });
 
+/**
+ * **One inset down the thread's column.** "Where to go" (`TripArrivalCard`)
+ * and "Anything changed" (`TripChangeLedger`) are `md` cards; the party panel
+ * under them was `lg`, so "Your group's seats" started 4px right of "Where to
+ * go" above it — 41 against 37 at 390, 401 against 397 at 1280 — and the
+ * coral booked moment at the top of the column 8px right, at 45 and 405 (K-52,
+ * TOKEN-2-07). Each panel was consistent with itself; the column was not.
+ */
+describe("the thread column's cards", () => {
+  it("share the md inset", () => {
+    for (const component of ["TripArrivalCard", "TripChangeLedger", "PartyClaimPanel"]) {
+      const source = readFileSync(
+        join(__dirname, "..", "..", "..", "components", `${component}.tsx`),
+        "utf8",
+      );
+      expect(source.includes("<SectionCard"), `${component} renders a SectionCard`).toBe(true);
+      expect(
+        /<SectionCard\b[^>]*?\bpadding="(?!md")/.test(source),
+        `${component} steps off the column's inset`,
+      ).toBe(false);
+    }
+  });
+
+  it("sets the booked moment above them at the same inset", () => {
+    const moments = SOURCE.match(/<EarnedMoment\b[^>]*>/g) ?? [];
+    expect(moments).toHaveLength(1);
+    expect(moments[0]).toContain('inset="card"');
+  });
+});
+
 describe("status is said once", () => {
   it("renders exactly one status statement", () => {
     expect(countOf("<ThreadStatus")).toBe(1);
