@@ -142,6 +142,32 @@ describe("ThreadSpine", () => {
     expect(screen.getByText("Day-of details")).toBeVisible();
   });
 
+  it("opens a step's body clear of the focus ring round its head", () => {
+    // The global ring reaches 5px outside the `<summary>`, and the body is a
+    // later sibling, so a body flush under the head painted "Sign your
+    // waiver" over the ring's bottom arm (K-161: summary y 589–660, button
+    // from 661). The head keeps its own even padding — a closed step is the
+    // same row as a settled one, centred between its hairlines — and the body
+    // opens 8px down, past the ring's reach.
+    const { container } = render(
+      <ThreadSpine
+        steps={[
+          step({
+            id: "sign",
+            current: true,
+            line: "Sign your waiver.",
+            body: <button type="button">Sign your waiver</button>,
+          }),
+          step({ id: "pay", state: "done", stateWord: null, line: "Paid." }),
+        ]}
+      />,
+    );
+    const summary = container.querySelector("summary");
+    const settledRow = container.querySelector("li[data-thread-step='pay'] > div");
+    expect(summary?.className).toContain(settledRow?.className ?? "missing");
+    expect(summary?.nextElementSibling?.classList.contains("pt-2")).toBe(true);
+  });
+
   it("hangs a step's fact under its name, on the name's own edge", () => {
     // The name starts after the settle mark and its gap; the fact under it
     // was indented 32px against the name's 28, 4px right of it on every step
