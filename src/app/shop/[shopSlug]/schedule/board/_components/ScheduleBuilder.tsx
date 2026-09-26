@@ -1221,6 +1221,8 @@ function AddPanel({
           onCountChange={setPlannedDives}
           onFirstDiveSiteChange={setDiveSiteId}
           copy={more.diveFields}
+          // Framed like Pay at booking and Repeat on either side of it.
+          frameClassName="rounded-lg border border-border bg-surface p-5"
         />
       )}
       {/* A legend names this recurrence control group; it must remain a
