@@ -82,6 +82,21 @@ export function EarnedMomentLine({
   );
 }
 
+/**
+ * The whole-page moment's inset. `moment` is `SectionCard`'s `lg` rung, for
+ * the moment that *is* the page's opening (the signed waiver, the recap's
+ * welcome home): a step wider than that, `p-6 sm:p-7`, started the recap's
+ * welcome text 4px right of every card under it (K-109). `card` is
+ * `SectionCard`'s `md` inset, for a moment that heads a column of cards: on
+ * /ready "You’re on the boat" sat 8px inside "Where to go" and the party
+ * panel's title (K-52, TOKEN-2-07). The test reads both rungs from card.tsx,
+ * so neither can drift.
+ */
+const INSET = {
+  moment: "p-5 sm:p-6",
+  card: "p-4 sm:p-5",
+} as const;
+
 export function EarnedMoment({
   eyebrow,
   title,
@@ -89,11 +104,14 @@ export function EarnedMoment({
   className = "",
   as: Heading = "h2",
   titleClassName = "",
+  inset = "moment",
 }: {
   eyebrow?: string;
   title: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
+  /** `card` where the moment heads a column of `md` cards, so their titles share an edge. */
+  inset?: keyof typeof INSET;
   /** `font-brand-display` on the recap, where the greeting is in the shop's face. */
   titleClassName?: string;
   /**
@@ -105,11 +123,10 @@ export function EarnedMoment({
   as?: "h1" | "h2";
 }) {
   return (
-    // `p-5 sm:p-6` is SectionCard's `lg` rung (`sectionCardClass`), so the
-    // moment's text starts on the same x as the cards stacked under it; the
-    // test reads the rung from card.tsx, so the two cannot drift.
+    // `INSET` is a SectionCard rung (`sectionCardClass`), so the moment's text
+    // starts on the same x as the cards stacked under it.
     <section
-      className={`relative overflow-hidden rise-in rounded-panel border border-accent/40 bg-accent/10 p-5 sm:p-6 ${className}`.trim()}
+      className={`relative overflow-hidden rise-in rounded-panel border border-accent/40 bg-accent/10 ${INSET[inset]} ${className}`.trim()}
     >
       {/* The 4px between eyebrow and heading belongs to the eyebrow: on the
           heading it pushed a lone title 2px below the panel's centre. */}

@@ -2258,6 +2258,7 @@ export default async function DiverReadinessPage({
         {justBooked ? (
           <EarnedMoment
             className="mt-8"
+            inset="card"
             title={t("booking.confirmedHeading", { name: firstName })}
           />
         ) : null}
