@@ -64,9 +64,9 @@ export default async function WindowStickerPage({
         })}
         foldRight={storefrontAddress(shopSlug, origin)}
       >
-        {/* 6mm, in paper millimetres like the code: it carries no quiet zone of
-            its own (`SheetCode`), and four of its modules, up to 1.4mm each on
-            a short storefront link, must stay clear of the sentence above. */}
+        {/* 6mm, in paper millimetres like the code: its quiet zone overhangs
+            its box (`SheetCode`), four modules of up to 1.4mm each on a short
+            storefront link, and must stay clear of the sentence above. */}
         <div className="flex flex-col items-center gap-[6mm] text-center">
           <p className="font-brand-display text-xl leading-tight font-extrabold">
             {t("print.sheet.sticker.title")}
@@ -74,7 +74,7 @@ export default async function WindowStickerPage({
           <SheetCode
             value={`${origin ?? ""}${publicSchedulePath(shopSlug)}`}
             label={t("print.sheet.sticker.title")}
-            className="w-[34mm]"
+            size={34}
           />
         </div>
       </PaperSheet>
