@@ -434,16 +434,28 @@ function WeekBoat({
       <div className="min-w-0 flex-1">
         {/* The lead line is what the canvas draws: when it leaves, how full it
             is, and the count. The bar sits between them rather than after, so
-            a reader scanning a column of times meets every fill at one x. */}
+            a reader scanning a column of times meets every fill at one x.
+
+            **The time and its bar are the row's first line, and that line is
+            36px whatever else is on it** (pixel-craft class 1): the day's
+            weekday and "No boats" take the same box, so the rail reads level
+            with the first departure beside it. The "⋯" sets 36px on its own
+            (a 44px square, `-my-1`), but a boat already home and a staffer
+            who cannot move one have none, and their line fell to the time's
+            20px. A box of its own rather than a floor on the whole line:
+            below `sm` the line wraps the meta beneath it, and a wrapped flex
+            container's `min-height` is not its first line's. */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap sm:gap-x-3">
-          {time ? (
-            <p
-              className={`text-base leading-tight font-semibold tabular-nums ${sailed ? "text-muted" : ""}`}
-            >
-              {time}
-            </p>
-          ) : null}
-          <SeatBar seats={seats} sailed={sailed} />
+          <div className="flex min-h-9 shrink-0 items-center gap-x-2 sm:gap-x-3">
+            {time ? (
+              <p
+                className={`text-base leading-tight font-semibold tabular-nums ${sailed ? "text-muted" : ""}`}
+              >
+                {time}
+              </p>
+            ) : null}
+            <SeatBar seats={seats} sailed={sailed} />
+          </div>
           {/* **A full line of its own on a phone, inline from `sm` up.** The
               week was a desktop-only grid until #1923 and this sentence had a
               row's whole measure to sit in; at 390 it has about 120px between
@@ -632,7 +644,13 @@ export function WeekBoard({
           const empty = day.entries.length === 0 && spans.length === 0;
           return (
             <div key={day.dateIso} className="border-b border-border">
-              <div className="grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-3 py-2 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-x-5">
+              {/* **One rail, 72px, at every width** (pixel-craft class 3).
+                  The phone's was 3rem, narrower than the label it holds:
+                  "WED 22" ran 12–14px past it and today's disc was squeezed
+                  to an oval. The widest label below `sm` is a weekday's fixed
+                  32px, its 6px gap and today's 32px disc — 70px — and from
+                  `sm` up the stacked label was already 4.5rem wide. */}
+              <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-x-3 py-2 sm:gap-x-5">
                 {/* **The day holds its place while its own boats scroll**
                     (ADR 20260827-clearwater-surface-language, decision 10).
                     This was the day stream's behaviour and it moves here
@@ -652,9 +670,14 @@ export function WeekBoard({
                   <span className="sr-only">{day.label}</span>
                   <span
                     aria-hidden="true"
-                    className="flex items-center gap-1.5 sm:flex-col sm:items-start sm:gap-0"
+                    className="flex min-h-9 items-center gap-1.5 sm:flex-col sm:items-start sm:gap-0"
                   >
-                    <span className={groupLabelClass(day.isToday ? "primary" : "muted")}>
+                    {/* A fixed width below `sm`, so every numeral after it
+                        starts at one x; from `sm` up it is the first line of
+                        the stacked label, in the departures' 36px box. */}
+                    <span
+                      className={`${groupLabelClass(day.isToday ? "primary" : "muted")} shrink-0 max-sm:w-8 sm:flex sm:min-h-9 sm:items-center`}
+                    >
                       {day.weekday}
                     </span>
                     {/* Today is a *filled* disc, not a smaller numeral: the
@@ -665,7 +688,7 @@ export function WeekBoard({
                     <span
                       className={`${FIGURE_INLINE_CLASS} ${
                         day.isToday
-                          ? "flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                          ? "flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
                           : day.isPast
                             ? "text-muted"
                             : ""
@@ -735,7 +758,11 @@ export function WeekBoard({
                       column blank and be read, because six columns beside it
                       gave the blank its meaning; one empty row in a run of
                       rows is just a gap. */}
-                  {empty ? <p className="px-2 py-2.5 text-sm text-muted">{copy.noBoats}</p> : null}
+                  {empty ? (
+                    <p className="flex min-h-9 items-center px-2 py-2 text-sm text-muted">
+                      {copy.noBoats}
+                    </p>
+                  ) : null}
                   {/* Never on a day that has already been: a departure is put
                       on the board, and the board is ahead. */}
                   {canConfigure && !day.isPast ? (
