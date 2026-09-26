@@ -169,6 +169,22 @@ describe("textareaClassFor", () => {
     expect(textareaClassFor(2).split(/\s+/)).toContain("min-h-[calc(2lh+1.125rem)]");
   });
 
+  /**
+   * **It grows down, never across.** `field-sizing: content` sizes both axes,
+   * so a textarea's min-content width became its longest unbroken run: the
+   * embed snippet's `src="https://…/embed.js">` is 337px with its padding,
+   * `Field`'s control column took it, and the settings page ran 13px past a
+   * 360px phone (settings-embed). Inline-size containment keeps the width the
+   * column's and leaves only the height to the text.
+   */
+  it("grows only its height with its content, never its width", () => {
+    for (const rows of [2, 3, 4, 6, 8, 14] as const) {
+      const tokens = textareaClassFor(rows).split(/\s+/);
+      expect(tokens).toContain("field-sizing-content");
+      expect(tokens).toContain("contain-inline-size");
+    }
+  });
+
   it("is the control's body, and spells one minimum height and one padding", () => {
     const tokens = textareaClassFor(4).split(/\s+/);
     for (const shared of controlClass.split(/\s+/).filter((token) => !token.startsWith("min-h-")))

@@ -119,9 +119,18 @@ export type TextareaRows = keyof typeof textareaMinHeight;
  * Unbounded, the waiver editor opened on the default release, about 5,700
  * characters, grew to some 80 lines at 1280 and put Publish a thousand pixels
  * below where it sat. A minimum taller than the cap wins, as CSS has it.
+ *
+ * **It grows down, never across** (`contain-inline-size`). `field-sizing:
+ * content` sizes both axes, so the box's min-content width became its longest
+ * unbroken run: the settings embed snippet's `src="https://…/embed.js">` is
+ * 337px with its padding, `Field`'s control column took that width, and at 360
+ * the page ran 13px wider than the phone (the pixel probe, settings-embed). A
+ * URL pasted into any notes box would do the same. Inline-size containment
+ * takes the content out of the width, so the box is its column's width and
+ * only its height follows the text.
  */
 export function textareaClassFor(rows: TextareaRows): string {
-  return `py-2 ${controlBody} field-sizing-content ${textareaMinHeight[rows]} max-h-[60svh]`;
+  return `py-2 ${controlBody} field-sizing-content contain-inline-size ${textareaMinHeight[rows]} max-h-[60svh]`;
 }
 
 /**
