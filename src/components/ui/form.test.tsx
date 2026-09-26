@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buttonClass } from "./button";
 import { ForgivingInput } from "./ForgivingInput";
 import {
+  ChoiceFieldset,
   ChoicePill,
   ChoiceRow,
   choiceClass,
@@ -356,6 +357,60 @@ describe("ChoicePill and ChoiceRow", () => {
     expect(box.parentElement).toHaveClass("h-lh", "items-center");
     expect(box.closest("label")).toHaveClass("min-h-11", "items-start", "text-base");
     expect(node).toBe(box);
+  });
+});
+
+/**
+ * **A group of choices is captioned the way a field is.** A `Field` puts 4px
+ * between its caption and its control; hand-rolled legends put 8px (`mb-2`,
+ * `mt-2`), so on one page "Catch Hook URL" sat 9px above its box and "Events
+ * to send" 13px above its pills, and on the call form "What they wanted" sat
+ * 4px further from its choices than every caption around it (K-72).
+ */
+describe("ChoiceFieldset", () => {
+  it("captions its choices like a field: text-sm, then 4px, then the body", () => {
+    render(
+      <ChoiceFieldset legend="Events to send" bodyClassName="grid gap-2 sm:grid-cols-3">
+        <ChoicePill type="checkbox" name="eventType" value="booking.created">
+          Booking made
+        </ChoicePill>
+      </ChoiceFieldset>,
+    );
+    const group = screen.getByRole("group", { name: "Events to send" });
+    const legend = group.querySelector("legend");
+    expect(legend).toHaveClass("text-sm", "font-medium");
+    expect(legend?.className).not.toMatch(/\bm[bty]?-/);
+    const body = legend?.nextElementSibling;
+    expect(body).toHaveClass("mt-1", "grid", "gap-2");
+    expect(body?.className.split(/\s+/).filter((token) => /^-?m[tbyxse]?-/.test(token))).toEqual([
+      "mt-1",
+    ]);
+    expect(screen.getByRole("checkbox", { name: "Booking made" })).toBeInTheDocument();
+  });
+
+  it("marks a required group the way Field marks a required control, outside its name", () => {
+    render(
+      <ChoiceFieldset legend="Outcome" required className="mt-6">
+        <ChoicePill type="radio" name="outcome" value="cleared" required>
+          Cleared
+        </ChoicePill>
+      </ChoiceFieldset>,
+    );
+    const group = screen.getByRole("group", { name: "Outcome" });
+    expect(group).toHaveClass("mt-6");
+    expect(screen.getByText("*")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("passes the fieldset's own props through, so a group can listen and be disabled", () => {
+    render(
+      <ChoiceFieldset legend="Departure" disabled data-testid="departure">
+        <ChoicePill type="radio" name="tripId" value="t1">
+          Saturday
+        </ChoicePill>
+      </ChoiceFieldset>,
+    );
+    expect(screen.getByTestId("departure")).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "Saturday" })).toBeDisabled();
   });
 });
 
@@ -1070,6 +1125,25 @@ describe("source sweeps", () => {
         const body = source.slice(index + text.length, source.indexOf("</label>", index));
         if (/type=(?:"|\{")(checkbox|radio)"/.test(body) && !/\bsr-only\b/.test(body))
           offenders.push(`${file}:${lineOf(source, index)}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * A legend's gap to its choices belongs to `ChoiceFieldset` (K-72): a
+   * legend with its own bottom margin is a caption drawn another way. A
+   * floated legend is exempt — a float is how a legend escapes the rendered
+   * legend's place in a bordered box, and the clearing sibling after it
+   * cannot take a top margin (clearance absorbs it), so its margin is the
+   * only one there is.
+   */
+  it("leaves the caption gap to ChoiceFieldset, never a legend's own margin", () => {
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      for (const { index, text } of openingTags(source, "legend")) {
+        if (/\bfloat-/.test(text)) continue;
+        if (/\bmb-/.test(text)) offenders.push(`${file}:${lineOf(source, index)} ${text}`);
       }
     }
     expect(offenders).toEqual([]);

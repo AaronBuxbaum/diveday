@@ -6,7 +6,14 @@ import { Copyable } from "@/components/Copyable";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { ChoicePill, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoicePill,
+  controlClass,
+  Field,
+  FieldGrid,
+  FormStatus,
+} from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { displayLinkAction } from "./actions";
 import {
@@ -112,19 +119,9 @@ export function DisplayLinksPanel({
               because the two grant different things: the kiosk *writes*, and a
               shop mounting a TV should have to say so before it gets one. The
               action reads it as a closed set, so an unrecognised value can
-              never fall through to the more capable surface.
-
-              `Field`'s required marker by hand, because a fieldset is not a
-              `Field` — the same shape `MedicalClearanceControl` uses. */}
-          <fieldset>
-            <legend className="text-sm font-medium">
-              {copy.purposeLegend}
-              <span aria-hidden="true" className="text-danger">
-                {" "}
-                *
-              </span>
-            </legend>
-            <div className="mt-2 flex flex-wrap gap-3">
+              never fall through to the more capable surface. */}
+          <ChoiceFieldset legend={copy.purposeLegend} required bodyClassName="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-3">
               <ChoicePill
                 type="radio"
                 name="purpose"
@@ -146,8 +143,8 @@ export function DisplayLinksPanel({
                 {copy.purposeCheckIn}
               </ChoicePill>
             </div>
-            <p className="mt-2 text-sm text-muted">{copy.purposeCheckInDescription}</p>
-          </fieldset>
+            <p className="text-sm text-muted">{copy.purposeCheckInDescription}</p>
+          </ChoiceFieldset>
           {purpose === "board" ? (
             <div className="flex items-start gap-3">
               <input

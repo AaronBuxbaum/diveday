@@ -4,7 +4,14 @@ import { useEffect, useState } from "react";
 import type { MedicalClearanceCopy } from "@/components/medical-clearance-copy";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { ChoicePill, controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoicePill,
+  controlClass,
+  DateField,
+  Field,
+  FieldGrid,
+} from "@/components/ui/form";
 import { WaiverActionIcon } from "@/components/WaiverActionIcon";
 
 /**
@@ -102,29 +109,17 @@ export function MedicalClearanceControl({
             two inputs answer it together, which is the one control shape
             `Field`'s single-`htmlFor` caption cannot describe. `required` on
             both radios is what makes "no answer" unsubmittable — there is no
-            default here, on purpose. */}
-        <fieldset>
-          <legend className="text-sm font-medium">
-            {copy.outcomeLegend}
-            {/* `Field`'s own required marker, by hand because a fieldset is not
-                one: without it the outcome would be the only mandatory control
-                on this form not saying so, and "required" is the whole point of
-                a choice with no default. Same shape as `Field` — aria-hidden,
-                outside the accessible name. */}
-            <span aria-hidden="true" className="text-danger">
-              {" "}
-              *
-            </span>
-          </legend>
-          <div className="mt-2 flex flex-wrap gap-3">
-            <ChoicePill type="radio" name="outcome" value="cleared" required>
-              {copy.outcomeCleared}
-            </ChoicePill>
-            <ChoicePill type="radio" name="outcome" value="not_cleared" required>
-              {copy.outcomeNotCleared}
-            </ChoicePill>
-          </div>
-        </fieldset>
+            default here, on purpose — and `required` on the group draws the
+            `*` that says so: without it the outcome would be the only
+            mandatory control on this form not saying so. */}
+        <ChoiceFieldset legend={copy.outcomeLegend} required bodyClassName="flex flex-wrap gap-3">
+          <ChoicePill type="radio" name="outcome" value="cleared" required>
+            {copy.outcomeCleared}
+          </ChoicePill>
+          <ChoicePill type="radio" name="outcome" value="not_cleared" required>
+            {copy.outcomeNotCleared}
+          </ChoicePill>
+        </ChoiceFieldset>
         <Field label={copy.evaluatedOnLabel} htmlFor="evaluatedOn">
           <DateField id="evaluatedOn" name="evaluatedOn" required max={today} />
         </Field>

@@ -683,6 +683,55 @@ export function ChoicePill({
 }
 
 /**
+ * **A captioned group of choices** — the `<fieldset>` + `<legend>` a set of
+ * `ChoicePill`s or `ChoiceRow`s answers together, which `Field`'s single
+ * `htmlFor` caption cannot describe.
+ *
+ * It captions the way `Field` does: the legend is `text-sm font-medium` and
+ * the body starts 4px under it, the `gap-y-1` between a field's caption and
+ * its control. Hand-rolled legends put 8px there (`mb-2`, `mt-2`), so a
+ * group's caption sat further from its choices than every field caption
+ * around it (the pixel probe, settings-integrations: 9px against 13px from
+ * caption to control; took-a-call: 19px against 23px).
+ *
+ * `required` draws the same aria-hidden `*` `Field` draws, since a group with
+ * no default answer is mandatory and should say so; the `required` on the
+ * inputs themselves is what enforces it. `className` is the fieldset's (its
+ * margin, a grid span), `bodyClassName` lays out the choices (`grid gap-2`,
+ * `flex flex-wrap gap-3`), and every other fieldset prop passes through — an
+ * `onChange` that listens to the group, `disabled`.
+ */
+export function ChoiceFieldset({
+  legend,
+  required = false,
+  className = "",
+  bodyClassName = "",
+  children,
+  ...fieldset
+}: {
+  legend: ReactNode;
+  required?: boolean;
+  className?: string;
+  bodyClassName?: string;
+  children: ReactNode;
+} & Omit<ComponentPropsWithoutRef<"fieldset">, "className" | "children">) {
+  return (
+    <fieldset className={className || undefined} {...fieldset}>
+      <legend className="text-sm font-medium text-pretty">
+        {legend}
+        {required ? (
+          <span aria-hidden="true" className="text-danger">
+            {" "}
+            *
+          </span>
+        ) : null}
+      </legend>
+      <div className={`mt-1 ${bodyClassName}`.trim()}>{children}</div>
+    </fieldset>
+  );
+}
+
+/**
  * **The submit row of a form longer than a screen, pinned to the bottom edge.**
  *
  * `FieldActions` below is right for a form you can see all of. This one is for

@@ -808,6 +808,11 @@ A checkbox or radio a person sees is drawn one way, from `src/components/ui/form
 - **`ChoicePill`** is the bordered answer pill — Yes / No on the medical questionnaire, a call's
   outcome, a staffer's roles — 44px, `px-4`, one hover. `size="md"` sets its words at 16px for a
   diver-facing form whose copy is 16px.
+- **`ChoiceFieldset`** captions a group of them the way `Field` captions a control: a
+  `text-sm font-medium` legend, then 4px, then the body (`bodyClassName` lays the choices out).
+  `required` draws `Field`'s aria-hidden `*`. Hand-rolled legends put 8px there (`mb-2`, `mt-2`),
+  so a group sat further from its caption than every field around it; `form.test.tsx` refuses a
+  legend with its own bottom margin (a floated legend aside).
 
 ```tsx
 <ChoicePill type="radio" name="outcome" value="cleared" required>

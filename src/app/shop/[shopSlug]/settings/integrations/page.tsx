@@ -5,7 +5,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { ChoicePill, controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoicePill,
+  controlClass,
+  Field,
+  FieldActions,
+  FieldGrid,
+} from "@/components/ui/form";
 import { canPersonManageShopSettings } from "@/db/authz";
 import {
   listIntegrationSummaries,
@@ -71,10 +78,10 @@ function noticeMessages(t: StaffTranslator) {
 
 function EventCheckboxes({ t, selected }: { t: StaffTranslator; selected: readonly string[] }) {
   return (
-    <fieldset className="grid gap-2 sm:grid-cols-3">
-      <legend className="mb-2 text-sm font-medium">
-        {t("integrations.common.selectedEvents")}
-      </legend>
+    <ChoiceFieldset
+      legend={t("integrations.common.selectedEvents")}
+      bodyClassName="grid gap-2 sm:grid-cols-3"
+    >
       {EVENT_OPTIONS.map((event) => (
         <ChoicePill
           key={event.value}
@@ -86,7 +93,7 @@ function EventCheckboxes({ t, selected }: { t: StaffTranslator; selected: readon
           {t(event.label as EventLabelKey)}
         </ChoicePill>
       ))}
-    </fieldset>
+    </ChoiceFieldset>
   );
 }
 
