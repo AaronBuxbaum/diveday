@@ -123,7 +123,11 @@ export default async function DiverShelfPage({
         <RememberShelf remember={rememberShelfAction.bind(null, token)} />
       )}
       <ThreadShell shopName={data.shop.name} title={t("shelf.title")}>
-        <div className="space-y-10">
+        {/* `mt-8`: the shell closes its header straight into its children,
+            and without it the first card's border sat on the title's line
+            box (K-479). 32px, as `/ready` and `/recap` open and as this
+            route's skeleton always did. */}
+        <div className="mt-8 space-y-10">
           <ReasonsToComeBack data={data} t={t} locale={locale} now={now} token={token} />
           <Dives data={data} t={t} locale={locale} />
           <TheFile data={data} t={t} locale={locale} token={token} saved={saved} error={error} />
