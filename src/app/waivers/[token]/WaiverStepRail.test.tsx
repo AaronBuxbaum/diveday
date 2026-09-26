@@ -209,6 +209,42 @@ describe("the rail as an object on the page", () => {
     expect(rail.className).toContain("border-y border-border");
     expect(rail.className).not.toMatch(/shadow/);
   });
+
+  it("lays each step out as a box, not as a mark sitting on a line of body text", () => {
+    // A block `<li>` set `SettledCheck`'s inline-flex mark on its own 16px/24px
+    // text strut, so the list stood 26px tall with the 20px mark at its top:
+    // the rings sat 13px under the top hairline and 19px over the bottom one,
+    // and the count, centred in that 26px, had its baseline 4px under the
+    // labels' (pixel probe, waiver-active 1280, K-225). As a flex box the step
+    // is its mark's height, the list is 20px, and the count shares its centre
+    // and baseline — and the loaded rail is the skeleton's 46px.
+    const { getByTestId } = renderRail({ answered: 1 });
+    const steps = getByTestId(WAIVER_RAIL_TEST_ID).querySelectorAll("li[data-rail-step]");
+    expect(steps).toHaveLength(3);
+    for (const step of steps) {
+      expect(step.className.split(" ")).toEqual(expect.arrayContaining(["flex", "items-center"]));
+    }
+  });
+
+  it("keeps the count on the steps' line at 390, and starts it at the left edge when it wraps", () => {
+    // At 390 the steps end at x 277 of a 20–370 column and the count is 75px
+    // wide: with 20px between them the row needed 372px, so the count dropped
+    // to a line of its own and the rail grew from 50px to 74px (K-533). 16px
+    // between the list and the count fits it, while the steps keep their 20px.
+    //
+    // The count is spread to the row's end, not pushed there by `ms-auto`: on
+    // one line it still ends the row, but a count that does wrap (360, or a
+    // longer language) starts its line at the column's left edge, where the
+    // margin floated it right, under nothing.
+    const { getByTestId } = renderRail({});
+    const rail = getByTestId(WAIVER_RAIL_TEST_ID);
+    const row = rail.className.split(" ");
+    expect(row).toEqual(expect.arrayContaining(["justify-between", "gap-x-4"]));
+    expect(row).not.toContain("gap-x-5");
+    expect(rail.querySelector("ol")?.className.split(" ")).toContain("gap-x-5");
+    const count = screen.getByText("0 of 3 done");
+    expect(count.className).not.toMatch(/(?:^|\s)(?:[\w-]+:)?ms-auto(?:\s|$)/);
+  });
 });
 
 describe("what the rail must never say", () => {
