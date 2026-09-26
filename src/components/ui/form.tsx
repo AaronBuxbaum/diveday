@@ -506,7 +506,7 @@ export function Field({
     );
     return htmlFor ? (
       <div className={rows}>
-        <span className="self-end">
+        <span className="self-end text-pretty">
           <label htmlFor={htmlFor}>{captionContent}</label>
           {aside}
         </span>
@@ -515,7 +515,7 @@ export function Field({
     ) : (
       // biome-ignore lint/a11y/noLabelWithoutControl: the wrapping branch — the control is `children`, which the rule cannot see through
       <label className={rows}>
-        <span className="self-end">
+        <span className="self-end text-pretty">
           {captionContent}
           {aside}
         </span>
@@ -539,7 +539,11 @@ export function Field({
     <div
       className={`row-span-2 grid min-w-0 grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`}
     >
-      <span className="self-end">
+      {/* `text-pretty` on every branch's caption row: a caption that wraps
+          keeps company on its last line. The fly-safe label left "diving *"
+          alone there, 49px of a 329px column (the pixel probe,
+          settings-fly-safe). */}
+      <span className="self-end text-pretty">
         <label htmlFor={controlId}>{captionContent}</label>
         {requiredMarker}
         {aside ? <span className="ml-1.5">{aside}</span> : null}

@@ -469,6 +469,49 @@ describe("StickyFormActions", () => {
 });
 
 /**
+ * **A caption never leaves its last word alone.** The fly-safe label wrapped
+ * to "diving *" on a line of its own, 49px of a 329px column at 1280 and the
+ * same at 390 (K-586). `text-pretty` balances the last lines, and it sits on
+ * the caption row of every branch, because which branch a `Field` takes is its
+ * child's business, not the caption's.
+ */
+describe("Field's caption wraps prettily", () => {
+  it("on the control branch", () => {
+    render(
+      <Field label="Hours between repetitive dives">
+        <input name="hours" required />
+      </Field>,
+    );
+    expect(screen.getByText("Hours between repetitive dives").parentElement).toHaveClass(
+      "text-pretty",
+    );
+  });
+
+  it("on the htmlFor branch", () => {
+    render(
+      <Field label="Map image" htmlFor="map-image">
+        <label>
+          Choose a photo
+          <input id="map-image" type="file" name="mapImage" className="sr-only" />
+        </label>
+      </Field>,
+    );
+    expect(screen.getByText("Map image").parentElement).toHaveClass("text-pretty");
+  });
+
+  it("on the wrapping branch", () => {
+    render(
+      <Field label="Party">
+        <div>
+          <input name="party" />
+        </div>
+      </Field>,
+    );
+    expect(screen.getByText("Party")).toHaveClass("text-pretty");
+  });
+});
+
+/**
  * `Field` derives the visible `*` from the control's own `required`, so a form
  * gets the marker for free and nobody has to remember it. `markRequired={false}`
  * is the one deliberate way out, for a form where every field is required and
