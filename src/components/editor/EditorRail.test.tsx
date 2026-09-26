@@ -91,15 +91,6 @@ describe("the editor rail", () => {
   });
 
   /**
-   * **One landmark, whatever the width.** This rail was first written as the
-   * app's `JumpNav` for the phone beside a sticky column for the desktop, which
-   * read as reuse of the one "places on this page" grammar — but `JumpNav`
-   * brings a `<nav>` of its own, so the editor offered two landmarks under one
-   * name and a screen reader read the same anchor list twice. `lg:hidden` does
-   * not help: both are in the accessibility tree at every width. The list
-   * changes shape at `lg`; the landmark does not.
-   */
-  /**
    * The current section's tint is a desktop state (`lg:bg-primary-tint`), and a
    * bare `hover:bg-surface-sunken` on every row outranked it: under the
    * pointer the one tinted row went grey with foreground text. Hover belongs to
@@ -122,6 +113,15 @@ describe("the editor rail", () => {
     expect(other).toContain("hover:text-foreground");
   });
 
+  /**
+   * **One landmark, whatever the width.** This rail was first written as the
+   * app's `JumpNav` for the phone beside a sticky column for the desktop, which
+   * read as reuse of the one "places on this page" grammar — but `JumpNav`
+   * brings a `<nav>` of its own, so the editor offered two landmarks under one
+   * name and a screen reader read the same anchor list twice. `lg:hidden` does
+   * not help: both are in the accessibility tree at every width. The list
+   * changes shape at `lg`; the landmark does not.
+   */
   it("is one navigation landmark, holding every anchor exactly once", () => {
     render(<Editor />);
 
