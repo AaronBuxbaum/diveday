@@ -38,9 +38,10 @@ export function PartyClaimPanel({
 }) {
   if (seats.length === 0) return null;
   const t = diverTranslator(locale);
+  // The default `md` inset, the one "Where to go" and "Anything changed" take
+  // above it on /ready, so the thread's card titles share one left edge.
   return (
     <SectionCard
-      padding="lg"
       className={`text-left ${className}`}
       title={t("seatClaim.panelHeading")}
       description={t("seatClaim.panelBody")}
