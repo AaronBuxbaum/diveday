@@ -304,8 +304,9 @@ export function CrewSection({
 
       {staff.length === 0 ? (
         // The shared empty-section grammar, not a bare paragraph
-        // (design/principles.md #4).
-        <EmptyState title={copy.noStaff} />
+        // (design/principles.md #4). `nested`: this sits in the About card
+        // too, and its own bed shadow would fall on the card's white.
+        <EmptyState title={copy.noStaff} nested />
       ) : (
         <div className="flex flex-col gap-3">
           {hasUnassignedStaff ? (

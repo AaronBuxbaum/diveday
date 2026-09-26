@@ -99,6 +99,37 @@ const COPY: CrewSectionCopy = {
   },
 };
 
+/**
+ * Both of the Crew section's empty states sit inside the About card, on its
+ * white: a box that also stands on the bed faded a 30px shadow onto the card
+ * (docs/design/pixel-craft.md, class 6). Each is the nested outline alone.
+ */
+describe("CrewSection's empty states", () => {
+  const props = {
+    tripId: "trip-1",
+    crewIds: [],
+    crewRoles: {},
+    onShiftIds: null,
+    shopSlug: "blue-mantis",
+    crewGapCode: "none" as const,
+    copy: COPY,
+    updateCrewAction: async () => ({ ok: true }),
+  };
+  const box = (text: string) => screen.getByText(text).closest(".border-dashed");
+
+  it("casts no shadow onto the card when the shop has no staff on file", () => {
+    render(<CrewSection {...props} staff={[]} />);
+    expect(box("No staff on file yet.")).toHaveClass("bg-transparent");
+    expect(box("No staff on file yet.")).not.toHaveClass("shadow-bed");
+  });
+
+  it("casts no shadow onto the card when nobody is assigned yet", () => {
+    render(<CrewSection {...props} staff={[staffMember("s-1", "Ana Diaz")]} />);
+    expect(box("Nobody assigned yet.")).toHaveClass("bg-transparent");
+    expect(box("Nobody assigned yet.")).not.toHaveClass("shadow-bed");
+  });
+});
+
 function staffMember(id: string, fullName: string, roles: string[] = ["instructor"]) {
   return {
     // CrewSection only ever reads `person.id`/`person.fullName` off this —

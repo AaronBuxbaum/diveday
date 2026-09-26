@@ -52,7 +52,11 @@ export function EmptyState({
   /** The next step, where there is one. A link or a button, never a paragraph. */
   action?: ReactNode;
   className?: string;
-  /** Pass `false` for a tighter or nested card. */
+  /**
+   * Pass `false` where the bubbles would outweigh one line of text. It drops
+   * the icon and nothing else: a card inside another panel is `nested`, which
+   * this is not.
+   */
   icon?: boolean;
   /**
    * The card sits inside another panel: the dashed outline alone, with no fill
