@@ -30,7 +30,7 @@
     "errorNotAuthorized": "Solo los propietarios, gerentes e instructores pueden ocultar o mostrar un curso.",
     "errorFaqIncomplete": "Cada pregunta necesita una respuesta, y cada respuesta una pregunta.",
     "errorImages": "Puedes mantener hasta ocho fotos en la galería. Elimina una antes de añadir más.",
-    "errorUpload": "Esa foto no se subió. Prueba un JPG, PNG o WebP de menos de 5 MB.",
+    "errorUpload": "Esa foto no se subió. Prueba un JPG, PNG o WebP de menos de 5\u00a0MB.",
     "errorTooManyPhotos": "Añade hasta {max, plural, one {# foto nueva} other {# fotos nuevas}} de galería por guardado. Guarda este lote y añade más después.",
     "errorDepthPlaceholder": "Una de tus marcas de profundidad está mal escrita, así que no se guardó nada. Escríbela exactamente como '{depth18}': las opciones son '{depth12}', '{depth18}', '{depth21}', '{depth30}' y '{depth40}'. Si prefieres escribir la profundidad con tus propias palabras, borra la marca.",
     "pitchLegend": "La propuesta",

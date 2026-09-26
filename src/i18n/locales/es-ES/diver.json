@@ -748,7 +748,7 @@
     "photoAdded": "Añadida a tu resumen. ¡Gracias por compartirla!",
     "photoMissing": "Elige primero una foto y luego añádela.",
     "photoUnsupported": "Este centro todavía no tiene activada la subida de fotos, así que etiquétalas cuando publiques.",
-    "photoFailed": "Esa foto no se ha subido. Prueba con un JPEG o PNG de menos de 5 MB.",
+    "photoFailed": "Esa foto no se ha subido. Prueba con un JPEG o PNG de menos de 5\u00a0MB.",
     "photoCancelled": "Esta reserva no tiene resumen al que añadir una foto.",
     "tipCancelled": "Sin problema, no se ha cobrado la propina.",
     "tipRange": "Introduce una propina de entre 1 y 500 $.",
@@ -2953,7 +2953,7 @@
           },
           "waiverDocuments": {
             "what": "Documentos de exención / médicos",
-            "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5 MB."
+            "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5\u00a0MB."
           },
           "role": {
             "what": "Rol",

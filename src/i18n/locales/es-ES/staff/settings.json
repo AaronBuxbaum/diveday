@@ -691,7 +691,7 @@
       },
       "waiverDocuments": {
         "what": "Documentos de exención / médicos",
-        "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5 MB."
+        "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5\u00a0MB."
       },
       "role": {
         "what": "Rol",

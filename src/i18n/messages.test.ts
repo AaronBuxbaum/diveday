@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { DIVER_MESSAGES, diverTranslator, messagesFor, messagesForNamespaces } from "./messages";
 import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES, isDiverLocale, toDiverLocale } from "./settings";
@@ -40,6 +43,30 @@ describe("message bundles", () => {
         .map((key) => `${locale} has stray ${key}`),
     );
     expect(stray).toEqual([]);
+  });
+});
+
+describe("a number and its unit", () => {
+  const LOCALES = join(dirname(fileURLToPath(import.meta.url)), "locales");
+
+  function bundleFiles(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) return bundleFiles(path);
+      return entry.name.endsWith(".json") ? [path] : [];
+    });
+  }
+
+  it("are joined by a no-break space in every bundle, staff and diver alike", () => {
+    // "Images and PDFs up to 5 MB." broke between "5" and "MB." on four
+    // switching guides at 1280 (K-203). A plain space is a line break waiting
+    // for the right width; U+00A0 keeps the size one unit.
+    const split = bundleFiles(LOCALES).flatMap((file) =>
+      Object.entries(flatten(JSON.parse(readFileSync(file, "utf8"))))
+        .filter(([, message]) => /\d (?:KB|MB|GB)\b/.test(message))
+        .map(([key]) => `${relative(LOCALES, file)}: ${key}`),
+    );
+    expect(split).toEqual([]);
   });
 });
 

@@ -199,7 +199,7 @@
     "errorCoordinates": "Agrega ambas coordenadas GPS: una ubicación necesita latitud y longitud.",
     "errorTideStation": "El id de una estación de mareas NOAA tiene siete dígitos, como 8723583.",
     "errorDepth": "Esa profundidad máxima es mayor que la de cualquier sitio de buceo.",
-    "errorImages": "Una de esas fotos no se pudo guardar. Un sitio admite hasta seis, y cada una tiene que ser JPG, PNG, WebP o HEIC de menos de 5 MB. Todo lo demás que escribiste sigue aquí.",
+    "errorImages": "Una de esas fotos no se pudo guardar. Un sitio admite hasta seis, y cada una tiene que ser JPG, PNG, WebP o HEIC de menos de 5\u00a0MB. Todo lo demás que escribiste sigue aquí.",
     "errorImagesUnconfigured": "El almacenamiento de fotos aún no está configurado para este centro. Guarda el briefing sin fotos por ahora, o pide al propietario o gerente de tu centro que lo configure.",
     "errorConflict": "Alguien más cambió este briefing mientras lo tenías abierto, así que no se guardó nada. Lo que escribiste sigue aquí: copia lo que necesites y recarga la página.",
     "planningNoteLabel": "Qué recordar al planificar este sitio de buceo",
@@ -290,7 +290,7 @@
     "importNoNameColumn": "Ese archivo no tiene columna de nombre, así que no hay con qué emparejar un sitio.",
     "importFileEmpty": "Ese archivo no tiene filas.",
     "imported": "Se actualizaron {updated, plural, one {# sitio} other {# sitios}} y se crearon {created, plural, one {# nuevo} other {# nuevos}}. {deleted, plural, =0 {Ninguno volvió eliminado} one {# volvió eliminado} other {# volvieron eliminados}} y {skipped, plural, =0 {no se dejó ninguna fila} one {se dejó # fila} other {se dejaron # filas}} sin tocar.",
-    "importFileTooLarge": "Ese archivo pesa más de 8 MB. Divídelo o vuelve a exportar desde este centro.",
+    "importFileTooLarge": "Ese archivo pesa más de 8\u00a0MB. Divídelo o vuelve a exportar desde este centro.",
     "importTooManyRows": "Ese archivo tiene más de 20.000 filas, más sitios de los que cabe una biblioteca.",
     "importTooManyColumns": "Ese archivo tiene más de 64 columnas, así que no es una exportación de DiveDay.",
     "importCellTooLong": "Uno de los valores de ese archivo pasa de 2.000 caracteres, así que no se leyó nada."

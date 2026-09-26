@@ -691,7 +691,7 @@
       },
       "waiverDocuments": {
         "what": "Waiver / medical documents",
-        "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5 MB."
+        "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5\u00a0MB."
       },
       "role": {
         "what": "Role",
