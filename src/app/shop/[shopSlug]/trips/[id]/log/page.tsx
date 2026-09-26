@@ -26,6 +26,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { CertificationLine } from "./_components/CertificationLine";
+import { NumberedName } from "./_components/NumberedName";
 import {
   rollCallCheckpointPrintClass,
   rollCallTableMinWidth,
@@ -216,17 +217,8 @@ export default async function IncidentExportPage({
           <TBody>
             {doc.roster.map((diver, index) => (
               <tr key={diver.bookingId}>
-                {/* The number is its own box and the name hangs beside it, so
-                    a name that wraps stays in its column rather than returning
-                    under "01". The space stays in the text: the cell still
-                    reads "01 Theo Lindqvist". */}
                 <Td>
-                  <span className="flex gap-1 font-semibold">
-                    <span className="shrink-0 tabular-nums">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>{" "}
-                    <span className="min-w-0">{diver.fullName}</span>
-                  </span>
+                  <NumberedName number={index + 1} name={diver.fullName} />
                 </Td>
                 {/* The name may wrap; the number may not. This is the one
                     document a shop hands an insurer or an authority, and a
