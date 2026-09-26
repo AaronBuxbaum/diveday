@@ -36,3 +36,22 @@ describe("a dive site's upcoming dives", () => {
     expect(pad.sort()).toEqual(bleed.map((token) => token.replace("-mx-", "px-")).sort());
   });
 });
+
+/**
+ * **The header seats its door at the foot of the title block, as the other
+ * records headers do** (class 12; K-491). `ShopPageHeader` reserves
+ * `align="start"` for actions that grow, such as a form that opens in place;
+ * "Schedule a departure" is a static link, and hanging it from the eyebrow put
+ * it level with the "Dive sites" crumb while every other records header with a
+ * door (settings-export's, the default `end`) seats it beside the block's last
+ * line.
+ */
+describe("a dive site's page header", () => {
+  it("takes the header's default alignment for its one static door", () => {
+    const start = SOURCE.indexOf("<ShopPageHeader");
+    expect(start, "the header is where this test looks").toBeGreaterThan(-1);
+    const header = SOURCE.slice(start, SOURCE.indexOf("/>\n", SOURCE.indexOf("actions={", start)));
+    expect(header).toContain('t("diveSites.edit.scheduleDeparture")');
+    expect(header).not.toMatch(/\balign=/);
+  });
+});
