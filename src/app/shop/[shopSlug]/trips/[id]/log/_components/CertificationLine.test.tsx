@@ -77,6 +77,25 @@ describe("the card number", () => {
     expect(text.startsWith(message)).toBe(true);
   });
 
+  it("decides number or no number exactly as the log did before the number was set whole", () => {
+    // Only a missing number (`null`) is stated as missing; whatever string the
+    // record holds is printed as held. Setting the number in its own span was
+    // a typesetting change, not a change to what the evidentiary document
+    // says. Whether an empty string should read as a missing number is the
+    // incident export's question (its "absence is stated" rule), answered
+    // where the evidence is built, not by this span.
+    for (const identifier of ["PADI-12-3456", ""]) {
+      const message = t("incidentExport.certLevelLine", {
+        agency: "PADI",
+        level: t("shared.readiness.certificationLevels.openWater"),
+        identifier,
+      });
+      // The message, then the status's separator: nothing in between.
+      const text = renderLine(evidence({ identifier })).textContent ?? "";
+      expect(text.startsWith(`${message}\u00a0· `), JSON.stringify(identifier)).toBe(true);
+    }
+  });
+
   it("leaves the no-number phrase free to wrap, since it is words and not a number", () => {
     const line = renderLine(evidence({ identifier: null, status: "pending", selfDeclared: true }));
     expect(line).toHaveTextContent(t("incidentExport.certNoNumber"));

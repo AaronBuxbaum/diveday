@@ -46,8 +46,11 @@ export function CertificationLine({
   // from, so it is set whole in a `whitespace-nowrap` span — the rule the
   // emergency phone takes on the roster (issue #1035). Never non-breaking
   // hyphens instead: a number copied off this page has to match the card.
-  // The no-number phrase is words, and wraps like them.
-  const identifier = card.identifier ? NUMBER_SLOT : t("incidentExport.certNoNumber");
+  // The no-number phrase is words, and wraps like them. Which of the two a
+  // card gets is decided exactly as before the number had a span of its own:
+  // only `null` is a missing number, and any string the record holds is
+  // printed as held.
+  const identifier = card.identifier != null ? NUMBER_SLOT : t("incidentExport.certNoNumber");
   const translated =
     card.kind === "level" && levelKey
       ? t("incidentExport.certLevelLine", {
