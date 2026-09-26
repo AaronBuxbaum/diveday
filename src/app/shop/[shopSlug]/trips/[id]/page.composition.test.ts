@@ -103,6 +103,26 @@ describe("the departure's section rhythm", () => {
     expect(own).not.toContain('<div className="mt-8">');
   });
 
+  it("sets the pulse facts' words, not their 44px boxes, 40px from their neighbours", () => {
+    // Each fact is a 44px link round a 20px line, so its words sat 12px inside
+    // each 40px gap: 52px from the About card and 52px above the roster. Each
+    // link hands the unseen 12px back as `-my-3` and the row is its words'
+    // height; `gap-y-7` keeps a wrapped line's box 4px clear of the one above,
+    // as `gap-y-1` did. Not `-my-3` on the row: the stack's end margin is
+    // `:where()`, so the row's own would replace it and pull the roster up.
+    const pulse = body.slice(
+      body.indexOf("{pulseFacts.length > 0 ? ("),
+      body.indexOf("<TripRosterContent"),
+    );
+    const row = pulse.match(/<div className="([^"]*)">\s*\{pulseFacts\.map/)?.[1] ?? "";
+    expect(row.split(/\s+/)).toEqual(expect.arrayContaining(["flex", "flex-wrap", "gap-y-7"]));
+    expect(row).not.toMatch(/(^|\s)-?m[ty]?-/);
+    const link = pulse.match(/className=\{`([^`]*)`\}/)?.[1] ?? "";
+    expect(link.split(/\s+/)).toEqual(
+      expect.arrayContaining(["-my-3", "inline-flex", "min-h-11", "items-center", "text-sm"]),
+    );
+  });
+
   it("keeps the skeleton on the same rhythm, so nothing jumps when the page arrives", () => {
     const skeleton = readFileSync(join(__dirname, "loading.tsx"), "utf8");
     expect(skeleton).toContain('className="animate-pulse space-y-10"');

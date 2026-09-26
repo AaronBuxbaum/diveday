@@ -1193,13 +1193,20 @@ export default async function ManageTripPage({
           />
         ) : null}
 
+        {/* **The stack's gap is measured to the words** (K-262). Each fact is
+            a 44px link round a 20px line, and its words sat 12px inside each
+            40px gap. Each link gives that unseen 12px back as `-my-3`, so the
+            row is its words' height and the targets overhang the gaps;
+            `gap-y-7` keeps a wrapped line's box 4px clear of the one above.
+            Not on the row: the stack's end margin is `:where()`, and the
+            row's own `-my-3` would replace it and pull the roster up. */}
         {pulseFacts.length > 0 ? (
-          <div className="flex flex-wrap gap-x-4 gap-y-1">
+          <div className="flex flex-wrap gap-x-4 gap-y-7">
             {pulseFacts.map((fact) => (
               <Link
                 key={fact.href}
                 href={fact.href}
-                className={`inline-flex min-h-11 items-center text-sm font-medium hover:underline ${
+                className={`-my-3 inline-flex min-h-11 items-center text-sm font-medium hover:underline ${
                   fact.tone === "danger" ? "text-danger" : "text-primary"
                 }`}
               >
