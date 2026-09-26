@@ -93,6 +93,49 @@ describe("collectGeometry, rebuilt from its own source", () => {
     expect(form.cls).toBe("f");
   });
 
+  it("records a tabindex, so an option focus never reaches is known as one", () => {
+    // The command palette's results: `<button role="option" tabindex="-1">`
+    // under an input that keeps focus and moves `aria-activedescendant`.
+    const window = freshWindow(
+      `<div role="listbox"><button class="opt" role="option" tabindex="-1">Tuesday</button></div>
+       <button class="plain">Save</button><div class="stop" tabindex="0">Map</div>`,
+    );
+    const snapshot = inWindow(window, collectGeometry)({});
+    const byCls = (cls) => snapshot.elements.find((el) => el.cls === cls);
+    // Still a control and still a target — only not a tab stop.
+    expect(byCls("opt")).toMatchObject({ ti: -1, focusable: true, interactive: true });
+    expect(byCls("plain").ti).toBeNull();
+    expect(byCls("stop")).toMatchObject({ ti: 0, focusable: true });
+  });
+
+  it("measures preserved text by its ink, not the space that hangs at a wrap", () => {
+    // The waiver release and a diver's message are `whitespace-pre-wrap`,
+    // where a space at a wrap is kept and hangs past the line's end. A text
+    // Range counts it, so the probe read the waiver as running 2.4px out of
+    // its box (cluster C1) while no ink left it. jsdom has no layout, so the
+    // page here gets one: 10px per character, ten to a line.
+    const window = freshWindow(
+      `<p class="pre" style="white-space: pre-wrap">Lorem ips dolor sit</p>
+       <p class="normal">Lorem ips dolor sit</p>`,
+    );
+    window.Range.prototype.getClientRects = function layout() {
+      const rects = [];
+      for (let at = this.startOffset; at < this.endOffset; at += 1) {
+        rects.push(new window.DOMRect((at % 10) * 10, Math.floor(at / 10) * 20, 10, 20));
+      }
+      return rects;
+    };
+    const snapshot = inWindow(window, collectGeometry)({});
+    const byCls = (cls) => snapshot.elements.find((el) => el.cls === cls);
+    // "Lorem ips" ends at 90; the space after it, kept at the wrap, at 100.
+    expect(byCls("pre").text).toEqual([
+      [0, 0, 90, 20],
+      [0, 20, 90, 20],
+    ]);
+    // Spaces that collapse are measured as one run, as before.
+    expect(byCls("normal").text[0]).toEqual([0, 0, 100, 20]);
+  });
+
   it("puts back the one style it lifts", () => {
     const window = freshWindow(html);
     window.document.body.style.overflowX = "clip";

@@ -123,33 +123,51 @@ export function collectGeometry(options) {
 
   // Direct, non-blank text children, measured through a Range trimmed of the
   // whitespace around them — so indentation in the markup never widens a box.
-  const textLinesOf = (element) => {
+  // Where spaces are preserved (`pre`, `pre-wrap`, `break-spaces`) they are
+  // measured as they render, and under `pre-wrap` a space kept at a wrap hangs
+  // past the line's end: there only the runs of ink are measured, word by
+  // word, until the lines this keeps are full.
+  const MAX_LINES = 24;
+  const textLinesOf = (element, preserved) => {
     const lines = [];
+    const range = document.createRange();
     for (const node of element.childNodes) {
       if (node.nodeType !== 3) continue;
+      if (lines.length > MAX_LINES) break;
       const data = node.data;
-      const start = data.search(/\S/);
-      if (start < 0) continue;
-      let end = data.length;
-      while (end > start && /\s/.test(data[end - 1])) end -= 1;
-      const range = document.createRange();
-      range.setStart(node, start);
-      range.setEnd(node, end);
-      for (const rect of range.getClientRects()) {
-        if (rect.width < 0.5 || rect.height < 0.5) continue;
-        const top = rect.top + sy;
-        const line = lines.find((known) => Math.abs(known[1] - top) < 1);
-        if (line) {
-          const right = Math.max(line[0] + line[2], rect.right + sx);
-          line[0] = Math.min(line[0], rect.left + sx);
-          line[2] = right - line[0];
-          line[3] = Math.max(line[3], rect.height);
-        } else {
-          lines.push([rect.left + sx, top, rect.width, rect.height]);
+      const runs = [];
+      if (preserved) {
+        for (const match of data.matchAll(/\S+/g)) {
+          runs.push([match.index, match.index + match[0].length]);
+        }
+      } else {
+        const start = data.search(/\S/);
+        if (start >= 0) {
+          let end = data.length;
+          while (end > start && /\s/.test(data[end - 1])) end -= 1;
+          runs.push([start, end]);
+        }
+      }
+      for (const [start, end] of runs) {
+        if (lines.length > MAX_LINES) break;
+        range.setStart(node, start);
+        range.setEnd(node, end);
+        for (const rect of range.getClientRects()) {
+          if (rect.width < 0.5 || rect.height < 0.5) continue;
+          const top = rect.top + sy;
+          const line = lines.find((known) => Math.abs(known[1] - top) < 1);
+          if (line) {
+            const right = Math.max(line[0] + line[2], rect.right + sx);
+            line[0] = Math.min(line[0], rect.left + sx);
+            line[2] = right - line[0];
+            line[3] = Math.max(line[3], rect.height);
+          } else {
+            lines.push([rect.left + sx, top, rect.width, rect.height]);
+          }
         }
       }
     }
-    return lines.slice(0, 24).map((line) => line.map(round));
+    return lines.slice(0, MAX_LINES).map((line) => line.map(round));
   };
 
   const inFlowPseudo = (element) => {
@@ -227,6 +245,7 @@ export function collectGeometry(options) {
       /paint|strict|content/.test(contain) || (style.clipPath && style.clipPath !== "none");
     const clips = clipsX || clipsY || clipsPaint;
     const tabIndexAttr = element.getAttribute("tabindex");
+    const tabIndex = tabIndexAttr === null ? Number.NaN : Number.parseInt(tabIndexAttr, 10);
     const focusable =
       (FOCUSABLE_TAGS.has(element.tagName) &&
         !(element.tagName === "A" && !element.hasAttribute("href")) &&
@@ -234,7 +253,11 @@ export function collectGeometry(options) {
       (tabIndexAttr !== null && Number(tabIndexAttr) >= 0);
     const interactive = focusable || CONTROL_ROLES.has(role);
     const disabled = element.disabled === true || element.getAttribute("aria-disabled") === "true";
-    const text = textLinesOf(element);
+    const text = textLinesOf(
+      element,
+      /^(pre|pre-wrap|break-spaces)$/.test(style.whiteSpace) ||
+        /^(preserve|preserve-spaces|break-spaces)$/.test(style.whiteSpaceCollapse || ""),
+    );
     const bgAlpha = alphaOf(style.backgroundColor);
     const borderWidths = [
       num(style.borderTopWidth),
@@ -317,6 +340,10 @@ export function collectGeometry(options) {
       lc: num(style.webkitLineClamp || style.getPropertyValue("-webkit-line-clamp")),
       interactive,
       focusable,
+      // The tabindex attribute, or null: a `-1` is focusable by script and
+      // out of the tab order (the command palette's options, which focus never
+      // reaches), which is not the same as focusable.
+      ti: Number.isFinite(tabIndex) ? tabIndex : null,
       disabled,
       ariaHidden: element.closest('[aria-hidden="true"]') !== null,
       // Inside an illustration (`role="img"`): a mock of the product drawn on

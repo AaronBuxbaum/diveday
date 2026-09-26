@@ -11,6 +11,7 @@ import {
   ringReach,
   SWEEP_CHECKS,
   shortHash,
+  takesFocus,
 } from "./analyze.mjs";
 import { collectGeometry } from "./collect.mjs";
 import { cropRegion, loadRaw, writeClipShot, writeCrop } from "./crop.mjs";
@@ -85,7 +86,8 @@ const SEVERITY_ORDER = { S1: 0, S2: 1, S3: 2 };
  * Which focusable elements the state pass forces: the first, middle and last
  * instance of each (signature, container) pair — the first and last rows of a
  * list are the ones that touch the container's corners — in document order,
- * up to the cap.
+ * up to the cap. `hoverOnly` holds the ones no keyboard focuses (`takesFocus`):
+ * they are hovered like any target and never forced into `:focus-visible`.
  */
 export function stateCandidates(
   snapshot,
@@ -113,7 +115,8 @@ export function stateCandidates(
     }
   }
   chosen.sort((a, b) => a - b);
-  return { candidates: chosen, dropped, groups: groups.size };
+  const hoverOnly = new Set(chosen.filter((index) => !takesFocus(ix.els[index])));
+  return { candidates: chosen, hoverOnly, dropped, groups: groups.size };
 }
 
 /** A clipped screenshot of the page as it is *right now* (forced state and all). */
@@ -212,7 +215,7 @@ export async function probeViewport(page, ctx) {
     const atlasHere = [];
 
     if (ctx.states) {
-      const { candidates, dropped, groups } = stateCandidates(snapshot);
+      const { candidates, hoverOnly, dropped, groups } = stateCandidates(snapshot);
       record.dropped.stateCandidates = dropped;
       const onState = async (index, state, rest, snap) => {
         const el = ix.els[index];
@@ -264,6 +267,7 @@ export async function probeViewport(page, ctx) {
       };
       const pass = await statePass(page, {
         candidates,
+        hoverOnly,
         mode: "full",
         bound: ctx.bound,
         callMs: ctx.budgets.callMs,

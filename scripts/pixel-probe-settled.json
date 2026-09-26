@@ -39,6 +39,33 @@
       "classes": ["gap-2", "ring-2"],
       "reason": "A diver record's waiver channel button carries its delivery state as an sr-only word. The probe reads that word's unclipped rects into the button's text box, so the text appears to run past the button and the hover fill reads as 9px short on the right. Nothing visible spills; the visible label keeps the size's 12px either side.",
       "pointer": "src/app/shop/[shopSlug]/divers/[personId]/_components/WaiverDeliveryActions.tsx, the comment on the sr-only state word; docs/design/settled-questions.md"
+    },
+    {
+      "check": "text-spill",
+      "signature": "span{block;p0,0,0,0;b0,0,0,0;r0,0,0,0;f10/400;}",
+      "container": "div.min-h-0 outline-none water-band",
+      "reason": "The year strip's month labels are anchored in the one-week column each month starts in, which is narrower than the word, so each runs on over its own month's empty weeks. The next label is four or five weeks along: nothing is overlapped or clipped.",
+      "pointer": "src/app/shop/[shopSlug]/reports/_components/YearStrip.tsx, the comment on the month-label row; docs/design/settled-questions.md"
+    },
+    {
+      "check": "truncated",
+      "signature": "span.truncate",
+      "container": "header.backdrop-blur-xl bg-background border-b border-border h-(--chrome-h) print:hidden sticky supports-[backdrop-filter]:bg-background/85",
+      "reason": "The chrome bar is one fixed-height row, so a long shop name ellipses rather than wrap onto a second line or push the nav and language picker off a phone.",
+      "pointer": "src/components/PublicShopChrome.tsx, the comment on the leading slot; docs/design/settled-questions.md"
+    },
+    {
+      "check": "truncated",
+      "classes": ["group-open/about:hidden", "truncate"],
+      "reason": "A departure's collapsed About line is one line at rest, cut to fit: it previews the rows the panel opens into, one tap away, and a wrapped preview would push the roster down for facts the panel holds in full.",
+      "pointer": "src/app/shop/[shopSlug]/trips/[id]/_components/TripAboutSection.tsx, the comment on the summary line; docs/design/settled-questions.md"
+    },
+    {
+      "check": "truncated",
+      "signature": "p.font-mono text-muted text-xs truncate",
+      "container": "li.border-border border-t flex gap-3 items-center last:border-b min-h-13 px-2 relative",
+      "reason": "The first-run checklist's storefront link is cut to fit its row: it sits beside its own Copy control, which copies it whole, and uncut it would push the page wider than a phone.",
+      "pointer": "src/app/shop/[shopSlug]/_components/today/FirstRunChecklist.tsx, the comment on the link's min-w-0 wrapper; docs/design/settled-questions.md"
     }
   ]
 }

@@ -241,6 +241,8 @@ const asFunction = (fn) => fn.toString();
  * @param {object} options
  * @param {number[]} options.candidates record indices (as `collectGeometry` numbered them)
  * @param {"full" | "ring"} options.mode `ring` only forces focus, to measure the ring's reach
+ * @param {Set<number>} [options.hoverOnly] candidates never forced into focus: ones no
+ *   keyboard focuses (`takesFocus` in analyze.mjs), whose forced ring is unreachable
  * @param {(what: string, ms: number, work: Promise<unknown>, degraded: unknown) => Promise<unknown>} options.bound
  *   the caller's renderer-bounded await (`withRendererBound` in the visual spec)
  * @param {number} options.callMs the bound on any one protocol step
@@ -250,6 +252,7 @@ const asFunction = (fn) => fn.toString();
  */
 export async function statePass(page, options) {
   const { candidates, mode, bound, callMs, deadline, onState } = options;
+  const hoverOnly = options.hoverOnly ?? new Set();
   const results = new Map();
   const stats = {
     requested: candidates.length,
@@ -391,14 +394,16 @@ export async function statePass(page, options) {
           await clear(chainNodes);
         }
       }
-      await force(chainNodes, (at) => (at === 0 ? ["focus", "focus-visible"] : ["focus-within"]));
-      try {
-        const focus = await measure(selfObject);
-        entry.focus = focus;
-        if (!focus.matches.focusVisible) stats.unforcedFocus += 1;
-        else if (onState) await onState(index, "focus", rest, focus);
-      } finally {
-        await clear(chainNodes);
+      if (!hoverOnly.has(index)) {
+        await force(chainNodes, (at) => (at === 0 ? ["focus", "focus-visible"] : ["focus-within"]));
+        try {
+          const focus = await measure(selfObject);
+          entry.focus = focus;
+          if (!focus.matches.focusVisible) stats.unforcedFocus += 1;
+          else if (onState) await onState(index, "focus", rest, focus);
+        } finally {
+          await clear(chainNodes);
+        }
       }
       results.set(index, entry);
       stats.tested += 1;

@@ -164,6 +164,41 @@ test.describe("focus-ring-clipped", () => {
     // takes the nested 12px radius the ladder gives it.
     await leavesStatic(page, "focus-ring-clipped", card(8, 12), "row");
   });
+
+  // The command palette's shape: an input that keeps focus and moves
+  // `aria-activedescendant`, over a scrolling listbox whose options sit flush
+  // against its sides.
+  const palette = (optionAttrs: string) =>
+    html(
+      `.list { height: 120px; overflow-y: auto; padding: 8px 0; }
+       .opt { display: block; width: 100%; padding: 12px 20px; border: 0; background: none; text-align: left; }`,
+      `<input class="field" role="combobox" aria-controls="list" aria-activedescendant="o1">
+       <div id="list" class="list" role="listbox"><button id="o1" class="opt" type="button" role="option" ${optionAttrs}>Tuesday dives</button></div>`,
+    );
+
+  test("flags an option in the tab order flush in a scrolling listbox", async ({ page }) => {
+    await flagsStatic(page, "focus-ring-clipped", palette(""), "opt");
+  });
+
+  test("leaves an option focus never reaches (tabindex -1) alone", async ({ page }) => {
+    await leavesStatic(page, "focus-ring-clipped", palette(`tabindex="-1"`), "opt");
+  });
+
+  test("hovers that option but never forces it into focus", async ({ page }) => {
+    const snapshot = await snapshotOf(page, palette(`tabindex="-1"`));
+    const el = byClass(snapshot, "opt");
+    const { results, stats } = await statePass(page, {
+      candidates: [el.i],
+      hoverOnly: new Set([el.i]),
+      mode: "full",
+      bound,
+      callMs: 5_000,
+      deadline: Date.now() + 10_000,
+    });
+    expect(stats.error).toBeNull();
+    expect(results.get(el.i)?.hover?.matches.hover, "hover was forced").toBe(true);
+    expect(results.get(el.i)?.focus).toBeNull();
+  });
 });
 
 test.describe("nested-corners", () => {
@@ -309,6 +344,21 @@ test.describe("ragged-column", () => {
   test("leaves a caret pushed to each row's right edge alone", async ({ page }) => {
     await leavesStatic(page, "ragged-column", list("margin-left: auto;"), "caret");
   });
+
+  test("leaves a required mark running on after each label alone", async ({ page }) => {
+    // Punctuation in a line of text: its x is the label before it, as a
+    // field's "*" is (`form.tsx`), and a legal term's " — " (`LegalDocument`).
+    const fields = html(
+      `.form { display: flex; flex-direction: column; gap: 8px; }
+       .field { height: 44px; }`,
+      `<div class="form">
+         <div class="field"><label>Date</label><span class="req"> *</span></div>
+         <div class="field"><label>Departs from</label><span class="req"> *</span></div>
+         <div class="field"><label>Returns</label><span class="req"> *</span></div>
+       </div>`,
+    );
+    await leavesStatic(page, "ragged-column", fields, "req");
+  });
 });
 
 test.describe("uneven-gaps", () => {
@@ -348,6 +398,18 @@ test.describe("phantom-gap", () => {
   test("leaves a column with no empty child alone", async ({ page }) => {
     await leavesStatic(page, "phantom-gap", stack(""), "stack");
   });
+
+  test("leaves an empty slot in a spread row alone: the free space takes its gap", async ({
+    page,
+  }) => {
+    // The ready roster row: a name, then a badge slot that is empty for a
+    // ready diver, in a `justify-content: space-between` header.
+    const header = html(
+      `.header { display: flex; justify-content: space-between; align-items: center; gap: 12px; height: 44px; }`,
+      `<div class="header"><span class="name">Ann Lee</span><div class="badges"></div></div>`,
+    );
+    await leavesStatic(page, "phantom-gap", header, "badges");
+  });
 });
 
 test.describe("page-overflow", () => {
@@ -383,6 +445,17 @@ test.describe("text-spill", () => {
 
   test("leaves the same word allowed to break anywhere alone", async ({ page }) => {
     await leavesStatic(page, "text-spill", chip("overflow-wrap: anywhere;"), "chip");
+  });
+
+  test("leaves a preserved space hanging at a wrap alone", async ({ page }) => {
+    // `pre-wrap` keeps the space at each wrap and lets it hang past the line's
+    // end (the waiver release, a diver's message). "aaaa bbbb" fills the 9ch
+    // box exactly, so the space after it hangs 1ch outside: no ink does.
+    const release = html(
+      `.release { width: 9ch; margin: 0; font: 16px/24px monospace; white-space: pre-wrap; }`,
+      `<p class="release">aaaa bbbb cccc dddd</p>`,
+    );
+    await leavesStatic(page, "text-spill", release, "release");
   });
 });
 

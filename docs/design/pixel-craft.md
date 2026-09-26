@@ -268,21 +268,61 @@ was read and given a verdict, and the checks were tuned until most flags were tr
 under 70% precision produces **leads**, not findings: read them, but a flag from one is not a
 finding until you have confirmed it.
 
-| Check | Flags (tuned) | Precision | Standing |
-| --- | --- | --- | --- |
-| `focus-ring-clipped` | 130 | 100% | finding |
-| `small-target` | 102 | 100% | finding |
-| `three-part-row` | 12 | 100% | finding |
-| `fill-tight` | 9 | 100% | finding |
-| `nested-corners` | 7 | 100% | finding |
-| `mismatched-controls` | 4 | 100% | finding |
-| `fill-corners` | 3 | 100% | finding |
-| `off-centre` | 2 | 100% | finding |
-| `text-spill` | 1 | 100% | finding |
-| `ragged-edges` | 27 | about 45% | lead |
-| `ragged-column` | 5 | about 20% | lead |
-| `truncated` | 2 | — | lead by design |
-| `text-beside-control`, `uneven-gaps`, `phantom-gap`, `hard-clip`, `page-overflow`, `hover-shift`, `focus-shift`, `focus-invisible`, `focus-ring-differs` | 0 | — | proven by fixture pairs only |
+Then they were audited on 36 capture groups. Each flag in each capture got a verdict with its
+measurement: 6,192 flags, 5,571 confirmed and 621 dismissed, 90% precision. The three atlas groups
+re-count, by control signature, flags the surface groups also count; without them it is 4,271 flags
+and 86%, and only `fill-tight` reads differently (91%).
+
+| Check | Flags | Confirmed | Dismissed | Precision | Standing |
+| --- | --- | --- | --- | --- | --- |
+| `focus-ring-clipped` | 3,400 | 3,318 | 82 | 98% | finding |
+| `small-target` | 990 | 990 | 0 | 100% | finding |
+| `ragged-edges` | 404 | 88 | 316 | 22% | lead |
+| `fill-tight` | 298 | 283 | 15 | 95% | finding |
+| `phantom-gap` | 196 | 118 | 78 | 60% | lead |
+| `mismatched-controls` | 182 | 182 | 0 | 100% | finding |
+| `truncated` | 156 | 137 | 19 | 88% | lead by design |
+| `fill-corners` | 144 | 144 | 0 | 100% | finding |
+| `ragged-column` | 89 | 33 | 56 | 37% | lead |
+| `nested-corners` | 85 | 85 | 0 | 100% | finding |
+| `three-part-row` | 84 | 84 | 0 | 100% | finding |
+| `off-centre` | 38 | 38 | 0 | 100% | finding |
+| `text-spill` | 38 | 7 | 31 | 18% | lead |
+| `uneven-gaps` | 34 | 30 | 4 | 88% | finding |
+| `hard-clip` | 34 | 34 | 0 | 100% | finding |
+| `text-beside-control` | 20 | 0 | 20 | 0% | lead |
+| `page-overflow`, `hover-shift`, `focus-shift`, `focus-invisible`, `focus-ring-differs` | 0 | — | — | — | proven by fixture pairs only |
+
+The dismissals were mostly a few probe errors, each repeated on many captures. These checks changed
+after the audit:
+
+- **`ragged-edges`.** 305 of its 316 dismissals were three errors.
+  - The painted-box walk stopped two levels short of the content walk. The staff chrome's logo
+    tile sits six levels under the header, so the probe read the "BM" inside it (23.8px) as the
+    header's edge instead of the tile's 16 (189 flags). Both walks now share one depth.
+  - The content walk cached a depth-dependent answer by element alone. An outer stack stored
+    `CompactDisclosureRow`'s `-mx-2` summary as its own x, and the row read 8px out of its column
+    (108). The cache is keyed by depth too.
+  - Centred text was given a left edge (8). It now offers none; a centred card still offers its box.
+- **`text-beside-control`.** All 20 were a caption stacked over its field inside a `<label>` whose
+  box ran beside the row's button. The first line itself must now sit beside the control.
+- **`focus-ring-clipped`.** All 82 were the command palette's `tabindex="-1"` options, which focus
+  never reaches: the combobox keeps it and moves `aria-activedescendant`. An element with a negative
+  tabindex is no longer forced into `:focus-visible`, and is still hovered and still a target.
+- **`text-spill`.** 13 were a space kept at a `pre-wrap` wrap, hanging past the line's end;
+  preserved text is now measured by its words alone. 17 were the year strip's month labels, which
+  are settled.
+- **`phantom-gap`.** Most were an empty slot in a row spread by `justify-content: space-between`
+  (or `-around`, `-evenly`), whose free space takes the gap. Such a row is left alone while it has
+  free space, unless the empty slot doubles its neighbours' measured spacing.
+- **`ragged-column`.** Most were a child whose x is the length of the words before it: an inline
+  mark running on after words (a required "*", a legal term's " — ", a link mid-sentence), or a
+  glyph closing its own label's box ("Edit details ⌄"). Both are left alone. A caret that is its
+  own item after a name is still flagged.
+- **`truncated`.** 13 of its 19 dismissals are settled: a departure's collapsed About line, the
+  storefront bar's shop name, and Today's first-run checklist link.
+
+The standings above are the audit's. They move only when the next audit measures them.
 
 Before tuning, most checks were noise:
 
@@ -295,7 +335,15 @@ Each fix is recorded as a "leaves alone" case in `scripts/pixel-probe/analyze.te
 - a card's border was not subtracted from the inset;
 - bands painted the page's own colour were counted as painted;
 - wrapped text aligned to the start was counted as off centre;
-- a tight line-height's font overhang was counted as spill.
+- a tight line-height's font overhang was counted as spill;
+- a painted tile six levels down was read by the words inside it;
+- a row's edge depended on which stack reached it first;
+- centred text was given a left edge;
+- a caption stacked over its field was read as text beside a button;
+- an option no keyboard focuses was forced into focus;
+- a space hanging at a `pre-wrap` wrap was counted as spill (in `collect.test.mjs`);
+- an empty slot in a spread row with free space was read as a doubled gap;
+- a mark after words, and a caret closing its own label's box, were read as a wandering column.
 
 Every check also has a flagging fixture and a correct twin that must not be flagged, in
 `e2e/pixel-probe.spec.ts`. A check with no flags on the calibration surfaces is proven by its

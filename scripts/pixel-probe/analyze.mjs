@@ -362,21 +362,37 @@ function textLineCount(ix, el, depth = 0) {
 }
 
 /**
+ * How far below a stacked sibling the two edge walks read. One number for
+ * both, so any word the content walk reads inside a painted box, the box walk
+ * reaches that box too: the staff chrome's monogram tile sits six levels under
+ * the header, and a box walk that stopped at four read the "BM" inside it
+ * (23.8px) as the header's edge instead of the tile's own 16.
+ */
+const EDGE_DEPTH = 6;
+
+/**
  * Where the eye puts an element's left edge: where its first word or icon
  * starts. A painted box with nothing inside it is its own edge. Two stacked
  * siblings "line up" when their content does — an active nav item's pill can
  * bleed past the column so long as its label does not.
+ *
+ * The answer depends on the depth it was asked from (past `EDGE_DEPTH` a box
+ * is its own x), so the cache is keyed by both: keyed by element alone, an
+ * outer stack that first reached `CompactDisclosureRow`'s `-mx-2` summary
+ * seven levels down stored "the summary's x" (8px left of its caret), and the
+ * row's own stack read that back as the row's edge.
  */
 function visualLeft(ix, el, cache, depth = 0) {
-  if (cache.has(el.i)) return cache.get(el.i);
+  const key = `${el.i}:${depth}`;
+  if (cache.has(key)) return cache.get(key);
   let value;
-  if (el.replaced || depth > 6) value = el.x;
+  if (el.replaced || depth > EDGE_DEPTH) value = el.x;
   else {
     const lefts = (el.text || []).map((line) => line[0]);
     for (const kid of flowKids(ix, el)) lefts.push(visualLeft(ix, kid, cache, depth + 1));
     value = lefts.length > 0 ? Math.min(...lefts) : el.x;
   }
-  cache.set(el.i, value);
+  cache.set(key, value);
   return value;
 }
 
@@ -386,7 +402,7 @@ function visualLeft(ix, el, cache, depth = 0) {
  */
 function boxLeft(ix, el, span, depth = 0) {
   if (isPainted(el) && el.w < span - 2) return el.x;
-  if (depth > 4) return null;
+  if (depth > EDGE_DEPTH) return null;
   let best = null;
   for (const kid of flowKids(ix, el)) {
     const edge = boxLeft(ix, kid, span, depth + 1);
@@ -508,8 +524,21 @@ export function ringClips(ix, el, reach) {
   return hits;
 }
 
+/**
+ * Whether a keyboard can put focus here — what forcing `:focus-visible` on it
+ * stands in for. `tabindex="-1"` takes a box out of the tab order: the command
+ * palette's options wear it because focus stays in the combobox and the arrows
+ * move `aria-activedescendant`, so a ring forced onto one is a state no
+ * keyboard reaches (82 dismissed `focus-ring-clipped` flags). A box that is a
+ * `-1` in one capture and a tab stop in another (a roving tab stop) is judged
+ * where it is the stop. It stays a pointer target either way.
+ */
+export function takesFocus(el) {
+  return Boolean(el.focusable) && !(el.ti < 0);
+}
+
 function isFocusCandidate(el) {
-  return el.focusable && isVisible(el) && !el.srOnly && el.disabled !== true;
+  return takesFocus(el) && isVisible(el) && !el.srOnly && el.disabled !== true;
 }
 
 /** Focusable elements whose ring *would* be clipped at the global ring's reach. */
@@ -897,6 +926,13 @@ function checkRows(ix, enabled) {
           const flexRow = /flex/.test(owner.disp) && !/column/.test(owner.fd);
           if (!flexRow && gapX > 48) continue;
           if (overlapY(tBox, controlMember.unit) <= 0) continue;
+          // Side by side means the words themselves: the first line has to
+          // share some height with the control and stay out of its column. A
+          // `<label>` wrapping a caption and its field runs its *box* beside
+          // the row's button while its words sit above both — every one of
+          // the 20 flags the audit gave this check was that stacked caption.
+          const line = { x: firstLine[0], y: firstLine[1], w: firstLine[2], h: lineH };
+          if (overlapY(line, control) <= 0.5 || overlapX(line, control) > 0.5) continue;
           const controlCentre = control.y + control.h / 2;
           const lineCentre = firstLine[1] + firstLine[3] / 2;
           const blockCentre = text.y + text.h / 2;
@@ -971,7 +1007,12 @@ function checkRaggedEdges(ix) {
     // lines up if either edge meets the stack's common edge.
     // Only a full-bleed band has no edge to align; a full-width card does.
     const span = ix.snapshot.doc?.width || Number.POSITIVE_INFINITY;
-    const lefts = kids.map((kid) => round1(visualLeft(ix, kid, cache)));
+    // Centred text starts wherever centring put it, so it offers no content
+    // edge (EntryShell's `text-center` footer at 36 against a column at 24);
+    // a centred card still offers its painted box.
+    const lefts = kids.map((kid) =>
+      /center/.test(kid.ta) ? null : round1(visualLeft(ix, kid, cache)),
+    );
     const boxes = kids.map((kid) => {
       const edge = boxLeft(ix, kid, span);
       return edge === null ? null : round1(edge);
@@ -982,16 +1023,15 @@ function checkRaggedEdges(ix) {
         counts.set(value, (counts.get(value) || 0) + 1);
       }
     });
+    if (counts.size === 0) continue;
     const mode = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
     const near = (value) => value !== null && Math.abs(value - mode) < 0.75;
     const strays = kids
-      .map((kid, index) => ({
-        kid,
-        left: lefts[index],
-        box: boxes[index],
-        off: lefts[index] - mode,
-      }))
-      .filter(({ left, box }) => !near(left) && !near(box))
+      .map((kid, index) => {
+        const edge = lefts[index] ?? boxes[index];
+        return { kid, left: edge, box: boxes[index], off: edge === null ? null : edge - mode };
+      })
+      .filter(({ left, box }) => left !== null && !near(left) && !near(box))
       .filter(({ off }) => Math.abs(off) >= 1 && Math.abs(off) <= 12);
     if (strays.length === 0) continue;
     // A stray that is the stack's majority is the stack's choice, not a stray.
@@ -1059,6 +1099,47 @@ function row0Width(spots) {
   return spots[0].row.w;
 }
 
+/** A text line on `el`'s line that ends at or before its left edge. */
+function endsBefore(el) {
+  return ([x, y, w, h]) =>
+    x + w <= el.x + 1 && Math.min(y + h, bottom(el)) - Math.max(y, el.y) > Math.min(h, el.h) * 0.5;
+}
+
+/** The text lines laid out before `el` in its parent: the parent's own, then earlier siblings'. */
+function linesBefore(ix, el) {
+  const parent = ix.els[el.p];
+  if (!parent) return [];
+  const lines = [...(parent.text || [])];
+  const gather = (node, depth) => {
+    if (!isVisible(node)) return;
+    lines.push(...(node.text || []));
+    if (depth < 3) for (const i of ix.kids[node.i]) gather(ix.els[i], depth + 1);
+  };
+  for (const i of ix.kids[parent.i]) {
+    if (i >= el.i) break;
+    gather(ix.els[i], 0);
+  }
+  return lines;
+}
+
+/**
+ * Whether a repeated child's x is set by the words before it rather than by a
+ * column: an inline element running on after words in its own line (a field's
+ * required "*", the " — " after a legal term's `<dt>`, a link mid-sentence),
+ * or a glyph closing a box that fits its own label ("Edit details ⌄"), where
+ * the box is what lines up. Most of the audit's 56 dismissed `ragged-column`
+ * flags were one of the two. A caret that is its own item in the row, after a
+ * name, is neither, and is still judged.
+ */
+function placedByWords(ix, el, row) {
+  const parent = ix.els[el.p];
+  if (!parent) return false;
+  const before = endsBefore(el);
+  if (/^inline/.test(el.disp)) return linesBefore(ix, el).some(before);
+  if (parent.i === row.i || !(parent.text || []).some(before)) return false;
+  return right(contentBox(parent)) - right(el) <= 1;
+}
+
 function checkRaggedColumns(ix) {
   const flags = [];
   for (const el of ix.els) {
@@ -1089,7 +1170,12 @@ function checkRaggedColumns(ix) {
               kid.replaced ||
               (isPainted(kid) && kid.w < row.w * 0.3) ||
               (kid.label && kid.label.length <= 2 && kid.w < 32);
-            if (columnish && kid.w < row.w * 0.5 && !seen.has(sig)) {
+            if (
+              columnish &&
+              kid.w < row.w * 0.5 &&
+              !seen.has(sig) &&
+              !placedByWords(ix, kid, row)
+            ) {
               seen.add(sig);
               if (!positions.has(sig)) positions.set(sig, []);
               positions.get(sig).push({ kid, row, l: kid.x - row.x, r: right(row) - right(kid) });
@@ -1129,6 +1215,24 @@ function checkRaggedColumns(ix) {
 
 // ---------------------------------------------------------------------------
 // 8. Uneven gaps, and a zero-size child doubling one.
+
+/**
+ * Whether a flex line spreads its free space between its items
+ * (`justify-content: space-between`, `-around`, `-evenly`) along the axis the
+ * gap is read on, and has some left over. There an empty item's gap comes out
+ * of that free space: the items at the ends stay at the ends, and nothing
+ * visible moves (the ready roster row's empty badge slot, the Pager's
+ * placeholder). A line with no free space has its gap pushing something.
+ */
+function spreadWithRoom(el, all, vertical) {
+  if (!/flex/.test(el.disp) || !/space-(between|around|evenly)/.test(el.jc)) return false;
+  if (/reverse/.test(el.fd) || /column/.test(el.fd) !== vertical) return false;
+  const box = contentBox(el);
+  const size = vertical ? box.h : box.w;
+  const used = all.reduce((sum, kid) => sum + (vertical ? kid.h : kid.w), 0);
+  const gap = vertical ? el.gapR : el.gapC;
+  return size - used - gap * (all.length - 1) > 0.5;
+}
 
 function checkGaps(ix, enabled) {
   const flags = [];
@@ -1185,7 +1289,8 @@ function checkGaps(ix, enabled) {
       // settings rows whose label sat 2px high over an empty description.
       const gap = vertical ? el.gapR : el.gapC;
       const gapped = /flex|grid/.test(el.disp) && gap > 0 && kids.length >= 1;
-      if (gapped) {
+      const spread = spreadWithRoom(el, all, vertical);
+      if (gapped && !spread) {
         for (const [position, hollow] of [
           ["first", all[0]],
           ["last", all.at(-1)],
@@ -1222,6 +1327,10 @@ function checkGaps(ix, enabled) {
           if (kids[k - 1] === before && kids[k] === after) continue;
           others.push(gapOf(kids[k - 1], kids[k]));
         }
+        // Spread items sit their gap plus a share of the free space apart, so
+        // only their measured spacing says what doubled looks like; with no
+        // other pair to measure, the two sit at the line's ends either way.
+        if (spread && others.length === 0) continue;
         const usual =
           others.length > 0
             ? others.sort((a, b) => a - b)[Math.floor(others.length / 2)]

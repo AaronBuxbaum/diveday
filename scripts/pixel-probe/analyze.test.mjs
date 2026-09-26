@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   analyzeSnapshot,
@@ -8,6 +9,7 @@ import {
   clusterKey,
   familyOf,
   hitBox,
+  ringCandidates,
   ringReach,
   settledEntryFor,
   signatureOf,
@@ -88,6 +90,7 @@ const BASE = {
   ch: 0,
   heading: false,
   id: "",
+  ti: null,
 };
 
 /** Build a snapshot from `[index, parent, props]` rows, filling every field. */
@@ -184,6 +187,39 @@ describe("focus ring clipped", () => {
     const [flag] = flagsOf(snapshot, "focus-ring-clipped");
     expect(flag.measure.sides).toMatchObject({ left: 5, right: 5, top: 5 });
     expect(flag.csig).toBe(signatureOf(snapshot.elements[0]));
+  });
+
+  it("leaves an option no keyboard focuses alone, and never forces focus on it", () => {
+    // The command palette's results, 82 dismissed flags: `tabindex="-1"`
+    // options under an input that keeps focus and moves
+    // `aria-activedescendant`, flush in a scrolling listbox. Forced into
+    // `:focus-visible` their ring is cut, but no keyboard ever puts it there.
+    const listbox = {
+      role: "listbox",
+      cls: "max-h-[58vh] overflow-y-auto py-2",
+      clips: true,
+      clipsX: true,
+      clipsY: true,
+      ovx: "auto",
+      ovy: "auto",
+    };
+    const option = {
+      tag: "button",
+      role: "option",
+      cls: "option",
+      focusable: true,
+      interactive: true,
+    };
+    const snapshot = page([
+      [0, -1, { ...listbox, x: 16, y: 100, w: 400, h: 300 }],
+      [1, 0, { ...option, ti: -1, cp: 0, x: 16, y: 108, w: 400, h: 44 }],
+    ]);
+    expect(flagsOf(snapshot, "focus-ring-clipped")).toEqual([]);
+    expect(ringCandidates(snapshot)).toEqual([]);
+    // The same button in the tab order is judged like any other.
+    snapshot.elements[1].ti = 0;
+    expect(flagsOf(snapshot, "focus-ring-clipped")).toHaveLength(1);
+    expect(ringCandidates(snapshot)).toEqual([1]);
   });
 
   it("leaves a row the card pads away from its edge, with a nested radius, alone", () => {
@@ -547,6 +583,23 @@ describe("rows of controls", () => {
     expect(flagsOf(snapshot, "text-beside-control")).toEqual([]);
   });
 
+  it("leaves a caption stacked over its field alone, though the label box sits beside a button", () => {
+    // The dive-site field guide at 640–1280 (20 flags, all dismissed): the
+    // `<label>` wraps "Find a species" and the 44px input under it, so the
+    // label's box runs beside the Add button while its words sit above the
+    // row the input and button share. A caption is not text beside a control.
+    const label = { tag: "label", cls: "font-medium text-sm", lh: 20, asc: [15, 5] };
+    const field = { tag: "input", type: "text", cls: "field", interactive: true, focusable: true };
+    const snapshot = page([
+      [0, -1, { cls: "row", disp: "flex", ai: "flex-end", x: 300, y: 5407, w: 700, h: 68 }],
+      [1, 0, { ...label, x: 300, y: 5407, w: 635.61, h: 68, text: [[300, 5407, 100, 20]] }],
+      [2, 1, { ...field, bw: [1, 1, 1, 1], x: 300, y: 5431, w: 635.61, h: 44 }],
+      [3, 0, { ...BTN, cls: "btn", x: 947.61, y: 5431, w: 52.39, h: 44 }],
+      [4, 3, { tag: "span", x: 959, y: 5443, w: 28, h: 20, text: [[959, 5443, 28, 20]] }],
+    ]);
+    expect(flagsOf(snapshot, "text-beside-control")).toEqual([]);
+  });
+
   it("leaves text sharing the button's baseline alone", () => {
     const snapshot = page([
       [0, -1, { cls: "header", disp: "flex", ai: "baseline", x: 0, y: 0, w: 400, h: 44 }],
@@ -676,6 +729,155 @@ describe("ragged edges", () => {
     ]);
     expect(flagsOf(snapshot, "ragged-edges")).toEqual([]);
   });
+
+  it("finds a painted tile six wrappers down, the staff chrome's logo, before the letters inside it", () => {
+    // Cluster C2, 137 captures at 390: the header's first content is the
+    // shop's 36px monogram tile at x 16, on the column with the banner and the
+    // page. The "BM" centred inside it starts at 23.8, and the tile sits six
+    // levels under the header (bar row, two leading slots, the menu's root,
+    // its button): deep enough for the content edge to read the letters and,
+    // until the two walks shared one depth, too deep for the painted-box edge
+    // to find the tile.
+    const band = { bg: true, bgc: "rgb(255,255,255)" };
+    const tile = {
+      tag: "span",
+      cls: "tile",
+      disp: "grid",
+      bg: true,
+      bgc: "rgb(0,100,210)",
+      rad: [12, 12, 12, 12],
+    };
+    const trigger = { tag: "button", cls: "trigger", disp: "flex", interactive: true };
+    const snapshot = page(
+      [
+        [0, -1, { cls: "shell", disp: "flex", fd: "column", x: 0, y: 0, w: 390, h: 600 }],
+        [1, 0, { ...band, cls: "banner", x: 0, y: 0, w: 390, h: 40 }],
+        [2, 1, { tag: "p", x: 16, y: 10, w: 200, h: 20, text: [[16, 10, 200, 20]] }],
+        [3, 0, { ...band, tag: "header", bw: [0, 0, 1, 0], x: 0, y: 40, w: 390, h: 56 }],
+        [4, 3, { cls: "bar", disp: "flex", x: 0, y: 40, w: 390, h: 56 }],
+        [5, 4, { cls: "leading", disp: "flex", x: 16, y: 46, w: 200, h: 44 }],
+        [6, 5, { cls: "identity", disp: "flex", x: 16, y: 46, w: 200, h: 44 }],
+        [7, 6, { cls: "menu", disp: "flex", x: 16, y: 46, w: 200, h: 44 }],
+        [8, 7, { ...trigger, x: 16, y: 46, w: 200, h: 44 }],
+        [9, 8, { ...tile, x: 16, y: 50, w: 36, h: 36, text: [[23.8, 60, 20.4, 16]] }],
+        [10, 8, { tag: "span", x: 60, y: 58, w: 150, h: 20, text: [[60, 58, 150, 20]] }],
+        [11, 0, { tag: "main", cls: "page", x: 16, y: 96, w: 358, h: 400 }],
+        [12, 11, { tag: "h1", x: 16, y: 96, w: 358, h: 32, text: [[16, 96, 200, 32]] }],
+      ],
+      { width: 390 },
+    );
+    expect(flagsOf(snapshot, "ragged-edges")).toEqual([]);
+  });
+
+  it("still flags that header when the tile is off the column too", () => {
+    const band = { bg: true, bgc: "rgb(255,255,255)" };
+    const snapshot = page(
+      [
+        [0, -1, { cls: "shell", disp: "flex", fd: "column", x: 0, y: 0, w: 390, h: 600 }],
+        [1, 0, { ...band, cls: "banner", x: 0, y: 0, w: 390, h: 40 }],
+        [2, 1, { tag: "p", x: 16, y: 10, w: 200, h: 20, text: [[16, 10, 200, 20]] }],
+        [3, 0, { ...band, tag: "header", bw: [0, 0, 1, 0], x: 0, y: 40, w: 390, h: 56 }],
+        [4, 3, { cls: "bar", disp: "flex", x: 0, y: 40, w: 390, h: 56 }],
+        [5, 4, { cls: "leading", disp: "flex", x: 20, y: 46, w: 200, h: 44 }],
+        [6, 5, { cls: "identity", disp: "flex", x: 20, y: 46, w: 200, h: 44 }],
+        [7, 6, { cls: "menu", disp: "flex", x: 20, y: 46, w: 200, h: 44 }],
+        [8, 7, { tag: "button", cls: "trigger", interactive: true, x: 20, y: 46, w: 200, h: 44 }],
+        [
+          9,
+          8,
+          {
+            tag: "span",
+            cls: "tile",
+            bg: true,
+            bgc: "rgb(0,100,210)",
+            x: 20,
+            y: 50,
+            w: 36,
+            h: 36,
+            text: [[27.8, 60, 20.4, 16]],
+          },
+        ],
+        [10, 0, { tag: "main", cls: "page", x: 16, y: 96, w: 358, h: 400 }],
+        [11, 10, { tag: "h1", x: 16, y: 96, w: 358, h: 32, text: [[16, 96, 200, 32]] }],
+      ],
+      { width: 390 },
+    );
+    const [flag] = flagsOf(snapshot, "ragged-edges");
+    expect(flag.measure.strays[0].off).toBe(11.8);
+  });
+
+  it("reads a row's edge the same however deep an outer stack first reached it", () => {
+    // `CompactDisclosureRow`, 108 flags "at −8px": its summary bleeds `-mx-2`
+    // (x 165) for a hover fill that is not painted at rest, and its caret sits
+    // on the rows' 173. An outer stack first reached the summary seven levels
+    // down, past the content walk's depth, and cached "the summary's own x";
+    // the row's own stack then read that cached 165 as the row's edge.
+    const summary = {
+      tag: "summary",
+      cls: "-mx-2 px-2 rounded-lg hover:bg-surface-sunken",
+      disp: "flex",
+      interactive: true,
+      focusable: true,
+      pad: [8, 8, 8, 8],
+      rad: [12, 12, 12, 12],
+    };
+    const snapshot = page([
+      [0, -1, { cls: "outer", x: 0, y: 0, w: 1280, h: 900 }],
+      [1, 0, { tag: "p", x: 16, y: 0, w: 400, h: 24, text: [[16, 0, 300, 24]] }],
+      [2, 0, { tag: "p", x: 16, y: 40, w: 400, h: 24, text: [[16, 40, 300, 24]] }],
+      [3, 0, { tag: "section", cls: "s1", x: 157, y: 80, w: 966, h: 400 }],
+      [4, 3, { cls: "s2", x: 157, y: 80, w: 966, h: 400 }],
+      [5, 4, { cls: "s3", x: 157, y: 80, w: 966, h: 400 }],
+      [6, 5, { tag: "ul", cls: "s4", x: 157, y: 80, w: 966, h: 400 }],
+      [7, 6, { cls: "s5", x: 157, y: 80, w: 966, h: 400 }],
+      [8, 7, { tag: "li", cls: "row", x: 157, y: 80, w: 966, h: 200 }],
+      [9, 8, { tag: "p", cls: "fact", x: 173, y: 80, w: 934, h: 24, text: [[173, 80, 200, 24]] }],
+      [
+        10,
+        8,
+        { tag: "p", cls: "fact", x: 173, y: 110, w: 934, h: 24, text: [[173, 110, 200, 24]] },
+      ],
+      [11, 8, { tag: "details", cls: "group/compact-row", x: 173, y: 140, w: 934, h: 44 }],
+      [12, 11, { ...summary, x: 165, y: 140, w: 950, h: 44 }],
+      [13, 12, { tag: "span", cls: "flex gap-2", disp: "flex", x: 173, y: 150, w: 120, h: 24 }],
+      [14, 13, { tag: "svg", cls: "caret", replaced: true, x: 173, y: 154, w: 16, h: 16 }],
+      [15, 13, { tag: "span", x: 197, y: 150, w: 96, h: 24, text: [[197, 150, 96, 24]] }],
+    ]);
+    expect(flagsOf(snapshot, "ragged-edges")).toEqual([]);
+  });
+
+  it("gives centred text no left edge to be ragged by", () => {
+    // EntryShell's footer (`items-center text-center`) and a `text-center`
+    // fine print: their first line starts wherever centring put it (x 36
+    // against the column's 24), which is not an edge anyone aligns by.
+    const footer = { tag: "footer", cls: "items-center text-center", ta: "center" };
+    const snapshot = page([
+      [0, -1, STACK],
+      para(1, 24, 0),
+      para(2, 24, 40),
+      [3, 0, { ...footer, x: 24, y: 80, w: 342, h: 40, text: [[36, 80, 318, 20]] }],
+      para(4, 24, 140),
+    ]);
+    expect(flagsOf(snapshot, "ragged-edges")).toEqual([]);
+  });
+
+  it("still reads a centred card's painted box as its edge", () => {
+    const card = {
+      cls: "card text-center",
+      ta: "center",
+      bg: true,
+      bgc: "rgb(255,255,255)",
+    };
+    const snapshot = page([
+      [0, -1, STACK],
+      para(1, 24, 0),
+      para(2, 24, 40),
+      [3, 0, { ...card, x: 28, y: 80, w: 300, h: 40, text: [[60, 90, 236, 20]] }],
+      para(4, 24, 140),
+    ]);
+    const [flag] = flagsOf(snapshot, "ragged-edges");
+    expect(flag.measure.strays).toEqual([{ sig: "div.card text-center", off: 4 }]);
+  });
 });
 
 describe("repeated rows", () => {
@@ -699,6 +901,166 @@ describe("repeated rows", () => {
 
   it("leaves a caret pinned to the row's end alone", () => {
     expect(flagsOf(rows([368, 368, 368]), "ragged-column")).toEqual([]);
+  });
+
+  it("still flags a caret that is its own item after each row's name", () => {
+    // e2e/pixel-probe.spec.ts's flagging fixture: a flex row, a name, and a
+    // caret beside it that should sit in one column and follows the name.
+    const snapshot = page([
+      [0, -1, { tag: "ul", cls: "list", x: 0, y: 0, w: 358, h: 132 }],
+      ...[60, 110, 150].flatMap((end, n) => [
+        [1 + n * 3, 0, { tag: "li", cls: "item", disp: "flex", x: 0, y: n * 44, w: 358, h: 44 }],
+        [
+          2 + n * 3,
+          1 + n * 3,
+          {
+            tag: "span",
+            cls: "name",
+            x: 0,
+            y: n * 44 + 10,
+            w: end,
+            h: 24,
+            text: [[0, n * 44 + 10, end, 24]],
+          },
+        ],
+        [
+          3 + n * 3,
+          1 + n * 3,
+          {
+            tag: "span",
+            cls: "caret",
+            label: "›",
+            x: end + 8,
+            y: n * 44 + 10,
+            w: 6,
+            h: 24,
+            text: [[end + 8, n * 44 + 10, 6, 24]],
+          },
+        ],
+      ]),
+    ]);
+    expect(flagsOf(snapshot, "ragged-column")).toHaveLength(1);
+  });
+
+  it("leaves a mark that runs on inline after each row's words alone", () => {
+    // The required "*" after a field's label (`form.tsx`), the " — " after a
+    // legal term's `<dt>` (`LegalDocument.tsx`, cluster C92): punctuation in
+    // a line of text, whose x is the words before it: the commonest shape
+    // among the audit's 56 dismissed `ragged-column` flags.
+    const snapshot = page([
+      [0, -1, { tag: "dl", cls: "terms", disp: "flex", fd: "column", x: 0, y: 0, w: 358, h: 132 }],
+      ...[64, 120, 92].flatMap((end, n) => [
+        [1 + n * 4, 0, { x: 0, y: n * 44, w: 358, h: 40 }],
+        [
+          2 + n * 4,
+          1 + n * 4,
+          {
+            tag: "dt",
+            cls: "inline font-semibold",
+            disp: "inline",
+            x: 0,
+            y: n * 44,
+            w: end,
+            h: 24,
+            text: [[0, n * 44, end, 24]],
+          },
+        ],
+        [
+          3 + n * 4,
+          1 + n * 4,
+          {
+            tag: "span",
+            disp: "inline",
+            label: "—",
+            x: end,
+            y: n * 44,
+            w: 24,
+            h: 24,
+            text: [[end + 4, n * 44, 16, 24]],
+          },
+        ],
+        [
+          4 + n * 4,
+          1 + n * 4,
+          {
+            tag: "dd",
+            cls: "inline text-muted",
+            disp: "inline",
+            x: 0,
+            y: n * 44,
+            w: 358,
+            h: 40,
+            text: [[end + 24, n * 44, 358 - end - 24, 24]],
+          },
+        ],
+      ]),
+    ]);
+    expect(flagsOf(snapshot, "ragged-column")).toEqual([]);
+  });
+
+  it("leaves a caret closing its own label's box alone", () => {
+    // The trip's About actions ("Edit details ⌄", "Write a crew prediction
+    // ⌄") and the gear page's "Add a note ⌄": each caret ends a box that
+    // fits its label, and that box is what sits on the rows' column.
+    const snapshot = page([
+      [0, -1, { cls: "rows", x: 0, y: 0, w: 358, h: 132 }],
+      ...[80, 170, 120].flatMap((end, n) => [
+        [1 + n * 3, 0, { tag: "li", cls: "about-row", x: 0, y: n * 44, w: 358, h: 44 }],
+        [
+          2 + n * 3,
+          1 + n * 3,
+          {
+            tag: "span",
+            cls: "inline-flex w-fit gap-1",
+            disp: "flex",
+            x: 33,
+            y: n * 44,
+            w: end - 33 + 20,
+            h: 44,
+            text: [[33, n * 44 + 12, end - 33, 20]],
+          },
+        ],
+        [
+          3 + n * 3,
+          2 + n * 3,
+          { tag: "svg", cls: "caret", replaced: true, x: end + 4, y: n * 44 + 14, w: 16, h: 16 },
+        ],
+      ]),
+    ]);
+    expect(flagsOf(snapshot, "ragged-column")).toEqual([]);
+  });
+
+  it("still flags an inline mark at the start of a grid cell that wanders", () => {
+    // Inline, but with no words before it in its own line: its x is its
+    // cell's, and a cell that moves is a column that wanders.
+    const snapshot = page([
+      [0, -1, { cls: "table", x: 0, y: 0, w: 400, h: 132 }],
+      ...[200, 206, 200, 210].flatMap((cell, n) => [
+        [1 + n * 4, 0, { cls: "grid-row", disp: "grid", x: 0, y: n * 33, w: 400, h: 32 }],
+        [
+          2 + n * 4,
+          1 + n * 4,
+          { cls: "name", x: 0, y: n * 33, w: 180, h: 32, text: [[0, n * 33 + 6, 150, 20]] },
+        ],
+        [3 + n * 4, 1 + n * 4, { cls: "status", x: cell, y: n * 33, w: 100, h: 32 }],
+        [
+          4 + n * 4,
+          3 + n * 4,
+          {
+            tag: "span",
+            cls: "badge",
+            disp: "inline-flex",
+            bg: true,
+            x: cell,
+            y: n * 33 + 6,
+            w: 60,
+            h: 20,
+            text: [[cell + 8, n * 33 + 6, 44, 20]],
+          },
+        ],
+      ]),
+    ]);
+    expect(flagsOf(snapshot, "ragged-column")).toHaveLength(1);
   });
 });
 
@@ -760,6 +1122,66 @@ describe("gaps", () => {
     ]);
     const [flag] = flagsOf(snapshot, "phantom-gap");
     expect(flag.measure).toMatchObject({ gap: 4, position: "last" });
+  });
+
+  describe("in a spread row, whose free space takes the gap", () => {
+    // `justify-content: space-between` (or around, evenly) shares out what
+    // is left of the line after the gaps, so an empty item's gap comes out of
+    // that share and nothing visible moves: the ready roster row's empty
+    // badge slot, the Pager's placeholder, a footer's empty line (the bulk of
+    // the audit's 78 dismissed `phantom-gap` flags).
+    const spread = (jc, kids) =>
+      page([
+        [0, -1, { cls: "header", disp: "flex", jc, gapC: 12, x: 0, y: 0, w: 400, h: 44 }],
+        ...kids,
+      ]);
+    const name = (i, x, w = 150) => [
+      i,
+      0,
+      { tag: "span", cls: "name", x, y: 12, w, h: 20, text: [[x, 12, w, 20]] },
+    ];
+    const slot = (i, x) => [i, 0, { cls: "slot", x, y: 22, w: 0, h: 0 }];
+
+    it("leaves an empty last slot alone", () => {
+      const snapshot = spread("space-between", [name(1, 0), slot(2, 400)]);
+      expect(flagsOf(snapshot, "phantom-gap")).toEqual([]);
+    });
+
+    it("leaves an empty first slot alone (the Pager's placeholder)", () => {
+      const snapshot = spread("space-between", [
+        slot(1, 0),
+        name(2, 150, 100),
+        [3, 0, { tag: "a", cls: "next", x: 340, y: 0, w: 60, h: 44, text: [[350, 12, 40, 20]] }],
+      ]);
+      expect(flagsOf(snapshot, "phantom-gap")).toEqual([]);
+    });
+
+    it("leaves an empty slot between the only two items alone", () => {
+      for (const jc of ["space-between", "space-around", "space-evenly"]) {
+        const snapshot = spread(jc, [name(1, 0), slot(2, 200), name(3, 250)]);
+        expect(flagsOf(snapshot, "phantom-gap")).toEqual([]);
+      }
+    });
+
+    it("still flags the slot when the line has no free space to take its gap", () => {
+      const snapshot = spread("space-between", [name(1, 0, 388), slot(2, 400)]);
+      const [flag] = flagsOf(snapshot, "phantom-gap");
+      expect(flag.measure).toMatchObject({ gap: 12, position: "last" });
+    });
+
+    it("still flags a slot that doubles the spread's own spacing", () => {
+      // Four items spread over the line sit (gap + share) apart; the empty
+      // one leaves twice that between its neighbours, which does show.
+      const snapshot = spread("space-between", [
+        name(1, 0, 40),
+        name(2, 100, 40),
+        slot(3, 200),
+        name(4, 260, 40),
+        name(5, 360, 40),
+      ]);
+      const [flag] = flagsOf(snapshot, "phantom-gap");
+      expect(flag.measure).toMatchObject({ spanned: 120, usual: 60 });
+    });
   });
 
   it("leaves a column with nothing empty in it alone", () => {
@@ -1198,6 +1620,61 @@ describe("clusters, the settled list and the census", () => {
     expect(settledEntryFor(flag, settled)?.pointer).toBe("x.tsx:1");
     expect(settledEntryFor({ ...flag, check: "off-centre" }, settled)).toBeNull();
     expect(settledEntryFor({ ...flag, cls: "other" }, settled)).toBeNull();
+  });
+
+  it("settles the flags the audit found right by design, and nothing beside them", () => {
+    // scripts/pixel-probe-settled.json itself, against flags as the probe
+    // raised them in the 36-group audit. Each settled entry points at a code
+    // comment and has a row in docs/design/settled-questions.md.
+    const settled = JSON.parse(
+      fs.readFileSync(new URL("../pixel-probe-settled.json", import.meta.url), "utf8"),
+    ).settled;
+    const chrome =
+      "header.backdrop-blur-xl bg-background border-b border-border h-(--chrome-h) print:hidden sticky supports-[backdrop-filter]:bg-background/85";
+    const ledgerRow =
+      "li.border-border border-t flex gap-3 items-center last:border-b min-h-13 px-2 relative";
+    const right = [
+      {
+        check: "text-spill",
+        sig: "span{block;p0,0,0,0;b0,0,0,0;r0,0,0,0;f10/400;}",
+        csig: "div.min-h-0 outline-none water-band",
+        cls: "",
+        label: "Jan",
+      },
+      { check: "truncated", sig: "span.truncate", csig: chrome, cls: "truncate", label: "Harbour" },
+      {
+        check: "truncated",
+        sig: "span.block font-semibold group-open/about:hidden leading-snug truncate",
+        csig: "summary.flex",
+        cls: "block truncate font-semibold leading-snug group-open/about:hidden",
+        label: "Spiegel Grove · Mantis II · Ke",
+      },
+      {
+        check: "truncated",
+        sig: "p.font-mono text-muted text-xs truncate",
+        csig: ledgerRow,
+        cls: "mt-1 max-w-full truncate font-mono text-xs text-muted",
+        label: "https://e2e.diveday.example/s/",
+      },
+    ];
+    const register = fs.readFileSync(
+      new URL("../../docs/design/settled-questions.md", import.meta.url),
+      "utf8",
+    );
+    for (const found of right) {
+      const entry = settledEntryFor(found, settled);
+      expect(entry, `${found.check} ${found.sig}`).not.toBeNull();
+      const file = entry.pointer.split(",")[0];
+      expect(fs.existsSync(new URL(`../../${file}`, import.meta.url)), file).toBe(true);
+      expect(register).toContain(`\`${file}\``);
+    }
+    // The same classes somewhere else are still findings.
+    const elsewhere = [
+      { check: "truncated", sig: "span.truncate", csig: "li.row", cls: "truncate", label: "" },
+      { ...right[3], csig: "li.other" },
+      { ...right[0], check: "hard-clip" },
+    ];
+    for (const found of elsewhere) expect(settledEntryFor(found, settled)).toBeNull();
   });
 
   it("finds one family at 22 and 24px, and leaves a deliberate size step alone", () => {
