@@ -137,8 +137,13 @@ export function MoneyBlock({
           but that optimized hero↔total consistency at the cost of the column:
           "Course fee $195.00 / E-learning $150.00 / Due at the shop $345"
           reads as rounding, and within the column is where the eye checks the
-          sum (principle 6: reconciled money carries its minor units always). */}
-      <div className="flex items-baseline justify-between gap-4 border-t border-border pt-3">
+          sum (principle 6: reconciled money carries its minor units always).
+
+          `mt-2 … pt-4`: with the list's `gap-2` that is 16px over this rule
+          and 16px under it, the air the caller's own rule leaves above the
+          first line (`border-t pt-4`), so the last line sits midway between
+          the two hairlines rather than 4px low. */}
+      <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-border pt-4">
         <dt className="text-sm font-medium">
           {dueNow === "checkout" ? t("money.dueNow") : t("money.dueAtShop")}
         </dt>
