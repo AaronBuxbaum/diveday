@@ -464,6 +464,20 @@ type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkL
 const ROW_PAD = { md: "py-2", lg: "py-3", xl: "py-4", none: "" } as const;
 
 /**
+ * A stacked row's bottom inset when its kind shares its line with a control:
+ * the row's own inset (`ROW_PAD`) plus the 8px the control stands over the
+ * kind's 20px line — (44 − 2 × 4 − 20) / 2 — so the air under the last line
+ * matches the air over the kind. Keyed on the fix's own slot holding a control
+ * (`data-ledger-fix`), never on a button in the sentence.
+ */
+const KIND_LINE_FIX_ROOM = {
+  md: "max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-4",
+  lg: "max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-5",
+  xl: "max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-6",
+  none: "max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-2",
+} as const satisfies Record<keyof typeof ROW_PAD, string>;
+
+/**
  * A hairline row on the page background — the ledger's only row shape.
  *
  * The hairline is `border-t` plus a `last:border-b`, so a group closes itself
@@ -510,6 +524,16 @@ const ROW_PAD = { md: "py-2", lg: "py-3", xl: "py-4", none: "" } as const;
  * moves the control's centre 2px off the kind word's and sits a bordered
  * control on the rule. The target is still 44px. The row's own 8px inset is
  * the room above the first line and below the last.
+ *
+ * **What the control still takes over the kind, the row gives back under its
+ * last line** (`KIND_LINE_FIX_ROOM`). Overhanging 4px a side, a 44px fix still
+ * makes the kind's line 36px, and the 20px word centred in it stands 8px lower
+ * than it would alone: "Needs crew" kept 20px of air over the kind and 10px
+ * under the last line, 5px low. Those 8px are mirrored under the last line, so
+ * the air is 20 over 18, the 2px every ledger row keeps between a cap top and
+ * a baseline. Only when the fix holds a control (`:has(a, button)`): a fix
+ * that is a fact — a date, "3 spots left" — is a 20px line in the kind's own
+ * line and takes nothing back.
  *
  * **A stacked row with no kind leads with its content.** The artboard's first
  * line is *the kind and the fix*; a row that names no kind has nothing to put
@@ -605,7 +629,9 @@ export function LedgerRow({
         closed ? ledgerRowBoxClass : ledgerRowOpenBoxClass
       } ${ROW_PAD[pad]} ${
         size === "lg" ? "min-h-14" : "min-h-13"
-      } ${align === "first-line" ? "sm:items-baseline sm:py-4" : ""} ${stacked ? "max-sm:flex-wrap max-sm:gap-y-1" : ""} ${href ? "pressable-row hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
+      } ${align === "first-line" ? "sm:items-baseline sm:py-4" : ""} ${stacked ? "max-sm:flex-wrap max-sm:gap-y-1" : ""} ${
+        stacked && kind && trailing != null ? KIND_LINE_FIX_ROOM[pad] : ""
+      } ${href ? "pressable-row hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
         .replace(/\s+/g, " ")
         .trim()}
     >
@@ -638,6 +664,7 @@ export function LedgerRow({
         // stacked phone line of its own (`max-sm:my-0`), where the overhang
         // would put it on the rule.
         <div
+          data-ledger-fix=""
           className={
             stacked
               ? kind

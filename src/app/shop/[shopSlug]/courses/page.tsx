@@ -169,13 +169,24 @@ export default async function CoursesPage({
     // weight rather than a button: the row is already a door, and a second
     // filled control on every one of 20 rows reads as a toolbar the reader has
     // to map back to its targets (principles §8, §10).
+    //
+    // Below `sm` the row stacks and "Schedule" is its last line, so its
+    // unseen lower half sinks into the row's 12px inset (`block-end-phone`):
+    // standing whole, it left 28px under its word against 17px over the
+    // course's name (pixel-craft class 5). The box then ends on the row's rule,
+    // so its ring is drawn inside it there.
     ...(canSchedule
       ? {
           actions: (
             <Link
               href={`/shop/${shopSlug}/schedule/board?course=${course.id}`}
               aria-label={st("courses.list.scheduleSrLabel", { title: course.title })}
-              className={buttonClass({ variant: "link", size: "sm" })}
+              className={buttonClass({
+                variant: "link",
+                size: "sm",
+                outdent: "block-end-phone",
+                className: "max-sm:focus-visible:focus-ring-inset",
+              })}
             >
               {st("courses.list.schedule")}
             </Link>

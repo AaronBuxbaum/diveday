@@ -970,6 +970,62 @@ describe("LedgerRow", () => {
     }
   });
 
+  /**
+   * **A control on the kind's line gives back under the last line the room it
+   * takes over the kind** (pixel-craft class 5). Overhanging 4px a side, a 44px
+   * "Assign" still makes the kind's line 36px, and the 20px kind word centred
+   * in it stands 8px lower than it would alone: the staffing week's "Needs
+   * crew" rows kept 20px of air over the kind and 10px under the last line, 5px
+   * low. The overhang cannot grow (above), so the room is mirrored instead: a
+   * row whose fix holds a control takes those 8px again under its last line.
+   * Only a control: a fix that is a fact ("3 spots left", a date) sits in the
+   * kind's own line and leaves that line 20px, so it takes nothing back.
+   */
+  it("mirrors under its last line the room a control takes over the kind's line", () => {
+    const px = (token: string | undefined) =>
+      token === undefined ? 0 : Number(token.replace(/^.*?-(?=[\d.]+$)/, "")) * 4;
+    const CONTROL = 44;
+    const KIND_LINE = 20;
+    for (const [pad, inset] of [
+      ["md", 8],
+      ["lg", 12],
+    ] as const) {
+      render(
+        <LedgerRow
+          as="div"
+          stacked
+          pad={pad}
+          kind={{ word: "Needs crew", tone: "warning" }}
+          trailing={<button type="button">Assign</button>}
+        >
+          <p>5:30 AM Dawn Two-Tank</p>
+        </LedgerRow>,
+      );
+      const fix = screen.getByRole("button", { name: "Assign" }).parentElement as HTMLElement;
+      const row = fix.parentElement as HTMLElement;
+      expect(fix, pad).toHaveAttribute("data-ledger-fix");
+      const overhang = px([...fix.classList].find((token) => /^max-sm:-my-[\d.]+$/.test(token)));
+      const over = (CONTROL - 2 * overhang - KIND_LINE) / 2;
+      const mirrored = [...row.classList].filter((token) =>
+        token.startsWith("max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-"),
+      );
+      expect(mirrored, pad).toHaveLength(1);
+      expect(px(mirrored[0]), pad).toBe(inset + over);
+      cleanup();
+    }
+  });
+
+  it("mirrors nothing on a stacked row with no kind, whose fix has a line of its own", () => {
+    render(
+      <LedgerRow as="div" stacked trailing={<button type="button">Hide</button>}>
+        <p>Pickles Reef</p>
+      </LedgerRow>,
+    );
+    const row = screen.getByRole("button", { name: "Hide" }).parentElement
+      ?.parentElement as HTMLElement;
+    expect([...row.classList].some((token) => token.includes("data-ledger-fix"))).toBe(false);
+  });
+
   it("gives a stacked fix on a line of its own its whole height", () => {
     // Without a kind the fix drops to a line of its own under the content; an
     // overhang there would put a 44px control on the row's bottom rule.
