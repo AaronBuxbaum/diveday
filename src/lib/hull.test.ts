@@ -39,14 +39,20 @@ const DRAWN = {
  * page — 88px above it and 86px below it at 1280, where every other gap on the
  * trip page is 16–40 (pixel-craft K-39). The built box is the drawing's own:
  * the outline and its 1.5 stroke, one unit of room each side.
+ *
+ * And the helm: 7 units further forward than the canvas put it. At the
+ * canvas's `bow + 56` its ring sat 22.47 units from each crew circle's centre,
+ * where the two stroked radii sum to 22.5 — the rings touched at every scale
+ * and merged at 390 (pixel-craft K-124).
  */
+const HELM_MOVED_FORWARD = 7;
 const CROPPED = {
   12: { x: 5, y: 25, width: 370, height: 100 },
   8: { x: 5, y: 25, width: 286, height: 100 },
 } as const;
 
 describe("the hull", () => {
-  it("is the one the canvas drew, to the unit, but for its box", () => {
+  it("is the one the canvas drew, to the unit, but for its box and its helm", () => {
     for (const [capacity, drawn] of Object.entries(DRAWN)) {
       const geometry = hullGeometry({
         capacity: Number(capacity),
@@ -63,7 +69,7 @@ describe("the hull", () => {
       expect(geometry.midline.x1).toBe(drawn.midline.x1);
       expect(geometry.midline.x2).toBe(drawn.midline.x2);
       expect(geometry.crew.map(({ cx, cy }) => ({ cx, cy }))).toEqual(drawn.crew);
-      expect(geometry.helm.cx).toBe(drawn.helm.cx);
+      expect(geometry.helm.cx).toBe(drawn.helm.cx + HELM_MOVED_FORWARD);
       expect(geometry.helm.cy).toBe(drawn.helm.cy);
     }
   });
@@ -89,6 +95,30 @@ describe("the hull", () => {
       for (const member of geometry.crew) {
         expect(member.cy - (member.r + 3.5)).toBeGreaterThanOrEqual(y);
         expect(member.cy + member.r + 3.5).toBeLessThanOrEqual(y + height);
+      }
+    }
+  });
+
+  /**
+   * **The helm never touches a guide.** The widest line a crew circle wears is
+   * a missing guide's: a 3-unit stroke on screen, and on paper a ring at
+   * r + 3, 1 wide. The helm's ring is r 9 at 1.5. Each of those clears the
+   * helm by at least 1.5 units of hull, for one guide and for two.
+   */
+  it("keeps the helm's ring clear of every crew circle, a missing guide's rings included", () => {
+    for (const crewCount of [1, 2]) {
+      const { crew, helm } = hullGeometry({ capacity: 12, crewCount });
+      const helmReach = helm.ringRadius + 0.75;
+      for (const member of crew) {
+        const apart = Math.hypot(helm.cx - member.cx, helm.cy - member.cy);
+        expect(
+          apart - (member.r + 1.5) - helmReach,
+          `screen, crew ${crewCount}`,
+        ).toBeGreaterThanOrEqual(1.5);
+        expect(
+          apart - (member.r + 3 + 0.5) - helmReach,
+          `paper, crew ${crewCount}`,
+        ).toBeGreaterThanOrEqual(1.5);
       }
     }
   });

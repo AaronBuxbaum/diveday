@@ -244,7 +244,13 @@ export function hullGeometry(input: { capacity: number; crewCount?: number }): H
     crew,
     crewOverflow: crewCount - seated,
     helm: {
-      cx: bow + 56,
+      // `bow + 63`, 7 units forward of where the canvas drew it. At `bow + 56`
+      // the ring sat 22.47 units from each guide's centre, where the two
+      // stroked radii sum to 22.5, so the rings touched at every scale and
+      // merged at 390. Here it clears a guide's ring by 4.4 units, a missing
+      // guide's 3-unit stroke by 3.6, and that guide's printed ring (r + 3) by
+      // 1.6 — and still sits well inside the bow, whose tip is `bow + 96`.
+      cx: bow + 63,
       cy: MIDLINE_Y,
       ringRadius: HELM_RING_R,
       dotRadius: HELM_DOT_R,
