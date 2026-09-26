@@ -5,6 +5,7 @@ import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { AvailabilityBlock, CrewAssignmentRequest } from "@/lib/crew-requests";
 import { staffWeek, type WeekGap, type WeekPerson } from "@/lib/staffing-week";
+import { rendersFlush } from "@/test/button-flush";
 import { type GapWords, StaffingWeek, type StaffingWeekWords } from "./StaffingWeek";
 
 afterEach(cleanup);
@@ -740,5 +741,31 @@ describe("StaffingWeek geometry", () => {
         expect(mark).not.toHaveClass("mt-0.5");
       }
     }
+  });
+
+  /**
+   * K-273: the grid's "Assign ›" was the `text-xs` line box, about 52×16px,
+   * four or five to a week. The probe cannot see it — `small-target` runs at
+   * 390 and 820, where this grid is hidden — so the floor is pinned here. It
+   * is drawn as its slot-mate, the crew member's "Ask for this one", already
+   * is: a flush `sm` link, 44px tall with the button's corner and ring.
+   */
+  it("gives the grid's Assign a 44px target, spelled as the ask beside it is", () => {
+    const { container } = renderWeek({ gaps: [GAP] });
+    const { grid } = branches(container);
+    const assign = within(grid).getByRole("link", { name: "Assign crew to Spiegel Grove" });
+    expect(assign).toHaveClass("min-h-11");
+    expect(rendersFlush(assign, "link", "sm")).toBe(true);
+    cleanup();
+
+    const crew = renderWeek({
+      gaps: [GAP],
+      canManage: false,
+      viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: false },
+    });
+    const ask = within(branches(crew.container).grid).getByRole("button", {
+      name: "Ask to work Spiegel Grove",
+    });
+    expect(rendersFlush(ask, "link", "sm")).toBe(true);
   });
 });

@@ -505,13 +505,17 @@ function GapChip({
       {act === "none" ? null : (
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {act === "assign" ? (
+            // Its slot-mate's spelling (the ask below): a flush `sm` link, so
+            // a 44px target with the button's corner and ring, where the
+            // chip's own `text-xs` line gave it about 52×16px (K-273). The
+            // chevron is sized to the link's `text-sm`.
             <Link
               href={tripHref(shopSlug, gap.tripId)}
               aria-label={fill(words.assignAria, { trip: gap.title })}
-              className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+              className={buttonClass({ variant: "link", size: "sm", flush: true })}
             >
               {words.assign}
-              <DiveDayIcon name="chevron-right" className="size-3" />
+              <DiveDayIcon name="chevron-right" className="size-3.5" />
             </Link>
           ) : (
             // Offered only when the write would accept it — same rule,
