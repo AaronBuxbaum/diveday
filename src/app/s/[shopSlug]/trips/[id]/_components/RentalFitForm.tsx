@@ -360,7 +360,10 @@ export function RentalFitForm({
                           />
                         ) : null}
                         {showPricing && priceCents !== undefined ? (
-                          <span className="text-muted">
+                          // Tabular figures: the marker before the price
+                          // walked 2px along the column with "$15.00"
+                          // against "$35.00" in proportional ones (K-476).
+                          <span className="text-muted tabular-nums">
                             {formatMoneyCents(priceCents, currency, locale)}
                           </span>
                         ) : null}

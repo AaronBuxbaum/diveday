@@ -136,6 +136,15 @@ describe("RentalFitForm geometry", () => {
     expect(items).not.toBe(sizes);
     expect(gutter(items)).toBe(gutter(sizes));
   });
+
+  it("sets each item's price in tabular figures", () => {
+    // The info marker sits before the price, so a proportional "$15.00"
+    // against "$35.00" walked it 2px along the column (K-476).
+    renderPriced();
+    const prices = screen.getAllByText("$15.00");
+    expect(prices.length).toBeGreaterThan(0);
+    for (const price of prices) expect(price).toHaveClass("tabular-nums");
+  });
 });
 
 describe("RentalFitForm scope", () => {
