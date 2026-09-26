@@ -569,7 +569,9 @@ body {
  * **A hidden bar is 0px tall.** With the bar gone and `--chrome-h` still 56px,
  * the count panel (`sticky top-(--chrome-h)`) pinned 56px below nothing, and
  * the scroll padding and the roll-call rows' scroll margins kept a bar's worth
- * of air above every jump. Zeroing the token moves every reader at once;
+ * of air above every jump. Zeroing the token moves every reader at once, the
+ * offline manifest's rejected-write notice (`fixed top-(--chrome-h)`) among
+ * them, which is why that notice has no rule of its own here any more;
  * `chrome.test.ts` holds it beside the rule that hides the bar. */
 @media (max-width: 1023px) {
   body:has(#shop-main-content > main > div.boat-mode) [data-staff-chrome="true"] {
@@ -578,10 +580,6 @@ body {
 
   html:has(#shop-main-content > main > div.boat-mode) {
     --chrome-h: 0px;
-  }
-
-  body:has(#shop-main-content > main > div.boat-mode) [data-offline-rejected-notice="true"] {
-    top: 0;
   }
 }
 

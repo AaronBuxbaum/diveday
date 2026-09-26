@@ -387,7 +387,6 @@ describe("staff chrome marker", () => {
   it("keeps the live manifest selector scoped to the staff shell", async () => {
     const css = await read("src/app/globals.css");
     expect(css).toContain('[data-staff-chrome="true"]');
-    expect(css).toContain("data-offline-rejected-notice");
   });
 });
 
@@ -413,5 +412,20 @@ describe("the hidden bar's height", () => {
         /^0(px|rem)?$/.test(declarations(rule.body)["--chrome-h"] ?? ""),
     );
     expect(zeroes, "a rule beside it that sets --chrome-h to 0").toBeDefined();
+  });
+
+  /**
+   * The offline manifest's rejected-write notice is one of the token's
+   * readers (`fixed top-(--chrome-h)`), so the zero pins it to the top of the
+   * phone too. It used to carry a `top: 0` of its own under the same media
+   * query and the same `:has()`: one fact spelled twice, and the second
+   * spelling is the one left behind when the first moves.
+   */
+  it("moves the offline notice with it, which needs no rule of its own", async () => {
+    const manager = await read("src/components/OfflineManifestManager.tsx");
+    expect(manager).toMatch(
+      /data-offline-rejected-notice="true"\s+className="[^"]*\btop-\(--chrome-h\)/,
+    );
+    expect(readGlobalsCss()).not.toContain("data-offline-rejected-notice");
   });
 });
