@@ -185,3 +185,39 @@ describe("EditCoursePage editor rail", () => {
     );
   });
 });
+
+/**
+ * **The nitrox box sits with the fields above it and its own hint under it**
+ * (docs/design/pixel-craft.md, class 4; K-414). Its row carried `mt-5` inside
+ * a section whose fields already stand `gap-5` apart, so it sat 40px under the
+ * Duration box where every sibling sits 20px; and its hint was a sibling of
+ * its own in that gap, 42px under the box, where every other hint on the page
+ * sits 4px under its control.
+ */
+describe("EditCoursePage nitrox box", () => {
+  it("keeps the section's field gap and carries its hint, wired to the box", async () => {
+    vi.mocked(requireShopSurface).mockResolvedValue({
+      session: { user: { shopId: COURSE.shopId, shopSlug: "blue-mantis", personId: "staff" } },
+      db: {},
+      shop: { id: COURSE.shopId, slug: "blue-mantis", defaultLocale: "en-US", currency: "usd" },
+    } as never);
+    vi.mocked(getCourseBySlug).mockResolvedValue(COURSE as never);
+    vi.mocked(getCourseTemplateUpdate).mockResolvedValue(null as never);
+    render(
+      await EditCoursePage({
+        params: Promise.resolve({ shopSlug: "blue-mantis", slug: "open-water-diver" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    const box = screen.getByRole("checkbox", { name: "courses.edit.nitroxCompatibleLabel" });
+    const row = box.closest("label");
+    const hint = screen.getByText("courses.edit.nitroxCompatibleHint");
+    expect(row).not.toHaveClass("mt-5");
+    // One item in the section's column, the row and its hint together.
+    expect(hint.parentElement).toBe(row?.parentElement);
+    expect(row?.parentElement?.children).toHaveLength(2);
+    expect(hint.id).not.toBe("");
+    expect(box).toHaveAttribute("aria-describedby", hint.id);
+  });
+});

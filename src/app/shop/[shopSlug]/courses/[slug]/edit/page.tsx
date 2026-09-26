@@ -578,18 +578,26 @@ export default async function EditCoursePage({
                 session of this course offers the nitrox box at all — on the
                 booking page or on the pre-trip form — however much nitrox the
                 shop fills (`nitroxAvailableOn`, src/lib/rentals.ts). */}
-                  <ChoiceRow
-                    type="checkbox"
-                    name="nitroxCompatible"
-                    value="true"
-                    defaultChecked={course.nitroxCompatible}
-                    className="mt-5 text-sm"
-                  >
-                    {t("courses.edit.nitroxCompatibleLabel")}
-                  </ChoiceRow>
-                  <p className="mt-1 text-sm text-muted">
-                    {t("courses.edit.nitroxCompatibleHint")}
-                  </p>
+                  {/* One item in the section's `gap-5` column, the box and its
+                      hint together: a margin of the row's own added to the gap
+                      (40px under Duration, where fields sit 20px apart), and
+                      the hint as a sibling of its own sat a whole gap under
+                      the box it explains (K-414). */}
+                  <div>
+                    <ChoiceRow
+                      type="checkbox"
+                      name="nitroxCompatible"
+                      value="true"
+                      defaultChecked={course.nitroxCompatible}
+                      aria-describedby="nitroxCompatible-hint"
+                      className="text-sm"
+                    >
+                      {t("courses.edit.nitroxCompatibleLabel")}
+                    </ChoiceRow>
+                    <p id="nitroxCompatible-hint" className="mt-1 text-sm text-muted">
+                      {t("courses.edit.nitroxCompatibleHint")}
+                    </p>
+                  </div>
                 </EditorSection>
 
                 <EditorSection
