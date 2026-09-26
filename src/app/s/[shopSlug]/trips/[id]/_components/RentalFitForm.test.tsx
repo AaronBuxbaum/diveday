@@ -101,6 +101,43 @@ describe("RentalFitForm defaults", () => {
   });
 });
 
+describe("RentalFitForm geometry", () => {
+  function renderPriced() {
+    return renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={null}
+        rentalItems={["bcd", "wetsuit", "mask_fins"]}
+        course={null}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+  }
+
+  /** The `gap-x-*` step of a two-column grid, or its shorthand `gap-*`. */
+  const gutter = (grid: Element | null) =>
+    /(?:^|\s)gap-x-(\S+)/.exec(grid?.className ?? "")?.[1] ??
+    /(?:^|\s)gap-(\d\S*)/.exec(grid?.className ?? "")?.[1];
+
+  it("splits the items' grid on the size fields' gutter", () => {
+    // The checkbox grid was hand-rolled at `gap-2` over size fields laid out by
+    // `FieldGrid` at `gap-x-4`, so the two grids' column edges stood 4px apart
+    // either side of the gutter (K-475: 644 against 648).
+    renderPriced();
+    const items = screen.getByRole("checkbox", { name: /^BCD/ }).closest(".sm\\:grid-cols-2");
+    const sizes = screen.getByLabelText(/BCD size/).closest(".sm\\:grid-cols-2");
+    expect(items).not.toBeNull();
+    expect(sizes).not.toBeNull();
+    expect(items).not.toBe(sizes);
+    expect(gutter(items)).toBe(gutter(sizes));
+  });
+});
+
 describe("RentalFitForm scope", () => {
   it("no longer carries the free-text note — it is its own question now (issue 627)", () => {
     // "Anything else the crew should know?" is a category of its own on

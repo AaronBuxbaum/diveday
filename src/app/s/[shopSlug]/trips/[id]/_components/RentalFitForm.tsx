@@ -325,7 +325,10 @@ export function RentalFitForm({
       <form action={action} className="mt-4 flex flex-col gap-4">
         {offered.length > 0 ? (
           <ChoiceFieldset legend={t("rental.whatToPlan")}>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {/* `gap-x-4`: `FieldGrid`'s gutter, so this grid's columns stand
+                on the size fields' edges below it (K-475: an 8px gutter here
+                put them 4px off either side). The rows keep their 8px. */}
+            <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
               {offered.map(({ kind, name }) => {
                 const priceCents = pricing.perItemCents[kind];
                 const hintKey = RENTABLE_ITEM_HINT_KEYS[kind];
