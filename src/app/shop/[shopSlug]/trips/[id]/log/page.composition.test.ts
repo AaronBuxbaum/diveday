@@ -19,6 +19,21 @@ function section(headingId: string): string {
   return SOURCE.slice(start, SOURCE.indexOf("</section>", start));
 }
 
+describe("the emergency contact cell", () => {
+  /**
+   * "Asha Sharma (sister) · +1-305-555-0231" was breakable on both sides of
+   * the dot, so a narrow cell led its second line with "·" (K-552,
+   * DEPARTURE-4-48). A no-break space glues the dot to the name; the phone
+   * after it keeps its own `whitespace-nowrap` (issue #1035).
+   */
+  it("keeps the dot with the name it follows", () => {
+    const at = SOURCE.indexOf("{diver.emergencyContactName}");
+    expect(at, "the contact cell is where this test looks").toBeGreaterThan(-1);
+    const join = SOURCE.slice(at + "{diver.emergencyContactName}".length).trimStart();
+    expect(join.startsWith('{"\\u00a0"}·{" "}')).toBe(true);
+  });
+});
+
 describe("the pre-departure check", () => {
   /**
    * Two columns — the item and who checked it when — under a `36rem` scroll

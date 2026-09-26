@@ -65,16 +65,15 @@ describe("the card number", () => {
   });
 
   it("reads exactly as the message says", () => {
-    const line = renderLine(evidence());
-    expect(
-      line.textContent?.startsWith(
-        t("incidentExport.certLevelLine", {
-          agency: "PADI",
-          level: t("shared.readiness.certificationLevels.openWater"),
-          identifier: "PADI-12-3456",
-        }),
-      ),
-    ).toBe(true);
+    // Word for word; only the space before each separator is a no-break one
+    // (see "the line's separators" below).
+    const message = t("incidentExport.certLevelLine", {
+      agency: "PADI",
+      level: t("shared.readiness.certificationLevels.openWater"),
+      identifier: "PADI-12-3456",
+    });
+    const text = renderLine(evidence()).textContent ?? "";
+    expect(text.startsWith(message.replaceAll(" · ", "\u00a0· "))).toBe(true);
   });
 
   it("leaves the no-number phrase free to wrap, since it is words and not a number", () => {
@@ -82,4 +81,29 @@ describe("the card number", () => {
     expect(line).toHaveTextContent(t("incidentExport.certNoNumber"));
     expect(line.querySelector(".whitespace-nowrap")).toBeNull();
   });
+});
+
+describe("the line's separators", () => {
+  /**
+   * Every " · " on the line was breakable on both sides, so a wrap could put
+   * the dot at the start of the next line: at 390 Lena ×2, June, Nadia and
+   * Ines led a line with "· Certified" or "· Pending review", while other
+   * rows ended theirs with it (K-552, DEPARTURE-4-48). A no-break space before
+   * each dot keeps it with what it follows, so a line can only break after one.
+   */
+  for (const [label, card] of [
+    ["a verified, imported card", evidence({ imported: true })],
+    ["a self-declared card", evidence({ identifier: null, status: "pending", selfDeclared: true })],
+    ["a specialty card", evidence({ kind: "specialty", level: null, specialty: "deep" })],
+    ["a nitrox card", evidence({ kind: "nitrox", level: null })],
+  ] as const) {
+    it(`glue every dot to what comes before it (${label})`, () => {
+      const text = renderLine(card).textContent ?? "";
+      const dots = [...text.matchAll(/·/g)];
+      expect(dots.length, "the line has separators to check").toBeGreaterThanOrEqual(2);
+      for (const dot of dots) {
+        expect(text[(dot.index ?? 0) - 1], `before the dot at ${dot.index}`).toBe("\u00a0");
+      }
+    });
+  }
 });
