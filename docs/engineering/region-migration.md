@@ -71,16 +71,34 @@ pnpm infra:migrate-region --from us-east-2 --execute --from-step 3   # resume
 It uses the `diveday-admin` profile, strips any ambient deployer key, reads the account off `sts:GetCallerIdentity` rather than assuming it, and makes you type the region name before the first delete.
 With no terminal to ask in it refuses outright unless `--confirm-teardown <region>` is passed, which is a flag that names what it destroys and authorizes nothing else.
 Steps 1 to 4 are idempotent: a resource that is already gone is "already done", not an error, so a run that dies half-way can be resumed rather than restarted.
+The destructive run's first line is `Starting at step N of 5.` — read it before anything else happens.
 
-**Before the script, when mail is moving too:** the script deletes `diveday-infra` and never `diveday-email`, so take the old email stack down by hand first — otherwise it survives in the old region with its identity and an active rule set, and the new region's deploy still cannot take `diveday-inbound-mail`:
+**Resuming after the deploys have begun is `--from-step 3`, never a fresh run.**
+Step 1 finds the old estate by *global* name, and once `diveday-infra` exists in the new region every one of those names is the new estate's.
+So step 1 refuses outright when `diveday-infra` exists in `PRIMARY_REGION`, or `diveday-email` exists in `SES_REGION` while mail is moving, and names the stack and its status.
+That refusal is the whole answer: do not delete anything it names to get past it.
 
-```bash
-aws ses set-active-receipt-rule-set --region <old region>    # no name: deactivates; an active set blocks the delete
-aws cloudformation delete-stack --region <old region> --stack-name diveday-email
-aws cloudformation wait stack-delete-complete --region <old region> --stack-name diveday-email
-```
+Nothing is done by hand before the script, including when mail is moving too.
 
-The inbound bucket it leaves behind (`RETAIN`) is one of the buckets step 1 empties and deletes.
+What each step does:
+
+1. **Tear down.**
+   Refuses if the new estate already exists.
+   Otherwise empties every bucket S3 places in the old region, deletes `diveday-infra` there, and — when `SES_REGION` is not the old region — takes the old `diveday-email` down too: it deactivates the old region's receipt rule set if the active one is `diveday-inbound` (an active set blocks the stack delete), then deletes the stack.
+   Then it deletes the retained buckets, `diveday-inbound-mail` among them, purges the secrets, and verifies every global name is free before letting the next step run.
+   A bucket that exists under one of the estate's names in any *other* region is reported and never touched, and the final check says which kind of "still taken" it found: a name still in the old region is step 1's unfinished business; one held anywhere else belongs to something this script does not know about, and is for a person to investigate rather than delete.
+   When mail stays in the old region, neither `diveday-email` nor `diveday-inbound-mail` is part of the move and neither is touched.
+2. **Bootstrap** every region in `DEPLOY_REGIONS`.
+3. **Deploy `DiveDay` alone.**
+   Its own per-region grants come from this stack, so nothing else can be deployed or diffed until it has landed once.
+4. **Deploy `DiveDayEmail` alone, then all three stacks.**
+5. **Print what is left**, which is the list in the next section.
+
+Steps 3 and 4 treat each stack's create the same way.
+Before each attempt, a stack a failed create left behind (`ROLLBACK_COMPLETE`, `CREATE_FAILED`, `REVIEW_IN_PROGRESS`) is deleted, and whatever that create orphaned is swept — fixed-name log groups, and the `RETAIN` buckets and secrets its template names, a bucket only when S3 places it in the region being built.
+If the sweep freed a bucket, the deploy waits five minutes first.
+A deploy that fails is retried, up to seven times, only when the stack's events say AWS has not caught up yet: S3's 409 `OperationAborted` on a name deleted minutes ago, or SES's "Your bucket must be in the same region as your Amazon SES configuration" on an inbound bucket that just moved.
+Any other failure stops the run.
 
 What each step does:
 
@@ -94,12 +112,15 @@ What each step does:
 
 ### Why this is a script and not a list of commands
 
-Four of the five steps have a trap that a careful person executing a list still walks into.
+Every step has a trap that a careful person executing a list still walks into; these are the ones that come from the estate, and the us-east-2 → us-east-1 move on 2026-09-26 added three that come from the order.
 
 - `diveday-vrt` is `RemovalPolicy.DESTROY` with no `autoDeleteObjects`, so leaving objects in it fails the *stack deletion* half-way, after the CloudFront distribution has already gone. It has to be emptied before the delete, not after.
 - Three buckets are `RETAIN`, so the stack deletion deliberately leaves them behind holding their global names.
 - `diveday-backups` is versioned, so `aws s3 rm --recursive` writes a delete marker per object and keeps every byte. The bucket reads as empty and `delete-bucket` still answers `BucketNotEmpty`.
 - `diveday/env` and `diveday/app-secret-seed` are `DESTROY`, which *schedules* deletion with a recovery window. For up to 30 days after the old stack is gone, reading `diveday/env` from the old region succeeds and hands back the dead estate's credentials document. The script purges them instead.
+- A bucket name is global and a bucket is regional. On 2026-09-26 a re-run started at step 1 against the already-built new estate, found every name "present", emptied and deleted the new estate's buckets, and stopped asking for the new stack's IAM users to be deleted by hand. Hence the refusal and the region check.
+- SES checks that the inbound bucket is in its own region, and for a while after `diveday-inbound-mail` is recreated somewhere new it still sees the old one. The email stack's create fails, and the rollback keeps the `RETAIN` bucket, so the next create fails "already exists". Step 4 now sweeps and retries that like step 3 does for the main stack.
+- The old `diveday-email` had to be taken down by hand, rule set first, before the script would work. Step 1 does it now.
 
 ## What the script leaves you
 
