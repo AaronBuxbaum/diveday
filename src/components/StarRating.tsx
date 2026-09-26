@@ -34,7 +34,12 @@ export function StarRating({
   className?: string;
 }) {
   return (
-    <span className={className}>
+    // A flex box, not an inline span: inline, it set the stars on a text
+    // baseline with the strut's descent below them, so a parent's
+    // `items-center` centred that taller line box and the stars rode 3px above
+    // the figure beside them (pixel-craft K-57). In running text it still sits
+    // on the baseline, by its stars' bottom edge, as it did.
+    <span className={`inline-flex items-center${className ? ` ${className}` : ""}`}>
       <span
         aria-hidden="true"
         className={`inline-flex items-center gap-0.5 ${
