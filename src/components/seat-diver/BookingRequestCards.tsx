@@ -79,8 +79,11 @@ export function RelevantBookingRequests({
         {/* From `sm` up a row never wraps: the words take the width and wrap
             themselves, so "Book from this request" stays at the row's right on
             every row instead of dropping under the one whose words ran long.
-            On a phone the link wraps under the words, and its 44px box is the
-            air between them. */}
+            On a phone the link wraps under the words, and the top half of its
+            44px box is the air between them; the bottom half overhangs the
+            row's own inset (`max-sm:-mb-3`), or it stacked 12px of invisible
+            box on the row's 12px and left the link 27px above the row's edge
+            against the name's 18px under the top (K-457 review). */}
         {items.map((item) => (
           <li
             key={item.id}
@@ -97,7 +100,7 @@ export function RelevantBookingRequests({
             </div>
             <Link
               href={item.href}
-              className={`${tapTargetLinkClass} shrink-0 text-sm font-medium text-primary hover:underline`}
+              className={`${tapTargetLinkClass} shrink-0 text-sm font-medium text-primary hover:underline max-sm:-mb-3`}
             >
               {openLabel}
             </Link>

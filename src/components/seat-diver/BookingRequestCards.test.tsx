@@ -55,6 +55,19 @@ describe("RelevantBookingRequests", () => {
     for (const link of links) expect(link).toHaveClass("inline-flex", "min-h-11", "items-center");
     for (const row of screen.getAllByRole("listitem")) expect(row).toHaveClass("gap-y-0");
   });
+
+  it("hands the wrapped link's lower half back to the row's inset on a phone", () => {
+    // Below `sm` the link wraps under the words. Its box's top half is the
+    // gap; its bottom half stacked on the row's own py-3 and left the link
+    // 27px above the row's edge against the name's 18px under the top (K-457
+    // review, booking-new@390). From `sm` up it shares the words' line.
+    render(<RelevantBookingRequests title="Relevant requests" items={ITEMS} openLabel="Book" />);
+    for (const link of screen.getAllByRole("link", { name: "Book" })) {
+      expect(link).toHaveClass("max-sm:-mb-3");
+      expect(link.className).not.toMatch(/(^|\s)-m[by]-/);
+      expect(link.closest("li")).toHaveClass("py-3");
+    }
+  });
 });
 
 describe("BookingRequestContext", () => {
