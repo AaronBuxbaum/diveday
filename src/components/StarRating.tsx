@@ -1,5 +1,18 @@
 import { REVIEW_RATINGS } from "@/lib/reviews";
 
+/** The drawn star, on a 20-unit grid. Its ink spans x 2–18 and y 1.8–17.02. */
+export const STAR_PATH =
+  "M10 1.8 12.47 6.81 18 7.61 14 11.51 14.94 17.02 10 14.42 5.06 17.02 6 11.51 2 7.61 7.53 6.81Z";
+
+/**
+ * **A square cropped to the star's ink**: exactly as wide as the star, and
+ * centred on it top to bottom (the ink is 15.22 units tall in a 16-unit box).
+ * For a caller that lines the star up by its ink, the rating input, whose
+ * hanging targets are pulled out by exactly the air around it. `StarRating`
+ * keeps the full 20-unit square it has always sat in.
+ */
+export const STAR_INK_VIEWBOX = "2 1.41 16 16";
+
 /**
  * A rating as stars. Read-only — the stars themselves are `aria-hidden`
  * decoration and the number is carried by a visually-hidden label, because a
@@ -56,10 +69,7 @@ export function StarRating({
             aria-hidden="true"
             className={`size-[1.15em] ${value <= rating ? "" : "opacity-25"}`}
           >
-            <path
-              fill="currentColor"
-              d="M10 1.8 12.47 6.81 18 7.61 14 11.51 14.94 17.02 10 14.42 5.06 17.02 6 11.51 2 7.61 7.53 6.81Z"
-            />
+            <path fill="currentColor" d={STAR_PATH} />
           </svg>
         ))}
       </span>

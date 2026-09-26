@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { STAR_INK_VIEWBOX, STAR_PATH } from "@/components/StarRating";
 import { REVIEW_RATINGS } from "@/lib/reviews";
 
 /**
@@ -40,7 +41,13 @@ export function StarRatingInput({
   return (
     <fieldset onMouseLeave={() => setHovered(0)}>
       <legend className="text-sm font-medium">{legend}</legend>
-      <div className="mt-1 flex gap-0.5">
+      {/* The targets hang, the way `InfoHint`'s do: each 44px target keeps
+          8px of air around its 28px star, so the row is pulled out by those
+          8px and the first star's ink lands on the column the legend and the
+          comment box start on. It kept 9px inside it, and 26px of empty
+          target under the stars where the form's rows sit 12px apart
+          (pixel-craft K-478). The top keeps the legend's 4px, less the air. */}
+      <div className="-mx-2 -mt-1 -mb-2 flex gap-0.5">
         {REVIEW_RATINGS.map((value) => (
           // The label is the 44px target (design/principles.md #2) and the
           // radio fills it invisibly rather than sitting `sr-only` in a corner:
@@ -50,7 +57,7 @@ export function StarRatingInput({
           <label
             key={value}
             onMouseEnter={() => setHovered(value)}
-            className="relative flex size-11 cursor-pointer items-center justify-center text-3xl leading-none transition-colors"
+            className="relative flex size-11 cursor-pointer items-center justify-center transition-colors"
           >
             <input
               type="radio"
@@ -69,7 +76,11 @@ export function StarRatingInput({
                 value <= lit ? "text-warning" : "text-border-strong"
               }`}
             >
-              ★
+              {/* Drawn, the same star `StarRating` shows the rating back in,
+                  in a box cropped to its ink so the hang above is exact. */}
+              <svg viewBox={STAR_INK_VIEWBOX} aria-hidden="true" className="size-7">
+                <path fill="currentColor" d={STAR_PATH} />
+              </svg>
             </span>
             <span className="sr-only">{optionLabels[value]}</span>
           </label>
