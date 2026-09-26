@@ -32,6 +32,15 @@ export const SHEET_PANEL_CLASS =
  * phone left it 165px beside the pill and the close; across both columns it
  * has the sheet's width.
  *
+ * **The name's line sets the row, not the close.** A 44px close made the row
+ * 44px, so a one-line name (a 32px line) sat 6px above the row's foot and its
+ * subtitle 10px under it, while a wrapped name set the row itself and had its
+ * subtitle 4px under: the gap moved with the name's length. The group hands
+ * back the close's unseen 12px as `-my-1.5`, a 32px margin box, so the
+ * subtitle is `gap-y-1` under the name either way; the close overhangs 6px
+ * into the room under the handle and 6px into the gap and the subtitle's
+ * leading, never onto its ink.
+ *
  * The close is the caller's, passed in `actions` with anything that rides
  * beside it, because it closes the caller's own state.
  */
@@ -56,7 +65,7 @@ export function SheetHeader({
       <h2 id={titleId} className={LEAD_TITLE_CLASS}>
         {title}
       </h2>
-      <div className="flex items-center gap-2">{actions}</div>
+      <div className="-my-1.5 flex items-center gap-2">{actions}</div>
       <p id={descriptionId} className="col-span-2 text-sm text-muted">
         {subtitle}
       </p>

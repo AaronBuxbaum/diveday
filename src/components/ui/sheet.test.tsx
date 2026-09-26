@@ -74,6 +74,19 @@ describe("SheetHeader", () => {
     expect(actions).toHaveClass("flex", "items-center");
   });
 
+  it("lets the name's line, not the 44px close, set the first row's height", () => {
+    // In a 44px row a one-line name (a 32px line) was centred 6px down, and the
+    // subtitle landed 10px under it; a wrapped name set the row itself and its
+    // subtitle sat 4px under. The group hands back the close's unseen 12px as
+    // `-my-1.5`, so its margin box is the name's one line and the subtitle is
+    // `gap-y-1` under the name whether or not the name wraps.
+    const { title, header } = renderHeader();
+    const actions = title.nextElementSibling as HTMLElement;
+    expect(actions).toHaveClass("-my-1.5");
+    expect(header).toHaveClass("gap-y-1");
+    expect(title.className).not.toMatch(/(^|\s)(leading-11|min-h-11|py-)/);
+  });
+
   it("runs the subtitle across both columns, under the name and the group", () => {
     const { header } = renderHeader();
     const subtitle = screen.getByText("Diver · Own kit");
