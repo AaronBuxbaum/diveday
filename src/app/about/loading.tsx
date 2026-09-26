@@ -37,8 +37,14 @@ export default function AboutLoading() {
               <div className="mt-6 h-6 w-full max-w-xl rounded bg-surface-sunken" />
               <div className="mt-2 h-6 w-2/3 max-w-lg rounded bg-surface-sunken" />
             </div>
+            {/* The phone at the height `CaptainPhoneFrame` renders it, which
+                is its mockup's, not a ratio: 468px in the 320px `max-w-xs`
+                column below `lg`, where the roll call wraps one more line,
+                and 450px in the 384px one from `lg`, where the phone sets the
+                hero's height. It was a guessed 480px, and the page under it
+                rose 30px on arrival (K-394). */}
             <div className="mx-auto w-full max-w-xs lg:max-w-sm">
-              <div className="h-[30rem] rounded-[2.5rem] border border-border bg-surface" />
+              <div className="h-[468px] rounded-[2.5rem] border border-border bg-surface lg:h-[450px]" />
             </div>
           </div>
         </section>
@@ -70,8 +76,8 @@ export default function AboutLoading() {
               well as at desktop — and the demo note beneath them, at the one
               bar `/product`'s hero skeleton gives the same sentence. */}
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <div className="h-11 w-full rounded-lg bg-surface-sunken sm:w-44" />
-            <div className="h-11 w-full rounded-lg bg-surface-sunken sm:w-36" />
+            <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
+            <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-36" />
           </div>
           <div className="mt-3 h-4 w-72 max-w-full rounded bg-surface-sunken" />
         </section>
