@@ -181,11 +181,16 @@ export function ShopNav({
                 `max-w-0` at rest so the label costs the row nothing wherever
                 the fold does not run — no scroll-driven animations, `lg` and
                 up, or a reduced-motion reader — and the fold gives it the width
-                the shop's name lets go of. */}
+                the shop's name lets go of.
+
+                No line height of its own: it inherits the one the shop's name
+                has, so the row centres the two on one line. `leading-none` gave
+                it a 17px line box whose negative half-leading set the title 1px
+                above the mark and the name it replaces. */}
             <span
               data-chrome-title-slot
               aria-hidden
-              className="max-w-0 min-w-0 truncate text-[17px] leading-none font-semibold tracking-tight opacity-0"
+              className="max-w-0 min-w-0 truncate text-[17px] font-semibold tracking-tight opacity-0"
             />
           </div>
         }

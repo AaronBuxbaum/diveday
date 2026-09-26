@@ -347,6 +347,22 @@ describe("the title folds into the bar", () => {
     );
   });
 
+  /**
+   * The folded title replaces the shop's name beside the same mark, so it sits
+   * on the name's line. With `leading-none` its 17px line box had negative
+   * half-leading, which Chromium splits unevenly, and the title's cap centre
+   * sat 1px above the mark's and the name's (27.0 against 28.0, the pixel
+   * audit, chrome-folded-title): the word stepped up as the two cross-faded.
+   * It inherits the line height the name has; the row centres both.
+   */
+  it("sets the folded label on the line the shop's name sits on", async () => {
+    const staff = withoutComments(await read("src/components/ShopNav.tsx"));
+    const slot = staff.slice(staff.indexOf("data-chrome-title-slot"));
+    const tag = slot.slice(0, slot.indexOf("/>"));
+    expect(tag).toContain("className=");
+    expect(tag, "the folded label sets its own line height").not.toMatch(/\bleading-/);
+  });
+
   it("drives the fold from the scroll, not from a timer", async () => {
     const css = await read("src/app/globals.css");
     expect(css).toContain("@supports (animation-timeline: scroll())");
