@@ -230,20 +230,30 @@ export function DayStation({
             fact — with the figure and the capacity over the water and the
             open count beside it. The roll call's dial (`HeadCount`) is the
             same anatomy on the one surface that counts heads; this one counts
-            seats, and the water is never a state. */}
-        <div className="flex shrink-0 items-center gap-4 max-sm:basis-full sm:flex-row-reverse">
-          <div className="relative size-19 shrink-0 overflow-hidden rounded-full border border-border bg-surface-sunken">
-            <div
-              aria-hidden="true"
-              data-station-water
-              className="absolute inset-0 origin-bottom bg-shallows"
-              style={{ transform: `scaleY(${filled / 100})` }}
-            />
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={FIGURE_DIAL_CLASS}>{station.booked}</span>
-              <span className="text-[11px] font-semibold text-primary-hover tabular-nums">
-                {t("shopHome.spine.ofCapacity", { capacity: station.capacity })}
-              </span>
+            seats, and the water is never a state.
+
+            **Below `sm` its words start on the title's column** (pixel-craft
+            K-318). There the dial wraps to a line of its own under the site
+            tile, and at 76 + 16 its words started 11px left of the time,
+            title and meta beside the 84px tile at its 20px gap. So on a phone
+            the dial stands centred in a box the tile's width (`w-21`), at the
+            tile's gap (`gap-5`); from `sm` up, beside the title, it keeps its
+            own size and `gap-4`. */}
+        <div className="flex shrink-0 items-center gap-5 max-sm:basis-full sm:flex-row-reverse sm:gap-4">
+          <div className="flex shrink-0 justify-center max-sm:w-21">
+            <div className="relative size-19 shrink-0 overflow-hidden rounded-full border border-border bg-surface-sunken">
+              <div
+                aria-hidden="true"
+                data-station-water
+                className="absolute inset-0 origin-bottom bg-shallows"
+                style={{ transform: `scaleY(${filled / 100})` }}
+              />
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={FIGURE_DIAL_CLASS}>{station.booked}</span>
+                <span className="text-[11px] font-semibold text-primary-hover tabular-nums">
+                  {t("shopHome.spine.ofCapacity", { capacity: station.capacity })}
+                </span>
+              </div>
             </div>
           </div>
           <div className="flex min-w-0 flex-col gap-1 sm:items-end">

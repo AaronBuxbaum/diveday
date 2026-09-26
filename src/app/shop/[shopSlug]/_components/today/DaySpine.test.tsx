@@ -30,6 +30,7 @@ vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   setLeftoverDecisionAction: vi.fn(),
 }));
 
+import { SITE_MARK_SIZES } from "@/components/illustration/SiteMark";
 import type { FirstBooking } from "@/db/first-booking";
 import type { DayTakings as DayTakingsReading } from "@/lib/closeout";
 import { assembleEveningClose, type CloseoutDeparture } from "@/lib/closeout";
@@ -387,6 +388,32 @@ describe("the station is a panel (16a)", () => {
     // The target is still 44px, standing from the top of the line.
     expect(door).toHaveClass("min-h-11", "items-start");
     expect(line).toHaveClass("items-start");
+  });
+
+  /**
+   * **On a phone the dial's words start on the title's column** (pixel-craft
+   * class 3, K-318). Below `sm` the dial wraps to its own line under the site
+   * tile, and its words started at 76 + 16 from the card's edge while the
+   * time, title and meta beside the tile start at 84 + 20: 11px apart. The
+   * dial now stands in a box the tile's width, centred, at the tile's gap.
+   */
+  it("starts the dial's words on the title's column below sm", () => {
+    const { container } = renderSpine();
+    const px = (classes: string | undefined, pattern: RegExp) => {
+      const match = classes?.match(pattern);
+      if (!match?.[1]) throw new Error(`no ${pattern} in "${classes}"`);
+      return Number(match[1]);
+    };
+    const tileWidth = px(SITE_MARK_SIZES.md.tile, /(?:^|\s)w-\[(\d+)px\](?:\s|$)/);
+    const header = container.querySelector("[data-site-mark]")?.parentElement;
+    const dial = container.querySelector("[data-station-water]")?.parentElement;
+    const box = dial?.parentElement;
+    const row = box?.parentElement;
+    expect(px(box?.className, /(?:^|\s)max-sm:w-(\d+)(?:\s|$)/) * 4).toBe(tileWidth);
+    expect(box).toHaveClass("justify-center");
+    expect(px(row?.className, /(?:^|\s)gap-(\d+)(?:\s|$)/)).toBe(
+      px(header?.className, /(?:^|\s)gap-x-(\d+)(?:\s|$)/),
+    );
   });
 
   it("renders a settled station as the same panel", () => {
