@@ -82,7 +82,7 @@ describe("MarketingNavView", () => {
       const nav = screen.getByRole("navigation");
       expect(nav).toHaveClass("flex-wrap", "md:flex-nowrap");
       const links = screen.getByRole("link", { name: "Product" }).parentElement;
-      expect(links).toHaveClass("basis-full", "md:basis-auto", "md:ml-auto");
+      expect(links).toHaveClass("order-3", "basis-full", "md:order-none", "md:basis-auto");
       for (const element of [nav, ...nav.querySelectorAll("*")]) {
         expect(element.getAttribute("class") ?? "").not.toMatch(/(^|\s)sm:/);
       }
