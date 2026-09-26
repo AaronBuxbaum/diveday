@@ -134,6 +134,34 @@ describe("an open item", () => {
     );
   });
 
+  /**
+   * **On a phone the sentence takes the row's whole width** (pixel-craft
+   * class 10). Kind, sentence and fix on one 390px line left the sentence a
+   * 113-130px column between them, and "Waiver is waiting for the diver's
+   * signature." ran four to six lines deep. These rows are exactly what
+   * `LedgerRow`'s `stacked` reading is for: kind and fix share the first
+   * line, the sentence and its departure drop beneath them. The day's diver
+   * sheet renders this same ledger, so it follows.
+   */
+  it("gives every row the stacked phone reading", () => {
+    renderLedger([
+      {
+        kind: "waiver",
+        tone: "danger",
+        sentence: { blocker: { code: "waiver_not_sent" } },
+        action: { labelKey: "divers.status.acts.sendWaiver", target: "send_waiver" },
+        tripContext: { tripId: "trip-1", startsAt: new Date("2026-08-27T11:00:00.000Z") },
+      },
+      { kind: "contact", tone: "warning", sentence: { key: "divers.status.noEmergencyContact" } },
+    ]);
+    const rows = screen.getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    for (const row of rows) expect(row).toHaveClass("max-sm:flex-wrap");
+    expect(screen.getByText("On Thu, Aug 27 · 6:00 AM.").parentElement).toHaveClass(
+      "max-sm:basis-full",
+    );
+  });
+
   /** A row the shop cannot act on renders no fix rather than an invented one. */
   it("renders no link for a row with no fix", () => {
     renderLedger([
