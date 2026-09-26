@@ -230,7 +230,13 @@ export function CounterQueue({
       {settled.length > 0 ? (
         <LedgerGroup
           as={settledHeadingLevel}
-          className="mt-6"
+          // **Folded, it keeps the walk-in door off its summary** (pixel-craft
+          // class 6). Until the boat sails the receipts are folded — the
+          // counter's ordinary mid-morning state — and the door's rule sat
+          // flush under "Checked in — N", reading as the fold's first row.
+          // Open, the door's rule is the close of the rows it shows. The fold
+          // toggles on the client, so this is CSS, not a prop.
+          className={endsOpen ? "mt-6 [&:not([open])]:mb-6" : "mt-6"}
           folded={!settledOpen}
           // The boat's fact, once, beside the count it belongs to.
           meta={boardedMeta}

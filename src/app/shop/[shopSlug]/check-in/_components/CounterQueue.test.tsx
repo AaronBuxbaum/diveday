@@ -106,6 +106,36 @@ describe("a queue with the walk-in door under it", () => {
     renderQueue([row("Tom Okafor")]);
     expect(article("Tom Okafor")).toHaveClass("last:border-b");
   });
+
+  /**
+   * **Folded, the settled group keeps the door off its summary.** Until the
+   * boat sails the receipts are a folded `<details>`, which is the counter's
+   * ordinary mid-morning state: the door's rule sat flush under "Checked in —
+   * N" and read as the fold's first row. The fold toggles on the client, so the
+   * page cannot decide it; the group keeps 24px under itself while it is
+   * closed, and none once open, where the door's rule closes its rows.
+   */
+  it("keeps the door 24px below a folded settled group, and flush under an open one", () => {
+    const { container } = renderQueue(
+      [row("Tom Okafor"), settled("Nadia Petrov")],
+      false,
+      true,
+      undefined,
+      true,
+    );
+    const fold = container.querySelector("details");
+    expect(fold).not.toHaveAttribute("open");
+    expect(fold).toHaveClass("mt-6", "[&:not([open])]:mb-6");
+    expect(fold?.className).not.toMatch(/(?:^|\s)mb-/);
+    cleanup();
+    const { container: alone } = renderQueue(
+      [row("Tom Okafor"), settled("Nadia Petrov")],
+      false,
+      true,
+    );
+    // With nothing under it, the fold needs no room of its own.
+    expect(alone.querySelector("details")?.className).not.toMatch(/mb-6/);
+  });
 });
 
 describe("a send that does not go through", () => {

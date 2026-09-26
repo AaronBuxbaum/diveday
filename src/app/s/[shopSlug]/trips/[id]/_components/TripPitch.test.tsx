@@ -3,7 +3,7 @@ import { cleanup, render, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { PublicCrewMember } from "@/db/trips";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { pitchHasDoor, TripPitch } from "./TripPitch";
+import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./TripPitch";
 import type { DiveBriefing } from "./types";
 
 /**
@@ -222,6 +222,37 @@ describe("TripPitch", () => {
     cleanup();
     const bare = [briefing({ diveSite: null } as unknown as Partial<DiveBriefing>)];
     expect(pitchHasDoor(bare, [])).toBe(false);
+  });
+
+  /**
+   * The day's run above may leave its close to this block only when the block
+   * opens on its door's rule — not on the fit word's badge or the faces, which
+   * the run's closing rule has to sit over (pixel-craft class 6). Asked of the
+   * same builders the block renders from, and checked against what it renders.
+   */
+  it("says whether it opens on its door, exactly as it renders", () => {
+    const opensOn = (briefings: DiveBriefing[], crew: readonly PublicCrewMember[]) => {
+      const { container } = render(
+        <TripPitch briefings={briefings} crew={crew} locale={DEFAULT_DIVER_LOCALE} />,
+      );
+      const first = container.querySelector("section")?.firstElementChild?.tagName ?? null;
+      cleanup();
+      return first;
+    };
+    const faces = [briefing({ creatures: CREATURES.map(creature) })];
+    const crewOnly = [briefing({ diveSite: null } as unknown as Partial<DiveBriefing>)];
+    // The fit word's badge, the door alone, and nothing at all.
+    expect(opensOn(faces, CREW)).toBe("P");
+    expect(opensOn(crewOnly, CREW)).toBe("DETAILS");
+    expect(opensOn(crewOnly, [])).toBeNull();
+    const cases: [DiveBriefing[], readonly PublicCrewMember[]][] = [
+      [faces, CREW],
+      [crewOnly, CREW],
+      [crewOnly, []],
+    ];
+    for (const [briefings, crew] of cases) {
+      expect(pitchOpensOnDoor(briefings, crew)).toBe(opensOn(briefings, crew) === "DETAILS");
+    }
   });
 
   it("renders nothing at all for a bare course session", () => {

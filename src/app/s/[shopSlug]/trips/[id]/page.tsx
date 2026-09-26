@@ -81,7 +81,7 @@ import { TripActions } from "./_components/TripActions";
 import { TripAlternatives } from "./_components/TripAlternatives";
 import { TripDayPlan } from "./_components/TripDayPlan";
 import { TripHeader } from "./_components/TripHeader";
-import { pitchHasDoor, TripPitch } from "./_components/TripPitch";
+import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
 import { TripTerms } from "./_components/TripTerms";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { offerHandoff } from "./actions";
@@ -726,8 +726,11 @@ export default async function TripDetailPage({
             names a card — which of the day's sites go deeper than that card
             covers. Facts the shop already publishes (issue #1479); the beat
             stays time-neutral, since durations promise no clock. */}
+        {/* Its run closes itself, except over a pitch that opens on its
+            door's own rule (pixel-craft class 6). */}
         <TripDayPlan
           briefings={diveBriefings}
+          nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew)}
           sightings={seenBySite}
           shop={shop}
           startsAt={trip.startsAt}
@@ -787,7 +790,9 @@ export default async function TripDetailPage({
             about the reader, which is what makes it safe on an anonymous page
             (DOM-M6), and it still says nothing at all on a course session,
             whose own page states its admission rule. */}
-        <TripAlternatives alternatives={worthALookRows} locale={locale} />
+        {/* The requirement note's rule closes the other boats when it follows
+            them, rather than drawing a second rule 33px under theirs. */}
+        <TripAlternatives alternatives={worthALookRows} closed={!requirementNote} locale={locale} />
         {requirementNote ? (
           // The ledger's room, so this rule is as long as the alternatives'
           // rules just above it.

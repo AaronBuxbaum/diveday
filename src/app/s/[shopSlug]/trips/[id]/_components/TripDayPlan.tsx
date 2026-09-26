@@ -6,6 +6,7 @@ import {
   GroupLabel,
   LedgerRow,
   ledgerKindColumnClass,
+  ledgerRowBoxClass,
   ledgerRowOpenBoxClass,
 } from "@/components/ui/ledger";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
@@ -198,6 +199,7 @@ export function TripDayPlan({
   locale,
   profile,
   sightings,
+  nextOpensOnRule = false,
 }: {
   briefings: DiveBriefing[];
   /**
@@ -222,6 +224,14 @@ export function TripDayPlan({
    * which is every shop whose crews have not tapped a chip.
    */
   sightings?: ReadonlyMap<string, SiteSightings>;
+  /**
+   * Whether the block under this section opens on a rule of its own — the
+   * public trip's pitch when it opens on its door (`pitchOpensOnDoor`). The
+   * run then leaves its close to that rule, but only when the run is the last
+   * thing here: under it may come the crew months' caption and the ceiling
+   * picker, which are not rules, and the run closes over them.
+   */
+  nextOpensOnRule?: boolean;
 }) {
   const t = diverTranslator(locale);
   // The sky belongs to the day, so it rides in this beat rather than opening a
@@ -329,15 +339,19 @@ export function TripDayPlan({
       </section>
     );
   }
+  // **The run closes itself unless a rule follows it directly** (pixel-craft
+  // class 6). On a bare day — no months' caption, no picker, a pitch opening
+  // on its door — the run's closing rule sat 32px over the door's own, two
+  // parallel hairlines with nothing between them. Anywhere else the rule is
+  // the list's only close: over the caption or the picker, or over a pitch
+  // that opens on its fit word and faces, leaving it open left the last dive
+  // unclosed above body text. Every line, hand-set or not, takes one box.
+  const runCloses = !(nextOpensOnRule && seenByDive.size === 0 && options.length === 0);
+  const handSetBox = runCloses ? ledgerRowBoxClass : ledgerRowOpenBoxClass;
   return (
     <section className="mt-8">
       <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
       {sky}
-      {/* **The run leaves its close to the beat under it** (pixel-craft class
-          6): the pitch's door and the conditions line each open with their
-          own rule, and a closing rule here sat 32px over the door's, two
-          parallel hairlines with nothing between them. Every line in it,
-          hand-set or not, takes the open box. */}
       <ul className="mt-2">
         {briefings.map(({ dive, diveSite }) => {
           const bottomTime = bottomTimes.get(dive.diveNumber) ?? null;
@@ -367,7 +381,7 @@ export function TripDayPlan({
           return (
             <Fragment key={dive.id}>
               <LedgerRow
-                closed={false}
+                closed={runCloses}
                 kind={{ word: t("trip.diveNumber", { number: dive.diveNumber }), tone: "neutral" }}
                 trailing={
                   depth ? <span className="text-sm text-muted tabular-nums">{depth}</span> : null
@@ -414,7 +428,7 @@ export function TripDayPlan({
                   shape for the same reason. It takes the dive rows' box, so its
                   rules are theirs. */}
               {seen ? (
-                <li className={`flex gap-3 py-2 ${ledgerRowOpenBoxClass}`}>
+                <li className={`flex gap-3 py-2 ${handSetBox}`}>
                   <span className={`${ledgerKindColumnClass} shrink-0`} />
                   <SiteSeen
                     seen={seen}
@@ -429,7 +443,7 @@ export function TripDayPlan({
                   Indented past the kind word so it reads as part of the run
                   rather than as a third dive. */}
               {interval ? (
-                <li className={`flex items-center gap-3 py-2 ${ledgerRowOpenBoxClass}`}>
+                <li className={`flex items-center gap-3 py-2 ${handSetBox}`}>
                   <span className={`${ledgerKindColumnClass} shrink-0`} />
                   <span className="text-sm text-muted tabular-nums">
                     {t("trip.dayProfile.surfaceInterval", { minutes: interval })}

@@ -26,6 +26,31 @@ function alternative(over: Partial<TripAlternative> = {}): TripAlternative {
 }
 
 describe("TripAlternatives", () => {
+  /**
+   * **The page's requirement note draws the rule under the list** (pixel-craft
+   * class 6). Closed, the list's last rule sat 33px over the note's own: two
+   * parallel hairlines with nothing between them, on every departure that
+   * both offers another boat and asks for a card.
+   */
+  it("closes its list, or leaves the close to a rule the page puts under it", () => {
+    const rows = () => screen.getAllByRole("listitem");
+    const { rerender } = render(
+      <TripAlternatives alternatives={[alternative()]} locale={DEFAULT_DIVER_LOCALE} />,
+    );
+    for (const row of rows()) expect(row).toHaveClass("border-t", "last:border-b");
+    rerender(
+      <TripAlternatives
+        alternatives={[alternative()]}
+        locale={DEFAULT_DIVER_LOCALE}
+        closed={false}
+      />,
+    );
+    for (const row of rows()) {
+      expect(row).toHaveClass("border-t");
+      expect(row).not.toHaveClass("last:border-b");
+    }
+  });
+
   it("renders nothing when nothing is worth offering", () => {
     const { container } = render(
       <TripAlternatives alternatives={[]} locale={DEFAULT_DIVER_LOCALE} />,

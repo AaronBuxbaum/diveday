@@ -51,6 +51,25 @@ const ABOVE_THE_FORM = [
   "<TripAlternatives",
 ] as const;
 
+/**
+ * **One rule between two blocks, never two** (pixel-craft class 6). Each list
+ * on this page closes itself unless the page knows the block under it opens on
+ * a rule of its own: the day's run over a pitch that opens on its door, and the
+ * other boats over the requirement note.
+ */
+describe("the trip page's rules", () => {
+  it("leaves the day's run open only over a pitch that opens on its door", () => {
+    expect(SOURCE).toMatch(
+      /<TripDayPlan[^>]*nextOpensOnRule=\{pitchOpensOnDoor\(diveBriefings, publicCrew\)\}/,
+    );
+  });
+
+  it("leaves the other boats open only over the requirement note", () => {
+    expect(SOURCE).toMatch(/<TripAlternatives[^>]*closed=\{!requirementNote\}/);
+    expect(positionOf("<TripAlternatives")).toBeLessThan(positionOf("{requirementNote ? ("));
+  });
+});
+
 describe("the trip page's order", () => {
   it("bounds what runs above the form, and bounds its own list", () => {
     // The count is the bound. Adding a section means editing this literal and

@@ -191,6 +191,25 @@ export function pitchHasDoor(
 }
 
 /**
+ * Whether the pitch *opens* on its door: a door, and no fit word or faces
+ * above it — so the first thing it draws is the door's rule. Only then may the
+ * day's run above leave its close to it (`TripDayPlan`'s `nextOpensOnRule`);
+ * over the fit word's badge or the faces, the run's own rule is the only
+ * close it has (pixel-craft class 6). Asked of the builders the block renders
+ * from, never a second detector.
+ */
+export function pitchOpensOnDoor(
+  briefings: DiveBriefing[],
+  crew: readonly PublicCrewMember[],
+): boolean {
+  return (
+    pitchHasDoor(briefings, crew) &&
+    dayFitTone(briefings) === null &&
+    fieldGuideCardsFor(briefings).length === 0
+  );
+}
+
+/**
  * Three, and the number is the bound. The Gap board reads "no more than four
  * field-guide tiles" counting the drawing's `+ 7 more` cell; the ADR's decision
  * says three tiles and a door, and this follows the ADR — the door is a
@@ -214,14 +233,21 @@ function dayFitWord(
   briefings: readonly DiveBriefing[],
   t: ReturnType<typeof diverTranslator>,
 ): string | null {
+  const tone = dayFitTone(briefings);
+  if (tone === "demanding") return t("trip.siteFitDemandingLabel");
+  return tone === "welcoming" ? t("trip.siteFitWelcomingLabel") : null;
+}
+
+/** The tone `dayFitWord` says in a word — whether there is one to say needs no translator. */
+function dayFitTone(briefings: readonly DiveBriefing[]): "demanding" | "welcoming" | null {
   const seen = new Set<string>();
   let welcoming = false;
   for (const { diveSite } of briefings) {
     if (!diveSite || seen.has(diveSite.id)) continue;
     seen.add(diveSite.id);
     const { tone } = siteFit(diveSite);
-    if (tone === "demanding") return t("trip.siteFitDemandingLabel");
+    if (tone === "demanding") return "demanding";
     if (tone === "welcoming") welcoming = true;
   }
-  return welcoming ? t("trip.siteFitWelcomingLabel") : null;
+  return welcoming ? "welcoming" : null;
 }

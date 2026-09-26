@@ -231,9 +231,17 @@ describe("TripDayPlan's profile", () => {
     expect(within(screen.getByRole("list")).queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
   });
 
-  it("leaves the day's run open: the beat under it draws its own rule", () => {
-    // Closed, the run's last rule sat 32px over the pitch door's own: two
-    // parallel hairlines with nothing between them (pixel-craft class 6).
+  /**
+   * **The run closes itself unless the next thing on the page is a rule**
+   * (pixel-craft class 6). On a bare day — no crew months, no ceiling picker,
+   * a pitch that opens on its door — the run's closing rule sat 32px over the
+   * door's own, two parallel hairlines with nothing between them, so the page
+   * may leave it open. Anything under the list inside this section (the
+   * picker, the months' caption) is not a rule, and the run closes over it.
+   */
+  const lines = () => [...screen.getByRole("list").children];
+
+  it("closes the day's run over the ceiling picker, whatever follows the section", () => {
     render(
       <TripDayPlan
         briefings={[briefing(), wall]}
@@ -242,14 +250,48 @@ describe("TripDayPlan's profile", () => {
         endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
+        nextOpensOnRule
       />,
     );
-    const lines = [...screen.getByRole("list").children];
-    expect(lines.length).toBeGreaterThan(2);
-    for (const line of lines) {
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    expect(lines().length).toBeGreaterThan(2);
+    for (const line of lines()) expect(line).toHaveClass("border-t", "last:border-b");
+  });
+
+  it("leaves a bare run open when the page says a rule follows it", () => {
+    const secondDive = briefing({
+      dive: { id: "dive-2", diveNumber: 2, title: "White Sand Bottom Cave" },
+      diveSite: { id: "site-2", name: "White Sand", depthRange: "to 14 m" },
+    } as unknown as Partial<DiveBriefing>);
+    const { rerender } = render(
+      <TripDayPlan
+        briefings={[briefing(), secondDive]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+        nextOpensOnRule
+      />,
+    );
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    // Two dives and the surface interval between them, hand-set line and all.
+    expect(lines()).toHaveLength(3);
+    for (const line of lines()) {
       expect(line).toHaveClass("border-t");
       expect(line).not.toHaveClass("last:border-b");
     }
+    rerender(
+      <TripDayPlan
+        briefings={[briefing(), secondDive]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+      />,
+    );
+    for (const line of lines()) expect(line).toHaveClass("last:border-b");
   });
 
   it("says nothing about a surface interval on a one-tank day", () => {
