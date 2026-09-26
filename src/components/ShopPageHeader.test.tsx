@@ -212,6 +212,28 @@ describe("the skeleton's description bar", () => {
 });
 
 /**
+ * **A meta that renders nothing takes no room.** Check-in's meta is a
+ * connectivity pill that renders `null` while the counter is online — nearly
+ * always — and the wrapper around it still carried its `mt-3`: 12px of
+ * nothing under the title on every visit, which the page's skeleton could
+ * only match by drawing a bar for a line that is not there (found walking
+ * K-28's callers). `ConnectivityStatus` already refuses a margin-carrying
+ * wrapper of its own for exactly this reason; this is the one above it.
+ */
+describe("the header's meta", () => {
+  function Offline() {
+    return null;
+  }
+
+  it("collapses away when what it holds renders nothing", () => {
+    render(<ShopPageHeader title="Check-in" meta={<Offline />} />);
+    const meta = screen.getByRole("heading", { name: "Check-in" }).parentElement?.lastElementChild;
+    expect(meta?.childElementCount).toBe(0);
+    expect(meta).toHaveClass("mt-3", "empty:hidden");
+  });
+});
+
+/**
  * **The chevron's box is its ink**, so the way back starts on the title's
  * column rather than 4px inside it.
  *

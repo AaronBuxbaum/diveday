@@ -258,7 +258,9 @@ export function ShopPageHeader({
               serves both shells and only one of them folds. */}
           <FoldedPageTitle title={title} />
           {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}
-          {meta ? <div className="mt-3">{meta}</div> : null}
+          {/* `empty:hidden`: a meta whose content renders nothing (check-in's
+              offline-only pill, online) leaves no 12px of margin behind. */}
+          {meta ? <div className="mt-3 empty:hidden">{meta}</div> : null}
         </div>
         {/* Below `sm` the header stacks and its actions share the row, each
             growing to an equal share, so two doors read as one tidy band
