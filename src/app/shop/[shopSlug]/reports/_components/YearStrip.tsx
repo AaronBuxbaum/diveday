@@ -77,11 +77,18 @@ export function YearStrip({
             // biome-ignore lint/suspicious/noArrayIndexKey: padding squares have no identity but their position.
             <span key={`pad-${index}`} className="aspect-square" />
           ) : (
+            // **Today's outline is drawn inside its square** (a negative
+            // offset as wide as the outline). Outside it, a 2px ring at a 1px
+            // offset filled the whole 3px gutter, touched the square above and
+            // ran 2px past the grid's edge (K-572). Below `sm` a square is
+            // under 4px wide, so the ring thins to 1px and the fill still shows.
             <span
               key={cell.day}
               title={copy.day(cell)}
               className={`aspect-square rounded-[2px] ${FILL_CLASS[cell.fill]} ${
-                cell.isToday ? "outline-2 outline-foreground outline-offset-1" : ""
+                cell.isToday
+                  ? "outline-2 -outline-offset-2 outline-foreground max-sm:outline-1 max-sm:-outline-offset-1"
+                  : ""
               }`.trim()}
             />
           ),
