@@ -69,7 +69,8 @@
       "offline-manifest-list",
       "offline-manifest-list-needs-refresh",
       "offline-manifest-removed-other-shop",
-      "offline-manifest-roll-call"
+      "offline-manifest-roll-call",
+      "offline-manifest-roll-call-high-contrast"
     ],
     "a11y": ["a11y.spec.ts"]
   },

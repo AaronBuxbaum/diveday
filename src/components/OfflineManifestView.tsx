@@ -1759,19 +1759,30 @@ export function OfflineManifestView() {
             the live panel — a crew that loses signal between two dives must not
             see two different completions for one fact. The heading below says
             it in words. */}
-        {/* Below `sm` the tiles give their inline padding and gap to the
-            label: at 360 a `p-3` tile left 75px, and "EMBARCADOS" needs 86. */}
+        {/* **The label fits its tile, or wraps inside it; it never spills
+            into the next.** Uppercase, "EMBARCADOS" needed 86px where a `p-3`
+            tile leaves 75 at 360, and glare mode (this page mounts it) forces
+            every `text-xs` to 16px, where no inset a phone tile can give holds
+            it: about 112px in a 100px box at 390. Narrowing the tiles' inset
+            below `sm` fixed only the 360 case and left every phone's tiles
+            reading cramped, 7px from their borders beside panels inset 16-20.
+            In sentence case the words fit a `p-3` tile at 12px, and at glare's
+            16px they hyphenate in the page's language (`lang`) or, where the
+            browser has no dictionary, break inside the tile. The gap stays 8px
+            below `sm`: three tiles on a phone. */}
         <section className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
           {[
             [t("shared.offlineManifest.single.statsDivers"), manifest.summary.totalDivers],
             [t("shared.offlineManifest.single.statsBoarded"), boarded],
             [t("shared.offlineManifest.single.statsAwaiting"), awaiting],
           ].map(([label, value]) => (
-            <div
-              key={String(label)}
-              className="rounded-lg border border-border bg-surface px-1.5 py-3 sm:px-3"
-            >
-              <p className="text-xs font-semibold text-muted uppercase">{label}</p>
+            <div key={String(label)} className="rounded-lg border border-border bg-surface p-3">
+              <p
+                lang={locale}
+                className="text-xs font-semibold text-muted hyphens-auto wrap-break-word"
+              >
+                {label}
+              </p>
               <p className={`mt-1 ${FIGURE_CLASS}`}>{value}</p>
             </div>
           ))}

@@ -7940,6 +7940,38 @@ for (const scheme of ["light", "dark"] as const) {
         });
 
         /**
+         * **The same roll call in Boat mode**, the way it is read at the rail
+         * in sun. Glare mode floors every `text-xs` at 16px, so the stat
+         * tiles' "Embarcados" / "Buceadores" / "Pendientes" are wider than any
+         * inset a phone tile can give them: they measured fine in the capture
+         * above and spilled past the 8px gap into the next tile here (K-473
+         * review). The probe sweeps this at 360 as well. Switched by the
+         * control's own change event, which is what the Boat mode button
+         * sends, so the capture does not depend on a light sensor.
+         */
+        test(`the offline roll call in Boat mode reads in Spanish (${scheme})`, async ({
+          page,
+        }) => {
+          test.setTimeout(FLOW_TIMEOUT_MS);
+          await openReefTrip(page);
+          await page.goto(`${new URL(page.url()).pathname}/manifest`);
+          await settleOfflineShellWorker(page);
+          await openOnThisPhone(page);
+          await page.getByRole("link", { name: "Abrir pase de lista sin conexión" }).click();
+          await page.waitForURL(/offline-manifest/);
+          await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
+          await page.evaluate(() =>
+            window.dispatchEvent(
+              new CustomEvent("diveday:contrast-mode-change", { detail: { mode: "full" } }),
+            ),
+          );
+          await expect(page.locator("html")).toHaveClass(/glare-mode/);
+          await capture(page, "offline-manifest-roll-call-high-contrast", scheme, {
+            locale: SPANISH,
+          });
+        });
+
+        /**
          * **The manifest's checkpoint track**, whose tabs carry a checkpoint
          * name and a state word in a row that has to stay one line: "Punto de
          * control activo" against "Active checkpoint", and "No embarcado"

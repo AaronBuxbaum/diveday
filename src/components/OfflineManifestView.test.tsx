@@ -2972,13 +2972,19 @@ describe("OfflineManifestView — one column, one text edge", () => {
     }
   });
 
-  // K-473: at 360 a `p-3` tile left 75px for EMBARCADOS, which needs 86.
-  it("widens the stat tiles' inner box below sm", async () => {
+  // K-473: uppercase, EMBARCADOS needed 86px where a `p-3` tile leaves 75 at
+  // 360, and glare's 16px floor put it past any phone tile's inset; the
+  // narrowed `px-1.5` tiles that fixed 360 read cramped on every phone.
+  it("fits the stat labels to a p-3 tile, and wraps them inside it rather than spilling", async () => {
     await renderTrip(richEnvelope("trip-1"));
-    const tile = screen.getByText("Awaiting", { selector: "p.uppercase" }).parentElement;
-    expect(tile).toHaveClass("px-1.5", "py-3", "sm:px-3");
-    expect(tile).not.toHaveClass("p-3");
-    expect(tile?.parentElement).toHaveClass("gap-2", "sm:gap-3");
+    const label = screen.getByText("Awaiting", { selector: "p" });
+    expect(label).not.toHaveClass("uppercase");
+    expect(label).toHaveClass("hyphens-auto", "wrap-break-word");
+    expect(label).toHaveAttribute("lang");
+    const tile = label.parentElement;
+    expect(tile).toHaveClass("p-3");
+    expect(tile?.className).not.toMatch(/(^|\s)(sm:)?p[xy]-/);
+    expect(tile?.parentElement).toHaveClass("grid-cols-3", "gap-2", "sm:gap-3");
   });
 
   // K-496: "After dive 2" dropped alone onto a second row at 390.
