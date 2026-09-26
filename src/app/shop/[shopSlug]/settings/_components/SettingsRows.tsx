@@ -176,7 +176,11 @@ export function SettingsRow({
       />
       <div className="px-4 pb-6 sm:px-5">
         {description ? <p className="text-sm text-muted">{description}</p> : null}
-        {detail ? <p className="mt-1 text-sm text-muted">{detail}</p> : null}
+        {/* `mt-1` is the step down from a description; with none above it,
+            the detail is the body's first line and starts where one would. */}
+        {detail ? (
+          <p className={description ? "mt-1 text-sm text-muted" : "text-sm text-muted"}>{detail}</p>
+        ) : null}
         {children}
       </div>
     </>
