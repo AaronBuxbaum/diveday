@@ -544,7 +544,14 @@ describe("the data-compliance queues' drawing", () => {
         const holdingForms = children.filter((child) => findElements(child, "form").length > 0);
         expect(holdingForms).toHaveLength(1);
         expect(findElements(holdingForms[0], FactLine)).toHaveLength(0);
-        expect(findElements(item.props.children, FactLine)).toHaveLength(1);
+        const factLines = findElements<{ separatorClassName?: string }>(
+          item.props.children,
+          FactLine,
+        );
+        expect(factLines).toHaveLength(1);
+        // The dots keep the muted ink the base's one muted run gave them, not
+        // the notice's danger (K-341 review).
+        expect(factLines[0]?.props.separatorClassName).toBe("text-muted");
         for (const text of strings(item.props.children)) expect(text).not.toMatch(/^\s*·/);
       }
     }

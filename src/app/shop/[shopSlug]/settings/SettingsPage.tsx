@@ -2289,6 +2289,7 @@ export default async function SettingsPage({
                     <li key={attempt.id} className="flex flex-col items-start gap-2">
                       <p className="min-w-0">
                         <FactLine
+                          separatorClassName="text-muted"
                           facts={[
                             { value: t(MEDIA_KIND_KEYS[attempt.kind]), className: "font-medium" },
                             {
@@ -2347,6 +2348,7 @@ export default async function SettingsPage({
                     <li key={obligation.id} className="flex flex-col items-start gap-2">
                       <p className="min-w-0">
                         <FactLine
+                          separatorClassName="text-muted"
                           facts={[
                             {
                               value: t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target]),

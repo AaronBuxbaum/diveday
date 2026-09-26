@@ -5,10 +5,14 @@ import { FACT_SEPARATOR, FactLine } from "./FactLine";
 
 afterEach(cleanup);
 
-function line(facts: Parameters<typeof FactLine>[0]["facts"], empty?: string) {
+function line(
+  facts: Parameters<typeof FactLine>[0]["facts"],
+  empty?: string,
+  separatorClassName?: string,
+) {
   const { container } = render(
     <p>
-      <FactLine facts={facts} empty={empty} />
+      <FactLine facts={facts} empty={empty} separatorClassName={separatorClassName} />
     </p>,
   );
   return container.firstElementChild as HTMLElement;
@@ -65,6 +69,23 @@ describe("FactLine", () => {
       "whitespace-nowrap font-mono",
     ]);
     expect(separators(root)).toEqual([FACT_SEPARATOR]);
+  });
+
+  /**
+   * A dot takes its line's ink unless told otherwise, so inside a danger
+   * notice every "·" turned red, even the one between two muted facts (K-341
+   * review). Given `separatorClassName`, the no-break space and the dot carry
+   * that ink, and the break space stays outside, after the dot: the dot is
+   * still glued to the fact before it, and the line still wraps only there.
+   */
+  it("gives the separator its own ink when asked, and keeps the break after it", () => {
+    const root = line(["Stripe customer", "raised Jul 21"], undefined, "text-muted");
+    const dots = [...root.querySelectorAll(":scope > span.text-muted")];
+    expect(dots.map((dot) => dot.textContent)).toEqual(["\u00a0·"]);
+    const after = dots[0]?.nextSibling;
+    expect(after?.nodeType).toBe(root.TEXT_NODE);
+    expect(after?.textContent).toBe(" ");
+    expect(root.textContent).toBe(`Stripe customer${FACT_SEPARATOR}raised Jul 21`);
   });
 
   it("says what it is told to when there is no fact at all", () => {

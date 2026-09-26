@@ -37,6 +37,10 @@ export const FACT_SEPARATOR = " · ";
  * and the data-job items opened a line with the "·" (K-235, K-341). Here each
  * fact is its own `whitespace-nowrap` span unless it is marked `wraps`.
  *
+ * A dot takes the line's ink, unless `separatorClassName` gives it its own: in
+ * a danger notice whose facts are muted, a red dot between two grey phrases
+ * read as part of neither (K-341 review).
+ *
  * It renders inline content and no box of its own, so it sits inside whatever
  * the caller's line is — a row's value, a paragraph. `joinFacts` in
  * `src/lib/format.ts` is the string twin, for a meta line whose facts are the
@@ -47,10 +51,16 @@ export const FACT_SEPARATOR = " · ";
 export function FactLine({
   facts,
   empty = null,
+  separatorClassName,
 }: {
   facts: readonly Fact[];
   /** What the line says when no fact survives — a settings row's "Not set". */
   empty?: ReactNode;
+  /**
+   * The dots' own ink. The no-break space and the dot take it; the break space
+   * after them stays outside, so the dot is still glued to the fact before it.
+   */
+  separatorClassName?: string;
 }) {
   const kept = facts.flatMap((fact) => {
     if (fact === null || fact === undefined || fact === false) return [];
@@ -58,6 +68,13 @@ export function FactLine({
     return fact.value === null || fact.value === undefined || fact.value === "" ? [] : [fact];
   });
   if (kept.length === 0) return <>{empty}</>;
+  const separator = separatorClassName ? (
+    <>
+      <span className={separatorClassName}>{FACT_SEPARATOR.trimEnd()}</span>{" "}
+    </>
+  ) : (
+    FACT_SEPARATOR
+  );
   return (
     <>
       {kept.map((fact, index) => {
@@ -67,7 +84,7 @@ export function FactLine({
         return (
           // biome-ignore lint/suspicious/noArrayIndexKey: facts are positional and never reordered
           <Fragment key={index}>
-            {index > 0 ? FACT_SEPARATOR : null}
+            {index > 0 ? separator : null}
             <span className={className || undefined}>{fact.value}</span>
           </Fragment>
         );
