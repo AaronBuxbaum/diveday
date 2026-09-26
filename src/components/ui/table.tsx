@@ -109,8 +109,14 @@ export type TableColumnWidth = keyof typeof COLUMN_WIDTH;
  * started 4px left of every card row around it on the trip page ("ITEM" at
  * 170, "Dive support" at 174). Only the outer edges move, so the gap between
  * two columns stays 32px.
+ *
+ * `CELL_EDGE` is the outer-edge half on its own, for a row whose cells pad
+ * themselves (`pad={false}`): their headings still take it, so the row has to
+ * take it too, or a heading sits 4px off the values under it.
  */
-const CELL_PAD = "px-4 py-3 sm:first:ps-5 sm:last:pe-5";
+export const CELL_EDGE = "sm:first:ps-5 sm:last:pe-5";
+
+const CELL_PAD = `px-4 py-3 ${CELL_EDGE}`;
 
 const CELL_ALIGN = {
   top: "align-top",
@@ -356,7 +362,8 @@ export function Td({
    * Opt out of the cell padding **only** for a tbody that reflows its rows to
    * stacked lines below `sm` (the backup delivery history), where the row
    * owns the padding and each cell is an inline fragment. Everything shaped
-   * like a grid keeps the default.
+   * like a grid keeps the default. From `sm`, where such a cell pads itself,
+   * it takes `CELL_EDGE` beside its own padding so it lines up under its `Th`.
    */
   pad?: boolean;
   /**

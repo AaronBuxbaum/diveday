@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
-import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
+import { CELL_EDGE, Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ShopBackupDelivery } from "@/db/schema";
 import type { getShopBackupDestination, listBackupDeliveries } from "@/features/backup-export";
@@ -316,24 +316,27 @@ export function BackupsSection({
                       {/* `align="baseline"` on every cell: the status Badge's
                         word sits on the row's line rather than 4px under it.
                         Below `sm` the row is a flex line, where it does
-                        nothing. */}
+                        nothing. `CELL_EDGE` beside each `sm:px-4`: the
+                        headings step their outer edges to 20px, and the first
+                        and last columns' values have to start where their
+                        headings do. */}
                       <Td
                         pad={false}
                         align="baseline"
-                        className="basis-full font-medium sm:basis-auto sm:px-4 sm:py-3 sm:font-normal sm:whitespace-nowrap"
+                        className={`basis-full font-medium sm:basis-auto sm:px-4 sm:py-3 sm:font-normal sm:whitespace-nowrap ${CELL_EDGE}`}
                       >
                         {formatDateTimeTz(delivery.startedAt, locale, timeZone)}
                       </Td>
                       <Td
                         pad={false}
                         align="baseline"
-                        className="text-muted sm:px-4 sm:py-3 sm:text-foreground"
+                        className={`text-muted sm:px-4 sm:py-3 sm:text-foreground ${CELL_EDGE}`}
                       >
                         {delivery.trigger === "scheduled"
                           ? t("backup.history.trigger.scheduled")
                           : t("backup.history.trigger.manual")}
                       </Td>
-                      <Td pad={false} align="baseline" className="sm:px-4 sm:py-3">
+                      <Td pad={false} align="baseline" className={`sm:px-4 sm:py-3 ${CELL_EDGE}`}>
                         <Badge tone={STATUS_TONE[delivery.status]}>
                           {statusText(t, delivery.status)}
                         </Badge>
@@ -341,7 +344,7 @@ export function BackupsSection({
                       <Td
                         pad={false}
                         align="baseline"
-                        className="text-muted tabular-nums sm:px-4 sm:py-3 sm:text-right sm:whitespace-nowrap sm:text-foreground"
+                        className={`text-muted tabular-nums sm:px-4 sm:py-3 sm:text-right sm:whitespace-nowrap sm:text-foreground ${CELL_EDGE}`}
                       >
                         {delivery.byteCount === null
                           ? "—"
@@ -353,7 +356,7 @@ export function BackupsSection({
                         pad={false}
                         muted
                         align="baseline"
-                        className="basis-full sm:basis-auto sm:px-4 sm:py-3"
+                        className={`basis-full sm:basis-auto sm:px-4 sm:py-3 ${CELL_EDGE}`}
                       >
                         {delivery.status === "failed" ? (
                           deliveryErrorText(t, delivery.errorCode)
