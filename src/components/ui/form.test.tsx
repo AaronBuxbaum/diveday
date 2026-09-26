@@ -416,6 +416,24 @@ describe("FormStatus", () => {
     expect(status.textContent).not.toContain("❌");
   });
 
+  /**
+   * **The mark centres on the first line, never on the baseline.** Under
+   * `items-baseline` the glyph's synthesised baseline is its own bottom edge,
+   * so it sat on the text's baseline and rode 2px above the caps: ink 806–819
+   * against caps 810–820 on `trip-guests-refusal-card` at 1280 (K-47). A
+   * one-line box around the mark, centred, puts it on the line's middle
+   * whatever the message wraps to.
+   */
+  it("centres its mark on the message's first line", () => {
+    render(<FormStatus tone="danger">That code is already in use.</FormStatus>);
+    const status = screen.getByRole("alert");
+    expect(status).not.toHaveClass("items-baseline");
+    expect(status).toHaveClass("items-start");
+    const box = status.querySelector("svg")?.parentElement;
+    expect(box).not.toBe(status);
+    expect(box).toHaveClass("h-lh", "items-center", "shrink-0");
+  });
+
   it("sits inside the form it belongs to", () => {
     // The whole point: the message is a descendant of the `<form>`, not a
     // sibling of the page header. This is the assertion the e2e specs mirror.

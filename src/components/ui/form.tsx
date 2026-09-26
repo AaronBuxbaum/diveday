@@ -654,6 +654,12 @@ const STATUS_TONE: Record<NoticeTone, string> = {
  * `role` follows the shared tone→role rule (`noticeRole`): a refusal is an
  * `alert`, a confirmation is a `status`. Nothing renders when there is no
  * message, so a form's action row keeps its exact resting layout.
+ *
+ * **The mark centres on the first line.** It sits in a box one line tall
+ * (`h-lh`), centred, beside the message at `items-start`. `items-baseline`
+ * put it 2px high: an inline SVG's baseline is its own bottom edge, so the
+ * glyph stood on the text's baseline instead of on the line's middle (the
+ * pixel probe, `trip-guests-refusal-card`: ink 806–819 against caps 810–820).
  */
 export function FormStatus({
   tone = "danger",
@@ -681,9 +687,13 @@ export function FormStatus({
       <p
         id={id}
         role={noticeRole(tone)}
-        className={`flex items-baseline gap-1.5 text-sm font-medium ${STATUS_TONE[tone]} ${className}`}
+        className={`flex items-start gap-1.5 text-sm font-medium ${STATUS_TONE[tone]} ${className}`}
       >
-        {mark ? <StatusMark variant={mark} /> : null}
+        {mark ? (
+          <span className="flex h-lh shrink-0 items-center">
+            <StatusMark variant={mark} />
+          </span>
+        ) : null}
         <span>{children}</span>
       </p>
       {/* An outcome that lands below the fold says nothing at all. Every tone
