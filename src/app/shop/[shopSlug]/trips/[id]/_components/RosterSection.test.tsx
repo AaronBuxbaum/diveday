@@ -699,4 +699,25 @@ describe("the roster's row geometry", () => {
     expect(facts).toHaveClass("sm:items-start");
     expect(facts).not.toHaveClass("sm:items-end");
   });
+
+  /**
+   * K-278 and K-364, the name line's trailing capsules. From `sm` they sit at
+   * the line's end, against the mark, and the verdict is the last of them, so
+   * "Blocked" meets the chevron whether or not a "Depth advisory" chip rides
+   * with it (it was first, and jumped 136px when the chip was there). On a
+   * phone the capsules wrap under the name and start on its column, verdict
+   * first, like the name's own wrap (they right-aligned to the mark's edge, 6px
+   * off the name, on no shared edge).
+   */
+  it("ends the capsules on the verdict from sm, and starts a phone's wrapped capsules on the name's column", () => {
+    const { container } = renderRoster(fixtures);
+
+    const verdict = within(
+      container.querySelector(`#booking-${blocked.booking.id}`) as HTMLElement,
+    ).getByText("Blocked");
+    expect(verdict).toHaveClass("sm:order-last");
+    const capsules = verdict.parentElement;
+    expect(capsules?.firstElementChild).toBe(verdict);
+    expect(capsules).toHaveClass("ms-auto", "justify-end", "max-sm:ms-0", "max-sm:justify-start");
+  });
 });

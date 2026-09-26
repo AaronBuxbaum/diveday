@@ -627,23 +627,15 @@ export function RosterSection({
     // `div` taking the line's 12px gap on every such row of ten trip
     // captures, and on a phone wrapping to a line of its own whose 4px row gap
     // put the name 2px above the row's centre.
+    //
+    // **The verdict leads a phone's line and ends a wide one** (K-364). It is
+    // first here, so where the capsules wrap under the name on a phone and
+    // start on its column (K-278) the verdict stands on that column, and a
+    // screen reader hears it before the chips; from `sm` the capsules sit at
+    // the line's end and `sm:order-last` puts it against the mark, so
+    // "Blocked" keeps one x whether a "Depth advisory" chip rides with it or
+    // not (it moved 136px with the chip).
     const headerBadges = Children.toArray([
-      // A note nobody knows exists was never written: the settled one-line
-      // row still says there are notes to read (dive-domain review,
-      // 2026-08-21). An unsettled row's open half already shows the notes
-      // disclosure itself.
-      settledRow && !holdOpen && notes.length > 0 ? (
-        <span key="notes" className="text-sm text-muted">
-          {t("trips.roster.privateStaffNotes", { count: notes.length })}
-        </span>
-      ) : null,
-      // Arrived at the counter — display only, the same capsule the manifest
-      // shows. It reads existing booking state and gates nothing.
-      booking.status === "checked_in" ? (
-        <Badge key="checked-in" tone="neutral">
-          {t("trips.roster.checkedInPill")}
-        </Badge>
-      ) : null,
       // The group band already says what the rows beneath it share, so a
       // capsule here marks only this diver's own exceptional state — the
       // word, never an emoji mark (readiness vocabulary:
@@ -658,8 +650,25 @@ export function RosterSection({
           tone={readinessStatusTone(readiness.status)}
           toneMark={false}
           size="lg"
+          className="sm:order-last"
         >
           {readinessStatusText(t, readiness.status)}
+        </Badge>
+      ) : null,
+      // A note nobody knows exists was never written: the settled one-line
+      // row still says there are notes to read (dive-domain review,
+      // 2026-08-21). An unsettled row's open half already shows the notes
+      // disclosure itself.
+      settledRow && !holdOpen && notes.length > 0 ? (
+        <span key="notes" className="text-sm text-muted">
+          {t("trips.roster.privateStaffNotes", { count: notes.length })}
+        </span>
+      ) : null,
+      // Arrived at the counter — display only, the same capsule the manifest
+      // shows. It reads existing booking state and gates nothing.
+      booking.status === "checked_in" ? (
+        <Badge key="checked-in" tone="neutral">
+          {t("trips.roster.checkedInPill")}
         </Badge>
       ) : null,
       // The boat-wide advisory's mark on this diver — the group's shared
@@ -1447,8 +1456,14 @@ export function RosterSection({
       >
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pe-11">
           {headerLeft}
+          {/* From `sm`, the line's end (`ms-auto`, `justify-end`). On a
+              phone, where this wraps under the name, the row's
+              `justify-between` still sends an unwrapped cluster to the end,
+              and a wrapped one starts on the name's column like the name's
+              own wrap (K-278: it right-aligned to the mark's edge, on no
+              shared edge). */}
           {headerBadges.length > 0 ? (
-            <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
+            <div className="ms-auto flex flex-wrap items-center justify-end gap-2 max-sm:ms-0 max-sm:justify-start">
               {headerBadges}
             </div>
           ) : null}
