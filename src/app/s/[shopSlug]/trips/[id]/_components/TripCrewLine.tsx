@@ -1,3 +1,4 @@
+import { GroupLabel } from "@/components/ui/ledger";
 import type { PublicCrewMember } from "@/db/trips";
 import { languageNameIn } from "@/i18n/language-labels";
 import { diverTranslator } from "@/i18n/messages";
@@ -36,7 +37,10 @@ export function TripCrewLine({
   const t = diverTranslator(locale);
   return (
     <section className={`mt-6 ${className}`}>
-      <h2 className="text-sm font-semibold">{t("trip.crewHeading")}</h2>
+      {/* The door's own label, as its sibling sections open (pixel-craft
+          class 12, K-381): a 14px semibold heading here read as a sub-heading
+          of the last dive site above it. */}
+      <GroupLabel as="h2">{t("trip.crewHeading")}</GroupLabel>
       <ul className="mt-2 flex flex-col gap-1 text-sm text-muted">
         {crew.map((member, index) => {
           const languages = member.languages
