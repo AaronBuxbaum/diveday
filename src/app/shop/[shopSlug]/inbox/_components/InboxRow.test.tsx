@@ -180,6 +180,21 @@ describe("a stranger's message, which has no record to be read on", () => {
     expect(screen.getByText(WORDS)).toHaveClass("line-clamp-3");
   });
 
+  /**
+   * **The address breaks inside its column rather than out of it** (pixel-craft
+   * class 9, K-461). At 640 the name's 176px column and the date left the
+   * message 72px, and "marta.keller@example.net" has no break in it: it ran
+   * 96px past the column's edge, under the date. Cut with an ellipsis it would
+   * lose half of what the row is for, so it wraps anywhere instead.
+   */
+  it("breaks a long address inside its column", () => {
+    const address = "marta.keller.bookings.team@a-very-long-dive-club-domain.example.net";
+    renderRow({ personId: null, fromAddress: address }, null);
+    const facts = screen.getByText(address);
+    expect(facts).toHaveClass("wrap-anywhere");
+    expect(facts).not.toHaveClass("truncate");
+  });
+
   it("keeps a door row's excerpt to one line, since the record holds the rest", () => {
     renderRow({ body: WORDS });
     expect(screen.getByText(WORDS)).toHaveClass("truncate");

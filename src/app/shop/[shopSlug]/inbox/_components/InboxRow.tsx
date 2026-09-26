@@ -156,8 +156,11 @@ export function InboxRow({
           <p className={subject ? `mt-0.5 ${wordsCut} text-sm text-muted` : wordsCut}>
             {excerpt(message.body)}
           </p>
+          {/* `wrap-anywhere`: a stranger's address has no break in it, and at
+              640 it ran 96px out of a 72px column (K-461). Cut, it would lose
+              half of what the row is for, so it breaks inside the column. */}
           {facts.length > 0 ? (
-            <p className="mt-0.5 text-sm text-muted">{facts.join(" · ")}</p>
+            <p className="mt-0.5 wrap-anywhere text-sm text-muted">{facts.join(" · ")}</p>
           ) : null}
         </div>
       </div>
