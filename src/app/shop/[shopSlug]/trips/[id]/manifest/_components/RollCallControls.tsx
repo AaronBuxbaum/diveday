@@ -4,7 +4,7 @@ import {
   type RollCallButtonCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { RollCallMark, type RollCallMarkState } from "@/components/RollCallMark";
-import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
+import { ROLL_CALL_ROW_TONE, rollCallRuleClass } from "@/components/row-tones";
 import { buttonClass } from "@/components/ui/button";
 import { StatusMark } from "@/components/ui/StatusMark";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -111,16 +111,13 @@ export {
  * rows read too — one map so the two surfaces a crew reads minutes apart,
  * often on two devices at once, can never drift into two meanings for one
  * colour.
+ * The rule between two rows lives beside them (`rollCallRuleClass`), drawn
+ * inside each row so no fill's border colour can take it; the diver and crew
+ * lists both draw it off that one helper.
  * Re-exported here because this file is where every roll-call consumer
  * already looks for them.
  */
-export { ROLL_CALL_ROW_TONE };
-/**
- * The rule between two rows, drawn inside each row so no tone can colour it —
- * the diver and crew lists both draw it off this one helper, from the same
- * shared vocabulary as the fills.
- */
-export { rollCallRuleClass } from "@/components/row-tones";
+export { ROLL_CALL_ROW_TONE, rollCallRuleClass };
 
 /**
  * The scroll margin every roll-call row wears, diver and crew alike.
