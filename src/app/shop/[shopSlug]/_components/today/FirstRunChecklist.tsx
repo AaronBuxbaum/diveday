@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { Copyable } from "@/components/Copyable";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
-import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
+import { DoorChevron, LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 
 /**
@@ -85,13 +84,16 @@ export type FirstRunChecklistCopy = {
  * name and a chevron, in the row's own type.
  *
  * Every other open step ends in nothing at all — the row is the door, and
- * `LedgerRow` draws that chevron itself (ADR 20260911-clear-the-deck).
+ * `LedgerRow` draws that chevron itself (ADR 20260911-clear-the-deck). This
+ * one draws the same glyph in the same box (`DoorChevron`), so its arrow ends
+ * on the content edge the doors' arrows end on; the square `chevron-right` it
+ * drew stopped 5px short of it (pixel-craft class 2).
  */
 function StepDoorLabel({ label }: { label: string }) {
   return (
     <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
       {label}
-      <DiveDayIcon name="chevron-right" className="size-4" />
+      <DoorChevron ink="current" />
     </span>
   );
 }

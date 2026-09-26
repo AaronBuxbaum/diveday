@@ -177,15 +177,40 @@ const HORIZON_META_CLASS = "shrink-0 text-sm font-medium text-muted tabular-nums
  * quarter when open — it drew the 12px disclosure caret, 4×8px of ink beside
  * the door's 6×10 and 3px further out, two arrows under a comment saying they
  * read as the same door (class 12).
+ *
+ * Exported for the one fix that wears a door's words and arrow without being
+ * its row — the first-run checklist's Stripe step, whose anchor has to do a
+ * full navigation. `ink="current"` takes that link's colour; a door's own
+ * arrow is muted. Its box is the door's either way, so its arrow ends on the
+ * same edge.
  */
-function DoorChevron({ className = "" }: { className?: string }) {
+export function DoorChevron({
+  className = "",
+  ink = "muted",
+}: {
+  className?: string;
+  ink?: "muted" | "current";
+}) {
   return (
     <DiveDayIcon
       name="door-chevron"
-      className={`h-4 w-auto shrink-0 text-muted ${className}`.trim()}
+      className={`h-4 w-auto shrink-0 ${ink === "muted" ? "text-muted" : ""} ${className}`
+        .replace(/\s+/g, " ")
+        .trim()}
     />
   );
 }
+
+/**
+ * **An open horizon's arrow ends where a closed one does** (pixel-craft class
+ * 3). Turned a quarter about its box's centre, the chevron's ink — 7.8 units
+ * across and 13.8 tall in its 8.5 × 24 box — lies 13.8 across, 3 units past
+ * its closed ink on each side: 2px at `h-4`, so an open Tomorrow's arrow ended
+ * 2px past the content edge every closed door ends on. Open, it steps back
+ * those 2px (`-translate-x-0.5`); `translate` applies before `rotate`, so the
+ * step runs along the row rather than the turned glyph.
+ */
+const HORIZON_ARROW_OPEN = "group-open/fold:rotate-90 group-open/fold:-translate-x-0.5";
 
 /** Heading levels a group label may be. `p` for chrome that is not page structure (a menu section). */
 type GroupLabelElement = "h2" | "h3" | "h4" | "p";
@@ -290,7 +315,7 @@ export function LedgerGroup({
             {label}
           </SummaryLabel>
           {meta != null ? <span className={HORIZON_META_CLASS}>{meta}</span> : null}
-          <DoorChevron className="transition-transform group-open/fold:rotate-90" />
+          <DoorChevron className={`transition-transform ${HORIZON_ARROW_OPEN}`} />
         </summary>
       ) : (
         <summary
@@ -628,15 +653,25 @@ export function LedgerRow({
         // instead of marking the row's own right edge. With a `trailing` it
         // is that element that carries the push (below) and the chevron
         // follows it, as it always has.
-        <DoorChevron
-          className={
-            stacked
-              ? kind && trailing == null
-                ? "max-sm:order-2 max-sm:ms-auto"
-                : "max-sm:order-2"
-              : ""
-          }
-        />
+        //
+        // **On a first-line row it rides in a box with a text baseline**
+        // (pixel-craft class 1). An svg has none, so a baseline-aligned row
+        // made one from its bottom edge and stood the arrow on the first
+        // line's baseline, its ink 2px high of that line's cap centre. A
+        // zero-width space gives the box the line's baseline and its line
+        // box, and the arrow is centred on that line box — whose centre is
+        // the cap centre's to a fraction of a pixel.
+        align === "first-line" ? (
+          <span
+            aria-hidden="true"
+            className={`inline-flex shrink-0 items-center ${doorPlacement(stacked, kind, trailing)}`.trim()}
+          >
+            {ZERO_WIDTH_SPACE}
+            <DoorChevron />
+          </span>
+        ) : (
+          <DoorChevron className={doorPlacement(stacked, kind, trailing)} />
+        )
       ) : null}
       {href ? (
         // The stretched link, the same construction the public schedule's
@@ -695,6 +730,23 @@ export function LedgerRow({
       ) : null}
     </Tag>
   );
+}
+
+/**
+ * The text a first-line door's arrow rides beside, for its baseline and line
+ * box: no width, no ink. By code point, because a literal one is invisible in
+ * the source.
+ */
+const ZERO_WIDTH_SPACE = String.fromCodePoint(0x200b);
+
+/** Where a stacked row's door glyph sits on a phone; nothing from `sm` up. */
+function doorPlacement(
+  stacked: boolean,
+  kind: { word: string; tone: LedgerRowKindTone } | undefined,
+  trailing: ReactNode,
+): string {
+  if (!stacked) return "";
+  return kind && trailing == null ? "max-sm:order-2 max-sm:ms-auto" : "max-sm:order-2";
 }
 
 /**

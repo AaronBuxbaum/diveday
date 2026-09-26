@@ -399,6 +399,24 @@ describe("LedgerGroup", () => {
   });
 
   /**
+   * **An open horizon's arrow ends where a closed one does** (pixel-craft
+   * class 3). Turned a quarter about its box's centre, the cropped chevron's
+   * ink lies 13.8 units across where its box is 8.5: 2px past the content edge
+   * each closed door ends on, at `h-4`. Open, it steps back those 2px.
+   */
+  it("keeps an open horizon's arrow on the edge a closed one ends on", () => {
+    const { container } = render(
+      <LedgerGroup label="Tomorrow" folded={false} summaryVariant="row">
+        <p>a row</p>
+      </LedgerGroup>,
+    );
+    const arrow = container.querySelector("summary svg");
+    expect(arrow).toHaveClass("group-open/fold:rotate-90", "group-open/fold:-translate-x-0.5");
+    // Turned in the same stroke as it steps, or the step jumps.
+    expect(arrow).toHaveClass("transition-transform");
+  });
+
+  /**
    * **The group owns the gap under its label** (pixel-craft class 12). Its
    * label sat at three distances from its first hairline: 4px in the inbox,
    * whose lists add nothing, and 10px on the booking form and Today's desk,
@@ -719,6 +737,38 @@ describe("LedgerRow", () => {
     );
     expect(row()).toHaveClass("items-center");
     expect(row().className).not.toMatch(/items-baseline|sm:py-4/);
+  });
+
+  /**
+   * **A first-line door's arrow sits on that line** (pixel-craft class 1). An
+   * svg has no baseline, so on a baseline-aligned row the flex box made one
+   * from its bottom edge: the known diver's inbox arrow stood on the name's
+   * baseline, its ink 12.6 to 3.4px above it, 2px high of the line's cap
+   * centre. The arrow rides in a box that carries a text baseline (a
+   * zero-width space), centred on that line's box, whose centre is the cap
+   * centre's within a fraction of a pixel.
+   */
+  it("gives a first-line door's arrow a text baseline to sit on", () => {
+    const { container } = render(
+      <LedgerRow
+        as="div"
+        align="first-line"
+        href="/shop/blue-mantis/inbox/1"
+        linkLabel="Open the message"
+        kind={{ word: "Email", tone: "neutral" }}
+      >
+        <p>Priya Sharma</p>
+        <p>Is the Saturday boat still on?</p>
+      </LedgerRow>,
+    );
+    const arrow = container.querySelector("svg") as SVGElement;
+    const line = arrow.parentElement as HTMLElement;
+    expect(line.parentElement).toBe(container.firstElementChild);
+    expect(line).toHaveClass("inline-flex", "items-center", "shrink-0");
+    expect(line).toHaveAttribute("aria-hidden", "true");
+    // A zero-width space, spelled by code point: a literal one is invisible here.
+    expect(line.textContent).toBe(String.fromCodePoint(0x200b));
+    expect(arrow).toHaveClass("h-4", "w-auto");
   });
 
   it("owns its horizontal box: no call site sets a row's horizontal margin or padding", () => {

@@ -317,6 +317,26 @@ describe("one primary, and the rest are the rows themselves", () => {
     expect(stripe.className).not.toContain("absolute");
   });
 
+  /**
+   * **Its arrow is the doors' arrow** (pixel-craft class 2). It wears the
+   * doors' words and chevron, and drew the square `chevron-right`, whose ink
+   * stops 5px inside its 16px box: on today-empty the doors' arrows ended on
+   * the content edge and this one 5px short of it, two right edges in one
+   * list. It draws the doors' ink-cropped chevron, in its link's colour.
+   */
+  it("ends Stripe's arrow on the edge the doors' arrows end on", () => {
+    const { container } = renderFresh();
+    const stripe = screen.getByRole("link", { name: "Connect Stripe" }).querySelector("svg");
+    const door = container.querySelector("li > svg");
+    expect(door).not.toBeNull();
+    expect(stripe?.getAttribute("viewBox")).toBe(door?.getAttribute("viewBox"));
+    expect(stripe?.innerHTML).toBe(door?.innerHTML);
+    expect(stripe).toHaveClass("h-4", "w-auto", "shrink-0");
+    expect(stripe).not.toHaveClass("size-4");
+    // The link's primary ink, not the door's muted one.
+    expect(stripe).not.toHaveClass("text-muted");
+  });
+
   it("leaves a settled step nothing at all to press", () => {
     renderFresh({ contactDone: true, profileDone: true, stripeDone: true });
     expect(screen.queryByRole("link", { name: "Add contact details" })).not.toBeInTheDocument();
