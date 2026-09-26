@@ -117,6 +117,17 @@ describe("controlClassFor", () => {
     expect(contentBox(controlClassFor("md"))).toBe(contentBox(controlClassFor("field")));
   });
 
+  /**
+   * A placeholder longer than its box was cut mid-word at the padding edge:
+   * "…along the c" at 390 on the dive-site editor (K-129). The ellipsis says
+   * there is more; a cut says the box is broken.
+   */
+  it("ends an overlong placeholder in an ellipsis at every size", () => {
+    for (const size of ["field", "md"] as const) {
+      expect(controlClassFor(size).split(/\s+/), size).toContain("placeholder-shown:text-ellipsis");
+    }
+  });
+
   it("spells each size's height and padding once, so nothing is left to stylesheet order", () => {
     for (const size of ["field", "md"] as const) {
       const tokens = controlClassFor(size).split(/\s+/);

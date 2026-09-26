@@ -63,8 +63,14 @@ const controlSizes = {
 
 export type ControlSize = keyof typeof controlSizes;
 
+/**
+ * `placeholder-shown:text-ellipsis`: a placeholder longer than its box ends
+ * in "…" rather than being cut mid-word at the padding edge ("…along the c"
+ * on the dive-site editor at 390, the pixel probe). Only while the
+ * placeholder shows — typed text scrolls as it always has.
+ */
 const controlBody =
-  "w-full rounded-lg border border-border-strong bg-surface px-3 text-base font-normal transition-colors focus:border-primary";
+  "w-full rounded-lg border border-border-strong bg-surface px-3 text-base font-normal transition-colors placeholder-shown:text-ellipsis focus:border-primary";
 
 /** Shared control styling at a size — see `controlSizes` for which size a row takes. */
 export function controlClassFor(size: ControlSize): string {
