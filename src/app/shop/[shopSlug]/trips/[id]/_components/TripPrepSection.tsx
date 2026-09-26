@@ -91,6 +91,7 @@ export async function TripPrepSection({
         grouping={grouping}
         cancelled={cancelled}
         groupPath={shopPath(shop.slug, "trips", tripId)}
+        className="space-y-10"
       />
     </>
   );

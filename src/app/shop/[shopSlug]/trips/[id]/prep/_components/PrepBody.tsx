@@ -80,6 +80,7 @@ export function PrepBody({
   cancelled = false,
   emptyState = null,
   idPrefix,
+  className,
 }: {
   prep: TripPrep;
   t: StaffTranslator;
@@ -134,6 +135,14 @@ export function PrepBody({
   emptyState?: ReactNode;
   /** See `src/lib/element-id.ts`: set on the paper day, absent on a route. */
   idPrefix?: string;
+  /**
+   * **The gap between the list's sections, which is the page's to set** —
+   * `space-y-10` from both callers. The list is a run of a page's sections, and
+   * section rhythm belongs to the page (`card.tsx`), so no section here hangs a
+   * margin of its own: each used to carry `mt-8`, 32px where the page's
+   * sections sit 40px apart (pixel-craft class 4).
+   */
+  className: string;
 }) {
   const { checklist, hotelPickups, gearFleetTotal, freeByKind, loadOut, assignmentRows } = prep;
 
@@ -280,7 +289,7 @@ export function PrepBody({
       {checklist.diverCount === 0 && checklist.crewCount === 0 ? (
         emptyState
       ) : (
-        <>
+        <div className={className}>
           {cancelled ? (
             // Said, not merely absent: a staffer who knows the list lives here
             // must not read the gap as a bug, and an empty packing list that
@@ -359,7 +368,7 @@ export function PrepBody({
                   // them is a problem. `SectionCard` has no tone prop on purpose
                   // (see its docblock), so a tone-carrying panel spells the chrome
                   // here on the card's own geometry (`TONE_PANEL_CLASS`).
-                  className={`mt-8 ${TONE_PANEL_CLASS} border-warning/40 bg-warning/10`}
+                  className={`${TONE_PANEL_CLASS} border-warning/40 bg-warning/10`}
                 >
                   <h2
                     id={scopedId(idPrefix, "nitrox-blocked-heading")}
@@ -392,7 +401,6 @@ export function PrepBody({
               question that already has half an answer. */}
               {checklist.diversWithIncompleteFit.length > 0 ? (
                 <SectionCard
-                  className="mt-8"
                   title={t("tripPrep.missingSizesHeading")}
                   description={t("tripPrep.missingSizesDescription")}
                 >
@@ -452,7 +460,7 @@ export function PrepBody({
               {checklist.diversNeedingStaffFit.length > 0 ? (
                 <section
                   aria-labelledby={scopedId(idPrefix, "staff-fit-heading")}
-                  className={`mt-8 ${TONE_PANEL_CLASS} border-warning/40 bg-warning/5`}
+                  className={`${TONE_PANEL_CLASS} border-warning/40 bg-warning/5`}
                 >
                   <h2 id={scopedId(idPrefix, "staff-fit-heading")} className={LEAD_TITLE_CLASS}>
                     {t("tripPrep.staffFitHeading")}
@@ -517,7 +525,7 @@ export function PrepBody({
               a conversation. Renders nothing at all when nobody has asked for
               anything, which is almost every departure. */}
               {checklist.supportNeeds.divers.length > 0 ? (
-                <SectionCard title={t("tripPrep.supportHeading")} className="mt-8">
+                <SectionCard title={t("tripPrep.supportHeading")}>
                   {/* Only what the shop has to *find*. A diver bringing their own
                   adaptive-trained buddy needs a seat and a team, not crew, and
                   summing them here would have a manager staff up for people who
@@ -572,7 +580,7 @@ export function PrepBody({
               blow-out morning this run is the list of hotels somebody has to
               phone before a diver is standing in a lobby at 06:00. */}
           {hotelPickups.length > 0 ? (
-            <section aria-labelledby={scopedId(idPrefix, "hotel-pickups-heading")} className="mt-8">
+            <section aria-labelledby={scopedId(idPrefix, "hotel-pickups-heading")}>
               <div className="flex items-center justify-between gap-2">
                 <h2
                   id={scopedId(idPrefix, "hotel-pickups-heading")}
@@ -627,7 +635,7 @@ export function PrepBody({
           ) : null}
 
           {cancelled ? null : (
-            <section aria-labelledby={scopedId(idPrefix, "kit-heading")} className="mt-8">
+            <section aria-labelledby={scopedId(idPrefix, "kit-heading")}>
               <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                 <h2 id={scopedId(idPrefix, "kit-heading")} className={SECTION_TITLE_CLASS}>
                   {t("tripPrep.rentalKitHeading")}
@@ -823,13 +831,14 @@ export function PrepBody({
               the section's own gate: a refusal like gear-not-found is exactly
               the case where the row (or the whole fleet) can be gone, and the
               staffer still gets told what happened. */}
-          {/* Its own space above it. Rendered flush, it read as the last row
-              of the packing table it happens to follow rather than as an
-              answer to the tap that produced it. */}
+          {/* Its own space above it, the stack's gap. Rendered flush, it
+              read as the last row of the packing table it happens to follow
+              rather than as an answer to the tap that produced it. Below it,
+              the banner's own `mb-6` outranks the stack's zero-specificity
+              margin, so it sits 24px over the assignments it answers for —
+              the space every notice keeps over what follows it. */}
           {gearBanner ? (
-            <StaffNoticeBanner tone={gearBanner.tone} className="mt-8">
-              {t(gearBanner.key)}
-            </StaffNoticeBanner>
+            <StaffNoticeBanner tone={gearBanner.tone}>{t(gearBanner.key)}</StaffNoticeBanner>
           ) : null}
           {gearFleetTotal > 0 && assignmentRows.length > 0 ? (
             <section
@@ -837,7 +846,9 @@ export function PrepBody({
               // On paper the section is only its assigned lines: with nothing
               // assigned yet it would print as a heading over bare names, so
               // it drops out of the packet entirely until a unit is on it.
-              className={`mt-8${assignmentRows.some((row) => row.assigned.length > 0) ? "" : " print:hidden"}`}
+              className={
+                assignmentRows.some((row) => row.assigned.length > 0) ? undefined : "print:hidden"
+              }
             >
               <h2 id={scopedId(idPrefix, "assignments-heading")} className={SECTION_TITLE_CLASS}>
                 {t("gear.prep.heading")}
@@ -1111,7 +1122,7 @@ export function PrepBody({
               </ul>
             </section>
           ) : null}
-        </>
+        </div>
       )}
     </>
   );

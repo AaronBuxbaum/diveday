@@ -1280,7 +1280,7 @@ export default async function ManageTripPage({
             // markers are comments, which `:empty` ignores, and the skeleton or
             // a read-failure banner inside it is a child, which it does not.
             <div id={PREP_SECTION_ID} className="scroll-mt-6 empty:hidden">
-              <Suspense fallback={<PrepBodySkeleton />}>
+              <Suspense fallback={<PrepBodySkeleton className="space-y-10" />}>
                 <TripPrepSection
                   shop={shop}
                   tripId={tripId}

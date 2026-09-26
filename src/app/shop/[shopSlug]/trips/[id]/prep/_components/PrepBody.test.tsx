@@ -1,14 +1,25 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { FIGURE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripPrep } from "@/db/trips-prep";
+import { diveRecencyText } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { buildDivePrepChecklist } from "@/lib/dive-prep";
+import {
+  buildDivePrepChecklist,
+  type PrepDiver,
+  type PrepGrouping,
+  type RentalFit,
+} from "@/lib/dive-prep";
+import type { SupportNeeds } from "@/lib/support-needs";
 import { PrepBody } from "./PrepBody";
 
 afterEach(cleanup);
 
 const t = staffTranslator("en-US");
+
+/** The stack gap both callers pass: a page's sections sit `space-y-10` apart. */
+const STACK = "space-y-10";
 
 /**
  * Two divers and a guide, so the packing half has something real to say: with
@@ -71,6 +82,7 @@ function renderBody(cancelled: boolean) {
       grouping="item"
       groupPath="/shop/blue-mantis/trips/t1"
       cancelled={cancelled}
+      className={STACK}
     />,
   );
 }
@@ -146,8 +158,189 @@ describe("an empty departure on the departure page", () => {
         grouping="item"
         groupPath="/shop/blue-mantis/trips/t1"
         cancelled={false}
+        className={STACK}
       />,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+const STATED = new Date("2026-09-01T00:00:00Z");
+
+/** A stated fit that rents nothing until an override says it does. */
+function fit(overrides: Partial<RentalFit> = {}): RentalFit {
+  return {
+    rentsBcd: false,
+    rentsRegulator: false,
+    rentsWetsuit: false,
+    rentsMaskFins: false,
+    rentsWeights: false,
+    rentsDiveComputer: false,
+    rentsGopro: false,
+    rentsDrysuit: false,
+    rentsHoodGloves: false,
+    rentsTorch: false,
+    rentsSmb: false,
+    bcdSize: null,
+    wetsuitSize: null,
+    drysuitSize: null,
+    bootSize: null,
+    finSize: null,
+    weightPreference: null,
+    needsStaffFitAt: null,
+    needsStaffFitNote: null,
+    fitStatedAt: STATED,
+    ...overrides,
+  };
+}
+
+const LIFT_AND_BOARDING: SupportNeeds = {
+  supportDiversNeeded: null,
+  supportDiversProvidedBy: null,
+  needsBoardingAssistance: true,
+  needsWaterLift: true,
+  briefingInSign: false,
+  briefingInWriting: false,
+  briefingAloud: false,
+  briefingBySignals: false,
+  equipmentAdaptation: null,
+  divesWithName: null,
+  statedAt: STATED,
+};
+
+function diver(n: number, fullName: string, rest: Partial<PrepDiver> = {}): PrepDiver {
+  return {
+    bookingId: `b${n}`,
+    personId: `p${n}`,
+    fullName,
+    fit: null,
+    wantsNitrox: false,
+    hasVerifiedNitroxCard: false,
+    lastDivedBand: null,
+    ...rest,
+  };
+}
+
+/**
+ * **A departure that opens every panel the list has**: a nitrox blocker, a
+ * partial fit, a never-asked diver, a hands-on fit, a support arrangement, a
+ * hotel pickup, a shared rental line, a diver dry for five years and an
+ * assigned unit. The geometry below is about how each of those is drawn, so
+ * each one has to be on the page.
+ */
+function everyPanelPrep(): TripPrep {
+  const checklist = buildDivePrepChecklist({
+    divers: [
+      diver(1, "Carmen Ruiz", {
+        fit: fit({
+          rentsBcd: true,
+          bcdSize: "L",
+          rentsWetsuit: true,
+          wetsuitSize: "L",
+          bootSize: "10",
+          rentsRegulator: true,
+        }),
+        lastDivedBand: "over_five_years",
+      }),
+      diver(2, "Sam Whitfield", {
+        fit: fit({
+          rentsBcd: true,
+          bcdSize: "XL",
+          needsStaffFitAt: STATED,
+          needsStaffFitNote: "No XL BCD left",
+        }),
+      }),
+      // BCD L beside Carmen, so one rental line is for two divers; no weight
+      // stated, so the partial list has a row.
+      diver(3, "Grace Mensah", {
+        fit: fit({ rentsBcd: true, bcdSize: "L", rentsWeights: true }),
+      }),
+      diver(4, "Theo Lindqvist"),
+      diver(5, "Nadia Petrov", { wantsNitrox: true, supportNeeds: LIFT_AND_BOARDING }),
+    ],
+    plannedDives: 2,
+    divingCrew: ["Keiko Tanaka"],
+    now: new Date("2026-09-26T12:00:00Z"),
+  });
+  return {
+    trip: { id: "t1", capacity: 12, booked: 5 } as TripPrep["trip"],
+    checklist,
+    hotelPickups: [
+      {
+        bookingId: "b1",
+        diverName: "Carmen Ruiz",
+        hotelPickupLocation: "Harbour Inn",
+        pickupTime: "07:15",
+      },
+    ],
+    gearFleetTotal: 4,
+    freeByKind: new Map(),
+    loadOut: { units: 1, divers: 1, stillToPick: 0, serviceFlagged: 0 },
+    assignmentRows: [
+      {
+        diver: { bookingId: "b1", fullName: "Carmen Ruiz" } as never,
+        assigned: [
+          { reservationId: "r1", kind: "bcd", size: "L", label: "BCD #2", checkedOutAt: null },
+        ] as never,
+        wanted: [],
+        handedOver: false,
+      },
+    ],
+  };
+}
+
+function renderPrep(
+  prep: TripPrep,
+  { grouping = "item", notice }: { grouping?: PrepGrouping; notice?: string } = {},
+) {
+  return render(
+    <PrepBody
+      prep={prep}
+      t={t}
+      locale="en-US"
+      shopSlug="blue-mantis"
+      tripId="t1"
+      rentalItems={["bcd", "wetsuit", "boots", "weights", "regulator", "mask_fins"]}
+      notice={notice}
+      grouping={grouping}
+      groupPath="/shop/blue-mantis/trips/t1"
+      cancelled={false}
+      className={STACK}
+    />,
+  );
+}
+
+/** Every link on the list that opens a diver's record. */
+function diverLinks(root: HTMLElement): HTMLElement[] {
+  return within(root)
+    .getAllByRole("link")
+    .filter((link) => /\/divers\/p\d/.test(link.getAttribute("href") ?? ""));
+}
+
+/** The element whose own text is exactly `text`, for finding a panel by its words. */
+function byText(root: HTMLElement, text: string): HTMLElement {
+  return within(root).getByText(text, { exact: true });
+}
+
+/** A class list as tokens, so `mt-4` never matches inside `-mt-4` or `sm:mt-4`. */
+function tokens(element: Element | null | undefined): string[] {
+  return (element?.getAttribute("class") ?? "").split(/\s+/).filter(Boolean);
+}
+
+/**
+ * **How the packing list is drawn** (docs/design/pixel-craft.md). jsdom has no
+ * layout, so each case pins the classes whose arithmetic the pixel probe
+ * measured wrong; the probe re-measures the pixels.
+ */
+describe("the packing list's geometry", () => {
+  it("stacks its sections at the gap its page asks for, never a margin each (K-487)", () => {
+    const { container } = renderPrep(everyPanelPrep(), { notice: "gear-assigned" });
+    const stack = container.firstElementChild;
+    expect(stack).toHaveClass(STACK);
+    // Tanks, nitrox, sizes, staff fit, support, pickups, kit, banner, assignments.
+    expect(stack?.children.length).toBe(9);
+    for (const section of stack?.children ?? []) {
+      expect(tokens(section).filter((token) => /^mt-/.test(token))).toEqual([]);
+    }
   });
 });

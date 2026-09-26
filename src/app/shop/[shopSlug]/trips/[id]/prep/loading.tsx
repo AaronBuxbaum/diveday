@@ -19,7 +19,7 @@ export default function TripPrepLoading() {
         meta={<div className="h-6 w-56 max-w-full rounded bg-surface-sunken" />}
       />
       <div className="mt-8">
-        <PrepBodySkeleton />
+        <PrepBodySkeleton className="space-y-10" />
       </div>
     </div>
   );
