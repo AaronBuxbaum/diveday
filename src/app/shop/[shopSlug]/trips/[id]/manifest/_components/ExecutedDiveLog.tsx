@@ -5,6 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import {
+  ChoiceRow,
   controlClass,
   DateField,
   Field,
@@ -436,17 +437,16 @@ function ExecutedDiveForm({
           </select>
         </Field>
       </FieldGrid>
-      <label className="mt-4 flex min-h-11 items-center gap-3 text-sm">
-        <input
-          name="notRecorded"
-          type="checkbox"
-          value="depth"
-          checked={depthNotRecorded}
-          onChange={(event) => setDepthNotRecorded(event.target.checked)}
-          className="size-4 accent-primary"
-        />
+      <ChoiceRow
+        name="notRecorded"
+        type="checkbox"
+        value="depth"
+        checked={depthNotRecorded}
+        onChange={(event) => setDepthNotRecorded(event.target.checked)}
+        className="mt-4 text-sm"
+      >
         {labels.notRecordedDepth}
-      </label>
+      </ChoiceRow>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button type="submit" className={buttonClass({ size: "sm" })}>
           {labels.save}

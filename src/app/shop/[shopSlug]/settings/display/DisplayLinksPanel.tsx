@@ -9,6 +9,7 @@ import { SectionCard } from "@/components/ui/card";
 import {
   ChoiceFieldset,
   ChoicePill,
+  choiceClass,
   controlClass,
   Field,
   FieldGrid,
@@ -152,7 +153,7 @@ export function DisplayLinksPanel({
                 type="checkbox"
                 name="showNames"
                 value="true"
-                className="mt-1 size-5"
+                className={`${choiceClass} mt-1`}
                 aria-describedby={`${namesId}-description`}
               />
               <div>

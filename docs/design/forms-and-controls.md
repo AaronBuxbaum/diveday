@@ -831,8 +831,15 @@ A checkbox or radio a person sees is drawn one way, from `src/components/ui/form
 Both pass every input prop to the box (`name`, `value`, `checked`/`onChange`, `aria-*`, `ref`) and
 take `className` for the row. Before them the pill was spelled by hand a dozen ways and radios were
 left at the platform's 13px beside 16px checkboxes (the pixel probe, waiver-active). `form.test.tsx`
-refuses a visible box with no size, one wearing the forms plugin's `rounded border-* text-primary
-focus:ring-*` (not loaded here, and inert on a native box), and a pill spelled by hand.
+refuses a visible box that does not wear `choiceClass` (the conditions hold and the buddy builder's
+drag rows are 20px on purpose, and named there), one wearing the forms plugin's `rounded border-*
+text-primary focus:ring-*` (not loaded here, and inert on a native box), and a pill spelled by hand,
+a bordered `<div>` around a label included.
+
+A box with words is a `ChoiceRow`, not a `Field`: `Field` wraps a child that is not one control in
+a `<label>`, so a row inside it is a label in a label. Where a row needs a field's caption beside
+it, give the `Field` `htmlFor` and the row's box that `id`, as the departure's private and
+self-guided boxes do.
 
 ## Segmented choices: `SegmentedControl`
 

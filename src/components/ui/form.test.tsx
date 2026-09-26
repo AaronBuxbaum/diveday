@@ -1329,22 +1329,35 @@ describe("source sweeps", () => {
   });
 
   /**
-   * **A checkbox or radio a person sees is drawn one way.** Three shapes of
-   * the drift K-13 found are refused outright: a visible box with no size at
-   * all (the platform's 13px), a box wearing the forms plugin's classes this
-   * app does not load (`rounded border-border text-primary focus:ring-*`,
-   * which do nothing to a native box), and a bordered answer pill spelled by
-   * hand instead of `ChoicePill`. A box that is `sr-only` or `opacity-0` is a
-   * stand-in's business, not this rule's.
+   * **A checkbox or radio a person sees is drawn one way.** Every visible box
+   * wears `choiceClass` — directly, or through `ChoiceRow` / `ChoicePill`,
+   * which are the only other places a box is spelled. K-13 found the platform's
+   * 13px radios beside 16px checkboxes, `size-4` boxes without `shrink-0` that
+   * squash beside a label long enough to wrap, and the forms plugin's classes
+   * this app does not load (`rounded border-border text-primary
+   * focus:ring-*`, which do nothing to a native box). A first sweep refused
+   * only the unsized and the plugin-classed, and 43 of 52 visible boxes still
+   * spelled `size-4` by hand, most without `shrink-0` (K-13 review). A box
+   * that is `sr-only` or `opacity-0` is a stand-in's business, not this rule's.
+   *
+   * Two boxes are 20px on purpose and named here by path: the conditions
+   * hold, a warning-tinted card whose box stands beside its 16px semibold
+   * heading, and the buddy builder's drag rows, a manifest surface whose own
+   * note asks for a box big enough to hit without aiming.
    */
-  it("draws no visible choice box at the platform's size or in dead plugin classes", () => {
+  it("draws every visible choice box with choiceClass", () => {
+    const deliberate20px = new Set([
+      "src/app/shop/[shopSlug]/trips/[id]/_components/ConditionsSection.tsx",
+      "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/BuddyDragGroups.tsx",
+    ]);
     const offenders: string[] = [];
     for (const { file, source } of sourceFiles()) {
       for (const { index, text } of openingTags(source, "input")) {
         if (!/type=(?:"|\{")(checkbox|radio)"/.test(text)) continue;
         if (/\b(sr-only|opacity-0)\b/.test(text)) continue;
         const where = `${file}:${lineOf(source, index)}`;
-        if (!/\bchoiceClass\b|\bsize-\d/.test(text)) offenders.push(`${where} has no size`);
+        if (!/\bchoiceClass\b/.test(text) && !deliberate20px.has(file))
+          offenders.push(`${where} lacks choiceClass`);
         if (/\b(rounded|border-[a-z-]+|text-primary|focus:ring-[a-z-]+)\b/.test(text))
           offenders.push(`${where} wears forms-plugin classes`);
       }

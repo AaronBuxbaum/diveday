@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import { ChoicePill } from "@/components/ui/form";
+import { ChoicePill, ChoiceRow } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
@@ -106,24 +106,23 @@ export function BookingGearFields({
             ? t("bookingGear.diverNHeading", { number: index + 1 })
             : t("bookingGear.heading")}
         </legend>
-        <label className="mt-1 flex min-h-11 items-center gap-3 text-sm font-medium">
-          <input
-            type="checkbox"
-            checked={wantsGear}
-            onChange={(event) => {
-              setWantsGear(event.target.checked);
-              // Turning the question back off clears the picks outright, so a
-              // subtotal from a moment ago can never survive as a charge the
-              // diver can no longer see.
-              if (!event.target.checked) {
-                setRentedKinds(new Set());
-                setNitroxRequested(false);
-              }
-            }}
-            className="size-4 accent-primary"
-          />
-          <span>{t("bookingGear.needGear")}</span>
-        </label>
+        <ChoiceRow
+          type="checkbox"
+          checked={wantsGear}
+          onChange={(event) => {
+            setWantsGear(event.target.checked);
+            // Turning the question back off clears the picks outright, so a
+            // subtotal from a moment ago can never survive as a charge the
+            // diver can no longer see.
+            if (!event.target.checked) {
+              setRentedKinds(new Set());
+              setNitroxRequested(false);
+            }
+          }}
+          className="mt-1 text-sm font-medium"
+        >
+          {t("bookingGear.needGear")}
+        </ChoiceRow>
         <p className="mt-1 text-sm text-muted">
           {wantsGear ? t("bookingGear.introBody") : t("bookingGear.skipBody")}
         </p>

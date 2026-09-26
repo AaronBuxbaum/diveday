@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import type { PaperWaiverCopy } from "@/components/paper-waiver-copy";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { choiceClass, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { WaiverActionIcon } from "@/components/WaiverActionIcon";
 import {
   PAPER_WAIVER_IDLE,
@@ -195,7 +195,7 @@ export function PaperWaiverControl({
           // refusal restores these from what it handed back rather than from
           // the DOM, which no longer holds them.
           defaultChecked={refused?.typed.medicalAttested ?? false}
-          className="mt-0.5 size-4 shrink-0"
+          className={`${choiceClass} mt-0.5`}
         />
         {/* **A minor's version says who answered the questions.** For an adult
             the sentence above is exactly right. For a minor it was the only
@@ -277,7 +277,7 @@ export function PaperWaiverControl({
           <input
             type="checkbox"
             name="guardianNamesakeAttested"
-            className="mt-0.5 size-4 shrink-0"
+            className={`${choiceClass} mt-0.5`}
           />
           <span>{copy.guardian.namesakeLabel}</span>
         </label>

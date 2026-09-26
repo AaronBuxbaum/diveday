@@ -4,6 +4,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
 import {
+  ChoiceRow,
   controlClass,
   DateField,
   Field,
@@ -226,10 +227,9 @@ export function DetailsSection({
                   className="h-20 w-32 rounded-lg border border-border"
                   sizes="128px"
                 />
-                <label className="flex min-h-11 items-center gap-2 text-sm">
-                  <input type="checkbox" name="removeArrivalPhoto" className="size-4" />
+                <ChoiceRow type="checkbox" name="removeArrivalPhoto" className="text-sm">
                   {t("trips.details.arrivalPhotoRemove")}
-                </label>
+                </ChoiceRow>
               </div>
             ) : null}
             <ImageFileInput
@@ -391,16 +391,20 @@ export function DetailsSection({
             </select>
           </Field>
         ) : null}
-        <Field label={t("schedule.builder.isPrivateLabel")}>
-          <label className="flex min-h-11 items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="isPrivate"
-              defaultChecked={trip.isPrivate}
-              className="size-4"
-            />
+        {/* `htmlFor`, so the caption is a label beside the row's own rather
+            than a label wrapped around it: `Field` wraps a child that is not
+            one control in a `<label>`, and a label in a label is invalid HTML
+            with two targets for one click (K-13). */}
+        <Field label={t("schedule.builder.isPrivateLabel")} htmlFor="trip-details-is-private">
+          <ChoiceRow
+            type="checkbox"
+            id="trip-details-is-private"
+            name="isPrivate"
+            defaultChecked={trip.isPrivate}
+            className="text-sm"
+          >
             {t("schedule.builder.isPrivateHint")}
-          </label>
+          </ChoiceRow>
         </Field>
         {/* Silences the shop's own divemaster target for this departure and
                 nothing else — an agency training ratio is a safety cap with its
@@ -420,16 +424,16 @@ export function DetailsSection({
                 action parses an absent checkbox as `false` rather than
                 `undefined`, so `updateTrip` writes the correction. */}
         {trip.courseId ? null : (
-          <Field label={t("schedule.builder.selfGuidedLabel")}>
-            <label className="flex min-h-11 items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="selfGuided"
-                defaultChecked={trip.selfGuided}
-                className="size-4"
-              />
+          <Field label={t("schedule.builder.selfGuidedLabel")} htmlFor="trip-details-self-guided">
+            <ChoiceRow
+              type="checkbox"
+              id="trip-details-self-guided"
+              name="selfGuided"
+              defaultChecked={trip.selfGuided}
+              className="text-sm"
+            >
               {t("schedule.builder.selfGuidedHint")}
-            </label>
+            </ChoiceRow>
           </Field>
         )}
       </FieldGrid>

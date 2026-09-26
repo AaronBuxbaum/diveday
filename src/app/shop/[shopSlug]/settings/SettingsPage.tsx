@@ -11,6 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import {
   ChoicePill,
+  ChoiceRow,
   choiceClass,
   controlClass,
   Field,
@@ -1057,16 +1058,16 @@ export default async function SettingsPage({
                 >
                   <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                     {BRAND_BADGE_CODES.map((code) => (
-                      <label key={code} className="flex min-h-11 items-center gap-3 text-sm">
-                        <input
-                          name="badge"
-                          type="checkbox"
-                          value={code}
-                          defaultChecked={shop.brandBadges.includes(code)}
-                          className="size-4 accent-primary"
-                        />
+                      <ChoiceRow
+                        key={code}
+                        name="badge"
+                        type="checkbox"
+                        value={code}
+                        defaultChecked={shop.brandBadges.includes(code)}
+                        className="text-sm"
+                      >
                         {t(`settings.main.profile.badgeLabels.${code}`)}
-                      </label>
+                      </ChoiceRow>
                     ))}
                   </div>
                 </Field>
@@ -1236,15 +1237,14 @@ export default async function SettingsPage({
             >
               <SectionNotice banner={banner} section="searchListing" active={activeSection} />
               <FieldGrid as="form" action={saveSearchListingAction} columns={1} className="mt-4">
-                <label className="flex min-h-11 items-center gap-3 text-sm">
-                  <input
-                    name="searchListed"
-                    type="checkbox"
-                    defaultChecked={!shop.searchListingOptOutAt}
-                    className="size-4 accent-primary"
-                  />
+                <ChoiceRow
+                  name="searchListed"
+                  type="checkbox"
+                  defaultChecked={!shop.searchListingOptOutAt}
+                  className="text-sm"
+                >
                   {t("settings.main.searchListing.label")}
-                </label>
+                </ChoiceRow>
                 <FieldActions>
                   <SubmitButton
                     pendingLabel={t("settings.main.searchListing.submitting")}
@@ -1272,15 +1272,14 @@ export default async function SettingsPage({
             >
               <SectionNotice banner={banner} section="tideWindow" active={activeSection} />
               <FieldGrid as="form" action={saveTideWindowAction} columns={1} className="mt-4">
-                <label className="flex min-h-11 items-center gap-3 text-sm">
-                  <input
-                    name="tideWindowPublic"
-                    type="checkbox"
-                    defaultChecked={shop.tideWindowPublic}
-                    className="size-4 accent-primary"
-                  />
+                <ChoiceRow
+                  name="tideWindowPublic"
+                  type="checkbox"
+                  defaultChecked={shop.tideWindowPublic}
+                  className="text-sm"
+                >
                   {t("settings.main.tideWindow.label")}
-                </label>
+                </ChoiceRow>
                 <FieldActions>
                   <SubmitButton
                     pendingLabel={t("settings.main.tideWindow.submitting")}
@@ -1308,16 +1307,16 @@ export default async function SettingsPage({
               >
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                   {CONSERVATION_COMMITMENT_CODES.map((code) => (
-                    <label key={code} className="flex min-h-11 items-center gap-3 text-sm">
-                      <input
-                        name="commitment"
-                        type="checkbox"
-                        value={code}
-                        defaultChecked={shop.conservationCommitments.includes(code)}
-                        className="size-4 accent-primary"
-                      />
+                    <ChoiceRow
+                      key={code}
+                      name="commitment"
+                      type="checkbox"
+                      value={code}
+                      defaultChecked={shop.conservationCommitments.includes(code)}
+                      className="text-sm"
+                    >
                       {t(`settings.main.conservation.commitments.${code}`)}
-                    </label>
+                    </ChoiceRow>
                   ))}
                 </div>
                 <FieldActions>
@@ -1685,43 +1684,43 @@ export default async function SettingsPage({
                 {/* Boat first, and on by default: it is what the product assumed
                     before this row existed, and what `trips.dive_mode` still
                     defaults to. Turning it off is what hides the Boats row
-                    below and takes the hull out of the Requests planner. */}
-                <label className="flex min-h-11 items-center gap-3 text-sm">
-                  <input
-                    name="hasBoatDiving"
-                    type="checkbox"
-                    defaultChecked={shop.hasBoatDiving}
-                    className="size-4 accent-primary"
-                  />
-                  <div>
-                    <p className="font-medium">{t("boats.boatDivingLabel")}</p>
-                    <p className="text-xs text-muted">{t("boats.boatDivingDescription")}</p>
-                  </div>
-                </label>
-                <label className="flex min-h-11 items-center gap-3 text-sm mt-2">
-                  <input
-                    name="hasShoreDiving"
-                    type="checkbox"
-                    defaultChecked={shop.hasShoreDiving}
-                    className="size-4 accent-primary"
-                  />
-                  <div>
-                    <p className="font-medium">{t("boats.shoreDivingLabel")}</p>
-                    <p className="text-xs text-muted">{t("boats.shoreDivingDescription")}</p>
-                  </div>
-                </label>
-                <label className="flex min-h-11 items-center gap-3 text-sm mt-2">
-                  <input
-                    name="hasPoolDiving"
-                    type="checkbox"
-                    defaultChecked={shop.hasPoolDiving}
-                    className="size-4 accent-primary"
-                  />
-                  <div>
-                    <p className="font-medium">{t("boats.poolDivingLabel")}</p>
-                    <p className="text-xs text-muted">{t("boats.poolDivingDescription")}</p>
-                  </div>
-                </label>
+                    below and takes the hull out of the Requests planner.
+
+                    Each box sits on its name's line, not between the name and
+                    the sentence under it, which `items-center` did (K-13). */}
+                <ChoiceRow
+                  name="hasBoatDiving"
+                  type="checkbox"
+                  defaultChecked={shop.hasBoatDiving}
+                  className="text-sm"
+                >
+                  <span className="block font-medium">{t("boats.boatDivingLabel")}</span>
+                  <span className="block text-xs text-muted">
+                    {t("boats.boatDivingDescription")}
+                  </span>
+                </ChoiceRow>
+                <ChoiceRow
+                  name="hasShoreDiving"
+                  type="checkbox"
+                  defaultChecked={shop.hasShoreDiving}
+                  className="mt-2 text-sm"
+                >
+                  <span className="block font-medium">{t("boats.shoreDivingLabel")}</span>
+                  <span className="block text-xs text-muted">
+                    {t("boats.shoreDivingDescription")}
+                  </span>
+                </ChoiceRow>
+                <ChoiceRow
+                  name="hasPoolDiving"
+                  type="checkbox"
+                  defaultChecked={shop.hasPoolDiving}
+                  className="mt-2 text-sm"
+                >
+                  <span className="block font-medium">{t("boats.poolDivingLabel")}</span>
+                  <span className="block text-xs text-muted">
+                    {t("boats.poolDivingDescription")}
+                  </span>
+                </ChoiceRow>
                 {/* Asked of every shop, unlike the "divers per departure" it
                     replaced: a hull's seat count is a fact about the boat, and
                     this is a statement about who is in the water — which a
@@ -2023,16 +2022,15 @@ export default async function SettingsPage({
                 >
                   <SectionNotice banner={banner} section="tax" active={activeSection} />
                   <form action={saveTaxAction} className="mt-4">
-                    <label className="flex min-h-11 items-center gap-3 text-sm">
-                      <input
-                        name="taxEnabled"
-                        type="checkbox"
-                        value="on"
-                        defaultChecked={shop.taxEnabled}
-                        className="size-4 accent-primary"
-                      />
+                    <ChoiceRow
+                      name="taxEnabled"
+                      type="checkbox"
+                      value="on"
+                      defaultChecked={shop.taxEnabled}
+                      className="text-sm"
+                    >
                       {t("settings.main.tax.checkboxLabel")}
-                    </label>
+                    </ChoiceRow>
                     <SubmitButton
                       pendingLabel={t("settings.main.tax.submitting")}
                       className={buttonClass({ variant: "secondary", className: "mt-3" })}

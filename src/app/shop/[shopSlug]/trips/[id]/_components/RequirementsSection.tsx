@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_CLASS } from "@/components/ui/card";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { ChoiceRow, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import {
   CERTIFICATION_LEVEL_KEYS,
   REQUIRABLE_CERTIFICATION_LEVEL_KEYS,
@@ -129,24 +129,22 @@ export function RequirementsSection({
           {hasSiteRequirement ? siteNote("trip") : null}
           <form action={action}>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-end">
-              <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
-                <input
-                  name="requiresWaiver"
-                  type="checkbox"
-                  defaultChecked={requirement?.requiresWaiver ?? true}
-                  className="size-4 accent-primary"
-                />
+              <ChoiceRow
+                name="requiresWaiver"
+                type="checkbox"
+                defaultChecked={requirement?.requiresWaiver ?? true}
+                className="text-sm font-medium"
+              >
                 {t("trips.requirements.requireWaiver")}
-              </label>
-              <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
-                <input
-                  name="requiresPayment"
-                  type="checkbox"
-                  defaultChecked={requirement?.requiresPayment ?? false}
-                  className="size-4 accent-primary"
-                />
+              </ChoiceRow>
+              <ChoiceRow
+                name="requiresPayment"
+                type="checkbox"
+                defaultChecked={requirement?.requiresPayment ?? false}
+                className="text-sm font-medium"
+              >
                 {t("trips.requirements.requirePayment")}
-              </label>
+              </ChoiceRow>
               <FieldGrid columns={1}>
                 <Field label={t("trips.requirements.minimumCertificationLabel")}>
                   <select
@@ -172,31 +170,27 @@ export function RequirementsSection({
               </legend>
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
-                  <label
+                  <ChoiceRow
                     key={value}
-                    className="flex min-h-11 items-center gap-2 text-sm font-medium"
-                  >
-                    <input
-                      name="specialty"
-                      type="checkbox"
-                      value={value}
-                      defaultChecked={requirement?.requiredSpecialties?.includes(
-                        value as keyof typeof SPECIALTY_KEYS,
-                      )}
-                      className="size-4 accent-primary"
-                    />
-                    {t(key)}
-                  </label>
-                ))}
-                <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
-                  <input
-                    name="requiresNitrox"
+                    name="specialty"
                     type="checkbox"
-                    defaultChecked={requirement?.requiresNitrox ?? false}
-                    className="size-4 accent-primary"
-                  />
+                    value={value}
+                    defaultChecked={requirement?.requiredSpecialties?.includes(
+                      value as keyof typeof SPECIALTY_KEYS,
+                    )}
+                    className="text-sm font-medium"
+                  >
+                    {t(key)}
+                  </ChoiceRow>
+                ))}
+                <ChoiceRow
+                  name="requiresNitrox"
+                  type="checkbox"
+                  defaultChecked={requirement?.requiresNitrox ?? false}
+                  className="text-sm font-medium"
+                >
                   {t("trips.requirements.nitrox")}
-                </label>
+                </ChoiceRow>
               </div>
             </fieldset>
             <div className="mt-5 flex flex-wrap items-center gap-3">

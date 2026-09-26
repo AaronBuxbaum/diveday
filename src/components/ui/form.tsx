@@ -668,8 +668,9 @@ export function Field({
  * unlayered, so a utility would say it twice and lose.
  *
  * Reach for `ChoiceRow` or `ChoicePill`, which carry this; the bare class is
- * for a box whose row is its own business (a table cell's box, a roster
- * line). `form.test.tsx` refuses a visible box with no size, or wearing the
+ * for a box whose row is its own business (a selectable card, a box beside a
+ * label of its own). `form.test.tsx` refuses a visible box that does not
+ * wear it, two deliberate 20px targets named there aside, or that wears the
  * forms plugin's `rounded border-* text-primary focus:ring-*`, which this app
  * does not load and which do nothing to a native box.
  */

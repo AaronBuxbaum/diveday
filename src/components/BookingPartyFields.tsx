@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { segmentClass, segmentedTrackClass } from "@/components/ui/segmented";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { suggestEmailTypo } from "@/lib/email-typo";
@@ -370,19 +370,18 @@ export function BookingPartyFields({
                   </Field>
                 ) : null}
                 {index > 0 ? (
-                  <label className="flex min-h-11 items-center gap-2 text-sm text-muted sm:col-span-2">
-                    <input
-                      type="checkbox"
-                      checked={!!useLeadEmail[index]}
-                      onChange={(event) => {
-                        const checked = event.target.checked;
-                        setUseLeadEmail((current) => ({ ...current, [index]: checked }));
-                        if (checked) updateMember(index, { email: "" });
-                      }}
-                      className="size-4"
-                    />
+                  <ChoiceRow
+                    type="checkbox"
+                    checked={!!useLeadEmail[index]}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setUseLeadEmail((current) => ({ ...current, [index]: checked }));
+                      if (checked) updateMember(index, { email: "" });
+                    }}
+                    className="text-sm text-muted sm:col-span-2"
+                  >
                     {t("party.useMainContactEmail")}
-                  </label>
+                  </ChoiceRow>
                 ) : null}
                 {index === 0 && leadPhone ? (
                   <Field

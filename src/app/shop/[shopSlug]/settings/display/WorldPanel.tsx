@@ -1,6 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { FieldActions, FieldGrid } from "@/components/ui/form";
+import { choiceClass, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 
 /**
@@ -55,7 +55,7 @@ export function WorldPanel({
                 name="publicBoatLine"
                 type="checkbox"
                 defaultChecked={on}
-                className="size-4 accent-primary"
+                className={choiceClass}
               />
               {copy.rowHeading}
             </label>

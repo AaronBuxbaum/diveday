@@ -9,7 +9,7 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ChoiceRow, choiceClass, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
@@ -515,28 +515,26 @@ export function BookSpotSection({
             reader is switching *into*. */}
         <fieldset className="flex flex-col gap-2">
           <legend className="text-sm font-medium">{t("giftChoiceLabel")}</legend>
-          <label className="flex min-h-11 items-center gap-2 text-base">
-            <input
-              type="radio"
-              name="bookingFor"
-              value="me"
-              checked={!asGift}
-              onChange={() => setAsGift(false)}
-              className="size-4"
-            />
+          <ChoiceRow
+            type="radio"
+            name="bookingFor"
+            value="me"
+            checked={!asGift}
+            onChange={() => setAsGift(false)}
+            className="text-base"
+          >
             {t("giftChoiceMe")}
-          </label>
-          <label className="flex min-h-11 items-center gap-2 text-base">
-            <input
-              type="radio"
-              name="bookingFor"
-              value="gift"
-              checked={asGift}
-              onChange={() => setAsGift(true)}
-              className="size-4"
-            />
+          </ChoiceRow>
+          <ChoiceRow
+            type="radio"
+            name="bookingFor"
+            value="gift"
+            checked={asGift}
+            onChange={() => setAsGift(true)}
+            className="text-base"
+          >
             {t("giftChoiceGift")}
-          </label>
+          </ChoiceRow>
         </fieldset>
         {asGift ? (
           <GiftFields fieldErrors={state.fieldErrors} />
@@ -586,7 +584,12 @@ export function BookSpotSection({
             Readiness asks whoever claims the seat. */}
         {trip.course?.minimumAge && !asGift ? (
           <label className="flex min-h-11 items-start gap-2 border-t border-border pt-4 text-sm">
-            <input type="checkbox" name="ageAttestation" required className="mt-0.5 size-4" />
+            <input
+              type="checkbox"
+              name="ageAttestation"
+              required
+              className={`${choiceClass} mt-0.5`}
+            />
             {t("ageAttestation", { age: trip.course.minimumAge })}
           </label>
         ) : null}

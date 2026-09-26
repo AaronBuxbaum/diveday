@@ -11,7 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
 import {
-  choiceClass,
+  ChoiceRow,
   controlClass,
   DateField,
   Field,
@@ -709,27 +709,24 @@ function AddPanel({
           <ul className="mt-3 grid gap-2">
             {requestPlan.requests.map((request) => (
               <li key={request.id}>
-                <label className="flex min-h-11 items-start gap-3 rounded-lg bg-surface px-3 py-2 text-sm">
-                  <input
-                    type="checkbox"
-                    name="inquiryId"
-                    value={request.id}
-                    defaultChecked
-                    className="mt-1 size-4 accent-primary"
-                  />
-                  <span className="min-w-0">
-                    <span className="block font-medium">
-                      {fill(
-                        pluralForm(request.divers, {
-                          one: copy.requestPlanPersonOne ?? "",
-                          other: copy.requestPlanPersonOther ?? "",
-                        }),
-                        { name: request.name, divers: request.divers },
-                      )}
-                    </span>
-                    <span className="block text-muted">{request.subject}</span>
+                <ChoiceRow
+                  type="checkbox"
+                  name="inquiryId"
+                  value={request.id}
+                  defaultChecked
+                  className="rounded-lg bg-surface px-3 py-2 text-sm"
+                >
+                  <span className="block font-medium">
+                    {fill(
+                      pluralForm(request.divers, {
+                        one: copy.requestPlanPersonOne ?? "",
+                        other: copy.requestPlanPersonOther ?? "",
+                      }),
+                      { name: request.name, divers: request.divers },
+                    )}
                   </span>
-                </label>
+                  <span className="block text-muted">{request.subject}</span>
+                </ChoiceRow>
               </li>
             ))}
           </ul>
@@ -773,21 +770,23 @@ function AddPanel({
           className={textareaClassFor(2)}
         />
       </Field>
-      <Field label={null} className={expanded ? undefined : "hidden"}>
-        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer py-2">
-          <input
-            type="checkbox"
-            name="isPrivate"
-            value="true"
-            disabled={!expanded}
-            className={choiceClass}
-          />
-          <div className="flex flex-col">
-            <span>{copy.isPrivateLabel}</span>
-            <span className="text-xs font-normal text-muted">{copy.isPrivateHint}</span>
-          </div>
-        </label>
-      </Field>
+      {/* A box's row, never a `Field`: `Field` wraps a child that is not one
+          control in a `<label>` of its own, so a row inside one is a label in
+          a label, and `items-center` hung the box between the words and their
+          hint rather than on the words (K-13). The wrapper carries `hidden`,
+          as the field did. */}
+      <div className={expanded ? undefined : "hidden"}>
+        <ChoiceRow
+          type="checkbox"
+          name="isPrivate"
+          value="true"
+          disabled={!expanded}
+          className="text-sm font-medium"
+        >
+          <span className="block">{copy.isPrivateLabel}</span>
+          <span className="block text-xs font-normal text-muted">{copy.isPrivateHint}</span>
+        </ChoiceRow>
+      </div>
       <FieldGrid columns={3} className="gap-y-4">
         <Field label={copy.date}>
           {/* Read here as well as submitted: the repeat fieldset below pre-checks
@@ -1145,21 +1144,23 @@ function AddPanel({
             something about the day that is not true. The control that governs
             it is now read first. The input stays uncontrolled, so switching
             back to an ordinary trip restores whatever they had ticked. */}
-        <Field label={null} className={expanded && courseId === "" ? undefined : "hidden"}>
-          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer py-2">
-            <input
-              type="checkbox"
-              name="selfGuided"
-              value="true"
-              disabled={!expanded || courseId !== ""}
-              className={choiceClass}
-            />
-            <div className="flex flex-col">
-              <span>{copy.selfGuidedLabel}</span>
-              <span className="text-xs font-normal text-muted">{copy.selfGuidedHint}</span>
-            </div>
-          </label>
-        </Field>
+        {/* Beside the course select, in its control row: the wrapper takes a
+            field's two rows (an empty caption, then the box) the way `Field`
+            does, without `Field`'s wrapping label around a label (K-13). */}
+        <div
+          className={`row-span-2 grid min-w-0 grid-rows-subgrid gap-y-1 ${expanded && courseId === "" ? "" : "hidden"}`}
+        >
+          <ChoiceRow
+            type="checkbox"
+            name="selfGuided"
+            value="true"
+            disabled={!expanded || courseId !== ""}
+            className="row-start-2 self-start text-sm font-medium"
+          >
+            <span className="block">{copy.selfGuidedLabel}</span>
+            <span className="block text-xs font-normal text-muted">{copy.selfGuidedHint}</span>
+          </ChoiceRow>
+        </div>
         {/* One site for the day, or — expanded — `dive-N-siteId` per dive.
             Never both: dive one's select is seeded from this one on the first
             expansion and writes back to it, so the two never disagree. */}
@@ -1276,29 +1277,21 @@ function AddPanel({
         </Field>
       ) : null}
       {pattern?.alsoUsual && patternApplied ? (
-        <Field label={null}>
-          <label className="flex items-start gap-3 rounded-inset bg-surface-sunken px-3 py-2 text-sm">
-            <input
-              type="checkbox"
-              name="alsoUsualStart"
-              value={pattern.alsoUsual.startTime}
-              className="mt-0.5 size-4 accent-primary"
-            />
-            <span className="flex flex-col">
-              <span>
-                {fill(
-                  pattern.alsoUsual.title ? copy.patternAlsoUsual : copy.patternAlsoUsualUntitled,
-                  {
-                    time: pattern.alsoUsual.timeLabel,
-                    title: pattern.alsoUsual.title ?? "",
-                    count: pattern.alsoUsual.days,
-                  },
-                )}
-              </span>
-              <span className="font-medium">{copy.patternAddAlso}</span>
-            </span>
-          </label>
-        </Field>
+        <ChoiceRow
+          type="checkbox"
+          name="alsoUsualStart"
+          value={pattern.alsoUsual.startTime}
+          className="rounded-inset bg-surface-sunken px-3 py-2 text-sm"
+        >
+          <span className="block">
+            {fill(pattern.alsoUsual.title ? copy.patternAlsoUsual : copy.patternAlsoUsualUntitled, {
+              time: pattern.alsoUsual.timeLabel,
+              title: pattern.alsoUsual.title ?? "",
+              count: pattern.alsoUsual.days,
+            })}
+          </span>
+          <span className="block font-medium">{copy.patternAddAlso}</span>
+        </ChoiceRow>
       ) : null}
       {/* The rare half, collapsed by default (design principles #8). The hint
           names what is behind it — a bare "More options" would hide the
