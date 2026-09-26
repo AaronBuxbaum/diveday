@@ -792,6 +792,29 @@ describe("the two horizon rows", () => {
     expect(screen.getByText("This week")).toHaveClass("text-base", "font-semibold");
   });
 
+  /**
+   * **A phone's pair of horizon rows is ruled like any ledger list** (pixel-craft
+   * class 6, K-230): a rule above Tomorrow, between the two, and under This
+   * week. With the week row present Tomorrow's own top rule was taken away, so
+   * the pair had rules between and below and none above, unlike every list on
+   * the page.
+   */
+  it("keeps Tomorrow's top rule on a phone when This week follows it", () => {
+    const { container } = renderSpine({
+      actions: [
+        action({ id: "today", departure: boat("t1") }),
+        action({ id: "tomorrow", departure: boat("t2") }),
+        action({ id: "friday", departure: boat("t9") }),
+      ],
+      tomorrow: [departure({ tripId: "t2", title: "Night Dive", startsAt: hoursFromNow(26) })],
+    });
+    const fold = container.querySelector("details");
+    expect(fold?.className).not.toContain("border-t-0");
+    expect(fold?.querySelector("summary")).toHaveClass("border-t");
+    const week = screen.getByText("This week").closest("li");
+    expect(week).toHaveClass("border-t", "last:border-b");
+  });
+
   it("renders no Tomorrow row on a day with nothing sailing tomorrow", () => {
     renderSpine({ actions: [action({ id: "today", departure: boat("t1") })] });
     expect(screen.queryByText(/^Tomorrow/)).toBeNull();

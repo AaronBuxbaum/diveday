@@ -907,10 +907,13 @@ export function DaySpine({
               as="h2"
               folded
               summaryVariant="row"
+              // On a phone the pair is ruled like any ledger list: Tomorrow's
+              // own top rule, the week row's top rule between them, and its
+              // `last:border-b` under the pair — or, with no week row, a
+              // closing rule of Tomorrow's own. Taking Tomorrow's top rule
+              // away left the pair open above (pixel-craft K-230).
               className={`${HORIZON_PANEL_CLASS} open:sm:col-span-2 sm:[&>summary]:border-0 sm:[&>summary]:rounded-panel [&>summary]:hover:bg-surface-sunken ${
-                spine.week.jobs > 0
-                  ? "max-sm:[&>summary]:border-t-0"
-                  : "max-sm:[&>summary]:border-b"
+                spine.week.jobs > 0 ? "" : "max-sm:[&>summary]:border-b"
               }`}
               label={t("shopHome.spine.tomorrow", {
                 date: tomorrowDate ? formatShortDate(tomorrowDate, locale, timeZone) : "",
