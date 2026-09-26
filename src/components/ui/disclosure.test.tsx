@@ -136,6 +136,43 @@ describe("CompactDisclosureRow", () => {
     expect(container.querySelector('input[aria-label="language"]')).toBeTruthy();
   });
 
+  /**
+   * **On a phone the value sits under its label, not under the caret** —
+   * pixel-craft class 3. The summary stacked below `sm` as a column, so the
+   * value started at the summary's edge: caret ink at x 20, label at 37, value
+   * at 17 (staffing at 390). Below `sm` the summary is two columns, the caret
+   * and the words, and the value takes the words' column on its own row, so it
+   * starts where the label starts whatever the caret's width. From `sm` up it
+   * is one row again, the value at the end.
+   */
+  it("puts the value in the label's column on a phone, and at the row's end from sm", () => {
+    const { container, getByText } = render(
+      <CompactDisclosureRow label="Shown on the public schedule" value="Shown as Dana">
+        <input aria-label="consent" />
+      </CompactDisclosureRow>,
+    );
+    const summary = container.querySelector("summary");
+    expect(summary).toHaveClass(
+      "grid",
+      "grid-cols-[auto_minmax(0,1fr)]",
+      "content-center",
+      "sm:flex",
+      "sm:justify-between",
+    );
+    const label = getByText("Shown on the public schedule");
+    const value = getByText("Shown as Dana");
+    // The caret and the label are the grid's first row: their wrapper steps
+    // out of the way below `sm` and is the row's leading group from `sm` up.
+    const lead = label.parentElement;
+    expect(lead?.parentElement).toBe(summary);
+    expect(lead).toHaveClass("contents", "sm:flex");
+    expect(lead?.firstElementChild?.querySelector("svg")).toBeTruthy();
+    expect(value.parentElement).toBe(summary);
+    expect(value).toHaveClass("col-start-2");
+    // No indent that assumes the caret's width.
+    expect(value.className).not.toMatch(/\b(max-sm:)?p[sl]-\d/);
+  });
+
   it("gives the compact row's hover state breathing room", () => {
     const { container } = render(
       <CompactDisclosureRow label="Languages" value="English">

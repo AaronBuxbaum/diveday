@@ -188,6 +188,17 @@ export function DisclosureRow({
  * A compact secondary-detail row (ADR 20260830-responsive-surface-consistency). The settled value stays visible at rest;
  * the editable form opens in place behind one native disclosure control.
  * Labels and values stack below sm so the row remains legible on narrow phones.
+ *
+ * **Stacked, the value sits under the label, not under the caret**
+ * (pixel-craft class 3). A column put it at the summary's edge, 20px left of
+ * the words it answers (staffing at 390). Below `sm` the summary is a grid of
+ * two columns, the caret and the words; the caret-and-label wrapper is
+ * `contents`, so both are the first row, and the value takes the words'
+ * column on the second. It starts where the label does whatever the caret's
+ * width, with no indent to keep in step with it. From `sm` up the wrapper is
+ * the row's leading group and the value its end, as before. The caret sits
+ * on the label's first line (`SummaryCaret`); `content-center` still centres
+ * a single line in the 44px floor.
  */
 export function CompactDisclosureRow({
   id,
@@ -221,13 +232,13 @@ export function CompactDisclosureRow({
       onToggle={onToggle ? (event) => onToggle(event.currentTarget.open) : undefined}
       className={`group/compact-row ${className}`.trim()}
     >
-      <summary className="-mx-2 flex min-h-11 cursor-pointer list-none flex-col items-start justify-center gap-1 rounded-lg px-2 py-2 text-sm select-none transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-primary sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <span className="flex min-w-0 items-center gap-2">
-          <DisclosureCaret className="shrink-0 text-muted group-open/compact-row:rotate-90" />
-          <span className="font-medium">{label}</span>
+      <summary className="-mx-2 grid min-h-11 cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)] content-center items-start gap-x-2 gap-y-1 rounded-lg px-2 py-2 text-sm select-none transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-primary sm:flex sm:items-center sm:justify-between sm:gap-3">
+        <span className="contents sm:flex sm:min-w-0 sm:items-center sm:gap-2">
+          <SummaryCaret className="text-muted group-open/compact-row:rotate-90" />
+          <span className="min-w-0 font-medium">{label}</span>
         </span>
         {value != null ? (
-          <span className="min-w-0 max-w-full whitespace-normal break-words text-muted sm:truncate sm:text-end">
+          <span className="col-start-2 min-w-0 max-w-full whitespace-normal break-words text-muted sm:truncate sm:text-end">
             {value}
           </span>
         ) : null}
