@@ -9,6 +9,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
+import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
 import {
@@ -628,7 +629,7 @@ function AddPanel({
       {pattern && patternApplied ? (
         <p
           role="status"
-          className="flex flex-wrap items-center gap-x-1 gap-y-1 rounded-inset bg-surface-sunken px-3 py-2 text-sm"
+          className={`flex flex-wrap items-center gap-x-1 gap-y-1 ${INSET_NOTE_BOX} bg-surface-sunken`}
         >
           <span>
             {fill(copy.patternFilled, {
@@ -1292,7 +1293,9 @@ function AddPanel({
           type="checkbox"
           name="alsoUsualStart"
           value={pattern.alsoUsual.startTime}
-          className="rounded-inset bg-surface-sunken px-3 py-2 text-sm"
+          // The pattern line's box: the two sunken lines in this panel share
+          // one inset (pixel-craft class 12).
+          className={`${INSET_NOTE_BOX} bg-surface-sunken`}
         >
           <span className="block">
             {fill(pattern.alsoUsual.title ? copy.patternAlsoUsual : copy.patternAlsoUsualUntitled, {

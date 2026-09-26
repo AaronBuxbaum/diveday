@@ -7,7 +7,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { INSET_NOTE_BOX, SectionCard } from "@/components/ui/card";
 import { controlClassFor, Field } from "@/components/ui/form";
 import { getAccountSecurity, getTotpSecret, listAccountSessions } from "@/db/account-security";
 import { userAccounts } from "@/db/schema";
@@ -202,6 +202,8 @@ export default async function SecurityPage({
             )}
           </div>
           {secret && !isEnabled ? (
+            // Not an inset note: a step a person works inside (the secret, a
+            // code field and Enable), so it takes a group's 16px inset.
             <div className="mt-4 rounded-lg bg-surface-sunken p-4 text-sm">
               <p>{t("settings.security.secretLabel")}</p>
               <code className="mt-1 block break-all font-mono">{secret}</code>
@@ -260,7 +262,7 @@ export default async function SecurityPage({
               // words and 25px below them (K-448).
               <li
                 key={item.id}
-                className="flex items-center gap-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
+                className={`flex items-center gap-3 ${INSET_NOTE_BOX} bg-surface-sunken`}
               >
                 {/* Each dot glued to the part before it, so a wrapped line
                     never opens on one (the Print register's K-590). */}

@@ -169,8 +169,17 @@ export const TONE_PANEL_CLASS = "rounded-panel border p-4 shadow-bed sm:p-5";
  * 12px, and 12px all round at 12px type (pixel-craft class 12).
  *
  * `INSET_NOTE_BOX` is the geometry alone, for a note that carries a tone
- * instead of the sunken grey (a warning tint): the tone changes, the box does
- * not. A note's place in its panel (`mt-3`, `mt-4`) stays at the call site.
+ * instead of the sunken grey (a warning tint), or a sunken line in the
+ * reader's own ink: a staff note on a roster row, a line of the activity
+ * trail, a signed-in session, the builder's pattern line. The tone changes,
+ * the box does not. A note's place in its panel (`mt-3`, `mt-4`) stays at the
+ * call site, and `card.test.tsx` refuses the box retyped by hand.
+ *
+ * **Not a note**, and so not this box: a sunken step a person works inside (a
+ * form, the 16px group inset), and a bordered sunken tile or band — a row
+ * that is itself a link (`TripPickerList`, `BookingRequestCards`), or a band
+ * on the page above a card rather than carved into one (orders' linked
+ * booking, `StaffPreviewBar`). Those take their hairline and the 16px inset.
  */
 export const INSET_NOTE_BOX = "rounded-lg px-3 py-2 text-sm";
 export const INSET_NOTE_CLASS = `${INSET_NOTE_BOX} bg-surface-sunken text-muted`;

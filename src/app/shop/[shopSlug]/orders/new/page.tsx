@@ -194,6 +194,10 @@ export default async function NewOrderPage({
       />
 
       {bookingContext ? (
+        // Not an inset note: a band on the page, above the form card rather
+        // than carved into it, so a hairline draws its edge against the page
+        // and it keeps the 16px inset a bordered sunken band takes
+        // (StaffPreviewBar, BookingRequestCards).
         <p className="mb-6 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm">
           {t("orders.new.linkedTo", {
             personName: bookingContext.person.fullName,

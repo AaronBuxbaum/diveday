@@ -235,6 +235,37 @@ describe("the inset note", () => {
     expect(INSET_NOTE_BOX).toBe("rounded-lg px-3 py-2 text-sm");
     expect(INSET_NOTE_CLASS).toBe(`${INSET_NOTE_BOX} bg-surface-sunken text-muted`);
   });
+
+  /**
+   * The tree half. The box was retyped by hand across the app after the
+   * departure's notes took the constant — the builder's pattern line, the
+   * draft line, a roster note, a session row, the rental estimate — so the
+   * majority spelling could drift one class at a time and nothing would say.
+   * A class string that spells the whole box on the sunken fill, in any
+   * order and at either 12px radius token, is a note that should name it.
+   */
+  it("is spelled through the constant, never retyped on the sunken fill", () => {
+    function files(dir: string): string[] {
+      return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) return files(full);
+        return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
+      });
+    }
+    const box = (tokens: string[]) =>
+      (tokens.includes("rounded-lg") || tokens.includes("rounded-inset")) &&
+      ["bg-surface-sunken", "px-3", "py-2", "text-sm"].every((token) => tokens.includes(token));
+    const offenders: string[] = [];
+    for (const file of files(SRC_DIR)) {
+      const text = readFileSync(file, "utf8");
+      for (const match of text.matchAll(/"[^"\n]*"|`[^`]*`/g)) {
+        if (!box(match[0].slice(1, -1).split(/\s+/))) continue;
+        const line = text.slice(0, match.index).split("\n").length;
+        offenders.push(`${relative(SRC_DIR, file).split(/[\\/]/).join("/")}:${line}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
 });
 
 /**

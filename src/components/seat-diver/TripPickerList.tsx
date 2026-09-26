@@ -36,6 +36,9 @@ export function TripPickerList({
         <li key={option.id}>
           <Link
             href={option.href}
+            // Not an inset note: a tile a staffer taps, whose border takes the
+            // hover, drawn as BookingRequestCards' request tiles are (bordered,
+            // 16px in).
             className="flex min-h-11 items-baseline justify-between gap-3 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm font-medium hover:border-primary/40"
           >
             {/* A row's facts, joined the app's one way (K-525): `joinFacts`

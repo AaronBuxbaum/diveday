@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { fill } from "@/i18n/fill";
 import { type DraftFields, draftableFields, type FormDraftKind } from "@/lib/form-drafts";
 import { applyFormFields } from "./apply-form-fields";
@@ -101,7 +102,7 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
       {applied && draft ? (
         <p
           role="status"
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-inset bg-surface-sunken px-3 py-2 text-sm"
+          className={`flex flex-wrap items-center gap-x-3 gap-y-1 ${INSET_NOTE_BOX} bg-surface-sunken`}
         >
           <span>{fill(copy.pickedUp, { time: draft.savedAtLabel })}</span>
           <button

@@ -1,3 +1,4 @@
+import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { formatDateTimeTz } from "@/lib/format";
 
 /**
@@ -44,7 +45,10 @@ export function ActivityLog({
       {events.map((event) => (
         <li
           key={event.id}
-          className="flex flex-col gap-x-4 gap-y-0.5 rounded-lg bg-surface-sunken px-4 py-3 text-sm sm:flex-row sm:items-baseline sm:justify-between"
+          // The inset note's box, on the sunken fill in the reader's ink: the
+          // departure's roster notes sit above this trail at 12px in, and its
+          // lines sat at 16 (pixel-craft class 12).
+          className={`flex flex-col gap-x-4 gap-y-0.5 ${INSET_NOTE_BOX} bg-surface-sunken sm:flex-row sm:items-baseline sm:justify-between`}
         >
           <span className="min-w-0">{event.message}</span>
           <span className="shrink-0 text-muted tabular-nums">

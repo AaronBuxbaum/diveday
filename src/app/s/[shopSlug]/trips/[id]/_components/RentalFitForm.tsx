@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { ChoiceFieldset, ChoicePill, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import type { DiverMessageKey } from "@/i18n/messages";
@@ -426,8 +427,10 @@ export function RentalFitForm({
               // Sunken, not `bg-surface`: this note is nested *inside* the
               // card, which is `bg-surface` itself now that the panel comes
               // from the shared component — surface on surface would leave the
-              // estimate legible only by its hairline.
-              <p className="mt-3 rounded-lg border border-border bg-surface-sunken px-3 py-2 text-sm">
+              // estimate legible only by its hairline. The sunken fill is the
+              // edge now, so the note is the inset box every note in a card
+              // is, with no hairline of its own (pixel-craft class 12).
+              <p className={`mt-3 ${INSET_NOTE_BOX} bg-surface-sunken`}>
                 <RentalQuoteAmount
                   totalLabel={
                     quote.unpricedKinds.length > 0

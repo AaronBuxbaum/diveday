@@ -10,7 +10,7 @@ import { ScrollToHash } from "@/components/ScrollToHash";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { INSET_NOTE_CLASS, sectionCardClass } from "@/components/ui/card";
+import { INSET_NOTE_BOX, INSET_NOTE_CLASS, sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
@@ -1173,7 +1173,7 @@ export function RosterSection({
               return (
                 <div
                   key={note.id}
-                  className="flex items-start justify-between gap-2 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
+                  className={`flex items-start justify-between gap-2 ${INSET_NOTE_BOX} bg-surface-sunken`}
                 >
                   <div className="min-w-0">
                     <p className="break-words whitespace-pre-wrap">{note.body}</p>
