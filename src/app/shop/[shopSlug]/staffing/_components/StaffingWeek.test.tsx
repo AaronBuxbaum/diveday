@@ -824,4 +824,11 @@ describe("StaffingWeek geometry", () => {
       unmount();
     }
   });
+
+  /** K-489: "· Away" broke between its dot and its word, the word alone on a line. */
+  it("keeps the phone list's away marker whole", () => {
+    const { list } = renderPhoneDay({ canManage: true });
+    const marker = within(list).getByText((_, element) => element?.textContent === "· Away");
+    expect(marker).toHaveClass("whitespace-nowrap");
+  });
 });

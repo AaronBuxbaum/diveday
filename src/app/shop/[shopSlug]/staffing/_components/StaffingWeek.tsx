@@ -790,8 +790,10 @@ export function StaffingWeek({
                               {formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)}
                             </span>{" "}
                             {trip.title}
+                            {/* Whole: the space after the dot broke, and left
+                                "Away" alone on a line under it (K-489). */}
                             {trip.awayBlocks.length > 0 ? (
-                              <span className="ms-1 font-semibold text-warning-strong">
+                              <span className="ms-1 font-semibold whitespace-nowrap text-warning-strong">
                                 · {words.away}
                               </span>
                             ) : null}
