@@ -675,6 +675,26 @@ describe("buttonClass", () => {
       expect(offenders).toEqual([]);
     });
 
+    it('draws a chip on the sky only as `variant: "sky"`: no other file spells its fill', () => {
+      // Today's "Print the day" typed the sky chip out by hand — `h-8`, a
+      // pill, `font-semibold` — so it was a 32px target on the same band
+      // where the trip masthead's chip of the same kind is 44px, rounded on
+      // the control rung and `font-medium` (K-152). The fill and its hover
+      // step are the variant's; a copy of them is a second chip.
+      const own = join("components", "ui", "button.ts");
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        if (file.endsWith(own)) continue;
+        const lines = readFileSync(file, "utf8").split("\n");
+        for (const [at, line] of lines.entries()) {
+          if (/(?<![\w-])(?:[\w-]+:)*bg-white\/(?:18|28)(?![\w.-])/.test(line)) {
+            offenders.push(`${relative(SRC_DIR, file)}:${at + 1}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
     it("hands no negative inline margin to buttonClass: the sideways outdent is `flush`", () => {
       // A ghost's invisible padding put its label 12px inside the column it
       // started or ended — seasons' Delete at x 478 against the fields' 466 —

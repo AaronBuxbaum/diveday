@@ -900,7 +900,10 @@ async function TodayBody({
               href={shopPath(shopSlug, "print")}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex h-8 items-center rounded-full bg-white/18 px-3 text-sm font-semibold text-(--sky-ink) backdrop-blur-sm print:hidden hover:bg-white/28"
+              // The band's own chip, as the trip masthead draws it: a 44px
+              // target on the control rung. It was typed out by hand as a
+              // 32px pill in a heavier weight (K-152).
+              className={buttonClass({ variant: "sky", size: "sm", className: "print:hidden" })}
             >
               {t("shared.printPacket.dayDoor")}
             </Link>
