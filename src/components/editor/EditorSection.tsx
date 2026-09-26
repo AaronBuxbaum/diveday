@@ -81,7 +81,7 @@ export function EditorSection({
 }) {
   // Hairlines between, never above the first: the rule separates two sections,
   // and a rule under the page header separates nothing.
-  const shell = `scroll-mt-6 ${lead ? "" : "border-t border-border pt-6"}`.trim();
+  const rule = lead ? "" : " border-t border-border pt-6";
   // The attribute the unsaved-note hook traces a typed control back to, and
   // the one thing that makes a section findable without knowing its id. Written
   // out rather than spread from a constant so JSX keeps its typing.
@@ -89,27 +89,32 @@ export function EditorSection({
   const body = <div className="mt-4 flex flex-col gap-5">{children}</div>;
   if (as === "fieldset") {
     return (
-      // The rule and its air go on a box *around* the fieldset. A fieldset draws
-      // its `<legend>` in its own top border, so on the fieldset itself they put
-      // the label on the hairline and the 24px between the label and its
-      // fields: 27–28px above the label and 40px under it, where a section's
-      // label sits 29px under its rule. The anchor and the marker go with the
-      // rule, on the section's outermost element.
-      <div id={id} {...marker} className={shell}>
+      // The rule and its air go on the legend, full width, and never on the
+      // fieldset. A fieldset draws its `<legend>` in its own top border, so on
+      // the fieldset they put the label on the hairline and the 24px between
+      // the label and its fields: 27–28px above the label and 40px under it,
+      // where a section's label sits 29px under its rule. A borderless
+      // fieldset sets its legend at its top, so a legend carrying the rule
+      // draws the section's geometry exactly.
+      //
+      // The anchor and the marker sit on the fieldset itself, the named group:
+      // the course editor's refused day-by-day save sends `?field=` with this
+      // id, and `FieldErrorFocus` focuses what carries it. A box around the
+      // fieldset took that focus with no role or name; the group says which
+      // section to fix.
+      <fieldset id={id} {...marker} className="min-w-0 scroll-mt-6">
         {/* `<legend>` has to be the fieldset's first child, so the label is
             spelled with `groupLabelClass()` rather than `GroupLabel` — the one
             documented use of the exported class: the same spelling, on the
             element this element has to be. */}
-        <fieldset className="min-w-0">
-          <legend className={groupLabelClass()}>{label}</legend>
-          {description == null ? null : <SectionDescription>{description}</SectionDescription>}
-          {body}
-        </fieldset>
-      </div>
+        <legend className={`${groupLabelClass()} w-full${rule}`}>{label}</legend>
+        {description == null ? null : <SectionDescription>{description}</SectionDescription>}
+        {body}
+      </fieldset>
     );
   }
   return (
-    <section id={id} {...marker} aria-labelledby={`${id}-label`} className={shell}>
+    <section id={id} {...marker} aria-labelledby={`${id}-label`} className={`scroll-mt-6${rule}`}>
       <GroupLabel as="h2" id={`${id}-label`}>
         {label}
       </GroupLabel>

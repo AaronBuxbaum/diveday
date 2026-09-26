@@ -242,9 +242,8 @@ describe("an editor section", () => {
   it("keeps the fieldset and drops its box", () => {
     render(<Editor />);
 
-    // The anchor names the section's outer box, which carries the hairline;
-    // the fieldset inside it keeps the grouping (EditorSection.test.tsx).
-    const pricing = document.getElementById("block-pricing")?.querySelector("fieldset");
+    const pricing = document.getElementById("block-pricing");
+    expect(pricing?.tagName).toBe("FIELDSET");
     expect(pricing?.querySelector("legend")?.textContent).toBe("Pricing");
     expect(pricing?.className).not.toContain("rounded");
     // The hairline between sections is a `border-t`; the box it replaced was a
@@ -255,8 +254,14 @@ describe("an editor section", () => {
   it("opens without a rule above it and separates the rest with one", () => {
     render(<Editor />);
 
-    expect(document.getElementById("block-pitch")?.className).not.toContain("border-t");
-    expect(document.getElementById("block-pricing")?.className).toContain("border-t border-border");
+    // A fieldset draws the rule on its legend, above the label, where a
+    // section draws it on itself (EditorSection.test.tsx).
+    const rule = (id: string) => {
+      const section = document.getElementById(id);
+      return section?.tagName === "FIELDSET" ? section.querySelector("legend") : section;
+    };
+    expect(rule("block-pitch")?.className).not.toContain("border-t");
+    expect(rule("block-pricing")?.className).toContain("border-t border-border");
   });
 
   /**
