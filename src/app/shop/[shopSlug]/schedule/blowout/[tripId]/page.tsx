@@ -15,7 +15,7 @@ import { getTripRoster, getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { displayStoredPhone } from "@/lib/forgiving-fields";
+import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
@@ -270,7 +270,7 @@ export default async function BlowoutPage({
                     {diver.messageStatus === "no_email" && diver.phone ? (
                       <div className="relative z-10 text-xs text-muted">
                         {t("blowout.record.callThem", {
-                          phone: displayStoredPhone(diver.phone),
+                          phone: displayStoredPhoneWhole(diver.phone),
                         })}
                       </div>
                     ) : null}

@@ -53,6 +53,19 @@ describe("the diver cell", () => {
       /<div className="relative z-10 text-xs text-muted">\s*\{t\("blowout\.record\.callThem"/,
     );
   });
+
+  /**
+   * **The number to call is one run** (pixel-craft class 8, K-450). "Call
+   * +1 305 555 0142" sits in the name's cell at 12px, and a narrow column
+   * broke inside the number: "+1 305 555" over "0142" is a different number to
+   * somebody dialling it off the screen. `displayStoredPhoneWhole` is the same
+   * reading with no-break spaces, as every other line that sets a number
+   * beside other words wears it.
+   */
+  it("keeps the number in the call line whole", () => {
+    expect(tableBody()).toMatch(/phone: displayStoredPhoneWhole\(diver\.phone\)/);
+    expect(tableBody()).not.toMatch(/displayStoredPhone\(/);
+  });
 });
 
 /**
