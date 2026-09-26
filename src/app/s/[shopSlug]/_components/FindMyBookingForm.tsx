@@ -53,7 +53,7 @@ export function FindMyBookingForm({ shopSlug }: { shopSlug: string }) {
         </Field>
         <SubmitButton
           pendingLabel={t("findMyBooking.submitting")}
-          className={buttonClass({ variant: "secondary", className: "px-5 py-2.5" })}
+          className={buttonClass({ variant: "secondary" })}
         >
           {t("findMyBooking.submit")}
         </SubmitButton>

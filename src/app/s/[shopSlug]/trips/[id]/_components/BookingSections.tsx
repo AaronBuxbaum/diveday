@@ -294,7 +294,7 @@ export function TripFullSection({
         <div>
           <SubmitButton
             pendingLabel={t("waitlistJoining")}
-            className={buttonClass({ className: "px-6 py-3 text-base disabled:opacity-70" })}
+            className={buttonClass({ busy: true })}
           >
             {t("waitlistHeading")}
           </SubmitButton>
@@ -680,7 +680,7 @@ export function BookSpotSection({
             pendingLabel={
               asGift ? t("giftBooking") : payAtBooking ? t("headingToPayment") : t("booking")
             }
-            className={buttonClass({ className: "px-6 py-3 text-base disabled:opacity-70" })}
+            className={buttonClass({ busy: true })}
           >
             {bookLabel}
           </SubmitButton>

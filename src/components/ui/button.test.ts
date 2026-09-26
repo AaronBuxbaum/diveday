@@ -607,6 +607,31 @@ describe("buttonClass", () => {
       expect(offenders).toEqual([]);
     });
 
+    it("hands no vertical padding or type size to buttonClass: the height and the label are the size's", () => {
+      // The public trip's two submits passed `px-6 py-3 text-base` over `md`'s
+      // `px-4 py-2.5 text-base`: `py-3` won only because Tailwind emits it
+      // after `py-2.5`, `text-base` said again what `md` says, and the pair
+      // drew the page's one 48px primary as a second signature beside every
+      // other (K-481). A button's height and label size are a rung of
+      // `sizes`, decided once; a new one is a size, not a call site's string.
+      // The horizontal half is `flush`'s: `px-*` has its own sweep.
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of [
+            ...(args.match(/(?<![\w-])(?:[\w-]+:)*p[ytb]?-[\w.[\]]+/g) ?? []),
+            ...(args.match(/(?<![\w-])(?:[\w-]+:)*text-(?:xs|sm|base|lg|[2-9]?xl)(?![\w-])/g) ??
+              []),
+          ]) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
     it("hands no negative inline margin to buttonClass: the sideways outdent is `flush`", () => {
       // A ghost's invisible padding put its label 12px inside the column it
       // started or ended — seasons' Delete at x 478 against the fields' 466 —
