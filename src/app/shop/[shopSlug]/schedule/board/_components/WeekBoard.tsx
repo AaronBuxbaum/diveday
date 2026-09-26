@@ -437,37 +437,51 @@ function WeekBoat({
             a reader scanning a column of times meets every fill at one x.
 
             **The time and its bar are the row's first line, and that line is
-            36px whatever else is on it** (pixel-craft class 1): the day's
+            32px whatever else is on it** (pixel-craft class 1): the day's
             weekday and "No boats" take the same box, so the rail reads level
-            with the first departure beside it. The "⋯" sets 36px on its own
-            (a 44px square, `-my-1`), but a boat already home and a staffer
-            who cannot move one have none, and their line fell to the time's
-            20px. A box of its own rather than a floor on the whole line:
-            below `sm` the line wraps the meta beneath it, and a wrapped flex
-            container's `min-height` is not its first line's. */}
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap sm:gap-x-3">
-          <div className="flex min-h-9 shrink-0 items-center gap-x-2 sm:gap-x-3">
+            with the first departure beside it. A box of its own rather than a
+            floor on the whole line: below `md` the line wraps the meta
+            beneath it, and a wrapped flex container's `min-height` is not its
+            first line's. A boat already home, or a staffer who cannot move
+            one, has no "⋯", and without the box their line fell to the
+            time's 20px.
+
+            **32px, and no row gap under it** (class 4): the meta is the next
+            line on a phone, and it sat 21px under the time's baseline against
+            13px from the meta to the title, under a 4px gap and a 36px line
+            that was the "⋯" square's height rather than the time's. The "⋯"
+            overhangs the line by its excess (44 − 2 × 6).
+
+            **The time has a slot of its own** (class 3): "12:00 PM" is ~74px
+            at 16px semibold, so every bar starts at one x after it, where
+            content-width times put "11:00 AM"'s 10px further on than
+            "5:30 AM"'s, and it never wraps its meridiem (class 8). */}
+        <div className="flex flex-wrap items-center gap-x-2 md:flex-nowrap md:gap-x-3">
+          <div className="flex min-h-8 shrink-0 items-center gap-x-2 md:gap-x-3">
             {time ? (
               <p
-                className={`text-base leading-tight font-semibold tabular-nums ${sailed ? "text-muted" : ""}`}
+                className={`w-19 shrink-0 text-base leading-tight font-semibold whitespace-nowrap tabular-nums ${sailed ? "text-muted" : ""}`}
               >
                 {time}
               </p>
             ) : null}
             <SeatBar seats={seats} sailed={sailed} />
           </div>
-          {/* **A full line of its own on a phone, inline from `sm` up.** The
+          {/* **A full line of its own below `md`, inline from `md` up.** The
               week was a desktop-only grid until #1923 and this sentence had a
               row's whole measure to sit in; at 390 it has about 120px between
               the seat bar and the "⋯", which truncated "Molasses Reef ·
               Mantis II · 10 of 12 · $95" to "Molas…" — every fact in it lost,
-              including the two the bar is a picture of.
+              including the two the bar is a picture of. From 640 to ~700px it
+              still did, inline from `sm`: the text column there is ~428px for
+              a 459–490px line. At 768 the room is 334px against the longest
+              meta's 268px.
 
               `basis-full order-last` drops it below the controls on a phone
-              and `sm:` puts it back where the desktop design has it, so the
+              and `md:` puts it back where the desktop design has it, so the
               sentence is one node in one place in the reading order rather
               than two copies fighting a media query. */}
-          <p className="order-last basis-full text-sm text-muted tabular-nums sm:order-none sm:min-w-0 sm:flex-1 sm:basis-auto sm:truncate">
+          <p className="order-last basis-full text-sm text-muted tabular-nums md:order-none md:min-w-0 md:flex-1 md:basis-auto md:truncate">
             {meta}
           </p>
           {canConfigure && !sailed ? (
@@ -477,7 +491,7 @@ function WeekBoat({
               onToggle={onToggle}
               registerToggle={registerToggle}
               label={copy.rowActionsAria}
-              className="-my-1 -me-2 ms-auto shrink-0 sm:ms-0"
+              className="-my-1.5 -me-2 ms-auto shrink-0 md:ms-0"
             />
           ) : null}
         </div>
@@ -670,13 +684,13 @@ export function WeekBoard({
                   <span className="sr-only">{day.label}</span>
                   <span
                     aria-hidden="true"
-                    className="flex min-h-9 items-center gap-1.5 sm:flex-col sm:items-start sm:gap-0"
+                    className="flex min-h-8 items-center gap-1.5 sm:flex-col sm:items-start sm:gap-0"
                   >
                     {/* A fixed width below `sm`, so every numeral after it
                         starts at one x; from `sm` up it is the first line of
-                        the stacked label, in the departures' 36px box. */}
+                        the stacked label, in the departures' 32px box. */}
                     <span
-                      className={`${groupLabelClass(day.isToday ? "primary" : "muted")} shrink-0 max-sm:w-8 sm:flex sm:min-h-9 sm:items-center`}
+                      className={`${groupLabelClass(day.isToday ? "primary" : "muted")} shrink-0 max-sm:w-8 sm:flex sm:min-h-8 sm:items-center`}
                     >
                       {day.weekday}
                     </span>
@@ -759,7 +773,7 @@ export function WeekBoard({
                       gave the blank its meaning; one empty row in a run of
                       rows is just a gap. */}
                   {empty ? (
-                    <p className="flex min-h-9 items-center px-2 py-2 text-sm text-muted">
+                    <p className="flex min-h-8 items-center px-2 py-2 text-sm text-muted">
                       {copy.noBoats}
                     </p>
                   ) : null}

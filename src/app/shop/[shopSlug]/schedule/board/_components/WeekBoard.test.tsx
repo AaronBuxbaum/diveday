@@ -150,6 +150,9 @@ function token(element: Element, pattern: RegExp): string {
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+/** The one first-line box a day's label, a departure's lead and "No boats" share. */
+const FIRST_LINE = ["flex", "min-h-8", "items-center"];
+
 describe("the day rail (K-326, K-327, K-328)", () => {
   it("is one width at every width, and holds its longest label: a fixed weekday, the gap and today's disc", () => {
     // "WED 22" ran 12–14px past a 3rem phone rail, and today's "TUE" beside
@@ -180,24 +183,74 @@ describe("the day rail (K-326, K-327, K-328)", () => {
     expect(screen.getByText("27")).toHaveClass("size-8", "shrink-0");
   });
 
-  it("sets the weekday, a departure's first line and 'No boats' in one 36px first-line box", () => {
+  it("sets the weekday, a departure's first line and 'No boats' in one 32px first-line box", () => {
     // The weekday's cap sat 9px above the first departure's time at 1280, and
     // 4px above "No boats" on an empty day.
     board(week({}, [entry()]));
-    const firstLine = ["flex", "min-h-9", "items-center"];
     // Below sm the weekday and its numeral share that line; from sm up the
     // weekday takes it alone, over its numeral.
-    expect(screen.getByText("Thu").parentElement).toHaveClass(...firstLine);
-    expect(screen.getByText("Thu")).toHaveClass("sm:flex", "sm:min-h-9", "sm:items-center");
-    expect(screen.getByText("7:00 AM").parentElement).toHaveClass(...firstLine);
+    expect(screen.getByText("Thu").parentElement).toHaveClass(...FIRST_LINE);
+    expect(screen.getByText("Thu")).toHaveClass("sm:flex", "sm:min-h-8", "sm:items-center");
+    expect(screen.getByText("7:00 AM").parentElement).toHaveClass(...FIRST_LINE);
     const empty = screen.getAllByText("No boats");
     expect(empty).toHaveLength(6);
-    for (const none of empty) expect(none).toHaveClass(...firstLine);
+    for (const none of empty) expect(none).toHaveClass(...FIRST_LINE);
     // Each under the same 8px: the rail's, the row's and the empty day's own.
     const inset = (element: Element | null | undefined) =>
       [...(element?.classList ?? [])].filter((name) => /^p[ty]-/.test(name));
     expect(inset(screen.getByText("Thu").closest("h3"))).toEqual(["py-2"]);
     expect(inset(screen.getByText("7:00 AM").closest("li")?.firstElementChild)).toEqual(["py-2"]);
     for (const none of empty) expect(inset(none)).toEqual(["py-2"]);
+  });
+});
+
+describe("a departure's lead line (K-329, K-335, K-529)", () => {
+  const META = "Molasses Reef · 8 of 12 · $95";
+
+  it("gives the time a fixed slot sized for '12:00 PM', so every seat bar starts at one x", () => {
+    // The bars began at x 320/321 after "5:30 AM" and 330/331 after
+    // "11:00 AM" at 1280, and from 640 to ~700px the time wrapped its
+    // meridiem. "12:00 PM" is ~74px at 16px semibold, tabular.
+    board(week({}, [entry({ time: "12:00 PM" })]));
+    const time = screen.getByText("12:00 PM");
+    expect(time).toHaveClass("shrink-0", "whitespace-nowrap");
+    expect(px(token(time, /^w-(\d+)$/))).toBeGreaterThanOrEqual(74);
+  });
+
+  it("keeps the meta on a line of its own until md, where it has room to sit inline", () => {
+    // At 640 the text column is ~428px for a 459–490px line, so two metas
+    // truncated before their price; at 768 the room is 334px against the
+    // longest meta's 268px.
+    board(week({}, [entry()]));
+    const meta = screen.getByText(META);
+    const line = meta.parentElement as HTMLElement;
+    const small = (element: Element) =>
+      [...element.classList].filter((name) => name.startsWith("sm:"));
+    expect(small(meta)).toEqual([]);
+    expect(small(line)).toEqual([]);
+    expect(meta).toHaveClass(
+      "order-last",
+      "basis-full",
+      "md:order-none",
+      "md:min-w-0",
+      "md:flex-1",
+      "md:basis-auto",
+      "md:truncate",
+    );
+    expect(line).toHaveClass("flex-wrap", "md:flex-nowrap");
+  });
+
+  it("sets the meta straight under the time's line, which the '⋯' overhangs by exactly its excess", () => {
+    // On a phone the meta started 21px under the time's baseline, against
+    // 13px from the meta to the title: a 4px row gap under a 36px line whose
+    // height was the "⋯" square's, not the time's.
+    board(week({}, [entry()]));
+    const line = screen.getByText(META).parentElement as HTMLElement;
+    expect([...line.classList].filter((name) => /(^|:)gap-y-/.test(name))).toEqual([]);
+    const first = screen.getByText("7:00 AM").parentElement as HTMLElement;
+    const menu = screen.getByRole("button", { name: /^Move, copy, or remove / });
+    const square = px(token(menu, /^w-(\d+)$/));
+    const overhang = px(token(menu, /^-my-([\d.]+)$/));
+    expect(square - 2 * overhang).toBe(px(token(first, /^min-h-(\d+)$/)));
   });
 });
