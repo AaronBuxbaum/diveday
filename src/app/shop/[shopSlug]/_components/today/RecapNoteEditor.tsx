@@ -128,22 +128,28 @@ export function RecapNoteEditor({
           ink against 28px over the first. `sm:-mb-3` takes that excess out of
           the flow and the target reaches into the padding (24px, room for it
           and the 5px ring); open, the form follows the summary and the margin
-          goes. Below `sm` the stacked word and note fill the target. */}
-      <summary className="flex min-h-11 cursor-pointer list-none flex-wrap content-center items-center gap-x-3 gap-y-0.5 text-sm [&::-webkit-details-marker]:hidden sm:-mb-3 sm:flex-nowrap sm:group-open/recap:mb-0">
+          goes. Below `sm` the stacked word and note fill the target. The
+          excess is padding (`sm:py-3`), not the room round a centred line:
+          until `md` the note may take two lines, and 40px of note centred in
+          44 would have hung 10px of text into the card's padding. */}
+      <summary className="flex min-h-11 cursor-pointer list-none flex-wrap content-center items-center gap-x-3 gap-y-0.5 text-sm [&::-webkit-details-marker]:hidden sm:-mb-3 sm:flex-nowrap sm:py-3 sm:group-open/recap:mb-0">
         <span className={`${ledgerKindColumnClass} shrink-0 font-medium`}>
           {t("closeout.recap.summaryHeading")}
         </span>
         {/* The note itself at rest — what a passing glance needs is "is there
             one, and does it still read right", not the form. Clamped so a
             long note ellipses instead of pushing the row wider than the card:
-            one line from `sm`, **two on a phone** (K-150), because the same
+            one line from `md`, **two below it** (K-150), because the same
             span carries the status sentence, and its last words are when the
-            recap goes ("…in about 3 hours."), which one 316px line cut off.
+            recap goes ("…in about 3 hours."), which one 316px line cut off at
+            390. From `sm` the note sits beside the kind's column, about
+            W − 242px wide, and the es-ES sentence runs about 450px: one line
+            holds it only from about 700px, so two lines run to `md`.
             Hidden once open: the body below says the same thing at least once
             already (the paragraph when the recap already went out, "Recap
             sending"'s own line otherwise), and a passing-glance summary has
             nothing left to add beside its own open form. */}
-        <span className="min-w-0 text-muted group-open/recap:hidden max-sm:order-last max-sm:basis-full max-sm:line-clamp-2 sm:flex-1 sm:truncate">
+        <span className="min-w-0 text-muted group-open/recap:hidden max-sm:order-last max-sm:basis-full max-md:line-clamp-2 sm:flex-1 md:truncate">
           {recapSummary}
         </span>
         <DisclosureCaret className="ms-auto text-muted group-open/recap:rotate-90" />

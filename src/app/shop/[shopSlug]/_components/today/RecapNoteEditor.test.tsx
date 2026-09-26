@@ -156,16 +156,22 @@ describe("the recap row at rest", () => {
    * **The sentence keeps the words that are its meaning** (pixel-craft class 8,
    * K-150). One truncated line was sized for a staff-written note, and the
    * same span carries the status sentence, whose last words are when it goes:
-   * at 390 it ran 360px in a 316px box and lost "3 hours." to the ellipsis. The
-   * stacked phone summary has room for two lines; from `sm` the one line is
-   * wide enough.
+   * at 390 it ran 360px in a 316px box and lost "3 hours." to the ellipsis.
+   *
+   * Two lines until `md`, not `sm`. From `sm` the note sits beside the
+   * kind's 104px column (K-260), about W − 242px wide in the card, and the
+   * es-ES sentence ("…se enviará automáticamente en aproximadamente 45
+   * minutos.") runs about 450px: one line holds it only from about 700px, so a
+   * phone on its side lost the time again. From `md` (526px and up) one line
+   * is wide enough.
    */
-  it("gives the status sentence two lines on a phone rather than lose its time", () => {
+  it("gives the status sentence two lines until one holds it, rather than lose its time", () => {
     renderClosed();
     const note = screen.getByText(WAITING);
     expect(note.closest("summary")).not.toBeNull();
-    expect(note).toHaveClass("max-sm:line-clamp-2", "sm:truncate");
-    expect(note).not.toHaveClass("truncate");
+    expect(note).toHaveClass("max-md:line-clamp-2", "md:truncate");
+    expect(note.className).not.toMatch(/(?:^|\s)(?:sm:)?truncate(?:\s|$)/);
+    expect(note).not.toHaveClass("max-sm:line-clamp-2");
   });
 
   /**
@@ -202,11 +208,16 @@ describe("the recap row at rest", () => {
    * 44px and overhangs the padding by the excess (`sm:-mb-3`); open, the form
    * follows it and the margin goes. Below `sm` the stacked word and note fill
    * the target already.
+   *
+   * The excess is padding (`sm:py-3`), not the room left round a centred
+   * line: between `sm` and `md` the note may take two lines (K-150), and a
+   * 40px note centred in 44 would have hung 10px of text into the card's
+   * padding. Padded, the note's last line always ends where the margin does.
    */
   it("lets its target overhang the card's foot at rest, and only at rest", () => {
     const { container } = renderClosed();
     const summary = container.querySelector("summary");
-    expect(summary).toHaveClass("min-h-11", "sm:-mb-3", "sm:group-open/recap:mb-0");
+    expect(summary).toHaveClass("min-h-11", "sm:py-3", "sm:-mb-3", "sm:group-open/recap:mb-0");
     expect(summary?.className).not.toMatch(/(?:^|\s)-mb-/);
   });
 });
