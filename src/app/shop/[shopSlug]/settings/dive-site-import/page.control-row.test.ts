@@ -5,33 +5,29 @@ import { describe, expect, it } from "vitest";
 /**
  * A source read: this is a Server Component page behind `requireShopSurface`,
  * so this pins the source that decides the geometry; nothing here measures it.
+ * `CsvFileInput` is what draws the picker; its drawing is its own.
  */
 const SOURCE = readFileSync(join(import.meta.dirname, "page.tsx"), "utf8");
 const FORM = SOURCE.slice(SOURCE.indexOf("<form"), SOURCE.indexOf("</form>"));
 
 /**
- * **The file box stands level with "Import dive sites", under its own
- * caption.** The box was the stacked field's 44px and the submit the card
- * body's `md` 48px; bottom-aligned (`items-end`), the button stood 4px above
- * the box's top edge (`settings-dive-site-import`, 2026-09-25). The box takes
- * md's 48px, and its padding grows with it, so the native picker, which lays
- * its button at the top of the content box instead of centring it, still sits
- * centred.
- *
- * The caption was a hand-built `<label>` wrapping caption and box, which the
- * probe measured as one tall block of text beside the button
- * (`text-beside-control`). `Field` renders the caption as its own label above
- * the box.
+ * **The file picker is a button, drawn the way Settings draws one.** The form
+ * rendered a bare `<input type="file">` in a text-box outline, and preflight
+ * strips the picker's own button, so "Choose File No file chosen" read as
+ * plain text in a box, with no hover (K-350, ATLAS-3-15). Import gear history,
+ * one row above it in the same Settings group, renders `CsvFileInput`: a
+ * secondary `md` button in the shop's language, the same height as the
+ * "Import dive sites" submit beside it.
  */
 describe("the dive-site import form", () => {
-  it("draws the file box at md, the size of the submit beside it", () => {
-    expect(FORM).toContain('type="file"');
-    expect(FORM).toContain('className={controlClassFor("md")}');
-    expect(FORM).not.toContain("className={controlClass}");
+  it("picks its file with the shared CsvFileInput, not a bare file input", () => {
+    expect(FORM).toMatch(/<CsvFileInput\s[^>]*name="file"/);
+    expect(FORM).toMatch(/<CsvFileInput\s[^>]*required/);
+    expect(FORM).not.toContain('type="file"');
   });
 
-  it("captions the file box through Field, with no hand-built label wrapping it", () => {
-    expect(FORM).toMatch(/<Field label=\{t\("diveSites\.import\.file"\)\}[^>]*>\s*<input/);
-    expect(FORM).not.toContain("<label");
+  it("names the picker in the shop's language", () => {
+    expect(FORM).toContain('choose: t("diveSites.import.chooseFile")');
+    expect(FORM).toContain('chooseAnother: t("diveSites.import.chooseDifferentFile")');
   });
 });
