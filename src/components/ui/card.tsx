@@ -289,7 +289,13 @@ export function SectionCard({
       className={sectionCardClass({ padding, className })}
     >
       {hasHeader ? (
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        // `items-baseline`: the title and whatever sits beside it (a 44px
+        // button, a badge, a count) share the line text beside a control
+        // shares. Top-aligned, a 32px title line and a 44px button shared no
+        // line at all — "My departures" sat 5.5px above its button's centre
+        // (pixel-craft class 1). Once the actions wrap under the title on a
+        // phone they are a line of their own and nothing aligns across.
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
             {title != null ? (
               <Heading id={headingId} className={TITLE_CLASS[titleAs]}>
