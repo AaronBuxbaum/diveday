@@ -59,8 +59,13 @@ import type { RollCallRecordedTone } from "@/lib/manifests";
  * edge, and needs no second map.
  */
 export const ROLL_CALL_ROW_TONE = {
-  /** A stated "did not come back" — the loudest thing on the page, and the only ring. */
-  notBackAboard: "border-danger bg-danger/15 ring-1 ring-danger/40",
+  /**
+   * A stated "did not come back" — the loudest thing on the page, and the only
+   * ring. Inset, because the roll-call lists are `overflow-hidden` panels: an
+   * outer ring fell outside the clip on three sides and under the next row on
+   * the fourth, so it never showed at all (the pixel audit).
+   */
+  notBackAboard: "border-danger bg-danger/15 ring-1 ring-inset ring-danger/40",
   boarded: "border-success bg-success/20",
   notBoarded: "border-warning bg-warning/15",
   /** Carried forward from the dock rather than recorded here — same hue, quieter. */
