@@ -330,13 +330,17 @@ export function SiteFields({
               a tick box for a question nobody put is furniture. It follows the
               grid rather than sitting inside it because the grid's rows are a
               subgrid two tracks deep per field, and a checkbox belongs beside
-              its own words the way the nitrox box does. */}
+              its own words the way the nitrox box does. No margin of its
+              own: it is an item in the section's `gap-5` column, where a
+              margin adds to the gap, and `mt-4` stood it 36px under the
+              warning it answers, nearer the next section than its question
+              (K-424). */}
           {stationFar ? (
             <ChoiceRow
               name="tideStationConfirmed"
               type="checkbox"
               defaultChecked={stationConfirmed}
-              className="mt-4 text-sm font-medium"
+              className="text-sm font-medium"
             >
               {t("diveSites.form.tideStationConfirmedCheckbox")}
             </ChoiceRow>

@@ -293,3 +293,19 @@ describe("SiteFields — a stored photo", () => {
     }
   });
 });
+
+/**
+ * **The right-station box sits a field gap under the question it answers**
+ * (docs/design/pixel-craft.md, class 4; K-424). It carried `mt-4` as a direct
+ * item of the section's `gap-5` column, where a flex item's margin adds to the
+ * gap: 36px under the warning against the section's 20px field gap, and nearer
+ * the next section's rule than its own question.
+ */
+describe("SiteFields — where the right-station box sits (K-424)", () => {
+  it("takes the section's own gap and no margin of its own", () => {
+    renderFields(FAR, "meters", "en-US", STORED);
+    const row = document.querySelector('input[name="tideStationConfirmed"]')?.closest("label");
+    expect(row).not.toBeNull();
+    expect(row?.className).not.toMatch(/(^|\s)m[ty]?-\d/);
+  });
+});
