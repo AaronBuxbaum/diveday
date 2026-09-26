@@ -33,3 +33,19 @@ describe("the Print register's text doors", () => {
     expect(door).not.toContain("text-muted");
   });
 });
+
+/**
+ * **A status line never opens on its separator** (pixel-craft class 8). The
+ * line and its status were one string joined by " · ", an ordinary space each
+ * side of the dot, so at 390 the dock sign's second line began "· Never
+ * printed" (K-590). The dot is glued to the words before it by a no-break
+ * space, and the status is one unit.
+ */
+describe("the Print register's status line", () => {
+  it("glues the separator to the line and keeps the status whole", () => {
+    const row = SOURCE.slice(SOURCE.indexOf("function SheetRow"));
+    expect(row).not.toMatch(/\$\{line\} · \$\{meta\}/);
+    expect(row).toContain('{"\\u00a0· "}');
+    expect(row).toMatch(/<span className="whitespace-nowrap">\{meta\}<\/span>/);
+  });
+});

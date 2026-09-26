@@ -184,7 +184,18 @@ function SheetRow({
       <span className="block truncate font-medium">
         {name} <span className="font-normal text-muted">· {paper}</span>
       </span>
-      <span className="mt-0.5 block text-sm text-muted">{meta ? `${line} · ${meta}` : line}</span>
+      {/* The dot is glued to the line before it with a no-break space, and
+          the status is one unit: " · " with ordinary spaces let a wrapped
+          line open on "· Never printed" at 390 (K-590). */}
+      <span className="mt-0.5 block text-sm text-muted">
+        {line}
+        {meta ? (
+          <>
+            {"\u00a0· "}
+            <span className="whitespace-nowrap">{meta}</span>
+          </>
+        ) : null}
+      </span>
     </LedgerRow>
   );
 }
