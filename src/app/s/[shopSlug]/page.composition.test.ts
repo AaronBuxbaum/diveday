@@ -37,16 +37,6 @@ describe("the public schedule identity composition", () => {
 });
 
 /**
- * **The lens rail's place** — ADR 20260904-reef-all-the-way-down, decision 2
- * (issue #1162).
- *
- * `e2e/schedule-filters.spec.ts` and `e2e/trip-admission.spec.ts` address the
- * departures as the `ul` immediately after the filter form, across seven
- * assertions. An element sibling slipped between the two breaks every one of
- * them, and nothing about that failure names the rail. So the order is a
- * source-level assertion here, where a later edit meets it first.
- */
-/**
  * **One rung for the storefront's section heads** (docs/design/pixel-craft.md,
  * class 12). The off-season "Ask us for a day" is a `DateRequestForm` section,
  * which heads itself as a lead (24px) unless told otherwise; every other h2
@@ -64,6 +54,16 @@ describe("the off-season ask's heading", () => {
   });
 });
 
+/**
+ * **The lens rail's place** — ADR 20260904-reef-all-the-way-down, decision 2
+ * (issue #1162).
+ *
+ * `e2e/schedule-filters.spec.ts` and `e2e/trip-admission.spec.ts` address the
+ * departures as the `ul` immediately after the filter form, across seven
+ * assertions. An element sibling slipped between the two breaks every one of
+ * them, and nothing about that failure names the rail. So the order is a
+ * source-level assertion here, where a later edit meets it first.
+ */
 describe("the lens rail's place", () => {
   it("renders once, after the month nav and above the filter form", () => {
     const monthNav = positionOf('aria-label={t("schedule.monthNav")}');
