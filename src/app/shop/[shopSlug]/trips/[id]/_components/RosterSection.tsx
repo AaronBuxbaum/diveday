@@ -1145,10 +1145,13 @@ export function RosterSection({
         )}
 
         {/* One disclosure, at the top level of the row — writing a note about
-            a diver is desk work a staffer starts from here. */}
+            a diver is desk work a staffer starts from here. The last thing in
+            the row: its body keeps `pb-2` so, with the `li`'s `py-1`, the
+            form's button clears the row's rule by the form's own 12px step
+            (K-352: 4px, the `py-1` sized for the closed summary's own air). */}
         <CompactDisclosureRow
           className="mt-3"
-          bodyClassName="mt-2"
+          bodyClassName="mt-2 pb-2"
           label={
             // A zero count is the absence of information formatted as
             // information (principle 9) — with no notes the disclosure is

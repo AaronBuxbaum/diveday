@@ -761,4 +761,21 @@ describe("the roster's row geometry", () => {
     expect(resend.className).toBe(buttonClass({ variant: "danger", size: "sm" }));
     for (const control of [send, resend]) expect(control).not.toHaveClass("rounded-full");
   });
+
+  /**
+   * K-352: the notes row is the last thing in a row with open work, and its
+   * body had no padding of its own below the form, so the bordered "Add
+   * private note" button ended 4px above the row's rule: the `li`'s `py-1`,
+   * which was sized for the 44px summary's own air. The body keeps 8px, so
+   * the button clears the rule by the form's own 12px step.
+   */
+  it("leaves the notes form its own room above the row's rule", () => {
+    const { container } = renderRoster(fixtures);
+
+    const row = container.querySelector(`#booking-${blocked.booking.id}`);
+    const notes = within(row as HTMLElement)
+      .getByText("Add a private note")
+      .closest("details");
+    expect(notes?.lastElementChild).toHaveClass("mt-2", "pb-2");
+  });
 });
