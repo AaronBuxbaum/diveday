@@ -2,9 +2,12 @@
 import { cleanup, render } from "@testing-library/react";
 import type { ComponentType } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { BookingStoryRow } from "@/components/person/rows";
 import { ReviewLedger } from "@/components/ShopReviews";
+import { buttonClass } from "@/components/ui/button";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import PublicBoatLoading from "./s/[shopSlug]/boats/[tripId]/loading";
 import PublicReviewsLoading from "./s/[shopSlug]/reviews/loading";
 import PublicSiteLoading from "./s/[shopSlug]/sites/[siteSlug]/loading";
@@ -12,6 +15,8 @@ import BookingNewLoading from "./shop/[shopSlug]/bookings/new/loading";
 import CheckInLoading from "./shop/[shopSlug]/check-in/loading";
 import CoursesLoading from "./shop/[shopSlug]/courses/loading";
 import DiveSitesLoading from "./shop/[shopSlug]/dive-sites/loading";
+import { DiverFileGroupDisclosure } from "./shop/[shopSlug]/divers/[personId]/_components/DiverFileGroupDisclosure";
+import DiverProfileLoading from "./shop/[shopSlug]/divers/[personId]/loading";
 import DiversLoading from "./shop/[shopSlug]/divers/loading";
 import GearLoading from "./shop/[shopSlug]/gear/loading";
 import InboxLoading from "./shop/[shopSlug]/inbox/loading";
@@ -41,6 +46,7 @@ afterEach(cleanup);
 const SKELETONS: [name: string, loadedBy: string, Skeleton: ComponentType][] = [
   ["orders", "OrdersLedger", OrdersLoading],
   ["divers", "DiverList", DiversLoading],
+  ["diver record", "DiverStory's BookingStoryRow", DiverProfileLoading],
   ["gear", "GearRegisterLedger", GearLoading],
   ["courses", "CourseRoster", CoursesLoading],
   ["inbox", "InboxRow", InboxLoading],
@@ -129,6 +135,69 @@ describe("the public reviews' rows", () => {
     expect(heights(quote)).toBe("mt-1.5");
     expect([...quote.children].map(heights)).toEqual(["h-6", "h-6 sm:hidden"]);
     expect(heights(byline)).toBe("mt-1.5 h-5");
+  });
+});
+
+/**
+ * **A diver's record lands on its skeleton's shapes** (pixel-craft class 11).
+ * The skeleton still drew the record before its file became one door per
+ * group: four label-over-card blocks where the page renders a column of 50px
+ * doors, 44px act bars under 48px buttons, 56px story rows under 69px ones,
+ * and a 20px meta line where the contact links are 44px targets — so
+ * everything under the name dropped about 28px when the record arrived, and
+ * the file changed shape entirely.
+ */
+describe("the diver record's skeleton", () => {
+  const box = (element: Element | null | undefined, pattern: RegExp) =>
+    [...(element?.classList ?? [])].filter((token) => pattern.test(token)).sort();
+
+  it("draws the file as the doors the record renders, and no card", () => {
+    const loaded = render(
+      <DiverFileGroupDisclosure id="notes" label="Diver notes" summary="1 note">
+        <p>Note body</p>
+      </DiverFileGroupDisclosure>,
+    ).container.querySelector("summary");
+    const door = /^(?:border-y|border-border|p[ytb]-\d)/;
+    expect(box(loaded, door)).toEqual(["border-border", "border-y", "py-3"]);
+    cleanup();
+
+    const { container } = render(<DiverProfileLoading />);
+    expect(container.querySelectorAll(".rounded-panel")).toHaveLength(0);
+    const doors = container.querySelectorAll(".border-y");
+    expect(doors).toHaveLength(7);
+    for (const skeleton of doors) expect(box(skeleton, door)).toEqual(box(loaded, door));
+  });
+
+  it("draws the acts at the md buttons' 48px", () => {
+    expect(buttonClass().split(" ")).toContain("min-h-12");
+    const { container } = render(<DiverProfileLoading />);
+    const acts = container.querySelectorAll(".rounded-lg");
+    expect(acts).toHaveLength(2);
+    for (const act of acts) expect(act).toHaveClass("h-12");
+  });
+
+  it("draws the story's rows at the loaded rows' inset", () => {
+    const loaded = render(
+      <ul>
+        <BookingStoryRow
+          t={staffTranslator("en-US")}
+          date="Tue, Jul 21"
+          title="Two-Tank Reef"
+          meta="2:30 PM"
+          href="/shop/blue-mantis/trips/trip-1"
+        />
+      </ul>,
+    ).container.querySelector("li");
+    const inset = /^p[ytb]-/;
+    expect(box(loaded, inset)).toEqual(["py-3"]);
+    cleanup();
+
+    const { container } = render(<DiverProfileLoading />);
+    const rows = [...container.querySelectorAll("*")].filter((element) =>
+      element.classList.contains("last:border-b"),
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(box(row, inset)).toEqual(box(loaded, inset));
   });
 });
 
