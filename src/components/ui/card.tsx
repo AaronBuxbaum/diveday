@@ -156,9 +156,19 @@ export function sectionCardClass({
  * `p-5` with no `sm:` step and no bed, the second at the 12px inset radius:
  * on a phone their words started 4px right of every card above and below
  * them, and the demand panel's corners were visibly tighter (pixel-craft
- * classes 3 and 12).
+ * classes 3 and 12). `card.test.tsx` refuses a tone panel hand-rolled on the
+ * panel radius, and names the few that are deliberately something else.
  */
 export const TONE_PANEL_CLASS = "rounded-panel border p-4 shadow-bed sm:p-5";
+
+/**
+ * **The `lg` twin**: the same panel on the inset of a card a person works
+ * inside (`padding="lg"`), for a tone panel among such cards — Today's
+ * stations, the public trip page's booking card. Hand-rolled, those panels
+ * wore that inset with no bed, or `p-5` with no step, which set their words
+ * 4px inside the card's from `sm` up (pixel-craft classes 3 and 12).
+ */
+export const TONE_PANEL_LG_CLASS = "rounded-panel border p-5 shadow-bed sm:p-6";
 
 /**
  * **A note carved into a card** — the first of the "not a section card"

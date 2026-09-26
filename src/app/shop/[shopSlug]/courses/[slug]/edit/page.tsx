@@ -11,6 +11,7 @@ import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovableP
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import {
@@ -264,7 +265,7 @@ export default async function EditCoursePage({
 
       {noticeText ? <ShopNotice>{noticeText}</ShopNotice> : null}
       {templateUpdate ? (
-        <section className="mt-6 rounded-panel border border-primary/30 bg-primary/5 p-4 sm:p-5">
+        <section className={`mt-6 ${TONE_PANEL_CLASS} border-primary/30 bg-primary/5`}>
           <h2 className="text-base font-semibold">{t("courses.edit.templateUpdates.title")}</h2>
           <p className="mt-1 text-sm text-muted">
             {templateUpdate.baselineUnavailable

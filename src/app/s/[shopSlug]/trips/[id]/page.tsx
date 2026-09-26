@@ -8,6 +8,7 @@ import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { buttonClass } from "@/components/ui/button";
+import { TONE_PANEL_LG_CLASS } from "@/components/ui/card";
 import { ledgerRowRoomClass } from "@/components/ui/ledger";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { readKnownDiver } from "@/db/booking-handoff";
@@ -671,11 +672,13 @@ export default async function TripDetailPage({
         {/* The one warning panel this page ever wears — the same shape as the
             conditions-changed panel below, on purpose. Two amber boxes with
             different radii and border weights read as two different systems
-            warning about one weather call. */}
+            warning about one weather call. Both are the booking card in a
+            tone (`TONE_PANEL_LG_CLASS`): at a hand-rolled `p-5` their words
+            sat 4px inside the card's from `sm` up. */}
         {trip.conditionsHold ? (
           <div
             role="status"
-            className="mt-5 rounded-panel border border-warning/40 bg-warning/10 p-5"
+            className={`mt-5 ${TONE_PANEL_LG_CLASS} border-warning/40 bg-warning/10`}
           >
             <h2 className="font-semibold">{t("trip.conditionsHoldHeading")}</h2>
             <p className="mt-1 text-sm text-muted">{t("trip.conditionsHoldBody")}</p>
@@ -808,7 +811,7 @@ export default async function TripDetailPage({
             confirmed.booking.conditionsBriefedAt,
           ) ? (
             <section
-              className="rounded-panel border border-warning/40 bg-warning/10 p-5"
+              className={`${TONE_PANEL_LG_CLASS} border-warning/40 bg-warning/10`}
               role="status"
             >
               <h2 className="font-semibold">{t("trip.conditionsChangedHeading")}</h2>

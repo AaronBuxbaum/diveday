@@ -10,6 +10,7 @@ import { SiteMark } from "@/components/illustration/SiteMark";
 import { SubmitButton } from "@/components/SubmitButton";
 import { sendHoldCopy } from "@/components/send-hold-copy";
 import { buttonClass } from "@/components/ui/button";
+import { TONE_PANEL_LG_CLASS } from "@/components/ui/card";
 import { GroupLabel, LedgerGroup, LedgerRow, type LedgerRowKindTone } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -808,7 +809,9 @@ export function DaySpine({
       {firstThing ? (
         <section
           aria-labelledby="first-thing-label"
-          className="flex flex-col gap-4 rounded-panel border border-danger/30 bg-surface p-5 shadow-bed sm:flex-row sm:items-center sm:gap-5 sm:px-6"
+          // The stations' `lg` inset: it was `p-5 sm:px-6`, 4px shallower
+          // than the station under it from `sm` up.
+          className={`flex flex-col gap-4 ${TONE_PANEL_LG_CLASS} border-danger/30 bg-surface sm:flex-row sm:items-center sm:gap-5`}
         >
           <span
             aria-hidden="true"

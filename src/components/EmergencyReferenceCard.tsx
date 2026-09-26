@@ -1,3 +1,4 @@
+import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { type EmergencyReference, hasEmergencyReference } from "@/lib/emergency-reference";
 
 /**
@@ -45,7 +46,7 @@ export function EmergencyReferenceCard({
     // in words (design principle 6).
     <section
       aria-labelledby={headingId}
-      className={`rounded-panel border border-danger/40 bg-danger/5 p-4 sm:p-5 ${className}`}
+      className={`${TONE_PANEL_CLASS} border-danger/40 bg-danger/5 ${className}`}
     >
       <h2 id={headingId} className="text-base font-semibold text-danger-strong">
         {copy.heading}

@@ -681,6 +681,7 @@
       "trips.spec.ts"
     ],
     "visual": [
+      "trip-cancelled",
       "trip-crew-clash",
       "trip-manage",
       "trip-manage-course-requirements",

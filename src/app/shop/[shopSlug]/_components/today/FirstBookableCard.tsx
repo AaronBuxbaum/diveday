@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Copyable } from "@/components/Copyable";
 import { tapTargetLinkClass } from "@/components/ui/button";
+import { TONE_PANEL_LG_CLASS } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 export type FirstBookableCardCopy = {
@@ -40,7 +41,8 @@ export function FirstBookableCard({
     // station as the stations sit from each other (K-316).
     <section
       aria-labelledby="first-bookable-heading"
-      className="mb-10 rounded-panel border border-success/30 bg-success/5 p-5 sm:p-6"
+      // The stations' `lg` inset, on the bed they sit on.
+      className={`mb-10 ${TONE_PANEL_LG_CLASS} border-success/30 bg-success/5`}
     >
       <h2 id="first-bookable-heading" className={SECTION_TITLE_CLASS}>
         {copy.heading}

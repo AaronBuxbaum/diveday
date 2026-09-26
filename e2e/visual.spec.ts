@@ -41,8 +41,8 @@ import {
 import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
 
 /**
- * Visual regression coverage. Two hundred and fifty-three key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 1,012 screenshots per run (see
+ * Visual regression coverage. Two hundred and fifty-four key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 1,016 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -67,10 +67,10 @@ import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
  * `TABLET_SURFACES` adds 16 — eight surfaces a shop runs on a tablet get a
  * third, portrait width, at one screenshot per scheme rather than two — and
  * `TV_SURFACES` adds 2 for the one board a lobby screen shows. That brings the
- * run to 1,034 screenshots: the extra widths are a 2% addition, not the 50% a
+ * run to 1,038 screenshots: the extra widths are a 2% addition, not the 50% a
  * third viewport applied to every surface would have cost.
  *
- * Three of the 253 are the same surface twice, in a second language: see
+ * Three of the 254 are the same surface twice, in a second language: see
  * {@link SPANISH}. A Spanish sibling takes the standard pair and keys its own
  * baseline off `<name>-es-ES`, so it is a new item in the report rather than a
  * change to the English one.
@@ -5553,6 +5553,26 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripFromBoard(page, MINIMUM_SEATS_TRIP);
         await page.getByRole("heading", { name: /divers short of the/ }).waitFor();
         await capture(page, "trip-minimum-seats", scheme);
+      });
+
+      /**
+       * **A cancelled departure, from the staff side.** The band that says so
+       * and offers Reinstate and the cascade is a tone panel on the card's
+       * geometry (`TONE_PANEL_CLASS`), and nothing had ever photographed it:
+       * no seeded departure is cancelled, so neither the visual run nor the
+       * pixel probe had looked at it. Reached the way a shop reaches it, by
+       * calling a blow-out on the seeded reef trip (safe: the per-test reset
+       * restores it), then opening the departure.
+       */
+      test(`a cancelled departure shows its reinstate band (${scheme})`, async ({ page }) => {
+        const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
+        await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+        await page.getByRole("button", { name: "Call the blow-out" }).click();
+        await page.getByRole("heading", { level: 1, name: "Blow-out cascade" }).waitFor();
+        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        await page.getByRole("button", { name: "Reinstate trip" }).waitFor();
+        await page.getByRole("link", { name: "View the blow-out cascade" }).waitFor();
+        await capture(page, "trip-cancelled", scheme);
       });
 
       test(`a trip's Trip roster renders true to the design (${scheme})`, async ({ page }) => {

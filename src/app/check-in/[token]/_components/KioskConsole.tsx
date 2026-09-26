@@ -136,6 +136,9 @@ export function KioskConsole({ token, copy }: { token: string; copy: KioskCopy }
       {shown.status === "idle" ? null : (
         <div
           role="status"
+          // Not `TONE_PANEL_CLASS`: the kiosk's answer, set at the kiosk's
+          // 24-32px type and read from a step back, so its inset is that
+          // scale's 24px, not a staff card's (card.test.tsx names it).
           className={`mt-8 rounded-panel border p-6 ${
             shown.status === "ready"
               ? "border-success/30 bg-success/10"

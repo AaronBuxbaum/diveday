@@ -13,6 +13,7 @@ import {
   SectionCard,
   sectionCardClass,
   TONE_PANEL_CLASS,
+  TONE_PANEL_LG_CLASS,
 } from "./card";
 
 afterEach(cleanup);
@@ -220,6 +221,73 @@ describe("TONE_PANEL_CLASS", () => {
     }
     expect(TONE_PANEL_CLASS).not.toMatch(
       /\b(border|bg|text)-(border|surface|warning|danger|success|primary)/,
+    );
+  });
+
+  /**
+   * The `lg` twin, for a tone panel among cards a person works inside: Today's
+   * stations and the public trip page's booking card are `padding="lg"`, and
+   * the tone panels beside them hand-rolled that inset with no bed, or at
+   * `p-5` with no step, 4px inside the card's words from `sm` up.
+   */
+  it("has an lg twin on the lg card's inset, and no colour", () => {
+    const geometry = (classes: string) =>
+      classes
+        .split(" ")
+        .filter((token) => !/^(border-border|bg-surface)$/.test(token))
+        .sort();
+    expect(geometry(TONE_PANEL_LG_CLASS)).toEqual(geometry(sectionCardClass({ padding: "lg" })));
+    expect(TONE_PANEL_LG_CLASS).not.toMatch(
+      /\b(border|bg|text)-(border|surface|warning|danger|success|primary)/,
+    );
+  });
+});
+
+/**
+ * The tree half: a panel that carries a tone spells the panel radius through
+ * `TONE_PANEL_CLASS` (or its `lg` twin), so a literal class string holding
+ * `rounded-panel` beside a tone border is one hand-rolling it — at `p-5` with
+ * no step, with no bed, the drift the roster's bands and a dozen others had.
+ * The panels below are deliberately something else; each says why, and each
+ * must still be here, so the list cannot outlive what it excuses.
+ */
+describe("every tone panel wears the card's geometry", () => {
+  const NOT_A_CARD_IN_A_TONE: Record<string, string> = {
+    "app/check-in/[token]/_components/KioskConsole.tsx":
+      "the kiosk's answer, at the kiosk's 24-32px type read from a step back: its inset is that scale's",
+    "app/shop/[shopSlug]/trips/[id]/manifest/_components/SummaryPanel.tsx":
+      "pinned under the chrome and floating over the list, with an overlay's own lift",
+    "components/ui/disclosure.tsx":
+      "DangerDisclosure: a shell whose face and body pad themselves (a card's padding none)",
+    "app/switching/_components/guide.tsx": "a marketing page: it keeps its own scale",
+    "app/switching/[competitor]/page.tsx": "a marketing page: it keeps its own scale",
+    "components/SwitchingConcierge.tsx": "a marketing page: it keeps its own scale",
+  };
+
+  function files(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) return files(full);
+      return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
+    });
+  }
+
+  const handRolled = files(SRC_DIR).flatMap((file) => {
+    const strings = readFileSync(file, "utf8").match(/"[^"\n]*"|`[^`]*`/g) ?? [];
+    const hit = strings.some(
+      (text) =>
+        /\brounded-panel\b/.test(text) && /\bborder-(danger|warning|success|primary)\//.test(text),
+    );
+    return hit ? [relative(SRC_DIR, file).split(/[\\/]/).join("/")] : [];
+  });
+
+  it("finds none hand-rolled", () => {
+    expect(handRolled.filter((file) => !(file in NOT_A_CARD_IN_A_TONE))).toEqual([]);
+  });
+
+  it("excuses only panels that are still there", () => {
+    expect(Object.keys(NOT_A_CARD_IN_A_TONE).filter((file) => !handRolled.includes(file))).toEqual(
+      [],
     );
   });
 });

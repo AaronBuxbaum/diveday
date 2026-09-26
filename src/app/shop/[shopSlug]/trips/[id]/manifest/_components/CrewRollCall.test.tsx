@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { RollCallCheckpoint, RollCallRecord, TripManifest } from "@/lib/manifests";
 import { CrewRollCall } from "./CrewRollCall";
@@ -90,6 +91,36 @@ function dangerToned(container: HTMLElement) {
 function control(row: HTMLElement, name: string) {
   return [...row.querySelectorAll("button")].find((button) => button.textContent?.trim() === name);
 }
+
+/**
+ * **No crew is a card in a tone, not a box of its own shape.** With nobody
+ * assigned, the warning panel stands where the crew list's card would, under
+ * the same heading — so it takes that card's geometry (`TONE_PANEL_CLASS`):
+ * it was a hand-rolled `p-4` with no `sm:` step and no bed, 4px inside every
+ * card's words from `sm` up (pixel-craft class 3). What it says, and the door
+ * to fixing it, do not change: the checkpoint's crew half stays open until a
+ * crew member is on the departure.
+ */
+describe("a departure with no crew", () => {
+  it("says so on the card's own geometry, with the way to fix it", () => {
+    renderCrew({ members: [] });
+    const note = screen.getByText(t("manifest.noCrew"));
+    const panel = note.parentElement as HTMLElement;
+    expect(panel).toHaveClass(...TONE_PANEL_CLASS.split(" "), "border-warning/50", "bg-warning/10");
+    const fix = within(panel).getByRole("link", { name: t("manifest.addCrewToTrip") });
+    expect(fix).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/00000000-0000-4000-8000-0000000000ff#crew",
+    );
+    expect(screen.queryByRole("list")).toBeNull();
+  });
+
+  it("draws no warning panel once anyone is crewing", () => {
+    renderCrew({ members: [crew()] });
+    expect(screen.queryByText(t("manifest.noCrew"))).toBeNull();
+    expect(screen.queryByRole("link", { name: t("manifest.addCrewToTrip") })).toBeNull();
+  });
+});
 
 describe("a crew row obeys the diver row's gestures", () => {
   it("carries the affirmative tap and hides the exception behind the person's panel", () => {

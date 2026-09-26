@@ -8,7 +8,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { SectionCard, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DangerDisclosure } from "@/components/ui/disclosure";
 import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -474,7 +474,7 @@ export default async function EditDiveSitePage({
         />
       ) : null}
       {templateUpdate ? (
-        <section className="mt-6 rounded-panel border border-primary/30 bg-primary/5 p-4 sm:p-5">
+        <section className={`mt-6 ${TONE_PANEL_CLASS} border-primary/30 bg-primary/5`}>
           <h2 className="text-base font-semibold">{t("diveSites.edit.templateUpdates.title")}</h2>
           <p className="mt-1 text-sm text-muted">
             {t("diveSites.edit.templateUpdates.description", {

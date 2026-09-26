@@ -1,6 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { restorePersonAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
@@ -46,7 +47,9 @@ export function RestoreDiver({
     // row, which is also the gap from this panel down to the ledger.
     <section
       aria-labelledby="removed-heading"
-      className="mt-8 scroll-mt-24 rounded-panel border border-warning/40 bg-warning/5 p-5"
+      // A card in a tone: at a hand-rolled `p-5` with no bed its words sat
+      // 4px inside every card's on the record at a phone's width.
+      className={`mt-8 scroll-mt-24 ${TONE_PANEL_CLASS} border-warning/40 bg-warning/5`}
     >
       <div className="flex flex-wrap items-center gap-3">
         <Badge tone="warning">{t("divers.removed.badge")}</Badge>

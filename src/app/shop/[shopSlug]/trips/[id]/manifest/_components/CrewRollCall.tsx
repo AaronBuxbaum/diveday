@@ -6,7 +6,7 @@ import type {
 import { RollCallMark } from "@/components/RollCallMark";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
+import { sectionCardClass, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
@@ -140,7 +140,10 @@ export function CrewRollCall({
         // "Crew" heading with blank space under it on exactly the departures
         // whose crew half is open (dive-domain review 20260804). Only the
         // button is screen-only — a link is not an action on paper.
-        <div className="mt-3 rounded-panel border border-warning/50 bg-warning/10 p-4">
+        // It stands where the crew list's card would, under the same heading,
+        // so it is that card in a tone (`TONE_PANEL_CLASS`), not a box of its
+        // own shape: a hand-rolled `p-4` with no step and no bed.
+        <div className={`mt-3 ${TONE_PANEL_CLASS} border-warning/50 bg-warning/10`}>
           <p className="max-w-prose text-sm">{t("manifest.noCrew")}</p>
           <Link
             href={`/shop/${shopSlug}/trips/${tripId}#crew`}
