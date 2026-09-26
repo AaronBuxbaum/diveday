@@ -284,31 +284,29 @@ async function CatalogView({
   const locationIsProvided = !!(shop.addressStreet && shop.addressLocality);
 
   if (!locationIsProvided) {
+    // The catalog's own header over the shared empty state, the one the
+    // library draws a click away (K-419). This was a bare "Back to library"
+    // link over a hand-rolled dashed box: a second empty panel, squarer and
+    // fainter than the first, filled with a card colour no token defines.
     return (
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <Link
-          href={back}
-          scroll={false}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          {t("diveSites.backToLibrary")}
-        </Link>
-        <div className="mt-8 flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12 text-center bg-card">
-          <h2 className={`${SECTION_TITLE_CLASS} text-foreground`}>
-            {t("diveSites.catalog.locationRequiredTitle")}
-          </h2>
-          <p className="mt-2 text-sm text-muted max-w-md">
-            {t("diveSites.catalog.locationRequiredDescription")}
-          </p>
-          <div className="mt-6">
+        <ShopPageHeader
+          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
+          eyebrowHref={back}
+          title={t("diveSites.catalog.title")}
+        />
+        <EmptyState
+          title={t("diveSites.catalog.locationRequiredTitle")}
+          body={t("diveSites.catalog.locationRequiredDescription")}
+          action={
             <Link
               href={`${shopPath(shopSlug, "settings")}?section=address`}
-              className={buttonClass({ variant: "primary" })}
+              className={buttonClass()}
             >
               {t("diveSites.catalog.goToSettings")}
             </Link>
-          </div>
-        </div>
+          }
+        />
       </main>
     );
   }
