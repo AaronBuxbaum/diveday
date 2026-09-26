@@ -5,7 +5,7 @@ import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
-import { controlClassFor } from "@/components/ui/form";
+import { DateField } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
   canPersonViewShopReports,
@@ -576,16 +576,15 @@ export default async function ReportsPage({
             <label htmlFor="report-month" className="sr-only">
               {t("reports.monthPicker.label")}
             </label>
-            <div className="w-44">
-              <input
-                id="report-month"
-                type="month"
-                name="month"
-                defaultValue={monthKey(current)}
-                min={monthKey(floorMonth)}
-                className={controlClassFor("md")}
-              />
-            </div>
+            <DateField
+              id="report-month"
+              type="month"
+              name="month"
+              defaultValue={monthKey(current)}
+              min={monthKey(floorMonth)}
+              size="md"
+              wrapperClassName="w-44"
+            />
             <button type="submit" className={buttonClass({ variant: "secondary" })}>
               {t("reports.monthPicker.go")}
             </button>

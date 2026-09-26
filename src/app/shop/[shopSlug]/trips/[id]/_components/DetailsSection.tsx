@@ -288,22 +288,15 @@ export function DetailsSection({
           <DateField name="date" required defaultValue={toDateInputValue(startWall)} />
         </Field>
         <Field label={t("trips.details.departsLabel")}>
-          <input
+          <DateField
             name="startTime"
             type="time"
             required
             defaultValue={toTimeInputValue(startWall)}
-            className={controlClass}
           />
         </Field>
         <Field label={t("trips.details.returnsLabel")}>
-          <input
-            name="endTime"
-            type="time"
-            required
-            defaultValue={toTimeInputValue(endWall)}
-            className={controlClass}
-          />
+          <DateField name="endTime" type="time" required defaultValue={toTimeInputValue(endWall)} />
         </Field>
       </FieldGrid>
       <FieldGrid columns={3}>

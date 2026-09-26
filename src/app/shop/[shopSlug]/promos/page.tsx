@@ -14,7 +14,14 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+import {
+  controlClass,
+  DateField,
+  Field,
+  FieldActions,
+  FieldGrid,
+  FormStatus,
+} from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/ledger";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { listShopPromoCodes } from "@/db/shop-promos";
@@ -472,10 +479,10 @@ export default async function PromosPage({
                 hint={t("promos.fields.startsHint")}
                 error={fieldError("startsAt")}
               >
-                <input name="startsAt" type="datetime-local" className={controlClass} />
+                <DateField name="startsAt" type="datetime-local" />
               </Field>
               <Field label={t("promos.fields.expires")} hint={t("promos.fields.expiresHint")}>
-                <input name="expiresAt" type="datetime-local" className={controlClass} />
+                <DateField name="expiresAt" type="datetime-local" />
               </Field>
               {/* The human zone name, never the raw IANA id — "America/New_York"
               with its underscore is implementation surfacing (principle 4). */}

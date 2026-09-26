@@ -476,22 +476,10 @@ export default async function StaffingPage({
                   <DateField name="date" required defaultValue={defaultShiftDate} />
                 </Field>
                 <Field label={t("staffing.addShift.starts")}>
-                  <input
-                    name="startTime"
-                    type="time"
-                    required
-                    defaultValue="07:00"
-                    className={controlClass}
-                  />
+                  <DateField name="startTime" type="time" required defaultValue="07:00" />
                 </Field>
                 <Field label={t("staffing.addShift.ends")}>
-                  <input
-                    name="endTime"
-                    type="time"
-                    required
-                    defaultValue="15:00"
-                    className={controlClass}
-                  />
+                  <DateField name="endTime" type="time" required defaultValue="15:00" />
                 </Field>
                 <Field label={t("staffing.addShift.note")} hint={t("staffing.addShift.noteHint")}>
                   <input

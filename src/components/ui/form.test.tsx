@@ -208,6 +208,41 @@ describe("DateField", () => {
     expect(glyph).toHaveClass("pointer-events-none");
   });
 
+  /**
+   * **Every temporal box wears the house glyph, not only a date.** A month,
+   * time or date-and-time box kept the platform's solid black indicator,
+   * further in than the date box's muted outline beside it, and iOS paints
+   * nothing at all in an empty one (K-54, issue #1415). A time takes a clock.
+   */
+  it("draws the house glyph for a month, a time and a date-and-time as well", () => {
+    for (const type of ["month", "time", "datetime-local"] as const) {
+      const { container, unmount } = render(<DateField type={type} name="when" />);
+      const box = container.querySelector("input");
+      expect(box, type).toHaveAttribute("type", type);
+      expect(box?.className, type).toContain("[&::-webkit-calendar-picker-indicator]:opacity-0");
+      const glyph = container.querySelector("svg");
+      expect(glyph, type).toHaveAttribute("aria-hidden", "true");
+      // A clock for a time, a calendar for anything with a day or a month in it.
+      expect(Boolean(glyph?.querySelector("circle")), type).toBe(type === "time");
+      unmount();
+    }
+    const { container } = render(<DateField name="on" />);
+    expect(container.querySelector("input")).toHaveAttribute("type", "date");
+  });
+
+  it("stands at md's 48px beside an md button, and at the field's 44px anywhere else", () => {
+    const { container } = render(
+      <>
+        <DateField type="month" name="month" size="md" />
+        <DateField name="on" />
+      </>,
+    );
+    const [beside, stacked] = container.querySelectorAll("input");
+    expect(beside).toHaveClass("min-h-12", "pe-9");
+    expect(beside).not.toHaveClass("min-h-11");
+    expect(stacked).toHaveClass("min-h-11");
+  });
+
   it("passes every native prop through, including a callback ref", () => {
     // The schedule builder focuses a date box on mount; a wrapper that ate the
     // ref would break that with nothing failing.
@@ -1144,6 +1179,22 @@ describe("source sweeps", () => {
       for (const { index, text } of openingTags(source, "legend")) {
         if (/\bfloat-/.test(text)) continue;
         if (/\bmb-/.test(text)) offenders.push(`${file}:${lineOf(source, index)} ${text}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * A temporal box is a `DateField` (K-54): spelled bare, it wears the
+   * platform's indicator and, on iOS, nothing at all when empty.
+   */
+  it("enters a month, a time or a date-and-time through DateField, never a bare input", () => {
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      if (file === "src/components/ui/form.tsx") continue;
+      for (const { index, text } of openingTags(source, "input")) {
+        if (/type="(date|month|time|datetime-local|week)"/.test(text))
+          offenders.push(`${file}:${lineOf(source, index)}`);
       }
     }
     expect(offenders).toEqual([]);

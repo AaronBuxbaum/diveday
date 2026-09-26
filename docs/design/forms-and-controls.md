@@ -967,6 +967,8 @@ and "Add diver" is the band's one primary again.
 
 A date is entered through **`DateField`** in `src/components/ui/form.tsx`, never a bare `<input type="date">`. It is a `type="date"` control wearing `controlClass` with a calendar glyph in its trailing inset, and it goes inside a `Field` like any other control.
 
+So are a month, a time and a date-and-time: `type="month" | "time" | "datetime-local"` (a time draws a clock). Spelled bare they kept the platform's solid black indicator beside a date box's muted outline, and iOS paints nothing in an empty one; `form.test.tsx` refuses a bare temporal `<input>` anywhere else. `size="md"` stands one on a line with `md` buttons, as `controlClassFor("md")` does.
+
 ```tsx
 import { DateField, Field } from "@/components/ui/form";
 

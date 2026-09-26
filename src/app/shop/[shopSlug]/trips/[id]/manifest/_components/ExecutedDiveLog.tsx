@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ExecutedDive } from "@/db/schema";
 import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
@@ -366,24 +366,22 @@ function ExecutedDiveForm({
           label={labels.enteredAt}
           error={timesError ? labels.refusals.times_transposed : undefined}
         >
-          <input
+          <DateField
             name="enteredAt"
             type="datetime-local"
             value={enteredAt}
             onChange={(event) => setEnteredAt(event.target.value)}
-            className={controlClass}
           />
         </Field>
         <Field
           label={labels.exitedAt}
           error={timesError ? labels.refusals.times_transposed : undefined}
         >
-          <input
+          <DateField
             name="exitedAt"
             type="datetime-local"
             value={exitedAt}
             onChange={(event) => setExitedAt(event.target.value)}
-            className={controlClass}
           />
         </Field>
         <Field label={labels.visibility}>

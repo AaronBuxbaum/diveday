@@ -186,23 +186,37 @@ export function SearchField({
  * Every native prop passes through — `min`/`max`, `value`/`onChange`,
  * `defaultValue`, and a callback `ref` (the schedule builder focuses one on
  * mount) — so a surface never has a reason to reach past this.
+ *
+ * **Every temporal box, not only a date.** `type` takes `month`, `time` and
+ * `datetime-local` too: spelled bare, those kept the platform's solid black
+ * indicator, further in than a date box's muted outline on the same form,
+ * and an empty one on iOS showed nothing at all (the pixel probe's state
+ * atlas, K-54). A time draws a clock; the rest draw the calendar. `size` is
+ * `controlClassFor`'s: `md` for a box on a line with `md` buttons, as the
+ * reports month picker's is between its arrows.
  */
 export function DateField({
+  type = "date",
+  size = "field",
   className = "",
   wrapperClassName = "",
   ...input
 }: {
+  /** Which temporal control. Default `date`. */
+  type?: TemporalType;
+  /** The row's size: `md` beside an `md` button, the default anywhere else. */
+  size?: ControlSize;
   /** Extra classes on the input itself, e.g. `tabular-nums`. */
   className?: string;
   /** Sizes the wrapper; `controlClass` already sets `w-full` on the input. */
   wrapperClassName?: string;
-} & Omit<ComponentPropsWithRef<"input">, "type" | "className">) {
+} & Omit<ComponentPropsWithRef<"input">, "type" | "className" | "size">) {
   return (
     <div className={`relative ${wrapperClassName}`.trim()}>
       <input
         {...input}
-        type="date"
-        className={`${controlClass} pe-9 [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`.trim()}
+        type={type}
+        className={`${controlClassFor(size)} pe-9 [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`.trim()}
       />
       {/* Inert and aria-hidden, like SearchField's magnifier: the input's own
           accessible name says what it is, and a tap here must reach the
@@ -217,12 +231,24 @@ export function DateField({
         strokeLinejoin="round"
         className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted"
       >
-        <rect x="3" y="5" width="18" height="16" rx="2" />
-        <path d="M8 3v4M16 3v4M3 11h18" />
+        {type === "time" ? (
+          <>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </>
+        ) : (
+          <>
+            <rect x="3" y="5" width="18" height="16" rx="2" />
+            <path d="M8 3v4M16 3v4M3 11h18" />
+          </>
+        )}
       </svg>
     </div>
   );
 }
+
+/** The temporal controls `DateField` draws. */
+export type TemporalType = "date" | "month" | "time" | "datetime-local";
 
 /**
  * **The legend of a bordered `<fieldset>`**, whose words sit in a notch cut
