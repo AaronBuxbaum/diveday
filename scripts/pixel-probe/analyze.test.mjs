@@ -77,6 +77,7 @@ const BASE = {
   ariaHidden: false,
   inImg: false,
   overlay: null,
+  overlayInset: null,
   pe: "auto",
   text: [],
   asc: null,
@@ -1417,6 +1418,133 @@ describe("targets", () => {
     ]);
     expect(targets(snapshot)).toHaveLength(1);
     expect(hitBox(buildIndex(snapshot), snapshot.elements[2]).h).toBe(20);
+  });
+
+  /**
+   * **A control that positions itself owns its `::after`**, and the offsets
+   * say how far the target reaches past the box: the info marker's 20px disc
+   * with `after:-inset-3` (20 + 2 × 12 = 44), the counter's blocked name, a
+   * 28px line with `after:-inset-y-2` (28 + 16 = 44). The probe used to count
+   * a `::after` only when all four offsets were 0 and only against an
+   * ancestor, so both read as the bare box and a 44px target as a small one.
+   */
+  it("counts a positioned control's own ::after, grown by its offsets", () => {
+    const snapshot = page([
+      [0, -1, { cls: "row", x: 0, y: 0, w: 390, h: 80 }],
+      [
+        1,
+        0,
+        {
+          ...link,
+          label: "Nadia",
+          pos: "relative",
+          overlayInset: [-8, 0, -8, 0],
+          x: 16,
+          y: 12,
+          w: 96,
+          h: 28,
+        },
+      ],
+      [
+        2,
+        0,
+        {
+          tag: "button",
+          label: "What is BCD?",
+          interactive: true,
+          focusable: true,
+          pos: "relative",
+          overlayInset: [-12, -12, -12, -12],
+          x: 200,
+          y: 16,
+          w: 20,
+          h: 20,
+        },
+      ],
+    ]);
+    expect(targets(snapshot)).toEqual([]);
+    const ix = buildIndex(snapshot);
+    expect(hitBox(ix, snapshot.elements[1])).toEqual({ x: 16, y: 4, w: 96, h: 44 });
+    expect(hitBox(ix, snapshot.elements[2])).toEqual({ x: 188, y: 4, w: 44, h: 44 });
+  });
+
+  it("still flags a positioned control whose ::after reaches too little", () => {
+    const [flag] = targets(
+      page([
+        [0, -1, { cls: "row", x: 0, y: 0, w: 390, h: 80 }],
+        [
+          1,
+          0,
+          {
+            ...link,
+            label: "Nadia",
+            pos: "relative",
+            overlayInset: [-4, 0, -4, 0],
+            x: 16,
+            y: 12,
+            w: 96,
+            h: 28,
+          },
+        ],
+      ]),
+    );
+    expect(flag.measure).toMatchObject({ h: 36, dimension: "height", overlay: true });
+  });
+
+  it("never lets an inset ::after shrink the control's own box", () => {
+    // A decoration drawn inside the box (an underline bar, a knob) is no
+    // smaller target than the box it sits in.
+    const snapshot = page([
+      [0, -1, { cls: "row", x: 0, y: 0, w: 390, h: 80 }],
+      [1, 0, { ...link, pos: "relative", overlayInset: [40, 0, 0, 0], x: 16, y: 12, w: 96, h: 44 }],
+    ]);
+    expect(targets(snapshot)).toEqual([]);
+    expect(hitBox(buildIndex(snapshot), snapshot.elements[1])).toEqual({
+      x: 16,
+      y: 12,
+      w: 96,
+      h: 44,
+    });
+  });
+
+  it("cuts a positioned control's ::after to a clipping ancestor", () => {
+    const snapshot = page([
+      [
+        0,
+        -1,
+        {
+          cls: "cell overflow-hidden",
+          clips: true,
+          clipsX: true,
+          clipsY: true,
+          x: 0,
+          y: 10,
+          w: 390,
+          h: 32,
+        },
+      ],
+      [
+        1,
+        0,
+        {
+          ...link,
+          cp: 0,
+          pos: "relative",
+          overlayInset: [-8, 0, -8, 0],
+          x: 16,
+          y: 12,
+          w: 96,
+          h: 28,
+        },
+      ],
+    ]);
+    expect(hitBox(buildIndex(snapshot), snapshot.elements[1])).toEqual({
+      x: 16,
+      y: 10,
+      w: 96,
+      h: 32,
+    });
+    expect(targets(snapshot)).toHaveLength(1);
   });
 
   it("leaves a link in running prose, a skip link and a mock inside an illustration alone", () => {
