@@ -9,7 +9,14 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { ChoiceRow, choiceClass, controlClass, Field, FieldGrid } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoiceRow,
+  choiceClass,
+  controlClass,
+  Field,
+  FieldGrid,
+} from "@/components/ui/form";
 import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
@@ -513,8 +520,7 @@ export function BookSpotSection({
             decides what the rest of the card asks for. A radio group rather
             than a toggle: both answers are ordinary, and neither is a mode the
             reader is switching *into*. */}
-        <fieldset className="flex flex-col gap-2">
-          <legend className="text-sm font-medium">{t("giftChoiceLabel")}</legend>
+        <ChoiceFieldset legend={t("giftChoiceLabel")} bodyClassName="flex flex-col gap-2">
           <ChoiceRow
             type="radio"
             name="bookingFor"
@@ -535,7 +541,7 @@ export function BookSpotSection({
           >
             {t("giftChoiceGift")}
           </ChoiceRow>
-        </fieldset>
+        </ChoiceFieldset>
         {asGift ? (
           <GiftFields fieldErrors={state.fieldErrors} />
         ) : (

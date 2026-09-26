@@ -817,7 +817,9 @@ A checkbox or radio a person sees is drawn one way, from `src/components/ui/form
   `text-sm font-medium` legend, then 4px, then the body (`bodyClassName` lays the choices out).
   `required` draws `Field`'s aria-hidden `*`. Hand-rolled legends put 8px there (`mb-2`, `mt-2`),
   so a group sat further from its caption than every field around it; `form.test.tsx` refuses a
-  legend with its own bottom margin (a floated legend aside).
+  legend with its own bottom margin (a floated legend aside), and a legend spelled as this caption
+  (`text-sm font-medium`) anywhere else. Three files that have not been touched since are named in
+  that rule and leave the list the day they are.
 
 ```tsx
 <ChoicePill type="radio" name="outcome" value="cleared" required>

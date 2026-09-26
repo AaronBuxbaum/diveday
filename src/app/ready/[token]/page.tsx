@@ -38,7 +38,14 @@ import { ThreadShell } from "@/components/thread/ThreadShell";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { ChoiceRow, controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoiceRow,
+  controlClass,
+  Field,
+  FieldGrid,
+  textareaClassFor,
+} from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -1066,23 +1073,20 @@ function DayOfDetails({
           action={saveReEntryAskFromReady.bind(null, token)}
           className="flex flex-col gap-3 py-5"
         >
-          <fieldset>
-            <legend className="text-sm font-medium">{t("booking.reEntry.legend")}</legend>
-            <div className="mt-2 flex flex-col gap-1">
-              {reEntryOffersFor(data.refresherCourseOffered).map((ask) => (
-                <ChoiceRow
-                  key={ask}
-                  type="radio"
-                  name="reEntryAsk"
-                  value={ask}
-                  defaultChecked={data.reEntryAsk === ask}
-                  className="text-sm"
-                >
-                  {t(DIVER_RE_ENTRY_KEYS[ask])}
-                </ChoiceRow>
-              ))}
-            </div>
-          </fieldset>
+          <ChoiceFieldset legend={t("booking.reEntry.legend")} bodyClassName="flex flex-col gap-1">
+            {reEntryOffersFor(data.refresherCourseOffered).map((ask) => (
+              <ChoiceRow
+                key={ask}
+                type="radio"
+                name="reEntryAsk"
+                value={ask}
+                defaultChecked={data.reEntryAsk === ask}
+                className="text-sm"
+              >
+                {t(DIVER_RE_ENTRY_KEYS[ask])}
+              </ChoiceRow>
+            ))}
+          </ChoiceFieldset>
           {/* The one sentence here that has to exist: an offer of help on a
               readiness checklist reads as a condition unless it says it is
               not one. */}

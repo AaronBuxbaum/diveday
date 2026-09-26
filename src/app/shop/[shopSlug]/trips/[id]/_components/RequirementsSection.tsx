@@ -1,7 +1,14 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_CLASS } from "@/components/ui/card";
-import { ChoiceRow, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoiceRow,
+  controlClass,
+  Field,
+  FieldGrid,
+  FormStatus,
+} from "@/components/ui/form";
 import {
   CERTIFICATION_LEVEL_KEYS,
   REQUIRABLE_CERTIFICATION_LEVEL_KEYS,
@@ -164,35 +171,34 @@ export function RequirementsSection({
                 </Field>
               </FieldGrid>
             </div>
-            <fieldset className="mt-5">
-              <legend className="text-sm font-medium">
-                {t("trips.requirements.requiredSpecialtiesLegend")}
-              </legend>
-              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
-                  <ChoiceRow
-                    key={value}
-                    name="specialty"
-                    type="checkbox"
-                    value={value}
-                    defaultChecked={requirement?.requiredSpecialties?.includes(
-                      value as keyof typeof SPECIALTY_KEYS,
-                    )}
-                    className="text-sm font-medium"
-                  >
-                    {t(key)}
-                  </ChoiceRow>
-                ))}
+            <ChoiceFieldset
+              legend={t("trips.requirements.requiredSpecialtiesLegend")}
+              className="mt-5"
+              bodyClassName="grid grid-cols-2 gap-3 sm:grid-cols-4"
+            >
+              {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
                 <ChoiceRow
-                  name="requiresNitrox"
+                  key={value}
+                  name="specialty"
                   type="checkbox"
-                  defaultChecked={requirement?.requiresNitrox ?? false}
+                  value={value}
+                  defaultChecked={requirement?.requiredSpecialties?.includes(
+                    value as keyof typeof SPECIALTY_KEYS,
+                  )}
                   className="text-sm font-medium"
                 >
-                  {t("trips.requirements.nitrox")}
+                  {t(key)}
                 </ChoiceRow>
-              </div>
-            </fieldset>
+              ))}
+              <ChoiceRow
+                name="requiresNitrox"
+                type="checkbox"
+                defaultChecked={requirement?.requiresNitrox ?? false}
+                className="text-sm font-medium"
+              >
+                {t("trips.requirements.nitrox")}
+              </ChoiceRow>
+            </ChoiceFieldset>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {/* One weight for a section's Save — the default primary the
                     other Overview forms share (DetailsSection's comment states

@@ -1415,6 +1415,37 @@ describe("source sweeps", () => {
   });
 
   /**
+   * A legend spelled as `ChoiceFieldset`'s caption (`text-sm font-medium`) is
+   * a group caption drawn by hand, and the ones found sat 8px or 12px above
+   * their choices where a field caption sits 4px: the rental "What to plan"
+   * and nitrox groups (`mt-2`, and a pill written `mt-2` under its legend),
+   * the staff rental toggles, the ready page's re-entry answers, the booking
+   * form's gift choice and a departure's required specialties (`mt-3`), each
+   * touched by the batch that moved its boxes (K-72 review). The rule's own
+   * wording is that the rest follow as they are touched: the three below have
+   * not been, and a file leaves this list the day it is. A bordered
+   * fieldset's legend (`legendClass`, the notch in its border) is another
+   * shape and not this rule's.
+   */
+  it("captions a group of choices with ChoiceFieldset, not a hand-spelled legend", () => {
+    const notYetTouched = new Set([
+      "src/app/shop/[shopSlug]/orders/new/page.tsx",
+      "src/components/StarRatingInput.tsx",
+      "src/components/RepeatFields.tsx",
+    ]);
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      if (file === "src/components/ui/form.tsx" || notYetTouched.has(file)) continue;
+      for (const { index, text } of openingTags(source, "legend")) {
+        if (/\b(sr-only|legendClass)\b/.test(text)) continue;
+        if (/\btext-sm\b/.test(text) && /\bfont-medium\b/.test(text))
+          offenders.push(`${file}:${lineOf(source, index)}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  /**
    * A temporal box is a `DateField` (K-54): spelled bare, it wears the
    * platform's indicator and, on iOS, nothing at all when empty.
    */

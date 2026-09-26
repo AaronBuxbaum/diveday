@@ -4,7 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { ChoicePill, controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ChoiceFieldset, ChoicePill, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import type { DiverMessageKey } from "@/i18n/messages";
 import { formatMoneyCents } from "@/lib/format";
@@ -324,9 +324,8 @@ export function RentalFitForm({
       ) : null}
       <form action={action} className="mt-4 flex flex-col gap-4">
         {offered.length > 0 ? (
-          <fieldset>
-            <legend className="text-sm font-medium">{t("rental.whatToPlan")}</legend>
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <ChoiceFieldset legend={t("rental.whatToPlan")}>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {offered.map(({ kind, name }) => {
                 const priceCents = pricing.perItemCents[kind];
                 const hintKey = RENTABLE_ITEM_HINT_KEYS[kind];
@@ -409,24 +408,22 @@ export function RentalFitForm({
                 ) : null}
               </p>
             ) : null}
-          </fieldset>
+          </ChoiceFieldset>
         ) : null}
 
+        {/* No "what is nitrox?" hint here any more: this section is only
+            reachable by a diver who has already filed a nitrox card, and the
+            explanation now sits where a diver first meets the word — the "Add
+            your nitrox card" disclosure in the certification row (issue 627).
+            The booking page, where nitrox genuinely can be a first encounter,
+            keeps its own (BookingGearFields.tsx). */}
         {nitroxOffered && !nitroxHidden ? (
-          <fieldset>
-            {/* No "what is nitrox?" hint here any more: this section is only
-                reachable by a diver who has already filed a nitrox card, and
-                the explanation now sits where a diver first meets the word —
-                the "Add your nitrox card" disclosure in the certification row
-                (issue 627). The booking page, where nitrox genuinely can be a
-                first encounter, keeps its own (BookingGearFields.tsx). */}
-            <legend className="text-sm font-medium">{t("rental.nitroxLegend")}</legend>
+          <ChoiceFieldset legend={t("rental.nitroxLegend")}>
             <ChoicePill
               type="checkbox"
               name="nitrox"
               checked={nitroxRequested}
               onChange={(event) => setNitroxRequested(event.target.checked)}
-              className="mt-2"
             >
               {showPricing && pricing.nitroxCents !== null
                 ? t("rental.nitroxReserveWithPrice", {
@@ -443,7 +440,7 @@ export function RentalFitForm({
                 {t(nitroxCardVerified ? "rental.nitroxVerifiedNote" : "rental.nitroxCardOnFile")}
               </p>
             ) : null}
-          </fieldset>
+          </ChoiceFieldset>
         ) : null}
 
         {/* `weights` rides in this grid rather than in a full-width row of its
