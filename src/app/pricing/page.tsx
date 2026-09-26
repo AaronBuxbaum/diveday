@@ -262,8 +262,11 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               </h1>
               {/* Cadence below the figure, not baseline-set beside it: paired
                   on one line, centring the pair pushed `$99` itself off centre
-                  by half the cadence's width. */}
-              <p className="mt-10 text-7xl leading-none font-semibold tracking-[-0.06em] sm:text-8xl">
+                  by half the cadence's width. And `pe-[0.06em]`, the tracking
+                  handed back: letter-spacing follows the last glyph too, so
+                  the line box ended 0.06em inside the final "9", and centring
+                  that box set the ink 3px right of the stack (K-405). */}
+              <p className="mt-10 pe-[0.06em] text-7xl leading-none font-semibold tracking-[-0.06em] sm:text-8xl">
                 {earlyAccessPrice.price}
               </p>
               <p className="mt-4 text-base text-muted">{t(earlyAccessPrice.cadenceKey)}</p>
