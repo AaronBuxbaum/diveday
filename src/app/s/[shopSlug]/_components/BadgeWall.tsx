@@ -1,3 +1,4 @@
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { brandBadgeLabel } from "@/i18n/brand-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { BrandBadgeCode } from "@/lib/brand";
@@ -33,19 +34,15 @@ export function BadgeWall({
           key={code}
           className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm"
         >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 16 16"
-            className="size-3.5 shrink-0 text-primary"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M8 1.5 13 3.5v4c0 3.2-2.1 5.6-5 6.8-2.9-1.2-5-3.6-5-6.8v-4z" />
-            <path d="m5.8 8 1.6 1.6L10.4 6.5" />
-          </svg>
+          {/* Drawn on its ink (`trim`), so the pill's `px-3` reads the same on
+              the shield's side as on the words'. In its square the shield sat
+              2px inside the box. */}
+          <DiveDayIcon
+            name="badge"
+            trim
+            strokeWidth={2.4}
+            className="h-3.5 w-auto shrink-0 text-primary"
+          />
           {brandBadgeLabel(code, t)}
         </li>
       ))}

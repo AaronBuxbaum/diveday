@@ -25,6 +25,7 @@ export type DiveDaySharedIconName =
   | "close"
   | "warning"
   | "boat"
+  | "badge"
   | `waiver-action-${WaiverActionIconName}`
   | `waiver-mark-${WaiverDeliveryMarkName}`;
 
@@ -75,6 +76,16 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
       <path d="M6 14.5 8 6h8l2 8.5" />
       <path d="M12 6V3" />
       <path d="M12 3 18 7" />
+    </>
+  ),
+  // A shield with a check: the one mark on each pill of a shop's badge wall,
+  // DiveDay's own drawing rather than an agency's (`BadgeWall`). Drawn at
+  // 1.5× the 16-unit square it used to have, so at its 2.4 stroke it renders
+  // exactly as it did; its ink spans x 4.5–19.5, on the square's centre.
+  badge: (
+    <>
+      <path d="M12 2.25 19.5 5.25v6c0 4.8-3.15 8.4-7.5 10.2-4.35-1.8-7.5-5.4-7.5-10.2v-6z" />
+      <path d="m8.7 12 2.4 2.4L15.6 9.75" />
     </>
   ),
   "arrow-right": (
@@ -384,8 +395,9 @@ type DiveDayIconName = StaffDestinationId | DiveDaySharedIconName;
  * (docs/design/pixel-craft.md, classes 2 and 3), and one ending a row ends on
  * its ink. In the shared 24-unit square the dive-site catalog door's pin
  * started 3px inside the column its row's words start on (pixel-craft K-519),
- * the back-link's chevron 3–4px right of its title's column (K-114), and a
- * ledger door's chevron 5px inside its row's end (K-118).
+ * the back-link's chevron 3–4px right of its title's column (K-114), a
+ * ledger door's chevron 5px inside its row's end (K-118), and the badge
+ * wall's shield 2px inside its pill's padding, in a square of its own (K-561).
  *
  * **This is the one way to draw a glyph on its ink.** Not a second name for a
  * cropped copy of a path, and not a viewBox written by hand at the call site:
@@ -400,6 +412,8 @@ const TRIM_X = {
   // Both chevrons run between x 9 and x 15, point and arms.
   "chevron-left": [9, 15],
   "chevron-right": [9, 15],
+  // The shield's two sides, x 4.5 and x 19.5; the check sits inside them.
+  badge: [4.5, 19.5],
 } as const satisfies Partial<Record<DiveDayIconName, readonly [number, number]>>;
 
 /** A glyph whose horizontal ink is recorded, so `trim` can crop its box to it. */

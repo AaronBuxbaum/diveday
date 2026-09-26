@@ -135,6 +135,98 @@ describe("a trimmed chevron", () => {
 });
 
 /**
+ * Every x a path reaches, control points included: the hull its ink cannot
+ * leave. Enough of the path grammar for this family's drawn marks — moves,
+ * lines, and cubic curves, absolute or relative.
+ */
+function pathXs(d: string): number[] {
+  const tokens = d.match(/[a-zA-Z]|-?(?:\d+\.?\d*|\.\d+)/g) ?? [];
+  const xs: number[] = [];
+  let at = 0;
+  let command = "";
+  let x = 0;
+  let start = 0;
+  const next = () => Number(tokens[at++]);
+  while (at < tokens.length) {
+    if (/[a-zA-Z]/.test(tokens[at])) command = tokens[at++];
+    switch (command) {
+      case "M":
+      case "L":
+        x = next();
+        next();
+        if (command === "M") [start, command] = [x, "L"];
+        break;
+      case "m":
+      case "l":
+        x += next();
+        next();
+        if (command === "m") [start, command] = [x, "l"];
+        break;
+      case "H":
+        x = next();
+        break;
+      case "h":
+        x += next();
+        break;
+      case "V":
+      case "v":
+        next();
+        break;
+      case "C":
+      case "c": {
+        const [x1, , x2, , x3] = [next(), next(), next(), next(), next(), next()];
+        const origin = command === "c" ? x : 0;
+        xs.push(origin + x1, origin + x2);
+        x = origin + x3;
+        break;
+      }
+      case "Z":
+      case "z":
+        x = start;
+        break;
+      default:
+        throw new Error(`path command ${command} is not read here: ${d}`);
+    }
+    xs.push(x);
+  }
+  return xs;
+}
+
+/**
+ * **The badge wall's shield, on its ink** (pixel-craft K-561). Drawn in a
+ * 16-unit square whose ink spans x 2.2–13.8, it left about 2px of blank box
+ * before the shield, inside a pill whose `px-3` is the same both sides: 14px
+ * from border to ink on the glyph side against 11–12px on the text side.
+ */
+describe("a trimmed badge", () => {
+  it("crops the shield across to its stroke, measured from its own paths", () => {
+    for (const stroke of [1.8, 2.4]) {
+      const { container, unmount } = render(
+        <DiveDayIcon name="badge" trim strokeWidth={stroke} className="h-3.5 w-auto" />,
+      );
+      const svg = container.querySelector("svg");
+      const xs = [...(svg?.querySelectorAll("path") ?? [])].flatMap((path) =>
+        pathXs(path.getAttribute("d") ?? ""),
+      );
+      const [x, y, width, height] = (svg?.getAttribute("viewBox") ?? "").split(" ").map(Number);
+
+      expect(x).toBeCloseTo(Math.min(...xs) - stroke / 2, 5);
+      expect(width).toBeCloseTo(Math.max(...xs) - Math.min(...xs) + stroke, 5);
+      expect([y, height]).toEqual([0, 24]);
+      unmount();
+    }
+  });
+
+  it("is centred across the square it is drawn in, so the square's users see no shift", () => {
+    const { container } = render(<DiveDayIcon name="badge" />);
+    const xs = [...container.querySelectorAll("path")].flatMap((path) =>
+      pathXs(path.getAttribute("d") ?? ""),
+    );
+    expect(Math.min(...xs) + Math.max(...xs)).toBeCloseTo(24, 5);
+  });
+});
+
+/**
  * **A remove control draws its cross**, in the family's stroke, rather than
  * typing a "×" that renders at the font's size and weight (pixel-craft K-545).
  */
