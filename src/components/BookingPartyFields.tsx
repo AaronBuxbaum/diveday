@@ -281,7 +281,11 @@ export function BookingPartyFields({
           // exactly where the step's own name sits.
           <div key={slot} className="rise-in border-t border-border pt-4">
             <fieldset>
-              <legend className="text-sm font-semibold text-muted">
+              {/* The card's one caption — "Number of divers" above, "Who is
+                  diving" in the card — in foreground ink, with the same 8px to
+                  what it captions that the count's track keeps (`mt-2`). It
+                  was the muted one of three spellings, sitting on "Name". */}
+              <legend className="mb-2 text-sm font-semibold">
                 {index === 0 ? t("party.yourDetails") : t("party.diverN", { number: index + 1 })}
               </legend>
               {index === 0 && rememberedDiver ? (

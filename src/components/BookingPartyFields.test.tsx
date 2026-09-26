@@ -113,6 +113,28 @@ describe("BookingPartyFields", () => {
  * which is what lets anything reading this form — a spec included — ask for
  * "Number of divers" without first working out how many seats are left.
  */
+/**
+ * **One caption, one gap** (docs/design/pixel-craft.md, class 12). The
+ * booking card's group captions were drawn three ways, and "Your details" was
+ * the muted one, with nothing between it and the "Name" label under it: its
+ * line box ended on the label's (site-briefing at 1280). It takes the party
+ * count's caption as it is, in foreground ink, and the same 8px to what it
+ * captions that the count's track keeps (`mt-2`).
+ */
+describe("BookingPartyFields — the group captions", () => {
+  it("captions the lead's details exactly as it captions the party count, 8px above the fields", () => {
+    renderDiver(<BookingPartyFields maxPartySize={4} />);
+    const countCaption = screen.getByText("Number of divers");
+    const detailsCaption = screen.getByText("Your details");
+    expect(detailsCaption.tagName).toBe("LEGEND");
+    expect(detailsCaption.className.split(" ").sort()).toEqual(
+      [...countCaption.className.split(" "), "mb-2"].sort(),
+    );
+    expect(detailsCaption).not.toHaveClass("text-muted");
+    expect(countCaption).toHaveClass("text-sm", "font-semibold");
+  });
+});
+
 describe("BookingPartyFields — the party-count control", () => {
   it("renders a segmented row of radios, and no select, for a party of six or fewer", () => {
     renderDiver(<BookingPartyFields maxPartySize={6} />);
