@@ -1,9 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Badge } from "@/components/ui/badge";
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import {
+  bookingPayments,
   bookings,
   importedPaymentHistory,
   orders,
@@ -13,11 +15,13 @@ import {
 } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
+import { setTripStatus } from "@/db/trips";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
+import { capturedPaymentStatuses } from "@/lib/payment-source";
 import { seededTestDb } from "@/test/db";
 import { ariaLabelsIn, findElements, hrefsIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
@@ -162,6 +166,81 @@ describe("the stuck-payment-operations panel", () => {
     // not, which is the one thing that could have gone wrong in moving a
     // gated section onto an ungated page.
     expect(ariaLabelsIn(await renderOrders("divemaster", stickAnOperation))).not.toContain(PANEL);
+  });
+});
+
+/**
+ * Both back-office notices with a row on a departure: an unconfirmed Stripe
+ * checkout for a trip, and money owed on a trip the shop called off with its
+ * paid seats still paid. The seeded shop's paid seats are real money once
+ * their departure is cancelled, which is all `listOwedShopCancellationRefunds`
+ * asks.
+ */
+async function troubleOnADeparture(db: AppDb, session: DiveDaySession) {
+  const shopId = session.user.shopId;
+  const [paid] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookingPayments)
+    .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
+    .where(
+      and(
+        eq(bookingPayments.shopId, shopId),
+        inArray(bookingPayments.status, [...capturedPaymentStatuses]),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .limit(1);
+  if (!paid) throw new Error("the seed has no paid seat to owe back");
+  await setTripStatus(db, shopId, paid.tripId, "cancelled");
+  await db.insert(paymentOperationIntents).values({
+    shopId,
+    kind: "checkout_session",
+    status: "started",
+    tripId: paid.tripId,
+    stripeObjectId: "cs_stuck",
+    startedAt: new Date(nowDate().getTime() - 60 * 60 * 1000),
+  });
+}
+
+type Node = ReactElement<{ children?: unknown; className?: string; href?: string }>;
+
+/** The words under a node, in order, as a reader would read them. */
+function textOf(node: unknown): string {
+  if (node === null || node === undefined || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join("");
+  if (typeof node === "object" && "props" in node) return textOf((node as Node).props.children);
+  return "";
+}
+
+/** The notice a section's `aria-label` names. */
+function notice(tree: unknown, label: string): Node {
+  const section = findElements<{ "aria-label"?: string; children?: unknown }>(tree, "section").find(
+    (element) => element.props["aria-label"] === label,
+  );
+  if (!section) throw new Error(`no "${label}" notice on the page`);
+  return section as unknown as Node;
+}
+
+describe("the notices' rows", () => {
+  /**
+   * **The reference's 44px target bleeds into the notice's padding, not onto
+   * it** (pixel-craft class 5; K-388). The summary wraps a 16px `text-xs` line
+   * in a 44px box, and that box sat on the notice's `py-3`: 13px from the
+   * border to the heading's ink, 27px from "Stripe reference" to the border.
+   * Only the bottom bleeds; bleeding the top too would lift the box's focus
+   * ring across the row above it.
+   */
+  it("lets the Stripe reference's target overhang the notice's foot", async () => {
+    const tree = await renderOrders("owner", troubleOnADeparture);
+    const summary = findElements<{ className?: string; children?: unknown }>(
+      notice(tree, "Payments that need a check"),
+      "summary",
+    ).find((element) => textOf(element) === "Stripe reference");
+    const classes = summary?.props.className?.split(" ") ?? [];
+    expect(classes).toContain("min-h-11");
+    expect(classes).toContain("-mb-3.5");
+    expect(classes).not.toContain("-my-3.5");
   });
 });
 

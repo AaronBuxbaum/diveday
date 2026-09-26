@@ -522,12 +522,25 @@ export default async function OrdersIndexPage({
                   {/* The identifier a shop pastes into Stripe's own search, one
                       tap down rather than on the row's face. Mono, because it is
                       a string to be transcribed character for character. */}
+                  {/* **The target's spare height hangs below the words, into
+                      the notice's padding** (K-388). The summary is a 44px box
+                      round a 16px line, and the 14px under the words stood on
+                      the notice's `py-3`: 13px from the border to the heading's
+                      ink, 27px from "Stripe reference" to the border. `-mb-3.5`
+                      gives those 14px back, so the words end on the content
+                      edge and the padding is 13 and 13; the box spills into
+                      the padding, which nothing clips. Only the bottom: a box
+                      lifted 14px would put its ring across the row's first
+                      line. `flex w-fit` rather than `inline-flex`, so the margin
+                      is taken whole; an inline box's line keeps the strut of
+                      the row's `text-sm` under it. Open, the id starts 4px
+                      under the box, as it did (`mt-4.5`: 14 + 4). */}
                   {intent.stripeObjectId ? (
                     <details className="mt-1">
-                      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-xs text-muted underline underline-offset-2 [&::-webkit-details-marker]:hidden">
+                      <summary className="-mb-3.5 flex min-h-11 w-fit cursor-pointer list-none items-center text-xs text-muted underline underline-offset-2 [&::-webkit-details-marker]:hidden">
                         {t("orders.index.paymentOps.reference")}
                       </summary>
-                      <code className="mt-1 block font-mono text-xs break-all text-muted">
+                      <code className="mt-4.5 block font-mono text-xs break-all text-muted">
                         {intent.stripeObjectId}
                       </code>
                     </details>
