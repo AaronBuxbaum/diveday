@@ -118,6 +118,58 @@ describe("the waiver group", () => {
   });
 
   /**
+   * **Every row in the group keeps the state row's inset** (pixel-craft
+   * class 5). The physician's form, the send options and the outcome line
+   * padded themselves `py-3` where the state row above them pads `py-4`, so
+   * the grey form sat 12px under its hairline and 12px over the card's edge
+   * against 24px from its side. One spelling, `FILE_ROW_INSET`, for all.
+   */
+  it("insets every row it pads by hand the way the state row is inset", () => {
+    const inset = (element: Element | null | undefined) =>
+      [...(element?.classList ?? [])].filter((token) => /^(?:[\w-]+:)*p[xytb]-/.test(token));
+    const rowOf = (element: Element) => {
+      let row: Element | null = element;
+      while (row?.parentElement && !row.parentElement.classList.contains("divide-y")) {
+        row = row.parentElement;
+      }
+      return row;
+    };
+
+    // The physician's answer: a held review, the one state that offers it.
+    const held = renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiver: {
+          state: "medical_review",
+          at: new Date("2026-09-02T15:00:00.000Z"),
+        } as DiverProfile["waiver"],
+      }),
+    );
+    const heldState = held.container.querySelector(".divide-y > :first-child");
+    expect(inset(heldState)).toEqual(["px-5", "py-4", "sm:px-6"]);
+    const clearance = rowOf(screen.getByRole("button", { name: /Record the physician’s answer/ }));
+    expect(clearance).not.toBe(heldState);
+    expect(inset(clearance)).toEqual(inset(heldState));
+    cleanup();
+
+    // The send options and a refusal's outcome line: an unsigned release.
+    const unsigned = renderCard(diver({ email: "priya@dive.day" }), {
+      form: "waiver",
+      tone: "warning",
+      text: "Confirm you reviewed the medical questionnaire before recording a paper waiver.",
+    } as ComponentProps<typeof WaiverGroup>["status"]);
+    const unsignedState = unsigned.container.querySelector(".divide-y > :first-child");
+    const options = rowOf(screen.getByText("Send options"));
+    const outcome = rowOf(
+      screen.getAllByText(/Confirm you reviewed the medical questionnaire/).at(-1) as Element,
+    );
+    expect(options?.tagName).toBe("DETAILS");
+    expect(outcome).not.toBe(options);
+    expect(inset(options)).toEqual(inset(unsignedState));
+    expect(inset(outcome)).toEqual(inset(unsignedState));
+  });
+
+  /**
    * **A referral the current signature replaced instead of answering** (issue
    * #1282). The standing is "Signed · Good until …" and the record is, on its
    * face, a clean one — so a closed muted door is the one way a staffer never

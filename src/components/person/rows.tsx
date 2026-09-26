@@ -43,9 +43,17 @@ import type { CertificationCardRowState } from "@/lib/certification-cards";
  * them. The booking row is a `LedgerRow`, because the story is one open ledger.
  */
 
-/** The self-padding a row inside an `InsetGroup` carries, matching the settings rows. */
-const FILE_ROW_CLASS =
-  "flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6";
+/**
+ * The self-padding a row inside an `InsetGroup` carries, matching the settings
+ * rows. Exported for a row of the file that is not one of these — a group's
+ * actions, a form, its outcome line — so every row in one group shares one
+ * inset: the waiver group's hand-padded rows took `py-3` under a `py-4` state
+ * row, and the physician's form sat 12px from the hairline above it and the
+ * card's edge below it against 24px from its side (pixel-craft class 5).
+ */
+export const FILE_ROW_INSET = "px-5 py-4 sm:px-6";
+
+const FILE_ROW_CLASS = `flex flex-col gap-3 ${FILE_ROW_INSET} sm:flex-row sm:items-center sm:justify-between`;
 
 /**
  * **A certification card, on the record and anywhere else a card is met.**

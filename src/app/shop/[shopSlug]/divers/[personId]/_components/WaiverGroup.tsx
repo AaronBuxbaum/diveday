@@ -3,7 +3,7 @@ import { MedicalClearanceControl } from "@/components/MedicalClearanceControl";
 import { medicalClearanceCopy } from "@/components/medical-clearance-copy";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
-import { WaiverStateRow } from "@/components/person/rows";
+import { FILE_ROW_INSET, WaiverStateRow } from "@/components/person/rows";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { InsetGroup } from "@/components/ui/ledger";
@@ -246,7 +246,7 @@ export function WaiverGroup({
             belongs on a line of its own. */}
         {needsAction ? (
           <details
-            className="group px-5 py-3 sm:px-6"
+            className={`group ${FILE_ROW_INSET}`}
             // A refusal aimed at this group re-opens it. The notice renders
             // below, outside the disclosure, so the staffer is told *that*
             // something was refused — but the box they must correct is shut,
@@ -334,7 +334,7 @@ export function WaiverGroup({
           </p>
         ) : null}
         {heldForMedical ? (
-          <div className="px-5 py-3 sm:px-6">
+          <div className={FILE_ROW_INSET}>
             <MedicalClearanceControl
               action={recordMedicalClearanceAction.bind(null, shopSlug, personId)}
               copy={medicalClearanceCopy(t)}
@@ -348,7 +348,7 @@ export function WaiverGroup({
           </div>
         ) : null}
         {status ? (
-          <div className="px-5 py-3 sm:px-6">
+          <div className={FILE_ROW_INSET}>
             <DiverFormStatus status={status} />
           </div>
         ) : null}
