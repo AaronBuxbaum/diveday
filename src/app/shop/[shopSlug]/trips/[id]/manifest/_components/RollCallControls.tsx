@@ -137,9 +137,17 @@ export { ROLL_CALL_ROW_TONE };
  * danger lines and the chips naming who is missing, and on a phone it stacks
  * and wraps each of them — so it is measured, not written down: `PanelHeight`
  * publishes it as `--roll-call-panel-h` on the column these rows share with
- * it. The rems are only the fallback before that has run. Written down, with
- * the bar counted twice, a jumped-to row landed at y 352 under a 426px card
- * reaching to y 482 at 390 (pixel-craft class 9).
+ * it. Written down, with the bar counted twice, a jumped-to row landed at y 352
+ * under a 426px card reaching to y 482 at 390 (pixel-craft class 9).
+ *
+ * **The rems are the fallback before it has measured**, which is an effect
+ * after hydration — mid-hydration on a slow boat connection, when the chips'
+ * plain `#diver-row-…` links already work. Each is sized for the card it
+ * stands in for at its width, and never lands a row higher than the written
+ * margin did with the bar counted twice (dive-domain review, K-142): on a
+ * phone, where boat mode takes the bar to 0px and the card stacks, 17rem, and
+ * 27rem after a dive, which clears the tallest card measured there (426px);
+ * from `lg`, where the bar is `html`'s scroll-padding, 13.5rem and 17.5rem.
  *
  * A jump that buries the name under the panel is what invites a tap on the
  * *next* visible row's mark, for the wrong person (dive-domain review
@@ -147,8 +155,8 @@ export { ROLL_CALL_ROW_TONE };
  */
 export function rollCallScrollMargin(isDeparture: boolean): string {
   return isDeparture
-    ? "scroll-mt-[calc(var(--roll-call-panel-h,11rem)+1rem)]"
-    : "scroll-mt-[calc(var(--roll-call-panel-h,15rem)+1rem)]";
+    ? "scroll-mt-[calc(var(--roll-call-panel-h,17rem)+1rem)] lg:scroll-mt-[calc(var(--roll-call-panel-h,13.5rem)+1rem)]"
+    : "scroll-mt-[calc(var(--roll-call-panel-h,27rem)+1rem)] lg:scroll-mt-[calc(var(--roll-call-panel-h,17.5rem)+1rem)]";
 }
 
 /**

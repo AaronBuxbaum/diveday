@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { TripManifest } from "@/lib/manifests";
 import { DiverRollCall } from "./DiverRollCall";
+import { rollCallScrollMargin } from "./RollCallControls";
 import { SummaryPanel } from "./SummaryPanel";
 
 /**
@@ -449,7 +450,7 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
       const rows = [...container.querySelectorAll<HTMLElement>("li[id^='diver-row-']")];
       expect(rows).toHaveLength(2);
       for (const row of rows) {
-        expect(row).toHaveClass("scroll-mt-[calc(var(--roll-call-panel-h,15rem)+1rem)]");
+        expect(row).toHaveClass(...rollCallScrollMargin(false).split(" "));
       }
     } finally {
       vi.unstubAllGlobals();

@@ -27,13 +27,47 @@ describe("the roll-call rows' scroll margin", () => {
     },
   );
 
-  it("keeps the written-down heights only as the fallback before the card has measured itself", () => {
-    expect(rollCallScrollMargin(true)).toBe(
-      `scroll-mt-[calc(var(${ROLL_CALL_PANEL_HEIGHT_VAR},11rem)+1rem)]`,
-    );
-    expect(rollCallScrollMargin(false)).toBe(
-      `scroll-mt-[calc(var(${ROLL_CALL_PANEL_HEIGHT_VAR},15rem)+1rem)]`,
-    );
+  /**
+   * **Before the card has measured itself, a jump lands no higher than it did
+   * when nothing was measured** (dive-domain review, K-142). The measurement
+   * runs in an effect after hydration — mid-hydration on a slow boat
+   * connection, exactly when the chips' plain `#diver-row-…` links still work.
+   * The fallback used to sit on top of the bar twice: `html`'s scroll-padding
+   * and `--chrome-h` in the margin, 56px each, so a row landed 112px plus
+   * 11rem (15rem after a dive) from the top. Dropping the bar and zeroing it in
+   * boat mode below `lg` took the fallback down to 192px and 256px on a phone,
+   * against a card that is 342–426px there after a dive. A phone's fallback is
+   * sized for the phone's card now, and `lg`'s gives back the bar it lost.
+   */
+  it("falls back, before the card has measured itself, to no less than the landing it replaced", () => {
+    const REM = 16;
+    const BAR = 56;
+    /** Where a jumped-to row lands on the fallback: phone (boat mode, no bar) and `lg`. */
+    const landing = (margin: string) => {
+      const found = Object.fromEntries(
+        [
+          ...margin.matchAll(
+            new RegExp(
+              `(?:^|\\s)(lg:)?scroll-mt-\\[calc\\(var\\(${ROLL_CALL_PANEL_HEIGHT_VAR},([\\d.]+)rem\\)\\+1rem\\)\\]`,
+              "g",
+            ),
+          ),
+        ].map(([, lg, rems]) => [lg ? "desk" : "phone", Number(rems) * REM + REM]),
+      );
+      return { phone: found.phone ?? 0, desk: BAR + (found.desk ?? 0) };
+    };
+    for (const [isDeparture, written] of [
+      [true, 11],
+      [false, 15],
+    ] as const) {
+      const before = BAR + BAR + written * REM;
+      const { phone, desk } = landing(rollCallScrollMargin(isDeparture));
+      expect(phone, `phone, departure: ${isDeparture}`).toBeGreaterThanOrEqual(before);
+      expect(desk, `lg, departure: ${isDeparture}`).toBeGreaterThanOrEqual(before);
+    }
+    // And after a dive a phone's clears the tallest card measured there: 426px
+    // on manifest-buddy-divergence at 390, and a 16px gap.
+    expect(landing(rollCallScrollMargin(false)).phone).toBeGreaterThanOrEqual(426 + REM);
   });
 });
 
