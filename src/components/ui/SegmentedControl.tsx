@@ -45,8 +45,8 @@ import {
  *   once it has measured. `prefers-reduced-motion` stills it through the
  *   global kill-switch.
  * - **Overflow wraps, never scrolls.** Labels stay `whitespace-nowrap`, and a
- *   row too wide for its container stacks onto a second line with each row's
- *   options sharing the width, rather than sliding sideways.
+ *   row too wide for its container stacks onto more lines rather than sliding
+ *   sideways — on a grid of equal columns that every line shares (below).
  *
  *   It scrolled until 2026-08-22, and that was measured wrong rather than
  *   decided wrong. At 390px the departure's four tabs came to `scrollWidth 343`
@@ -63,6 +63,16 @@ import {
  *   and hides nothing, which is what the dock test wants; `e2e/` asserts no
  *   control scrolls at 390px in either locale, because a rendered-pixel diff
  *   cannot tell a clipped strip from a scrollable one.
+ *
+ *   **A wrapped track is a grid, so its lines share column edges** (pixel-craft
+ *   class 3). It wrapped as a flex row with `grow` options, which let each line
+ *   divide its own leftover space: the counter's four departure chips split at
+ *   x 627 on the first line and 616 on the second, labels centred at different
+ *   x. So once the options measure wider than the track's room, the track lays
+ *   them on equal columns — as many as its widest option allows, balanced so
+ *   five make 3 + 2 rather than 4 + 1 — and goes back to one flex line when
+ *   there is room again. Measured, not guessed from the item count: a boat-size
+ *   checkpoint row in Spanish fits fewer columns than four short times do.
  * - **A caller may supply a shorter word for below `sm`** (`shortLabel`), for a
  *   track whose full labels wrap a phone even after that. Only where the full
  *   name is already on screen at that width: the short form is a handle, not a
@@ -125,6 +135,49 @@ const sizes = {
 
 export type SegmentedControlSize = keyof typeof sizes;
 
+/**
+ * The columns a track needs, or `null` while its options fit on one line.
+ *
+ * Reads two widths off the track: laid on one unwrapped line at its content's
+ * width (every option at its own width, `flex: none`), and at the room its
+ * container gives it. Both are set as inline styles and put back before this
+ * returns, inside the same layout pass, so nothing is painted in between.
+ */
+function columnsFor(nav: HTMLElement, count: number): number | null {
+  const options = [...nav.querySelectorAll<HTMLElement>("[data-key]")];
+  if (options.length < 2) return null;
+  const style = nav.getAttribute("style");
+  nav.style.display = "flex";
+  nav.style.flexWrap = "nowrap";
+  nav.style.maxWidth = "none";
+  nav.style.width = "max-content";
+  for (const option of options) option.style.flex = "none";
+  const oneLine = nav.getBoundingClientRect().width;
+  const widest = Math.max(...options.map((option) => option.getBoundingClientRect().width));
+  nav.style.width = "100%";
+  const room = nav.getBoundingClientRect().width;
+  for (const option of options) option.style.flex = "";
+  if (style === null) nav.removeAttribute("style");
+  else nav.setAttribute("style", style);
+  // Half a pixel of slack: widths arrive in fractions, and a track that fits
+  // exactly must not flip to a grid on a rounding error.
+  if (oneLine <= room + 0.5) return null;
+  const track = getComputedStyle(nav);
+  const px = (value: string) => Number.parseFloat(value) || 0;
+  const inner =
+    room -
+    px(track.paddingLeft) -
+    px(track.paddingRight) -
+    px(track.borderLeftWidth) -
+    px(track.borderRightWidth);
+  const gap = px(track.columnGap);
+  // As many columns as the widest option allows, never fewer than one...
+  const fit = Math.max(1, Math.min(count, Math.floor((inner + gap) / (widest + gap))));
+  // ...then balanced over the lines that takes: five in room for four are
+  // 3 + 2, not 4 + 1.
+  return Math.ceil(count / Math.ceil(count / fit));
+}
+
 export function SegmentedControl({
   ariaLabel,
   items,
@@ -161,6 +214,10 @@ export function SegmentedControl({
   const lastBox = useRef<{ left: number; top: number; width: number; height: number } | null>(null);
   // Until the pill has measured once, the current option draws its own fill.
   const [pillReady, setPillReady] = useState(false);
+  // `null` while the options fit on one line; otherwise the grid's columns.
+  const [columns, setColumns] = useState<number | null>(null);
+  // The pill's placement, kept so a change of layout can re-place it.
+  const placePill = useRef<(animate: boolean) => void>(() => {});
 
   useLayoutEffect(() => {
     const nav = navRef.current;
@@ -245,6 +302,7 @@ export function SegmentedControl({
       pill.style.transform = "";
     };
 
+    placePill.current = place;
     place(true);
     setPillReady(true);
     if (typeof ResizeObserver === "undefined") return;
@@ -254,18 +312,53 @@ export function SegmentedControl({
     return () => observer.disconnect();
   }, [currentKey]);
 
+  // One line or a grid, decided by measurement: on every render (the labels
+  // may have changed) and whenever the track is resized. A layout effect, so
+  // the first paint is already the right shape.
+  const count = items.length;
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (nav) setColumns(columnsFor(nav, count));
+  });
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setColumns(columnsFor(nav, count)));
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [count]);
+  // A change of shape moves every option, and the track may keep its size
+  // while it does, so the resize observer above cannot be relied on to tell
+  // the pill. Without motion: the selection did not change.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `columns` is a trigger, not a value the effect body reads.
+  useLayoutEffect(() => {
+    placePill.current(false);
+  }, [columns]);
+
   // Block-level `flex` in both shapes, never `inline-flex`: an inline-level
   // box opts out of margin collapsing, so a track with `mt-*` below a header
   // with `mb-*` would stack the two margins instead of taking the larger —
   // +28px of phantom space the old hand-rolled navs (all block-level) never
-  // had. Content width comes from `w-fit`, not from being inline.
+  // had. Content width comes from `w-fit`, not from being inline. A grid
+  // spans its room, like the wrapped row it replaces; its `display` is inline
+  // style because `grid` and the track's own `flex` are one property, and two
+  // utilities for it would be settled by stylesheet order rather than intent.
   const track = `relative ${segmentedTrackClass} ${
-    fill ? "" : "w-fit max-w-full"
-  } flex-wrap print:hidden ${className}`
+    columns !== null ? "" : fill ? "flex-wrap" : "w-fit max-w-full flex-wrap"
+  } print:hidden ${className}`
     .replace(/\s+/g, " ")
     .trim();
   return (
-    <nav ref={navRef} aria-label={ariaLabel} className={track}>
+    <nav
+      ref={navRef}
+      aria-label={ariaLabel}
+      className={track}
+      style={
+        columns !== null
+          ? { display: "grid", gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+          : undefined
+      }
+    >
       {/* First in the tree so every option paints above it; `relative` on the
           options is what puts them in the same paint order. Positioned by the
           effect above, invisible until it has measured, and cornered like the
@@ -279,9 +372,9 @@ export function SegmentedControl({
       {items.map((item) => {
         const active = item.key === currentKey;
         // `grow` on the content-width variant too: it does nothing while the
-        // row fits (a `w-fit` track is exactly its content), and once the row
-        // wraps it is what makes each line share its width instead of sitting
-        // ragged — four tabs become a 2x2 block on a phone.
+        // row fits (a `w-fit` track is exactly its content), and before the
+        // track has measured itself onto a grid (the server's render) it keeps
+        // a wrapped line from sitting ragged. On the grid it means nothing.
         const cls = `relative inline-flex ${
           fill ? "flex-1" : "grow"
         } pressable items-center justify-center whitespace-nowrap ${sizes[size]} ${segmentClass({
