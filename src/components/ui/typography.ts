@@ -27,7 +27,9 @@
  * `SUB_TITLE_CLASS`. Two of those set their tracking tighter than the app's and
  * balance their wrap, because they are headings that *wrap* at display size; a
  * staff page title is a short label that does not. That is a real difference in
- * the type, not a preserved accident.
+ * the type, not a preserved accident. The sub-title wraps `pretty` rather than
+ * balanced: it sits in narrow grid cells, and it left "sizes" alone on its last
+ * line under a product-page card at 390.
  *
  * ### Figures
  *
@@ -41,7 +43,11 @@
  * and the card shell would drag the whole of it into the browser bundle.
  *
  * `text-balance` is not baked into the app ramp: it belongs to titles that wrap
- * (a trip name), not to the ones that don't, and each shell decides.
+ * (a trip name), not to the ones that don't, and each shell decides. The
+ * reading ramp is the other way round — its rungs carry their wrap rule, and a
+ * call site never adds a second one (`typography.test.ts`): two `text-wrap`
+ * utilities on one element are settled by stylesheet order, not by the order
+ * they are written in.
  */
 
 /**
@@ -102,7 +108,7 @@ export const BANNER_TITLE_CLASS = "text-3xl font-semibold tracking-[-0.035em] te
 export const LEAD_TITLE_CLASS = "text-2xl font-semibold tracking-tight";
 
 /** The step under a lead — a named item in a marketing grid, a legal `<h2>`. */
-export const SUB_TITLE_CLASS = "text-xl font-semibold tracking-tight";
+export const SUB_TITLE_CLASS = "text-xl font-semibold tracking-tight text-pretty";
 
 /**
  * **The app's section heading**, and the workhorse of the whole ramp — 76 of the

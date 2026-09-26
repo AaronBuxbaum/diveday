@@ -934,10 +934,7 @@ function DiveRecord({
           <span data-postcard-mark className="contents">
             <SiteMark mark={siteMark} size="lg" ground="surface" className="print:hidden" />
           </span>
-          <h2
-            id="dive-record-heading"
-            className={`font-brand-display ${SUB_TITLE_CLASS} text-pretty`}
-          >
+          <h2 id="dive-record-heading" className={`font-brand-display ${SUB_TITLE_CLASS}`}>
             {t("recap.logbookHeading")}
           </h2>
         </div>
