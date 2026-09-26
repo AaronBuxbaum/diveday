@@ -441,7 +441,23 @@ export function RowKind({
  * omission; one union means the type system asks for the destination's name in
  * the same breath as the destination.
  */
-type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkLabel?: never };
+type LedgerRowDoor =
+  | { href: string; linkLabel: string; reserveDoorSlot?: never }
+  | {
+      href?: never;
+      linkLabel?: never;
+      /**
+       * **A plain row in a list of doors keeps the door's slot** (pixel-craft
+       * class 3): the door's own glyph, unseen, so this row's `trailing` ends
+       * on the edge its siblings' does. The inbox's strangers are the case — a
+       * message with no record behind it, among messages with one — whose
+       * date stood 18px right of every other date in the column. The glyph
+       * itself rather than a spacer a call site sizes, so the slot is whatever
+       * the door's box is: a hand-set `size-4` would have been 10px wider than
+       * the 5.7px of ink the chevron is cropped to.
+       */
+      reserveDoorSlot?: boolean;
+    };
 
 /**
  * **The row's vertical inset, owned here** (pixel-craft class 5). A row had
@@ -571,6 +587,7 @@ export function LedgerRow({
   trailing,
   href,
   linkLabel,
+  reserveDoorSlot = false,
   size = "md",
   pad = "md",
   align = "center",
@@ -676,10 +693,12 @@ export function LedgerRow({
           {trailing}
         </div>
       ) : null}
-      {href ? (
+      {href || reserveDoorSlot ? (
         // The door's glyph, last on the line at every width. It sits below
         // the overlay link (static, so the absolutely positioned link paints
-        // over it) — a tap on it is a tap on the row.
+        // over it) — a tap on it is a tap on the row. On a plain row that
+        // keeps the door's slot (`reserveDoorSlot`) it is the same box,
+        // `invisible`, so it holds its width and draws nothing.
         //
         // `max-sm:ms-auto` only when a stacked row has a kind and nothing
         // trailing: the sentence has dropped to its own full-width line, so
@@ -699,13 +718,17 @@ export function LedgerRow({
         align === "first-line" ? (
           <span
             aria-hidden="true"
-            className={`inline-flex shrink-0 items-center ${doorPlacement(stacked, kind, trailing)}`.trim()}
+            className={`inline-flex shrink-0 items-center ${doorPlacement(stacked, kind, trailing)} ${href ? "" : "invisible"}`
+              .replace(/\s+/g, " ")
+              .trim()}
           >
             {ZERO_WIDTH_SPACE}
             <DoorChevron />
           </span>
         ) : (
-          <DoorChevron className={doorPlacement(stacked, kind, trailing)} />
+          <DoorChevron
+            className={`${doorPlacement(stacked, kind, trailing)} ${href ? "" : "invisible"}`}
+          />
         )
       ) : null}
       {href ? (

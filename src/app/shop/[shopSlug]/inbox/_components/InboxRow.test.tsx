@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { formatDateTimeTz } from "@/lib/format";
 import { InboxRow } from "./InboxRow";
 
 afterEach(cleanup);
@@ -85,6 +86,66 @@ describe("a message from a stranger", () => {
     ).toBeInTheDocument();
     // The id the action deletes rides in the form, not in the URL.
     expect(container.querySelector('input[name="messageId"]')).toHaveValue(MESSAGE.id);
+  });
+});
+
+/** The row's own child holding `node`: its kind, its body, its trailing slot or its door's glyph. */
+function slotOf(container: HTMLElement, node: Element): Element {
+  const row = container.querySelector("li");
+  const slot = row ? [...row.children].find((child) => child.contains(node)) : undefined;
+  if (!slot) throw new Error("that node is not in the row");
+  return slot;
+}
+
+/**
+ * **One column of dates, door or not** (pixel-craft class 3, K-459). A
+ * stranger's row carried its Delete beside its date, and a door's chevron is
+ * 5.7px of ink, so the stranger's date ended 50px left of every other date in
+ * the column (903–1035 against 853–984 at 1280). And the 44px button set the
+ * height of the kind's line on a phone, so that row's first line sat 12px
+ * lower than its neighbours' (K-465). The trailing slot holds the date alone
+ * on every row, the door's slot follows it whether or not there is a door, and
+ * Delete is a line of the row's body.
+ */
+describe("where the row sets its date and its Delete", () => {
+  const RECEIVED = formatDateTimeTz(MESSAGE.receivedAt, "en-US", "America/Cancun");
+  // By exact text: the formatted date keeps its no-break spaces, which
+  // `getByText`'s normalizer would collapse on the node's side only.
+  const received = () =>
+    screen.getByText((_, node) => node?.children.length === 0 && node.textContent === RECEIVED);
+
+  it("holds only the date in a door row's trailing slot, with the door's glyph after it", () => {
+    const container = renderRow();
+    const trailing = slotOf(container, received());
+    expect(trailing.textContent).toBe(RECEIVED);
+    const glyph = trailing.nextElementSibling;
+    expect(glyph?.querySelector("svg")).not.toBeNull();
+    expect(glyph).not.toHaveClass("invisible");
+  });
+
+  it("holds only the date in a stranger's trailing slot, and keeps the door's slot after it", () => {
+    const container = renderRow({ personId: null, fromAddress: "marta.keller@example.net" }, null);
+    const trailing = slotOf(container, received());
+    expect(trailing.textContent).toBe(RECEIVED);
+    expect(trailing.querySelector("form, button")).toBeNull();
+    // The door's glyph, unseen: the date ends where a door row's date ends.
+    const glyph = trailing.nextElementSibling;
+    expect(glyph?.querySelector("svg")).not.toBeNull();
+    expect(glyph).toHaveClass("invisible");
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("sets a stranger's Delete in the row's body, after the address it names", () => {
+    const container = renderRow({ personId: null, fromAddress: "marta.keller@example.net" }, null);
+    const remove = screen.getByRole("button", {
+      name: "Delete the message from marta.keller@example.net",
+    });
+    const address = screen.getByText("marta.keller@example.net");
+    expect(slotOf(container, remove)).toBe(slotOf(container, screen.getByText("Unknown sender")));
+    expect(address.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Its own line, at the body's end edge.
+    const line = remove.closest("form")?.parentElement;
+    expect(line).toHaveClass("flex", "justify-end");
   });
 });
 

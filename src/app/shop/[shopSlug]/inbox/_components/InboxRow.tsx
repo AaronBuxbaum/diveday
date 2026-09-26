@@ -71,12 +71,18 @@ function excerpt(body: string): string {
  * restore — from where they stand this is one-way, and a confirm is the honest
  * shape for that. Give the inbox a restore and this becomes an undo toast.
  *
- * The form sits in `trailing`, and that placement is safe on any row, door or
- * not: `LedgerRow` renders `trailing` as a **sibling** of its door link, given
- * `relative z-10` so it paints and receives taps above the overlay
- * (`src/components/ui/ledger.tsx`). No button of ours ends up inside an
- * anchor. So nothing about the markup is what keeps Delete off a diver's row
- * — the product decision above is, and the invariant that actually holds is
+ * **The form is the last line of the row's body, not a slot beside the date**
+ * (pixel-craft classes 3 and 4, K-459 and K-465). In `trailing` it pushed the
+ * stranger's date 50px left of every other date in the column, and on a phone
+ * its 44px box set the height of the kind's line, so that row's first line sat
+ * 12px lower than its neighbours'. The date is now the only thing `trailing`
+ * holds on any row, and a stranger's row keeps the door's slot after it.
+ *
+ * The body is under a door's overlay link, so a button there would be
+ * unreachable on a door row — and it is only ever on a row with no door. It is
+ * never inside an anchor either way (the overlay is an empty sibling). So
+ * nothing about the markup is what keeps Delete off a diver's row — the
+ * product decision above is, and the invariant that actually holds is
  * `person_id is null` in `deleteStrangerInboundMessage`'s `where`
  * (`security-reviewer`, issue 1506). A render guard decides what a staffer is
  * offered; it has never decided what the server accepts.
@@ -100,12 +106,14 @@ export function InboxRow({
   const { message, personName } = row;
   const name = personName ?? t("inbox.unknownSender");
   const subject = message.subject?.trim() || null;
+  // A stranger's row has no door, and keeps the door's slot: its date ends
+  // on the edge every other date in the column ends on (K-459).
   const door = message.personId
     ? {
         href: `${shopPath(shopSlug, "divers", message.personId)}#conversation`,
         linkLabel: t("inbox.openRecord", { name }),
       }
-    : {};
+    : { reserveDoorSlot: true };
   const facts = [
     // The address is on the stranger's row only: for a diver on file the name
     // above already says who this is, and their address is on their record.
@@ -124,25 +132,8 @@ export function InboxRow({
       align="first-line"
       kind={{ word: t(CHANNEL_KEYS[message.channel]), tone: "neutral" }}
       trailing={
-        <span className="flex items-center gap-3">
-          <span className="text-sm text-muted tabular-nums">
-            {formatDateTimeTz(message.receivedAt, locale, timezone)}
-          </span>
-          {message.personId ? null : (
-            <form action={deleteAction}>
-              <input type="hidden" name="messageId" value={message.id} />
-              <SubmitButton
-                pendingLabel={t("inbox.delete.pending")}
-                className={buttonClass({ variant: "danger-ghost", size: "sm" })}
-                confirmMessage={t("inbox.delete.confirm")}
-                // One "Delete" per row would name them all the same, so the
-                // accessible name carries the address the row is about.
-                ariaLabel={t("inbox.delete.actionFor", { address: message.fromAddress })}
-              >
-                {t("inbox.delete.action")}
-              </SubmitButton>
-            </form>
-          )}
+        <span className="text-sm text-muted tabular-nums">
+          {formatDateTimeTz(message.receivedAt, locale, timezone)}
         </span>
       }
       {...door}
@@ -163,6 +154,37 @@ export function InboxRow({
           ) : null}
         </div>
       </div>
+      {message.personId ? null : (
+        // The row's last line, at the body's end edge (K-459, K-465). `mt-1`
+        // keeps the hover fill 4px clear of the address above it.
+        <div className="mt-1 flex justify-end">
+          <form action={deleteAction}>
+            <input type="hidden" name="messageId" value={message.id} />
+            <SubmitButton
+              pendingLabel={t("inbox.delete.pending")}
+              // The word ends on the body's edge (`flush`), and the unseen
+              // half of its target sinks into the row's inset (`outdent`), so
+              // the row has as much room under "Delete" as over its first
+              // line — the team card's pair (`settings/team/page.tsx`). That
+              // leaves the box 0–4px from the row's rule, so its ring is drawn
+              // inside it rather than across the rule and the row below.
+              className={buttonClass({
+                variant: "danger-ghost",
+                size: "sm",
+                flush: true,
+                outdent: "block-end",
+                className: "focus-visible:focus-ring-inset",
+              })}
+              confirmMessage={t("inbox.delete.confirm")}
+              // One "Delete" per row would name them all the same, so the
+              // accessible name carries the address the row is about.
+              ariaLabel={t("inbox.delete.actionFor", { address: message.fromAddress })}
+            >
+              {t("inbox.delete.action")}
+            </SubmitButton>
+          </form>
+        </div>
+      )}
     </LedgerRow>
   );
 }

@@ -869,6 +869,66 @@ describe("LedgerRow", () => {
     expect(container.querySelector("svg")).toBeNull();
   });
 
+  /**
+   * **A plain row among doors keeps the door's slot** (pixel-craft class 3).
+   * The inbox mixes the two: a stranger's message has no record to open, so
+   * its date ended where its siblings' chevrons begin, 18px right of every
+   * other date in the column — and 50px left of them once a Delete stood
+   * beside it (K-459). The slot is the door's own glyph, unseen, rather than a
+   * spacer a call site sizes by hand: a 16px guess would have outlived the
+   * glyph's crop to its 5.7px of ink by 10px.
+   */
+  it("keeps the door glyph's box, unseen, on a plain row that asks for it", () => {
+    const { container } = render(
+      <LedgerRow as="div" reserveDoorSlot trailing={<span>Jul 20, 7:30 AM</span>}>
+        Unknown sender
+      </LedgerRow>,
+    );
+    const row = container.firstElementChild as HTMLElement;
+    const slot = row.lastElementChild as HTMLElement;
+    expect(slot.tagName).toBe("svg");
+    expect(slot).toHaveAttribute("viewBox", "7.75 0 8.5 24");
+    expect(slot).toHaveClass("h-4", "w-auto", "shrink-0", "invisible");
+    expect(slot).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("Jul 20, 7:30 AM").parentElement?.nextElementSibling).toBe(slot);
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("keeps a first-line door's slot in the door's own baseline box, unseen", () => {
+    const door = render(
+      <LedgerRow
+        as="div"
+        align="first-line"
+        stacked
+        kind={{ word: "Email", tone: "neutral" }}
+        href="/shop/blue-mantis/divers/1#conversation"
+        linkLabel="Open the record for Priya Sharma"
+        trailing={<span>Jul 21</span>}
+      >
+        Priya Sharma
+      </LedgerRow>,
+    );
+    const doorBox = door.container.querySelector("svg")?.parentElement as HTMLElement;
+    const doorClasses = [...doorBox.classList];
+    cleanup();
+    const { container } = render(
+      <LedgerRow
+        as="div"
+        align="first-line"
+        stacked
+        kind={{ word: "Email", tone: "neutral" }}
+        reserveDoorSlot
+        trailing={<span>Jul 20</span>}
+      >
+        Unknown sender
+      </LedgerRow>,
+    );
+    const slot = container.querySelector("svg")?.parentElement as HTMLElement;
+    expect(slot.parentElement).toBe(container.firstElementChild);
+    expect(slot).toHaveClass("invisible");
+    expect([...slot.classList].filter((token) => token !== "invisible")).toEqual(doorClasses);
+  });
+
   it("gives the sentence its own line below sm, and one line from sm up", () => {
     // The phone reading the `TodayPhone` artboard draws: the kind and the fix
     // share the first line, the sentence takes the width beneath them. It is a
