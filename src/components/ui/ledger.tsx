@@ -401,6 +401,15 @@ const ROW_PAD = { md: "py-2", lg: "py-3", none: "" } as const;
  * `max-sm:` one, so from `sm` up an opted-in row is byte-for-byte the row it
  * always was.
  *
+ * **Its lines sit evenly between the rules** (pixel-craft class 5). Wrapped,
+ * the row's `gap-3` became a 12px gap between its lines, and a 44px fix set
+ * the first line's height with the 20px kind word centred in it: the staffing
+ * week's "Needs crew" rows sat 7px low, 24px of air over the kind and 10px
+ * under the last line. The lines are 4px apart (`max-sm:gap-y-1`), and beside
+ * a kind the fix overhangs the kind's line (`max-sm:-my-3`, 44 − 24 = 20) so
+ * the word sets it; the target is still 44px. The row's own 8px inset is the
+ * room above the first line and below the last.
+ *
  * **A stacked row with no kind leads with its content.** The artboard's first
  * line is *the kind and the fix*; a row that names no kind has nothing to put
  * on the left of that line, and the first reading of this rule gave the
@@ -486,7 +495,7 @@ export function LedgerRow({
     <Tag
       className={`relative flex items-center gap-3 ${ledgerRowBoxClass} ${ROW_PAD[pad]} ${
         size === "lg" ? "min-h-14" : "min-h-13"
-      } ${align === "first-line" ? "sm:items-baseline sm:py-4" : ""} ${stacked ? "max-sm:flex-wrap" : ""} ${href ? "pressable-row hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
+      } ${align === "first-line" ? "sm:items-baseline sm:py-4" : ""} ${stacked ? "max-sm:flex-wrap max-sm:gap-y-1" : ""} ${href ? "pressable-row hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
         .replace(/\s+/g, " ")
         .trim()}
     >
@@ -520,7 +529,7 @@ export function LedgerRow({
           className={
             stacked
               ? kind
-                ? "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-2 max-sm:ms-auto"
+                ? "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-2 max-sm:-my-3 max-sm:ms-auto"
                 : "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-3 max-sm:my-0 max-sm:flex max-sm:basis-full max-sm:justify-end"
               : "relative z-10 -my-2 min-w-0 max-w-full shrink-0"
           }

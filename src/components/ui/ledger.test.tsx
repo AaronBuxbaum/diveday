@@ -589,6 +589,44 @@ describe("LedgerRow", () => {
     );
   });
 
+  /**
+   * **A stacked row's lines sit evenly between its rules** (pixel-craft class
+   * 5). Wrapped, the row's `gap-3` became a 12px gap between its lines, and a
+   * 44px "Assign" set the height of the first line with the 20px kind word
+   * centred in it: the staffing week's "Needs crew" rows put 24px of air over
+   * the kind word and 10px under the last line, 7px low. The line gap is 4px,
+   * and the fix overhangs the kind's line instead of sizing it — its target
+   * stays 44px.
+   */
+  it("wraps its lines 4px apart and lets the fix overhang the kind's line", () => {
+    render(
+      <LedgerRow
+        as="div"
+        stacked
+        kind={{ word: "Needs crew", tone: "warning" }}
+        trailing={<button type="button">Assign</button>}
+      >
+        <p>5:30 AM Dawn Two-Tank</p>
+      </LedgerRow>,
+    );
+    const trailing = screen.getByRole("button", { name: "Assign" }).parentElement as HTMLElement;
+    expect(trailing.parentElement).toHaveClass("max-sm:flex-wrap", "max-sm:gap-y-1");
+    expect(trailing).toHaveClass("max-sm:-my-3");
+  });
+
+  it("gives a stacked fix on a line of its own its whole height", () => {
+    // Without a kind the fix drops to a line of its own under the content; an
+    // overhang there would put a 44px control on the row's bottom rule.
+    render(
+      <LedgerRow as="div" stacked trailing={<button type="button">Hide</button>}>
+        <p>Pickles Reef</p>
+      </LedgerRow>,
+    );
+    const trailing = screen.getByRole("button", { name: "Hide" }).parentElement as HTMLElement;
+    expect(trailing).toHaveClass("max-sm:my-0");
+    expect(trailing.className).not.toMatch(/max-sm:-my-3/);
+  });
+
   it("leads with its content when stacked without a kind", () => {
     // The artboard's first line is *the kind and the fix*. A row that names
     // no kind has nothing for the left of that line, and the first reading of
