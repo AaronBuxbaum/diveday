@@ -32,6 +32,14 @@ export async function copyToClipboard(value: string): Promise<boolean> {
  * - `"inline"` — just the button, for a value already shown elsewhere on the
  *   row (a promo code next to its badge).
  *
+ * `flush` puts the button's word on the edge its box stands on rather than
+ * 12px inside it (`buttonClass`'s `flush`). The panel's button always ends its
+ * header row, so the panel takes it by default; an inline button is flush only
+ * where its caller starts a line with it — the embed snippet's Copy under its
+ * box, the party panel's reminder under the seat's name. Mid-row, among other
+ * words (a promo code's, a waiver link's), it keeps its padding, which is what
+ * keeps its hover fill off its neighbours.
+ *
  * On a denied or unsupported clipboard, the button reports `failedLabel`
  * instead of silently doing nothing — the value is always visible on screen
  * either way, so a failed copy must read as "select it yourself", not as a
@@ -55,6 +63,7 @@ export function Copyable({
   copiedLabel,
   failedLabel,
   layout = "panel",
+  flush = layout === "panel",
   autoCopy = false,
   className,
 }: {
@@ -65,6 +74,8 @@ export function Copyable({
   copiedLabel: string;
   failedLabel: string;
   layout?: "panel" | "inline";
+  /** The button starts or ends its line: its word sits on that edge. Default: the panel's. */
+  flush?: boolean;
   /** Attempt the write as soon as `value` arrives — only when the copy is the errand. */
   autoCopy?: boolean;
   className?: string;
@@ -108,9 +119,15 @@ export function Copyable({
     <button
       type="button"
       onClick={copy}
-      // In the panel the button starts or ends the label's line, so its word
-      // sits on the panel's edge; inline, it is a word among others.
-      className={buttonClass({ variant: "ghost", size: "sm", flush: layout === "panel" })}
+      className={buttonClass({
+        variant: "ghost",
+        size: "sm",
+        flush,
+        // The panel's 12px inset leaves a flush fill 4px from the sunken box's
+        // edge, short of the outset ring's 5px reach, so the ring is drawn
+        // inside rather than a pixel outside the box.
+        className: layout === "panel" ? "focus-visible:focus-ring-inset" : undefined,
+      })}
     >
       <span aria-live="polite" className={status === "failed" ? "text-danger" : undefined}>
         {buttonText}

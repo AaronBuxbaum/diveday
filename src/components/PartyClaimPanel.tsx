@@ -68,8 +68,11 @@ export function PartyClaimPanel({
             </p>
             {!seat.claimed && seat.claimUrl ? (
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                {/* It starts the line, so its word sits on the seat's name and
+                    waiver line above it rather than 12px inside them. */}
                 <Copyable
                   layout="inline"
+                  flush
                   value={seat.claimUrl}
                   copyLabel={t("seatClaim.copyReminder")}
                   copiedLabel={t("seatClaim.copiedLabel")}

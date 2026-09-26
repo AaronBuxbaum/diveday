@@ -36,8 +36,10 @@ export function SnippetField({
           className={`${controlClass} font-mono text-xs`}
         />
         <div>
+          {/* Alone on the line under the box: its word sits on the box's edge. */}
           <Copyable
             layout="inline"
+            flush
             value={snippet}
             copyLabel={copyLabel}
             copiedLabel={copiedLabel}
