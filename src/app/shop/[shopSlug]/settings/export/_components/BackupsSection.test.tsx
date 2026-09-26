@@ -92,13 +92,12 @@ describe("BackupsSection's delivery history", () => {
    * The table is `table-layout: fixed`, and five headings with no width split
    * it evenly: 134px columns at 1280 cut "Jun 29, 4:00 AM EDT" by 39px, and at
    * the 640 and 1024 edges the table was 540 and 580px wide, where the stamp
-   * lost 65px and "Delivered" 30. The stamp and the outcome now state the
-   * widths their longest words need, and the rows stay stacked until the
-   * table is wide enough to leave Run, Size and Details a share each: at 1024
-   * it is 580px, which leaves them 76px each, under "48.6 MB"; from 1280 it
-   * is 670px.
+   * lost 65px and "Delivered" 30. Every column but Details now states the
+   * width its longest words need, and the rows stay stacked until the table is
+   * wide enough to leave Details a column beside them: at 1024 it is 580px,
+   * which leaves it 36px; from 1280 it is 670px, which leaves it 126.
    */
-  it("gives the stamp and the outcome the widths their longest words need", () => {
+  it("gives every column but Details the width its longest words need", () => {
     renderSection("en-US", [DELIVERY]);
     const headings = within(screen.getByRole("table")).getAllByRole("columnheader");
     expect(headings.map((heading) => heading.textContent)).toEqual([
@@ -110,10 +109,12 @@ describe("BackupsSection's delivery history", () => {
     ]);
     expect(headings[0]).toHaveClass("w-48");
     expect(headings[2]).toHaveClass("w-40");
-    // Run, Size and Details share what is left.
-    for (const heading of [headings[1], headings[3], headings[4]]) {
-      expect(heading.className).not.toMatch(/(^|\s)w-/);
-    }
+    // Run and Size hold "Semanal" and "48.6 MB" in 6rem, and Details, the
+    // sentence a failed delivery is read for, takes what is left: 126px at
+    // 670, where an even split left it 106.
+    expect(headings[1]).toHaveClass("w-24");
+    expect(headings[3]).toHaveClass("w-24");
+    expect(headings[4].className).not.toMatch(/(^|\s)w-/);
   });
 
   it("lets a stamp longer than its column wrap after its comma rather than be cut", () => {

@@ -309,12 +309,12 @@ export function BackupsSection({
                 **Why `xl`, and not `sm`** (K-143, pixel-craft class 9): the
                 table is `table-layout: fixed`, so it is only as good as the
                 widths it states. The stamp takes 12rem ("Jun 29, 4:00 AM EDT"
-                is 173px with its padding) and the outcome 10rem ("Delivered"
-                138px), and Run, Size and Details share the rest. That rest is
-                a column each only where the table is 670px, which it is from
-                1280; at 1024 the rail beside the pane leaves it 580px, 76px
-                apiece and under "48.6 MB", and at 640 it is 540px. From `sm`
-                it split five ways at every width and cut the stamp at all of
+                is 173px with its padding), the outcome 10rem ("Delivered" is
+                138px), Run and Size 6rem each ("Semanal", "48.6 MB"), and
+                Details the rest: 126px where the table is 670px, which it is
+                from 1280. At 1024 the rail beside the pane leaves the table
+                580px, 36px for Details, and at 640 it is 540px. From `sm` it
+                split five ways at every width and cut the stamp at all of
                 them. */}
               {/* `flush` inside this card — no card-on-card shadow or second
                 bg-surface; a thin border stays as the boundary of the grid,
@@ -324,9 +324,11 @@ export function BackupsSection({
                   grid, so a lone "When" heading over them would be noise. */}
                 <THead className="hidden xl:table-header-group">
                   <Th width="12rem">{t("backup.history.when")}</Th>
-                  <Th>{t("backup.history.kind")}</Th>
+                  <Th width="6rem">{t("backup.history.kind")}</Th>
                   <Th width="10rem">{t("backup.history.outcome")}</Th>
-                  <Th numeric>{t("backup.history.size")}</Th>
+                  <Th numeric width="6rem">
+                    {t("backup.history.size")}
+                  </Th>
                   <Th>{t("backup.history.details")}</Th>
                 </THead>
                 {/* One DOM, two layouts: below `xl` the tbody reflows to stacked

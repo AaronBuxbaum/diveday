@@ -99,6 +99,10 @@ export type TableMinWidth = keyof typeof MIN_WIDTH;
  * departure log does for its per-dive checkpoint columns.
  */
 const COLUMN_WIDTH = {
+  // A short word or a figure beside a column of sentences: the backup
+  // history's Run ("Semanal") and Size ("48.6 MB"), so its Details keeps the
+  // rest (K-143).
+  "6rem": "w-24",
   "8rem": "w-32",
   "10rem": "w-40",
   "12rem": "w-48",
