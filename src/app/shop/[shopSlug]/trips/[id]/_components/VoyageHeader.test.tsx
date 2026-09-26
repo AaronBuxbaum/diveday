@@ -112,6 +112,36 @@ describe("VoyageHeader", () => {
     expect(container.querySelector(".sky")?.textContent).not.toContain(" · ");
   });
 
+  /**
+   * **The band's two chips stand 8px apart** (pixel-craft class 4, K-163).
+   * The page hands Manifest and Add diver over as a fragment, and two inline
+   * boxes from a fragment have no space between them: they touched at x 1018
+   * and 1019 at 1280, and the second chip's `backdrop-blur` painted over the
+   * first one's focus ring, which reaches 5px out. The slot lays its children
+   * out itself, `gap-2`, more than the ring's reach.
+   */
+  it("spaces the chips it is handed a gap wider than the focus ring", () => {
+    render(
+      <VoyageHeader
+        scheme="day"
+        back={<a href="/back">Board</a>}
+        hour="2:30 PM"
+        title="Two-Tank Reef"
+        facts={["Mantis I", "9 of 12 seats taken"]}
+        strip={null}
+        action={
+          <>
+            <a href="/manifest">Manifest</a>
+            <a href="#add-diver">Add diver</a>
+          </>
+        }
+      />,
+    );
+    const slot = screen.getByRole("link", { name: "Manifest" }).parentElement;
+    expect(slot).toBe(screen.getByRole("link", { name: "Add diver" }).parentElement);
+    expect(slot).toHaveClass("flex", "items-center", "gap-2");
+  });
+
   it("wears the hour it is read at, and nothing else decides it", () => {
     const { container } = render(
       <VoyageHeader

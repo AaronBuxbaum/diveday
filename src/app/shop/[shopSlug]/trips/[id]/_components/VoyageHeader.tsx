@@ -102,7 +102,13 @@ export function VoyageHeader({
         <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
           <div className="flex items-center gap-3">
             {back}
-            {action ? <div className="ms-auto shrink-0">{action}</div> : null}
+            {/* The slot lays its children out itself: the page hands over
+                two chips in a fragment, and two inline boxes from a fragment
+                touch, so the second one's `backdrop-blur` painted over the
+                first one's focus ring. `gap-2` is more than the ring's 5px. */}
+            {action ? (
+              <div className="ms-auto flex shrink-0 items-center gap-2">{action}</div>
+            ) : null}
           </div>
           <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <p className="font-rounded text-[34px] leading-10 font-bold tracking-tight tabular-nums">
