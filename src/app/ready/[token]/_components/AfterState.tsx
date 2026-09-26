@@ -968,7 +968,10 @@ function DiveRecord({
       </div>
 
       <div className="p-5 pt-0 sm:p-6 sm:pt-0 print:p-0">
-        <dl className="mt-5 divide-y divide-border border-t border-border">
+        {/* The top rule is paper's only: on screen the band's wash is this
+            list's top edge, and a hairline 20px under it drew it twice
+            (K-595); in print the band goes transparent. */}
+        <dl className="mt-5 divide-y divide-border print:border-t print:border-border">
           <Fact label={t("recap.diverLabel")}>{diverName}</Fact>
           <Fact label={t("recap.dateLabel")}>{when}</Fact>
           {trip.boatName ? <Fact label={t("recap.vesselLabel")}>{trip.boatName}</Fact> : null}

@@ -602,6 +602,16 @@ describe("the keepsake prints like a logbook page", () => {
       }
     }
   });
+
+  it("rules the facts' top edge on paper only, where the band's wash is gone", () => {
+    // On screen the band's wash is the facts' top edge, and a rule 20px
+    // under it drew that edge twice (K-595). In print the band goes
+    // transparent and the rule is the only edge left.
+    render(<AfterState {...props()} />);
+    const facts = screen.getByTestId(AFTER_STATE_TEST_IDS.record).querySelector("dl");
+    expect(facts).toHaveClass("print:border-t", "divide-y");
+    expect(facts).not.toHaveClass("border-t");
+  });
 });
 
 /**
