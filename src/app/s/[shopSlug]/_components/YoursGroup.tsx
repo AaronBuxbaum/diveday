@@ -3,6 +3,7 @@ import { openMyShelfAction } from "@/app/actions/shelf-door";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 export type YoursRow = {
@@ -32,6 +33,10 @@ export type YoursRow = {
  * The shelf's own door is a **form**, not a link: the token lives in an
  * `HttpOnly` cookie and an `href` would print it into the public page's HTML
  * (`openMyShelfAction`).
+ *
+ * The card is the page's card (`sectionCardClass`): it sits directly under the
+ * storefront's status panels, and hand-rolled it had a 12px corner against
+ * their 20px, no bed, and its words 4px further in.
  */
 export function YoursGroup({
   heading,
@@ -48,10 +53,7 @@ export function YoursGroup({
   shelfLabel: string;
 }) {
   return (
-    <section
-      aria-label={heading}
-      className="mt-8 rounded-lg border border-border bg-surface p-4 sm:p-6"
-    >
+    <section aria-label={heading} className={sectionCardClass({ className: "mt-8" })}>
       <p className="text-lg font-medium">{greeting}</p>
       <h2 className={`mt-4 ${SECTION_TITLE_CLASS}`}>{heading}</h2>
       <ul className="mt-2 divide-y divide-border">
