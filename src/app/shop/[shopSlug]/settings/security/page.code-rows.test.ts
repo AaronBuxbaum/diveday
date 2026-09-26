@@ -69,4 +69,23 @@ describe("the security page's session rows", () => {
     expect(form.open).toContain("revokeSessionAction");
     expect(form.classes).toContain("shrink-0");
   });
+
+  /**
+   * **A wrapped device line never opens on a separator** (pixel-craft class
+   * 8). The three parts were joined by " · " with an ordinary space before
+   * each dot, so a user agent that wrapped could start its next line "· 127.0.0.1",
+   * the defect K-590 fixed on the Print register. The dot is glued to the part
+   * before it.
+   */
+  it("glues each separator to the part before it", () => {
+    const line = SOURCE.slice(
+      SOURCE.indexOf("sessions.map("),
+      SOURCE.indexOf("<form", SOURCE.indexOf("sessions.map(")),
+    );
+    expect(line).not.toMatch(/ ·\{" "\}/);
+    expect(
+      line.split('{"\\u00a0· "}').length - 1,
+      "one before the address, one before the time",
+    ).toBe(2);
+  });
 });

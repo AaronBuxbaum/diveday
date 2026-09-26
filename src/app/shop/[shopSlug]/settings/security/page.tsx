@@ -262,9 +262,13 @@ export default async function SecurityPage({
                 key={item.id}
                 className="flex items-center gap-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
               >
+                {/* Each dot glued to the part before it, so a wrapped line
+                    never opens on one (the Print register's K-590). */}
                 <span className="min-w-0 flex-1 break-words">
-                  {item.userAgent ?? t("settings.security.unknownDevice")} ·{" "}
-                  {item.ipAddress ?? t("settings.security.unknownIp")} ·{" "}
+                  {item.userAgent ?? t("settings.security.unknownDevice")}
+                  {"\u00a0· "}
+                  {item.ipAddress ?? t("settings.security.unknownIp")}
+                  {"\u00a0· "}
                   {t("settings.security.lastSeen", {
                     date: formatDateTimeTz(item.updatedAt, locale, shop.timezone),
                   })}
