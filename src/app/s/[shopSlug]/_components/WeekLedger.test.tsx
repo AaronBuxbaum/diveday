@@ -332,6 +332,27 @@ describe("seat state and price", () => {
     expect(screen.getByRole("listitem").querySelector(".opacity-60")).toBeNull();
   });
 
+  /**
+   * The seat badge is a 28px pill beside a 24px title line, and its group
+   * centres everything in the pill's height: top-aligned with the title, the
+   * price and chevron sat 2–3px below the title's line (pixel-craft class 1).
+   * On one baseline the badge's word — `Badge` hands its row the word's
+   * baseline — the price and the title share a line.
+   */
+  it("sets the time, the title and the seat state on one baseline", () => {
+    render(
+      <WeekLedger
+        rows={[row({ capacityText: "Only 2 spots left", capacityTone: "low" })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const box = screen.getByRole("link", { name: /Two-Tank Reef/ }).parentElement;
+    expect(box).toHaveClass("sm:items-baseline");
+    expect(box).not.toHaveClass("sm:items-start");
+  });
+
   it("leaves routine availability as a quiet fact rather than a badge", () => {
     render(<WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />);
 
