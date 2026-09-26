@@ -787,3 +787,25 @@ describe("the skip link's landing", () => {
     expect(section).toHaveClass(rollCallScrollMargin(isDeparture));
   });
 });
+
+describe("the person panel's spacing", () => {
+  const open = (name: string) => {
+    fireEvent.click(screen.getByRole("button", { name: `Open details for ${name}` }));
+    return screen.getByRole("dialog");
+  };
+
+  /**
+   * **A list with nothing in it takes no room** (pixel-craft class 4, K-361).
+   * The quiet facts under a diver's details — checked in, the age — are a list
+   * whose every item is conditional; for a diver with neither it rendered
+   * empty, and its `mt-3` stood on the note form's own, 24px where the panel's
+   * blocks sit 12 apart (31px from the last fact to the note's label).
+   */
+  it("hides a list of facts with none to show", () => {
+    renderList({ divers: [diver()] });
+    const sheet = open("Meera Iyer");
+    const empty = [...sheet.querySelectorAll("ul")].filter((list) => list.childNodes.length === 0);
+    expect(empty.length).toBeGreaterThan(0);
+    for (const list of empty) expect(list).toHaveClass("empty:hidden");
+  });
+});

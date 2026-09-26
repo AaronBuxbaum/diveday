@@ -748,8 +748,13 @@ export function DiverRollCall({
                         away: a team label is not an exception, so it does not
                         earn the row's single capsule, but "who am I supposed to
                         be with?" is a question asked at the rail and the answer
-                        has to be on the screen as well as on paper. */}
-                      <ul className="mt-3 flex flex-wrap gap-2">
+                        has to be on the screen as well as on paper.
+
+                        `empty:hidden` because every item is conditional: a
+                        diver with neither rendered the list empty, and its
+                        `mt-3` stood on the note form's, 24px where the panel's
+                        blocks sit 12 apart (pixel-craft class 4). */}
+                      <ul className="mt-3 flex flex-wrap gap-2 empty:hidden">
                         {/* **A sighting and a claim wear different words.**
                           A staffer's tap means the desk has seen this person;
                           a lobby-tablet tap means somebody typed a surname,
