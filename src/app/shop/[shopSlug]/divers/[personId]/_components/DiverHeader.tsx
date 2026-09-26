@@ -102,7 +102,17 @@ export function DiverHeader({
                 which is the one tap on this page a staffer makes with a diver
                 already on the phone. Both links are button-shaped and go
                 through `buttonClass` for it, so the 44px target is structural
-                rather than a remembered `min-h-11`. */}
+                rather than a remembered `min-h-11`.
+
+                **A fact that wraps sits 4px under the links, and that is
+                settled** (docs/design/settled-questions.md). A wrapped flex
+                line is as tall as what it holds, so "3 visits" on a phone is a
+                20px line of its own; the blank above its words is the links'
+                44px boxes, which must be their own (axe measures the element,
+                see `EYEBROW_TAP_WRAPPER`), and handing their unseen half back
+                would run their focus ring through the facts. A line of its own
+                at every width changes nothing on a phone and costs every
+                desktop record with a visit 24px. */}
             {diver.person.email ? (
               <a
                 href={mailtoHref(diver.person.email)}
