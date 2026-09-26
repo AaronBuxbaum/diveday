@@ -101,6 +101,9 @@ function renderFields(
       locale={locale}
       timezone="America/New_York"
     />,
+    // Inside a form, as both pages render it, so a test can read what the
+    // form would submit.
+    { container: document.body.appendChild(document.createElement("form")) },
   );
 }
 
@@ -437,5 +440,23 @@ describe("SiteFields — the required specialties (K-212)", () => {
     renderFields(null, "meters", "en-US", STORED, "Required specialties");
     expect(specialtyBoxes().some((box) => box.checked)).toBe(false);
     expect(document.querySelector('input[name="requiresNitrox"]')).not.toBeChecked();
+  });
+
+  it("submits what is ticked under the names both actions read, captioned or not", () => {
+    for (const caption of [undefined, "Required specialties"]) {
+      renderFields(
+        null,
+        "meters",
+        "en-US",
+        { ...STORED, requiredSpecialties: ["deep", "drysuit"], requiresNitrox: true },
+        caption,
+      );
+      const form = specialtyBoxes()[0].form;
+      expect(form).not.toBeNull();
+      const submitted = new FormData(form as HTMLFormElement);
+      expect(submitted.getAll("specialty")).toEqual(["deep", "drysuit"]);
+      expect(submitted.get("requiresNitrox")).toBe("on");
+      cleanup();
+    }
   });
 });
