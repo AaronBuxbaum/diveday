@@ -18,6 +18,7 @@ import {
 import { Copyable } from "@/components/Copyable";
 import { SendHold } from "@/components/SendHold";
 import { buttonClass } from "@/components/ui/button";
+import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { fill, pluralForm } from "@/i18n/fill";
 
@@ -176,10 +177,10 @@ export function ResultNotice({ state, copy }: { state: WaiverSendState; copy: Wa
   if (nothing && !state.emptySelection) return null;
 
   return (
-    <div
-      role="status"
-      className="mt-3 rounded-inset border border-border bg-surface-sunken px-3 py-2.5 text-sm"
-    >
+    // A note carved into the station's card, so the one inset box on the
+    // sunken fill: it was a third spelling, 10px down behind a hairline the
+    // sunken fill already made redundant (pixel-craft class 12).
+    <div role="status" className={`mt-3 ${INSET_NOTE_BOX} bg-surface-sunken`}>
       {state.emptySelection ? (
         <p className="flex items-start gap-1.5 text-danger">
           <StatusMark variant="danger" />
@@ -247,12 +248,17 @@ export function WaiverSendControl({
   /** A person-scoped waiver target, independent of any booking or schedule. */
   personId?: string;
   label: string;
-  /** Short trailing detail (e.g. "tap to resend") — the roster's richer status pill uses this. */
+  /** Short trailing detail (e.g. "tap to resend") — the roster's status-faced send uses this. */
   hint?: string;
   pendingLabel?: string;
   /** An in-page `InlineConfirm` guard before a resend — the roster's already-sent case wants this. */
   confirmMessage?: string;
-  /** Overrides the default secondary-button look — the roster's per-status tone pill. */
+  /**
+   * Overrides the default secondary-button look — the roster's per-status
+   * `buttonClass`, `danger` for an expired link. The default is `sm`: its home
+   * is a ledger row on Today, beside fixes that are all `sm` (`button.ts`, "a
+   * ledger row … takes `sm`").
+   */
   className?: string;
   /** Overrides the outer `sm:text-right` alignment — the roster's two-column grid wants it left. */
   wrapperClassName?: string;
@@ -283,7 +289,8 @@ export function WaiverSendControl({
     state.links.length === 0 &&
     state.errors.length === 0;
   const buttonClassName =
-    className ?? buttonClass({ variant: "secondary", className: "w-full shrink-0 sm:w-auto" });
+    className ??
+    buttonClass({ variant: "secondary", size: "sm", className: "w-full shrink-0 sm:w-auto" });
   const labelContent = (
     <>
       {label}

@@ -33,8 +33,11 @@ const sizeClass = {
  * is where that line's capitals are centred. Not a `vertical-align` nudge on
  * the svg itself: the right nudge depends on the mark's size against the
  * text's, and this box is right at any of them.
+ *
+ * Exported for any glyph that stands in a run of text the same way — Today's
+ * station title ends in its chevron on the last line it wraps to (K-464).
  */
-const INLINE_LINE_BOX = "inline-flex h-lh items-center align-top";
+export const INLINE_LINE_BOX = "inline-flex h-lh items-center align-top";
 
 export function StatusMark({
   variant,
@@ -51,6 +54,29 @@ export function StatusMark({
 }) {
   const mark = drawMark(variant, `${sizeClass[size]} shrink-0 ${className}`.trim());
   return inline ? <span className={INLINE_LINE_BOX}>{mark}</span> : mark;
+}
+
+/**
+ * **The mark as the first column of a row of text** — a notice, a blocker
+ * line, a group band's fact: a `flex` row whose words are the next item.
+ *
+ * A bare mark heading a row has no line to sit on. In a stretched row it
+ * stands at the top of the words' line, 2.5px above its centre on a 20px line
+ * (K-494). And flex synthesizes a missing baseline from the mark's foot, so a
+ * row that is itself a baseline for its parent hands that parent the foot: the
+ * roster's group band sat its title 5px under the fact beside it (K-181).
+ *
+ * This column is a block (the row's flex item) holding the `inline` one-line
+ * box: a real line of the row's own text, so a real first baseline, with the
+ * mark centred on it. First in a row aligned `items-baseline`, it lines up
+ * with the words' first line wherever that line is (`ShopNotice`, K-15).
+ */
+export function StatusMarkColumn(props: Omit<Parameters<typeof StatusMark>[0], "inline">) {
+  return (
+    <span className="shrink-0">
+      <StatusMark {...props} inline />
+    </span>
+  );
 }
 
 function drawMark(variant: StatusMarkVariant, classes: string) {

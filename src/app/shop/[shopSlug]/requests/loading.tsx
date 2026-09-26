@@ -41,9 +41,11 @@ export default function RequestsLoading() {
         <div className="space-y-10">
           {[2, 1].map((rows) => (
             <div key={rows}>
-              <div className="flex items-baseline justify-between gap-4">
+              {/* `RequestDayGroup`'s own header box, and its act at the link's
+                  44px: a 40px bar grew every header 4px as the page landed. */}
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 sm:min-h-11 sm:items-center">
                 <div className="h-4 w-56 max-w-full rounded bg-surface-sunken" />
-                <div className="h-10 w-36 shrink-0 rounded-lg bg-surface-sunken" />
+                <div className="h-11 w-36 shrink-0 rounded-lg bg-surface-sunken" />
               </div>
               <div className="mt-2 h-4 w-72 max-w-full rounded bg-surface-sunken" />
               <RequestRows count={rows} />

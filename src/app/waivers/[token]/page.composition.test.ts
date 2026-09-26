@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createElement, Fragment } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { diverTranslator } from "@/i18n/messages";
 
 /**
  * **What the waiver page is, and what it stopped being** — ADR
@@ -155,7 +158,7 @@ describe("one notice grammar", () => {
 
 describe("one primary", () => {
   it("gives Sign the full width and demotes saving to a text link", () => {
-    expect(SOURCE).toContain('buttonClass({ variant: "link", size: "sm", flush: true })');
+    expect(SOURCE).toMatch(/buttonClass\(\{\s*variant: "link",\s*size: "sm",\s*flush: true,/);
     // The bordered secondary that used to sit above the primary on a phone.
     expect(SOURCE).not.toContain('variant: "secondary"');
     expect(SOURCE).toContain("mt-6 w-full disabled:opacity-70");
@@ -175,6 +178,45 @@ describe("one primary", () => {
     expect(link).toBeGreaterThan(-1);
     expect(expiry).toBeGreaterThan(link);
     expect(expiry - link).toBeLessThan(600);
+  });
+
+  it("stacks the two on a phone, with no dot left at the end of a line", () => {
+    // The row was three wrapping siblings — the link, a standalone "·" and the
+    // expiry — and at 390 the wrap fell after the dot: "Save and finish later
+    // ·" on one line, the expiry alone on the next (waiver-active, K-340).
+    // Below `sm` the two facts stack and the dot, which only ever separated
+    // them on one line, is not drawn; from `sm` they share a line split by it.
+    const link = positionOf('t("waiver.saveForLater")');
+    const row = SOURCE.lastIndexOf("<div", link);
+    expect(SOURCE.slice(row, link)).toContain("max-sm:flex-col max-sm:items-start");
+    expect(SOURCE.slice(row, link)).not.toContain("flex-wrap");
+    expect(SOURCE.slice(link, positionOf('t("waiver.linkExpiresAt"'))).toContain(
+      '<span aria-hidden="true" className="max-sm:hidden">',
+    );
+  });
+
+  it("ends each signing card at its words, not under a target nobody sees", () => {
+    // Both of the page's cards can end in a 44px target around a 20–24px line:
+    // the fine print's save link from `sm`, and the diver's agreement when the
+    // guardian's card follows. That unseen half added to the card's 24px
+    // padding — 30px above the heading against 38px under the last words
+    // (waiver-active 1280), 30 against 37 (waiver-guardian) — K-493.
+    //
+    // The link sinks it through the button's own outdent, from `sm` only: on
+    // a phone the expiry sits under it, and would sit under its box. Its row
+    // lines its words up by their baseline, which a pulled-up margin cannot
+    // move, where centring would lift the link 6px off the sentence beside it.
+    const link = positionOf('t("waiver.saveForLater")');
+    const row = SOURCE.slice(SOURCE.lastIndexOf("<div", link), link);
+    expect(row).toContain("items-baseline");
+    expect(row).not.toContain("items-center");
+    expect(row).toContain('outdent: "block-end-wide"');
+    // The agreement row outdents itself, and only while it ends the card.
+    const agreement = SOURCE.slice(
+      SOURCE.lastIndexOf("<ChoiceRow", positionOf('t("waiver.agreementCheckbox")')),
+      positionOf('t("waiver.agreementCheckbox")'),
+    );
+    expect(agreement).toContain('outdent="block-end"');
   });
 });
 
@@ -207,6 +249,46 @@ describe("the emergency contact's two boxes", () => {
     expect(SOURCE).toContain('id="emergencyContactPhone"');
     // One sentence for both boxes: the fix is the same either way.
     expect(countOf('textKey: "waiver.errorContactPair"')).toBe(2);
+  });
+
+  it("sets the number on file whole, never split at a hyphen", () => {
+    // "Already on file: Asha Sharma (sister) · +1-305-555-0231." broke after
+    // "+1-305-555-" at 390, four digits short of fitting (waiver-active, K-257):
+    // a hyphen is a place a line may end. The number is set in a
+    // `whitespace-nowrap` span through the message's own `<nowrap>` tag — the
+    // rule the roster's emergency phone and the departure log's card numbers
+    // take — and never with non-breaking hyphens, so a number copied off the
+    // page still dials.
+    //
+    // Whole, the number would move to the next line and leave the "·" ending
+    // this one, so the dot is glued to both sides in the bundle (U+00A0, as
+    // `joinFacts` glues a line's last fact): "(sister) · +1-305-555-0231."
+    // moves as one, and the name still breaks between its own words.
+    expect(SOURCE).toContain('t.rich("waiver.emergencyOnFile"');
+    expect(SOURCE).toContain(
+      'nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>',
+    );
+    for (const locale of ["en-US", "es-ES"] as const) {
+      const bundle = JSON.parse(
+        readFileSync(join(__dirname, `../../../i18n/locales/${locale}/diver.json`), "utf8"),
+      ) as { waiver: { emergencyOnFile: string } };
+      expect(bundle.waiver.emergencyOnFile, locale).toContain(
+        "{name}\u00A0·\u00A0<nowrap>{phone}</nowrap>",
+      );
+      const line = renderToStaticMarkup(
+        createElement(
+          Fragment,
+          null,
+          diverTranslator(locale).rich("waiver.emergencyOnFile", {
+            name: "Asha Sharma (sister)",
+            phone: "+1-305-555-0231",
+            nowrap: (chunks) => createElement("span", { className: "whitespace-nowrap" }, chunks),
+          }),
+        ),
+      );
+      expect(line, locale).toContain('<span class="whitespace-nowrap">+1-305-555-0231</span>');
+      expect(line, locale).not.toContain("\u2011");
+    }
   });
 });
 

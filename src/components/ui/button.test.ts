@@ -2,7 +2,13 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { type ButtonSize, type ButtonVariant, buttonClass } from "./button";
+import {
+  type ButtonSize,
+  type ButtonVariant,
+  buttonClass,
+  proseLinkClass,
+  tapTargetLineClass,
+} from "./button";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -94,6 +100,26 @@ describe("buttonClass", () => {
     }
     for (const variant of ["primary", "danger-solid"] as const) {
       expect(buttonClass({ variant }).split(" "), variant).toContain("border-transparent");
+    }
+  });
+
+  it("draws the quiet variants in the same box, so a toggle from quiet to bordered keeps its label still", () => {
+    // The gear return's "Service concern" is `ghost` until it is opened and
+    // `secondary` once it is (GearReturnPane): with no border on `ghost`, the
+    // label moved 1px sideways and the box grew 2px as the note opened (the
+    // K-83 follow-up). `danger-ghost` swaps with `secondary` on the team
+    // card's Disable / Enable. The border is transparent, so nothing is drawn
+    // at rest; the hover wash paints under it, edge to edge.
+    for (const variant of HOVER_FILL_VARIANTS) {
+      const tokens = buttonClass({ variant }).split(" ");
+      expect(tokens, variant).toContain("border");
+      expect(tokens, variant).toContain("border-transparent");
+      for (const size of PADDED_SIZES) {
+        // The same border and the same padding as the bordered box: one box.
+        expect(horizontalPadding(buttonClass({ variant, size })), `${variant}/${size}`).toEqual(
+          horizontalPadding(buttonClass({ variant: "secondary", size })),
+        );
+      }
     }
   });
 
@@ -242,6 +268,23 @@ describe("buttonClass", () => {
       expect(phone).not.toContain("-mb-3");
     });
 
+    it("pulls it up from sm only, for a button that stands above its line's words on a phone", () => {
+      // The waiver's "Save and finish later" ends the signature card from `sm`,
+      // on one line with the expiry sentence, and stacks over that sentence on
+      // a phone — where the unseen half of its box would lie over the words
+      // under it, and a tap on them would save the draft (K-493).
+      const wide = tokens(
+        buttonClass({ variant: "link", size: "sm", flush: true, outdent: "block-end-wide" }),
+      );
+      expect(wide).toContain("sm:-mb-3");
+      expect(wide).toContain("sm:align-bottom");
+      expect(wide).not.toContain("-mb-3");
+      expect(wide).not.toContain("max-sm:-mb-3");
+      expect(
+        tokens(buttonClass({ variant: "ghost", size: "boat", outdent: "block-end-wide" })),
+      ).toContain("sm:-mb-4");
+    });
+
     it("measures the unseen half from the size: 12px on sm and md, 16px on the 56px dock target", () => {
       for (const size of ["sm", "md", "icon", "icon-sm"] as const) {
         expect(
@@ -291,6 +334,66 @@ describe("buttonClass", () => {
     });
   });
 
+  /**
+   * **A `secondary` box can wear a state in its edge** (pixel-craft class 6).
+   * The waiver delivery buttons drew theirs as a `ring-2` outside the
+   * variant's grey border — two stacked edges, a hue then a hairline — and a
+   * ring takes no room, so two ringed buttons in a `gap-2` row stood 4px apart
+   * while the plain ones kept 8. The edge is the border itself, 2px, in the
+   * state's hue; the padding gives back the extra pixel a side so the box
+   * keeps its width and its label stays where it was.
+   */
+  describe("edge", () => {
+    const EDGES = {
+      success: "border-success/50",
+      danger: "border-danger/55",
+      warning: "border-warning/55",
+      strong: "border-border-strong",
+    } as const;
+
+    it("draws the state as the box's one border, never a ring outside it", () => {
+      for (const [edge, colour] of Object.entries(EDGES) as [keyof typeof EDGES, string][]) {
+        const tokens = buttonClass({ variant: "secondary", edge }).split(" ");
+        expect(tokens, edge).toContain("border-2");
+        expect(tokens, edge).toContain(colour);
+        expect(tokens, edge).not.toContain("border");
+        expect(tokens, edge).not.toContain("border-border");
+        expect(
+          tokens.filter((token) => /^(?:[\w-]+:)*ring-/.test(token)),
+          edge,
+        ).toEqual([]);
+        expect(tokens, edge).toContain("bg-surface");
+        expect(tokens, edge).toContain("text-foreground");
+      }
+    });
+
+    it("keeps the box's width: each size's padding less the pixel the edge adds a side", () => {
+      const padding = { sm: ["px-2.75"], md: ["px-3.75"], boat: ["px-5.75"] } as const;
+      for (const size of PADDED_SIZES) {
+        expect(horizontalPadding(buttonClass({ variant: "secondary", size })), size).toHaveLength(
+          1,
+        );
+        expect(
+          horizontalPadding(buttonClass({ variant: "secondary", size, edge: "danger" })),
+          size,
+        ).toEqual(padding[size]);
+      }
+      for (const size of ["icon", "icon-sm"] as const) {
+        expect(
+          horizontalPadding(buttonClass({ variant: "secondary", size, edge: "danger" })),
+          size,
+        ).toEqual(["px-0"]);
+      }
+    });
+
+    it("leaves a secondary with no state on its 1px hairline", () => {
+      const tokens = buttonClass({ variant: "secondary" }).split(" ");
+      expect(tokens).toContain("border");
+      expect(tokens).toContain("border-border");
+      expect(tokens).not.toContain("border-2");
+    });
+  });
+
   describe("shape", () => {
     const radii = (classes: string) =>
       classes.split(" ").filter((token) => /^(?:[\w-]+:)*rounded(?:-|$)/.test(token));
@@ -331,6 +434,20 @@ describe("buttonClass", () => {
       expect(tokens).not.toContain("min-h-12");
       expect(tokens).toContain("text-sm");
       expect(horizontalPadding(tokens.join(" "))).toEqual(["px-0"]);
+    });
+  });
+
+  /**
+   * **A 44px link on a line of its own costs the flow its words' 20px**
+   * (pixel-craft K-185, K-237). As its own line the box was the flow: 12px of
+   * target under "Follow" added to the card's padding, and a header's "All
+   * courses" would have stood its row 44px tall.
+   */
+  describe("tapTargetLineClass", () => {
+    it("is a block exactly the sm link's 20px line box, centring the target on it", () => {
+      expect(tapTargetLineClass.split(" ")).toEqual(["flex", "h-5", "items-center"]);
+      // `h-5` is `text-sm`'s line box, which is the `sm` size's type.
+      expect(buttonClass({ variant: "link", size: "sm" }).split(" ")).toContain("text-sm");
     });
   });
 
@@ -394,12 +511,15 @@ describe("buttonClass", () => {
       // comes off again as an equal negative margin: the words sit where a
       // padless label would, and the tint reaches 8px past them. 8px rather
       // than the size's own padding, so the tint and the 5px focus ring stay
-      // inside a phone's 16px gutter.
+      // inside a phone's 16px gutter. The 8px is the quiet box's transparent
+      // 1px border and 7px of padding: 8px of padding inside that border
+      // stood the label 1px off the column it was flushed to.
       for (const variant of HOVER_FILL_VARIANTS) {
         for (const size of PADDED_SIZES) {
           const classes = buttonClass({ variant, size, flush: true });
-          expect(horizontalPadding(classes), `${variant}/${size}`).toEqual(["px-2"]);
+          expect(horizontalPadding(classes), `${variant}/${size}`).toEqual(["px-1.75"]);
           expect(classes.split(" "), `${variant}/${size}`).toContain("-mx-2");
+          expect(classes.split(" "), `${variant}/${size}`).toContain("border");
         }
       }
     });
@@ -587,6 +707,77 @@ describe("buttonClass", () => {
       expect(offenders).toEqual([]);
     });
 
+    it("hands no vertical padding or type size to buttonClass: the height and the label are the size's", () => {
+      // The public trip's two submits passed `px-6 py-3 text-base` over `md`'s
+      // `px-4 py-2.5 text-base`: `py-3` won only because Tailwind emits it
+      // after `py-2.5`, `text-base` said again what `md` says, and the pair
+      // drew the page's one 48px primary as a second signature beside every
+      // other (K-481). A button's height and label size are a rung of
+      // `sizes`, decided once; a new one is a size, not a call site's string.
+      // The horizontal half is `flush`'s: `px-*` has its own sweep.
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of [
+            ...(args.match(/(?<![\w-])(?:[\w-]+:)*p[ytb]?-[\w.[\]]+/g) ?? []),
+            ...(args.match(/(?<![\w-])(?:[\w-]+:)*text-(?:xs|sm|base|lg|[2-9]?xl)(?![\w-])/g) ??
+              []),
+          ]) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    it("hands no font size to buttonClass: the type, and the line it sets, are the size's", () => {
+      // The self check-in kiosk passed `text-[1.25rem]` over `boat`'s
+      // `text-base`. The arbitrary size won the font, and `text-base`'s
+      // unitless 1.5 line-height scaled with it: 14 + 30 + 14 made a 58px
+      // `boat` where every other one is 56 (K-339). A label size a surface
+      // needs is a size here, with its own leading, decided once.
+      //
+      // A repeat of the size's own token fights nothing and is not counted
+      // here; the sweep above refuses it as noise (K-481).
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          const size = (args.match(/\bsize:\s*"([\w-]+)"/)?.[1] ?? "md") as ButtonSize;
+          const own = new Set(buttonClass({ size }).split(/\s+/));
+          for (const token of args.match(
+            /(?<![\w-])(?:[\w-]+:)*text-(?:xs|sm|base|lg|\d?xl|\[[^\]\s]+\])(?:\/[\w.[\]]+)?(?![\w-])/g,
+          ) ?? []) {
+            if (!own.has(token)) offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    it('draws a chip on the sky only as `variant: "sky"`: no other file spells its fill', () => {
+      // Today's "Print the day" typed the sky chip out by hand — `h-8`, a
+      // pill, `font-semibold` — so it was a 32px target on the same band
+      // where the trip masthead's chip of the same kind is 44px, rounded on
+      // the control rung and `font-medium` (K-152). The fill and its hover
+      // step are the variant's; a copy of them is a second chip.
+      const own = join("components", "ui", "button.ts");
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        if (file.endsWith(own)) continue;
+        const lines = readFileSync(file, "utf8").split("\n");
+        for (const [at, line] of lines.entries()) {
+          if (/(?<![\w-])(?:[\w-]+:)*bg-white\/(?:18|28)(?![\w.-])/.test(line)) {
+            offenders.push(`${relative(SRC_DIR, file)}:${at + 1}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
     it("hands no negative inline margin to buttonClass: the sideways outdent is `flush`", () => {
       // A ghost's invisible padding put its label 12px inside the column it
       // started or ended — seasons' Delete at x 478 against the fields' 466 —
@@ -606,6 +797,27 @@ describe("buttonClass", () => {
         if (!source.includes("buttonClass(")) continue;
         for (const args of buttonClassArgs(source)) {
           for (const token of args.match(/(?<![\w-])(?:[\w-]+:)*-m[xlrse]-[\w.[\]]+/g) ?? []) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    it("hands no zero inline padding to buttonClass: dropping the size's padding is `flush`", () => {
+      // `className: "px-0"` reads as though someone lined the words up, and
+      // does nothing: Tailwind emits `px-0` before the size's `px-3`, so the
+      // size wins by stylesheet order. The storefront's "See After dark
+      // departures" rendered 12px inside the season note above it that way,
+      // and the builder's "Start blank" and a form draft's "Start over" sat
+      // 12px further from their status line than they asked (pixel-craft
+      // K-194). `flush` is the spelling that works.
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(/(?<![\w-])(?:[\w-]+:)*p[xse]-0(?![\w.[\]])/g) ?? []) {
             offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
           }
         }
@@ -741,5 +953,41 @@ describe("buttonClass", () => {
       }
       expect(offenders).toEqual([]);
     });
+  });
+});
+
+/**
+ * **A link inside a sentence repaints under the pointer** (K-500).
+ *
+ * "support@dive.day" on /privacy and /terms, and the three guide links in
+ * Import's "coming from" line, were `className="underline"` and nothing else:
+ * under the pointer they looked exactly as they did at rest (the state atlas
+ * measured no pixel over threshold), where most links on the site change
+ * colour or gain their underline. `proseLinkClass` is the spelling for a link
+ * that keeps its sentence's ink, and the sweep keeps a bare `underline` out.
+ * It is not the only spelling of an inline link: most are
+ * `font-medium text-primary hover:underline`, and the ones underlined in the
+ * link colour at rest (Orders, Reports, the switching guides, WaiverGroup,
+ * ConflictGuardedForm) have no hover step yet and are not what this sweep
+ * reads — that is a follow-up filed from K-500.
+ */
+describe("proseLinkClass", () => {
+  it("underlines at rest and paints a colour under the pointer", () => {
+    const tokens = proseLinkClass.split(" ");
+    expect(tokens).toContain("underline");
+    expect(tokens.filter((token) => token.startsWith("hover:text-"))).toHaveLength(1);
+  });
+
+  it("is what every underlined link in a sentence wears", () => {
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) return walk(full);
+        return /\.tsx$/.test(entry.name) && !/\.test\.tsx$/.test(entry.name) ? [full] : [];
+      });
+    const offenders = walk(SRC_DIR).filter((file) =>
+      /className="underline"/.test(readFileSync(file, "utf8")),
+    );
+    expect(offenders.map((file) => relative(SRC_DIR, file))).toEqual([]);
   });
 });

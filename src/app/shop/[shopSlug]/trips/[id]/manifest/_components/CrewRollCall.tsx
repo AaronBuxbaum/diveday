@@ -6,7 +6,7 @@ import type {
 import { RollCallMark } from "@/components/RollCallMark";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
+import { sectionCardClass, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
@@ -25,6 +25,7 @@ import { PersonBuddyList } from "./PersonBuddyList";
 import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
 import { personTrailWithCurrentRecord } from "./person-trail";
 import {
+  ROLL_CALL_ROW_CLASS,
   ROLL_CALL_ROW_TONE,
   ROW_DISCLOSURE_PANEL_CLASS,
   ROW_DISCLOSURE_SUMMARY_CLASS,
@@ -34,6 +35,7 @@ import {
   rollCallMarkState,
   rollCallRecordedTone,
   rollCallRowState,
+  rollCallRuleClass,
   rollCallScrollMargin,
 } from "./RollCallControls";
 
@@ -126,7 +128,7 @@ export function CrewRollCall({
 }) {
   const crewAssigned = crew.length;
   return (
-    <section className="mt-9">
+    <section>
       <h2 className={SECTION_TITLE_CLASS}>{t("manifest.crewHeading")}</h2>
       {crewAssigned === 0 ? (
         // An empty crew list holds the checkpoint open (`crew_none_assigned`),
@@ -138,7 +140,10 @@ export function CrewRollCall({
         // "Crew" heading with blank space under it on exactly the departures
         // whose crew half is open (dive-domain review 20260804). Only the
         // button is screen-only — a link is not an action on paper.
-        <div className="mt-3 rounded-panel border border-warning/50 bg-warning/10 p-4">
+        // It stands where the crew list's card would, under the same heading,
+        // so it is that card in a tone (`TONE_PANEL_CLASS`), not a box of its
+        // own shape: a hand-rolled `p-4` with no step and no bed.
+        <div className={`mt-3 ${TONE_PANEL_CLASS} border-warning/50 bg-warning/10`}>
           <p className="max-w-prose text-sm">{t("manifest.noCrew")}</p>
           <Link
             href={`/shop/${shopSlug}/trips/${tripId}#crew`}
@@ -162,14 +167,21 @@ export function CrewRollCall({
               has not surfaced; the typed "how many crew are aboard" count
               that used to sit below this list named nobody. Same control,
               same append-only write, same undo as a diver's — the subject is
-              a person, not a booking. */}
+              a person, not a booking.
+
+              **No `divide-y`.** It rules the `<li>` itself, and each row's tone
+              colours the row's whole border for its stripe, so the rule came
+              out `border-strong` on an untouched row — green or red on a
+              boarded or missing one — where the diver list's reads `border`.
+              Each row draws its own rule inside, off the diver list's helper
+              (`rollCallRuleClass`). */}
           <ul
             className={sectionCardClass({
               padding: "none",
-              className: "mt-3 divide-y divide-border overflow-hidden",
+              className: "mt-3 overflow-hidden",
             })}
           >
-            {crew.map((member) => {
+            {crew.map((member, index) => {
               const rc = member.rollCall;
               const personTrail = personTrailWithCurrentRecord({
                 trail: todayTrailBySubject?.get(member.id) ?? [],
@@ -233,12 +245,22 @@ export function CrewRollCall({
                   // `break-inside-avoid` for the same reason a diver's row
                   // carries it: this sheet is printed and goes ashore, and a
                   // crew member's name split across a page boundary is a
-                  // defect in the record rather than a layout nit.
-                  className={`border-l-4 break-inside-avoid ${rollCallScrollMargin(isDeparture)} ${
+                  // defect in the record rather than a layout nit
+                  // (`ROLL_CALL_ROW_CLASS`, with the card's corner on paper).
+                  className={`${ROLL_CALL_ROW_CLASS} ${rollCallScrollMargin(isDeparture)} ${
                     recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : ROLL_CALL_ROW_TONE.awaiting
                   }`}
                 >
-                  <div className="flex items-start">
+                  {/* The row's hairline sits on this box, in the rule colour and
+                      off whichever row is first on screen or on paper
+                      (`rollCallRuleClass`, K-165); the sheet lays the name and
+                      the mark out inside it as one centred row (K-266). */}
+                  <div
+                    className={rollCallRuleClass({
+                      firstOnScreen: index === 0,
+                      firstOnPaper: index === 0,
+                    })}
+                  >
                     <PersonSheet
                       name={member.fullName}
                       triggerLabel={t("manifest.openPersonDetails", { name: member.fullName })}
@@ -278,6 +300,22 @@ export function CrewRollCall({
                       }
                       closeLabel={t("manifest.closePersonDetails")}
                       triggerClassName={ROW_DISCLOSURE_SUMMARY_CLASS}
+                      mark={
+                        rowState.notBackAboard ? (
+                          <RollCallMark state="notBack" />
+                        ) : (
+                          <RollCallMarkButton
+                            kind="crew"
+                            subjectId={member.id}
+                            checkpoint={checkpoint}
+                            rollCall={rc}
+                            action={crewRollCallAction}
+                            copy={crewRollCallButtonCopy}
+                            markState={rollCallMarkState(rowState)}
+                            t={t}
+                          />
+                        )
+                      }
                       trigger={
                         <span className="min-w-0 flex-1">
                           <span className="flex flex-wrap items-center gap-2">
@@ -341,26 +379,6 @@ export function CrewRollCall({
                         />
                       </div>
                     </PersonSheet>
-                    {/* `py-2.5`, as on the diver row: 10px above centres the
-                      mark on the 76px summary line, and 10px below is its
-                      focus ring's room whenever the mark sets the row's
-                      height (#1981). */}
-                    <div className="shrink-0 py-2.5 ps-3 pe-3 print:hidden">
-                      {rowState.notBackAboard ? (
-                        <RollCallMark state="notBack" />
-                      ) : (
-                        <RollCallMarkButton
-                          kind="crew"
-                          subjectId={member.id}
-                          checkpoint={checkpoint}
-                          rollCall={rc}
-                          action={crewRollCallAction}
-                          copy={crewRollCallButtonCopy}
-                          markState={rollCallMarkState(rowState)}
-                          t={t}
-                        />
-                      )}
-                    </div>
                   </div>
                   {/* Paper keeps what the sheet hides: the recorded state as a
                       word, the team, and the contact. The summary above prints

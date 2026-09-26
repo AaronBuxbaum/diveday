@@ -314,6 +314,7 @@
     },
     "passThrough": {
       "heading": "Cuota del parque marino o de conservación",
+      "value": "{price} / buceador",
       "description": "Añade opcionalmente una cuota por buceador para un tercero identificado.",
       "detail": "Se muestra como una línea propia en el checkout y se mantiene fuera de los ingresos del centro.",
       "nameLabel": "Nombre de la cuota",
@@ -475,7 +476,7 @@
       "empty": "Sin registrar",
       "intro": "Aparecen en la lista de pasajeros, también sin conexión. DiveDay nunca los rellena, porque la cámara hiperbárica más cercana y la línea correcta dependen de dónde bucees.",
       "lineLabel": "Qué es {n}",
-      "linePlaceholder": "Cámara hiperbárica, línea de accidentes de buceo, guardacostas…",
+      "lineExamples": "Cámara hiperbárica, línea de accidentes de buceo, guardacostas…",
       "phoneLabel": "Número {n}",
       "vesselLabel": "Embarcación",
       "shoreContactLabel": "Contacto en tierra",

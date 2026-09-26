@@ -14,6 +14,7 @@ import { CHECK_IN_LINK_TTL_DAYS, DISPLAY_LABEL_MAX_LENGTH } from "@/lib/display-
 import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { settingsPaneClass } from "../_components/settings-pane";
 import { savePublicBoatLineAction, saveYearOnDivedayAction } from "./actions";
 import { DisplayLinksPanel } from "./DisplayLinksPanel";
 import type { DisplayLinkCopy, DisplayLinkView } from "./display-panel-types";
@@ -150,7 +151,7 @@ export default async function LobbyDisplayPage({
   }));
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
@@ -190,7 +191,7 @@ export default async function LobbyDisplayPage({
         unqualified "Save" is ambiguous to a screen reader reading the page's
         controls, and to anything else addressing them one at a time.
       */}
-      <SectionCard as="section" className="mt-10 p-5 sm:p-6">
+      <SectionCard as="section" padding="lg" className="mt-10">
         <h2 id={YEAR_SECTION_ID} className={SECTION_TITLE_CLASS}>
           {t("display.year.heading")}
         </h2>

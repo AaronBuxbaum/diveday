@@ -155,6 +155,16 @@ describe("TripPitch", () => {
     }
   });
 
+  it("sets the crew line 24px under the beat above it, inside the door", () => {
+    // The crew line brings no margin of its own any more (K-233: `/ready`
+    // spaces it with the rest of its sections), so the door says it.
+    const { container } = fullDay();
+    const door = container.querySelector("[data-pitch-door-body]") as HTMLElement | null;
+    if (!door) throw new Error("expected the pitch to render a door");
+    const crew = within(door).getByText("Who you’re diving with").closest("section");
+    expect(crew).toHaveClass("mt-6");
+  });
+
   it("counts the species the door is holding, and says nothing when it holds none", () => {
     const { container } = fullDay();
     // Ten, not "7 more": the number names what the door holds, and it holds

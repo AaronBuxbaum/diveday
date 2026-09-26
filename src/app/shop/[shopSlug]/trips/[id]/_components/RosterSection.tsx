@@ -10,13 +10,13 @@ import { ScrollToHash } from "@/components/ScrollToHash";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { INSET_NOTE_CLASS, sectionCardClass } from "@/components/ui/card";
+import { INSET_NOTE_BOX, INSET_NOTE_CLASS, sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
-import { StatusMark } from "@/components/ui/StatusMark";
+import { StatusMark, StatusMarkColumn } from "@/components/ui/StatusMark";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { listBookingNotes } from "@/db/operations";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
@@ -54,7 +54,7 @@ import {
   type PaymentStatusControlCopy,
 } from "./PaymentStatusControl";
 import { RosterAllClear } from "./RosterAllClear";
-import { RosterGroupBand } from "./RosterGroupBand";
+import { RosterGroup, RosterGroupBand } from "./RosterGroupBand";
 import { SHARED_FACT_MIN, UNGROUPABLE_BLOCKER_CODES } from "./shared-facts";
 import type {
   NitroxByBooking,
@@ -91,53 +91,55 @@ type RosterPrivateNote = Awaited<ReturnType<typeof listBookingNotes>>[number] & 
 };
 
 // The whole waiver collapses to a single control per diver. Its face is the
-// status; its click is the only sensible next action. `action: null` means the
-// waiver is signed and there is nothing left to do — it renders as a static pill.
-type WaiverControl = {
-  label: string;
-  hint?: string;
-  tone: string;
-  action: "send" | "resend" | null;
-  confirm: boolean;
-};
-
+// status; its click is the only sensible next action. `action: null` means
+// there is nothing left to send — the waiver is signed, or a medical answer
+// decides it — and the row has no control at all.
 type WaiverControlKeys = {
   labelKey: StaffMessageKey;
   hintKey?: StaffMessageKey;
-  tone: string;
-  action: "send" | "resend" | null;
   confirm: boolean;
-};
+} & (
+  | {
+      action: "send" | "resend";
+      /**
+       * The button the send wears: the app's own `sm` button, as the diver
+       * record draws the same act (`WaiverDeliveryActions`), never a
+       * hand-rolled pill beside it (K-174). `danger` for a link that expired.
+       */
+      variant: "secondary" | "danger";
+    }
+  | { action: null }
+);
+
+type WaiverControl = WaiverControlKeys & { label: string; hint?: string };
 
 const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlKeys> = {
   not_sent: {
     labelKey: "trips.roster.waiverSend",
-    tone: "border border-border bg-surface hover:bg-surface-sunken",
+    variant: "secondary",
     action: "send",
     confirm: false,
   },
   awaiting_signature: {
     labelKey: "trips.roster.waiverSent",
     hintKey: "trips.roster.waiverResendHint",
-    tone: "border border-border bg-surface hover:bg-surface-sunken",
+    variant: "secondary",
     action: "resend",
     confirm: true,
   },
   expired: {
     labelKey: "trips.roster.waiverLinkExpired",
-    tone: "border border-danger/40 text-danger hover:bg-danger-tint",
+    variant: "danger",
     action: "resend",
     confirm: false,
   },
   complete: {
     labelKey: "trips.roster.waiverSigned",
-    tone: "bg-success-tint text-success-strong",
     action: null,
     confirm: false,
   },
   medical_review: {
     labelKey: "trips.roster.waiverMedicalReview",
-    tone: "bg-warning-tint text-warning-strong",
     action: null,
     confirm: false,
   },
@@ -147,7 +149,6 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlK
   // sending another link would be the wrong thing to offer (issue #1283).
   medical_not_cleared: {
     labelKey: "trips.roster.waiverMedicalNotCleared",
-    tone: "bg-danger-tint text-danger-strong",
     action: null,
     confirm: false,
   },
@@ -327,11 +328,9 @@ export function RosterSection({
     Object.entries(WAIVER_CONTROL_KEYS).map(([status, entry]) => [
       status,
       {
+        ...entry,
         label: t(entry.labelKey),
         hint: entry.hintKey ? t(entry.hintKey) : undefined,
-        tone: entry.tone,
-        action: entry.action,
-        confirm: entry.confirm,
       } satisfies WaiverControl,
     ]),
   ) as Record<ReturnType<typeof waiverState>, WaiverControl>;
@@ -627,23 +626,15 @@ export function RosterSection({
     // `div` taking the line's 12px gap on every such row of ten trip
     // captures, and on a phone wrapping to a line of its own whose 4px row gap
     // put the name 2px above the row's centre.
+    //
+    // **The verdict leads a phone's line and ends a wide one** (K-364). It is
+    // first here, so where the capsules wrap under the name on a phone and
+    // start on its column (K-278) the verdict stands on that column, and a
+    // screen reader hears it before the chips; from `sm` the capsules sit at
+    // the line's end and `sm:order-last` puts it against the mark, so
+    // "Blocked" keeps one x whether a "Depth advisory" chip rides with it or
+    // not (it moved 136px with the chip).
     const headerBadges = Children.toArray([
-      // A note nobody knows exists was never written: the settled one-line
-      // row still says there are notes to read (dive-domain review,
-      // 2026-08-21). An unsettled row's open half already shows the notes
-      // disclosure itself.
-      settledRow && !holdOpen && notes.length > 0 ? (
-        <span key="notes" className="text-sm text-muted">
-          {t("trips.roster.privateStaffNotes", { count: notes.length })}
-        </span>
-      ) : null,
-      // Arrived at the counter — display only, the same capsule the manifest
-      // shows. It reads existing booking state and gates nothing.
-      booking.status === "checked_in" ? (
-        <Badge key="checked-in" tone="neutral">
-          {t("trips.roster.checkedInPill")}
-        </Badge>
-      ) : null,
       // The group band already says what the rows beneath it share, so a
       // capsule here marks only this diver's own exceptional state — the
       // word, never an emoji mark (readiness vocabulary:
@@ -658,8 +649,25 @@ export function RosterSection({
           tone={readinessStatusTone(readiness.status)}
           toneMark={false}
           size="lg"
+          className="sm:order-last"
         >
           {readinessStatusText(t, readiness.status)}
+        </Badge>
+      ) : null,
+      // A note nobody knows exists was never written: the settled one-line
+      // row still says there are notes to read (dive-domain review,
+      // 2026-08-21). An unsettled row's open half already shows the notes
+      // disclosure itself.
+      settledRow && !holdOpen && notes.length > 0 ? (
+        <span key="notes" className="text-sm text-muted">
+          {t("trips.roster.privateStaffNotes", { count: notes.length })}
+        </span>
+      ) : null,
+      // Arrived at the counter — display only, the same capsule the manifest
+      // shows. It reads existing booking state and gates nothing.
+      booking.status === "checked_in" ? (
+        <Badge key="checked-in" tone="neutral">
+          {t("trips.roster.checkedInPill")}
         </Badge>
       ) : null,
       // The boat-wide advisory's mark on this diver — the group's shared
@@ -758,11 +766,14 @@ export function RosterSection({
 
         {blockerTexts.length > 0 ? (
           <>
+            {/* Each line's mark is its first column, one line of the words
+                tall, so it centres on their first line whatever wraps below
+                it (K-494: a bare mark sat 2.5px above the line). */}
             {/* diveday:allow-tinted-ink: a 5% wash, not the status tint — `text-danger` on `danger/5` measures 5.66:1 over `--background` in the app palette (issue #874) */}
             <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
               {uniqueBlockers.map(({ text }) => (
-                <li key={text} className="flex gap-2">
-                  <StatusMark variant="danger" />
+                <li key={text} className="flex items-baseline gap-2">
+                  <StatusMarkColumn variant="danger" />
                   <span>{text}</span>
                 </li>
               ))}
@@ -771,8 +782,8 @@ export function RosterSection({
                   diver's blockers — the count keeps the row honest, and the
                   reference panel has their full list. */}
               {sharedBlockerCount > 0 ? (
-                <li className="flex gap-2">
-                  <StatusMark variant="danger" />
+                <li className="flex items-baseline gap-2">
+                  <StatusMarkColumn variant="danger" />
                   <span>{t("trips.roster.sharedOnCard", { count: sharedBlockerCount })}</span>
                 </li>
               ) : null}
@@ -780,13 +791,19 @@ export function RosterSection({
             {/* Every named problem carries its handle. The waiver, payment,
                 and identity blockers already do — their controls are on this
                 row — but a certification-family blocker's fix lives on the
-                diver's record (design review 2026-08-21). */}
+                diver's record (design review 2026-08-21).
+
+                Its 44px box carries 12px nobody sees under the words, and the
+                next line's `mt-3` stacked on it: 45px of air between two text
+                lines (K-551). `-mb-3 align-bottom` gives that half back, as
+                `buttonClass`'s `outdent` does for a quiet button, so the next
+                line's box meets this one's and the target stays whole. */}
             {blockerTexts.some(
               ({ blocker }) => BLOCKER_CATEGORY[blocker.code] === "certification",
             ) ? (
               <Link
                 href={`/shop/${shopSlug}/divers/${person.id}#cards`}
-                className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+                className="mt-2 -mb-3 inline-flex min-h-11 items-center align-bottom text-sm font-semibold text-primary hover:underline"
               >
                 {t("trips.roster.reviewCertificationsLink")}
               </Link>
@@ -800,8 +817,8 @@ export function RosterSection({
             around (H-08). An advisory the group already states for much of
             the boat shrinks to the capsule in this row's header instead. */}
         {depthText !== null && !depthShared ? (
-          <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-            <StatusMark variant="warning" />
+          <p className="mt-3 flex items-baseline gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+            <StatusMarkColumn variant="warning" />
             <span>{depthText}</span>
           </p>
         ) : null}
@@ -812,8 +829,8 @@ export function RosterSection({
             may be running the orientation itself, so this is a conversation
             before the first dive and never a refusal (src/lib/drysuit-card.ts). */}
         {drysuitCard.status !== "ok" ? (
-          <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-            <StatusMark variant="warning" />
+          <p className="mt-3 flex items-baseline gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+            <StatusMarkColumn variant="warning" />
             <span>{drysuitCardWarningText(t, drysuitCard)}</span>
           </p>
         ) : null}
@@ -824,8 +841,8 @@ export function RosterSection({
             is: this diver boards. It is a refresher conversation and a buddy
             pairing, not a refusal. */}
         {diveRecencyIsNotable(booking.lastDivedBand) ? (
-          <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-            <StatusMark variant="warning" />
+          <p className="mt-3 flex items-baseline gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+            <StatusMarkColumn variant="warning" />
             <span>{diveRecencyText(t, booking.lastDivedBand)}</span>
           </p>
         ) : null}
@@ -973,7 +990,7 @@ export function RosterSection({
                   ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
                   : undefined
               }
-              className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors ${waiverControl.tone}`}
+              className={buttonClass({ variant: waiverControl.variant, size: "sm" })}
               wrapperClassName=""
               copy={waiverSendCopy(t)}
             />
@@ -1106,7 +1123,9 @@ export function RosterSection({
             one line in the same warning grammar as its siblings above with
             its fix riding the line's end: the whole line is the disclosure
             that opens the form (`keepOpenBookingId` reopens the row a
-            just-saved contact settled).
+            just-saved contact settled). It hovers a step deeper than its
+            tint: it hovered to the tint it rests on, 0px changed (K-501),
+            and the palette has no opaque warning fill deeper than the tint.
 
             Withheld on an unconfirmed row (`showsPersonDetail`) in both
             directions: the form is prefilled from the matched person and
@@ -1114,7 +1133,8 @@ export function RosterSection({
             contact and let a guess edit a real diver's next-of-kin. */}
         {hasEmergencyContact || !showsPersonDetail ? null : (
           <details className="group/missing-contact mt-3">
-            <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong transition-colors hover:bg-warning-tint [&::-webkit-details-marker]:hidden">
+            {/* diveday:allow-tinted-ink: the hover step only, and the roster sits on a card: `text-warning-strong` on `warning/15` over `--surface` measures 4.83:1 light and 5.51:1 dark */}
+            <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong transition-colors hover:bg-warning/15 [&::-webkit-details-marker]:hidden">
               <StatusMark variant="warning" />
               <span>
                 {t("trips.roster.emergencyContactHeading")} ·{" "}
@@ -1131,10 +1151,13 @@ export function RosterSection({
         )}
 
         {/* One disclosure, at the top level of the row — writing a note about
-            a diver is desk work a staffer starts from here. */}
+            a diver is desk work a staffer starts from here. The last thing in
+            the row: its body keeps `pb-2` so, with the `li`'s `py-1`, the
+            form's button clears the row's rule by the form's own 12px step
+            (K-352: 4px, the `py-1` sized for the closed summary's own air). */}
         <CompactDisclosureRow
           className="mt-3"
-          bodyClassName="mt-2"
+          bodyClassName="mt-2 pb-2"
           label={
             // A zero count is the absence of information formatted as
             // information (principle 9) — with no notes the disclosure is
@@ -1150,7 +1173,7 @@ export function RosterSection({
               return (
                 <div
                   key={note.id}
-                  className="flex items-start justify-between gap-2 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
+                  className={`flex items-start justify-between gap-2 ${INSET_NOTE_BOX} bg-surface-sunken`}
                 >
                   <div className="min-w-0">
                     <p className="break-words whitespace-pre-wrap">{note.body}</p>
@@ -1410,10 +1433,14 @@ export function RosterSection({
     // diver-name link beside it is never an interactive element nested in
     // another (axe nested-interactive); the accessible name says whose
     // details these are.
+    //
+    // `top-1` is the `li`'s own top padding (`py-1`), so this 44px box and the
+    // header line's 44px name link share one band and the mark centres on the
+    // name and the pills (K-157: a stale `top-2.5` sat it 6px low).
     const markSummary = (
       <summary
         aria-label={t("trips.roster.detailsSummaryLabel", { name: person.fullName })}
-        className={`absolute top-2.5 end-2 flex size-11 cursor-pointer list-none items-center justify-center rounded-lg transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:end-3 ${
+        className={`absolute top-1 end-2 flex size-11 cursor-pointer list-none items-center justify-center rounded-lg transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:end-3 ${
           settledRow ? "text-success" : "text-muted hover:text-foreground"
         }`}
       >
@@ -1437,8 +1464,14 @@ export function RosterSection({
       >
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pe-11">
           {headerLeft}
+          {/* From `sm`, the line's end (`ms-auto`, `justify-end`). On a
+              phone, where this wraps under the name, the row's
+              `justify-between` still sends an unwrapped cluster to the end,
+              and a wrapped one starts on the name's column like the name's
+              own wrap (K-278: it right-aligned to the mark's edge, on no
+              shared edge). */}
           {headerBadges.length > 0 ? (
-            <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
+            <div className="ms-auto flex flex-wrap items-center justify-end gap-2 max-sm:ms-0 max-sm:justify-start">
               {headerBadges}
             </div>
           ) : null}
@@ -1477,7 +1510,10 @@ export function RosterSection({
     <section
       id="roster"
       aria-label={showSummaryHeading ? undefined : t("trips.roster.heading")}
-      className={`${compact ? "mt-5" : "mt-10"} scroll-mt-24`}
+      // Compact is the departure page, whose `space-y-10` spaces this
+      // (K-262); the standalone /guests compatibility route has no stack and
+      // keeps its own step.
+      className={`${compact ? "" : "mt-10"} scroll-mt-24`}
     >
       {showSummaryHeading ? (
         <div>
@@ -1524,17 +1560,27 @@ export function RosterSection({
                 {/* The facts much of the boat shares, said once in the group
                     band instead of photocopied down its rows (principle 9).
                     They move below the label on a phone so the state word keeps
-                    its own readable line. */}
+                    its own readable line.
+
+                    The band aligns its title on this column's first baseline,
+                    so each line is `items-baseline` with its mark a column of
+                    its own: the words set that baseline, not the mark's foot
+                    (K-181: the title sat 5px under the first fact).
+
+                    From `sm` the column sits at the band's end, put there by
+                    the band's `justify-between`, but its lines start on one
+                    edge so their marks form a column (K-267: right-aligned,
+                    they stepped left line by line). */}
                 {sharedFacts.length > 0 ? (
-                  <div className="flex w-full min-w-0 flex-col gap-1 text-xs sm:w-auto sm:max-w-[68%] sm:items-end">
+                  <div className="flex w-full min-w-0 flex-col gap-1 text-xs sm:w-auto sm:max-w-[68%] sm:items-start">
                     {sharedFacts.map(({ sentence, count, tone }) => (
                       <p
                         key={sentence}
-                        className={`flex min-w-0 items-start gap-1.5 ${
+                        className={`flex min-w-0 items-baseline gap-1.5 ${
                           tone === "danger" ? "text-danger" : "text-warning-strong"
                         }`}
                       >
-                        <StatusMark variant={tone === "danger" ? "danger" : "warning"} />
+                        <StatusMarkColumn variant={tone === "danger" ? "danger" : "warning"} />
                         <span>{t("trips.roster.sharedFactLine", { count, sentence })}</span>
                       </p>
                     ))}
@@ -1556,11 +1602,12 @@ export function RosterSection({
           ) : null}
           {waitingGroup}
           {invitedGroup}
+          {/* One box, so `#add-diver` holds the form its links and specs
+              scope to; the box draws the group's rule (K-354). */}
           {addDiverGroup ? (
-            <div id="add-diver" className="scroll-mt-24">
-              <RosterGroupBand label={t("trips.addDiver.heading")} />
-              <div className="px-4 pt-3 pb-5 sm:px-5">{addDiverGroup}</div>
-            </div>
+            <RosterGroup id="add-diver" label={t("trips.addDiver.heading")}>
+              <div className="px-4 py-5 sm:px-5">{addDiverGroup}</div>
+            </RosterGroup>
           ) : null}
         </div>
       ) : null}

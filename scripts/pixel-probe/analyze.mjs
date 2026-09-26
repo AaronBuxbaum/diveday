@@ -1493,8 +1493,16 @@ function labelledByTallLabel(ix, el) {
  * ancestor's, cut down by any clipping ancestor in between. The cut is the
  * lesson of issue #786: `DiverList`'s overlay was believed to cover its row
  * while `Td`'s `overflow-hidden` clipped it to the cell.
+ *
+ * **A control that positions itself owns its `::after`** (`overlayInset`,
+ * its four offsets): the box grows by them — `InfoHint`'s 20px disc with
+ * `after:-inset-3`, the counter's 28px blocked name with `after:-inset-y-2`,
+ * each 44px to a finger — cut by every clipping ancestor, and never smaller
+ * than the control's own box, so a decoration drawn inside it (a knob, an
+ * underline bar) takes nothing away.
  */
 export function hitBox(ix, el) {
+  if (el.overlayInset) return ownOverlayBox(ix, el);
   if (el.overlay !== "after") return { x: el.x, y: el.y, w: el.w, h: el.h };
   let host = ix.els[el.p];
   while (host && host.pos === "static") host = ix.els[host.p];
@@ -1511,6 +1519,31 @@ export function hitBox(ix, el) {
     clipper = ix.els[clipper.cp];
   }
   return box;
+}
+
+function ownOverlayBox(ix, el) {
+  const [top, right, bottom, left] = el.overlayInset;
+  const own = paddingBox(el);
+  let x1 = own.x + left;
+  let y1 = own.y + top;
+  let x2 = own.x + own.w - right;
+  let y2 = own.y + own.h - bottom;
+  for (let clipper = ix.els[el.cp]; clipper; clipper = ix.els[clipper.cp]) {
+    const clip = paddingBox(clipper);
+    if (clipper.clipsX) {
+      x1 = Math.max(x1, clip.x);
+      x2 = Math.min(x2, clip.x + clip.w);
+    }
+    if (clipper.clipsY) {
+      y1 = Math.max(y1, clip.y);
+      y2 = Math.min(y2, clip.y + clip.h);
+    }
+  }
+  x1 = Math.min(x1, el.x);
+  y1 = Math.min(y1, el.y);
+  x2 = Math.max(x2, el.x + el.w);
+  y2 = Math.max(y2, el.y + el.h);
+  return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
 }
 
 /** Is `inner` a descendant of `outer`? */
@@ -1537,12 +1570,12 @@ function checkTargets(ix) {
       makeFlag(ix, "small-target", el, {
         msg: `${el.tag} "${el.label}" is ${round1(hit.w)}×${round1(hit.h)}px (${
           short ? "height" : "width"
-        } under ${MIN_TARGET})${el.overlay ? " including its stretched ::after" : ""}`,
+        } under ${MIN_TARGET})${el.overlay || el.overlayInset ? " including its stretched ::after" : ""}`,
         measure: {
           w: round1(hit.w),
           h: round1(hit.h),
           dimension: short ? "height" : "width",
-          overlay: Boolean(el.overlay),
+          overlay: Boolean(el.overlay || el.overlayInset),
         },
         guides: [
           guide(el, "magenta"),

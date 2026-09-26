@@ -1,15 +1,15 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatusMark } from "@/components/ui/StatusMark";
-import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
-import { FIGURE_CLASS, LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
+import { FIGURE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripPrep } from "@/db/trips-prep";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { diveRecencyText } from "@/i18n/readiness-labels";
@@ -80,6 +80,7 @@ export function PrepBody({
   cancelled = false,
   emptyState = null,
   idPrefix,
+  className,
 }: {
   prep: TripPrep;
   t: StaffTranslator;
@@ -134,6 +135,14 @@ export function PrepBody({
   emptyState?: ReactNode;
   /** See `src/lib/element-id.ts`: set on the paper day, absent on a route. */
   idPrefix?: string;
+  /**
+   * **The gap between the list's sections, which is the page's to set** —
+   * `space-y-10` from both callers. The list is a run of a page's sections, and
+   * section rhythm belongs to the page (`card.tsx`), so no section here hangs a
+   * margin of its own: each used to carry `mt-8`, 32px where the page's
+   * sections sit 40px apart (pixel-craft class 4).
+   */
+  className: string;
 }) {
   const { checklist, hotelPickups, gearFleetTotal, freeByKind, loadOut, assignmentRows } = prep;
 
@@ -199,6 +208,27 @@ export function PrepBody({
       dropped
     );
   };
+  /**
+   * A rental line's divers, breakable between two names and inside one only
+   * when it cannot fit whole. Joined as one string, a line could end inside a
+   * name: "Sam / Whitfield" in the table and the phone card alike (pixel-craft
+   * class 8). Each name is its own `inline-block`, which moves to the next line
+   * whole and wraps inside itself only when it is wider than the column; never
+   * `whitespace-nowrap`, which in a clipping `Td` cut such a name off without a
+   * mark. The comma rides inside the name before it, so the one break between
+   * two names is the bare space.
+   */
+  const diverNames = (names: readonly string[]) =>
+    names.map((name, place) => (
+      // biome-ignore lint/suspicious/noArrayIndexKey: two divers can share a name, and the list is drawn once, never reordered
+      <Fragment key={`${place}:${name}`}>
+        {place > 0 ? " " : null}
+        <span className="inline-block">
+          {name}
+          {place < names.length - 1 ? "," : null}
+        </span>
+      </Fragment>
+    ));
   /** The same answer in a Size column, where an unsized piece still owes a cell. */
   const sizeCell = (piece: PrepPiece) => {
     return pieceSize(piece) ?? <span className="text-muted">—</span>;
@@ -212,6 +242,14 @@ export function PrepBody({
   // empty state says which rather than making the crew scroll back up to guess.
   const needsSorting =
     checklist.diversWithIncompleteFit.length > 0 || checklist.diversNeedingStaffFit.length > 0;
+  // The "Sizes still missing" card's two halves, sorted once: each is drawn
+  // only when it has somebody in it.
+  const partialFit = checklist.diversWithIncompleteFit.filter(
+    (diver) => diver.state !== "not_recorded",
+  );
+  const neverAsked = checklist.diversWithIncompleteFit.filter(
+    (diver) => diver.state === "not_recorded",
+  );
   const showNitrox =
     shopOffersNitrox(rentalItems) ||
     checklist.tanks.nitrox > 0 ||
@@ -225,6 +263,23 @@ export function PrepBody({
    */
   const kitLineClass = "grid gap-x-3 gap-y-1 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-baseline";
 
+  /**
+   * **A diver's name that stands on a line of its own, as the way into their
+   * record**: the 44px floor (`tapTargetLinkClass`, principles §2), with the
+   * (44 − 20) / 2 it adds handed back above and below, so the target grows and
+   * the 20px line the name sits on does not — the give-back `EntryShell`'s
+   * footer links make. The never-asked run and Dive support were 17px words
+   * (pixel-craft class 7). A name inside a sentence (the bullet lines) stays
+   * that sentence's link.
+   *
+   * The 12px is padding as well as the margin that hands it back, so the
+   * margin box is always exactly the name's own lines. As a bare `min-h-11`
+   * the give-back held for one line only: a name that wrapped outgrew the
+   * floor, the margin still handed back 24px, and its second line hung 10px
+   * below the line box, onto whatever came next.
+   */
+  const nameLinkClass = `${tapTargetLinkClass} py-3 -my-3 font-medium hover:text-primary hover:underline`;
+
   const gearBanner = noticeFromParam(notice, GEAR_NOTICES);
   /**
    * Years dry, beside the name, on exactly the terms the roster states it
@@ -237,11 +292,15 @@ export function PrepBody({
    * nothing here filters, sorts, or refuses. `diveRecencyText` returns null for
    * a diver who was never asked, so silence renders nothing rather than a "not
    * said" line on every seat booked before the question existed.
+   *
+   * `items-start`: the `md` mark is 20px, the `text-sm` line, so it sits on the
+   * note's first line; centred, it stood 9px low beside a note that wrapped.
+   * `gap-2`, as the roster draws the same fact.
    */
   const diveRecencyLine = (band: (typeof checklist.diverLines)[number]["lastDivedBand"]) => {
     if (!diveRecencyIsNotable(band)) return null;
     return (
-      <span className="mt-0.5 flex items-center gap-1 text-sm font-normal text-warning-strong">
+      <span className="mt-0.5 flex items-start gap-2 text-sm font-normal text-warning-strong">
         <StatusMark variant="warning" size="md" />
         {diveRecencyText(t, band)}
       </span>
@@ -260,9 +319,12 @@ export function PrepBody({
         {line.items.map((piece) => {
           const detail = pieceSize(piece);
           return (
-            <li key={piece.kind}>
-              <span className="font-medium">{rentalItemLabel(t, piece.kind)}</span>
-              {detail ? <> {detail}</> : null}
+            // The piece and its detail as two boxes, so a detail that wraps
+            // ("Drysuit: weight check in the water") hangs under itself, not
+            // back under the piece's name, which never wraps.
+            <li key={piece.kind} className="flex gap-1">
+              <span className="shrink-0 font-medium">{rentalItemLabel(t, piece.kind)}</span>
+              {detail ? <span>{detail}</span> : null}
             </li>
           );
         })}
@@ -280,7 +342,7 @@ export function PrepBody({
       {checklist.diverCount === 0 && checklist.crewCount === 0 ? (
         emptyState
       ) : (
-        <>
+        <div className={className}>
           {cancelled ? (
             // Said, not merely absent: a staffer who knows the list lives here
             // must not read the gap as a bug, and an empty packing list that
@@ -290,7 +352,12 @@ export function PrepBody({
           ) : (
             <>
               <section aria-labelledby={scopedId(idPrefix, "tanks-heading")}>
-                <h2 id={scopedId(idPrefix, "tanks-heading")} className={SECTION_TITLE_CLASS}>
+                {/* Above its tiles, not a card's title: the body is plural
+                    (forms-and-controls.md, "Where a heading goes"), as are the
+                    pickups', the kit's and the assignments' below. At a card
+                    title's size all the same, so every section here speaks at
+                    one volume — these four were 18px beside the cards' 24px. */}
+                <h2 id={scopedId(idPrefix, "tanks-heading")} className={LEAD_TITLE_CLASS}>
                   {t("tripPrep.tanksHeading")}
                 </h2>
                 {/* **Where the total comes from, beside the total.** This line
@@ -359,7 +426,7 @@ export function PrepBody({
                   // them is a problem. `SectionCard` has no tone prop on purpose
                   // (see its docblock), so a tone-carrying panel spells the chrome
                   // here on the card's own geometry (`TONE_PANEL_CLASS`).
-                  className={`mt-8 ${TONE_PANEL_CLASS} border-warning/40 bg-warning/10`}
+                  className={`${TONE_PANEL_CLASS} border-warning/40 bg-warning/10`}
                 >
                   <h2
                     id={scopedId(idPrefix, "nitrox-blocked-heading")}
@@ -368,16 +435,24 @@ export function PrepBody({
                     {t("tripPrep.nitroxBlockedHeading")}
                   </h2>
                   <p className="mt-1 text-sm">{t("tripPrep.nitroxBlockedDescription")}</p>
-                  <ul className="mt-2 flex flex-col gap-1 text-sm">
+                  {/* A bullet is its own box and the words another, here and
+                      in the two lists below, so a wrapped line hangs under the
+                      words it continues rather than back under the bullet.
+                      `mt-4` is `SectionCard`'s header-to-body gap, as in the
+                      staff-fit panel: `mt-2` crowded both lists 8px closer to
+                      their description than "Sizes still missing" sits. */}
+                  <ul className="mt-4 flex flex-col gap-1 text-sm">
                     {checklist.nitroxBlockers.map((blocker) => (
-                      <li key={blocker.bookingId}>
-                        •{" "}
-                        <Link
-                          href={`/shop/${shopSlug}/divers/${blocker.personId}`}
-                          className="font-medium hover:text-primary hover:underline"
-                        >
-                          {blocker.fullName}
-                        </Link>
+                      <li key={blocker.bookingId} className="flex gap-1.5">
+                        <span aria-hidden="true">•</span>
+                        <span>
+                          <Link
+                            href={`/shop/${shopSlug}/divers/${blocker.personId}`}
+                            className="font-medium hover:text-primary hover:underline"
+                          >
+                            {blocker.fullName}
+                          </Link>
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -392,7 +467,6 @@ export function PrepBody({
               question that already has half an answer. */}
               {checklist.diversWithIncompleteFit.length > 0 ? (
                 <SectionCard
-                  className="mt-8"
                   title={t("tripPrep.missingSizesHeading")}
                   description={t("tripPrep.missingSizesDescription")}
                 >
@@ -401,99 +475,109 @@ export function PrepBody({
                   missing, while the never-asked share one sentence said once
                   above their names — the old list repeated "nothing on file;
                   they may be bringing their own kit…" per row, the same clause
-                  chanted seven times (principle 9). */}
-                  <ul className="flex flex-col gap-1 text-sm">
-                    {checklist.diversWithIncompleteFit
-                      .filter((diver) => diver.state !== "not_recorded")
-                      .map((diver) => (
-                        <li key={diver.personId}>
-                          •{" "}
-                          <Link
-                            href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                            className="font-medium hover:text-primary hover:underline"
-                          >
-                            {diver.fullName}
-                          </Link>{" "}
-                          <span className="text-muted">
-                            {t("tripPrep.missingSizesItems", {
-                              items: cachedListFormat(locale, {
-                                style: "long",
-                                type: "conjunction",
-                              }).format(diver.missing.map((kind) => rentalItemLabel(t, kind))),
-                            })}
-                          </span>
-                        </li>
-                      ))}
-                  </ul>
-                  {checklist.diversWithIncompleteFit.some(
-                    (diver) => diver.state === "not_recorded",
-                  ) ? (
-                    <div className="mt-3 text-sm">
-                      <p className="text-muted">{t("tripPrep.missingSizesNobodyAskedLead")}</p>
-                      <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                        {checklist.diversWithIncompleteFit
-                          .filter((diver) => diver.state === "not_recorded")
-                          .map((diver) => (
-                            <li key={diver.personId}>
+                  chanted seven times (principle 9). One gap between the two,
+                  and only when both are there: an empty partial list used to
+                  hold the never-asked block's `mt-3` open under the
+                  description, a blank line that read as a missing row. */}
+                  <div className="flex flex-col gap-3 text-sm">
+                    {partialFit.length > 0 ? (
+                      <ul className="flex flex-col gap-1">
+                        {partialFit.map((diver) => (
+                          <li key={diver.personId} className="flex gap-1.5">
+                            <span aria-hidden="true">•</span>
+                            <span>
                               <Link
                                 href={`/shop/${shopSlug}/divers/${diver.personId}`}
                                 className="font-medium hover:text-primary hover:underline"
                               >
                                 {diver.fullName}
+                              </Link>{" "}
+                              <span className="text-muted">
+                                {t("tripPrep.missingSizesItems", {
+                                  items: cachedListFormat(locale, {
+                                    style: "long",
+                                    type: "conjunction",
+                                  }).format(diver.missing.map((kind) => rentalItemLabel(t, kind))),
+                                })}
+                              </span>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {neverAsked.length > 0 ? (
+                      <div>
+                        <p className="text-muted">{t("tripPrep.missingSizesNobodyAskedLead")}</p>
+                        {/* `gap-y-6`, twice the 12px each name's target
+                            reaches above and below its 20px line: wrapped
+                            rows sit 44px apart and their targets meet. At
+                            `gap-y-1` the second row's targets reached over
+                            the names above them, and won the tap. */}
+                        <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-6">
+                          {neverAsked.map((diver) => (
+                            <li key={diver.personId}>
+                              <Link
+                                href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                                className={nameLinkClass}
+                              >
+                                {diver.fullName}
                               </Link>
                             </li>
                           ))}
-                      </ul>
-                    </div>
-                  ) : null}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
                 </SectionCard>
               ) : null}
 
               {checklist.diversNeedingStaffFit.length > 0 ? (
                 <section
                   aria-labelledby={scopedId(idPrefix, "staff-fit-heading")}
-                  className={`mt-8 ${TONE_PANEL_CLASS} border-warning/40 bg-warning/5`}
+                  className={`${TONE_PANEL_CLASS} border-warning/40 bg-warning/5`}
                 >
                   <h2 id={scopedId(idPrefix, "staff-fit-heading")} className={LEAD_TITLE_CLASS}>
                     {t("tripPrep.staffFitHeading")}
                   </h2>
                   <p className="mt-1 text-sm text-muted">{t("tripPrep.staffFitDescription")}</p>
-                  <ul className="mt-2 flex flex-col gap-1 text-sm">
+                  <ul className="mt-4 flex flex-col gap-1 text-sm">
                     {checklist.diversNeedingStaffFit.map((diver) => (
-                      <li key={diver.personId}>
-                        •{" "}
-                        <Link
-                          href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                          className="font-medium hover:text-primary hover:underline"
-                        >
-                          {diver.fullName}
-                        </Link>
-                        {diver.note ? <span className="text-muted"> — {diver.note}</span> : null}
-                        {/* What they asked for. The captain doing the fit can't edit
-                        the profile and sees no size on the packing line, so
-                        without this there is nothing to bring a range around. */}
-                        {diver.statedSizes.length > 0 ? (
+                      <li key={diver.personId} className="flex gap-1.5">
+                        <span aria-hidden="true">•</span>
+                        <span>
+                          <Link
+                            href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                            className="font-medium hover:text-primary hover:underline"
+                          >
+                            {diver.fullName}
+                          </Link>
+                          {diver.note ? <span className="text-muted"> — {diver.note}</span> : null}
+                          {/* What they asked for. The captain doing the fit can't edit
+                          the profile and sees no size on the packing line, so
+                          without this there is nothing to bring a range around. */}
+                          {diver.statedSizes.length > 0 ? (
+                            <span className="text-muted">
+                              {" "}
+                              {t("tripPrep.askedFor", {
+                                sizes: statedSizesText(t, locale, diver.statedSizes),
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-muted"> {t("tripPrep.noSizesOnFile")}</span>
+                          )}
+                          {/* How old the flag is: a shortage is about one day, so a
+                          months-old flag is a prompt to re-ask, not to trust. */}
                           <span className="text-muted">
                             {" "}
-                            {t("tripPrep.askedFor", {
-                              sizes: statedSizesText(t, locale, diver.statedSizes),
+                            {t("tripPrep.flaggedAgo", {
+                              when:
+                                diver.flaggedDaysAgo === 0
+                                  ? t("tripPrep.today")
+                                  : diver.flaggedDaysAgo === 1
+                                    ? t("tripPrep.yesterday")
+                                    : t("tripPrep.daysAgo", { count: diver.flaggedDaysAgo }),
                             })}
                           </span>
-                        ) : (
-                          <span className="text-muted"> {t("tripPrep.noSizesOnFile")}</span>
-                        )}
-                        {/* How old the flag is: a shortage is about one day, so a
-                        months-old flag is a prompt to re-ask, not to trust. */}
-                        <span className="text-muted">
-                          {" "}
-                          {t("tripPrep.flaggedAgo", {
-                            when:
-                              diver.flaggedDaysAgo === 0
-                                ? t("tripPrep.today")
-                                : diver.flaggedDaysAgo === 1
-                                  ? t("tripPrep.yesterday")
-                                  : t("tripPrep.daysAgo", { count: diver.flaggedDaysAgo }),
-                          })}
                         </span>
                       </li>
                     ))}
@@ -517,7 +601,7 @@ export function PrepBody({
               a conversation. Renders nothing at all when nobody has asked for
               anything, which is almost every departure. */}
               {checklist.supportNeeds.divers.length > 0 ? (
-                <SectionCard title={t("tripPrep.supportHeading")} className="mt-8">
+                <SectionCard title={t("tripPrep.supportHeading")}>
                   {/* Only what the shop has to *find*. A diver bringing their own
                   adaptive-trained buddy needs a seat and a team, not crew, and
                   summing them here would have a manager staff up for people who
@@ -538,15 +622,17 @@ export function PrepBody({
                         looking at (issue #1069). */}
                         <Link
                           href={`/shop/${shopSlug}/divers/${diver.personId}#support`}
-                          className="font-medium hover:text-primary hover:underline"
+                          className={nameLinkClass}
                         >
                           {diver.fullName}
                         </Link>
                         {/* One line per fact rather than a comma-separated run:
                         two of them carry the diver's own free text, and a
                         sentence inside a joined list is where a crew loses
-                        track of which fact is which. */}
-                        <ul className="mt-0.5 flex flex-col text-muted">
+                        track of which fact is which. `gap-1` keeps that true
+                        when a fact wraps: its second line sits 20px under it
+                        and the next fact 24px, where both used to be 20. */}
+                        <ul className="mt-0.5 flex flex-col gap-1 text-muted">
                           {supportNeedsLines(
                             t,
                             diver.needs,
@@ -572,12 +658,11 @@ export function PrepBody({
               blow-out morning this run is the list of hotels somebody has to
               phone before a diver is standing in a lobby at 06:00. */}
           {hotelPickups.length > 0 ? (
-            <section aria-labelledby={scopedId(idPrefix, "hotel-pickups-heading")} className="mt-8">
-              <div className="flex items-center justify-between gap-2">
-                <h2
-                  id={scopedId(idPrefix, "hotel-pickups-heading")}
-                  className={SECTION_TITLE_CLASS}
-                >
+            <section aria-labelledby={scopedId(idPrefix, "hotel-pickups-heading")}>
+              {/* `items-baseline`, as `SectionCard`'s header: the count is
+                  words beside the title's words, so they share a line. */}
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 id={scopedId(idPrefix, "hotel-pickups-heading")} className={LEAD_TITLE_CLASS}>
                   {t("tripPrep.hotelPickupsHeading")}
                 </h2>
                 <span className="text-sm text-muted">
@@ -603,11 +688,9 @@ export function PrepBody({
               </div>
               <Table shellClassName="mt-3 hidden sm:block">
                 <THead>
-                  <tr>
-                    <Th>{t("tripPrep.pickupTimeColumn")}</Th>
-                    <Th>{t("tripPrep.pickupHotelColumn")}</Th>
-                    <Th>{t("tripPrep.pickupDiverColumn")}</Th>
-                  </tr>
+                  <Th>{t("tripPrep.pickupTimeColumn")}</Th>
+                  <Th>{t("tripPrep.pickupHotelColumn")}</Th>
+                  <Th>{t("tripPrep.pickupDiverColumn")}</Th>
                 </THead>
                 <TBody>
                   {hotelPickups.map((pickup) => (
@@ -627,9 +710,9 @@ export function PrepBody({
           ) : null}
 
           {cancelled ? null : (
-            <section aria-labelledby={scopedId(idPrefix, "kit-heading")} className="mt-8">
+            <section aria-labelledby={scopedId(idPrefix, "kit-heading")}>
               <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                <h2 id={scopedId(idPrefix, "kit-heading")} className={SECTION_TITLE_CLASS}>
+                <h2 id={scopedId(idPrefix, "kit-heading")} className={LEAD_TITLE_CLASS}>
                   {t("tripPrep.rentalKitHeading")}
                 </h2>
                 {/* A state toggle, not two buttons: one list, two ways of
@@ -705,37 +788,55 @@ export function PrepBody({
                   <ul className="mt-3 flex flex-col gap-3 sm:hidden print:hidden">
                     {checklist.lines.map((line) => (
                       <li key={`${line.kind}:${prepLineKey(line)}`} className={sectionCardClass()}>
-                        <div className="flex items-start justify-between gap-3">
+                        {/* `items-baseline`, in this card and the by-diver one:
+                            top-aligned, the 24/32 count's baseline sat 6px
+                            under the 16/24 title's (pixel-craft class 1). */}
+                        <div className="flex items-baseline justify-between gap-3">
                           <p className="font-semibold">{rentalItemLabel(t, line.kind)}</p>
                           <p className={`shrink-0 ${FIGURE_CLASS}`}>
                             <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
                             {line.count}
                           </p>
                         </div>
-                        <dl className="mt-2 flex flex-col gap-1 text-sm">
-                          <div className="flex flex-wrap gap-x-2">
+                        {/* One grid for both pairs, each a subgrid row, so
+                            both values start at the wider label plus 8px and a
+                            long "For" list wraps in its own column: as two
+                            flex rows the values stood 6px apart and the names
+                            fell back under the label. */}
+                        <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 text-sm">
+                          <div className="col-span-2 grid grid-cols-subgrid">
                             <dt className="text-muted">{t("tripPrep.sizeColumn")}</dt>
                             <dd>{sizeCell(line)}</dd>
                           </div>
-                          <div className="flex flex-wrap gap-x-2">
+                          <div className="col-span-2 grid grid-cols-subgrid">
                             <dt className="text-muted">{t("tripPrep.forColumn")}</dt>
-                            <dd className="text-muted">{line.divers.join(", ")}</dd>
+                            <dd className="text-muted">{diverNames(line.divers)}</dd>
                           </div>
                         </dl>
                       </li>
                     ))}
                   </ul>
-                  {/* The scroll strategy: the 45rem floor is what stops the four
+                  {/* The scroll strategy: the 40rem floor is what stops the four
                     columns collapsing between 640px and a real tablet, and the
                     vocabulary's `print:` overrides keep paper out of the
                     scroll rule entirely — an A4 sheet is narrower than the
                     floor, and a clipped column on a packing list is a silent
-                    one. */}
-                  <Table minWidth="45rem" shellClassName="mt-3 hidden sm:block print:block">
+                    one. Not 45rem: that is 720px, and at 768 the trip shell's
+                    column is 720px with a 718px scroll region inside the
+                    table's borders, so the table scrolled sideways by 2px. */}
+                  <Table minWidth="40rem" shellClassName="mt-3 hidden sm:block print:block">
                     <THead>
-                      <Th>{t("tripPrep.itemColumn")}</Th>
+                      {/* Pinned, the short Item column and the count, so Size
+                          and For share the rest: with only the count pinned,
+                          For held two names a line at 1280 and a fifth fell
+                          alone onto a third. The fixed layout split four
+                          unnamed columns equally, and a one-digit count held
+                          244px. */}
+                      <Th width="10rem">{t("tripPrep.itemColumn")}</Th>
                       <Th>{t("tripPrep.sizeColumn")}</Th>
-                      <Th numeric>{t("tripPrep.qtyColumn")}</Th>
+                      <Th numeric width="8rem">
+                        {t("tripPrep.qtyColumn")}
+                      </Th>
                       <Th>{t("tripPrep.forColumn")}</Th>
                     </THead>
                     <TBody>
@@ -744,7 +845,7 @@ export function PrepBody({
                           <Td className="font-medium">{rentalItemLabel(t, line.kind)}</Td>
                           <Td>{sizeCell(line)}</Td>
                           <Td numeric>{line.count}</Td>
-                          <Td muted>{line.divers.join(", ")}</Td>
+                          <Td muted>{diverNames(line.divers)}</Td>
                         </tr>
                       ))}
                     </TBody>
@@ -763,12 +864,15 @@ export function PrepBody({
                   <ul className="mt-3 flex flex-col gap-3 sm:hidden print:hidden">
                     {checklist.diverLines.map((line) => (
                       <li key={line.bookingId} className={sectionCardClass()}>
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-baseline justify-between gap-3">
                           <div className="min-w-0">
                             <p className="font-semibold">
+                              {/* The card's 16px name: `nameLinkClass`'s floor,
+                                  padding and handing back (44 − 24) / 2 of its
+                                  own line, so a name that wraps keeps both. */}
                               <Link
                                 href={`/shop/${shopSlug}/divers/${line.personId}`}
-                                className="hover:text-primary hover:underline"
+                                className={`${tapTargetLinkClass} py-2.5 -my-2.5 hover:text-primary hover:underline`}
                               >
                                 {line.fullName}
                               </Link>
@@ -785,29 +889,37 @@ export function PrepBody({
                     ))}
                   </ul>
                   {/* Three columns rather than four, so a lower floor than the
-                    by-item table's: the kit cell wraps, and forcing 45rem
+                    by-item table's: the kit cell wraps, and forcing 40rem
                     would scroll a phone-width tablet sideways for nothing. */}
                   <Table minWidth="36rem" shellClassName="mt-3 hidden sm:block print:block">
                     <THead>
                       <Th>{t("tripPrep.diverColumn")}</Th>
                       <Th>{t("tripPrep.kitColumn")}</Th>
-                      <Th numeric>{t("tripPrep.qtyColumn")}</Th>
+                      <Th numeric width="8rem">
+                        {t("tripPrep.qtyColumn")}
+                      </Th>
                     </THead>
                     <TBody>
                       {checklist.diverLines.map((line) => (
-                        <tr key={line.bookingId}>
+                        // The row's one way in, and its only one: `RowLink`'s
+                        // overlay is positioned against `Tr`. Its 44px box
+                        // pads and hands (44 − 20) / 2 into the cell's `py-3`,
+                        // so the name keeps the kit's first line, the row its
+                        // height, and a wrapped name its second line clear of
+                        // the dive-recency note under it.
+                        <Tr key={line.bookingId}>
                           <Td className="font-medium">
-                            <Link
+                            <RowLink
                               href={`/shop/${shopSlug}/divers/${line.personId}`}
-                              className="hover:text-primary hover:underline"
+                              className="py-3 -my-3 hover:text-primary hover:underline"
                             >
                               {line.fullName}
-                            </Link>
+                            </RowLink>
                             {diveRecencyLine(line.lastDivedBand)}
                           </Td>
                           <Td>{kitCell(line)}</Td>
                           <Td numeric>{line.items.length}</Td>
-                        </tr>
+                        </Tr>
                       ))}
                     </TBody>
                   </Table>
@@ -823,13 +935,14 @@ export function PrepBody({
               the section's own gate: a refusal like gear-not-found is exactly
               the case where the row (or the whole fleet) can be gone, and the
               staffer still gets told what happened. */}
-          {/* Its own space above it. Rendered flush, it read as the last row
-              of the packing table it happens to follow rather than as an
-              answer to the tap that produced it. */}
+          {/* Its own space above it, the stack's gap. Rendered flush, it
+              read as the last row of the packing table it happens to follow
+              rather than as an answer to the tap that produced it. Below it,
+              the banner's own `mb-6` outranks the stack's zero-specificity
+              margin, so it sits 24px over the assignments it answers for —
+              the space every notice keeps over what follows it. */}
           {gearBanner ? (
-            <StaffNoticeBanner tone={gearBanner.tone} className="mt-8">
-              {t(gearBanner.key)}
-            </StaffNoticeBanner>
+            <StaffNoticeBanner tone={gearBanner.tone}>{t(gearBanner.key)}</StaffNoticeBanner>
           ) : null}
           {gearFleetTotal > 0 && assignmentRows.length > 0 ? (
             <section
@@ -837,9 +950,11 @@ export function PrepBody({
               // On paper the section is only its assigned lines: with nothing
               // assigned yet it would print as a heading over bare names, so
               // it drops out of the packet entirely until a unit is on it.
-              className={`mt-8${assignmentRows.some((row) => row.assigned.length > 0) ? "" : " print:hidden"}`}
+              className={
+                assignmentRows.some((row) => row.assigned.length > 0) ? undefined : "print:hidden"
+              }
             >
-              <h2 id={scopedId(idPrefix, "assignments-heading")} className={SECTION_TITLE_CLASS}>
+              <h2 id={scopedId(idPrefix, "assignments-heading")} className={LEAD_TITLE_CLASS}>
                 {t("gear.prep.heading")}
               </h2>
               {/* The cart, not a caption. What replaced a sentence restating
@@ -888,7 +1003,15 @@ export function PrepBody({
                       {/* The slip's door, and only once there is something to
                           put on it — a ticket listing nothing is a wrong slip,
                           not a short one. Hidden on paper: the departure packet
-                          is already printing this diver's units. */}
+                          is already printing this diver's units.
+
+                          `-my-2.5` hands (44 − 24) / 2 back, so the row keeps
+                          the name's 24px line: the 44px ghost set a diver with
+                          a unit 8–11px lower than the diver above (pixel-craft
+                          class 4). `flush` ends the label on the column's edge,
+                          as the name starts on it. The box then reaches into
+                          the row's padding of a card that clips, so its ring
+                          is drawn inside. */}
                       {assigned.length > 0 ? (
                         <Link
                           href={shopPath(
@@ -899,7 +1022,12 @@ export function PrepBody({
                             "ticket",
                             diver.bookingId,
                           )}
-                          className={`${buttonClass({ variant: "ghost", size: "sm" })} print:hidden`}
+                          className={buttonClass({
+                            variant: "ghost",
+                            size: "sm",
+                            flush: true,
+                            className: "-my-2.5 focus-visible:focus-ring-inset print:hidden",
+                          })}
                         >
                           {t("gear.prep.ticketDoor")}
                         </Link>
@@ -1111,7 +1239,7 @@ export function PrepBody({
               </ul>
             </section>
           ) : null}
-        </>
+        </div>
       )}
     </>
   );

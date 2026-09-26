@@ -225,13 +225,16 @@ export function YearReport({
 
         {/* Where the card goes when it leaves the shop, and the one door that
           changes it. A quiet line rather than a section, on the tax line's
-          pattern: it is a state and a door, not a heading's worth of page. */}
+          pattern: it is a state and a door, not a heading's worth of page.
+          The door is kept whole (`whitespace-nowrap`), so on a phone the
+          line breaks at the dot before it rather than leaving one of its
+          words on a line of its own (K-574). */}
         <p className="text-end text-sm text-muted">
           {showsOnDiveday ? t("reports.year.shareOn") : t("reports.year.shareOff")}
           {" · "}
           <Link
             href={shopPath(shopSlug, "settings", "display")}
-            className="font-medium text-primary hover:underline"
+            className="font-medium whitespace-nowrap text-primary hover:underline"
           >
             {t("reports.year.shareDoor")}
           </Link>

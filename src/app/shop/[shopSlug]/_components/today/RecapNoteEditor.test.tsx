@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ledgerKindColumnClass } from "@/components/ui/ledger";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { RecapNoteEditor } from "./RecapNoteEditor";
 
@@ -133,5 +134,90 @@ describe("the settled station's post-trip recap note", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Upload photo" })).not.toBeInTheDocument();
+  });
+});
+
+describe("the recap row at rest", () => {
+  const WAITING = "This recap will go out automatically in about 3 hours.";
+
+  function renderClosed() {
+    return render(
+      <RecapNoteEditor
+        action={vi.fn()}
+        shoutout={null}
+        saved={false}
+        t={t}
+        recapStatusSummary={WAITING}
+      />,
+    );
+  }
+
+  /**
+   * **The sentence keeps the words that are its meaning** (pixel-craft class 8,
+   * K-150). One truncated line was sized for a staff-written note, and the
+   * same span carries the status sentence, whose last words are when it goes:
+   * at 390 it ran 360px in a 316px box and lost "3 hours." to the ellipsis.
+   *
+   * Two lines until `md`, not `sm`. From `sm` the note sits beside the
+   * kind's 104px column (K-260), about W − 242px wide in the card, and the
+   * es-ES sentence ("…se enviará automáticamente en aproximadamente 45
+   * minutos.") runs about 450px: one line holds it only from about 700px, so a
+   * phone on its side lost the time again. From `md` (526px and up) one line
+   * is wide enough.
+   */
+  it("gives the status sentence two lines until one holds it, rather than lose its time", () => {
+    renderClosed();
+    const note = screen.getByText(WAITING);
+    expect(note.closest("summary")).not.toBeNull();
+    expect(note).toHaveClass("max-md:line-clamp-2", "md:truncate");
+    expect(note.className).not.toMatch(/(?:^|\s)(?:sm:)?truncate(?:\s|$)/);
+    expect(note).not.toHaveClass("max-sm:line-clamp-2");
+  });
+
+  /**
+   * **One row anatomy under the settled station's rule** (pixel-craft class 3,
+   * K-260). The unsold-seats row above is a `LedgerRow` with a kind: its word in
+   * the kind's column, its sentence a `gap-3` after it. The recap led with its
+   * caret and set its note `gap-2` after the word, so "Recap" started 20px right
+   * of "Unsold seats" and its note 35px left of that row's sentence. The word
+   * takes the kind's column, the note the row's gap, and the caret goes to the
+   * row's end, where a door's glyph is.
+   */
+  it("lays its word and note on the ledger's kind column and sentence edge", () => {
+    const { container } = renderClosed();
+    const summary = container.querySelector("summary");
+    const [label, note] = [...(summary?.children ?? [])];
+    expect(label).toHaveTextContent("Recap");
+    expect(label).toHaveClass(ledgerKindColumnClass, "shrink-0");
+    expect(note).toHaveTextContent(WAITING);
+    expect(summary).toHaveClass("gap-x-3");
+    expect(summary?.className).not.toMatch(/(?:^|\s)(?:sm:)?gap-2(?:\s|$)/);
+    // The caret is last, so nothing stands before the word; and with it gone
+    // from the start, the stacked note has no caret to clear.
+    expect(summary?.lastElementChild?.tagName.toLowerCase()).toBe("svg");
+    expect(summary?.lastElementChild).toHaveClass("ms-auto");
+    expect(note.className).not.toMatch(/(?:^|\s)ps-/);
+  });
+
+  /**
+   * **The card's last line sits as far from its foot as its first from its
+   * top** (pixel-craft class 5, K-453). From `sm` the summary is one 20px line
+   * in a 44px target, the card's last thing, so 12px of invisible target sat
+   * between the Recap line and the card's 24px padding: 38px of card under
+   * the last ink against 28px over the first. Closed, the target keeps its
+   * 44px and overhangs the padding by the excess (`sm:-mb-3`); open, the form
+   * follows it and the margin goes. Below `sm` the stacked word and note fill
+   * the target already.
+   *
+   * The excess is padding (`sm:py-3`), not the room left round a centred
+   * line: between `sm` and `md` the note may take two lines (K-150), and a
+   * 40px note centred in 44 would have hung 10px of text into the card's
+   * padding. Padded, the note's last line always ends where the margin does.
+   */
+  it("lets its target overhang the card's foot at rest, and only at rest", () => {
+    const { container } = renderClosed();
+    const summary = container.querySelector("summary");
+    expect(summary).toHaveClass("min-h-11", "sm:py-3", "sm:-mb-3", "sm:group-open/recap:mb-0");
+    expect(summary?.className).not.toMatch(/(?:^|\s)-mb-/);
   });
 });

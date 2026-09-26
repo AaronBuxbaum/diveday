@@ -82,6 +82,8 @@ function renderFields(
   depthUnit: DepthUnit = "meters",
   locale: "en-US" | "es-ES" = "en-US",
   values?: SiteFieldValues,
+  /** The edit page's caption over the specialty boxes; the new-site form passes none. */
+  requiredSpecialtiesLabel?: string,
 ) {
   const translator = locale === "en-US" ? t : staffTranslator(locale);
   render(
@@ -91,6 +93,7 @@ function renderFields(
       tideStation={tideStation}
       values={values}
       certificationDescription="Who can dive this site."
+      requiredSpecialtiesLabel={requiredSpecialtiesLabel}
       routeCopy={routeEditorCopy(translator)}
       landmarkCopy={landmarkEditorCopy(translator)}
       fieldGuideCopy={fieldGuideEditorCopy(translator)}
@@ -98,6 +101,9 @@ function renderFields(
       locale={locale}
       timezone="America/New_York"
     />,
+    // Inside a form, as both pages render it, so a test can read what the
+    // form would submit.
+    { container: document.body.appendChild(document.createElement("form")) },
   );
 }
 
@@ -290,6 +296,167 @@ describe("SiteFields — a stored photo", () => {
     expect(holder("removeSiteImageUrls")).toHaveClass(...removablePhotoGridClass.split(" "));
     for (const still of ["removeSatelliteImage", "removeRouteImage"]) {
       expect(holder(still)?.className).not.toMatch(/(^|\s)grid(\s|$)|grid-cols/);
+    }
+  });
+});
+
+/**
+ * **"This is the right station" sits a field gap under the question it answers**
+ * (docs/design/pixel-craft.md, class 4; K-424). It carried `mt-4` as a direct
+ * item of the section's `gap-5` column, where a flex item's margin adds to the
+ * gap: 36px under the warning against the section's 20px field gap, and nearer
+ * the next section's rule than its own question.
+ */
+describe("SiteFields — where the station confirmation sits (K-424)", () => {
+  it("takes the section's own gap and no margin of its own", () => {
+    renderFields(FAR, "meters", "en-US", STORED);
+    const row = document.querySelector('input[name="tideStationConfirmed"]')?.closest("label");
+    expect(row).not.toBeNull();
+    expect(row?.className).not.toMatch(/(^|\s)m[ty]?-\d/);
+  });
+});
+
+/**
+ * **A helper sentence is a description under its control, never a hint on its
+ * caption** (docs/design/pixel-craft.md, class 12; K-418). `Field`'s `hint` is
+ * the inline "(optional)" qualifier, 14px on the caption's own line; the NOAA
+ * station's two sentences and link, and the conservation note's sentence, rode
+ * there, so the form drew help two ways — 14px after a label, or 12px under a
+ * control — and "NOAA tide station" stood two lines above "Dives best" beside
+ * it. The maximum depth, the time in the water and the tips heading carried a
+ * sentence inside their "(optional · …)", which wrapped into a two-line
+ * parenthetical after the label. A description is also what a screen reader
+ * hears as the box's description rather than as part of its name.
+ */
+describe("SiteFields — help under the control (K-418)", () => {
+  const describedBy = (control: Element | null) =>
+    document.getElementById(control?.getAttribute("aria-describedby") ?? "");
+
+  it("puts the NOAA station's help under the box, with its link", () => {
+    renderFields(null);
+    const input = document.querySelector('input[name="tideStationId"]') as HTMLInputElement;
+    const caption = input.labels?.[0];
+    expect(caption?.textContent).toBe("NOAA tide station");
+    expect(caption?.querySelector("a")).toBeNull();
+    const help = describedBy(input);
+    expect(help?.textContent).toContain("The list covers US waters only.");
+    expect(help?.querySelector("a")).toHaveAttribute(
+      "href",
+      "https://tidesandcurrents.noaa.gov/tide_predictions.html",
+    );
+  });
+
+  it("keeps the station NOAA answered for under the help, in the same description", () => {
+    renderFields(FAR);
+    const help = describedBy(document.querySelector('input[name="tideStationId"]'));
+    expect(help?.textContent).toContain("The list covers US waters only.");
+    expect(help?.textContent).toContain("8723970 · Vaca Key, FL");
+  });
+
+  it("puts the conservation note's sentence under its box", () => {
+    renderFields(null);
+    const box = document.querySelector('textarea[name="conservationNote"]') as HTMLTextAreaElement;
+    expect(box.labels?.[0]?.textContent).toBe("Conservation note");
+    expect(describedBy(box)?.textContent).toBe(t("diveSites.form.conservationNoteHint"));
+  });
+
+  it("keeps only (optional) on a caption, and its sentence under the box", () => {
+    renderFields(null);
+    const fields = [
+      ["maxDepth", "diveSites.form.maxDepthMetersLabel", "diveSites.form.maxDepthHint"],
+      [
+        "expectedBottomTime",
+        "diveSites.form.expectedBottomTimeLabel",
+        "diveSites.form.expectedBottomTimeHint",
+      ],
+      [
+        "fieldGuideTipsHeading",
+        "diveSites.form.tipsHeadingLabel",
+        "diveSites.form.tipsHeadingHint",
+      ],
+    ] as const;
+    for (const [name, label, sentence] of fields) {
+      const box = document.querySelector(`input[name="${name}"]`) as HTMLInputElement;
+      expect(box.labels?.[0]?.textContent).toBe(`${t(label)} ${t("diveSites.form.optionalHint")}`);
+      expect(describedBy(box)?.textContent).toBe(t(sentence));
+      expect(t(sentence)).not.toMatch(/^\(|\)$/);
+    }
+  });
+});
+
+/**
+ * **The specialty boxes are captioned as a group, a field caption's distance
+ * from them** (docs/design/pixel-craft.md, class 4; K-212). The edit form's
+ * "Required specialties" was a bare paragraph over a grid pushed `mt-3` down,
+ * and the new-site form, which has no caption, kept the `mt-3` with nothing
+ * above it: 32px from the level select to the first row where the section's
+ * fields stand 20px apart.
+ *
+ * A site's requirements decide who may book it, so the boxes, their names and
+ * what they hold are pinned here too: only where they sit moved.
+ */
+describe("SiteFields — the required specialties (K-212)", () => {
+  const specialtyBoxes = (scope: ParentNode = document) =>
+    [...scope.querySelectorAll('input[type="checkbox"][name="specialty"]')] as HTMLInputElement[];
+
+  it("captions the edit form's boxes as one group, its legend over them", () => {
+    renderFields(null, "meters", "en-US", STORED, "Required specialties");
+    const group = screen.getByRole("group", { name: "Required specialties" });
+    expect(group.tagName).toBe("FIELDSET");
+    expect(specialtyBoxes(group).map((box) => box.value)).toEqual([
+      "deep",
+      "wreck",
+      "night",
+      "drysuit",
+    ]);
+    expect(group.querySelector('input[name="requiresNitrox"]')).not.toBeNull();
+    const grid = specialtyBoxes(group)[0].closest("label")?.parentElement;
+    expect(grid?.className).not.toMatch(/(^|\s)mt-3(\s|$)/);
+    expect(screen.queryByText("Required specialties", { selector: "p" })).toBeNull();
+  });
+
+  it("starts the new form's uncaptioned boxes at the section's own gap", () => {
+    renderFields(null);
+    const grid = specialtyBoxes()[0].closest("label")?.parentElement;
+    expect(grid?.className).not.toMatch(/(^|\s)m[ty]-\d/);
+    expect(screen.queryByRole("group", { name: "Required specialties" })).toBeNull();
+  });
+
+  it("keeps what a stored site requires ticked, and nothing else", () => {
+    renderFields(
+      null,
+      "meters",
+      "en-US",
+      { ...STORED, requiredSpecialties: ["deep", "night"], requiresNitrox: true },
+      "Required specialties",
+    );
+    expect(
+      specialtyBoxes()
+        .filter((box) => box.checked)
+        .map((box) => box.value),
+    ).toEqual(["deep", "night"]);
+    expect(document.querySelector('input[name="requiresNitrox"]')).toBeChecked();
+    cleanup();
+    renderFields(null, "meters", "en-US", STORED, "Required specialties");
+    expect(specialtyBoxes().some((box) => box.checked)).toBe(false);
+    expect(document.querySelector('input[name="requiresNitrox"]')).not.toBeChecked();
+  });
+
+  it("submits what is ticked under the names both actions read, captioned or not", () => {
+    for (const caption of [undefined, "Required specialties"]) {
+      renderFields(
+        null,
+        "meters",
+        "en-US",
+        { ...STORED, requiredSpecialties: ["deep", "drysuit"], requiresNitrox: true },
+        caption,
+      );
+      const form = specialtyBoxes()[0].form;
+      expect(form).not.toBeNull();
+      const submitted = new FormData(form as HTMLFormElement);
+      expect(submitted.getAll("specialty")).toEqual(["deep", "drysuit"]);
+      expect(submitted.get("requiresNitrox")).toBe("on");
+      cleanup();
     }
   });
 });

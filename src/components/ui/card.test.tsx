@@ -13,6 +13,8 @@ import {
   SectionCard,
   sectionCardClass,
   TONE_PANEL_CLASS,
+  TONE_PANEL_IN_OVERLAY_CLASS,
+  TONE_PANEL_LG_CLASS,
 } from "./card";
 
 afterEach(cleanup);
@@ -141,6 +143,22 @@ describe("every panel shell wears the panel radius and the bed", () => {
       offenders((text) => /\brounded-panel\b/.test(text) && /\bshadow-sm\b/.test(text)),
     ).toEqual([]);
   });
+
+  /**
+   * `rounded-3xl` is 24px, a rung the ladder does not have (K-378: the course
+   * page's dates panel, 4px rounder than the hero panel above it). Comments
+   * are stripped first, so a note naming the retired class is not an offender.
+   */
+  it("finds no class string wearing rounded-3xl, a radius off the ladder", () => {
+    const offending = files(SRC_DIR).filter((file) =>
+      /\brounded-3xl\b/.test(
+        readFileSync(file, "utf8")
+          .replace(/\/\*[\s\S]*?\*\//g, "")
+          .replace(/^\s*\/\/.*$/gm, ""),
+      ),
+    );
+    expect(offending.map((file) => relative(SRC_DIR, file).split(/[\\/]/).join("/"))).toEqual([]);
+  });
 });
 
 /**
@@ -206,6 +224,96 @@ describe("TONE_PANEL_CLASS", () => {
       /\b(border|bg|text)-(border|surface|warning|danger|success|primary)/,
     );
   });
+
+  /**
+   * The `lg` twin, for a tone panel among cards a person works inside: Today's
+   * stations and the public trip page's booked moment are the `lg` rung, and
+   * the tone panels beside them hand-rolled that inset with no bed, or at
+   * `p-5` with no step, 4px inside the card's words from `sm` up.
+   */
+  it("has an lg twin on the lg card's inset, and no colour", () => {
+    const geometry = (classes: string) =>
+      classes
+        .split(" ")
+        .filter((token) => !/^(border-border|bg-surface)$/.test(token))
+        .sort();
+    expect(geometry(TONE_PANEL_LG_CLASS)).toEqual(geometry(sectionCardClass({ padding: "lg" })));
+    expect(TONE_PANEL_LG_CLASS).not.toMatch(
+      /\b(border|bg|text)-(border|surface|warning|danger|success|primary)/,
+    );
+  });
+
+  /**
+   * The overlay twin, for a tone panel carried inside a menu or a sheet: the
+   * manifest's phone menu holds the emergency reference. ADR
+   * 20260901-diveday-reimagined gives the bed to a panel at rest only ("menus,
+   * sheets and toasts keep their own lift"); on a popover that already lifts
+   * it, the bed's 26px blur smeared across the popover's bottom padding and,
+   * in dark mode, past its edge.
+   */
+  it("has an overlay twin: the same geometry with no bed, and no colour", () => {
+    expect(TONE_PANEL_IN_OVERLAY_CLASS.split(" ").sort()).toEqual(
+      TONE_PANEL_CLASS.split(" ")
+        .filter((token) => token !== "shadow-bed")
+        .sort(),
+    );
+    expect(TONE_PANEL_IN_OVERLAY_CLASS).not.toMatch(/\bshadow-/);
+  });
+});
+
+/**
+ * The tree half: a panel that carries a tone spells the panel radius through
+ * `TONE_PANEL_CLASS` (or a twin), so a literal class string holding
+ * `rounded-panel` beside a tone border or a tone fill is one hand-rolling it —
+ * at `p-5` with no step, with no bed, the drift the roster's bands and a dozen
+ * others had. The fill counts on its own: the dive-site catalog's fit note was
+ * a borderless tint at `p-5` under two cards, and a sweep that asked only for
+ * the border let it through. The panels below are deliberately something
+ * else; each says why, and each must still be here, so the list cannot
+ * outlive what it excuses.
+ */
+describe("every tone panel wears the card's geometry", () => {
+  const NOT_A_CARD_IN_A_TONE: Record<string, string> = {
+    "app/check-in/[token]/_components/KioskConsole.tsx":
+      "the kiosk's answer, at the kiosk's 24-32px type read from a step back: its inset is that scale's",
+    "app/shop/[shopSlug]/trips/[id]/manifest/_components/SummaryPanel.tsx":
+      "pinned under the chrome and floating over the list, with an overlay's own lift",
+    "components/ui/disclosure.tsx":
+      "DangerDisclosure: a shell whose face and body pad themselves (a card's padding none)",
+    "app/switching/_components/guide.tsx": "a marketing page: it keeps its own scale",
+    "app/switching/[competitor]/page.tsx": "a marketing page: it keeps its own scale",
+    "components/SwitchingConcierge.tsx": "a marketing page: it keeps its own scale",
+    "app/s/[shopSlug]/courses/[slug]/_components/CourseSections.tsx":
+      "the course page's dates panel: on the course hero card's own `p-6 sm:p-8` inset above it, so their words start on one edge (K-378)",
+  };
+
+  function files(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) return files(full);
+      return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
+    });
+  }
+
+  const handRolled = files(SRC_DIR).flatMap((file) => {
+    const strings = readFileSync(file, "utf8").match(/"[^"\n]*"|`[^`]*`/g) ?? [];
+    const hit = strings.some(
+      (text) =>
+        /\brounded-panel\b/.test(text) &&
+        /\b(border|bg)-(danger|warning|success|primary)(\/|-tint\b)/.test(text),
+    );
+    return hit ? [relative(SRC_DIR, file).split(/[\\/]/).join("/")] : [];
+  });
+
+  it("finds none hand-rolled", () => {
+    expect(handRolled.filter((file) => !(file in NOT_A_CARD_IN_A_TONE))).toEqual([]);
+  });
+
+  it("excuses only panels that are still there", () => {
+    expect(Object.keys(NOT_A_CARD_IN_A_TONE).filter((file) => !handRolled.includes(file))).toEqual(
+      [],
+    );
+  });
 });
 
 /**
@@ -218,6 +326,42 @@ describe("the inset note", () => {
   it("is one geometry, and one sunken spelling of it", () => {
     expect(INSET_NOTE_BOX).toBe("rounded-lg px-3 py-2 text-sm");
     expect(INSET_NOTE_CLASS).toBe(`${INSET_NOTE_BOX} bg-surface-sunken text-muted`);
+  });
+
+  /**
+   * The tree half. The box was retyped by hand across the app after the
+   * departure's notes took the constant — the builder's pattern line, the
+   * draft line, a roster note, a session row, the rental estimate — so the
+   * majority spelling could drift one class at a time and nothing would say.
+   * A class string that sets a box 12px in on the sunken fill, in any order,
+   * at either 12px radius token, at any vertical padding and with or without
+   * a hairline, is a note that should name it: Today's waiver result note
+   * drew a third spelling (a hairline, 10px down) that a sweep asking for
+   * `py-2` could not see.
+   */
+  it("is spelled through the constant, never retyped on the sunken fill", () => {
+    function files(dir: string): string[] {
+      return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) return files(full);
+        return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
+      });
+    }
+    const box = (tokens: string[]) =>
+      (tokens.includes("rounded-lg") || tokens.includes("rounded-inset")) &&
+      tokens.includes("bg-surface-sunken") &&
+      tokens.includes("px-3") &&
+      tokens.some((token) => token.startsWith("py-"));
+    const offenders: string[] = [];
+    for (const file of files(SRC_DIR)) {
+      const text = readFileSync(file, "utf8");
+      for (const match of text.matchAll(/"[^"\n]*"|`[^`]*`/g)) {
+        if (!box(match[0].slice(1, -1).split(/\s+/))) continue;
+        const line = text.slice(0, match.index).split("\n").length;
+        offenders.push(`${relative(SRC_DIR, file).split(/[\\/]/).join("/")}:${line}`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });
 

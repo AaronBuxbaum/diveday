@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { declarations, readGlobalsCss, topLevelBlocks } from "@/test/stylesheet";
 
 /**
  * **The order the trip page composes in, pinned as a rule.**
@@ -70,9 +71,37 @@ describe("the trip page's rules", () => {
   it("closes the other boats, and rules the requirement note only when it opens the block", () => {
     expect(SOURCE).not.toMatch(/<TripAlternatives[^>]*closed=/);
     expect(positionOf("<TripAlternatives")).toBeLessThan(positionOf("{requirementNote ? ("));
-    expect(SOURCE).toMatch(
-      /worthALookRows\.length > 0 \? "mt-4" : "mt-8 border-t border-border pt-4"/,
-    );
+    // Alone, the note stands a section from the block above on the page's
+    // stack (K-162) and opens on its own rule; under the boats it sits 16px
+    // below their closing rule, inside the one block the two make.
+    expect(SOURCE).toMatch(/worthALookRows\.length > 0 \? "mt-4" : "border-t border-border pt-4"/);
+  });
+});
+
+/**
+ * **The two weather warnings, each on its neighbour's inset** (pixel-craft
+ * K-351 follow-up). Neither stands beside the booking card. A conditions hold
+ * replaces the form with plain type (`ConditionsHoldSection`), and the one box
+ * beside its banner is the minimum-seats note directly under it, 16px in: so
+ * the banner is the default tone panel, level with that note on a phone.
+ * Conditions changed needs a booking, and a booking renders the booked moment
+ * on the `lg` rung: so that panel is the `lg` twin.
+ */
+describe("the trip page's weather warnings", () => {
+  function panelAt(marker: string): string {
+    const at = positionOf(marker);
+    expect(at).toBeGreaterThan(-1);
+    return SOURCE.slice(at, SOURCE.indexOf("</", at));
+  }
+
+  it("sets the hold banner on the default tone panel, level with the note under it", () => {
+    const hold = panelAt("{trip.conditionsHold ? (");
+    expect(hold).toMatch(/\$\{TONE_PANEL_CLASS\}/);
+    expect(hold).not.toContain("TONE_PANEL_LG_CLASS");
+  });
+
+  it("sets the conditions-changed panel on the lg twin, as the booked moment is", () => {
+    expect(panelAt("conditionsChangedSinceBooking(")).toMatch(/\$\{TONE_PANEL_LG_CLASS\}/);
   });
 });
 
@@ -149,7 +178,119 @@ describe("the trip page's order", () => {
     expect(SOURCE).not.toContain("max-w-2xl");
   });
 
-  it("keeps the sticky phone pill a verb pointing at the form", () => {
+  /**
+   * **The trip stands in the public pages' own frame** (pixel-craft class 3,
+   * K-170). It alone was `px-6 py-16`: on a phone its hero, rules and card
+   * started at x 24 where the chrome, the footer and every sibling page start
+   * at 16, and its eyebrow sat 84px under the chrome's rule against the
+   * siblings' 36–44 — the 64px padding plus the header's own `mt-4`.
+   */
+  it("frames its column as every public page does, with nothing above the header", () => {
+    const FRAME = "mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10";
+    const LOADING = readFileSync(join(__dirname, "loading.tsx"), "utf8");
+    const HEADER = readFileSync(join(__dirname, "_components", "TripHeader.tsx"), "utf8");
+    const BOATS = readFileSync(
+      join(__dirname, "..", "..", "boats", "[tripId]", "page.tsx"),
+      "utf8",
+    );
+    // The same frame the boat page draws, for the same `max-w-xl` measure.
+    expect(BOATS).toContain(`<main className="${FRAME}">`);
+    // Both of this page's non-embed columns — the departure and the cancelled
+    // landing — and its loading skeleton.
+    expect(SOURCE.split(`: "${FRAME}"`).length - 1).toBe(2);
+    expect(LOADING).toContain(`<main className="${FRAME}">`);
+    for (const source of [SOURCE, LOADING]) expect(source).not.toContain("py-16");
+    // The header opens the column; the staff preview bar keeps its own `mb-6`.
+    expect(HEADER).toMatch(/return \(\s*<ShopPageHeader/);
+  });
+
+  /**
+   * **One rhythm below the hero** (pixel-craft class 4, K-162;
+   * forms-and-controls.md: "`space-y-10` between a page's sections, never
+   * `mt-*`"). Each section spelled its own top margin — `mt-8` on the day,
+   * the pitch, the other boats, the requirement note and the contact line,
+   * `mt-6` on the conditions line and the change ledger, `mt-10` on the form
+   * card — so the page's sections stood 24, 32 and 40px apart. They share
+   * one `space-y-10` now, and none carries a margin of its own.
+   */
+  it("stacks every section from the day's run to the contact line 40px apart", () => {
+    const opening = '<div className="mt-10 space-y-10">';
+    const stack = positionOf(opening);
+    expect(stack).toBeGreaterThan(-1);
+    // The stack opens directly on the day's run, and holds everything to the
+    // shop's contact line.
+    expect(SOURCE.slice(stack + opening.length, positionOf("<TripDayPlan"))).not.toMatch(
+      /<[A-Za-z]/,
+    );
+    for (const marker of [
+      "<TripDayPlan",
+      "<TripAlternatives",
+      "<BookSpotSection",
+      "<ShopContactLinks",
+    ]) {
+      expect(positionOf(marker)).toBeGreaterThan(stack);
+    }
+    const region = SOURCE.slice(stack + opening.length, SOURCE.lastIndexOf("</main>"));
+    expect(region).toContain("<ShopContactLinks");
+    // No section in it spells its own distance from the one above.
+    expect(region.match(/className=(?:"|\{`)[^"`]*\bmt-(?:6|8|10|12)\b/g) ?? []).toEqual([]);
+    expect(region.match(/<TripChangeLedger[^>]*className=/g) ?? []).toEqual([]);
+    // The skeleton stands its bars on the same stack, so nothing moves when
+    // the sections land.
+    expect(readFileSync(join(__dirname, "loading.tsx"), "utf8")).toContain(opening);
+    // Under the pitch's door the conditions line sits flush, its rule the
+    // door's close; with no door the two stand a section apart.
+    expect(region).toContain(
+      '<div className={pitchHasDoor(diveBriefings, publicCrew) ? undefined : "space-y-10"}>',
+    );
+  });
+
+  it("leaves every section's own component without an outer margin", () => {
+    const component = (name: string) =>
+      readFileSync(join(__dirname, "_components", `${name}.tsx`), "utf8");
+    // The day's run, the pitch and the other boats open on a bare section.
+    // Counted rather than matched, so a failure names what it found.
+    const found = (name: string, pattern: RegExp) => component(name).match(pattern) ?? [];
+    for (const name of ["TripDayPlan", "TripPitch", "TripAlternatives"]) {
+      expect(found(name, /<section className="mt-8">/g), name).toEqual([]);
+    }
+    expect(found("ConditionsLine", /\bmt-6\b/g)).toEqual([]);
+    // Every state that stands in the form's slot.
+    expect(found("BookingSections", /\bmt-1[02]\b/g)).toEqual([]);
+    expect(found("EmbedBookedNotice", /\bmt-10\b/g)).toEqual([]);
+  });
+
+  /**
+   * **The phone's Book is a bar at the foot, not a pill over the page**
+   * (pixel-craft class 9, K-139). A 70×48 pill fixed 16px off the corner of
+   * every phone screen sat on the page's own controls at rest — the depth
+   * picker's caret, "…on 2 of 3 logged dives", a dive's "water" — and nothing
+   * reserved room for it. It is now a full-width bar in the chrome's materials,
+   * and the document ends that bar's height lower, so the last of the page and
+   * the shop's footer scroll clear of it and a field or fragment lands above it.
+   */
+  it("pins the phone's Book as a bar the document ends clear of", () => {
+    // No control pinned by a corner offset any more: the pill was `fixed`
+    // 16px off the screen's bottom corner.
+    expect(SOURCE.match(/\bfixed (?:[\w-]+ )*bottom-4\b/g) ?? []).toEqual([]);
+    const bar = SOURCE.match(
+      /<div\s+data-foot-bar=""\s+className="([^"]*)"\s*>\s*(?:\{\/\*[\s\S]*?\*\/\}\s*)?<a href="#book" className=\{buttonClass\(\{ className: "w-full" \}\)\}>/,
+    );
+    expect(bar?.[1]).toBe(
+      "fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:hidden print:hidden",
+    );
+    // The bar's height: the md button (3rem), its `py-3` (1.5rem), its hairline.
+    const height = "calc(3rem + 1.5rem + 1px)";
+    const phone = topLevelBlocks(readGlobalsCss())
+      .filter((block) => block.prelude === "@media (width < 40rem)")
+      .flatMap((block) => topLevelBlocks(block.body));
+    const rule = (selector: string) =>
+      declarations(phone.find((candidate) => candidate.prelude === selector)?.body ?? "");
+    expect(rule("body:has([data-foot-bar])")["padding-bottom"]).toBe(height);
+    expect(rule("html:has([data-foot-bar])")["scroll-padding-bottom"]).toBe(height);
+  });
+
+  it("keeps the phone's Book bar a verb pointing at the form", () => {
     // It carried the seat count ("Book · 3 left"), which is the fact the card
     // it scrolls to already states in its own corner.
     expect(SOURCE).toContain("bookVerb");

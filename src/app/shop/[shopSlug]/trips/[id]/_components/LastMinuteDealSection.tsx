@@ -148,26 +148,34 @@ export function LastMinuteDealSection({
                 requirement first — see `reviewLastMinuteRecipients`. */}
             <ul className="mt-2 divide-y divide-border rounded-lg border border-border bg-surface-sunken">
               {review.shown.map(({ recipient }) => (
+                // A grid, so a certification too long for the line hangs
+                // under the name it describes rather than under the box: the
+                // label lends the row its box and its name (`contents`), and
+                // the certification takes the name's column on a phone and a
+                // third, end-aligned one from `sm`. The box sits centred on
+                // the name's first line, as `ChoiceRow`'s does.
                 <li
                   key={recipient.personId}
-                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2 text-sm"
+                  className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2 gap-y-1 px-3 py-2 text-sm sm:grid-cols-[auto_minmax(0,1fr)_auto]"
                 >
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      name="recipientPersonIds"
-                      value={recipient.personId}
-                      defaultChecked
-                      className={choiceClass}
-                    />
+                  <label className="contents cursor-pointer select-none">
+                    <span className="flex h-lh items-center">
+                      <input
+                        type="checkbox"
+                        name="recipientPersonIds"
+                        value={recipient.personId}
+                        defaultChecked
+                        className={choiceClass}
+                      />
+                    </span>
                     <span className="font-medium">{recipient.fullName}</span>
                   </label>
                   <span
-                    className={
+                    className={`col-start-2 sm:col-start-auto sm:text-end ${
                       certificationSummaryUnchecked(recipient.certification)
                         ? "text-warning"
                         : "text-muted"
-                    }
+                    }`}
                   >
                     {certificationSummaryText(t, recipient.certification, locale)}
                   </span>

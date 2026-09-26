@@ -352,6 +352,10 @@ export function collectGeometry(options) {
       // A `::after` stretched over the nearest positioned ancestor is this
       // link's real hit area (`after:absolute after:inset-0`).
       overlay: null,
+      // A control that positions itself is its own `::after`'s containing
+      // block, so the pseudo is the box moved by these four offsets (top,
+      // right, bottom, left): `after:-inset-3` reaches 12px past each edge.
+      overlayInset: null,
       pe: style.pointerEvents,
       text,
       asc: null,
@@ -386,11 +390,22 @@ export function collectGeometry(options) {
     }
     if (interactive) {
       const after = getComputedStyle(element, "::after");
-      if (
+      const drawn =
         after.content &&
         after.content !== "none" &&
         after.content !== "normal" &&
-        after.position === "absolute" &&
+        after.position === "absolute";
+      if (drawn && style.position !== "static") {
+        if (after.display !== "none" && after.pointerEvents !== "none") {
+          record.overlayInset = [
+            round(num(after.top)),
+            round(num(after.right)),
+            round(num(after.bottom)),
+            round(num(after.left)),
+          ];
+        }
+      } else if (
+        drawn &&
         num(after.top) === 0 &&
         num(after.left) === 0 &&
         num(after.right) === 0 &&

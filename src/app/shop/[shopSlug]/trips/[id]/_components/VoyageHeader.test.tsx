@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { dayStripGeometry } from "@/lib/day-strip";
 import { TripAddDiverLink } from "./TripPageHeader";
-import { VoyageHeader } from "./VoyageHeader";
+import { VoyageHeader, VoyageHeaderSkeleton } from "./VoyageHeader";
 
 afterEach(cleanup);
 
@@ -31,6 +31,17 @@ const strip = {
   markLabels: { off: "7:00 AM", back: "11:45 AM" },
 };
 
+/**
+ * The line of facts read as a person reads it: the paragraph's whole text, with
+ * its no-break spaces read as spaces. Each fact is a box of its own, so no one
+ * element's own text is the line.
+ */
+function factsLine(text: string) {
+  return screen.getByText(
+    (_, element) => element?.tagName === "P" && element.textContent?.replace(/\s+/g, " ") === text,
+  );
+}
+
 describe("VoyageHeader", () => {
   /**
    * **The hour is the name.** A crew standing on a dock at 6:58 knows which
@@ -45,7 +56,7 @@ describe("VoyageHeader", () => {
         back={<a href="/shop/blue-mantis/schedule/board">Board</a>}
         hour="7:00 AM"
         title="Two-Tank Reef — Molasses & French"
-        line="Mantis I · Keiko Tanaka · 9 of 12 seats taken"
+        facts={["Mantis I", "Keiko Tanaka", "9 of 12 seats taken"]}
         strip={strip}
       />,
     );
@@ -57,7 +68,78 @@ describe("VoyageHeader", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Two-Tank Reef — Molasses & French" }),
     ).toBeTruthy();
-    expect(screen.getByText("Mantis I · Keiko Tanaka · 9 of 12 seats taken")).toBeTruthy();
+    expect(factsLine("Mantis I · Keiko Tanaka · 9 of 12 seats taken")).toBeTruthy();
+  });
+
+  /**
+   * **The line breaks between facts, never inside one** (pixel-craft class 8,
+   * K-158). It was one string joined with " · ", so the browser broke it at
+   * any space: "· Tue," / "Jul 21" on a crew-clash departure at 390, and "9 of
+   * 12 seats" / "taken" on another. Each fact is now its own atomic box, so a
+   * line ends only between two of them; one longer than the whole line still
+   * wraps inside its own box rather than running off a phone, which a boat or a
+   * crew name — free text a shop typed — could. The dot rides inside the fact
+   * before it: a line can break on either side of an atomic box whatever
+   * character stands there, so a dot outside one could start a line.
+   */
+  it("sets each fact whole, with its dot kept on the fact before it", () => {
+    const { container } = render(
+      <VoyageHeader
+        scheme="dawn"
+        back={<a href="/back">Board</a>}
+        hour="7:00 AM"
+        title="Two-Tank Reef"
+        facts={["Blue Mantis", "Sal Moretti", "9 of 12 seats taken", "Tue, Jul 21"]}
+        strip={null}
+      />,
+    );
+    const line = factsLine("Blue Mantis · Sal Moretti · 9 of 12 seats taken · Tue, Jul 21");
+    const pieces = [...line.children];
+    expect(pieces.map((piece) => piece.textContent)).toEqual([
+      "Blue Mantis\u00a0·",
+      "Sal Moretti\u00a0·",
+      "9 of 12 seats taken\u00a0·",
+      "Tue, Jul 21",
+    ]);
+    for (const piece of pieces) {
+      expect(piece.tagName).toBe("SPAN");
+      expect(piece).toHaveClass("inline-block");
+      expect(piece.className).not.toContain("whitespace-nowrap");
+    }
+    expect(line.textContent).toBe(
+      "Blue Mantis\u00a0· Sal Moretti\u00a0· 9 of 12 seats taken\u00a0· Tue, Jul 21",
+    );
+    expect(container.querySelector(".sky")?.textContent).not.toContain(" · ");
+  });
+
+  /**
+   * **The band's two chips stand 8px apart** (pixel-craft class 4, K-163).
+   * The page hands Manifest and Add diver over as a fragment, and two inline
+   * boxes from a fragment have no space between them: they touched at x 1018
+   * and 1019 at 1280, and the second chip's `backdrop-blur` painted over the
+   * first one's focus ring, which reaches 5px out. The slot lays its children
+   * out itself, `gap-2`, more than the ring's reach.
+   */
+  it("spaces the chips it is handed a gap wider than the focus ring", () => {
+    render(
+      <VoyageHeader
+        scheme="day"
+        back={<a href="/back">Board</a>}
+        hour="2:30 PM"
+        title="Two-Tank Reef"
+        facts={["Mantis I", "9 of 12 seats taken"]}
+        strip={null}
+        action={
+          <>
+            <a href="/manifest">Manifest</a>
+            <a href="#add-diver">Add diver</a>
+          </>
+        }
+      />,
+    );
+    const slot = screen.getByRole("link", { name: "Manifest" }).parentElement;
+    expect(slot).toBe(screen.getByRole("link", { name: "Add diver" }).parentElement);
+    expect(slot).toHaveClass("flex", "items-center", "gap-2");
   });
 
   it("wears the hour it is read at, and nothing else decides it", () => {
@@ -67,7 +149,7 @@ describe("VoyageHeader", () => {
         back={<a href="/back">Board</a>}
         hour="7:30 PM"
         title="Night Dive"
-        line="Skiff · 3 of 8 seats taken"
+        facts={["Skiff", "3 of 8 seats taken"]}
         strip={null}
       />,
     );
@@ -85,7 +167,7 @@ describe("VoyageHeader", () => {
         back={<a href="/back">Board</a>}
         hour="1:00 PM"
         title="Wreck Trip"
-        line="Mantis II · 12 of 12 seats taken"
+        facts={["Mantis II", "12 of 12 seats taken"]}
         strip={strip}
       />,
     );
@@ -96,7 +178,7 @@ describe("VoyageHeader", () => {
         back={<a href="/back">Board</a>}
         hour="1:00 PM"
         title="Wreck Trip"
-        line="Mantis II · 12 of 12 seats taken"
+        facts={["Mantis II", "12 of 12 seats taken"]}
         strip={null}
       />,
     );
@@ -115,7 +197,7 @@ describe("VoyageHeader", () => {
         back={<a href="/back">Board</a>}
         hour="7:00 AM"
         title="Two-Tank Reef"
-        line="Mantis I · 9 of 12 seats taken"
+        facts={["Mantis I", "9 of 12 seats taken"]}
         strip={null}
         badge={<span>Cancelled</span>}
       />,
@@ -145,7 +227,7 @@ describe("VoyageHeader", () => {
         }
         hour="2:30 PM"
         title="Two-Tank Reef"
-        line="Mantis I · 9 of 12 seats taken"
+        facts={["Mantis I", "9 of 12 seats taken"]}
         strip={null}
         action={<TripAddDiverLink onSky href="#add-diver" label="Add diver" />}
       />,
@@ -156,6 +238,40 @@ describe("VoyageHeader", () => {
     expect(back?.className).not.toContain("text-primary");
     expect(action?.className).toContain("text-(--sky-ink)");
     expect(action?.className).not.toContain("text-primary");
+  });
+
+  /**
+   * **The loading frame stands on the band's own box** (pixel-craft class 11,
+   * K-197). The departure's skeleton drew the retired masthead's three bars on
+   * the page ground, so a full-width sky arrived when the page landed and the
+   * About card dropped 171px at 1280. The frame is exported from here and
+   * built from the band's own classes, so the two cannot drift: the band less
+   * its paint is the frame's band less its fill, the column is one column, and
+   * the strip's block is the strip's height.
+   */
+  it("draws its loading frame on the band's own box", () => {
+    const { container } = render(
+      <VoyageHeader
+        scheme="day"
+        back={<a href="/back">Board</a>}
+        hour="2:30 PM"
+        title="Two-Tank Reef"
+        facts={["Mantis I", "9 of 12 seats taken"]}
+        strip={strip}
+      />,
+    );
+    const { container: frame } = render(<VoyageHeaderSkeleton />);
+    const classes = (element: Element | null | undefined, ...drop: string[]) =>
+      [...(element?.classList ?? [])].filter((name) => !drop.includes(name)).sort();
+    const band = container.querySelector(".sky");
+    const frameBand = frame.querySelector("header")?.firstElementChild;
+    expect(classes(band)).toContain("w-screen");
+    expect(classes(frameBand, "bg-surface-sunken")).toEqual(classes(band, "sky"));
+    expect(classes(frameBand?.firstElementChild)).toEqual(classes(band?.firstElementChild));
+    const drawn = screen.getByRole("img", { name: /drawn as its voyage/ });
+    expect(
+      classes(frameBand?.firstElementChild?.lastElementChild, "rounded", "bg-surface"),
+    ).toEqual(classes(drawn, "relative"));
   });
 
   /**

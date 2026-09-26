@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { RollCallCheckpoint, RollCallRecord, TripManifest } from "@/lib/manifests";
 import { DiverRollCall } from "./DiverRollCall";
+import { rollCallScrollMargin } from "./RollCallControls";
 
 /**
  * **The two rules slice 5a owes ADR
@@ -311,6 +312,25 @@ describe("a recorded alarm sorts to the top, and paper does not (decision 4)", (
     const { container } = renderList({ divers: roster() });
     for (const row of container.querySelectorAll<HTMLElement>("li[id^='diver-row-']")) {
       expect(row.className).toContain("break-inside-avoid");
+    }
+  });
+
+  it("gives the first and last rows the card's inner corner on paper, where nothing clips them", () => {
+    // The print packets lift every `overflow` clip on purpose (a clipped box
+    // on paper is content that does not exist), so the card's rounded corner
+    // stopped cutting the rows and the 4px state stripe stood square across
+    // it (pixel probe, day-packet-print: 14px of stripe past the curve at each
+    // end). On paper the list is block layout in manifest order, so
+    // `:first-child` is the first row painted — which it is not on screen,
+    // where an alarmed row is `order-first` and the card still clips.
+    const { container } = renderList({ divers: roster() });
+    for (const row of container.querySelectorAll<HTMLElement>("li[id^='diver-row-']")) {
+      expect(row).toHaveClass(
+        "border-l-4",
+        "print:first:rounded-t-[calc(var(--radius-panel)-1px)]",
+        "print:last:rounded-b-[calc(var(--radius-panel)-1px)]",
+      );
+      expect(row.className).not.toMatch(/(^|\s)(first|last):rounded/);
     }
   });
 
@@ -745,5 +765,90 @@ describe("the roll call on paper", () => {
     renderList({ divers: [diver()] });
     const trigger = screen.getByRole("button", { name: "Open details for Meera Iyer" });
     expect(trigger).toHaveClass("print:min-h-0", "print:py-1");
+  });
+});
+
+describe("the skip link's landing", () => {
+  /**
+   * **"Skip to roll call" lands the list below the pinned count card**
+   * (pixel-craft class 9, K-140). The section it jumps to had no scroll margin,
+   * so it landed on the chrome bar's 56px, under the sticky count card (113px
+   * tall at 1280, 173 at 390): the heading and the first names were under it.
+   * The section takes the margin its own rows already wear, which reads the
+   * card's published height.
+   */
+  it.each([
+    ["departure", true],
+    ["after_dive_1", false],
+  ] as const)("clears the count card at %s", (checkpoint, isDeparture) => {
+    const { container } = renderList({ divers: [diver()], checkpoint });
+    const section = container.querySelector<HTMLElement>("[id$='roll-call-list']");
+    expect(section?.tagName).toBe("SECTION");
+    expect(section).toHaveClass(rollCallScrollMargin(isDeparture));
+  });
+});
+
+describe("the person panel's spacing", () => {
+  const open = (name: string) => {
+    fireEvent.click(screen.getByRole("button", { name: `Open details for ${name}` }));
+    return screen.getByRole("dialog");
+  };
+
+  /**
+   * **A list with nothing in it takes no room** (pixel-craft class 4, K-361).
+   * The quiet facts under a diver's details — checked in, the age — are a list
+   * whose every item is conditional; for a diver with neither it rendered
+   * empty, and its `mt-3` stood on the note form's own, 24px where the panel's
+   * blocks sit 12 apart (31px from the last fact to the note's label).
+   */
+  it("hides a list of facts with none to show", () => {
+    renderList({ divers: [diver()] });
+    const sheet = open("Meera Iyer");
+    const empty = [...sheet.querySelectorAll("ul")].filter((list) => list.childNodes.length === 0);
+    expect(empty.length).toBeGreaterThan(0);
+    for (const list of empty) expect(list).toHaveClass("empty:hidden");
+  });
+
+  /**
+   * **The rule under "Resolve blockers on Guests →" sits as far from the link's
+   * words as from the next line's** (pixel-craft class 4, K-362). The link is a
+   * 44px target round a 24px line, so about 15px of its box is already air under
+   * its words; the rule's `my-3` added 12px more above and 12 below — 27px of
+   * ink to rule, against 18 from the rule to "Emergency contact". The link's
+   * own air is the space above.
+   */
+  it("spaces the blockers' rule by the ink on each side, not by its box", () => {
+    renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({ readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] } }),
+      ],
+    });
+    const rule = open("Meera Iyer").querySelector("hr");
+    expect(rule).toHaveClass("mt-0", "mb-3");
+    expect(rule?.className).not.toMatch(/(^|\s)my-/);
+  });
+});
+
+/**
+ * **The mark centres on the row it sits in** (K-266). The row was
+ * `flex items-start` and the mark's column held it 10px from the top, which
+ * centres a 56px mark only on a 76px name button. A name that wraps grows the
+ * button, its index and caret move to the new middle, and the mark stayed up:
+ * 19px above them on a phone. The mark rides in `PersonSheet`'s trailing slot,
+ * one `items-center` row with the button, so it centres on the button's real
+ * height.
+ */
+describe("the mark beside a name that wraps", () => {
+  it("sits in the name button's own items-center row", () => {
+    renderList({ divers: [diver()] });
+    const trigger = screen.getByRole("button", { name: "Open details for Meera Iyer" });
+    const row = trigger.parentElement as HTMLElement;
+    expect(row).toHaveClass("flex", "items-center");
+    expect(row.className).not.toMatch(/items-start/);
+    const mark = within(screen.getByRole("listitem")).getByRole("button", {
+      name: "Mark boarded",
+    });
+    expect(row).toContainElement(mark);
   });
 });

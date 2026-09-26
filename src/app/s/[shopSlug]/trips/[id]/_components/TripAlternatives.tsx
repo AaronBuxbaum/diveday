@@ -65,7 +65,7 @@ export function TripAlternatives({
   if (alternatives.length === 0) return null;
   const t = diverTranslator(locale);
   return (
-    <section className="mt-8">
+    <section>
       <GroupLabel as="h2">{t("booking.alsoOnTheSchedule")}</GroupLabel>
       <ul className="mt-2">
         {alternatives.map((alternative) => (

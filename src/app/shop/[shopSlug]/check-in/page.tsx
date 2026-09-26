@@ -33,7 +33,7 @@ import {
   isSettledAtCounter,
 } from "@/lib/check-in";
 import { nowDate } from "@/lib/clock";
-import { displayStoredPhone } from "@/lib/forgiving-fields";
+import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatDayParts, formatTime, formatWeekdayTime } from "@/lib/format";
 import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
 import { requireStaffSession } from "@/lib/session";
@@ -847,7 +847,9 @@ export default async function CheckInPage({
                         {diver.fullName}
                       </Link>
                       <p className="text-sm text-muted">
-                        {[diver.email, displayStoredPhone(diver.phone)].filter(Boolean).join(" · ")}
+                        {[diver.email, displayStoredPhoneWhole(diver.phone)]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                     </div>
                     {openDepartures.length > 0 ? (

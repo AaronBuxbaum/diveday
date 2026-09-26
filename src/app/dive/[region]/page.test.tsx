@@ -96,6 +96,17 @@ describe("one town's dive shops", () => {
     );
   });
 
+  it("sits on the marketing chrome's 24px gutter at every width (K-293)", async () => {
+    vi.mocked(listRegionShops).mockResolvedValue([SHOP] as never);
+
+    render(await RegionPage(params("key-largo")));
+
+    const main = screen.getByRole("main");
+    expect(main).toHaveClass("px-6");
+    expect(main).not.toHaveClass("px-4");
+    expect(main).not.toHaveClass("sm:px-6");
+  });
+
   it("publishes the town's shops as an ItemList of dive operators", async () => {
     vi.mocked(listRegionShops).mockResolvedValue([SHOP, OTHER_SHOP] as never);
 

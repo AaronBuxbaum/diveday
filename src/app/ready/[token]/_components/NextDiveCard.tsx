@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { NextDivePick } from "@/lib/next-dive";
@@ -54,16 +55,26 @@ export function NextDiveCard({
       {/* The departure's own name, not a heading: `SectionCard` already owns the
           only heading on this card, and a second one would give a keepsake two
           titles a screen reader reads in a row. Weighted rather than ramped for
-          the same reason (`pnpm check:type-ramp`). */}
-      <p className="mt-1 text-lg font-medium">
+          the same reason (`pnpm check:type-ramp`).
+
+          The card's one door, so a 44px target (`tapTargetLinkClass`): bare,
+          it was 21px tall (K-187). The target grows and the line does not:
+          `py-2` is the 16px it adds to the 28px line, `-my-2` gives it back,
+          and the `<p>` is a flex line so the margin comes off the line itself
+          rather than leaving it to a strut. In the flow, the 44px box put the
+          date 12px under the name, as far as the reason sits under the date,
+          and the two stopped reading as a pair. A title that wraps overhangs
+          by the same 8px a side. The date stands `mt-2` under it, the room the
+          target reaches down, so the focus ring ends above the date's words. */}
+      <p className="mt-1 flex text-lg font-medium">
         <Link
           href={href ?? publicTripPath(shopSlug, pick.tripId)}
-          className="text-primary hover:underline"
+          className={`${tapTargetLinkClass} -my-2 py-2 text-primary hover:underline`}
         >
           {pick.title}
         </Link>
       </p>
-      <p className="mt-1 text-base text-muted">{when}</p>
+      <p className="mt-2 text-base text-muted">{when}</p>
       <p className="mt-3 text-base">{reason}</p>
       {/* Only when the departure demands a level. On one that asks nothing of
           anybody, saying so is the absence of a rule dressed up as a rule. */}

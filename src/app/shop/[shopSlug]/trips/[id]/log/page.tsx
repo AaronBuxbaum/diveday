@@ -4,12 +4,11 @@ import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components
 import { PrintButton } from "@/components/PrintButton";
 import { EYEBROW_CLASS, EyebrowBackLink, ShopStat } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
-import { Table, type TableMinWidth, TBody, Td, THead, Th } from "@/components/ui/table";
+import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getIncidentExport } from "@/db/incident-export";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
-import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabels } from "@/i18n/staff-role-labels";
@@ -20,17 +19,18 @@ import {
   formatTimeRangeTz,
   formatTimeZoneName,
 } from "@/lib/format";
-import type {
-  IncidentCertificationEvidence,
-  IncidentRollCallResult,
-  IncidentWaiverStatus,
-} from "@/lib/incident-export";
+import type { IncidentRollCallResult, IncidentWaiverStatus } from "@/lib/incident-export";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { RollCallCheckpoint } from "@/lib/manifests";
-import type { CertificationLevel } from "@/lib/readiness";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { CertificationLine } from "./_components/CertificationLine";
+import { NumberedName } from "./_components/NumberedName";
+import {
+  rollCallCheckpointPrintClass,
+  rollCallTableMinWidth,
+} from "./_components/roll-call-columns";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — the claim every trips/[id] sibling makes (ADR
@@ -112,6 +112,11 @@ export default async function IncidentExportPage({
     formatDateTimeTz(new Date(isoString), locale, doc.meta.timezone);
   const checkpointText = (checkpoint: string) =>
     rollCallCheckpointText(t, checkpoint as RollCallCheckpoint);
+  // A checkpoint column is pinned narrow on screen (`width="8rem"`) and on
+  // paper (this share), so fixed layout stops splitting a roll-call table into
+  // equal columns: "Awaiting roll call" had as much room as a buddy team,
+  // which ran four and five lines. The text columns keep the rest.
+  const checkpointPrintClass = rollCallCheckpointPrintClass(doc.meta.checkpoints.length);
   // The trail's names join in the reader's own locale, never a hard-coded ", ".
   const memberList = cachedListFormat(locale, { type: "conjunction" });
   const agencyText = (agency: string) =>
@@ -125,8 +130,11 @@ export default async function IncidentExportPage({
     [t("incidentExport.summaryCrewAssigned"), doc.departureSummary.crewAssigned],
   ];
 
+  // Section rhythm is the wrapper's, one `space-y-10`, and no section hangs a
+  // margin of its own (docs/design/forms-and-controls.md): they used to step
+  // `mt-7`, `mt-8`, `mt-10`, three gaps where the page has one.
   return (
-    <div>
+    <div className="space-y-10">
       <header className="border-b border-border pb-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -141,15 +149,18 @@ export default async function IncidentExportPage({
             </EyebrowBackLink>
             <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("incidentExport.title")}</p>
             <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{doc.meta.tripTitle}</h1>
+            {/* Each dot is glued to what it follows by a no-break space, so a
+                wrap falls after one and never starts a line with it. */}
             <p className="mt-1 text-muted">
-              {formatShortDate(new Date(doc.meta.tripStartsAt), locale, doc.meta.timezone)} ·{" "}
+              {formatShortDate(new Date(doc.meta.tripStartsAt), locale, doc.meta.timezone)}
+              {"\u00a0"}·{" "}
               {formatTimeRangeTz(
                 new Date(doc.meta.tripStartsAt),
                 new Date(doc.meta.tripEndsAt),
                 locale,
                 doc.meta.timezone,
-              )}{" "}
-              · {doc.meta.shopName}
+              )}
+              {"\u00a0"}· {doc.meta.shopName}
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3 print:hidden">
@@ -162,15 +173,15 @@ export default async function IncidentExportPage({
           {t("incidentExport.generatedLine", {
             date: dateTime(doc.meta.generatedAt),
             name: doc.meta.generatedByName,
-          })}{" "}
-          ·{" "}
+          })}
+          {"\u00a0"}·{" "}
           {t("incidentExport.shopTimeLabel", {
             timezone: formatTimeZoneName(locale, doc.meta.timezone),
           })}
         </p>
       </header>
 
-      <section className="mt-7" aria-labelledby="incident-summary-heading">
+      <section aria-labelledby="incident-summary-heading">
         <h2 id="incident-summary-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.summaryHeading")}
         </h2>
@@ -185,7 +196,7 @@ export default async function IncidentExportPage({
         </dl>
       </section>
 
-      <section className="mt-8" aria-labelledby="incident-roster-heading">
+      <section aria-labelledby="incident-roster-heading">
         <h2 id="incident-roster-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.rosterHeading")}
         </h2>
@@ -198,16 +209,16 @@ export default async function IncidentExportPage({
             <Th>{t("incidentExport.colEmergencyContact")}</Th>
             <Th>{t("incidentExport.colBuddy")}</Th>
             {doc.meta.checkpoints.map((checkpoint) => (
-              <Th key={checkpoint}>{checkpointText(checkpoint)}</Th>
+              <Th key={checkpoint} width="8rem" className={checkpointPrintClass}>
+                {checkpointText(checkpoint)}
+              </Th>
             ))}
           </THead>
           <TBody>
             {doc.roster.map((diver, index) => (
               <tr key={diver.bookingId}>
                 <Td>
-                  <span className="font-semibold">
-                    {String(index + 1).padStart(2, "0")} {diver.fullName}
-                  </span>
+                  <NumberedName number={index + 1} name={diver.fullName} />
                 </Td>
                 {/* The name may wrap; the number may not. This is the one
                     document a shop hands an insurer or an authority, and a
@@ -215,11 +226,14 @@ export default async function IncidentExportPage({
                     somebody has to reassemble while reading it aloud in a
                     hurry (issue #1035). `Td numeric` would nowrap it, but it
                     would also right-align the whole cell and make a name a
-                    figure — so the rule goes on the number itself. */}
+                    figure — so the rule goes on the number itself. The dot
+                    before it is glued to the name by a no-break space, so a
+                    narrow cell never starts a line with "·". */}
                 <Td muted>
                   {diver.emergencyContactName && diver.emergencyContactPhone ? (
                     <>
-                      {diver.emergencyContactName} ·{" "}
+                      {diver.emergencyContactName}
+                      {"\u00a0"}·{" "}
                       <span className="whitespace-nowrap">{diver.emergencyContactPhone}</span>
                     </>
                   ) : (
@@ -265,7 +279,7 @@ export default async function IncidentExportPage({
         </Table>
       </section>
 
-      <section className="mt-8" aria-labelledby="incident-crew-heading">
+      <section aria-labelledby="incident-crew-heading">
         <h2 id="incident-crew-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.crewHeading")}
         </h2>
@@ -281,7 +295,9 @@ export default async function IncidentExportPage({
               <Th>{t("incidentExport.colRoles")}</Th>
               <Th>{t("incidentExport.colCrewTeams")}</Th>
               {doc.meta.checkpoints.map((checkpoint) => (
-                <Th key={checkpoint}>{checkpointText(checkpoint)}</Th>
+                <Th key={checkpoint} width="8rem" className={checkpointPrintClass}>
+                  {checkpointText(checkpoint)}
+                </Th>
               ))}
             </THead>
             <TBody>
@@ -323,7 +339,7 @@ export default async function IncidentExportPage({
       {/* Absence is stated, never blank: a shop with no checklist defined says
           so, rather than the section simply not appearing — the two mean
           different things to an investigator. */}
-      <section className="mt-8" aria-labelledby="incident-checklist-heading">
+      <section aria-labelledby="incident-checklist-heading">
         <h2 id="incident-checklist-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.checklistHeading")}
         </h2>
@@ -332,7 +348,9 @@ export default async function IncidentExportPage({
             {t("incidentExport.checklistEmpty")}
           </p>
         ) : (
-          <Table minWidth="36rem" shellClassName="mt-3">
+          // No scroll floor: two columns share a phone's width and wrap. The
+          // roll-call tables keep theirs, which grow a column per dive.
+          <Table shellClassName="mt-3">
             <THead>
               <Th>{t("incidentExport.checklistColItem")}</Th>
               <Th>{t("incidentExport.checklistColStatus")}</Th>
@@ -356,7 +374,7 @@ export default async function IncidentExportPage({
         )}
       </section>
 
-      <section className="mt-8" aria-labelledby="incident-evidence-heading">
+      <section aria-labelledby="incident-evidence-heading">
         <h2 id="incident-evidence-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.evidenceHeading")}
         </h2>
@@ -401,7 +419,7 @@ export default async function IncidentExportPage({
         </ul>
       </section>
 
-      <section className="mt-8" aria-labelledby="incident-executed-dive-heading">
+      <section aria-labelledby="incident-executed-dive-heading">
         <h2 id="incident-executed-dive-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.executedDiveHeading")}
         </h2>
@@ -472,7 +490,7 @@ export default async function IncidentExportPage({
         )}
       </section>
 
-      <section className="mt-8" aria-labelledby="incident-timeline-heading">
+      <section aria-labelledby="incident-timeline-heading">
         <h2 id="incident-timeline-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.timelineHeading")}
         </h2>
@@ -485,7 +503,7 @@ export default async function IncidentExportPage({
           <ol
             className={sectionCardClass({
               padding: "none",
-              className: "mt-3 divide-y divide-border",
+              className: "mt-3 divide-y divide-border sm:grid sm:grid-cols-[auto_minmax(0,1fr)]",
             })}
           >
             {doc.timeline.map((entry, index) => (
@@ -493,70 +511,81 @@ export default async function IncidentExportPage({
                 // Append-only history has no natural key; index order is the record.
                 // biome-ignore lint/suspicious/noArrayIndexKey: static, never reordered
                 key={index}
-                className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-5"
+                // Two columns from `sm`: the time, then every other part
+                // wrapping inside a column of its own, so a part that wraps
+                // hangs under the text and never falls back under the time
+                // (it did, at x = 169 on one row and 720 on the next). The
+                // columns are the list's, laid through each entry by
+                // `subgrid`, so the time column is the widest timestamp's and
+                // "10:05 AM" does not push its row's text a character right of
+                // "7:05 AM". On a phone the parts take the line under the time.
+                className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:col-span-2 sm:grid sm:grid-cols-subgrid sm:px-5"
               >
                 <span className="font-mono text-xs text-muted tabular-nums">
                   {dateTime(entry.occurredAt)}
                 </span>
-                {entry.checkpoint === null ? null : (
-                  <span className="text-muted">{checkpointText(entry.checkpoint)}</span>
-                )}
-                {entry.kind === "buddy_team" ? (
-                  <span className="font-semibold">
-                    {entry.teamNumber > 0
-                      ? t("incidentExport.buddyTeam", { number: entry.teamNumber })
-                      : t("incidentExport.buddyTeamUnnumbered")}{" "}
-                    — {t(BUDDY_TEAM_ACTION_KEYS[entry.action])}
-                  </span>
-                ) : (
-                  <span className="font-semibold">
-                    {entry.subjectName}
-                    {entry.kind === "crew" ? ` (${t("incidentExport.crewTag")})` : ""} —{" "}
-                    {entry.action === "cleared"
-                      ? t("incidentExport.actionCleared")
-                      : rollCallLabelText(
-                          t,
-                          entry.action === "boarded"
-                            ? "boarded"
-                            : entry.checkpoint === "departure"
-                              ? "not_boarded"
-                              : "not_back_aboard",
-                        )}
-                  </span>
-                )}
-                <span className="text-muted">
-                  {t("incidentExport.recordedByName", { name: entry.recordedByName })}
-                </span>
-                {entry.kind === "buddy_team" ? (
+                <span className="flex basis-full flex-wrap items-baseline gap-x-3 gap-y-1">
+                  {entry.checkpoint === null ? null : (
+                    <span className="text-muted">{checkpointText(entry.checkpoint)}</span>
+                  )}
+                  {entry.kind === "buddy_team" ? (
+                    <span className="font-semibold">
+                      {entry.teamNumber > 0
+                        ? t("incidentExport.buddyTeam", { number: entry.teamNumber })
+                        : t("incidentExport.buddyTeamUnnumbered")}{" "}
+                      — {t(BUDDY_TEAM_ACTION_KEYS[entry.action])}
+                    </span>
+                  ) : (
+                    <span className="font-semibold">
+                      {entry.subjectName}
+                      {entry.kind === "crew" ? ` (${t("incidentExport.crewTag")})` : ""} —{" "}
+                      {entry.action === "cleared"
+                        ? t("incidentExport.actionCleared")
+                        : rollCallLabelText(
+                            t,
+                            entry.action === "boarded"
+                              ? "boarded"
+                              : entry.checkpoint === "departure"
+                                ? "not_boarded"
+                                : "not_back_aboard",
+                          )}
+                    </span>
+                  )}
                   <span className="text-muted">
-                    {t("incidentExport.timelineBuddyMembers", {
-                      names: memberList.format(entry.memberNames),
-                    })}
+                    {t("incidentExport.recordedByName", { name: entry.recordedByName })}
                   </span>
-                ) : null}
-                {(entry.kind === "diver" || entry.kind === "crew") && entry.source === "offline" ? (
-                  <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-medium text-muted">
-                    {t("incidentExport.timelineOfflineTag")}
-                  </span>
-                ) : null}
-                {/* What the crew observed, on its own full-width line below the
-                    facts rather than wrapped into them (ADR
-                    20260828-a-missing-diver-gets-a-sentence). This is the half
-                    of the record a mark alone cannot carry, and the reason an
-                    investigator reading this page meets "surfaced 200 m north,
-                    picked up by Reef Runner at 14:31" instead of an
-                    unexplained red entry. It is inside the content hash, like
-                    every other fact here. */}
-                {(entry.kind === "diver" || entry.kind === "crew") && entry.note ? (
-                  <span className="basis-full text-sm">{entry.note}</span>
-                ) : null}
+                  {entry.kind === "buddy_team" ? (
+                    <span className="text-muted">
+                      {t("incidentExport.timelineBuddyMembers", {
+                        names: memberList.format(entry.memberNames),
+                      })}
+                    </span>
+                  ) : null}
+                  {(entry.kind === "diver" || entry.kind === "crew") &&
+                  entry.source === "offline" ? (
+                    <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-medium text-muted">
+                      {t("incidentExport.timelineOfflineTag")}
+                    </span>
+                  ) : null}
+                  {/* What the crew observed, on its own line below the facts, in
+                      their column, rather than wrapped into them (ADR
+                      20260828-a-missing-diver-gets-a-sentence). This is the half
+                      of the record a mark alone cannot carry, and the reason an
+                      investigator reading this page meets "surfaced 200 m north,
+                      picked up by Reef Runner at 14:31" instead of an
+                      unexplained red entry. It is inside the content hash, like
+                      every other fact here. */}
+                  {(entry.kind === "diver" || entry.kind === "crew") && entry.note ? (
+                    <span className="basis-full text-sm">{entry.note}</span>
+                  ) : null}
+                </span>
               </li>
             ))}
           </ol>
         )}
       </section>
 
-      <footer className="mt-10 break-inside-avoid border-t border-border pt-4 text-sm">
+      <footer className="break-inside-avoid border-t border-border pt-4 text-sm">
         <p className="font-semibold">{t("incidentExport.footerHashLabel")}</p>
         <p className="mt-1 font-mono text-xs break-all">{doc.contentHash}</p>
         <p className="mt-2 max-w-prose text-muted">{t("incidentExport.footerHashExplainer")}</p>
@@ -566,27 +595,6 @@ export default async function IncidentExportPage({
 }
 
 /** One roll-call result cell: the manifest's own word, plus when and by whom. */
-/**
- * The scroll floor for the two roll-call tables, which is the one thing on this
- * page whose column count is not fixed: three columns plus one per checkpoint,
- * and a checkpoint is a dive. `rollCallCheckpoints` clamps to 1..4 dives (as
- * does the `trips_planned_dives_range` check constraint), so this answers for
- * five to eight columns and there is no ninth case to miss.
- *
- * A two-branch pick rather than arithmetic, because `MIN_WIDTH` is a static map
- * of literal Tailwind classes: a computed `min-w-[${n}rem]` typechecks, lints
- * and renders with no width at all, since the scanner never sees the class.
- * The arithmetic lives here rather than in `Table` for the reason that
- * component's own doc gives — its width props are a hint about a table's
- * strategy, not a layout escape hatch, and this page is the only call site that
- * has a column count to count (issue #1052).
- */
-function rollCallTableMinWidth(checkpointCount: number): TableMinWidth {
-  // Seven columns and up. Six at `56rem` is ~149px each, the width issue #1035
-  // measured and settled on; seven would be 128px at that floor and eight 112px.
-  return checkpointCount >= 4 ? "72rem" : "56rem";
-}
-
 function RollCallCell({
   t,
   result,
@@ -739,67 +747,4 @@ function WaiverLine({
     return <>{t("incidentExport.waiverExpired")}</>;
   }
   return <>{t("incidentExport.waiverNotSigned")}</>;
-}
-
-/** One held card, as the shop's records state it. */
-function CertificationLine({
-  t,
-  card,
-  agencyText,
-  dateTime,
-}: {
-  t: StaffTranslator;
-  card: IncidentCertificationEvidence;
-  agencyText: (agency: string) => string;
-  dateTime: (isoString: string) => string;
-}) {
-  const levelKey = card.level
-    ? CERTIFICATION_LEVEL_KEYS[card.level as CertificationLevel]
-    : undefined;
-  const specialtyKey = card.specialty
-    ? SPECIALTY_KEYS[card.specialty as keyof typeof SPECIALTY_KEYS]
-    : undefined;
-  // A self-declared card has no number the shop holds, and "absence is stated,
-  // never blank" is rule 2 of this document (src/lib/incident-export.ts) — a
-  // bare gap where a card number belongs reads as a missing page to an
-  // investigator. The card is separately tagged as the diver's own word below.
-  const identifier = card.identifier ?? t("incidentExport.certNoNumber");
-  const line =
-    card.kind === "level" && levelKey
-      ? t("incidentExport.certLevelLine", {
-          agency: agencyText(card.agency),
-          level: t(levelKey),
-          identifier,
-        })
-      : card.kind === "specialty" && specialtyKey
-        ? t("incidentExport.certSpecialtyLine", {
-            agency: agencyText(card.agency),
-            specialty: t(specialtyKey),
-            identifier,
-          })
-        : t("incidentExport.certNitroxLine", {
-            agency: agencyText(card.agency),
-            identifier,
-          });
-  const status =
-    card.status === "verified"
-      ? card.reviewedAt
-        ? card.reviewedByName
-          ? t("incidentExport.certStatusVerifiedBy", {
-              date: dateTime(card.reviewedAt),
-              name: card.reviewedByName,
-            })
-          : t("incidentExport.certStatusVerifiedUnknownReviewer", {
-              date: dateTime(card.reviewedAt),
-            })
-        : t("incidentExport.certStatusVerifiedNoDate")
-      : t("incidentExport.certStatusPending");
-  return (
-    <>
-      {line} · {status}
-      {card.imported ? <> · {t("incidentExport.certImportedTag")}</> : null}
-      {/* The weakest thing on the page, and it has to read that way. */}
-      {card.selfDeclared ? <> · {t("incidentExport.certSelfDeclaredTag")}</> : null}
-    </>
-  );
 }

@@ -19,7 +19,7 @@ import {
   FormStatus,
 } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
 import { languageNameIn } from "@/i18n/language-labels";
@@ -32,6 +32,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { requireShopSurface } from "@/lib/session";
 import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
 import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
+import { settingsPaneClass } from "../_components/settings-pane";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
 import {
   inviteStaffAction,
@@ -591,7 +592,7 @@ export default async function TeamSettingsPage({
   const undoRolesFor = parseRoles(priorRoles);
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass("5xl")}>
       <FlashParams
         params={[
           "notice",
@@ -677,10 +678,13 @@ export default async function TeamSettingsPage({
         </SectionCard>
 
         <section>
-          {/* Not a card — a heading over a list of them. It wears the same
-              heading spelling `SectionCard` uses so the two sections on this
-              page read at one level. */}
-          <h2 className={SECTION_TITLE_CLASS}>{t("settings.team.current.heading")}</h2>
+          {/* Not a card — a heading over a list of them, so a bare `h2` at
+              `LEAD_TITLE_CLASS`, the rung `SectionCard` draws its own title at
+              and `card.tsx` prescribes for a heading over a plural body. The
+              two sections on this page read at one level; at
+              `SECTION_TITLE_CLASS` this one was 18px under the invite card's
+              24px (K-314). */}
+          <h2 className={LEAD_TITLE_CLASS}>{t("settings.team.current.heading")}</h2>
           {staff.length === 0 ? (
             <EmptyState
               title={t("settings.team.current.empty")}

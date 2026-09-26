@@ -33,6 +33,7 @@ import { LanguageFallbackNotice } from "@/components/LanguageFallbackNotice";
 import { PublicShopFooter, PublicShopHeader } from "@/components/PublicShopChrome";
 import type { PublicShopNavItem } from "@/components/PublicShopNav";
 import { SkipLink } from "@/components/SkipLink";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
@@ -195,11 +196,22 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
       ) : null}
       {showStaffBar && shop ? (
         <div className="border-b border-border bg-surface-sunken">
-          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm sm:px-6">
-            <p className="text-muted">{staffT("shared.publicPreview.youWorkHere")}</p>
+          {/* From `sm` one 56px row, the chrome bar's own height: the link
+              is a 44px target (it was a 20px word), and the 6px above and
+              below it hold its focus ring, 5px outside the box. For a staffer
+              on their own live shop this bar is the first thing on the page,
+              so a bar that was only the box ran the ring's top off it and its
+              bottom across the border. On a phone the sentence is its own
+              20px line and the link wraps under it: the row gap keeps the
+              ring off the sentence there, and the column gap does where the
+              two share a row. */}
+          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1.5 px-4 py-1.5 text-sm sm:px-6">
+            <p className="flex items-center text-muted sm:min-h-11">
+              {staffT("shared.publicPreview.youWorkHere")}
+            </p>
             <Link
               href={`/shop/${shop.slug}/schedule/board`}
-              className="font-medium text-primary hover:underline"
+              className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
             >
               {staffT("shared.publicPreview.openTheBoard")}
             </Link>
@@ -285,6 +297,7 @@ export function PublicShopChromePlaceholder({ label }: { label: DiverTranslator 
       <div
         className="h-(--chrome-h) border-b border-border bg-background"
         data-suspense-placeholder
+        data-public-shop-chrome-placeholder
         aria-hidden
       />
     </>

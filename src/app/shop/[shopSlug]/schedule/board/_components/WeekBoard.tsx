@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { SiteMark } from "@/components/illustration/SiteMark";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { buttonClass } from "@/components/ui/button";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { GroupLabel, groupLabelClass } from "@/components/ui/ledger";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { WeekPager } from "@/components/ui/week-pager";
@@ -12,6 +12,12 @@ import { fill } from "@/i18n/fill";
 import type { SiteMarkCode } from "@/lib/site-mark";
 import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import { isSoldOut, seatFill } from "@/lib/week-seats";
+import {
+  WEEK_DAY_GRID_CLASS,
+  WEEK_EMPTY_DAY_CLASS,
+  WEEK_MARK_CLASS,
+  WEEK_ROW_BOX_CLASS,
+} from "./week-geometry";
 
 /**
  * What every departure the grid draws — a day cell or a spanning course bar —
@@ -266,17 +272,18 @@ export function AllUnpricedNotice({
  * Drawn mark and words together, never hue alone, and it **outranks** the
  * price flag rather than stacking with it: one slot, one grammar (issue 758,
  * the same call the stream made).
+ *
+ * Both flags are a 44px target that ends at its words (`FLAG_CLASS`), lifted
+ * over the row's own door.
  */
 function RollCallFlag({
   departure,
   shopSlug,
   copy,
-  className,
 }: {
   departure: WeekDeparture & { rollCallOpen: { diveNumber: number; uncounted: number } };
   shopSlug: string;
   copy: { rollCallOpen: string; rollCallOpenAria: string };
-  className: string;
 }) {
   return (
     <Link
@@ -285,13 +292,23 @@ function RollCallFlag({
         ref: departure.ref,
         dive: departure.rollCallOpen.diveNumber,
       })}
-      className={`flex items-center gap-1.5 text-xs font-semibold text-danger hover:underline ${className}`}
+      className={`${FLAG_CLASS} text-danger`}
     >
       <DiveDayIcon name="warning" className="size-3.5" />
       {fill(copy.rollCallOpen, { count: departure.rollCallOpen.uncounted })}
     </Link>
   );
 }
+
+/**
+ * **A flag is its own target, over the row's door** (pixel-craft class 7). It
+ * was a block `flex` link with no floor: 16px tall, and at 390 228px wide for
+ * 90px of words, its hit area running the whole column. `tapTargetLinkClass`
+ * gives it the 44px floor and ends its box at its words; `relative z-10`
+ * stands it above the row's stretched link, so a tap on it is a tap on it.
+ * No margin above it: the 44px box's own band is the room under the title.
+ */
+const FLAG_CLASS = `${tapTargetLinkClass} relative z-10 gap-1.5 text-xs font-semibold hover:underline`;
 
 /**
  * The quieter toned mark, and only while the departure can still be booked.
@@ -304,18 +321,16 @@ function PriceFlag({
   departure,
   shopSlug,
   copy,
-  className,
 }: {
   departure: WeekDeparture;
   shopSlug: string;
   copy: { noPriceSet: string; noPriceSetAria: string };
-  className: string;
 }) {
   return (
     <Link
       href={`/shop/${shopSlug}/trips/${departure.tripId}#details`}
       aria-label={fill(copy.noPriceSetAria, { ref: departure.ref })}
-      className={`flex items-center gap-1.5 text-xs font-semibold text-warning-strong hover:underline ${className}`}
+      className={`${FLAG_CLASS} text-warning-strong`}
     >
       <DiveDayIcon name="warning" className="size-3.5" />
       {copy.noPriceSet}
@@ -426,36 +441,70 @@ function WeekBoat({
 }) {
   const sailed = departure.status === "sailed";
   return (
-    <div className="flex items-start gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:gap-3">
+    // **The row is the departure's door** (pixel-craft class 7) — the ledger
+    // row's construction (`LedgerRow`, src/components/ui/ledger.tsx): a
+    // stretched link, last in the row, named by the title, over a row that
+    // hovers and presses as one. The title was a 19–38px link inside a row
+    // that painted a hover fill it did not answer to. What else in the row
+    // is a control — the "⋯", a flag — stands above the door (`z-10`).
+    <div
+      className={`group/boat pressable-row relative ${WEEK_ROW_BOX_CLASS} hover:bg-surface has-[a:focus-visible]:bg-surface`}
+    >
       {/* The drawn site mark leads the row (ADR 20260901-diveday-reimagined,
           slice 13f). No coral: the budget is one creature's detail per
           surface, and a week has no one boat to give it to. */}
-      {mark ? <SiteMark mark={mark} size="sm" coral={false} className="mt-0.5 shrink-0" /> : null}
+      {mark ? <SiteMark mark={mark} size="sm" coral={false} className={WEEK_MARK_CLASS} /> : null}
       <div className="min-w-0 flex-1">
         {/* The lead line is what the canvas draws: when it leaves, how full it
             is, and the count. The bar sits between them rather than after, so
-            a reader scanning a column of times meets every fill at one x. */}
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap sm:gap-x-3">
-          {time ? (
-            <p
-              className={`text-base leading-tight font-semibold tabular-nums ${sailed ? "text-muted" : ""}`}
-            >
-              {time}
-            </p>
-          ) : null}
-          <SeatBar seats={seats} sailed={sailed} />
-          {/* **A full line of its own on a phone, inline from `sm` up.** The
+            a reader scanning a column of times meets every fill at one x.
+
+            **The time and its bar are the row's first line, and that line is
+            32px whatever else is on it** (pixel-craft class 1): the day's
+            weekday and "No boats" take the same box, so the rail reads level
+            with the first departure beside it. A box of its own rather than a
+            floor on the whole line: below `md` the line wraps the meta
+            beneath it, and a wrapped flex container's `min-height` is not its
+            first line's. A boat already home, or a staffer who cannot move
+            one, has no "⋯", and without the box their line fell to the
+            time's 20px.
+
+            **32px, and no row gap under it** (class 4): the meta is the next
+            line on a phone, and it sat 21px under the time's baseline against
+            13px from the meta to the title, under a 4px gap and a 36px line
+            that was the "⋯" square's height rather than the time's. The "⋯"
+            overhangs the line by its excess (44 − 2 × 6).
+
+            **The time has a slot of its own** (class 3): "12:00 PM" is ~74px
+            at 16px semibold, so every bar starts at one x after it, where
+            content-width times put "11:00 AM"'s 10px further on than
+            "5:30 AM"'s, and it never wraps its meridiem (class 8). */}
+        <div className="flex flex-wrap items-center gap-x-2 md:flex-nowrap md:gap-x-3">
+          <div className="flex min-h-8 shrink-0 items-center gap-x-2 md:gap-x-3">
+            {time ? (
+              <p
+                className={`w-19 shrink-0 text-base leading-tight font-semibold whitespace-nowrap tabular-nums ${sailed ? "text-muted" : ""}`}
+              >
+                {time}
+              </p>
+            ) : null}
+            <SeatBar seats={seats} sailed={sailed} />
+          </div>
+          {/* **A full line of its own below `md`, inline from `md` up.** The
               week was a desktop-only grid until #1923 and this sentence had a
               row's whole measure to sit in; at 390 it has about 120px between
               the seat bar and the "⋯", which truncated "Molasses Reef ·
               Mantis II · 10 of 12 · $95" to "Molas…" — every fact in it lost,
-              including the two the bar is a picture of.
+              including the two the bar is a picture of. From 640 to ~700px it
+              still did, inline from `sm`: the text column there is ~428px for
+              a 459–490px line. At 768 the room is 334px against the longest
+              meta's 268px.
 
               `basis-full order-last` drops it below the controls on a phone
-              and `sm:` puts it back where the desktop design has it, so the
+              and `md:` puts it back where the desktop design has it, so the
               sentence is one node in one place in the reading order rather
               than two copies fighting a media query. */}
-          <p className="order-last basis-full text-sm text-muted tabular-nums sm:order-none sm:min-w-0 sm:flex-1 sm:basis-auto sm:truncate">
+          <p className="order-last basis-full text-sm text-muted tabular-nums md:order-none md:min-w-0 md:flex-1 md:basis-auto md:truncate">
             {meta}
           </p>
           {canConfigure && !sailed ? (
@@ -465,7 +514,7 @@ function WeekBoat({
               onToggle={onToggle}
               registerToggle={registerToggle}
               label={copy.rowActionsAria}
-              className="-my-1 -me-2 ms-auto shrink-0 sm:ms-0"
+              className="relative z-10 -my-1.5 -me-2 ms-auto shrink-0 md:ms-0"
             />
           ) : null}
         </div>
@@ -478,18 +527,29 @@ function WeekBoat({
 
             No `block` beside `line-clamp-2`: the clamp supplies its own
             `display`, and two display utilities resolve by stylesheet order
-            rather than the order they are written. */}
-        <div className="mt-0.5 flex items-baseline gap-2">
-          <Link
-            href={`/shop/${shopSlug}/trips/${departure.tripId}`}
-            className={`text-sm leading-snug font-semibold line-clamp-2 hover:text-primary ${sailed ? "text-muted" : ""}`}
-          >
-            {departure.title}
-          </Link>
+            rather than the order they are written.
+
+            **A course's length is in the title's own run** (pixel-craft class
+            8), so it follows the last word at every width. As a flex sibling
+            of a title that wrapped, it sat at the row's far end, 41px from
+            the title's ink at 390. The words are the door's name, not a link
+            of their own: the row's stretched link below is.
+
+            **And a course's run is never clamped**: nothing else on its row
+            says how long it runs (the meta is seats, price and instructor),
+            and a clamp ellipses the end of the run, which is where the length
+            is. A course's title is one of a day's few, not one of a week of
+            shared prefixes. */}
+        <p
+          className={`mt-0.5 text-sm leading-snug font-semibold group-hover/boat:text-primary ${runs ? "" : "line-clamp-2"} ${sailed ? "text-muted" : ""}`}
+        >
+          {departure.title}
           {runs ? (
-            <span className="shrink-0 text-xs font-medium text-primary tabular-nums">{runs}</span>
+            <span className="ms-1.5 text-xs font-medium whitespace-nowrap text-primary tabular-nums">
+              {runs}
+            </span>
           ) : null}
-        </div>
+        </p>
         {/* **The one line a departure prints about its people**, and only when
             it is the exception (#1923, principle 9). The board ran with a
             usual crew and said so on every row until this rule replaced the
@@ -521,12 +581,26 @@ function WeekBoat({
             departure={{ ...departure, rollCallOpen: departure.rollCallOpen }}
             shopSlug={shopSlug}
             copy={copy}
-            className="mt-1"
           />
         ) : departure.unpriced && !sailed ? (
-          <PriceFlag departure={departure} shopSlug={shopSlug} copy={copy} className="mt-1" />
+          <PriceFlag departure={departure} shopSlug={shopSlug} copy={copy} />
         ) : null}
       </div>
+      {/* Last, so it paints over everything before it that is positioned —
+          the seat bar is — and under only what asks to be above it. Its ring
+          is drawn inside, on the row's own corner, as a ledger door's is.
+
+          `data-departure-door` is the copy-free hook a spec takes a departure
+          by: the door has no text of its own to filter on, and it follows the
+          row's flags, whose links go to the same trip's `#details` and
+          `/manifest`, so "the week's first trip link" is a flag on any week
+          whose first departure carries one. */}
+      <Link
+        href={`/shop/${shopSlug}/trips/${departure.tripId}`}
+        aria-label={departure.title}
+        data-departure-door=""
+        className="absolute inset-0 z-0 rounded-[inherit] focus-visible:focus-ring-inset"
+      />
     </div>
   );
 }
@@ -611,11 +685,14 @@ export function WeekBoard({
       {week.allUnpriced ? <AllUnpricedNotice>{copy.noPriceSetAll}</AllUnpricedNotice> : null}
 
       {/* The week's own line. It is the one number a shop asks a week for, and
-          it belongs to the whole run rather than to any day in it. */}
-      <p className="mt-4 flex items-baseline justify-between gap-3 border-b border-border pb-2">
-        <span className={groupLabelClass("muted")}>{week.ariaLabel}</span>
-        <span className="text-sm font-semibold text-muted tabular-nums">{week.seatTally}</span>
-      </p>
+          it belongs to the whole run rather than to any day in it. A group's
+          label and its meta, so `GroupLabel` draws them: the board spelled
+          the meta twice more by hand, 14px semibold here and 14px regular
+          over the asks, beside the 12px medium every other group carries
+          (pixel-craft class 12). The rule under it is the board's own. */}
+      <div className="mt-4 border-b border-border pb-2">
+        <GroupLabel meta={week.seatTally}>{week.ariaLabel}</GroupLabel>
+      </div>
 
       {/* **Not a list of days.** Each day's boats are a list, labelled by that
           day's own heading; wrapping the seven in a second list would nest
@@ -629,7 +706,9 @@ export function WeekBoard({
           const empty = day.entries.length === 0 && spans.length === 0;
           return (
             <div key={day.dateIso} className="border-b border-border">
-              <div className="grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-3 py-2 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-x-5">
+              {/* One rail, 72px, at every width — sized, and shared with
+                  the loading skeleton, in `week-geometry.ts`. */}
+              <div className={WEEK_DAY_GRID_CLASS}>
                 {/* **The day holds its place while its own boats scroll**
                     (ADR 20260827-clearwater-surface-language, decision 10).
                     This was the day stream's behaviour and it moves here
@@ -649,9 +728,14 @@ export function WeekBoard({
                   <span className="sr-only">{day.label}</span>
                   <span
                     aria-hidden="true"
-                    className="flex items-center gap-1.5 sm:flex-col sm:items-start sm:gap-0"
+                    className="flex min-h-8 items-center gap-1.5 sm:flex-col sm:items-start sm:gap-0"
                   >
-                    <span className={groupLabelClass(day.isToday ? "primary" : "muted")}>
+                    {/* A fixed width below `sm`, so every numeral after it
+                        starts at one x; from `sm` up it is the first line of
+                        the stacked label, in the departures' 32px box. */}
+                    <span
+                      className={`${groupLabelClass(day.isToday ? "primary" : "muted")} shrink-0 max-sm:w-8 sm:flex sm:min-h-8 sm:items-center`}
+                    >
                       {day.weekday}
                     </span>
                     {/* Today is a *filled* disc, not a smaller numeral: the
@@ -662,7 +746,7 @@ export function WeekBoard({
                     <span
                       className={`${FIGURE_INLINE_CLASS} ${
                         day.isToday
-                          ? "flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                          ? "flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
                           : day.isPast
                             ? "text-muted"
                             : ""
@@ -732,7 +816,9 @@ export function WeekBoard({
                       column blank and be read, because six columns beside it
                       gave the blank its meaning; one empty row in a run of
                       rows is just a gap. */}
-                  {empty ? <p className="px-2 py-2.5 text-sm text-muted">{copy.noBoats}</p> : null}
+                  {empty ? (
+                    <p className={`${WEEK_EMPTY_DAY_CLASS} text-sm text-muted`}>{copy.noBoats}</p>
+                  ) : null}
                   {/* Never on a day that has already been: a departure is put
                       on the board, and the board is ahead. */}
                   {canConfigure && !day.isPast ? (
@@ -764,17 +850,20 @@ export function WeekBoard({
           page cannot, and the reason this is not a second copy of it. */}
       {week.asked.length > 0 ? (
         <section aria-labelledby="week-asked" className="mt-8">
-          <p className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
-            <span id="week-asked" className={groupLabelClass("muted")}>
+          <div className="border-b border-border pb-2">
+            <GroupLabel id="week-asked" meta={week.askedCount}>
               {copy.asked}
-            </span>
-            <span className="text-sm text-muted tabular-nums">{week.askedCount}</span>
-          </p>
+            </GroupLabel>
+          </div>
           <ul className="flex flex-col">
             {week.asked.map((ask) => (
               <li
                 key={ask.dateIso}
-                className="flex items-start gap-3 border-b border-border px-2 py-3"
+                // On the section's own edges (pixel-craft class 3): the row
+                // paints no fill, so it keeps no room for one, and its words
+                // start where "ASKED FOR" does. The act is centred on them
+                // (class 1), since the names wrap to two lines on a phone.
+                className="flex items-center gap-3 border-b border-border py-3"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm leading-snug font-semibold">{ask.lead}</p>
@@ -786,7 +875,14 @@ export function WeekBoard({
                 {canConfigure ? (
                   <Link
                     href={ask.href}
-                    className={buttonClass({ variant: "ghost", size: "sm", className: "shrink-0" })}
+                    // `flush`: its word ends on the column, under the count
+                    // it answers, not 12px inside it.
+                    className={buttonClass({
+                      variant: "ghost",
+                      size: "sm",
+                      flush: true,
+                      className: "shrink-0",
+                    })}
                   >
                     {copy.addDeparture}
                   </Link>

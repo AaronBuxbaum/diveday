@@ -58,3 +58,60 @@ describe("the packet's print backstop", () => {
     expect(trigger?.matches(backstop?.selector ?? "*")).toBe(false);
   });
 });
+
+/**
+ * **A primary label prints in ink** (K-141). Print strips every fill
+ * (`background: transparent !important`) but the print palette kept
+ * `--primary-foreground: #ffffff`, so a label written for a primary fill
+ * printed white on white paper: the manifest's current stage was a hole the
+ * width of its word. With the fill gone, the label is ink like every other.
+ */
+describe("the print palette", () => {
+  const rules = [...CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, prelude, body]) => ({
+    selectors: (prelude ?? "").trim().split(/\s*,\s*/),
+    body: body ?? "",
+  }));
+  const palette = rules.find(
+    (rule) => rule.selectors.includes(":root") && rule.selectors.includes(".boat-mode"),
+  );
+
+  function token(name: string) {
+    return palette?.body.match(new RegExp(`--${name}:\\s*([^;]+);`))?.[1]?.trim();
+  }
+
+  it("prints a primary label in the foreground ink", () => {
+    expect(palette, "the print `:root, .boat-mode` palette").toBeDefined();
+    expect(token("foreground")).toBeDefined();
+    expect(token("primary-foreground")).toBe(token("foreground"));
+  });
+
+  /**
+   * **And glare mode does not take it back.** `AmbientGlareDetector` puts
+   * `.glare-mode` on `<html>`, and its palettes (light and dark) redeclare
+   * `--primary-foreground` as white and, in the dark, `--foreground` too. A
+   * bare `.glare-mode` weighs what `:root` does and stands later in the file,
+   * so it won while printing: a page outside a `.boat-mode` box printed its
+   * primary labels white on the stripped fills. `:root.glare-mode` outranks it
+   * wherever either stands.
+   */
+  it("outranks glare mode's palettes on paper", () => {
+    const glare = rules.filter(
+      (rule) =>
+        rule !== palette &&
+        rule.selectors.some((selector) => selector.includes(".glare-mode")) &&
+        /--primary-foreground:/.test(rule.body),
+    );
+    expect(glare.length, "glare mode's light and dark palettes").toBeGreaterThan(0);
+    for (const rule of glare) expect(rule.selectors).toEqual([".glare-mode"]);
+    expect(palette?.selectors).toContain(":root.glare-mode");
+
+    document.documentElement.className = "glare-mode";
+    try {
+      expect(document.documentElement.matches(palette?.selectors.join(", ") ?? ":not(*)")).toBe(
+        true,
+      );
+    } finally {
+      document.documentElement.className = "";
+    }
+  });
+});

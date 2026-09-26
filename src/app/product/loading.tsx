@@ -1,5 +1,7 @@
 import { MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
+import { SkeletonLineBars } from "@/components/ShopPageHeader";
+import { DISPLAY_TITLE_CLASS, MARKETING_EYEBROW_CLASS } from "@/components/ui/typography";
 
 /**
  * The `/product` segment's `<Suspense>` boundary, and what a client navigation
@@ -23,36 +25,78 @@ import { MarketingFooterFallback } from "@/components/MarketingFooter";
  * Shaped like the body above the fold — hero, then the anchor strip's row,
  * then the first chapter's two columns — so the streamed page lands where the
  * bars stood instead of shifting under a reader who has already started
- * scrolling.
+ * scrolling. The hero's bars are its line boxes, `h-lh` in the type of the
+ * text they stand for, as many as the English wraps to at 1280 and at a 390px
+ * phone (`SkeletonLineBars`, the phone's extra lines `sm:hidden`); the strip
+ * is the real strip's one row of 52px tabs with no padding above or below
+ * them (K-400), and never wraps. They
+ * used to be 48px bars for 40px title lines, 20px bars for 32px lede lines, no
+ * price line, and a strip that wrapped to three rows on a phone, so the strip
+ * landed 36px lower at 1280 and 156px lower at 390 (K-409). A rewrite that
+ * changes how the title, lede or notes wrap changes these counts.
  */
 export default function ProductLoading() {
   return (
     <div className="flex flex-1 flex-col">
       <MarketingNavFallback />
       <main className="flex-1 animate-pulse">
-        {/* Hero: eyebrow, two title lines, lede, the CTA pair, the demo note. */}
+        {/* Hero: eyebrow, the title, the lede, the CTA pair, the demo note and
+            the price line, at the page's own margins. */}
         <section className="border-b border-border">
-          <div className="mx-auto flex max-w-4xl flex-col items-center px-6 py-20 lg:py-28">
-            <div className="h-4 w-40 rounded bg-surface-sunken" />
-            <div className="mt-6 h-12 w-full max-w-2xl rounded bg-surface-sunken sm:h-14" />
-            <div className="mt-3 h-12 w-3/4 max-w-xl rounded bg-surface-sunken sm:h-14" />
-            <div className="mt-7 h-5 w-full max-w-lg rounded bg-surface-sunken" />
-            <div className="mt-2 h-5 w-2/3 max-w-md rounded bg-surface-sunken" />
-            <div className="mt-8 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
+          <div className="mx-auto max-w-4xl px-6 py-20 lg:py-28">
+            <SkeletonLineBars
+              lines={1}
+              height={`h-lh ${MARKETING_EYEBROW_CLASS}`}
+              width="mx-auto w-40"
+            />
+            <div className="mt-5">
+              <SkeletonLineBars
+                lines={{ base: 3, sm: 2 }}
+                height={`h-lh ${DISPLAY_TITLE_CLASS} sm:text-6xl`}
+                width="mx-auto max-w-2xl"
+              />
+            </div>
+            <div className="mt-6">
+              <SkeletonLineBars
+                lines={{ base: 4, sm: 2 }}
+                height="h-lh text-lg leading-8"
+                width="mx-auto max-w-xl"
+              />
+            </div>
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
               <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
             </div>
-            <div className="mt-4 h-4 w-72 max-w-full rounded bg-surface-sunken" />
+            <div className="mt-3">
+              <SkeletonLineBars
+                lines={{ base: 2, sm: 1 }}
+                height="h-lh text-sm"
+                width="mx-auto w-72 max-w-full"
+              />
+            </div>
+            <div className="mt-2">
+              <SkeletonLineBars
+                lines={{ base: 2, sm: 1 }}
+                height="h-lh text-sm"
+                width="mx-auto w-80 max-w-full"
+              />
+            </div>
           </div>
         </section>
 
-        {/* The anchor strip: a label plus five short entries, at its own height
-            so the chapter below it does not jump when the real strip lands. */}
+        {/* The anchor strip: a label plus five chapters in one row that never
+            wraps, each item the tabs' 52px with no padding around them, so
+            the bar is the real one's 53px with its rule and the chapter below
+            it does not jump when the real strip lands. */}
         <div className="border-b border-border">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-2 px-6 py-4">
-            <div className="h-4 w-24 rounded bg-surface-sunken" />
+          <div className="mx-auto flex max-w-6xl flex-nowrap items-center gap-x-4 overflow-hidden px-6 sm:gap-x-8">
+            <div className="flex h-13 shrink-0 items-center">
+              <div className="h-4 w-24 rounded bg-surface-sunken" />
+            </div>
             {[0, 1, 2, 3, 4].map((entry) => (
-              <div key={entry} className="h-4 w-28 rounded bg-surface-sunken" />
+              <div key={entry} className="flex h-13 shrink-0 items-center">
+                <div className="h-4 w-28 rounded bg-surface-sunken" />
+              </div>
             ))}
           </div>
         </div>

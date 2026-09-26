@@ -98,4 +98,23 @@ describe("the departure picker", () => {
     // A departure nobody asked for renders nothing rather than a "0 requests".
     expect(screen.getAllByText(/requests?$/)).toHaveLength(1);
   });
+
+  /**
+   * **Every title starts on one edge** (pixel-craft class 3, K-455). The time
+   * sat in a box as wide as its own words, so each title started a `gap-x-3`
+   * after a different string — "2:30 PM – 6:00 PM" is 123px, "11:00 AM – 2:30
+   * PM" 131px — and the titles down one day ran on an 11px spread. From `sm`
+   * the time is a fixed 144px column (the longest 12-hour range, "10:00 AM –
+   * 11:30 AM", is about 140px; es-ES reads 24-hour and is narrower), and the
+   * line stops wrapping, so a long title wraps inside its own column rather
+   * than dropping under the time.
+   */
+  it("starts every title on one edge from sm up", () => {
+    renderPicker();
+    for (const time of ["7:00 AM — 11:00 AM", "1:00 PM — 4:30 PM", "7:30 AM — 12:30 PM"]) {
+      const span = screen.getByText(time);
+      expect(span).toHaveClass("shrink-0", "sm:w-36");
+      expect(span.parentElement).toHaveClass("sm:flex-nowrap");
+    }
+  });
 });

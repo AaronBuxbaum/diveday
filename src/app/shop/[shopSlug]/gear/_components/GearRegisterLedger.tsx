@@ -272,22 +272,35 @@ function GearUnitRow({
       }
     >
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="font-mono text-sm font-medium">{item.label}</span>
+        {/* **The tag is a column, not a width** (pixel-craft class 3, K-248).
+            In mono, a tag's character count set where its brand and size
+            began, so the register's descriptors wandered 214–256px from row
+            to row. `11ch` holds "Computer #2", the longest tag a working
+            register reads at the rack; a longer one still pushes its own row. */}
+        <span className="min-w-[11ch] font-mono text-sm font-medium">{item.label}</span>
         {descriptor ? <span className="min-w-0 text-sm text-muted">{descriptor}</span> : null}
         {where ? (
           <span
             className={
               where.tone === "warning"
-                ? "inline-flex items-center gap-1.5 text-sm font-medium text-warning-strong"
+                ? "inline-flex items-baseline gap-1.5 text-sm font-medium text-warning-strong"
                 : where.tone === "plain"
                   ? "text-sm"
                   : "text-sm text-muted"
             }
           >
+            {/* **The fact takes its baseline from its words** (pixel-craft
+                class 1, K-429). A bare svg first has no baseline, so the box
+                made one from the mark's bottom edge and stood 3px high of the
+                tag beside it; and `items-center` centred the mark on a fact
+                wrapped to two lines. The mark rides a box one line tall at the
+                top, as `FormStatus`'s does, and the words are the baseline. */}
             {where.tone === "warning" ? (
-              <DiveDayIcon name="warning" className="size-4 shrink-0" />
+              <span className="flex h-lh shrink-0 items-center self-start">
+                <DiveDayIcon name="warning" className="size-4 shrink-0" />
+              </span>
             ) : null}
-            {where.text}
+            <span>{where.text}</span>
           </span>
         ) : null}
         {service ? (

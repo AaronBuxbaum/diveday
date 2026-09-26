@@ -529,6 +529,20 @@ describe("form wiring", () => {
 });
 
 describe("the real published questionnaire", () => {
+  it("never leaves a question's last word alone on its line", () => {
+    // A prompt is the `<legend>` that names its group, and the app's pretty
+    // wrap is set for running text — paragraphs, list items — not for a
+    // legend: "…within the past 12 / months." ended on one word at 1280
+    // (waiver-active, K-534). Line breaks only; the wording is the published
+    // form's and does not change.
+    render(<MedicalQuestionnaireFields questionnaire={RSTC_QUESTIONNAIRE} {...LABELS} />);
+    const groups = screen.getAllByRole("group");
+    expect(groups.length).toBeGreaterThan(0);
+    for (const group of groups) {
+      expect(group.querySelector("legend")).toHaveClass("text-pretty");
+    }
+  });
+
   it("renders every primary question and no box until one is answered", () => {
     // Guards against the component quietly dropping a section as the form is
     // revised: primaries are always visible, boxes never are.

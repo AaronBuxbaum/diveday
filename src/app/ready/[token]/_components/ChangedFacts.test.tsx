@@ -125,6 +125,51 @@ describe("the three facts", () => {
   });
 });
 
+/**
+ * **A value never breaks inside a unit** (K-471). The sizes and the contact
+ * were each joined into one plain string, so a narrow line could end on "16"
+ * and start the next with "lb", or break a phone number after a hyphen — on
+ * the emergency contact a diver is checking before they dive. Each sized item
+ * and the phone are set whole; the list and the separator still break.
+ */
+describe("a fact's value keeps its units whole", () => {
+  function factValue(label: string): HTMLElement {
+    const value = screen.getByText(label).nextElementSibling;
+    expect(value, `the ${label} row has a value`).not.toBeNull();
+    return value as HTMLElement;
+  }
+
+  it("sets each sized item whole, and lets the list break between them", () => {
+    render(panel());
+    const sizes = factValue("Sizes");
+    const items = Array.from(sizes.querySelectorAll(".whitespace-nowrap")).map(
+      (item) => item.textContent,
+    );
+    expect(items).toEqual(["BCD M", "Wetsuit M", "Boots 9", "Mask & fins 9", "Weights 16 lb"]);
+    // The list's own punctuation is `Intl.ListFormat`'s (a unit list), outside
+    // the items, where the line may break.
+    expect(sizes.textContent).toBe("BCD M, Wetsuit M, Boots 9, Mask & fins 9, Weights 16 lb");
+  });
+
+  it("sets the phone whole and keeps the dot with the name before it", () => {
+    render(panel());
+    const contact = factValue("Emergency contact");
+    expect(screen.getByText("+1-305-555-0100")).toHaveClass("whitespace-nowrap");
+    expect(contact.textContent).toBe("Sam Quinn\u00a0· +1-305-555-0100");
+  });
+
+  it("sets a phone alone whole, with no dot before it", () => {
+    render(panel({ emergencyContact: { name: null, phone: "+1-305-555-0100" } }));
+    expect(factValue("Emergency contact").textContent).toBe("+1-305-555-0100");
+    expect(screen.getByText("+1-305-555-0100")).toHaveClass("whitespace-nowrap");
+  });
+
+  it("says a name alone with no dot after it", () => {
+    render(panel({ emergencyContact: { name: "Sam Quinn", phone: null } }));
+    expect(factValue("Emergency contact").textContent).toBe("Sam Quinn");
+  });
+});
+
 describe("the recall line", () => {
   const recall: FitRecall = { staffFullName: "Keiko Tanaka", item: "bcd", size: "M" };
 
@@ -172,6 +217,17 @@ describe("one primary act, and three separate doors", () => {
     for (const form of forms) {
       expect(form.querySelectorAll("button[type='submit']")).toHaveLength(1);
     }
+  });
+
+  it("keeps the tanks row's Save at its own width on a phone", () => {
+    // The row is `flex-col` below `sm`, which stretches a direct child across
+    // the column: this Save ran 350px wide where every other Save on the page
+    // is as wide as its word (K-470). Wrapped, like its siblings.
+    const { container } = render(panel());
+    const tanks = container.querySelector("select[name='nitrox']")?.closest("form");
+    const save = tanks?.querySelector("button[type='submit']");
+    expect(save).toBeTruthy();
+    expect(save?.parentElement).not.toBe(tanks);
   });
 
   it("opens the page's own sizes form behind the Sizes door", () => {

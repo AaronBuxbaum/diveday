@@ -10,7 +10,8 @@ import { SiteMark } from "@/components/illustration/SiteMark";
 import { SubmitButton } from "@/components/SubmitButton";
 import { sendHoldCopy } from "@/components/send-hold-copy";
 import { buttonClass } from "@/components/ui/button";
-import { GroupLabel, LedgerGroup, LedgerRow } from "@/components/ui/ledger";
+import { TONE_PANEL_LG_CLASS } from "@/components/ui/card";
+import { GroupLabel, LedgerGroup, LedgerRow, type LedgerRowKindTone } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DayCloseoutRecord } from "@/db/closeout";
@@ -154,8 +155,23 @@ function rowKey(action: TodayAction): string {
  * on a phone the two horizons keep the row grammar they always had, one under
  * the other, because a panel's own padding was what pushed "Tomorrow · Wed,
  * Jul 22" onto two lines at 390px.
+ *
+ * **A hover shows on the panel's edge** (pixel-craft class 7, K-261). The rows
+ * inside hover to `bg-surface-sunken`, which on this sunken panel is #ececf1
+ * on #ececf1: hovering either door painted nothing at all. So the panel's
+ * edge steps to `border-strong` while its door — Tomorrow's summary, the
+ * week's row, each the panel's direct child — is under the pointer. An inset
+ * ring, not a border: it is drawn at rest too, clear, so neither the hover nor
+ * its arrival moves a pixel. The rows keep their fills for the phone, where no
+ * panel is painted under them.
+ *
+ * **Only where a pointer can hover.** Every `hover:` utility carries
+ * Tailwind's `@media (hover: hover)` gate; a `:hover` written inside `has-[]`
+ * does not, so on a touch tablet a tap that opened Tomorrow left the whole
+ * panel ringed until the next tap somewhere else. The step names the gate.
  */
-const HORIZON_PANEL_CLASS = "sm:rounded-panel sm:bg-surface-sunken sm:px-5 sm:py-1";
+const HORIZON_PANEL_CLASS =
+  "sm:rounded-panel sm:bg-surface-sunken sm:px-5 sm:py-1 sm:inset-ring sm:inset-ring-transparent sm:[@media(hover:hover)]:has-[>summary:hover,>li:hover]:inset-ring-border-strong";
 
 /** The status family's shape for each kind tone, and the ink it takes. */
 const ROW_GLYPH = { danger: "danger", warning: "warning", neutral: "pending" } as const;
@@ -164,6 +180,69 @@ const ROW_GLYPH_INK = {
   warning: "text-warning-strong",
   neutral: "text-muted",
 } as const;
+
+/**
+ * **A spine row's anatomy, owned once**: the glyph, one word of kind, the one
+ * sentence at reading size, the one fix. `StationRow` draws a job this way, and
+ * so does a desk row that is not a job — a form draft to pick back up, the
+ * payments setup row — so every sentence in a list starts on one column in one
+ * size. Drawn by hand, the payments row had no glyph and no kind and a 14px
+ * grey sentence, a draft's row a kind and no glyph: at 1280 the payments
+ * sentence started at the glyph column (x 153) under a Setup row whose
+ * sentence starts at 289, and read as that row's continuation (pixel-craft
+ * K-317).
+ */
+function SpineRow({
+  tone,
+  kind,
+  trailing,
+  closed = true,
+  door,
+  children,
+}: {
+  tone: LedgerRowKindTone;
+  /** One word of kind, in the row's own type. */
+  kind: string;
+  /** The row's fix when it performs one — a real control beside the words. */
+  trailing?: React.ReactNode;
+  /** `false` inside a station's panel, whose own edge closes the list. */
+  closed?: boolean;
+  /**
+   * Where the row's own tap goes, and its name for a screen reader. One object,
+   * not two props: `LedgerRow`'s door is a union, so a link never reaches a
+   * reader without an accessible name. Absent on a row that performs its fix.
+   */
+  door?: { href: string; linkLabel: string };
+  /** The sentence's words. */
+  children: React.ReactNode;
+}) {
+  // Both halves or neither, as one value: the union `LedgerRow` takes.
+  const doorProps: { href: string; linkLabel: string } | { href?: never; linkLabel?: never } =
+    door ?? {};
+  return (
+    <LedgerRow
+      // Stacked below `sm`: the kind and the fix share the first line and the
+      // sentence takes the width beneath them, which is the phone artboard's
+      // reading and the only one where a full sentence has room to be read.
+      stacked
+      // The row's glyph — the first of the anatomy's four parts (glyph, one
+      // word of kind, one sentence, one fix), drawn from the shipped status
+      // family and never from the illustration hand: a status glyph is a
+      // status, and the ADR keeps drawings out of that job. The kind word
+      // beside it carries the meaning; the glyph is what a scan reads first.
+      leading={<StatusMark variant={ROW_GLYPH[tone]} size="md" className={ROW_GLYPH_INK[tone]} />}
+      kind={{ word: kind, tone }}
+      trailing={trailing}
+      closed={closed}
+      {...doorProps}
+    >
+      {/* One line per row (ADR 20260904-reef-all-the-way-down, slice 16a):
+          the sentence at reading size — a subject over a detail at 14px was
+          the rail's grammar, and a panel reads as one sentence. */}
+      <p className="min-w-0 text-base leading-snug">{children}</p>
+    </LedgerRow>
+  );
+}
 
 function StationRow({
   action,
@@ -183,18 +262,15 @@ function StationRow({
       action.payment?.orderId ||
       action.helpRequest,
   );
-  // One line per row (ADR 20260904-reef-all-the-way-down, slice 16a): the
-  // person, then the sentence, at reading size — a subject over a detail at
-  // 14px was the rail's grammar, and a panel reads as one sentence with a name
-  // in it. Each half keeps its own element so a reader (and a test) can find
-  // either by its own words.
+  // The person, then the sentence, in one line (`SpineRow`). Each half keeps
+  // its own element so a reader (and a test) can find either by its own words.
   const tone = ACTION_KIND_META[action.kind].tone;
   // A row whose subject already is the whole fact carries no detail at all
   // (the desk's two counting rows), so neither the separator nor the second
   // span renders — a dangling " · " is the shape of a sentence that was
   // deleted rather than one that never existed.
-  const body = (
-    <p className="min-w-0 text-base leading-snug">
+  const sentence = (
+    <>
       {action.aboutDeparture ? null : (
         <>
           <span className="font-medium">{action.subject}</span>
@@ -208,7 +284,7 @@ function StationRow({
       {action.detail ? (
         <span className={tone === "neutral" ? "text-muted" : undefined}>{action.detail}</span>
       ) : null}
-    </p>
+    </>
   );
   const control = action.waiver ? (
     <WaiverSendControl
@@ -272,35 +348,21 @@ function StationRow({
   // chevron.
   null;
 
-  // One object, not two props. `LedgerRow`'s door is a union — a row carries
-  // both `href` and a `linkLabel` or neither, so a link can never reach a
-  // reader without an accessible name. Two independent ternaries cannot prove
-  // that correlation to the compiler, and a row that performs its own fix
-  // inline is deliberately not a door: the tap is the control beside it.
-  const door = performs || !action.href ? {} : { href: action.href, linkLabel: action.actionLabel };
+  // A row that performs its own fix inline is deliberately not a door: the
+  // tap is the control beside it.
+  const door =
+    performs || !action.href ? undefined : { href: action.href, linkLabel: action.actionLabel };
 
   return (
-    <LedgerRow
-      // Stacked below `sm`: the kind and the fix share the first line and the
-      // sentence takes the width beneath them, which is the phone artboard's
-      // reading and the only one where a full sentence has room to be read.
-      stacked
-      // The row's glyph — the first of the anatomy's four parts (glyph, one
-      // word of kind, one sentence, one fix), drawn from the shipped status
-      // family and never from the illustration hand: a status glyph is a
-      // status, and the ADR keeps drawings out of that job. The kind word
-      // beside it carries the meaning; the glyph is what a scan reads first.
-      leading={<StatusMark variant={ROW_GLYPH[tone]} size="md" className={ROW_GLYPH_INK[tone]} />}
-      kind={{
-        word: t(ACTION_KIND_KEYS[action.kind]),
-        tone,
-      }}
+    <SpineRow
+      tone={tone}
+      kind={t(ACTION_KIND_KEYS[action.kind])}
       trailing={control}
       closed={closed}
-      {...door}
+      door={door}
     >
-      {body}
-    </LedgerRow>
+      {sentence}
+    </SpineRow>
   );
 }
 
@@ -608,7 +670,15 @@ export function DaySpine({
       {/* The coral table's two home rows, one at a time (see the docblock).
           Each renders only while its condition holds and vanishes when it
           passes — nothing here is stored, and nothing replays a celebration
-          the day has moved past. */}
+          the day has moved past.
+
+          **Only the all-home line is pulled up** (`-mt-4`, pixel-craft K-319):
+          it tucks under the header's "Next up" sentence, which the page prints
+          only once no station is left on the spine — an evening's shape. The
+          all-clear needs today's stations, and the season's fact comes with
+          them, so nothing is above either but the sky band: pulled, they sat
+          16px under its edge with 40px to the first station. Unpulled, they
+          sit the header's 32px under the band like every first block. */}
       {allHomeLine && evening ? (
         <EarnedMomentLine className="-mt-4 tabular-nums">
           {/* **Souls, not seats** (issue #1346). The one sentence in the
@@ -627,7 +697,7 @@ export function DaySpine({
         // 20260901-diveday-reimagined, decision 1: "one earned moment on a
         // staff surface, once a day"). Drawn in the line, without its own coral
         // detail: the panel it sits in is the surface's coral.
-        <EarnedMomentLine className="-mt-4 flex items-center gap-3">
+        <EarnedMomentLine className="flex items-center gap-3">
           <SiteMark mark="turtle" size="sm" ground="surface" coral={false} />
           <span>{t("today.todayQueue.boatsClear")}</span>
         </EarnedMomentLine>
@@ -640,7 +710,7 @@ export function DaySpine({
           booking is still: the fact holds all day, and a celebration replayed
           on every visit stops meaning anything. */}
       {factOfScaleLine && factOfScale ? (
-        <EarnedMomentLine animate={false} className="-mt-4">
+        <EarnedMomentLine animate={false}>
           <span className="font-medium">
             {factOfScale.kind === "first_boat"
               ? t("shopHome.spine.factOfScale.firstBoat")
@@ -739,7 +809,9 @@ export function DaySpine({
       {firstThing ? (
         <section
           aria-labelledby="first-thing-label"
-          className="flex flex-col gap-4 rounded-panel border border-danger/30 bg-surface p-5 shadow-bed sm:flex-row sm:items-center sm:gap-5 sm:px-6"
+          // The stations' `lg` inset: it was `p-5 sm:px-6`, 4px shallower
+          // than the station under it from `sm` up.
+          className={`flex flex-col gap-4 ${TONE_PANEL_LG_CLASS} border-danger/30 bg-surface sm:flex-row sm:items-center sm:gap-5`}
         >
           <span
             aria-hidden="true"
@@ -839,23 +911,30 @@ export function DaySpine({
             ))}
             {/* What the reader started and did not finish — a draft is theirs
                 alone, so the row is too. Renders nothing when there is none. */}
+            {/* The two desk rows that are not jobs take a job's anatomy all
+                the same (`SpineRow`), so their sentences start on the column
+                and at the size every row's above them does. */}
             {drafts.map((draft) => (
-              <LedgerRow
+              <SpineRow
                 key={`draft:${draft.form}`}
-                kind={{ word: t("today.unfinished.label"), tone: "neutral" }}
-                href={draft.href}
-                linkLabel={t("today.unfinished.resume")}
+                tone="neutral"
+                kind={t("today.unfinished.label")}
+                door={{ href: draft.href, linkLabel: t("today.unfinished.resume") }}
               >
-                <p className="text-sm text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</p>
-              </LedgerRow>
+                <span className="text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</span>
+              </SpineRow>
             ))}
             {showPaymentsRow ? (
-              <LedgerRow
-                href={`/shop/${shopSlug}/settings#stripe`}
-                linkLabel={t("shopHome.spine.deskPaymentsAction")}
+              <SpineRow
+                tone="neutral"
+                kind={t("shopHome.spine.deskPaymentsKind")}
+                door={{
+                  href: `/shop/${shopSlug}/settings#stripe`,
+                  linkLabel: t("shopHome.spine.deskPaymentsAction"),
+                }}
               >
-                <p className="text-sm text-muted">{t("shopHome.spine.deskPaymentsRow")}</p>
-              </LedgerRow>
+                <span className="text-muted">{t("shopHome.spine.deskPaymentsRow")}</span>
+              </SpineRow>
             ) : null}
           </ul>
         </LedgerGroup>
@@ -907,10 +986,13 @@ export function DaySpine({
               as="h2"
               folded
               summaryVariant="row"
-              className={`${HORIZON_PANEL_CLASS} open:sm:col-span-2 sm:[&>summary]:border-0 sm:[&>summary]:rounded-panel [&>summary]:hover:bg-surface-sunken ${
-                spine.week.jobs > 0
-                  ? "max-sm:[&>summary]:border-t-0"
-                  : "max-sm:[&>summary]:border-b"
+              // On a phone the pair is ruled like any ledger list: Tomorrow's
+              // own top rule, the week row's top rule between them, and its
+              // `last:border-b` under the pair — or, with no week row, a
+              // closing rule of Tomorrow's own. Taking Tomorrow's top rule
+              // away left the pair open above (pixel-craft K-230).
+              className={`${HORIZON_PANEL_CLASS} open:sm:col-span-2 sm:[&>summary]:border-0 sm:[&>summary]:rounded-panel ${
+                spine.week.jobs > 0 ? "" : "max-sm:[&>summary]:border-b"
               }`}
               label={t("shopHome.spine.tomorrow", {
                 date: tomorrowDate ? formatShortDate(tomorrowDate, locale, timeZone) : "",
@@ -944,7 +1026,7 @@ export function DaySpine({
                 // it back there (`sm:mx-0 sm:px-0`), which left the fill
                 // flush against "This week" while Tomorrow's summary in the
                 // panel beside it kept its 8px.
-                className="hover:bg-surface-sunken sm:rounded-panel sm:border-transparent sm:last:border-transparent"
+                className="sm:rounded-panel sm:border-transparent sm:last:border-transparent"
                 href={`/shop/${shopSlug}/schedule/board`}
                 linkLabel={t("shopHome.spine.openBoard")}
                 trailing={

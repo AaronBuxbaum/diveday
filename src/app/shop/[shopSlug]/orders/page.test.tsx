@@ -1,9 +1,13 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
+import Link from "next/link";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Badge } from "@/components/ui/badge";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import {
+  bookingPayments,
   bookings,
   importedPaymentHistory,
   orders,
@@ -13,11 +17,13 @@ import {
 } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
+import { setTripStatus } from "@/db/trips";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
+import { capturedPaymentStatuses } from "@/lib/payment-source";
 import { seededTestDb } from "@/test/db";
 import { ariaLabelsIn, findElements, hrefsIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
@@ -162,6 +168,232 @@ describe("the stuck-payment-operations panel", () => {
     // not, which is the one thing that could have gone wrong in moving a
     // gated section onto an ungated page.
     expect(ariaLabelsIn(await renderOrders("divemaster", stickAnOperation))).not.toContain(PANEL);
+  });
+});
+
+/**
+ * Both back-office notices with a row on a departure: an unconfirmed Stripe
+ * checkout for a trip, and money owed on a trip the shop called off with its
+ * paid seats still paid. The seeded shop's paid seats are real money once
+ * their departure is cancelled, which is all `listOwedShopCancellationRefunds`
+ * asks.
+ */
+async function troubleOnADeparture(db: AppDb, session: DiveDaySession) {
+  const shopId = session.user.shopId;
+  const [paid] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookingPayments)
+    .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
+    .where(
+      and(
+        eq(bookingPayments.shopId, shopId),
+        inArray(bookingPayments.status, [...capturedPaymentStatuses]),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .limit(1);
+  if (!paid) throw new Error("the seed has no paid seat to owe back");
+  await setTripStatus(db, shopId, paid.tripId, "cancelled");
+  await db.insert(paymentOperationIntents).values({
+    shopId,
+    kind: "checkout_session",
+    status: "started",
+    tripId: paid.tripId,
+    stripeObjectId: "cs_stuck",
+    startedAt: new Date(nowDate().getTime() - 60 * 60 * 1000),
+  });
+}
+
+type Node = ReactElement<{ children?: unknown; className?: string; href?: string }>;
+
+/** The words under a node, in order, as a reader would read them. */
+function textOf(node: unknown): string {
+  if (node === null || node === undefined || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join("");
+  if (typeof node === "object" && "props" in node) return textOf((node as Node).props.children);
+  return "";
+}
+
+/** A node's rendered children, the `null`s of its conditionals dropped. */
+function childrenOf(node: Node): Node[] {
+  return [node.props.children]
+    .flat(Number.POSITIVE_INFINITY)
+    .filter((child): child is Node => typeof child === "object" && child !== null);
+}
+
+/** The notice a section's `aria-label` names. */
+function notice(tree: unknown, label: string): Node {
+  const section = findElements<{ "aria-label"?: string; children?: unknown }>(tree, "section").find(
+    (element) => element.props["aria-label"] === label,
+  );
+  if (!section) throw new Error(`no "${label}" notice on the page`);
+  return section as unknown as Node;
+}
+
+/**
+ * An unconfirmed invoice for one diver's seat, so its row names both the
+ * departure and the diver — the two facts the danger list joins.
+ */
+async function stickABookingsInvoice(db: AppDb, session: DiveDaySession) {
+  const shopId = session.user.shopId;
+  const [booking] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(and(eq(bookings.shopId, shopId), ne(bookings.status, "cancelled")))
+    .limit(1);
+  if (!booking) throw new Error("the seed has no booking");
+  await db.insert(paymentOperationIntents).values({
+    shopId,
+    kind: "invoice",
+    status: "started",
+    bookingId: booking.id,
+    stripeObjectId: "in_seat",
+    startedAt: new Date(nowDate().getTime() - 60 * 60 * 1000),
+  });
+}
+
+/**
+ * The classes in effect on an element inside one of a list's rows: its plain
+ * ones always, and its `group-last/op:` ones only on the row that is the
+ * list's last child, which is what Tailwind's `:where(.group\/op):last-child *`
+ * selects.
+ */
+function inEffect(className: string | undefined, rowIsLast: boolean): string[] {
+  return (className?.split(" ") ?? []).flatMap((token) => {
+    if (!token.startsWith("group-last/op:")) return [token];
+    return rowIsLast ? [token.slice("group-last/op:".length)] : [];
+  });
+}
+
+describe("the notices' rows", () => {
+  /**
+   * **Only the last row's reference bleeds into the notice's padding**
+   * (pixel-craft class 5; K-388). The summary wraps a 16px `text-xs` line in a
+   * 44px box, and on the last row that box sat on the notice's `py-3`: 13px
+   * from the border to the heading's ink, 27px from "Stripe reference" to the
+   * border. There its bottom 14px overhang the padding. On any other row the
+   * same margin collapsed into the gap below it and pulled the next row up
+   * under the reference, which then read as that row's, with its 44px box and
+   * focus ring reaching into that row's first line. Only the bottom ever
+   * bleeds; bleeding the top too would lift the ring across the row above.
+   */
+  it("lets only the last Stripe reference's target overhang the notice's foot", async () => {
+    const tree = await renderOrders("owner", async (db, session) => {
+      await troubleOnADeparture(db, session);
+      await stickAnOperation(db, session);
+    });
+    const rows = findElements<{ className?: string; children?: unknown }>(
+      notice(tree, "Payments that need a check"),
+      "li",
+    );
+    expect(rows).toHaveLength(2);
+    const effect = rows.map((row, index) => {
+      expect(row.props.className?.split(" ")).toContain("group/op");
+      const isLast = index === rows.length - 1;
+      const [summary] = findElements<{ className?: string }>(row, "summary");
+      const [code] = findElements<{ className?: string }>(row, "code");
+      expect(textOf(summary)).toBe("Stripe reference");
+      const summaryClasses = inEffect(summary?.props.className, isLast);
+      expect(summaryClasses).toContain("min-h-11");
+      expect(summaryClasses).not.toContain("-my-3.5");
+      return {
+        bleeds: summaryClasses.includes("-mb-3.5"),
+        // Open, the id starts 4px under the 44px box on every row: `mt-1`,
+        // or 14 + 4 where the box has given its 14px back.
+        idGap: inEffect(code?.props.className, isLast)
+          .filter((token) => /^mt-/.test(token))
+          .at(-1),
+      };
+    });
+    expect(effect).toEqual([
+      { bleeds: false, idGap: "mt-1" },
+      { bleeds: true, idGap: "mt-4.5" },
+    ]);
+  });
+
+  /**
+   * **"Open trip" is a 44px target on a 20px line** (pixel-craft class 7;
+   * K-389). Both notices drew it as a plain underlined word, 61.8×20px. The
+   * link takes `tapTargetLinkClass` inside a wrapper exactly one `text-sm`
+   * line tall, so the box a finger meets is 44px and the line stays 20px.
+   */
+  it("makes every Open trip a 44px target that keeps its line", async () => {
+    const tree = await renderOrders("owner", troubleOnADeparture);
+    for (const label of ["Payments that need a check", "Refunds you still owe"]) {
+      const section = notice(tree, label);
+      const links = findElements<{ className?: string; href?: string }>(section, Link).filter(
+        (link) => textOf(link) === "Open trip",
+      );
+      expect(links.length, label).toBeGreaterThan(0);
+      const wrappers = findElements<{ className?: string; children?: unknown }>(section, "span");
+      for (const link of links) {
+        expect(link.props.className).toContain(tapTargetLinkClass);
+        const wrapper = wrappers.find((span) => childrenOf(span as Node).includes(link as Node));
+        expect(wrapper?.props.className?.split(" ")).toEqual(
+          expect.arrayContaining(["h-5", "items-center"]),
+        );
+      }
+    }
+  });
+
+  /**
+   * **Two rows' targets meet and never cross** (pixel-craft class 7; K-389).
+   * Each "Open trip" box is 44px on a 20px line, so it spills 12px above and
+   * below. At `space-y-2` two one-line rows stood 28px apart and their boxes
+   * crossed by 16px; the later link paints over the earlier and took a click
+   * on the earlier one's underline, opening the next diver's departure. A
+   * 20px line plus the gap has to be the 44px target.
+   */
+  it("stands the notices' rows at least a target apart", async () => {
+    const tree = await renderOrders("owner", troubleOnADeparture);
+    for (const label of ["Payments that need a check", "Refunds you still owe"]) {
+      const [list] = findElements<{ className?: string }>(notice(tree, label), "ul");
+      const gap = list?.props.className?.match(/(?:^| )space-y-(\d+(?:\.\d+)?)(?: |$)/)?.[1];
+      expect(gap, label).toBeDefined();
+      expect(20 + Number(gap) * 4, label).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  /**
+   * **An owed row is one run of text that never opens a line on a dot**
+   * (pixel-craft class 4; K-569). Its facts were flex items, `<span>· {trip}
+   * </span>` and a muted `· $60.00 · …`, so the row spaced its dots two ways
+   * and, wrapped at 390, began lines "· $60.00". Joined into one flex item they
+   * still moved off the name's line whole on a phone and pushed "Open trip" to
+   * a line of its own. As running text the row breaks only after a dot or
+   * inside the trip's words, and every dot is bound to the word before it.
+   */
+  it("runs an owed row as text whose dots are bound to the word before", async () => {
+    const tree = await renderOrders("owner", troubleOnADeparture);
+    const rows = findElements<{ className?: string; children?: unknown }>(
+      notice(tree, "Refunds you still owe"),
+      "li",
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.props.className?.split(" ") ?? []).not.toContain("flex");
+      const text = textOf(row);
+      expect(text).toContain("·");
+      expect(text, text).not.toMatch(/ ·/);
+      expect(text.endsWith(" Open trip"), text).toBe(true);
+    }
+  });
+
+  /**
+   * **The danger list binds its dot the same way** (pixel-craft class 4;
+   * K-569). It joined its departure and diver with an ordinary space before
+   * the dot, so at 390 a line could open on "· Priya Sharma".
+   */
+  it("binds the dot between a stuck payment's departure and diver", async () => {
+    const tree = await renderOrders("owner", stickABookingsInvoice);
+    const [row] = findElements<{ children?: unknown }>(
+      notice(tree, "Payments that need a check"),
+      "p",
+    ).filter((paragraph) => textOf(paragraph).includes("·"));
+    const text = textOf(row);
+    expect(text).toContain(" · ");
+    expect(text, text).not.toMatch(/ ·/);
   });
 });
 

@@ -121,6 +121,7 @@ export default async function TripPrepPage({
           />
         }
         idPrefix={idPrefix}
+        className="space-y-10"
       />
     </>
   );

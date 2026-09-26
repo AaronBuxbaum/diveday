@@ -156,9 +156,28 @@ export function sectionCardClass({
  * `p-5` with no `sm:` step and no bed, the second at the 12px inset radius:
  * on a phone their words started 4px right of every card above and below
  * them, and the demand panel's corners were visibly tighter (pixel-craft
- * classes 3 and 12).
+ * classes 3 and 12). `card.test.tsx` refuses a tone panel hand-rolled on the
+ * panel radius, and names the few that are deliberately something else.
  */
 export const TONE_PANEL_CLASS = "rounded-panel border p-4 shadow-bed sm:p-5";
+
+/**
+ * **The `lg` twin**: the same panel on the inset of a card a person works
+ * inside (`padding="lg"`), for a tone panel among such cards — Today's
+ * stations, the public trip page's booked moment. Hand-rolled, those panels
+ * wore that inset with no bed, or `p-5` with no step, which set their words
+ * 4px inside the card's from `sm` up (pixel-craft classes 3 and 12).
+ */
+export const TONE_PANEL_LG_CLASS = "rounded-panel border p-5 shadow-bed sm:p-6";
+
+/**
+ * **The overlay twin**: the default geometry with no bed, for a tone panel
+ * carried inside a menu or a sheet — the emergency reference in the
+ * manifest's phone menu. The bed is for a panel at rest; an overlay keeps its
+ * own lift (ADR 20260901-diveday-reimagined), and a bed inside one smeared its
+ * 26px blur across the popover's padding and, in dark mode, past its edge.
+ */
+export const TONE_PANEL_IN_OVERLAY_CLASS = "rounded-panel border p-4 sm:p-5";
 
 /**
  * **A note carved into a card** — the first of the "not a section card"
@@ -169,8 +188,17 @@ export const TONE_PANEL_CLASS = "rounded-panel border p-4 shadow-bed sm:p-5";
  * 12px, and 12px all round at 12px type (pixel-craft class 12).
  *
  * `INSET_NOTE_BOX` is the geometry alone, for a note that carries a tone
- * instead of the sunken grey (a warning tint): the tone changes, the box does
- * not. A note's place in its panel (`mt-3`, `mt-4`) stays at the call site.
+ * instead of the sunken grey (a warning tint), or a sunken line in the
+ * reader's own ink: a staff note on a roster row, a line of the activity
+ * trail, a signed-in session, the builder's pattern line. The tone changes,
+ * the box does not. A note's place in its panel (`mt-3`, `mt-4`) stays at the
+ * call site, and `card.test.tsx` refuses the box retyped by hand.
+ *
+ * **Not a note**, and so not this box: a sunken step a person works inside (a
+ * form, the 16px group inset), and a bordered sunken tile or band — a row
+ * that is itself a link (`TripPickerList`, `BookingRequestCards`), or a band
+ * on the page above a card rather than carved into one (orders' linked
+ * booking, `StaffPreviewBar`). Those take their hairline and the 16px inset.
  */
 export const INSET_NOTE_BOX = "rounded-lg px-3 py-2 text-sm";
 export const INSET_NOTE_CLASS = `${INSET_NOTE_BOX} bg-surface-sunken text-muted`;

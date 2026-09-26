@@ -6,7 +6,7 @@ import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { LedgerRow } from "@/components/ui/ledger";
@@ -189,6 +189,57 @@ function DiverIdentity({
   );
 }
 
+/**
+ * **The blocked row's first line**: who, then the gate at the row's end, at
+ * every width (pixel-craft class 3, K-222).
+ *
+ * The line used to wrap, over an identity that took only its content's width,
+ * so a name wearing a second badge ("No emergency contact") grew the identity
+ * until the row wrapped and the Blocked badge dropped under the name at the
+ * row's start, while the next row's badge stood at its end. The line does not
+ * wrap: the identity takes the room (`flex-1`) and wraps its own badges inside
+ * itself, and the name truncates in it. That trade is right for one badge,
+ * about 90px of end; the released seat's end is a badge and a button, and
+ * keeps a line of its own (`RELEASED_LINE_CLASS`).
+ */
+const STATE_LINE_CLASS = "flex items-center justify-between gap-2";
+const STATE_LINE_IDENTITY_CLASS = "min-w-0 flex-1";
+
+/**
+ * **The released seat's first line wraps, and its end holds the row's end**
+ * (K-222). Its end is "Not here" and a ghost "Put back on the list", about
+ * 240px in en-US and 280 in es-ES ("No vino", "Volver a ponerlo en la lista"),
+ * so the blocked row's no-wrap line left a 357px phone column 70–110px for the
+ * name — the one a staffer reads to walk the seat back — and pushed "No
+ * emergency contact" out under the badge. Here the identity keeps its own
+ * width and the end gives way under it, `ms-auto` so a wrapped end still
+ * stands at the row's end rather than its start.
+ */
+const RELEASED_LINE_CLASS = "flex flex-wrap items-center justify-between gap-x-2 gap-y-1";
+
+/**
+ * **The blocked row's name: its record's door, a 28px line with a 44px
+ * target** (pixel-craft class 12, K-321).
+ *
+ * It was a `tapTargetLinkClass` box — 44px tall round the 28px line — where
+ * the ready row's name is the plain line, so the identity block was spaced two
+ * ways on one counter: the meta sat 36px under a blocked name's cap top and
+ * 28px under a ready one's. Now the link is the line, and its target is a
+ * stretched `::after` reaching 8px above and below it (28 + 16 = 44), inside
+ * the row's 12px inset above and over the meta's top edge below. The name
+ * truncates in an inner span, because `truncate` on the link itself is
+ * `overflow: hidden`, which would clip the target it draws.
+ *
+ * **Not a 44px link box hung over the line**, the overhang the first-bookable
+ * card's link uses. The target would be the same, but the focus ring draws
+ * 5px round the link's box: its lower band would cross the meta's letters
+ * 10–13px under the name, and its upper band the row's top rule. On the
+ * `::after` the ring stays on the 28px line. The pixel probe measures the
+ * target the same way a finger meets it (`hitBox`,
+ * `scripts/pixel-probe/analyze.mjs`).
+ */
+const NAME_DOOR_CLASS = `relative block min-w-0 ${SECTION_TITLE_CLASS} text-primary hover:underline after:absolute after:inset-x-0 after:-inset-y-2`;
+
 export function CounterQueueRow({
   row,
   shopSlug,
@@ -273,7 +324,7 @@ export function CounterQueueRow({
          on this page instead of vanishing: the diver who walks in as the lines
          come off needs somewhere for a staffer to walk it back. */
       <LedgerRow as="article" size="lg" pad="lg" closed={closed}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className={RELEASED_LINE_CLASS}>
           <div className="min-w-0">
             <DiverIdentity
               row={row}
@@ -283,7 +334,7 @@ export function CounterQueueRow({
               name={<span className="block truncate text-base text-muted">{row.personName}</span>}
             />
           </div>
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="ms-auto flex shrink-0 items-center gap-3">
             <Badge tone="neutral">{t("checkIn.noShow.badge")}</Badge>
             <RowActionForm
               action={undoNoShowAction}
@@ -581,8 +632,8 @@ export function CounterQueueRow({
   ) : null;
   return (
     <LedgerRow as="article" size="lg" pad="lg" closed={closed}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
+      <div className={STATE_LINE_CLASS}>
+        <div className={STATE_LINE_IDENTITY_CLASS}>
           <DiverIdentity
             row={row}
             showEmail={showEmail}
@@ -598,11 +649,8 @@ export function CounterQueueRow({
               // and the diver's record is one of the doors. Primary ink at
               // rest: on a phone there is no hover, and an invisible link is
               // no door at all.
-              <Link
-                href={`/shop/${shopSlug}/divers/${row.personId}`}
-                className={`${tapTargetLinkClass} truncate ${SECTION_TITLE_CLASS} text-primary hover:underline`}
-              >
-                {row.personName}
+              <Link href={`/shop/${shopSlug}/divers/${row.personId}`} className={NAME_DOOR_CLASS}>
+                <span className="block truncate">{row.personName}</span>
               </Link>
             }
           />
@@ -624,11 +672,10 @@ export function CounterQueueRow({
           </Badge>
         </div>
       </div>
-      {/* The one blocked-diver presentation, shared with the by-departure view.
-          It shows *every* blocker; a single sayable reason sits open on the row
-          and the rest name their first one in the summary (#759, #890). */}
+      {/* The one blocked-diver presentation. It shows *every* blocker; a
+          single sayable reason sits open on the row and the rest name their
+          first one in the summary (#759, #890). */}
       <BlockedDiverRow
-        layout="below"
         surface="check_in"
         waiverCopy={waiverSendCopy(t)}
         blockers={row.readiness.blockers}
@@ -648,8 +695,8 @@ export function CounterQueueRow({
           // `?notice=…` alone rendered the banner, `?notice=…&bid=…` rendered
           // neither (issue 1574).
           //
-          // `BlockedDiverRow` renders `extra` unconditionally in both layouts,
-          // so a refusal routed to a rendered row always has somewhere to land.
+          // `BlockedDiverRow` renders `extra` unconditionally, so a refusal
+          // routed to a rendered row always has somewhere to land.
           identityControl ? (
             // The confirm sits *after* the waiver control, in the order the
             // desk works them: the identity is what releases the matched
@@ -681,11 +728,14 @@ function PassDoor({ shopSlug, row, t }: { shopSlug: string; row: QueueRow; t: St
       {/* `link` weight, not `ghost`: it is the settled row's one remaining act
           and the row beside it is a receipt. A filled-looking control repeated
           down five finished rows is the loudest thing in a group whose whole
-          point is that there is nothing left to do in it. */}
+          point is that there is nothing left to do in it. `flush`, because a
+          link paints nothing around its words: `sm`'s `px-3` ended them 12px
+          inside the column every badge and "All boarded" end on (K-320). The
+          row's `gap-3` is still the room between the undo and the pass. */}
       <SubmitButton
         pendingLabel={t("print.counter.passDoor")}
         ariaLabel={t("print.counter.passDoor")}
-        className={buttonClass({ variant: "link", size: "sm" })}
+        className={buttonClass({ variant: "link", size: "sm", flush: true })}
       >
         {t("print.counter.passDoor")}
       </SubmitButton>

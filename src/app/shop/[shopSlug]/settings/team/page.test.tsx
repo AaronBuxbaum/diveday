@@ -1,10 +1,13 @@
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import type { StaffMember } from "@/db/staff-accounts";
+import { STAFF_MESSAGES } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
 import { seededTestDb } from "@/test/db";
+import { findElements } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
@@ -101,6 +104,24 @@ async function renderTeam() {
     searchParams: Promise.resolve({}),
   });
 }
+
+/**
+ * **The page's two sections speak at one volume** (K-314). "Invite someone" is
+ * a `SectionCard` title, `LEAD_TITLE_CLASS` (24px); "Current team" stood over
+ * the list of staff cards at `SECTION_TITLE_CLASS` (18px), because its comment
+ * trusted a typography doc that still said a card's own heading was that rung.
+ */
+describe("the page's section headings", () => {
+  it("heads the current team at the rung a card's own title is drawn at", async () => {
+    const heading = STAFF_MESSAGES["en-US"].settings.team.current.heading;
+    const headings = findElements<{ className?: string; children?: unknown }>(
+      await renderTeam(),
+      "h2",
+    ).filter((h2) => h2.props.children === heading);
+    expect(headings).toHaveLength(1);
+    expect(headings[0]?.props.className).toBe(LEAD_TITLE_CLASS);
+  });
+});
 
 /** The row at the foot of a staff card: resend an invitation, or switch the account off. */
 const ACCOUNT_ROW = ["flex", "flex-col", "gap-2", "sm:flex-row"];

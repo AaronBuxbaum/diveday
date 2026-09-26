@@ -1,4 +1,5 @@
 import { EmptyState } from "@/components/EmptyState";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
@@ -10,6 +11,19 @@ import type { TripBuddyTeam } from "@/db/buddy-pairs";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { scopedId } from "@/lib/element-id";
 import { BuddyDragGroups } from "./BuddyDragGroups";
+
+/**
+ * **One box for every member chip** (pixel-craft class 12). A team of three's
+ * chips carry a 44px remove target and a team of two's carry none, and the two
+ * were drawn apart: 50px with the name 18px in against `px-3 py-1`, 34px with
+ * it 14px in — Team 01 small and tight over a tall Team 02. Both now take the
+ * removable chip's box: `min-h-12.5` is the target's 44px, 2px of air above and
+ * below it and the 1px border, and the name starts `ps-4` in. The end differs
+ * only by what stands there: `pe-4` after a name, `pe-1` after the target,
+ * whose circle is its own padding.
+ */
+const MEMBER_CHIP_CLASS =
+  "flex min-h-12.5 items-center gap-1 rounded-full border border-border bg-surface-sunken ps-4 font-semibold";
 
 /** One person the builder can offer: the form's flat member token plus a name. */
 export type BuddyMemberOption = { token: string; label: string };
@@ -95,10 +109,7 @@ export function BuddyTeamsPanel({
   const builderError = buddyErrorForm === "builder" && showBuilder ? buddyErrorText : null;
   const panelError = builderError ? null : buddyErrorText;
   return (
-    <section
-      aria-labelledby={scopedId(idPrefix, "buddy-teams-heading")}
-      className="mt-9 print:hidden"
-    >
+    <section aria-labelledby={scopedId(idPrefix, "buddy-teams-heading")} className="print:hidden">
       {/* The whole panel sits behind one disclosure line. Grouping people is
           dock/desk prep, done once per departure — but the open panel (team
           rows, per-team pickers, dissolve buttons) stood at permanent height
@@ -115,13 +126,16 @@ export function BuddyTeamsPanel({
             baseline beside it. Flattened into a single baseline row the caret
             hung off the text's baseline like a stray comma; centred on the
             whole block it floated between the lines once the count wrapped
-            (9.5–20px low at 390, most in Spanish). `py-2` round the 28px title
-            line is the 44px floor, so one line still centres; `-mx-2 px-2
-            rounded-lg` gives the ring room off the words. */}
-        <summary className="-mx-2 flex min-h-11 w-fit cursor-pointer list-none items-start gap-2 rounded-lg px-2 py-2 select-none [&::-webkit-details-marker]:hidden">
+            (9.5–20px low at 390, most in Spanish). `p-2` round the 28px title
+            line is the 44px floor, so one line still centres, and gives the
+            ring room off the words; `-m-2` hands the same 8px back on every
+            side, so the box overhangs the section gap rather than adding to it
+            — above, it stood "Buddy teams" 8px further from the plan than the
+            page's 40px (K-189). */}
+        <summary className="-m-2 flex min-h-11 w-fit cursor-pointer list-none items-start gap-2 rounded-lg p-2 select-none [&::-webkit-details-marker]:hidden">
           <SummaryCaret
             line={`h-lh ${SECTION_TITLE_CLASS}`}
-            className="text-muted group-open/buddypanel:rotate-90"
+            className="size-4 text-muted group-open/buddypanel:rotate-90"
           />
           <span className="flex flex-wrap items-baseline gap-x-2">
             <h2 id={scopedId(idPrefix, "buddy-teams-heading")} className={SECTION_TITLE_CLASS}>
@@ -185,136 +199,140 @@ export function BuddyTeamsPanel({
               });
               return (
                 <li key={team.teamId} className="px-4 py-3">
-                  {/* No `justify-between`: it pushed "Dissolve team" to the
-                      row's far right edge, ~500px from the team it dissolves at
-                      a 1280 viewport, aligned to nothing. The control now
-                      follows the members/recorded-by block as a trailing item,
-                      so it reads as belonging to that team rather than to the
-                      panel's right margin. `flex-wrap` still carries it to its
-                      own line on a phone, and a team of five wraps its members
-                      freely without stranding the button. */}
-                  <div className="flex flex-wrap items-start gap-3">
-                    <div className="min-w-0">
-                      <p className={groupLabelClass()}>
-                        {t("manifest.buddyTeamLabel", { number: index + 1 })}
-                      </p>
-                      <ul className="mt-1.5 flex flex-wrap items-center gap-2">
-                        {team.members.map((member) => {
-                          const token =
-                            member.kind === "diver"
-                              ? `diver:${member.bookingId}`
-                              : `crew:${member.personId}`;
-                          const name =
-                            member.kind === "crew"
-                              ? t("manifest.buddyCrewName", { name: member.fullName })
-                              : member.cancelled
-                                ? t("manifest.buddyCancelledName", { name: member.fullName })
-                                : member.fullName;
-                          // Only a team of three or more can lose a member and
-                          // stay a team; at two the act is a dissolve, which
-                          // has its own button and its own entry on the trail.
-                          const removable = team.members.length > 2;
-                          return (
-                            <li
-                              key={token}
-                              // A team row carries two lists of names now — who
-                              // is *on* the team, and who its divers must dive
-                              // with (issue #1068) — so "the row with Omar in
-                              // it" stopped being a question the DOM could
-                              // answer. This marks the membership half, which
-                              // is what `e2e/buddy-pairs.spec.ts` means when it
-                              // asks for a diver's team.
-                              data-buddy-member=""
-                              className={`flex items-center gap-1 rounded-full border border-border bg-surface-sunken font-semibold ${
-                                removable ? "py-0.5 ps-4 pe-1" : "px-3 py-1"
-                              }`}
-                            >
-                              <span>{name}</span>
-                              {removable ? (
-                                <form action={removeBuddyTeamMemberAction} className="flex">
-                                  <input type="hidden" name="teamId" value={team.teamId} />
-                                  <input type="hidden" name="member" value={token} />
-                                  {/* A real target, not a bare "×" glyph: this
-                                    panel is worked on a moving deck, and the
-                                    chip shape is what makes the control read
-                                    as a control rather than a typo. `size-11`
-                                    is the dock test's floor (44px,
-                                    design/principles.md §2) — at `size-7` this
-                                    was a 28px hit area for wet fingers, and
-                                    the act behind it removes a person from a
-                                    buddy team. The chip's own padding grew to
-                                    hold it.
+                  <p className={groupLabelClass()}>
+                    {t("manifest.buddyTeamLabel", { number: index + 1 })}
+                  </p>
+                  {/* **"Dissolve team" is the chip row's last item, at the
+                      row's size** (pixel-craft class 1). Beside the whole
+                      label-and-chips block, a 48px `md` button topped against
+                      it set its words 15px off the chips' centre on a team of
+                      two and 23px on a team of three. Here it takes the chips'
+                      centre from the list's `items-center`, follows the last
+                      name rather than the panel's right margin (a
+                      `justify-between` once put it ~500px from the team it
+                      dissolves), and wraps with the names on a phone. No
+                      `data-buddy-member`: it is not a member.
 
-                                    `SubmitButton`, not a raw `<button>`: a wet
-                                    deck is where a tap that seems not to have
-                                    registered gets tapped again, and without
-                                    `useFormStatus` this posted twice — the same
-                                    double-submit every other destructive control
-                                    in the app is already guarded against. The
-                                    pending label is the glyph again rather than
-                                    a word, because the label lives inside a
-                                    44px circle that a word would burst; the
-                                    disabled + `aria-busy` state is what says
-                                    the tap landed.
+                      Nothing in this panel is worked at the rail — grouping
+                      people is desk/dock prep — so it is `sm`, a chip row's
+                      size, rather than the roll-call buttons' `boat`.
+                      Dissolving is destructive but never this section's main
+                      action — and with two or three teams open, a red-boxed
+                      `danger` button per row framed the panel's calm content
+                      in warnings, so it is the quieter `danger-ghost`: the hue
+                      stays, the box waits for hover (design review 20260810). */}
+                  <ul className="mt-1.5 flex flex-wrap items-center gap-2">
+                    {team.members.map((member) => {
+                      const token =
+                        member.kind === "diver"
+                          ? `diver:${member.bookingId}`
+                          : `crew:${member.personId}`;
+                      const name =
+                        member.kind === "crew"
+                          ? t("manifest.buddyCrewName", { name: member.fullName })
+                          : member.cancelled
+                            ? t("manifest.buddyCancelledName", { name: member.fullName })
+                            : member.fullName;
+                      // Only a team of three or more can lose a member and
+                      // stay a team; at two the act is a dissolve, which
+                      // has its own button and its own entry on the trail.
+                      const removable = team.members.length > 2;
+                      return (
+                        <li
+                          key={token}
+                          // A team row carries two lists of names now — who
+                          // is *on* the team, and who its divers must dive
+                          // with (issue #1068) — so "the row with Omar in
+                          // it" stopped being a question the DOM could
+                          // answer. This marks the membership half, which
+                          // is what `e2e/buddy-pairs.spec.ts` means when it
+                          // asks for a diver's team.
+                          data-buddy-member=""
+                          className={`${MEMBER_CHIP_CLASS} ${removable ? "pe-1" : "pe-4"}`}
+                        >
+                          <span>{name}</span>
+                          {removable ? (
+                            <form action={removeBuddyTeamMemberAction} className="flex">
+                              <input type="hidden" name="teamId" value={team.teamId} />
+                              <input type="hidden" name="member" value={token} />
+                              {/* A real target, not a bare "×" glyph: this
+                                panel is worked on a moving deck, and the
+                                chip shape is what makes the control read
+                                as a control rather than a typo. `size-11`
+                                is the dock test's floor (44px,
+                                design/principles.md §2) — at `size-7` this
+                                was a 28px hit area for wet fingers, and
+                                the act behind it removes a person from a
+                                buddy team. The chip's box is sized round
+                                it (`MEMBER_CHIP_CLASS`).
 
-                                    Ringed inside its own circle
-                                    (`focus-ring-inset`): the global ring's
-                                    5px reach put its left arm on the last
-                                    letter of the name 4px before it. */}
-                                  <SubmitButton
-                                    pendingLabel="×"
-                                    ariaLabel={t("manifest.buddyRemoveMember", {
-                                      name: member.fullName,
-                                    })}
-                                    className="flex size-11 cursor-pointer items-center justify-center rounded-full text-lg leading-none text-muted disabled:cursor-wait disabled:opacity-70 hover:bg-danger-tint hover:text-danger focus-visible:focus-ring-inset"
-                                  >
-                                    <span aria-hidden="true">×</span>
-                                  </SubmitButton>
-                                </form>
-                              ) : null}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                      {/* **Under the chips, not among them.** These are
-                          constraints on the team, not members of it: rendered
-                          as chips they read as extra people, and a name in a
-                          member list is what every locator on this panel means
-                          by "who is on this team" — which is how the first cut
-                          of this made `buddy-pairs.spec.ts` match Diego's team
-                          when it asked for Omar's.
+                                `SubmitButton`, not a raw `<button>`: a wet
+                                deck is where a tap that seems not to have
+                                registered gets tapped again, and without
+                                `useFormStatus` this posted twice — the same
+                                double-submit every other destructive control
+                                in the app is already guarded against. The
+                                pending label is the glyph again rather than
+                                a word, because the label lives inside a
+                                44px circle that a word would burst; the
+                                disabled + `aria-busy` state is what says
+                                the tap landed. The glyph is the drawn
+                                cross every remove control shares, at the
+                                names' 16px, not a typed "×" at the font's
+                                size (pixel-craft K-545).
 
-                          Muted, never a warning tone: a departure with the
-                          constraint unmet sails (ADR
-                          20260827-support-needs-are-a-record-about-the-dive,
-                          fourth refusal). The words carry it. */}
-                      {teamDivesWith.length > 0 ? (
-                        <ul className="mt-1.5 flex flex-col gap-0.5 text-sm text-muted">
-                          {teamDivesWith.map(({ bookingId, line }) => (
-                            <li key={bookingId}>{line}</li>
-                          ))}
-                        </ul>
-                      ) : null}
-                      <p className="mt-1 text-sm text-muted">
-                        {t("manifest.buddyRecordedBy", { name: team.recordedByName })}
-                      </p>
-                    </div>
-                    {/* Nothing in this panel is worked at the rail — grouping
-                      people is desk/dock prep, so these controls take the
-                      app's default size rather than the roll-call buttons'
-                      `boat`. Dissolving is destructive but never this
-                      section's main action — and with two or three teams open,
-                      a red-boxed `danger` button per row framed the panel's
-                      calm content in warnings, so it is the quieter
-                      `danger-ghost`: the hue stays, the box waits for hover
-                      (design review 20260810). */}
-                    <form action={dissolveBuddyTeamAction}>
-                      <input type="hidden" name="teamId" value={team.teamId} />
-                      <button type="submit" className={buttonClass({ variant: "danger-ghost" })}>
-                        {t("manifest.buddyDissolve")}
-                      </button>
-                    </form>
-                  </div>
+                                Ringed inside its own circle
+                                (`focus-ring-inset`): the global ring's
+                                5px reach put its left arm on the last
+                                letter of the name 4px before it. */}
+                              <SubmitButton
+                                pendingLabel={<DiveDayIcon name="close" className="size-4" />}
+                                ariaLabel={t("manifest.buddyRemoveMember", {
+                                  name: member.fullName,
+                                })}
+                                className="flex size-11 cursor-pointer items-center justify-center rounded-full text-muted disabled:cursor-wait disabled:opacity-70 hover:bg-danger-tint hover:text-danger focus-visible:focus-ring-inset"
+                              >
+                                <DiveDayIcon name="close" className="size-4" />
+                              </SubmitButton>
+                            </form>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                    <li>
+                      <form action={dissolveBuddyTeamAction} className="flex">
+                        <input type="hidden" name="teamId" value={team.teamId} />
+                        <button
+                          type="submit"
+                          className={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                        >
+                          {t("manifest.buddyDissolve")}
+                        </button>
+                      </form>
+                    </li>
+                  </ul>
+                  {/* **Under the chips, not among them.** These are
+                      constraints on the team, not members of it: rendered
+                      as chips they read as extra people, and a name in a
+                      member list is what every locator on this panel means
+                      by "who is on this team" — which is how the first cut
+                      of this made `buddy-pairs.spec.ts` match Diego's team
+                      when it asked for Omar's.
+
+                      Muted, never a warning tone: a departure with the
+                      constraint unmet sails (ADR
+                      20260827-support-needs-are-a-record-about-the-dive,
+                      fourth refusal). The words carry it. */}
+                  {teamDivesWith.length > 0 ? (
+                    <ul className="mt-1.5 flex flex-col gap-0.5 text-sm text-muted">
+                      {teamDivesWith.map(({ bookingId, line }) => (
+                        <li key={bookingId}>{line}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <p className="mt-1 text-sm text-muted">
+                    {t("manifest.buddyRecordedBy", { name: team.recordedByName })}
+                  </p>
                   {addableDivers.length + addableCrew.length > 0 ? (
                     <form
                       action={addBuddyTeamMemberAction}

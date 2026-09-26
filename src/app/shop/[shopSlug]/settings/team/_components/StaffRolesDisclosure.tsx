@@ -250,6 +250,9 @@ export function StaffRolesDisclosure({
 
   return (
     <div ref={rootRef}>
+      {/* The row's width, not the words': its hover fill spans the row like
+          every disclosure row around it (`CompactDisclosureRow`'s summary)
+          rather than a pill hugging "Owner and Manager" (K-522). */}
       <button
         ref={toggleRef}
         type="button"
@@ -259,7 +262,7 @@ export function StaffRolesDisclosure({
         onClick={() => (open ? closeAndSave() : setOpen(true))}
         onKeyDown={onEscape}
         onBlur={onFocusLeave}
-        className="-mx-2 flex min-h-11 w-fit items-center gap-2 rounded-lg px-2 text-sm text-muted select-none transition-colors hover:bg-surface-sunken hover:text-primary"
+        className="-mx-2 flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm text-muted select-none transition-colors hover:bg-surface-sunken hover:text-primary"
       >
         <DisclosureCaret className={open ? "rotate-90" : ""} />
         <span className="hover:underline">{summary}</span>

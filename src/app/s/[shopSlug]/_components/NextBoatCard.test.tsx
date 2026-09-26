@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { NextBoatCard } from "./NextBoatCard";
 
@@ -127,6 +129,21 @@ describe("next boat with space", () => {
     expect(screen.getByText("Next boat with space in this view")).toBeInTheDocument();
   });
 
+  /**
+   * **One rung for the identity band's eyebrows** (pixel-craft K-218). This
+   * one was the page header's 11px bold "where you are" rung beside the Right
+   * now and In season panels' 12px semibold group label: three eyebrows on one
+   * row, two type sizes. The card keeps its lagoon ink, which marks it as the
+   * page's subject; the rung is the panels'.
+   */
+  it("draws its eyebrow on the rung the panels beside it use, in its own lagoon ink", () => {
+    render(card());
+
+    const eyebrow = screen.getByText("Next boat with space");
+    expect(eyebrow.className).toBe(groupLabelClass("primary"));
+    expect(eyebrow.className).not.toBe(EYEBROW_CLASS);
+  });
+
   it("claims the shop's own next boat when nothing is narrowed", () => {
     const { container } = render(card());
 
@@ -134,6 +151,60 @@ describe("next boat with space", () => {
     // qualify every unfiltered storefront, which is the opposite lie.
     expect(screen.getByRole("region", { name: "Next boat with space" })).toBeInTheDocument();
     expect(container.textContent).not.toContain("in this view");
+  });
+});
+
+/**
+ * **A separator sits in the middle of its gap** (pixel-craft K-175). Each
+ * fragment used to open with its own "· ", so the row's 8px gap fell before
+ * the dot and one space after it: 9px against 6px at 1280, 9 against 5 at
+ * 390. The dot is an element of its own now, with the same gap either side.
+ */
+describe("the facts line", () => {
+  function facts() {
+    render(card({ skipped: 1, firstSkippedTime: "7:00 AM" }));
+    return screen.getByText("5 spots left").parentElement as HTMLElement;
+  }
+
+  it("sets each dot as a hidden element of its own, with the row's gap either side", () => {
+    const row = facts();
+    const dots = [...row.querySelectorAll("span")].filter((span) => span.textContent === "·");
+    expect(dots).toHaveLength(2);
+    for (const dot of dots) {
+      expect(dot).toHaveAttribute("aria-hidden", "true");
+      // Before the dot, the row's gap; after it, its fact's, which is the same.
+      const fact = dot.parentElement as HTMLElement;
+      expect(fact.parentElement).toBe(row);
+      expect(row).toHaveClass("gap-x-2");
+      expect(fact).toHaveClass("gap-x-2");
+      expect(dot.nextElementSibling?.textContent).not.toMatch(/^[\s·]/);
+    }
+    // Still one sentence to anything reading the text: the spaces are there,
+    // and a flex row renders none of them.
+    expect(row.textContent?.replace(/\s+/g, " ").trim()).toBe(
+      "5 spots left · $120.00 per diver · the 7:00 AM boat is full",
+    );
+  });
+
+  /**
+   * **And it wraps with the fact it introduces.** As a free item in the
+   * wrapping row, a dot could end a line: with a boat skipped the facts run
+   * about 356px against the card's 326 at 390, and line one ended on "·".
+   */
+  it("keeps each dot in one item with its fact, so no line ends on a dot", () => {
+    const row = facts();
+    expect([...row.children].map((fact) => fact.textContent?.replace(/\s+/g, " ").trim())).toEqual([
+      "5 spots left",
+      "· $120.00 per diver",
+      "· the 7:00 AM boat is full",
+    ]);
+  });
+
+  it("draws no dot for a fact the card does not have", () => {
+    render(card({ price: null }));
+
+    const row = screen.getByText("5 spots left").parentElement as HTMLElement;
+    expect(row.textContent).not.toContain("·");
   });
 });
 

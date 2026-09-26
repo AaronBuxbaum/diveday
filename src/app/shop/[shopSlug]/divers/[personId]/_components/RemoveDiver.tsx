@@ -27,12 +27,16 @@ export function RemoveDiver({
        things you do *to* a record rather than with it.
 
        Opened by its own outcome: a refusal rendered inside a shut disclosure is
-       invisible, which is worse than page-top. */
+       invisible, which is worse than page-top.
+
+       The default `md`, like "Download record" beside it and the "Remove
+       diver" confirm under it: as `sm` it stood 44px and 14px beside a 48px,
+       16px button, 2px short at each edge. The size follows the surface, and
+       the foot is a page row. */
     <details open={Boolean(status)} className="scroll-mt-24" id="remove">
       <summary
         className={buttonClass({
           variant: "danger-ghost",
-          size: "sm",
           flush: true,
           className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
         })}

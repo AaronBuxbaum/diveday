@@ -18,6 +18,11 @@ import { IDLE_KIOSK_RESULT, type KioskCopy, type KioskResult } from "../kiosk-ty
  */
 const CLEAR_AFTER_MS = 12_000;
 
+/**
+ * The dock's `boat` target, as it is on every other boat-mode surface. It took
+ * `text-[1.25rem]` through `className` until K-339: `boat`'s unitless
+ * line-height scaled with the font, and the kiosk's was the one 58px `boat`.
+ */
 function CheckInButton({ copy }: { copy: KioskCopy }) {
   const { pending } = useFormStatus();
   return (
@@ -25,7 +30,7 @@ function CheckInButton({ copy }: { copy: KioskCopy }) {
       type="submit"
       disabled={pending}
       aria-busy={pending}
-      className={buttonClass({ size: "boat", busy: true, className: "text-[1.25rem]" })}
+      className={buttonClass({ size: "boat", busy: true })}
     >
       {pending ? copy.submitting : copy.submit}
     </button>
@@ -131,6 +136,9 @@ export function KioskConsole({ token, copy }: { token: string; copy: KioskCopy }
       {shown.status === "idle" ? null : (
         <div
           role="status"
+          // Not `TONE_PANEL_CLASS`: the kiosk's answer, set at the kiosk's
+          // 24-32px type and read from a step back, so its inset is that
+          // scale's 24px, not a staff card's (card.test.tsx names it).
           className={`mt-8 rounded-panel border p-6 ${
             shown.status === "ready"
               ? "border-success/30 bg-success/10"

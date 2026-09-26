@@ -11,6 +11,7 @@ import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovableP
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import {
@@ -264,7 +265,7 @@ export default async function EditCoursePage({
 
       {noticeText ? <ShopNotice>{noticeText}</ShopNotice> : null}
       {templateUpdate ? (
-        <section className="mt-6 rounded-panel border border-primary/30 bg-primary/5 p-4 sm:p-5">
+        <section className={`mt-6 ${TONE_PANEL_CLASS} border-primary/30 bg-primary/5`}>
           <h2 className="text-base font-semibold">{t("courses.edit.templateUpdates.title")}</h2>
           <p className="mt-1 text-sm text-muted">
             {templateUpdate.baselineUnavailable
@@ -578,18 +579,30 @@ export default async function EditCoursePage({
                 session of this course offers the nitrox box at all — on the
                 booking page or on the pre-trip form — however much nitrox the
                 shop fills (`nitroxAvailableOn`, src/lib/rentals.ts). */}
+                  {/* One item in the section's `gap-5` column, with no margin
+                      of its own: `mt-5` added to the gap stood it 40px under
+                      Duration, where fields sit 20px apart. Its hint is the
+                      next line of its own words, at a `Field` description's
+                      12px: as a paragraph under the row it hung a 44px
+                      target's height under the box, and at 14px (K-414). The
+                      box is named by its label alone and described by the
+                      hint, as a `Field`'s control is. */}
                   <ChoiceRow
                     type="checkbox"
                     name="nitroxCompatible"
                     value="true"
                     defaultChecked={course.nitroxCompatible}
-                    className="mt-5 text-sm"
+                    aria-labelledby="nitroxCompatible-label"
+                    aria-describedby="nitroxCompatible-hint"
+                    className="text-sm"
                   >
-                    {t("courses.edit.nitroxCompatibleLabel")}
+                    <span id="nitroxCompatible-label" className="block">
+                      {t("courses.edit.nitroxCompatibleLabel")}
+                    </span>
+                    <span id="nitroxCompatible-hint" className="block text-xs text-muted">
+                      {t("courses.edit.nitroxCompatibleHint")}
+                    </span>
                   </ChoiceRow>
-                  <p className="mt-1 text-sm text-muted">
-                    {t("courses.edit.nitroxCompatibleHint")}
-                  </p>
                 </EditorSection>
 
                 <EditorSection

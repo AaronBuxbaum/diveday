@@ -401,14 +401,90 @@ describe("the door's skeleton", () => {
     expect(pulse?.lastElementChild).toHaveClass("h-12");
   });
 
+  /** The header's bars, as the shell's `<header>` holds its words: the block the panel follows. */
+  function headerOf(container: HTMLElement) {
+    const header = panelOf(container).previousElementSibling;
+    if (!header) throw new Error("no header");
+    return header;
+  }
+
   it("draws a description bar only for a door that has a description", () => {
     const withBar = render(<EntryShellSkeleton fields={["email"]} />);
-    expect(panelOf(withBar.container).previousElementSibling).toHaveClass("h-6");
+    expect(headerOf(withBar.container).querySelectorAll(".h-6")).toHaveLength(1);
+    expect(headerOf(withBar.container).lastElementChild).toHaveClass("mt-2");
     withBar.unmount();
 
     const { container } = render(<EntryShellSkeleton description={false} fields={["email"]} />);
     // The title bar is what the panel follows when there is no description.
-    expect(panelOf(container).previousElementSibling).toHaveClass("h-9");
+    expect(headerOf(container).querySelectorAll(".h-6")).toHaveLength(0);
+    expect(headerOf(container).lastElementChild).toHaveClass("h-9");
+  });
+
+  /**
+   * The shell's wordmark is `mb-8` above everything under it, the eyebrow
+   * included. The skeleton put the 32px on the title bar instead, so a door
+   * with both — the demo story door — drew its eyebrow flush under the
+   * wordmark and 32px over its title, where the page puts it 32px under the
+   * wordmark and 8px over the title (K-576).
+   */
+  it("stands the eyebrow 32px under the wordmark and 8px over the title", () => {
+    const { container } = render(
+      <EntryShellSkeleton wordmark eyebrow panel={false} footnote={false} />,
+    );
+    const [wordmark, eyebrow, title] = [
+      ...(container.querySelector(".animate-pulse > div")?.children ?? []),
+    ];
+    expect(wordmark).toHaveClass("mb-8", "h-6");
+    expect(eyebrow).toHaveClass("mb-2", "h-4");
+    expect(title).toHaveClass("h-9");
+    expect(title).not.toHaveClass("mt-8");
+  });
+
+  /**
+   * A door's title and description wrap, and a bar has no way to: one bar
+   * for a two-line description dropped everything under it 24px when the
+   * page landed (the demo story door's, at every width). The counts are the
+   * page's, in `ShopPageHeaderSkeleton`'s spelling (`SkeletonLines`).
+   */
+  it("draws a line box for every line the title and description wrap to", () => {
+    const { container } = render(
+      <EntryShellSkeleton
+        titleLines={{ base: 2, sm: 1 }}
+        descriptionLines={2}
+        fields={["email"]}
+      />,
+    );
+    const header = headerOf(container);
+    expect(header.querySelectorAll(".h-9")).toHaveLength(2);
+    expect(header.querySelectorAll(".h-9.sm\\:hidden")).toHaveLength(1);
+    expect(header.querySelectorAll(".h-6")).toHaveLength(2);
+  });
+
+  /**
+   * **The closed onboarding door is a sentence and one button**, not a form
+   * (K-290): its panel holds a `<p>` and, `mt-6` under it, the 48px mail
+   * door. `body` draws that sentence's lines in place of fields.
+   */
+  it("draws a sentence's lines and one button 24px under them for a door with no form", () => {
+    const { container } = render(<EntryShellSkeleton description={false} body={2} />);
+    const rows = [...panelOf(container).children];
+    expect(rows.filter((row) => row.classList.contains("h-6"))).toHaveLength(2);
+    expect(rows.at(-1)).toHaveClass("mt-6", "h-12");
+    expect(panelOf(container).querySelectorAll(".h-11")).toHaveLength(0);
+  });
+
+  /**
+   * A footer of two sentences, the first wrapping (the closed onboarding
+   * door's demo line and sign-in line): the shell's footer is `gap-2`
+   * between 20px lines, so the skeleton draws a row per sentence and a line
+   * box per line.
+   */
+  it("draws a footer row for each sentence, a line for each line it wraps to", () => {
+    const { container } = render(<EntryShellSkeleton footnote={[2, 1]} fields={["email"]} />);
+    const footer = container.querySelector("main > div")?.lastElementChild;
+    expect(footer).toHaveClass("mt-8", "flex-col", "gap-2");
+    expect(footer?.children).toHaveLength(2);
+    expect(footer?.querySelectorAll(".h-5")).toHaveLength(3);
   });
 
   it("keeps sign-in's forgot-password row between the last field and the button", () => {

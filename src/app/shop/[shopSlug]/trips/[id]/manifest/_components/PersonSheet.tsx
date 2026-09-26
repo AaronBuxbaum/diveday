@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
-import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { SHEET_PANEL_CLASS, SheetHeader } from "@/components/ui/sheet";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import { motionMs } from "@/lib/motion";
@@ -78,6 +78,7 @@ export function PersonSheet({
   children,
   closeLabel,
   triggerClassName,
+  mark,
 }: {
   name: string;
   trigger: React.ReactNode;
@@ -92,6 +93,12 @@ export function PersonSheet({
   children: React.ReactNode;
   closeLabel: string;
   triggerClassName: string;
+  /**
+   * The row's one tap, at the trailing edge where every row's mark lands —
+   * a separate control from the trigger, which it sits beside and never
+   * inside. See the slot below.
+   */
+  mark?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -143,39 +150,41 @@ export function PersonSheet({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         tabIndex={-1}
-        className={`max-h-[min(90dvh,48rem)] w-full overflow-y-auto overscroll-contain rounded-t-[22px] border-t border-border bg-surface px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-2 shadow-2xl outline-none sm:mx-auto sm:max-w-2xl sm:px-7 ${closing ? "sheet-out" : "rise-in"}`}
+        className={`${SHEET_PANEL_CLASS} outline-none ${closing ? "sheet-out" : "rise-in"}`}
       >
         <div aria-hidden="true" className="mx-auto h-1 w-10 rounded-full bg-border-strong" />
-        <header className="mt-3 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 id={titleId} className={LEAD_TITLE_CLASS}>
-              {name}
-            </h2>
-            <p id={descriptionId} className="mt-1 text-sm text-muted">
-              {subtitle}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-start gap-2">
-            {status}
-            <button
-              type="button"
-              aria-label={closeLabel}
-              className="grid size-11 place-items-center rounded-full text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
-              onClick={close}
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
+        <SheetHeader
+          titleId={titleId}
+          descriptionId={descriptionId}
+          title={name}
+          subtitle={subtitle}
+          actions={
+            <>
+              {status}
+              <button
+                type="button"
+                aria-label={closeLabel}
+                className="grid size-11 place-items-center rounded-full text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
+                onClick={close}
               >
-                <path d="m5 5 10 10M15 5 5 15" />
-              </svg>
-            </button>
-          </div>
-        </header>
+                {/* `size-5`, as `DiverSheet` draws the same ×: with only a
+                    `viewBox` it stretched to its cell, 26px of ink beside the
+                    name. */}
+                <svg
+                  aria-hidden="true"
+                  className="size-5"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                >
+                  <path d="m5 5 10 10M15 5 5 15" />
+                </svg>
+              </button>
+            </>
+          }
+        />
 
         <section className="mt-5" aria-label={todayLabel}>
           <p className={groupLabelClass()}>{todayLabel}</p>
@@ -222,24 +231,43 @@ export function PersonSheet({
 
   return (
     <>
-      {/* `data-print-content`: the trigger's content is the person, and the
-          packet's print backstop hides every other button (`globals.css`,
-          `.trip-print-bundle`). The caret is the control part, so it alone
-          stays off paper. */}
-      <button
-        ref={triggerRef}
-        type="button"
-        data-print-content
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={sheetId}
-        aria-label={triggerLabel}
-        className={triggerClassName}
-        onClick={() => setOpen(true)}
-      >
-        {trigger}
-        <DisclosureCaret className="shrink-0 print:hidden" />
-      </button>
+      {/* **One row: the trigger, then the mark, sharing a centre**
+          (`items-center`). The mark centres on the trigger's real height —
+          76px at rest, taller when a long name or its line under it wraps —
+          where a mark hung 10px from the top of an `items-start` row stayed
+          put while the index and caret moved to the new middle: 19px above
+          them on a phone (K-266). The sheet itself is portalled, so nothing
+          else shares this row. */}
+      <div className="flex items-center">
+        {/* `data-print-content`: the trigger's content is the person, and the
+            packet's print backstop hides every other button (`globals.css`,
+            `.trip-print-bundle`). The caret is the control part, so it alone
+            stays off paper. */}
+        <button
+          ref={triggerRef}
+          type="button"
+          data-print-content
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-controls={sheetId}
+          aria-label={triggerLabel}
+          className={triggerClassName}
+          onClick={() => setOpen(true)}
+        >
+          {trigger}
+          {/* `size-4`, not the default `size-3`: a 4×8px tick beside an 18px
+              semibold name read as a stray mark (K-549). */}
+          <DisclosureCaret className="size-4 shrink-0 print:hidden" />
+        </button>
+        {/* The mark's own box. `ps-3` is the real gap between two adjacent
+            targets that do opposite things (`ROW_DISCLOSURE_SUMMARY_CLASS`).
+            `py-2.5` is the same above and below, so it centres nothing off
+            the row's middle: it is the room the mark's 5px focus ring needs
+            whenever the mark sets the row's height — on the last row, flush
+            with the card's `overflow-hidden`, the ring lost its bottom 5px
+            without it (#1981). */}
+        {mark ? <div className="shrink-0 py-2.5 ps-3 pe-3 print:hidden">{mark}</div> : null}
+      </div>
       {overlay ? createPortal(overlay, document.body) : null}
     </>
   );

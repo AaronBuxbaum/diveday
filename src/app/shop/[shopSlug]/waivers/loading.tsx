@@ -1,10 +1,9 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Body-shaped skeleton for the waiver surface (design principle 1): the
- * version line under the title, the release editor in its card, then the
+ * version line under the title, the closed "Edit the release" door, then the
  * signature log as hairline day groups beneath it — the shape ADR
  * 20260827-people-not-lists gave this page when the Signatures tab folded into
  * it. It owns the `<main>` shell now, the sub-nav layout that used to render
@@ -17,11 +16,20 @@ function LogRows({ count }: { count: number }) {
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: static bars, no identity of their own
           key={index}
-          className={`flex h-12 items-center gap-3 ${ledgerRowBoxClass}`}
+          className={ledgerRowBoxClass}
         >
-          <div className="h-4 w-40 shrink-0 rounded bg-surface-sunken" />
-          <div className="h-4 flex-1 rounded bg-surface-sunken" />
-          <div className="h-4 w-14 shrink-0 rounded bg-surface-sunken" />
+          {/* A signature row as `SignatureLog` draws it: the rule on the
+              row's box, and in it the summary's grammar — a 51px floor,
+              wrapping, the name's 24px line and the departure's 20px one. From
+              `sm` up that is one 52px line; below `sm` the departure bar takes
+              a full-width line of its own, as the departure does, and the row
+              is 65px. A one-line `h-13` row was 52px at every width, 13px
+              short of every phone row it stood for. */}
+          <div className="flex min-h-12.75 flex-wrap items-center gap-x-3 gap-y-1 py-2">
+            <div className="my-1 h-4 w-40 shrink-0 rounded bg-surface-sunken max-sm:me-auto" />
+            <div className="my-0.5 h-4 min-w-0 flex-1 rounded bg-surface-sunken max-sm:order-last max-sm:basis-full" />
+            <div className="h-4 w-14 shrink-0 rounded bg-surface-sunken" />
+          </div>
         </div>
       ))}
     </div>
@@ -36,11 +44,11 @@ export default function WaiversLoading() {
           description={false}
           meta={<div className="h-5 w-56 max-w-full rounded bg-surface-sunken" />}
         />
-        <div className={sectionCardClass({ padding: "lg" })}>
-          <div className="h-4 w-28 rounded bg-surface-sunken" />
-          <div className="mt-2 h-72 rounded bg-surface-sunken" />
-          <div className="mt-5 h-11 w-32 rounded-lg bg-surface-sunken" />
-        </div>
+        {/* The release editor is a door at rest (`waivers/page.tsx`: "the
+            ledger leads; the editor is a door"), one `md` secondary button.
+            The open editor's card stood here, 426px of it, and the log landed
+            378px above its own bars. */}
+        <div className="h-12 w-40 rounded-lg bg-surface-sunken" />
         <div className="mt-10">
           <div className="h-4 w-36 rounded bg-surface-sunken" />
           <div className="mt-4 space-y-8">

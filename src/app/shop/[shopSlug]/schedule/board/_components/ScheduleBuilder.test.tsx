@@ -3,8 +3,10 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import userEvent from "@testing-library/user-event";
 import { type ComponentProps, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { MovePreflight } from "@/lib/move-preflight";
+import { rendersFlush } from "@/test/button-flush";
 import {
   type BuilderCopy,
   type BuilderMoreOptions,
@@ -487,6 +489,86 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
 });
 
 /**
+ * **The tide at the chosen site** (ADR 20260907-noaa-tide-predictions) is one
+ * line under the site select, and it is that select's description: set the
+ * way every field description is, under its own box, and read with it. A
+ * paragraph after the fields put it in the first column at 14px, 22px under
+ * a select standing in the second (pixel-craft K-337).
+ */
+describe("ScheduleBuilder add panel: the tide at the chosen site", () => {
+  const days: FixtureDay[] = [
+    {
+      dateIso: "2026-08-01",
+      label: "Sat, Aug 1",
+      parts: { weekday: "Sat", day: "1", month: "Aug" },
+      trips: [],
+    },
+  ];
+  const TIDE = "Next high water at 9:12 AM; this departure reaches the site at 9:40 AM.";
+  const loadTideWindow = vi.fn(async (_input: unknown): Promise<string | null> => TIDE);
+
+  function renderBuilder() {
+    return render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        week={weekFrom(days)}
+        loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
+        loadTideWindow={loadTideWindow}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        locale="en-US"
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+      />,
+    );
+  }
+
+  /** The text of every element a control's `aria-describedby` names. */
+  const describedBy = (control: Element | null) =>
+    (control?.getAttribute("aria-describedby") ?? "")
+      .split(" ")
+      .filter(Boolean)
+      .map((id) => document.getElementById(id)?.textContent ?? "");
+
+  afterEach(() => {
+    loadTideWindow.mockClear();
+  });
+
+  it("describes the site select with the tide, and dive one's once the form is expanded", async () => {
+    const { container } = renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    await screen.findByRole("option", { name: "Molasses Reef" });
+    const site = container.querySelector('select[name="diveSiteId"]') as HTMLSelectElement;
+    // Nothing picked, nothing to say: no description, and nothing asked.
+    expect(site.getAttribute("aria-describedby")).toBeNull();
+    expect(loadTideWindow).not.toHaveBeenCalled();
+
+    await userEvent.selectOptions(site, "site-1");
+    await waitFor(() => expect(describedBy(site)).toEqual([TIDE]));
+    for (const paragraph of container.querySelectorAll("form p")) {
+      expect(paragraph).not.toHaveTextContent(TIDE);
+    }
+    // The select is also how the effect reaches its form: any change there
+    // (the "when" is uncontrolled boxes) asks again.
+    const asked = loadTideWindow.mock.calls.length;
+    fireEvent.change(site.form as HTMLFormElement);
+    expect(loadTideWindow).toHaveBeenCalledTimes(asked + 1);
+
+    // Expanded, the day's site is dive one's select, so the line goes with it.
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+    expect(describedBy(container.querySelector('select[name="dive-1-siteId"]'))).toEqual([TIDE]);
+    expect(
+      container.querySelector('select[name="dive-2-siteId"]')?.getAttribute("aria-describedby"),
+    ).toBeNull();
+  });
+});
+
+/**
  * **The add panel already knows the weekday** (ADR 20260906-before-you-ask,
  * decision 3). The rule pinned: a panel opened plainly fills its own fields
  * from the weekday's pattern once the option lists are on screen and says so
@@ -598,6 +680,22 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
     expect(container.querySelectorAll('input[name="crewPersonIds"]')).toHaveLength(0);
     expect(screen.queryByText(/Filled from your last/)).not.toBeInTheDocument();
     expect(screen.queryByRole("checkbox", { name: /Wreck Trip/ })).not.toBeInTheDocument();
+  });
+
+  /**
+   * "start blank" finishes the sentence that offers it ("…Change anything, or
+   * start blank"), so it sits a word space after "or", not a word space and
+   * a button's padding (pixel-craft K-223). A `px-0` handed through
+   * `className` loses to the size's padding; `flush` is how a quiet button
+   * lines up with the words around it.
+   */
+  it("sets start blank inside the sentence that offers it", async () => {
+    renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    await screen.findByText(/Filled from your last 6 Sat departures/);
+    expect(rendersFlush(screen.getByRole("button", { name: "start blank" }), "link", "sm")).toBe(
+      true,
+    );
   });
 
   it("asks for no pattern when the panel arrived with something to say already", async () => {
@@ -892,6 +990,52 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     // Still one submit — expanding deepens the form, it never forks it.
     expect(screen.getAllByRole("button", { name: "Put it on the board" })).toHaveLength(1);
     expect(submittedKeys(container)).toContain("dayCount");
+  });
+
+  /**
+   * The disclosure is a line of the form, so its caret starts on the column
+   * every label and box above it starts on. Unflushed, the link's `sm`
+   * padding set "More options" 12px inside that column at every width
+   * (pixel-craft K-223, schedule-builder-add at 1280: 117 against 105).
+   */
+  it("starts More options and Fewer options on the form's column", async () => {
+    renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    const more = screen.getByRole("button", { name: /More options/ });
+    expect(rendersFlush(more, "link", "sm")).toBe(true);
+    await userEvent.click(more);
+    expect(rendersFlush(screen.getByRole("button", { name: /Fewer options/ }), "link", "sm")).toBe(
+      true,
+    );
+  });
+
+  /**
+   * The private and self-guided boxes are rows of the form, never a label
+   * inside a label. Self-guided also takes a caption track only where it has
+   * a neighbour to share one with: beside the course select, from `sm`, it
+   * spans that field's caption and control rows so its box sits on the
+   * select's row. Stacked under the select on a phone, the same empty track
+   * and its 4px gutter set it 4px lower than the private row (31px from the
+   * select's bottom to its words, against 27; pixel-craft K-330).
+   */
+  it("draws the private and self-guided boxes as rows, with no empty caption on a phone", async () => {
+    const { container } = renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+
+    for (const name of ["isPrivate", "selfGuided"]) {
+      const row = container.querySelector(`input[name="${name}"]`)?.closest("label");
+      expect(row, name).not.toBeNull();
+      expect(row?.parentElement?.closest("label"), name).toBeNull();
+    }
+
+    const wrapper = container
+      .querySelector('input[name="selfGuided"]')
+      ?.closest("label")?.parentElement;
+    const tokens = [...(wrapper?.classList ?? [])];
+    expect(tokens).toEqual(expect.arrayContaining(["sm:row-span-2", "sm:grid-rows-subgrid"]));
+    expect(tokens).not.toContain("row-span-2");
+    expect(tokens).not.toContain("grid-rows-subgrid");
   });
 
   it("posts only the quick fields while collapsed, though the rest stay mounted", async () => {
@@ -1993,6 +2137,24 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     expect(screen.getByText("5 seats are already paid.")).toBeInTheDocument();
     expect(screen.getByText("Cancellations close 48 hours before it departs.")).toBeInTheDocument();
     expect(screen.getByText(COPY.impactTitle)).toBeInTheDocument();
+  });
+
+  /**
+   * "If you move it" is a group label like every other in the app, not a
+   * small-caps line spelled by hand at a quarter of their letter-spacing
+   * (`tracking-wide`, 0.025em, beside the week's 0.14em; pixel-craft K-336).
+   */
+  it("titles the consequences with the app's one group label", async () => {
+    loadMovePreflight.mockImplementation(async () => ({
+      blocked: null,
+      sections: [{ kind: "gear", count: 1 }],
+    }));
+    renderBoard();
+    await openMovePanel();
+
+    const title = await screen.findByText(COPY.impactTitle);
+    expect(title).toHaveClass(...groupLabelClass("muted").split(" "));
+    expect(title).not.toHaveClass("tracking-wide");
   });
 
   /**

@@ -1,14 +1,26 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { FIGURE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripPrep } from "@/db/trips-prep";
+import { diveRecencyText } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { buildDivePrepChecklist } from "@/lib/dive-prep";
+import {
+  buildDivePrepChecklist,
+  type PrepDiver,
+  type PrepGrouping,
+  type RentalFit,
+} from "@/lib/dive-prep";
+import type { SupportNeeds } from "@/lib/support-needs";
+import { rendersFlush } from "@/test/button-flush";
 import { PrepBody } from "./PrepBody";
 
 afterEach(cleanup);
 
 const t = staffTranslator("en-US");
+
+/** The stack gap both callers pass: a page's sections sit `space-y-10` apart. */
+const STACK = "space-y-10";
 
 /**
  * Two divers and a guide, so the packing half has something real to say: with
@@ -71,6 +83,7 @@ function renderBody(cancelled: boolean) {
       grouping="item"
       groupPath="/shop/blue-mantis/trips/t1"
       cancelled={cancelled}
+      className={STACK}
     />,
   );
 }
@@ -146,8 +159,490 @@ describe("an empty departure on the departure page", () => {
         grouping="item"
         groupPath="/shop/blue-mantis/trips/t1"
         cancelled={false}
+        className={STACK}
       />,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+const STATED = new Date("2026-09-01T00:00:00Z");
+
+/** A stated fit that rents nothing until an override says it does. */
+function fit(overrides: Partial<RentalFit> = {}): RentalFit {
+  return {
+    rentsBcd: false,
+    rentsRegulator: false,
+    rentsWetsuit: false,
+    rentsMaskFins: false,
+    rentsWeights: false,
+    rentsDiveComputer: false,
+    rentsGopro: false,
+    rentsDrysuit: false,
+    rentsHoodGloves: false,
+    rentsTorch: false,
+    rentsSmb: false,
+    bcdSize: null,
+    wetsuitSize: null,
+    drysuitSize: null,
+    bootSize: null,
+    finSize: null,
+    weightPreference: null,
+    needsStaffFitAt: null,
+    needsStaffFitNote: null,
+    fitStatedAt: STATED,
+    ...overrides,
+  };
+}
+
+const LIFT_AND_BOARDING: SupportNeeds = {
+  supportDiversNeeded: null,
+  supportDiversProvidedBy: null,
+  needsBoardingAssistance: true,
+  needsWaterLift: true,
+  briefingInSign: false,
+  briefingInWriting: false,
+  briefingAloud: false,
+  briefingBySignals: false,
+  equipmentAdaptation: null,
+  divesWithName: null,
+  statedAt: STATED,
+};
+
+function diver(n: number, fullName: string, rest: Partial<PrepDiver> = {}): PrepDiver {
+  return {
+    bookingId: `b${n}`,
+    personId: `p${n}`,
+    fullName,
+    fit: null,
+    wantsNitrox: false,
+    hasVerifiedNitroxCard: false,
+    lastDivedBand: null,
+    ...rest,
+  };
+}
+
+/**
+ * **A departure that opens every panel the list has**: a nitrox blocker, a
+ * partial fit, a never-asked diver, a hands-on fit, a support arrangement, a
+ * hotel pickup, a shared rental line, a diver dry for five years and an
+ * assigned unit. The geometry below is about how each of those is drawn, so
+ * each one has to be on the page.
+ */
+function everyPanelPrep(): TripPrep {
+  const checklist = buildDivePrepChecklist({
+    divers: [
+      diver(1, "Carmen Ruiz", {
+        fit: fit({
+          rentsBcd: true,
+          bcdSize: "L",
+          rentsWetsuit: true,
+          wetsuitSize: "L",
+          bootSize: "10",
+          rentsRegulator: true,
+        }),
+        lastDivedBand: "over_five_years",
+      }),
+      diver(2, "Sam Whitfield", {
+        fit: fit({
+          rentsBcd: true,
+          bcdSize: "XL",
+          needsStaffFitAt: STATED,
+          needsStaffFitNote: "No XL BCD left",
+        }),
+      }),
+      // BCD L beside Carmen, so one rental line is for two divers; no weight
+      // stated, so the partial list has a row.
+      diver(3, "Grace Mensah", {
+        fit: fit({ rentsBcd: true, bcdSize: "L", rentsWeights: true }),
+      }),
+      diver(4, "Theo Lindqvist"),
+      diver(5, "Nadia Petrov", { wantsNitrox: true, supportNeeds: LIFT_AND_BOARDING }),
+    ],
+    plannedDives: 2,
+    divingCrew: ["Keiko Tanaka"],
+    now: new Date("2026-09-26T12:00:00Z"),
+  });
+  return {
+    trip: { id: "t1", capacity: 12, booked: 5 } as TripPrep["trip"],
+    checklist,
+    hotelPickups: [
+      {
+        bookingId: "b1",
+        diverName: "Carmen Ruiz",
+        hotelPickupLocation: "Harbour Inn",
+        pickupTime: "07:15",
+      },
+    ],
+    gearFleetTotal: 4,
+    freeByKind: new Map(),
+    loadOut: { units: 1, divers: 1, stillToPick: 0, serviceFlagged: 0 },
+    assignmentRows: [
+      {
+        diver: { bookingId: "b1", fullName: "Carmen Ruiz" } as never,
+        assigned: [
+          { reservationId: "r1", kind: "bcd", size: "L", label: "BCD #2", checkedOutAt: null },
+        ] as never,
+        wanted: [],
+        handedOver: false,
+      },
+    ],
+  };
+}
+
+function renderPrep(
+  prep: TripPrep,
+  { grouping = "item", notice }: { grouping?: PrepGrouping; notice?: string } = {},
+) {
+  return render(
+    <PrepBody
+      prep={prep}
+      t={t}
+      locale="en-US"
+      shopSlug="blue-mantis"
+      tripId="t1"
+      rentalItems={["bcd", "wetsuit", "boots", "weights", "regulator", "mask_fins"]}
+      notice={notice}
+      grouping={grouping}
+      groupPath="/shop/blue-mantis/trips/t1"
+      cancelled={false}
+      className={STACK}
+    />,
+  );
+}
+
+/** Every link on the list that opens a diver's record. */
+function diverLinks(root: HTMLElement): HTMLElement[] {
+  return within(root)
+    .getAllByRole("link")
+    .filter((link) => /\/divers\/p\d/.test(link.getAttribute("href") ?? ""));
+}
+
+/** The element whose own text is exactly `text`, for finding a panel by its words. */
+function byText(root: HTMLElement, text: string): HTMLElement {
+  return within(root).getByText(text, { exact: true });
+}
+
+/** A class list as tokens, so `mt-4` never matches inside `-mt-4` or `sm:mt-4`. */
+function tokens(element: Element | null | undefined): string[] {
+  return (element?.getAttribute("class") ?? "").split(/\s+/).filter(Boolean);
+}
+
+/**
+ * A spacing utility's length in px on Tailwind's 4px scale, read off the
+ * element's own tokens: `gap-y-6` is 24, `-my-2.5` is 10, and an element with
+ * no such token is 0.
+ */
+function spacingPx(element: Element | null | undefined, utility: string): number {
+  for (const token of tokens(element)) {
+    if (!token.startsWith(`${utility}-`)) continue;
+    const step = Number(token.slice(utility.length + 1));
+    if (Number.isFinite(step)) return step * 4;
+  }
+  return 0;
+}
+
+/**
+ * **How the packing list is drawn** (docs/design/pixel-craft.md). jsdom has no
+ * layout, so each case pins the classes whose arithmetic the pixel probe
+ * measured wrong; the probe re-measures the pixels.
+ */
+describe("the packing list's geometry", () => {
+  it("stacks its sections at the gap its page asks for, never a margin each (K-487)", () => {
+    const { container } = renderPrep(everyPanelPrep(), { notice: "gear-assigned" });
+    const stack = container.firstElementChild;
+    expect(stack).toHaveClass(STACK);
+    // Tanks, nitrox, sizes, staff fit, support, pickups, kit, banner, assignments.
+    expect(stack?.children.length).toBe(9);
+    for (const section of stack?.children ?? []) {
+      expect(tokens(section).filter((token) => /^mt-/.test(token))).toEqual([]);
+    }
+  });
+
+  it("gives every diver's name that stands on its own line a 44px target, and keeps the line (K-146)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const lead = byText(container, t("tripPrep.missingSizesNobodyAskedLead"));
+    const neverAsked = within(lead.nextElementSibling as HTMLElement).getAllByRole("link");
+    const support = diverLinks(container).filter((link) =>
+      link.getAttribute("href")?.endsWith("#support"),
+    );
+    expect(neverAsked.map((link) => link.textContent)).toEqual(["Theo Lindqvist", "Nadia Petrov"]);
+    expect(support.map((link) => link.textContent)).toEqual(["Nadia Petrov"]);
+    for (const link of [...neverAsked, ...support]) {
+      // The 44px floor, and the (44 − 20) / 2 handed back above and below, so
+      // the 20px line the name sits on does not grow to 44.
+      expect(tokens(link)).toEqual(expect.arrayContaining(["inline-flex", "min-h-11", "-my-3"]));
+    }
+  });
+
+  it("sets the never-asked run's rows a whole target apart, so a tap lands on the name it covers (K-146)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const lead = byText(container, t("tripPrep.missingSizesNobodyAskedLead"));
+    const run = lead.nextElementSibling as HTMLElement;
+    const rowGap = spacingPx(run, "gap-y");
+    for (const link of within(run).getAllByRole("link")) {
+      // Each target reaches its give-back above and below its line, and the
+      // next row's reaches as far up. With the rows closer than twice that, a
+      // wrapped row's targets cover the names above them, and the later one
+      // in the DOM wins the tap: a diver's record opens for the name above.
+      expect(rowGap, link.textContent ?? "").toBeGreaterThanOrEqual(2 * spacingPx(link, "-my"));
+    }
+  });
+
+  it("hands back only the height its own padding adds, so a name that wraps keeps its lines (K-146)", () => {
+    const byItem = renderPrep(everyPanelPrep()).container;
+    const neverAsked = within(
+      byText(byItem, t("tripPrep.missingSizesNobodyAskedLead")).nextElementSibling as HTMLElement,
+    ).getAllByRole("link");
+    const support = diverLinks(byItem).filter((link) =>
+      link.getAttribute("href")?.endsWith("#support"),
+    );
+    const byDiver = renderPrep(everyPanelPrep(), { grouping: "diver" }).container;
+    const carmen = diverLinks(byDiver).filter((link) => link.textContent === "Carmen Ruiz");
+    expect(carmen).toHaveLength(2);
+    for (const link of [...neverAsked, ...support, ...carmen]) {
+      // A 44px floor with a fixed give-back is right only for a name on one
+      // line: wrapped, the box outgrows the floor, the margin still hands back
+      // the same, and the second line hangs over the dive-recency note under
+      // it. Padding the box by what the margin hands back keeps the margin box
+      // exactly the name's own lines, however many there are.
+      const giveBack = spacingPx(link, "-my");
+      expect(giveBack, link.textContent ?? "").toBeGreaterThan(0);
+      expect(spacingPx(link, "py"), link.textContent ?? "").toBe(giveBack);
+    }
+  });
+
+  it("gives the phone card's name a 44px target on its 24px line, and the table's row the RowLink (K-146)", () => {
+    const { container } = renderPrep(everyPanelPrep(), { grouping: "diver" });
+    const carmen = diverLinks(container).filter((link) => link.textContent === "Carmen Ruiz");
+    expect(carmen).toHaveLength(2);
+    const [card, row] = carmen;
+    expect(tokens(card)).toEqual(expect.arrayContaining(["inline-flex", "min-h-11", "-my-2.5"]));
+    // The table's first cell is the row's one way in: `RowLink`'s overlay,
+    // positioned against `Tr`'s `relative`, never against the page.
+    expect(tokens(row)).toEqual(expect.arrayContaining(["min-h-11", "after:absolute", "-my-3"]));
+    expect(row.closest("tr")).toHaveClass("relative");
+  });
+
+  it("starts both values of a kit card at one x, however long the names run (K-147)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const cards = container.querySelectorAll("ul.sm\\:hidden > li dl");
+    expect(cards.length).toBeGreaterThan(0);
+    for (const dl of cards) {
+      expect(tokens(dl)).toEqual(
+        expect.arrayContaining(["grid", "grid-cols-[auto_minmax(0,1fr)]", "gap-x-2"]),
+      );
+      expect(dl.children).toHaveLength(2);
+      for (const pair of dl.children) {
+        expect(tokens(pair)).toEqual(
+          expect.arrayContaining(["col-span-2", "grid", "grid-cols-subgrid"]),
+        );
+      }
+    }
+  });
+
+  it("pins the quantity column narrow in both tables, so the names get the room (K-148)", () => {
+    for (const grouping of ["item", "diver"] as const) {
+      const { container, unmount } = renderPrep(everyPanelPrep(), { grouping });
+      const qty = within(container)
+        .getAllByRole("columnheader")
+        .filter((th) => th.textContent === t("tripPrep.qtyColumn"));
+      expect(qty, grouping).toHaveLength(1);
+      expect(qty[0], grouping).toHaveClass("w-32");
+      unmount();
+    }
+    // The by-item table's short Item column is pinned too, so Size and For
+    // share what is left: with three unnamed columns splitting it, For held
+    // two names a line at 1280 and the fifth fell alone onto a third.
+    const { container } = renderPrep(everyPanelPrep());
+    const item = within(container).getByRole("columnheader", { name: t("tripPrep.itemColumn") });
+    expect(item).toHaveClass("w-40");
+    for (const unpinned of [t("tripPrep.sizeColumn"), t("tripPrep.forColumn")]) {
+      const header = within(container).getByRole("columnheader", { name: unpinned });
+      expect(
+        tokens(header).filter((token) => /^w-/.test(token)),
+        unpinned,
+      ).toEqual([]);
+    }
+  });
+
+  it("hangs a kit piece's wrapped detail under the detail, not under the piece (K-148)", () => {
+    const { container } = renderPrep(everyPanelPrep(), { grouping: "diver" });
+    const row = diverLinks(container)
+      .filter((link) => link.textContent === "Carmen Ruiz")[1]
+      .closest("tr") as HTMLElement;
+    const pieces = row.querySelectorAll("td:nth-child(2) li");
+    expect(pieces.length).toBeGreaterThan(1);
+    for (const piece of pieces) {
+      expect(piece).toHaveClass("flex");
+      // The piece and its detail are two boxes; no bare text between them.
+      for (const node of piece.childNodes) expect(node.nodeType).toBe(Node.ELEMENT_NODE);
+    }
+  });
+
+  it("sets each card's count on its title's baseline (K-149)", () => {
+    for (const grouping of ["item", "diver"] as const) {
+      const { container, unmount } = renderPrep(everyPanelPrep(), { grouping });
+      const counts = [...container.querySelectorAll("ul.sm\\:hidden > li p")].filter((p) =>
+        tokens(p).includes(FIGURE_CLASS.split(" ")[0]),
+      );
+      expect(counts.length, grouping).toBeGreaterThan(0);
+      for (const count of counts) {
+        expect(tokens(count.parentElement), grouping).toContain("items-baseline");
+        expect(tokens(count.parentElement), grouping).not.toContain("items-start");
+      }
+      unmount();
+    }
+  });
+
+  it("titles every section at the one size a card's own title has (K-151)", () => {
+    const { container } = renderPrep(everyPanelPrep(), { notice: "gear-assigned" });
+    const headings = container.querySelectorAll("h2");
+    // Tanks, nitrox, sizes, staff fit, support, pickups, kit, assignments.
+    expect(headings).toHaveLength(8);
+    for (const heading of headings) {
+      expect(tokens(heading), heading.textContent ?? "").toEqual(
+        expect.arrayContaining(LEAD_TITLE_CLASS.split(" ")),
+      );
+      expect(tokens(heading), heading.textContent ?? "").not.toContain("text-lg");
+    }
+  });
+
+  it("hangs a bullet's wrapped line under its words, not under the bullet (K-154)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const bullets = within(container).getAllByText("•", { exact: true });
+    // The nitrox blocker, the partial fit and the hands-on fit.
+    expect(bullets).toHaveLength(3);
+    for (const bullet of bullets) {
+      expect(bullet.tagName).toBe("SPAN");
+      expect(bullet).toHaveAttribute("aria-hidden", "true");
+      const item = bullet.parentElement as HTMLElement;
+      expect(item.tagName).toBe("LI");
+      expect(tokens(item)).toEqual(expect.arrayContaining(["flex", "gap-1.5"]));
+      // The bullet and the words are the item's only two boxes.
+      expect(item.childNodes).toHaveLength(2);
+      expect(item.lastChild?.nodeName).toBe("SPAN");
+    }
+  });
+
+  it("opens a tone panel's list at the gap a card opens its body (K-173)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    for (const key of ["tripPrep.nitroxBlockedHeading", "tripPrep.staffFitHeading"] as const) {
+      const panel = byText(container, t(key)).closest("section") as HTMLElement;
+      const list = panel.querySelector("ul");
+      expect(tokens(list), key).toContain("mt-4");
+      expect(tokens(list), key).not.toContain("mt-2");
+    }
+  });
+
+  it("holds no empty list open above the never-asked names (K-184)", () => {
+    // Only divers nobody asked: the partial list has nothing to say.
+    const prep = everyPanelPrep();
+    prep.checklist = buildDivePrepChecklist({
+      divers: [diver(4, "Theo Lindqvist"), diver(6, "Ana Costa")],
+      plannedDives: 2,
+      now: new Date("2026-09-26T12:00:00Z"),
+    });
+    const { container } = renderPrep(prep);
+    const lead = byText(container, t("tripPrep.missingSizesNobodyAskedLead"));
+    const card = lead.closest("section") as HTMLElement;
+    for (const list of card.querySelectorAll("ul")) {
+      expect(list.children.length).toBeGreaterThan(0);
+    }
+    // The never-asked block is the body's first child, with no margin of its own.
+    const block = lead.parentElement as HTMLElement;
+    expect(block.previousElementSibling).toBeNull();
+    expect(tokens(block).filter((token) => /^mt-/.test(token))).toEqual([]);
+  });
+
+  it("keeps the partial list and the never-asked block one gap apart when both are there (K-184)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const block = byText(container, t("tripPrep.missingSizesNobodyAskedLead"))
+      .parentElement as HTMLElement;
+    expect(block.previousElementSibling?.tagName).toBe("UL");
+    expect(tokens(block.parentElement)).toEqual(
+      expect.arrayContaining(["flex", "flex-col", "gap-3"]),
+    );
+    expect(tokens(block).filter((token) => /^mt-/.test(token))).toEqual([]);
+  });
+
+  it("keeps a diver's header row to their name's line when a ticket link sits beside it (K-280)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const ticket = within(container).getByRole("link", { name: t("gear.prep.ticketDoor") });
+    // (44 − 24) / 2 handed back, and the ring drawn inside the clipping card.
+    expect(tokens(ticket)).toEqual(
+      expect.arrayContaining(["-my-2.5", "focus-visible:focus-ring-inset"]),
+    );
+    // `flush` asked of `buttonClass`, not spelled as its tokens (K-83).
+    expect(rendersFlush(ticket, "ghost", "sm")).toBe(true);
+  });
+
+  it("sets the dive-recency mark on the note's first line, not its middle (K-281)", () => {
+    const { container } = renderPrep(everyPanelPrep(), { grouping: "diver" });
+    const words = diveRecencyText(t, "over_five_years") ?? "";
+    const notes = [...container.querySelectorAll("span")].filter(
+      (span) => span.textContent === words && span.children.length > 0,
+    );
+    expect(notes.length).toBeGreaterThan(0);
+    for (const note of notes) {
+      expect(tokens(note)).toEqual(expect.arrayContaining(["flex", "items-start", "gap-2"]));
+      expect(tokens(note)).not.toContain("items-center");
+    }
+  });
+
+  it("breaks a shared rental line between two names, and a name only where it cannot fit whole (K-353)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    // Carmen and Grace share the BCD L line: drawn as a phone card's For list
+    // and as the table's For cell.
+    const shared = [...container.querySelectorAll("dd, td")].filter(
+      (cell) => cell.textContent === "Carmen Ruiz, Grace Mensah",
+    );
+    expect(shared).toHaveLength(2);
+    for (const cell of shared) {
+      const names = [...cell.children];
+      expect(names.map((name) => name.textContent)).toEqual(["Carmen Ruiz,", "Grace Mensah"]);
+      for (const name of names) {
+        // Its own box: it moves to the next line whole, and wraps inside
+        // itself only when it is wider than the column. Unbreakable, a name
+        // wider than a clipping cell was cut off without a mark.
+        expect(name.tagName).toBe("SPAN");
+        expect(tokens(name)).toContain("inline-block");
+        expect(tokens(name)).not.toContain("whitespace-nowrap");
+      }
+      // The comma travels with the name before it; the only break between two
+      // names is the bare space.
+      const between = [...cell.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE);
+      expect(between.map((node) => node.textContent)).toEqual([" "]);
+    }
+  });
+
+  it("sets a diver's support facts apart from each other, so a wrapped fact reads as one (K-366)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const link = diverLinks(container).find((a) => a.getAttribute("href")?.endsWith("#support"));
+    const facts = link?.parentElement?.querySelector("ul");
+    expect(facts?.children.length).toBeGreaterThan(1);
+    expect(tokens(facts)).toContain("gap-1");
+  });
+
+  it("floors the by-item table at a width a 768px tablet holds without scrolling (K-506)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const byItem = [...container.querySelectorAll("table")].find((table) =>
+      within(table).queryByRole("columnheader", { name: t("tripPrep.itemColumn") }),
+    );
+    expect(byItem).toHaveClass("min-w-[40rem]");
+    expect(byItem).not.toHaveClass("min-w-[45rem]");
+  });
+
+  it("heads the hotel pickups table with the one row THead draws", () => {
+    // `THead` wraps its cells in its own `<tr>`; a second one inside it makes
+    // a row in a row, which a browser draws as a table squeezed into the
+    // first column, under a header row that has lost its column voice.
+    const { container } = renderPrep(everyPanelPrep());
+    const hotel = within(container).getByRole("columnheader", {
+      name: t("tripPrep.pickupHotelColumn"),
+    });
+    const head = hotel.closest("thead") as HTMLElement;
+    expect(head.querySelectorAll("tr")).toHaveLength(1);
+    expect(hotel.parentElement?.parentElement).toBe(head);
   });
 });

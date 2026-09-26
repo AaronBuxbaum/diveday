@@ -93,6 +93,21 @@ describe("DiverHeader edit disclosure", () => {
   });
 
   /**
+   * **The open card reaches the column's right edge** (pixel-craft class 3).
+   * With the disclosure `contents`, the box Chrome wraps its body in,
+   * `::details-content`, is what joins the flex row, and it shrink-wrapped
+   * the form: the card stopped at its longest hint, 167px short of the edge
+   * every other card and rule on the record reaches at 1280. The body's box
+   * takes the whole line, so the form's `w-full` is the row's width.
+   */
+  it("gives the open form the action row's whole width", () => {
+    const { container } = renderHeader({ editOpen: true });
+    const details = container.querySelector("details");
+    expect(details).toHaveClass("open:contents", "open:details-content:basis-full");
+    expect(details?.querySelector("form")).toHaveClass("w-full");
+  });
+
+  /**
    * **The masthead's action row is one size, `md`.** "Book a departure"
    * arrives in the `book` slot at the default size and "Edit details" was
    * `sm`: a 48px, 16px primary beside a 44px, 14px secondary, top-aligned, so

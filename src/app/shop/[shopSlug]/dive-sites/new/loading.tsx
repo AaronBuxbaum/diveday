@@ -10,7 +10,7 @@ import { SITE_FORM_RAIL_STUBS } from "../_components/site-form-sections";
  * `src/app/shop/[shopSlug]/dive-sites/loading.tsx`, the site *library*, at
  * `max-w-6xl` — so a staffer tapping "Add a dive site" watched a table
  * skeleton and landed on a narrow form. It tracks the page's own shape: the
- * back link, the header, then the two columns the long-form editor pattern put
+ * header with its back link as its eyebrow, then the two columns the long-form editor pattern put
  * there — the section rail from `lg` up, the jump row below it, and unboxed
  * sections on hairlines rather than the bordered fieldsets that used to stand
  * here (ADR 20260827-the-shops-shelves).
@@ -19,15 +19,10 @@ export default function NewDiveSiteLoading() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
       <div className="animate-pulse">
-        {/* The back link above the header. */}
-        <div className="h-5 w-36 rounded bg-surface-sunken" />
-        <div className="mt-4">
-          <ShopPageHeaderSkeleton
-            titleWidth="w-56"
-            description
-            descriptionWidth="w-80 max-w-full"
-          />
-        </div>
+        {/* The header's eyebrow bar is the back link: the page draws one,
+            as the header's own eyebrow. A second, standalone bar above it
+            stood every bar below 36px lower than what replaced it (K-423). */}
+        <ShopPageHeaderSkeleton titleWidth="w-56" description descriptionWidth="w-80 max-w-full" />
 
         <div className="mt-8 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
           {/* The jump row on a phone, the rail on a desktop: the rail's own

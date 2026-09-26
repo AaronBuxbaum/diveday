@@ -2,11 +2,12 @@ import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { INSET_NOTE_BOX, SectionCard } from "@/components/ui/card";
 import { controlClassFor, Field } from "@/components/ui/form";
 import { getAccountSecurity, getTotpSecret, listAccountSessions } from "@/db/account-security";
 import { userAccounts } from "@/db/schema";
@@ -16,7 +17,8 @@ import { formatDateTimeTz } from "@/lib/format";
 import { openSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { isStepUpPurpose, type StepUpPurpose, safeStepUpReturnPath } from "@/lib/security-step-up";
 import { requireShopSurface } from "@/lib/session";
-import { type NoticeTone, noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { settingsPaneClass } from "../_components/settings-pane";
 import {
   beginTotpEnrollmentAction,
   disableTotpAction,
@@ -109,7 +111,7 @@ export default async function SecurityPage({
   });
   const isEnabled = Boolean(security?.totpEnabledAt);
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
@@ -117,49 +119,46 @@ export default async function SecurityPage({
         eyebrowHref={shopPath(shopSlug, "settings")}
         title={t("settings.security.title")}
       />
-      {notice ? (
-        <div className="mt-6">
-          <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)}>
-            {notice.text}
-          </ShopNotice>
-        </div>
-      ) : null}
-      {purpose && returnTo && isEnabled ? (
-        <SectionCard
-          className="mt-6"
-          title={t("settings.security.stepUpHeading")}
-          description={t("settings.security.stepUpDescription")}
-        >
-          <form
-            action={verifyStepUpAction.bind(null, shopSlug)}
-            className="flex flex-wrap items-end gap-3"
+      {notice ? <StaffNoticeBanner tone={notice.tone}>{notice.text}</StaffNoticeBanner> : null}
+      {/* Section rhythm belongs to the page, not to each section: one
+          `space-y-10` here, and no `mt-*` on any card
+          (docs/design/forms-and-controls.md). The cards stood 24px apart,
+          and the step-up card and the notice hung `mt-6` of their own (K-521). */}
+      <div className="space-y-10">
+        {purpose && returnTo && isEnabled ? (
+          <SectionCard
+            title={t("settings.security.stepUpHeading")}
+            description={t("settings.security.stepUpDescription")}
           >
-            <input type="hidden" name="purpose" value={purpose} />
-            <input type="hidden" name="returnTo" value={returnTo} />
-            <Field
-              label={t("settings.security.stepUpCodeLabel")}
-              hint={t("settings.security.stepUpCodeHint")}
+            <form
+              action={verifyStepUpAction.bind(null, shopSlug)}
+              className="flex flex-wrap items-end gap-3"
             >
-              <input
-                name="code"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9A-Za-z-]{6,32}"
-                maxLength={32}
-                required
-                className={controlClassFor("md")}
-              />
-            </Field>
-            <SubmitButton
-              pendingLabel={t("settings.security.stepUpVerifying")}
-              className={buttonClass()}
-            >
-              {t("settings.security.stepUpVerify")}
-            </SubmitButton>
-          </form>
-        </SectionCard>
-      ) : null}
-      <div className="mt-8 space-y-6">
+              <input type="hidden" name="purpose" value={purpose} />
+              <input type="hidden" name="returnTo" value={returnTo} />
+              <Field
+                label={t("settings.security.stepUpCodeLabel")}
+                hint={t("settings.security.stepUpCodeHint")}
+              >
+                <input
+                  name="code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9A-Za-z-]{6,32}"
+                  maxLength={32}
+                  required
+                  className={controlClassFor("md")}
+                />
+              </Field>
+              <SubmitButton
+                pendingLabel={t("settings.security.stepUpVerifying")}
+                className={buttonClass()}
+              >
+                {t("settings.security.stepUpVerify")}
+              </SubmitButton>
+            </form>
+          </SectionCard>
+        ) : null}
         <SectionCard
           title={t("settings.security.twoFactorHeading")}
           description={t("settings.security.twoFactorDescription")}
@@ -203,6 +202,8 @@ export default async function SecurityPage({
             )}
           </div>
           {secret && !isEnabled ? (
+            // Not an inset note: a step a person works inside (the secret, a
+            // code field and Enable), so it takes a group's 16px inset.
             <div className="mt-4 rounded-lg bg-surface-sunken p-4 text-sm">
               <p>{t("settings.security.secretLabel")}</p>
               <code className="mt-1 block break-all font-mono">{secret}</code>
@@ -253,18 +254,28 @@ export default async function SecurityPage({
         >
           <ul className="space-y-2">
             {sessions.map((item) => (
+              // One line, Revoke at its end: the device line takes the room
+              // Revoke leaves and wraps in it, breaking a long unspaced token
+              // (an IPv6 address) rather than running under the button. With
+              // `flex-wrap` and no basis to give up, a real user agent pushed
+              // Revoke onto a second line of its own, the box 12px above the
+              // words and 25px below them (K-448).
               <li
                 key={item.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
+                className={`flex items-center gap-3 ${INSET_NOTE_BOX} bg-surface-sunken`}
               >
-                <span>
-                  {item.userAgent ?? t("settings.security.unknownDevice")} ·{" "}
-                  {item.ipAddress ?? t("settings.security.unknownIp")} ·{" "}
+                {/* Each dot glued to the part before it, so a wrapped line
+                    never opens on one (the Print register's K-590). */}
+                <span className="min-w-0 flex-1 break-words">
+                  {item.userAgent ?? t("settings.security.unknownDevice")}
+                  {"\u00a0· "}
+                  {item.ipAddress ?? t("settings.security.unknownIp")}
+                  {"\u00a0· "}
                   {t("settings.security.lastSeen", {
                     date: formatDateTimeTz(item.updatedAt, locale, shop.timezone),
                   })}
                 </span>
-                <form action={revokeSessionAction.bind(null, shopSlug)}>
+                <form action={revokeSessionAction.bind(null, shopSlug)} className="shrink-0">
                   <input type="hidden" name="sessionId" value={item.id} />
                   <SubmitButton
                     pendingLabel={t("settings.security.revoking")}

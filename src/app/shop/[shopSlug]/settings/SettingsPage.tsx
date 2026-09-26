@@ -2,17 +2,20 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Fragment } from "react";
 import { FlashParams } from "@/components/FlashParams";
+import { ImageFileInput } from "@/components/ImageFileInput";
+import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneOptions";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { FactLine } from "@/components/ui/FactLine";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import {
+  ChoiceFieldset,
   ChoicePill,
   ChoiceRow,
-  choiceClass,
   controlClass,
   Field,
   FieldActions,
@@ -85,6 +88,7 @@ import { publicShopRegisterPath } from "@/lib/public-routes";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import {
   type CuratedTimeZone,
   type CuratedTimezoneGroupKey,
@@ -94,6 +98,7 @@ import { isTrialExpired, trialDaysRemaining, trialEndsAt } from "@/lib/trial";
 import { BrandColorField } from "./_components/BrandColorField";
 import { BrandPreview } from "./_components/BrandPreview";
 import { SettingsDoorRow, SettingsRow } from "./_components/SettingsRows";
+import { settingsPaneClass } from "./_components/settings-pane";
 import { AddressSearch } from "./AddressSearch";
 import {
   dischargeProcessorErasureAction,
@@ -569,6 +574,14 @@ export default async function SettingsPage({
   // interface). "Not set" is a value here, not a status: on a settings row the
   // absence of an answer is exactly the fact the reader came to check.
   const notSet = t("settings.main.summary.notSet");
+  // The one exception the Online payments row states at rest, if it has one.
+  const stripeWarning = !account
+    ? t("settings.main.stripe.summaryNotConnected")
+    : account.disconnectedAt
+      ? t("settings.main.stripe.summaryDisconnected")
+      : ready
+        ? null
+        : t("settings.main.stripe.notReadyBadge");
   // How many of the three the shop has written. The words themselves are too
   // long to sit on a closed row, and which one is missing is a question the
   // open row answers better than a summary line could.
@@ -578,7 +591,12 @@ export default async function SettingsPage({
   const zoneId = shop.timezone || DEFAULT_TIMEZONE;
   const timezoneValue =
     zoneId in CURATED_TIMEZONE_KEYS ? t(CURATED_TIMEZONE_KEYS[zoneId as CuratedTimeZone]) : zoneId;
-  const contactText = [shop.contactEmail, shop.contactPhone].filter(Boolean).join(" · ") || notSet;
+  // The rows below that state several facts do it through `FactLine`, so a
+  // line wraps only between facts: as one `.join(" · ")` string the contact
+  // row broke "+1" / "305 555 0142" and Diving options "6:1 divers" / "per
+  // divemaster" at 390 (K-235). Only the shop's own free text wraps inside
+  // itself (a tagline, a fee's name).
+  const contactText = <FactLine facts={[shop.contactEmail, shop.contactPhone]} empty={notSet} />;
   // An address the shop has not yet confirmed is the one exceptional state on
   // this row: until the link sent there is opened, diver replies are not
   // routed to it (issue #1288). Confirmed is the quiet default and says nothing.
@@ -594,17 +612,19 @@ export default async function SettingsPage({
   // when it had to be darkened so the owner learns here, not on the storefront.
   const brandTheme = shop.brandColor ? deriveBrandTheme(shop.brandColor) : null;
   const brandNightTheme = shop.brandColor ? deriveDarkBrandTheme(shop.brandColor) : null;
-  const profileValue =
-    [
-      shop.tagline,
-      shop.description ? t("settings.main.profile.descriptionSet") : null,
-      shop.logoUrl ? t("settings.main.profile.logoSet") : null,
-      shop.brandBadges.length > 0
-        ? t("settings.main.profile.badgesSet", { count: shop.brandBadges.length })
-        : null,
-    ]
-      .filter(Boolean)
-      .join(" · ") || notSet;
+  const profileValue = (
+    <FactLine
+      facts={[
+        shop.tagline ? { value: shop.tagline, wraps: true } : null,
+        shop.description ? t("settings.main.profile.descriptionSet") : null,
+        shop.logoUrl ? t("settings.main.profile.logoSet") : null,
+        shop.brandBadges.length > 0
+          ? t("settings.main.profile.badgesSet", { count: shop.brandBadges.length })
+          : null,
+      ]}
+      empty={notSet}
+    />
+  );
   const addressValue =
     [shop.addressStreet, shop.addressLocality].filter(Boolean).join(", ") || notSet;
   const reviewLinkValue = (() => {
@@ -632,24 +652,32 @@ export default async function SettingsPage({
     single: shop.flySafeHoursSingle,
     repetitive: shop.flySafeHoursRepetitive,
   });
-  const unitsValue = [
-    t(shop.depthUnit === "feet" ? "settings.main.units.feet" : "settings.main.units.meters"),
-    t(
-      shop.temperatureUnit === "fahrenheit"
-        ? "settings.main.units.fahrenheit"
-        : "settings.main.units.celsius",
-    ),
-    shopCurrency.toUpperCase(),
-  ].join(" · ");
-  const divingOptionsValue = [
-    shop.hasBoatDiving ? t("boats.boatEnabled") : t("boats.boatDisabled"),
-    shop.hasShoreDiving ? t("boats.shoreEnabled") : t("boats.shoreDisabled"),
-    shop.hasPoolDiving ? t("boats.poolEnabled") : t("boats.poolDisabled"),
-    // The row's other setting, in the notation the rest of the product shows it
-    // in. A hub row states what it holds, and a target nobody can see without
-    // opening the row is a target nobody remembers they set.
-    t("boats.diversPerDivemasterValue", { ratio: shop.diversPerDivemaster }),
-  ].join(" · ");
+  const unitsValue = (
+    <FactLine
+      facts={[
+        t(shop.depthUnit === "feet" ? "settings.main.units.feet" : "settings.main.units.meters"),
+        t(
+          shop.temperatureUnit === "fahrenheit"
+            ? "settings.main.units.fahrenheit"
+            : "settings.main.units.celsius",
+        ),
+        shopCurrency.toUpperCase(),
+      ]}
+    />
+  );
+  const divingOptionsValue = (
+    <FactLine
+      facts={[
+        shop.hasBoatDiving ? t("boats.boatEnabled") : t("boats.boatDisabled"),
+        shop.hasShoreDiving ? t("boats.shoreEnabled") : t("boats.shoreDisabled"),
+        shop.hasPoolDiving ? t("boats.poolEnabled") : t("boats.poolDisabled"),
+        // The row's other setting, in the notation the rest of the product shows it
+        // in. A hub row states what it holds, and a target nobody can see without
+        // opening the row is a target nobody remembers they set.
+        t("boats.diversPerDivemasterValue", { ratio: shop.diversPerDivemaster }),
+      ]}
+    />
+  );
   // A count, not the numbers themselves: this row is read on the hub and the
   // numbers belong on the boat, not on a settings list somebody is scrolling.
   const emergencyValue = hasEmergencyReference(shop.emergencyReference)
@@ -665,13 +693,30 @@ export default async function SettingsPage({
   const taxValue = t(
     shop.taxEnabled ? "settings.main.tax.enabledValue" : "settings.main.tax.disabledValue",
   );
+  // The logo's and the cover photo's pickers, in the words every photo
+  // picker in the app uses.
+  const imageInputCopy = {
+    choose: t("shared.imageInput.choose"),
+    chooseAnother: t("shared.imageInput.chooseAnother"),
+    wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+    tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+  };
   const passThroughFee = parsePassThroughFee(shop.passThroughFee);
-  const passThroughValue = passThroughFee
-    ? `${passThroughFee.name} · ${formatMoneyScanned(passThroughFee.amountCents, shopCurrency, locale)} / diver`
-    : notSet;
+  const passThroughValue = passThroughFee ? (
+    <FactLine
+      facts={[
+        { value: passThroughFee.name, wraps: true },
+        t("settings.main.passThrough.value", {
+          price: formatMoneyScanned(passThroughFee.amountCents, shopCurrency, locale),
+        }),
+      ]}
+    />
+  ) : (
+    notSet
+  );
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <FlashParams params={["notice", "saved"]} />
       <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("settings.main.title")} />
 
@@ -922,37 +967,28 @@ export default async function SettingsPage({
                     className={textareaClassFor(3)}
                   />
                 </Field>
+                {/* `htmlFor` the picker: wrapped in the caption's label, with a
+                    logo on file "Logo" labelled the remove box before it, and
+                    a click on the caption ticked it (K-13 review). */}
                 <Field
                   label={t("settings.main.profile.logo")}
                   hint={t("settings.main.profile.logoHint")}
+                  htmlFor="settings-logo-file"
                 >
-                  <div className="flex flex-col gap-3">
-                    {shop.logoUrl ? (
-                      <div className="flex items-center gap-4">
-                        {/* biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo */}
-                        <img
-                          src={shop.logoUrl}
-                          alt=""
-                          className="size-16 rounded-inset border border-border bg-surface object-cover"
-                        />
-                        <label className="flex items-center gap-2 text-sm text-muted hover:text-foreground cursor-pointer">
-                          <input
-                            type="checkbox"
-                            name="removeLogo"
-                            value="true"
-                            className={choiceClass}
-                          />
-                          <span>{t("settings.main.profile.removeLogo")}</span>
-                        </label>
-                      </div>
-                    ) : null}
-                    <input
-                      name="logoFile"
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="text-sm file:me-3 file:rounded-lg file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:cursor-pointer hover:file:bg-surface-hover"
-                    />
-                  </div>
+                  {/* The stored logo is taken back off the way every stored
+                      photo is (K-247 follow-up), in the square it is drawn as
+                      on the storefront. */}
+                  {shop.logoUrl ? (
+                    <div className="mb-3">
+                      <RemovablePhoto
+                        url={shop.logoUrl}
+                        name="removeLogo"
+                        label={t("settings.main.profile.removeLogo")}
+                        shape="logo"
+                      />
+                    </div>
+                  ) : null}
+                  <ImageFileInput id="settings-logo-file" name="logoFile" copy={imageInputCopy} />
                 </Field>
                 <FieldGrid columns={2}>
                   <Field
@@ -1000,34 +1036,25 @@ export default async function SettingsPage({
                 <Field
                   label={t("settings.main.profile.heroPhoto")}
                   hint={t("settings.main.profile.heroHint")}
+                  htmlFor="settings-cover-photo-file"
                 >
-                  <div className="flex flex-col gap-3">
-                    {shop.brandHeroImageUrl ? (
-                      <div className="flex items-center gap-4">
-                        {/* biome-ignore lint/performance/noImgElement: dynamic user-uploaded photo */}
-                        <img
-                          src={shop.brandHeroImageUrl}
-                          alt={shop.brandHeroImageAlt ?? ""}
-                          className="h-16 w-28 rounded-inset border border-border bg-surface object-cover"
-                        />
-                        <label className="flex items-center gap-2 text-sm text-muted hover:text-foreground cursor-pointer">
-                          <input
-                            type="checkbox"
-                            name="removeHero"
-                            value="true"
-                            className={choiceClass}
-                          />
-                          <span>{t("settings.main.profile.removeHero")}</span>
-                        </label>
-                      </div>
-                    ) : null}
-                    <input
-                      name="brandHeroFile"
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="text-sm file:me-3 file:rounded-lg file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:cursor-pointer hover:file:bg-surface-hover"
-                    />
-                  </div>
+                  {/* One cell of the gallery grid, as the course hero is: a
+                      full-width field holding one photo draws it at a
+                      gallery cell's size (RemovablePhoto's grid doc). */}
+                  {shop.brandHeroImageUrl ? (
+                    <div className={`mb-3 ${removablePhotoGridClass}`}>
+                      <RemovablePhoto
+                        url={shop.brandHeroImageUrl}
+                        name="removeHero"
+                        label={t("settings.main.profile.removeHero")}
+                      />
+                    </div>
+                  ) : null}
+                  <ImageFileInput
+                    id="settings-cover-photo-file"
+                    name="brandHeroFile"
+                    copy={imageInputCopy}
+                  />
                 </Field>
                 <FieldGrid columns={2}>
                   <Field label={t("settings.main.profile.heroAlt")}>
@@ -1052,25 +1079,27 @@ export default async function SettingsPage({
                     />
                   </Field>
                 </FieldGrid>
-                <Field
-                  label={t("settings.main.profile.badges")}
+                {/* A group of choices, so a legend over them: as a `Field` the
+                    caption's label wrapped every badge and named the first
+                    (K-13 review). */}
+                <ChoiceFieldset
+                  legend={t("settings.main.profile.badges")}
                   hint={t("settings.main.profile.badgesHint")}
+                  bodyClassName="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
                 >
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                    {BRAND_BADGE_CODES.map((code) => (
-                      <ChoiceRow
-                        key={code}
-                        name="badge"
-                        type="checkbox"
-                        value={code}
-                        defaultChecked={shop.brandBadges.includes(code)}
-                        className="text-sm"
-                      >
-                        {t(`settings.main.profile.badgeLabels.${code}`)}
-                      </ChoiceRow>
-                    ))}
-                  </div>
-                </Field>
+                  {BRAND_BADGE_CODES.map((code) => (
+                    <ChoiceRow
+                      key={code}
+                      name="badge"
+                      type="checkbox"
+                      value={code}
+                      defaultChecked={shop.brandBadges.includes(code)}
+                      className="text-sm"
+                    >
+                      {t(`settings.main.profile.badgeLabels.${code}`)}
+                    </ChoiceRow>
+                  ))}
+                </ChoiceFieldset>
                 <FieldActions>
                   <SubmitButton
                     pendingLabel={t("settings.main.profile.submitting")}
@@ -1412,8 +1441,12 @@ export default async function SettingsPage({
                 is also why it stops at the last dive rather than inventing a
                 return, since each trip publishes its own. Two dives, because
                 that is what most of this catalogue is; a departure's own
-                planned count is what the diver's page lays out. */}
-              <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted">
+                planned count is what the diver's page lays out.
+
+                One beat per line on a phone and the strip from `sm` up: a
+                greedy wrap at 390 put two beats on the third of six lines
+                and one on every other (K-585). */}
+              <dl className="mt-5 grid gap-y-1 text-sm text-muted sm:flex sm:flex-wrap sm:gap-x-6">
                 {dockDayOffsets(shop).map(({ step, number, minutesFromDeparture }) => (
                   <div key={`${step}-${number ?? 0}`} className="flex items-baseline gap-2">
                     <dt>{t(DOCK_DAY_STEP_KEYS[step], { number: number ?? 1 })}</dt>
@@ -1764,22 +1797,31 @@ export default async function SettingsPage({
             <SettingsRow
               heading={t("settings.main.emergency.heading")}
               value={emergencyValue}
+              // The row's description, where every row's first body line sits:
+              // as a `<p>` inside the `mt-4` form it sat 16px lower (K-437).
+              description={t("settings.main.emergency.intro")}
               sectionId="emergency"
               activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="emergency" active={activeSection} />
               <form action={saveEmergencyReferenceAction} className="mt-4 flex flex-col gap-4">
-                <p className="text-sm text-muted">{t("settings.main.emergency.intro")}</p>
                 <FieldGrid columns={2}>
                   {EMERGENCY_LINE_SLOTS.map((slot, index) => (
                     <Fragment key={slot}>
-                      <Field label={t("settings.main.emergency.lineLabel", { n: index + 1 })}>
+                      {/* The examples are the first line's description, which
+                          wraps: as every label box's placeholder they were cut
+                          mid-word in a half-width box (K-583). */}
+                      <Field
+                        label={t("settings.main.emergency.lineLabel", { n: index + 1 })}
+                        description={
+                          index === 0 ? t("settings.main.emergency.lineExamples") : undefined
+                        }
+                      >
                         <input
                           name={`emergencyLabel-${index}`}
                           type="text"
                           maxLength={80}
                           defaultValue={shop.emergencyReference.lines[index]?.label ?? ""}
-                          placeholder={t("settings.main.emergency.linePlaceholder")}
                           className={controlClass}
                         />
                       </Field>
@@ -1822,14 +1864,16 @@ export default async function SettingsPage({
                     className={textareaClassFor(4)}
                   />
                 </Field>
-                <div>
+                {/* The hub's one Save: `md` in `FieldActions`. It was `sm` in
+                    a bare div, 44px beside every other row's 48px (K-308). */}
+                <FieldActions>
                   <SubmitButton
                     pendingLabel={t("settings.main.emergency.saving")}
-                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                    className={buttonClass({ variant: "secondary" })}
                   >
                     {t("settings.main.emergency.submit")}
                   </SubmitButton>
-                </div>
+                </FieldActions>
               </form>
             </SettingsRow>
             {shop.hasBoatDiving ? (
@@ -2089,18 +2133,17 @@ export default async function SettingsPage({
                 <SettingsRow
                   heading={t("settings.main.stripe.rowHeading")}
                   value={
-                    !account ? (
-                      <Badge tone="warning">{t("settings.main.stripe.summaryNotConnected")}</Badge>
-                    ) : account.disconnectedAt ? (
-                      <Badge tone="warning">{t("settings.main.stripe.summaryDisconnected")}</Badge>
-                    ) : ready ? (
+                    stripeWarning ? (
+                      <Badge tone="warning">{stripeWarning}</Badge>
+                    ) : account ? (
                       t("settings.main.stripe.accountEnding", {
                         last6: account.stripeAccountId.slice(-6),
                       })
-                    ) : (
-                      <Badge tone="warning">{t("settings.main.stripe.notReadyBadge")}</Badge>
-                    )
+                    ) : null
                   }
+                  // A warning pill keeps to the heading's line on a phone; the
+                  // account number is a sentence and stacks like any other value.
+                  valuePlacement={stripeWarning ? "inline" : "stack"}
                   sectionId="stripe"
                   activeSection={activeSection}
                 >
@@ -2229,7 +2272,11 @@ export default async function SettingsPage({
                   })}
                 </p>
                 <p className="mt-1 text-sm">{t("settings.main.dataJobs.mediaDeletions.detail")}</p>
-                <ul className="mt-3 space-y-2 text-sm">
+                {/* Each item is its words as one line of facts, then its
+                    actions on a line of their own, so no line opens with "·"
+                    and every item's buttons start at one x (K-341). An item's
+                    two lines sit 8px apart, and items 16px. */}
+                <ul className="mt-3 space-y-4 text-sm">
                   {pendingMediaDeletions.map((attempt) => (
                     // The provider's own words are deliberately not here. A
                     // shop read "Blob storage returned 503" beside a photo and
@@ -2237,23 +2284,32 @@ export default async function SettingsPage({
                     // already say what happened and what to do, and tonight's
                     // retry is what actually fixes it. The reason stays on the
                     // row in the database for whoever is on call.
-                    <li key={attempt.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="font-medium">{t(MEDIA_KIND_KEYS[attempt.kind])}</span>
-                      <span className="text-muted">
-                        ·{" "}
-                        {t("settings.main.dataJobs.mediaDeletions.queued", {
-                          date: formatShortDate(attempt.createdAt, locale, shop.timezone),
-                        })}
-                      </span>
-                      <form action={retryMediaDeletionAction}>
-                        <input type="hidden" name="attemptId" value={attempt.id} />
-                        <SubmitButton
-                          pendingLabel={t("settings.main.dataJobs.mediaDeletions.retrying")}
-                          className={buttonClass({ variant: "secondary", size: "sm" })}
-                        >
-                          {t("settings.main.dataJobs.mediaDeletions.retry")}
-                        </SubmitButton>
-                      </form>
+                    <li key={attempt.id} className="flex flex-col items-start gap-2">
+                      <p className="min-w-0">
+                        <FactLine
+                          separatorClassName="text-muted"
+                          facts={[
+                            { value: t(MEDIA_KIND_KEYS[attempt.kind]), className: "font-medium" },
+                            {
+                              value: t("settings.main.dataJobs.mediaDeletions.queued", {
+                                date: formatShortDate(attempt.createdAt, locale, shop.timezone),
+                              }),
+                              className: "text-muted",
+                            },
+                          ]}
+                        />
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <form action={retryMediaDeletionAction}>
+                          <input type="hidden" name="attemptId" value={attempt.id} />
+                          <SubmitButton
+                            pendingLabel={t("settings.main.dataJobs.mediaDeletions.retrying")}
+                            className={buttonClass({ variant: "secondary", size: "sm" })}
+                          >
+                            {t("settings.main.dataJobs.mediaDeletions.retry")}
+                          </SubmitButton>
+                        </form>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -2285,41 +2341,64 @@ export default async function SettingsPage({
                 <p className="mt-1 text-sm">
                   {t("settings.main.dataJobs.processorErasures.detail")}
                 </p>
-                <ul className="mt-3 space-y-2 text-sm">
+                <ul className="mt-3 space-y-4 text-sm">
                   {owedProcessorErasures.map((obligation) => (
-                    <li key={obligation.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="font-medium">
-                        {t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target])}
-                      </span>
-                      <span className="font-mono">{obligation.externalId}</span>
-                      <span className="text-muted">
-                        ·{" "}
-                        {t("settings.main.dataJobs.processorErasures.raised", {
-                          date: formatShortDate(obligation.createdAt, locale, shop.timezone),
-                        })}
-                        {obligation.lastError ? ` · ${obligation.lastError}` : ""}
-                      </span>
-                      {canErase && obligation.target === "stripe_customer" ? (
-                        <form action={retryProcessorErasureAction}>
-                          <input type="hidden" name="obligationId" value={obligation.id} />
-                          <SubmitButton
-                            pendingLabel={t("settings.main.dataJobs.processorErasures.retrying")}
-                            className={buttonClass({ variant: "secondary", size: "sm" })}
-                          >
-                            {t("settings.main.dataJobs.processorErasures.retry")}
-                          </SubmitButton>
-                        </form>
-                      ) : null}
+                    <li key={obligation.id} className="flex flex-col items-start gap-2">
+                      <p className="min-w-0">
+                        <FactLine
+                          separatorClassName="text-muted"
+                          facts={[
+                            {
+                              value: t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target]),
+                              className: "font-medium",
+                            },
+                            { value: obligation.externalId, className: "font-mono" },
+                            {
+                              value: t("settings.main.dataJobs.processorErasures.raised", {
+                                date: formatShortDate(obligation.createdAt, locale, shop.timezone),
+                              }),
+                              className: "text-muted",
+                            },
+                            // Stripe's own words, so free text that wraps.
+                            obligation.lastError
+                              ? {
+                                  value: obligation.lastError,
+                                  className: "text-muted",
+                                  wraps: true,
+                                }
+                              : null,
+                          ]}
+                        />
+                      </p>
+                      {/* Only an owner may close an erasure, so a manager's
+                          item is its words alone, with no empty row under it. */}
                       {canErase ? (
-                        <form action={dischargeProcessorErasureAction}>
-                          <input type="hidden" name="obligationId" value={obligation.id} />
-                          <SubmitButton
-                            pendingLabel={t("settings.main.dataJobs.processorErasures.discharging")}
-                            className={buttonClass({ variant: "secondary", size: "sm" })}
-                          >
-                            {t("settings.main.dataJobs.processorErasures.discharge")}
-                          </SubmitButton>
-                        </form>
+                        <div className="flex flex-wrap gap-2">
+                          {obligation.target === "stripe_customer" ? (
+                            <form action={retryProcessorErasureAction}>
+                              <input type="hidden" name="obligationId" value={obligation.id} />
+                              <SubmitButton
+                                pendingLabel={t(
+                                  "settings.main.dataJobs.processorErasures.retrying",
+                                )}
+                                className={buttonClass({ variant: "secondary", size: "sm" })}
+                              >
+                                {t("settings.main.dataJobs.processorErasures.retry")}
+                              </SubmitButton>
+                            </form>
+                          ) : null}
+                          <form action={dischargeProcessorErasureAction}>
+                            <input type="hidden" name="obligationId" value={obligation.id} />
+                            <SubmitButton
+                              pendingLabel={t(
+                                "settings.main.dataJobs.processorErasures.discharging",
+                              )}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                            >
+                              {t("settings.main.dataJobs.processorErasures.discharge")}
+                            </SubmitButton>
+                          </form>
+                        </div>
                       ) : null}
                     </li>
                   ))}
@@ -2413,14 +2492,22 @@ export default async function SettingsPage({
             ) : null}
           </InsetGroup>
         </SettingsGroup>
-      </div>
 
-      <footer className="mt-12 border-t border-border pt-6 text-sm text-muted">
-        <p>{t("settings.main.support.description")}</p>
-        <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-primary hover:underline">
-          {t("settings.main.support.emailCta", { email: SUPPORT_EMAIL })}
-        </a>
-      </footer>
+        {/* The stack's last child, so it sits a section's 40px under the last
+            card like every section above it; on its own `mt-12` it sat 48px
+            under (K-488). */}
+        <footer className="border-t border-border pt-6 text-sm text-muted">
+          <p>{t("settings.main.support.description")}</p>
+          {/* A link under a paragraph, not inside a sentence, so it takes the
+            44px floor: it was a 159×17 target at 390 (K-153). */}
+          <a
+            href={`mailto:${SUPPORT_EMAIL}`}
+            className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
+          >
+            {t("settings.main.support.emailCta", { email: SUPPORT_EMAIL })}
+          </a>
+        </footer>
+      </div>
     </main>
   );
 }

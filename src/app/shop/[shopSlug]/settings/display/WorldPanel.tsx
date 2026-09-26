@@ -47,9 +47,15 @@ export function WorldPanel({
 }) {
   return (
     <InsetGroup as="h2" label={copy.heading} className="mt-10">
-      <div className="p-4 sm:p-5">
+      {/* The `lg` card inset, which every other card on this page takes, so
+          the checkbox and its Save share their left edge. */}
+      <div className="p-5 sm:p-6">
         <FieldGrid as="form" action={action} columns={1}>
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          {/* `items-center`, not `items-baseline`: the label is a flex box
+              whose first item is the checkbox, and a checkbox's baseline is
+              its bottom edge, so the saved word stood 3px below the label's
+              line (K-440). Both are one line in a 44px row. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
             <label className="flex min-h-11 items-center gap-3 text-base font-semibold">
               <input
                 name="publicBoatLine"

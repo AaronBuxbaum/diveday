@@ -209,6 +209,17 @@
     "e2e": ["embed-catalogue.spec.ts"],
     "visual": ["embed-courses", "embed-departure", "embed-grid"]
   },
+  "/s/[shopSlug]/embed/schedule": {
+    "e2e": [
+      "returning-diver.spec.ts",
+      "reviews.spec.ts",
+      "schedule-embed.spec.ts",
+      "seo.spec.ts",
+      "storefront-brand.spec.ts",
+      "trip-admission.spec.ts"
+    ],
+    "visual": ["schedule-embed"]
+  },
   "/s/[shopSlug]/register": {
     "e2e": ["self-registration.spec.ts"],
     "visual": ["shopfront-register"]
@@ -254,6 +265,10 @@
       "site-briefing-requirements"
     ],
     "a11y": ["a11y.spec.ts"]
+  },
+  "/s/[shopSlug]/trips/[id]/embed": {
+    "e2e": ["returning-diver.spec.ts", "schedule-embed.spec.ts"],
+    "visual": ["booking-confirmed-embed"]
   },
   "/shelf/[token]": {
     "e2e": ["a11y.spec.ts", "shelf.spec.ts"],
@@ -544,6 +559,7 @@
       "settings-data-unfinished",
       "settings-hospitality",
       "settings-payments",
+      "settings-profile",
       "settings-tax",
       "settings-trial"
     ],
@@ -665,6 +681,7 @@
       "trips.spec.ts"
     ],
     "visual": [
+      "trip-cancelled",
       "trip-crew-clash",
       "trip-manage",
       "trip-manage-course-requirements",

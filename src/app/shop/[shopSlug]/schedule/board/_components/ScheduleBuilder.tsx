@@ -5,9 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { applyFormFields } from "@/components/apply-form-fields";
 import { FormDraft, type FormDraftActions, type FormDraftProps } from "@/components/FormDraft";
 import { RepeatFields } from "@/components/RepeatFields";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
+import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
 import {
@@ -19,6 +21,7 @@ import {
   legendClass,
   textareaClassFor,
 } from "@/components/ui/form";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -485,20 +488,23 @@ function AddPanel({
 
   /**
    * **The tide at the chosen site**, one line under the site select (ADR
-   * 20260907-noaa-tide-predictions). Asked of the server the moment a site
+   * 20260907-noaa-tide-predictions): that select's own description, and dive
+   * one's once the form is expanded, so it is set and read the way every
+   * field's description is (K-337). Asked of the server the moment a site
    * is picked and again whenever the form's own "when" changes — the date is
    * state, but the time and mode are uncontrolled boxes, so the form's
    * `change` event is what re-asks. The answer is already a sentence in the
    * reader's language; null is the ordinary case and renders nothing.
    */
   const [tideLine, setTideLine] = useState<string | null>(null);
-  const tideAnchor = useRef<HTMLParagraphElement>(null);
+  /** The quick row's site select: always mounted, so the effect reaches the form through it. */
+  const tideAnchor = useRef<HTMLSelectElement>(null);
   useEffect(() => {
     if (!loadTideWindow || !diveSiteId) {
       setTideLine(null);
       return;
     }
-    const form = tideAnchor.current?.closest("form") ?? null;
+    const form = tideAnchor.current?.form ?? null;
     let live = true;
     // Typing a time fires `change` per keystroke-committed box, so two asks
     // can be in flight at once and the network decides which lands last.
@@ -623,7 +629,7 @@ function AddPanel({
       {pattern && patternApplied ? (
         <p
           role="status"
-          className="flex flex-wrap items-center gap-x-1 gap-y-1 rounded-inset bg-surface-sunken px-3 py-2 text-sm"
+          className={`flex flex-wrap items-center gap-x-1 gap-y-1 ${INSET_NOTE_BOX} bg-surface-sunken`}
         >
           <span>
             {fill(copy.patternFilled, {
@@ -634,7 +640,7 @@ function AddPanel({
           <button
             type="button"
             onClick={startBlank}
-            className={buttonClass({ variant: "link", size: "sm", className: "px-0" })}
+            className={buttonClass({ variant: "link", size: "sm", flush: true })}
           >
             {copy.patternStartBlank}
           </button>
@@ -847,7 +853,7 @@ function AddPanel({
           min={more.minDays}
           max={more.maxDays}
           defaultValue={more.minDays}
-          className={`${controlClass} tabular-nums sm:w-40`}
+          className={`${controlClass} tabular-nums max-w-40`}
         />
       </Field>
       {offeredModes.length > 1 ||
@@ -985,12 +991,16 @@ function AddPanel({
             min={0}
             max={price.max}
             placeholder={price.placeholder}
-            className={`${controlClass} tabular-nums sm:w-40`}
+            className={`${controlClass} tabular-nums max-w-40`}
           />
         </Field>
       </FieldGrid>
       {/* `<fieldset disabled>` reaches every control inside it, so this whole
-          block leaves the submission in one attribute while it is hidden. */}
+          block leaves the submission in one attribute while it is hidden.
+          Its number boxes are capped at every width, a `max-w-*` beside
+          `controlClass`'s `w-full` (two `w-*` would race by stylesheet
+          order): `sm:w-*` alone let each box on a phone fill whatever its
+          suffix left, four widths in one stack (K-332). */}
       {/* A legend names this payment control group; it must remain a
           fieldset rather than becoming a generic SectionCard. */}
       <fieldset hidden={!expanded} disabled={!expanded} className={GROUP_FRAME}>
@@ -1010,7 +1020,7 @@ function AddPanel({
               max={price.max}
               placeholder={price.placeholder}
               title={copy.depositTitle}
-              className={`${controlClass} tabular-nums sm:w-40`}
+              className={`${controlClass} tabular-nums max-w-40`}
             />
           </Field>
           <Field
@@ -1026,9 +1036,9 @@ function AddPanel({
                 min={0}
                 max={720}
                 placeholder="48"
-                className={`${controlClass} tabular-nums sm:w-28`}
+                className={`${controlClass} tabular-nums max-w-28`}
               />
-              <span className="text-sm text-muted">{copy.hoursSuffix}</span>
+              <span className="whitespace-nowrap text-sm text-muted">{copy.hoursSuffix}</span>
             </div>
           </Field>
           <Field
@@ -1044,9 +1054,9 @@ function AddPanel({
                 min={1}
                 max={MAX_MINIMUM_BOOKINGS}
                 placeholder="4"
-                className={`${controlClass} tabular-nums sm:w-28`}
+                className={`${controlClass} tabular-nums max-w-28`}
               />
-              <span className="text-sm text-muted">{copy.diversSuffix}</span>
+              <span className="whitespace-nowrap text-sm text-muted">{copy.diversSuffix}</span>
             </div>
           </Field>
           <Field
@@ -1062,9 +1072,9 @@ function AddPanel({
                 min={MIN_DECISION_HOURS}
                 max={MAX_DECISION_HOURS}
                 placeholder={String(MINIMUM_SEATS_DECISION_HOURS_DEFAULT)}
-                className={`${controlClass} tabular-nums sm:w-28`}
+                className={`${controlClass} tabular-nums max-w-28`}
               />
-              <span className="text-sm text-muted">{copy.hoursBeforeSuffix}</span>
+              <span className="whitespace-nowrap text-sm text-muted">{copy.hoursBeforeSuffix}</span>
             </div>
           </Field>
         </FieldGrid>
@@ -1150,16 +1160,19 @@ function AddPanel({
             back to an ordinary trip restores whatever they had ticked. */}
         {/* Beside the course select, in its control row: the wrapper takes a
             field's two rows (an empty caption, then the box) the way `Field`
-            does, without `Field`'s wrapping label around a label (K-13). */}
+            does, without `Field`'s wrapping label around a label (K-13).
+            Only from `sm`, where there is a neighbour's caption to share: on a
+            phone it stacks under the select, and the empty caption track and
+            its 4px gutter set the box 4px lower than the private row (K-330). */}
         <div
-          className={`row-span-2 grid min-w-0 grid-rows-subgrid gap-y-1 ${expanded && courseId === "" ? "" : "hidden"}`}
+          className={`grid min-w-0 sm:row-span-2 sm:grid-rows-subgrid sm:gap-y-1 ${expanded && courseId === "" ? "" : "hidden"}`}
         >
           <ChoiceRow
             type="checkbox"
             name="selfGuided"
             value="true"
             disabled={!expanded || courseId !== ""}
-            className="row-start-2 self-start text-sm font-medium"
+            className="self-start text-sm font-medium sm:row-start-2"
           >
             <span className="block">{copy.selfGuidedLabel}</span>
             <span className="block text-xs font-normal text-muted">{copy.selfGuidedHint}</span>
@@ -1171,9 +1184,11 @@ function AddPanel({
         <Field
           label={copy.diveSite}
           hint={copy.optional}
+          description={tideLine}
           className={expanded ? "hidden" : undefined}
         >
           <select
+            ref={tideAnchor}
             name="diveSiteId"
             value={diveSiteId}
             disabled={expanded}
@@ -1198,12 +1213,6 @@ function AddPanel({
           </select>
         </Field>
       </FieldGrid>
-      {/* Always mounted, empty or not: the effect above finds the form
-          through this element, and it has to be there before a site is
-          picked. Hidden rather than absent while there is nothing to say. */}
-      <p ref={tideAnchor} hidden={!tideLine} className="text-sm text-muted">
-        {tideLine}
-      </p>
       {diveSeed === null ? null : (
         <TripDiveFields
           diveSites={(options?.diveSites ?? []).map((site) => ({
@@ -1224,6 +1233,7 @@ function AddPanel({
           disabled={!expanded}
           onCountChange={setPlannedDives}
           onFirstDiveSiteChange={setDiveSiteId}
+          firstDiveSiteDescription={tideLine}
           copy={more.diveFields}
           frameClassName={GROUP_FRAME}
         />
@@ -1268,7 +1278,8 @@ function AddPanel({
                     onClick={() => setCrew((current) => current.filter((c) => c.id !== member.id))}
                     className="ms-1 rounded-full px-1 text-muted hover:text-foreground"
                   >
-                    <span aria-hidden="true">×</span>
+                    {/* The crew row's drawn cross (pixel-craft K-545), at the chip's 14px. */}
+                    <DiveDayIcon name="close" className="size-3.5" />
                   </button>
                 </li>
               ))}
@@ -1282,7 +1293,9 @@ function AddPanel({
           type="checkbox"
           name="alsoUsualStart"
           value={pattern.alsoUsual.startTime}
-          className="rounded-inset bg-surface-sunken px-3 py-2 text-sm"
+          // The pattern line's box: the two sunken lines in this panel share
+          // one inset (pixel-craft class 12).
+          className={`${INSET_NOTE_BOX} bg-surface-sunken`}
         >
           <span className="block">
             {fill(pattern.alsoUsual.title ? copy.patternAlsoUsual : copy.patternAlsoUsualUntitled, {
@@ -1296,13 +1309,16 @@ function AddPanel({
       ) : null}
       {/* The rare half, collapsed by default (design principles #8). The hint
           names what is behind it — a bare "More options" would hide the
-          multi-day and repeat mechanisms behind a shrug. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          multi-day and repeat mechanisms behind a shrug. `flush` starts the
+          caret on the column every label above it starts on (K-223); the 12px
+          of padding it gives up comes back in the row's gap, so the hint stays
+          24px after the words. */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
         <button
           type="button"
           onClick={toggleExpanded}
           aria-expanded={expanded}
-          className={buttonClass({ variant: "link", size: "sm" })}
+          className={buttonClass({ variant: "link", size: "sm", flush: true })}
         >
           {/* The affordance a ghost button has none of: which way this goes,
               before you press it. Decorative — `aria-expanded` is the state a
@@ -1504,9 +1520,7 @@ function MoveImpact({
       ))}
       {lines.length > 0 ? (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            {copy.impactTitle}
-          </p>
+          <p className={groupLabelClass("muted")}>{copy.impactTitle}</p>
           <ul className="mt-2 space-y-1 text-sm text-muted">
             {lines.map((line) => (
               <li key={line}>{line}</li>

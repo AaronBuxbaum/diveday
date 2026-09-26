@@ -237,9 +237,12 @@ export function CourseSchedule({
             const time = formatScheduleDayTime(day, locale);
             return (
               <li key={day.title} className="relative pb-10 pl-8 last:pb-0">
+                {/* `top-2`: the 11px ring's centre on the title's cap centre,
+                    8px down a 28px `text-lg` line, where the rail starts too.
+                    At `top-1.5` it rode 2px high (K-562). */}
                 <span
                   aria-hidden="true"
-                  className="absolute top-1.5 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
+                  className="absolute top-2 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
                 />
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <h3 className={SECTION_TITLE_CLASS}>{day.title}</h3>
@@ -424,7 +427,9 @@ export function CourseSessions({
   const nextIsSoonest = next === sessions[0];
   return (
     <section id="dates" className="mt-14 scroll-mt-8">
-      <div className="rounded-3xl border border-primary/15 bg-primary/5 p-6 sm:p-8">
+      {/* The panel rung, like the hero panel above it: this was `rounded-3xl`,
+          24px, a corner the ladder does not have (K-378). */}
+      <div className="rounded-panel border border-primary/15 bg-primary/5 p-6 sm:p-8">
         <h2 className={LEAD_TITLE_CLASS}>{t("course.datesHeading")}</h2>
         {!next ? (
           <p className="mt-4 max-w-2xl text-muted">

@@ -6,7 +6,14 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldGrid, FormStatus, legendClass } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  controlClass,
+  Field,
+  FieldGrid,
+  FormStatus,
+  legendClass,
+} from "@/components/ui/form";
 import { canPersonManageOrders } from "@/db/authz";
 import { getBookingContext, listOrderableCustomers } from "@/db/orders";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -45,6 +52,15 @@ const LINE_ITEM_KINDS = [
 ] as const satisfies { value: string; key: StaffMessageKey }[];
 
 type LineItemKind = (typeof LINE_ITEM_KINDS)[number]["value"];
+
+/**
+ * **The form's two kinds of box inside its card** — the billing address and
+ * each line item — spelled once, so their controls start on one x and end on
+ * one. The address took `p-4` and the line items `p-3`, and the line items'
+ * controls sat 4px outside the address's on the left and 3px on the right
+ * (318 against 322, 961 against 958 at 1280; K-571).
+ */
+const INSET_BOX_CLASS = "rounded-lg border border-border p-4";
 
 // A notice query param maps to a message key, never to a sentence — the words
 // come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
@@ -178,6 +194,10 @@ export default async function NewOrderPage({
       />
 
       {bookingContext ? (
+        // Not an inset note: a band on the page, above the form card rather
+        // than carved into it, so a hairline draws its edge against the page
+        // and it keeps the 16px inset a bordered sunken band takes
+        // (StaffPreviewBar, BookingRequestCards).
         <p className="mb-6 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm">
           {t("orders.new.linkedTo", {
             personName: bookingContext.person.fullName,
@@ -239,7 +259,7 @@ export default async function NewOrderPage({
               every invoice — a worse failure than an empty field, because it
               looks answered. A real shop still types it. */}
           {shop.taxEnabled ? (
-            <fieldset className="rounded-lg border border-border p-4">
+            <fieldset className={INSET_BOX_CLASS}>
               <legend className={`${legendClass} text-sm font-medium`}>
                 {t("orders.new.taxLocationLegend")}
               </legend>
@@ -314,15 +334,22 @@ export default async function NewOrderPage({
             </fieldset>
           ) : null}
 
-          <fieldset className="flex flex-col gap-3">
-            <legend className="text-sm font-medium">{t("orders.new.lineItemsLegend")}</legend>
+          {/* `ChoiceFieldset` captions the rows as `Field` captions a control,
+              the body 4px under the legend. A hand-set `<legend>` took no gap
+              at all: it is not a flex item, so the fieldset's `gap-3` never
+              reached it, and "Line items" sat 5px over its first box where
+              every other caption here sits 8px over its control (K-570). */}
+          <ChoiceFieldset
+            legend={t("orders.new.lineItemsLegend")}
+            bodyClassName="flex flex-col gap-3"
+          >
             {Array.from({ length: LINE_ITEM_ROWS }).map((_, i) => {
               const rowDefault = lineDefaults[i] ?? null;
               return (
                 <div
                   // biome-ignore lint/suspicious/noArrayIndexKey: a fixed set of static rows, never reordered
                   key={i}
-                  className="grid grid-cols-1 gap-2 rounded-lg border border-border p-3 sm:grid-cols-[7rem_1fr_5rem_6rem]"
+                  className={`grid grid-cols-1 gap-2 ${INSET_BOX_CLASS} sm:grid-cols-[7rem_1fr_5rem_6rem]`}
                 >
                   <select
                     name={`kind-${i}`}
@@ -369,7 +396,7 @@ export default async function NewOrderPage({
                 </div>
               );
             })}
-          </fieldset>
+          </ChoiceFieldset>
 
           <div className="flex flex-wrap items-center gap-3">
             <SubmitButton pendingLabel={t("orders.new.sending")} className={buttonClass()}>

@@ -706,9 +706,11 @@ export default async function TripManifestPage({
             label={t("manifest.emergencyMenuLabel")}
             closeLabel={t("manifest.closeEmergencyReference")}
           >
+            {/* In the popover, which lifts it: no bed of its own. */}
             <EmergencyReferenceCard
               className="mt-0"
               headingId="emergency-reference-phone-heading"
+              inOverlay
               reference={shop.emergencyReference}
               copy={emergencyCopy}
             />
@@ -850,313 +852,320 @@ export default async function TripManifestPage({
         className="mt-7"
       />
 
-      {/* One line, under the checkpoint switch: the boat check happens once
-          before the boat leaves rather than once per dive, so it is the last
-          thing above the roll call and the first thing to step back once it is
-          done (ADR 20260827-the-departure-is-two-working-surfaces, decision 2 —
-          the boat-check items are a "one tap away" concern). It used to stand
-          fully expanded *above* the checkpoint switch, five full-width buttons
-          between the masthead and the head count at every checkpoint. */}
-      <PreDepartureCheckList
-        idPrefix={idPrefix}
-        action={boundPreDepartureCheckAction}
-        items={checklistListItems}
-        copy={{
-          heading: t("trips.preDepartureCheck.heading"),
-          summary: t("trips.preDepartureCheck.summary", {
-            checked: checklistListItems.filter((item) => item.checkedByLine !== undefined).length,
-            total: checklistListItems.length,
-          }),
-          errorRefusal: t("trips.preDepartureCheck.errorRefusal"),
-          checkedLabel: t("trips.preDepartureCheck.checkedLabel"),
-          uncheckedLabel: t("trips.preDepartureCheck.uncheckedLabel"),
-        }}
-      />
-      {/* The page's job, as high as it can go: the divers, immediately under
-          the panel that counts them. It used to be the *last* section, below
-          the offline card, the tiles, the blocked banner, the crew and the
-          whole buddy-team builder — so a captain on a phone scrolled past six
-          screens of context to reach the first name at roll call. */}
-      <DiverRollCall
-        idPrefix={idPrefix}
-        divers={manifest.divers}
-        crew={manifest.crew}
-        crewNames={manifest.crew.map((member) => member.fullName)}
-        checkpoint={checkpoint}
-        isDeparture={isDeparture}
-        shopSlug={shopSlug}
-        tripId={tripId}
-        locale={locale}
-        timezone={shop.timezone}
-        notesByBooking={notesByBooking}
-        todayTrailByBooking={todayTrailBySubject}
-        rollCallAction={boundRollCallAction}
-        addPrivateNoteAction={boundAddPrivateNoteAction}
-        rollCallButtonCopy={rollCallButtonCopy}
-        buddyTeamLabel={buddyTeamLabel}
-        t={t}
-      />
-
-      {/* Crew close the checkpoint (DOM-H1) — they come straight after the
-          divers, not before them: the divers are the head count's heart, and
-          a two-person crew list ahead of nine divers read as the page's
-          subject. */}
-      <CrewRollCall
-        crew={manifest.crew}
-        idPrefix={idPrefix}
-        divers={manifest.divers}
-        checkpoint={checkpoint}
-        isDeparture={isDeparture}
-        shopSlug={shopSlug}
-        tripId={tripId}
-        locale={locale}
-        timezone={shop.timezone}
-        todayTrailBySubject={todayTrailBySubject}
-        crewRollCallAction={boundCrewRollCallAction}
-        crewRollCallButtonCopy={crewRollCallButtonCopy}
-        buddyTeamLabel={buddyTeamLabel}
-        t={t}
-      />
-
-      {/* **The plan, and the door to saying it changed** (issue #1184, D24).
-          At the dock only: after a dive the log below owns this ground, and a
-          read-only copy of the plan beside it would be a second answer to the
-          same question. */}
-      {isDeparture ? (
-        <TripPlanSection
+      {/* **Every section from the boat check down, at one gap** (K-189). Each
+          used to bring its own top margin — `mt-5`, `mt-8`, `mt-9` and back —
+          so sections of one kind stepped 21 to 42px apart, and "Buddy teams"
+          opened 64px under the plan. One `space-y-10` holds them and none
+          carries a margin (docs/design/forms-and-controls.md); `mt-5` is the
+          boat check's own step under the checkpoint switch it belongs to. */}
+      <div className="mt-5 space-y-10">
+        {/* One line, under the checkpoint switch: the boat check happens once
+            before the boat leaves rather than once per dive, so it is the last
+            thing above the roll call and the first thing to step back once it is
+            done (ADR 20260827-the-departure-is-two-working-surfaces, decision 2 —
+            the boat-check items are a "one tap away" concern). It used to stand
+            fully expanded *above* the checkpoint switch, five full-width buttons
+            between the masthead and the head count at every checkpoint. */}
+        <PreDepartureCheckList
           idPrefix={idPrefix}
-          heading={t("manifest.planChange.heading")}
-          dives={plannedDives.map(({ dive, diveSite }) => ({
-            diveNumber: dive.diveNumber,
-            line: diveSite
-              ? t("manifest.planChange.diveRow", {
-                  number: dive.diveNumber,
-                  site: diveSite.name,
-                })
-              : t("manifest.planChange.diveRowNoSite", { number: dive.diveNumber }),
-          }))}
-          doorLabel={t("manifest.planChange.door")}
-          doorNote={t("manifest.planChange.doorNote")}
-          doorHref={`/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=after_dive_1`}
-        />
-      ) : null}
-
-      {!isDeparture ? (
-        <ExecutedDiveLog
-          idPrefix={idPrefix}
-          planned={plannedDives.map(({ dive, diveSite }) => ({
-            diveNumber: dive.diveNumber,
-            diveSite: diveSite ? { id: diveSite.id, name: diveSite.name } : null,
-            diveLabel: t("manifest.executedDive.dive", { number: dive.diveNumber }),
-            plannedSiteLabel: t("manifest.executedDive.plannedSite", {
-              site: diveSite?.name ?? t("manifest.executedDive.unknown"),
-            }),
-            summaryLine: executedDiveSummary({
-              diveLabel: t("manifest.executedDive.dive", { number: dive.diveNumber }),
-              row: executedDives.find((entry) => entry.executed.diveNumber === dive.diveNumber),
-              locale,
-              timeZone: shop.timezone,
-              depthUnit: shop.depthUnit,
-              t,
-            }),
-          }))}
-          executed={executedDives}
-          liveDiveSites={liveDiveSites.map((site) => ({ id: site.id, name: site.name }))}
-          catalogSpecies={catalogSpecies}
-          speciesBySite={speciesBySite}
-          action={boundSaveExecutedDiveAction}
-          labels={executedDiveLabels(t, shop.depthUnit)}
-          timeZone={shop.timezone}
-          depthUnit={shop.depthUnit}
-          checkpoint={checkpoint}
-        />
-      ) : null}
-
-      {/* **The living reef** — the crew's tally of what this departure saw,
-          under the log they are already filling in and nowhere near the roll
-          call's commit path or the head count above it. Nothing here gates
-          anything; it reaches the shop's own public trip page. */}
-      {!isDeparture &&
-      seenDeparted &&
-      seenSite &&
-      boundRecordSightingAction &&
-      boundDeleteSightingAction ? (
-        <SeenGroup
-          idPrefix={idPrefix}
-          chips={seenChips}
-          tallies={seenTallies}
+          action={boundPreDepartureCheckAction}
+          items={checklistListItems}
           copy={{
-            heading: t("manifest.seen.heading"),
-            consequence: t("manifest.seen.consequence", { site: seenSite.name }),
-            delete: t("manifest.seen.delete"),
-            refusal: t("manifest.seen.refusal"),
-            offlineLabel: t("manifest.seen.offlineLabel"),
-            connectivity: {
-              online: t("shared.connectivity.online"),
-              onlineTitle: t("shared.connectivity.onlineTitle"),
-              offlineTitle: t("shared.connectivity.offlineTitle"),
-            },
+            heading: t("trips.preDepartureCheck.heading"),
+            summary: t("trips.preDepartureCheck.summary", {
+              checked: checklistListItems.filter((item) => item.checkedByLine !== undefined).length,
+              total: checklistListItems.length,
+            }),
+            errorRefusal: t("trips.preDepartureCheck.errorRefusal"),
+            checkedLabel: t("trips.preDepartureCheck.checkedLabel"),
+            uncheckedLabel: t("trips.preDepartureCheck.uncheckedLabel"),
           }}
-          recordAction={boundRecordSightingAction}
-          deleteAction={boundDeleteSightingAction}
         />
-      ) : null}
-
-      {/* **The numbers a crew dials during** are a rare reference, behind the
-          manifest-local ellipsis on a phone and a quiet footer line on desktop
-          (ADR 20260827-the-departure-is-two-working-surfaces, decision 2). The
-          printed manifest is the fallback under the fallback, so its complete
-          copy is rendered outside either interactive disclosure below. */}
-      <div className="hidden print:block">
-        <EmergencyReferenceCard
-          className="mt-6"
-          headingId={scopedId(idPrefix, "emergency-reference-print-heading")}
-          reference={shop.emergencyReference}
-          copy={emergencyCopy}
+        {/* The page's job, as high as it can go: the divers, immediately under
+            the panel that counts them. It used to be the *last* section, below
+            the offline card, the tiles, the blocked banner, the crew and the
+            whole buddy-team builder — so a captain on a phone scrolled past six
+            screens of context to reach the first name at roll call. */}
+        <DiverRollCall
+          idPrefix={idPrefix}
+          divers={manifest.divers}
+          crew={manifest.crew}
+          crewNames={manifest.crew.map((member) => member.fullName)}
+          checkpoint={checkpoint}
+          isDeparture={isDeparture}
+          shopSlug={shopSlug}
+          tripId={tripId}
+          locale={locale}
+          timezone={shop.timezone}
+          notesByBooking={notesByBooking}
+          todayTrailByBooking={todayTrailBySubject}
+          rollCallAction={boundRollCallAction}
+          addPrivateNoteAction={boundAddPrivateNoteAction}
+          rollCallButtonCopy={rollCallButtonCopy}
+          buddyTeamLabel={buddyTeamLabel}
+          t={t}
         />
-      </div>
-      {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
-          people happens before the boat leaves, while the lists above are
-          worked at the rail. Below the lists, still expanded — the teams
-          themselves ride on each member's row where roll call can see them. */}
-      <BuddyTeamsPanel
-        idPrefix={idPrefix}
-        defaultOpen={buddies === "open"}
-        intentLine={staffDiveIntentLine(t, diveIntents, locale)}
-        buddyTeamsList={buddyTeamsList}
-        diverOptions={diverOptions}
-        crewOptions={crewOptions}
-        unteamedDivers={unteamedDivers}
-        divesWithByBooking={divesWithByBooking}
-        buddyErrorText={buddyErrorText}
-        buddyErrorForm={buddyErrorForm}
-        formBuddyTeamAction={formBuddyTeamAction.bind(null, actionContext)}
-        addBuddyTeamMemberAction={addBuddyTeamMemberAction.bind(null, actionContext)}
-        removeBuddyTeamMemberAction={removeBuddyTeamMemberAction.bind(null, actionContext)}
-        dissolveBuddyTeamAction={dissolveBuddyTeamAction.bind(null, actionContext)}
-        t={t}
-      />
 
-      {/* Everything this *device* does, in **one line** at the foot of the
-          page: hold an offline copy, wake itself for a refresh, ignore spray on
-          the glass, buzz. All four are per-phone preferences rather than
-          anything about this departure, and decision 2 of ADR
-          20260827-the-departure-is-two-working-surfaces puts device settings in
-          the "ashore, not here" tier.
+        {/* Crew close the checkpoint (DOM-H1) — they come straight after the
+            divers, not before them: the divers are the head count's heart, and
+            a two-person crew list ahead of nine divers read as the page's
+            subject. */}
+        <CrewRollCall
+          crew={manifest.crew}
+          idPrefix={idPrefix}
+          divers={manifest.divers}
+          checkpoint={checkpoint}
+          isDeparture={isDeparture}
+          shopSlug={shopSlug}
+          tripId={tripId}
+          locale={locale}
+          timezone={shop.timezone}
+          todayTrailBySubject={todayTrailBySubject}
+          crewRollCallAction={boundCrewRollCallAction}
+          crewRollCallButtonCopy={crewRollCallButtonCopy}
+          buddyTeamLabel={buddyTeamLabel}
+          t={t}
+        />
 
-          The disclosure belongs to `OfflineManifestManager` rather than to a
-          wrapper here, and that is load-bearing: the summary line keeps the
-          connectivity chip and the freshness pill on screen, because a stale
-          copy that looks current is the failure mode this whole mechanism
-          exists to prevent — and the component that computes that state is the
-          only thing that can render it. The rest of the group rides in as its
-          children. */}
-      <OfflineManifestManager
-        idPrefix={idPrefix}
-        locale={locale}
-        payload={serializeManifests(
-          completeManifests,
-          {
-            slug: shopSlug,
-            name: shop.name,
-            timezone: shop.timezone,
-            emergencyReference: shop.emergencyReference,
-          },
-          (blocker) => readinessBlockerText(t, blocker),
-          checklistItems.map((item) => ({
-            id: item.id,
-            label: item.label,
-            check: checklistChecks.get(item.id),
-          })),
-        )}
-        copy={
-          {
-            checkingDevice: t("trips.offlineManifestManager.checkingDevice"),
-            reconcileRejectedOne: t("trips.offlineManifestManager.reconcileRejectedOne"),
-            reconcileRejectedOther: t.raw("trips.offlineManifestManager.reconcileRejectedOther"),
-            reconcilePendingOne: t("trips.offlineManifestManager.reconcilePendingOne"),
-            reconcilePendingOther: t.raw("trips.offlineManifestManager.reconcilePendingOther"),
-            reconcileCaughtUp: t("trips.offlineManifestManager.reconcileCaughtUp"),
-            reconcileErrorFallback: t("trips.offlineManifestManager.reconcileErrorFallback"),
-            savingMessage: t("trips.offlineManifestManager.savingMessage"),
-            saveErrorFallback: t("trips.offlineManifestManager.saveErrorFallback"),
-            offlineWithSavedCopy: t("trips.offlineManifestManager.offlineWithSavedCopy"),
-            offlineNoSavedCopy: t("trips.offlineManifestManager.offlineNoSavedCopy"),
-            refreshNoSignal: t("trips.offlineManifestManager.refreshNoSignal"),
-            heading: t("trips.offlineManifestManager.heading"),
-            body: t("trips.offlineManifestManager.body"),
-            connectivityOfflineWithCopy: t(
-              "trips.offlineManifestManager.connectivityOfflineWithCopy",
-            ),
-            connectivityOffline: t("trips.offlineManifestManager.connectivityOffline"),
-            connectivityOnline: t("trips.offlineManifestManager.connectivityOnline"),
-            connectivityOnlineTitle: t("trips.offlineManifestManager.connectivityOnlineTitle"),
-            connectivityOfflineTitle: t("trips.offlineManifestManager.connectivityOfflineTitle"),
-            freshnessCurrent: t("trips.offlineManifestManager.freshnessCurrent"),
-            freshnessAging: t("trips.offlineManifestManager.freshnessAging"),
-            freshnessStale: t("trips.offlineManifestManager.freshnessStale"),
-            savedSummary: t.raw("trips.offlineManifestManager.savedSummary"),
-            refreshingLabel: t("trips.offlineManifestManager.refreshingLabel"),
-            refreshNowLabel: t("trips.offlineManifestManager.refreshNowLabel"),
-            openOfflineRollCall: t("trips.offlineManifestManager.openOfflineRollCall"),
-            groupHeading: t("manifest.onThisPhone"),
-          } satisfies OfflineManifestManagerCopy
-        }
-      >
-        <div className="grid gap-5">
-          {/* Push is an optional device capability. The empty guard keeps a
-            browser without notification support from leaving a blank inset
-            behind while the device settings below keep their place. */}
-          <div className="rounded-inset bg-surface-sunken/70 p-4 empty:hidden">
-            <PushOptIn
-              publicKey={webPushPublicKey()}
-              subscribeAction={subscribePushAction.bind(null, tripId)}
-              unsubscribeAction={unsubscribePushAction.bind(null, tripId)}
-              isSubscribedAction={isPushSubscribedAction.bind(null, tripId)}
-              isSubscribedAnyAction={isPushSubscribedAnywhereAction}
-              copy={
-                {
-                  heading: t("trips.offlineManifestManager.pushHeading"),
-                  body: t("trips.offlineManifestManager.pushBody"),
-                  enable: t("trips.offlineManifestManager.pushEnable"),
-                  enabling: t("trips.offlineManifestManager.pushEnabling"),
-                  disable: t("trips.offlineManifestManager.pushDisable"),
-                  on: t("trips.offlineManifestManager.pushOn"),
-                  unsupported: t("trips.offlineManifestManager.pushUnsupported"),
-                  homeScreenHint: t("trips.offlineManifestManager.pushHomeScreenHint"),
-                  denied: t("trips.offlineManifestManager.pushDenied"),
-                  error: t("trips.offlineManifestManager.pushError"),
-                } satisfies PushOptInCopy
-              }
-            />
-          </div>
+        {/* **The plan, and the door to saying it changed** (issue #1184, D24).
+            At the dock only: after a dive the log below owns this ground, and a
+            read-only copy of the plan beside it would be a second answer to the
+            same question. */}
+        {isDeparture ? (
+          <TripPlanSection
+            idPrefix={idPrefix}
+            heading={t("manifest.planChange.heading")}
+            dives={plannedDives.map(({ dive, diveSite }) => ({
+              diveNumber: dive.diveNumber,
+              line: diveSite
+                ? t("manifest.planChange.diveRow", {
+                    number: dive.diveNumber,
+                    site: diveSite.name,
+                  })
+                : t("manifest.planChange.diveRowNoSite", { number: dive.diveNumber }),
+            }))}
+            doorLabel={t("manifest.planChange.door")}
+            doorNote={t("manifest.planChange.doorNote")}
+            doorHref={`/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=after_dive_1`}
+          />
+        ) : null}
 
-          {/* These are all *this device* preferences, not checkpoint
-            destinations. They share one responsive grid so their labels and
-            touch targets stay together on a phone and align at desk width. */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <WaterLockerToggle
-              copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
-              className="h-full w-full justify-start"
-            />
-            {/* Renders nothing on a phone with no vibration motor — which is
-              every iPhone (src/components/haptics.ts). */}
-            <HapticsToggle
-              copy={{ label: t("shared.haptics.toggleLabel") }}
-              className="h-full w-full justify-start"
-            />
-            <AmbientContrastControl
-              className="h-full w-full rounded-inset border border-border bg-surface-sunken p-3"
-              copy={{
-                modeLabel: t("shared.boatMode.modeLabel"),
-                labelAuto: t("shared.boatMode.labelAuto"),
-                labelStandard: t("shared.boatMode.labelLand"),
-                labelFull: t("shared.boatMode.labelBoat"),
-              }}
-            />
-          </div>
+        {!isDeparture ? (
+          <ExecutedDiveLog
+            idPrefix={idPrefix}
+            planned={plannedDives.map(({ dive, diveSite }) => ({
+              diveNumber: dive.diveNumber,
+              diveSite: diveSite ? { id: diveSite.id, name: diveSite.name } : null,
+              diveLabel: t("manifest.executedDive.dive", { number: dive.diveNumber }),
+              plannedSiteLabel: t("manifest.executedDive.plannedSite", {
+                site: diveSite?.name ?? t("manifest.executedDive.unknown"),
+              }),
+              summaryLine: executedDiveSummary({
+                diveLabel: t("manifest.executedDive.dive", { number: dive.diveNumber }),
+                row: executedDives.find((entry) => entry.executed.diveNumber === dive.diveNumber),
+                locale,
+                timeZone: shop.timezone,
+                depthUnit: shop.depthUnit,
+                t,
+              }),
+            }))}
+            executed={executedDives}
+            liveDiveSites={liveDiveSites.map((site) => ({ id: site.id, name: site.name }))}
+            catalogSpecies={catalogSpecies}
+            speciesBySite={speciesBySite}
+            action={boundSaveExecutedDiveAction}
+            labels={executedDiveLabels(t, shop.depthUnit)}
+            timeZone={shop.timezone}
+            depthUnit={shop.depthUnit}
+            checkpoint={checkpoint}
+          />
+        ) : null}
+
+        {/* **The living reef** — the crew's tally of what this departure saw,
+            under the log they are already filling in and nowhere near the roll
+            call's commit path or the head count above it. Nothing here gates
+            anything; it reaches the shop's own public trip page. */}
+        {!isDeparture &&
+        seenDeparted &&
+        seenSite &&
+        boundRecordSightingAction &&
+        boundDeleteSightingAction ? (
+          <SeenGroup
+            idPrefix={idPrefix}
+            chips={seenChips}
+            tallies={seenTallies}
+            copy={{
+              heading: t("manifest.seen.heading"),
+              consequence: t("manifest.seen.consequence", { site: seenSite.name }),
+              delete: t("manifest.seen.delete"),
+              refusal: t("manifest.seen.refusal"),
+              offlineLabel: t("manifest.seen.offlineLabel"),
+              connectivity: {
+                online: t("shared.connectivity.online"),
+                onlineTitle: t("shared.connectivity.onlineTitle"),
+                offlineTitle: t("shared.connectivity.offlineTitle"),
+              },
+            }}
+            recordAction={boundRecordSightingAction}
+            deleteAction={boundDeleteSightingAction}
+          />
+        ) : null}
+
+        {/* **The numbers a crew dials during** are a rare reference, behind the
+            manifest-local ellipsis on a phone and a quiet footer line on desktop
+            (ADR 20260827-the-departure-is-two-working-surfaces, decision 2). The
+            printed manifest is the fallback under the fallback, so its complete
+            copy is rendered outside either interactive disclosure below. */}
+        <div className="hidden print:block">
+          <EmergencyReferenceCard
+            headingId={scopedId(idPrefix, "emergency-reference-print-heading")}
+            reference={shop.emergencyReference}
+            copy={emergencyCopy}
+          />
         </div>
-      </OfflineManifestManager>
+        {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
+            people happens before the boat leaves, while the lists above are
+            worked at the rail. Below the lists, still expanded — the teams
+            themselves ride on each member's row where roll call can see them. */}
+        <BuddyTeamsPanel
+          idPrefix={idPrefix}
+          defaultOpen={buddies === "open"}
+          intentLine={staffDiveIntentLine(t, diveIntents, locale)}
+          buddyTeamsList={buddyTeamsList}
+          diverOptions={diverOptions}
+          crewOptions={crewOptions}
+          unteamedDivers={unteamedDivers}
+          divesWithByBooking={divesWithByBooking}
+          buddyErrorText={buddyErrorText}
+          buddyErrorForm={buddyErrorForm}
+          formBuddyTeamAction={formBuddyTeamAction.bind(null, actionContext)}
+          addBuddyTeamMemberAction={addBuddyTeamMemberAction.bind(null, actionContext)}
+          removeBuddyTeamMemberAction={removeBuddyTeamMemberAction.bind(null, actionContext)}
+          dissolveBuddyTeamAction={dissolveBuddyTeamAction.bind(null, actionContext)}
+          t={t}
+        />
+
+        {/* Everything this *device* does, in **one line** at the foot of the
+            page: hold an offline copy, wake itself for a refresh, ignore spray on
+            the glass, buzz. All four are per-phone preferences rather than
+            anything about this departure, and decision 2 of ADR
+            20260827-the-departure-is-two-working-surfaces puts device settings in
+            the "ashore, not here" tier.
+
+            The disclosure belongs to `OfflineManifestManager` rather than to a
+            wrapper here, and that is load-bearing: the summary line keeps the
+            connectivity chip and the freshness pill on screen, because a stale
+            copy that looks current is the failure mode this whole mechanism
+            exists to prevent — and the component that computes that state is the
+            only thing that can render it. The rest of the group rides in as its
+            children. */}
+        <OfflineManifestManager
+          idPrefix={idPrefix}
+          locale={locale}
+          payload={serializeManifests(
+            completeManifests,
+            {
+              slug: shopSlug,
+              name: shop.name,
+              timezone: shop.timezone,
+              emergencyReference: shop.emergencyReference,
+            },
+            (blocker) => readinessBlockerText(t, blocker),
+            checklistItems.map((item) => ({
+              id: item.id,
+              label: item.label,
+              check: checklistChecks.get(item.id),
+            })),
+          )}
+          copy={
+            {
+              checkingDevice: t("trips.offlineManifestManager.checkingDevice"),
+              reconcileRejectedOne: t("trips.offlineManifestManager.reconcileRejectedOne"),
+              reconcileRejectedOther: t.raw("trips.offlineManifestManager.reconcileRejectedOther"),
+              reconcilePendingOne: t("trips.offlineManifestManager.reconcilePendingOne"),
+              reconcilePendingOther: t.raw("trips.offlineManifestManager.reconcilePendingOther"),
+              reconcileCaughtUp: t("trips.offlineManifestManager.reconcileCaughtUp"),
+              reconcileErrorFallback: t("trips.offlineManifestManager.reconcileErrorFallback"),
+              savingMessage: t("trips.offlineManifestManager.savingMessage"),
+              saveErrorFallback: t("trips.offlineManifestManager.saveErrorFallback"),
+              offlineWithSavedCopy: t("trips.offlineManifestManager.offlineWithSavedCopy"),
+              offlineNoSavedCopy: t("trips.offlineManifestManager.offlineNoSavedCopy"),
+              refreshNoSignal: t("trips.offlineManifestManager.refreshNoSignal"),
+              heading: t("trips.offlineManifestManager.heading"),
+              body: t("trips.offlineManifestManager.body"),
+              connectivityOfflineWithCopy: t(
+                "trips.offlineManifestManager.connectivityOfflineWithCopy",
+              ),
+              connectivityOffline: t("trips.offlineManifestManager.connectivityOffline"),
+              connectivityOnline: t("trips.offlineManifestManager.connectivityOnline"),
+              connectivityOnlineTitle: t("trips.offlineManifestManager.connectivityOnlineTitle"),
+              connectivityOfflineTitle: t("trips.offlineManifestManager.connectivityOfflineTitle"),
+              freshnessCurrent: t("trips.offlineManifestManager.freshnessCurrent"),
+              freshnessAging: t("trips.offlineManifestManager.freshnessAging"),
+              freshnessStale: t("trips.offlineManifestManager.freshnessStale"),
+              savedSummary: t.raw("trips.offlineManifestManager.savedSummary"),
+              refreshingLabel: t("trips.offlineManifestManager.refreshingLabel"),
+              refreshNowLabel: t("trips.offlineManifestManager.refreshNowLabel"),
+              openOfflineRollCall: t("trips.offlineManifestManager.openOfflineRollCall"),
+              groupHeading: t("manifest.onThisPhone"),
+            } satisfies OfflineManifestManagerCopy
+          }
+        >
+          <div className="grid gap-5">
+            {/* Push is an optional device capability. The empty guard keeps a
+              browser without notification support from leaving a blank inset
+              behind while the device settings below keep their place. */}
+            <div className="rounded-inset bg-surface-sunken/70 p-4 empty:hidden">
+              <PushOptIn
+                publicKey={webPushPublicKey()}
+                subscribeAction={subscribePushAction.bind(null, tripId)}
+                unsubscribeAction={unsubscribePushAction.bind(null, tripId)}
+                isSubscribedAction={isPushSubscribedAction.bind(null, tripId)}
+                isSubscribedAnyAction={isPushSubscribedAnywhereAction}
+                copy={
+                  {
+                    heading: t("trips.offlineManifestManager.pushHeading"),
+                    body: t("trips.offlineManifestManager.pushBody"),
+                    enable: t("trips.offlineManifestManager.pushEnable"),
+                    enabling: t("trips.offlineManifestManager.pushEnabling"),
+                    disable: t("trips.offlineManifestManager.pushDisable"),
+                    on: t("trips.offlineManifestManager.pushOn"),
+                    unsupported: t("trips.offlineManifestManager.pushUnsupported"),
+                    homeScreenHint: t("trips.offlineManifestManager.pushHomeScreenHint"),
+                    denied: t("trips.offlineManifestManager.pushDenied"),
+                    error: t("trips.offlineManifestManager.pushError"),
+                  } satisfies PushOptInCopy
+                }
+              />
+            </div>
+
+            {/* These are all *this device* preferences, not checkpoint
+              destinations. They share one responsive grid so their labels and
+              touch targets stay together on a phone and align at desk width. */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <WaterLockerToggle
+                copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
+                className="h-full w-full justify-start"
+              />
+              {/* Renders nothing on a phone with no vibration motor — which is
+                every iPhone (src/components/haptics.ts). */}
+              <HapticsToggle
+                copy={{ label: t("shared.haptics.toggleLabel") }}
+                className="h-full w-full justify-start"
+              />
+              <AmbientContrastControl
+                className="h-full w-full rounded-inset border border-border bg-surface-sunken p-3"
+                copy={{
+                  modeLabel: t("shared.boatMode.modeLabel"),
+                  labelAuto: t("shared.boatMode.labelAuto"),
+                  labelStandard: t("shared.boatMode.labelLand"),
+                  labelFull: t("shared.boatMode.labelBoat"),
+                }}
+              />
+            </div>
+          </div>
+        </OfflineManifestManager>
+      </div>
 
       <ManifestMoreMenu
         variant="footer"

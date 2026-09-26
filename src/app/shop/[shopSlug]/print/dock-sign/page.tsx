@@ -60,6 +60,7 @@ export default async function DockSignPage({ params }: { params: Promise<{ shopS
     >
       <PaperSheet
         paper={spec.paper}
+        layout="poster"
         tone={{ band: theme.primary, bandInk: theme.primaryForeground }}
         band={
           <>
@@ -93,15 +94,18 @@ export default async function DockSignPage({ params }: { params: Promise<{ shopS
             ))}
           </ul>
         ) : null}
+        {/* Each caption stands 5.5mm under its code: the code's quiet zone
+            overhangs its box (`SheetCode`), four modules of up to 1.3mm each on
+            a short storefront link, and must stay clear of the words. */}
         <div className="mt-12 grid grid-cols-2 gap-8">
           <div>
             <SheetCode
               value={`${origin ?? ""}${publicShopRegisterPath(shopSlug)}`}
               label={t("print.sheet.dockSign.checkIn")}
-              className="w-[32mm]"
+              size={32}
             />
             {/* diveday:allow-type-ramp: the print ramp is the sheet's own, sized in paper millimetres rather than the app's screen ladder */}
-            <p className="font-brand-display mt-3 text-xl font-bold">
+            <p className="font-brand-display mt-[5.5mm] text-xl font-bold">
               {t("print.sheet.dockSign.checkIn")}
             </p>
             <p className="paper-sheet-muted mt-1 text-sm">
@@ -112,10 +116,10 @@ export default async function DockSignPage({ params }: { params: Promise<{ shopS
             <SheetCode
               value={`${origin ?? ""}${publicSchedulePath(shopSlug)}`}
               label={t("print.sheet.dockSign.schedule")}
-              className="w-[32mm]"
+              size={32}
             />
             {/* diveday:allow-type-ramp: the print ramp is the sheet's own, sized in paper millimetres rather than the app's screen ladder */}
-            <p className="font-brand-display mt-3 text-xl font-bold">
+            <p className="font-brand-display mt-[5.5mm] text-xl font-bold">
               {t("print.sheet.dockSign.schedule")}
             </p>
             <p className="paper-sheet-muted mt-1 text-sm">

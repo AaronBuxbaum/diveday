@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLineClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -46,10 +46,14 @@ export function SeasonBand({
   entries: readonly SeasonBandEntry[];
 }) {
   if (entries.length === 0) return null;
+  // A card whose last season ends in its link takes 20px under it on a phone,
+  // as it does from `sm`: the link's focus ring reaches 17px under its words
+  // (`tapTargetLineClass`), and the phone's 16px put it on the border.
+  const endsInLink = entries[entries.length - 1]?.lens != null;
   return (
     // No width and no margin of its own: the identity band's row owns both, so
     // the four panels share one column width however many of them render.
-    <SectionCard className="h-full">
+    <SectionCard className={endsInLink ? "h-full max-sm:pb-5" : "h-full"}>
       <p className={groupLabelClass()}>{eyebrow}</p>
       <ul className="mt-1 space-y-4">
         {entries.map((entry) => (
@@ -58,13 +62,20 @@ export function SeasonBand({
             <p className="mt-0.5 text-sm text-muted">{entry.through}</p>
             {entry.note ? <p className="mt-2 text-sm">{entry.note}</p> : null}
             {entry.lens ? (
-              <Link
-                href={entry.lens.href}
-                scroll={false}
-                className={buttonClass({ variant: "link", size: "sm", className: "mt-2 px-0" })}
-              >
-                {entry.lens.label}
-              </Link>
+              // On a line its words' height: the 44px target bleeds into the
+              // card's padding and the gap to the next season, not adding to
+              // either. 16px under the note, because the target reaches 12px
+              // above the words and its ring 17: after 8px the ring crossed
+              // the note's x-height.
+              <p className={`mt-4 ${tapTargetLineClass}`}>
+                <Link
+                  href={entry.lens.href}
+                  scroll={false}
+                  className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                >
+                  {entry.lens.label}
+                </Link>
+              </p>
             ) : null}
           </li>
         ))}

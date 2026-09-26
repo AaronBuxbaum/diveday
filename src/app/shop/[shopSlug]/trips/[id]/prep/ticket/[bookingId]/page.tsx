@@ -115,16 +115,22 @@ export default async function RentalTicketPage({
         <h2 id="ticket-units-heading" className={SECTION_TITLE_CLASS}>
           {t("gear.ticket.unitsHeading")}
         </h2>
+        {/* **One column for the tags, so every kind starts at one x** (K-505).
+            Each row was its own `flex-wrap` line, and the kind started wherever
+            that row's tag ended: "BCD #2" is six monospace characters and
+            "Boots #1" eight, about 22px apart. The list is two columns sized
+            by the widest tag, and each row a subgrid of them. */}
         <ul
           className={sectionCardClass({
             padding: "none",
-            className: "mt-3 divide-y divide-border overflow-hidden",
+            className:
+              "mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 divide-y divide-border overflow-hidden",
           })}
         >
           {assignments.map((assignment) => (
             <li
               key={assignment.reservationId}
-              className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-3 sm:px-5"
+              className="col-span-2 grid grid-cols-subgrid items-baseline px-4 py-3 sm:px-5"
             >
               <span className="font-mono text-lg font-medium">{assignment.label}</span>
               <span className="text-muted">

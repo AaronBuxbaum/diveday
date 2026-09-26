@@ -4,6 +4,7 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  findTripOnBoard,
   openRosterDetails,
   openThreadStep,
   openTripAbout,
@@ -162,12 +163,9 @@ test.describe("staff", () => {
       returnsAt: "11:00",
       capacity: 6,
     });
-    await page.goto("/shop/blue-mantis/schedule/board");
-    const manageLink = page
-      .locator('a[href^="/shop/blue-mantis/trips/"]')
-      .filter({ hasText: title })
-      .filter({ visible: true })
-      .first();
+    // By the door's exact name: the row's door carries no text of its own,
+    // so a `hasText` filter on the board's trip links matches nothing.
+    const manageLink = await findTripOnBoard(page, "blue-mantis", title);
     const manageHref = await manageLink.getAttribute("href");
     expect(manageHref).toMatch(/^\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/i);
     const tripId = manageHref?.split("/").at(-1);

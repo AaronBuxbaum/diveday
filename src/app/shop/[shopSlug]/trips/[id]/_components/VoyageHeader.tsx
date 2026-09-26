@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { DayStrip, type DayStripProps } from "@/components/day/DayStrip";
 import { SkyBand } from "@/components/day/SkyBand";
 import type { SkyScheme } from "@/lib/sky-scheme";
@@ -40,12 +40,49 @@ import type { SkyScheme } from "@/lib/sky-scheme";
  * does, which is why it needs nothing).
  */
 
+/**
+ * The dot between two facts, glued to the fact before it by a no-break space.
+ * It rides *inside* that fact's box: a line may break on either side of an
+ * atomic inline box whatever character stands beside it, so a dot outside the
+ * box could start a line.
+ */
+const FACT_SEPARATOR = "\u00a0·";
+
+/**
+ * **The band's box**, worn by the band and by `VoyageHeaderSkeleton`, so the
+ * frame a navigation paints and the band that replaces it cannot drift
+ * (pixel-craft class 11: the skeleton drew the retired masthead's bars, and
+ * the About card dropped 171px when the page landed).
+ *
+ * Sky to both edges, exactly as `DayHeader` does it and for the same reason:
+ * the trip shell is `mx-auto max-w-5xl`, so a band stopping at its content box
+ * would be a panel of sky with the page's ground either side of it.
+ * `mx-[calc(50%-50vw)] w-screen` walks it back out to the viewport from inside
+ * that centred column, which is safe because `body { overflow-x: clip }`
+ * contains the scrollbar without opening a horizontal scroll container.
+ * `-mt-8 sm:-mt-10` eats the shell's own top padding, because a sky with a
+ * margin above it is a picture of sky. No margin below: the page's
+ * `space-y-10` spaces the masthead from what follows it (K-262), and the
+ * skeleton stands on the same stack.
+ */
+const BAND_CLASS =
+  "mx-[calc(50%-50vw)] -mt-8 w-screen pt-5 pb-5 print:mx-0 print:w-full sm:-mt-10 sm:pt-7";
+
+/** The page's column again, inside the full-bleed band. */
+const BAND_COLUMN_CLASS = "mx-auto w-full max-w-5xl px-4 sm:px-6";
+
+/** The line of facts' type, whose line box (15px at the inherited 1.5) the skeleton's bars take. */
+const FACTS_LINE_CLASS = "mt-1 text-[15px]";
+
+/** The voyage strip's box. */
+const STRIP_CLASS = "mt-3 h-24 w-full sm:h-28";
+
 export function VoyageHeader({
   scheme,
   back,
   hour,
   title,
-  line,
+  facts,
   strip,
   action,
   badge,
@@ -57,8 +94,12 @@ export function VoyageHeader({
   hour: string;
   /** The departure's own name, under its hour. */
   title: string;
-  /** The boat, its crew and how full it is, in one line. */
-  line: string;
+  /**
+   * The boat, each crew member, how full it is, the day and the price — each
+   * fact already worded, read as one line and set so it breaks only between
+   * two of them.
+   */
+  facts: readonly string[];
   /** The voyage drawn: lines off, the dives, the way back. Null with nothing to draw. */
   strip: DayStripProps | null;
   /** The band's one action. */
@@ -72,25 +113,18 @@ export function VoyageHeader({
   badge?: ReactNode;
 }) {
   return (
-    <header className="mb-5">
-      {/*
-       * Sky to both edges, exactly as `DayHeader` does it and for the same
-       * reason: the trip shell is `mx-auto max-w-5xl`, so a band stopping at
-       * its content box would be a panel of sky with the page's ground either
-       * side of it. `mx-[calc(50%-50vw)] w-screen` walks it back out to the
-       * viewport from inside that centred column, which is safe because
-       * `body { overflow-x: clip }` contains the scrollbar without opening a
-       * horizontal scroll container. `-mt-8 sm:-mt-10` eats the shell's own
-       * top padding, because a sky with a margin above it is a picture of sky.
-       */}
-      <SkyBand
-        scheme={scheme}
-        className="mx-[calc(50%-50vw)] -mt-8 mb-5 w-screen pt-5 pb-5 print:mx-0 print:w-full sm:-mt-10 sm:pt-7"
-      >
-        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
+    <header>
+      <SkyBand scheme={scheme} className={BAND_CLASS}>
+        <div className={BAND_COLUMN_CLASS}>
           <div className="flex items-center gap-3">
             {back}
-            {action ? <div className="ms-auto shrink-0">{action}</div> : null}
+            {/* The slot lays its children out itself: the page hands over
+                two chips in a fragment, and two inline boxes from a fragment
+                touch, so the second one's `backdrop-blur` painted over the
+                first one's focus ring. `gap-2` is more than the ring's 5px. */}
+            {action ? (
+              <div className="ms-auto flex shrink-0 items-center gap-2">{action}</div>
+            ) : null}
           </div>
           <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <p className="font-rounded text-[34px] leading-10 font-bold tracking-tight tabular-nums">
@@ -99,10 +133,73 @@ export function VoyageHeader({
             {badge ? <span className="shrink-0">{badge}</span> : null}
           </div>
           <h1 className="mt-1 text-[19px] leading-6 font-semibold text-balance">{title}</h1>
-          <p className="mt-1 text-[15px] text-(--sky-ink-soft)">{line}</p>
-          {strip ? <DayStrip {...strip} className="mt-3 h-24 w-full sm:h-28" /> : null}
+          {/*
+           * **A line breaks between facts, never inside one** (pixel-craft class
+           * 8). One string joined with " · " broke at any space: "· Tue," /
+           * "Jul 21", "9 of 12 seats" / "taken" at 390. Each fact is an
+           * `inline-block`, an atomic box, so a line ends only between two, and
+           * one longer than the whole line still wraps inside its own box. Not
+           * `whitespace-nowrap`: a boat or a crew name is free text a shop typed,
+           * and glued whole it could run off a phone (the reason `joinFacts`
+           * leaves ordinary words breakable).
+           */}
+          <p className={`${FACTS_LINE_CLASS} text-(--sky-ink-soft)`}>
+            {facts.map((fact, index) => {
+              const last = index === facts.length - 1;
+              return (
+                // biome-ignore lint/suspicious/noArrayIndexKey: two crew members may share a name, and the facts never reorder
+                <Fragment key={index}>
+                  <span className="inline-block">
+                    {fact}
+                    {last ? null : FACT_SEPARATOR}
+                  </span>
+                  {last ? null : " "}
+                </Fragment>
+              );
+            })}
+          </p>
+          {strip ? <DayStrip {...strip} className={STRIP_CLASS} /> : null}
         </div>
       </SkyBand>
+    </header>
+  );
+}
+
+/**
+ * **The band as a navigation paints it**, for the departure's `loading.tsx`:
+ * the band's own box on the neutral fill (the hour the page will be read at is
+ * not known yet, and a day sky that turns to night is a flash), holding one
+ * bar per line of the band, each its line's own height.
+ *
+ * - `h-11`, the back row: the band's two chips are `sm`, 44px.
+ * - `h-10`, the hour's `leading-10`; `h-6`, the title's `leading-6`, on one
+ *   line, as a title is at 390.
+ * - The facts at their own type, one `h-lh` box per line: two on a phone,
+ *   where the seeded line wraps ("… 9 of 12 seats" / "taken · Tue, Jul 21 …"),
+ *   one from `sm`.
+ * - The strip's own box.
+ */
+export function VoyageHeaderSkeleton() {
+  const bar = "rounded bg-surface";
+  return (
+    <header>
+      <div className={`${BAND_CLASS} bg-surface-sunken`}>
+        <div className={BAND_COLUMN_CLASS}>
+          <div className="flex h-11 items-center gap-3">
+            <div className={`h-4 w-20 ${bar}`} />
+            <div className="ms-auto h-11 w-48 rounded-lg bg-surface" />
+          </div>
+          <div className={`mt-3 h-10 w-36 ${bar}`} />
+          <div className={`mt-1 h-6 w-72 max-w-full ${bar}`} />
+          <div className={FACTS_LINE_CLASS}>
+            <div className={`h-lh w-80 max-w-full ${bar}`} />
+            <div className="h-lh pt-1 sm:hidden">
+              <div className={`h-full w-48 ${bar}`} />
+            </div>
+          </div>
+          <div className={`${STRIP_CLASS} ${bar}`} />
+        </div>
+      </div>
     </header>
   );
 }

@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { RowLink, Table, TBody, Td, THead, Th, Tr } from "./table";
+import { CELL_EDGE, REFLOW_CELL_EDGE, RowLink, Table, TBody, Td, THead, Th, Tr } from "./table";
 
 afterEach(cleanup);
 
@@ -208,6 +208,16 @@ describe("Table", () => {
     }
     // A cell whose row owns the padding is left to its row.
     expect(screen.getByRole("cell", { name: "Reflowed" })).not.toHaveClass("sm:first:ps-5");
+  });
+
+  it("steps a reflowing row's outer edges out where it becomes a table, by the same 20px", () => {
+    // A tbody that stacks its rows below `xl` (the backup delivery history)
+    // cannot take `CELL_EDGE`'s `sm:` step: on a row that is still a stacked
+    // line it pushes the first value 20px in from the row's own inset (K-143).
+    for (const [breakpoint, edge] of Object.entries(REFLOW_CELL_EDGE)) {
+      expect(edge).toBe(CELL_EDGE.replaceAll("sm:", `${breakpoint}:`));
+    }
+    expect(REFLOW_CELL_EDGE.xl).toBe("xl:first:ps-5 xl:last:pe-5");
   });
 
   it("lines a row's cells up on their first baselines when asked", () => {

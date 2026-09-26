@@ -80,40 +80,54 @@ export function PaymentStatusControl({
         {sourceNote ? <span className="text-muted"> · {sourceNote}</span> : null}
         {showRefund ? <span className="text-muted"> · {refundNote}</span> : null}
       </span>
-      {/* Sized by the wrapper, not by a width class on the control —
-          `controlClass` already carries `w-full`, and two width utilities
-          resolve by stylesheet order rather than class order (same trap as
-          `min-h-*`, see components/ui/button.ts). `w-fit` on the wrapper keeps
-          the shrink-to-content width this row has always had. The hand-rolled
-          class this replaces had dropped `py-2` and, more to the point,
-          `focus:border-primary` — the control had no focus indicator at all —
-          and carried a no-op `items-center` on an element that is not a flex
-          container.
+      {/* **The picker and the button it submits wrap as one.** Label,
+          select and Update were three siblings of this wrapping row, so on a
+          phone a short label ("Payment: Unpaid") kept the select on the first
+          line and sent Update down alone, while a longer one dropped both,
+          and the select stood at two x's down the roster (K-363). The pair
+          is one group, so the row breaks between the label and the pair, and
+          the pair moves down entire. The group wraps only inside a row too
+          narrow for the pair alone (a long status in Spanish at 360), where
+          the one alternative is pushing the page sideways. */}
+      <span className="flex flex-wrap items-center gap-2">
+        {/* Sized by the wrapper, not by a width class on the control —
+            `controlClass` already carries `w-full`, and two width utilities
+            resolve by stylesheet order rather than class order (same trap as
+            `min-h-*`, see components/ui/button.ts). `w-fit` on the wrapper keeps
+            the shrink-to-content width this row has always had. The hand-rolled
+            class this replaces had dropped `py-2` and, more to the point,
+            `focus:border-primary` — the control had no focus indicator at all —
+            and carried a no-op `items-center` on an element that is not a flex
+            container.
 
-          `md`, select and button both: a row with a text control in it is an
-          `md` row. The select used to take an appended `text-sm` to match an
-          `sm` Update; a control's type is 16px at every size (K-45), and a
-          16px box beside a 14px label is the mismatch `controlSizes` names. */}
-      <span className="w-fit">
-        <select name="status" defaultValue={status} className={controlClassFor("md")}>
-          {/* The booking's current status is always among the options, even
-              when this staffer could not have set it. Without that, a captain
-              opening a booking an owner had waived would find the select
-              showing the *first* option instead — and one tap of Update would
-              silently move a free seat to unpaid. Order comes from the copy
-              map, so the list reads the same for everyone who sees it. */}
-          {(Object.keys(copy.statuses) as PaymentStatus[])
-            .filter((value) => value === status || allowedStatuses.includes(value))
-            .map((value) => (
-              <option key={value} value={value}>
-                {copy.statuses[value]}
-              </option>
-            ))}
-        </select>
+            `md`, select and button both: a row with a text control in it is an
+            `md` row. The select used to take an appended `text-sm` to match an
+            `sm` Update; a control's type is 16px at every size (K-45), and a
+            16px box beside a 14px label is the mismatch `controlSizes` names. */}
+        <span className="w-fit">
+          <select name="status" defaultValue={status} className={controlClassFor("md")}>
+            {/* The booking's current status is always among the options, even
+                when this staffer could not have set it. Without that, a captain
+                opening a booking an owner had waived would find the select
+                showing the *first* option instead — and one tap of Update would
+                silently move a free seat to unpaid. Order comes from the copy
+                map, so the list reads the same for everyone who sees it. */}
+            {(Object.keys(copy.statuses) as PaymentStatus[])
+              .filter((value) => value === status || allowedStatuses.includes(value))
+              .map((value) => (
+                <option key={value} value={value}>
+                  {copy.statuses[value]}
+                </option>
+              ))}
+          </select>
+        </span>
+        <SubmitButton
+          pendingLabel={copy.updating}
+          className={buttonClass({ variant: "secondary" })}
+        >
+          {copy.update}
+        </SubmitButton>
       </span>
-      <SubmitButton pendingLabel={copy.updating} className={buttonClass({ variant: "secondary" })}>
-        {copy.update}
-      </SubmitButton>
     </form>
   );
 }

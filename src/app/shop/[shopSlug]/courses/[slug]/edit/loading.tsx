@@ -22,7 +22,13 @@ export default function EditCourseLoading() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton description={false} />
+        {/* The header's meta is one `text-sm` line — "Live at /s/…", or
+            "Hidden from divers · Preview" — 12px under the title. Without its
+            bar everything below the title dropped 32px on load (K-417). */}
+        <ShopPageHeaderSkeleton
+          description={false}
+          meta={<div className="h-5 w-72 max-w-full rounded bg-surface-sunken" />}
+        />
         <div className="mt-6 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
           {/* The rail: a jump-row across the top on a phone, a column from `lg`. */}
           <EditorRailSkeleton count={COURSE_EDITOR_SECTIONS} />

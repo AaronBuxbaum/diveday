@@ -68,11 +68,17 @@ export async function POST(request: Request) {
   if (timezone !== null && !isValidTimeZone(timezone)) {
     return NextResponse.json({ error: "bad_timezone" }, { status: 400 });
   }
+  // **`?brand=1` dresses the shop** in the canonical demo's brand and a logo,
+  // for the one capture of the settings profile row and nothing else
+  // (`createDemoShop`'s `brand`). A flag, never a URL: the caller picks
+  // whether, not what.
+  const brand = params.get("brand") === "1";
   const { slug, ownerEmail } = await db.transaction(async (tx) =>
     createDemoShop(tx, {
       history: false,
       slug: requested ?? undefined,
       timezone: timezone ?? undefined,
+      brand,
     }),
   );
   return NextResponse.json({ slug, ownerEmail, password: DEMO_BYPASS_PASSWORD });

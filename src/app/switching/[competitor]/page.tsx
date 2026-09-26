@@ -8,6 +8,7 @@ import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingN
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { SWITCH_EMAIL, SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/ledger";
 import {
   BANNER_TITLE_CLASS,
@@ -27,6 +28,9 @@ import {
 import {
   ClosingCta,
   DividedList,
+  GUIDE_BAND_CLASS,
+  GUIDE_BAND_LEDE_CLASS,
+  GuideBodySkeleton,
   GuideContext,
   GuideHero,
   ImportPhase,
@@ -38,6 +42,7 @@ import {
   SourcesFootnote,
   StepList,
 } from "../_components/guide";
+import { GUIDE_SKELETON_LINES } from "../_components/guide-skeleton-lines";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -113,7 +118,12 @@ export default async function MigrationGuidePage({
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <Suspense fallback={<main className="flex-1" />}>
+      {/* No `loading.tsx` stands above this segment, so this boundary is what
+          paints while the localized body streams: the guide's hero and "you
+          are here" band as bars, a bar per line this guide's words wrap to.
+          It was an empty `<main>`, 0px against a 6,000–13,000px guide, and the
+          footer painted at the top (K-342). */}
+      <Suspense fallback={<GuideBodySkeleton lines={GUIDE_SKELETON_LINES[guide.slug]} />}>
         <LocalizedGuideBody guide={guide} />
       </Suspense>
       <Suspense fallback={<MarketingFooterFallback />}>
@@ -134,6 +144,24 @@ async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
     />
   );
 }
+
+/**
+ * The one link inside the coexist and website callouts: a 44px target
+ * (`tapTargetLinkClass`) whose underline thickens on hover. They were 24px
+ * `inline-block` words, already underlined, so a hover changed no pixel
+ * (K-258). Each sits in a `flex h-6 items-center` line, the 16px text's own
+ * 24px, so the target bleeds 10px into the gap above and the callout's
+ * padding below and the callout keeps its shape.
+ */
+const CALLOUT_LINK_CLASS = `${tapTargetLinkClass} font-medium text-primary underline underline-offset-4 hover:decoration-2`;
+
+/**
+ * The website ledger's two columns, one class for the head row and every
+ * ledger row so the heads stay over their columns. `8rem` on a phone: at
+ * `7.5rem` (120px) the tracked small-caps head "IN FAREHARBOR", about 122px,
+ * broke after "IN" (K-579); es-ES "EN FAREHARBOR" is the same length.
+ */
+const WEBSITE_LEDGER_COLUMNS = "grid-cols-[8rem_1fr] gap-3 sm:grid-cols-[15rem_1fr] sm:gap-4";
 
 /**
  * Cached per (negotiated locale, guide) — `guide` is a plain, serializable
@@ -173,15 +201,16 @@ async function GuideBody({
       {/* Coexist framing: for a booking channel a shop keeps (FareHarbor,
           Rezdy), the "keep the storefront, we run the water" division of
           labor, plus the honest alternative of leaving. Absent for the
-          leave-it guides. */}
+          leave-it guides. Ruled below only: `GuideContext` above it draws the
+          rule on top (K-204). */}
       {guide.coexist && (
-        <section className="border-y border-border">
-          <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
+        <section className="border-b border-border">
+          <div className={GUIDE_BAND_CLASS}>
             <p className={MARKETING_EYEBROW_CLASS}>
               {t("switching.competitor.keepOrLeaveEyebrow")}
             </p>
             <h2 className={`mt-3 ${BANNER_TITLE_CLASS} sm:text-4xl`}>{t(guide.coexist.heading)}</h2>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.coexist.intro)}</p>
+            <p className={GUIDE_BAND_LEDE_CLASS}>{t(guide.coexist.intro)}</p>
 
             {/* Shared messages — two of them interpolate the competitor's name. */}
             <DividedList
@@ -212,12 +241,11 @@ async function GuideBody({
                   src/lib/marketing.ts (marketing.md's claims policy), and
                   /pricing already links back here for the fee citation -- this
                   is what closes that loop in the other direction. */}
-              <Link
-                href="/pricing"
-                className="mt-4 inline-block font-medium text-primary underline underline-offset-4"
-              >
-                {t("switching.common.seePricing")}
-              </Link>
+              <p className="mt-4 flex h-6 items-center">
+                <Link href="/pricing" className={CALLOUT_LINK_CLASS}>
+                  {t("switching.common.seePricing")}
+                </Link>
+              </p>
             </div>
           </div>
         </section>
@@ -233,15 +261,15 @@ async function GuideBody({
           the offer's one action is the address to write to. */}
       {guide.website && (
         <section className="border-b border-border">
-          <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
+          <div className={GUIDE_BAND_CLASS}>
             <p className={MARKETING_EYEBROW_CLASS}>{t("switching.competitor.websiteEyebrow")}</p>
             <h2 className={`mt-3 ${BANNER_TITLE_CLASS} sm:text-4xl`}>{t(guide.website.heading)}</h2>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.website.intro)}</p>
+            <p className={GUIDE_BAND_LEDE_CLASS}>{t(guide.website.intro)}</p>
 
             {/* The two column labels render at every width — on a phone the
                 rows are two narrow columns rather than a stack, so a reader
                 who never sees a desktop still knows which side is whose. */}
-            <div className="mt-8 grid grid-cols-[7.5rem_1fr] gap-3 sm:grid-cols-[15rem_1fr] sm:gap-4">
+            <div className={`mt-8 grid ${WEBSITE_LEDGER_COLUMNS}`}>
               <span className={groupLabelClass()}>
                 {t("switching.competitor.websiteTheirs", { competitor: guide.competitor })}
               </span>
@@ -251,7 +279,7 @@ async function GuideBody({
               {guide.website.ledger.map((row) => (
                 <li
                   key={row.theirs}
-                  className="grid grid-cols-[7.5rem_1fr] items-baseline gap-3 py-3 sm:grid-cols-[15rem_1fr] sm:gap-4"
+                  className={`grid ${WEBSITE_LEDGER_COLUMNS} items-baseline py-3`}
                 >
                   <span className="font-medium text-foreground">{t(row.theirs)}</span>
                   <span className="text-sm leading-6 text-muted">{t(row.ours)}</span>
@@ -270,12 +298,11 @@ async function GuideBody({
               <p className="mt-2 leading-7 text-muted">{t(guide.website.offer.body)}</p>
               {/* The concierge's own door, reused word for word: one address
                   for the switch and the website, said the same way twice. */}
-              <a
-                href={`mailto:${SWITCH_EMAIL}`}
-                className="mt-4 inline-block font-medium text-primary underline underline-offset-4"
-              >
-                {t("switching.concierge.emailCta", { email: SWITCH_EMAIL })}
-              </a>
+              <p className="mt-4 flex h-6 items-center">
+                <a href={`mailto:${SWITCH_EMAIL}`} className={CALLOUT_LINK_CLASS}>
+                  {t("switching.concierge.emailCta", { email: SWITCH_EMAIL })}
+                </a>
+              </p>
             </div>
           </div>
         </section>

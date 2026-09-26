@@ -144,14 +144,20 @@ export function DiverStatusLedger({
             key={`${row.kind}-${row.tone}`}
             kind={{ word: t(KIND_WORD[row.kind]), tone: row.tone }}
             pad="lg"
+            // A whole sentence, so on a phone it takes the row's full width
+            // under the kind and the fix: beside both it had a ~120px column
+            // and ran four to six lines deep.
+            stacked
             trailing={
               row.action ? (
                 <FixLink
                   href={fixHref(row, shopSlug, recordPath)}
                   // Through `buttonClass` so the 44px target is structural
                   // rather than a remembered `min-h-11` — this is the one tap
-                  // the row exists for.
-                  className={buttonClass({ variant: "link", size: "sm" })}
+                  // the row exists for. `flush`, so its words end on the
+                  // column's edge with the file groups' facts below, not 12px
+                  // inside it.
+                  className={buttonClass({ variant: "link", size: "sm", flush: true })}
                 >
                   {t(row.action.labelKey)}
                 </FixLink>

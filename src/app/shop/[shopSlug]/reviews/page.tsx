@@ -284,165 +284,173 @@ export default async function ReviewsPage({
         <StaffNoticeBanner tone={pulseNotice.tone}>{t(pulseNotice.key)}</StaffNoticeBanner>
       ) : null}
 
-      {/* **Renders nothing when there is nothing to fix** — the pattern this
-          page's own `nothingAtAll` branch already keeps. A heading over an
-          absence would put a permanent "Asked us to fix" on the screen of every
-          shop nobody has ever complained to.
+      {/* The pulse card and the groups below share one section rhythm, as the
+          groups share it among themselves: the card's own `mb-8` stood it
+          32px above Waiting where Waiting stands 40px above Published (K-305). */}
+      <div className="space-y-10">
+        {/* **Renders nothing when there is nothing to fix** — the pattern this
+            page's own `nothingAtAll` branch already keeps. A heading over an
+            absence would put a permanent "Asked us to fix" on the screen of every
+            shop nobody has ever complained to.
 
-          Above the ledger because it is the thing on this page a person is
-          waiting on, and behind **its own owner/manager gate** — the one thing
-          on this page that is (issue #1410). Moderating public words stays open
-          to every staff role; the panel is the exception, not the page.
+            Above the ledger because it is the thing on this page a person is
+            waiting on, and behind **its own owner/manager gate** — the one thing
+            on this page that is (issue #1410). Moderating public words stays open
+            to every staff role; the panel is the exception, not the page.
 
-          `canReadPulses` is repeated here even though the read above already
-          hands a refused reader an empty list: the panel stays gated if that
-          read ever stops being the conditional one. */}
-      {canReadPulses && openPulses.length > 0 ? (
-        <SectionCard title={t("reviews.pulseTitle")} className="mb-8">
-          <ul className="divide-y divide-border">
-            {openPulses.map((pulse) => (
-              <li
-                key={pulse.id}
-                className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0"
-              >
-                {/* `min-w-56` so the act drops below the words on a phone
-                    rather than squeezing them into a four-line column. */}
-                <div className="min-w-56 flex-1">
-                  <p className="text-base font-semibold">
-                    {pulse.categories
-                      .map((category) => t(STAFF_PULSE_CATEGORY_KEYS[category]))
-                      .join(" · ")}
-                  </p>
-                  {/* The diver's own words, in full — this is the whole reason
-                      the row exists, so it is never clipped. */}
-                  {pulse.note ? (
-                    <p className="mt-1 break-words text-base text-pretty">{pulse.note}</p>
-                  ) : null}
-                  <p className="mt-1 text-xs text-muted">
-                    {t.rich("reviews.pulseMeta", {
-                      diverName: pulse.diverName,
-                      tripTitle: pulse.tripTitle,
-                      date: formatShortDate(pulse.tripStartsAt, locale, timezone),
-                      diver: (chunks) => (
-                        <Link
-                          href={shopPath(shopSlug, "divers", pulse.personId)}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {chunks}
-                        </Link>
-                      ),
-                      trip: (chunks) => (
-                        <Link
-                          href={shopPath(shopSlug, "trips", pulse.tripId)}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {chunks}
-                        </Link>
-                      ),
-                    })}
-                  </p>
-                </div>
-                <form action={markPulseAddressedAction}>
-                  <input type="hidden" name="pulseId" value={pulse.id} />
-                  <SubmitButton
-                    pendingLabel={t("reviews.saving")}
-                    ariaLabel={`${t("reviews.pulseMarkAddressed")} — ${pulse.diverName}`}
-                    className={buttonClass({ variant: "secondary", size: "sm" })}
-                  >
-                    {t("reviews.pulseMarkAddressed")}
-                  </SubmitButton>
-                </form>
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
-      ) : null}
-
-      {nothingAtAll ? (
-        <EmptyState
-          title={t("reviews.emptyHeading")}
-          body={t("reviews.emptyDetail")}
-          /* Nothing here yet is not something staff can fix by clicking — a
-             review arrives when a diver opens the recap after a trip sails,
-             and no setting turns that on. What *is* theirs to set is where a
-             happy diver goes next, so that is the door: the review link the
-             recap offers after a strong rating. */
-          action={
-            <div className="flex flex-col items-center gap-2">
-              <p className="max-w-md text-sm text-muted">{t("reviews.emptyReviewLinkBody")}</p>
-              <Link
-                href={`/shop/${shopSlug}/settings#review-link`}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("reviews.emptyReviewLinkAction")}
-              </Link>
-            </div>
-          }
-        />
-      ) : (
-        <PublishAllProvider>
-          {/* Above the groups and rendered unconditionally: a pass that clears
-              the queue takes the waiting group — and the button that ran it —
-              off the page, and that is exactly the pass most worth a sentence. */}
-          <PublishAllStatus copy={bulkCopy} className="mb-4" />
-
-          {/* The same reasoning per row, and for the same reason: publishing or
-              hiding a review moves its `<li>` between these three lists, which
-              unmounts it. A `useActionState` inside the row was destroyed by
-              the act it existed to report. */}
-
-          {/* One rhythm between groups, the page-section spacing every staff
-              surface uses — never a per-section `mt-*` that drifts. */}
-          <ReviewRowProvider>
-            {/* Above the lists for the same reason `PublishAllStatus` is: a
-                hide takes its own row off the group, and off the page entirely
-                once there are more moderated reviews than fit one. */}
-            <ReviewRowUndoToast copy={rowCopy} />
-            <div className="space-y-10">
-              {waitingPage.reviews.length > 0 ? (
-                <section aria-labelledby="reviews-waiting">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <GroupLabel as="h2" id="reviews-waiting">
-                      {t("reviews.group.waiting", { count: waitingPage.total })}
-                    </GroupLabel>
-                    {/* With one review waiting there is nothing a header act does
-                      that the row's own Publish does not, so it does not
-                      render: two buttons one tap apart, doing the same thing,
-                      is the second door principle 8 exists to close. */}
-                    {waitingIds.length > 1 ? (
-                      <PublishAllButton
-                        reviewIds={waitingIds}
-                        label={t("reviews.publishAll", { count: waitingIds.length })}
-                        pendingLabel={t("reviews.saving")}
-                        className={buttonClass({ variant: "link", size: "sm", flush: true })}
-                      />
+            `canReadPulses` is repeated here even though the read above already
+            hands a refused reader an empty list: the panel stays gated if that
+            read ever stops being the conditional one. */}
+        {canReadPulses && openPulses.length > 0 ? (
+          <SectionCard title={t("reviews.pulseTitle")}>
+            <ul className="divide-y divide-border">
+              {openPulses.map((pulse) => (
+                <li
+                  key={pulse.id}
+                  className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0 sm:items-center"
+                >
+                  {/* `min-w-56` so the act drops below the words on a phone
+                      rather than squeezing them into a four-line column. */}
+                  <div className="min-w-56 flex-1">
+                    <p className="text-base font-semibold">
+                      {pulse.categories
+                        .map((category) => t(STAFF_PULSE_CATEGORY_KEYS[category]))
+                        .join(" · ")}
+                    </p>
+                    {/* The diver's own words, in full — this is the whole reason
+                        the row exists, so it is never clipped. */}
+                    {pulse.note ? (
+                      <p className="mt-1 break-words text-base text-pretty">{pulse.note}</p>
                     ) : null}
+                    <p className="mt-1 text-xs text-muted">
+                      {t.rich("reviews.pulseMeta", {
+                        diverName: pulse.diverName,
+                        tripTitle: pulse.tripTitle,
+                        date: formatShortDate(pulse.tripStartsAt, locale, timezone),
+                        diver: (chunks) => (
+                          <Link
+                            href={shopPath(shopSlug, "divers", pulse.personId)}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {chunks}
+                          </Link>
+                        ),
+                        trip: (chunks) => (
+                          <Link
+                            href={shopPath(shopSlug, "trips", pulse.tripId)}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {chunks}
+                          </Link>
+                        ),
+                      })}
+                    </p>
                   </div>
-                  <ul className="mt-2">{rows(waitingPage.reviews, "waiting")}</ul>
-                </section>
-              ) : null}
+                  {/* Centred on the item from `sm`, and ending at the row's right
+                      edge when it wraps under the words on a phone — where the
+                      ledger rows' acts below sit (K-433). */}
+                  <form action={markPulseAddressedAction} className="max-sm:ms-auto">
+                    <input type="hidden" name="pulseId" value={pulse.id} />
+                    <SubmitButton
+                      pendingLabel={t("reviews.saving")}
+                      ariaLabel={`${t("reviews.pulseMarkAddressed")} — ${pulse.diverName}`}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {t("reviews.pulseMarkAddressed")}
+                    </SubmitButton>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+        ) : null}
 
-              {published.length > 0 ? (
-                <section aria-labelledby="reviews-published">
-                  <GroupLabel as="h2" id="reviews-published">
-                    {t("reviews.group.published", { count: groups.published })}
-                  </GroupLabel>
-                  <ul className="mt-2">{rows(published, "published")}</ul>
-                </section>
-              ) : null}
+        {nothingAtAll ? (
+          <EmptyState
+            title={t("reviews.emptyHeading")}
+            body={t("reviews.emptyDetail")}
+            /* Nothing here yet is not something staff can fix by clicking — a
+               review arrives when a diver opens the recap after a trip sails,
+               and no setting turns that on. What *is* theirs to set is where a
+               happy diver goes next, so that is the door: the review link the
+               recap offers after a strong rating. */
+            action={
+              <div className="flex flex-col items-center gap-2">
+                <p className="max-w-md text-sm text-muted">{t("reviews.emptyReviewLinkBody")}</p>
+                <Link
+                  href={`/shop/${shopSlug}/settings#review-link`}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {t("reviews.emptyReviewLinkAction")}
+                </Link>
+              </div>
+            }
+          />
+        ) : (
+          <PublishAllProvider>
+            {/* Above the groups and rendered unconditionally: a pass that clears
+                the queue takes the waiting group — and the button that ran it —
+                off the page, and that is exactly the pass most worth a sentence. */}
+            <PublishAllStatus copy={bulkCopy} className="mb-4" />
 
-              {hidden.length > 0 ? (
-                <section aria-labelledby="reviews-hidden">
-                  <GroupLabel as="h2" id="reviews-hidden">
-                    {t("reviews.group.hidden", { count: groups.hidden })}
-                  </GroupLabel>
-                  <ul className="mt-2">{rows(hidden, "hidden")}</ul>
-                </section>
-              ) : null}
-            </div>
-          </ReviewRowProvider>
-        </PublishAllProvider>
-      )}
+            {/* The same reasoning per row, and for the same reason: publishing or
+                hiding a review moves its `<li>` between these three lists, which
+                unmounts it. A `useActionState` inside the row was destroyed by
+                the act it existed to report. */}
+
+            {/* One rhythm between groups, the page-section spacing every staff
+                surface uses — never a per-section `mt-*` that drifts. */}
+            <ReviewRowProvider>
+              {/* Above the lists for the same reason `PublishAllStatus` is: a
+                  hide takes its own row off the group, and off the page entirely
+                  once there are more moderated reviews than fit one. */}
+              <ReviewRowUndoToast copy={rowCopy} />
+              <div className="space-y-10">
+                {waitingPage.reviews.length > 0 ? (
+                  <section aria-labelledby="reviews-waiting">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <GroupLabel as="h2" id="reviews-waiting">
+                        {t("reviews.group.waiting", { count: waitingPage.total })}
+                      </GroupLabel>
+                      {/* With one review waiting there is nothing a header act does
+                        that the row's own Publish does not, so it does not
+                        render: two buttons one tap apart, doing the same thing,
+                        is the second door principle 8 exists to close. */}
+                      {waitingIds.length > 1 ? (
+                        <PublishAllButton
+                          reviewIds={waitingIds}
+                          label={t("reviews.publishAll", { count: waitingIds.length })}
+                          pendingLabel={t("reviews.saving")}
+                          className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                        />
+                      ) : null}
+                    </div>
+                    <ul className="mt-2">{rows(waitingPage.reviews, "waiting")}</ul>
+                  </section>
+                ) : null}
+
+                {published.length > 0 ? (
+                  <section aria-labelledby="reviews-published">
+                    <GroupLabel as="h2" id="reviews-published">
+                      {t("reviews.group.published", { count: groups.published })}
+                    </GroupLabel>
+                    <ul className="mt-2">{rows(published, "published")}</ul>
+                  </section>
+                ) : null}
+
+                {hidden.length > 0 ? (
+                  <section aria-labelledby="reviews-hidden">
+                    <GroupLabel as="h2" id="reviews-hidden">
+                      {t("reviews.group.hidden", { count: groups.hidden })}
+                    </GroupLabel>
+                    <ul className="mt-2">{rows(hidden, "hidden")}</ul>
+                  </section>
+                ) : null}
+              </div>
+            </ReviewRowProvider>
+          </PublishAllProvider>
+        )}
+      </div>
 
       <Pager
         page={moderatedPage.page}

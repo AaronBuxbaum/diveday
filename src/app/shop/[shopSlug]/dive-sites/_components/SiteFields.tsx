@@ -2,7 +2,14 @@ import type { ReactNode } from "react";
 import { EditorSection } from "@/components/editor/EditorSection";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
-import { ChoiceRow, controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoiceRow,
+  controlClass,
+  Field,
+  FieldGrid,
+  textareaClassFor,
+} from "@/components/ui/form";
 import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
 import { REQUIRABLE_CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -32,6 +39,9 @@ import {
   type SiteFormSection,
   siteFormSectionLabels,
 } from "./site-form-sections";
+
+/** The specialty boxes' grid: two across on a phone, four from `sm`. */
+const SPECIALTY_GRID = "grid grid-cols-2 gap-3 sm:grid-cols-4";
 
 /**
  * The subset of a stored dive site the form needs to prefill. `undefined`
@@ -213,6 +223,32 @@ export function SiteFields({
     </>
   ) : undefined;
 
+  // What a site asks of a diver beyond a level: each specialty, then nitrox.
+  const specialtyBoxes = (
+    <>
+      {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
+        <ChoiceRow
+          key={value}
+          name="specialty"
+          type="checkbox"
+          value={value}
+          defaultChecked={values?.requiredSpecialties.includes(value as DiveSpecialty) ?? false}
+          className="text-sm font-medium"
+        >
+          {t(key)}
+        </ChoiceRow>
+      ))}
+      <ChoiceRow
+        name="requiresNitrox"
+        type="checkbox"
+        defaultChecked={values?.requiresNitrox ?? false}
+        className="text-sm font-medium"
+      >
+        {t("diveSites.form.nitroxCheckbox")}
+      </ChoiceRow>
+    </>
+  );
+
   const sections: Record<SiteFormSection, SectionParts> = {
     about: {
       body: (
@@ -279,24 +315,36 @@ export function SiteFields({
             </Field>
             {/* The tide is read at a NOAA station, never at the coordinates
               above — a reef is rarely a station — so the id is its own field,
-              and the hint carries the one link a staffer needs to find one.
+              and its help carries the one link a staffer needs to find one.
               A blank id says nothing about the tide anywhere (ADR
-              20260907-noaa-tide-predictions). */}
+              20260907-noaa-tide-predictions).
+
+              The help is the field's description, under the box, with the
+              station NOAA answered for beneath it: two sentences and a link
+              are not a `hint`, the inline "(optional)" on the caption's line,
+              where they stood "NOAA tide station" two lines above "Dives
+              best" beside it (K-418). */}
             <Field
               label={t("diveSites.form.tideStationLabel")}
-              description={tideStationNote}
-              hint={t.rich("diveSites.form.tideStationHint", {
-                link: (chunks) => (
-                  <a
-                    href="https://tidesandcurrents.noaa.gov/tide_predictions.html"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {chunks}
-                  </a>
-                ),
-              })}
+              description={
+                <>
+                  <span className="block">
+                    {t.rich("diveSites.form.tideStationHint", {
+                      link: (chunks) => (
+                        <a
+                          href="https://tidesandcurrents.noaa.gov/tide_predictions.html"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {chunks}
+                        </a>
+                      ),
+                    })}
+                  </span>
+                  {tideStationNote}
+                </>
+              }
             >
               {/* No `pattern`: native constraint validation refuses the submit
                 outright, in the browser's own words, and the form never
@@ -330,13 +378,17 @@ export function SiteFields({
               a tick box for a question nobody put is furniture. It follows the
               grid rather than sitting inside it because the grid's rows are a
               subgrid two tracks deep per field, and a checkbox belongs beside
-              its own words the way the nitrox box does. */}
+              its own words the way the nitrox box does. No margin of its
+              own: it is an item in the section's `gap-5` column, where a
+              margin adds to the gap, and `mt-4` stood it 36px under the
+              warning it answers, nearer the next section than its question
+              (K-424). */}
           {stationFar ? (
             <ChoiceRow
               name="tideStationConfirmed"
               type="checkbox"
               defaultChecked={stationConfirmed}
-              className="mt-4 text-sm font-medium"
+              className="text-sm font-medium"
             >
               {t("diveSites.form.tideStationConfirmedCheckbox")}
             </ChoiceRow>
@@ -535,7 +587,8 @@ export function SiteFields({
                   ? "diveSites.form.maxDepthFeetLabel"
                   : "diveSites.form.maxDepthMetersLabel",
               )}
-              hint={t("diveSites.form.maxDepthHint")}
+              hint={t("diveSites.form.optionalHint")}
+              description={t("diveSites.form.maxDepthHint")}
             >
               <input
                 name="maxDepth"
@@ -561,7 +614,8 @@ export function SiteFields({
                 standing. */}
             <Field
               label={t("diveSites.form.expectedBottomTimeLabel")}
-              hint={t("diveSites.form.expectedBottomTimeHint")}
+              hint={t("diveSites.form.optionalHint")}
+              description={t("diveSites.form.expectedBottomTimeHint")}
             >
               <input
                 name="expectedBottomTime"
@@ -602,9 +656,11 @@ export function SiteFields({
                 className={textareaClassFor(3)}
               />
             </Field>
+            {/* A sentence of help, so a description under the box, as the
+                form's other help is; not the caption's inline hint (K-418). */}
             <Field
               label={t("diveSites.form.conservationNoteLabel")}
-              hint={t("diveSites.form.conservationNoteHint")}
+              description={t("diveSites.form.conservationNoteHint")}
             >
               <textarea
                 name="conservationNote"
@@ -710,7 +766,8 @@ export function SiteFields({
           <FieldGrid columns={1}>
             <Field
               label={t("diveSites.form.tipsHeadingLabel")}
-              hint={t("diveSites.form.tipsHeadingHint")}
+              hint={t("diveSites.form.optionalHint")}
+              description={t("diveSites.form.tipsHeadingHint")}
             >
               <input
                 name="fieldGuideTipsHeading"
@@ -748,35 +805,20 @@ export function SiteFields({
               </select>
             </Field>
           </FieldGrid>
-          <div>
-            {requiredSpecialtiesLabel ? (
-              <p className="text-sm font-medium">{requiredSpecialtiesLabel}</p>
-            ) : null}
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
-                <ChoiceRow
-                  key={value}
-                  name="specialty"
-                  type="checkbox"
-                  value={value}
-                  defaultChecked={
-                    values?.requiredSpecialties.includes(value as DiveSpecialty) ?? false
-                  }
-                  className="text-sm font-medium"
-                >
-                  {t(key)}
-                </ChoiceRow>
-              ))}
-              <ChoiceRow
-                name="requiresNitrox"
-                type="checkbox"
-                defaultChecked={values?.requiresNitrox ?? false}
-                className="text-sm font-medium"
-              >
-                {t("diveSites.form.nitroxCheckbox")}
-              </ChoiceRow>
-            </div>
-          </div>
+          {/* Captioned, the boxes are one group under a legend at a field
+              caption's distance (`ChoiceFieldset`); the new form passes no
+              caption and they start at the section's own gap. A bare
+              paragraph over a grid pushed `mt-3` down read as floating
+              between the select above and its own boxes, and with no caption
+              the `mt-3` stood them 32px under the select where the section's
+              fields stand 20px apart (K-212). */}
+          {requiredSpecialtiesLabel ? (
+            <ChoiceFieldset legend={requiredSpecialtiesLabel} bodyClassName={SPECIALTY_GRID}>
+              {specialtyBoxes}
+            </ChoiceFieldset>
+          ) : (
+            <div className={SPECIALTY_GRID}>{specialtyBoxes}</div>
+          )}
         </>
       ),
     },

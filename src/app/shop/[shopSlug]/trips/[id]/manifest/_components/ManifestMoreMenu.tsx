@@ -66,8 +66,12 @@ export function ManifestMoreMenu({
           className="grid size-12 place-items-center rounded-full border border-border bg-surface text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
           onClick={() => setOpen((current) => !current)}
         >
+          {/* `size-5` on both marks here: an svg with only a `viewBox`
+              stretches to its grid cell, which ran the dots 34px across this
+              48px circle and the panel's × to its button's edge. */}
           <svg
             aria-hidden="true"
+            className="size-5"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -87,14 +91,17 @@ export function ManifestMoreMenu({
           >
             <div className="mb-2 flex items-center justify-between gap-3 px-1">
               <p className={groupLabelClass()}>{label}</p>
+              {/* `size-11`, the 44px floor: at `size-9` this was the one
+                  control on the manifest a wet thumb had 36px of. */}
               <button
                 type="button"
                 aria-label={closeLabel}
-                className="grid size-9 place-items-center rounded-full text-muted hover:bg-surface-sunken hover:text-foreground"
+                className="grid size-11 place-items-center rounded-full text-muted hover:bg-surface-sunken hover:text-foreground"
                 onClick={close}
               >
                 <svg
                   aria-hidden="true"
+                  className="size-5"
                   viewBox="0 0 20 20"
                   fill="none"
                   stroke="currentColor"
@@ -112,8 +119,12 @@ export function ManifestMoreMenu({
     );
   }
 
+  // **Its own gap above** (pixel-craft class 4). The page passes none, and
+  // with none the trigger's box began on the "On this phone" card's bottom
+  // border, 0px under it, its 5px focus ring drawn inside the card. `mt-3` is
+  // 12px of box and the flush ghost's 12px of air above its words.
   return (
-    <div className="hidden print:hidden lg:block">
+    <div className="mt-3 hidden print:hidden lg:block">
       <button
         ref={triggerRef}
         type="button"

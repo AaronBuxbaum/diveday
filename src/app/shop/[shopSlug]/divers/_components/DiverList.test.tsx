@@ -166,6 +166,24 @@ describe("DiverList empty state", () => {
   });
 
   /**
+   * **The empty card stands where the ledger would** (pixel-craft class 11).
+   * It started 24px under the toolbar where the list starts 32px, so
+   * narrowing the view to nothing pulled the card 8px up — while the comment
+   * on the wrapper round both says it is there to keep those gaps equal.
+   */
+  it("starts the empty card on the ledger's own gap under the toolbar", () => {
+    const topGap = (element: Element | null) =>
+      [...(element?.classList ?? [])].filter((token) => /^m[ty]-/.test(token));
+    renderList({ query: "nobody" });
+    const card = screen.getByRole("heading", { name: "No divers match this view." }).parentElement;
+    cleanup();
+    renderList({ rows: [rosterRow()] });
+    const ledger = screen.getByRole("list").closest(".flex-col");
+    expect(topGap(ledger)).toEqual(["mt-8"]);
+    expect(topGap(card)).toEqual(topGap(ledger));
+  });
+
+  /**
    * Nothing to group when there is nothing to list — no stray letter labels.
    *
    * Targeted at the letter heads by their own id rather than at every `h2` on
@@ -238,7 +256,10 @@ describe("DiverList empty state", () => {
     expect(css).not.toContain("animate-slide-in-right");
     expect(css).not.toContain("animate-slide-out-right");
     expect(css).not.toContain("--quick-add-shift");
-    expect(css).not.toContain("@media (width < 40rem)");
+    // No phone breakpoint cutting a motion short, which is what that block
+    // was. A phone breakpoint for anything else — the public trip's foot bar
+    // reserving its height (K-139) — is not this row's business.
+    expect(css).not.toMatch(/@media \(width < 40rem\)\s*\{[^}]*animation/);
   });
 
   /**

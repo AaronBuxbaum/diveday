@@ -115,6 +115,21 @@ describe("the fly-safe line", () => {
     expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.flySafe)).toBeNull();
   });
 
+  it("stands a section's 40px under the record, as every section on the page does", () => {
+    // It was `mt-6`: 24px under the log card where the crew quote, the
+    // review, the doors and the next dive are each 40px apart (K-532).
+    render(
+      <AfterState
+        {...props({
+          flySafe: { when: "Sunday 10:20 AM", hours: 24, anchor: "last_dive", reason: "one_dive" },
+        })}
+      />,
+    );
+    const line = screen.getByTestId(AFTER_STATE_TEST_IDS.flySafe);
+    expect(line).toHaveClass("mt-10");
+    expect(line).not.toHaveClass("mt-6");
+  });
+
   it("names the instant, the hours, and the shop, worded off the last dive", () => {
     render(
       <AfterState
@@ -587,6 +602,16 @@ describe("the keepsake prints like a logbook page", () => {
       }
     }
   });
+
+  it("rules the facts' top edge on paper only, where the band's wash is gone", () => {
+    // On screen the band's wash is the facts' top edge, and a rule 20px
+    // under it drew that edge twice (K-595). In print the band goes
+    // transparent and the rule is the only edge left.
+    render(<AfterState {...props()} />);
+    const facts = screen.getByTestId(AFTER_STATE_TEST_IDS.record).querySelector("dl");
+    expect(facts).toHaveClass("print:border-t", "divide-y");
+    expect(facts).not.toHaveClass("border-t");
+  });
 });
 
 /**
@@ -817,6 +842,15 @@ describe("the postcard (ADR 20260901-diveday-reimagined, slice 13i)", () => {
     expect(screen.getByRole("heading", { level: 2, name: "recap.logbookHeading" })).toBeTruthy();
     expect(screen.getAllByTestId(AFTER_STATE_TEST_IDS.sites)).toHaveLength(1);
   });
+
+  it("lets the stamp leave the heading's row when the row cannot hold all three", () => {
+    // At 390 the 120px mark and the stamp left "Dive log entry" 101px of the
+    // 140 it needs, and it broke onto a second line for one word (K-596).
+    // Wrapping, the stamp drops under the mark and the heading keeps one line.
+    render(<AfterState {...props({ visitCount: 1 })} />);
+    const face = screen.getByTestId(AFTER_STATE_TEST_IDS.face);
+    expect(face).toHaveClass("flex", "flex-wrap", "gap-y-3");
+  });
 });
 
 /**
@@ -973,6 +1007,42 @@ describe("the next dive", () => {
   it("renders nothing at all when the board has nothing for this diver", () => {
     render(<AfterState {...props({ nextDive: null, nextDiveWorded: null })} />);
     expect(screen.queryByText("recap.nextDiveHeading")).toBeNull();
+  });
+
+  it("makes the departure's name a 44px target, not a 21px line of text", () => {
+    // The card's one door was a bare inline link, 244.7 x 21 on every recap
+    // capture (K-187); `tapTargetLinkClass` gives it the 44px floor.
+    render(<AfterState {...props({ nextDive: pick, nextDiveWorded: worded })} />);
+    expect(screen.getByRole("link", { name: pick.title })).toHaveClass(
+      "inline-flex",
+      "min-h-11",
+      "items-center",
+    );
+  });
+
+  /**
+   * **The target grows, the name's line does not** (K-187). As a 44px box in
+   * the flow, the name's line grew 8px a side: 12px from the name to its date,
+   * the same 12 as from the date to the reason, so the title and its date no
+   * longer read as a pair. The 16px the target adds is padding its own
+   * negative margin gives back, and the name's `<p>` is a flex line, so the
+   * margin comes off the line and no strut holds it open. The date sits 8px
+   * under the name, the room the target reaches down, so the focus ring (5px
+   * outside the box) ends above the date's ink rather than across it.
+   */
+  it("keeps the name's line its words' height, and its date nearer it than the reason", () => {
+    render(<AfterState {...props({ nextDive: pick, nextDiveWorded: worded })} />);
+    const link = screen.getByRole("link", { name: pick.title });
+    expect(link).toHaveClass("-my-2", "py-2");
+    const line = link.parentElement;
+    expect(line).toHaveClass("flex", "text-lg");
+
+    const date = screen.getByText(worded.when);
+    expect(line?.nextElementSibling).toBe(date);
+    expect(date).toHaveClass("mt-2");
+    const reason = screen.getByText(worded.reason);
+    expect(date.nextElementSibling).toBe(reason);
+    expect(reason).toHaveClass("mt-3");
   });
 
   /**

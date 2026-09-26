@@ -16,6 +16,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
+import { settingsPaneClass } from "../_components/settings-pane";
 import { EmbedGenerator, type EmbedGeneratorCopy } from "./EmbedGenerator";
 
 export const instant = true;
@@ -52,7 +53,7 @@ export default async function EmbedSettingsPage({
   );
   if (!origin) {
     return (
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <main className={settingsPaneClass("5xl")}>
         {header}
         <p className="rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
           {t("settings.embed.notConfigured", { email: SUPPORT_EMAIL })}
@@ -128,7 +129,7 @@ export default async function EmbedSettingsPage({
   };
   const scheduleUrl = `${origin}${publicSchedulePath(shop.slug)}`;
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass("5xl")}>
       {header}
       <EmbedGenerator
         origin={origin}

@@ -696,7 +696,9 @@ are untouched. Conversion surface: `conversion-reviewer` pass before merge.
   on the trip page already — deletions are key removals in `diver.json` across locales where the
   storefront was their only reader.
 - Full rows: dimmed + neutral `Full` badge; scarcity keeps the existing warning words ("Only 2
-  spots left"). Unpriced trips render no price cell.
+  spots left"). Unpriced trips print no price, but the price's column stays, empty, so their seat
+  state and chevron hold the priced rows' x; the column is as wide as the list's longest price, and
+  a list with no price at all draws none (pixel-craft K-375).
 - Courses shelf (`listActiveCourses`, up to 3 + "All courses" link): cards render
   `courses.heroImageUrl` when set, else one new drawn-SVG wave placeholder component
   (primary-tint palette only) — the artboard's three wave variants are illustrative. Reviews band

@@ -566,11 +566,16 @@ async function seededTrip(
   // A caller that *clicks* wants `findTripOnBoard` in `e2e/helpers.ts`, which
   // can page forward a week at a time. It takes a title, which is exactly what
   // this helper must not do — the Spanish run cannot read English copy.
-  const link = page.locator('[data-week-board] a[href^="/shop/blue-mantis/trips/"]').first();
+  //
+  // **By the door's own hook, not "the first trip link"**: a departure's row
+  // is one stretched link that follows the row's flags, and a flag links to
+  // the same trip's `#details` or `/manifest?checkpoint=…`. The door has no
+  // text either — its name is its `aria-label`, the departure's title.
+  const link = page.locator("[data-week-board] a[data-departure-door]").first();
   await link.waitFor({ state: "attached" });
   return {
     path: ((await link.getAttribute("href")) ?? "").replace(/\/(guests|manifest|prep|log)$/, ""),
-    title: ((await link.textContent()) ?? "").trim(),
+    title: ((await link.getAttribute("aria-label")) ?? "").trim(),
   };
 }
 

@@ -178,3 +178,21 @@ describe("NewDiverPage name-match prompt", () => {
     expect(container.querySelectorAll('input[name="fromNameMatch"]')).toHaveLength(0);
   });
 });
+
+/**
+ * **The action row stands one field gap under the last field** (pixel-craft
+ * class 4, K-182). The row sits inside the trio's `FieldGrid`, whose `gap-y-4`
+ * is already that gap; an `mt-6` of its own stacked on it, so "Add a diver"
+ * put its buttons 40px under the phone field where every other form in the
+ * app puts them 16px under.
+ */
+describe("NewDiverPage action row", () => {
+  it("rides the trio's grid and adds no margin of its own", async () => {
+    await renderPage({}, []);
+
+    const row = screen.getByRole("link", { name: "divers.page.cancel" }).parentElement;
+    expect(row).toHaveClass("col-span-full");
+    expect(row?.parentElement).toHaveClass("grid", "gap-y-4");
+    expect(row?.className).not.toMatch(/(^|\s)m[ty]-/);
+  });
+});

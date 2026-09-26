@@ -93,3 +93,42 @@ new option is a new attribute, never a renamed one. Two new runtime facts: `qrco
 dependencies to draw the QR code in the shop's browser from the same target URL (MIT; nothing is
 stored for it), and `requestLocale` now honours an embed's fixed language, forwarded by the proxy
 as a header, ahead of the visitor's cookie — the cookie cannot reach a third-party frame anyway.
+
+## Amendment, 2026-09-25 — each framed page renders from a segment of its own
+
+`?embed=1` is a query parameter, and a segment's `loading.tsx` cannot read one, so the framed
+schedule and trip page streamed into a shop's iframe under their full-page skeletons: the
+storefront's identity band in a `max-w-6xl` column, the trip page's centred 528px `max-w-xl` column,
+each then snapping to the frame's full-width `px-3 py-4` column when the body arrived (pixel-craft
+class 11; K-371, K-382). The proxy is the one layer that reads the query before the shell goes out,
+so `src/proxy.ts` now rewrites a genuine embed request (the same exactly-one-`?embed=1` test as
+before) onto an internal segment: `/s/<slug>` onto `/s/<slug>/embed/schedule`, a static segment the
+router prefers to `embed/[widget]`, and `/s/<slug>/trips/<id>` onto `/s/<slug>/trips/<id>/embed`
+(`embedRenderPath` in `src/lib/embed-routes.ts`). Each segment's page renders the very same page
+function with the mode set, and its `loading.tsx` is the frame's shape: the week ledger's rows, or
+the trip page's column at the frame's width.
+
+This is not the dedicated `/embed/*` tree this record rejected. There is still one page per surface
+and one copy of its booking and capacity logic; the segment is a rewrite target, not a surface. The
+browser's URL does not change, so the snippet, the canonical, every link inside the frame and the
+2026-08-03 redirects are untouched. What the framing policy decides is still decided by the page
+the host framed: the framing exception, the embed header and the request path header all read its
+public URL.
+
+On a server started on `127.0.0.1` — every e2e server — the rewrite comes back through the proxy as
+a request of its own for the internal path, and its response headers are the ones the browser keeps
+(why, and when it does not: "Whether the proxy runs twice" in ADR
+20260912-the-public-namespace-refuses-at-the-edge). That pass judges the segment as the public page
+it stands for (`embedPublicPath`): the same existence lookup, the same framing exception, the same
+public path for the shell, read off the URL rather than off a header the first pass left, and no
+second rewrite. Refusing both segments by name, the obvious guard, would on such a server be a 404
+for every framed schedule and booking page. A request for either segment in any other shape — without exactly one `?embed=1`, or at a shop spelling no embed request has — is still
+a plain 404 in the proxy (`isInternalEmbedRoute`), before any lookup, and `schedule` stays off the
+widget list so it is never framable by path alone. In the one shape the proxy passes on, a segment
+serves exactly the framed page its public URL serves.
+
+The layout's chrome placeholder no longer paints inside the frame. It holds the header band's height
+above every public page, and a frame's real chrome is nothing, so there it was a 57px bar that
+vanished and took the frame up with it. The layout sits above both segments and cannot see the
+query, but the segments are the frame: each one's skeleton and page render `EmbedChromeCollapse`, a
+`<style>` that hides the bar from the static shell until the chrome streams in as nothing.

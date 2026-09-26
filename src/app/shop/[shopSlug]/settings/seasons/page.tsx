@@ -29,6 +29,8 @@ import {
 } from "@/lib/season-events";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
+import { AddPanel } from "../_components/AddPanel";
+import { settingsPaneClass } from "../_components/settings-pane";
 import {
   createSeasonEventAction,
   deleteSeasonEventAction,
@@ -87,7 +89,7 @@ export default async function SeasonsSettingsPage({
   const banner = noticeFromParam(notice, seasonEventNoticeMessages(t));
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
@@ -183,8 +185,7 @@ export default async function SeasonsSettingsPage({
             </div>
           )}
 
-          <div className="border border-dashed border-border rounded-lg p-4 bg-surface-sunken">
-            <h2 className="text-sm font-medium mb-3">{t("seasonEvents.createTitle")}</h2>
+          <AddPanel title={t("seasonEvents.createTitle")}>
             <FieldGrid as="form" columns={2} action={createSeasonEventAction}>
               <Field label={t("seasonEvents.nameLabel")}>
                 <input
@@ -236,7 +237,7 @@ export default async function SeasonsSettingsPage({
                 </SubmitButton>
               </FieldActions>
             </FieldGrid>
-          </div>
+          </AddPanel>
         </div>
       </SectionCard>
     </main>

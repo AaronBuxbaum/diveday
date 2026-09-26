@@ -3,6 +3,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { buttonClass } from "@/components/ui/button";
 import { emptyMedicalAnswers, flaggedMedicalPrompts, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { rendersFlush } from "@/test/button-flush";
@@ -261,6 +262,26 @@ describe("the guests ledger (slice 5d)", () => {
   });
 
   /**
+   * The add-diver group sits between its band and the card's bottom edge at
+   * one inset (pixel-craft class 5, K-164). Its wrapper was `pt-3 pb-5`, and
+   * the search row's own `mt-4` made the top 28px against 20px below on every
+   * trip capture; `AddDiverSection` now brings no margin, so the wrapper owns
+   * both sides.
+   */
+  it("insets the add-diver group equally under its band and above the card's edge", () => {
+    renderRoster({
+      roster: [],
+      readiness: new Map() as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+      addDiverGroup: <p data-testid="add-diver-form">Find a returning diver</p>,
+    });
+
+    const wrapper = screen.getByTestId("add-diver-form").parentElement;
+    expect(wrapper).toHaveClass("py-5");
+    expect(wrapper?.className).not.toMatch(/(^|\s)(pt|pb)-/);
+  });
+
+  /**
    * A cleared seat with no notes and no arrival has nothing to put at the end
    * of its name line, and the pixel probe found the trailing slot rendered
    * anyway: an empty `div` that still took the line's 12px gap on every such
@@ -507,6 +528,33 @@ describe("a drysuit going out with no drysuit card", () => {
 });
 
 /**
+ * **A missing emergency contact's line hovers** (K-501). The whole line is the
+ * disclosure that opens the form, and it declared `hover:bg-warning-tint` on a
+ * `bg-warning-tint` rest: the state atlas measured `#fdefdf` both ways, 0px
+ * changed, so the pointer never said the line would open.
+ */
+describe("the missing emergency contact line", () => {
+  it("hovers a step past its resting fill", () => {
+    const { container } = renderRoster({
+      ...fixtures,
+      roster: [entry("e", "Noor Haddad", { emergencyContactName: "", emergencyContactPhone: "" })],
+      readiness: new Map([["e", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map([["e", signedWaiver]]) as WaiverByBooking,
+    });
+
+    const summary = container.querySelector('[class~="group/missing-contact"] > summary');
+    expect(summary).not.toBeNull();
+    const tokens = [...(summary?.classList ?? [])];
+    const rest = tokens.filter((token) => token.startsWith("bg-"));
+    const hover = tokens.filter((token) => token.startsWith("hover:bg-"));
+    expect(rest).toEqual(["bg-warning-tint"]);
+    expect(hover).toHaveLength(1);
+    expect(hover[0]).not.toBe("hover:bg-warning-tint");
+    expect(hover[0]).not.toMatch(/^hover:bg-warning-tint\//);
+  });
+});
+
+/**
  * The seat's foot row put its controls on the panel's text column with a hand
  * `-mx-3`, which left whichever came first 4px from the card's
  * `overflow-hidden` on a phone, so both drew an inset ring
@@ -535,5 +583,262 @@ describe("the seat's foot row sits on the text column through flush", () => {
     expect(screen.queryByRole("link", { name: "Create order" })).toBeNull();
     expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(true);
     expect(remove).not.toHaveClass("focus-visible:focus-ring-inset");
+  });
+});
+
+/**
+ * Pixel-craft geometry the audit measured on the roster
+ * (docs/design/pixel-craft.md). jsdom has no layout, so each case pins the
+ * class arithmetic that puts the pixels where they belong; the pixel probe
+ * re-measures the rendered rows.
+ */
+describe("the roster's row geometry", () => {
+  /**
+   * K-157: the mark was pinned at `top-2.5`, the row's top padding when the
+   * `li` was `py-2.5`. The `li` went to `py-1` and the 44px name line moved up
+   * 6px; the mark stayed, 6px under the name and the "Blocked" pill on every
+   * row. The mark's top is the `li`'s own padding, so the two 44px boxes share
+   * one band.
+   */
+  it("pins each row's mark to the name line's band, at the row's own top padding", () => {
+    const { container } = renderRoster(fixtures);
+
+    for (const seat of fixtures.roster) {
+      const row = container.querySelector(`#booking-${seat.booking.id}`);
+      expect(row).toHaveClass("py-1");
+      const mark = row?.querySelector("summary[aria-label]");
+      expect(mark).toHaveClass("absolute", "top-1", "size-11");
+      expect(mark).not.toHaveClass("top-2.5");
+    }
+  });
+
+  /** A row that opens on a mark, then its words: the mark stands on the words' first line. */
+  function expectMarkOnFirstLine(row: Element | null) {
+    expect(row).toHaveClass("flex", "items-baseline");
+    const column = row?.firstElementChild;
+    expect(column).toHaveClass("shrink-0");
+    expect(column?.firstElementChild).toHaveClass("h-lh", "items-center");
+    expect(column?.querySelector("svg")).not.toBeNull();
+  }
+
+  /**
+   * K-494: a bare 16px mark in a stretched `flex gap-2` row stood at the top
+   * of the words' 20px line, 2.5–3px above its centre, on every blocker and
+   * warning line. Each mark is now the row's `StatusMarkColumn`, a block one
+   * line of the row's text tall with the mark centred in it.
+   */
+  it("stands each blocker's and warning's mark on the first line of its words", () => {
+    const rusty = entry("r", "Olga Rust");
+    renderRoster({
+      roster: [
+        blocked,
+        { ...rusty, booking: { ...rusty.booking, lastDivedBand: "over_five_years" } },
+      ] as RosterEntry[],
+      readiness: new Map([
+        ["a", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+        ["r", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map([
+        ["a", signedWaiver],
+        ["r", signedWaiver],
+      ]) as WaiverByBooking,
+    });
+
+    const blocker = screen.getByText("No certification is on file for this trip.");
+    expectMarkOnFirstLine(blocker.closest("li"));
+    const warning = screen.getByText(/^Last dived/);
+    expectMarkOnFirstLine(warning.closest("p"));
+  });
+
+  /**
+   * K-181: the band aligns its title on the first baseline of the facts
+   * beside it. Each fact line was `items-start` with a bare mark first, so
+   * its baseline was the mark's foot and "STILL TO CLEAR · 3" sat 5px under
+   * the sentence. The line is `items-baseline` now, its mark a column with a
+   * line of its own, so the fact's words set the baseline the title meets.
+   */
+  it("lines the band's title up with its first fact's words, not the fact's mark", () => {
+    const roster = [blocked, entry("c", "Mina Patel"), entry("d", "Owen Reed")];
+    const blocker = [{ code: "certification_missing", params: undefined }];
+    renderRoster({
+      roster,
+      readiness: new Map(
+        roster.map((seat) => [seat.booking.id, readinessRow("blocked", blocker)]),
+      ) as ReadinessByBooking,
+      waivers: new Map(roster.map((seat) => [seat.booking.id, signedWaiver])) as WaiverByBooking,
+    });
+
+    const band = screen.getByRole("heading", { name: "Still to clear · 3" }).parentElement;
+    expect(band).toHaveClass("items-baseline");
+    const fact = within(band as HTMLElement).getByText(/3 divers: No certification/);
+    expectMarkOnFirstLine(fact.closest("p"));
+    expect(fact.closest("p")).not.toHaveClass("items-start");
+  });
+
+  /**
+   * K-267: the facts' column right-aligned each line (`sm:items-end`), so
+   * the red marks in front of them stepped left line by line (x 888, 827,
+   * 741 on minimum-seats). The column stays at the band's end, placed there
+   * by the band's `justify-between`; its lines start on one edge.
+   */
+  it("starts every shared fact on one edge, so their marks form a column", () => {
+    const roster = [blocked, entry("c", "Mina Patel"), entry("d", "Owen Reed")];
+    const blocker = [{ code: "certification_missing", params: undefined }];
+    renderRoster({
+      roster,
+      readiness: new Map(
+        roster.map((seat) => [seat.booking.id, readinessRow("blocked", blocker)]),
+      ) as ReadinessByBooking,
+      waivers: new Map(roster.map((seat) => [seat.booking.id, signedWaiver])) as WaiverByBooking,
+    });
+
+    const band = screen.getByRole("heading", { name: "Still to clear · 3" }).parentElement;
+    expect(band).toHaveClass("justify-between");
+    const facts = within(band as HTMLElement)
+      .getByText(/3 divers: No certification/)
+      .closest("p")?.parentElement;
+    expect(facts).toHaveClass("sm:items-start");
+    expect(facts).not.toHaveClass("sm:items-end");
+  });
+
+  /**
+   * K-278 and K-364, the name line's trailing capsules. From `sm` they sit at
+   * the line's end, against the mark, and the verdict is the last of them, so
+   * "Blocked" meets the chevron whether or not a "Depth advisory" chip rides
+   * with it (it was first, and jumped 136px when the chip was there). On a
+   * phone the capsules wrap under the name and start on its column, verdict
+   * first, like the name's own wrap (they right-aligned to the mark's edge, 6px
+   * off the name, on no shared edge).
+   */
+  it("ends the capsules on the verdict from sm, and starts a phone's wrapped capsules on the name's column", () => {
+    const { container } = renderRoster(fixtures);
+
+    const verdict = within(
+      container.querySelector(`#booking-${blocked.booking.id}`) as HTMLElement,
+    ).getByText("Blocked");
+    expect(verdict).toHaveClass("sm:order-last");
+    const capsules = verdict.parentElement;
+    expect(capsules?.firstElementChild).toBe(verdict);
+    expect(capsules).toHaveClass("ms-auto", "justify-end", "max-sm:ms-0", "max-sm:justify-start");
+  });
+
+  /**
+   * K-174: the roster drew its waiver send as a hand-rolled pill (fully
+   * round, 16px inset, no `pressable`, no disabled state) while the diver
+   * record draws the same act as the app's `sm` button. Both are the one
+   * button now; an expired link's send wears `danger`.
+   */
+  it("draws the waiver's send as the app's own sm button, as the diver record does", () => {
+    const unsent = entry("n", "Nadia Petrov");
+    const lapsed = entry("x", "Xavier Lind");
+    const blocker = [{ code: "certification_missing", params: undefined }];
+    renderRoster({
+      roster: [unsent, lapsed],
+      readiness: new Map([
+        ["n", readinessRow("blocked", blocker)],
+        ["x", readinessRow("blocked", blocker)],
+      ]) as ReadinessByBooking,
+      waivers: new Map([
+        [
+          "x",
+          {
+            waiver: {
+              id: "w-x",
+              status: "sent",
+              completedAt: null,
+              signatureMethod: null,
+              expiresAt: new Date("2020-01-01T00:00:00Z"),
+              medicalAnswers: null,
+            },
+          },
+        ],
+      ]) as unknown as WaiverByBooking,
+    });
+
+    const send = screen.getByRole("button", { name: "Send waiver" });
+    const resend = screen.getByRole("button", { name: "Link expired" });
+    expect(send.className).toBe(buttonClass({ variant: "secondary", size: "sm" }));
+    expect(resend.className).toBe(buttonClass({ variant: "danger", size: "sm" }));
+    for (const control of [send, resend]) expect(control).not.toHaveClass("rounded-full");
+  });
+
+  /**
+   * K-352: the notes row is the last thing in a row with open work, and its
+   * body had no padding of its own below the form, so the bordered "Add
+   * private note" button ended 4px above the row's rule: the `li`'s `py-1`,
+   * which was sized for the 44px summary's own air. The body keeps 8px, so
+   * the button clears the rule by the form's own 12px step.
+   */
+  it("leaves the notes form its own room above the row's rule", () => {
+    const { container } = renderRoster(fixtures);
+
+    const row = container.querySelector(`#booking-${blocked.booking.id}`);
+    const notes = within(row as HTMLElement)
+      .getByText("Add a private note")
+      .closest("details");
+    expect(notes?.lastElementChild).toHaveClass("mt-2", "pb-2");
+  });
+
+  /**
+   * K-551: "Review certifications →" is 14px of text in a 44px box, and the
+   * next line's `mt-3` stacked on the box's unseen 12px below it: 45px from
+   * the link's ink to the note row's, where the row's other steps are 24–26.
+   * The link gives that unseen half back (`-mb-3`, with `align-bottom` so its
+   * line's strut keeps none of it, as `buttonClass`'s `outdent` does), and the
+   * target stays whole.
+   */
+  it("gives back the unseen lower half of the certification link's target", () => {
+    renderRoster(fixtures);
+
+    const link = screen.getByRole("link", { name: /Review certifications/ });
+    expect(link).toHaveClass("min-h-11", "-mb-3", "align-bottom");
+  });
+
+  /**
+   * K-354: every group band opens with a hairline except "ADD A DIVER". The
+   * band draws `border-t … first:border-t-0`, and the add-diver band sat
+   * first inside the `#add-diver` wrapper, so `first:` stripped its rule
+   * though it is the card's last group. The group's rule is drawn by the
+   * element that is the card's child: the band, or the box holding it.
+   */
+  it("opens the add-diver group with the same rule as every other group", () => {
+    const { container } = renderRoster({
+      ...fixtures,
+      addDiverGroup: <p>Find a returning diver</p>,
+    });
+
+    const addDiver = container.querySelector("#add-diver");
+    const ready = screen.getByRole("heading", { name: "Ready · 1" }).parentElement;
+    // Siblings in the card, each drawing the rule between groups.
+    expect(addDiver?.parentElement).toBe(ready?.parentElement);
+    for (const group of [addDiver, ready]) {
+      expect(group).toHaveClass("border-t", "first:border-t-0");
+    }
+    // The band inside the add-diver box draws none of its own.
+    const band = within(addDiver as HTMLElement).getByRole("heading", {
+      name: "Add a diver",
+    }).parentElement;
+    expect(band).not.toBe(addDiver);
+    expect(band).not.toHaveClass("border-t");
+  });
+});
+
+/**
+ * **On the departure page the roster is spaced by the page** (K-262). It hung
+ * `mt-5` there, one of five different steps between the page's sections; the
+ * page's one `space-y-10` spaces it now. The standalone /guests compatibility
+ * route, which has no stack, keeps its own step.
+ */
+describe("the roster's place on the departure page", () => {
+  it("carries no top margin of its own when compact", () => {
+    const { container } = renderRoster({
+      roster: [],
+      readiness: new Map() as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+      compact: true,
+    });
+    const roster = container.querySelector("#roster");
+    expect(roster).not.toBeNull();
+    expect(roster?.className).not.toMatch(/(^|\s)mt-/);
   });
 });

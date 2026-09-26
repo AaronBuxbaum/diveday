@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { TripManifest } from "@/lib/manifests";
 import { DiverRollCall } from "./DiverRollCall";
+import { rollCallScrollMargin } from "./RollCallControls";
 import { SummaryPanel } from "./SummaryPanel";
 
 /**
@@ -377,5 +378,135 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
         chip.textContent,
       );
     }
+  });
+
+  /**
+   * **And the jump lands below the card, however tall the card grows**
+   * (pixel-craft class 9). The card publishes its measured height on the
+   * column it pins in, the same column the rows sit in, and every row's
+   * scroll margin reads it. Asserted as that relationship, because jsdom has
+   * no layout: the stubbed observer stands in for the phone's 426px card.
+   */
+  it("hands the rows the card's measured height, on the column they share", () => {
+    const observed: Array<(entries: Array<Partial<ResizeObserverEntry>>) => void> = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: (entries: Array<Partial<ResizeObserverEntry>>) => void) {
+          observed.push(callback);
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    try {
+      const { container } = render(
+        <div data-testid="column">
+          <SummaryPanel
+            checkpoint="after_dive_1"
+            isDeparture={false}
+            rollCallComplete={false}
+            completeness={completeness()}
+            summary={summary()}
+            separatedTeams={0}
+            uncalled={[]}
+            uncalledCrew={[]}
+            notBackAboardDivers={[{ bookingId: "b-3", fullName: "Priya Sharma" }]}
+            notBackAboardCrew={[]}
+            t={t}
+          />
+          <DiverRollCall
+            divers={[diver("b-1", "Ana Ruiz"), diver("b-3", "Priya Sharma")]}
+            crewNames={[]}
+            checkpoint="after_dive_1"
+            isDeparture={false}
+            shopSlug="blue-mantis"
+            tripId="00000000-0000-4000-8000-0000000000ff"
+            locale="en-US"
+            timezone="America/New_York"
+            notesByBooking={new Map()}
+            rollCallAction={vi.fn(async () => ({ ok: true }) as const)}
+            addPrivateNoteAction={vi.fn(async () => undefined) as never}
+            rollCallButtonCopy={() => ({
+              errorRefusal: "Try again",
+              blockedMessage: "Still blocked",
+            })}
+            buddyTeamLabel={() => null}
+            t={t}
+          />
+        </div>,
+      );
+      const column = screen.getByTestId("column");
+      const card = screen.getByRole("region", { name: "After dive 1" });
+      // Still the column's own child: a wrapper would un-pin the card (see
+      // `SummaryPanel`), and it would publish the height where no row reads it.
+      expect(card.parentElement).toBe(column);
+      expect(card).toHaveClass("sticky", "top-(--chrome-h)");
+
+      expect(observed).toHaveLength(1);
+      observed[0]?.([{ target: card, borderBoxSize: [{ blockSize: 425.4, inlineSize: 350 }] }]);
+      expect(column.style.getPropertyValue("--roll-call-panel-h")).toBe("426px");
+      const rows = [...container.querySelectorAll<HTMLElement>("li[id^='diver-row-']")];
+      expect(rows).toHaveLength(2);
+      for (const row of rows) {
+        expect(row).toHaveClass(...rollCallScrollMargin(false).split(" "));
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+/**
+ * **The prose under the pinned card starts on the card's content edge, and an
+ * empty status line adds nothing** (K-554, K-558).
+ *
+ * The card is `border p-4`, so its chips start 17px in; the prose block under
+ * it was `px-4`, and its chips started a pixel left of the card's. And the
+ * live status line stays mounted (it must exist before its words arrive), but
+ * with divers still to call it has nothing to say, and the lines after it
+ * still spaced themselves off it: 4px of margin above "1 diver is blocked."
+ * against a 0px line.
+ */
+describe("the prose under the pinned card", () => {
+  function renderAwaiting() {
+    return renderPanel({
+      isDeparture: true,
+      checkpoint: "departure",
+      completeness: completeness({ reason: "divers_awaiting" }),
+      summary: summary({
+        totalDivers: 3,
+        ready: 2,
+        blocked: 1,
+        boarded: 1,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 2,
+      }),
+      uncalled: [
+        { bookingId: "b-2", fullName: "Diego Marín", blocked: false },
+        { bookingId: "b-3", fullName: "Priya Sharma", blocked: true },
+      ],
+      notBackAboardDivers: [],
+    });
+  }
+
+  it("insets its content by the card's border as well as its padding", () => {
+    renderAwaiting();
+    const prose = screen.getByRole("list", { name: "People still to call" }).parentElement;
+    expect(prose).toHaveClass("border-x", "border-transparent", "px-4");
+  });
+
+  it("spaces nothing off the live line while it is empty", () => {
+    renderAwaiting();
+    const live = document.querySelector('[aria-live="polite"]');
+    expect(live?.tagName).toBe("P");
+    expect(live).toBeEmptyDOMElement();
+    const list = screen.getByRole("list", { name: "People still to call" });
+    expect(list.previousElementSibling).toBe(live);
+    expect(list).toHaveClass("[p:empty+&]:mt-0");
+    const blocked = screen.getByText("1 diver is blocked.");
+    expect(blocked).toHaveClass("[p:empty+&]:mt-0");
   });
 });

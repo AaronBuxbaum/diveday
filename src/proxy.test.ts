@@ -233,6 +233,162 @@ describe("proxy embed handling", () => {
   });
 });
 
+/**
+ * **A framed page renders from a segment of its own** (K-371, K-382). A
+ * segment's `loading.tsx` cannot read `?embed=1`, so the framed schedule and
+ * trip page streamed in under their full-page skeletons and then snapped to the
+ * frame's column. The proxy is the one layer that reads the query before the
+ * shell goes out, so it routes an embed request onto an internal segment whose
+ * skeleton is the frame's.
+ *
+ * On a server started on `127.0.0.1` — every e2e server — that rewrite comes
+ * back through the proxy as a request of its own, for the internal path (see
+ * "Whether the proxy runs twice" in `src/proxy.ts`). The second pass has to
+ * reach the same verdict as the first, or it 404s the frame or stamps `DENY`
+ * over it; a request for the segment in any other shape is refused.
+ */
+describe("the framed pages' own segments", () => {
+  const TRIP_ID = "11111111-2222-4333-8444-555555555555";
+
+  beforeEach(() => {
+    existence.answer = true;
+    existence.throws = false;
+    existence.liveShops = null;
+    existence.asked.length = 0;
+  });
+
+  function rewriteTarget(res: Response): URL | null {
+    const value = res.headers.get("x-middleware-rewrite");
+    return value ? new URL(value) : null;
+  }
+
+  /** What the first pass stamped, as the re-entered request carries it. */
+  function carried(publicPath: string): Record<string, string> {
+    return { [EMBED_REQUEST_HEADER]: "1", [REQUEST_PATH_HEADER]: publicPath };
+  }
+
+  it("rewrites the framed schedule onto its own segment, keeping every query the page reads", async () => {
+    const res = await run(request("/s/blue-mantis?embed=1&month=2026-08&credit=host"));
+    const target = rewriteTarget(res);
+    expect(target?.pathname).toBe("/s/blue-mantis/embed/schedule");
+    expect(target?.searchParams.get("embed")).toBe("1");
+    expect(target?.searchParams.get("month")).toBe("2026-08");
+    expect(target?.searchParams.get("credit")).toBe("host");
+    // Everything else is decided by the request the host page made: it is an
+    // embed, it may be framed, and its path is the public one.
+    expect(res.headers.get(`x-middleware-request-${EMBED_REQUEST_HEADER}`)).toBe("1");
+    expect(res.headers.get(`x-middleware-request-${REQUEST_PATH_HEADER}`)).toBe("/s/blue-mantis");
+    expect(res.headers.get("X-Frame-Options")).toBeNull();
+  });
+
+  it("rewrites the framed trip page onto its own segment", async () => {
+    const res = await run(request(`/s/blue-mantis/trips/${TRIP_ID}?embed=1&booking=abc`));
+    const target = rewriteTarget(res);
+    expect(target?.pathname).toBe(`/s/blue-mantis/trips/${TRIP_ID}/embed`);
+    expect(target?.searchParams.get("booking")).toBe("abc");
+    expect(res.headers.get(`x-middleware-request-${REQUEST_PATH_HEADER}`)).toBe(
+      `/s/blue-mantis/trips/${TRIP_ID}`,
+    );
+    expect(res.headers.get("X-Frame-Options")).toBeNull();
+  });
+
+  it("leaves the unframed pages, a repeated embed parameter and a widget where they are", async () => {
+    for (const url of [
+      "/s/blue-mantis",
+      "/s/blue-mantis?embed=0",
+      "/s/blue-mantis?embed=1&embed=0",
+      `/s/blue-mantis/trips/${TRIP_ID}`,
+      "/s/blue-mantis/embed/grid",
+    ]) {
+      const res = await run(request(url));
+      expect(rewriteTarget(res), url).toBeNull();
+    }
+  });
+
+  it("passes the schedule's segment on as the embed it stands for when the rewrite comes back", async () => {
+    // The second pass of `/s/blue-mantis?embed=1&month=2026-08` on a server
+    // started on 127.0.0.1. Refusing it 404s every framed schedule; judging it
+    // as a page that is not an embed stamps `DENY` over the frame, because the
+    // second pass's response headers are the ones the browser keeps.
+    const res = await run(
+      request("/s/blue-mantis/embed/schedule?embed=1&month=2026-08", carried("/s/blue-mantis")),
+    );
+    expect(res.status).not.toBe(404);
+    expect(rewriteTarget(res)).toBeNull();
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(res.headers.get(`x-middleware-request-${EMBED_REQUEST_HEADER}`)).toBe("1");
+    expect(res.headers.get(`x-middleware-request-${REQUEST_PATH_HEADER}`)).toBe("/s/blue-mantis");
+    expect(res.headers.get("X-Frame-Options")).toBeNull();
+    expect(res.headers.get("Content-Security-Policy") ?? "").not.toContain("frame-ancestors");
+    // Judged as the page it stands for: the lookup is the storefront's.
+    expect(existence.asked).toEqual([{ kind: "shop", shopSlug: "blue-mantis" }]);
+  });
+
+  it("passes the trip page's segment on as the embed it stands for, a booking's POST included", async () => {
+    const publicPath = `/s/blue-mantis/trips/${TRIP_ID}`;
+    for (const method of ["GET", "POST"]) {
+      const res = await run(
+        new NextRequest(`http://127.0.0.1${publicPath}/embed?embed=1&booking=abc`, {
+          method,
+          headers: carried(publicPath),
+        }),
+      );
+      expect(res.status, method).not.toBe(404);
+      expect(rewriteTarget(res), method).toBeNull();
+      expect(res.headers.get(`x-middleware-request-${EMBED_REQUEST_HEADER}`), method).toBe("1");
+      expect(res.headers.get(`x-middleware-request-${REQUEST_PATH_HEADER}`), method).toBe(
+        publicPath,
+      );
+      expect(res.headers.get("X-Frame-Options"), method).toBeNull();
+    }
+  });
+
+  it("decides the second pass from the URL, not from the headers the first pass left", async () => {
+    // A request for the segment that carries nothing is decided exactly as the
+    // one that carries the first pass's stamps: the query and the path say
+    // what it is, and a header a client can send says nothing.
+    const bare = await run(request("/s/blue-mantis/embed/schedule?embed=1"));
+    expect(bare.headers.get(`x-middleware-request-${EMBED_REQUEST_HEADER}`)).toBe("1");
+    expect(bare.headers.get(`x-middleware-request-${REQUEST_PATH_HEADER}`)).toBe("/s/blue-mantis");
+    const forged = await run(
+      request("/s/blue-mantis/embed/schedule?embed=1", {
+        [REQUEST_PATH_HEADER]: "/s/someone-else",
+      }),
+    );
+    expect(forged.headers.get(`x-middleware-request-${REQUEST_PATH_HEADER}`)).toBe(
+      "/s/blue-mantis",
+    );
+  });
+
+  it("refuses a segment whose public page does not exist, as the public page would be", async () => {
+    existence.answer = false;
+    const res = await run(request(`/s/blue-mantis/trips/${TRIP_ID}/embed?embed=1`));
+    expect(rewriteTarget(res)?.pathname).toBe("/_not-found");
+    expect(existence.asked).toEqual([{ kind: "trip", shopSlug: "blue-mantis", tripId: TRIP_ID }]);
+  });
+
+  it("refuses either segment in any shape the rewrite does not produce", async () => {
+    for (const url of [
+      "/s/blue-mantis/embed/schedule",
+      "/s/blue-mantis/embed/schedule?embed=0",
+      "/s/blue-mantis/embed/schedule?embed=1&embed=1",
+      "/s/Blue-Mantis/embed/schedule?embed=1",
+      `/s/blue-mantis/trips/${TRIP_ID}/embed`,
+      `/s/blue-mantis/trips/${TRIP_ID}/embed?embed=1&embed=0`,
+    ]) {
+      const res = await run(request(url));
+      expect(res.status, url).toBe(404);
+      expect(rewriteTarget(res), url).toBeNull();
+    }
+  });
+
+  it("lets the edge refusal win over the embed rewrite", async () => {
+    existence.answer = false;
+    const res = await run(request(`/s/blue-mantis/trips/${TRIP_ID}?embed=1`));
+    expect(rewriteTarget(res)?.pathname).toBe("/_not-found");
+  });
+});
+
 describe("the public namespace's edge refusal", () => {
   const TRIP_ID = "11111111-2222-4333-8444-555555555555";
 
@@ -523,12 +679,13 @@ describe("the public namespace's edge refusal", () => {
   });
 
   it("carries the refusal's own facts through the second pass, and asks nothing on it", async () => {
-    // Next routes a rewrite from the top, matcher included, so `proxy` is
-    // re-entered with `/_not-found` as its own pathname. Recomputing there
-    // blanked both headers — the path came back as the literal `/_not-found`
-    // and the shop came back empty — which is a shop-framed 404 quietly
-    // reverting to DiveDay's sales-page one. Verified against a real build
-    // before it was fixed; this is the regression guard.
+    // On a server started on 127.0.0.1 (every e2e server) Next hands the
+    // rewrite back to the same server as a new request, so `proxy` runs again
+    // with `/_not-found` as its own pathname ("Whether the proxy runs twice" in
+    // `src/proxy.ts`). Recomputing there blanked both headers — the path came
+    // back as the literal `/_not-found` and the shop came back empty — which is
+    // a shop-framed 404 quietly reverting to DiveDay's sales-page one. Verified
+    // against a real build before it was fixed; this is the regression guard.
     const res = await run(
       request("/_not-found", {
         [REQUEST_PATH_HEADER]: `/s/blue-mantis/trips/${TRIP_ID}`,
@@ -570,9 +727,9 @@ describe("the public namespace's edge refusal", () => {
   });
 
   it("carries nothing into a bare /_not-found render", async () => {
-    // Next's own `notFound()` reaches this route without a refusal in front of
-    // it — a stale email link, a cross-tenant staff URL. Nothing to carry, and
-    // the headers say so rather than keeping whatever was last there.
+    // A request for `/_not-found` by name reaches this route without a refusal
+    // in front of it. Nothing to carry, and the headers say so rather than
+    // keeping whatever was last there.
     const res = await run(request("/_not-found"));
     expect(res.headers.get(`x-middleware-request-${REFUSED_SHOP_SLUG_HEADER}`)).toBe("");
     expect(res.headers.get(`x-middleware-request-${REQUEST_PATH_HEADER}`)).toBe("/_not-found");

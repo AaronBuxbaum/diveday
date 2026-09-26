@@ -1,10 +1,17 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ledgerRowBoxClass, ledgerRowRoomClass } from "@/components/ui/ledger";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { AvailabilityBlock, CrewAssignmentRequest } from "@/lib/crew-requests";
 import { staffWeek, type WeekGap, type WeekPerson } from "@/lib/staffing-week";
-import { type GapWords, StaffingWeek, type StaffingWeekWords } from "./StaffingWeek";
+import { rendersFlush } from "@/test/button-flush";
+import {
+  type GapWords,
+  StaffingWeek,
+  type StaffingWeekWords,
+  weekTailRowClass,
+} from "./StaffingWeek";
 
 afterEach(cleanup);
 
@@ -491,5 +498,435 @@ describe("StaffingWeek standing crew clash", () => {
       expect(within(branch).getAllByText(/Reef drift/).length).toBeGreaterThan(0);
       expect(within(branch).getAllByText(/Afternoon single/).length).toBeGreaterThan(0);
     }
+  });
+});
+
+/**
+ * **The week's geometry, pinned as classes** (docs/design/pixel-craft.md). The
+ * probe's `small-target` runs at 390 and 820, where the grid is `hidden`, and
+ * shared edges are leads it cannot confirm, so what was measured on the 1280
+ * and 390 captures is held here instead.
+ */
+describe("StaffingWeek geometry", () => {
+  function branches(container: HTMLElement) {
+    const grid = container.querySelector<HTMLElement>('[class~="lg:block"]');
+    const list = container.querySelector<HTMLElement>('[class~="lg:hidden"]');
+    if (!grid || !list) throw new Error("the week should render a grid and a day list");
+    return { grid, list };
+  }
+  const horizontalInset = (element: Element | undefined) =>
+    [...(element?.classList ?? [])].filter((token) => /^p[xse]-/.test(token));
+
+  /**
+   * K-239: the names and "Needs crew" started 8px inside the column every
+   * other line on the page starts on (the pager, the h1, the ledger's words).
+   * The day columns need an inset for their left rule; the person column has
+   * no rule on its left, so it keeps only the 8px before the first day's.
+   */
+  it("starts the person column's words on the page's own edge", () => {
+    const { container } = renderWeek({ gaps: [GAP] });
+    const rows = [...branches(container).grid.children];
+    expect(rows).toHaveLength(3);
+    expect(within(rows[2] as HTMLElement).getByText("Needs crew")).toBeVisible();
+    for (const row of rows) {
+      expect(row.firstElementChild).toHaveClass("pe-2");
+      expect(row.firstElementChild).not.toHaveClass("px-2");
+    }
+  });
+
+  /**
+   * And its rules are a ledger row's. Every rule under the grid (the doors,
+   * the credentials) runs 8px past the column with its row's room
+   * (`FILL_ROOM`), so a grid drawing its hairlines on the column stepped 8px
+   * where the two met.
+   */
+  it("draws each grid row on the ledger's box, so its rules end where the page's do", () => {
+    const { container } = renderWeek({ gaps: [GAP] });
+    const { grid } = branches(container);
+    expect(grid).not.toHaveClass("border-t");
+    expect(grid).not.toHaveClass("border-b");
+    for (const row of grid.children) expect(row).toHaveClass(...ledgerRowBoxClass.split(" "));
+  });
+
+  /**
+   * K-240: a day's label started 2px right of its chips' painted edge and
+   * 6–8px left of their words. The header takes the day cells' inset, so each
+   * label starts on its chips' edge.
+   */
+  it("insets each day's label as its day cells inset their chips", () => {
+    const { container } = renderWeek({ gaps: [GAP] });
+    const [header, person, gapRow] = branches(container).grid.children;
+    const heads = [...header.children].slice(1);
+    expect(heads).toHaveLength(7);
+    for (const [index, head] of heads.entries()) {
+      expect(horizontalInset(head)).toEqual(["px-1.5"]);
+      expect(horizontalInset(head)).toEqual(horizontalInset(person.children[index + 1]));
+      expect(horizontalInset(head)).toEqual(horizontalInset(gapRow.children[index + 1]));
+    }
+  });
+
+  /**
+   * K-499: `pt-3 pb-2` set the band's caps 15px under its top rule and 12px
+   * over its bottom one, 1.5px below the band's centre. One inset each side.
+   */
+  it("centres the day-header band's labels between its rules", () => {
+    const { container } = renderWeek();
+    const [header] = branches(container).grid.children;
+    for (const cell of header.children) {
+      expect(cell).toHaveClass("py-2.5");
+      expect(cell).not.toHaveClass("pt-3");
+      expect(cell).not.toHaveClass("pb-2");
+    }
+  });
+
+  /** One of each chip kind, in Thursday's column and Wednesday's. */
+  function renderEveryChip({ canManage = true } = {}) {
+    const rendered = renderWeek({
+      canManage,
+      people: [
+        {
+          ...KEIKO,
+          crewingTrips: [
+            {
+              tripId: "trip-drift",
+              title: "Reef drift",
+              meetings: [
+                {
+                  startsAt: new Date("2026-08-27T13:00:00.000Z"),
+                  endsAt: new Date("2026-08-27T17:00:00.000Z"),
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      blocks: [
+        {
+          id: "away-1",
+          personId: KEIKO.personId,
+          startsOn: "2026-08-26",
+          endsOn: "2026-08-26",
+          note: null,
+        },
+      ],
+      gaps: [GAP],
+    });
+    const { grid } = branches(rendered.container);
+    const chips = {
+      shift: canManage
+        ? grid.querySelector("summary")
+        : within(grid).getByText("6:30 AM – 12:00 PM").closest("span.flex-col")?.parentElement,
+      crew: grid.querySelector('a[href="/shop/blue-mantis/trips/trip-drift#crew"]'),
+      away: within(grid).getByText("Away").parentElement,
+      gap: within(grid).getByText("Nobody in the water").parentElement,
+    };
+    return { ...rendered, grid, chips };
+  }
+
+  /**
+   * K-498: the crew and away chips carried a 1px border and the shift and gap
+   * chips none, so in one day column the chips' words started 1px apart and a
+   * bordered chip stood 2px taller for the same lines. Every kind reserves the
+   * pixel; a kind only colours it.
+   */
+  it("reserves one 1px border on every chip kind, so their words share an edge", () => {
+    for (const canManage of [true, false]) {
+      const { chips, unmount } = renderEveryChip({ canManage });
+      for (const [kind, chip] of Object.entries(chips)) {
+        expect(chip, kind).not.toBeNull();
+        expect(chip, kind).toHaveClass("border", "rounded-lg", "px-2", "py-1.5");
+      }
+      unmount();
+    }
+  });
+
+  /** A box's start inset, in px, from its classes: its 1px edge, then its padding. */
+  function startInset(element: Element | null | undefined) {
+    const tokens = [...(element?.classList ?? [])];
+    const edge = tokens.some((token) => ["border", "border-x", "border-s"].includes(token)) ? 1 : 0;
+    const padding = tokens.map((token) => /^p[xs]-(\d+(?:\.\d+)?)$/.exec(token)).find(Boolean);
+    return edge + (padding ? Number(padding[1]) * 4 : 0);
+  }
+
+  /**
+   * K-498, carried into the opened shift. The chip reserves a 1px edge
+   * before its 8px, so its words start 9px in; the disclosure under it (the
+   * zoned range, then Remove flush on the column) started at 8px, so the
+   * opened shift was 1px ragged, the defect K-498 removed moved down a line.
+   * The disclosure reserves the same edge, transparent, on its start side.
+   */
+  it("starts the opened shift's words on the chip's own inset", () => {
+    const { chips } = renderEveryChip();
+    const disclosure = chips.shift?.nextElementSibling;
+    expect(disclosure).not.toBeNull();
+    expect(startInset(chips.shift)).toBe(9);
+    expect(startInset(disclosure)).toBe(startInset(chips.shift));
+    expect(disclosure).toHaveClass("border-transparent");
+  });
+
+  /**
+   * K-535, K-501: the two chips a manager can press hovered to a translucent
+   * copy of their own fill, which over the page's ground is lighter, not
+   * deeper — `#e6f0ff` to `#eaf1fd` on the crew chip, `#ececf1` to `#eeeef3`
+   * on the shift chip, 0px changed at the state atlas's threshold. Each now
+   * hovers one step past where it rests, and the step is the chip's edge,
+   * never its fill: a fill under the words moves their contrast, and
+   * `bg-border` did — under `prefers-contrast: more` (light) the hovered
+   * shift's time fell to 3.10:1 and a past shift's to 1.84:1, for exactly the
+   * readers who asked for more.
+   */
+  it("hovers each chip a person can press a step past its rest, never a fainter copy of it", () => {
+    const { chips } = renderEveryChip();
+    for (const [kind, chip] of [
+      ["shift", chips.shift],
+      ["crew", chips.crew],
+    ] as const) {
+      const tokens = [...(chip?.classList ?? [])];
+      const rest = tokens.filter((token) => /^(?:bg|border)-/.test(token));
+      const hover = tokens.filter((token) => token.startsWith("hover:"));
+      expect(hover.length, kind).toBeGreaterThan(0);
+      expect(
+        hover.filter((token) => token.startsWith("hover:bg-")),
+        kind,
+      ).toEqual([]);
+      for (const paint of rest) {
+        for (const token of hover) {
+          expect(token, kind).not.toBe(`hover:${paint}`);
+          expect(token.startsWith(`hover:${paint}/`), `${kind}: ${token}`).toBe(false);
+        }
+      }
+    }
+    expect(chips.shift).toHaveClass("hover:border-border-strong");
+    expect(chips.crew).toHaveClass("hover:border-primary/50");
+  });
+
+  /**
+   * K-241: the week's one warning glyph was drawn at 10px beside a 4px gap on
+   * the crew chip, 12px beside 6px on the gap chip, and nudged down `mt-0.5`
+   * on both, which set it 1–1.5px below its line's capitals. One line piece
+   * now: the glyph centred in a box its line tall (`h-lh`), at one size and
+   * gap per type size — 12px and 4px beside the chips' `text-xs`, 14px and
+   * 6px beside the phone list's `text-sm`.
+   */
+  it("draws the warning glyph one way per type size, centred on its line", () => {
+    const { container } = renderWeek({
+      people: [
+        {
+          ...KEIKO,
+          crewingTrips: [
+            {
+              tripId: "trip-drift",
+              title: "Reef drift",
+              meetings: [
+                {
+                  startsAt: new Date("2026-08-27T13:00:00.000Z"),
+                  endsAt: new Date("2026-08-27T17:00:00.000Z"),
+                },
+              ],
+            },
+            {
+              tripId: "trip-wreck",
+              title: "Wreck charter",
+              meetings: [
+                {
+                  startsAt: new Date("2026-08-27T14:00:00.000Z"),
+                  endsAt: new Date("2026-08-27T18:00:00.000Z"),
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      blocks: [
+        {
+          id: "away-1",
+          personId: KEIKO.personId,
+          startsOn: THURSDAY,
+          endsOn: THURSDAY,
+          note: null,
+        },
+      ],
+      gaps: [GAP],
+    });
+    const { grid, list } = branches(container);
+    const lineOf = (words: HTMLElement) => words.parentElement as HTMLElement;
+    const chipLines = [
+      ...within(grid)
+        .getAllByText(/cannot be on both/)
+        .map(lineOf),
+      ...within(grid)
+        .getAllByText(/^Away /)
+        .map(lineOf),
+      grid.querySelector<HTMLElement>(".bg-warning-tint > span") as HTMLElement,
+    ];
+    const listLines = within(list)
+      .getAllByText(/cannot be on both/)
+      .map(lineOf);
+    expect(chipLines).toHaveLength(5);
+    expect(listLines).toHaveLength(2);
+
+    for (const [lines, gap, glyph] of [
+      [chipLines, "gap-1", "size-3"],
+      [listLines, "gap-1.5", "size-3.5"],
+    ] as const) {
+      for (const line of lines) {
+        expect(line).toHaveClass("flex", "items-start", gap);
+        const box = line.firstElementChild;
+        expect(box).toHaveClass("flex", "h-lh", "shrink-0", "items-center");
+        const mark = box?.querySelector("svg");
+        expect(mark).toHaveClass(glyph);
+        expect(mark).not.toHaveClass("mt-0.5");
+      }
+    }
+  });
+
+  /**
+   * K-273: the grid's "Assign ›" was the `text-xs` line box, about 52×16px,
+   * four or five to a week. The probe cannot see it — `small-target` runs at
+   * 390 and 820, where this grid is hidden — so the floor is pinned here. It
+   * is drawn as its slot-mate, the crew member's "Ask for this one", already
+   * is: a flush `sm` link, 44px tall with the button's corner and ring.
+   */
+  it("gives the grid's Assign a 44px target, spelled as the ask beside it is", () => {
+    const { container } = renderWeek({ gaps: [GAP] });
+    const { grid } = branches(container);
+    const assign = within(grid).getByRole("link", { name: "Assign crew to Spiegel Grove" });
+    expect(assign).toHaveClass("min-h-11");
+    expect(rendersFlush(assign, "link", "sm")).toBe(true);
+    cleanup();
+
+    const crew = renderWeek({
+      gaps: [GAP],
+      canManage: false,
+      viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: false },
+    });
+    const ask = within(branches(crew.container).grid).getByRole("button", {
+      name: "Ask to work Spiegel Grove",
+    });
+    expect(rendersFlush(ask, "link", "sm")).toBe(true);
+  });
+
+  /** Thursday on the phone: a shift, a crewed boat the person is away for, and the away line. */
+  function renderPhoneDay({ canManage }: { canManage: boolean }) {
+    const rendered = renderWeek({
+      canManage,
+      people: [
+        {
+          ...KEIKO,
+          crewingTrips: [
+            {
+              tripId: "trip-drift",
+              title: "Reef drift",
+              meetings: [
+                {
+                  startsAt: new Date("2026-08-27T13:00:00.000Z"),
+                  endsAt: new Date("2026-08-27T17:00:00.000Z"),
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      blocks: [
+        {
+          id: "away-1",
+          personId: KEIKO.personId,
+          startsOn: THURSDAY,
+          endsOn: THURSDAY,
+          note: null,
+        },
+      ],
+    });
+    const { list } = branches(rendered.container);
+    const name = within(list).getByText("Keiko Tanaka");
+    const entries = name.nextElementSibling as HTMLElement;
+    return { ...rendered, list, entries };
+  }
+
+  /**
+   * K-213: each departure a person crews was one line of blue text, 358×20
+   * (or ×40 wrapped), 4px from the next: a thumb aimed at one landed on its
+   * neighbour. Each is now a 44px target, and the day's entries abut, so the
+   * list keeps one pitch — every entry a 44px line, as a manager's shift
+   * already was beside its Remove.
+   */
+  it("makes each crewed departure on the phone a 44px target in a list of 44px lines", () => {
+    for (const canManage of [true, false]) {
+      const { list, entries, unmount } = renderPhoneDay({ canManage });
+      expect(entries.className).not.toMatch(/(?:^|\s)gap-/);
+      expect(entries.children.length).toBe(3);
+      for (const entry of entries.children) expect(entry).toHaveClass("min-h-11");
+      const door = within(list).getByRole("link", { name: /Reef drift/ });
+      expect(door).toHaveClass("flex", "flex-col", "min-h-11", "justify-center");
+      unmount();
+    }
+  });
+
+  /** K-489: "· Away" broke between its dot and its word, the word alone on a line. */
+  it("keeps the phone list's away marker whole", () => {
+    const { list } = renderPhoneDay({ canManage: true });
+    const marker = within(list).getByText((_, element) => element?.textContent === "· Away");
+    expect(marker).toHaveClass("whitespace-nowrap");
+  });
+
+  /**
+   * K-195: the page's doors drew a ledger row's box under a week that had
+   * already closed itself, so the rule above "Add a shift" was two 1px rules
+   * stacked, and with the consent row after them `last:border-b` never fired
+   * under "Tell the shop you're away". Both renderings of the week close
+   * themselves; a row hung under them draws its closing rule alone, with a
+   * ledger row's room so the rule ends where the week's do.
+   *
+   * On a phone that holds only if the list ends on a row. An empty week drew
+   * a bare line with no rule under it, and a week whose only entries are
+   * days away drew nothing at all (the list drew a day only for a shift or a
+   * boat), so the first door had no rule above it. The empty line is now a
+   * closed ledger row, and a day someone is away is drawn as the grid draws
+   * it: a recorded holiday is something, and the week never says "nothing"
+   * over one. That rule was `staffWeek`'s `hasEntries`, which only this
+   * line read; the line now reads the list it closes.
+   */
+  it("closes itself in both renderings, and hangs a row under it on its closing rule alone", () => {
+    const { container } = renderWeek({ gaps: [GAP] });
+    const { grid, list } = branches(container);
+    expect(grid.lastElementChild).toHaveClass("last:border-b");
+    const lastRows = list.querySelectorAll("ul > li:last-child");
+    expect(lastRows.length).toBeGreaterThan(0);
+    expect(lastRows[lastRows.length - 1]).toHaveClass("last:border-b");
+
+    const tail = weekTailRowClass.split(" ");
+    expect(tail).toEqual(expect.arrayContaining([...ledgerRowRoomClass.split(" "), "border-b"]));
+    expect(tail.filter((token) => /(?:^|:)border-t$/.test(token))).toEqual([]);
+    expect(tail).not.toContain("last:border-b");
+
+    const nobodyWorking: WeekPerson = { ...KEIKO, shifts: [] };
+    cleanup();
+    const empty = branches(renderWeek({ people: [nobodyWorking] }).container).list;
+    expect(empty.children).toHaveLength(1);
+    expect(empty.lastElementChild).toHaveTextContent(WORDS.empty);
+    expect(empty.lastElementChild).toHaveClass(...ledgerRowBoxClass.split(" "));
+    expect(empty.lastElementChild).toHaveClass("last:border-b");
+
+    cleanup();
+    const awayOnly = branches(
+      renderWeek({
+        people: [nobodyWorking],
+        blocks: [
+          {
+            id: "away-1",
+            personId: KEIKO.personId,
+            startsOn: THURSDAY,
+            endsOn: THURSDAY,
+            note: "Family trip",
+          },
+        ],
+      }).container,
+    ).list;
+    expect(awayOnly).not.toHaveTextContent(WORDS.empty);
+    expect(awayOnly.children).toHaveLength(1);
+    const row = within(awayOnly).getByText("Keiko Tanaka").closest("li");
+    expect(row).toHaveTextContent("Away · Family trip");
+    expect(row).toBe(awayOnly.querySelector("ul > li:last-child"));
+    expect(row).toHaveClass("last:border-b");
   });
 });

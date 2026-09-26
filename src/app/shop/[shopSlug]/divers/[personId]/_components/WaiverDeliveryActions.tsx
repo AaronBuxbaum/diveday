@@ -17,7 +17,7 @@ import {
 import { copyToClipboard } from "@/components/Copyable";
 import { SendHold } from "@/components/SendHold";
 import { Toast } from "@/components/Toast";
-import { buttonClass } from "@/components/ui/button";
+import { type ButtonEdge, buttonClass } from "@/components/ui/button";
 import {
   WaiverActionIcon,
   type WaiverActionIconName,
@@ -40,9 +40,9 @@ export type WaiverDeliveryCopy = {
 };
 
 /**
- * How a button wears what we last knew about its channel: a ring the eye
+ * How a button wears what we last knew about its channel: an edge the eye
  * catches from across a counter, and a mark whose *shape* says the same thing
- * for anyone the ring's hue does not reach.
+ * for anyone the edge's hue does not reach.
  *
  * `unknown` — nobody has tried this way on this link — deliberately draws
  * nothing. An "untried" badge on every button on every unsigned waiver would be
@@ -51,14 +51,14 @@ export type WaiverDeliveryCopy = {
  */
 const CHANNEL_STATE: Record<
   Exclude<WaiverChannelDeliveryState, "unknown">,
-  { ring: string; ink: string; mark: WaiverDeliveryMarkName }
+  { edge: ButtonEdge; ink: string; mark: WaiverDeliveryMarkName }
 > = {
-  sent: { ring: "ring-2 ring-success/50", ink: "text-success", mark: "sent" },
-  // Not the success ring: nothing was delivered. A staffer has the URL, and
+  sent: { edge: "success", ink: "text-success", mark: "sent" },
+  // Not the success edge: nothing was delivered. A staffer has the URL, and
   // whether the diver does is a thing that happened off this screen.
-  copied: { ring: "ring-2 ring-border", ink: "text-muted", mark: "copied" },
-  failed: { ring: "ring-2 ring-danger/55", ink: "text-danger", mark: "failed" },
-  not_configured: { ring: "ring-2 ring-warning/55", ink: "text-warning", mark: "unavailable" },
+  copied: { edge: "strong", ink: "text-muted", mark: "copied" },
+  failed: { edge: "danger", ink: "text-danger", mark: "failed" },
+  not_configured: { edge: "warning", ink: "text-warning", mark: "unavailable" },
 };
 
 function stateWord(state: WaiverChannelDeliveryState, copy: WaiverDeliveryCopy): string | null {
@@ -134,15 +134,16 @@ function ChannelButton({
       disabled={pending}
       aria-busy={busy}
       onClick={() => onTap(channel)}
-      // The ring, not a border or a text colour: `secondary` already owns both
-      // of those, and two utilities for one property resolve by stylesheet
-      // order rather than by which one you wrote last (see `ui/button.ts`).
-      // Nothing here competes with the variant.
+      // The state is the box's own edge (`edge` in `ui/button.ts`), never a
+      // ring outside `secondary`'s hairline: that drew two stacked edges and,
+      // taking no room, left two outlined buttons 4px apart in this `gap-2`
+      // row. The edge swaps the hairline and keeps the box's width.
       className={buttonClass({
         variant: "secondary",
         size: "sm",
         busy: true,
-        className: mark ? `gap-2 ${mark.ring}` : "gap-2",
+        edge: mark?.edge,
+        className: "gap-2",
       })}
     >
       {busy ? (
@@ -163,9 +164,9 @@ function ChannelButton({
               an `sr-only` span's rects come back unclipped, running past the
               button's end — and so calls the hover fill 9px short of the
               label on the right (`fill-tight`, "Email waiver · Didn’t go
-              out", 2026-09-25). Nothing visible spills: the label keeps the
-              size's 12px either side. Settled in
-              scripts/pixel-probe-settled.json. */}
+              out", 2026-09-25). Nothing visible spills: the label keeps its
+              13px from the box's outer edge either side, padding and edge
+              together. Settled in scripts/pixel-probe-settled.json. */}
           {stateLabel ? <span className="sr-only">{stateLabel}</span> : null}
         </>
       )}

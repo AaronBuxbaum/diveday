@@ -80,7 +80,7 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
         <div className="flex flex-wrap items-center gap-3">
           <SubmitButton
             pendingLabel={t("lastMinute.submitting")}
-            className={buttonClass({ variant: "secondary", className: "px-5 py-2.5" })}
+            className={buttonClass({ variant: "secondary" })}
           >
             {t("lastMinute.submit")}
           </SubmitButton>

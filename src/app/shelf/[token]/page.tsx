@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { EntryDone } from "@/components/account/EntryShell";
 import { BrandStyle } from "@/components/BrandStyle";
 import { SubmitButton } from "@/components/SubmitButton";
-import { ThreadShell } from "@/components/thread/ThreadShell";
+import { THREAD_FOOT_SECTION_CLASS, ThreadShell } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
@@ -123,7 +123,11 @@ export default async function DiverShelfPage({
         <RememberShelf remember={rememberShelfAction.bind(null, token)} />
       )}
       <ThreadShell shopName={data.shop.name} title={t("shelf.title")}>
-        <div className="space-y-10">
+        {/* `mt-8`: the shell closes its header straight into its children,
+            and without it the first card's border sat on the title's line
+            box (K-479). 32px, as `/ready` and `/recap` open and as this
+            route's skeleton always did. */}
+        <div className="mt-8 space-y-10">
           <ReasonsToComeBack data={data} t={t} locale={locale} now={now} token={token} />
           <Dives data={data} t={t} locale={locale} />
           <TheFile data={data} t={t} locale={locale} token={token} saved={saved} error={error} />
@@ -335,7 +339,10 @@ function TheFile({
         ) : null}
       </dl>
 
-      <form action={saveShelfSizesAction.bind(null, token)} className="mt-6">
+      {/* `mt-8`, as the contact form below opens after its Save: the last
+          fact row above adds no padding of its own (`Row`), so both
+          subheads open one gap under what precedes them (K-597). */}
+      <form action={saveShelfSizesAction.bind(null, token)} className="mt-8">
         <h3 className="text-base font-semibold">{t("shelf.sizes")}</h3>
         <FieldGrid columns={2} className="mt-3">
           {sizeBoxes.map((box) => (
@@ -421,9 +428,15 @@ function TheFile({
   );
 }
 
+/**
+ * One fact of the file. The last row gives up its bottom padding and its
+ * floor: the rule-less foot of the list is not space to hold, and its `py-3`
+ * put 12px of nothing between the last fact and the "Sizes" subhead — the
+ * floor alone hands back 8 of those 12 (K-597).
+ */
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-h-11 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
+    <div className="flex min-h-11 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 last:min-h-0 last:pb-0">
       <dt className="text-base font-medium">{label}</dt>
       <dd className="text-sm text-muted">{children}</dd>
     </div>
@@ -473,7 +486,7 @@ function Forget({
   forgot: boolean;
 }) {
   return (
-    <form action={forgetShelfAction.bind(null, token)} className="border-t border-border pt-6">
+    <form action={forgetShelfAction.bind(null, token)} className={THREAD_FOOT_SECTION_CLASS}>
       <h2 className="text-base font-semibold">{t("shelf.forgetHeading")}</h2>
       <p className="mt-1 text-sm text-muted">
         {t("shelf.forgetBody", { shopName: data.shop.name })}

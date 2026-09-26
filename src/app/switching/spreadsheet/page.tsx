@@ -230,7 +230,7 @@ async function SpreadsheetBody({
             {SHEET_COLUMNS.map((column) => (
               <li
                 key={column}
-                className="grid gap-1 py-3 sm:grid-cols-[11rem_1fr] sm:items-baseline sm:gap-4"
+                className="grid gap-1 py-3 sm:grid-cols-[15rem_1fr] sm:items-baseline sm:gap-4"
               >
                 <span className="font-medium text-foreground">
                   {t(`switching.spreadsheet.columns.${column}.column`)}

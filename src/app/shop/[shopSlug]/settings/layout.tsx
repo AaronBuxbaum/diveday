@@ -14,6 +14,7 @@ import {
 } from "@/lib/authz";
 import { requireShopSurface } from "@/lib/session";
 import { SettingsRail } from "./_components/SettingsRail";
+import { SettingsRailSkeleton } from "./_components/SettingsRailSkeleton";
 import { SETTINGS_GROUPS, type SettingsRailGate, settingsRailRowsFor } from "./settings-groups";
 
 /**
@@ -49,23 +50,6 @@ export default function SettingsLayout({
         <SettingsRailPanel params={params} />
       </Suspense>
       <div className="min-w-0 lg:flex-1">{children}</div>
-    </div>
-  );
-}
-
-function SettingsRailSkeleton() {
-  return (
-    <div className="hidden lg:block lg:w-[264px] lg:shrink-0" aria-hidden="true">
-      <div className="sticky top-(--chrome-h) animate-pulse space-y-6 py-10 pe-2">
-        {[0, 1, 2].map((group) => (
-          <div key={group} className="space-y-2">
-            <div className="mx-2 h-3 w-24 rounded bg-surface-sunken" />
-            {[0, 1, 2, 3].map((row) => (
-              <div key={row} className="mx-2 h-4 w-36 rounded bg-surface-sunken" />
-            ))}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

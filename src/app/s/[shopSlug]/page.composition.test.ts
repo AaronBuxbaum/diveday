@@ -22,7 +22,7 @@ describe("the public schedule identity composition", () => {
   it("puts one next-boat surface directly after the shop identity", () => {
     const hero = positionOf("<ShopfrontHero");
     const nextBoat = positionOf("<NextBoatCard");
-    const schedule = positionOf('<div className={isEmbed ? undefined : "mt-10"}>');
+    const schedule = positionOf("<div className={isEmbed ? undefined : SECTION_GAP}>");
     const weekLedger = positionOf("<WeekLedger");
 
     for (const marker of [hero, nextBoat, schedule, weekLedger]) {
@@ -33,6 +33,30 @@ describe("the public schedule identity composition", () => {
     expect(nextBoat).toBeLessThan(weekLedger);
     expect(countOf("<NextBoatCard")).toBe(1);
     expect(SOURCE).not.toContain("lg:grid-cols-[minmax(0,1fr)_20rem]");
+  });
+});
+
+/**
+ * **The pager row reads the list's own gate.** The week's list hands its last
+ * row's 16px (20px from `sm`) of hover room back below itself (`WeekLedger`),
+ * so the section after it measures from the last row's words. The "Show later
+ * departures" row takes that room into its own margin
+ * (`WEEK_LEDGER_FOLLOWER_CLASS`, spelled beside the hand-back) and so still
+ * sits 20px under the last row's box. Under an empty state nothing is handed
+ * back, and it keeps its 20px. The list and the margin are chosen on one name,
+ * so a state added to the render cannot leave the pager's margin on the old
+ * condition.
+ */
+describe("the schedule's pager row", () => {
+  it("takes the list's follower margin exactly when the list renders", () => {
+    expect(countOf("const showsWeekLedger = ")).toBe(1);
+    expect(countOf("<WeekLedger")).toBe(1);
+    // The list renders on that name, and on nothing else.
+    expect(SOURCE).toMatch(/\{showsWeekLedger \? \(\s*<WeekLedger\b/);
+    const pager = SOURCE.slice(positionOf("(nextCursor || after || explicitMonth) ? ("));
+    expect(pager).toMatch(
+      /^[^<]*<div\s+className=\{`flex flex-wrap items-center gap-3 \$\{showsWeekLedger \? WEEK_LEDGER_FOLLOWER_CLASS : "mt-5"\}`\}/,
+    );
   });
 });
 
@@ -85,6 +109,59 @@ describe("the lens rail's place", () => {
     // the widget has literally zero navigation landmarks.
     expect(SOURCE).toContain("hasUpcoming && !isEmbed && lenses.length > 0");
     expect(SOURCE).toContain("isEmbed ? [] : await listTripLenses(");
+  });
+});
+
+/**
+ * **One gap between the storefront's sections** (docs/design/pixel-craft.md,
+ * class 4; K-176). Each section spaced itself with its own `mt-*`, and the
+ * week was `mt-10` where every other section was `mt-12`, so "Schedule" stood
+ * 8px closer to the band above it than any other heading to its neighbour.
+ * The gap is spelled once, and the route's skeleton opens its week at it too.
+ */
+describe("the storefront's section rhythm", () => {
+  it("spells the section gap once and opens every section with it", () => {
+    expect(SOURCE).toContain('const SECTION_GAP = "mt-12";');
+    expect(countOf('"mt-12"')).toBe(1);
+    expect(SOURCE).not.toMatch(/\bmt-10\b/);
+    expect(SOURCE).toContain("<div className={isEmbed ? undefined : SECTION_GAP}>");
+    for (const id of ["boats-heading", "more-ways-heading"]) {
+      expect(SOURCE).toContain(`<section aria-labelledby="${id}" className={SECTION_GAP}>`);
+    }
+    // The sections a component draws take the gap as a prop. The first JSX
+    // call of each (a comment may name the component before it does).
+    for (const component of ["<DateRequestForm\n", "<CoursesShelf\n", "<ShopReviews\n"]) {
+      const start = positionOf(component);
+      const call = SOURCE.slice(start, SOURCE.indexOf("/>", start));
+      expect(call, component).toContain("className={SECTION_GAP}");
+    }
+  });
+
+  it("opens the skeleton's week at the same gap", () => {
+    const skeleton = readFileSync(join(__dirname, "loading.tsx"), "utf8");
+    expect(skeleton).not.toMatch(/\bmt-10\b/);
+    expect(skeleton).toMatch(/className="mt-12 animate-pulse"/);
+  });
+});
+
+/**
+ * **The boats stand on the courses' columns** (pixel-craft class 3, K-227).
+ * The boats grid's gutter was `gap-3` under a course shelf and an identity
+ * band at `gap-4`, so at 1280 the boat cards' edges sat 1–3px off the course
+ * cards' above them, and on a phone the stacked boats were 12px apart where
+ * the courses were 16.
+ */
+describe("the boats grid", () => {
+  it("takes the course shelf's columns and gutter", () => {
+    const shelf = readFileSync(join(__dirname, "_components/CoursesShelf.tsx"), "utf8");
+    const shelfGrid = shelf.match(/<ul className="(mt-4 grid [^"]*)"/)?.[1];
+    const boats = SOURCE.slice(positionOf('aria-labelledby="boats-heading"'));
+    const boatsGrid = boats.match(/<ul className="([^"]*)"/)?.[1];
+    // One column below `sm` is what an unset grid has anyway.
+    const tokens = (classes: string | undefined) =>
+      new Set((classes ?? "").split(/\s+/).filter((token) => token !== "grid-cols-1"));
+    expect(shelfGrid).toBeDefined();
+    expect(tokens(boatsGrid)).toEqual(tokens(shelfGrid));
   });
 });
 

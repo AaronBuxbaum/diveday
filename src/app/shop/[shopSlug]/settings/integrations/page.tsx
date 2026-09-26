@@ -27,6 +27,7 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
+import { settingsPaneClass } from "../_components/settings-pane";
 import {
   disconnectIntegrationAction,
   saveZapierIntegrationAction,
@@ -214,7 +215,7 @@ export default async function IntegrationsSettingsPage({
       : banner;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}

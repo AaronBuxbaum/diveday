@@ -190,8 +190,10 @@ export default async function DiveSitePage({
 
       {/* The page's one act. Everything above answers "would I like this
           reef?"; this answers "when can I go?", and each row is the door to
-          the departure that already owns capacity, readiness and payment. */}
-      <section id="departures" className="mt-8 scroll-mt-8">
+          the departure that already owns capacity, readiness and payment.
+          `mt-6`, the step every beat above it stands at (pixel-craft class 4,
+          K-509). */}
+      <section id="departures" className="mt-6 scroll-mt-8">
         <GroupLabel as="h2">{t("site.page.departuresHeading")}</GroupLabel>
         {departures.length === 0 ? (
           <EmptyState

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { SHEET_PANEL_CLASS, SheetHeader } from "@/components/ui/sheet";
 import { useDragSheet } from "@/components/useDragSheet";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
@@ -127,9 +127,9 @@ export function DiverSheet({
       }}
     >
       {/* Geometry, radius, shadow and safe-area padding are the manifest
-          sheet's own, unchanged: two sheets one tap apart that rounded their
-          corners differently is precisely the drift `SectionCard` has no
-          `radius` prop to prevent. */}
+          sheet's own — one `SHEET_PANEL_CLASS`, not a copy of it: two sheets
+          one tap apart that rounded their corners differently is precisely
+          the drift `SectionCard` has no `radius` prop to prevent. */}
       <section
         ref={sheetRef}
         role="dialog"
@@ -139,41 +139,39 @@ export function DiverSheet({
         tabIndex={-1}
         {...drag.handlers}
         style={drag.style}
-        className={`max-h-[min(90dvh,48rem)] w-full overflow-y-auto overscroll-contain rounded-t-[22px] border-border border-t bg-surface px-5 pt-2 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl outline-none sm:mx-auto sm:max-w-2xl sm:px-7 ${
+        className={`${SHEET_PANEL_CLASS} outline-none ${
           drag.dragging ? "" : closing ? "sheet-out" : "rise-in"
         }`}
       >
         {/* The handle is the drag surface once the body can scroll, so a
             finger that means to read the story reads the story. */}
         <div aria-hidden="true" className="mx-auto h-1 w-10 rounded-full bg-border-strong" />
-        <header className="mt-3 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 id={titleId} className={LEAD_TITLE_CLASS}>
-              {name}
-            </h2>
-            <p id={descriptionId} className="mt-1 text-muted text-sm">
-              {subtitle}
-            </p>
-          </div>
-          <button
-            type="button"
-            aria-label={closeLabel}
-            onClick={close}
-            className="grid size-11 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
-          >
-            <svg
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              aria-hidden="true"
-              className="size-5"
+        <SheetHeader
+          titleId={titleId}
+          descriptionId={descriptionId}
+          title={name}
+          subtitle={subtitle}
+          actions={
+            <button
+              type="button"
+              aria-label={closeLabel}
+              onClick={close}
+              className="grid size-11 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
             >
-              <path d="m5 5 10 10M15 5 5 15" />
-            </svg>
-          </button>
-        </header>
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                aria-hidden="true"
+                className="size-5"
+              >
+                <path d="m5 5 10 10M15 5 5 15" />
+              </svg>
+            </button>
+          }
+        />
         <div className="mt-4">{children}</div>
       </section>
     </div>,

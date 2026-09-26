@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { buttonClass } from "@/components/ui/button";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import type { SignedWaiverEntry } from "@/db/waivers";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -250,5 +251,146 @@ describe("the evidence block", () => {
     const row = rowFor(container, "a");
     expect(within(row).queryByRole("link", { name: "Open the departure" })).toBeNull();
     expect(within(row).getByText("Imported record")).toBeInTheDocument();
+  });
+});
+
+function summaryOf(container: HTMLElement, id: string) {
+  const summary = rowFor(container, id).querySelector("summary");
+  if (!(summary instanceof HTMLElement)) throw new Error(`no summary for ${id}`);
+  return summary;
+}
+
+/**
+ * **A signature row is a ledger row's height** (docs/design/pixel-craft.md,
+ * class 12). The pixel probe (staff-waivers, 2026-09-25) measured the rows 49px
+ * apart against every other hairline ledger's 52: the summary kept the
+ * ledger's old `min-h-12` under the row's 1px rule. A `LedgerRow` is
+ * `min-h-13` on the element that carries its rule, so the summary under this
+ * row's rule is the 51px left.
+ */
+describe("a row's height", () => {
+  it("stands 52px from rule to rule, a LedgerRow's floor: the 1px rule and a 51px summary", () => {
+    const { container } = renderLog([entry({ id: "a" })]);
+    expect(rowFor(container, "a").closest("li")).toHaveClass("border-t");
+    const summary = summaryOf(container, "a");
+    expect(summary).toHaveClass("min-h-12.75");
+    expect(summary).not.toHaveClass("min-h-12");
+  });
+});
+
+/**
+ * **On a phone the departure is read whole, on a line of its own** (class 8).
+ * The pixel probe (staff-waivers@390): the departure shared the first line
+ * with the name, the time and the caret, and truncated to 38–182px of its
+ * 276–351px on every row — the date never showed, and a "Not sealed" row kept
+ * only "Two-…". The column is 358px, wider than the longest seeded value, so
+ * below `sm` the row takes `LedgerRow`'s `stacked` grammar: the name, time
+ * and caret on the first line, the departure under them at full width.
+ *
+ * A badge is the exception, and below `sm` it takes a line of its own under
+ * the departure. Left on the first line, "Medical follow-up flagged" (about
+ * 193px with its mark) beside a name, the time and the caret needs more than
+ * the 358px column for any name over about 62px, so on every flagged row the
+ * time and caret wrapped to a middle line at its start and the departure took
+ * a third. From `sm` up it is the one-line row it was.
+ */
+describe("a row on a phone", () => {
+  it("drops the departure to a full-width line under the name instead of cutting it", () => {
+    const { container } = renderLog([entry({ id: "a", integrity: "unsealed" })]);
+    const summary = summaryOf(container, "a");
+    const trip = within(summary).getByText(/Two-Tank Reef/);
+    expect(trip).toHaveClass("max-sm:order-last", "max-sm:basis-full", "sm:truncate");
+    expect(trip).not.toHaveClass("truncate");
+    // The name pushes the time and caret to the first line's end.
+    expect(within(summary).getByText("Grace Mensah")).toHaveClass("max-sm:me-auto");
+  });
+
+  it("keeps a flagged row's time and caret on the name's line, the badges on a line of their own", () => {
+    const { container } = renderLog([
+      entry({
+        id: "a",
+        integrity: "unsealed",
+        flaggedPrompts: ["Have you had chest surgery in the last 12 months?"],
+      }),
+    ]);
+    const summary = summaryOf(container, "a");
+    const badges = within(summary).getByText("Medical follow-up flagged").parentElement;
+    expect(within(summary).getByText("Not sealed").parentElement).toBe(badges);
+    expect(badges?.parentElement).toBe(summary);
+    // Below `sm` a full-width line after the departure's; from `sm` up the
+    // badges are the row's own items again, where they always stood.
+    expect(badges).toHaveClass("max-sm:order-last", "max-sm:basis-full", "sm:contents");
+    // The name, the time and the caret keep their places on the first line.
+    const moved = [...summary.children].filter((child) =>
+      [...child.classList].some((token) => token.startsWith("max-sm:order")),
+    );
+    expect(moved).toEqual([within(summary).getByText(/Two-Tank Reef/), badges]);
+  });
+
+  it("draws no badge line on a row with nothing to flag", () => {
+    const { container } = renderLog([entry({ id: "a" })]);
+    const summary = summaryOf(container, "a");
+    const fullWidth = [...summary.children].filter((child) =>
+      child.classList.contains("max-sm:basis-full"),
+    );
+    expect(fullWidth).toEqual([within(summary).getByText(/Two-Tank Reef/)]);
+  });
+});
+
+/**
+ * **The open record reads evenly down to its closing rule** (class 4). The
+ * pixel probe (staff-waivers-record@1280, ink to ink): the version line sat
+ * 24px under the name, the doors 34px under the version and the closing rule
+ * 31px under the doors — each door is a 44px target around a 20px line, so
+ * its 12px of unseen box above and below stacked on the block's own
+ * `gap-3` and `pb-4`. The gap counts the room above the doors (`gap-1`),
+ * and the doors sink the room below into the block's padding (`outdent`)
+ * when they end it; the padding (`pb-5`) is then the same 20px under the
+ * doors as under the flagged answers, and keeps the ring 3px clear of the rule.
+ *
+ * The doors share a wrapping row, and at 320px (the reflow width) the column
+ * is 288px against the two English doors' 290, so they wrap. Every door gives
+ * its 12px back, the first line's too, so that line is 32px tall: under a
+ * `gap-y-1` the second door's target started 4px below the first line and
+ * overlapped the first door's by 8px. An outdented row's lines are 16px apart
+ * (`gap-y-4`), which is the 4px the targets had before plus the 12px each gives
+ * back; unwrapped, a row has no line gap and nothing moves.
+ */
+describe("the evidence block's rhythm", () => {
+  const tokens = (className: string) => className.split(/\s+/).filter(Boolean);
+
+  it("counts the doors' unseen room in its gap, and sinks it into its padding when the doors end the block", () => {
+    const { container } = renderLog([entry({ id: "a" })]);
+    const row = rowFor(container, "a");
+    expect(row.querySelector("summary + div")).toHaveClass("gap-1", "pb-5");
+    const doors = within(row).getAllByRole("link");
+    expect(doors).toHaveLength(2);
+    for (const door of doors) {
+      expect(door).toHaveClass(
+        ...tokens(buttonClass({ variant: "link", size: "sm", flush: true, outdent: "block-end" })),
+      );
+    }
+    // Wrapped, the second line's targets stay 4px clear of the first line's.
+    const doorRow = doors[0]?.parentElement;
+    expect(doors[1]?.parentElement).toBe(doorRow);
+    expect(doorRow).toHaveClass("flex-wrap", "gap-y-4");
+    expect(doorRow).not.toHaveClass("gap-y-1");
+  });
+
+  it("leaves the doors whole when the flagged answers close the block", () => {
+    const { container } = renderLog([
+      entry({ id: "a", flaggedPrompts: ["Have you had chest surgery in the last 12 months?"] }),
+    ]);
+    const row = rowFor(container, "a");
+    const block = row.querySelector("summary + div");
+    expect(block).toHaveClass("gap-1", "pb-5");
+    expect(block?.lastElementChild?.textContent).toMatch(/chest surgery/);
+    const doors = within(row).getAllByRole("link");
+    for (const door of doors) {
+      expect(door).not.toHaveClass("-mb-3");
+    }
+    // Whole doors keep their own 12px, so wrapped lines need only the 4px.
+    expect(doors[0]?.parentElement).toHaveClass("flex-wrap", "gap-y-1");
+    expect(doors[0]?.parentElement).not.toHaveClass("gap-y-4");
   });
 });

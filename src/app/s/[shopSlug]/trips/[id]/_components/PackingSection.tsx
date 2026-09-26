@@ -303,7 +303,10 @@ export function PackingSection({
     // loud as its own `h1` sitting under a spine of `text-base` steps. This is
     // Clearwater's closed ramp's section heading (ADR
     // 20260827-clearwater-surface-language, decision 3).
-    <section className="mt-10">
+    //
+    // No outer margin: `/ready`, its one caller, spaces its sections once
+    // with `space-y-10` (K-233).
+    <section>
       <h2 className={SECTION_TITLE_CLASS}>{t("trip.packTitle")}</h2>
       {exposureSuit ? (
         <p className="mt-2 text-sm text-muted">{t(EXPOSURE_SUIT_KEYS[exposureSuit])}</p>
@@ -387,11 +390,16 @@ export function PackingSection({
                               aria-hidden="true"
                             />
                           ) : null}
-                          <div className="absolute left-0 top-0.5 flex size-6 items-center justify-center rounded-full border border-border bg-surface text-muted z-10">
+                          {/* The circle at the row's top, beside a first line
+                              as tall as it (`leading-6`): both centres sit
+                              12px down, and the rail starts at its foot. A
+                              20px `text-sm` line beside a `top-0.5` circle hung
+                              every circle 3–4px below its time (K-160). */}
+                          <div className="absolute left-0 top-0 flex size-6 items-center justify-center rounded-full border border-border bg-surface text-muted z-10">
                             <StepIcon step={entry.step} className="size-3.5" />
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-4">
-                            <span className="font-semibold tabular-nums text-foreground text-sm sm:w-20 sm:shrink-0">
+                            <span className="font-semibold tabular-nums text-foreground text-sm leading-6 sm:w-20 sm:shrink-0">
                               {/* `formatTime` builds the identical formatter,
                                   and building it here instead is the ~12x tax
                                   `check:intl-cache` exists to stop — once per
@@ -399,7 +407,7 @@ export function PackingSection({
                                   (issue #799). */}
                               {formatTime(entry.at, locale, shop.timezone)}
                             </span>
-                            <span className="text-muted text-sm leading-normal">
+                            <span className="text-muted text-sm leading-6">
                               {t(timelineStepKey(entry.step, trip.diveMode), {
                                 number: entry.number ?? 1,
                               })}

@@ -751,9 +751,10 @@ test.describe("the folding title", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     // Into a departure, which is where `TripPageHeader` lives. Clicked rather
     // than addressed by id: the board is the door a staffer uses, and the id
-    // is the seed's to choose.
+    // is the seed's to choose. By the row's door, since a row's flags come
+    // before it and link to the trip's `#details` or `/manifest`.
     const departure = await page
-      .locator('a[href*="/shop/blue-mantis/trips/"]')
+      .locator("[data-week-board] a[data-departure-door]")
       .first()
       .getAttribute("href");
     if (!departure) throw new Error("the board listed no departure to open");

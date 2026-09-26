@@ -448,9 +448,10 @@ export function AfterState({
           (issue #1425): when they may fly, in the shop's zone, with the hours
           and who set them in the same sentence. A sentence and no panel — it
           informs, and a boxed warning would read as a gate. Off the print, which
-          is the keepsake alone. */}
+          is the keepsake alone. A section's `mt-10` like every one around it:
+          at `mt-6` it broke the page's 40px rhythm under the record (K-532). */}
       {flySafe ? (
-        <p data-testid={AFTER_STATE_TEST_IDS.flySafe} className="mt-6 text-base print:hidden">
+        <p data-testid={AFTER_STATE_TEST_IDS.flySafe} className="mt-10 text-base print:hidden">
           {t(`recap.${flySafeMessageKey(flySafe)}`, {
             when: flySafe.when,
             count: flySafe.hours,
@@ -925,10 +926,14 @@ function DiveRecord({
       {/* The postcard's face: the site, drawn, and the heading in the shop's
           face on the lagoon wash. The band is the wash, so the tile takes the
           shell to keep its edge. In print the band drops its wash and its
-          drawing and the heading stands alone at the top of the sheet. */}
+          drawing and the heading stands alone at the top of the sheet.
+
+          It wraps: on a phone the 120px mark and the stamp left the heading
+          101px of the 140 "Dive log entry" needs, and one word broke onto a
+          line of its own (K-596). The stamp drops under the mark instead. */}
       <div
         data-testid={AFTER_STATE_TEST_IDS.face}
-        className="flex items-center justify-between gap-4 bg-primary-tint px-5 py-4 sm:px-6 print:bg-transparent print:px-0 print:py-0"
+        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 bg-primary-tint px-5 py-4 sm:px-6 print:bg-transparent print:px-0 print:py-0"
       >
         <div className="flex min-w-0 items-center gap-4">
           {/* `data-postcard-mark` is `SavePostcard`'s reach into the live DOM:
@@ -967,7 +972,10 @@ function DiveRecord({
       </div>
 
       <div className="p-5 pt-0 sm:p-6 sm:pt-0 print:p-0">
-        <dl className="mt-5 divide-y divide-border border-t border-border">
+        {/* The top rule is paper's only: on screen the band's wash is this
+            list's top edge, and a hairline 20px under it drew it twice
+            (K-595); in print the band goes transparent. */}
+        <dl className="mt-5 divide-y divide-border print:border-t print:border-border">
           <Fact label={t("recap.diverLabel")}>{diverName}</Fact>
           <Fact label={t("recap.dateLabel")}>{when}</Fact>
           {trip.boatName ? <Fact label={t("recap.vesselLabel")}>{trip.boatName}</Fact> : null}

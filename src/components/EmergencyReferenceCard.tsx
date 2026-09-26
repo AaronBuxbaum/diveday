@@ -1,3 +1,4 @@
+import { TONE_PANEL_CLASS, TONE_PANEL_IN_OVERLAY_CLASS } from "@/components/ui/card";
 import { type EmergencyReference, hasEmergencyReference } from "@/lib/emergency-reference";
 
 /**
@@ -28,12 +29,19 @@ export function EmergencyReferenceCard({
   copy,
   className = "",
   headingId = "emergency-reference-heading",
+  inOverlay = false,
 }: {
   reference: EmergencyReference;
   copy: EmergencyReferenceCopy;
   className?: string;
   /** Unique when several responsive/print copies share a page. */
   headingId?: string;
+  /**
+   * Carried inside a menu or a sheet that lifts it (the manifest's phone
+   * menu): the card drops the bed a panel at rest stands on, and keeps its
+   * tone, words and padding.
+   */
+  inOverlay?: boolean;
 }) {
   const filled = hasEmergencyReference(reference);
   return (
@@ -45,7 +53,7 @@ export function EmergencyReferenceCard({
     // in words (design principle 6).
     <section
       aria-labelledby={headingId}
-      className={`rounded-panel border border-danger/40 bg-danger/5 p-4 sm:p-5 ${className}`}
+      className={`${inOverlay ? TONE_PANEL_IN_OVERLAY_CLASS : TONE_PANEL_CLASS} border-danger/40 bg-danger/5 ${className}`}
     >
       <h2 id={headingId} className="text-base font-semibold text-danger-strong">
         {copy.heading}

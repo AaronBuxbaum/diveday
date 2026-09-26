@@ -231,7 +231,10 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
 
       <section className="border-y border-border bg-surface">
         <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-          <div className="grid gap-10 lg:grid-cols-[0.9fr_1fr] lg:items-start">
+          {/* Two grid items, so below `lg` the row gap is the heading-to-body
+              gap: `gap-5`, the `mt-5` every other band sets its body at, and
+              the 40px column gap only once there are columns (K-577). */}
+          <div className="grid gap-5 lg:grid-cols-[0.9fr_1fr] lg:items-start lg:gap-10">
             <div>
               <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.founderEyebrow")}</p>
               <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
@@ -289,7 +292,10 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                 cadence: t(earlyAccessPrice.cadenceKey),
               })}
             </Link>
-            <Link href="/product" className={buttonClass({ variant: "link" })}>
+            {/* `flush`: it wraps under the two doors onto a line of its own,
+                where the size's `px-4` set its words 16px inside the column
+                (K-397). */}
+            <Link href="/product" className={buttonClass({ variant: "link", flush: true })}>
               {t("marketing.about.seeProduct")}
             </Link>
           </div>
@@ -357,7 +363,11 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                   across all of them would answer nothing. */}
               <Link
                 href={switchingHref("/switching", "about-switching")}
-                className={buttonClass({ variant: "link", className: "mt-4 text-left" })}
+                className={buttonClass({
+                  variant: "link",
+                  flush: true,
+                  className: "mt-4 text-left",
+                })}
               >
                 {t("marketing.about.switchingLink")}
               </Link>

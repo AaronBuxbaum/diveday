@@ -153,9 +153,15 @@ export function WaiverStepRail({
     // already announces its running count politely, and a second region
     // re-announcing "1 of 3 done" on the same keystroke is two interruptions
     // for one fact.
+    //
+    // 16px before the count, where the steps keep 20px between them: at 390
+    // the row needs 368px of the 370px column, where 20px needed 372 and sent
+    // the count to a line of its own. The count is spread to the row's end
+    // rather than pushed there by a margin, so a count that does wrap (360, a
+    // longer language) starts its line at the left edge (K-533).
     <div
       data-testid={WAIVER_RAIL_TEST_ID}
-      className={`flex flex-wrap items-center gap-x-5 gap-y-1 border-y border-border py-3 ${className}`.trim()}
+      className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-y border-border py-3 ${className}`.trim()}
     >
       <ol className="flex flex-wrap items-center gap-x-5 gap-y-1">
         {WAIVER_RAIL_ORDER.map((id) => {
@@ -167,8 +173,15 @@ export function WaiverStepRail({
               className="text-sm font-medium"
             />
           );
+          // A flex box, not a block: a block `<li>` set the mark on its own
+          // 24px body-text strut, 26px tall with the 20px mark at its top, and
+          // the count centred beside it sat 4px under the labels (K-225).
           return (
-            <li key={id} data-rail-step={id} className={progress[id] ? "" : "text-muted"}>
+            <li
+              key={id}
+              data-rail-step={id}
+              className={`flex items-center ${progress[id] ? "" : "text-muted"}`.trim()}
+            >
               {anchor ? (
                 <a
                   href={`#${anchor}`}
@@ -183,7 +196,7 @@ export function WaiverStepRail({
           );
         })}
       </ol>
-      <span className="ms-auto text-sm text-muted tabular-nums">{doneLabel}</span>
+      <span className="text-sm text-muted tabular-nums">{doneLabel}</span>
     </div>
   );
 }

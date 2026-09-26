@@ -92,6 +92,25 @@ describe("Trip About panel", () => {
     expect(screen.getByText("Details editor").parentElement).toHaveClass("px-2");
   });
 
+  it("sets a row's label, value and 'Edit …' on one baseline from sm", () => {
+    // K-180: the grid was `sm:items-start` and the action `self-start`, so
+    // its 20px line centred in its 44px box while the label and value sat at
+    // the box's top: "Edit details ▾" 12px under the value it edits, and the
+    // label 3px off the value. The 44px box stays (the whole summary is the
+    // target); the three share the first baseline.
+    const { container } = render(<TripAboutSection {...props} open />);
+    const summaryGrid = container.querySelector("details#details > summary")?.firstElementChild;
+    const fact = container.querySelector("#conditions");
+
+    for (const grid of [summaryGrid, fact]) {
+      expect(grid).toHaveClass("sm:items-baseline");
+      expect(grid).not.toHaveClass("sm:items-start");
+    }
+    const action = screen.getByText("Edit details");
+    expect(action).toHaveClass("min-h-11");
+    expect(action).not.toHaveClass("self-start");
+  });
+
   it("rings an editable row inside its own box", () => {
     // Three focus classes here compiled and did nothing: the global ring rule
     // beat them. The app's inset ring is one utility, not a width and offset

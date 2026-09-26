@@ -1,6 +1,9 @@
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   displayStoredPhone,
+  displayStoredPhoneWhole,
   formatWallTime,
   isNeverForgivingFieldName,
   readTypedDate,
@@ -163,6 +166,54 @@ describe("displayStoredPhone", () => {
     expect(displayStoredPhone(null)).toBe("");
     expect(displayStoredPhone(undefined)).toBe("");
     expect(displayStoredPhone("  ")).toBe("");
+  });
+});
+
+/**
+ * **A number beside other facts is one unit** (pixel-craft class 8, K-450). A
+ * contact line joins the email and the number, and with ordinary spaces a
+ * narrow column broke inside the number: "+1 305 555" over "0110" is a
+ * different number to somebody dialling it off the screen. The line may still
+ * break at its separator or inside the email; a note stored where a number
+ * should be keeps its spaces, because it is words.
+ */
+describe("displayStoredPhoneWhole", () => {
+  it.each([
+    ["+13055550142", "+1\u00a0305\u00a0555\u00a00142"],
+    ["+529871234567", "+52\u00a09871234567"],
+    ["+1 305 555 0142 x21", "+1\u00a0305\u00a0555\u00a00142\u00a0x21"],
+    ["305-555-0142 ext 21", "305-555-0142\u00a0ext\u00a021"],
+  ])("holds the stored %j together", (stored, whole) => {
+    expect(displayStoredPhoneWhole(stored)).toBe(whole);
+    expect(whole.replaceAll("\u00a0", " ")).toBe(displayStoredPhone(stored));
+  });
+
+  it("leaves a note in the phone column free to wrap", () => {
+    expect(displayStoredPhoneWhole("ask at the desk")).toBe("ask at the desk");
+  });
+
+  it("says nothing for a row with no number on file", () => {
+    expect(displayStoredPhoneWhole(null)).toBe("");
+    expect(displayStoredPhoneWhole("  ")).toBe("");
+  });
+
+  /**
+   * The diver sheet's subtitle was fixed on its own, and the check-in queue,
+   * the merge prompt and the three name-match prompts kept the same join with
+   * ordinary spaces. Any list a number is joined into takes the whole reading.
+   */
+  it("is what every surface that joins a number to other facts shows", () => {
+    const src = path.join(import.meta.dirname, "..");
+    const files = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) return files(full);
+        return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
+      });
+    const offenders = [...files(path.join(src, "app")), ...files(path.join(src, "components"))]
+      .filter((file) => /\[[^\]]*\bdisplayStoredPhone\(/.test(readFileSync(file, "utf8")))
+      .map((file) => path.relative(src, file));
+    expect(offenders).toEqual([]);
   });
 });
 

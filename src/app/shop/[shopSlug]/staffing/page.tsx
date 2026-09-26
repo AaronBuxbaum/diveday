@@ -41,7 +41,7 @@ import {
   type RenewalState,
   StaffCredentials,
 } from "./_components/StaffCredentials";
-import { type GapWords, StaffingWeek } from "./_components/StaffingWeek";
+import { type GapWords, StaffingWeek, weekTailRowClass } from "./_components/StaffingWeek";
 import {
   createShiftAction,
   decideCrewRequestAction,
@@ -597,8 +597,10 @@ export default async function StaffingPage({
               ("Shown as Dana" / "Not shown") and opens the form on a tap. The
               answer is still on the glass, which is the thing burying a consent
               behind a chevron would cost; what is gone is the form. */}
+          {/* `mt-10`, the gap the credentials keep above themselves too: the
+              tail's groups sat 24px and then 40px apart (K-195). */}
           <CompactDisclosureRow
-            className="mt-6"
+            className="mt-10"
             label={t("staffing.crewConsent.rowLabel")}
             value={
               crewConsented
@@ -759,10 +761,12 @@ function AddDoor({
   children: React.ReactNode;
 }) {
   return (
-    // The hairline belongs to the row, not to the `<details>`, so `last:`
-    // closes a ledger whose final member is this door — and it is a ledger
-    // row's box, so its rules end where the credentials' rules above it do.
-    <Tag className={`list-none ${ledgerRowBoxClass}`}>
+    // The hairline belongs to the row, not to the `<details>`. In the
+    // credentials' list (`li`) the door is that ledger's tail row, on a ledger
+    // row's box, so `last:` closes the list and its rules end where the rows'
+    // do. On the page (`div`) it hangs under the week, which has already
+    // closed itself, so it draws only its own closing rule (K-195).
+    <Tag className={`list-none ${Tag === "li" ? ledgerRowBoxClass : weekTailRowClass}`}>
       <AutoOpenDetails id={id} openOnHash={id} open={open} className="group/add scroll-mt-8">
         <summary
           className={buttonClass({

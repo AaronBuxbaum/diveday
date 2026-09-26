@@ -107,6 +107,9 @@ function CardRow({
   );
 }
 
+/** A no-break space, by code point, because a literal one is invisible in the source. */
+const NBSP = String.fromCodePoint(0x00a0);
+
 /**
  * **The one fact the closed door carries: what this diver is certified to do.**
  *
@@ -183,7 +186,18 @@ function cardsOnFile(
     ),
   ];
   if (cards.length > 0) {
-    return { text: cards.join(" · "), tone: unchecked ? "warning" : "muted" };
+    // **The fact wraps between cards, never inside one.** On a phone it takes
+    // a line of its own and wraps where the width runs out, and a break inside
+    // "Deep — confirm to clear" left a stray "clear" opening the next line,
+    // read as the state of the card after it. Each phrase's spaces are
+    // no-break, and so is the one before its "·", so the only break left is
+    // after a separator (the trip log's `CertificationLine` joins the same
+    // way). A phrase wider than the line still breaks: the door's
+    // `max-sm:break-words`.
+    return {
+      text: cards.map((card) => card.replaceAll(" ", NBSP)).join(`${NBSP}· `),
+      tone: unchecked ? "warning" : "muted",
+    };
   }
   // "Not certified yet" is unverified too, and it is the row a staffer most
   // needs to catch before a two-tank charter goes out to it — the same reading

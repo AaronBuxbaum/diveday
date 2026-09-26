@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import { ledgerRowRoomClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { depthText, seaStateText, temperatureText, windText } from "@/i18n/unit-labels";
@@ -37,7 +36,6 @@ export function ConditionsLine({
   crewLanguages,
   tideLines,
   locale,
-  underDoor = false,
 }: {
   shop: Shop;
   trip: Trip;
@@ -71,13 +69,6 @@ export function ConditionsLine({
    */
   tideLines?: { site: string; text: string; station?: string | null }[];
   locale: string;
-  /**
-   * Directly under the pitch's door (`pitchHasDoor`): the line sits flush, so
-   * its rule is the door's close. 24px below, the door's label sat in an 80px
-   * band between two rules, 29px under one and 51px over the other
-   * (pixel-craft class 6).
-   */
-  underDoor?: boolean;
 }) {
   const t = diverTranslator(locale);
   // Stored metric, displayed in the shop's own units (src/lib/depth-units.ts,
@@ -131,20 +122,38 @@ export function ConditionsLine({
   return (
     // The ledger's room: its rule ends where the day's rows' rules end, and
     // its words stay on the column.
-    <section
-      className={`${underDoor ? "" : "mt-6 "}border-t border-border pt-4 ${ledgerRowRoomClass}`}
-    >
+    //
+    // **No margin of its own** (pixel-craft class 4, K-162): the page's
+    // `space-y-10` stands it a section below what precedes it, and directly
+    // under the pitch's door it sits flush, so its rule is the door's close —
+    // 24px below, the door's label sat in an 80px band between two rules
+    // (pixel-craft class 6). The page decides which; the line is the same.
+    <section className={`border-t border-border pt-4 ${ledgerRowRoomClass}`}>
       {parts.length > 0 ? (
-        <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
-          {parts.map((part, index) => (
-            // The separator is a sibling of the part, never a child of it: a
-            // reading nested beside a dot is one string to anything reading the
-            // DOM, which is how "Light chop" becomes "·Light chop".
-            <Fragment key={part}>
-              {index > 0 ? <span aria-hidden="true">·</span> : null}
-              <span>{part}</span>
-            </Fragment>
-          ))}
+        // **A wrap never strands a "·"** (pixel-craft class 8, K-483). Each
+        // reading carries the dot before it in one item, so the two wrap
+        // together, and the row stands 12px left of the column — the dot's
+        // 4px box and its 8px gap — inside a line that clips there: the dot
+        // that starts a line (the first reading's, and any a wrap moves to
+        // the front) is cut, and every other sits between two readings. As
+        // its own item a dot could end a line: "18 m visibility ·" over
+        // "Glassy" at 390. Clipped on the inline axis only (`overflow-x-clip`),
+        // and nothing overflows the other way, so nothing scrolls.
+        <p className="overflow-x-clip text-sm text-muted">
+          <span className="-ms-3 flex flex-wrap items-baseline gap-x-2">
+            {parts.map((part) => (
+              <span key={part} className="inline-flex items-baseline gap-x-2">
+                {/* The separator is a sibling of the part, never a child of
+                    it: a reading nested beside a dot is one string to anything
+                    reading the DOM, which is how "Light chop" becomes
+                    "·Light chop". */}
+                <span aria-hidden="true" className="w-1 text-center">
+                  ·
+                </span>
+                <span>{part}</span>
+              </span>
+            ))}
+          </span>
         </p>
       ) : null}
       {/* The tide's own line, under the readings: a clock time and a

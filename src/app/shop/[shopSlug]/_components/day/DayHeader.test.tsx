@@ -86,4 +86,19 @@ describe("DayHeader", () => {
     render(<DayHeader {...BASE} action={<a href="/shop/x/print">Print the day</a>} />);
     expect(screen.getByRole("link", { name: "Print the day" })).toBeTruthy();
   });
+
+  /**
+   * **The action shares the date's row, never the summary's** (pixel-craft
+   * K-523). Inside the action's flex row the summary wrapped in the column the
+   * 110px "Print the day" pill left it, three lines deep at 390 with "dock."
+   * alone on the last, beside empty sky. Under the row it runs the band's
+   * whole measure.
+   */
+  it("runs the summary under the date's row, not beside the action", () => {
+    render(<DayHeader {...BASE} action={<a href="/shop/x/print">Print the day</a>} />);
+    const summary = screen.getByText(BASE.summary);
+    const row = screen.getByRole("link", { name: "Print the day" }).parentElement?.parentElement;
+    expect(row?.contains(screen.getByRole("heading", { level: 1 }))).toBe(true);
+    expect(row?.contains(summary)).toBe(false);
+  });
 });

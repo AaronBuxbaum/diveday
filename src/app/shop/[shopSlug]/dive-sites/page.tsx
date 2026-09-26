@@ -4,12 +4,13 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
+import { sectionCardClass, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { SearchField } from "@/components/ui/form";
 import { groupLabelClass, LedgerRow } from "@/components/ui/ledger";
 import { QueryForm } from "@/components/ui/QueryForm";
@@ -182,12 +183,13 @@ export default async function DiveSitesPage({
             className="w-full min-w-0 sm:w-80"
           />
           {query ? (
-            // The glyph a search box clears with everywhere else, through the
-            // shared `size: "icon"` box rather than a hand-spelled square —
-            // 48px, and the same construction as the crew chip's unassign and
-            // the report navigator's arrows. The words survive as the
-            // accessible name, so nothing is lost to a screen reader or to
-            // the e2e spec that clicks it by name.
+            // The drawn cross every remove control shares (the crew row's
+            // unassign, the builder's crew chip), through the shared
+            // `size: "icon"` box rather than a hand-spelled square — 48px,
+            // the same construction as the report navigator's arrows, the
+            // mark at the field's 16px. The words survive as the accessible
+            // name, so nothing is lost to a screen reader or to the e2e spec
+            // that clicks it by name.
             <Link
               href={`/shop/${shopSlug}/dive-sites`}
               scroll={false}
@@ -195,7 +197,7 @@ export default async function DiveSitesPage({
               title={t("diveSites.list.searchClear")}
               className={buttonClass({ variant: "ghost", size: "icon" })}
             >
-              <span aria-hidden="true">×</span>
+              <DiveDayIcon name="close" className="size-4" />
             </Link>
           ) : null}
         </QueryForm>
@@ -284,31 +286,29 @@ async function CatalogView({
   const locationIsProvided = !!(shop.addressStreet && shop.addressLocality);
 
   if (!locationIsProvided) {
+    // The catalog's own header over the shared empty state, the one the
+    // library draws a click away (K-419). This was a bare "Back to library"
+    // link over a hand-rolled dashed box: a second empty panel, squarer and
+    // fainter than the first, filled with a card colour no token defines.
     return (
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <Link
-          href={back}
-          scroll={false}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          {t("diveSites.backToLibrary")}
-        </Link>
-        <div className="mt-8 flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12 text-center bg-card">
-          <h2 className={`${SECTION_TITLE_CLASS} text-foreground`}>
-            {t("diveSites.catalog.locationRequiredTitle")}
-          </h2>
-          <p className="mt-2 text-sm text-muted max-w-md">
-            {t("diveSites.catalog.locationRequiredDescription")}
-          </p>
-          <div className="mt-6">
+        <ShopPageHeader
+          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
+          eyebrowHref={back}
+          title={t("diveSites.catalog.title")}
+        />
+        <EmptyState
+          title={t("diveSites.catalog.locationRequiredTitle")}
+          body={t("diveSites.catalog.locationRequiredDescription")}
+          action={
             <Link
               href={`${shopPath(shopSlug, "settings")}?section=address`}
-              className={buttonClass({ variant: "primary" })}
+              className={buttonClass()}
             >
               {t("diveSites.catalog.goToSettings")}
             </Link>
-          </div>
-        </div>
+          }
+        />
       </main>
     );
   }
@@ -543,7 +543,10 @@ function TemplatePreview({
       ) : null}
 
       {briefing.fitNote ? (
-        <section className="mt-6 rounded-panel bg-primary-tint p-5">
+        // A card in a tone (`TONE_PANEL_CLASS`), under the facts and gates
+        // cards: at a hand-rolled `p-5` with no bed, its words sat 4px inside
+        // theirs on a phone. It keeps its lagoon fill, with the tone's hairline.
+        <section className={`mt-6 ${TONE_PANEL_CLASS} border-primary/30 bg-primary-tint`}>
           <h2 className={`${SECTION_TITLE_CLASS} text-primary`}>
             {t("diveSites.catalog.preview_fit")}
           </h2>

@@ -101,6 +101,34 @@ describe("EmbedBookedNotice", () => {
     );
   });
 
+  /**
+   * **The way back's ring clears the button above it** (pixel-craft class 7,
+   * K-536). The two stood 4px apart, inside the 5px the focus ring reaches, so
+   * a focused "Back to the schedule" drew its top arm on the button's own
+   * green and the two read as one block. 8px clears the ring and the shadow.
+   */
+  it("stands the way back 8px under the readiness button", () => {
+    renderNotice();
+    const stack = screen.getByRole("link", { name: /Back to the schedule/ }).parentElement;
+    expect(stack).toHaveClass("flex-col", "gap-2");
+    expect(stack).not.toHaveClass("gap-1");
+  });
+
+  /**
+   * **One block of the page's stack** (pixel-craft class 4, K-162). The trip
+   * page stands its sections on one `space-y-10`; a fragment would hand each of
+   * this notice's lines its own 40px, and its own `mt-10` stood it apart from
+   * the rest of the page's rhythm.
+   */
+  it("renders as one block with no margin of its own", () => {
+    const { container } = renderNotice({ emailsOnTheWay: true });
+    expect(container.children).toHaveLength(1);
+    const margins = (element: Element) =>
+      [...element.classList].filter((token) => /^-?m[ty]?-/.test(token));
+    expect(margins(container.children[0])).toEqual([]);
+    expect(margins(container.children[0].children[0])).toEqual([]);
+  });
+
   it("promises two emails only when both actually went out", () => {
     renderNotice({ emailsOnTheWay: false });
     expect(screen.queryByText(/Two emails are on their way/)).toBeNull();

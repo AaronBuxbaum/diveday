@@ -166,8 +166,9 @@ test.describe("staff-prepared trip", () => {
       "mailto:hello@demo.invalid",
     );
     // The map is a plain roadmap embed built from the shop's own address —
-    // never a guessed location. The e2e context aborts maps.google.com
-    // requests (fixtures.ts), so this asserts the frame, not its contents.
+    // never a guessed location. The e2e context answers maps.google.com
+    // with an empty page (fixtures.ts), so this asserts the frame, not its
+    // contents.
     await expect(arrivalCard.locator('iframe[title="Map of Blue Mantis Divers"]')).toHaveAttribute(
       "src",
       /100%20Ocean%20Drive/,

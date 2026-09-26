@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { TONE_PANEL_LG_CLASS } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 export type RoleOrientationCardCopy = {
@@ -49,7 +50,8 @@ export function RoleOrientationCard({
   return (
     <section
       aria-labelledby="role-orientation-heading"
-      className="mb-10 rounded-panel border border-primary/25 bg-primary/5 p-5 sm:p-6"
+      // The stations' `lg` inset, on the bed they sit on.
+      className={`mb-10 ${TONE_PANEL_LG_CLASS} border-primary/25 bg-primary/5`}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">

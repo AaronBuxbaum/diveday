@@ -86,6 +86,162 @@ describe("the thread page's order", () => {
   });
 });
 
+/**
+ * **One inset down the thread's column.** "Where to go" (`TripArrivalCard`)
+ * and "Anything changed" (`TripChangeLedger`) are `md` cards; the party panel
+ * under them was `lg`, so "Your group's seats" started 4px right of "Where to
+ * go" above it — 41 against 37 at 390, 401 against 397 at 1280 — and the
+ * coral booked moment at the top of the column 8px right, at 45 and 405 (K-52,
+ * TOKEN-2-07). Each panel was consistent with itself; the column was not.
+ */
+describe("the thread column's cards", () => {
+  it("share the md inset", () => {
+    for (const component of ["TripArrivalCard", "TripChangeLedger", "PartyClaimPanel"]) {
+      const source = readFileSync(
+        join(__dirname, "..", "..", "..", "components", `${component}.tsx`),
+        "utf8",
+      );
+      expect(source.includes("<SectionCard"), `${component} renders a SectionCard`).toBe(true);
+      expect(
+        /<SectionCard\b[^>]*?\bpadding="(?!md")/.test(source),
+        `${component} steps off the column's inset`,
+      ).toBe(false);
+    }
+  });
+
+  it("sets the booked moment above them at the same inset", () => {
+    const moments = SOURCE.match(/<EarnedMoment\b[^>]*>/g) ?? [];
+    expect(moments).toHaveLength(1);
+    expect(moments[0]).toContain('inset="card"');
+  });
+});
+
+/**
+ * **One rhythm under the spine.** The sections after it each brought their
+ * own top margin — the arrival card 32px, the crew line 24, the change ledger
+ * 24, the party panel 32, the packing list and the cancel door 40 — so the
+ * column stepped 32, 24, 40, 40 down one scroll (K-233). The page sets the
+ * gap once, `space-y-10`, and the sections carry none of their own.
+ */
+describe("the thread's sections under the spine", () => {
+  const RUN = '<div className="mt-10 space-y-10">';
+  const SECTIONS = [
+    "<TripArrivalCard",
+    "<TripCrewLine",
+    "<TripChangeLedger",
+    "<PartyClaimPanel",
+    "<PackingSection",
+    "<InlineConfirm",
+  ];
+
+  it("stand in one space-y-10 run after the spine", () => {
+    expect(countOf(RUN)).toBe(1);
+    const run = positionOf(RUN);
+    expect(run).toBeGreaterThan(positionOf("<ThreadSpine"));
+    for (const section of SECTIONS) {
+      expect(positionOf(section), section).toBeGreaterThan(run);
+    }
+  });
+
+  it("carry no top margin of their own", () => {
+    for (const section of SECTIONS.slice(0, 5)) {
+      const start = positionOf(section);
+      const tag = SOURCE.slice(start, SOURCE.indexOf("/>", start));
+      expect(tag, section).not.toMatch(/className="[^"]*\bmt-/);
+    }
+    const door = SOURCE.lastIndexOf("<section", positionOf("<InlineConfirm"));
+    const doorTag = SOURCE.slice(door, SOURCE.indexOf(">", door));
+    expect(doorTag).not.toMatch(/\bmt-\d/);
+  });
+
+  it("leave no door open for one: the arrival card and the party panel take no className", () => {
+    // This page was the only caller that passed either one, and all it ever
+    // passed was the top margin the run now owns (K-233 review). A prop no
+    // caller uses is an invitation to put that margin back.
+    for (const component of ["TripArrivalCard", "PartyClaimPanel"]) {
+      const source = readFileSync(
+        join(__dirname, "..", "..", "..", "components", `${component}.tsx`),
+        "utf8",
+      );
+      const start = source.indexOf(`export function ${component}(`);
+      expect(start, component).toBeGreaterThan(-1);
+      const props = source.slice(start, source.indexOf("}) {", start));
+      expect(props, component).not.toMatch(/\bclassName\b/);
+    }
+  });
+});
+
+/**
+ * **The cancel door opens 24px under its rule, preview or not.** The form
+ * carried `mt-3` to clear the refund preview above it, which renders only
+ * when there is a refund to preview — so with none, "Cancel my spot" stood
+ * 36px under the rule where the section asks for 24 (K-156). The gap now
+ * lives between the two children, and exists only when both do.
+ */
+describe("the cancel door", () => {
+  const door = () => {
+    const start = SOURCE.lastIndexOf("<section", positionOf("<InlineConfirm"));
+    return SOURCE.slice(start, SOURCE.indexOf("</section>", start));
+  };
+
+  it("spaces the preview and the form by a gap, never by the form's own margin", () => {
+    const section = door();
+    expect(section.slice(0, section.indexOf(">"))).toContain("flex flex-col gap-3");
+    const form = section.slice(
+      section.indexOf("<form"),
+      section.indexOf(">", section.indexOf("<form")),
+    );
+    expect(form).not.toMatch(/className="[^"]*\bmt-/);
+  });
+
+  it("sits under its rule at the thread's one hairline-section inset", () => {
+    expect(door().slice(0, door().indexOf(">"))).toContain("THREAD_FOOT_SECTION_CLASS");
+  });
+});
+
+/**
+ * **Day-of details' select rows.** Each is a question with its Save beside it
+ * from `sm` and under it on a phone.
+ */
+describe("day-of details", () => {
+  /** The source of the form posting to `action`, from `<form` to `</form>`. */
+  const formFor = (action: string) => {
+    const at = positionOf(action);
+    const start = SOURCE.lastIndexOf("<form", at);
+    return SOURCE.slice(start, SOURCE.indexOf("</form>", at));
+  };
+
+  it("keeps who sees the intent answer with the question, above the next rule", () => {
+    // It was a child of its own in the `divide-y` stack, so a rule fell
+    // between it and "What's this dive for?" and it read as the start of the
+    // next question (K-469).
+    const intent = formFor("saveDiveIntentFromReady.bind(null, token)");
+    expect(intent).toContain('t("booking.intent.audience")');
+    expect(countOf('t("booking.intent.audience")')).toBe(1);
+    // …and it describes the select it is about, not only sits near it.
+    const id = /<p id="([^"]+)"[^>]*>\s*\{t\("booking\.intent\.audience"\)\}/.exec(intent)?.[1];
+    expect(id).toBeTruthy();
+    expect(intent).toContain(`aria-describedby="${id}"`);
+  });
+
+  it("keeps each select row's Save at its own width on a phone", () => {
+    // Below `sm` the row is `flex-col`, which stretches a direct child across
+    // the column: these two Saves ran 350px wide beside siblings as wide as
+    // their words (K-470). Wrapped, like the rest of the page's Saves.
+    for (const action of [
+      "saveDiveRecencyFromReady.bind(null, token)",
+      "saveDiveIntentFromReady.bind(null, token)",
+    ]) {
+      const form = formFor(action);
+      expect(form.split("<SubmitButton").length - 1, action).toBe(1);
+      // The wrapper as the Save's own parent element, opened right before it
+      // and closed right after it: the word `<div>` in the comment above the
+      // Save is not a wrapper, and would outlive one that was taken away.
+      expect(form, action).toMatch(/<div>\s*<SubmitButton\b[\s\S]*?<\/SubmitButton>\s*<\/div>/);
+    }
+  });
+});
+
 describe("status is said once", () => {
   it("renders exactly one status statement", () => {
     expect(countOf("<ThreadStatus")).toBe(1);

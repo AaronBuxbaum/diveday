@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { openMyShelfAction } from "@/app/actions/shelf-door";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
+import { DoorChevron } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 export type YoursRow = {
@@ -32,6 +33,12 @@ export type YoursRow = {
  * The shelf's own door is a **form**, not a link: the token lives in an
  * `HttpOnly` cookie and an `href` would print it into the public page's HTML
  * (`openMyShelfAction`).
+ *
+ * The card is the page's card (`sectionCardClass`): it sits directly under the
+ * storefront's status panels, and hand-rolled it had a 12px corner against
+ * their 20px, no bed, and its words 4px further in. A row's arrow is the
+ * doors' (`DoorChevron`), cropped to its ink, so it ends on the card's column
+ * where the rules between the rows do, not 5px inside it.
  */
 export function YoursGroup({
   heading,
@@ -48,10 +55,7 @@ export function YoursGroup({
   shelfLabel: string;
 }) {
   return (
-    <section
-      aria-label={heading}
-      className="mt-8 rounded-lg border border-border bg-surface p-4 sm:p-6"
-    >
+    <section aria-label={heading} className={sectionCardClass({ className: "mt-8" })}>
       <p className="text-lg font-medium">{greeting}</p>
       <h2 className={`mt-4 ${SECTION_TITLE_CLASS}`}>{heading}</h2>
       <ul className="mt-2 divide-y divide-border">
@@ -67,16 +71,18 @@ export function YoursGroup({
                   {row.because ? `${row.because} · ${row.when}` : row.when}
                 </span>
               </span>
-              <DiveDayIcon
-                name="chevron-right"
-                className="size-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5"
-              />
+              <DoorChevron className="transition-transform group-hover:translate-x-0.5" />
             </Link>
           </li>
         ))}
         <li className="py-3">
+          {/* `flush`: at its size's padding "Your shelf" started 16px right of
+              the heading and the row titles above it. */}
           <form action={openMyShelfAction.bind(null, shopSlug)}>
-            <SubmitButton pendingLabel={shelfLabel} className={buttonClass({ variant: "link" })}>
+            <SubmitButton
+              pendingLabel={shelfLabel}
+              className={buttonClass({ variant: "link", flush: true })}
+            >
               {shelfLabel}
             </SubmitButton>
           </form>

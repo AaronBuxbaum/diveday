@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { StatusMark, type StatusMarkVariant } from "./StatusMark";
+import { StatusMark, StatusMarkColumn, type StatusMarkVariant } from "./StatusMark";
 
 afterEach(cleanup);
 
@@ -51,5 +53,52 @@ describe("StatusMark", () => {
     const { container } = render(<StatusMark variant="success" />);
 
     expect(container.firstElementChild?.tagName.toLowerCase()).toBe("svg");
+  });
+
+  /**
+   * **A bare mark heading a flex row has no line to sit on.** In a stretched
+   * row it stood at the top of the words' 20px line, 2.5px above its centre
+   * (K-494, the roster's blocker and warning lines). A row that was itself
+   * the baseline for its parent lent that parent the mark's foot, which flex
+   * synthesizes as a missing baseline: the roster's group band sat "STILL TO
+   * CLEAR" 5px under the fact beside it (K-181). The column is a block (the
+   * row's flex item) holding the inline one-line box, so it has a real line
+   * and a real first baseline, with the mark centred on that line.
+   */
+  it("heads a row as a block holding one line of the row's text, the mark centred in it", () => {
+    const { container } = render(<StatusMarkColumn variant="danger" className="text-danger" />);
+    const column = container.firstElementChild;
+    const line = column?.firstElementChild;
+
+    expect(column?.tagName).toBe("SPAN");
+    expect(column).toHaveClass("shrink-0");
+    expect(line).toHaveClass("inline-flex", "h-lh", "items-center", "align-top");
+    expect(line?.querySelector("svg")).toHaveClass("size-4", "shrink-0", "text-danger");
+  });
+
+  it("is the only spelling of that column: no hand-rolled wrapper around an inline mark", () => {
+    // `ShopNotice` wrapped `<StatusMark inline />` in its own `shrink-0` span
+    // before the column had a name; a second copy is how the roster's rows
+    // ended up with bare marks instead.
+    const root = join(process.cwd(), "src");
+    const handCopy = /<span className="shrink-0">\s*<StatusMark\b/;
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const path = join(dir, name);
+        if (statSync(path).isDirectory()) walk(path);
+        else if (
+          path.endsWith(".tsx") &&
+          !path.endsWith(".test.tsx") &&
+          !path.endsWith(join("ui", "StatusMark.tsx")) &&
+          handCopy.test(readFileSync(path, "utf8"))
+        ) {
+          offenders.push(relative(process.cwd(), path));
+        }
+      }
+    };
+    walk(root);
+
+    expect(offenders).toEqual([]);
   });
 });

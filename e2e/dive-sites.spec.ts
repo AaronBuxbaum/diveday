@@ -940,7 +940,7 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
   // A subset of the bundle's columns, which is what a shop that trimmed its
   // copy hands over — only `name` is required, and a column that is not there
   // says nothing rather than blanking a field.
-  await page.getByLabel("CSV file").setInputFiles({
+  await page.getByLabel("Choose CSV file").setInputFiles({
     name: "dive_sites.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(
@@ -963,7 +963,7 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
   // is either one a later DiveDay wrote or one the shop added by hand, and
   // both are a restore that quietly loses a fact.
   await page.goto(`/shop/${privateShop.slug}/settings/dive-site-import`);
-  await page.getByLabel("CSV file").setInputFiles({
+  await page.getByLabel("Choose CSV file").setInputFiles({
     name: "dive_sites.csv",
     mimeType: "text/csv",
     buffer: Buffer.from("name,house_reef_rating\nSomewhere Else,5\n"),

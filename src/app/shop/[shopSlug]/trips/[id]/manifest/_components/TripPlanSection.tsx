@@ -44,10 +44,7 @@ export function TripPlanSection({
 }) {
   if (dives.length === 0) return null;
   return (
-    <section
-      className="mt-8 print:hidden"
-      aria-labelledby={scopedId(idPrefix, "trip-plan-heading")}
-    >
+    <section className="print:hidden" aria-labelledby={scopedId(idPrefix, "trip-plan-heading")}>
       <h2 id={scopedId(idPrefix, "trip-plan-heading")} className={SECTION_TITLE_CLASS}>
         {heading}
       </h2>
@@ -60,11 +57,23 @@ export function TripPlanSection({
       </ul>
       {/* A quiet link, not a button: the act it leads to happens after a dive,
           and a filled control here would compete with the roll call above it
-          for the one thing a crew is doing at the dock. */}
-      <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          for the one thing a crew is doing at the dock.
+
+          **The link's words sit at the foot of its 44px box** (`items-end`).
+          Centred, the box's lower 10px pushed a phone's wrapped note down to
+          38px from the link, baseline to baseline, against the body's 24
+          (K-497), and hung an unseen 10px under the section's last words (K-189).
+          Below `sm` the pair is a column, so the note follows the link at body
+          spacing; from `sm` it is one baseline row. The box's unseen 20px is
+          above the words, in the 8px under the list and what the words would
+          have had anyway: `mt-2` keeps its ring 3px clear of the list's rule.
+          The column is `items-start`: stretched, the link was a target the
+          phone's whole width, and a tap beside the words opened the after-dive
+          log. */}
+      <div className="mt-2 flex flex-col items-start sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3">
         <Link
           href={doorHref}
-          className="inline-flex min-h-11 items-center text-base font-semibold text-primary hover:underline"
+          className="inline-flex min-h-11 items-end text-base font-semibold text-primary hover:underline"
         >
           {doorLabel}
         </Link>

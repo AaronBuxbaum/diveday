@@ -228,6 +228,12 @@ const FOCUS_SHOWN_ELSEWHERE: readonly (readonly [file: string, anchor: string, s
       "after:absolute after:inset-0",
       "focus-visible:after:focus-ring-inset",
     ],
+    // A settings door row: the same overlay, stretched over the whole row.
+    [
+      "app/shop/[shopSlug]/settings/_components/SettingsRows.tsx",
+      "after:absolute after:inset-0",
+      "focus-visible:after:focus-ring-inset",
+    ],
     // The tip picker's amount field: the bordered label around it is ringed.
     [
       "app/ready/[token]/_components/TipAmountPicker.tsx",
@@ -387,9 +393,10 @@ function classStringsWith(source: string, anchor: string, needs: readonly string
  * `focus-ring-clipped`). Rows flush inside an `overflow-hidden` card or a
  * scroll box, or bled to 4px from the screen edge by a `-mx-3`, take the ring
  * inset; where one meets the container's rounded corner it also takes the
- * container's radius, or the clip shaves the ring's square corner. A strip that
- * scrolls sideways keeps the outset ring and gets room for it instead, and so
- * does a row whose padding was the defect.
+ * container's radius, or the clip shaves the ring's square corner. A strip of
+ * chips that scrolls sideways keeps the outset ring and gets room for it
+ * instead, and so does a row whose padding was the defect; a strip of underline
+ * tabs takes it inset, so its underline can sit on its rule (K-400).
  *
  * These are class strings, read from source. An element whose component
  * renders in jsdom is pinned in that component's own test instead, which
@@ -447,22 +454,26 @@ const CUT_RINGS: readonly (readonly [file: string, anchor: string, needs: readon
     "absolute inset-0 z-0 rounded-inset",
     ["focus-visible:focus-ring-inset"],
   ],
+  // The public lists' rows fill rule to rule, 8px past the column (K-513):
+  // a ring outside the row would cross the rules and the rows either side,
+  // as a ledger door's would, so it is drawn inside.
   [
     "app/s/[shopSlug]/courses/page.tsx",
-    "group -mx-3 flex gap-4",
+    "group flex gap-4 px-2",
     ["focus-visible:focus-ring-inset"],
   ],
-  ["app/dive/page.tsx", "group -mx-3 flex items-baseline", ["focus-visible:focus-ring-inset"]],
+  ["app/dive/page.tsx", "group flex items-baseline", ["focus-visible:focus-ring-inset"]],
   [
     "app/dive/[region]/page.tsx",
-    "group -mx-3 flex items-center",
+    "group flex items-center gap-4 px-2",
     ["focus-visible:focus-ring-inset"],
   ],
-  [
-    "components/editor/EditorRail.tsx",
-    "min-h-11 items-center rounded-lg px-3 py-2",
-    ["focus-visible:focus-ring-inset"],
-  ],
+  // The page rail's one row: the editor's section rail and the settings map
+  // both draw it (EditorRail.test.tsx, SettingsRail.test.tsx). Its box is
+  // `RAIL_ROW_BOX`, which the settings rail's skeleton wears too (K-345), and
+  // the row composes the box with its ring.
+  ["components/ui/rail.ts", "min-h-11 items-center rounded-lg px-3 py-2", []],
+  ["components/ui/rail.ts", "RAIL_ROW_BOX} text-sm", ["focus-visible:focus-ring-inset"]],
   ["components/JumpNav.tsx", "focus-visible:focus-ring-inset", []],
   // The contrast switch's pills scroll sideways in a 4px track.
   [

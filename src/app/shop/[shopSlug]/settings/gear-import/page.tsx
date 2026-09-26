@@ -11,6 +11,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { CsvFileInput } from "../_components/CsvFileInput";
+import { settingsPaneClass } from "../_components/settings-pane";
 import { importGearServiceHistoryAction } from "./actions";
 
 // See the gear register's copy of this comment (ADR 20260804-instant-navigation).
@@ -54,7 +55,7 @@ export default async function GearImportPage({
   const banner = noticeFromParam(notice, NOTICES);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}

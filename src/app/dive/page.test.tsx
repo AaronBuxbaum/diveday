@@ -56,6 +56,24 @@ describe("the regional index", () => {
     ]);
   });
 
+  /**
+   * The marketing chrome above and below the page is `px-6` at every width,
+   * and the page sat on `px-4` below `sm`: its words started at x 16 under a
+   * wordmark at 24, on the one column a phone has (K-293).
+   */
+  it("sits on the chrome's 24px gutter at every width", async () => {
+    vi.mocked(listRegions).mockResolvedValue([
+      { slug: "key-largo", name: "Key Largo", shopCount: 2 },
+    ]);
+
+    render(await RegionsPage());
+
+    const main = screen.getByRole("main");
+    expect(main).toHaveClass("px-6");
+    expect(main).not.toHaveClass("px-4");
+    expect(main).not.toHaveClass("sm:px-6");
+  });
+
   it("teaches rather than showing an empty ledger when no shop is listed anywhere", async () => {
     vi.mocked(listRegions).mockResolvedValue([]);
 

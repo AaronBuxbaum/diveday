@@ -8,6 +8,7 @@ import {
 } from "@/lib/dive-site-route";
 import { googleMapsUrl, googleTerrainEmbedUrl } from "@/lib/maps";
 import { MapEmbed } from "./MapEmbed";
+import { RouteWaypoint } from "./RouteWaypoint";
 
 /** The slice of a dive site this draws — structural, so callers pass the row. */
 export type DiveSiteRouteMap = {
@@ -68,8 +69,6 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
   // the reef rather than a route.
   const zoom = focus?.scale ?? 1;
   const strokeWidth = 2.25 / zoom;
-  const markerRadius = 2.4 / zoom;
-  const markerStroke = 1.1 / zoom;
 
   return (
     <figure className="overflow-hidden rounded-panel border border-border bg-surface-sunken">
@@ -123,25 +122,12 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
                 strokeWidth={strokeWidth}
                 vectorEffect="non-scaling-stroke"
               />
-              <circle
-                cx={start.x}
-                cy={start.y}
-                r={markerRadius}
-                fill="var(--surface)"
-                stroke="var(--primary)"
-                strokeWidth={markerStroke}
-                vectorEffect="non-scaling-stroke"
-              />
-              <circle
-                cx={finish.x}
-                cy={finish.y}
-                r={markerRadius}
-                fill="var(--primary)"
-                stroke="var(--surface)"
-                strokeWidth={markerStroke}
-                vectorEffect="non-scaling-stroke"
-              />
             </svg>
+            {/* The two ends over the line, each a dot of its own: in the
+                stretched box above, a circle drew as an oval as wide as the
+                frame is wide for its height (K-413). */}
+            <RouteWaypoint point={start} magnified={zoom} className="border-primary bg-surface" />
+            <RouteWaypoint point={finish} magnified={zoom} className="border-surface bg-primary" />
           </MapEmbed>
         </div>
       </div>

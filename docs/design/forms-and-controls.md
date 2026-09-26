@@ -128,8 +128,8 @@ that is a `<form>`: `SectionCard`'s element set excludes `<form>`, so such a car
 hierarchy, colour carries state. A heading that grew or shrank because something went wrong would
 move the page's apparent structure as panels change state, and a reader would re-learn the
 hierarchy every time — so a tone-carrying panel's heading is never quieter for having a tone, and
-never louder for it either. The trip's prep page breaks this today: its two warning panels are
-`LEAD_TITLE_CLASS` and its untoned sections `SECTION_TITLE_CLASS`, which is part of #1966.
+never louder for it either. The trip's packing list keeps it: its two warning panels, its two
+titled cards and its four group headings are all `LEAD_TITLE_CLASS`.
 
 ### Section rhythm: `space-y-10`, never `mt-*`
 
@@ -278,6 +278,16 @@ label-wraps-everything shape, **unless the caller passes `htmlFor`**, which says
 already named and leaves the caption a plain sibling. Pass it whenever the child renders a
 `<label>` of its own: nested labels are invalid HTML, and a click in the overlap has two controls
 to forward to.
+
+A body that is a **group** of self-labelled controls rather than one — a segmented pair of radios
+beside a select in a two-column `FieldGrid`, as the embed generator's look is — takes `group`: the
+caption names the body by id (`role="group"`, `aria-labelledby`, described by the field's
+description and refusal) and wraps nothing. A group of choices on a row of its own is a
+`ChoiceFieldset`; `group` is for one that must keep a `FieldGrid` row's caption line, which a
+fieldset's rendered legend cannot take. `form.test.tsx` refuses a `Field` with neither `htmlFor` nor
+`group` whose body holds a `<label>`, `ChoiceRow`, `ChoicePill`, `ImageFileInput` or
+`RemovablePhoto`: with a logo on file, the settings profile's "Shop logo" caption labelled the
+"Remove current logo" box, and a click on the caption ticked it (K-13 review).
 
 ### Picking a file: `ImageFileInput`
 
@@ -559,6 +569,12 @@ A mark inside running text (the printed pre-departure list) takes `inline` too, 
 mark is a block: preflight makes every `svg` `display: block`, so it stands on a line of its own
 above its words, and a margin on it spaces it from nothing.
 
+A mark that heads a `flex` row of words (`ShopNotice`, the roster's blocker and warning lines, a
+group band's fact) is `StatusMarkColumn`, first in a row aligned `items-baseline`: a block holding
+that one-line box, so the mark centres on the words' first line and the row keeps the words'
+baseline. A bare mark there stood 2.5px above a 20px line (K-494), and handed a parent aligning on
+the row the mark's foot for a baseline (K-181).
+
 These replaced the emoji (✅ ⚠️ ❌) on 2026-08-29. The emoji had replaced text dingbats (`✓ ▲ ✕`),
 which took the surrounding font and read at badge size as a font falling back. Don't swap a glyph
 back in.
@@ -645,12 +661,13 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
   `LIST_ROW_SUMMARY_RING` in `src/components/ui/disclosure.tsx` for a `<summary>` row, which
   cannot `inherit` a radius through its `<details>`. Never remove the container's
   `overflow-hidden` to make room: it is what rounds the rows' hover fills.
-- **Room, not an inset ring,** for chips in a strip that scrolls sideways (`FilterChips`, the
-  product page's chapter strip): vertical padding on the scroller for the 5px, and the same
-  negative margin so nothing around it moves. A negative top margin collapses through a parent
-  with no top border or padding, so that parent is `flow-root`. Room too where the row's
-  padding was the defect: the diver record's shelf rows had `px-1` in an `InsetGroup` and now
-  take its `px-5 py-4 sm:px-6`.
+- **Room, not an inset ring,** for chips in a strip that scrolls sideways (`FilterChips`): vertical
+  padding on the scroller for the 5px, and the same negative margin so nothing around it moves. A
+  negative top margin collapses through a parent with no top border or padding, so that parent is
+  `flow-root`. Not for underline tabs: the product page's chapter strip padded its tabs that way and
+  floated the active underline 4px above the bar's rule (K-400), so its tabs take the ring inset and
+  sit on the rule. Room too where the row's padding was the defect: the diver record's shelf rows
+  had `px-1` in an `InsetGroup` and now take its `px-5 py-4 sm:px-6`.
 - **Never switch the outline off** on an `a`, `button`, `input`, `select`, `textarea` or
   `summary`. In `@layer base` the global rule loses to `outline-none`, so it now does what it
   says and leaves a keyboard user nothing. The two exceptions show focus on another box:
@@ -741,8 +758,11 @@ above them that way. `flush` drops the size's horizontal padding at every breakp
 **What `flush` does depends on what the variant paints.** `link` and `bare` paint nothing of their
 own around their words (a link's hover is an underline), so their padding goes to `px-0`. `ghost`
 and `danger-ghost` paint only on hover, and their tint with the padding gone sat 0px from either
-side of "Delete Morgan Vale" (pixel probe, 2026-09-25), so they get `-mx-2 px-2`: the label sits
-where a padless one would, and the tint reaches 8px past it. A ledger row keeps the same 8px, for
+side of "Delete Morgan Vale" (pixel probe, 2026-09-25), so they keep 8px of room and hand it back
+as `-mx-2`: the label sits where a padless one would, and the tint reaches 8px past it. The room is
+their transparent 1px border and `px-1.75`, because the quiet variants carry the same border box as
+the painted ones: a toggle that swaps `ghost` for `secondary` (the gear return's "Service concern")
+keeps its label still. A ledger row keeps the same 8px, for
 the same reason (`FILL_ROOM` in `src/components/ui/ledger.tsx`). The variants painted at rest
 (`primary`, `secondary`, `outline`, `danger`, `danger-solid`, `sky`) are boxes, and a box lines up
 by its edge, not its label, so the type refuses `flush` on them.
@@ -766,6 +786,20 @@ there. Never on a button that shares its line with a visible box: centred in the
 rise by half the margin. The box then ends `padding − 12px` from the container's edge, so with
 under 17px of padding its 5px ring needs drawing inside (the team card, 16px) or the container
 needs the padding (the safety checklist's rows, `max-sm:py-5`).
+
+**A `text-sm` link with a line of its own stands on `tapTargetLineClass`.** A block exactly the
+words' 20px line box, centring the 44px link on it, so the target reaches 12px either way and the
+flow pays 20px: the storefront's "Follow" and season link at the end of their cards (which
+`outdent` would only half fix, leaving 12px of box between each and the sentence above it), and a
+section header's "All courses" beside its heading, where the bare target would stand the row 44px
+tall. **Centred, the line needs 17px free of ink above and below its words**, the box's 12px and
+the ring's 5px. After a line of text it opens with `mt-4`, whose 16px plus that line's empty bottom
+pixel make the 17: with `mt-2` the ring's top band ran 6 to 9px up through the x-height of the
+sentence above, and the target covered that sentence's bottom 4px. A card it ends needs 17px of
+padding under it, so the storefront's two cards take `max-sm:pb-5` over a phone's 16px, where the
+ring lay 1px on the border. Drawing the ring inside is no way out: on a flush link it crosses the
+first and last letters. This is not `EYEBROW_TAP_WRAPPER`'s trade, which stands its box on the
+line's bottom edge (`items-end`) because centred its ring ran through the title under it (K-395).
 
 The same trap applies to the type scale, which is why it lives on the sizes: a `text-base` passed
 through `className` cannot reliably beat a size's `text-sm`. Pick the size that already says it.
@@ -818,7 +852,8 @@ A checkbox or radio a person sees is drawn one way, from `src/components/ui/form
   around its label and the aside, with the box on the plain pill's 16px inset.
 - **`ChoiceFieldset`** captions a group of them the way `Field` captions a control: a
   `text-sm font-medium` legend, then 4px, then the body (`bodyClassName` lays the choices out).
-  `required` draws `Field`'s aria-hidden `*`. Hand-rolled legends put 8px there (`mb-2`, `mt-2`),
+  `required` draws `Field`'s aria-hidden `*`, and `hint` sets a qualifier after the legend the way
+  `Field` sets its own. Hand-rolled legends put 8px there (`mb-2`, `mt-2`),
   so a group sat further from its caption than every field around it; `form.test.tsx` refuses a
   legend with its own bottom margin (a floated legend aside), and a legend spelled as this caption
   (`text-sm font-medium`) anywhere else. Three files that have not been touched since are named in

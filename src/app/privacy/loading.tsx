@@ -1,4 +1,5 @@
 import { MarketingNavFallback } from "@/app/_components/MarketingNav";
+import { LegalDocumentSkeleton, type LegalSkeletonBlock } from "@/components/LegalDocument";
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
 
 /**
@@ -13,41 +14,56 @@ import { MarketingFooterFallback } from "@/components/MarketingFooter";
  * would throw away anything the reader did to it when the localized body landed
  * (ADR 20260804-instant-navigation's 2026-08-14 amendment).
  *
- * Shaped like the document above the fold — eyebrow, title, the dateline, the
- * opening paragraph, then stacked sections — so the streamed page lands where
- * the bars stood. Identical to `/terms`'s, because the two pages are the
- * same document in different words.
+ * The bars stand in the document's own boxes (`LegalDocumentSkeleton`, which
+ * `/terms` draws through too), so the streamed page lands where they stood.
+ * What is this page's own is how far its words wrap: the en-US copy's lines at
+ * 390 (`base`) and 1280 (`sm`; the column stops widening at 768), the widths
+ * the visual suite captures. A title of one line that takes two on a phone, an
+ * intro of four that takes eight, then the first two sections term by term,
+ * which reach past the fold at both widths, so the footer never shows early.
+ * It used to be a hand copy of this layout in bars of guessed heights, and the
+ * page jumped 40px at 1280 and its first heading 147px on a phone when the
+ * words landed (K-407). A rewrite that changes how the intro or those terms
+ * wrap changes these numbers.
  */
 export default function PrivacyLoading() {
   return (
     <div className="flex flex-1 flex-col">
       <MarketingNavFallback />
-      <main className="flex-1 animate-pulse">
-        <div className="mx-auto w-full max-w-3xl px-6 py-16 lg:py-24">
-          <div className="h-4 w-40 rounded bg-surface-sunken" />
-          <div className="mt-4 h-9 w-full rounded bg-surface-sunken sm:h-10" />
-          <div className="mt-2 h-9 w-2/3 rounded bg-surface-sunken sm:h-10" />
-          <div className="mt-3 h-4 w-56 rounded bg-surface-sunken" />
-          <div className="mt-8 flex flex-col gap-2">
-            <div className="h-5 w-full rounded bg-surface-sunken" />
-            <div className="h-5 w-full rounded bg-surface-sunken" />
-            <div className="h-5 w-4/5 rounded bg-surface-sunken" />
-          </div>
-          <div className="mt-12 flex flex-col gap-12">
-            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((section) => (
-              <div key={section}>
-                <div className="h-6 w-2/5 rounded bg-surface-sunken" />
-                <div className="mt-4 flex flex-col gap-2">
-                  <div className="h-4 w-full rounded bg-surface-sunken" />
-                  <div className="h-4 w-full rounded bg-surface-sunken" />
-                  <div className="h-4 w-3/4 rounded bg-surface-sunken" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </main>
+      <LegalDocumentSkeleton
+        eyebrowWidth="w-60"
+        titleWidth="w-5/6 sm:w-11/12"
+        titleLines={{ base: 2, sm: 1 }}
+        introLines={{ base: 8, sm: 4 }}
+        sections={PRIVACY_SECTIONS}
+      />
       <MarketingFooterFallback />
     </div>
   );
 }
+
+/** Each section's lines, in the page's order, down past the fold. */
+const PRIVACY_SECTIONS: ReadonlyArray<ReadonlyArray<LegalSkeletonBlock>> = [
+  // Two different relationships: the shop, then its divers.
+  [
+    {
+      terms: [
+        { base: 3, sm: 2 },
+        { base: 8, sm: 4 },
+      ],
+    },
+  ],
+  // What is stored: staff, divers, waivers, payments, trails, devices.
+  [
+    {
+      terms: [
+        { base: 3, sm: 2 },
+        { base: 4, sm: 2 },
+        { base: 7, sm: 4 },
+        { base: 6, sm: 3 },
+        { base: 4, sm: 2 },
+        { base: 14, sm: 7 },
+      ],
+    },
+  ],
+];

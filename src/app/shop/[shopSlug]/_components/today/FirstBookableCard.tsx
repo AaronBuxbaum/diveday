@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Copyable } from "@/components/Copyable";
+import { tapTargetLinkClass } from "@/components/ui/button";
+import { TONE_PANEL_LG_CLASS } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 export type FirstBookableCardCopy = {
@@ -34,9 +36,13 @@ export function FirstBookableCard({
   copy: FirstBookableCardCopy;
 }) {
   return (
+    // `mb-10`, the spine's own `gap-10` (`DaySpine`): the card is one more
+    // block in the column it stands over, so it sits as far from the first
+    // station as the stations sit from each other (K-316).
     <section
       aria-labelledby="first-bookable-heading"
-      className="mb-6 rounded-panel border border-success/30 bg-success/5 p-5 sm:p-6"
+      // The stations' `lg` inset, on the bed they sit on.
+      className={`mb-10 ${TONE_PANEL_LG_CLASS} border-success/30 bg-success/5`}
     >
       <h2 id="first-bookable-heading" className={SECTION_TITLE_CLASS}>
         {copy.heading}
@@ -50,8 +56,18 @@ export function FirstBookableCard({
         copiedLabel={copy.copied}
         failedLabel={copy.copyFailed}
       />
-      <p className="mt-3 text-sm">
-        <Link href={scheduleHref} className="font-medium text-primary hover:underline">
+      {/* **A 44px target on a 20px line** (K-452). The line is `h-5`, the
+          text-sm line box, and centres the link's `tapTargetLinkClass` box on
+          it, so the 12px of target above and below overhang the `mt-5` and the
+          card's padding instead of stacking under the card's last line.
+          `mt-5`, not `mt-3`: the box's top met the sunken panel's foot, and
+          the 5px focus ring drew inside it. 20px leaves the box 8px under the
+          panel and the ring 3px clear, as it is of the card's border below. */}
+      <p className="mt-5 flex h-5 items-center text-sm">
+        <Link
+          href={scheduleHref}
+          className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
+        >
           {copy.viewAsDiver}
         </Link>
       </p>

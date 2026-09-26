@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { formatDateTimeTz } from "@/lib/format";
 import { InboxRow } from "./InboxRow";
 
 afterEach(cleanup);
@@ -85,6 +86,141 @@ describe("a message from a stranger", () => {
     ).toBeInTheDocument();
     // The id the action deletes rides in the form, not in the URL.
     expect(container.querySelector('input[name="messageId"]')).toHaveValue(MESSAGE.id);
+  });
+});
+
+/** The row's own child holding `node`: its kind, its body, its trailing slot or its door's glyph. */
+function slotOf(container: HTMLElement, node: Element): Element {
+  const row = container.querySelector("li");
+  const slot = row ? [...row.children].find((child) => child.contains(node)) : undefined;
+  if (!slot) throw new Error("that node is not in the row");
+  return slot;
+}
+
+/**
+ * **One column of dates, door or not** (pixel-craft class 3, K-459). A
+ * stranger's row carried its Delete beside its date, and a door's chevron is
+ * 5.7px of ink, so the stranger's date ended 50px left of every other date in
+ * the column (903–1035 against 853–984 at 1280). And the 44px button set the
+ * height of the kind's line on a phone, so that row's first line sat 12px
+ * lower than its neighbours' (K-465). The trailing slot holds the date alone
+ * on every row, the door's slot follows it whether or not there is a door, and
+ * Delete is a line of the row's body.
+ */
+describe("where the row sets its date and its Delete", () => {
+  const RECEIVED = formatDateTimeTz(MESSAGE.receivedAt, "en-US", "America/Cancun");
+  // By exact text: the formatted date keeps its no-break spaces, which
+  // `getByText`'s normalizer would collapse on the node's side only.
+  const received = () =>
+    screen.getByText((_, node) => node?.children.length === 0 && node.textContent === RECEIVED);
+
+  it("holds only the date in a door row's trailing slot, with the door's glyph after it", () => {
+    const container = renderRow();
+    const trailing = slotOf(container, received());
+    expect(trailing.textContent).toBe(RECEIVED);
+    const glyph = trailing.nextElementSibling;
+    expect(glyph?.querySelector("svg")).not.toBeNull();
+    expect(glyph).not.toHaveClass("invisible");
+  });
+
+  it("holds only the date in a stranger's trailing slot, and keeps the door's slot after it", () => {
+    const container = renderRow({ personId: null, fromAddress: "marta.keller@example.net" }, null);
+    const trailing = slotOf(container, received());
+    expect(trailing.textContent).toBe(RECEIVED);
+    expect(trailing.querySelector("form, button")).toBeNull();
+    // The door's glyph, unseen: the date ends where a door row's date ends.
+    const glyph = trailing.nextElementSibling;
+    expect(glyph?.querySelector("svg")).not.toBeNull();
+    expect(glyph).toHaveClass("invisible");
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("sets a stranger's Delete in the row's body, after the address it names", () => {
+    const container = renderRow({ personId: null, fromAddress: "marta.keller@example.net" }, null);
+    const remove = screen.getByRole("button", {
+      name: "Delete the message from marta.keller@example.net",
+    });
+    const address = screen.getByText("marta.keller@example.net");
+    expect(slotOf(container, remove)).toBe(slotOf(container, screen.getByText("Unknown sender")));
+    expect(address.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Its own line, at the body's end edge.
+    const line = remove.closest("form")?.parentElement;
+    expect(line).toHaveClass("flex", "justify-end");
+  });
+});
+
+/**
+ * **A stranger's words are read here or nowhere** (pixel-craft class 8,
+ * K-460). A door row's excerpt is one line because the whole message is on
+ * the record one tap away; a stranger's row has no record, so its one line cut
+ * "Hello, do you run night dives in October? Two of us, b…" at 328px of a
+ * 534px line and nothing could open the rest. It wraps, and it is not cut at
+ * any line count: three lines held the seeded message only where the message
+ * column was wide, and at the `sm` seam that column was ~122px — three lines
+ * held 46 of its characters. The excerpt's own 140-character cap is what
+ * bounds the row's height.
+ */
+describe("a stranger's message, which has no record to be read on", () => {
+  const WORDS = "Hello, do you run night dives in October? Two of us, both AOW.";
+
+  it("wraps the stranger's words whole instead of cutting them at a line", () => {
+    renderRow({ personId: null, fromAddress: "marta.keller@example.net", body: WORDS }, null);
+    const words = screen.getByText(WORDS);
+    expect(words).toHaveClass("wrap-anywhere");
+    expect(words).not.toHaveClass("truncate");
+    expect(words.className).not.toMatch(/line-clamp/);
+  });
+
+  /**
+   * **The name sits beside the message only from `md`** (the ledger's note on
+   * K-461). Beside the kind column, the date and the door's slot, the name's
+   * 176px column left the message ~122px at 640 — a door row's one line held
+   * about 16 characters and a stranger's words ran to nine lines. Below `md`
+   * the name sits over the message, which takes the body's whole width.
+   */
+  it("sets the name beside the message only from md, where the message has room", () => {
+    renderRow({ personId: null, fromAddress: "marta.keller@example.net", body: WORDS }, null);
+    const name = screen.getByText("Unknown sender");
+    expect(name).toHaveClass("md:w-44", "md:shrink-0");
+    expect(name.parentElement).toHaveClass("md:flex-row", "md:items-baseline", "md:gap-4");
+    for (const element of [name, name.parentElement as HTMLElement]) {
+      expect(element.className).not.toMatch(/(^|\s)sm:/);
+    }
+  });
+
+  it("wraps them on a channel with no subject too", () => {
+    renderRow(
+      {
+        personId: null,
+        channel: "whatsapp",
+        subject: null,
+        fromAddress: "+13055550142",
+        body: WORDS,
+      },
+      null,
+    );
+    expect(screen.getByText(WORDS)).toHaveClass("wrap-anywhere");
+    expect(screen.getByText(WORDS).className).not.toMatch(/line-clamp|truncate/);
+  });
+
+  /**
+   * **The address breaks inside its column rather than out of it** (pixel-craft
+   * class 9, K-461). At 640 the name's 176px column and the date left the
+   * message 72px, and "marta.keller@example.net" has no break in it: it ran
+   * 96px past the column's edge, under the date. Cut with an ellipsis it would
+   * lose half of what the row is for, so it wraps anywhere instead.
+   */
+  it("breaks a long address inside its column", () => {
+    const address = "marta.keller.bookings.team@a-very-long-dive-club-domain.example.net";
+    renderRow({ personId: null, fromAddress: address }, null);
+    const facts = screen.getByText(address);
+    expect(facts).toHaveClass("wrap-anywhere");
+    expect(facts).not.toHaveClass("truncate");
+  });
+
+  it("keeps a door row's excerpt to one line, since the record holds the rest", () => {
+    renderRow({ body: WORDS });
+    expect(screen.getByText(WORDS)).toHaveClass("truncate");
   });
 });
 

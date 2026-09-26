@@ -3,8 +3,9 @@ import { BoatDrift } from "@/components/illustration/BoatDrift";
 import { SiteMark } from "@/components/illustration/SiteMark";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
-import { tapTargetLinkClass } from "@/components/ui/button";
+import { tapTargetLinkClass, tapTargetOverhangClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { INLINE_LINE_BOX } from "@/components/ui/StatusMark";
 import { FIGURE_CLASS, FIGURE_DIAL_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -54,6 +55,17 @@ import { StationSettles } from "./StationSettles";
  * a station's counts are per-boat, and pre-resolving four plurals per
  * departure at the call site is how a plural ends up wired to the wrong count.
  */
+
+/**
+ * A title cut before its last word: everything up to and including the last
+ * space, then the last word. The last word rides with the title's chevron as
+ * one unbreakable unit (K-464); a one-word title is all last word.
+ */
+function lastWordApart(title: string): [head: string, last: string] {
+  const match = title.match(/^([\s\S]*\s)?(\S+)\s*$/);
+  if (!match?.[2]) return ["", title];
+  return [match[1] ?? "", match[2]];
+}
 
 /** What one aboard group is blocked on, in words. */
 function aboardReasonKey(kind: AboardBlockerKind) {
@@ -131,6 +143,7 @@ export function DayStation({
   // a shop could collect answers for weeks and meet them only by opening a fold
   // on a safety surface.
   const intentLine = staffDiveIntentLine(t, station.intents ?? [], locale);
+  const [titleHead, titleLast] = lastWordApart(station.title);
   // The whole readiness fact, not the split counts: when every blocked diver on
   // a boat is marked `not_boarded` both split counts are zero, and a station
   // that went quiet there would be affirming the opposite of its own numbers.
@@ -203,11 +216,25 @@ export function DayStation({
               href={`/shop/${shopSlug}/trips/${station.tripId}`}
               className={`${tapTargetLinkClass} group/station -mx-2 rounded-lg px-2 transition-colors hover:bg-surface-sunken hover:no-underline`}
             >
-              {station.title}
-              <DiveDayIcon
-                name="chevron-right"
-                className="size-4 shrink-0 text-muted transition-transform group-hover/station:translate-x-0.5"
-              />
+              {/* **One run of text, its chevron on the end of it** (pixel-craft
+                  K-464). As the link's two flex items, a title that wrapped
+                  was one box and the chevron the next, centred beside the
+                  whole block: at 390 it floated 45px right of the words,
+                  between the two lines. Inside one span the title wraps as
+                  text, and its last word and the chevron are one unbreakable
+                  unit, the chevron centred on the line it ends. */}
+              <span>
+                {titleHead}
+                <span className="whitespace-nowrap">
+                  {titleLast}
+                  <span className={INLINE_LINE_BOX}>
+                    <DiveDayIcon
+                      name="chevron-right"
+                      className="size-4 shrink-0 text-muted transition-transform group-hover/station:translate-x-0.5"
+                    />
+                  </span>
+                </span>
+              </span>
             </Link>
             {crewed ? <Badge tone="primary">{t("shopHome.spine.crewing")}</Badge> : null}
           </h3>
@@ -220,20 +247,30 @@ export function DayStation({
             fact — with the figure and the capacity over the water and the
             open count beside it. The roll call's dial (`HeadCount`) is the
             same anatomy on the one surface that counts heads; this one counts
-            seats, and the water is never a state. */}
-        <div className="flex shrink-0 items-center gap-4 max-sm:basis-full sm:flex-row-reverse">
-          <div className="relative size-19 shrink-0 overflow-hidden rounded-full border border-border bg-surface-sunken">
-            <div
-              aria-hidden="true"
-              data-station-water
-              className="absolute inset-0 origin-bottom bg-shallows"
-              style={{ transform: `scaleY(${filled / 100})` }}
-            />
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={FIGURE_DIAL_CLASS}>{station.booked}</span>
-              <span className="text-[11px] font-semibold text-primary-hover tabular-nums">
-                {t("shopHome.spine.ofCapacity", { capacity: station.capacity })}
-              </span>
+            seats, and the water is never a state.
+
+            **Below `sm` its words start on the title's column** (pixel-craft
+            K-318). There the dial wraps to a line of its own under the site
+            tile, and at 76 + 16 its words started 11px left of the time,
+            title and meta beside the 84px tile at its 20px gap. So on a phone
+            the dial stands centred in a box the tile's width (`w-21`), at the
+            tile's gap (`gap-5`); from `sm` up, beside the title, it keeps its
+            own size and `gap-4`. */}
+        <div className="flex shrink-0 items-center gap-5 max-sm:basis-full sm:flex-row-reverse sm:gap-4">
+          <div className="flex shrink-0 justify-center max-sm:w-21">
+            <div className="relative size-19 shrink-0 overflow-hidden rounded-full border border-border bg-surface-sunken">
+              <div
+                aria-hidden="true"
+                data-station-water
+                className="absolute inset-0 origin-bottom bg-shallows"
+                style={{ transform: `scaleY(${filled / 100})` }}
+              />
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={FIGURE_DIAL_CLASS}>{station.booked}</span>
+                <span className="text-[11px] font-semibold text-primary-hover tabular-nums">
+                  {t("shopHome.spine.ofCapacity", { capacity: station.capacity })}
+                </span>
+              </div>
             </div>
           </div>
           <div className="flex min-w-0 flex-col gap-1 sm:items-end">
@@ -255,14 +292,26 @@ export function DayStation({
                 the ink left the closing station's identical link at 20px
                 tall, under WCAG 2.5.8's floor, until the evening a11y scan
                 reached it. This one had the same defect and a quieter place
-                to hide in. */}
+                to hide in.
+
+                **The target takes no room in the column** (pixel-craft
+                K-186). The column is centred on the 76px dial, and a 44px box
+                under a 20px line put its words 4.5px high of the dial's
+                centre, 8px under its top and 17px over its bottom. The link
+                stands in a box its own line tall (`h-5`, text-sm's 20px), so
+                the column measures its words; the 44px target starts at the
+                line's top (`tapTargetOverhangClass.down`) and reaches the 24px spare
+                downward, into the room under the header — not upward, where
+                its focus ring would run through "3 spots open". */}
             {canOpenLog ? (
-              <Link
-                href={`/shop/${shopSlug}/trips/${station.tripId}/log`}
-                className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}
-              >
-                {t("incidentExport.openLink")}
-              </Link>
+              <span className={`${tapTargetOverhangClass.down.line} h-5`}>
+                <Link
+                  href={`/shop/${shopSlug}/trips/${station.tripId}/log`}
+                  className={`${tapTargetOverhangClass.down.target} text-sm font-medium text-primary hover:underline`}
+                >
+                  {t("incidentExport.openLink")}
+                </Link>
+              </span>
             ) : null}
           </div>
         </div>

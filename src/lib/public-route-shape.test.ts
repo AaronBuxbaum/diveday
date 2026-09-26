@@ -94,6 +94,16 @@ describe("publicRouteShape", () => {
     });
   });
 
+  it("calls the framed pages' own segments malformed, because nobody may ask for one by name", () => {
+    // `src/proxy.ts` rewrites `?embed=1` onto these and refuses them by path
+    // (`isInternalEmbedRoute`) before it asks for a shape; said again here so
+    // this function stays true on its own terms, and so the route tree's
+    // coverage guard has an opinion to read.
+    const malformed = { kind: "malformed", shopSlug: SHOP };
+    expect(publicRouteShape(`/s/${SHOP}/embed/schedule`)).toEqual(malformed);
+    expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}/embed`)).toEqual(malformed);
+  });
+
   it("has no opinion about a path in the namespace that names no route at all", () => {
     // Next already answers these with a real 404 of its own; asking the
     // database about them would buy nothing and cost a read.

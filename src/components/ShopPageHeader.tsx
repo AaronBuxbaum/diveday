@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { FoldedPageTitle } from "@/components/chrome/FoldedPageTitle";
+import { tapTargetOverhangClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { StatusMark } from "@/components/ui/StatusMark";
+import { StatusMarkColumn } from "@/components/ui/StatusMark";
 import { toneMark } from "@/components/ui/tone";
 import { GREETING_TITLE_CLASS, PAGE_TITLE_CLASS } from "@/components/ui/typography";
 import { bindTitleDash } from "@/lib/format";
@@ -53,20 +54,19 @@ export const EYEBROW_CLASS = `${EYEBROW_SHAPE} text-primary`;
  * top padding (32px on a phone, 40 from `sm`), and in the trip band it rises
  * inside the 44px row it is centred in.
  */
-export const EYEBROW_TAP_WRAPPER = "flex h-4 items-end";
+export const EYEBROW_TAP_WRAPPER = `${tapTargetOverhangClass.up.line} h-4`;
 
 /**
  * `tapTargetLinkClass`'s 44px floor with its content on the box's bottom edge
  * rather than centred — the bottom edge is the eyebrow's line, see
- * `EYEBROW_TAP_WRAPPER`. Spelled whole, not `tapTargetLinkClass` plus
- * `items-end`: two `align-items` utilities on one element resolve by
- * stylesheet order, not by the order they are written.
+ * `EYEBROW_TAP_WRAPPER`. It is `tapTargetOverhangClass.up` in button.ts, the
+ * shape the Today log door takes the other way up.
  *
  * Its content is **one** item, a row the eyebrow's line box tall that centres
  * the chevron on the words. Two items on the bottom edge each stand on it by
  * their own height, and the 12px chevron sat 2px under the 16px line's centre.
  */
-const EYEBROW_TAP_TARGET = "inline-flex min-h-11 items-end";
+const EYEBROW_TAP_TARGET = tapTargetOverhangClass.up.target;
 
 /**
  * The eyebrow-as-breadcrumb, for a header that is not `ShopPageHeader`.
@@ -88,12 +88,13 @@ export function EyebrowBackLink({
   children: ReactNode;
   /**
    * **Layout classes land on the wrapper, not the link.** The wrapper is the
-   * element the caller's parent lays out -- `TripPageHeader` places it with
-   * `col-start-1 row-start-1`, and the log and ticket pages hide it in print
-   * with `print:hidden` so their print-only `<p>` can take the line. On the
-   * link those do nothing and the wrapper auto-places, which is a 16px band of
-   * nothing on paper and a back-link in the wrong grid cell on screen. Colour
-   * is the exception and already has a prop, for the reason below.
+   * element the caller's parent lays out -- a grid places it with
+   * `col-start-1 row-start-1`, and `TripPageHeader` and the log and ticket
+   * pages hide it in print with `print:hidden` (the last two so their
+   * print-only `<p>` can take the line). On the link those do nothing and the
+   * wrapper auto-places, which is a 16px band of nothing on paper and a
+   * back-link in the wrong grid cell on screen. Colour is the exception and
+   * already has a prop, for the reason below.
    */
   className?: string;
   /**
@@ -313,6 +314,8 @@ export function ShopPageHeader({
  *   - `h-6`  — the description `<p>`'s unsized line box (1rem × 1.5)
  *   - `mt-2` after the eyebrow and before the description, `mt-3` before meta,
  *     and `mb-8` on the wrapper — all straight off `<header className="mb-8">`.
+ *   - `mb-5` under the `brand` block, whose tagline is an `h-6` `text-base`
+ *     line — the header's own block, where a framed page names its shop.
  *
  * Widths stay per-caller: a bar should be about as wide as the words it stands
  * in for, and that is the page's business, not this component's. So do line
@@ -320,6 +323,7 @@ export function ShopPageHeader({
  * that wraps, and how far a page's words wrap at 390px is the page's too.
  */
 export function ShopPageHeaderSkeleton({
+  brand,
   eyebrow = true,
   titleWidth = "w-64",
   titleLines = 1,
@@ -329,6 +333,13 @@ export function ShopPageHeaderSkeleton({
   meta,
   actions = false,
 }: {
+  /**
+   * The header carries `brand`: how many lines its tagline wraps to, drawn
+   * above the eyebrow as the header draws the block (K-382: the framed trip
+   * page, which names its shop there because the frame has no chrome). Left
+   * out for a header without one.
+   */
+  brand?: SkeletonLines;
   /** Pass `false` for a header with no eyebrow — the `<h1>` then loses its `mt-2`, same as the real one. */
   eyebrow?: boolean;
   /** Tailwind width classes for the title bar (e.g. `"w-72 max-w-full"`). */
@@ -361,6 +372,11 @@ export function ShopPageHeaderSkeleton({
   const actionRows = actions === true ? 1 : actions === false ? 0 : actions;
   return (
     <div className="mb-8">
+      {brand ? (
+        <div className="mb-5">
+          <SkeletonLineBars lines={brand} height="h-6" width="w-80 max-w-full" />
+        </div>
+      ) : null}
       {eyebrow ? <div className="h-4 w-24 rounded bg-surface-sunken" /> : null}
       <div className={eyebrow ? "mt-2" : undefined}>
         <SkeletonLineBars lines={titleLines} height="h-11" width={titleWidth} />
@@ -401,7 +417,11 @@ export type SkeletonLines = number | { base: number; sm: number };
  * lines read as two rather than one tall slab; the box keeps the full height.
  * A line one side of `sm` does not have is hidden on that side.
  *
- * Exported for a skeleton's own `meta`, whose line can wrap the same way.
+ * Exported for any skeleton that draws lines of words: a header skeleton's own
+ * `meta`, whose line can wrap the same way, and a whole document's lines, as
+ * `LegalDocumentSkeleton` draws the legal pages. That one passes `h-lh` inside
+ * a wrapper wearing the text's own type classes, so each bar is exactly the
+ * line box of the words it stands for, whatever their size.
  */
 export function SkeletonLineBars({
   lines,
@@ -409,7 +429,10 @@ export function SkeletonLineBars({
   width,
 }: {
   lines: SkeletonLines;
-  /** The line box's height class: `h-11` a title, `h-6` a description, `h-5` a `text-sm` line. */
+  /**
+   * The line box's height class: `h-11` a title, `h-6` a description, `h-5` a
+   * `text-sm` line; or `h-lh`, one line of whatever type the bars' parent sets.
+   */
   height: string;
   /** The bar's width classes. */
   width: string;
@@ -430,6 +453,39 @@ export function SkeletonLineBars({
     );
   });
 }
+
+/**
+ * **Two rows of the grid the tile stands in: labels, then figures** (K-75).
+ * In block flow a label that wrapped ("Divers on the / manifest") pushed its
+ * own figure 20px below the figures beside it. Subgridding onto the parent's
+ * rows — the mechanism `Field` uses for captions over controls
+ * (`ui/form.tsx`) — makes the label row as tall as the row's longest label,
+ * so every figure starts on one line. Not `flex-col` with the figure
+ * `mt-auto`: that aligns figures only when every tile carries the same lines
+ * under them, and the blowout record's first tile has no detail where its
+ * neighbours do. The row gap is the space the figure's `mt-2` / `mt-0.5`
+ * gave. Outside a grid, `subgrid` falls back to plain rows and the tile
+ * reads exactly as it did.
+ */
+function statRowsClass(inset: boolean) {
+  return `grid row-span-2 grid-rows-subgrid ${inset ? "gap-y-0.5" : "gap-y-2"}`;
+}
+
+/** The raised tile's chrome, or the sunken inset's, around its two rows. */
+function statTileClass(inset: boolean) {
+  // The raised tile takes its chrome from the card, not from a copy of the
+  // card's spelling: a stat tile and a section card are the same object
+  // (docs/design/forms-and-controls.md), so neither can drift from the
+  // other. `inset` is the sunken, chrome-less variant and has none of it.
+  const rows = statRowsClass(inset);
+  return inset
+    ? `${rows} rounded-inset bg-surface-sunken px-4 py-3`
+    : sectionCardClass({ className: rows });
+}
+
+/** The label's and the figure's type sizes, raised and inset — read by `ShopStatSkeleton` too. */
+const STAT_LABEL_SIZE = { card: "text-sm", inset: "text-xs" } as const;
+const STAT_FIGURE_SIZE = { card: "text-3xl", inset: "text-2xl" } as const;
 
 /**
  * The one stat tile: a quiet label, the figure at headline size, and an
@@ -509,40 +565,11 @@ export function ShopStat({
   const Label = definition ? "dt" : "p";
   const Value = definition ? "dd" : "p";
   const inset = variant === "inset";
-  const valueClass = `font-semibold tracking-tight tabular-nums ${
-    inset ? "text-2xl" : "text-3xl"
-  } ${toneClass}`;
-
-  // **Two rows of the grid the tile stands in: labels, then figures** (K-75).
-  // In block flow a label that wrapped ("Divers on the / manifest") pushed its
-  // own figure 20px below the figures beside it. Subgridding onto the parent's
-  // rows — the mechanism `Field` uses for captions over controls
-  // (`ui/form.tsx`) — makes the label row as tall as the row's longest label,
-  // so every figure starts on one line. Not `flex-col` with the figure
-  // `mt-auto`: that aligns figures only when every tile carries the same lines
-  // under them, and the blowout record's first tile has no detail where its
-  // neighbours do. The row gap is the space the figure's `mt-2` / `mt-0.5`
-  // gave. Outside a grid, `subgrid` falls back to plain rows and the tile
-  // reads exactly as it did.
-  const rows = `grid row-span-2 grid-rows-subgrid ${inset ? "gap-y-0.5" : "gap-y-2"}`;
+  const valueClass = `font-semibold tracking-tight tabular-nums ${STAT_FIGURE_SIZE[variant]} ${toneClass}`;
 
   return (
-    <div
-      // The raised tile takes its chrome from the card, not from a copy of the
-      // card's spelling: a stat tile and a section card are the same object
-      // (docs/design/forms-and-controls.md), so neither can drift from the
-      // other. `inset` is the sunken, chrome-less variant and has none of it.
-      className={
-        inset
-          ? `${rows} rounded-inset bg-surface-sunken px-4 py-3`
-          : sectionCardClass({ className: rows })
-      }
-    >
-      <Label
-        className={inset ? "text-xs font-medium text-muted" : "text-sm font-medium text-muted"}
-      >
-        {label}
-      </Label>
+    <div className={statTileClass(inset)}>
+      <Label className={`${STAT_LABEL_SIZE[variant]} font-medium text-muted`}>{label}</Label>
       {definition ? (
         <Value className={valueClass}>
           {value}
@@ -620,6 +647,26 @@ function statDetail({
   );
 }
 
+/**
+ * {@link ShopStat} drawn as bars — the raised tile's own box and rows, holding
+ * one bar per row, each the line box of the text it stands in for (`h-lh` at
+ * the label's and the figure's own sizes).
+ *
+ * The packing list stood its tank tiles in with `h-28` boxes: 112px against
+ * the tile's 98 on a phone and 106 from `sm`, so the tiles shrank and the
+ * list below them moved when it arrived (K-188). A fixed height is a guess at
+ * the padding, the border and two line boxes; this reads all of them from the
+ * tile. Like the tile, it subgrids onto the rows of the grid it stands in.
+ */
+export function ShopStatSkeleton() {
+  return (
+    <div className={statTileClass(false)}>
+      <div className={`h-lh ${STAT_LABEL_SIZE.card} w-16 rounded bg-surface-sunken`} />
+      <div className={`h-lh ${STAT_FIGURE_SIZE.card} w-12 rounded bg-surface-sunken`} />
+    </div>
+  );
+}
+
 export function ShopNotice({
   children,
   tone = "success",
@@ -658,15 +705,11 @@ export function ShopNotice({
       // line is not always at its top — the trip banner's words sit centred
       // beside a 44px Undo, the duplicate-diver warning opens on a 16px
       // heading — so the mark's column carries one line of the notice's own
-      // text (`StatusMark inline`) and the row lines that line's baseline up
+      // text (`StatusMarkColumn`) and the row lines that line's baseline up
       // with the words' first one, wherever it is. `ShopPageHeader.test.tsx`.
       className={`rise-in flex items-baseline gap-2 rounded-inset border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
     >
-      {mark ? (
-        <span className="shrink-0">
-          <StatusMark variant={mark} inline />
-        </span>
-      ) : null}
+      {mark ? <StatusMarkColumn variant={mark} /> : null}
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );

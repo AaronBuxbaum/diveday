@@ -137,8 +137,11 @@ export function EmbedGenerator({
     };
   }, [kind, target]);
 
+  // `justify-start`: the grid stretches both tiles in a row to the taller
+  // one, and centring then pushed the shorter tile's title down, 9px at 1280
+  // (K-442). Titles start at the top, so a row's titles share a line.
   const tile = (active: boolean) =>
-    `flex min-h-11 flex-col items-start justify-center rounded-lg border px-3 py-2 text-start text-sm transition-colors ${
+    `flex min-h-11 flex-col items-start justify-start rounded-lg border px-3 py-2 text-start text-sm transition-colors ${
       active
         ? "border-primary bg-primary-tint text-foreground"
         : "border-border bg-surface text-foreground hover:bg-surface-sunken"
@@ -222,8 +225,16 @@ export function EmbedGenerator({
             ) : null}
 
             {kind !== "qr" && kind !== "partner" ? (
-              <FieldGrid columns={2}>
-                <Field label={copy.look} hint={look === "site" ? copy.lookNote : undefined}>
+              // **One column.** Side by side in this 26rem column each field
+              // had 200px, and the select cut "Follow the visitor's browser"
+              // at "br" (K-144); the 54px Look track also stood beside the
+              // 44px select (K-445). Stacked, each control has the column's
+              // width and a row of its own.
+              <FieldGrid columns={1}>
+                {/* `group`: two radios are not one control, and wrapped in the
+                    caption's label the caption named the first radio and a
+                    click on it chose "Your site" (#1972, K-13 review). */}
+                <Field label={copy.look} hint={look === "site" ? copy.lookNote : undefined} group>
                   {/* Two radios, so the segmented recipe rather than
                       `SegmentedControl` (a `<nav>` of links): the look is a
                       form value, not a destination. The recipe is what nests
@@ -231,8 +242,7 @@ export function EmbedGenerator({
                       one selected and hover treatment. Each label is the
                       radio's tap target, so it takes the 44px floor
                       (`min-h-11`, as `SegmentedControl`'s own options do):
-                      it was `min-h-9`, 36px. That makes the track 54px
-                      beside a 44px select (#1974). */}
+                      it was `min-h-9`, 36px. */}
                   <div className={segmentedTrackClass}>
                     {(["site", "light"] as const).map((value) => (
                       <label
@@ -334,11 +344,14 @@ export function EmbedGenerator({
         </SectionCard>
       ) : kind === "qr" ? null : (
         <SectionCard padding="lg" title={copy.snippet}>
-          <div className="mb-4 flex flex-wrap gap-1">
+          {/* Each chip is its radio's tap target, so it takes the 44px floor
+              the kind tiles and Look segments take; it was `min-h-9`, 36px,
+              4px from the next (K-443). */}
+          <div className="mb-4 flex flex-wrap gap-2">
             {PLATFORMS.map((p) => (
               <label
                 key={p}
-                className={`min-h-9 cursor-pointer rounded-full border px-3 py-1.5 text-sm font-medium has-[:focus-visible]:focus-ring ${
+                className={`inline-flex min-h-11 cursor-pointer items-center rounded-full border px-3 text-sm font-medium has-[:focus-visible]:focus-ring ${
                   platform === p ? "border-primary bg-primary-tint" : "border-border bg-surface"
                 }`}
               >

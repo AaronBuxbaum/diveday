@@ -72,8 +72,14 @@ export function NoShowScript({
         <DisclosureCaret className="group-open/no-show:rotate-90" />
         {copy.door}
       </summary>
-      <div className="mt-2 flex flex-wrap items-center gap-3 ps-5">
-        <p className="min-w-0 text-sm text-muted">{copy.consequence}</p>
+      {/* **The confirm ends on the row's edge** (K-253), where the row's own
+          Check in ends: the sentence grows from its own width and the line
+          packs to its end, so the button stands at the end beside the
+          sentence, or under it once the two do not share a line. `grow`, not
+          `flex-1`, whose zero basis never wraps and squeezed the sentence into
+          a narrow column beside the button on a phone. */}
+      <div className="mt-2 flex flex-wrap items-center justify-end gap-3 ps-5">
+        <p className="min-w-0 grow text-sm text-muted">{copy.consequence}</p>
         <RowActionForm action={action} sendFailedLabel={copy.sendFailed}>
           <input type="hidden" name="bookingId" value={bookingId} />
           <SubmitButton

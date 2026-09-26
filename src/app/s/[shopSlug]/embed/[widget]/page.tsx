@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EmbedCredit } from "@/components/EmbedCredit";
 import { buttonClass } from "@/components/ui/button";
 import { listBoats } from "@/db/boats";
 import { getDb } from "@/db/client";
@@ -9,7 +10,9 @@ import { shopBySlugCached } from "@/db/shops";
 import { getTripWithBooked, pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
+import { courseDepthFormat } from "@/i18n/unit-labels";
 import { nowDate } from "@/lib/clock";
+import { resolveCourseContentDepths } from "@/lib/courses";
 import { isEmbedWidget } from "@/lib/embed-routes";
 import { formatDayParts, formatMoneyScanned, formatTimeRange } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
@@ -63,6 +66,15 @@ export default async function EmbedWidgetPage({
   const now = nowDate();
   const origin = publicAppUrl() ?? "";
   const tz = shop.timezone;
+  // `{depth18}` markers in the shop's own course prose resolve into the shop's
+  // unit before a card reads a field, the same one-shot pass the course
+  // catalog makes (src/lib/courses.ts). Rendered raw, a framed summary read
+  // "How to dive between {depth18n} and {depth40}…" (K-376).
+  const depthFormat = courseDepthFormat(t, shop.depthUnit);
+  const activeCourses = async () =>
+    (await listActiveCourses(db, shop.id)).map((course) =>
+      resolveCourseContentDepths(course, depthFormat),
+    );
 
   const money = (cents: number | null) =>
     cents === null ? null : formatMoneyScanned(cents, currency, locale);
@@ -100,7 +112,7 @@ export default async function EmbedWidgetPage({
       />
     );
   } else if (widget === "courses") {
-    const active = await listActiveCourses(db, shop.id);
+    const active = await activeCourses();
     // **One course, or the catalogue** (issue #1284, completing ADR
     // 20260901-diveday-reimagined decision 2's "what it shows"). A slug that
     // names no active course is a 404 rather than a silently empty list, the
@@ -118,8 +130,12 @@ export default async function EmbedWidgetPage({
           >
             <div className="min-w-0">
               <p className="font-brand-display font-semibold">{course.title}</p>
+              {/* Two lines on a phone, as the grid's card clamps the same
+                  field: at one line every summary on a 390px frame was cut
+                  to a fragment ("How to dive between…") beside a title
+                  that wraps freely (K-376). From `sm` one line holds it. */}
               {course.summary ? (
-                <p className="line-clamp-1 text-sm text-muted">{course.summary}</p>
+                <p className="line-clamp-2 text-sm text-muted sm:line-clamp-1">{course.summary}</p>
               ) : null}
               {/* How long, in the shop's own words — the course index says it,
                   and a list that dropped it was thinner than the page it stands for. */}
@@ -146,7 +162,7 @@ export default async function EmbedWidgetPage({
   } else {
     const [{ trips }, courses] = await Promise.all([
       pagedUpcomingTripsWithCounts(db, shop.id, { now, limit: 6, publicOnly: true }),
-      listActiveCourses(db, shop.id),
+      activeCourses(),
     ]);
     body = (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -195,15 +211,9 @@ export default async function EmbedWidgetPage({
     <main className="w-full p-3">
       {body}
       {hostCarriesCredit ? null : (
-        <p className="mt-3 text-center text-xs text-muted">
-          <Link
-            href={`${origin}${publicSchedulePath(shopSlug)}`}
-            target="_top"
-            className="hover:underline"
-          >
-            {t("schedule.poweredByDiveDay")}
-          </Link>
-        </p>
+        <EmbedCredit href={`${origin}${publicSchedulePath(shopSlug)}`} target="_top">
+          {t("schedule.poweredByDiveDay")}
+        </EmbedCredit>
       )}
       <EmbedHeightReporter />
     </main>
@@ -233,10 +243,15 @@ function DepartureCard({
       <p className="text-sm tabular-nums">{when}</p>
       {site ? <p className="text-sm text-muted">{site}</p> : null}
       <div className="mt-auto flex items-center justify-between gap-3 pt-2">
-        <span className="text-sm">
+        {/* The price at the footer's own size, as a course card's price in
+            the same slot of the same grid; only the seats step down. Both
+            were `text-sm`, so "$95" stood 2px shorter than "$175" (K-377). */}
+        <span>
           {price ? <span className="font-semibold tabular-nums">{price}</span> : null}
-          {price ? " · " : ""}
-          <span className="text-muted">{seats}</span>
+          <span className="text-sm">
+            {price ? " · " : ""}
+            <span className="text-muted">{seats}</span>
+          </span>
         </span>
         <Link href={href} target="_top" className={buttonClass({ size: "sm" })}>
           {t("embed.book")}

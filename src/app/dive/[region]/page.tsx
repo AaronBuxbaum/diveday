@@ -135,7 +135,8 @@ export default async function RegionPage({ params }: { params: Promise<{ region:
       <Suspense fallback={<MarketingNavFallback hideCta />}>
         <MarketingNav hideCta />
       </Suspense>
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      {/* The marketing chrome's gutter at every width (K-293). */}
+      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-8 sm:py-10">
         {graph ? <JsonLd data={graph} /> : null}
         <ShopPageHeader
           eyebrow={t("regions.index.title")}
@@ -143,12 +144,14 @@ export default async function RegionPage({ params }: { params: Promise<{ region:
           title={title}
           description={t("regions.region.description")}
         />
-        <ul className="divide-y divide-border border-y border-border">
+        {/* The ledger's geometry, as on the index: rules run with the square
+            fill, words stay on the column (K-513). */}
+        <ul className="-mx-2 divide-y divide-border border-y border-border">
           {shops.map((shop) => (
             <li key={shop.id}>
               <Link
                 href={publicSchedulePath(shop.slug)}
-                className="group -mx-3 flex items-center gap-4 rounded-lg px-3 py-5 transition-colors hover:bg-surface-sunken focus-visible:focus-ring-inset"
+                className="group flex items-center gap-4 px-2 py-5 transition-colors hover:bg-surface-sunken focus-visible:focus-ring-inset"
               >
                 {shop.logoUrl ? (
                   // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo

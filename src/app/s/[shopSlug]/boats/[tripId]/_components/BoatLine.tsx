@@ -46,20 +46,23 @@ export function BoatLine({
  * The one mark this page draws. Wordless on purpose: the row already says what
  * the step is and when, and a second label for "done" would be DiveDay
  * narrating a shop's morning. The ring on `now` is the only emphasis.
+ *
+ * **Every mark sits in the ring's 16px box** (K-379). A bare 8px dot beside
+ * the 16px ring put "Check-in" 8px right of "Leaves" and the dots on two
+ * centre lines; in one box the dots share a centre and the labels one edge.
  */
 function BoatLineDot({ mark }: { mark: BoatLineMark }) {
-  if (mark === "now") {
-    return (
-      <span className="flex size-4 items-center justify-center rounded-full bg-primary-tint">
-        <span className="size-2 rounded-full bg-primary" />
-      </span>
-    );
-  }
   return (
     <span
-      className={`block size-2 rounded-full ${
-        mark === "done" ? "bg-primary" : "border border-border bg-surface"
+      className={`flex size-4 items-center justify-center rounded-full${
+        mark === "now" ? " bg-primary-tint" : ""
       }`}
-    />
+    >
+      <span
+        className={`size-2 rounded-full ${
+          mark === "todo" ? "border border-border bg-surface" : "bg-primary"
+        }`}
+      />
+    </span>
   );
 }

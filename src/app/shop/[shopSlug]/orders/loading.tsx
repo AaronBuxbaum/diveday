@@ -27,12 +27,19 @@ export default function OrdersIndexLoading() {
         <div className="mt-8 flex flex-col gap-9">
           {[0, 1].map((group) => (
             <div key={group}>
-              <div className="flex items-baseline justify-between gap-3 pb-2">
+              {/* The day's header is `GroupLabel`'s one `text-xs` line,
+                  16px, and the rows start the list's `mt-2.5` under it: 26px,
+                  where `h-3` bars in `pb-2` drew 20 (K-390). */}
+              <div className="mb-2.5 flex h-4 items-center justify-between gap-3">
                 <div className="h-3 w-32 rounded bg-surface-sunken" />
                 <div className="h-3 w-28 rounded bg-surface-sunken" />
               </div>
+              {/* `sm:h-13`: a `LedgerRow`'s 52px floor, which read 48 until
+                  2026-09-02. Below `sm` the diver and what they bought stack
+                  as two 24px lines, 2px apart, in the row's `py-2` under its
+                  1px rule: 67px, `h-16.75` (K-390). */}
               {[0, 1, 2].map((row) => (
-                <div key={row} className={`h-12 ${ledgerRowBoxClass}`} />
+                <div key={row} className={`h-16.75 sm:h-13 ${ledgerRowBoxClass}`} />
               ))}
             </div>
           ))}

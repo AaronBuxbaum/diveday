@@ -8,7 +8,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { SectionCard, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DangerDisclosure } from "@/components/ui/disclosure";
 import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -430,7 +430,9 @@ export default async function EditDiveSitePage({
           eyebrowHref={back}
           title={site.name}
           description={t("diveSites.edit.description")}
-          align="start"
+          // The default `end`: a static door sits at the foot of the title
+          // block, as on every records header; `start` is for actions that
+          // grow, and hung this one from the eyebrow (K-491).
           actions={
             <Link
               href={`/shop/${shopSlug}/schedule/board?add=1&site=${site.id}`}
@@ -472,7 +474,7 @@ export default async function EditDiveSitePage({
         />
       ) : null}
       {templateUpdate ? (
-        <section className="mt-6 rounded-panel border border-primary/30 bg-primary/5 p-4 sm:p-5">
+        <section className={`mt-6 ${TONE_PANEL_CLASS} border-primary/30 bg-primary/5`}>
           <h2 className="text-base font-semibold">{t("diveSites.edit.templateUpdates.title")}</h2>
           <p className="mt-1 text-sm text-muted">
             {t("diveSites.edit.templateUpdates.description", {
@@ -524,13 +526,15 @@ export default async function EditDiveSitePage({
               `overflow-hidden` clips that fill to the corner radius. The same
               clip cut the outset focus ring on both sides, so the ring is drawn
               inside the row, and the last row takes the card's bottom corners
-              so the clip cannot shave the ring's. */}
+              so the clip cannot shave the ring's. Each row pads back exactly
+              what the list bleeds, `sm:` included, or from 640px up its words
+              start 4px left of the card's heading (K-412). */}
           <ul className="-mx-4 -mb-4 divide-y divide-border border-t border-border sm:-mx-5 sm:-mb-5">
             {upcomingTrips.map((trip) => (
               <li key={trip.tripId} className="last:rounded-b-panel">
                 <Link
                   href={`/shop/${shopSlug}/trips/${trip.tripId}`}
-                  className="flex flex-col gap-1 rounded-[inherit] px-4 py-3 text-sm hover:bg-surface-sunken focus-visible:focus-ring-inset sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-3"
+                  className="flex flex-col gap-1 rounded-[inherit] px-4 py-3 text-sm hover:bg-surface-sunken focus-visible:focus-ring-inset sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-3 sm:px-5"
                 >
                   <span className="font-medium">{trip.title}</span>
                   <span className="text-muted">

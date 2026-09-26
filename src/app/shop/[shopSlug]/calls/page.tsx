@@ -177,8 +177,10 @@ export default async function TookACallPage({
           {/* The refusal sits in the action row beside the button that produced
               it, never in a banner at the top of the page — this page has one
               form, and the rule is the same either way
-              (docs/design/forms-and-controls.md). */}
-          <FieldActions className="mt-6">
+              (docs/design/forms-and-controls.md). `mt-4`, one field gap under
+              the last control, which a row inside a `FieldGrid` gets from the
+              grid (K-182). */}
+          <FieldActions className="mt-4">
             <SubmitButton pendingLabel={t("calls.submitting")} className={buttonClass()}>
               {t("calls.submit")}
             </SubmitButton>

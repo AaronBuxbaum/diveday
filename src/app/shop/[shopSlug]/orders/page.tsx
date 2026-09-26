@@ -7,7 +7,7 @@ import { PaymentsConnectCta } from "@/components/PaymentsConnectCta";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { canPersonManagePaymentSettings } from "@/db/authz";
@@ -30,7 +30,7 @@ import {
   isValidCalendarDate,
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import { formatMoneyCents, formatShortDate, joinFacts } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { isManagedStorageUrl } from "@/lib/storage/blob-host";
@@ -88,6 +88,35 @@ const OPERATION_UNFINISHED_KEYS: Record<string, StaffMessageKey> = {
   refund: "orders.index.paymentOps.unfinished.refund",
 };
 const OPERATION_UNFINISHED_FALLBACK: StaffMessageKey = "orders.index.paymentOps.unfinished.other";
+
+/**
+ * **"Open trip" is a 44px target on a 20px line** (K-389). The notices drew
+ * it as a plain underlined word, 61.8×20px. The link takes
+ * `tapTargetLinkClass`, and this wrapper is exactly one `text-sm` line tall,
+ * so the 44px box spills 12px above and below without moving the line
+ * (`EYEBROW_TAP_WRAPPER`'s idiom, a line box round a larger target). A flex
+ * item of the danger row or inline in an owed row's text, the wrapper stands
+ * on the line's baseline by the link's words.
+ */
+const OPEN_TRIP_LINE = "inline-flex h-5 items-center";
+const OPEN_TRIP_LINK = `${tapTargetLinkClass} font-medium text-primary underline underline-offset-2`;
+
+/**
+ * **A notice's rows stand at least a target apart** (K-389). Each "Open trip"
+ * box spills 12px above and below its 20px line, so at `space-y-2` two
+ * one-line rows stood 28px apart and their boxes crossed by 16px: the later
+ * link paints over the earlier and took a click on the earlier one's
+ * underline, opening the next diver's departure. A 20px line and a 24px gap
+ * is the 44px target, so two rows' spills meet and never cross. Both lists
+ * take it: an unconfirmed payment with no Stripe id yet is a one-line row too.
+ */
+const NOTICE_ROWS = "mt-3 space-y-6 text-sm";
+
+/**
+ * A notice row's separator, bound by a no-break space to the word before it,
+ * so a wrapped line ends after a dot and never opens on one (K-569).
+ */
+const FACT_SEPARATOR = "\u00A0· ";
 
 const IMPORTED_PAYMENT_DIRECTION_KEYS: Record<"payment" | "refund" | "unknown", StaffMessageKey> = {
   payment: "orders.index.importedHistory.direction.payment",
@@ -495,9 +524,9 @@ export default async function OrdersIndexPage({
                 mechanism ("Stripe was asked to do something and the app never
                 confirmed how it went"), and the heading above already says what
                 to do about it. */}
-            <ul className="mt-3 space-y-2 text-sm">
+            <ul className={NOTICE_ROWS}>
               {stuckPaymentOperations.map(({ intent, tripId: opTripId, tripTitle, personName }) => (
-                <li key={intent.id}>
+                <li key={intent.id} className="group/op">
                   <p className="flex flex-wrap items-baseline gap-x-2">
                     <span className="font-medium">
                       {t(OPERATION_UNFINISHED_KEYS[intent.kind] ?? OPERATION_UNFINISHED_FALLBACK, {
@@ -506,28 +535,50 @@ export default async function OrdersIndexPage({
                     </span>
                     {/* Whose money and which boat, joined here rather than
                         each carrying its own separator — a row with a name and
-                        no departure used to open on a stray bullet. */}
+                        no departure used to open on a stray bullet — with the
+                        dot bound to the departure, so a phone's line never
+                        opens on "· Priya Sharma" (K-569). */}
                     {tripTitle || personName ? (
-                      <span>{[tripTitle, personName].filter(Boolean).join(" · ")}</span>
+                      <span>{[tripTitle, personName].filter(Boolean).join(FACT_SEPARATOR)}</span>
                     ) : null}
                     {opTripId ? (
-                      <Link
-                        href={`/shop/${shopSlug}/trips/${opTripId}`}
-                        className="font-medium text-primary underline underline-offset-2"
-                      >
-                        {t("orders.index.paymentOps.openTrip")}
-                      </Link>
+                      <span className={OPEN_TRIP_LINE}>
+                        <Link
+                          href={`/shop/${shopSlug}/trips/${opTripId}`}
+                          className={OPEN_TRIP_LINK}
+                        >
+                          {t("orders.index.paymentOps.openTrip")}
+                        </Link>
+                      </span>
                     ) : null}
                   </p>
                   {/* The identifier a shop pastes into Stripe's own search, one
                       tap down rather than on the row's face. Mono, because it is
                       a string to be transcribed character for character. */}
+                  {/* **On the last row, the target's spare height hangs
+                      below the words, into the notice's padding** (K-388). The
+                      summary is a 44px box round a 16px line, and the 14px
+                      under the words stood on the notice's `py-3`: 13px from
+                      the border to the heading's ink, 27px from "Stripe
+                      reference" to the border. `-mb-3.5` gives those 14px back
+                      there, so the words end on the content edge and the
+                      padding is 13 and 13; the box spills into the padding,
+                      which nothing clips. Only on the last row (the row is
+                      `group/op`): on any other, the margin would collapse into
+                      the gap below it and pull the next row up under the
+                      reference, which would then read as that row's. And only
+                      the bottom: a box lifted 14px would put its ring across
+                      the row's first line. `flex w-fit` rather than
+                      `inline-flex`, so the margin is taken whole; an inline
+                      box's line keeps the strut of the row's `text-sm` under
+                      it. Open, the id starts 4px under the box on every row:
+                      `mt-1`, or 14 + 4 where the box has bled. */}
                   {intent.stripeObjectId ? (
                     <details className="mt-1">
-                      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-xs text-muted underline underline-offset-2 [&::-webkit-details-marker]:hidden">
+                      <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center text-xs text-muted underline underline-offset-2 group-last/op:-mb-3.5 [&::-webkit-details-marker]:hidden">
                         {t("orders.index.paymentOps.reference")}
                       </summary>
-                      <code className="mt-1 block font-mono text-xs break-all text-muted">
+                      <code className="mt-1 block font-mono text-xs break-all text-muted group-last/op:mt-4.5">
                         {intent.stripeObjectId}
                       </code>
                     </details>
@@ -549,29 +600,43 @@ export default async function OrdersIndexPage({
               {t("orders.index.owedRefunds.heading", { count: owedRefunds.length })}
             </p>
             <p className="mt-1 text-sm">{t("orders.index.owedRefunds.detail")}</p>
-            <ul className="mt-3 space-y-2 text-sm">
+            <ul className={NOTICE_ROWS}>
               {owedRefunds.map((owed) => (
-                <li key={owed.bookingId} className="flex flex-wrap items-baseline gap-x-2">
+                // **Running text, not flex items** (K-569). Each fact was a
+                // flex item opening on its own "·", so the row spaced its
+                // dots two ways and, wrapped on a phone, began lines
+                // "· $60.00"; and a single joined span, as one flex item,
+                // left the name's line whole on a phone and pushed "Open
+                // trip" to a line of its own. As one run of text the row
+                // breaks only after a dot or inside the departure's words,
+                // every dot bound to the word before it, and "Open trip"
+                // (a 20px `inline-flex` on the text's baseline) shares the
+                // last line.
+                <li key={owed.bookingId}>
                   <span className="font-medium">{owed.diverName}</span>
-                  <span>· {owed.tripTitle}</span>
+                  {FACT_SEPARATOR}
+                  {owed.tripTitle}
                   <span className="text-muted">
-                    ·{" "}
-                    {/* A counter mark often records no amount. Saying so beats
-                        printing a confident 0.00 the shop would have to
-                        distrust. */}
-                    {owed.amountCents === null
-                      ? t("orders.index.owedRefunds.unrecordedAmount")
-                      : formatMoneyCents(owed.amountCents, owed.currency, locale)}
-                    {owed.depositOnly ? ` · ${t("orders.index.owedRefunds.depositOnly")}` : ""}
-                    {" · "}
-                    {formatShortDate(owed.tripStartsAt, locale, shop.timezone)}
+                    {FACT_SEPARATOR}
+                    {joinFacts([
+                      // A counter mark often records no amount. Saying so
+                      // beats printing a confident 0.00 the shop would have
+                      // to distrust.
+                      owed.amountCents === null
+                        ? t("orders.index.owedRefunds.unrecordedAmount")
+                        : formatMoneyCents(owed.amountCents, owed.currency, locale),
+                      owed.depositOnly && t("orders.index.owedRefunds.depositOnly"),
+                      formatShortDate(owed.tripStartsAt, locale, shop.timezone),
+                    ])}
+                  </span>{" "}
+                  <span className={OPEN_TRIP_LINE}>
+                    <Link
+                      href={`/shop/${shopSlug}/trips/${owed.tripId}`}
+                      className={OPEN_TRIP_LINK}
+                    >
+                      {t("orders.index.owedRefunds.openTrip")}
+                    </Link>
                   </span>
-                  <Link
-                    href={`/shop/${shopSlug}/trips/${owed.tripId}`}
-                    className="font-medium text-primary underline underline-offset-2"
-                  >
-                    {t("orders.index.owedRefunds.openTrip")}
-                  </Link>
                 </li>
               ))}
             </ul>

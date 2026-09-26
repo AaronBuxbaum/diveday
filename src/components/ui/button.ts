@@ -120,6 +120,10 @@ const DISABLED = {
   busy: "disabled:cursor-wait disabled:opacity-70 has-[input:disabled]:cursor-wait has-[input:disabled]:opacity-70",
 } as const;
 
+/** `secondary`'s face without its edge, so `edge` (see `EDGES`) can swap the one for another. */
+const SECONDARY_FACE =
+  "bg-surface text-foreground not-disabled:not-has-[input:disabled]:hover:bg-foreground/8";
+
 /**
  * **Every box carries the same 1px border, transparent where the variant is a
  * fill.** `primary` and `danger-solid` had none while `secondary` and `danger`
@@ -128,6 +132,15 @@ const DISABLED = {
  * the two — the pre-departure checklist, the offline counter's "Check in" /
  * "Checked in" — moved its label 1px sideways. The fill still paints under a
  * transparent border (`background-clip` is `border-box`), edge to edge.
+ *
+ * **The quiet variants carry it too, transparent at rest and under the hover
+ * wash.** The gear return's "Service concern" is `ghost` until it is opened
+ * and `secondary` once it is, and it moved its label 1px and grew its box 2px
+ * as the note opened; the team card's Disable (`danger-ghost`) and Enable
+ * (`secondary`) are one control either side of a submit. `link`, `sky` and
+ * `bare` swap with nothing bordered and are left as they are. A flush quiet
+ * button takes the pixel back from its padding (`FLUSH_HOVER_FILL`), so its
+ * label still sits on the column it is flushed to.
  *
  * **Every hover is `not-disabled:not-has-[input:disabled]:hover:`.** Tailwind
  * v4's `hover:` still matches a disabled button, and `DISABLED` above only
@@ -164,8 +177,7 @@ const variants = {
    * variants no longer say the same thing in colour. Contrast improves either
    * way (light 5.36 -> 15.02, dark 9.05 -> 14.48 on `bg-surface`).
    */
-  secondary:
-    "border border-border bg-surface text-foreground not-disabled:not-has-[input:disabled]:hover:bg-foreground/8",
+  secondary: `border border-border ${SECONDARY_FACE}`,
   /**
    * **`secondary` for the public pages: the same box, with the border that
    * holds 3:1 against the ground** (`--border-strong`, the form controls'
@@ -179,7 +191,7 @@ const variants = {
   outline:
     "border border-border-strong bg-surface text-foreground not-disabled:not-has-[input:disabled]:hover:bg-foreground/8",
   ghost:
-    "text-muted not-disabled:not-has-[input:disabled]:hover:bg-foreground/8 not-disabled:not-has-[input:disabled]:hover:text-foreground",
+    "border border-transparent text-muted not-disabled:not-has-[input:disabled]:hover:bg-foreground/8 not-disabled:not-has-[input:disabled]:hover:text-foreground",
   danger:
     "border border-danger/40 text-danger not-disabled:not-has-[input:disabled]:hover:bg-danger-tint",
   /**
@@ -187,7 +199,8 @@ const variants = {
    * list's "Remove" next to ghost-weight items. The bordered `danger` shouts
    * inside a small menu; this keeps the warning hue without the box.
    */
-  "danger-ghost": "text-danger not-disabled:not-has-[input:disabled]:hover:bg-danger-tint",
+  "danger-ghost":
+    "border border-transparent text-danger not-disabled:not-has-[input:disabled]:hover:bg-danger-tint",
   "danger-solid":
     "border border-transparent bg-danger text-primary-foreground not-disabled:not-has-[input:disabled]:hover:bg-danger/90",
   /** Reads as inline text, but still claims a full touch target. */
@@ -322,6 +335,30 @@ const sizes = {
 } as const;
 
 /**
+ * **A 44px target that takes only its line's room**, reaching past the line on
+ * one side. `tapTargetLinkClass`'s floor, for a quiet link whose row cannot
+ * spare 44px of flow: the link stands on a block exactly its words' line box
+ * (`line`, plus that line's height: `h-4` for a 16px line, `h-5` for text-sm's
+ * 20px), so the flow measures the words, and the target's spare reaches out of
+ * the block on the one side where nothing is drawn.
+ *
+ * - `up`: the content on the box's bottom edge, the spare above the line. The
+ *   eyebrow back-link over a page title (`EYEBROW_TAP_WRAPPER`, K-395), whose
+ *   focus ring ran through the title's cap tops while the box was centred.
+ * - `down`: the content on the box's top edge, the spare below the line. The
+ *   log door under "3 spots open" beside the seat dial (`DayStation.tsx`,
+ *   K-186), where a centred ring would run through the line above.
+ *
+ * `target` goes on the link and is spelled whole, not `tapTargetLinkClass`
+ * plus an `items-*`: two `align-items` utilities on one element resolve by
+ * stylesheet order, not by the order they are written.
+ */
+export const tapTargetOverhangClass = {
+  up: { line: "flex items-end", target: "inline-flex min-h-11 items-end" },
+  down: { line: "flex items-start", target: "inline-flex min-h-11 items-start" },
+} as const;
+
+/**
  * **A text link that is also a tap target**, for the one case a button is not:
  * the link that opens the record a row or a card is about.
  *
@@ -337,6 +374,102 @@ const sizes = {
  * all: `min-height` does nothing to a non-replaced inline box.
  */
 export const tapTargetLinkClass = "inline-flex min-h-11 items-center";
+
+/**
+ * **A link inside a sentence**: the words' own ink, underlined, and the link
+ * colour under the pointer.
+ *
+ * For an address or a name that sits in running text — "write to
+ * support@dive.day", "coming from EVE, DiveShop360 or a spreadsheet" — where a
+ * `link` button would break the line with its box and its target floor (a link
+ * in a sentence is exempt from the 44px target, WCAG 2.5.8). The underline
+ * says "link" at rest; the colour change says "this one" under the pointer.
+ * These were bare `underline` and looked the same hovered as at rest (K-500).
+ * A link already in the link colour is a different case: `text-primary` with
+ * `hover:underline` (the `link` variant's own pair) is how most inline links
+ * are spelled.
+ */
+export const proseLinkClass = "underline hover:text-primary";
+
+/**
+ * **The 20px line a 44px link stands on**, for a `text-sm` link with a line of
+ * its own: the last line of a card, the "All courses" beside a section's
+ * heading.
+ *
+ * The link's floor is 44px around a 20px line, and as its own line that box
+ * *is* the flow, 12px of it nobody sees above the words and 12px below. Last
+ * in a card, the half below added to the card's padding: the storefront's
+ * "Right now" card measured 16px over its icon and 32px under "Follow", the
+ * season card 19px over its eyebrow and 30px under its link (pixel-craft
+ * K-185). Beside a heading, the box would stand the header row 44px tall and
+ * push the heading down 7px (K-237).
+ *
+ * So the link stands on a block exactly its words' line box, which centres it:
+ * the words land where a plain line's would, the flow is 20px, and the target
+ * reaches 12px either way into space nothing else uses. A negative margin on
+ * the inline-flex link itself would not give the line back, for the reason
+ * `EYEBROW_TAP_WRAPPER` (`ShopPageHeader.tsx`) records (#1857). Not
+ * `outdent`, which returns only the half below and leaves the 12px above the
+ * words in the flow.
+ *
+ * **Centred, it needs 17px free of ink above and below its words**: the box's
+ * 12px and the focus ring's 5px (3px at a 2px offset). The ring is drawn
+ * outside the box, and drawn inside it would cross a flush link's first and
+ * last letters. So a line after a line of text opens with `mt-4`: 16px, and
+ * the text line's empty bottom pixel under its descenders is the 17th. With
+ * `mt-2` the ring's top band ran 6 to 9px up inside the line above, through
+ * the x-height of "around 6:00 PM." over "Follow", and the target covered
+ * that line's bottom 4px (pixel-craft K-185, K-219). A card the line ends
+ * needs 17px of padding under it: `max-sm:pb-5` on a `SectionCard`, whose
+ * phone padding is 16px, or the ring lies 1px on the border. Beside a heading
+ * on an `items-baseline` row the heading's 28px line takes part of each half,
+ * and the row's `mt-4` to what follows holds the rest.
+ *
+ * This is not `EYEBROW_TAP_WRAPPER`'s trade. That line stands its box on its
+ * bottom edge (`items-end`), with all the spare height above, because centred
+ * its ring ran through the page title 8px under it (K-395).
+ *
+ * Only for a link set in `text-sm` (`buttonClass`'s `sm`, or
+ * `tapTargetLinkClass` with `text-sm`); the line is that size's 20px.
+ */
+export const tapTargetLineClass = "flex h-5 items-center";
+
+/**
+ * **A `secondary` box that wears a state in its edge** — the waiver delivery
+ * buttons, each outlined in what we last knew about its channel (sent, failed,
+ * unavailable, copied).
+ *
+ * Those drew it as a `ring-2` through `className`, because a second border
+ * colour there loses to `secondary`'s own `border-border` by stylesheet
+ * order. But a ring sits *outside* the border: the box had two edges, a 2px
+ * hue and then the grey hairline inside it, and a ring takes no room, so two
+ * ringed buttons in a `gap-2` row stood 4px apart while the plain ones kept 8
+ * (pixel probe, 2026-09-25). So the edge is an option: the border itself,
+ * 2px, in the state's hue, instead of the hairline rather than beside it.
+ *
+ * The extra pixel a side comes back out of the padding (`EDGE_X`), so a
+ * button that gains or loses its state keeps its width, and its label and
+ * its neighbours stay where they were.
+ */
+const EDGES = {
+  success: "border-success/50",
+  danger: "border-danger/55",
+  warning: "border-warning/55",
+  /** A state that is neither good nor bad news — a link that was only copied. */
+  strong: "border-border-strong",
+} as const;
+
+export type ButtonEdge = keyof typeof EDGES;
+
+/** Each size's horizontal padding less the 1px a 2px edge adds on each side. Spelled whole, for Tailwind to find. */
+const EDGE_X: Record<ButtonSize, string> = {
+  sm: "px-2.75",
+  md: "px-3.75",
+  boat: "px-5.75",
+  icon: "px-0",
+  "icon-sm": "px-0",
+  mark: "px-0",
+};
 
 export type ButtonVariant = keyof typeof variants;
 export type ButtonSize = keyof typeof sizes;
@@ -369,9 +502,12 @@ const FLUSH = "px-0";
  * measured `danger-ghost`'s hover tint at 0px either side of "Delete Morgan
  * Vale" on every diver record, and of a gear unit's "Delete" (2026-09-25).
  *
- * So a flush ghost keeps 8px of padding and hands the same 8px back as a
+ * So a flush ghost keeps 8px of room and hands the same 8px back as a
  * negative margin: the label sits exactly where a padless one would — which
  * is all `flush` promises — and the tint reaches 8px past it on each side.
+ * The room is the quiet box's transparent 1px border (see `variants`) and 7px
+ * of padding; 8px of padding inside that border stood the label 1px off its
+ * column.
  * 8px, not the size's own padding, so the tint and the 5px focus ring around
  * it stay inside a phone's 16px gutter. It is the room `ledger.tsx` gives a
  * row's fill, and for the same reason.
@@ -391,7 +527,7 @@ const FLUSH = "px-0";
  * (`focus-visible:focus-ring-inset`) or gains the padding (the FAQ editor's
  * cards, `p-4`).
  */
-const FLUSH_HOVER_FILL = "-mx-2 px-2";
+const FLUSH_HOVER_FILL = "-mx-2 px-1.75";
 
 /** The variants that paint nothing of their own around their words, hover included. */
 const PAINTS_NOTHING: ReadonlySet<ButtonVariant> = new Set(["link", "bare"]);
@@ -428,7 +564,10 @@ function horizontalPadding(variant: ButtonVariant, x: string, flush: boolean) {
  * 28px (pixel probe, 2026-09-25). `block-end` gives the unseen half back as a
  * negative bottom margin, so the target stays whole while that half sits in
  * the padding; `block-end-phone` does it below `sm` only, for a button that
- * drops to a line of its own there (`ListItemActions`).
+ * drops to a line of its own there (`ListItemActions`); `block-end-wide` does
+ * it from `sm` up only, for a button that ends its box beside words there and
+ * stacks over words below `sm`, where its unseen half would lie over them and
+ * take their taps (the waiver's "Save and finish later", K-493).
  *
  * `align-bottom` rides with it: a button in a `<form>` is an inline box on the
  * form's line, and the line's strut would keep a pixel of the height the
@@ -444,9 +583,11 @@ function horizontalPadding(variant: ButtonVariant, x: string, flush: boolean) {
  *
  * Only on a variant that paints nothing at rest — a bordered box's end is its
  * border, not its word — and never where the button shares its line with a
- * visible box: centred in a row, the pulled-up margin would lift it 6px.
+ * visible box: centred in a row, the pulled-up margin would lift it 6px. Beside
+ * words, the row lines them up by their baseline (`items-baseline`), which a
+ * margin cannot move.
  */
-export type ButtonOutdent = "block-end" | "block-end-phone";
+export type ButtonOutdent = "block-end" | "block-end-phone" | "block-end-wide";
 
 /**
  * The unseen half of each size's box, (height − line) / 2: 12px on the 44px
@@ -455,10 +596,12 @@ export type ButtonOutdent = "block-end" | "block-end-phone";
 const OUTDENT_12 = {
   "block-end": "-mb-3 align-bottom",
   "block-end-phone": "max-sm:-mb-3 max-sm:align-bottom",
+  "block-end-wide": "sm:-mb-3 sm:align-bottom",
 } as const;
 const OUTDENT_16 = {
   "block-end": "-mb-4 align-bottom",
   "block-end-phone": "max-sm:-mb-4 max-sm:align-bottom",
+  "block-end-wide": "sm:-mb-4 sm:align-bottom",
 } as const;
 const OUTDENT: Record<ButtonSize, Record<ButtonOutdent, string>> = {
   sm: OUTDENT_12,
@@ -479,6 +622,7 @@ export function buttonClass<V extends ButtonVariant = "primary">({
   size = "md",
   flush = false,
   outdent,
+  edge,
   busy = false,
   shape = "rounded",
   className = "",
@@ -496,10 +640,16 @@ export function buttonClass<V extends ButtonVariant = "primary">({
   flush?: V extends PaintedAtRest ? false : boolean;
   /**
    * Sink the unseen lower half of a quiet button's target into the padding of
-   * the box it ends, everywhere (`block-end`) or below `sm` (`block-end-phone`).
+   * the box it ends, everywhere (`block-end`), below `sm` (`block-end-phone`) or
+   * from `sm` up (`block-end-wide`).
    * Refused on a variant painted at rest. See `OUTDENT`.
    */
   outdent?: V extends PaintedAtRest ? undefined : ButtonOutdent;
+  /**
+   * A state worn as the box's own 2px border, in place of `secondary`'s
+   * hairline. `secondary` only. See `EDGES`.
+   */
+  edge?: V extends "secondary" ? ButtonEdge : undefined;
   /**
    * This control's disabled state means "in flight", not "unavailable" — every
    * `SubmitButton`, which disables itself for the duration of its own submit.
@@ -511,9 +661,10 @@ export function buttonClass<V extends ButtonVariant = "primary">({
   const { x, rest } = sizes[size];
   const corner = SHAPES[CIRCLES.has(size) ? "pill" : shape];
   const end = blockEndOutdent(variant, size, outdent);
-  return `${base} ${DISABLED[busy ? "busy" : "default"]} ${variants[variant]} ${rest} ${corner} ${horizontalPadding(
-    variant,
-    x,
-    flush,
-  )}${end ? ` ${end}` : ""} ${className}`.trim();
+  const edged = variant === "secondary" && edge ? edge : undefined;
+  const paint = edged ? `border-2 ${EDGES[edged]} ${SECONDARY_FACE}` : variants[variant];
+  const padding = edged ? EDGE_X[size] : horizontalPadding(variant, x, flush);
+  return `${base} ${DISABLED[busy ? "busy" : "default"]} ${paint} ${rest} ${corner} ${padding}${
+    end ? ` ${end}` : ""
+  } ${className}`.trim();
 }

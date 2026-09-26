@@ -113,6 +113,28 @@ function SignatureRow({
           entry.tripStartsAt ? ` · ${formatShortDate(entry.tripStartsAt, locale, timezone)}` : ""
         }`
       : t("waiversStaff.signatures.noTrip");
+  const flagged = entry.flaggedPrompts.length > 0;
+  const badged = flagged || entry.integrity !== "valid";
+  // Each door is a 44px target around a 20px line, 12px of box unseen above
+  // and below its words. The block's `gap-1` counts the room above; when the
+  // doors end the block they sink the room below into its `pb-5`
+  // (`outdent`), so the doors and the flagged answers alike end 20px above
+  // the closing rule, the ring 3px clear of it. With `gap-3 pb-4` stacked on
+  // that room, the doors sat 34px under the version and 31px over the rule,
+  // against the version's 24px under the name.
+  //
+  // Every door gives its 12px back, the first line's too when the row wraps
+  // (320px, the reflow width, wraps the English pair), so an outdented row's
+  // lines are 16px apart: the 4px its targets keep between them plus the 12px
+  // each gives back. Under `gap-y-1` the second line's targets overlapped the
+  // first's by 8px.
+  const door = buttonClass({
+    variant: "link",
+    size: "sm",
+    flush: true,
+    outdent: flagged ? undefined : "block-end",
+  });
+  const doorRow = flagged ? "flex flex-wrap gap-x-4 gap-y-1" : "flex flex-wrap gap-x-4 gap-y-4";
   return (
     // A ledger row's box (`ledgerRowBoxClass`): the rules reach 8px past the
     // column, and the words stay on it.
@@ -133,17 +155,39 @@ function SignatureRow({
             global ring sits 2-5px outside the box, and the pinned bar sits
             2-4px outside it, so a keyboard reaching the pinned record painted
             the ring over the one mark that says which record the link
-            resolved (dive-domain-expert review, 2026-09-25). */}
-        <summary className="-mx-2 flex min-h-12 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/60 focus-visible:focus-ring-inset">
-          <span className="font-medium sm:w-52 sm:shrink-0">{entry.personName}</span>
-          <span className="min-w-0 flex-1 truncate text-sm text-muted">{trip}</span>
-          <IntegrityBadge entry={entry} t={t} />
-          {/* The summary badge only — never the answers, which sit in the
-              block below and are read by opening the row. */}
-          {entry.flaggedPrompts.length > 0 ? (
-            <Badge tone="warning" size="sm" className="shrink-0">
-              {t("waiversStaff.signatures.medicalFlag")}
-            </Badge>
+            resolved (dive-domain-expert review, 2026-09-25).
+
+            51px (`min-h-12.75`) under the row's 1px rule is a `LedgerRow`'s
+            52: its `min-h-13` sits on the element carrying its rule. The old
+            `min-h-12` stood these rows 49px apart in an app of 52px ledgers. */}
+        <summary className="-mx-2 flex min-h-12.75 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/60 focus-visible:focus-ring-inset">
+          {/* On a phone the departure takes a line of its own under the name,
+              `LedgerRow`'s `stacked` grammar: beside the name, time and caret
+              it truncated to a few words and the date never showed. The name
+              then pushes the time and caret to the first line's end. */}
+          <span className="font-medium max-sm:me-auto sm:w-52 sm:shrink-0">{entry.personName}</span>
+          <span className="min-w-0 flex-1 text-sm text-muted max-sm:order-last max-sm:basis-full sm:truncate">
+            {trip}
+          </span>
+          {/* On a phone the badges, the exception, take a line of their own
+              under the departure. On the first line "Medical follow-up
+              flagged" (about 193px) beside a name, the time and the caret
+              overran the 358px column for any name over about 62px, and the
+              time and caret wrapped to the start of a middle line. From `sm`
+              up the wrapper is no box at all (`contents`): the badges are the
+              row's own items, where they always stood. Only a row with a
+              badge draws it, so no other row gains an empty line. */}
+          {badged ? (
+            <span className="flex flex-wrap gap-x-3 gap-y-1 max-sm:order-last max-sm:basis-full sm:contents">
+              <IntegrityBadge entry={entry} t={t} />
+              {/* The summary badge only — never the answers, which sit in the
+                  block below and are read by opening the row. */}
+              {flagged ? (
+                <Badge tone="warning" size="sm" className="shrink-0">
+                  {t("waiversStaff.signatures.medicalFlag")}
+                </Badge>
+              ) : null}
+            </span>
           ) : null}
           {entry.signedAt ? (
             <span className="shrink-0 text-xs text-muted tabular-nums">
@@ -152,7 +196,7 @@ function SignatureRow({
           ) : null}
           <DisclosureCaret className="shrink-0 text-muted group-open/signature:rotate-90" />
         </summary>
-        <div className="flex flex-col gap-3 pb-4 text-sm">
+        <div className="flex flex-col gap-1 pb-5 text-sm">
           <p className="text-muted tabular-nums">
             {t("waiversStaff.signatures.releaseVersion", { version: entry.templateVersion })}
           </p>
@@ -163,23 +207,17 @@ function SignatureRow({
           {entry.guardian ? (
             <p className="text-muted">{guardianCoSignedText(t, entry.guardian)}</p>
           ) : null}
-          <div className="flex flex-wrap gap-x-4 gap-y-1">
-            <Link
-              href={`/shop/${shopSlug}/divers/${entry.personId}`}
-              className={buttonClass({ variant: "link", size: "sm", flush: true })}
-            >
+          <div className={doorRow}>
+            <Link href={`/shop/${shopSlug}/divers/${entry.personId}`} className={door}>
               {t("waiversStaff.signatures.openRecord")}
             </Link>
             {entry.tripId ? (
-              <Link
-                href={`/shop/${shopSlug}/trips/${entry.tripId}`}
-                className={buttonClass({ variant: "link", size: "sm", flush: true })}
-              >
+              <Link href={`/shop/${shopSlug}/trips/${entry.tripId}`} className={door}>
                 {t("waiversStaff.signatures.openTrip")}
               </Link>
             ) : null}
           </div>
-          {entry.flaggedPrompts.length > 0 ? (
+          {flagged ? (
             <div>
               <GroupLabel as="h4">{t("waiversStaff.signatures.flaggedAnswersHeading")}</GroupLabel>
               <ul className="mt-1 flex list-disc flex-col gap-1 ps-5 text-warning-strong">

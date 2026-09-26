@@ -320,8 +320,6 @@ export type StaffWeek = {
   gapDays: StaffWeekGapDay[];
   /** Whether the gap row has anything to say. It renders only when it does. */
   hasGaps: boolean;
-  /** Whether any shift or crewed departure landed anywhere in the week. */
-  hasEntries: boolean;
 };
 
 /** The shop-local day something starts on, or `null` when it falls outside the week. */
@@ -462,7 +460,6 @@ export function staffWeek(input: {
     isPast: date < input.today,
   }));
 
-  let hasEntries = false;
   const people: StaffWeekPerson[] = input.people.map((person) => {
     const shiftsByDay = new Map<CalendarDate, WeekShift[]>();
     for (const shift of person.shifts) {
@@ -501,13 +498,6 @@ export function staffWeek(input: {
       crewing: (crewingByDay.get(date) ?? []).sort(byStart),
       away: ownBlocks.filter((block) => blockCoversDay(block, date)),
     }));
-    if (
-      personDays.some(
-        (day) => day.shifts.length > 0 || day.crewing.length > 0 || day.away.length > 0,
-      )
-    ) {
-      hasEntries = true;
-    }
     return {
       personId: person.personId,
       name: person.name,
@@ -593,6 +583,5 @@ export function staffWeek(input: {
     people,
     gapDays,
     hasGaps: gapDays.some((day) => day.gaps.length > 0),
-    hasEntries,
   };
 }

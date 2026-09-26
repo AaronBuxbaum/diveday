@@ -17,10 +17,13 @@ export default function RegionsLoading() {
   return (
     <div className="flex flex-1 flex-col">
       <MarketingNavFallback hideCta />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-8 sm:py-10">
         <div className="animate-pulse">
           {/* The description is three lines on a phone and two from `sm`
-              (K-292). */}
+              (K-292). The title is one line: "Dive shops by town" is about
+              344px of 40px type, which the chrome's 24px gutter (K-293)
+              leaves room for from a 393px phone up. A 390px phone and
+              narrower wrap it to two, and no one count serves both sides. */}
           <ShopPageHeaderSkeleton
             eyebrow={false}
             titleWidth="w-64"
@@ -29,9 +32,9 @@ export default function RegionsLoading() {
             descriptionLines={{ base: 3, sm: 2 }}
           />
         </div>
-        <div className="animate-pulse divide-y divide-border border-y border-border">
+        <div className="-mx-2 animate-pulse divide-y divide-border border-y border-border">
           {[0, 1, 2, 3, 4].map((row) => (
-            <div key={row} className="flex items-baseline justify-between gap-6 py-5">
+            <div key={row} className="flex items-baseline justify-between gap-6 px-2 py-5">
               <div className="h-7 w-44 max-w-full rounded bg-surface-sunken" />
               <div className="h-5 w-16 shrink-0 rounded bg-surface-sunken" />
             </div>

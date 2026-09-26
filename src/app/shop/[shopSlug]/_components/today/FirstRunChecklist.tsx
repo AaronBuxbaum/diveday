@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Copyable } from "@/components/Copyable";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { DoorChevron, LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 
@@ -293,13 +293,18 @@ export function FirstRunChecklist({
             client-side navigation would follow that redirect via fetch, a
             cross-origin request Stripe's CORS policy rejects. So the fix sits
             beside the row as a plain `<a>` doing a full navigation, wearing
-            the same words and chevron the doors wear. */}
+            the same words and chevron the doors wear — and the 44px floor
+            the overlay gives them (K-451): the row centres its trailing slot
+            and overhangs its inset, so the target costs the row no height. */}
         <LedgerRow
           trailing={
             stripeDone ? (
               <SettledCheck settled label={copy.doneBadge} />
             ) : (
-              <a href={`/shop/${shopSlug}/settings/connect`} className="hover:underline">
+              <a
+                href={`/shop/${shopSlug}/settings/connect`}
+                className={`${tapTargetLinkClass} hover:underline`}
+              >
                 <StepDoorLabel label={copy.stripeAction} />
               </a>
             )

@@ -30,10 +30,12 @@ vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   setLeftoverDecisionAction: vi.fn(),
 }));
 
+import { SITE_MARK_SIZES } from "@/components/illustration/SiteMark";
+import { tapTargetOverhangClass } from "@/components/ui/button";
 import type { FirstBooking } from "@/db/first-booking";
 import type { DayTakings as DayTakingsReading } from "@/lib/closeout";
 import { assembleEveningClose, type CloseoutDeparture } from "@/lib/closeout";
-import { DaySpine, type EveningReading } from "./DaySpine";
+import { DaySpine, type EveningReading, type SpineDraft } from "./DaySpine";
 
 afterEach(() => {
   cleanup();
@@ -149,6 +151,7 @@ function renderSpine({
   tomorrow?: SpineDeparture[];
   withheldCount?: number;
   showPaymentsRow?: boolean;
+  drafts?: SpineDraft[];
   crewedTripIds?: string[];
   sessions?: React.ReactNode;
   firstRun?: React.ReactNode;
@@ -193,7 +196,9 @@ describe("a station owns its departure's facts", () => {
     });
     // Once, in the station header — never again beneath it, not even by the
     // row that is *about* the departure, which leads with its detail instead.
-    expect(screen.getAllByText("Two-Tank Reef")).toHaveLength(1);
+    // Counted in the page's words, not by element: the header sets the
+    // title's last word in a span of its own, beside its chevron.
+    expect(document.body.textContent?.split("Two-Tank Reef")).toHaveLength(2);
     expect(screen.getByRole("link", { name: /Two-Tank Reef/ })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/trips/t1",
@@ -366,6 +371,85 @@ describe("the station is a panel (16a)", () => {
     expect(door.className).toContain("text-primary");
   });
 
+  /**
+   * **The dial's words centre on the dial** (pixel-craft class 1, K-186). The
+   * column beside the 76px dial is centred on it, and the log door's 44px
+   * target stacked in that column as 44px of box under a 20px line: "3 spots
+   * open / Generate log" sat 4.5px high, 8px clear of the dial's top and 17px
+   * of its bottom. The door stands in a box its own line tall, so the column
+   * measures its words, and the target reaches past the line into the room
+   * below it rather than taking room in the column.
+   */
+  it("stands the log door in a box one line tall, so its target takes no room in the dial's column", () => {
+    renderSpine({ departures: [departure({ tripId: "t1" })], evening: evening([]) });
+    const door = screen.getByRole("link", { name: "Generate log" });
+    const line = door.parentElement;
+    const column = screen.getByText("2 spots open").parentElement;
+    expect(line?.parentElement).toBe(column);
+    // text-sm's line box is 20px: `h-5`.
+    expect(line).toHaveClass("h-5");
+    // The target is still 44px, standing from the top of the line.
+    expect(door).toHaveClass("min-h-11", "items-start");
+    expect(line).toHaveClass("items-start");
+    // The eyebrow back-link's shape, reaching the other way: one decision in
+    // button.ts, not a second hand-spelled copy of it.
+    expect(door).toHaveClass(...tapTargetOverhangClass.down.target.split(" "));
+    expect(line).toHaveClass(...tapTargetOverhangClass.down.line.split(" "));
+  });
+
+  /**
+   * **On a phone the dial's words start on the title's column** (pixel-craft
+   * class 3, K-318). Below `sm` the dial wraps to its own line under the site
+   * tile, and its words started at 76 + 16 from the card's edge while the
+   * time, title and meta beside the tile start at 84 + 20: 11px apart. The
+   * dial now stands in a box the tile's width, centred, at the tile's gap.
+   */
+  it("starts the dial's words on the title's column below sm", () => {
+    const { container } = renderSpine();
+    const px = (classes: string | undefined, pattern: RegExp) => {
+      const match = classes?.match(pattern);
+      if (!match?.[1]) throw new Error(`no ${pattern} in "${classes}"`);
+      return Number(match[1]);
+    };
+    const tileWidth = px(SITE_MARK_SIZES.md.tile, /(?:^|\s)w-\[(\d+)px\](?:\s|$)/);
+    const header = container.querySelector("[data-site-mark]")?.parentElement;
+    const dial = container.querySelector("[data-station-water]")?.parentElement;
+    const box = dial?.parentElement;
+    const row = box?.parentElement;
+    expect(px(box?.className, /(?:^|\s)max-sm:w-(\d+)(?:\s|$)/) * 4).toBe(tileWidth);
+    expect(box).toHaveClass("justify-center");
+    expect(px(row?.className, /(?:^|\s)gap-(\d+)(?:\s|$)/)).toBe(
+      px(header?.className, /(?:^|\s)gap-x-(\d+)(?:\s|$)/),
+    );
+  });
+
+  /**
+   * **The title's chevron stays with its last word** (pixel-craft class 2,
+   * K-464). The link is `inline-flex`, so a title that wrapped became one
+   * anonymous flex item and the chevron the next, centred beside the whole
+   * block: at 390 it floated 45px right of the text, between the two lines.
+   * The title is one run of text now, and its last word and the chevron are
+   * one unbreakable unit at the end of it.
+   */
+  it("keeps the title's chevron with the title's last word", () => {
+    renderSpine({ departures: [departure({ title: "Dawn Two-Tank — Molasses Reef" })] });
+    const link = screen.getByRole("link", { name: "Dawn Two-Tank — Molasses Reef" });
+    const chevron = link.querySelector("svg");
+    const unit = chevron?.closest(".whitespace-nowrap");
+    expect(unit).not.toBeNull();
+    expect(link.contains(unit ?? null)).toBe(true);
+    expect(unit?.textContent).toBe("Reef");
+    // One run of text: the words before the unit sit in the same element as it.
+    expect(unit?.parentElement?.textContent).toBe("Dawn Two-Tank — Molasses Reef");
+    // Centred on the line it ends, not on the whole wrapped title.
+    expect(chevron?.parentElement).toHaveClass("h-lh", "items-center", "align-top");
+
+    cleanup();
+    renderSpine({ departures: [departure({ title: "Snorkel" })] });
+    const lone = screen.getByRole("link", { name: "Snorkel" });
+    expect(lone.querySelector("svg")?.closest(".whitespace-nowrap")?.textContent).toBe("Snorkel");
+  });
+
   it("renders a settled station as the same panel", () => {
     const { container } = renderSpine({
       departures: [],
@@ -526,6 +610,47 @@ describe("the desk group", () => {
       "href",
       "/shop/blue-mantis/settings#stripe",
     );
+  });
+
+  /**
+   * **Every desk row is drawn one way** (pixel-craft class 3, K-317). The
+   * payments row had no glyph and no kind, and a draft's row a kind but no
+   * glyph, each with a 14px grey sentence — so at 1280 the payments sentence
+   * started at the glyph column (x 153) under a Setup row whose sentence
+   * starts at 289, in smaller type, and read as that row's continuation.
+   */
+  it("gives the payments and draft rows the desk's anatomy: glyph, kind, reading-size sentence", () => {
+    renderSpine({
+      actions: [
+        action({ id: "on-boat", departure: boat("t1") }),
+        action({
+          id: "chore",
+          kind: "reviews_pending",
+          subject: "1 review",
+          detail: "One review is waiting on you.",
+        }),
+      ],
+      showPaymentsRow: true,
+      drafts: [{ form: "add_departure", href: "/shop/blue-mantis/schedule/board?add=1" }],
+    });
+    const sentence = (text: string) => screen.getByText(text).closest("p");
+    const chore = sentence("One review is waiting on you.");
+    const draft = sentence("A departure you started adding.");
+    const payments = sentence(
+      "Payments aren’t connected, so divers can book and pay at the counter.",
+    );
+    expect(chore).toHaveClass("text-base", "leading-snug");
+    for (const [row, kind] of [
+      [draft, "Unfinished"],
+      [payments, "Setup"],
+    ] as const) {
+      expect(row?.className).toBe(chore?.className);
+      const line = row?.closest("li");
+      if (!line) throw new Error("the desk row rendered outside a list item");
+      // The glyph leads the row, then the kind word, as on every station row.
+      expect(line.firstElementChild?.querySelector("svg")).not.toBeNull();
+      expect(within(line).getByText(kind)).toBeInTheDocument();
+    }
   });
 
   it("renders no payments row once the shop can take payment", () => {
@@ -790,6 +915,68 @@ describe("the two horizon rows", () => {
     expect(week?.parentElement).toHaveClass("sm:rounded-panel", "sm:bg-surface-sunken");
     expect(fold?.className).not.toContain("shadow-bed");
     expect(screen.getByText("This week")).toHaveClass("text-base", "font-semibold");
+  });
+
+  /**
+   * **A phone's pair of horizon rows is ruled like any ledger list** (pixel-craft
+   * class 6, K-230): a rule above Tomorrow, between the two, and under This
+   * week. With the week row present Tomorrow's own top rule was taken away, so
+   * the pair had rules between and below and none above, unlike every list on
+   * the page.
+   */
+  it("keeps Tomorrow's top rule on a phone when This week follows it", () => {
+    const { container } = renderSpine({
+      actions: [
+        action({ id: "today", departure: boat("t1") }),
+        action({ id: "tomorrow", departure: boat("t2") }),
+        action({ id: "friday", departure: boat("t9") }),
+      ],
+      tomorrow: [departure({ tripId: "t2", title: "Night Dive", startsAt: hoursFromNow(26) })],
+    });
+    const fold = container.querySelector("details");
+    expect(fold?.className).not.toContain("border-t-0");
+    expect(fold?.querySelector("summary")).toHaveClass("border-t");
+    const week = screen.getByText("This week").closest("li");
+    expect(week).toHaveClass("border-t", "last:border-b");
+  });
+
+  /**
+   * **Hovering a horizon panel changes something you can see** (pixel-craft
+   * class 7, K-261). From `sm` up the panels are `bg-surface-sunken`, and the
+   * rows inside them hovered to `bg-surface-sunken` too — #ececf1 on #ececf1,
+   * a hover that painted nothing. The panel's own edge steps instead, on both
+   * doors alike; the rows keep their fills for the phone, where no panel is
+   * painted under them.
+   */
+  it("answers a hover on either horizon door with the panel's edge, not a fill the panel hides", () => {
+    const { container } = renderSpine({
+      actions: [
+        action({ id: "today", departure: boat("t1") }),
+        action({ id: "tomorrow", departure: boat("t2") }),
+        action({ id: "friday", departure: boat("t9") }),
+      ],
+      tomorrow: [departure({ tripId: "t2", title: "Night Dive", startsAt: hoursFromNow(26) })],
+    });
+    const fold = container.querySelector("details");
+    const weekPanel = screen.getByText("This week").closest("li")?.parentElement;
+    const step = (element: Element | null | undefined) =>
+      (element?.className ?? "")
+        .split(/\s+/)
+        .filter((name) => /has-\[.*:hover.*\]:inset-ring-border-strong$/.test(name));
+    expect(step(fold)).toHaveLength(1);
+    expect(step(weekPanel)).toEqual(step(fold));
+    // Only where a pointer can hover. `hover:` carries Tailwind's
+    // `@media (hover: hover)` gate and a `:hover` inside `has-[]` does not, so
+    // on a touch tablet a tap that opened Tomorrow left the whole panel ringed
+    // until the next tap somewhere else. The step names the gate itself.
+    expect(step(fold)[0]).toMatch(/^sm:\[@media\(hover:hover\)\]:has-\[/);
+    // Resting, the edge is there and clear, so the hover moves no pixel.
+    expect(fold).toHaveClass("sm:inset-ring", "sm:inset-ring-transparent");
+    expect(weekPanel).toHaveClass("sm:inset-ring", "sm:inset-ring-transparent");
+    // No call site adds a sunken fill of its own inside the sunken panel.
+    expect(fold?.className).not.toContain("[&>summary]:hover:bg-surface-sunken");
+    const weekRow = screen.getByText("This week").closest("li");
+    expect(weekRow?.className.split(/\s+/)).not.toContain("hover:bg-surface-sunken");
   });
 
   it("renders no Tomorrow row on a day with nothing sailing tomorrow", () => {
@@ -1232,6 +1419,107 @@ describe("the evening reading", () => {
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   });
 
+  /**
+   * **A settled station's facts hang beside its mark** (pixel-craft class 3,
+   * K-593). The status, the count and who closed it were three flex siblings
+   * of the mark, so at 390 "head count closed by Sal Moretti" wrapped back
+   * under the check glyph (x 38) rather than under "All home" (x 65). They
+   * are one text block beside the mark now; every word of them still renders.
+   */
+  it("hangs a settled station's count and who closed it beside its mark", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1", booked: 8 })], {
+        headCountCloses: new Map([["t1", { closedAt: hoursFromNow(-3), closedBy: "Sal Moretti" }]]),
+      }),
+    });
+    const label = screen.getByText("All home");
+    const block = label.parentElement;
+    expect(block?.querySelector("svg")).toBeNull();
+    expect(block).toContainElement(screen.getByText(/, 10 back by /));
+    expect(block).toContainElement(screen.getByText("head count closed by Sal Moretti"));
+    expect(block?.parentElement?.querySelector("svg path")).not.toBeNull();
+  });
+
+  it("hangs an open head count's sentence the same way, in its tone, beside the open mark", () => {
+    // The failure path of the same line: a boat whose count did not close
+    // keeps its word, its per-reason sentence and its danger ink, beside the
+    // hollow mark rather than the tick.
+    renderSpine({
+      departures: [],
+      evening: evening([
+        closed({
+          tripId: "t1",
+          status: "unreconciled",
+          gapReason: "missing_diver",
+          diveNumber: 1,
+          uncounted: 1,
+        }),
+      ]),
+    });
+    const label = screen.getByText("Unreconciled");
+    const block = label.parentElement;
+    const sentence = block?.querySelector(".text-danger");
+    expect(sentence?.textContent).toBeTruthy();
+    expect(block?.querySelector("svg")).toBeNull();
+    const row = block?.parentElement;
+    expect(row?.querySelector("svg circle")).not.toBeNull();
+    expect(row?.querySelector("svg path")).toBeNull();
+  });
+
+  /**
+   * The rest of the states that are not "All home" share that line: a boat
+   * still out and an open dock count in warning ink, a boat that never left in
+   * muted ink. Each keeps its word and its sentence beside the hollow mark, and
+   * none of them names who closed a head count nobody closed.
+   */
+  it.each([
+    {
+      word: "Still out",
+      ink: "text-warning-strong",
+      station: {
+        status: "still_out",
+        startsAt: hoursFromNow(-2),
+        endsAt: hoursFromNow(1),
+        ended: false,
+      },
+    },
+    {
+      word: "Dock count open",
+      ink: "text-warning-strong",
+      station: { status: "count_open", gapReason: "no_roll_call" },
+    },
+    {
+      word: "Not departed",
+      ink: "text-muted",
+      station: {
+        status: "not_departed",
+        startsAt: hoursFromNow(6),
+        endsAt: hoursFromNow(9),
+        ended: false,
+      },
+    },
+  ] as const)(
+    "hangs a $word station's sentence beside the hollow mark, in its tone",
+    ({ word, ink, station }) => {
+      renderSpine({
+        departures: [],
+        evening: evening([closed({ tripId: "t1", ...station })], {
+          headCountCloses: new Map([
+            ["t1", { closedAt: hoursFromNow(-3), closedBy: "Sal Moretti" }],
+          ]),
+        }),
+      });
+      const block = screen.getByText(word).parentElement;
+      expect(block?.querySelector(`.${ink}`)?.textContent).toBeTruthy();
+      expect(block?.querySelector("svg")).toBeNull();
+      const row = block?.parentElement;
+      expect(row?.querySelector("svg circle")).not.toBeNull();
+      expect(row?.querySelector("svg path")).toBeNull();
+      expect(screen.queryByText(/closed by/)).toBeNull();
+    },
+  );
+
   it("offers the departure log only to a reader who may generate one", () => {
     renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
     expect(screen.getByRole("link", { name: "Generate log" })).toBeInTheDocument();
@@ -1374,7 +1662,7 @@ describe("the evening reading", () => {
     expect(titles).toEqual(["Dawn Two-Tank", "Night Dive"]);
     // The live station won the trip it shares with the closing list — one
     // departure is one station, never two.
-    expect(screen.getAllByText("Night Dive")).toHaveLength(1);
+    expect(document.body.textContent?.split("Night Dive")).toHaveLength(2);
   });
 });
 
@@ -1563,6 +1851,40 @@ describe("one fact of scale (slice 16b)", () => {
       actions: [action({ id: "blocked", kind: "certification", departure: boat("t1") })],
     });
     expect(screen.getByText(/400th diver of the season/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * **A moment line is pulled up only toward a sentence** (pixel-craft class 4,
+ * K-319). The `-mt-4` tucks a line under the header's "Next up" sentence,
+ * which the page prints only on a day with no station left on the spine. The
+ * season's fact and the morning all-clear render over today's stations, so
+ * there is no sentence above them and the pull aimed at the sky band's edge:
+ * 16px under it, then 40px to the first station, where every other first
+ * block sits the header's 32px under the band.
+ */
+describe("where a moment line sits (K-319)", () => {
+  it("leaves the season's fact the header's own distance under the band", () => {
+    renderSpine({
+      factOfScale: { kind: "first_boat", seasonStart: { month: 5, day: 1 } },
+      actions: [action({ id: "b", departure: boat("t1") })],
+    });
+    expect(screen.getByRole("status")).not.toHaveClass("-mt-4");
+  });
+
+  it("leaves the morning all-clear there too: it needs today's stations, so no sentence is above it", () => {
+    renderSpine({
+      actions: [
+        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+        action({ id: "later", kind: "waiver", departure: boat("t9") }),
+      ],
+    });
+    expect(screen.getByRole("status")).not.toHaveClass("-mt-4");
+  });
+
+  it("still tucks the all-home line under the sentence an evening's header ends on", () => {
+    renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
+    expect(screen.getByRole("status")).toHaveClass("-mt-4");
   });
 });
 

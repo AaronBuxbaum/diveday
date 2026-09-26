@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
 
@@ -19,6 +20,9 @@ import { SUB_TITLE_CLASS } from "@/components/ui/typography";
  * spaced list (the pixel probe measured the old fill at 0px from the title,
  * 2026-09-25).
  */
+/** The row's item: its rule and the 8px that keep the chip off it. Shared with its skeleton. */
+const ROW_ITEM_CLASS = "border-b border-border py-2";
+
 export function HubGuideRow({
   href,
   title,
@@ -29,7 +33,7 @@ export function HubGuideRow({
   summary: string;
 }) {
   return (
-    <li className="border-b border-border py-2">
+    <li className={ROW_ITEM_CLASS}>
       <Link
         href={href}
         className="group -mx-4 flex items-start gap-6 rounded-lg px-4 py-4 transition-colors hover:bg-surface"
@@ -43,6 +47,27 @@ export function HubGuideRow({
           className="mt-1 size-5 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-primary motion-reduce:transition-none"
         />
       </Link>
+    </li>
+  );
+}
+
+/**
+ * **A row, as bars** (K-406): the item's own rule and 8px, the link's 16px
+ * above and below, a 28px title line (`SUB_TITLE_CLASS`) and a 28px line per
+ * line the summary wraps to — so the row lands where its bars stood. The
+ * skeleton's rows used to be a 24px title bar and one 20px summary bar, 105px
+ * for rows of 111–139px at 1280 and 167–223 at 390. How far a guide's summary
+ * wraps is the hub's business (`HUB_ROW_SUMMARY_LINES`).
+ */
+export function HubGuideRowSkeleton({ summaryLines }: { summaryLines: SkeletonLines }) {
+  return (
+    <li className={ROW_ITEM_CLASS}>
+      <div className="py-4">
+        <div className="h-7 w-full max-w-xs rounded bg-surface-sunken" />
+        <div className="mt-1.5">
+          <SkeletonLineBars lines={summaryLines} height="h-7" width="w-full max-w-lg" />
+        </div>
+      </div>
     </li>
   );
 }

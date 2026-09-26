@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { ReviewAggregate } from "@/lib/reviews";
 
@@ -25,6 +26,14 @@ import type { ReviewAggregate } from "@/lib/reviews";
  *
  * No accent ink: the coral budget's table gives this surface no moment
  * (clearwater decision 11). Moderation is work, not a celebration.
+ *
+ * **It breaks at the dot, never inside a sentence** (pixel-craft class 8,
+ * K-249). One joined string gave every space a break, and at 390 the line
+ * wrapped after "· this month", so its first line read as the month's reading
+ * of 83 reviews. Each sentence is an `inline-block`: it keeps together while
+ * it fits a line, and wraps inside itself only when it cannot, so it never
+ * runs off a narrow screen as a `whitespace-nowrap` one would. The dot is
+ * glued to the sentence before it, so no line opens on "·".
  */
 export function ReviewsAggregateLine({
   aggregate,
@@ -52,6 +61,13 @@ export function ReviewsAggregateLine({
     );
   }
   return (
-    <p className={`text-sm text-muted tabular-nums ${className}`.trim()}>{parts.join(" · ")}</p>
+    <p className={`text-sm text-muted tabular-nums ${className}`.trim()}>
+      {parts.map((part, index) => (
+        <Fragment key={part}>
+          {index > 0 ? "\u00A0· " : null}
+          <span className="inline-block">{part}</span>
+        </Fragment>
+      ))}
+    </p>
   );
 }

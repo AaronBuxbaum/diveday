@@ -118,6 +118,7 @@
     "summaryAfter": "{count, plural, =0 {Nothing is waiting on you.} one {# thing still needs you.} other {# things still need you.}}",
     "quietSentence": "No boats today, and nothing is waiting on you.",
     "deskLabel": "At the desk",
+    "deskPaymentsKind": "Setup",
     "deskPaymentsRow": "Payments aren’t connected, so divers can book and pay at the counter.",
     "deskPaymentsAction": "Open payment settings",
     "tomorrow": "Tomorrow · {date}",

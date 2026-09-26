@@ -98,6 +98,36 @@ describe("ConditionsLine — the automated marine outlook", () => {
   });
 });
 
+/**
+ * **A wrap never strands a "·"** (pixel-craft class 8, K-483). Each dot was a
+ * flex item of its own, so a line could end on it: "…18 m visibility ·" over
+ * "Glassy" at 390. Each reading now carries the dot before it in one item, so
+ * the two wrap together, and the row stands the dot and its gap (12px) left of
+ * the column inside a line that clips there: the dot that starts a line — the
+ * first reading's, and any a wrap moves to the front — is cut, and every other
+ * sits between two readings as it did.
+ */
+describe("ConditionsLine — the separators", () => {
+  it("keeps each dot with the reading after it, and clips the one that starts a line", () => {
+    renderAutomated();
+    const item = screen.getByText("Light chop").parentElement;
+    expect(item).toHaveClass("inline-flex", "gap-x-2");
+    const row = item?.parentElement;
+    expect(row).toHaveClass("flex", "flex-wrap", "gap-x-2", "-ms-3");
+    expect(row?.parentElement).toHaveClass("overflow-x-clip");
+    expect(row?.children).toHaveLength(2);
+    for (const reading of row?.children ?? []) {
+      // The dot is a sibling of the reading, never inside it, and a 4px box:
+      // with the 8px gap, exactly the row's 12px shift.
+      const [dot, words] = [...reading.children];
+      expect(dot).toHaveTextContent("·");
+      expect(dot).toHaveAttribute("aria-hidden", "true");
+      expect(dot).toHaveClass("w-1");
+      expect(words).not.toHaveTextContent("·");
+    }
+  });
+});
+
 describe("ConditionsLine — the crew's own prediction", () => {
   const trip = {
     conditionsSummary: "Calm morning, building after lunch.",
@@ -154,25 +184,17 @@ describe("ConditionsLine — with no forecast at all", () => {
   });
 
   /**
-   * **Flush under the pitch's door, its rule is the door's close** (pixel-craft
-   * class 6). 24px below it, the door's label sat in an 80px band between two
-   * rules, 29px under one and 51px over the other.
+   * **The page sets its distance, the line opens on its rule** (pixel-craft
+   * class 4, K-162). The trip page's `space-y-10` stands it a section below
+   * what precedes it, and puts it flush under the pitch's door, where its rule
+   * is the door's close (class 6). It carried its own `mt-6`, 24px where the
+   * page's other sections stood 32 and 40.
    */
-  it("stands 24px below the page above it, or flush under the pitch's door", () => {
-    const props = {
-      shop,
-      trip: { waterTemperatureC: null } as Trip,
-      crewPrediction: false,
-      automatedForecast: automated(),
-      crewLanguages: null,
-      locale: DEFAULT_DIVER_LOCALE,
-    };
-    const { container, rerender } = render(<ConditionsLine {...props} />);
-    const section = () => container.querySelector("section");
-    expect(section()).toHaveClass("mt-6", "border-t");
-    rerender(<ConditionsLine {...props} underDoor />);
-    expect(section()).toHaveClass("border-t");
-    expect(section()).not.toHaveClass("mt-6");
+  it("opens on its rule and carries no margin of its own", () => {
+    const { container } = renderAutomated();
+    const section = container.querySelector("section");
+    expect(section).toHaveClass("border-t", "pt-4");
+    expect([...(section?.classList ?? [])].filter((token) => /^-?m[ty]?-/.test(token))).toEqual([]);
   });
 
   it("renders nothing at all when there is neither a forecast nor a language", () => {

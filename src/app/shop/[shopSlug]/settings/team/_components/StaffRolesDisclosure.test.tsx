@@ -62,6 +62,19 @@ describe("StaffRolesDisclosure", () => {
     expect(toggle()).toHaveClass("-mx-2", "px-2", "hover:bg-surface-sunken");
   });
 
+  /**
+   * Hovered, the roles line lit a pill that hugged its words (`w-fit`, about
+   * 166px on "Owner and Manager"), where every disclosure row around it lights
+   * the row's whole width, 726px at 1280 with the caret at the same x
+   * (K-522). The toggle takes the row's width.
+   */
+  it("lights the row's whole width on hover, like the disclosure rows around it", () => {
+    renderRow();
+
+    expect(toggle()).not.toHaveClass("w-fit");
+    expect(toggle()).toHaveClass("flex");
+  });
+
   it("saves the row when it closes, posting that person and their checked roles", async () => {
     const action = vi.fn();
     renderRow({ action });

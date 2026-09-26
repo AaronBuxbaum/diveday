@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { SettledCheck } from "@/components/ui/SettledCheck";
+import { SETTLED_CHECK_TEXT_INSET } from "@/components/ui/settled-mark";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 import type { ThreadStepId, ThreadStepState } from "@/lib/thread-steps";
 
@@ -105,6 +106,24 @@ export type ThreadSpineStep = {
 };
 
 /**
+ * One step's row between its hairlines, open or closed, settled or not: the
+ * `<summary>` of a step that opens is this row too, so a closed step centres
+ * its name exactly where a settled line does.
+ */
+const STEP_ROW_CLASS = "flex min-h-14 flex-col justify-center gap-1 py-3";
+
+/**
+ * An *open* step's head lends its body the 8px that clear the focus ring
+ * (K-161): 4px of bottom where the closed row has 12, so the fact stands 12px
+ * over the form as it did before the ring fix rather than 20. The floor gives
+ * up the same 8px, so a head with no fact under it keeps its name 16px down
+ * whether the step is open or closed, instead of dropping 4px as it opens.
+ * Only while open: closed, the head is the row between two hairlines, and its
+ * even `py-3` is what centres it there.
+ */
+const OPEN_STEP_HEAD_CLASS = "group-open/step:min-h-12 group-open/step:pb-1";
+
+/**
  * The spine itself: hairline rows straight on the page background.
  *
  * **At most one step is open at rest**, and it stays that way after a tap —
@@ -144,13 +163,21 @@ export function ThreadSpine({
                   not `<p>`s: `<summary>`'s content model takes phrasing (or a
                   single heading), and a paragraph in here is invalid markup
                   that browsers silently re-parent. */}
-              <summary className="flex min-h-14 cursor-pointer list-none flex-col justify-center gap-1 py-3 select-none [&::-webkit-details-marker]:hidden">
+              <summary
+                className={`${STEP_ROW_CLASS} ${OPEN_STEP_HEAD_CLASS} cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden`}
+              >
                 <StepHead step={step} />
               </summary>
-              <div className="pb-6">{step.body}</div>
+              {/* `pt-2`: the summary's focus ring reaches 5px below it, and
+                  the body is a later sibling that paints over whatever it
+                  overlaps — flush, "Sign your waiver" hid the ring's bottom
+                  arm (K-161). The open head lends these 8px from its own
+                  bottom (`OPEN_STEP_HEAD_CLASS`), so the fact still stands
+                  12px over the form. */}
+              <div className="pt-2 pb-6">{step.body}</div>
             </AutoOpenDetails>
           ) : (
-            <div className="flex min-h-14 flex-col justify-center gap-1 py-3">
+            <div className={STEP_ROW_CLASS}>
               <StepHead step={step} />
             </div>
           )}
@@ -184,7 +211,10 @@ function StepHead({ step }: { step: ThreadSpineStep }) {
           </span>
         ) : null}
       </span>
-      {step.line ? <span className="ps-8 text-sm text-muted">{step.line}</span> : null}
+      {/* Hung on the name's own edge: the mark's width plus its gap. */}
+      {step.line ? (
+        <span className={`${SETTLED_CHECK_TEXT_INSET} text-sm text-muted`}>{step.line}</span>
+      ) : null}
     </>
   );
 }

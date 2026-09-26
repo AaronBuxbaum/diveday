@@ -162,14 +162,17 @@ export default async function PublicCoursesPage({
                 ? t("courses.index.requires", { level: t(DIVER_CERTIFICATION_LEVEL_KEYS[level]) })
                 : t("courses.index.groupStart")}
             </GroupLabel>
-            <ul className="mt-2 divide-y divide-border border-y border-border">
+            {/* The ledger's geometry, as on `/dive`: the list steps 8px out so
+                its rules run with the row's square fill, and the row keeps the
+                room as its `px-2` (K-513). */}
+            <ul className="-mx-2 mt-2 divide-y divide-border border-y border-border">
               {courses.map((course) => {
                 const totalCents = courseTotalCents(course);
                 return (
                   <li key={course.id}>
                     <Link
                       href={publicCoursePath(shopSlug, course.slug)}
-                      className="group -mx-3 flex gap-4 rounded-lg px-3 py-5 transition-colors hover:bg-surface-sunken focus-visible:focus-ring-inset"
+                      className="group flex gap-4 px-2 py-5 transition-colors hover:bg-surface-sunken focus-visible:focus-ring-inset"
                     >
                       {/* The course's own face, decorative (`alt=""` — the
                           title beside it names the course). A course with no

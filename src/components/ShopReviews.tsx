@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { SkeletonLineBars } from "@/components/ShopPageHeader";
 import { StarRating } from "@/components/StarRating";
-import { LedgerRow } from "@/components/ui/ledger";
+import { buttonClass, tapTargetLineClass } from "@/components/ui/button";
+import { LedgerRow, ledgerRowBoxClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { PublicReview } from "@/db/reviews";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -56,12 +58,17 @@ export function ShopReviews({
         >
           {t("reviews.sectionTitle")}
         </h2>
-        <Link
-          href={publicReviewsPath(shopSlug)}
-          className="text-sm font-medium text-primary hover:underline focus-visible:underline"
-        >
-          {t("reviews.allTitle")}
-        </Link>
+        {/* A 44px door on the words' 20px line: the target bleeds above and
+            below, and the baseline row stays the heading's height. Spelled
+            as the storefront's other text doors are, so all draw one ring. */}
+        <span className={tapTargetLineClass}>
+          <Link
+            href={publicReviewsPath(shopSlug)}
+            className={buttonClass({ variant: "link", size: "sm", flush: true })}
+          >
+            {t("reviews.allTitle")}
+          </Link>
+        </span>
       </div>
       <ReviewLedger
         reviews={reviews.slice(0, SHELF_QUOTES)}
@@ -69,6 +76,45 @@ export function ShopReviews({
         timezone={timezone}
         t={t}
       />
+    </section>
+  );
+}
+
+/**
+ * **The shelf, as a skeleton** — heading, the all-reviews door, and
+ * `ReviewLedger`'s two rows (design principle 1), for the storefront's
+ * `<Suspense>` fallback while the published reviews stream in.
+ *
+ * **Every bar is its line's own box** (pixel-craft class 11, K-368). The bars
+ * were under the real line boxes, so a row was 97px against 113 loaded at
+ * 1280 and the page below dropped about 36px when the reviews landed (104px
+ * at 390). The numbers are read off the shelf and must move with it:
+ *   - `h-7`: the heading's `text-lg` line;
+ *   - `h-6`: the stars' line, which is the row's 16px/24px strut (the 16px
+ *     star box stands on its baseline inside it);
+ *   - `mt-1.5` and `h-6`: the quote's `text-base` line, two of them below
+ *     `sm`, where a diver's sentence wraps;
+ *   - `mt-1.5` and `h-5`: the meta's `text-sm` line;
+ *   - `py-4`: `LedgerRow`'s `xl` inset, and the ledger row's box.
+ */
+export function ShopReviewsSkeleton({ className = "" }: { className?: string }) {
+  return (
+    <section aria-hidden="true" className={`animate-pulse ${className}`.trim()}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <div className="h-7 w-40 rounded bg-surface-sunken" />
+        <div className="h-5 w-24 rounded bg-surface-sunken" />
+      </div>
+      <div className="mt-4 flex flex-col">
+        {[0, 1].map((row) => (
+          <div key={row} className={`py-4 ${ledgerRowBoxClass}`}>
+            <div className="h-6 w-24 rounded bg-surface-sunken" />
+            <div className="mt-1.5">
+              <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-6" width="w-80 max-w-full" />
+            </div>
+            <div className="mt-1.5 h-5 w-56 max-w-full rounded bg-surface-sunken" />
+          </div>
+        ))}
+      </div>
     </section>
   );
 }

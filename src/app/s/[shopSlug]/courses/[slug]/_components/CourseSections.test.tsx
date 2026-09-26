@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Course } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
-import { CourseGallery, CourseHero, CourseSessions } from "./CourseSections";
+import { CourseGallery, CourseHero, CourseSchedule, CourseSessions } from "./CourseSections";
 
 /**
  * The course hero's price is a *list* price, so it follows `shops.currency` —
@@ -141,6 +141,35 @@ describe("CourseGallery captions (DATA-L4)", () => {
 });
 
 /**
+ * The day-by-day timeline: a ring on a rail beside each day's title.
+ */
+describe("CourseSchedule's day marks", () => {
+  const days = [
+    { title: "Day 1 — theory and pool", items: ["Knowledge review"] },
+    { title: "Day 2 — confined water and first open water", items: [] },
+  ];
+
+  /**
+   * **The ring is centred on its title's line** (pixel-craft class 2, K-562).
+   * The 11px ring beside a 28px `text-lg` line sat at 6px, 2px above the
+   * title's cap centre; at 8px its centre is the caps', and it starts where
+   * the rail behind it starts.
+   */
+  it("hangs each day's ring 8px down, where the rail starts", () => {
+    const { container } = render(<CourseSchedule days={days} locale="en-US" t={t} />);
+
+    const rail = container.querySelector("#how-it-runs .relative > span[aria-hidden]");
+    expect(rail?.className).toMatch(/\btop-2\b/);
+    const rings = Array.from(container.querySelectorAll("#how-it-runs li > span[aria-hidden]"));
+    expect(rings).toHaveLength(2);
+    for (const ring of rings) {
+      expect(ring.className).toMatch(/\btop-2\b/);
+      expect(ring.className).not.toMatch(/\btop-1\.5\b/);
+    }
+  });
+});
+
+/**
  * The featured slot in the booking panel answers "when can I start?", so it
  * holds the soonest *bookable* session — featuring a full one would put a
  * waitlist in the page's most prominent slot (and leave the page with no
@@ -225,5 +254,18 @@ describe("CourseSessions featured date", () => {
     expect(
       screen.getByText(/No dates on the books right now. This course runs on request/),
     ).toBeInTheDocument();
+  });
+
+  /**
+   * **The panel's corner is on the ladder** (pixel-craft class 6, K-378). It
+   * was `rounded-3xl`, 24px, a rung the ladder does not have, under a hero
+   * panel at the panel rung's 20px on the same page.
+   */
+  it("rounds the dates panel at the panel rung", () => {
+    const { container } = render(<CourseSessions sessions={[]} {...props} />);
+
+    const panel = container.querySelector("#dates > div");
+    expect(panel?.className).toMatch(/\brounded-panel\b/);
+    expect(panel?.className).not.toMatch(/\brounded-3xl\b/);
   });
 });

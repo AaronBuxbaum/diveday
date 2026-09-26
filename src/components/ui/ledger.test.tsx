@@ -869,6 +869,66 @@ describe("LedgerRow", () => {
     expect(container.querySelector("svg")).toBeNull();
   });
 
+  /**
+   * **A plain row among doors keeps the door's slot** (pixel-craft class 3).
+   * The inbox mixes the two: a stranger's message has no record to open, so
+   * with nothing after it its date would end on the chevrons' edge, 18px
+   * right of every other date in the column — and it ended 50px left of them
+   * while a Delete stood beside it (K-459). The slot is the door's own glyph,
+   * unseen, rather than a spacer a call site sizes by hand: a 16px guess would
+   * have outlived the glyph's crop to its 5.7px of ink by 10px.
+   */
+  it("keeps the door glyph's box, unseen, on a plain row that asks for it", () => {
+    const { container } = render(
+      <LedgerRow as="div" reserveDoorSlot trailing={<span>Jul 20, 7:30 AM</span>}>
+        Unknown sender
+      </LedgerRow>,
+    );
+    const row = container.firstElementChild as HTMLElement;
+    const slot = row.lastElementChild as HTMLElement;
+    expect(slot.tagName).toBe("svg");
+    expect(slot).toHaveAttribute("viewBox", "7.75 0 8.5 24");
+    expect(slot).toHaveClass("h-4", "w-auto", "shrink-0", "invisible");
+    expect(slot).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("Jul 20, 7:30 AM").parentElement?.nextElementSibling).toBe(slot);
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("keeps a first-line door's slot in the door's own baseline box, unseen", () => {
+    const door = render(
+      <LedgerRow
+        as="div"
+        align="first-line"
+        stacked
+        kind={{ word: "Email", tone: "neutral" }}
+        href="/shop/blue-mantis/divers/1#conversation"
+        linkLabel="Open the record for Priya Sharma"
+        trailing={<span>Jul 21</span>}
+      >
+        Priya Sharma
+      </LedgerRow>,
+    );
+    const doorBox = door.container.querySelector("svg")?.parentElement as HTMLElement;
+    const doorClasses = [...doorBox.classList];
+    cleanup();
+    const { container } = render(
+      <LedgerRow
+        as="div"
+        align="first-line"
+        stacked
+        kind={{ word: "Email", tone: "neutral" }}
+        reserveDoorSlot
+        trailing={<span>Jul 20</span>}
+      >
+        Unknown sender
+      </LedgerRow>,
+    );
+    const slot = container.querySelector("svg")?.parentElement as HTMLElement;
+    expect(slot.parentElement).toBe(container.firstElementChild);
+    expect(slot).toHaveClass("invisible");
+    expect([...slot.classList].filter((token) => token !== "invisible")).toEqual(doorClasses);
+  });
+
   it("gives the sentence its own line below sm, and one line from sm up", () => {
     // The phone reading the `TodayPhone` artboard draws: the kind and the fix
     // share the first line, the sentence takes the width beneath them. It is a
@@ -1069,6 +1129,26 @@ describe("LedgerRow", () => {
     );
     expect(trailing.className).not.toMatch(/ms-auto/);
     expect(content.parentElement?.querySelector("svg")).toHaveClass("max-sm:order-2");
+  });
+
+  /**
+   * **The fix's own line takes a tap only on the fix** (pixel-craft class 7,
+   * K-458). Dropped to a line of its own, the trailing slot is a `relative
+   * z-10` box as wide as the row, 4px under the content. On a request with no
+   * timing and no message it lay over the lower 8px of the address's 44px
+   * target (`after:-inset-y-3`) across the whole width, so a tap there landed
+   * on an empty box and the address was a 36px target; over a door row it
+   * kept the whole line beside the fix out of the door. The box lets a tap
+   * through, and what it holds still takes one.
+   */
+  it("lets a tap through its fix's line everywhere but on the fix", () => {
+    render(
+      <LedgerRow as="div" stacked trailing={<a href="/shop/blue-mantis/bookings/new">Book</a>}>
+        <p>Tomás Ferreira</p>
+      </LedgerRow>,
+    );
+    const trailing = screen.getByRole("link", { name: "Book" }).parentElement as HTMLElement;
+    expect(trailing).toHaveClass("max-sm:pointer-events-none", "max-sm:*:pointer-events-auto");
   });
 
   it("stays one line when a row is not stacked — the default is unchanged", () => {

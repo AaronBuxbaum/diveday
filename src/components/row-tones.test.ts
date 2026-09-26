@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ROLL_CALL_ROW_TONE } from "./row-tones";
+import { ROLL_CALL_ROW_TONE, rollCallRuleClass } from "./row-tones";
 
 const tokens = (tone: string) => tone.split(/\s+/);
 /** `ring-1`, `ring-2`, `ring`: a ring's width, as opposed to its colour or `ring-inset`. */
@@ -28,5 +28,35 @@ describe("the roll-call row tones", () => {
       .filter(([, tone]) => tokens(tone).some(ringWidth))
       .map(([state]) => state);
     expect(ringed).toEqual(["notBackAboard"]);
+  });
+});
+
+/**
+ * **The hairline between two roll-call rows is drawn inside the row, in the
+ * rule colour** (pixel-craft class 12, K-165). A tone colours the row's whole
+ * border for its 4px stripe, so a `divide-*` rule on the row itself took the
+ * tone's colour: the crew list's rules read `border-strong`, and would read
+ * green or red on a boarded or missing row. Both roll-call lists draw it off
+ * this one helper, skipping it above whichever row each medium shows first.
+ */
+describe("the rule between two roll-call rows", () => {
+  const classes = (value: string) => value.split(/\s+/);
+
+  it("skips the rule above the first row on screen and on paper, separately", () => {
+    expect(classes(rollCallRuleClass({ firstOnScreen: true, firstOnPaper: false }))).toEqual(
+      expect.arrayContaining(["border-t-0", "print:border-t"]),
+    );
+    expect(classes(rollCallRuleClass({ firstOnScreen: false, firstOnPaper: true }))).toEqual(
+      expect.arrayContaining(["border-t", "print:border-t-0"]),
+    );
+  });
+
+  it("draws it in the rule colour and never a tone's", () => {
+    const rule = classes(rollCallRuleClass({ firstOnScreen: false, firstOnPaper: false }));
+    expect(rule).toContain("border-border");
+    const toneColours = Object.values(ROLL_CALL_ROW_TONE)
+      .flatMap(classes)
+      .filter((name) => /^border-(?!l-|dashed)/.test(name));
+    for (const colour of toneColours) expect(rule).not.toContain(colour);
   });
 });

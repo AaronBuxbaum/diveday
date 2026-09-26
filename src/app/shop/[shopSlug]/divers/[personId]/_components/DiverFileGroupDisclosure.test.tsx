@@ -90,6 +90,26 @@ describe("DiverFileGroupDisclosure", () => {
   });
 
   /**
+   * **The door's ends are the column's** (pixel-craft class 3). The summary
+   * paints no fill of its own, so a `px-1` there was an inset with nothing to
+   * hold: the caret started 4px right of the status ledger's kind above it and
+   * the fact ended 4px short of the fix link's end, on every group of the
+   * record.
+   */
+  it("starts the caret and ends the fact on the column's own edges", () => {
+    render(
+      <DiverFileGroupDisclosure id="notes" label="Diver notes" summary="1 note">
+        <p>Note body</p>
+      </DiverFileGroupDisclosure>,
+    );
+    const summary = screen.getByTestId("diver-file-group-notes").querySelector("summary");
+    const inline = [...(summary?.classList ?? [])].filter((token) =>
+      /^(?:[a-z-]+:)*-?(?:p[xse]|m[xse])-/.test(token),
+    );
+    expect(inline).toEqual([]);
+  });
+
+  /**
    * The row's own label is the group's heading, and it carries the fragment the
    * `?notice=` redirects and the prep panel's `#support` link land on. A second
    * uppercase copy of it inside the body was what made the desktop record read
@@ -139,6 +159,35 @@ describe("DiverFileGroupDisclosure", () => {
       "max-sm:break-words",
     );
     expect(value).not.toHaveClass("shrink-0");
+  });
+
+  /**
+   * From `sm` up a stacked fact shares the label's line, and the fact is what
+   * gives way. It used to be `sm:shrink-0` beside a `min-w-0 flex-1` label, so
+   * a long fact (an unverified card's amber sentence) kept its whole width and
+   * the label collapsed to what was left: the pixel probe measured "Certification
+   * records" in a 20px box at 640, its words running 71px out under the fact.
+   */
+  it("keeps the label on one line from sm up and wraps a long fact beside it", () => {
+    render(
+      <DiverFileGroupDisclosure
+        id="certifications"
+        label="Certification records"
+        summary="PADI Advanced Open Water · self-declared, not yet checked against the card"
+        summaryTone="warning"
+        stacked
+      >
+        <p>Certification rows</p>
+      </DiverFileGroupDisclosure>,
+    );
+
+    const summary = screen.getByTestId("diver-file-group-certifications").querySelector("summary");
+    const label = summary?.querySelector("h2");
+    const value = summary?.querySelector("span.text-sm");
+
+    expect(label).toHaveClass("flex-1", "sm:min-w-max");
+    expect(value).toHaveClass("min-w-0", "sm:text-end");
+    expect(value).not.toHaveClass("sm:shrink-0");
   });
 });
 

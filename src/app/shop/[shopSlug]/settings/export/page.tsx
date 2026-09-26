@@ -19,6 +19,7 @@ import { nowDate } from "@/lib/clock";
 import { requireShopSurface } from "@/lib/session";
 import type { NoticeCodeOf, NoticeTone } from "@/lib/staff-notices";
 import { utcToWallTime } from "@/lib/zoned";
+import { settingsPaneClass } from "../_components/settings-pane";
 import { BackupsSection, deliveryErrorText } from "./_components/BackupsSection";
 import type { Notice } from "./actions";
 import { DownloadExportButton } from "./DownloadExportButton";
@@ -151,7 +152,7 @@ export default async function DataOutSettingsPage({
   const crewSheetMonths = Array.from({ length: 12 }, (_, back) => addMonths(thisMonth, -back));
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
@@ -258,8 +259,10 @@ export default async function DataOutSettingsPage({
             same owner/manager gate as the bundle above it, on the one "your
             data leaves with you" surface (ADR 20260806-one-data-out-surface).
             A plain GET form: the month is a path the browser navigates to, so
-            the download needs no client component and no popup. */}
-        <SectionCard>
+            the download needs no client component and no popup. `lg`, the
+            inset of the bundle above it and every Backups card below, so the
+            page's headings share one left edge. */}
+        <SectionCard padding="lg">
           <h2 className={SECTION_TITLE_CLASS}>{t("settings.crewSheet.heading")}</h2>
           <p className="mt-1 max-w-2xl text-sm text-muted">{t("settings.crewSheet.description")}</p>
           {/* The one sentence that earns its place here: hours and a tips

@@ -22,6 +22,7 @@ export type ResendConfirmationCopy = {
  * One-tap re-send of a failed booking confirmation on the Today queue. Posts the
  * shared server action in place and reports the outcome inline, so the row is a
  * fix rather than a dead link. Falls back to a plain form post before hydration.
+ * `sm`, like every other fix in a ledger row (`button.ts`).
  */
 export function ResendConfirmationControl({
   shopSlug,
@@ -51,7 +52,11 @@ export function ResendConfirmationControl({
         <input type="hidden" name="bookingId" value={bookingId} />
         <SubmitButton
           pendingLabel={copy.resending}
-          className={buttonClass({ variant: "secondary", className: "w-full shrink-0 sm:w-auto" })}
+          className={buttonClass({
+            variant: "secondary",
+            size: "sm",
+            className: "w-full shrink-0 sm:w-auto",
+          })}
         >
           {label}
         </SubmitButton>

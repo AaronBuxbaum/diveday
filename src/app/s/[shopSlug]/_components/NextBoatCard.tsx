@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
 
@@ -99,7 +99,9 @@ export function NextBoatCard({
   return (
     <SectionCard as="section" ariaLabel={eyebrow} className="flex h-full flex-col gap-4">
       <div className="min-w-0 flex-1">
-        <p className={EYEBROW_CLASS}>{eyebrow}</p>
+        {/* The rung the Right now and In season panels beside it use; the
+            lagoon ink is this card's, the page's subject. */}
+        <p className={groupLabelClass("primary")}>{eyebrow}</p>
         {/* The departure time is the figure a returning diver came to check,
             with the day reading as its caption (decision 3: numbers that lead
             render as figures). */}
@@ -109,24 +111,41 @@ export function NextBoatCard({
         </p>
         <h2 className="mt-1 text-lg font-medium text-pretty">{title}</h2>
         {description ? <p className="mt-2 line-clamp-2 text-sm text-muted">{description}</p> : null}
+        {/* Each dot is an element of its own, with the row's gap before it
+            and its fact's same gap after; opening the fact with "· " put the
+            gap before the dot and one space after. The dot and its fact are
+            one item of the wrapping row, so a line never ends on a dot. The
+            spaces are for anything reading the text; a flex row renders none
+            of them. */}
         <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-sm tabular-nums">
           <span className="font-medium">{spots}</span>
           {price ? (
-            <span className="text-muted">
-              · {price} {t("common.perDiver")}
-            </span>
+            <>
+              {" "}
+              <span className="flex items-baseline gap-x-2 text-muted">
+                <span aria-hidden="true">·</span>{" "}
+                <span>
+                  {price} {t("common.perDiver")}
+                </span>
+              </span>
+            </>
           ) : null}
           {/* Why this is not the 7:00 AM boat on the week below. Quiet ink, one
               fragment on the line the card already has, and absent entirely
               when there is nothing to explain. */}
           {skipped > 0 ? (
-            <span className="text-muted">
-              ·{" "}
-              {t("schedule.nextWithSpace.earlierFull", {
-                count: skipped,
-                time: firstSkippedTime ?? "",
-              })}
-            </span>
+            <>
+              {" "}
+              <span className="flex items-baseline gap-x-2 text-muted">
+                <span aria-hidden="true">·</span>{" "}
+                <span>
+                  {t("schedule.nextWithSpace.earlierFull", {
+                    count: skipped,
+                    time: firstSkippedTime ?? "",
+                  })}
+                </span>
+              </span>
+            </>
           ) : null}
         </p>
       </div>

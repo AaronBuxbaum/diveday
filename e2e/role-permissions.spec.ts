@@ -41,11 +41,12 @@ async function firstDiverDetailHref(page: Page): Promise<string> {
 }
 
 async function firstTripManageHref(page: Page): Promise<string> {
-  // Signed-in staff see the schedule's cards link straight to trip management.
+  // Signed-in staff see the schedule's rows link straight to trip management.
+  // By the row's door, not the first trip link: a row's flags come before it
+  // and link to the trip's `#details` or `/manifest?checkpoint=…`.
   await page.goto(`/shop/${SHOP}/schedule/board`);
   const href = await page
-    .locator(`a[href^="/shop/${SHOP}/trips/"]`)
-    .filter({ visible: true })
+    .locator("[data-week-board] a[data-departure-door]")
     .first()
     .getAttribute("href");
   if (!href) throw new Error("no trip management link found");

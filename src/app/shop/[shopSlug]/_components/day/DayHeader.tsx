@@ -76,10 +76,15 @@ export function DayHeader({
               <h1 className="font-rounded text-[34px] leading-10 font-bold tracking-tight">
                 {date}
               </h1>
-              <p className="mt-1 text-[15px] text-(--sky-ink-soft)">{summary}</p>
             </div>
             {action ? <div className="ms-auto shrink-0">{action}</div> : null}
           </div>
+          {/* **Under the date's row, not in it** (pixel-craft K-523). The
+              action holds its column the row's full height, so a summary
+              beside it wrapped in what the pill left: three lines at 390,
+              "dock." alone on the last, empty sky to its right. Here it runs
+              the band's whole measure. */}
+          <p className="mt-1 text-[15px] text-(--sky-ink-soft)">{summary}</p>
           {strip ? <DayStrip {...strip} className="mt-3 h-24 w-full sm:h-28" /> : null}
           {almanac ? <p className="mt-2 text-[13px] text-(--sky-ink-soft)">{almanac}</p> : null}
         </div>

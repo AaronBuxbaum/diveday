@@ -179,6 +179,64 @@ describe("the certification records door", () => {
   });
 
   /**
+   * **The fact wraps between cards, never inside one** (pixel-craft class 8).
+   * On a phone the door's fact takes a line of its own and wraps where the
+   * width runs out, so "PADI Advanced Open Water · Deep — confirm to" ended
+   * one line and a stray "clear" began the next, reading as the state of the
+   * Nitrox card after it. Every space inside a card's phrase, and the one
+   * before its separator, is a no-break space: the only place left to break
+   * is after a "·".
+   */
+  it("keeps each card's phrase whole when the fact wraps", () => {
+    renderGroup(
+      diver({
+        certifications: [
+          {
+            id: "c1",
+            agency: "padi",
+            level: "advanced_open_water",
+            status: "verified",
+            identifier: "1234",
+            selfDeclaredAt: null,
+          },
+        ],
+        specialtyCertifications: [
+          {
+            id: "s1",
+            agency: "padi",
+            specialty: "deep",
+            status: "verified",
+            identifier: "4321",
+            selfDeclaredAt: null,
+            importedAt: new Date("2026-08-01T10:00:00.000Z"),
+            reviewedAt: null,
+          },
+        ],
+        nitroxCertifications: [
+          {
+            id: "n1",
+            agency: "padi",
+            status: "verified",
+            identifier: "5678",
+            selfDeclaredAt: null,
+            importedAt: new Date("2026-08-01T10:00:00.000Z"),
+            reviewedAt: null,
+          },
+        ],
+      } as unknown as Partial<DiverProfile>),
+    );
+
+    const fact = screen.getByText(/Deep — confirm to clear/);
+    const text = fact.textContent ?? "";
+    expect(text.replace(/\s+/g, " ")).toBe(
+      "PADI Advanced Open Water · Deep — confirm to clear · Nitrox — confirm to clear",
+    );
+    const breaks = [...text].flatMap((char, index) => (char === " " ? [index] : []));
+    expect(breaks).toHaveLength(2);
+    for (const index of breaks) expect(text[index - 1], text).toBe("·");
+  });
+
+  /**
    * The asymmetry `certificationCardRowState` takes `kind` for: an imported
    * *level* card is genuinely valid on arrival, so its confirm is a nudge and
    * the door must not invent a gate the readiness engine does not enforce.

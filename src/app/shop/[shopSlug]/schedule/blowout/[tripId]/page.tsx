@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
@@ -9,14 +8,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
+import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { type BlowoutDiverState, getTripBlowout } from "@/db/blowouts";
 import type { PaymentStatus } from "@/db/schema";
 import { getTripRoster, getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { displayStoredPhone } from "@/lib/forgiving-fields";
+import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
@@ -35,6 +34,12 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Weather blow-out — DiveDay",
 };
+
+/**
+ * Between an offered departure's title and its date, glued to the title by a
+ * no-break space: a wrap falls after the dash, so a line never starts with one.
+ */
+const TITLE_DATE_JOIN = " — ";
 
 const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey }> = {
   called: { tone: "success", key: "blowout.notices.called" },
@@ -245,19 +250,27 @@ export default async function BlowoutPage({
               const message = MESSAGE_BADGE[diver.messageStatus];
               return (
                 // `align="baseline"` on every cell: the two Badge columns put
-                // their word on the row's line, not under it.
-                <tr key={diver.id}>
+                // their word on the row's line, not under it. A `Tr`, because
+                // the name's `RowLink` overlay positions against its
+                // `relative`: the name is the row's one door, and it was a
+                // 17–37px target (K-322).
+                <Tr key={diver.id}>
                   <Td align="baseline">
-                    <Link
+                    <RowLink
                       href={shopPath(shopSlug, "divers", diver.personId)}
                       className="font-medium text-foreground hover:text-primary hover:underline"
                     >
                       {diver.fullName}
-                    </Link>
+                    </RowLink>
+                    {/* Over the name's overlay (`relative z-10`, as
+                        `LedgerRow` lifts its trailing slot): under it, a tap on
+                        the number opened the record, and the number could be
+                        neither selected nor tapped to call — on the page for
+                        reaching the divers the cascade could not email. */}
                     {diver.messageStatus === "no_email" && diver.phone ? (
-                      <div className="text-xs text-muted">
+                      <div className="relative z-10 text-xs text-muted">
                         {t("blowout.record.callThem", {
-                          phone: displayStoredPhone(diver.phone),
+                          phone: displayStoredPhoneWhole(diver.phone),
                         })}
                       </div>
                     ) : null}
@@ -273,14 +286,25 @@ export default async function BlowoutPage({
                       : t("blowout.record.noPayment")}
                   </Td>
                   <Td muted hideBelow="md" align="baseline">
-                    {diver.offeredTrips.length === 0
-                      ? t("blowout.record.noOffers")
-                      : diver.offeredTrips
-                          .map(
-                            (offer) =>
-                              `${offer.title} — ${formatShortDate(offer.startsAt, locale, shop.timezone)}`,
-                          )
-                          .join(" · ")}
+                    {/* One offer per line, its date one unbroken run: joined
+                        with " · " in this ~163px column, two or three dates
+                        broke across lines on every row (K-323). Only a title
+                        may wrap, and the dash stays with it. */}
+                    {diver.offeredTrips.length === 0 ? (
+                      t("blowout.record.noOffers")
+                    ) : (
+                      <ul className="space-y-1">
+                        {diver.offeredTrips.map((offer) => (
+                          <li key={offer.id}>
+                            {offer.title}
+                            {TITLE_DATE_JOIN}
+                            <span className="whitespace-nowrap">
+                              {formatShortDate(offer.startsAt, locale, shop.timezone)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </Td>
                   <Td align="baseline">
                     {diver.rebooked ? (
@@ -293,7 +317,7 @@ export default async function BlowoutPage({
                       </Badge>
                     )}
                   </Td>
-                </tr>
+                </Tr>
               );
             })}
           </TBody>

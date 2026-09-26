@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buttonClass } from "./button";
 import { ForgivingInput } from "./ForgivingInput";
@@ -648,6 +648,57 @@ describe("ChoicePill and ChoiceRow", () => {
     expect(box.closest("label")).toHaveClass("min-h-11", "items-start", "text-base");
     expect(node).toBe(box);
   });
+
+  it("never leaves the last word of a row's words alone on its line", () => {
+    // A row's words are a sentence — a waiver's agreement, a readiness answer
+    // — set in a `<span>`, which the app's pretty wrap for running text does
+    // not reach: the guardian's agreement ended "…as far as I / know." at 390
+    // (waiver-guardian, K-534).
+    render(
+      <ChoiceRow type="checkbox" name="guardianAcknowledged">
+        The health answers above are complete and accurate as far as I know.
+      </ChoiceRow>,
+    );
+    const words = screen.getByText(/as far as I know/);
+    expect(words.tagName).toBe("SPAN");
+    expect(words).toHaveClass("text-pretty");
+  });
+
+  /**
+   * **A row that ends its box sinks the half of its target nobody sees.** A
+   * one-line row is a 24px line centred in 44px, so 10px of target sits under
+   * its words; last in a card, that adds to the card's padding, and the
+   * waiver's signer card read 30px above its heading and 37px under "…agree to
+   * it." (waiver-guardian 1280, K-493). A negative margin alone would be wrong
+   * the moment the words wrap, when there is no unseen half to give back — on
+   * a phone, or in Spanish. So the unseen half becomes padding under the
+   * words, `(44px − 1lh) / 2`, handed back as an equal negative margin, and
+   * the words sit at the box's end: one line lands where centring put it,
+   * several lines stand where they did, and either way the box's layout ends
+   * at the words' last line while the target keeps its 44px. Only while the
+   * row is its box's last child: a refusal rendered under it takes the room
+   * back.
+   */
+  it("outdents only on request, and only while it is the last thing in its box", () => {
+    const outdent = [
+      "last:content-end",
+      "last:pb-[calc((--spacing(11)-1lh)/2)]",
+      "last:-mb-[calc((--spacing(11)-1lh)/2)]",
+    ];
+    const { rerender } = render(
+      <ChoiceRow type="checkbox" name="acknowledged" outdent="block-end" className="text-base">
+        I agree.
+      </ChoiceRow>,
+    );
+    const label = () => screen.getByRole("checkbox", { name: "I agree." }).closest("label");
+    expect(label()).toHaveClass("min-h-11", "content-center", ...outdent);
+    rerender(
+      <ChoiceRow type="checkbox" name="acknowledged" className="text-base">
+        I agree.
+      </ChoiceRow>,
+    );
+    for (const token of outdent) expect(label()).not.toHaveClass(token);
+  });
 });
 
 /**
@@ -689,6 +740,21 @@ describe("ChoiceFieldset", () => {
     const group = screen.getByRole("group", { name: "Outcome" });
     expect(group).toHaveClass("mt-6");
     expect(screen.getByText("*")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("sets a hint after its legend the way Field sets one after its caption", () => {
+    render(
+      <ChoiceFieldset legend="Badges" hint="(optional)">
+        <ChoiceRow type="checkbox" name="badge" value="padi">
+          PADI 5 Star
+        </ChoiceRow>
+      </ChoiceFieldset>,
+    );
+    // jsdom's name computation drops the hint's leading space; a browser keeps it.
+    const group = screen.getByRole("group", { name: /^Badges\s*\(optional\)$/ });
+    const hint = group.querySelector("legend > span");
+    expect(hint).toHaveClass("font-normal", "text-muted");
+    expect(hint).toHaveTextContent("(optional)");
   });
 
   it("passes the fieldset's own props through, so a group can listen and be disabled", () => {
@@ -837,6 +903,55 @@ describe("Field around a child that labels itself", () => {
     expect(container.querySelector("label label")).toBeNull();
     // And it still names the control — both labels do, caption first.
     expect(screen.getByLabelText(/Map image/)).toHaveAttribute("name", "mapImage");
+  });
+
+  /**
+   * A pair of radios beside a select in a two-column `FieldGrid` (the embed
+   * generator's look) is a group, not one control, and wrapped in the
+   * caption's label the caption labelled the first radio: its name was the
+   * caption and its own words together, and a click on "Look" chose it (K-13
+   * review). A `<fieldset>`'s rendered legend sits in the box's border, outside
+   * any subgrid, so it cannot keep the row's caption line; `group` names the
+   * body by id instead and wraps nothing.
+   */
+  it("names a group of self-labelled controls by id, keeping the field's two rows", () => {
+    const { container } = render(
+      <Field label="Look" hint="Reads your page" group>
+        <div>
+          <label>
+            <input type="radio" name="look" value="site" />
+            Your site
+          </label>
+          <label>
+            <input type="radio" name="look" value="light" />
+            DiveDay
+          </label>
+        </div>
+      </Field>,
+    );
+    expect(container.querySelector("label label")).toBeNull();
+    const group = screen.getByRole("group", { name: /^Look\s*Reads your page$/ });
+    expect(group).toHaveClass("row-span-2", "grid", "grid-rows-subgrid", "gap-y-1");
+    expect(group.querySelectorAll('input[type="radio"]')).toHaveLength(2);
+    // Each radio is named by its own words and nothing else.
+    expect(screen.getByRole("radio", { name: "Your site" })).toHaveAttribute("value", "site");
+    // The caption is not a label, so a click on it chooses nothing.
+    expect(within(group).getByText("Look").closest("label")).toBeNull();
+  });
+
+  it("describes a group by its description and its refusal", () => {
+    render(
+      <Field label="Look" group description="How the embed is coloured" error="Pick one">
+        <div>
+          <label>
+            <input type="radio" name="look" value="site" />
+            Your site
+          </label>
+        </div>
+      </Field>,
+    );
+    const group = screen.getByRole("group", { name: "Look" });
+    expect(group).toHaveAccessibleDescription("How the embed is coloured Pick one");
   });
 });
 
@@ -1405,6 +1520,30 @@ function openingTags(source: string, tag: string): { index: number; text: string
   return tags;
 }
 
+/**
+ * Where the element opened at `start` closes: the `</tag>` that brings the
+ * count of open `<tag …>`s back to zero, stepping over self-closing ones. The
+ * end of the source when it never closes.
+ */
+function closingTagIndex(source: string, tag: string, start: number): number {
+  const edge = new RegExp(`<${tag}(?![A-Za-z0-9_])|</${tag}>`, "g");
+  edge.lastIndex = start;
+  let depth = 0;
+  for (const match of source.matchAll(edge)) {
+    if (match.index < start) continue;
+    if (match[0] === `</${tag}>`) {
+      depth--;
+      if (depth === 0) return match.index;
+    } else {
+      // Bounded: an opening tag is never longer than this, and reading the
+      // whole rest of the file for every tag would be quadratic.
+      const [opening] = openingTags(source.slice(match.index, match.index + 5000), tag);
+      if (!opening?.text.endsWith("/>")) depth++;
+    }
+  }
+  return source.length;
+}
+
 describe("source sweeps", () => {
   it("reads enough of the app to be worth asserting on", () => {
     expect(sourceFiles().length).toBeGreaterThan(300);
@@ -1608,6 +1747,32 @@ describe("source sweeps", () => {
   });
 
   /**
+   * **A `Field` wraps one control, never another label.** Without `htmlFor`,
+   * a `Field` whose child is not one native control wraps it in its caption's
+   * `<label>`; handed a composite holding labels of its own, it nested a label
+   * in a label, which is invalid HTML, and the caption named whatever came
+   * first. With a logo on file, "Logo" labelled the "Remove logo" box, so a
+   * click on the caption ticked it; "Badges" labelled the first badge; the
+   * embed's "Look" the first radio (K-13 review). Name the control with
+   * `htmlFor`, caption a group of choices with `ChoiceFieldset`, or, where the
+   * group must keep a `FieldGrid` row's caption line, pass `group`.
+   */
+  it("never wraps a label in a Field's caption label", () => {
+    const labels = /<(label|ChoiceRow|ChoicePill|ImageFileInput|RemovablePhoto)\b/;
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      if (file === "src/components/ui/form.tsx") continue;
+      for (const { index, text } of openingTags(source, "Field")) {
+        if (text.endsWith("/>") || /\shtmlFor=/.test(text) || /\sgroup[\s/>]/.test(text)) continue;
+        const body = source.slice(index + text.length, closingTagIndex(source, "Field", index));
+        const hit = body.match(labels);
+        if (hit) offenders.push(`${file}:${lineOf(source, index)} wraps <${hit[1]}>`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  /**
    * **One gutter between a form's columns.** `FieldGrid` draws 16px, and call
    * sites appended `gap-x-5 gap-y-5`, which won by stylesheet order: on one
    * settings page the dock-day and fly-safe columns stood 20px apart and the
@@ -1619,6 +1784,27 @@ describe("source sweeps", () => {
     for (const { file, source } of sourceFiles()) {
       for (const { index, text } of openingTags(source, "FieldGrid")) {
         if (/\bgap-x-/.test(text)) offenders.push(`${file}:${lineOf(source, index)}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * **An action row stands one field gap under the last control.** Inside a
+   * `FieldGrid` that gap is the grid's own `gap-y-4`, so the row takes no
+   * margin; a row set after a grid rather than in one takes `mt-4`, the same
+   * 16px. "Add a diver" stacked an `mt-6` on the grid's gap and put its buttons
+   * 40px under the phone field, and "Took a call" stood its row 24px under its
+   * note, where every other form stands it 16px under (K-182).
+   */
+  it("never spaces a FieldActions row by anything but one field gap", () => {
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      for (const { index, text } of openingTags(source, "FieldActions")) {
+        const margins = text.match(/(?<![\w-])m[ty]-[\w.[\]-]+/g) ?? [];
+        if (margins.some((margin) => margin !== "mt-4")) {
+          offenders.push(`${file}:${lineOf(source, index)} ${margins.join(" ")}`);
+        }
       }
     }
     expect(offenders).toEqual([]);

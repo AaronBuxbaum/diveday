@@ -4,21 +4,14 @@
     {
       "check": "focus-invisible",
       "classes": ["focus-visible:outline-none", "focus-visible:after:focus-ring-inset"],
-      "reason": "Focus shows on RowLink's ::after overlay, the target a pointer has: focus-visible:after:focus-ring-inset draws the ring inside the overlay's own edge, and the text is not ringed a second time. The probe reads only the element's own outline. How far the overlay reaches (the cell or the whole row) is issue #1989.",
-      "pointer": "src/components/ui/table.tsx, RowLink's doc comment; docs/design/settled-questions.md"
+      "reason": "Focus shows on the link's ::after overlay, the target a pointer has — RowLink's in a table cell, SettingsDoorRow's across a settings row: focus-visible:after:focus-ring-inset draws the ring inside the overlay's own edge, and the text is not ringed a second time. The probe reads only the element's own outline. How far RowLink's overlay reaches (the cell or the whole row) is issue #1989.",
+      "pointer": "src/components/ui/table.tsx, RowLink's doc comment; src/app/shop/[shopSlug]/settings/_components/SettingsRows.tsx, the comment on SettingsDoorRow's linkClass; docs/design/settled-questions.md"
     },
     {
       "check": "focus-invisible",
       "classes": ["w-16", "bg-transparent", "focus:outline-none"],
       "reason": "Focus shows on the bordered box around the tip picker's custom amount input: its label wears has-[:focus-visible]:focus-ring, the global ring at +2px around the whole box. The input is a 64px strip of that box, so its own ring would circle the digits alone.",
       "pointer": "src/app/ready/[token]/_components/TipAmountPicker.tsx, the comment above the preset pills; docs/design/settled-questions.md"
-    },
-    {
-      "check": "phantom-gap",
-      "signature": "hr.border-border",
-      "container": "div.bg-surface-sunken/50 border border-border/70 p-3 rounded-inset",
-      "reason": "An <hr> has no children by nature: the 25px is the rule's own my-3 on each side of its 1px border, even above and below, not a gap an empty box took.",
-      "pointer": "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx, the comment on the blockers' <hr>"
     },
     {
       "check": "uneven-gaps",
@@ -36,8 +29,8 @@
     },
     {
       "check": "fill-tight",
-      "classes": ["gap-2", "ring-2"],
-      "reason": "A diver record's waiver channel button carries its delivery state as an sr-only word. The probe reads that word's unclipped rects into the button's text box, so the text appears to run past the button and the hover fill reads as 9px short on the right. Nothing visible spills; the visible label keeps the size's 12px either side.",
+      "classes": ["gap-2", "border-2"],
+      "reason": "A diver record's waiver channel button carries its delivery state as an sr-only word. The probe reads that word's unclipped rects into the button's text box, so the text appears to run past the button and the hover fill reads as 9px short on the right. Nothing visible spills; the visible label keeps its 13px from the box's outer edge either side.",
       "pointer": "src/app/shop/[shopSlug]/divers/[personId]/_components/WaiverDeliveryActions.tsx, the comment on the sr-only state word; docs/design/settled-questions.md"
     },
     {

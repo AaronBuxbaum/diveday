@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { tapTargetOverhangClass } from "@/components/ui/button";
 import {
   EYEBROW_CLASS,
   EYEBROW_TAP_WRAPPER,
@@ -9,6 +10,7 @@ import {
   ShopPageHeader,
   ShopPageHeaderSkeleton,
   ShopStat,
+  ShopStatSkeleton,
 } from "./ShopPageHeader";
 
 afterEach(cleanup);
@@ -102,9 +104,10 @@ describe("the eyebrow's line box", () => {
   });
 
   /**
-   * **The wrapper is the element the caller lays out.** `TripPageHeader` places
-   * its back link with `col-start-1 row-start-1`, and the log and ticket pages
-   * hide theirs with `print:hidden` so a print-only `<p>` can take the line.
+   * **The wrapper is the element the caller lays out.** A grid places a back
+   * link with `col-start-1 row-start-1` (as `TripPageHeader` once did), and
+   * the log and ticket pages hide theirs with `print:hidden` so a print-only
+   * `<p>` can take the line.
    * Introducing the wrapper put those on the nested link, where grid placement
    * does nothing and `print:hidden` leaves a 16px band of nothing on paper
    * (`sourcery-ai` on #1943). Colour is the exception, and already has `onSky`.
@@ -147,6 +150,9 @@ describe("the eyebrow's line box", () => {
     // line a `<p>` eyebrow's would, with the whole spare 28px above them.
     expect(link).toHaveClass("inline-flex", "min-h-11", "items-end");
     expect(link).not.toHaveClass("items-center");
+    // The shape is button.ts's, shared with the log door that reaches down.
+    expect(wrapper).toHaveClass(...tapTargetOverhangClass.up.line.split(" "));
+    expect(link).toHaveClass(...tapTargetOverhangClass.up.target.split(" "));
   });
 
   it("wraps the link rather than giving it a margin, because an inline box's margins do not move a line box", () => {
@@ -464,6 +470,33 @@ describe("ShopStat's figure", () => {
   });
 });
 
+describe("ShopStat's skeleton", () => {
+  /**
+   * **The tile's own box and rows, one bar per row at that row's line box**
+   * (K-188). The packing list stood its tank tiles in with `h-28` boxes: 112px
+   * against the tile's 98 on a phone and 106 from `sm`, so every tile shrank
+   * and everything under it moved when the list arrived. A bar that is the
+   * text's own line box (`h-lh` at the text's size) moves with the type.
+   */
+  it("wears the loaded tile's classes, and a label bar and a figure bar at their line boxes", () => {
+    const loaded = render(<ShopStat label="Total" value={20} />).container.firstElementChild;
+    const skeleton = render(<ShopStatSkeleton />).container.firstElementChild;
+    expect(skeleton?.className).toBe(loaded?.className);
+
+    const typeSize = (element: Element | null | undefined) =>
+      (element?.className ?? "")
+        .split(" ")
+        .filter((token) => /^text-(?:xs|sm|base|lg|\d?xl)$/.test(token));
+    const [label, figureRow] = Array.from(loaded?.children ?? []);
+    const [labelBar, figureBar] = Array.from(skeleton?.children ?? []);
+    expect(skeleton?.children).toHaveLength(2);
+    expect(typeSize(label)).toHaveLength(1);
+    expect(labelBar).toHaveClass("h-lh", ...typeSize(label));
+    expect(typeSize(figureRow.firstElementChild)).toHaveLength(1);
+    expect(figureBar).toHaveClass("h-lh", ...typeSize(figureRow.firstElementChild));
+  });
+});
+
 /**
  * **The mark opens the notice's first line; it is not a line of its own.**
  *
@@ -517,5 +550,35 @@ describe("ShopNotice's mark", () => {
     expect(notice.querySelector("svg")).toBeNull();
     expect(notice.children).toHaveLength(1);
     expect(notice.firstElementChild).toHaveClass("min-w-0", "flex-1");
+  });
+});
+
+/**
+ * **A header that leads with the shop's own words draws them first** (K-382).
+ * `ShopPageHeader`'s `brand` block — the tagline, 20px over the eyebrow — is
+ * how a framed trip page names its shop, because the frame has no chrome above
+ * it. A skeleton without it promised the eyebrow and the title a line or two
+ * higher than they land.
+ */
+describe("the skeleton's brand block", () => {
+  it("draws the tagline's lines above the eyebrow, 20px over it, as the header does", () => {
+    const { container } = render(
+      <ShopPageHeaderSkeleton description={false} brand={{ base: 2, sm: 1 }} />,
+    );
+    const block = container.firstElementChild?.firstElementChild;
+    expect(block).toHaveClass("mb-5");
+    const lines = Array.from(block?.children ?? []);
+    // A tagline is a `text-base` line: a 24px box each, the second one a
+    // phone's alone.
+    expect(lines).toHaveLength(2);
+    for (const line of lines) expect(line).toHaveClass("h-6");
+    expect(lines[1]).toHaveClass("sm:hidden");
+    // The eyebrow still follows it, where the header puts it.
+    expect(block?.nextElementSibling).toHaveClass("h-4");
+  });
+
+  it("is not drawn for a header without one", () => {
+    const { container } = render(<ShopPageHeaderSkeleton description={false} />);
+    expect(container.querySelector(".mb-5")).toBeNull();
   });
 });

@@ -5,12 +5,13 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClassFor, Field } from "@/components/ui/form";
 import { canPersonImportShopData } from "@/db/import";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { CsvFileInput } from "../_components/CsvFileInput";
+import { settingsPaneClass } from "../_components/settings-pane";
 import { restoreDiveSitesAction } from "./actions";
 
 // See the gear register's copy of this comment (ADR 20260804-instant-navigation).
@@ -67,7 +68,7 @@ export default async function DiveSiteImportPage({
   const banner = noticeFromParam(notice, NOTICES);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
@@ -97,22 +98,19 @@ export default async function DiveSiteImportPage({
           encType="multipart/form-data"
           className="mt-5 flex flex-wrap items-end gap-3"
         >
-          {/* One `md` row: the file box and the submit. The box was the 44px
-              default beside a 48px `md` button, and `items-end` stood the
-              button 4px above the box's top edge
-              (`settings-dive-site-import`, 2026-09-25). The caption is
-              `Field`'s own label, above the box; `markRequired={false}`
-              because this is the form's one field, so a `*` would tell
-              nothing apart. */}
-          <Field label={t("diveSites.import.file")} markRequired={false}>
-            <input
-              name="file"
-              type="file"
-              accept=".csv,text/csv"
-              required
-              className={controlClassFor("md")}
-            />
-          </Field>
+          {/* The picker Import gear history uses, one row above this page in
+              the same Settings group: a secondary `md` button in the shop's
+              language, the height of the submit beside it. A bare file input
+              in a text-box outline read "Choose File No file chosen" as plain
+              text in a box, with no hover (K-350). */}
+          <CsvFileInput
+            name="file"
+            required
+            copy={{
+              choose: t("diveSites.import.chooseFile"),
+              chooseAnother: t("diveSites.import.chooseDifferentFile"),
+            }}
+          />
           <SubmitButton
             pendingLabel={t("diveSites.import.pending")}
             className={buttonClass({ variant: "secondary" })}

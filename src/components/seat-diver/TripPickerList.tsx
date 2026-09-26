@@ -1,12 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { joinFacts } from "@/lib/format";
 
 /** One departure a staffer can stand on. */
 export type TripPickerOption = {
   id: string;
   href: string;
-  /** Title · date · time — already formatted for the request locale and shop zone. */
-  label: ReactNode;
+  /** The departure's name, as the shop wrote it. */
+  title: string;
+  /** When it leaves — already formatted for the request locale and shop zone. */
+  when: string;
   /** The right-hand column: seats left, or booked/capacity. */
   meta: ReactNode;
 };
@@ -33,9 +36,16 @@ export function TripPickerList({
         <li key={option.id}>
           <Link
             href={option.href}
+            // Not an inset note: a tile a staffer taps, whose border takes the
+            // hover, drawn as BookingRequestCards' request tiles are (bordered,
+            // 16px in).
             className="flex min-h-11 items-baseline justify-between gap-3 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm font-medium hover:border-primary/40"
           >
-            <span className="min-w-0 flex-1">{option.label}</span>
+            {/* A row's facts, joined the app's one way (K-525): `joinFacts`
+                binds the dot to the title's last word and the time to the
+                dot, so a long title that wraps never opens its next line on
+                "·" nor leaves the time alone under one. */}
+            <span className="min-w-0 flex-1">{joinFacts([option.title, option.when])}</span>
             <span className="shrink-0 tabular-nums text-muted">{option.meta}</span>
           </Link>
         </li>

@@ -588,7 +588,14 @@ async function newActorContext(): Promise<BrowserContext> {
         prop === "now" ? () => fixed : Reflect.get(target, prop, receiver),
     });
   }, SIMULATION_DAY_START);
-  await context.route("https://maps.google.com/**", (route) => route.abort());
+  // As `e2e/fixtures.ts` answers it: an empty page, never an aborted frame.
+  await context.route("https://maps.google.com/**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: "<!doctype html><title></title>",
+    }),
+  );
   await context.route("https://fonts.googleapis.com/**", (route) =>
     route.fulfill({ status: 200, contentType: "text/css", body: "" }),
   );

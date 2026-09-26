@@ -235,9 +235,15 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
             clicking one costs, then — behind a hairline, in the same
             container — what the number buys. No card border, no shadow; the
             figure itself is the weight. The old page answered in screenful
-            two, inside a bordered card below a generic headline band. */}
+            two, inside a bordered card below a generic headline band.
+
+            `max-w-5xl`, the page's wide measure: the invoice beside its notes
+            is a two-column band like the data exit and the FAQ below, and on
+            `max-w-4xl` it, the covers list and "The full list" stood at x 216,
+            between the fee anchor's 280 and those bands' 152 — a third left
+            edge (K-404). The centred stack keeps its own `max-w-3xl`. */}
         <section className="border-b border-border">
-          <div className="mx-auto max-w-4xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
+          <div className="mx-auto max-w-5xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
             <div className="mx-auto max-w-3xl text-center">
               {/* The spaces around the separator are load-bearing, not
                   formatting: the middot is `aria-hidden`, and JSX drops the
@@ -256,8 +262,11 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               </h1>
               {/* Cadence below the figure, not baseline-set beside it: paired
                   on one line, centring the pair pushed `$99` itself off centre
-                  by half the cadence's width. */}
-              <p className="mt-10 text-7xl leading-none font-semibold tracking-[-0.06em] sm:text-8xl">
+                  by half the cadence's width. And `pe-[0.06em]`, the tracking
+                  handed back: letter-spacing follows the last glyph too, so
+                  the line box ended 0.06em inside the final "9", and centring
+                  that box set the ink 3px right of the stack (K-405). */}
+              <p className="mt-10 pe-[0.06em] text-7xl leading-none font-semibold tracking-[-0.06em] sm:text-8xl">
                 {earlyAccessPrice.price}
               </p>
               <p className="mt-4 text-base text-muted">{t(earlyAccessPrice.cadenceKey)}</p>
@@ -470,12 +479,13 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
             The mockup is a claim, so it mirrors the real Settings → Data export
             element for element — including the "Not included, on purpose:" line
             that says credentials never leave (docs/product/marketing.md). */}
-        {/* `max-w-5xl`, the same measure as the FAQ below it: the page was
-            running three different left edges down the desktop viewport (88px
-            here, 152px at the FAQ, 280px for the single-column bands), which
-            reads as three unrelated pages stacked. Two measures now — narrow
-            for prose, wide for the two-column bands — and the columns land at
-            a more readable ~470px besides. */}
+        {/* `max-w-5xl`, the same measure as the FAQ below it and the hero's
+            invoice above: the page was running three different left edges
+            down the desktop viewport (88px here, 152px at the FAQ, 280px for
+            the single-column bands), which reads as three unrelated pages
+            stacked. Two measures now — narrow for prose, wide for the
+            two-column bands — and the columns land at a more readable ~470px
+            besides. */}
         <section className="border-b border-border">
           <div className="mx-auto grid max-w-5xl gap-10 px-6 py-16 lg:grid-cols-2 lg:items-center lg:py-24">
             <div>

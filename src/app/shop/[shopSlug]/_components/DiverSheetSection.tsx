@@ -5,7 +5,7 @@ import { getDiverProfile } from "@/db/divers";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { displayStoredPhone } from "@/lib/forgiving-fields";
+import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { shopPath } from "@/lib/staff-notices";
 import { DiverStatusLedger } from "../divers/[personId]/_components/DiverStatusLedger";
 import { DiverStory } from "../divers/[personId]/_components/DiverStory";
@@ -58,7 +58,11 @@ export async function DiverSheetSection({
   const recordPath = shopPath(shop.slug, "divers", personId);
   // The record's own spelling of a stored number, not the raw E.164 column:
   // "+13055550230" is what the database holds and not what anybody reads.
-  const reach = [diver.person.email, displayStoredPhone(diver.person.phone)]
+  //
+  // **One number, one unit** (pixel-craft class 8, K-450): the whole reading,
+  // so the line breaks at the separator or inside the email and never inside
+  // the number.
+  const reach = [diver.person.email, displayStoredPhoneWhole(diver.person.phone)]
     .filter(Boolean)
     .join(" · ");
 
@@ -100,12 +104,17 @@ export async function DiverSheetSection({
       {/* **The one door out.** Everything this sheet does not hold — the
           certifications, the waiver, the fit, the notes, and every form — is on
           the record, and a form here would redirect with a `?notice=` and take
-          the sheet off the screen with it. */}
+          the sheet off the screen with it.
+
+          `gap-1`, not a space before the arrow: in an `inline-flex` link that
+          space ends the label's anonymous flex item and is dropped, which set
+          the arrow 2px from "record" (pixel-craft K-591). */}
       <Link
         href={recordPath}
-        className="mt-6 inline-flex min-h-11 items-center font-semibold text-primary text-sm hover:underline"
+        className="mt-6 inline-flex min-h-11 items-center gap-1 font-semibold text-primary text-sm hover:underline"
       >
-        {t("shared.diverSheet.openRecord")} <span aria-hidden="true">→</span>
+        {t("shared.diverSheet.openRecord")}
+        <span aria-hidden="true">→</span>
       </Link>
     </DiverSheet>
   );

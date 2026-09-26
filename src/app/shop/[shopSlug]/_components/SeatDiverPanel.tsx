@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { fill } from "@/i18n/fill";
-import { displayStoredPhone } from "@/lib/forgiving-fields";
+import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { newDiverHref } from "@/lib/person-fields";
 
@@ -141,7 +141,11 @@ export function SeatDiverPanel({
                   </form>
                   {match.email || match.phone ? (
                     <span className="text-muted text-xs ms-1">
-                      ({[match.email, displayStoredPhone(match.phone)].filter(Boolean).join(", ")})
+                      (
+                      {[match.email, displayStoredPhoneWhole(match.phone)]
+                        .filter(Boolean)
+                        .join(", ")}
+                      )
                     </span>
                   ) : null}
                   {match.lastDiveDayAt ? (

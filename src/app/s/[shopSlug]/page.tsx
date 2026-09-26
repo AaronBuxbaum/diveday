@@ -5,15 +5,15 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { submitInquiryAction } from "@/app/actions/inquiry";
 import { DateRequestForm } from "@/components/DateRequestForm";
+import { EmbedCredit } from "@/components/EmbedCredit";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
-import { ShopReviews } from "@/components/ShopReviews";
+import { ShopReviews, ShopReviewsSkeleton } from "@/components/ShopReviews";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureRowList } from "@/components/ui/disclosure";
 import { FilterChips } from "@/components/ui/FilterChips";
-import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
@@ -93,7 +93,11 @@ import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { SeasonBand } from "./_components/SeasonBand";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
-import { WeekLedger, type WeekLedgerRow } from "./_components/WeekLedger";
+import {
+  WEEK_LEDGER_FOLLOWER_CLASS,
+  WeekLedger,
+  type WeekLedgerRow,
+} from "./_components/WeekLedger";
 import { YoursGroup, type YoursRow } from "./_components/YoursGroup";
 import { readShelfWelcome } from "./_lib/shelf-welcome";
 
@@ -103,6 +107,17 @@ import { readShelfWelcome } from "./_lib/shelf-welcome";
 // and `next build` fails if that ever stops being true.
 // See ADR 20260804-instant-navigation.
 export const instant = true;
+
+/**
+ * **One gap between the storefront's sections** (pixel-craft class 4, K-176).
+ * Each section spaced itself with its own `mt-*`, and the week opened 40px
+ * under the band where the shelves, the boats, the reviews, the three asks
+ * and the off-season ask opened 48px under theirs: "Schedule" stood 8px
+ * closer to the panels above it than any other heading to its neighbour.
+ * Spelled once, and the route's `loading.tsx` opens its week at the same
+ * 48px.
+ */
+const SECTION_GAP = "mt-12";
 
 /**
  * Per-shop title, description, and canonical URL. The embed surface points its
@@ -771,6 +786,14 @@ export default async function SchedulePage({
         trip.priceCents !== null ? formatMoneyScanned(trip.priceCents, currency, locale) : null,
     };
   });
+  /**
+   * **The one gate for the week's list.** The list, or the state standing in
+   * for it, is chosen on this name, and the pager row under it reads the same
+   * name for its margin: the list hands its last row's room back below itself
+   * and only a row under the list takes it back in. Two spellings of the
+   * condition would disagree the day a state is added to one of them.
+   */
+  const showsWeekLedger = hasUpcoming && visibleUpcoming.length > 0;
 
   // The shelf takes the first three rungs in progression order; "All courses"
   // is the rest. `{depth18}` markers resolve into the shop's own unit before
@@ -1029,7 +1052,7 @@ export default async function SchedulePage({
           over nothing is the page apologising. The frame keeps its own
           terminal state (see the empty state inside). */}
       {hasUpcoming || isEmbed ? (
-        <div className={isEmbed ? undefined : "mt-10"}>
+        <div className={isEmbed ? undefined : SECTION_GAP}>
           {isEmbed ? null : (
             <div className="mb-4">
               <h2 className={`font-brand-display ${SECTION_TITLE_CLASS}`}>{t("schedule.title")}</h2>
@@ -1174,37 +1197,43 @@ export default async function SchedulePage({
               and the middle one is the sentence that reads as a shop which has
               stopped. The widget keeps it: `?embed=1` renders neither of those
               two, and a blank iframe on a shop's own website says nothing at
-              all. */}
-          {!hasUpcoming ? (
-            isEmbed ? (
-              <EmptyState
-                title={t("schedule.noTrips")}
-                body={t(
-                  shop.contactPhone || shop.contactEmail
-                    ? "schedule.noTripsPublic"
-                    : "schedule.noTripsPublicNoPhone",
-                )}
-              />
-            ) : null
-          ) : visibleUpcoming.length === 0 ? (
-            <EmptyState
-              title={filteredView ? t("schedule.filters.noMatches") : t("schedule.noTripsMonth")}
-            />
-          ) : (
+              all. The list itself renders on `showsWeekLedger`, the name the
+              pager row's margin below reads too. */}
+          {showsWeekLedger ? (
             <WeekLedger
               rows={weekRows}
               listLabel={t("schedule.tripListLabel")}
               stickyTop={isEmbed ? "top-0" : "top-(--chrome-h)"}
             />
-          )}
+          ) : hasUpcoming ? (
+            <EmptyState
+              title={filteredView ? t("schedule.filters.noMatches") : t("schedule.noTripsMonth")}
+            />
+          ) : isEmbed ? (
+            <EmptyState
+              title={t("schedule.noTrips")}
+              body={t(
+                shop.contactPhone || shop.contactEmail
+                  ? "schedule.noTripsPublic"
+                  : "schedule.noTripsPublicNoPhone",
+              )}
+            />
+          ) : null}
         </div>
       ) : null}
       {/* No pager in the frame either. "Show later departures" is the same
           nested navigation the fixed height caused — a second page loaded
           inside somebody else's site — and the widget already offers the way
-          out to the real schedule below (issue #805). */}
+          out to the real schedule below (issue #805). Under the week's list
+          the row takes `WEEK_LEDGER_FOLLOWER_CLASS`: the list hands its last
+          row's 16px (20px) of hover room back below itself, and this row
+          takes it into its margin, so it still sits 20px under that row's
+          box. Under an empty state (a month or a filter with nothing in it)
+          no room is handed back. */}
       {!isEmbed && (nextCursor || after || explicitMonth) ? (
-        <div className="mt-5 flex flex-wrap items-center gap-3">
+        <div
+          className={`flex flex-wrap items-center gap-3 ${showsWeekLedger ? WEEK_LEDGER_FOLLOWER_CLASS : "mt-5"}`}
+        >
           {(() => {
             const backStack = decodeCursorStack(back);
             const previous = popCursor(backStack);
@@ -1281,7 +1310,7 @@ export default async function SchedulePage({
             submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
             askInterest
             sectionId="request-a-date"
-            className="mt-12"
+            className={SECTION_GAP}
             headingClassName={`font-brand-display ${SECTION_TITLE_CLASS}`}
             contactEmail={null}
             contactPhone={null}
@@ -1304,7 +1333,7 @@ export default async function SchedulePage({
         <CoursesShelf
           courses={shelfCourses}
           allCoursesHref={publicCoursesPath(shopSlug)}
-          className="mt-12"
+          className={SECTION_GAP}
           t={t}
         />
       )}
@@ -1312,11 +1341,13 @@ export default async function SchedulePage({
           the storefront is the shop's website, and a shop's site always names
           its hulls). Only when the shop has any: an empty fleet is not a section. */}
       {isEmbed || boats.length === 0 ? null : (
-        <section aria-labelledby="boats-heading" className="mt-12">
+        <section aria-labelledby="boats-heading" className={SECTION_GAP}>
           <h2 id="boats-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
             {t("schedule.boatsHeading")}
           </h2>
-          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {/* The course shelf's columns and gutter, so the boat cards stand
+              under the course cards' edges (K-227). */}
+          <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {boats.map((boat) => (
               // The card itself, not a hand-rolled copy at `px-5 py-4`: its
               // words started 4px in from every other card's on a phone.
@@ -1353,7 +1384,7 @@ export default async function SchedulePage({
           is already in hand — it belongs to the hero now, and is handed down
           here rather than read a second time. */}
       {showReviews ? (
-        <Suspense fallback={<ScheduleReviewsSkeleton />}>
+        <Suspense fallback={<ShopReviewsSkeleton className={SECTION_GAP} />}>
           <ScheduleReviewsSection
             db={db}
             shop={shop}
@@ -1390,7 +1421,7 @@ export default async function SchedulePage({
           find-my-link door, and on a quiet board the date request has moved
           above — which between them can empty the list under the heading. */}
       {!isEmbed && (everHadDeparture || !quiet.quiet) ? (
-        <section aria-labelledby="more-ways-heading" className="mt-12">
+        <section aria-labelledby="more-ways-heading" className={SECTION_GAP}>
           <h2 id="more-ways-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
             {t("schedule.moreWaysHeading")}
           </h2>
@@ -1474,20 +1505,17 @@ export default async function SchedulePage({
         </div>
       ) : null}
       {isEmbed && hostCarriesCredit ? null : isEmbed ? (
-        <p className="mt-4 text-center text-xs text-muted">
-          <Link
-            href={`/?${new URLSearchParams({
-              utm_source: "embed",
-              utm_medium: "widget",
-              utm_campaign: shopSlug,
-            }).toString()}`}
-            target="_blank"
-            rel="noopener"
-            className="hover:underline"
-          >
-            {t("schedule.poweredByDiveDay")}
-          </Link>
-        </p>
+        <EmbedCredit
+          href={`/?${new URLSearchParams({
+            utm_source: "embed",
+            utm_medium: "widget",
+            utm_campaign: shopSlug,
+          }).toString()}`}
+          target="_blank"
+          rel="noopener"
+        >
+          {t("schedule.poweredByDiveDay")}
+        </EmbedCredit>
       ) : null}
     </main>
   );
@@ -1563,7 +1591,7 @@ async function ScheduleReviewsSection({
     <>
       <JsonLd data={structuredData} />
       <ShopReviews
-        className="mt-12"
+        className={SECTION_GAP}
         aggregate={aggregate}
         reviews={reviews}
         shopSlug={shop.slug}
@@ -1572,26 +1600,5 @@ async function ScheduleReviewsSection({
         t={t}
       />
     </>
-  );
-}
-
-/** Shaped like `ShopReviews` — heading, the all-reviews door, two ledger rows (design principle 1). */
-function ScheduleReviewsSkeleton() {
-  return (
-    <section aria-hidden="true" className="mt-12 animate-pulse">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div className="h-6 w-40 rounded bg-surface-sunken" />
-        <div className="h-4 w-24 rounded bg-surface-sunken" />
-      </div>
-      <div className="mt-4 flex flex-col">
-        {[0, 1].map((row) => (
-          <div key={row} className={`py-4 ${ledgerRowBoxClass}`}>
-            <div className="h-4 w-24 rounded bg-surface-sunken" />
-            <div className="mt-1.5 h-5 w-80 max-w-full rounded bg-surface-sunken" />
-            <div className="mt-1.5 h-4 w-56 max-w-full rounded bg-surface-sunken" />
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }

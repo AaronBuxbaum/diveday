@@ -45,10 +45,21 @@ export function PaperSheet({
   foldLeft,
   foldRight,
   fit = false,
+  layout = "flow",
   children,
 }: {
   paper: PrintSheetPaper;
   tone: SheetTone;
+  /**
+   * `flow` for a document, whose content runs from the band down: a briefing
+   * card, the pass and the boat card print the shop's own prose, of whatever
+   * length it is. `poster` for a sign, the dock sign and the window sticker,
+   * whose few fixed things are centred on the paper. Flowed from the band, the
+   * A3 sign ended in its top third over 28cm of blank paper, and the sticker's
+   * own `h-full` centring had nothing to resolve against in a sheet whose
+   * height is only a floor.
+   */
+  layout?: "flow" | "poster";
   /**
    * Hold the sheet to exactly one page. Only the boat card: it is two faces of
    * one lamination, so a face that grew would be laminated across two cards.
@@ -83,7 +94,9 @@ export function PaperSheet({
       }
     >
       <div className="paper-sheet-band">{band}</div>
-      <div className="paper-sheet-body">{children}</div>
+      <div className={`paper-sheet-body${layout === "poster" ? " paper-sheet-body-poster" : ""}`}>
+        {children}
+      </div>
       <div className="paper-sheet-fold">
         <span>{foldLeft}</span>
         <span>{foldRight}</span>

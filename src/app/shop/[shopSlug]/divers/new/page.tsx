@@ -19,7 +19,7 @@ import { createDiver, findSimilarDivers } from "@/db/divers";
 import { discardFormDraft, readFormDraft } from "@/db/form-drafts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { displayStoredPhone } from "@/lib/forgiving-fields";
+import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -298,7 +298,11 @@ export default async function NewDiverPage({
                   )}
                   {match.email || match.phone ? (
                     <span className="text-muted text-sm ms-1">
-                      ({[match.email, displayStoredPhone(match.phone)].filter(Boolean).join(", ")})
+                      (
+                      {[match.email, displayStoredPhoneWhole(match.phone)]
+                        .filter(Boolean)
+                        .join(", ")}
+                      )
                     </span>
                   ) : null}
                   {match.lastDiveDayAt ? (
@@ -363,7 +367,9 @@ export default async function NewDiverPage({
           <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
           <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
           <input type="hidden" name="request" value={requestParam ?? ""} />
-          <FieldActions className="mt-6">
+          {/* No margin: the trio's grid gap is the one field gap every form
+              stands its action row under (K-182). */}
+          <FieldActions>
             <SubmitButton pendingLabel={t("divers.page.adding")} className={buttonClass()}>
               {submitLabel}
             </SubmitButton>

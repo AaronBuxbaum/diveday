@@ -86,7 +86,15 @@ describe("RepeatingItemCard", () => {
     expect(repeatingItemRemoveClass).toContain("text-danger");
     expect(repeatingItemRemoveClass).toContain("min-h-11");
     expect(repeatingItemRemoveClass).toContain("-mx-2");
-    expect(repeatingItemRemoveClass).not.toMatch(/(^|\s)border(\s|$)/);
+    // Quiet: no drawn edge. Its box may carry the border every button has,
+    // unpainted, so it keeps secondary's box if a toggle swaps the two (K-83);
+    // a painted border is a bordered button, which this is not.
+    const borders = repeatingItemRemoveClass
+      .split(/\s+/)
+      .filter((token) => /^border(-|$)/.test(token));
+    expect(borders.filter((token) => token !== "border" && token !== "border-transparent")).toEqual(
+      [],
+    );
   });
 
   it("gives every Add under a list one size", () => {

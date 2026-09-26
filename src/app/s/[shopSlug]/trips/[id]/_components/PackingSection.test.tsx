@@ -48,6 +48,16 @@ function renderPacking(overrides: { waterTemperatureC: number | null; statedAbov
   );
 }
 
+describe("PackingSection — its place on the page", () => {
+  it("brings no outer margin of its own", () => {
+    // `/ready` sets its sections 40px apart once, with `space-y-10`; a
+    // built-in `mt-10` here was one of five per-child margins that stepped the
+    // column 32, 24 and 40 (K-233).
+    const { container } = renderPacking({ waterTemperatureC: null, statedAbove: false });
+    expect(container.querySelector("section")?.className ?? "").not.toMatch(/(^|\s)m[ty]?-/);
+  });
+});
+
 describe("PackingSection — the exposure-suit line", () => {
   it("names the suit when no conditions card above it has", () => {
     // The `/ready/[token]` case: no card on the page, so this is the only
@@ -112,6 +122,25 @@ describe("PackingSection — the dock-day rhythm's meeting point", () => {
   it("names the meeting point alone when no address is on file", () => {
     renderRhythm({ meetingPointLabel: "North Jetty Marina", meetingPointAddress: null });
     expect(screen.getByText("North Jetty Marina")).toBeInTheDocument();
+  });
+
+  it("centres each step's circle on its time's line", () => {
+    // The 24px circle sat `top-0.5` beside a 20px `text-sm` line, so its
+    // centre fell 14px down the row against the time's 10: the circles hung
+    // 3–4px below their times on every row (K-160). One 24px line box for the
+    // time and its label, and the circle at the row's top, share a centre at
+    // 12 — with no nudge left to compensate for.
+    const { container } = renderRhythm({ meetingPointLabel: null, meetingPointAddress: null });
+    const rows = container.querySelectorAll("ol > li");
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      const circle = row.querySelector(".rounded-full");
+      expect(circle).toHaveClass("size-6", "top-0");
+      expect(circle).not.toHaveClass("top-0.5");
+      const [time, label] = row.querySelectorAll(":scope > div:not(.absolute) > span");
+      expect(time).toHaveClass("leading-6");
+      expect(label).toHaveClass("leading-6");
+    }
   });
 
   it("says nothing extra when the departure has no meeting point of its own", () => {

@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Fragment, type ReactNode } from "react";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { type CSSProperties, Fragment, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
+import { DoorChevron } from "@/components/ui/ledger";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 
 /**
@@ -86,6 +86,41 @@ export type WeekLedgerRow = {
   price: string | null;
 };
 
+/**
+ * **The price's column is as wide as the list's longest price** (pixel-craft
+ * class 3), so every row's seat state and chevron end on one x in whatever
+ * currency the shop sells in. A fixed width held a four-figure dollar or euro
+ * price and nothing longer: "$145.50" (a price with cents keeps them) runs to
+ * about 6.25ch, and a rupiah, yen or Egyptian pound shop's ordinary prices
+ * ("Rp 1.500.000", "¥15,000", "EGP 2,500") run far past it, so each such row's
+ * price set its own column again.
+ *
+ * A character a `ch`: the price is set in tabular figures, where a digit is
+ * exactly 1ch, and its separators are narrower. Half a digit more covers a
+ * currency sign a little wider than a digit (€ is about 1.1ch) in a price with
+ * no separator to give the difference back ("€95"). The width is a custom
+ * property on the list, so `ch` resolves in the price's own face, and each
+ * row's column reads it from `sm` up. Null when no row has a price: a list with
+ * nothing to charge draws no column at all.
+ */
+function priceColumnWidth(rows: readonly WeekLedgerRow[]): string | null {
+  const longest = Math.max(0, ...rows.map((row) => (row.price ? [...row.price].length : 0)));
+  return longest > 0 ? `${longest + 0.5}ch` : null;
+}
+
+type PriceColumnStyle = CSSProperties & { "--price-col": string };
+
+/**
+ * **The margin of a row that belongs under the list** — the schedule's pager,
+ * "Show later departures". The list hands its last row's lower room back
+ * below itself (`-mb-4 sm:-mb-5`, below), so a section after it measures from
+ * the last row's words; a row that belongs to the list takes that room back
+ * into its own margin, and so sits 20px under the last row's box at every
+ * width (16 + 20, and 20 + 20 from `sm`). Spelled here, beside the hand-back
+ * it cancels, so the two change together.
+ */
+export const WEEK_LEDGER_FOLLOWER_CLASS = "mt-9 sm:mt-10";
+
 export function WeekLedger({
   stickyTop,
   rows,
@@ -104,21 +139,54 @@ export function WeekLedger({
   stickyTop: string;
 }) {
   let lastDayKey: string | null = null;
+  const priceColumn = priceColumnWidth(rows);
+  const style: PriceColumnStyle | undefined = priceColumn
+    ? { "--price-col": priceColumn }
+    : undefined;
   return (
-    <ul className="flex flex-col" aria-label={listLabel}>
+    // `-mb-4 sm:-mb-5` hands back the last row's lower room — its `py-4
+    // sm:py-5`, kept for the hover fill and unpainted at rest — so whatever
+    // follows measures from the last row's words. Stacked on the next
+    // section's margin, it put "Courses" 78px under the last meta line at
+    // 1280 against the page's 56px section gap. A row that belongs under the
+    // list takes it back in (`WEEK_LEDGER_FOLLOWER_CLASS`).
+    <ul className="-mb-4 flex flex-col sm:-mb-5" aria-label={listLabel} style={style}>
       {rows.map((row) => {
         const newDay = row.dayKey !== lastDayKey;
         lastDayKey = row.dayKey;
         return (
           <Fragment key={row.id}>
             {newDay ? <DayRule parts={row.dayParts} stickyTop={stickyTop} /> : null}
-            <Row row={row} />
+            <Row row={row} priceColumn={priceColumn !== null} />
           </Fragment>
         );
       })}
     </ul>
   );
 }
+
+/**
+ * **The ledger's columns, which its skeleton draws on too** (pixel-craft class
+ * 11: 0px of shift on load). `loading.tsx` builds its day rules and rows from
+ * these strings, so its hairline, time bar and title start where the loaded
+ * ones will by construction. Copied by hand they drifted: the skeleton's rows
+ * missed the row's `sm:px-4`, which stood its title 16px left of the loaded
+ * one from `sm` up, and its numeral was a fixed 40px block beside the loaded
+ * numeral's two tabular digits.
+ *
+ * The row's box: below `sm` it bleeds `-mx-3` into the gutter so its hover
+ * fill has room and its words stay on the column; from `sm` it sits on the
+ * column with 16px inside. Its `py-4 sm:py-5` is the room the list hands back
+ * below itself.
+ */
+export const WEEK_ROW_BOX_CLASS =
+  "-mx-3 flex flex-col gap-2 px-3 py-4 sm:mx-0 sm:flex-row sm:gap-4 sm:px-4 sm:py-5";
+/** The row's time rail, wide enough for an eight-digit range. */
+export const WEEK_TIME_RAIL_CLASS = "shrink-0 sm:w-44";
+/** The day rule's numeral: two tabular digits wide whatever the day. */
+export const DAY_NUMERAL_CLASS = `${FIGURE_LARGE_CLASS} min-w-[2ch] leading-none`;
+/** The day rule's weekday-over-month column, as wide as the longest label. */
+export const DAY_LABEL_COLUMN_CLASS = "flex min-w-14 flex-col justify-center leading-tight";
 
 /**
  * The day header as a calendar block — a numeral a reader catches mid-scroll,
@@ -128,6 +196,14 @@ export function WeekLedger({
  * Presentational: every row's own stretched-link label already speaks its full
  * date, so a screen reader loses nothing and the announced item count stays the
  * number of bookable departures.
+ *
+ * **Each part stands in a fixed column**, so every rule's hairline starts at one
+ * x (pixel-craft class 3). Shrink-wrapped, the hairline started 15px past each
+ * weekday's own ink — nine rules 9px apart at 1280 — and a one-digit day would
+ * have pulled its weekday and hairline 19px further left. The numeral's box is
+ * two tabular digits (`2ch`); the weekday column holds the longest label either
+ * locale prints, es-ES "SEPT" (about 51px with its tracking; en-US "MON" is 46).
+ * `loading.tsx` draws its rule on the same columns.
  */
 function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stickyTop: string }) {
   return (
@@ -136,8 +212,8 @@ function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stick
       aria-hidden="true"
       className={`sticky ${stickyTop} z-20 mt-8 flex items-center gap-3 bg-background pt-2 pb-3 first:mt-0`}
     >
-      <span className={`${FIGURE_LARGE_CLASS} leading-none`}>{parts.day}</span>
-      <span className="flex flex-col justify-center leading-tight">
+      <span className={DAY_NUMERAL_CLASS}>{parts.day}</span>
+      <span className={DAY_LABEL_COLUMN_CLASS}>
         <span className="text-base font-bold tracking-[0.18em] uppercase">{parts.weekday}</span>
         <span className="text-base font-medium tracking-[0.18em] text-muted uppercase">
           {parts.month}
@@ -148,35 +224,67 @@ function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stick
   );
 }
 
-function Row({ row }: { row: WeekLedgerRow }) {
+/**
+ * **A fact on the meta line is one box** (pixel-craft class 8), so the line
+ * breaks at a " · " between facts and a fact moves to the next line whole. As
+ * plain inline text it broke at any space: on a phone "Advanced Open / Water or
+ * higher" and "Scuba / Refresher" split five times on the schedule at 390.
+ * Only a fact longer than the whole line wraps inside itself — never
+ * `whitespace-nowrap`, which would run a long site name past the column.
+ */
+const FACT = "inline-block";
+
+function Row({ row, priceColumn }: { row: WeekLedgerRow; priceColumn: boolean }) {
   const meta: ReactNode[] = [];
   // The shop's own word leads the line, before the course and the site: it is
   // what the reader is scanning for once they have tapped a lens, and it is the
   // one fragment on the row written by the shop rather than by DiveDay.
-  if (row.lens) meta.push(<span key="lens">{row.lens}</span>);
-  if (row.course) {
+  if (row.lens)
     meta.push(
-      <span key="course" className="font-medium text-primary">
+      <span key="lens" className={FACT}>
+        {row.lens}
+      </span>,
+    );
+  if (row.course) {
+    // The course's name is a box of its own inside the fact, so a fact too long
+    // for the line breaks after "Course session ·" rather than inside the name.
+    meta.push(
+      <span key="course" className={`${FACT} font-medium text-primary`}>
         {row.course.label} ·{" "}
         <Link
           href={row.course.href}
-          className="relative z-10 underline-offset-2 hover:underline focus-visible:underline"
+          className={`${FACT} relative z-10 underline-offset-2 hover:underline focus-visible:underline`}
         >
           {row.course.title}
         </Link>
       </span>,
     );
   }
-  if (row.site) meta.push(<span key="site">{row.site}</span>);
-  for (const marker of row.requirements) meta.push(<span key={`req-${marker}`}>{marker}</span>);
+  if (row.site)
+    meta.push(
+      <span key="site" className={FACT}>
+        {row.site}
+      </span>,
+    );
+  for (const marker of row.requirements)
+    meta.push(
+      <span key={`req-${marker}`} className={FACT}>
+        {marker}
+      </span>,
+    );
   if (row.aboveLevel) {
     meta.push(
-      <span key="above" className="font-medium text-warning-strong">
+      <span key="above" className={`${FACT} font-medium text-warning-strong`}>
         {row.aboveLevel}
       </span>,
     );
   }
-  if (row.clears) meta.push(<span key="clears">{row.clears}</span>);
+  if (row.clears)
+    meta.push(
+      <span key="clears" className={FACT}>
+        {row.clears}
+      </span>,
+    );
   // Quiet, never disabled: the row still navigates and every control stays
   // reachable. The quiet is *measured* ink — `text-muted` on the title and
   // time — not a wrapper `opacity-60`, which dimmed every token on the row
@@ -187,19 +295,33 @@ function Row({ row }: { row: WeekLedgerRow }) {
   const quiet = row.capacityTone === "full" || row.aboveLevel !== null;
   return (
     <li>
-      <div className="group relative -mx-3 flex flex-col gap-2 rounded-lg px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-start sm:gap-4 sm:px-4 sm:py-5">
+      {/* `sm:items-baseline`: the seat group centres a 28px badge, taller than
+          the title's 24px line, so top-aligned its price and chevron sat 2–3px
+          below the title. On one baseline — the badge's word's — they share
+          its line. The fill answers the row's own door (`>a`, the overlay
+          link, a direct child), not the course link nested in its meta line,
+          which lit the whole row as if the row had focus. */}
+      <div
+        className={`${WEEK_ROW_BOX_CLASS} group relative rounded-lg transition-colors hover:bg-surface has-[>a:focus-visible]:bg-surface sm:items-baseline`}
+      >
         {/* The ring is drawn inside the row: below `sm` the row bleeds
             `-mx-3` into a 16px gutter, 4px from the screen's edge, which cut
-            the outset ring by a pixel on each side. */}
+            the outset ring by a pixel on each side. `scroll-mt-16` keeps a
+            focused row clear of the day rule pinned over the list (60px, and
+            4px): the page's scroll inset clears only the chrome above it, so a
+            row focused 56–116px down stayed under its own rule. */}
         <Link
           href={row.href}
-          className="absolute inset-0 z-0 rounded-inset focus-visible:focus-ring-inset"
+          className="absolute inset-0 z-0 rounded-inset scroll-mt-16 focus-visible:focus-ring-inset"
           aria-label={row.linkLabel}
         />
         {/* The date lives on the day rule above, so the row carries only its
             time — `whitespace-nowrap` so a range never breaks at the space
-            before AM/PM and strands "PM" on a line of its own. */}
-        <div className="shrink-0 sm:w-40">
+            before AM/PM and strands "PM" on a line of its own. 176px holds
+            the longest range, eight digits ("10:00 AM – 12:30 PM", about
+            166px); the seed's seven-digit ones sized it at 160, which an
+            eight-digit range overran by 7px toward the title. */}
+        <div className={WEEK_TIME_RAIL_CLASS}>
           <p
             className={`text-base font-semibold tabular-nums whitespace-nowrap${quiet ? " text-muted" : ""}`}
           >
@@ -228,7 +350,12 @@ function Row({ row }: { row: WeekLedgerRow }) {
             nearly — and routine availability reads as the quiet fact it is. The
             chevron is the row's one at-rest tap cue: with no border, a phone row
             (where hover does not exist) read as a text listing rather than as a
-            pressable thing. */}
+            pressable thing. Below `sm` the row is a column and this group is
+            stretched to its width, so the chevron takes `ms-auto` to hold the
+            row's end rather than trailing each row's words. It is the doors'
+            glyph (`DoorChevron`), its box cropped to its ink, so the arrow
+            ends on the row's edge — the day rule's hairline's — rather than
+            5px inside it. */}
         <div className="flex shrink-0 items-center gap-3">
           {/* Seat state and price are the two facts a diver decides on, so they
               are critical text (principle 2's own definition: a status word, a
@@ -240,11 +367,22 @@ function Row({ row }: { row: WeekLedgerRow }) {
               {row.capacityText}
             </Badge>
           )}
-          {row.price ? <p className="text-base font-semibold tabular-nums">{row.price}</p> : null}
-          <DiveDayIcon
-            name="chevron-right"
-            className="size-4 text-muted transition-transform group-hover:translate-x-0.5"
-          />
+          {/* The price's column stands on every row of a list that charges
+              anything, so a departure with no price keeps its seat state and
+              chevron where the others' are rather than sliding 43px into the
+              price's place. It is as wide as the list's longest price
+              (`--price-col`, `priceColumnWidth`) and set to its end, so seat
+              states end on one x too. Below `sm` the group packs from the
+              start and the chevron holds the row's end by itself, so an empty
+              column there is only a gap and stands down. */}
+          {priceColumn ? (
+            <p
+              className={`text-base font-semibold tabular-nums sm:min-w-(--price-col) sm:text-end${row.price ? "" : " max-sm:hidden"}`}
+            >
+              {row.price}
+            </p>
+          ) : null}
+          <DoorChevron className="ms-auto transition-transform group-hover:translate-x-0.5" />
         </div>
       </div>
     </li>

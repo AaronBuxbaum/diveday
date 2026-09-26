@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BoatDrift } from "@/components/illustration/BoatDrift";
 import { SiteMark } from "@/components/illustration/SiteMark";
+import { buttonClass, tapTargetLineClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -42,7 +43,10 @@ export function LiveBoatPanel({
   follow?: { href: string; label: string };
 }) {
   return (
-    <SectionCard className="h-full">
+    // A card that ends in the Follow door takes 20px under it on a phone, as
+    // it does from `sm`: the door's focus ring reaches 17px under its words
+    // (`tapTargetLineClass`), and the phone's 16px put it on the border.
+    <SectionCard className={follow ? "h-full max-sm:pb-5" : "h-full"}>
       <div className="flex items-start gap-4">
         <BoatDrift stage={stage}>
           <SiteMark mark="boat" size="sm" ground="tint" coral={false} />
@@ -55,12 +59,19 @@ export function LiveBoatPanel({
             // One quiet door, at link weight. A panel about a boat that is
             // already out is not a place for a button competing with the
             // page's one primary, which is the seat on the next departure.
-            <Link
-              href={follow.href}
-              className="mt-2 inline-flex min-h-11 items-center font-medium text-primary hover:underline"
-            >
-              {follow.label}
-            </Link>
+            // Drawn as the season band's link beside it is, on a line its
+            // words' height, so its 44px target adds nothing under the card.
+            // 16px under the meta line, because the target reaches 12px above
+            // the words and its ring 17: after 8px the ring crossed the meta
+            // line's x-height.
+            <p className={`mt-4 ${tapTargetLineClass}`}>
+              <Link
+                href={follow.href}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
+              >
+                {follow.label}
+              </Link>
+            </p>
           ) : null}
         </div>
       </div>

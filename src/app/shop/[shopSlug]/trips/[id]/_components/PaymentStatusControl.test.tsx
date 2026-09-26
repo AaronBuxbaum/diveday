@@ -48,4 +48,36 @@ describe("PaymentStatusControl control row", () => {
     expect(update).toHaveClass("min-h-12", "text-base");
     expect(update).not.toHaveClass("text-sm");
   });
+
+  /**
+   * **The picker and the button it submits wrap as one.** Label, select and
+   * Update were three siblings of one wrapping row, so on a phone a short
+   * label ("Payment: Unpaid") kept the select on the first line and sent
+   * Update down alone, while a longer one dropped both — the select stood at
+   * two different x's down the roster (K-363). Grouped, the pair moves
+   * together and the label wraps above it.
+   */
+  it("keeps the status select and Update in one group of their own inside the row", () => {
+    const { container } = render(
+      <PaymentStatusControl
+        bookingId="booking-1"
+        status="unpaid"
+        allowedStatuses={["unpaid", "deposit_paid", "paid"]}
+        action={vi.fn()}
+        sourceNote={null}
+        refundNote={null}
+        copy={COPY}
+      />,
+    );
+    const form = container.querySelector("form");
+    const select = screen.getByRole("combobox");
+    const update = screen.getByRole("button", { name: "Update" });
+    const group = update.parentElement;
+    expect(group).not.toBe(form);
+    expect(group?.contains(select)).toBe(true);
+    expect(group?.parentElement).toBe(form);
+    expect(group).toHaveClass("flex", "items-center", "gap-2");
+    // The label is the row's other item, outside the pair.
+    expect(group?.contains(screen.getByText(/Payment:/))).toBe(false);
+  });
 });

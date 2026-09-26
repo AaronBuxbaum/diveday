@@ -497,7 +497,7 @@ export function OfflineManifestManager({
           out of signal this live page does not load at all —
           /offline-manifest is what a captain opens. */}
       <section
-        className={sectionCardClass({ padding: "none", className: "mt-8 print:hidden" })}
+        className={sectionCardClass({ padding: "none", className: "print:hidden" })}
         aria-labelledby={scopedId(idPrefix, "offline-heading")}
       >
         <details className="group/phone">

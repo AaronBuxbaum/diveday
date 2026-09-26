@@ -10,6 +10,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
+import { settingsPaneClass } from "../_components/settings-pane";
 import { CalendarFeedPanel } from "./CalendarFeedPanel";
 import type { CalendarFeedCopy, FeedScopeView } from "./feed-panel-types";
 
@@ -111,7 +112,7 @@ export default async function CalendarSubscriptionsPage({
   });
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}

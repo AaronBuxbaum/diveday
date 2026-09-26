@@ -44,6 +44,17 @@ describe("MinimumSeatsBand", () => {
     expect(band).not.toHaveClass("p-5");
   });
 
+  /**
+   * A heading that wraps shares its words between its lines (pixel-craft
+   * class 8, K-543): at 390 "3 divers short of the 6 this departure needs"
+   * left "needs" alone on the second line. The app ramp leaves balance to
+   * each heading that wraps, and this one does.
+   */
+  it("balances its heading's lines", () => {
+    const { getByRole } = renderBand(1);
+    expect(getByRole("heading", { level: 2 })).toHaveClass("text-balance");
+  });
+
   it("says nothing once the departure has its head count", () => {
     const { container } = renderBand(4);
     expect(container).toBeEmptyDOMElement();

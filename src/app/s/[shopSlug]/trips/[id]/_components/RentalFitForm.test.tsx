@@ -101,6 +101,87 @@ describe("RentalFitForm defaults", () => {
   });
 });
 
+describe("RentalFitForm geometry", () => {
+  function renderPriced() {
+    return renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={null}
+        rentalItems={["bcd", "wetsuit", "mask_fins"]}
+        course={null}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+  }
+
+  /** The `gap-x-*` step of a two-column grid, or its shorthand `gap-*`. */
+  const gutter = (grid: Element | null) =>
+    /(?:^|\s)gap-x-(\S+)/.exec(grid?.className ?? "")?.[1] ??
+    /(?:^|\s)gap-(\d\S*)/.exec(grid?.className ?? "")?.[1];
+
+  it("splits the items' grid on the size fields' gutter", () => {
+    // The checkbox grid was hand-rolled at `gap-2` over size fields laid out by
+    // `FieldGrid` at `gap-x-4`, so the two grids' column edges stood 4px apart
+    // either side of the gutter (K-475: 644 against 648).
+    renderPriced();
+    const items = screen.getByRole("checkbox", { name: /^BCD/ }).closest(".sm\\:grid-cols-2");
+    const sizes = screen.getByLabelText(/BCD size/).closest(".sm\\:grid-cols-2");
+    expect(items).not.toBeNull();
+    expect(sizes).not.toBeNull();
+    expect(items).not.toBe(sizes);
+    expect(gutter(items)).toBe(gutter(sizes));
+  });
+
+  it("holds every item's info marker on one line, whatever its price's length", () => {
+    // The marker sits before the price, so the price's width places it.
+    // Proportional figures walked it 2px between "$15.00" and "$35.00"
+    // (K-476); tabular ones still walked it a whole figure between "$8.00"
+    // and "$35.00" (K-476 review). Each price now keeps the widest price's
+    // width, in tabular figures, and ends on the pill's edge.
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={null}
+        rentalItems={["bcd", "drysuit", "weights"]}
+        course={null}
+        pricing={{
+          ...defaultPricing,
+          perItemCents: { ...defaultPricing.perItemCents, bcd: 800, drysuit: 3500 },
+        }}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+    const priceOf = (item: RegExp) =>
+      screen.getByRole("checkbox", { name: item }).closest("label")?.parentElement
+        ?.lastElementChild;
+    for (const [item, own] of [
+      [/^BCD/, "$8.00"],
+      [/^Drysuit/, "$35.00"],
+      [/^Weights/, "$5.00"],
+    ] as const) {
+      const price = priceOf(item);
+      expect(price, own).toHaveClass("tabular-nums", "text-end");
+      const shown = [...(price?.children ?? [])].filter((c) => !c.hasAttribute("aria-hidden"));
+      expect(
+        shown.map((c) => c.textContent),
+        own,
+      ).toEqual([own]);
+      // The widest price, held invisibly under a shorter one, sets its width.
+      const held = price?.querySelector("[aria-hidden='true']");
+      expect(held?.textContent ?? own, own).toBe("$35.00");
+    }
+  });
+});
+
 describe("RentalFitForm scope", () => {
   it("no longer carries the free-text note — it is its own question now (issue 627)", () => {
     // "Anything else the crew should know?" is a category of its own on

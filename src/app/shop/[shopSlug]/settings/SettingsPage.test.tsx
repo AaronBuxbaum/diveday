@@ -1,16 +1,24 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { ImageFileInput } from "@/components/ImageFileInput";
+import { RemovablePhoto } from "@/components/RemovablePhoto";
+import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { type Fact, FactLine } from "@/components/ui/FactLine";
+import { ChoiceFieldset, ChoiceRow, Field, FieldActions } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
-import { diveSites, mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
+import { diveSites, mediaDeletionAttempts, processorErasureObligations, shops } from "@/db/schema";
 import { getShopBySlug, setShopDivingOptions } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import { STAFF_MESSAGES } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { seededTestDb } from "@/test/db";
 import {
   ariaLabelsIn,
@@ -234,6 +242,98 @@ describe("the units card", () => {
   });
 });
 
+/**
+ * **No caption label wraps another label** (K-13 review). The profile row's
+ * logo, cover photo and badges were `Field`s around composites holding labels
+ * of their own, so the page nested a label in a label: with a logo on file the
+ * caption "Logo" labelled the "Remove logo" box and a click on it ticked the
+ * box, and "Badges" labelled the first badge.
+ */
+describe("the profile row's captions", () => {
+  const PROFILE = STAFF_MESSAGES["en-US"].settings.main.profile;
+
+  /** Every element in a tree carrying `name`, whatever renders it. */
+  function named(node: unknown, name: string, found: ReactElement<{ id?: string }>[] = []) {
+    if (node === null || typeof node !== "object") return found;
+    if (Array.isArray(node)) {
+      for (const child of node) named(child, name, found);
+      return found;
+    }
+    if ("props" in node) {
+      const element = node as ReactElement<{ name?: unknown; id?: string; children?: unknown }>;
+      if (element.props?.name === name) found.push(element);
+      named(element.props?.children, name, found);
+    }
+    return found;
+  }
+
+  async function profileBody() {
+    const [row] = findElements<{ sectionId?: string; children?: unknown }>(
+      await renderSettings("owner", async (db, session) => {
+        await db
+          .update(shops)
+          .set({ logoUrl: "/dive-sites/logo.png" })
+          .where(eq(shops.id, session.user.shopId));
+      }),
+      settingsRowsModule.SettingsRow,
+    ).filter((candidate) => candidate.props.sectionId === "profile");
+    return row?.props.children;
+  }
+
+  it("names the logo and cover-photo pickers with their captions, never the remove box", async () => {
+    const body = await profileBody();
+    const fields = findElements<{ label?: unknown; htmlFor?: string }>(body, Field);
+    for (const [label, input] of [
+      [PROFILE.logo, "logoFile"],
+      [PROFILE.heroPhoto, "brandHeroFile"],
+    ] as const) {
+      const [field] = fields.filter((candidate) => candidate.props.label === label);
+      expect(field?.props.htmlFor, label).toBeTruthy();
+      const [picker] = named(body, input);
+      expect(picker?.props.id, input).toBe(field?.props.htmlFor);
+    }
+  });
+
+  /**
+   * The logo and the cover photo were a raw `<img>` beside a visible checkbox,
+   * above a bare file input: the one form still drawing "take a stored photo
+   * back off" its own way (K-247 follow-up). They are `RemovablePhoto`s now,
+   * the logo in its square shape, picked with `ImageFileInput`, posting the
+   * same `removeLogo` / `removeHero` and `logoFile` / `brandHeroFile` the save
+   * action reads.
+   */
+  it("takes a stored logo and cover photo back off the way every stored photo is", async () => {
+    const body = await profileBody();
+    const photos = findElements<{ name?: string; value?: string; shape?: string }>(
+      body,
+      RemovablePhoto,
+    );
+    expect(photos.map(({ props }) => [props.name, props.value ?? "true", props.shape])).toEqual([
+      ["removeLogo", "true", "logo"],
+      ["removeHero", "true", undefined],
+    ]);
+    expect(
+      findElements<{ name?: string }>(body, ImageFileInput).map(({ props }) => props.name),
+    ).toEqual(["logoFile", "brandHeroFile"]);
+    expect(findElements(body, "img")).toHaveLength(0);
+  });
+
+  it("captions the badges as a group of choices, not with a field's label", async () => {
+    const body = await profileBody();
+    const groups = findElements<{ legend?: unknown; hint?: unknown; children?: unknown }>(
+      body,
+      ChoiceFieldset,
+    ).filter((group) => group.props.legend === PROFILE.badges);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.props.hint).toBe(PROFILE.badgesHint);
+    expect(inputNamesIn(groups[0]?.props.children)).toContain("badge");
+    const wrapping = findElements<{ children?: unknown }>(body, Field).filter(
+      (field) => findElements(field.props.children, ChoiceRow).length > 0,
+    );
+    expect(wrapping).toHaveLength(0);
+  });
+});
+
 /*
  * The two data-compliance queues that moved here from the monthly report:
  * stored files a provider delete never finished, and erasures that never landed
@@ -334,6 +434,118 @@ describe("the data-compliance queues in the Data group", () => {
   });
 });
 
+/**
+ * **A row's answer wraps only between its facts** (K-235). Five closed rows
+ * state several facts joined by " · ", and each was one plain string, so any
+ * space in any fact was a place to break: the contact row ended a line on
+ * "+1" with "305 555 0142" under it (SETTINGS-1-07), and Diving options broke
+ * "6:1 divers / per divemaster" (SETTINGS-1-21). Each is a `FactLine` now,
+ * which keeps our own words whole and lets only the shop's free text wrap.
+ */
+describe("the hub's summary values", () => {
+  const PHONE = "+1 305 555 0231";
+
+  async function valueFacts(sectionId: SectionId) {
+    const element = await renderSettings("owner", async (db, session) => {
+      await db
+        .update(shops)
+        .set({
+          contactPhone: PHONE,
+          tagline: "Diving the Keys since 2012",
+          passThroughFee: { name: "Marine park fee", amountCents: 500 },
+        })
+        .where(eq(shops.id, session.user.shopId));
+    });
+    const [row] = findElements<{ sectionId?: string; value?: unknown }>(
+      element,
+      settingsRowsModule.SettingsRow,
+    ).filter((candidate) => candidate.props.sectionId === sectionId);
+    expect(row, sectionId).toBeDefined();
+    const lines = findElements<{ facts: readonly Fact[] }>(row?.props.value, FactLine);
+    expect(lines, `${sectionId}'s value is a FactLine`).toHaveLength(1);
+    return lines[0]?.props.facts ?? [];
+  }
+
+  it("keeps the contact phone whole, so the line breaks only after its dot", async () => {
+    const facts = await valueFacts("contact");
+    expect(facts.filter(Boolean).at(-1)).toBe(PHONE);
+  });
+
+  it("keeps each of our own facts whole on the units and diving-options rows", async () => {
+    for (const sectionId of ["units", "divingOptions"] as const) {
+      const facts = (await valueFacts(sectionId)).filter(Boolean);
+      expect(facts.length, sectionId).toBeGreaterThan(1);
+      for (const fact of facts) expect(typeof fact, `${sectionId}: ${fact}`).toBe("string");
+    }
+    expect(await valueFacts("divingOptions")).toContain("6:1 divers per divemaster");
+  });
+
+  it("lets only the shop's own words wrap: the tagline and the fee's name", async () => {
+    const [tagline, ...profile] = (await valueFacts("profile")).filter(Boolean);
+    expect(tagline).toEqual({ value: "Diving the Keys since 2012", wraps: true });
+    for (const fact of profile) expect(typeof fact).toBe("string");
+
+    const [feeName, price] = await valueFacts("passThrough");
+    expect(feeName).toEqual({ value: "Marine park fee", wraps: true });
+    expect(price).toBe("$5 / diver");
+  });
+});
+
+/** How the two queues are drawn, once they have something in them. */
+describe("the data-compliance queues' drawing", () => {
+  async function queuePanels() {
+    const element = await renderSettings("owner", async (db, session) => {
+      await queueStuckDeletion(db, session);
+      await oweErasure(db, session, "stripe_customer");
+    });
+    const panels = findElements<{ "aria-label"?: string; children?: unknown }>(
+      element,
+      "section",
+    ).filter((section) => [MEDIA_PANEL, ERASURE_PANEL].includes(section.props["aria-label"] ?? ""));
+    expect(panels).toHaveLength(2);
+    return panels;
+  }
+
+  /**
+   * Each item was one `flex flex-wrap` run of name, id, a meta span that
+   * *started* with "·", and the forms, so at 390 a line opened on the dot and
+   * the buttons landed wherever the words ended, at a different x on every
+   * item (K-341). The words are one `FactLine` now, and the forms a group of
+   * their own under them.
+   */
+  it("sets each item's words as one line of facts, and its actions on a line of their own", async () => {
+    const strings = (node: unknown): string[] => {
+      if (typeof node === "string") return [node];
+      if (Array.isArray(node)) return node.flatMap(strings);
+      if (node && typeof node === "object" && "props" in node) {
+        return strings((node as ReactElement<{ children?: unknown }>).props.children);
+      }
+      return [];
+    };
+    let items = 0;
+    for (const panel of await queuePanels()) {
+      for (const item of findElements<{ children?: unknown }>(panel.props.children, "li")) {
+        items++;
+        const children = [item.props.children].flat(Number.POSITIVE_INFINITY);
+        expect(children.filter((child) => (child as ReactElement)?.type === "form")).toEqual([]);
+        const holdingForms = children.filter((child) => findElements(child, "form").length > 0);
+        expect(holdingForms).toHaveLength(1);
+        expect(findElements(holdingForms[0], FactLine)).toHaveLength(0);
+        const factLines = findElements<{ separatorClassName?: string }>(
+          item.props.children,
+          FactLine,
+        );
+        expect(factLines).toHaveLength(1);
+        // The dots keep the muted ink the base's one muted run gave them, not
+        // the notice's danger (K-341 review).
+        expect(factLines[0]?.props.separatorClassName).toBe("text-muted");
+        for (const text of strings(item.props.children)) expect(text).not.toMatch(/^\s*·/);
+      }
+    }
+    expect(items).toBe(2);
+  });
+});
+
 describe("the diving options a shop runs", () => {
   it("offers boat alongside shore and pool, and the door to the fleet with it", async () => {
     const element = await renderSettings("owner");
@@ -389,6 +601,27 @@ describe("the diving options a shop runs", () => {
   });
 });
 
+/**
+ * **One beat per line on a phone** (K-585). The preview was a greedy
+ * `flex-wrap` strip, so at 390 five lines held one beat each and the third
+ * held two, 25px apart, and the list read as a list with one line carrying two
+ * beats. From `sm` up it is the strip it was.
+ */
+describe("the dock-day preview's layout", () => {
+  it("stacks the beats on a phone and runs them as a strip from sm up", async () => {
+    const [row] = findElements<{ sectionId?: string; children?: unknown }>(
+      await renderSettings("owner"),
+      settingsRowsModule.SettingsRow,
+    ).filter((candidate) => candidate.props.sectionId === "dockCall");
+    const lists = findElements<{ className?: string }>(row?.props.children, "dl");
+    expect(lists).toHaveLength(1);
+    const classes = lists[0]?.props.className?.split(" ") ?? [];
+    expect(classes).toEqual(expect.arrayContaining(["grid", "sm:flex", "sm:flex-wrap"]));
+    expect(classes).not.toContain("flex");
+    expect(classes).not.toContain("flex-wrap");
+  });
+});
+
 /*
  * The dock-day preview describes the shop's own six numbers, and a dive site
  * may override one of them (`dive_sites.expected_bottom_time_minutes`). The
@@ -413,6 +646,113 @@ describe("the dock-day preview and the sites that override it", () => {
         .where(eq(diveSites.id, site.id));
     });
     expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/dive-sites/${overridden}`);
+  });
+});
+
+/**
+ * **The emergency reference row**, drawn like every other row on the hub. It
+ * is the one thing on this page a crew reads when something has gone wrong,
+ * and it was the one row whose body was spelled its own way.
+ */
+describe("the emergency reference row", () => {
+  const EMERGENCY = STAFF_MESSAGES["en-US"].settings.main.emergency;
+
+  async function emergencyRow() {
+    const rows = findElements<{ sectionId?: string; description?: string; children?: unknown }>(
+      await renderSettings("owner"),
+      settingsRowsModule.SettingsRow,
+    ).filter((row) => row.props.sectionId === "emergency");
+    expect(rows).toHaveLength(1);
+    return rows[0] as NonNullable<(typeof rows)[number]>;
+  }
+
+  /**
+   * Its intro was a `<p>` inside the `mt-4` form, not the row's description,
+   * so its first line sat 16px lower than every other row's (55px from label
+   * to first line at 1280, against 39 on the rows around it; K-437).
+   */
+  it("says what it is for in the row's description, where every row does", async () => {
+    const row = await emergencyRow();
+    expect(row.props.description).toBe(EMERGENCY.intro);
+    const paragraphs = findElements<{ children?: unknown }>(row.props.children, "p");
+    expect(paragraphs.filter((p) => p.props.children === EMERGENCY.intro)).toHaveLength(0);
+  });
+
+  /**
+   * Its Save was `size: "sm"` in a bare `<div>`: 44px with a 14px label, where
+   * every other Save on the hub is the default 48px with 16px, in
+   * `FieldActions` (K-308).
+   */
+  it("saves with the hub's one Save, at its size and in its row", async () => {
+    const row = await emergencyRow();
+    const saves = findElements<{ children?: unknown; className?: string }>(
+      findElements(row.props.children, FieldActions),
+      SubmitButton,
+    ).filter((button) => button.props.children === EMERGENCY.submit);
+    expect(saves).toHaveLength(1);
+    expect(saves[0]?.props.className).toBe(buttonClass({ variant: "secondary" }));
+  });
+
+  /**
+   * The examples were each label box's placeholder, and a half-width box is
+   * 331px at 1280 and 324 at 390: "Chamber, dive-accident hotline, coast
+   * guard…" was cut mid-word, and the Spanish is longer (K-583). They are the
+   * first line's description now, which wraps, and no box carries them.
+   */
+  it("gives its examples once, under the first line, where they wrap", async () => {
+    const row = await emergencyRow();
+    const lines = findElements<{ description?: unknown; children?: unknown }>(
+      row.props.children,
+      Field,
+    ).filter((field) => {
+      const control = field.props.children as ReactElement<{ name?: string }> | undefined;
+      return control?.props?.name?.startsWith("emergencyLabel-");
+    });
+    expect(lines.length).toBeGreaterThan(1);
+    for (const line of lines) {
+      const control = line.props.children as ReactElement<{ placeholder?: unknown }>;
+      expect(control.props.placeholder).toBeUndefined();
+    }
+    expect(lines.map((line) => line.props.description)).toEqual([
+      EMERGENCY.lineExamples,
+      ...lines.slice(1).map(() => undefined),
+    ]);
+  });
+});
+
+/**
+ * **The support door at the foot of the page.** A bare `<a>` after a block
+ * `<p>` is not a link inside a sentence, so the inline-link exception to the
+ * 44px floor does not apply to it: "Email support@dive.day" was a 159×17
+ * target on every settings capture at 390 (K-153).
+ */
+describe("the page's footer", () => {
+  it("makes the support email a 44px target", async () => {
+    const links = findElements<{ href?: string; className?: string }>(
+      await renderSettings("owner"),
+      "a",
+    ).filter((link) => link.props.href === `mailto:${SUPPORT_EMAIL}`);
+    expect(links).toHaveLength(1);
+    expect(links[0]?.props.className?.split(" ")).toEqual(
+      expect.arrayContaining(tapTargetLinkClass.split(" ")),
+    );
+  });
+
+  /**
+   * The page's sections sit 40px apart in one `space-y-10`, and the footer
+   * sat outside that stack on its own `mt-12`, 48px under the last card
+   * (K-488). It is the stack's last child now, and carries no margin of its own.
+   */
+  it("sits in the page's section stack, a section's gap under the last card", async () => {
+    const stacks = findElements<{ className?: string; children?: unknown }>(
+      await renderSettings("owner"),
+      "div",
+    ).filter((div) => div.props.className === "space-y-10");
+    expect(stacks).toHaveLength(1);
+    const children = [stacks[0]?.props.children].flat(Number.POSITIVE_INFINITY);
+    const footer = children.at(-1) as ReactElement<{ className?: string }> | undefined;
+    expect(footer?.type).toBe("footer");
+    expect(footer?.props.className).not.toMatch(/(^|\s)m[ty]-/);
   });
 });
 

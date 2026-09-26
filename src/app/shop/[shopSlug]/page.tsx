@@ -900,7 +900,10 @@ async function TodayBody({
               href={shopPath(shopSlug, "print")}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex h-8 items-center rounded-full bg-white/18 px-3 text-sm font-semibold text-(--sky-ink) backdrop-blur-sm print:hidden hover:bg-white/28"
+              // The band's own chip, as the trip masthead draws it: a 44px
+              // target on the control rung. It was typed out by hand as a
+              // 32px pill in a heavier weight (K-152).
+              className={buttonClass({ variant: "sky", size: "sm", className: "print:hidden" })}
             >
               {t("shared.printPacket.dayDoor")}
             </Link>
@@ -1016,14 +1019,15 @@ async function TodayBody({
 
       {/* One notice surface. A visit rarely carries more than one of these;
           when it does, they read as one stack of arrivals rather than four
-          competing banners. */}
+          competing banners. `mb-10` is the spine's own `gap-10`: the stack is
+          one more block in that column, not closer to it (K-316). */}
       {(created && !firstBookableMoment) ||
       reset ||
       email ||
       authNoticeKey ||
       closed ||
       eveningNotice ? (
-        <div className="mb-6 flex flex-col gap-2">
+        <div className="mb-10 flex flex-col gap-2">
           {created && !firstBookableMoment ? (
             <ShopNotice>
               {seriesCount > 1

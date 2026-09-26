@@ -115,8 +115,9 @@ async function expectNoA11yViolations(page: Page) {
   // aborted map frame is the page's only one. It does not wedge on macOS
   // (measured at 523ms against a warm e2e server), so the Linux-runner half of
   // that is unproven; the useful half is that the culprit is a third-party
-  // iframe this harness deliberately kills, not anything a diver's phone does.
-  // Which is the whole argument for waiting on content instead.
+  // iframe this harness deliberately killed (it answers it with an empty page
+  // now, pixel-craft K-511), not anything a diver's phone does. Which is the
+  // whole argument for waiting on content instead.
   //
   // **Order still matters.** The title assertion is last, immediately before
   // `analyze()`, so the document axe reads is the one this checked. Asserting it
@@ -1252,7 +1253,7 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
    * marine life, an embedded map and a booking form, on one page.
    *
    * It was left out because the scan used to wait for `networkidle`, which this
-   * page never reaches — `e2e/fixtures.ts` aborts its Google Maps iframe, and
+   * page never reached — `e2e/fixtures.ts` aborted its Google Maps iframe, and
    * its dive-site photos are externally hosted and proxied through
    * `/_next/image`, which the sealed e2e fleet cannot fetch. That wait was
    * removed from `expectNoA11yViolations` in PR #585 and every caller now gates

@@ -7,6 +7,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { crewRowId, diverRowHash, scopedHash, scopedId } from "@/lib/element-id";
 import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
 import { HeadCount } from "./HeadCount";
+import { PanelHeight } from "./PanelHeight";
 
 /**
  * The sticky progress panel: which checkpoint is live, how much of it is
@@ -259,8 +260,12 @@ export function SummaryPanel({
           coral on no manifest or roll call, and the moment here is the count
           that fills (slice 13h) — the water at the brim and the heading's
           word, never a wash behind the reading text. */}
-      <section
-        aria-labelledby={scopedId(idPrefix, "roll-call-progress-heading")}
+      {/* `PanelHeight` is this `<section>`, not a wrapper around it: it
+          measures the card and hands its height to the rows' scroll margin
+          (`rollCallScrollMargin`), so a jump lands below the card however tall
+          its danger lines make it. */}
+      <PanelHeight
+        labelledBy={scopedId(idPrefix, "roll-call-progress-heading")}
         className="sticky top-(--chrome-h) z-10 mt-4 rounded-panel border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur print:hidden"
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -397,17 +402,26 @@ export function SummaryPanel({
             {t("manifest.buddySeparatedLine", { count: separatedTeams })}
           </p>
         ) : null}
-      </section>
+      </PanelHeight>
       {/* The prose half, immediately below the pinned card and in the same
           visual language — it may scroll away. Nothing here is an emergency:
           the closing line when it is calm, and what being blocked means at
-          *this* checkpoint. */}
-      <div className="px-4 pt-2 print:hidden">
+          *this* checkpoint.
+
+          `border-x border-transparent`: the card above is `border p-4`, so its
+          content starts 17px in, and `px-4` alone started these chips a pixel
+          left of the card's (K-554). The same box model, with nothing
+          painted. */}
+      <div className="border-x border-transparent px-4 pt-2 print:hidden">
         {/* The line that says whether this checkpoint is closed. It used to go
             quiet at `awaiting === 0` — every diver counted, nothing said about
             the crew. Now it names what is still open. */}
         {/* Stays mounted whether or not it currently has anything to say, so a
-            change is announced when one arrives. */}
+            change is announced when one arrives. Empty, it is 0px tall, so the
+            lines after it drop their margin off it (`[p:empty+&]:mt-0`): an
+            empty line adds no gap it does not fill (K-558, pixel-craft class
+            4). Not `flex gap-*` on this block, which lays its gap beside a
+            zero-height item as well. */}
         <p className="text-base font-semibold text-muted" aria-live="polite">
           {mutedText}
         </p>
@@ -436,7 +450,10 @@ export function SummaryPanel({
             words the buddy panel puts on a crew member, so the page says one
             thing one way. */}
         {rollCallStarted && stillToCall.length > 0 ? (
-          <ul className="mt-2 flex flex-wrap gap-2" aria-label={t("manifest.stillToCallListLabel")}>
+          <ul
+            className="mt-2 flex flex-wrap gap-2 [p:empty+&]:mt-0"
+            aria-label={t("manifest.stillToCallListLabel")}
+          >
             {stillToCall.map((person) => (
               <li key={person.key}>
                 <a
@@ -479,7 +496,7 @@ export function SummaryPanel({
             20260827-the-departure-is-two-working-surfaces, decision 4), and it
             competed with the one red that means somebody is in the water. */}
         {isDeparture && summary.blocked > 0 ? (
-          <p className="mt-1 text-base font-semibold text-danger">
+          <p className="mt-1 text-base font-semibold text-danger [p:empty+&]:mt-0">
             {t("manifest.blockedDeparture", { count: summary.blocked })}
           </p>
         ) : null}

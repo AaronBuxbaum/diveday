@@ -2,6 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { buttonClass } from "@/components/ui/button";
 import type { CheckInQueueRow } from "@/db/check-in";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { NoShowClaim } from "@/lib/no-show";
@@ -606,5 +607,115 @@ describe("the row's box", () => {
     expect(form?.className).not.toMatch(/(?:^|\s)-m[xe]-/);
     expect(undo).toHaveClass("w-full", "ps-2");
     expect(undo.className).not.toMatch(/(?:^|\s)p[xe]-/);
+  });
+
+  /**
+   * **The pass's words end on the column** (pixel-craft class 3, K-320). A
+   * `link` paints nothing around its words, and `sm`'s `px-3` put "Print a
+   * pass" 12px inside the edge every badge and "All boarded" end on (1051
+   * against 1063 at 1280). `flush` drops the padding and keeps the 44px floor;
+   * the row's `gap-3` is still the room between the undo and the pass.
+   */
+  it("ends the settled row's pass on the column's edge", () => {
+    renderRow({ bookingStatus: "checked_in" });
+    const pass = screen.getByRole("button", { name: "Print a pass" });
+    expect(pass.className).toBe(buttonClass({ variant: "link", size: "sm", flush: true }));
+  });
+});
+
+/**
+ * **A row's state stays at the row's end, however much the name carries**
+ * (pixel-craft class 3, K-222). The first line was a wrapping row whose
+ * identity took only its content's width, so a name wearing a second badge
+ * ("No emergency contact") grew the identity until the row wrapped and the
+ * Blocked badge dropped under the name at the row's start, while every other
+ * row's badge stood at its end. The blocked row's line does not wrap; the
+ * identity takes the room and wraps its own badges inside itself. A released
+ * seat's line still wraps, and its cluster holds the end — see its own case.
+ */
+describe("a row's first line", () => {
+  const LONG = "Nadia Petrova-Castellanos de la Fuente";
+
+  function header(stateWord: string) {
+    const state = screen.getByText(stateWord);
+    // `LedgerRow`'s content box, then the row's own first line inside it.
+    const line = state.closest("article > div > div");
+    expect(line, "the row's first line").not.toBeNull();
+    return { line, identity: line?.firstElementChild, state };
+  }
+
+  it("keeps a blocked row's badge at the end beside a name with a badge of its own", () => {
+    renderRow({ ...owesWaiver, personName: LONG, missingEmergencyContact: true });
+    const { line, identity, state } = header("Blocked");
+    expect(line).toHaveClass("flex", "items-center");
+    expect(line).not.toHaveClass("flex-wrap");
+    expect(identity).toHaveClass("min-w-0", "flex-1");
+    // The gap badge rides with the name; the gate stays the line's last word.
+    expect(identity).toHaveTextContent("No emergency contact");
+    expect(identity).not.toContainElement(state);
+    expect(line?.lastElementChild).toContainElement(state);
+    // Laid out, never decided: still the gate, still no check-in control.
+    expect(screen.queryByRole("button", { name: `Check in ${LONG}` })).not.toBeInTheDocument();
+  });
+
+  /**
+   * **The blocked name is a 28px line with a 44px target** (pixel-craft class
+   * 12, K-321). The blocked row's name is its record's door, and it was a
+   * `tapTargetLinkClass` box, 44px tall around a 28px line, where the ready
+   * row's name is the plain line: the meta under it sat 36px from the name's
+   * cap top on a blocked row and 28px on a ready one. The link is the line, and
+   * its target reaches 8px above and below it as a stretched `::after`; the
+   * name truncates inside it, so the link's own box never clips that target.
+   */
+  it("spaces a blocked name and its meta as a ready row does, keeping the target", () => {
+    renderRow({ ...owesWaiver, bookingStatus: "checked_in" });
+    const link = screen.getByRole("link", { name: "Nadia Petrov" });
+    expect(link).toHaveAttribute("href", "/shop/blue-mantis/divers/person-1");
+    expect(link.className).not.toMatch(/(?:^|\s)(?:min-h-11|inline-flex|truncate)(?:\s|$)/);
+    expect(link).toHaveClass(
+      "relative",
+      "block",
+      "min-w-0",
+      "text-lg",
+      "after:absolute",
+      "after:inset-x-0",
+      "after:-inset-y-2",
+    );
+    const words = link.firstElementChild;
+    expect(words).toHaveTextContent("Nadia Petrov");
+    expect(words).toHaveClass("block", "truncate");
+    // The meta line still follows the name, as a ready row's does.
+    expect(screen.getByText(/Checked in/)).toHaveClass("mt-0.5");
+  });
+
+  /**
+   * **A released seat keeps its name whole, and its cluster gives way under
+   * it** (K-222). Its end is not one badge but "Not here" and a ghost "Put
+   * back on the list", about 240px in en-US and 280 in es-ES, so the blocked
+   * row's no-wrap line would leave a 357px phone column 70–110px for the name
+   * a staffer reads to walk the seat back, and push "No emergency contact"
+   * out under the badge. The line wraps as it always did; a cluster that
+   * wraps holds the row's end (`ms-auto`) rather than dropping to its start.
+   */
+  it("wraps a released seat's word and undo under a whole name, at the row's end", () => {
+    renderRow({ bookingStatus: "no_show", personName: LONG, missingEmergencyContact: true });
+    const { line, identity, state } = header("Not here");
+    expect(line).toHaveClass(
+      "flex",
+      "flex-wrap",
+      "items-center",
+      "justify-between",
+      "gap-x-2",
+      "gap-y-1",
+    );
+    expect(identity).toHaveClass("min-w-0");
+    expect(identity).not.toHaveClass("flex-1");
+    expect(identity).not.toContainElement(state);
+    const cluster = line?.lastElementChild;
+    expect(cluster).toContainElement(state);
+    expect(cluster).toContainElement(
+      screen.getByRole("button", { name: `Put ${LONG} back on this boat’s list` }),
+    );
+    expect(cluster).toHaveClass("ms-auto", "shrink-0");
   });
 });

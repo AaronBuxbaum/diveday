@@ -217,6 +217,85 @@ describe("the crew-names checkbox", () => {
 });
 
 /**
+ * **Every screen row puts its actions in one place.** A row was a wrapping
+ * flex line spread `justify-between`, so whether Revoke stood beside the text
+ * or on a line of its own under it depended on how long that row's meta line
+ * ran: at 1280 the first row's actions sat under its text at x 466, the
+ * second's beside it at x 1064 (K-441, SETTINGS-2-19). From `sm` the row is
+ * two columns, the actions always the right one; below it they always follow
+ * the text.
+ *
+ * **A wrapped meta line never starts with its separator.** The parts were
+ * joined with an ordinary space on each side of the "·", so a line could break
+ * before the dot and open with it at 390 (K-587, SETTINGS-2-40). A no-break
+ * space ties each dot to the part before it.
+ */
+describe("a screen row's geometry", () => {
+  it("holds its actions in a column of their own from sm, whatever the meta line's length", () => {
+    const long = {
+      ...screenRow("cccccccc-1111-4222-8333-444444444444", "Counter tablet", "Expires 12 Mar 2027"),
+      lastShownLabel: "Last shown Thursday 27 August 2026 at 9:30 AM EDT",
+    };
+    render(panel([long, ...SCREENS]));
+    const rows = within(screen.getByRole("region", { name: copy.listHeading })).getAllByRole(
+      "listitem",
+    );
+    expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      expect(row).toHaveClass("flex-col", "sm:grid", "sm:grid-cols-[minmax(0,1fr)_auto]");
+      expect(row).not.toHaveClass("flex-wrap");
+      expect(row).not.toHaveClass("justify-between");
+    }
+  });
+
+  it("ties each separator to the part before it", () => {
+    render(panel());
+    const list = screen.getByRole("region", { name: copy.listHeading });
+    const [meta] = within(list).getAllByText(/^Departures board/);
+    expect(meta?.textContent).toBe(
+      ["Departures board", "Created Lobby TV", copy.neverShown, copy.namesOff].join("\u00a0· "),
+    );
+    expect(meta?.textContent).not.toMatch(/ ·/);
+  });
+
+  /**
+   * **An armed Revoke gets a line of its own.** Arming swaps the trigger for
+   * `InlineConfirm`'s question block (`role="alert"`), and an `auto` grid track
+   * grows to its content's max-content before the `1fr` track gets anything:
+   * with the question in the right column the name and meta shrank to 144px
+   * at 1280 and to 18px at 640, and the row grew to 432px (the review of
+   * K-441). While the row holds that block it is one column, so the question
+   * stands under the text, as the wrapping row always put it; a row at rest
+   * keeps its two.
+   */
+  it("stacks an armed Revoke's question under the text rather than beside it", async () => {
+    render(
+      panel([
+        screenRow("aaaaaaaa-1111-4222-8333-444444444444", "Lobby TV", "Expires 12 Mar 2027"),
+        screenRow("bbbbbbbb-1111-4222-8333-444444444444", "Dock B tablet"),
+      ]),
+    );
+    const list = screen.getByRole("region", { name: copy.listHeading });
+    const [armedRow, restingRow] = within(list).getAllByRole("listitem");
+
+    await userEvent.click(screen.getByRole("button", { name: "Revoke Lobby TV" }));
+
+    const question = within(list).getByRole("alert");
+    expect(question).toHaveTextContent(copy.confirmRevoke);
+    // The block the variant keys on is inside the row it collapses, and only
+    // that row: the resting row holds none, so it keeps its two columns.
+    expect(question.closest("li")).toBe(armedRow);
+    expect(restingRow?.querySelector('[role="alert"]')).toBeNull();
+    for (const row of [armedRow, restingRow]) {
+      expect(row).toHaveClass(
+        "sm:grid-cols-[minmax(0,1fr)_auto]",
+        "sm:has-[[role=alert]]:grid-cols-1",
+      );
+    }
+  });
+});
+
+/**
  * **A link that expires says when, and offers the one repair.** A kiosk whose
  * URL quietly stopped working is a tablet nobody can explain, so the row that
  * has a lifetime prints it and carries a Renew beside the Revoke. A board link

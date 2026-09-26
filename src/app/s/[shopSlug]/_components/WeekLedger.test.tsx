@@ -1,14 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { WeekLedger, type WeekLedgerRow } from "./WeekLedger";
+import { DoorChevron } from "@/components/ui/ledger";
+import { WEEK_LEDGER_FOLLOWER_CLASS, WeekLedger, type WeekLedgerRow } from "./WeekLedger";
 
 /**
  * The week ledger's pins for ADR 20260827-clearwater-surface-language,
  * decision 8 — the rules, never the pixels. Every "renders nothing" assertion
  * here is guarding one of the design's silences: the requirement slot on a
- * departure that demands nothing, the price cell on a departure with no price,
- * and the second detail line that used to stack under every title.
+ * departure that demands nothing, the price on a departure with no price (its
+ * column stays, empty, so the row's seat state holds its x), and the second
+ * detail line that used to stack under every title.
  */
 afterEach(cleanup);
 
@@ -66,6 +68,19 @@ describe("a week row is a link, never a button", () => {
     );
   });
 
+  /**
+   * The day rule pins over the list, 60px tall, and the page's scroll inset
+   * clears only the chrome above it: a row focused anywhere from 56 to 116px
+   * down counted as in view and stayed under its own rule (pixel-craft class
+   * 9). The row's door keeps 64px — the rule and 4px — clear of the top, on
+   * the page (on top of the chrome's inset) and in the embed.
+   */
+  it("keeps a focused row's door clear of the day rule pinned above it", () => {
+    render(<WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />);
+
+    expect(screen.getByRole("link", { name: /Two-Tank Reef/ })).toHaveClass("scroll-mt-16");
+  });
+
   it("adds the course's own link as the row's one nested door", () => {
     render(
       <WeekLedger
@@ -87,6 +102,54 @@ describe("a week row is a link, never a button", () => {
       "href",
       "/s/blue-mantis/courses/open-water-diver",
     );
+  });
+
+  /**
+   * The row fills when its door has focus, and the fill asked for any focused
+   * link inside it: tabbing to the nested course link lit the whole row as if
+   * the row were focused, beside the course link's own ring (pixel-craft class
+   * 7). Only the row's own door — the overlay link, a direct child — lights it.
+   */
+  it("lights the row for its own door's focus, not the nested course link's", () => {
+    render(
+      <WeekLedger
+        rows={[
+          row({ course: { label: "Course session", title: "Open Water Diver", href: "/c/ow" } }),
+        ]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const box = screen.getByRole("link", { name: /Two-Tank Reef/ }).parentElement;
+    const course = screen.getByRole("link", { name: "Open Water Diver" });
+    expect(box).toHaveClass("has-[>a:focus-visible]:bg-surface");
+    expect(box?.className).not.toContain("has-[a:focus-visible]");
+    // The course link is inside the row but not a child of it, so `>a` never
+    // matches it.
+    expect(box?.contains(course)).toBe(true);
+    expect(course.parentElement).not.toBe(box);
+  });
+});
+
+/**
+ * The time rail was sized for the seed's seven-digit ranges: "12:00 PM – 4:00
+ * PM" is 153px, so a digit is 11px and an eight-digit range ("10:00 AM – 12:30
+ * PM") about 166px, which ran 7px out of a 160px rail toward the title
+ * (pixel-craft class 8, latent). The rail is 176px.
+ */
+describe("the time rail", () => {
+  it("is wide enough for an eight-digit range", () => {
+    render(
+      <WeekLedger
+        rows={[row({ timeRange: "10:00 AM – 12:30 PM" })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const rail = screen.getByText("10:00 AM – 12:30 PM").parentElement;
+    expect(rail).toHaveClass("shrink-0", "sm:w-44");
   });
 });
 
@@ -186,6 +249,78 @@ describe("one meta line, and nothing stacked under it", () => {
   });
 });
 
+/**
+ * **A fact moves to the next line whole** (pixel-craft class 8). The meta line
+ * wrapped at every space, so on a phone a fact broke in two — "Advanced Open /
+ * Water or higher", "Scuba / Refresher" — five times on the schedule at 390.
+ * Each fragment is one inline box, so the line breaks at a " · " between
+ * facts, and only a fact longer than the whole line wraps inside itself. Not
+ * `whitespace-nowrap`: a long site name would run past the column.
+ */
+describe("a fact on the meta line moves whole", () => {
+  it("sets every fragment as one box", () => {
+    render(
+      <WeekLedger
+        rows={[
+          row({
+            id: "course",
+            lens: "First time back in a while",
+            course: { label: "Course session", title: "Scuba Refresher", href: "/c/refresher" },
+            site: "Molasses Reef",
+            requirements: [],
+          }),
+          row({
+            id: "above",
+            site: "USCGC Duane",
+            requirements: ["Advanced Open Water or higher", "Deep"],
+            aboveLevel: "Above your level",
+          }),
+          row({
+            id: "clears",
+            requirements: ["Advanced Open Water or higher"],
+            clears: "Your Advanced card clears this",
+          }),
+        ]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const fragments = screen
+      .getAllByRole("listitem")
+      .flatMap((item) => Array.from(bodyLines(item)[0]?.children ?? []));
+    expect(fragments.map((fragment) => fragment.textContent)).toEqual([
+      "First time back in a while",
+      "Course session · Scuba Refresher",
+      "Molasses Reef",
+      "USCGC Duane",
+      "Advanced Open Water or higher",
+      "Deep",
+      "Above your level",
+      "Molasses Reef and French Reef",
+      "Advanced Open Water or higher",
+      "Your Advanced card clears this",
+    ]);
+    for (const fragment of fragments) expect(fragment).toHaveClass("inline-block");
+  });
+
+  it("keeps a course's name whole inside its fragment, so an overlong one breaks after the label", () => {
+    render(
+      <WeekLedger
+        rows={[
+          row({
+            course: { label: "Course session", title: "Scuba Refresher", href: "/c/refresher" },
+          }),
+        ]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Scuba Refresher" })).toHaveClass("inline-block");
+  });
+});
+
 describe("the requirement slot's silence", () => {
   it("says nothing when the departure demands nothing — site, seats and price only", () => {
     render(
@@ -260,6 +395,27 @@ describe("seat state and price", () => {
     expect(screen.getByRole("listitem").querySelector(".opacity-60")).toBeNull();
   });
 
+  /**
+   * The seat badge is a 28px pill beside a 24px title line, and its group
+   * centres everything in the pill's height: top-aligned with the title, the
+   * price and chevron sat 2–3px below the title's line (pixel-craft class 1).
+   * On one baseline the badge's word — `Badge` hands its row the word's
+   * baseline — the price and the title share a line.
+   */
+  it("sets the time, the title and the seat state on one baseline", () => {
+    render(
+      <WeekLedger
+        rows={[row({ capacityText: "Only 2 spots left", capacityTone: "low" })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const box = screen.getByRole("link", { name: /Two-Tank Reef/ }).parentElement;
+    expect(box).toHaveClass("sm:items-baseline");
+    expect(box).not.toHaveClass("sm:items-start");
+  });
+
   it("leaves routine availability as a quiet fact rather than a badge", () => {
     render(<WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />);
 
@@ -268,7 +424,44 @@ describe("seat state and price", () => {
     expect(seats.className).not.toContain("bg-warning-tint");
   });
 
-  it("renders no price cell for a departure with no price set", () => {
+  /**
+   * Below `sm` the row is a column, so the trailing group is stretched to the
+   * row's width and packs from the start: the chevron sat just after each
+   * row's seat words and price, 14 rows at 14 x's across 114px at 390
+   * (pixel-craft class 3). `ms-auto` pins it to the row's end; from `sm` up
+   * the group has no free space and it does nothing.
+   */
+  it("pins the chevron to the end of the row", () => {
+    render(<WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />);
+
+    const chevron = screen.getByRole("listitem").querySelector("svg");
+    expect(chevron).toHaveClass("ms-auto");
+  });
+
+  /**
+   * The chevron was the square `chevron-right`, whose ink stops 5px inside its
+   * 16px box: pinned to a phone row's end, its arrow ended 5px short of the day
+   * rule's hairline, where every other ledger's door arrow ends on the edge
+   * its row ends on (pixel-craft class 2). It draws the doors' own glyph.
+   */
+  it("draws the doors' ink-cropped chevron, so its arrow ends on the row's edge", () => {
+    const { container } = render(
+      <>
+        <DoorChevron />
+        <WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />
+      </>,
+    );
+
+    const door = container.firstElementChild;
+    const chevron = screen.getByRole("listitem").querySelector("svg");
+    expect(door?.tagName.toLowerCase()).toBe("svg");
+    expect(chevron?.getAttribute("viewBox")).toBe(door?.getAttribute("viewBox"));
+    expect(chevron?.innerHTML).toBe(door?.innerHTML);
+    expect(chevron).toHaveClass("h-4", "w-auto", "text-muted");
+    expect(chevron).not.toHaveClass("size-4");
+  });
+
+  it("prints no price for a departure with no price set", () => {
     render(
       <WeekLedger
         rows={[row({ price: null })]}
@@ -278,6 +471,125 @@ describe("seat state and price", () => {
     );
 
     expect(screen.getByRole("listitem").textContent).not.toContain("$");
+  });
+
+  /**
+   * The price was rendered only when there was one, so a departure with no
+   * price slid its seat state and chevron into the price's column: "Only 2
+   * spots left" at x 952.7 on one row and 995.3 on the next at 1280
+   * (pixel-craft class 3). The column now stands on every row, as wide as the
+   * list's longest price and ending on one edge, and empty where there is no
+   * price.
+   */
+  it("keeps the price's column when a departure has no price, so the seat state holds its x", () => {
+    render(
+      <WeekLedger
+        rows={[row({ id: "priced" }), row({ id: "unpriced", price: null })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const [priced, unpriced] = screen
+      .getAllByRole("listitem")
+      .map((item) => Array.from(item.querySelector("svg")?.parentElement?.children ?? []));
+    // Seat state, the price's column, the chevron — on both rows.
+    expect(priced).toHaveLength(3);
+    expect(unpriced).toHaveLength(3);
+    expect(priced[1]).toHaveTextContent("$95.00");
+    expect(priced[1]).toHaveClass("sm:min-w-(--price-col)", "sm:text-end");
+    expect(unpriced[1]).toBeEmptyDOMElement();
+    expect(unpriced[1]).toHaveClass("sm:min-w-(--price-col)");
+    // Below `sm` the group packs from the start and the chevron holds the
+    // row's end on its own, so an empty column there would only add a gap.
+    expect(unpriced[1]).toHaveClass("max-sm:hidden");
+    expect(priced[1]).not.toHaveClass("max-sm:hidden");
+  });
+
+  /**
+   * The column was a fixed 5.5ch: a four-figure dollar or euro price and
+   * nothing longer. "$145.50" (a price with cents keeps them) is about 6.25ch,
+   * and a rupiah, yen or Egyptian pound shop's ordinary prices ("Rp 1.500.000",
+   * "¥15,000", "EGP 2,500") run far past it, so each such row's price set its
+   * own column and the seat states went ragged again. The list sizes the
+   * column to its own longest price: a character a `ch` — a tabular digit is
+   * exactly 1ch, a separator narrower — and half a digit more for a currency
+   * sign a little wider than a digit (€ is about 1.1ch).
+   */
+  it("sizes the price's column to the list's longest price, in any currency", () => {
+    render(
+      <WeekLedger
+        rows={[
+          row({ id: "a", price: "Rp 150.000" }),
+          row({ id: "b", price: "Rp 1.500.000" }),
+          row({ id: "c", price: null }),
+        ]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    expect(
+      screen.getByRole("list", { name: "Upcoming trips" }).style.getPropertyValue("--price-col"),
+    ).toBe("12.5ch");
+    for (const item of screen.getAllByRole("listitem")) {
+      const column = item.querySelector("svg")?.parentElement?.children[1];
+      expect(column).toHaveClass("sm:min-w-(--price-col)");
+    }
+  });
+
+  it("draws no price column at all in a list where nothing has a price", () => {
+    render(
+      <WeekLedger
+        rows={[row({ id: "a", price: null }), row({ id: "b", price: null })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    expect(
+      screen.getByRole("list", { name: "Upcoming trips" }).style.getPropertyValue("--price-col"),
+    ).toBe("");
+    for (const item of screen.getAllByRole("listitem")) {
+      // Seat state and chevron only: an empty column on every row would be a
+      // 12px gap standing in for nothing.
+      expect(item.querySelector("svg")?.parentElement?.children).toHaveLength(2);
+    }
+  });
+});
+
+/**
+ * **The list ends at its last row's words** (pixel-craft class 4). A row keeps
+ * `py-4 sm:py-5` of room for its hover fill, unpainted at rest, and the last
+ * row's lower half stacked on the next section's own margin: last meta line to
+ * "Courses" measured 78px at 1280 and 75px at 390, against the page's 56px
+ * section gap. The list hands the same room back below itself.
+ */
+describe("the list's close", () => {
+  it("hands back its last row's unpainted room, so what follows measures from the words", () => {
+    render(<WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />);
+
+    const box = screen.getByRole("link", { name: /Two-Tank Reef/ }).parentElement;
+    expect(box).toHaveClass("py-4", "sm:py-5");
+    expect(screen.getByRole("list", { name: "Upcoming trips" })).toHaveClass("-mb-4", "sm:-mb-5");
+  });
+
+  /**
+   * A row that belongs under the list — the pager's "Show later departures" —
+   * takes the handed-back room into its own margin, which is spelled here
+   * beside the hand-back so the two cannot drift apart: 20px (five steps)
+   * under the last row's box at every width, where it sat before the list
+   * handed anything back.
+   */
+  it("gives a row under the list the margin that takes that room back in", () => {
+    render(<WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />);
+
+    const list = screen.getByRole("list", { name: "Upcoming trips" }).className;
+    const step = (classes: string, pattern: RegExp) => Number(classes.match(pattern)?.[1]);
+    expect(
+      step(WEEK_LEDGER_FOLLOWER_CLASS, /(?:^| )mt-(\d+)/) - step(list, /(?:^| )-mb-(\d+)/),
+    ).toBe(5);
+    expect(step(WEEK_LEDGER_FOLLOWER_CLASS, /sm:mt-(\d+)/) - step(list, /sm:-mb-(\d+)/)).toBe(5);
   });
 });
 
@@ -322,5 +634,40 @@ describe("the day rule", () => {
     // An embed has no chrome above it, so the top of the frame is the top of
     // the list.
     expect(container.querySelector(".sticky")?.className).toContain("top-0");
+  });
+
+  /**
+   * **Every part of the rule stands in a fixed column** (pixel-craft class 3).
+   * The numeral and the weekday block were shrink-wrapped and the hairline
+   * took what was left, so it started at the weekday's ink edge + 15px: nine
+   * rules at 1280 started at nine x's across 9px, and a one-digit day would
+   * have moved its weekday and hairline a further 19px left.
+   */
+  it("sets a one-digit day in a two-digit box", () => {
+    render(
+      <WeekLedger
+        rows={[row({ dayParts: { day: "7", weekday: "Mon", month: "Sep" } })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    // The numeral is `tabular-nums`, so 2ch is exactly two digits.
+    expect(screen.getByText("7")).toHaveClass("min-w-[2ch]");
+  });
+
+  it("sets the weekday and the month in one column wide enough for the longest label", () => {
+    render(
+      <WeekLedger
+        rows={[row({ dayParts: { day: "7", weekday: "lun", month: "sept" } })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const column = screen.getByText("lun").parentElement;
+    expect(screen.getByText("sept").parentElement).toBe(column);
+    // 56px: es-ES "SEPT" at its tracking is about 51px, en-US "MON" 46.
+    expect(column).toHaveClass("min-w-14");
   });
 });

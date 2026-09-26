@@ -3,6 +3,7 @@ import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
 import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
 import { diverTranslator } from "@/i18n/messages";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
+import { PublicShopMainContent } from "./_components/PublicShopMainContent";
 import {
   PublicShopBrand,
   PublicShopChrome,
@@ -61,15 +62,15 @@ export default function PublicShopLayout({
           negotiated one replaces it. The height matters more: this band sits
           *above* the page, so a fallback of nothing would let the schedule paint
           at the top of the viewport and then jump down when the shop's header
-          arrived. The one case it reads oddly is `?embed=1`, where the real
-          chrome is deliberately nothing and this bar therefore disappears —
-          a layout cannot see `searchParams`, and the proxy's embed header is a
-          request read, which is exactly what this component exists to defer. A
-          brief bar inside an iframe is the cheaper of the two mistakes. */}
+          arrived. The one case it is wrong for is `?embed=1`, where the real
+          chrome is deliberately nothing: a layout cannot see `searchParams`,
+          and the proxy's embed header is a request read, which is exactly what
+          this component exists to defer. So the frame's own segments hide the
+          bar instead (`EmbedChromeCollapse`), from their static shell on. */}
       <Suspense fallback={<PublicShopChromePlaceholder label={fallbackT} />}>
         <PublicShopChrome params={params} />
       </Suspense>
-      <div id="public-shop-main-content" tabIndex={-1} className="flex-1 outline-none">
+      <PublicShopMainContent>
         {/* Words for `error.tsx`, which renders below this layout and above the
             page (ADR 20260803-error-boundary-copy-bridge). A boundary is a file
             convention with a fixed {error, reset} signature, so it can only read
@@ -80,7 +81,7 @@ export default function PublicShopLayout({
         <ErrorBoundaryIntlProvider messagesByLocale={ERROR_BOUNDARY_MESSAGES_BY_LOCALE}>
           {children}
         </ErrorBoundaryIntlProvider>
-      </div>
+      </PublicShopMainContent>
       {/* No placeholder: the footer is the last thing on the page, so arriving
           late moves nothing that is already on screen. Reserving space for it
           would only mean an empty bar to look at, and an embed — which drops

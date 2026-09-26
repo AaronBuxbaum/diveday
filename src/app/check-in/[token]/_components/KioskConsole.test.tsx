@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { buttonClass } from "@/components/ui/button";
 import type { KioskResult } from "../kiosk-types";
 import { KioskConsole } from "./KioskConsole";
 
@@ -57,6 +58,20 @@ function openConsole(): HTMLInputElement {
   render(<KioskConsole token="a-display-link-token" copy={copy} />);
   return screen.getByLabelText(copy.prompt) as HTMLInputElement;
 }
+
+describe("KioskConsole — the button", () => {
+  /**
+   * **The dock's own 56px target, as it is everywhere else** (K-339). It took
+   * `text-[1.25rem]` through `className`, and `boat`'s unitless line-height
+   * scaled with the font: 58px, the one `boat` button in the app that was.
+   */
+  it("is the boat size exactly, with nothing passed over it", () => {
+    openConsole();
+    expect(screen.getByRole("button", { name: copy.submit }).className).toBe(
+      buttonClass({ size: "boat", busy: true }),
+    );
+  });
+});
 
 describe("KioskConsole — what stands on the glass", () => {
   it("empties the box the moment a scanned code is submitted, before the answer comes back", async () => {

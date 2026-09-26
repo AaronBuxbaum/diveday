@@ -192,7 +192,10 @@ export function TripRosterContent({
   };
 
   return (
-    <div data-trip-guests-ready className="contents">
+    // `contents`, so these blocks lie in the page's flow; `space-y-10` is the
+    // page's stack carried through it, since the page's own reaches only its
+    // direct children, and this box is one (K-262).
+    <div data-trip-guests-ready className="contents space-y-10">
       {noteDeleted ? (
         <UndoToast
           message={t("trips.roster.noteDeletedToast")}
@@ -213,9 +216,12 @@ export function TripRosterContent({
       {demand ? (
         // A card in a tone (`TONE_PANEL_CLASS`), not a 12px inset box: its
         // corners were tighter than every card's, its words 4px further in.
-        <section className={`mt-6 ${TONE_PANEL_CLASS} border-warning/40 bg-warning-tint`}>
+        <section className={`${TONE_PANEL_CLASS} border-warning/40 bg-warning-tint`}>
           <p className={groupLabelClass("warning")}>{t("trips.guests.demandSignal")}</p>
-          <h2 className={`mt-1 ${SECTION_TITLE_CLASS}`}>{t("trips.guests.demandHeading")}</h2>
+          {/* Balanced: at 390 it ended on "capacity" alone (K-504). */}
+          <h2 className={`mt-1 text-balance ${SECTION_TITLE_CLASS}`}>
+            {t("trips.guests.demandHeading")}
+          </h2>
           <p className="mt-1 text-sm text-muted">
             {t("trips.guests.demandBody", { count: demand.unmetSeats })}
           </p>
@@ -248,7 +254,7 @@ export function TripRosterContent({
           the picture is read first. There is no honest hull for a departure
           that is not going, so there is none (dive-domain review 20260919). */}
       {hull && !cancelled ? (
-        <div className="mt-6">
+        <div>
           <TripHull
             roster={roster}
             readinessByBooking={readinessByBooking}
@@ -363,7 +369,7 @@ export function TripRosterContent({
 
       {afterRoster}
 
-      <div className="mt-8">
+      <div>
         {showPromote ? (
           <AutoOpenDetails
             openOnHash="last-minute-deal"

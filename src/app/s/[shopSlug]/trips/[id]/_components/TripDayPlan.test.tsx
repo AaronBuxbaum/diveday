@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
@@ -84,6 +86,45 @@ describe("TripDayPlan", () => {
     // promising to keep.
     const dives = screen.getByRole("list");
     expect(within(dives).queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
+  });
+
+  /**
+   * **The row is the door to its site** (pixel-craft class 7, K-168). The
+   * site's name was an inline link inside a plain row: a 17px-tall target
+   * ("French Reef" 79×17 at 390), its ring hugging the words. The row now opens
+   * the site's page whichever line names it — the dive's own name, or the
+   * site under a dive the shop named itself — and a dive with no site yet stays
+   * a plain row.
+   */
+  it("makes a dive with a site the door to that site's page, and leaves one without a plain row", () => {
+    render(
+      <TripDayPlan
+        briefings={[
+          briefing({
+            diveSite: { id: "site-1", slug: "french-reef", name: "French Reef" },
+          } as unknown as Partial<DiveBriefing>),
+          briefing({
+            dive: { id: "dive-2", diveNumber: 2, title: "Wreck penetration" },
+            diveSite: null,
+          } as unknown as Partial<DiveBriefing>),
+        ]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    const dives = screen.getByRole("list");
+    const links = within(dives).getAllByRole("link");
+    expect(links).toHaveLength(1);
+    const [door] = links;
+    expect(door).toHaveAccessibleName("French Reef");
+    expect(door).toHaveAttribute("href", "/s/blue-mantis/sites/french-reef");
+    // The row's own stretched door, not a link on the words.
+    expect(door).toHaveClass("absolute", "inset-0");
+    expect(door.closest("li")).toHaveTextContent("French Reef swim-throughs");
+    expect(door.closest("li")).toHaveTextContent("French Reef");
+    expect(within(dives).getByText("Wreck penetration").closest("li")).not.toContainElement(door);
   });
 
   it("says when the light arrives and when it goes, on a daylight departure", () => {
@@ -453,6 +494,45 @@ describe("TripLookFor", () => {
 });
 
 /**
+ * **Every beat's label sits 8px over what it labels** (pixel-craft class 4,
+ * K-509). The route and the site notes open `mt-2` under their `GroupLabel`;
+ * "Look for" and "Moments from divers" opened `mt-3`, and floated 12–13px
+ * above their content on the trip's door and the dive-site page alike. The
+ * site page's departures stood `mt-8` under beats that stand `mt-6`.
+ */
+describe("the day's beats", () => {
+  const creatures = [
+    { id: "c1", slug: "green-sea-turtle", name: "Green turtle", imageUrl: "/turtle.jpg" },
+  ] as unknown as DiveBriefing["creatures"];
+  const moments = [
+    { id: "m1", caption: "A ray disappearing into the blue.", imageUrl: "/dive-sites/ray.jpg" },
+  ] as unknown as DiveBriefing["moments"];
+
+  it.each([
+    ["Look for", () => <TripLookFor briefings={[briefing({ creatures })]} locale="en-US" />],
+    [
+      "Moments from divers",
+      () => <TripMoments briefings={[briefing({ moments })]} locale="en-US" />,
+    ],
+  ])("opens %s's content 8px under its label", (label, Beat) => {
+    render(<Beat />);
+    const heading = screen.getByRole("heading", { level: 2, name: label });
+    expect(heading.nextElementSibling).toHaveClass("mt-2");
+    expect(heading.nextElementSibling).not.toHaveClass("mt-3");
+    expect(heading.closest("section")).toHaveClass("mt-6");
+  });
+
+  it("stands the dive-site page's departures where its other beats stand", () => {
+    const page = readFileSync(
+      join(__dirname, "..", "..", "..", "sites", "[siteSlug]", "page.tsx"),
+      "utf8",
+    );
+    const departures = page.match(/<section id="departures" className="([^"]*)"/)?.[1];
+    expect(departures).toBe("mt-6 scroll-mt-8");
+  });
+});
+
+/**
  * The diver photos a staffer published for the day's sites finally reach the
  * page (they were fetched and rendered nowhere from slice 7c until the
  * 2026-08-28 diver-views design review). Capped, deduplicated by site, silent
@@ -478,6 +558,38 @@ describe("TripMoments", () => {
     expect(screen.queryByText("The winch at 12 m.")).not.toBeInTheDocument();
     // The caption is the accessible content; the photo is decorative.
     expect(screen.getByRole("presentation")).toHaveAttribute("alt", "");
+  });
+
+  /**
+   * **A photo that fills the measure takes the panel's corner** (pixel-craft
+   * class 12, K-510). One moment is the column's full width, beside the hero
+   * and the route card's 20px corners, and drew the two-up grid's 12px inset
+   * corner there; in a pair it is a tile, and keeps it.
+   */
+  it("rounds a lone photo as a panel and a pair as tiles", () => {
+    const photo = (id: string) => ({ id, caption: `Moment ${id}`, imageUrl: `/m/${id}.jpg` });
+    const { rerender } = render(
+      <TripMoments
+        briefings={[briefing({ moments: [photo("a")] } as unknown as Partial<DiveBriefing>)]}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    // `StoredPhoto` draws the corner on the box round the image.
+    const box = (image: HTMLElement) => image.parentElement;
+    expect(box(screen.getByRole("presentation"))).toHaveClass("rounded-panel");
+    expect(box(screen.getByRole("presentation"))).not.toHaveClass("rounded-inset");
+    rerender(
+      <TripMoments
+        briefings={[
+          briefing({ moments: [photo("a"), photo("b")] } as unknown as Partial<DiveBriefing>),
+        ]}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    for (const tile of screen.getAllByRole("presentation")) {
+      expect(box(tile)).toHaveClass("rounded-inset");
+      expect(box(tile)).not.toHaveClass("rounded-panel");
+    }
   });
 
   it("renders nothing when no site has a published photo", () => {

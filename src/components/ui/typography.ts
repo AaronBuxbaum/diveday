@@ -104,16 +104,28 @@ export const DISPLAY_TITLE_CLASS = "text-4xl font-semibold tracking-[-0.045em] t
 /** The section heading of a long reading page — a marketing `<h2>`, a legal title. */
 export const BANNER_TITLE_CLASS = "text-3xl font-semibold tracking-[-0.035em] text-balance";
 
-/** A section lead inside a reading page: a course page's `<h2>`, a modal-scale title. */
+/**
+ * A section lead inside a reading page: a course page's `<h2>`, a modal-scale
+ * title. It is also the app's section rung since Reef (#1286): `SectionCard`
+ * draws its own `h2` at it, and a bare `h2` standing over a plural body (a list
+ * of cards, an `EmptyState`) takes it too (`card.tsx`), so a page's sections
+ * speak at one volume.
+ */
 export const LEAD_TITLE_CLASS = "text-2xl font-semibold tracking-tight";
 
 /** The step under a lead — a named item in a marketing grid, a legal `<h2>`. */
 export const SUB_TITLE_CLASS = "text-xl font-semibold tracking-tight text-pretty";
 
 /**
- * **The app's section heading**, and the workhorse of the whole ramp — 76 of the
- * call sites swept onto these constants were this one, in two spellings.
- * `SectionCard` renders it for its own `h2`, so a card never types it.
+ * **The hand-spelled section heading**, and the workhorse of the whole ramp — 76
+ * of the call sites swept onto these constants were this one, in two spellings.
+ *
+ * It is **not** what `SectionCard` draws: a card's own `h2` moved up to
+ * `LEAD_TITLE_CLASS` with Reef (#1286), and so does a bare group heading over
+ * a plural body (docs/design/forms-and-controls.md, "Where a heading goes").
+ * This line used to say otherwise, and the team page's "Current team" trusted
+ * it and stood 18px under its invite card's 24px (K-314). Which one size every
+ * section heading should be is #1966's question.
  */
 export const SECTION_TITLE_CLASS = "text-lg font-semibold";
 

@@ -154,21 +154,14 @@ export default async function WalkInPage({
               options={trips.map((trip) => ({
                 id: trip.tripId,
                 href: `${self}/${trip.tripId}${diverq ? `?diverq=${encodeURIComponent(diverq)}` : ""}`,
-                // JSX rather than template literals, for the same reason the
-                // Add-booking picker keeps its own: text is shaped per DOM text
-                // node, so joining these into single strings re-kerns across the
-                // old node boundaries and shifts glyphs sub-pixel.
-                label: (
-                  <>
-                    {trip.title} ·{" "}
-                    {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-                  </>
-                ),
-                // A string, unlike `label` above: the same node-joining shifts
-                // these two numbers sub-pixel, but writing them as JSX puts a
-                // bare "/" text node in a component, which `pnpm check:copy`
-                // rightly refuses. Two digits of sub-pixel shaping is the
-                // cheaper side of that trade.
+                // Two facts, not one joined label: the list joins them the
+                // way every row's facts are joined (`joinFacts`, K-525).
+                title: trip.title,
+                when: formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone),
+                // A string, not JSX: joining shifts these two numbers
+                // sub-pixel, but writing them as JSX puts a bare "/" text node
+                // in a component, which `pnpm check:copy` rightly refuses. Two
+                // digits of sub-pixel shaping is the cheaper side of that trade.
                 meta: `${trip.booked}/${trip.capacity}`,
               }))}
             />

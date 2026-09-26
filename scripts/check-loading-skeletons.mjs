@@ -34,15 +34,19 @@ import { pathToFileURL } from "node:url";
  * **The width half is deliberately narrow.** It compares the first
  * `mx-auto w-full max-w-*` container each file declares — the outermost
  * work-surface container by convention (`docs/design/principles.md` §10's
- * tiers). A page that delegates its container to a component (`settings`
- * re-exports `SettingsPage`, the legal pages render `LegalDocument`) declares
- * none in-file, and its pair is reported as delegated and skipped rather than
+ * tiers). A page that delegates its container to a component (the legal
+ * pages render `LegalDocument`) declares none in-file while its skeleton
+ * does, and its pair is reported as delegated and skipped rather than
  * guessed at: following an arbitrary component chain would buy a handful of
  * routes at the cost of a check nobody can predict. Those counts are printed
- * on success so the coverage is stated rather than implied. A page that owns
- * no width at all — the trip family, whose `layout.tsx` owns the `<main>` —
- * matches a skeleton that owns none either, which is the correct answer for
- * both.
+ * on success so the coverage is stated rather than implied. A page that spells
+ * no width in its own file matches a skeleton that spells none either, and the
+ * pair counts as owning no width, which is the correct answer for both when
+ * something else owns it. Two families do: the trip family, whose
+ * `layout.tsx` owns the `<main>`, and every settings route, whose page and
+ * skeleton both take their `<main>` from `settingsPaneClass`
+ * (`settings/_components/settings-pane.ts`). Their parity is not compared
+ * here; it rests on that owner, the one layout or `settings-pane.test.ts`.
  */
 
 const ROOT = process.cwd();

@@ -87,17 +87,40 @@ describe("RemovablePhoto", () => {
   });
 
   /**
+   * A logo is drawn square everywhere a diver sees it (the storefront, the
+   * region directory, the staff bar), cropped to cover. So the logo that can
+   * be taken back off is that square, at the photo cell's 96px height, not a
+   * full-width cell that would crop it to a strip. The label is the tile's
+   * width, so the tick sits on the tile's corner and the caption wraps under
+   * it, balanced (the shop settings' logo, the K-247 follow-up).
+   */
+  it("draws a logo as the square the storefront crops it to, with the tick on its corner", () => {
+    render(
+      <RemovablePhoto
+        url="/logos/blue-mantis.png"
+        name="removeLogo"
+        label="Remove current logo"
+        shape="logo"
+      />,
+    );
+
+    const box = screen.getByRole("checkbox", { name: "Remove current logo" });
+    expect(box).toHaveClass("peer", "sr-only");
+    const label = box.closest("label");
+    expect(label).toHaveClass("w-24");
+    const photo = box.nextElementSibling;
+    expect(photo).toHaveClass("size-24", "border-2", "peer-focus-visible:focus-ring");
+    expect(photo).not.toHaveClass("w-full");
+    expect(photo?.nextElementSibling).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("Remove current logo")).toHaveClass("text-balance");
+  });
+
+  /**
    * The drift started as a copy: the dive-site editor re-drew the course
    * gallery's cell by hand and left the tick behind. A stored photo — a
    * `StoredPhoto` or a raw `<img>` — beside a checkbox anywhere else is the
-   * next copy.
-   *
-   * One is known and named rather than hidden by a narrower match: the shop
-   * settings' logo and cover photo are still a raw `<img>` thumbnail beside a
-   * visible checkbox, beside a bare file input rather than `ImageFileInput`.
-   * A logo is not a photo cell, so that form's drawing is its own change (the
-   * follow-up filed with this one). Moving it on turns this list empty, and
-   * the test says so.
+   * next copy. The last known one, the shop settings' logo and cover photo
+   * (a raw `<img>` beside a visible checkbox), moved onto this component.
    */
   it("is the only place a stored photo sits beside a checkbox", async () => {
     const offenders: string[] = [];
@@ -108,8 +131,6 @@ describe("RemovablePhoto", () => {
         offenders.push(file);
       }
     }
-    expect(offenders).toEqual([
-      path.join("src", "app", "shop", "[shopSlug]", "settings", "SettingsPage.tsx"),
-    ]);
+    expect(offenders).toEqual([]);
   });
 });

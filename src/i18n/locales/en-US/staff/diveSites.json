@@ -1,5 +1,4 @@
 {
-  "backToLibrary": "Dive-site library",
   "list": {
     "title": "Dive-site library",
     "createSite": "Add a dive site",
@@ -128,9 +127,9 @@
     "depthRangePlaceholder": "20–45 ft",
     "maxDepthMetersLabel": "Maximum depth (metres)",
     "maxDepthFeetLabel": "Maximum depth (feet)",
-    "maxDepthHint": "(optional · warns when a diver’s certification doesn’t reach it)",
+    "maxDepthHint": "Warns when a diver’s certification doesn’t reach it.",
     "expectedBottomTimeLabel": "Time in the water here (minutes)",
-    "expectedBottomTimeHint": "(optional · overrides your shop’s usual bottom time)",
+    "expectedBottomTimeHint": "Overrides your shop’s usual bottom time.",
     "expectedBottomTimePlaceholder": "45",
     "currentNoteLabel": "Current and conditions notes",
     "divePlanLabel": "Dive plan",
@@ -188,7 +187,7 @@
       "moveDownAriaLabel": "Move {name} later in the guide"
     },
     "tipsHeadingLabel": "Heading over the “slow down” tips",
-    "tipsHeadingHint": "(optional · DiveDay writes one if you don’t)",
+    "tipsHeadingHint": "DiveDay writes one if you don’t.",
     "tipsHeadingPlaceholder": "See more by slowing down",
     "certificationLegend": "Certification requirements",
     "minimumCertificationLabel": "Minimum certification",
@@ -280,7 +279,8 @@
     "description": "Read a dive_sites.csv from your DiveDay export back into this shop’s library.",
     "help": "This reads DiveDay’s own export rather than another system’s file, so it expects the columns the bundle wrote and refuses one it does not recognise. Sites match by id first, then by name: importing into the shop the bundle came from rewrites the sites it names, and importing into a new one creates them. A site that was deleted when the bundle was made comes back deleted.",
     "notRestored": "Two things do not come back. The field guide’s species travel in dive_site_creatures.csv and are left exactly as they are. And a tide-station acknowledgement lands only on a site this shop already holds that station for; anywhere else the distance prompt asks again, which is what it is for.",
-    "file": "CSV file",
+    "chooseFile": "Choose CSV file",
+    "chooseDifferentFile": "Choose a different file",
     "submit": "Import dive sites",
     "pending": "Importing…"
   },

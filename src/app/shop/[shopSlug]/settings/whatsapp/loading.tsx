@@ -1,10 +1,11 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
+import { settingsPaneClass } from "../_components/settings-pane";
 
 /** Panel-shaped skeleton for the shop's own WhatsApp sender settings. */
 export default function WhatsAppSettingsLoading() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <div className="animate-pulse">
         {/* The description is three lines at 390px and two at 1280 (K-97). */}
         <ShopPageHeaderSkeleton

@@ -1,8 +1,15 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { GroupLabel, groupLabelClass, LedgerRow } from "@/components/ui/ledger";
+import {
+  GroupLabel,
+  groupLabelClass,
+  LedgerRow,
+  ledgerRowBoxClass,
+  ledgerRowRoomClass,
+} from "@/components/ui/ledger";
 import { WeekPager } from "@/components/ui/week-pager";
 import { fill } from "@/i18n/fill";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
@@ -171,8 +178,46 @@ function ShiftFace({
   );
 }
 
-const CHIP_CLASS =
-  "flex w-full flex-col gap-px rounded-lg bg-surface-sunken px-2 py-1.5 text-start text-xs";
+/**
+ * **Every chip's box: one shape, one inset and one 1px border, on all four
+ * kinds** (K-498). The crew and away chips drew a border and the shift and gap
+ * chips none, so in one day column the chips' words started 1px apart and a
+ * bordered chip stood 2px taller for the same lines. Every kind reserves the
+ * pixel; a kind only colours it (`CHIP_KIND`), transparent where it draws none.
+ */
+const CHIP_BOX = "flex w-full flex-col rounded-lg border px-2 py-1.5 text-start text-xs";
+
+const CHIP_KIND = {
+  shift: "gap-px border-transparent bg-surface-sunken",
+  crew: "gap-px border-primary/25 bg-primary-tint text-primary",
+  away: "gap-px border-dashed border-border bg-surface-sunken text-muted",
+  gap: "gap-1 border-transparent bg-surface-sunken",
+  loudGap: "gap-1 border-transparent bg-warning-tint",
+} as const;
+
+function chipClass(kind: keyof typeof CHIP_KIND) {
+  return `${CHIP_BOX} ${CHIP_KIND[kind]}`;
+}
+
+/**
+ * **A chip a person can press hovers one step past its rest** (K-535, K-501).
+ * Both hovered to a translucent copy of their own fill, which over the page's
+ * ground is lighter, not deeper: `#e6f0ff` to `#eaf1fd` on the crew chip,
+ * `#ececf1` to `#eeeef3` on the shift chip, 0px changed at the state atlas's
+ * threshold. Each now steps the 1px edge every chip reserves (`CHIP_BOX`):
+ * the crew chip deepens the rule it already draws, and the shift chip draws
+ * `--border-strong` where it rests transparent, visible in every scheme.
+ *
+ * The edge, never the fill: a fill under the words moves their contrast.
+ * `bg-border` did. `--border` is a hairline, not a well, and under
+ * `prefers-contrast: more` (light) it is `#6b6a63`, where the hovered time
+ * measured 3.10:1 and a past shift's muted time 1.84:1; even in the default
+ * light scheme muted ink on it is 4.46:1, under AA for this 12px type.
+ */
+const CHIP_HOVER = {
+  shift: "hover:border-border-strong",
+  crew: "hover:border-primary/50",
+} as const;
 
 /**
  * One shift in a day cell. A manager gets the disclosure — the chip is the
@@ -202,19 +247,21 @@ function ShiftChip({
   deleteShiftAction: (formData: FormData) => void;
 }) {
   const face = <ShiftFace shift={shift} locale={locale} timeZone={timeZone} isPast={isPast} />;
-  if (!canManage) return <span className={CHIP_CLASS}>{face}</span>;
+  if (!canManage) return <span className={chipClass("shift")}>{face}</span>;
   return (
     <details className="group/shift w-full">
       <summary
         aria-label={fill(words.shiftAria, { person: personName, day: dayLabel })}
-        className={`${CHIP_CLASS} cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/70`}
+        className={`${chipClass("shift")} cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden ${CHIP_HOVER.shift}`}
       >
         {face}
       </summary>
       {/* The facts the chip could not fit, then the one act. The zone is
           spelled out here and nowhere else on the grid: seven columns of
-          "EDT" would be the same word said 40 times. */}
-      <div className="mt-1 flex flex-col items-start gap-1 ps-2">
+          "EDT" would be the same word said 40 times. Its inset is the
+          chip's own, a transparent 1px edge and then 8px, so the range and
+          the flush Remove start on the chip's words, not 1px short (K-498). */}
+      <div className="mt-1 flex flex-col items-start gap-1 border-s border-transparent ps-2">
         <span className="text-xs text-muted tabular-nums">
           {formatTimeRangeTz(shift.startsAt, shift.endsAt, locale, timeZone)}
         </span>
@@ -229,6 +276,48 @@ function ShiftChip({
         </form>
       </div>
     </details>
+  );
+}
+
+/**
+ * The glyph and the gap beside it, per type size: the chips' `text-xs`, the
+ * phone list's `text-sm`. The glyph is its type's own size; the gap is 4px
+ * beside 12px type and 6px beside 14px, as `FormStatus` sets its mark.
+ */
+const WARNING_LINE_SIZE = {
+  xs: { gap: "gap-1", glyph: "size-3" },
+  sm: { gap: "gap-1.5", glyph: "size-3.5" },
+} as const;
+
+/**
+ * **The week's one warning line** (K-241): the glyph, then the words, in the
+ * warning ink. The crew chip drew the glyph at 10px beside a 4px gap, the gap
+ * chip at 12px beside 6px, and both nudged it down `mt-0.5`, which set it
+ * 1–1.5px below its line's capitals. Here it sits centred in a box one line
+ * of its own text tall (`h-lh`), at the top of a line that may wrap — the
+ * middle of a line box is where its capitals are centred, at any type size —
+ * so no nudge is needed, and each type size draws it one way.
+ */
+function WarningLine({
+  size,
+  className = "",
+  children,
+}: {
+  size: keyof typeof WARNING_LINE_SIZE;
+  /** The line's place among its siblings (a margin), never its geometry. */
+  className?: string;
+  children: ReactNode;
+}) {
+  const { gap, glyph } = WARNING_LINE_SIZE[size];
+  return (
+    <span
+      className={`flex items-start ${gap} font-semibold text-warning-strong ${className}`.trim()}
+    >
+      <span className="flex h-lh shrink-0 items-center">
+        <DiveDayIcon name="warning" className={glyph} />
+      </span>
+      <span>{children}</span>
+    </span>
   );
 }
 
@@ -254,7 +343,7 @@ function CrewChip({
   return (
     <Link
       href={tripHref(shopSlug, trip.tripId)}
-      className="flex w-full flex-col gap-px rounded-lg border border-primary/25 bg-primary-tint px-2 py-1.5 text-xs text-primary transition-colors hover:bg-primary-tint/70"
+      className={`${chipClass("crew")} transition-colors ${CHIP_HOVER.crew}`}
     >
       <span className="sr-only">{words.crewing}: </span>
       <span className="font-semibold tabular-nums">
@@ -278,33 +367,26 @@ function CrewChip({
           second would leave the surface with two. The word carries the
           difference, which is this grid's own rule. */}
       {trip.clashes.map((clash) => (
-        <span
-          key={clash.tripId}
-          className="mt-0.5 flex items-start gap-1 font-semibold text-warning-strong"
-        >
-          <DiveDayIcon name="warning" className="mt-0.5 size-3 shrink-0" />
-          <span>{fill(words.crewClash, { departure: clash.title })}</span>
-        </span>
+        <WarningLine key={clash.tripId} size="xs" className="mt-0.5">
+          {fill(words.crewClash, { departure: clash.title })}
+        </WarningLine>
       ))}
       {/* **Informs, never gates** (ADR 20260902-crew-requests-and-blackouts):
           this person told the shop they were away across days this departure
           meets on. Nobody is taken off the boat and the assignment stands —
           the week says so, and the conversation is the shop's to have. */}
       {trip.awayBlocks.length > 0 ? (
-        <span className="mt-0.5 flex items-start gap-1 font-semibold text-warning-strong">
-          <DiveDayIcon name="warning" className="mt-0.5 size-3 shrink-0" />
-          <span>
-            {fill(words.awayConflict, {
-              dates: trip.awayBlocks
-                .map((block) =>
-                  block.startsOn === block.endsOn
-                    ? formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")
-                    : `${formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")} – ${formatShortDate(calendarDateToUtcMidnight(block.endsOn), locale, "UTC")}`,
-                )
-                .join(", "),
-            })}
-          </span>
-        </span>
+        <WarningLine size="xs" className="mt-0.5">
+          {fill(words.awayConflict, {
+            dates: trip.awayBlocks
+              .map((block) =>
+                block.startsOn === block.endsOn
+                  ? formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")
+                  : `${formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")} – ${formatShortDate(calendarDateToUtcMidnight(block.endsOn), locale, "UTC")}`,
+              )
+              .join(", "),
+          })}
+        </WarningLine>
       ) : null}
     </Link>
   );
@@ -320,7 +402,7 @@ function CrewChip({
  */
 function AwayChip({ block, words }: { block: AvailabilityBlock; words: StaffingWeekWords }) {
   return (
-    <span className={`${CHIP_CLASS} border border-dashed border-border text-muted`}>
+    <span className={chipClass("away")}>
       <span className="font-semibold">{words.away}</span>
       {block.note ? <span className="font-medium">{block.note}</span> : null}
     </span>
@@ -366,19 +448,20 @@ function GapChip({
   const loud = GAP_TONE[gap.gap] === "warning";
   const ink = loud ? "text-warning-strong" : "text-muted";
   const act = gapAct(gap, canManage);
+  // The departure time alone, not its range: the cell is ~120px and the
+  // question here is which boat, not how long it is out.
+  const departure = (
+    <>
+      <span className="tabular-nums">{formatTime(gap.startsAt, locale, timeZone)}</span> {gap.title}
+    </>
+  );
   return (
-    <div
-      className={`flex w-full flex-col gap-1 rounded-lg px-2 py-1.5 text-xs ${loud ? "bg-warning-tint" : "bg-surface-sunken"}`}
-    >
-      <span className={`flex items-start gap-1.5 font-semibold ${ink}`}>
-        {loud ? <DiveDayIcon name="warning" className="mt-0.5 size-3.5 shrink-0" /> : null}
-        <span>
-          {/* The departure time alone, not its range: the cell is ~120px and
-              the question here is which boat, not how long it is out. */}
-          <span className="tabular-nums">{formatTime(gap.startsAt, locale, timeZone)}</span>{" "}
-          {gap.title}
-        </span>
-      </span>
+    <div className={chipClass(loud ? "loudGap" : "gap")}>
+      {loud ? (
+        <WarningLine size="xs">{departure}</WarningLine>
+      ) : (
+        <span className={`font-semibold ${ink}`}>{departure}</span>
+      )}
       <span className={ink}>{gapWords[gap.gap]}</span>
       {/* **Who has asked to work it** (issue #1235). The owner's own act sits
           on the request rather than in a queue elsewhere: the departure, the
@@ -436,13 +519,17 @@ function GapChip({
       {act === "none" ? null : (
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {act === "assign" ? (
+            // Its slot-mate's spelling (the ask below): a flush `sm` link, so
+            // a 44px target with the button's corner and ring, where the
+            // chip's own `text-xs` line gave it about 52×16px (K-273). The
+            // chevron is sized to the link's `text-sm`.
             <Link
               href={tripHref(shopSlug, gap.tripId)}
               aria-label={fill(words.assignAria, { trip: gap.title })}
-              className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+              className={buttonClass({ variant: "link", size: "sm", flush: true })}
             >
               {words.assign}
-              <DiveDayIcon name="chevron-right" className="size-3" />
+              <DiveDayIcon name="chevron-right" className="size-3.5" />
             </Link>
           ) : (
             // Offered only when the write would accept it — same rule,
@@ -472,6 +559,46 @@ function GapChip({
 }
 
 const GRID_CLASS = "grid grid-cols-[9rem_repeat(7,minmax(0,1fr))]";
+
+/**
+ * **The grid's parts, one spelling each**, shared with its skeleton
+ * (`../loading.tsx`), which drew its own copies and drifted from them.
+ *
+ * - `row`: every row is a ledger row's box (`ledgerRowBoxClass`). Its rules
+ *   run 8px past the column with the row's room, as every rule under the grid
+ *   does (the doors, the credentials), and the last row closes the grid, so
+ *   the ledger closes itself whether or not the gap row is there. On the
+ *   column, the grid's rules stepped 8px where they met the doors' (K-239).
+ * - `personHead` / `person`: the person column has no rule on its left, so it
+ *   keeps only the 8px before the first day's rule, and its words start on the
+ *   column the pager, the h1 and the ledger's words start on (K-239).
+ * - `dayHead` / `day`: a day's label takes its cells' inset, so it starts on
+ *   its chips' painted edge (K-240). The band is `py-2.5` a side: `pt-3 pb-2`
+ *   set its caps 1.5px below its centre (K-499).
+ * - `shiftChip`: a shift chip's box, which the skeleton's chip bar wears
+ *   around its two lines so it stands at the chip's height, edge and all. A
+ *   fixed `h-11` was the chip before K-498 gave it its 1px edge, 2px short
+ *   of the 46px it is now, a row (K-274).
+ */
+export const WEEK_GRID = {
+  row: `${GRID_CLASS} ${ledgerRowBoxClass}`,
+  personHead: "pe-2 py-2.5",
+  dayHead: "border-s border-border px-1.5 py-2.5",
+  person: "pe-2 py-3",
+  day: "flex flex-col items-start gap-1 border-s border-border px-1.5 py-2",
+  shiftChip: chipClass("shift"),
+} as const;
+
+/**
+ * **A row hung under the week**: the page's doors ("Add a shift", "Tell the
+ * shop you're away") and its skeleton's stand-ins for them. The week closes
+ * itself (the grid's last row, the day list's last ledger row), so a row under
+ * it draws only its own closing rule, with a ledger row's room so the rule
+ * ends where the week's do. The doors drew a ledger row's box: its top rule
+ * doubled the week's, 2px of hairline at every width, and its `last:border-b`
+ * never fired, because the consent row follows them (K-195).
+ */
+export const weekTailRowClass = `${ledgerRowRoomClass} border-b border-border`;
 
 export function StaffingWeek({
   week,
@@ -511,6 +638,21 @@ export function StaffingWeek({
     const parts = formatDayParts(instant, locale, "UTC");
     return { ...day, ...parts, label: formatShortDate(instant, locale, "UTC") };
   });
+  // The day list's days, below `lg`: a day someone works, crews a boat or is
+  // away, or a boat is short of crew. Worked out before drawing, so the list
+  // knows when none did.
+  const listDays = dayFaces
+    .map((day, index) => ({
+      day,
+      rows: week.people
+        .map((person) => ({ person, cell: person.days[index] }))
+        .filter(
+          ({ cell }) =>
+            cell && (cell.shifts.length > 0 || cell.crewing.length > 0 || cell.away.length > 0),
+        ),
+      gaps: week.gapDays[index]?.gaps ?? [],
+    }))
+    .filter(({ rows, gaps }) => rows.length > 0 || gaps.length > 0);
 
   return (
     <section aria-label={words.ariaLabel}>
@@ -522,15 +664,15 @@ export function StaffingWeek({
         words={words}
       />
 
-      {/* ---- The grid, from `lg` up. The bottom hairline is the container's,
-          so the ledger closes itself whether or not the gap row is there. */}
-      <div className="mt-4 hidden border-t border-b border-border lg:block">
-        <div className={GRID_CLASS}>
-          <div className="px-2 pt-3 pb-2">
+      {/* ---- The grid, from `lg` up. Its rules are its rows' (`WEEK_GRID`),
+          so the last row there closes it, gap row or not. */}
+      <div className="mt-4 hidden lg:block">
+        <div className={WEEK_GRID.row}>
+          <div className={WEEK_GRID.personHead}>
             <span className="sr-only">{words.person}</span>
           </div>
           {dayFaces.map((day) => (
-            <div key={day.date} className="border-s border-border px-2 pt-3 pb-2">
+            <div key={day.date} className={WEEK_GRID.dayHead}>
               {/* `h2`, not `h3`: the page's own `<h1>` is directly above and a
                   skipped level is an axe `heading-order` failure on a route
                   e2e/a11y.spec.ts scans. */}
@@ -553,8 +695,8 @@ export function StaffingWeek({
         </div>
 
         {week.people.map((person) => (
-          <div key={person.personId} className={`${GRID_CLASS} border-t border-border`}>
-            <div className="px-2 py-3">
+          <div key={person.personId} className={WEEK_GRID.row}>
+            <div className={WEEK_GRID.person}>
               <p className="text-sm font-semibold">{person.name}</p>
               {person.roles.length > 0 ? (
                 <p className="text-xs text-muted">{person.roles.join(" · ")}</p>
@@ -563,10 +705,7 @@ export function StaffingWeek({
             {person.days.map((cell, index) => {
               const day = week.days[index];
               return (
-                <div
-                  key={cell.date}
-                  className="flex flex-col items-start gap-1 border-s border-border px-1.5 py-2"
-                >
+                <div key={cell.date} className={WEEK_GRID.day}>
                   {cell.shifts.map((shift) => (
                     <ShiftChip
                       key={shift.id}
@@ -604,15 +743,12 @@ export function StaffingWeek({
             seven empty cells under "Needs crew" would be the page saying
             nothing at the volume of something. */}
         {week.hasGaps ? (
-          <div className={`${GRID_CLASS} border-t border-border`}>
-            <div className="px-2 py-3">
+          <div className={WEEK_GRID.row}>
+            <div className={WEEK_GRID.person}>
               <p className="text-sm font-semibold text-muted">{words.needsCrew}</p>
             </div>
             {week.gapDays.map((cell) => (
-              <div
-                key={cell.date}
-                className="flex flex-col items-start gap-1 border-s border-border px-1.5 py-2"
-              >
+              <div key={cell.date} className={WEEK_GRID.day}>
                 {cell.gaps.map((gap) => (
                   <GapChip
                     key={gap.tripId}
@@ -636,14 +772,13 @@ export function StaffingWeek({
 
       {/* ---- The same week as a day list, below `lg`. Days with nothing in
           them are absent rather than empty: the reader is paging a week, and
-          "Wednesday, nothing" seven times is chrome. */}
+          "Wednesday, nothing" seven times is chrome. A day someone is away
+          is not nothing: the grid draws it as that person's chip, and the
+          list as their row (ADR 20260902-crew-requests-and-blackouts). It
+          drew a day away only beside a shift or a boat, so a week of days
+          away drew no list at all, and no rule over the doors (K-195). */}
       <div className="mt-4 lg:hidden">
-        {dayFaces.map((day, index) => {
-          const rows = week.people
-            .map((person) => ({ person, cell: person.days[index] }))
-            .filter(({ cell }) => cell && (cell.shifts.length > 0 || cell.crewing.length > 0));
-          const gaps = week.gapDays[index]?.gaps ?? [];
-          if (rows.length === 0 && gaps.length === 0) return null;
+        {listDays.map(({ day, rows, gaps }) => {
           return (
             <div key={day.date} className="mt-6 first:mt-0">
               {/* `h2` for the same reason the grid's day headers are: the
@@ -656,11 +791,17 @@ export function StaffingWeek({
                 {rows.map(({ person, cell }) => (
                   <LedgerRow key={person.personId} stacked>
                     <p className="text-sm font-semibold">{person.name}</p>
-                    <div className="mt-1 flex flex-col gap-1">
+                    {/* **One pitch: every entry is a 44px line, and they abut**
+                        (K-213). A crewed departure is a door, and it was one
+                        line of text 4px from the next — 358×20, a thumb aimed
+                        at one landing on its neighbour. A manager's shift was
+                        already 44px beside its Remove; the rest now match it,
+                        so the day reads at one rhythm whoever is reading. */}
+                    <div className="mt-1 flex flex-col">
                       {cell?.shifts.map((shift) => (
                         <div
                           key={shift.id}
-                          className="flex items-center justify-between gap-2 text-sm"
+                          className="flex min-h-11 items-center justify-between gap-2 text-sm"
                         >
                           <ShiftFace
                             shift={shift}
@@ -685,7 +826,7 @@ export function StaffingWeek({
                         <Link
                           key={trip.tripId}
                           href={tripHref(shopSlug, trip.tripId)}
-                          className="flex flex-col text-sm font-medium text-primary hover:underline"
+                          className="flex min-h-11 flex-col justify-center text-sm font-medium text-primary hover:underline"
                         >
                           <span>
                             <span className="sr-only">{words.crewing}: </span>
@@ -693,8 +834,10 @@ export function StaffingWeek({
                               {formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)}
                             </span>{" "}
                             {trip.title}
+                            {/* Whole: the space after the dot broke, and left
+                                "Away" alone on a line under it (K-489). */}
                             {trip.awayBlocks.length > 0 ? (
-                              <span className="ms-1 font-semibold text-warning-strong">
+                              <span className="ms-1 font-semibold whitespace-nowrap text-warning-strong">
                                 · {words.away}
                               </span>
                             ) : null}
@@ -711,18 +854,14 @@ export function StaffingWeek({
                               sentence joins its accessible name rather than
                               needing a live region of its own. */}
                           {trip.clashes.map((clash) => (
-                            <span
-                              key={clash.tripId}
-                              className="flex items-start gap-1 font-semibold text-warning-strong"
-                            >
-                              <DiveDayIcon name="warning" className="mt-0.5 size-3 shrink-0" />
-                              <span>{fill(words.crewClash, { departure: clash.title })}</span>
-                            </span>
+                            <WarningLine key={clash.tripId} size="sm">
+                              {fill(words.crewClash, { departure: clash.title })}
+                            </WarningLine>
                           ))}
                         </Link>
                       ))}
                       {cell?.away.map((block) => (
-                        <p key={block.id} className="text-sm text-muted">
+                        <p key={block.id} className="flex min-h-11 items-center text-sm text-muted">
                           {words.away}
                           {block.note ? ` · ${block.note}` : ""}
                         </p>
@@ -830,10 +969,15 @@ export function StaffingWeek({
             </div>
           );
         })}
-        {/* One honest line when the whole week is blank on a phone, where the
-            grid's own emptiness is not visible to say it. */}
-        {!week.hasEntries && !week.hasGaps ? (
-          <p className="text-sm text-muted">{words.empty}</p>
+        {/* One honest line when the list has no day to draw, where the
+            grid's own emptiness is not visible to say it. It is a ledger row,
+            the list's last, so it closes the week as the day rows do, and the
+            doors below hang on their closing rules alone as under any week
+            (K-195). */}
+        {listDays.length === 0 ? (
+          <LedgerRow as="div">
+            <p className="text-sm text-muted">{words.empty}</p>
+          </LedgerRow>
         ) : null}
       </div>
     </section>

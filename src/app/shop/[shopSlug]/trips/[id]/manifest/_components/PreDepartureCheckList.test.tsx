@@ -69,3 +69,20 @@ describe("the printed pre-departure list", () => {
     expect(radio.querySelector("svg rect")).not.toBeNull();
   });
 });
+
+/**
+ * **The one line never ends on one word** (K-486). At 390 "Before you leave
+ * the dock: 0 of 5 checked" wrapped to two lines with "checked" alone on the
+ * second. The base rule gives running text `pretty`; a heading is not running
+ * text, so the summary asks for `balance` itself.
+ */
+describe("the checklist's summary line", () => {
+  it("balances its heading's lines", () => {
+    const { container } = render(
+      <PreDepartureCheckList action={async () => null} items={items} copy={copy} />,
+    );
+    const heading = container.querySelector("summary h2");
+    expect(heading?.textContent).toBe(copy.summary);
+    expect(heading).toHaveClass("text-balance");
+  });
+});

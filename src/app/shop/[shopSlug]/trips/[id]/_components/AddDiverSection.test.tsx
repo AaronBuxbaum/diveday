@@ -225,3 +225,68 @@ describe("AddDiverSection name-match prompt", () => {
     expect(container.querySelectorAll('input[name="fromNameMatch"]')).toHaveLength(1);
   });
 });
+
+/**
+ * **One stack, one gap** (pixel-craft class 5, K-164). Each part brought its
+ * own top margin — the status `mt-2`, the search row `mt-4`, the full
+ * boat's line `mt-1` — so the space under the roster's "Add a diver" band was
+ * whatever the first part to render happened to carry: 28px above the search
+ * row against 20px below it on every trip capture. The section is now one
+ * column at one gap, and the roster's wrapper gives it the same inset on
+ * both sides, whichever part renders first.
+ */
+describe("AddDiverSection spacing", () => {
+  const candidate = {
+    person: { id: "person-1", fullName: "Avery Diver", email: "avery@example.com" },
+    rentalFit: null,
+  } as unknown as BookableDiver;
+
+  const states = {
+    "at rest": { full: false, query: "", candidates: [] },
+    "with a refusal above the search": {
+      full: false,
+      query: "",
+      candidates: [],
+      status: { form: "add-diver", tone: "danger" as const, text: "Needs an Advanced card." },
+    },
+    "with returning divers found": { full: false, query: "Avery", candidates: [candidate] },
+    "with nobody found": { full: false, query: "Nobody", candidates: [] },
+    "on a full boat": { full: true, query: "", candidates: [] },
+    "asking about a name match": {
+      full: false,
+      query: "",
+      candidates: [],
+      confirmName: "Nadia Ruis",
+      confirmMatches: [
+        { id: "person-2", fullName: "Nadia Ruiz", email: null, phone: null, lastDiveDayAt: null },
+      ],
+    },
+  };
+
+  it.each(Object.entries(states))(
+    "stacks its parts at one gap, none with a top margin of its own (%s)",
+    (_state, props) => {
+      const { container } = render(
+        <AddDiverSection
+          shopSlug="blue-mantis"
+          tripId="trip-1"
+          addBookingAction={action}
+          addToWaitlistAction={action}
+          addExistingDiverAction={action}
+          locale="en-US"
+          timeZone="America/Cancun"
+          {...props}
+        />,
+      );
+
+      const stack = container.firstElementChild;
+      expect(container.children).toHaveLength(1);
+      expect(stack).toHaveClass("flex", "flex-col", "gap-4");
+      const parts = [...(stack?.children ?? [])].filter((part) => !part.hasAttribute("hidden"));
+      expect(parts.length).toBeGreaterThan(0);
+      for (const part of parts) {
+        expect(part.getAttribute("class") ?? "").not.toMatch(/(^|\s)(mt|my|m)-/);
+      }
+    },
+  );
+});

@@ -138,6 +138,26 @@ describe("a queue with the walk-in door under it", () => {
   });
 });
 
+/**
+ * **The settled rows recede by their ink, never by the group's opacity**
+ * (pixel-craft class 12, K-324). `opacity-70` on the group composites every
+ * descendant, the global focus ring included: a keyboard staffer's ring on a
+ * settled row's undo or its pass painted #0064d2 as #498fdd, 5.02:1 against
+ * the page falling to 3.01:1. The names are already `text-muted`; the ring
+ * paints at full strength.
+ */
+describe("the settled group", () => {
+  it("dims nothing as a group, so a focus ring inside it keeps its contrast", () => {
+    renderQueue([row("Tom Okafor"), settled("Nadia Petrov")], true);
+    const settledRow = screen.getByText("Nadia Petrov").closest("article");
+    expect(settledRow).not.toBeNull();
+    for (let node = settledRow?.parentElement; node; node = node.parentElement) {
+      expect(node.className, node.tagName).not.toMatch(/(?:^|\s)opacity-/);
+    }
+    expect(screen.getByText("Nadia Petrov")).toHaveClass("text-muted");
+  });
+});
+
 describe("a send that does not go through", () => {
   /**
    * **The queue survives a failed mutation** (issue #1788). Every control on a

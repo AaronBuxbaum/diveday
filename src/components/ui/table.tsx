@@ -49,7 +49,6 @@ const HIDE_BELOW = {
 const MIN_WIDTH = {
   "36rem": "min-w-[36rem] print:min-w-0",
   "40rem": "min-w-[40rem] print:min-w-0",
-  "45rem": "min-w-[45rem] print:min-w-0",
   // Above the widest content column any staff page offers (`max-w-5xl` less
   // `px-6` is 976px at desktop, and less than that on anything narrower), so a
   // table that names this one scrolls at every width below the desktop tier
@@ -58,17 +57,21 @@ const MIN_WIDTH = {
   // so the shell never scrolled and the columns packed instead (issue #1035).
   "56rem": "min-w-[56rem] print:min-w-0",
   // The same table with more roll-call columns. The departure log's roster is
-  // three fixed columns plus one per checkpoint, and a checkpoint is a dive:
+  // three text columns plus one per checkpoint, and a checkpoint is a dive:
   // `rollCallCheckpoints` clamps `plannedDives` to 1..4 and the DB check
   // constraint `trips_planned_dives_range` agrees, so the count is five to
-  // eight columns and nothing wider exists. `56rem` holds six of them at the
-  // ~149px issue #1035 measured; the same floor gives seven 128px and eight
-  // 112px, which is that crush returning on a shop that runs more dives per
-  // departure than the seed does. This one holds seven at 165px and eight at
-  // 144px. Wider than the `max-w-5xl` staff work surface on purpose — at eight
-  // columns the document scrolls sideways at every width including desktop,
-  // which is the answer #1035 settled on for a table that is a document, and
-  // `print:min-w-0` still hands paper the whole thing (issue #1052).
+  // eight columns and nothing wider exists. The log pins each checkpoint
+  // column at `8rem` and the text columns share the rest, so at `56rem` they
+  // get ~213px beside two checkpoints and ~171px beside three, but only 128px
+  // beside four and 85px beside five: the crush issue #1035 measured, back on a
+  // shop that runs more dives per departure than the seed does. This floor
+  // gives them ~213px beside four and ~171px beside five
+  // (`rollCallTableMinWidth`, trips/[id]/log/_components/roll-call-columns.ts).
+  // Wider than the `max-w-5xl` staff work surface on purpose — at seven and
+  // eight columns the document scrolls sideways at every width including
+  // desktop, which is the answer #1035 settled on for a table that is a
+  // document, and `print:min-w-0` still hands paper the whole thing (issue
+  // #1052).
   "72rem": "min-w-[72rem] print:min-w-0",
 } as const;
 
@@ -90,8 +93,16 @@ export type TableMinWidth = keyof typeof MIN_WIDTH;
  * itself. Static strings for the same reason as `MIN_WIDTH` — Tailwind cannot
  * see an interpolated arbitrary value — and deliberately few: this is a hint
  * about a column's *role*, not a layout escape hatch.
+ *
+ * A pin holds on paper too. A table whose pinned columns could outgrow a page
+ * says so at its call site with a `print:` width in `className`, as the
+ * departure log does for its per-dive checkpoint columns.
  */
 const COLUMN_WIDTH = {
+  // A short word or a figure beside a column of sentences: the backup
+  // history's Run ("Semanal") and Size ("48.6 MB"), so its Details keeps the
+  // rest (K-143).
+  "6rem": "w-24",
   "8rem": "w-32",
   "10rem": "w-40",
   "12rem": "w-48",
@@ -112,9 +123,25 @@ export type TableColumnWidth = keyof typeof COLUMN_WIDTH;
  *
  * `CELL_EDGE` is the outer-edge half on its own, for a row whose cells pad
  * themselves (`pad={false}`): their headings still take it, so the row has to
- * take it too, or a heading sits 4px off the values under it.
+ * take it too, or a heading sits 4px off the values under it. Such a row takes
+ * it at the breakpoint it becomes a table, through `REFLOW_CELL_EDGE`.
  */
 export const CELL_EDGE = "sm:first:ps-5 sm:last:pe-5";
+
+/**
+ * **`CELL_EDGE` at the breakpoint a reflowing tbody becomes a table.**
+ *
+ * A tbody whose rows reflow to stacked lines below some width (`Td`'s
+ * `pad={false}`, the backup delivery history) pads its cells only from that
+ * width, and their outer edges have to step out there too, never earlier: the
+ * `sm:` step on a row that is still a stacked line pushes its first value 20px
+ * in from the row's own inset. Keyed by the breakpoint the rows become a table
+ * at; static strings, because Tailwind cannot see an interpolated one.
+ */
+export const REFLOW_CELL_EDGE = {
+  sm: CELL_EDGE,
+  xl: "xl:first:ps-5 xl:last:pe-5",
+} as const;
 
 const CELL_PAD = `px-4 py-3 ${CELL_EDGE}`;
 
@@ -360,10 +387,11 @@ export function Td({
   hideBelow?: keyof typeof HIDE_BELOW;
   /**
    * Opt out of the cell padding **only** for a tbody that reflows its rows to
-   * stacked lines below `sm` (the backup delivery history), where the row
-   * owns the padding and each cell is an inline fragment. Everything shaped
-   * like a grid keeps the default. From `sm`, where such a cell pads itself,
-   * it takes `CELL_EDGE` beside its own padding so it lines up under its `Th`.
+   * stacked lines below a breakpoint (the backup delivery history, below
+   * `xl`), where the row owns the padding and each cell is an inline fragment.
+   * Everything shaped like a grid keeps the default. From that breakpoint,
+   * where such a cell pads itself, it takes `REFLOW_CELL_EDGE` for the same
+   * breakpoint beside its own padding, so it lines up under its `Th`.
    */
   pad?: boolean;
   /**

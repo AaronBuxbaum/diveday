@@ -5,12 +5,12 @@ import { choiceClass } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverMergeCandidate } from "@/db/diver-merge";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { displayStoredPhone } from "@/lib/forgiving-fields";
+import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { mergeDiverAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
 function contactLine(email: string | null, phone: string | null, missing: string): string {
-  return [email, displayStoredPhone(phone)].filter(Boolean).join(" · ") || missing;
+  return [email, displayStoredPhoneWhole(phone)].filter(Boolean).join(" · ") || missing;
 }
 
 export function MergeDiver({

@@ -410,6 +410,8 @@ async function TripGuestsBody({
 
       {cancelled ? null : (
         <AddDiverSection
+          // Its parts' own top margins used to space it from the roster here.
+          className="mt-4"
           shopSlug={shopSlug}
           full={isFull(trip)}
           query={diverQuery}

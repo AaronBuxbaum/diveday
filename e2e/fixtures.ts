@@ -119,6 +119,7 @@ export const test = base.extend<
     privateShop: PrivateShop;
     privateShopSlug: string | null;
     privateShopTimezone: string | null;
+    privateShopBrand: boolean;
   },
   { workerBaseURL: string; staffStorageState: (role: StaffRole) => Promise<string> }
 >({
@@ -381,13 +382,29 @@ export const test = base.extend<
    */
   privateShopTimezone: [null, { option: true }],
 
-  privateShop: async ({ demoReset, request, page, privateShopSlug, privateShopTimezone }, use) => {
+  /**
+   * Dress the minted shop in a **logo, a cover photo and badges**, for a
+   * visual capture and nothing else.
+   *
+   * A minted shop is blank shop-wide config, and the canonical demo has a
+   * cover photo and badges but no logo, so no fixture showed the settings
+   * profile row with a stored logo to take back off. Uploading one through the
+   * form cannot work here: the fleet configures no media storage. Set it with
+   * `test.use({ privateShopBrand: true })` on the describe that captures.
+   */
+  privateShopBrand: [false, { option: true }],
+
+  privateShop: async (
+    { demoReset, request, page, privateShopSlug, privateShopTimezone, privateShopBrand },
+    use,
+  ) => {
     // Named only for ordering: the reset purges the *previous* test's minted
     // shop, and it has to have run before this one mints its replacement.
     void demoReset;
     const mint = new URLSearchParams();
     if (privateShopSlug) mint.set("slug", privateShopSlug);
     if (privateShopTimezone) mint.set("timezone", privateShopTimezone);
+    if (privateShopBrand) mint.set("brand", "1");
     const query = mint.toString();
     const response = await request.post(
       query ? `/api/test/seed-private-shop?${query}` : "/api/test/seed-private-shop",
@@ -490,28 +507,39 @@ export const test = base.extend<
     // The trip detail page embeds a live Google Maps iframe (DiveSiteMap.tsx).
     // DIVEDAY_DISABLE_EXTERNAL_HTTP keeps the *server* from waiting on a
     // third-party forecast, but that flag can't reach this request — it's the
-    // browser loading the iframe directly, not our server code. Left
-    // unblocked, an environment with restricted outbound egress can make this
-    // request hang for several seconds before failing, which a plain
-    // `page.goto` (default `waitUntil: "load"`) then waits out in full,
-    // risking the suite's tight per-test timeout on any page a dive site map
-    // appears on. Aborting it immediately keeps every test's network
-    // footprint inside this worker's own server, matching the same
-    // no-third-party-dependency principle.
+    // browser loading the iframe directly, not our server code. Left alone,
+    // an environment with restricted outbound egress can make this request
+    // hang for several seconds before failing, which a plain `page.goto`
+    // (default `waitUntil: "load"`) then waits out in full, risking the
+    // suite's tight per-test timeout on any page a dive site map appears on.
+    // Answering it here keeps every test's network footprint inside this
+    // worker's own server, matching the same no-third-party-dependency
+    // principle.
     //
-    // **It also means no page carrying one of these iframes can be waited on
-    // with `networkidle`, and on a CI runner that is permanent.** An aborted
-    // iframe navigation commits `chrome-error://chromewebdata/` in a child
-    // frame, and Playwright only fires the main frame's `networkidle` once
-    // *every* child frame reports idle. On CI runs 32439332010, 32440808953 and
-    // 32441820119 that cost `e2e/a11y.spec.ts` its entire test budget three
-    // times over on `/ready`, whose shop-location map is the page's only child
-    // frame — 112 seconds during which the page requested nothing whatsoever.
-    // It does not reproduce on macOS, so treat the platform half as unproven;
-    // the rule that follows from it does not depend on the platform. Wait for
-    // something the destination page renders (`pnpm check:e2e-hygiene` refuses
-    // the alternative), never for the network to go quiet.
-    await context.route("https://maps.google.com/**", (route) => route.abort());
+    // **Answered with an empty page, not aborted** (pixel-craft K-511). An
+    // aborted iframe navigation commits `chrome-error://chromewebdata/`, whose
+    // broken-frame glyph then sat under the route drawn over the map, and
+    // every visual capture with a map baselined that failure state. An empty
+    // document is a blank frame, the way the map reads before it loads.
+    //
+    // A frame that commits a real document should also retire one cause of a
+    // hang, though nothing has proven it. Playwright only fires the main
+    // frame's `networkidle` once *every* child frame reports idle, and on CI
+    // runs 32439332010, 32440808953 and 32441820119 the aborted frame's error
+    // page cost `e2e/a11y.spec.ts` its entire test budget three times over on
+    // `/ready`, whose shop-location map is the page's only child frame — 112
+    // seconds during which the page requested nothing whatsoever. It never
+    // reproduced on macOS. The rule it taught stands whatever answers the
+    // frame: wait for something the destination page renders (`pnpm
+    // check:e2e-hygiene` refuses the alternative), never for the network to go
+    // quiet.
+    await context.route("https://maps.google.com/**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: "<!doctype html><title></title>",
+      }),
+    );
     // The storefront's brand display face is a Google Fonts stylesheet (see
     // src/lib/brand.ts). Answering it with an empty sheet keeps every capture
     // on the same fallback face wherever the fleet runs — a font that arrives

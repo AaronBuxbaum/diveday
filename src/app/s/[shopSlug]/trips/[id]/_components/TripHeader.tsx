@@ -64,118 +64,115 @@ export function TripHeader({
   // the diver reached the form.
   const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
   const multiDay = meetingDays.length > 1;
+  // The header opens the column, with no margin of its own above it: the page
+  // stands in the public pages' frame, and the staff preview bar keeps its own
+  // `mb-6`. A wrapping `mt-4` put the eyebrow 84px under the chrome's rule
+  // where every sibling page's sits 36–44 (pixel-craft class 3, K-170).
   return (
-    <div className="mt-4">
-      <ShopPageHeader
-        eyebrow={embed ? shop.name : t("trip.backToAllTrips")}
-        {...(embed ? {} : { eyebrowHref: publicSchedulePath(shop.slug) })}
-        title={trip.title}
-        titleFace="brand"
-        {...(embed
-          ? {
-              brand: {
-                logoUrl: shop.logoUrl,
-                tagline: shop.tagline,
-                description: shop.description,
-              },
-            }
-          : {})}
-        meta={
-          <>
-            {/* The one line on the one page where a diver decides to buy a
-                seat, so it names the clock it is on: `formatTimeRangeTz` rather
-                than the bare `formatTimeRange` the schedule list uses (review
-                finding I18N-L2). A booker two timezones away reading "7:30 AM –
-                11:00 AM" here has nothing else to tell them whose morning that
-                is, and the confirmation they get afterwards has said "EDT" all
-                along — which made this the one step of the flow that could
-                disagree with the two around it. Foreground weight on purpose:
-                "when" is one of the two facts this page exists to answer, and
-                it spent its whole life in the muted ink reserved for asides. */}
-            {multiDay ? (
-              // A multi-day departure leads with its whole span, then names
-              // every day. The days are listed rather than summarised as a
-              // range because they are what a student has to clear a calendar
-              // for, and because each carries its own hours — the staff editor
-              // repeats one wall-clock window across the days, but a day edited
-              // afterwards keeps its own, and this must show that rather than
-              // imply day one's times run the week.
-              <>
-                <p className="text-lg font-medium">
-                  {t("trip.meetingDaysSummary", {
-                    count: meetingDays.length,
-                    first: formatShortDate(meetingDays[0].startsAt, locale, shop.timezone),
-                    last: formatShortDate(
-                      meetingDays[meetingDays.length - 1].startsAt,
-                      locale,
-                      shop.timezone,
-                    ),
-                  })}
-                </p>
-                <ol className="mt-2 space-y-0.5 text-sm text-muted">
-                  {meetingDays.map((day) => (
-                    <li key={day.id}>
-                      {t("trip.meetingDayLabel", {
-                        number: day.dayNumber,
-                        date: formatShortDate(day.startsAt, locale, shop.timezone),
-                        timeRange: formatTimeRangeTz(
-                          day.startsAt,
-                          day.endsAt,
-                          locale,
-                          shop.timezone,
-                        ),
-                      })}
-                    </li>
-                  ))}
-                </ol>
-              </>
-            ) : (
+    <ShopPageHeader
+      eyebrow={embed ? shop.name : t("trip.backToAllTrips")}
+      {...(embed ? {} : { eyebrowHref: publicSchedulePath(shop.slug) })}
+      title={trip.title}
+      titleFace="brand"
+      {...(embed
+        ? {
+            brand: {
+              logoUrl: shop.logoUrl,
+              tagline: shop.tagline,
+              description: shop.description,
+            },
+          }
+        : {})}
+      meta={
+        <>
+          {/* The one line on the one page where a diver decides to buy a
+              seat, so it names the clock it is on: `formatTimeRangeTz` rather
+              than the bare `formatTimeRange` the schedule list uses (review
+              finding I18N-L2). A booker two timezones away reading "7:30 AM –
+              11:00 AM" here has nothing else to tell them whose morning that
+              is, and the confirmation they get afterwards has said "EDT" all
+              along — which made this the one step of the flow that could
+              disagree with the two around it. Foreground weight on purpose:
+              "when" is one of the two facts this page exists to answer, and
+              it spent its whole life in the muted ink reserved for asides. */}
+          {multiDay ? (
+            // A multi-day departure leads with its whole span, then names
+            // every day. The days are listed rather than summarised as a
+            // range because they are what a student has to clear a calendar
+            // for, and because each carries its own hours — the staff editor
+            // repeats one wall-clock window across the days, but a day edited
+            // afterwards keeps its own, and this must show that rather than
+            // imply day one's times run the week.
+            <>
               <p className="text-lg font-medium">
-                {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
-                {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
+                {t("trip.meetingDaysSummary", {
+                  count: meetingDays.length,
+                  first: formatShortDate(meetingDays[0].startsAt, locale, shop.timezone),
+                  last: formatShortDate(
+                    meetingDays[meetingDays.length - 1].startsAt,
+                    locale,
+                    shop.timezone,
+                  ),
+                })}
               </p>
-            )}
-            {showMeetingPoint && trip.meetingPointLabel ? (
-              <p className="mt-2 text-sm font-medium text-muted">
-                {trip.meetingPointAddress
-                  ? t("trip.meetingPointWithAddress", {
-                      label: trip.meetingPointLabel,
-                      address: trip.meetingPointAddress,
-                    })
-                  : trip.meetingPointLabel}
-              </p>
-            ) : null}
-            {trip.isPrivate ? (
-              <p className="mt-2 text-sm font-medium text-primary">{t("trip.privateCharter")}</p>
-            ) : null}
-            {trip.course ? (
-              <p className="mt-2 text-sm font-medium text-primary">
-                {t("trip.courseSession")} ·{" "}
-                <Link
-                  href={publicCoursePath(shop.slug, trip.course.slug)}
-                  className="underline-offset-2 hover:underline focus-visible:underline"
-                >
-                  {trip.course.title}
-                </Link>
-              </p>
-            ) : null}
-            {trip.description ? <p className="mt-3 text-muted">{trip.description}</p> : null}
-            {/* "How much" is the other fact this page exists to answer, so it
-                gets a real typographic moment instead of one more muted line.
-                The deposit split, cancellation window, and course-fee
-                breakdown that used to trail it are `TripTerms`, beside the
-                button — fine print belongs with the signature. */}
-            {perDiverPriceCents !== null ? (
-              <p className="mt-4 flex items-baseline gap-2">
-                <span className={FIGURE_LARGE_CLASS}>
-                  {formatMoneyScanned(perDiverPriceCents, currency, locale)}
-                </span>
-                <span className="text-sm text-muted">{t("common.perDiver")}</span>
-              </p>
-            ) : null}
-          </>
-        }
-      />
-    </div>
+              <ol className="mt-2 space-y-0.5 text-sm text-muted">
+                {meetingDays.map((day) => (
+                  <li key={day.id}>
+                    {t("trip.meetingDayLabel", {
+                      number: day.dayNumber,
+                      date: formatShortDate(day.startsAt, locale, shop.timezone),
+                      timeRange: formatTimeRangeTz(day.startsAt, day.endsAt, locale, shop.timezone),
+                    })}
+                  </li>
+                ))}
+              </ol>
+            </>
+          ) : (
+            <p className="text-lg font-medium">
+              {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
+              {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
+            </p>
+          )}
+          {showMeetingPoint && trip.meetingPointLabel ? (
+            <p className="mt-2 text-sm font-medium text-muted">
+              {trip.meetingPointAddress
+                ? t("trip.meetingPointWithAddress", {
+                    label: trip.meetingPointLabel,
+                    address: trip.meetingPointAddress,
+                  })
+                : trip.meetingPointLabel}
+            </p>
+          ) : null}
+          {trip.isPrivate ? (
+            <p className="mt-2 text-sm font-medium text-primary">{t("trip.privateCharter")}</p>
+          ) : null}
+          {trip.course ? (
+            <p className="mt-2 text-sm font-medium text-primary">
+              {t("trip.courseSession")} ·{" "}
+              <Link
+                href={publicCoursePath(shop.slug, trip.course.slug)}
+                className="underline-offset-2 hover:underline focus-visible:underline"
+              >
+                {trip.course.title}
+              </Link>
+            </p>
+          ) : null}
+          {trip.description ? <p className="mt-3 text-muted">{trip.description}</p> : null}
+          {/* "How much" is the other fact this page exists to answer, so it
+              gets a real typographic moment instead of one more muted line.
+              The deposit split, cancellation window, and course-fee
+              breakdown that used to trail it are `TripTerms`, beside the
+              button — fine print belongs with the signature. */}
+          {perDiverPriceCents !== null ? (
+            <p className="mt-4 flex items-baseline gap-2">
+              <span className={FIGURE_LARGE_CLASS}>
+                {formatMoneyScanned(perDiverPriceCents, currency, locale)}
+              </span>
+              <span className="text-sm text-muted">{t("common.perDiver")}</span>
+            </p>
+          ) : null}
+        </>
+      }
+    />
   );
 }

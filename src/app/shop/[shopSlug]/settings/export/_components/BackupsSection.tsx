@@ -4,8 +4,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
-import { CELL_EDGE, Table, TBody, Td, THead, Th } from "@/components/ui/table";
+import {
+  controlClass,
+  FIELD_GRID_COLUMN_GAP,
+  Field,
+  FieldActions,
+  FieldGrid,
+} from "@/components/ui/form";
+import { REFLOW_CELL_EDGE, Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ShopBackupDelivery } from "@/db/schema";
 import type { getShopBackupDestination, listBackupDeliveries } from "@/features/backup-export";
@@ -61,6 +67,13 @@ export function deliveryErrorText(t: StaffTranslator, code: string | null): stri
 
 const STATUS_TONE = { succeeded: "success", failed: "danger", started: "neutral" } as const;
 
+/**
+ * The delivery history's outer cells step onto the card column where it
+ * becomes a table, `xl`, and not before: on a stacked line the step would
+ * push the stamp 20px in from the row's own inset.
+ */
+const HISTORY_CELL_EDGE = REFLOW_CELL_EDGE.xl;
+
 function statusText(t: StaffTranslator, status: ShopBackupDelivery["status"]): string {
   if (status === "succeeded") return t("backup.history.status.succeeded");
   if (status === "failed") return t("backup.history.status.failed");
@@ -114,7 +127,9 @@ export function BackupsSection({
           }
         >
           {destination ? (
-            <dl className="grid gap-2 text-sm sm:grid-cols-2">
+            // The form below's column gutter, so the two second columns
+            // stand on one x (K-588); rows keep the list's tighter 8px.
+            <dl className={`grid ${FIELD_GRID_COLUMN_GAP} gap-y-2 text-sm sm:grid-cols-2`}>
               <div>
                 <dt className="text-muted">{t("backup.status.endpoint")}</dt>
                 <dd className="break-all">{destination.endpoint}</dd>
@@ -268,7 +283,7 @@ export function BackupsSection({
             <EmptyState title={t("backup.history.empty")} icon={false} nested />
           ) : (
             <>
-              {/* Five columns at `sm` and up; one stacked block below it.
+              {/* Five columns from `xl`; one stacked block below it.
                 `overflow-x-auto` stays as the desktop-narrow safety net, but it
                 cannot be the phone answer: a horizontal scroller nested in a
                 vertically-scrolling settings page advertises itself to nobody
@@ -279,65 +294,89 @@ export function BackupsSection({
                 (FU-20260811-backup-delivery-history-clips-on-a-phone).
 
                 The fold is done by *reflowing* the row, not by rendering it
-                twice. Below `sm` the `<tr>` becomes a wrapping flex line and the
+                twice. Below `xl` the `<tr>` becomes a wrapping flex line and the
                 date and details cells claim a full line each, so the reading
                 order is: date, then run/outcome/size together, then the reason.
                 Every value exists exactly once in the DOM.
+
                 The first draft did render both arrangements and hid one with
                 `hidden`, which is the orders index's pattern — and it was wrong
                 here: two copies of the same text made `getByText` inside a row
                 ambiguous (`e2e/backup-export.spec.ts` failed on a strict-mode
                 violation), and it doubled the DOM of a paged list for no gain.
-                A layout switch belongs in CSS. */}
+                A layout switch belongs in CSS.
+
+                **Why `xl`, and not `sm`** (K-143, pixel-craft class 9): the
+                table is `table-layout: fixed`, so it is only as good as the
+                widths it states. The stamp takes 12rem ("Jun 29, 4:00 AM EDT"
+                is 173px with its padding), the outcome 10rem ("Delivered" is
+                138px), Run and Size 6rem each ("Semanal", "48.6 MB"), and
+                Details the rest: 126px where the table is 670px, which it is
+                from 1280. At 1024 the rail beside the pane leaves the table
+                580px, 36px for Details, and at 640 it is 540px. From `sm` it
+                split five ways at every width and cut the stamp at all of
+                them. */}
               {/* `flush` inside this card — no card-on-card shadow or second
                 bg-surface; a thin border stays as the boundary of the grid,
                 the same nested-table treatment as the import preview. */}
               <Table flush shellClassName="rounded-inset border border-border">
-                {/* Below `sm` the rows are self-describing stacks rather than a
+                {/* Below `xl` the rows are self-describing stacks rather than a
                   grid, so a lone "When" heading over them would be noise. */}
-                <THead className="hidden sm:table-header-group">
-                  <Th>{t("backup.history.when")}</Th>
-                  <Th>{t("backup.history.kind")}</Th>
-                  <Th>{t("backup.history.outcome")}</Th>
-                  <Th numeric>{t("backup.history.size")}</Th>
+                <THead className="hidden xl:table-header-group">
+                  <Th width="12rem">{t("backup.history.when")}</Th>
+                  <Th width="6rem">{t("backup.history.kind")}</Th>
+                  <Th width="10rem">{t("backup.history.outcome")}</Th>
+                  <Th numeric width="6rem">
+                    {t("backup.history.size")}
+                  </Th>
                   <Th>{t("backup.history.details")}</Th>
                 </THead>
-                {/* One DOM, two layouts: below `sm` the tbody reflows to stacked
+                {/* One DOM, two layouts: below `xl` the tbody reflows to stacked
                   lines (the row owns the padding, `pad={false}` on every cell)
                   so the Details sentence — where a *failed* delivery says why —
                   is on screen without a guessed sideways scroll. Rendering the
                   fold twice instead would duplicate that text in the DOM and
                   break the strict-mode `getByText` in e2e/backup.spec.ts. */}
-                <TBody className="block sm:table-row-group">
+                <TBody className="block xl:table-row-group">
                   {deliveries.rows.map((delivery) => (
                     <tr
                       key={delivery.id}
-                      className="flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3 sm:table-row sm:gap-0 sm:p-0"
+                      className="flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3 xl:table-row xl:gap-0 xl:p-0"
                     >
                       {/* `align="baseline"` on every cell: the status Badge's
                         word sits on the row's line rather than 4px under it.
-                        Below `sm` the row is a flex line, where it does
-                        nothing. `CELL_EDGE` beside each `sm:px-4`: the
+                        Below `xl` the row is a flex line, where it does
+                        nothing. `HISTORY_CELL_EDGE` beside each `xl:px-4`: the
                         headings step their outer edges to 20px, and the first
                         and last columns' values have to start where their
-                        headings do. */}
+                        headings do.
+
+                        The stamp wraps: the formatter keeps its time and zone
+                        whole, so a stamp longer than its 12rem ("Sep 29, 10:00
+                        PM GMT+10", a shop in Sydney) ends a line after its
+                        comma. `nowrap` in the cell's `overflow-hidden` cut it
+                        instead. */}
                       <Td
                         pad={false}
                         align="baseline"
-                        className={`basis-full font-medium sm:basis-auto sm:px-4 sm:py-3 sm:font-normal sm:whitespace-nowrap ${CELL_EDGE}`}
+                        className={`basis-full font-medium xl:basis-auto xl:px-4 xl:py-3 xl:font-normal ${HISTORY_CELL_EDGE}`}
                       >
                         {formatDateTimeTz(delivery.startedAt, locale, timeZone)}
                       </Td>
                       <Td
                         pad={false}
                         align="baseline"
-                        className={`text-muted sm:px-4 sm:py-3 sm:text-foreground ${CELL_EDGE}`}
+                        className={`text-muted xl:px-4 xl:py-3 xl:text-foreground ${HISTORY_CELL_EDGE}`}
                       >
                         {delivery.trigger === "scheduled"
                           ? t("backup.history.trigger.scheduled")
                           : t("backup.history.trigger.manual")}
                       </Td>
-                      <Td pad={false} align="baseline" className={`sm:px-4 sm:py-3 ${CELL_EDGE}`}>
+                      <Td
+                        pad={false}
+                        align="baseline"
+                        className={`xl:px-4 xl:py-3 ${HISTORY_CELL_EDGE}`}
+                      >
                         <Badge tone={STATUS_TONE[delivery.status]}>
                           {statusText(t, delivery.status)}
                         </Badge>
@@ -345,19 +384,19 @@ export function BackupsSection({
                       <Td
                         pad={false}
                         align="baseline"
-                        className={`text-muted tabular-nums sm:px-4 sm:py-3 sm:text-right sm:whitespace-nowrap sm:text-foreground ${CELL_EDGE}`}
+                        className={`text-muted tabular-nums xl:px-4 xl:py-3 xl:text-right xl:whitespace-nowrap xl:text-foreground ${HISTORY_CELL_EDGE}`}
                       >
                         {delivery.byteCount === null
                           ? "—"
                           : formatByteSize(delivery.byteCount, locale)}
                       </Td>
-                      {/* Its own line below `sm`: this is the cell a shop came
+                      {/* Its own line below `xl`: this is the cell a shop came
                         for on a failed row, and it is a sentence, not a chip. */}
                       <Td
                         pad={false}
                         muted
                         align="baseline"
-                        className={`basis-full sm:basis-auto sm:px-4 sm:py-3 ${CELL_EDGE}`}
+                        className={`basis-full xl:basis-auto xl:px-4 xl:py-3 ${HISTORY_CELL_EDGE}`}
                       >
                         {delivery.status === "failed" ? (
                           deliveryErrorText(t, delivery.errorCode)

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { proseLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { canPersonImportShopData } from "@/db/import";
 import { requestLocale } from "@/i18n/request";
@@ -11,6 +12,7 @@ import {
   type ImportScopeRowId,
 } from "@/lib/import";
 import { requireShopSurface } from "@/lib/session";
+import { settingsPaneClass } from "../_components/settings-pane";
 import type { ImportActionErrorCode } from "./actions";
 import { ImportWizard } from "./ImportWizard";
 
@@ -343,7 +345,7 @@ export default async function ImportContactsPage({
   const staysBehind = staysBehindChip(t);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
@@ -358,17 +360,27 @@ export default async function ImportContactsPage({
       <p className="-mt-2 mb-6 text-sm text-muted">
         {t.rich("settings.import.comingFrom", {
           eve: (chunks) => (
-            <a href="/switching/eve" target="_blank" rel="noreferrer" className="underline">
+            <a href="/switching/eve" target="_blank" rel="noreferrer" className={proseLinkClass}>
               {chunks}
             </a>
           ),
           diveshop360: (chunks) => (
-            <a href="/switching/diveshop360" target="_blank" rel="noreferrer" className="underline">
+            <a
+              href="/switching/diveshop360"
+              target="_blank"
+              rel="noreferrer"
+              className={proseLinkClass}
+            >
               {chunks}
             </a>
           ),
           spreadsheet: (chunks) => (
-            <a href="/switching/spreadsheet" target="_blank" rel="noreferrer" className="underline">
+            <a
+              href="/switching/spreadsheet"
+              target="_blank"
+              rel="noreferrer"
+              className={proseLinkClass}
+            >
               {chunks}
             </a>
           ),

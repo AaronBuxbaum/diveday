@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 
@@ -78,8 +79,19 @@ export type MonthFigure = {
  * instead. The first figure of each visual row starts on the column, and the
  * band's rules, the rules between its stacked rows and the ledger's rules
  * below all end at one x.
+ *
+ * **The end gutter is a column gutter, so it waits for a column.** On a phone
+ * the figures stack one to a row with nothing beside them, and a stacked figure
+ * takes the band's 8px back on the right exactly as it does on the left
+ * (`pe-2`); the 24px `pe-6` that keeps a figure off its neighbour's rule starts
+ * at `sm`, where the neighbour does. It was `pe-6` at every width, and a
+ * stacked figure's words stopped 24px short of its rule on the right and 8px
+ * on the left (K-573).
+ *
+ * Exported for the route's loading skeleton, which stands the same cells in
+ * for these and would otherwise be a second spelling of where they sit.
  */
-function figureCellClass(index: number): string {
+export function figureCellClass(index: number): string {
   const rule =
     index === 0
       ? ""
@@ -94,7 +106,7 @@ function figureCellClass(index: number): string {
         index % 2 === 1
         ? "sm:border-s sm:border-border sm:ps-6"
         : "lg:border-s lg:border-border lg:ps-6";
-  return `py-5 ps-2 pe-6 ${rule} ${gutter}`.replace(/\s+/g, " ").trim();
+  return `py-5 ps-2 pe-2 sm:pe-6 ${rule} ${gutter}`.replace(/\s+/g, " ").trim();
 }
 
 /**
@@ -145,31 +157,47 @@ export function MonthFigures({
                   different size, and inheriting one to override it three times
                   is how a ramp drifts. */}
               <span className={`block ${FIGURE_LARGE_CLASS}`}>{figure.value}</span>
-              {figure.earned ? (
-                <EarnedMomentLine animate={false} className="mt-2">
-                  {figure.earned}
-                </EarnedMomentLine>
-              ) : figure.detail ? (
-                <span
-                  className={`mt-2 block text-sm ${
-                    figure.detailTone === "attention" ? "text-warning-strong" : "text-muted"
-                  }`}
-                >
-                  {figure.detail}
-                </span>
+              {/* **One block owns the lines under the value**, so the first of
+                  them starts 8px down whichever it is. The detail took `mt-2`
+                  and the comparison `mt-1`, so a figure with no detail (net
+                  revenue) set its comparison 4px higher than every
+                  neighbour's first line (K-287). Rendered only when it holds
+                  something: an empty `mt-2` block is a phantom gap. */}
+              {figure.earned || figure.detail || figure.comparison ? (
+                <div className="mt-2 space-y-1">
+                  {figure.earned ? (
+                    <EarnedMomentLine animate={false}>{figure.earned}</EarnedMomentLine>
+                  ) : figure.detail ? (
+                    <span
+                      className={`block text-sm ${
+                        figure.detailTone === "attention" ? "text-warning-strong" : "text-muted"
+                      }`}
+                    >
+                      {figure.detail}
+                    </span>
+                  ) : null}
+                  {figure.comparison ? (
+                    <span className="block text-sm text-muted tabular-nums">
+                      {figure.comparison}
+                    </span>
+                  ) : null}
+                </div>
               ) : null}
-              {figure.comparison ? (
-                <span className="mt-1 block text-sm text-muted tabular-nums">
-                  {figure.comparison}
-                </span>
-              ) : null}
+              {/* **A quiet link still clears 44px.** The line box keeps the
+                  `text-sm` line's 20px (`h-5`) and the link takes the shared
+                  tap-target floor, centred on it, so its target overhangs the
+                  line 12px each side, up into the gap above it and down into
+                  the cell's `py-5`, without moving a line on the page. As an `inline-block` it was a 78x20 target
+                  on a phone (K-288). */}
               {figure.link ? (
-                <Link
-                  href={figure.link.href}
-                  className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
-                >
-                  {figure.link.label}
-                </Link>
+                <span className="mt-2 flex h-5 items-center">
+                  <Link
+                    href={figure.link.href}
+                    className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}
+                  >
+                    {figure.link.label}
+                  </Link>
+                </span>
               ) : null}
             </dd>
           </div>

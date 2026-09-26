@@ -15,6 +15,7 @@ import { formatShortDate } from "@/lib/format";
 import type { PrintRunSheetCode } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
+import { settingsPaneClass } from "../_components/settings-pane";
 
 export const instant = true;
 
@@ -22,6 +23,13 @@ export const metadata: Metadata = {
   title: "Print — DiveDay",
   robots: { index: false, follow: false },
 };
+
+/**
+ * The register's two text doors — the paper pass's counter and the year
+ * poster's Reports — in one ink and with the app's text-door hover. They were
+ * `text-muted` and `text-primary`, and neither answered a hover (K-538).
+ */
+const TEXT_DOOR_CLASS = `${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`;
 
 /**
  * **The Print register** — ADR 20260908-one-hand, decision 6, lever X.
@@ -71,7 +79,7 @@ export default async function SettingsPrintPage({
   };
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
+    <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={shopPath(shopSlug, "settings")}
@@ -79,7 +87,11 @@ export default async function SettingsPrintPage({
         description={t("print.settings.lede")}
       />
 
-      <div className="mt-8 space-y-8">
+      {/* Section rhythm belongs to the page, not to each section: one
+          `space-y-10` here, the header's `mb-8` above it, and no `mt-*` on a
+          group (docs/design/forms-and-controls.md). The groups stood 32px
+          apart (K-521). */}
+      <div className="space-y-10">
         <LedgerGroup as="h2" label={t("print.settings.groups.dock")}>
           <SheetRow
             name={t("print.settings.dockSign.name")}
@@ -128,10 +140,7 @@ export default async function SettingsPrintPage({
             line={t("print.settings.paperPass.line")}
             meta={printedMeta("paper_pass")}
             door={
-              <Link
-                href={shopPath(shopSlug, "check-in")}
-                className={`${tapTargetLinkClass} text-sm font-medium text-muted`}
-              >
+              <Link href={shopPath(shopSlug, "check-in")} className={TEXT_DOOR_CLASS}>
                 {t("print.settings.counterDoor")}
               </Link>
             }
@@ -144,10 +153,7 @@ export default async function SettingsPrintPage({
             paper={t("print.settings.yearPoster.paper")}
             line={t("print.settings.yearPoster.line")}
             door={
-              <Link
-                href={shopPath(shopSlug, "reports")}
-                className={`${tapTargetLinkClass} text-sm font-medium text-primary`}
-              >
+              <Link href={shopPath(shopSlug, "reports")} className={TEXT_DOOR_CLASS}>
                 {t("print.settings.reportsDoor")}
               </Link>
             }
@@ -182,7 +188,18 @@ function SheetRow({
       <span className="block truncate font-medium">
         {name} <span className="font-normal text-muted">· {paper}</span>
       </span>
-      <span className="mt-0.5 block text-sm text-muted">{meta ? `${line} · ${meta}` : line}</span>
+      {/* The dot is glued to the line before it with a no-break space, and
+          the status is one unit: " · " with ordinary spaces let a wrapped
+          line open on "· Never printed" at 390 (K-590). */}
+      <span className="mt-0.5 block text-sm text-muted">
+        {line}
+        {meta ? (
+          <>
+            {"\u00a0· "}
+            <span className="whitespace-nowrap">{meta}</span>
+          </>
+        ) : null}
+      </span>
     </LedgerRow>
   );
 }

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Fragment } from "react";
 import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
 import { StoredPhoto } from "@/components/StoredPhoto";
@@ -274,7 +273,7 @@ export function TripDayPlan({
   );
   if (briefings.length === 0) {
     return nightSky || sunMoon?.sunriseAt ? (
-      <section className="mt-8">
+      <section>
         <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
         {sky}
       </section>
@@ -330,7 +329,7 @@ export function TripDayPlan({
   // those rows carried.
   if (briefings.every(({ dive, diveSite }) => !dive.title && !diveSite)) {
     return (
-      <section className="mt-8">
+      <section>
         <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
         {sky}
         <p className="mt-2 text-sm text-muted">
@@ -349,7 +348,7 @@ export function TripDayPlan({
   const runCloses = !(nextOpensOnRule && seenByDive.size === 0 && options.length === 0);
   const handSetBox = runCloses ? ledgerRowBoxClass : ledgerRowOpenBoxClass;
   return (
-    <section className="mt-8">
+    <section>
       <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
       {sky}
       <ul className="mt-2">
@@ -373,11 +372,17 @@ export function TripDayPlan({
           // there — lives at `/s/<shop>/sites/<site>`, and this run of rows is
           // the one beat on this page that names every site the day dives. A
           // page reachable only from a sitemap is a page divers never find.
-          const siteHref = diveSite ? publicDiveSitePath(shop.slug, diveSite.slug) : null;
+          //
+          // **The row is the door** (pixel-craft class 7, K-168), whichever of
+          // its lines names the site. The name was an inline link inside a
+          // plain row, a 17px-tall target ("French Reef" 79×17 at 390) with
+          // its ring hugging the words; a door row is the whole row, 52px and
+          // up, with the chevron that says it opens. A dive with no site yet
+          // has nowhere to go and stays a plain row.
+          const siteDoor = diveSite
+            ? { href: publicDiveSitePath(shop.slug, diveSite.slug), linkLabel: diveSite.name }
+            : {};
           const lead = dive.title ?? diveSite?.name ?? t("trip.siteToBeConfirmed");
-          // Linked once per row, on whichever line carries the site's name: a
-          // dive the shop named after its site has one line, not two.
-          const leadNamesSite = Boolean(diveSite && lead === diveSite.name);
           return (
             <Fragment key={dive.id}>
               <LedgerRow
@@ -386,30 +391,15 @@ export function TripDayPlan({
                 trailing={
                   depth ? <span className="text-sm text-muted tabular-nums">{depth}</span> : null
                 }
+                {...siteDoor}
               >
-                <span className="block text-sm font-medium">
-                  {siteHref && leadNamesSite ? (
-                    <Link href={siteHref} className="text-primary hover:underline">
-                      {lead}
-                    </Link>
-                  ) : (
-                    lead
-                  )}
-                </span>
+                <span className="block text-sm font-medium">{lead}</span>
                 {/* The site under the dive's own name, when the shop gave the dive
                     a name of its own that is not simply the site's. A departure
                     whose second tank has no site yet says so here rather than
                     reading as a one-site day. */}
                 {dive.title && diveSite?.name && dive.title !== diveSite.name ? (
-                  <span className="block text-sm">
-                    {siteHref ? (
-                      <Link href={siteHref} className="text-primary hover:underline">
-                        {diveSite.name}
-                      </Link>
-                    ) : (
-                      <span className="text-muted">{diveSite.name}</span>
-                    )}
-                  </span>
+                  <span className="block text-sm text-muted">{diveSite.name}</span>
                 ) : null}
                 {dive.title && !diveSite ? (
                   <span className="block text-sm text-muted">{t("trip.siteToBeConfirmed")}</span>
@@ -521,8 +511,10 @@ export function TripLookFor({ briefings, locale }: { briefings: SiteBriefing[]; 
   if (cards.length === 0) return null;
   return (
     <section className="mt-6">
+      {/* `mt-2`, as every beat opens under its label (pixel-craft class 4,
+          K-509): at `mt-3` this one floated 12px above its faces. */}
       <GroupLabel as="h2">{t("trip.lookFor")}</GroupLabel>
-      <ul className="mt-3 grid gap-x-6 gap-y-5 sm:grid-cols-2">
+      <ul className="mt-2 grid gap-x-6 gap-y-5 sm:grid-cols-2">
         {cards.map((card) => (
           <li key={card.slug ?? card.name} className="flex min-w-0 gap-3">
             <StoredPhoto
@@ -587,14 +579,19 @@ export function TripMoments({ briefings, locale }: { briefings: SiteBriefing[]; 
   return (
     <section className="mt-6">
       <GroupLabel as="h2">{t("trip.momentsHeading")}</GroupLabel>
-      <ul className={`mt-3 grid gap-4${shown.length > 1 ? " sm:grid-cols-2" : ""}`}>
+      <ul className={`mt-2 grid gap-4${shown.length > 1 ? " sm:grid-cols-2" : ""}`}>
         {shown.map((moment) => (
           <li key={moment.id}>
             <figure>
               <StoredPhoto
                 src={moment.imageUrl}
                 alt=""
-                className="aspect-[3/2] w-full rounded-inset"
+                // The corner follows the layout, as `sizes` below does. A lone
+                // moment fills the measure beside the hero's and the route
+                // card's 20px corners and takes the panel's; in the two-up
+                // grid each is a tile at the inset's 12px (pixel-craft class
+                // 12, K-510).
+                className={`aspect-[3/2] w-full ${shown.length > 1 ? "rounded-inset" : "rounded-panel"}`}
                 // Tracks the grid above it, which is only two-column when
                 // there is more than one moment. Declared flat at `17rem` it
                 // was right for a pair and half the truth for a single

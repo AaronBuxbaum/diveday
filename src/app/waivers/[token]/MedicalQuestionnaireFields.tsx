@@ -55,9 +55,11 @@ function RadioQuestion({
        * the box while `<fieldset>`/`<legend>` keep naming the radio group for
        * assistive technology (`MedicalQuestionnaireFields.test.tsx` asks for
        * the group by its prompt). The sibling below clears the float so the
-       * fieldset still wraps its own height.
+       * fieldset still wraps its own height. `text-pretty` because the app's
+       * pretty wrap reaches paragraphs, not a legend, and a prompt ended
+       * "…within the past 12 / months." (K-534): line breaks only, never words.
        */}
-      <legend className="float-left mb-3 w-full p-0 text-base font-medium">
+      <legend className="float-left mb-3 w-full p-0 text-base font-medium text-pretty">
         {question.prompt}
       </legend>
       {/* `size="md"`: the diver reads this form at 16px, the answers too. */}
