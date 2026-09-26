@@ -7,17 +7,20 @@ import {
 } from "@/components/ui/typography";
 
 /*
- * The document's measurements, named once because two things draw them: the
- * document, and `LegalDocumentFallback`, whose bars must land where the words
- * do (K-407).
+ * The document's boxes, named once because two things draw them: the document
+ * and `LegalDocumentSkeleton`, whose bars stand in each one's own box so the
+ * streamed page lands where they stood (K-411, K-407).
+ *
+ * `text-pretty` is on the column, not per paragraph: `text-wrap` inherits, and
+ * a term list's inline `<dt>`/`<dd>` pair has no block of its own to carry it.
+ * Without it the policy ended lines on "it." (K-484).
  */
-const COLUMN_CLASS = "mx-auto w-full max-w-3xl px-6 py-16 lg:py-24";
-const TITLE_CLASS = `${BANNER_TITLE_CLASS} leading-tight sm:text-4xl`;
-const META_CLASS = "text-sm text-muted";
-/** The intro and every section's prose: 28px lines. */
-const PROSE_CLASS = "text-base leading-7";
+const COLUMN_CLASS = "mx-auto w-full max-w-3xl px-6 py-16 text-pretty lg:py-24";
+const TITLE_CLASS = `mt-4 ${BANNER_TITLE_CLASS} leading-tight sm:text-4xl`;
+const DATELINE_CLASS = "mt-3 text-sm text-muted";
+const INTRO_CLASS = "mt-8 text-base leading-7";
 const SECTIONS_CLASS = "mt-12 flex flex-col gap-12";
-const SECTION_BODY_CLASS = "mt-4 flex flex-col gap-4";
+const SECTION_BODY_CLASS = "mt-4 flex flex-col gap-4 text-base leading-7";
 const TERM_LIST_CLASS = "flex flex-col gap-3";
 
 /**
@@ -52,106 +55,14 @@ export function LegalDocument({
 }) {
   return (
     <main className="flex-1">
-      {/* `text-pretty` on the column, not per paragraph: `text-wrap` inherits,
-          and a term list's inline `<dt>`/`<dd>` pair has no block of its own
-          to carry it. Without it the policy ended lines on "it." (K-484). */}
-      <div className={`${COLUMN_CLASS} text-pretty`}>
+      <div className={COLUMN_CLASS}>
         <p className={MARKETING_EYEBROW_CLASS}>{eyebrow}</p>
-        <h1 className={`mt-4 ${TITLE_CLASS}`}>{title}</h1>
-        <p className={`mt-3 ${META_CLASS}`}>{updated}</p>
-        <p className={`mt-8 ${PROSE_CLASS}`}>{intro}</p>
+        <h1 className={TITLE_CLASS}>{title}</h1>
+        <p className={DATELINE_CLASS}>{updated}</p>
+        <p className={INTRO_CLASS}>{intro}</p>
         <div className={SECTIONS_CLASS}>{children}</div>
       </div>
     </main>
-  );
-}
-
-/**
- * One block of a section's body, as `LegalDocumentFallback` draws it: a
- * paragraph and the lines it wraps to, or a `LegalTermList` and the lines each
- * of its terms wraps to.
- */
-export type LegalBlockShape = { paragraph: SkeletonLines } | { terms: readonly SkeletonLines[] };
-
-/**
- * What a legal page paints while its localized body streams (its route's
- * `loading.tsx`, ADR 20260804-instant-navigation): the document's first screen
- * in bars, line for line.
- *
- * Each bar is one line box — `h-lh` in the type of the text it stands for,
- * stacked with no gap, a line one side of `sm` does not have hidden there
- * (`SkeletonLineBars`) — and each run of lines stands at the document's own
- * margins and gaps. `/privacy`'s hand-drawn copy of this layout had none of
- * that: two title bars for a one-line title, 20px bars with gaps for 28px
- * lines, 104px sections for 224px ones, so the page jumped 40px at 1280 and
- * its first heading 147px on a phone when the words landed (K-407).
- *
- * How far the words wrap is each page's own business, so the line counts are
- * the caller's: `titleLines`, `introLines`, and `sections` down to the fold —
- * each section a heading line over its blocks. Past the fold nothing is seen
- * landing, so nothing below it needs drawing.
- */
-export function LegalDocumentFallback({
-  titleLines,
-  introLines,
-  sections,
-}: {
-  titleLines: SkeletonLines;
-  introLines: SkeletonLines;
-  sections: readonly (readonly LegalBlockShape[])[];
-}) {
-  const prose = `h-lh ${PROSE_CLASS}`;
-  return (
-    <main className="flex-1 animate-pulse">
-      <div className={COLUMN_CLASS}>
-        <SkeletonLineBars lines={1} height={`h-lh ${MARKETING_EYEBROW_CLASS}`} width="w-48" />
-        <div className="mt-4">
-          <SkeletonLineBars lines={titleLines} height={`h-lh ${TITLE_CLASS}`} width="w-5/6" />
-        </div>
-        <div className="mt-3">
-          <SkeletonLineBars lines={1} height={`h-lh ${META_CLASS}`} width="w-56" />
-        </div>
-        <div className="mt-8">
-          <SkeletonLineBars lines={introLines} height={prose} width="w-full" />
-        </div>
-        <div className={SECTIONS_CLASS}>
-          {sections.map((blocks, section) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: bars, not records — the section's place is the only identity a placeholder has
-            <div key={section}>
-              <SkeletonLineBars lines={1} height={`h-lh ${SUB_TITLE_CLASS}`} width="w-2/5" />
-              <div className={SECTION_BODY_CLASS}>
-                {blocks.map((block, index) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: as above
-                  <LegalBlockBars key={index} block={block} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </main>
-  );
-}
-
-/** One block of a fallback section: a paragraph's lines, or a term list's terms at the list's gap. */
-function LegalBlockBars({ block }: { block: LegalBlockShape }) {
-  const prose = `h-lh ${PROSE_CLASS}`;
-  if ("terms" in block) {
-    return (
-      <div className={TERM_LIST_CLASS}>
-        {block.terms.map((lines, term) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: bars, not records — the term's place is the only identity a placeholder has
-          <div key={term}>
-            <SkeletonLineBars lines={lines} height={prose} width="w-full" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-  return (
-    <div>
-      <SkeletonLineBars lines={block.paragraph} height={prose} width="w-full" />
-    </div>
   );
 }
 
@@ -160,7 +71,7 @@ export function LegalSection({ heading, children }: { heading: string; children:
   return (
     <section>
       <h2 className={SUB_TITLE_CLASS}>{heading}</h2>
-      <div className={`${SECTION_BODY_CLASS} ${PROSE_CLASS}`}>{children}</div>
+      <div className={SECTION_BODY_CLASS}>{children}</div>
     </section>
   );
 }
@@ -206,5 +117,99 @@ export function LegalList({ items }: { items: ReadonlyArray<string> }) {
         <li key={item}>{item}</li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * One block of a section's body, as the skeleton draws it: a paragraph's line
+ * count, or a term list's, one count per term.
+ */
+export type LegalSkeletonBlock = SkeletonLines | { terms: ReadonlyArray<SkeletonLines> };
+
+/**
+ * **What a legal page paints while its words stream in**: the document's own
+ * boxes, with a bar for each line (K-411, K-407).
+ *
+ * `/terms` and `/privacy` each typed a copy of one skeleton (two title bars,
+ * three intro bars, three short bars per section) that neither page rendered:
+ * bars 16px and 20px tall with 8px gaps standing in for 28px lines, so the
+ * streamed page jumped 53px on a desk, and on a phone the second section's
+ * heading stood where the first section's paragraph lands.
+ *
+ * Each block here wears the classes the document's element wears, so its type
+ * and line height are the document's, and each line is a bar one line box tall
+ * (`h-lh`) stacked with no gap, as a paragraph's line boxes are
+ * (`SkeletonLineBars`). N lines are then exactly N line heights at every width,
+ * the title's 37.5px and 45px included. What stays with each page is how far
+ * its words wrap (one count, or one below `sm` and one from it) and roughly
+ * how wide its eyebrow and title are. Nothing here is interactive, and nothing
+ * is a heading or a paragraph: a fallback holds shape, never content (ADR
+ * 20260804-instant-navigation's 2026-08-14 amendment).
+ */
+export function LegalDocumentSkeleton({
+  eyebrowWidth = "w-40",
+  titleWidth = "w-4/5",
+  titleLines,
+  introLines,
+  sections,
+}: {
+  /** Tailwind width classes for the eyebrow's bar. */
+  eyebrowWidth?: string;
+  /** Tailwind width classes for the title's bars. */
+  titleWidth?: string;
+  /** How many lines the title wraps to. */
+  titleLines: SkeletonLines;
+  /** How many lines the intro wraps to. */
+  introLines: SkeletonLines;
+  /** Each section's body, block by block, as the page's `LegalSection`s hold it. */
+  sections: ReadonlyArray<ReadonlyArray<LegalSkeletonBlock>>;
+}) {
+  return (
+    <main className="flex-1 animate-pulse">
+      <div className={COLUMN_CLASS}>
+        <div className={MARKETING_EYEBROW_CLASS}>
+          <SkeletonLineBars lines={1} height="h-lh" width={eyebrowWidth} />
+        </div>
+        <div className={TITLE_CLASS}>
+          <SkeletonLineBars lines={titleLines} height="h-lh" width={titleWidth} />
+        </div>
+        <div className={DATELINE_CLASS}>
+          <SkeletonLineBars lines={1} height="h-lh" width="w-60 max-w-full" />
+        </div>
+        <div className={INTRO_CLASS}>
+          <SkeletonLineBars lines={introLines} height="h-lh" width="w-full" />
+        </div>
+        <div className={SECTIONS_CLASS}>
+          {sections.map((blocks, section) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: bars, not records — the section number is the only identity a placeholder section has
+            <div key={section}>
+              <div className={SUB_TITLE_CLASS}>
+                <SkeletonLineBars lines={1} height="h-lh" width="w-1/2 sm:w-2/5" />
+              </div>
+              <div className={SECTION_BODY_CLASS}>
+                {blocks.map((block, index) =>
+                  typeof block === "object" && "terms" in block ? (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: as above
+                    <div key={index} className={TERM_LIST_CLASS}>
+                      {block.terms.map((lines, term) => (
+                        // biome-ignore lint/suspicious/noArrayIndexKey: as above
+                        <div key={term}>
+                          <SkeletonLineBars lines={lines} height="h-lh" width="w-full" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: as above
+                    <div key={index}>
+                      <SkeletonLineBars lines={block} height="h-lh" width="w-full" />
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
   );
 }

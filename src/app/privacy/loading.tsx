@@ -1,5 +1,5 @@
 import { MarketingNavFallback } from "@/app/_components/MarketingNav";
-import { LegalDocumentFallback } from "@/components/LegalDocument";
+import { LegalDocumentSkeleton, type LegalSkeletonBlock } from "@/components/LegalDocument";
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
 
 /**
@@ -14,46 +14,54 @@ import { MarketingFooterFallback } from "@/components/MarketingFooter";
  * would throw away anything the reader did to it when the localized body landed
  * (ADR 20260804-instant-navigation's 2026-08-14 amendment).
  *
- * The document's first screen, line for line, so the streamed page lands where
- * the bars stood (K-407). The counts are how far the English wraps in the
- * page's 720px column (from `sm`) and at a 390px phone (below it): a one-line
- * title that takes two on a phone, a four-line intro that takes eight, then
- * "Two different relationships" and "What is stored", each term at its own
- * count. The two sections reach past the fold at every width, so the footer
- * never shows early. A rewrite that changes how the intro or those terms wrap
- * changes these numbers.
+ * The bars stand in the document's own boxes (`LegalDocumentSkeleton`, the
+ * one skeleton `/terms` wears too), so the streamed page lands where they
+ * stood (K-407). What is this page's own is how far its words wrap: the en-US
+ * copy's lines at 390 (`base`) and 1280 (`sm`; the column stops widening at
+ * 768), the widths the visual suite captures. A title that takes two lines on
+ * a phone, an intro of eight lines and four, then "Two different
+ * relationships" and "What is stored" term by term, which reaches past the
+ * fold at both widths, so the footer never shows early. A rewrite that
+ * changes how the title, the intro or those terms wrap changes these numbers.
  */
 export default function PrivacyLoading() {
   return (
     <div className="flex flex-1 flex-col">
       <MarketingNavFallback />
-      <LegalDocumentFallback
+      <LegalDocumentSkeleton
+        eyebrowWidth="w-60"
+        titleWidth="w-5/6 sm:w-11/12"
         titleLines={{ base: 2, sm: 1 }}
         introLines={{ base: 8, sm: 4 }}
-        sections={[
-          [
-            {
-              terms: [
-                { base: 3, sm: 2 },
-                { base: 7, sm: 4 },
-              ],
-            },
-          ],
-          [
-            {
-              terms: [
-                { base: 3, sm: 2 },
-                { base: 4, sm: 2 },
-                { base: 7, sm: 4 },
-                { base: 6, sm: 3 },
-                { base: 4, sm: 2 },
-                { base: 14, sm: 7 },
-              ],
-            },
-          ],
-        ]}
+        sections={PRIVACY_SECTIONS}
       />
       <MarketingFooterFallback />
     </div>
   );
 }
+
+/** Each section's lines, in the page's order, down past the fold. */
+const PRIVACY_SECTIONS: ReadonlyArray<ReadonlyArray<LegalSkeletonBlock>> = [
+  // Two different relationships: the shop, then the shop's divers.
+  [
+    {
+      terms: [
+        { base: 3, sm: 2 },
+        { base: 8, sm: 4 },
+      ],
+    },
+  ],
+  // What is stored: six terms.
+  [
+    {
+      terms: [
+        { base: 3, sm: 2 },
+        { base: 4, sm: 2 },
+        { base: 7, sm: 4 },
+        { base: 6, sm: 3 },
+        { base: 4, sm: 2 },
+        { base: 14, sm: 7 },
+      ],
+    },
+  ],
+];
