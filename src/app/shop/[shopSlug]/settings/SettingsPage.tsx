@@ -2242,7 +2242,9 @@ export default async function SettingsPage({
               className="mb-6"
             >
               <ShopNotice tone="danger" role="status">
-                <p className="font-medium">
+                {/* `text-balance`: the title left "storage" alone on its last
+                    line at 390 (K-584). */}
+                <p className="font-medium text-balance">
                   {t("settings.main.dataJobs.mediaDeletions.heading", {
                     count: pendingMediaDeletions.length,
                   })}
@@ -2296,7 +2298,7 @@ export default async function SettingsPage({
               className="mb-6"
             >
               <ShopNotice tone="danger" role="status">
-                <p className="font-medium">
+                <p className="font-medium text-balance">
                   {t("settings.main.dataJobs.processorErasures.heading", {
                     count: owedProcessorErasures.length,
                   })}

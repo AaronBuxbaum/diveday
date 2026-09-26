@@ -339,6 +339,35 @@ describe("the data-compliance queues in the Data group", () => {
   });
 });
 
+/** How the two queues are drawn, once they have something in them. */
+describe("the data-compliance queues' drawing", () => {
+  async function queuePanels() {
+    const element = await renderSettings("owner", async (db, session) => {
+      await queueStuckDeletion(db, session);
+      await oweErasure(db, session, "stripe_customer");
+    });
+    const panels = findElements<{ "aria-label"?: string; children?: unknown }>(
+      element,
+      "section",
+    ).filter((section) => [MEDIA_PANEL, ERASURE_PANEL].includes(section.props["aria-label"] ?? ""));
+    expect(panels).toHaveLength(2);
+    return panels;
+  }
+
+  /**
+   * "1 photo removed but not yet deleted from" / "storage": a danger notice's
+   * title left its last word alone on a line at 390 (K-584).
+   */
+  it("balances each notice's title, so no word is left alone on its last line", async () => {
+    for (const panel of await queuePanels()) {
+      const [title] = findElements<{ className?: string }>(panel.props.children, "p");
+      expect(title?.props.className?.split(" ")).toEqual(
+        expect.arrayContaining(["font-medium", "text-balance"]),
+      );
+    }
+  });
+});
+
 describe("the diving options a shop runs", () => {
   it("offers boat alongside shore and pool, and the door to the fleet with it", async () => {
     const element = await renderSettings("owner");
