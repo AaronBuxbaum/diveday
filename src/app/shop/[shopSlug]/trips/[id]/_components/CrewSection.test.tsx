@@ -565,3 +565,31 @@ describe("CrewSection standing crew clash", () => {
     expect(screen.queryByText(/cannot be on both/)).toBeNull();
   });
 });
+
+/**
+ * **"Manage shifts" starts on the crew column's edge** (pixel-craft class 3,
+ * K-201). The section is a `flex flex-col`, which stretched the link's
+ * `inline-flex justify-center` box to the panel's width, so the flush words
+ * sat centred (ink at 594 against the column's 173 on trip-crew-clash at
+ * 1280) and its focus ring drew a 934px box round a 92px phrase.
+ */
+describe("the way out to the week's shifts", () => {
+  it("keeps to its own words' width, on the column's start edge", () => {
+    render(
+      <CrewSection
+        tripId="trip-1"
+        staff={[] as StaffList}
+        crewIds={[]}
+        crewRoles={{}}
+        onShiftIds={null}
+        shopSlug="blue-mantis"
+        updateCrewAction={async () => ({ ok: true })}
+        crewGapCode="none"
+        copy={COPY}
+      />,
+    );
+    const link = screen.getByRole("link", { name: "Manage shifts" });
+    expect(link).toHaveAttribute("href", "/shop/blue-mantis/staffing");
+    expect(link).toHaveClass("self-start", "px-0");
+  });
+});

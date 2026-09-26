@@ -501,10 +501,17 @@ export function CrewSection({
           shift this week is a different subject, and a staffer reaches for it
           after reading this departure's crew rather than instead of it
           (principles.md §10, "actions ride on their objects"). It wears
-          `buttonClass` for the 44px floor the header slot used to give it. */}
+          `buttonClass` for the 44px floor the header slot used to give it,
+          and `self-start` so the column does not stretch its centred box to
+          the panel's width and float the words mid-panel. */}
       <Link
         href={`/shop/${shopSlug}/staffing`}
-        className={buttonClass({ variant: "link", size: "sm", flush: true })}
+        className={buttonClass({
+          variant: "link",
+          size: "sm",
+          flush: true,
+          className: "self-start",
+        })}
       >
         {copy.manageShifts}
       </Link>
