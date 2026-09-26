@@ -113,6 +113,17 @@ export type ThreadSpineStep = {
 const STEP_ROW_CLASS = "flex min-h-14 flex-col justify-center gap-1 py-3";
 
 /**
+ * An *open* step's head lends its body the 8px that clear the focus ring
+ * (K-161): 4px of bottom where the closed row has 12, so the fact stands 12px
+ * over the form as it did before the ring fix rather than 20. The floor gives
+ * up the same 8px, so a head with no fact under it keeps its name 16px down
+ * whether the step is open or closed, instead of dropping 4px as it opens.
+ * Only while open: closed, the head is the row between two hairlines, and its
+ * even `py-3` is what centres it there.
+ */
+const OPEN_STEP_HEAD_CLASS = "group-open/step:min-h-12 group-open/step:pb-1";
+
+/**
  * The spine itself: hairline rows straight on the page background.
  *
  * **At most one step is open at rest**, and it stays that way after a tap —
@@ -153,17 +164,16 @@ export function ThreadSpine({
                   single heading), and a paragraph in here is invalid markup
                   that browsers silently re-parent. */}
               <summary
-                className={`${STEP_ROW_CLASS} cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden`}
+                className={`${STEP_ROW_CLASS} ${OPEN_STEP_HEAD_CLASS} cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden`}
               >
                 <StepHead step={step} />
               </summary>
               {/* `pt-2`: the summary's focus ring reaches 5px below it, and
                   the body is a later sibling that paints over whatever it
                   overlaps — flush, "Sign your waiver" hid the ring's bottom
-                  arm (K-161). The head keeps its even `py-3` rather than
-                  lending this 8px from its own bottom: it is the closed row
-                  too, and a lopsided one would sit its name off centre
-                  between the hairlines. */}
+                  arm (K-161). The open head lends these 8px from its own
+                  bottom (`OPEN_STEP_HEAD_CLASS`), so the fact still stands
+                  12px over the form. */}
               <div className="pt-2 pb-6">{step.body}</div>
             </AutoOpenDetails>
           ) : (

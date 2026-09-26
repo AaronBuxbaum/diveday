@@ -168,6 +168,54 @@ describe("ThreadSpine", () => {
     expect(summary?.nextElementSibling?.classList.contains("pt-2")).toBe(true);
   });
 
+  it("keeps an open step's fact 12px over its form, and its name where the closed row puts it", () => {
+    // The body's 8px clear of the ring came on top of the head's even `py-3`,
+    // so on every open step (the current one on every /ready view) the fact
+    // stood 20px over the first control where it had stood 12 (K-161 review).
+    // An open head lends those 8px from its own bottom instead, and 8px of its
+    // floor with them, so a name with no fact under it does not drop 4px as
+    // its step opens. A closed head is the settled row, untouched.
+    const RING_REACH = 5; // globals.css: a 3px outline, 2px off its box
+    const NAME_LINE = 24; // the name's text-base line
+    const OPEN = "group-open/step:";
+    const { container } = render(
+      <ThreadSpine
+        steps={[
+          step({
+            id: "sign",
+            current: true,
+            line: "Sign your waiver.",
+            body: <button type="button">Sign your waiver</button>,
+          }),
+        ]}
+      />,
+    );
+    const summary = container.querySelector("summary");
+    const body = summary?.nextElementSibling;
+    if (!summary || !body) throw new Error("no open step");
+    expect(summary.closest("details")?.classList.contains("group/step")).toBe(true);
+    /** The px the first of these spacing utilities sets on `el`, in 4px steps. */
+    const px = (el: Element, ...utilities: string[]) => {
+      const tokens = el.className.split(/\s+/);
+      for (const utility of utilities) {
+        const token = tokens.find((t) => t.startsWith(`${utility}-`));
+        if (token) return Number(token.slice(utility.length + 1)) * 4;
+      }
+      throw new Error(`none of ${utilities.join(", ")} in "${el.className}"`);
+    };
+    const top = px(summary, "pt", "py");
+    const closedBottom = px(summary, "pb", "py");
+    const openBottom = px(summary, `${OPEN}pb`, "pb", "py");
+    const closedFloor = px(summary, "min-h");
+    const openFloor = px(summary, `${OPEN}min-h`, "min-h");
+    const bodyTop = px(body, "pt");
+
+    expect(openBottom + bodyTop).toBe(closedBottom);
+    expect(bodyTop).toBeGreaterThan(RING_REACH);
+    const nameTop = (floor: number, bottom: number) => top + (floor - top - bottom - NAME_LINE) / 2;
+    expect(nameTop(openFloor, openBottom)).toBe(nameTop(closedFloor, closedBottom));
+  });
+
   it("hangs a step's fact under its name, on the name's own edge", () => {
     // The name starts after the settle mark and its gap; the fact under it
     // was indented 32px against the name's 28, 4px right of it on every step
