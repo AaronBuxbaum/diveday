@@ -111,9 +111,12 @@ export const LEAD_TITLE_CLASS = "text-2xl font-semibold tracking-tight";
 export const SUB_TITLE_CLASS = "text-xl font-semibold tracking-tight text-pretty";
 
 /**
- * **The app's section heading**, and the workhorse of the whole ramp — 76 of the
- * call sites swept onto these constants were this one, in two spellings.
- * `SectionCard` renders it for its own `h2`, so a card never types it.
+ * **The hand-spelled section heading**, and the workhorse of the whole ramp — 76
+ * of the call sites swept onto these constants were this one, in two spellings.
+ * Not `SectionCard`'s: its `h2` has been `LEAD_TITLE_CLASS` since #1286, and a
+ * bare group heading above a plural body takes that rung too
+ * (docs/design/forms-and-controls.md, "Where a heading goes"). Which one size
+ * every section heading should be is #1966's question.
  */
 export const SECTION_TITLE_CLASS = "text-lg font-semibold";
 

@@ -343,4 +343,17 @@ describe("the packing list's geometry", () => {
       expect(tokens(section).filter((token) => /^mt-/.test(token))).toEqual([]);
     }
   });
+
+  it("titles every section at the one size a card's own title has (K-151)", () => {
+    const { container } = renderPrep(everyPanelPrep(), { notice: "gear-assigned" });
+    const headings = container.querySelectorAll("h2");
+    // Tanks, nitrox, sizes, staff fit, support, pickups, kit, assignments.
+    expect(headings).toHaveLength(8);
+    for (const heading of headings) {
+      expect(tokens(heading), heading.textContent ?? "").toEqual(
+        expect.arrayContaining(LEAD_TITLE_CLASS.split(" ")),
+      );
+      expect(tokens(heading), heading.textContent ?? "").not.toContain("text-lg");
+    }
+  });
 });

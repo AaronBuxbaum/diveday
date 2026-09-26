@@ -128,8 +128,8 @@ that is a `<form>`: `SectionCard`'s element set excludes `<form>`, so such a car
 hierarchy, colour carries state. A heading that grew or shrank because something went wrong would
 move the page's apparent structure as panels change state, and a reader would re-learn the
 hierarchy every time — so a tone-carrying panel's heading is never quieter for having a tone, and
-never louder for it either. The trip's prep page breaks this today: its two warning panels are
-`LEAD_TITLE_CLASS` and its untoned sections `SECTION_TITLE_CLASS`, which is part of #1966.
+never louder for it either. The trip's packing list keeps it: its two warning panels, its two
+titled cards and its four group headings are all `LEAD_TITLE_CLASS`.
 
 ### Section rhythm: `space-y-10`, never `mt-*`
 

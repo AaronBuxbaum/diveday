@@ -13,8 +13,10 @@ import { sectionCardClass } from "@/components/ui/card";
 export function PrepBodySkeleton({ className }: { className: string }) {
   return (
     <div className={`animate-pulse ${className}`}>
+      {/* Each title bar one `LEAD_TITLE_CLASS` line tall, 32px, the size
+          every section title in the list is drawn at. */}
       <div>
-        <div className="h-6 w-32 rounded bg-surface-sunken" />
+        <div className="h-8 w-32 rounded bg-surface-sunken" />
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className={sectionCardClass({ padding: "none", className: "h-28" })} />
@@ -26,7 +28,7 @@ export function PrepBodySkeleton({ className }: { className: string }) {
         <div key={i} className={sectionCardClass({ padding: "md", className: "h-36" })} />
       ))}
       <div>
-        <div className="h-6 w-40 rounded bg-surface-sunken" />
+        <div className="h-8 w-40 rounded bg-surface-sunken" />
         <div className={sectionCardClass({ padding: "none", className: "mt-3 h-64" })} />
       </div>
     </div>

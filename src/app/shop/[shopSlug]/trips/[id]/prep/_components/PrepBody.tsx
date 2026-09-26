@@ -9,7 +9,7 @@ import { SectionCard, sectionCardClass, TONE_PANEL_CLASS } from "@/components/ui
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
-import { FIGURE_CLASS, LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { FIGURE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripPrep } from "@/db/trips-prep";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { diveRecencyText } from "@/i18n/readiness-labels";
@@ -299,7 +299,12 @@ export function PrepBody({
           ) : (
             <>
               <section aria-labelledby={scopedId(idPrefix, "tanks-heading")}>
-                <h2 id={scopedId(idPrefix, "tanks-heading")} className={SECTION_TITLE_CLASS}>
+                {/* Above its tiles, not a card's title: the body is plural
+                    (forms-and-controls.md, "Where a heading goes"), as are the
+                    pickups', the kit's and the assignments' below. At a card
+                    title's size all the same, so every section here speaks at
+                    one volume — these four were 18px beside the cards' 24px. */}
+                <h2 id={scopedId(idPrefix, "tanks-heading")} className={LEAD_TITLE_CLASS}>
                   {t("tripPrep.tanksHeading")}
                 </h2>
                 {/* **Where the total comes from, beside the total.** This line
@@ -581,11 +586,10 @@ export function PrepBody({
               phone before a diver is standing in a lobby at 06:00. */}
           {hotelPickups.length > 0 ? (
             <section aria-labelledby={scopedId(idPrefix, "hotel-pickups-heading")}>
-              <div className="flex items-center justify-between gap-2">
-                <h2
-                  id={scopedId(idPrefix, "hotel-pickups-heading")}
-                  className={SECTION_TITLE_CLASS}
-                >
+              {/* `items-baseline`, as `SectionCard`'s header: the count is
+                  words beside the title's words, so they share a line. */}
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 id={scopedId(idPrefix, "hotel-pickups-heading")} className={LEAD_TITLE_CLASS}>
                   {t("tripPrep.hotelPickupsHeading")}
                 </h2>
                 <span className="text-sm text-muted">
@@ -637,7 +641,7 @@ export function PrepBody({
           {cancelled ? null : (
             <section aria-labelledby={scopedId(idPrefix, "kit-heading")}>
               <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                <h2 id={scopedId(idPrefix, "kit-heading")} className={SECTION_TITLE_CLASS}>
+                <h2 id={scopedId(idPrefix, "kit-heading")} className={LEAD_TITLE_CLASS}>
                   {t("tripPrep.rentalKitHeading")}
                 </h2>
                 {/* A state toggle, not two buttons: one list, two ways of
@@ -850,7 +854,7 @@ export function PrepBody({
                 assignmentRows.some((row) => row.assigned.length > 0) ? undefined : "print:hidden"
               }
             >
-              <h2 id={scopedId(idPrefix, "assignments-heading")} className={SECTION_TITLE_CLASS}>
+              <h2 id={scopedId(idPrefix, "assignments-heading")} className={LEAD_TITLE_CLASS}>
                 {t("gear.prep.heading")}
               </h2>
               {/* The cart, not a caption. What replaced a sentence restating
