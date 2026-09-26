@@ -79,6 +79,25 @@ describe("SegmentedControl", () => {
     }
   });
 
+  /**
+   * **The floor holds on both axes** (pixel-craft class 7). A target's floor
+   * is 44px in width as well as height, and a three-letter label does not
+   * reach it: on the public courses page "SDI" measured 43.4×44 and "SSI"
+   * 42.3×44 at 390px. The boat size floors its width at its own 56px height,
+   * `min-w-14`, so a short label there is a square, not a sliver.
+   */
+  it("floors every option's width too, so a three-letter label is still a target", () => {
+    const short = [
+      { key: "sdi", label: "SDI", href: "/s/reef/courses?agency=sdi" },
+      { key: "ssi", label: "SSI", href: "/s/reef/courses?agency=ssi" },
+    ];
+    render(<SegmentedControl ariaLabel="Agency" items={short} currentKey="sdi" />);
+    for (const label of ["SDI", "SSI"]) expect(screen.getByText(label)).toHaveClass("min-w-11");
+    cleanup();
+    render(<SegmentedControl ariaLabel="Agency" items={short} currentKey="sdi" size="boat" />);
+    for (const label of ["SDI", "SSI"]) expect(screen.getByText(label)).toHaveClass("min-w-14");
+  });
+
   it("never shifts layout on selection: both states share one weight and size", () => {
     render(<SegmentedControl ariaLabel="Trip" items={items} currentKey="guests" />);
     const current = screen.getByText("Guests");

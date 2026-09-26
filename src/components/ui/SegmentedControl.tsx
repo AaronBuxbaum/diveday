@@ -114,10 +114,13 @@ const sizes = {
    * stays on one row instead of wrapping for the sake of three pixels. The
    * target's height is untouched, and its width is set by the label anyway
    * (issue #811).
+   *
+   * The floor holds on both axes: `min-w-11` because a three-letter label
+   * ("SDI", "SSI" on the public courses page) came to 42–43px wide.
    */
-  md: "min-h-11 px-2.5 text-sm",
-  /** Boat surfaces: 56px targets, 16px labels, for wet hands and glare. */
-  boat: "min-h-14 px-5 text-base",
+  md: "min-h-11 min-w-11 px-2.5 text-sm",
+  /** Boat surfaces: 56px targets on both axes, 16px labels, for wet hands and glare. */
+  boat: "min-h-14 min-w-14 px-5 text-base",
 } as const;
 
 export type SegmentedControlSize = keyof typeof sizes;
