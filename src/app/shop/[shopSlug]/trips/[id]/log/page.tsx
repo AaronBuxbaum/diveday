@@ -148,15 +148,18 @@ export default async function IncidentExportPage({
             </EyebrowBackLink>
             <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("incidentExport.title")}</p>
             <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{doc.meta.tripTitle}</h1>
+            {/* Each dot is glued to what it follows by a no-break space, so a
+                wrap falls after one and never starts a line with it. */}
             <p className="mt-1 text-muted">
-              {formatShortDate(new Date(doc.meta.tripStartsAt), locale, doc.meta.timezone)} ·{" "}
+              {formatShortDate(new Date(doc.meta.tripStartsAt), locale, doc.meta.timezone)}
+              {"\u00a0"}·{" "}
               {formatTimeRangeTz(
                 new Date(doc.meta.tripStartsAt),
                 new Date(doc.meta.tripEndsAt),
                 locale,
                 doc.meta.timezone,
-              )}{" "}
-              · {doc.meta.shopName}
+              )}
+              {"\u00a0"}· {doc.meta.shopName}
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3 print:hidden">
@@ -169,8 +172,8 @@ export default async function IncidentExportPage({
           {t("incidentExport.generatedLine", {
             date: dateTime(doc.meta.generatedAt),
             name: doc.meta.generatedByName,
-          })}{" "}
-          ·{" "}
+          })}
+          {"\u00a0"}·{" "}
           {t("incidentExport.shopTimeLabel", {
             timezone: formatTimeZoneName(locale, doc.meta.timezone),
           })}

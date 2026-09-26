@@ -139,6 +139,48 @@ describe("the emergency contact cell", () => {
   });
 });
 
+describe("the header's lines", () => {
+  /**
+   * "{date} · {time range} · {shop}" and "{generated} · {shop time}" joined
+   * with a breakable space before each dot, and at 390 both lines already
+   * wrap right at one ("EDT · Blue" / "Mantis Divers"): a slightly longer time
+   * range or shop name starts a line with "·" (K-552). Each dot is glued to
+   * what it follows, as on the contact cell.
+   */
+  it("keeps every dot with what it follows", () => {
+    const header = SOURCE.slice(SOURCE.indexOf("<header"), SOURCE.indexOf("</header>"));
+    const dots = [...header.matchAll(/·/g)];
+    expect(dots, "the header's joins are where this test looks").toHaveLength(3);
+    for (const dot of dots) {
+      expect(header.slice(0, dot.index).trimEnd().endsWith('{"\\u00a0"}')).toBe(true);
+    }
+  });
+});
+
+describe("the log's messages", () => {
+  /**
+   * The joins inside the log's own messages ("{agency} · {level} · …",
+   * "{date} · {name}", "Checked by {name} · {date}") are glued in the bundles,
+   * where a translator sees the character, rather than patched after
+   * translation: a component rewriting finished copy stops applying the
+   * moment a translator changes the spacing, and reaches into interpolated
+   * names too (K-552).
+   */
+  for (const locale of ["en-US", "es-ES"]) {
+    it(`never leaves a breakable space before a dot (${locale})`, () => {
+      const bundle = JSON.parse(
+        readFileSync(
+          join(process.cwd(), "src/i18n/locales", locale, "staff/incidentExport.json"),
+          "utf8",
+        ),
+      ) as Record<string, string>;
+      const joined = Object.entries(bundle).filter(([, message]) => message.includes("·"));
+      expect(joined.length, "the bundle's joins are where this test looks").toBe(5);
+      for (const [key, message] of joined) expect(message, key).not.toMatch(/[^\u00a0]·/);
+    });
+  }
+});
+
 describe("the pre-departure check", () => {
   /**
    * Two columns — the item and who checked it when — under a `36rem` scroll
