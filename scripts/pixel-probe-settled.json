@@ -4,8 +4,8 @@
     {
       "check": "focus-invisible",
       "classes": ["focus-visible:outline-none", "focus-visible:after:focus-ring-inset"],
-      "reason": "Focus shows on RowLink's ::after overlay, the target a pointer has: focus-visible:after:focus-ring-inset draws the ring inside the overlay's own edge, and the text is not ringed a second time. The probe reads only the element's own outline. How far the overlay reaches (the cell or the whole row) is issue #1989.",
-      "pointer": "src/components/ui/table.tsx, RowLink's doc comment; docs/design/settled-questions.md"
+      "reason": "Focus shows on the link's ::after overlay, the target a pointer has — RowLink's in a table cell, SettingsDoorRow's across a settings row: focus-visible:after:focus-ring-inset draws the ring inside the overlay's own edge, and the text is not ringed a second time. The probe reads only the element's own outline. How far RowLink's overlay reaches (the cell or the whole row) is issue #1989.",
+      "pointer": "src/components/ui/table.tsx, RowLink's doc comment; src/app/shop/[shopSlug]/settings/_components/SettingsRows.tsx, the comment on SettingsDoorRow's linkClass; docs/design/settled-questions.md"
     },
     {
       "check": "focus-invisible",
