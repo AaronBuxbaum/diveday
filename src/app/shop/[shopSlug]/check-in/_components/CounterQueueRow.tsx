@@ -190,19 +190,32 @@ function DiverIdentity({
 }
 
 /**
- * **The first line of a row that carries its state beside the name** — the
- * blocked row and the released seat: who, then the state (and its act) at the
- * row's end, at every width (pixel-craft class 3, K-222).
+ * **The blocked row's first line**: who, then the gate at the row's end, at
+ * every width (pixel-craft class 3, K-222).
  *
  * The line used to wrap, over an identity that took only its content's width,
  * so a name wearing a second badge ("No emergency contact") grew the identity
  * until the row wrapped and the Blocked badge dropped under the name at the
  * row's start, while the next row's badge stood at its end. The line does not
  * wrap: the identity takes the room (`flex-1`) and wraps its own badges inside
- * itself, and the name truncates in it.
+ * itself, and the name truncates in it. That trade is right for one badge,
+ * about 90px of end; the released seat's end is a badge and a button, and
+ * keeps a line of its own (`RELEASED_LINE_CLASS`).
  */
 const STATE_LINE_CLASS = "flex items-center justify-between gap-2";
 const STATE_LINE_IDENTITY_CLASS = "min-w-0 flex-1";
+
+/**
+ * **The released seat's first line wraps, and its end holds the row's end**
+ * (K-222). Its end is "Not here" and a ghost "Put back on the list", about
+ * 240px in en-US and 280 in es-ES ("No vino", "Volver a ponerlo en la lista"),
+ * so the blocked row's no-wrap line left a 357px phone column 70–110px for the
+ * name — the one a staffer reads to walk the seat back — and pushed "No
+ * emergency contact" out under the badge. Here the identity keeps its own
+ * width and the end gives way under it, `ms-auto` so a wrapped end still
+ * stands at the row's end rather than its start.
+ */
+const RELEASED_LINE_CLASS = "flex flex-wrap items-center justify-between gap-x-2 gap-y-1";
 
 /**
  * **The blocked row's name: its record's door, a 28px line with a 44px
@@ -303,8 +316,8 @@ export function CounterQueueRow({
          on this page instead of vanishing: the diver who walks in as the lines
          come off needs somewhere for a staffer to walk it back. */
       <LedgerRow as="article" size="lg" pad="lg" closed={closed}>
-        <div className={STATE_LINE_CLASS}>
-          <div className={STATE_LINE_IDENTITY_CLASS}>
+        <div className={RELEASED_LINE_CLASS}>
+          <div className="min-w-0">
             <DiverIdentity
               row={row}
               showEmail={showEmail}
@@ -313,7 +326,7 @@ export function CounterQueueRow({
               name={<span className="block truncate text-base text-muted">{row.personName}</span>}
             />
           </div>
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="ms-auto flex shrink-0 items-center gap-3">
             <Badge tone="neutral">{t("checkIn.noShow.badge")}</Badge>
             <RowActionForm
               action={undoNoShowAction}

@@ -629,8 +629,9 @@ describe("the row's box", () => {
  * identity took only its content's width, so a name wearing a second badge
  * ("No emergency contact") grew the identity until the row wrapped and the
  * Blocked badge dropped under the name at the row's start, while every other
- * row's badge stood at its end. The line does not wrap; the identity takes
- * the room and wraps its own badges inside itself.
+ * row's badge stood at its end. The blocked row's line does not wrap; the
+ * identity takes the room and wraps its own badges inside itself. A released
+ * seat's line still wraps, and its cluster holds the end — see its own case.
  */
 describe("a row's first line", () => {
   const LONG = "Nadia Petrova-Castellanos de la Fuente";
@@ -687,11 +688,34 @@ describe("a row's first line", () => {
     expect(screen.getByText(/Checked in/)).toHaveClass("mt-0.5");
   });
 
-  it("keeps a released seat's word and undo at the end the same way", () => {
+  /**
+   * **A released seat keeps its name whole, and its cluster gives way under
+   * it** (K-222). Its end is not one badge but "Not here" and a ghost "Put
+   * back on the list", about 240px in en-US and 280 in es-ES, so the blocked
+   * row's no-wrap line would leave a 357px phone column 70–110px for the name
+   * a staffer reads to walk the seat back, and push "No emergency contact"
+   * out under the badge. The line wraps as it always did; a cluster that
+   * wraps holds the row's end (`ms-auto`) rather than dropping to its start.
+   */
+  it("wraps a released seat's word and undo under a whole name, at the row's end", () => {
     renderRow({ bookingStatus: "no_show", personName: LONG, missingEmergencyContact: true });
     const { line, identity, state } = header("Not here");
-    expect(line).not.toHaveClass("flex-wrap");
-    expect(identity).toHaveClass("min-w-0", "flex-1");
+    expect(line).toHaveClass(
+      "flex",
+      "flex-wrap",
+      "items-center",
+      "justify-between",
+      "gap-x-2",
+      "gap-y-1",
+    );
+    expect(identity).toHaveClass("min-w-0");
+    expect(identity).not.toHaveClass("flex-1");
     expect(identity).not.toContainElement(state);
+    const cluster = line?.lastElementChild;
+    expect(cluster).toContainElement(state);
+    expect(cluster).toContainElement(
+      screen.getByRole("button", { name: `Put ${LONG} back on this boat’s list` }),
+    );
+    expect(cluster).toHaveClass("ms-auto", "shrink-0");
   });
 });
