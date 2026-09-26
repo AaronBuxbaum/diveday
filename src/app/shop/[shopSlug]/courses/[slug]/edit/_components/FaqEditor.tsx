@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { buttonClass } from "@/components/ui/button";
+import {
+  RepeatingItemCard,
+  repeatingItemAddClass,
+  repeatingItemRemoveClass,
+} from "@/components/editor/RepeatingItemCard";
 import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
 import { MAX_FAQS } from "@/lib/course-limits";
@@ -92,14 +96,19 @@ export function FaqEditor({
     <div className="flex flex-col gap-4">
       {rows.length === 0 ? <p className="text-sm text-muted">{copy.empty}</p> : null}
       {rows.map((row, index) => (
-        <div
+        <RepeatingItemCard
           key={row.key}
-          // `p-4` at every width: Remove is flush, so its fill reaches 8px
-          // past its word and its ring 13px. At a phone's `p-3` the ring's
-          // outer pixel lay on this card's border.
-          className="rounded-inset border border-border bg-surface-sunken p-4"
+          remove={
+            <button
+              type="button"
+              onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))}
+              className={repeatingItemRemoveClass}
+            >
+              {fill(copy.removeFaq, { number: index + 1 })}
+            </button>
+          }
         >
-          <FieldGrid columns={1} className="gap-y-3">
+          <FieldGrid columns={1}>
             <Field label={fill(copy.questionLabel, { number: index + 1 })}>
               <input
                 type="text"
@@ -121,16 +130,7 @@ export function FaqEditor({
               />
             </Field>
           </FieldGrid>
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))}
-              className={buttonClass({ variant: "danger-ghost", size: "sm", flush: true })}
-            >
-              {fill(copy.removeFaq, { number: index + 1 })}
-            </button>
-          </div>
-        </div>
+        </RepeatingItemCard>
       ))}
       {atMax ? (
         <p className="text-sm text-muted">
@@ -146,7 +146,7 @@ export function FaqEditor({
               setRows((current) => [...current, { question: "", answer: "", key: nextKey }]);
               setNextKey((key) => key + 1);
             }}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
+            className={repeatingItemAddClass}
           >
             {copy.addFaq}
           </button>

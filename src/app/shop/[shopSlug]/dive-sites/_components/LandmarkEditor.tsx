@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
-import { buttonClass } from "@/components/ui/button";
-import { controlClassFor, Field, textareaClassFor } from "@/components/ui/form";
+import {
+  RepeatingItemCard,
+  repeatingItemAddClass,
+  repeatingItemRemoveClass,
+} from "@/components/editor/RepeatingItemCard";
+import { controlClass, Field, textareaClassFor } from "@/components/ui/form";
 import {
   DIVE_SITE_LANDMARK_KINDS,
   type DiveSiteLandmark,
@@ -81,26 +85,35 @@ export function LandmarkEditor({
       ) : (
         <ul className="space-y-3">
           {landmarks.map((landmark, index) => (
-            <li
+            <RepeatingItemCard
+              as="li"
               // Landmarks have no identity beyond their position in the list,
               // and two can share a name while one is being retyped — the index
               // is the only stable key here.
               // biome-ignore lint/suspicious/noArrayIndexKey: see above
               key={index}
-              className="rounded-lg border border-border bg-surface-sunken p-3"
+              remove={
+                <button
+                  type="button"
+                  aria-label={copy.removeAriaLabel.replace("{name}", landmark.name)}
+                  onClick={() => setLandmarks((current) => current.filter((_, at) => at !== index))}
+                  className={repeatingItemRemoveClass}
+                >
+                  {copy.remove}
+                </button>
+              }
             >
-              {/* One `md` row, the field guide's shape on the same page: the
-                  name box and the kind select stand at md's 48px beside an
-                  `md` Remove, each under a caption of its own. Remove was
-                  `sm`, a 14px word beside two 16px controls. */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+              {/* A row of controls only, now that Remove sits at the card's
+                  head: the name box and the kind select stand at the field
+                  size, each under a caption of its own, one field gap apart. */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
                 <Field label={copy.nameLabel} className="flex-1 sm:min-w-48">
                   <input
                     value={landmark.name}
                     onChange={(event) => update(index, { name: event.target.value })}
                     maxLength={80}
                     placeholder={copy.namePlaceholder}
-                    className={controlClassFor("md")}
+                    className={controlClass}
                   />
                 </Field>
                 <Field label={copy.kindLabel} className="w-full sm:w-auto sm:min-w-40">
@@ -109,7 +122,7 @@ export function LandmarkEditor({
                     onChange={(event) =>
                       update(index, { kind: event.target.value as DiveSiteLandmarkKind })
                     }
-                    className={controlClassFor("md")}
+                    className={controlClass}
                   >
                     {DIVE_SITE_LANDMARK_KINDS.map((kind) => (
                       <option key={kind} value={kind}>
@@ -118,16 +131,8 @@ export function LandmarkEditor({
                     ))}
                   </select>
                 </Field>
-                <button
-                  type="button"
-                  aria-label={copy.removeAriaLabel.replace("{name}", landmark.name)}
-                  onClick={() => setLandmarks((current) => current.filter((_, at) => at !== index))}
-                  className={buttonClass({ variant: "ghost", className: "w-full sm:w-auto" })}
-                >
-                  {copy.remove}
-                </button>
               </div>
-              <Field label={copy.noteLabel} className="mt-3">
+              <Field label={copy.noteLabel} className="mt-4">
                 <textarea
                   value={landmark.note}
                   onChange={(event) => update(index, { note: event.target.value })}
@@ -137,7 +142,7 @@ export function LandmarkEditor({
                   className={textareaClassFor(2)}
                 />
               </Field>
-            </li>
+            </RepeatingItemCard>
           ))}
         </ul>
       )}
@@ -149,7 +154,7 @@ export function LandmarkEditor({
           onClick={() =>
             setLandmarks((current) => [...current, { name: "", kind: "pointOfInterest", note: "" }])
           }
-          className={buttonClass({ variant: "secondary", size: "sm" })}
+          className={repeatingItemAddClass}
         >
           {copy.add}
         </button>
