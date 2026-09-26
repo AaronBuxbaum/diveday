@@ -356,4 +356,35 @@ describe("the packing list's geometry", () => {
       expect(tokens(heading), heading.textContent ?? "").not.toContain("text-lg");
     }
   });
+
+  it("holds no empty list open above the never-asked names (K-184)", () => {
+    // Only divers nobody asked: the partial list has nothing to say.
+    const prep = everyPanelPrep();
+    prep.checklist = buildDivePrepChecklist({
+      divers: [diver(4, "Theo Lindqvist"), diver(6, "Ana Costa")],
+      plannedDives: 2,
+      now: new Date("2026-09-26T12:00:00Z"),
+    });
+    const { container } = renderPrep(prep);
+    const lead = byText(container, t("tripPrep.missingSizesNobodyAskedLead"));
+    const card = lead.closest("section") as HTMLElement;
+    for (const list of card.querySelectorAll("ul")) {
+      expect(list.children.length).toBeGreaterThan(0);
+    }
+    // The never-asked block is the body's first child, with no margin of its own.
+    const block = lead.parentElement as HTMLElement;
+    expect(block.previousElementSibling).toBeNull();
+    expect(tokens(block).filter((token) => /^mt-/.test(token))).toEqual([]);
+  });
+
+  it("keeps the partial list and the never-asked block one gap apart when both are there (K-184)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const block = byText(container, t("tripPrep.missingSizesNobodyAskedLead"))
+      .parentElement as HTMLElement;
+    expect(block.previousElementSibling?.tagName).toBe("UL");
+    expect(tokens(block.parentElement)).toEqual(
+      expect.arrayContaining(["flex", "flex-col", "gap-3"]),
+    );
+    expect(tokens(block).filter((token) => /^mt-/.test(token))).toEqual([]);
+  });
 });

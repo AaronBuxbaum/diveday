@@ -221,6 +221,14 @@ export function PrepBody({
   // empty state says which rather than making the crew scroll back up to guess.
   const needsSorting =
     checklist.diversWithIncompleteFit.length > 0 || checklist.diversNeedingStaffFit.length > 0;
+  // The "Sizes still missing" card's two halves, sorted once: each is drawn
+  // only when it has somebody in it.
+  const partialFit = checklist.diversWithIncompleteFit.filter(
+    (diver) => diver.state !== "not_recorded",
+  );
+  const neverAsked = checklist.diversWithIncompleteFit.filter(
+    (diver) => diver.state === "not_recorded",
+  );
   const showNitrox =
     shopOffersNitrox(rentalItems) ||
     checklist.tanks.nitrox > 0 ||
@@ -414,39 +422,39 @@ export function PrepBody({
                   missing, while the never-asked share one sentence said once
                   above their names — the old list repeated "nothing on file;
                   they may be bringing their own kit…" per row, the same clause
-                  chanted seven times (principle 9). */}
-                  <ul className="flex flex-col gap-1 text-sm">
-                    {checklist.diversWithIncompleteFit
-                      .filter((diver) => diver.state !== "not_recorded")
-                      .map((diver) => (
-                        <li key={diver.personId}>
-                          •{" "}
-                          <Link
-                            href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                            className="font-medium hover:text-primary hover:underline"
-                          >
-                            {diver.fullName}
-                          </Link>{" "}
-                          <span className="text-muted">
-                            {t("tripPrep.missingSizesItems", {
-                              items: cachedListFormat(locale, {
-                                style: "long",
-                                type: "conjunction",
-                              }).format(diver.missing.map((kind) => rentalItemLabel(t, kind))),
-                            })}
-                          </span>
-                        </li>
-                      ))}
-                  </ul>
-                  {checklist.diversWithIncompleteFit.some(
-                    (diver) => diver.state === "not_recorded",
-                  ) ? (
-                    <div className="mt-3 text-sm">
-                      <p className="text-muted">{t("tripPrep.missingSizesNobodyAskedLead")}</p>
-                      <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                        {checklist.diversWithIncompleteFit
-                          .filter((diver) => diver.state === "not_recorded")
-                          .map((diver) => (
+                  chanted seven times (principle 9). One gap between the two,
+                  and only when both are there: an empty partial list used to
+                  hold the never-asked block's `mt-3` open under the
+                  description, a blank line that read as a missing row. */}
+                  <div className="flex flex-col gap-3 text-sm">
+                    {partialFit.length > 0 ? (
+                      <ul className="flex flex-col gap-1">
+                        {partialFit.map((diver) => (
+                          <li key={diver.personId}>
+                            •{" "}
+                            <Link
+                              href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                              className="font-medium hover:text-primary hover:underline"
+                            >
+                              {diver.fullName}
+                            </Link>{" "}
+                            <span className="text-muted">
+                              {t("tripPrep.missingSizesItems", {
+                                items: cachedListFormat(locale, {
+                                  style: "long",
+                                  type: "conjunction",
+                                }).format(diver.missing.map((kind) => rentalItemLabel(t, kind))),
+                              })}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {neverAsked.length > 0 ? (
+                      <div>
+                        <p className="text-muted">{t("tripPrep.missingSizesNobodyAskedLead")}</p>
+                        <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                          {neverAsked.map((diver) => (
                             <li key={diver.personId}>
                               <Link
                                 href={`/shop/${shopSlug}/divers/${diver.personId}`}
@@ -456,9 +464,10 @@ export function PrepBody({
                               </Link>
                             </li>
                           ))}
-                      </ul>
-                    </div>
-                  ) : null}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
                 </SectionCard>
               ) : null}
 
