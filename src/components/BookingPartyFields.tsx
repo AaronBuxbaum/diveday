@@ -284,12 +284,14 @@ export function BookingPartyFields({
               {/* The card's one caption — "Number of divers" above, "Who is
                   diving" in the card — in foreground ink, with the same 8px to
                   what it captions that the count's track keeps (`mt-2`). It
-                  was the muted one of three spellings, sitting on "Name". */}
+                  was the muted one of three spellings, sitting on "Name". The
+                  8px is the one gap under it, to "Name" or to the remembered
+                  line below: nothing under it takes a margin of its own. */}
               <legend className="mb-2 text-sm font-semibold">
                 {index === 0 ? t("party.yourDetails") : t("party.diverN", { number: index + 1 })}
               </legend>
               {index === 0 && rememberedDiver ? (
-                <p className="-mt-1 mb-3 text-sm text-muted">
+                <p className="mb-3 text-sm text-muted">
                   {t.rich("party.rememberedChip", {
                     name: rememberedDiver.fullName,
                     strong: (chunks) => (
