@@ -364,6 +364,33 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
   ),
 };
 
+type DiveDayIconName = StaffDestinationId | DiveDaySharedIconName;
+
+/**
+ * **Where a glyph's ink starts and ends across its box**, for the glyphs a
+ * caller may draw `trim`med: the path's own geometry, x from and x to, before
+ * the stroke (which `trimmedViewBox` adds, so a heavier stroke still fits).
+ *
+ * A glyph leading a row lines up by its ink, the way the words beside it do
+ * (docs/design/pixel-craft.md, classes 2 and 3). In the shared 24-unit square
+ * the dive-site catalog door's pin started 3px inside the column its row's
+ * words start on (pixel-craft K-519). An entry here is measured from the path
+ * above it, never guessed: a wrong one crops the ink it was meant to align.
+ */
+const TRIM_X = {
+  // The pin's teardrop: its arc and both curves reach x 5 and x 19.
+  diveSites: [5, 19],
+} as const satisfies Partial<Record<DiveDayIconName, readonly [number, number]>>;
+
+/** A glyph whose horizontal ink is recorded, so `trim` can crop its box to it. */
+export type TrimmableIconName = keyof typeof TRIM_X;
+
+function trimmedViewBox(name: TrimmableIconName, stroke: number) {
+  const [from, to] = TRIM_X[name];
+  const round = (value: number) => Number(value.toFixed(3));
+  return `${round(from - stroke / 2)} 0 ${round(to - from + stroke)} 24`;
+}
+
 /**
  * **A mark whose box is cropped to its ink across** — the one exception to the
  * 24-unit square, spelled here so it cannot drift into a component.
@@ -388,16 +415,25 @@ const ICON_VIEWBOX: Partial<Record<DiveDaySharedIconName, string>> = {
  * bubble, info hint, language globe, and waiver mark cannot drift into their
  * own viewBox or stroke grammar in another component.
  */
-export function DiveDayIcon({
+export function DiveDayIcon<N extends DiveDayIconName>({
   name,
   className = "size-4",
   direction = "right",
   strokeWidth = 1.8,
+  trim,
 }: {
-  name: StaffDestinationId | DiveDaySharedIconName;
+  name: N;
   className?: string;
   direction?: DisclosureCaretDirection;
   strokeWidth?: number;
+  /**
+   * Crop the box to the glyph's horizontal ink, stroke included, and keep its
+   * full height, so a glyph that leads a row starts where the row's words do.
+   * Size it by height, `h-5 w-auto`: the box then comes out as wide as the
+   * ink, where a square class would centre the ink in the square again.
+   * Accepted only on a glyph `TRIM_X` has measured.
+   */
+  trim?: [N] extends [TrimmableIconName] ? boolean : never;
 }) {
   const isCaret = name === "caret";
   const path = isCaret ? (
@@ -410,13 +446,18 @@ export function DiveDayIcon({
   const isFilled = name === "info";
   const isEmpty = name === "empty";
   const isMark = name.startsWith("waiver-mark-");
+  const stroke = isMark ? 2.4 : isCaret ? 2.5 : isEmpty ? EMPTY_STROKE : strokeWidth;
   return (
     <svg
       aria-hidden="true"
-      viewBox={ICON_VIEWBOX[name as DiveDaySharedIconName] ?? "0 0 24 24"}
+      viewBox={
+        trim && name in TRIM_X
+          ? trimmedViewBox(name as TrimmableIconName, stroke)
+          : (ICON_VIEWBOX[name as DiveDaySharedIconName] ?? "0 0 24 24")
+      }
       fill={isFilled ? "none" : "none"}
       stroke={isFilled ? "none" : "currentColor"}
-      strokeWidth={isMark ? 2.4 : isCaret ? 2.5 : isEmpty ? EMPTY_STROKE : strokeWidth}
+      strokeWidth={stroke}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}

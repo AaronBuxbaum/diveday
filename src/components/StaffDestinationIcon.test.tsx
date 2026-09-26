@@ -43,6 +43,37 @@ describe("the destination icons", () => {
 });
 
 /**
+ * **A leading glyph lines up by its ink.** The dive-site catalog door's pin
+ * sat in the full 24-unit box, so its ink started 3px inside the column the
+ * row's words start on (pixel-craft K-519). `trim` crops the box to the
+ * glyph's horizontal ink, stroke included, and keeps the height, so a caller
+ * sizing it by height (`h-5 w-auto`) gets a box as wide as the ink.
+ */
+describe("a trimmed glyph", () => {
+  it("crops its box to the ink's width and keeps the full height", () => {
+    const { container } = render(<DiveDayIcon name="diveSites" trim className="h-5 w-auto" />);
+    // The pin's geometry spans x 5–19; the 1.8 stroke adds 0.9 either side.
+    expect(container.querySelector("svg")).toHaveAttribute("viewBox", "4.1 0 15.8 24");
+  });
+
+  it("follows a heavier stroke out to its edge", () => {
+    const { container } = render(<DiveDayIcon name="diveSites" trim strokeWidth={3} />);
+    expect(container.querySelector("svg")).toHaveAttribute("viewBox", "3.5 0 17 24");
+  });
+
+  it("leaves every glyph drawn without it in the shared square", () => {
+    const { container } = render(<DiveDayIcon name="diveSites" />);
+    expect(container.querySelector("svg")).toHaveAttribute("viewBox", "0 0 24 24");
+  });
+
+  it("is refused, at compile time, on a glyph whose ink it does not know", () => {
+    // @ts-expect-error — `today` has no recorded ink extent to trim to.
+    const { container } = render(<DiveDayIcon name="today" trim />);
+    expect(container.querySelector("svg")).toHaveAttribute("viewBox", "0 0 24 24");
+  });
+});
+
+/**
  * **The empty-state bubbles fill their box.** They reached only y 4.6–18.8 of
  * the 24-unit square, so `EmptyState` drew 7–8px of blank box above the ink
  * and its panel read bottom-heavy: 47px from the top border to the bubbles
