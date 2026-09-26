@@ -210,8 +210,8 @@ describe("a move phase", () => {
       heading.parentElement?.querySelectorAll("[aria-hidden]") ?? [],
     );
     expect(marker.textContent).toBe("2");
-    expect(marker).toHaveClass("absolute", "top-0", "left-0", "size-8");
-    expect(rail).toHaveClass("top-10", "left-4");
+    expect(marker).toHaveClass("absolute", "top-0", "start-0", "size-8");
+    expect(rail).toHaveClass("top-10", "start-4");
   });
 });
 

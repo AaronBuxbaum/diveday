@@ -401,16 +401,16 @@ export function MovePhase({
           line box, at the line's top, so the two share a centre 16px down with
           no nudge. It was a 36px circle beside a `pt-1` heading, and the words
           sat 1.5–3px below its centre on every phase (K-205). The rail leaves
-          from the marker's centre line (`left-4`), 8px under it. */}
+          from the marker's centre line (`start-4`), 8px under it. */}
       <span
         aria-hidden
-        className="absolute top-0 left-0 flex size-8 items-center justify-center rounded-full border border-primary/30 bg-primary-tint text-sm font-semibold text-primary"
+        className="absolute start-0 top-0 flex size-8 items-center justify-center rounded-full border border-primary/30 bg-primary-tint text-sm font-semibold text-primary"
       >
         {number}
       </span>
       <span
         aria-hidden
-        className="absolute top-10 bottom-2 left-4 w-px bg-border group-last:hidden"
+        className="absolute start-4 top-10 bottom-2 w-px bg-border group-last:hidden"
       />
       <h3 className={`${LEAD_TITLE_CLASS} text-balance`}>{title}</h3>
       {intro && <p className="mt-3 max-w-2xl leading-7 text-muted">{intro}</p>}
