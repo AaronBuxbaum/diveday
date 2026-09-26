@@ -23,6 +23,13 @@ import type { FormNotice } from "@/lib/staff-notices";
  *
  * Typing a query presents both the matching candidate divers and a one-tap
  * "Add diver" path prefilled with their name or email.
+ *
+ * **One column at one gap, and no part brings a margin of its own.** Each
+ * part carried its own top margin (the status `mt-2`, the search row `mt-4`,
+ * the full boat's line `mt-1`), so the space under the roster's band was
+ * whatever the first part to render happened to carry: 28px above the search
+ * row against the 20px below it (pixel probe, trip-guests). The roster's
+ * wrapper owns the inset on both sides; `className` is a caller's placement.
  */
 export function AddDiverSection({
   shopSlug,
@@ -42,6 +49,7 @@ export function AddDiverSection({
   confirmPhone,
   confirmMatches,
   shopRentalItems,
+  className = "",
 }: {
   shopSlug: string;
   tripId: string;
@@ -74,6 +82,7 @@ export function AddDiverSection({
    * than hides.
    */
   shopRentalItems?: readonly string[];
+  className?: string;
 }) {
   const t = staffTranslator(locale);
   const searched = query.length > 0;
@@ -81,13 +90,11 @@ export function AddDiverSection({
   // and the bias it corrects are in `noDiveDayNeedsSaying`.
   const sayNoDiveDay = noDiveDayNeedsSaying(confirmMatches ?? []);
   return (
-    <>
-      <FormStatus tone={status?.tone} className="mt-2">
-        {status?.text}
-      </FormStatus>
+    <div className={`flex flex-col gap-4 ${className}`.trim()}>
+      <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
 
       {confirmMatches && confirmMatches.length > 0 ? (
-        <div className="border border-warning/25 bg-warning/10 rounded-inset p-4 mt-4 text-left">
+        <div className="border border-warning/25 bg-warning/10 rounded-inset p-4 text-left">
           <div className="flex flex-col gap-2">
             <h3 className="font-semibold text-sm">
               {t("divers.page.confirmMatchesTitle", { name: confirmName ?? "" })}
@@ -152,8 +159,9 @@ export function AddDiverSection({
 
       {full ? (
         <>
-          <p className="mt-1 text-sm text-muted">{t("trips.addDiver.fullDescription")}</p>
-          <div className="mt-4">
+          <p className="text-sm text-muted">{t("trips.addDiver.fullDescription")}</p>
+          {/* A block of its own, so the column does not stretch the button. */}
+          <div>
             <Link
               href={newDiverHref(shopSlug, {
                 surface: "trip-guests",
@@ -169,7 +177,6 @@ export function AddDiverSection({
       ) : (
         <>
           <PersonSearchForm
-            className="mt-4"
             query={query}
             label={t("trips.addDiver.findLabel")}
             placeholder={t("trips.addDiver.findPlaceholder")}
@@ -184,7 +191,6 @@ export function AddDiverSection({
           {searched ? (
             candidates.length > 0 ? (
               <PersonCandidateList
-                className="mt-4"
                 candidates={candidates}
                 tripId={tripId}
                 seatAction={addExistingDiverAction}
@@ -216,7 +222,6 @@ export function AddDiverSection({
               />
             ) : (
               <HandEntryPrompt
-                className="mt-4"
                 heading={t("trips.addDiver.noMatchesHeading")}
                 body={t("trips.addDiver.noMatches", { query })}
                 actionLabel={t("trips.addDiver.addNewDiverAction", { query })}
@@ -230,6 +235,6 @@ export function AddDiverSection({
           ) : null}
         </>
       )}
-    </>
+    </div>
   );
 }

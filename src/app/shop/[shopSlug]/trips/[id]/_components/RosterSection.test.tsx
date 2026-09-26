@@ -261,6 +261,26 @@ describe("the guests ledger (slice 5d)", () => {
   });
 
   /**
+   * The add-diver group sits between its band and the card's bottom edge at
+   * one inset (pixel-craft class 5, K-164). Its wrapper was `pt-3 pb-5`, and
+   * the search row's own `mt-4` made the top 28px against 20px below on every
+   * trip capture; `AddDiverSection` now brings no margin, so the wrapper owns
+   * both sides.
+   */
+  it("insets the add-diver group equally under its band and above the card's edge", () => {
+    renderRoster({
+      roster: [],
+      readiness: new Map() as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+      addDiverGroup: <p data-testid="add-diver-form">Find a returning diver</p>,
+    });
+
+    const wrapper = screen.getByTestId("add-diver-form").parentElement;
+    expect(wrapper).toHaveClass("py-5");
+    expect(wrapper?.className).not.toMatch(/(^|\s)(pt|pb)-/);
+  });
+
+  /**
    * A cleared seat with no notes and no arrival has nothing to put at the end
    * of its name line, and the pixel probe found the trailing slot rendered
    * anyway: an empty `div` that still took the line's 12px gap on every such
