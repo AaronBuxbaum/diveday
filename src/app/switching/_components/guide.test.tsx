@@ -7,7 +7,8 @@ import { tapTargetLinkClass } from "@/components/ui/button";
 // reference, not the session and database behind it.
 vi.mock("@/app/actions/demo", () => ({ enterDemoAction: vi.fn() }));
 
-const { ClosingCta, GuideContext, GuideHero, SourcesFootnote } = await import("./guide");
+const { ClosingCta, GUIDE_BAND_CLASS, GuideContext, GuideHero, MovePath, SourcesFootnote } =
+  await import("./guide");
 
 afterEach(cleanup);
 
@@ -139,5 +140,21 @@ describe("the you-are-here band", () => {
     expect(band).toHaveClass("border-b", "border-border");
     expect(band?.className).not.toMatch(/max-w-|(?:^|\s)p[xy]?-/);
     expect(band?.firstElementChild).toHaveClass("mx-auto", "max-w-4xl", "px-6");
+  });
+
+  /**
+   * **One padding for every eyebrow-and-prose band** (K-518). This band was
+   * `py-14` where the move rail, the coexist and website bands, the concierge
+   * and the closing band are `py-16`, so on a phone the rules above and below
+   * it sat 56px from its words against the 64 every band around it keeps.
+   */
+  it("pads its box as the move rail's, 64px on a phone and 80 from lg", () => {
+    const { container } = renderContext();
+    const box = container.firstElementChild?.firstElementChild;
+    expect(box).toHaveClass("py-16", "lg:py-20");
+    expect(box?.className).toBe(GUIDE_BAND_CLASS);
+    cleanup();
+    const rail = render(<MovePath locale="en-US">{null}</MovePath>).container;
+    expect(rail.firstElementChild?.firstElementChild?.className).toBe(GUIDE_BAND_CLASS);
   });
 });

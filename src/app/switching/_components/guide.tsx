@@ -49,6 +49,17 @@ import { IMPORT_SCOPE_ROW_KEYS } from "@/lib/migration-guides";
 const GUIDE_FACTS = ["moves", "time", "preview", "back"] as const;
 
 /**
+ * **The box of every eyebrow-and-prose band on a guide**: "you are here", the
+ * move rail, the coexist and website bands, the closing band — 64px above and
+ * below its words on a phone and 80 from `lg`, the same as
+ * `SwitchingConcierge`. One string, because the hand copies drifted: "you are
+ * here" was `py-14`, so on a phone the rules either side of it sat 56px from
+ * its words against the 64 of every band around it (K-518). The hero (`py-24`
+ * from `lg`) and the mid-page card (`MidCta`) are deliberately other sizes.
+ */
+export const GUIDE_BAND_CLASS = "mx-auto max-w-4xl px-6 py-16 lg:py-20";
+
+/**
  * The guide hero: back link, eyebrow, headline, lede, the buyer's first door
  * out — and {@link GUIDE_FACTS}, stated in the first screenful instead of
  * four to eight sections down.
@@ -137,7 +148,7 @@ export function GuideContext({
   const t = diverTranslator(locale);
   return (
     <section className="border-b border-border">
-      <div className="mx-auto max-w-4xl px-6 py-14 lg:py-20">
+      <div className={GUIDE_BAND_CLASS}>
         <p className={MARKETING_EYEBROW_CLASS}>{t("switching.common.contextEyebrow")}</p>
         <div className="mt-5 max-w-2xl space-y-5">
           {paragraphs.map((paragraph) => (
@@ -192,7 +203,7 @@ export function MovePath({ locale, children }: { locale: DiverLocale; children: 
   const t = diverTranslator(locale);
   return (
     <section className="border-y border-border bg-surface">
-      <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
+      <div className={GUIDE_BAND_CLASS}>
         <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>{t("switching.common.moveTitle")}</h2>
         <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
           {t("switching.common.moveIntro")}
@@ -479,7 +490,9 @@ export function ClosingCta({
           without it the column shrank to its widest door and the pair's
           full-width doors with it (169px at 390, where every other primary on
           the page spans the column). */}
-      <div className="mx-auto flex max-w-4xl flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center lg:py-20">
+      <div
+        className={`${GUIDE_BAND_CLASS} flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center`}
+      >
         <div className="max-w-md">
           <h2 className={`${LEAD_TITLE_CLASS} text-balance`}>{title}</h2>
           <p className="mt-2 max-w-xl text-muted">{body}</p>

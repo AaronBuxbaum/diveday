@@ -27,6 +27,7 @@ import {
 import {
   ClosingCta,
   DividedList,
+  GUIDE_BAND_CLASS,
   GuideContext,
   GuideHero,
   ImportPhase,
@@ -177,7 +178,7 @@ async function GuideBody({
           rule on top (K-204). */}
       {guide.coexist && (
         <section className="border-b border-border">
-          <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
+          <div className={GUIDE_BAND_CLASS}>
             <p className={MARKETING_EYEBROW_CLASS}>
               {t("switching.competitor.keepOrLeaveEyebrow")}
             </p>
@@ -234,7 +235,7 @@ async function GuideBody({
           the offer's one action is the address to write to. */}
       {guide.website && (
         <section className="border-b border-border">
-          <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
+          <div className={GUIDE_BAND_CLASS}>
             <p className={MARKETING_EYEBROW_CLASS}>{t("switching.competitor.websiteEyebrow")}</p>
             <h2 className={`mt-3 ${BANNER_TITLE_CLASS} sm:text-4xl`}>{t(guide.website.heading)}</h2>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.website.intro)}</p>
