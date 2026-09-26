@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OFFLINE_CREW_ROW_TONE, ROLL_CALL_ROW_TONE } from "./row-tones";
+import { ROLL_CALL_ROW_TONE } from "./row-tones";
 
 const tokens = (tone: string) => tone.split(/\s+/);
 /** `ring-1`, `ring-2`, `ring`: a ring's width, as opposed to its colour or `ring-inset`. */
@@ -12,15 +12,13 @@ const ringWidth = (token: string) => /^ring(-\d+)?$/.test(token);
  * outside the clip and the fourth was painted over by the next row, so the
  * alarmed row showed its fill and its red edge and nothing else (the pixel
  * audit, manifest-not-back-aboard). Inset, the ring paints inside the row,
- * where neither can reach it — as the offline manifest's crew-missing box
- * already does.
+ * where neither can reach it. The offline copy's crew roster wears these
+ * same tones now (it had a map of its own while its rows were cards), so a
+ * missing crew member's row is ringed the same way.
  */
 describe("the roll-call row tones", () => {
   it("rings a row inside its own box, where a clipping list cannot cut it off", () => {
-    for (const tone of [
-      ...Object.values(ROLL_CALL_ROW_TONE),
-      ...Object.values(OFFLINE_CREW_ROW_TONE),
-    ]) {
+    for (const tone of Object.values(ROLL_CALL_ROW_TONE)) {
       if (tokens(tone).some(ringWidth)) expect(tokens(tone)).toContain("ring-inset");
     }
   });
