@@ -283,6 +283,8 @@ describe("every tone panel wears the card's geometry", () => {
     "app/switching/_components/guide.tsx": "a marketing page: it keeps its own scale",
     "app/switching/[competitor]/page.tsx": "a marketing page: it keeps its own scale",
     "components/SwitchingConcierge.tsx": "a marketing page: it keeps its own scale",
+    "app/s/[shopSlug]/courses/[slug]/_components/CourseSections.tsx":
+      "the course page's dates panel: on the course hero card's own `p-6 sm:p-8` inset above it, so their words start on one edge (K-378)",
   };
 
   function files(dir: string): string[] {
