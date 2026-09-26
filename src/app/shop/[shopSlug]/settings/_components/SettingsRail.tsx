@@ -98,16 +98,20 @@ export function SettingsRail({
                   already renders that id on its `<h2>`, and two of them would
                   make the fragment ambiguous.
 
-                  Sticky inside the rail's scroll area, and opaque, so the rows
-                  slide under their own group's name rather than past it. The
-                  background is the page's, because the rail sits directly on
-                  it — there is no card here to borrow a surface from. */}
+                  Sticky inside the rail's scroll area, and opaque while it is
+                  stuck, so the rows slide under their own group's name rather
+                  than past it. Only then: at rest the first label sits on the
+                  staff page's water-band wash, where an always-opaque label
+                  was a grey slab across the blue. `settings-rail-label`
+                  (globals.css) paints the words' box from a scroll-state
+                  query, which is why they sit in a span of their own: a
+                  container cannot style itself. */}
               <GroupLabel
                 id={`settings-rail-${group.id}`}
                 tone={isCurrentGroup ? "primary" : "muted"}
-                className="sticky top-0 z-10 mb-2 bg-background px-3 py-1"
+                className="settings-rail-label sticky top-0 z-10 mb-2"
               >
-                {group.label}
+                <span className="block px-3 py-1">{group.label}</span>
               </GroupLabel>
               <ul aria-labelledby={`settings-rail-${group.id}`}>
                 {group.rows.map((row) => {

@@ -2384,6 +2384,39 @@ details[open]::details-content {
 }
 
 /*
+ * **The settings rail's group label is opaque only while it is stuck.**
+ *
+ * The label is sticky inside the rail's own scroll box, and it needs a fill so
+ * the rows slide under the group's name rather than through it. At rest it
+ * needs none, and there it sits on the staff page's water-band wash: an
+ * always-opaque label painted a flat grey slab across the blue (the pixel
+ * probe measured it 256x24 at the top of every settings page). So the fill
+ * belongs to the stuck state, which only a scroll-state container query can
+ * see. The label is the container and its words' box takes the fill, since a
+ * container cannot style itself. A browser without scroll-state queries keeps
+ * the opaque label it always had (`SettingsRail.tsx`).
+ */
+.settings-rail-label > span {
+  background: var(--background);
+}
+
+@supports (container-type: scroll-state) {
+  .settings-rail-label {
+    container-type: scroll-state;
+  }
+
+  .settings-rail-label > span {
+    background: transparent;
+  }
+
+  @container scroll-state(stuck: top) {
+    .settings-rail-label > span {
+      background: var(--background);
+    }
+  }
+}
+
+/*
  * **The title folds into the bar** — ADR 20260907-nothing-from-nowhere,
  * decision 5, slice 18e (issue #1422).
  *
