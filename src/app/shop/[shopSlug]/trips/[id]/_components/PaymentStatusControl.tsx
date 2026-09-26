@@ -3,7 +3,7 @@
 import { useOptimistic } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { controlClassFor } from "@/components/ui/form";
 
 /**
  * Every value the column can hold — which is not the same as every value this
@@ -88,9 +88,14 @@ export function PaymentStatusControl({
           class this replaces had dropped `py-2` and, more to the point,
           `focus:border-primary` — the control had no focus indicator at all —
           and carried a no-op `items-center` on an element that is not a flex
-          container. */}
+          container.
+
+          `md`, select and button both: a row with a text control in it is an
+          `md` row. The select used to take an appended `text-sm` to match an
+          `sm` Update; a control's type is 16px at every size (K-45), and a
+          16px box beside a 14px label is the mismatch `controlSizes` names. */}
       <span className="w-fit">
-        <select name="status" defaultValue={status} className={controlClass}>
+        <select name="status" defaultValue={status} className={controlClassFor("md")}>
           {/* The booking's current status is always among the options, even
               when this staffer could not have set it. Without that, a captain
               opening a booking an owner had waived would find the select
@@ -106,10 +111,7 @@ export function PaymentStatusControl({
             ))}
         </select>
       </span>
-      <SubmitButton
-        pendingLabel={copy.updating}
-        className={buttonClass({ variant: "secondary", size: "sm" })}
-      >
+      <SubmitButton pendingLabel={copy.updating} className={buttonClass({ variant: "secondary" })}>
         {copy.update}
       </SubmitButton>
     </form>
