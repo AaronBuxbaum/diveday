@@ -200,9 +200,14 @@ export function ChangedFacts({
                 <option value="on">{t("ready.tanksNitrox")}</option>
               </select>
             </Field>
-            <SubmitButton pendingLabel={t("common.saving")} className={saveButton}>
-              {t("ready.saveChange")}
-            </SubmitButton>
+            {/* In a `<div>`: a direct child of the phone's `flex-col` row is
+                stretched across the column, and every other Save is as wide
+                as its word (K-470). */}
+            <div>
+              <SubmitButton pendingLabel={t("common.saving")} className={saveButton}>
+                {t("ready.saveChange")}
+              </SubmitButton>
+            </div>
           </form>
         </FactRow>
       ) : null}

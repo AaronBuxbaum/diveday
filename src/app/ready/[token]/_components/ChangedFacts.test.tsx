@@ -219,6 +219,17 @@ describe("one primary act, and three separate doors", () => {
     }
   });
 
+  it("keeps the tanks row's Save at its own width on a phone", () => {
+    // The row is `flex-col` below `sm`, which stretches a direct child across
+    // the column: this Save ran 350px wide where every other Save on the page
+    // is as wide as its word (K-470). Wrapped, like its siblings.
+    const { container } = render(panel());
+    const tanks = container.querySelector("select[name='nitrox']")?.closest("form");
+    const save = tanks?.querySelector("button[type='submit']");
+    expect(save).toBeTruthy();
+    expect(save?.parentElement).not.toBe(tanks);
+  });
+
   it("opens the page's own sizes form behind the Sizes door", () => {
     render(panel());
     // Never a second sizes form of its own: the one that owns every size column

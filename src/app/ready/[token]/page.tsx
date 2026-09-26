@@ -1019,9 +1019,13 @@ function DayOfDetails({
             ))}
           </select>
         </Field>
-        <SubmitButton pendingLabel={t("ready.savingLastDived")} className={saveButton}>
-          {t("ready.saveLastDived")}
-        </SubmitButton>
+        {/* In a `<div>`, like every other Save on the page: a direct child of
+            the phone's `flex-col` row is stretched across the column (K-470). */}
+        <div>
+          <SubmitButton pendingLabel={t("ready.savingLastDived")} className={saveButton}>
+            {t("ready.saveLastDived")}
+          </SubmitButton>
+        </div>
       </form>
       {/* **The way back.** The booking form asks this and says "change it any
           time from the link we send you" — this is that link, and it is also
@@ -1049,9 +1053,11 @@ function DayOfDetails({
             ))}
           </select>
         </Field>
-        <SubmitButton pendingLabel={t("ready.savingIntent")} className={saveButton}>
-          {t("ready.saveIntent")}
-        </SubmitButton>
+        <div>
+          <SubmitButton pendingLabel={t("ready.savingIntent")} className={saveButton}>
+            {t("ready.saveIntent")}
+          </SubmitButton>
+        </div>
       </form>
       {/* Who reads the answer above, in the consent grammar ADR
           20260904-reef-all-the-way-down's budget rule 6 asks of anything a

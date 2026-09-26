@@ -183,6 +183,34 @@ describe("the cancel door", () => {
   });
 });
 
+/**
+ * **Day-of details' select rows.** Each is a question with its Save beside it
+ * from `sm` and under it on a phone.
+ */
+describe("day-of details", () => {
+  /** The source of the form posting to `action`, from `<form` to `</form>`. */
+  const formFor = (action: string) => {
+    const at = positionOf(action);
+    const start = SOURCE.lastIndexOf("<form", at);
+    return SOURCE.slice(start, SOURCE.indexOf("</form>", at));
+  };
+
+  it("keeps each select row's Save at its own width on a phone", () => {
+    // Below `sm` the row is `flex-col`, which stretches a direct child across
+    // the column: these two Saves ran 350px wide beside siblings as wide as
+    // their words (K-470). Wrapped, like the rest of the page's Saves.
+    for (const action of [
+      "saveDiveRecencyFromReady.bind(null, token)",
+      "saveDiveIntentFromReady.bind(null, token)",
+    ]) {
+      const form = formFor(action);
+      const save = form.indexOf("<SubmitButton");
+      expect(save, action).toBeGreaterThan(-1);
+      expect(form.slice(form.lastIndexOf("</Field>", save), save), action).toContain("<div>");
+    }
+  });
+});
+
 describe("status is said once", () => {
   it("renders exactly one status statement", () => {
     expect(countOf("<ThreadStatus")).toBe(1);
