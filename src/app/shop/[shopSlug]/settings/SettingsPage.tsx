@@ -569,6 +569,14 @@ export default async function SettingsPage({
   // interface). "Not set" is a value here, not a status: on a settings row the
   // absence of an answer is exactly the fact the reader came to check.
   const notSet = t("settings.main.summary.notSet");
+  // The one exception the Online payments row states at rest, if it has one.
+  const stripeWarning = !account
+    ? t("settings.main.stripe.summaryNotConnected")
+    : account.disconnectedAt
+      ? t("settings.main.stripe.summaryDisconnected")
+      : ready
+        ? null
+        : t("settings.main.stripe.notReadyBadge");
   // How many of the three the shop has written. The words themselves are too
   // long to sit on a closed row, and which one is missing is a question the
   // open row answers better than a summary line could.
@@ -2089,18 +2097,17 @@ export default async function SettingsPage({
                 <SettingsRow
                   heading={t("settings.main.stripe.rowHeading")}
                   value={
-                    !account ? (
-                      <Badge tone="warning">{t("settings.main.stripe.summaryNotConnected")}</Badge>
-                    ) : account.disconnectedAt ? (
-                      <Badge tone="warning">{t("settings.main.stripe.summaryDisconnected")}</Badge>
-                    ) : ready ? (
+                    stripeWarning ? (
+                      <Badge tone="warning">{stripeWarning}</Badge>
+                    ) : account ? (
                       t("settings.main.stripe.accountEnding", {
                         last6: account.stripeAccountId.slice(-6),
                       })
-                    ) : (
-                      <Badge tone="warning">{t("settings.main.stripe.notReadyBadge")}</Badge>
-                    )
+                    ) : null
                   }
+                  // A warning pill keeps to the heading's line on a phone; the
+                  // account number is a sentence and stacks like any other value.
+                  valuePlacement={stripeWarning ? "inline" : "stack"}
                   sectionId="stripe"
                   activeSection={activeSection}
                 >

@@ -33,13 +33,22 @@ import { type SectionId, settingsSectionFragment } from "../settings-groups";
  * reader has already asked for more.
  */
 
+/**
+ * Where a row's value sits on a phone. `stack` (the default) puts it on a line
+ * of its own under the heading, where a long answer has the full width;
+ * `inline` keeps it on the heading's line, as it sits from `sm` up.
+ */
+type SettingsValuePlacement = "stack" | "inline";
+
 function RowSummary({
   heading,
   value,
+  valuePlacement = "stack",
   anchorId,
 }: {
   heading: string;
   value?: ReactNode;
+  valuePlacement?: SettingsValuePlacement;
   /** Fragment target on the heading itself — *inside* the `<details>`, so a
    * hard navigation's reveal algorithm opens the row on its way to it, and so
    * the rail's scroll-spy has one measurable element per section. */
@@ -63,23 +72,43 @@ function RowSummary({
   // caret is the summary's own last item instead, and `hidden` takes it out
   // of the phone's column entirely; from `sm` up it sits at the row's end,
   // where the wrapper used to put it.
+  //
+  // **A badge value stays on the heading's line** (`valuePlacement="inline"`).
+  // Stacked, a text value's line carries half-leading under its baseline, so
+  // the column still looks centred; a `Badge` paints its whole 28px box, that
+  // air is gone, and "Online payments" over "Not connected" sat 2.5px low in
+  // its row. A status pill is word-sized, so it takes the heading line's end
+  // on a phone — the place it holds from `sm` up, where the heading line then
+  // fills the row so the value and its caret end where every other row's do.
   const desktopCaret = (
     <DisclosureCaret
       direction="down"
       className="hidden text-muted group-open:rotate-180 sm:block"
     />
   );
+  const phoneCaret = (
+    <DisclosureCaret direction="down" className="text-muted group-open:rotate-180 sm:hidden" />
+  );
+  const inline = value != null && valuePlacement === "inline";
   return (
     <summary
       className={`flex min-h-14 cursor-pointer list-none flex-col justify-center gap-1 px-4 py-3 transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 ${LIST_ROW_SUMMARY_RING}`}
     >
-      <span className="flex items-center justify-between gap-4">
+      <span className={`flex items-center justify-between gap-4${inline ? " sm:flex-1" : ""}`}>
         <h3 id={anchorId} className="scroll-mt-24 text-base font-medium sm:shrink-0">
           {heading}
         </h3>
-        <DisclosureCaret direction="down" className="text-muted group-open:rotate-180 sm:hidden" />
+        {inline ? (
+          <span className="flex items-center gap-3">
+            <span className="text-sm text-muted">{value}</span>
+            {phoneCaret}
+            {desktopCaret}
+          </span>
+        ) : (
+          phoneCaret
+        )}
       </span>
-      {value != null ? (
+      {inline ? null : value != null ? (
         <span className="flex min-w-0 items-center gap-3">
           <span className="text-sm text-muted sm:truncate">{value}</span>
           {desktopCaret}
@@ -97,6 +126,7 @@ export function SettingsRow({
   onToggle,
   heading,
   value,
+  valuePlacement,
   description,
   detail,
   children,
@@ -121,6 +151,8 @@ export function SettingsRow({
   heading: string;
   /** The current answer, stated at rest. Pass a `Badge` only for an exceptional state. */
   value?: ReactNode;
+  /** `inline` for a `Badge` value, which sits on the heading's line on a phone too. */
+  valuePlacement?: SettingsValuePlacement;
   /** What this setting is for — shown once the row is open. */
   description?: string;
   /** The longer once-interesting explanation, below the description when open. */
@@ -136,7 +168,12 @@ export function SettingsRow({
   const open = Boolean(sectionId != null && activeSection === sectionId);
   const body = (
     <>
-      <RowSummary heading={heading} value={value} anchorId={fragment} />
+      <RowSummary
+        heading={heading}
+        value={value}
+        valuePlacement={valuePlacement}
+        anchorId={fragment}
+      />
       <div className="px-4 pb-6 sm:px-5">
         {description ? <p className="text-sm text-muted">{description}</p> : null}
         {detail ? <p className="mt-1 text-sm text-muted">{detail}</p> : null}
