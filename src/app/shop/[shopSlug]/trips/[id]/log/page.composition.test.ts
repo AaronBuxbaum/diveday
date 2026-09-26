@@ -48,6 +48,50 @@ describe("the log's section rhythm", () => {
   });
 });
 
+describe("a timeline entry", () => {
+  /**
+   * Every part of an entry sat in one `flex-wrap` row with its timestamp, so a
+   * part that wrapped fell back under the time: "Members at that moment"
+   * started at x = 720 on one row and x = 169, under the timestamp, on the
+   * next (K-550, DEPARTURE-4-36). From `sm` an entry is two columns — the time,
+   * then everything else wrapping inside its own column — so a wrapped part
+   * hangs under the text and never under the time.
+   */
+  function timelineEntry() {
+    const timeline = section("incident-timeline-heading");
+    return timeline.slice(timeline.indexOf("<li"), timeline.indexOf("</li>"));
+  }
+
+  it("is two columns from sm, the time and then the rest", () => {
+    const entry = timelineEntry();
+    const tag = entry.slice(0, entry.indexOf(">", entry.indexOf("className=")) + 1);
+    expect(tag).toContain("sm:grid");
+    expect(tag).toContain("sm:grid-cols-[auto_minmax(0,1fr)]");
+  });
+
+  it("holds every part but the time in one wrapping column", () => {
+    const entry = timelineEntry();
+    const time = entry.indexOf("{dateTime(entry.occurredAt)}");
+    expect(time, "the timestamp is the entry's first part").toBeGreaterThan(-1);
+    const afterTime = entry.slice(entry.indexOf("</span>", time) + "</span>".length).trimStart();
+    expect(afterTime).toMatch(/^<span className="[^"]*\bflex-wrap\b[^"]*">/);
+    // The wrapper closes last: everything from it to the end of the entry is
+    // inside it.
+    let depth = 0;
+    let end = -1;
+    for (const tag of afterTime.matchAll(/<span\b[^>]*?(\/?)>|<\/span>/g)) {
+      if (tag[0] === "</span>") depth--;
+      else if (tag[1] !== "/") depth++;
+      if (depth === 0) {
+        end = (tag.index ?? 0) + tag[0].length;
+        break;
+      }
+    }
+    expect(end, "the wrapper closes").toBeGreaterThan(-1);
+    expect(afterTime.slice(end).trim()).toBe("");
+  });
+});
+
 describe("the emergency contact cell", () => {
   /**
    * "Asha Sharma (sister) · +1-305-555-0231" was breakable on both sides of

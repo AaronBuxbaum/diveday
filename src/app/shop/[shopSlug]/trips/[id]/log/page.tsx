@@ -504,63 +504,71 @@ export default async function IncidentExportPage({
                 // Append-only history has no natural key; index order is the record.
                 // biome-ignore lint/suspicious/noArrayIndexKey: static, never reordered
                 key={index}
-                className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-5"
+                // Two columns from `sm`: the time, then every other part
+                // wrapping inside a column of its own, so a part that wraps
+                // hangs under the text and never falls back under the time
+                // (it did, at x = 169 on one row and 720 on the next). On a
+                // phone the parts take the line under the time.
+                className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:px-5"
               >
                 <span className="font-mono text-xs text-muted tabular-nums">
                   {dateTime(entry.occurredAt)}
                 </span>
-                {entry.checkpoint === null ? null : (
-                  <span className="text-muted">{checkpointText(entry.checkpoint)}</span>
-                )}
-                {entry.kind === "buddy_team" ? (
-                  <span className="font-semibold">
-                    {entry.teamNumber > 0
-                      ? t("incidentExport.buddyTeam", { number: entry.teamNumber })
-                      : t("incidentExport.buddyTeamUnnumbered")}{" "}
-                    — {t(BUDDY_TEAM_ACTION_KEYS[entry.action])}
-                  </span>
-                ) : (
-                  <span className="font-semibold">
-                    {entry.subjectName}
-                    {entry.kind === "crew" ? ` (${t("incidentExport.crewTag")})` : ""} —{" "}
-                    {entry.action === "cleared"
-                      ? t("incidentExport.actionCleared")
-                      : rollCallLabelText(
-                          t,
-                          entry.action === "boarded"
-                            ? "boarded"
-                            : entry.checkpoint === "departure"
-                              ? "not_boarded"
-                              : "not_back_aboard",
-                        )}
-                  </span>
-                )}
-                <span className="text-muted">
-                  {t("incidentExport.recordedByName", { name: entry.recordedByName })}
-                </span>
-                {entry.kind === "buddy_team" ? (
+                <span className="flex basis-full flex-wrap items-baseline gap-x-3 gap-y-1">
+                  {entry.checkpoint === null ? null : (
+                    <span className="text-muted">{checkpointText(entry.checkpoint)}</span>
+                  )}
+                  {entry.kind === "buddy_team" ? (
+                    <span className="font-semibold">
+                      {entry.teamNumber > 0
+                        ? t("incidentExport.buddyTeam", { number: entry.teamNumber })
+                        : t("incidentExport.buddyTeamUnnumbered")}{" "}
+                      — {t(BUDDY_TEAM_ACTION_KEYS[entry.action])}
+                    </span>
+                  ) : (
+                    <span className="font-semibold">
+                      {entry.subjectName}
+                      {entry.kind === "crew" ? ` (${t("incidentExport.crewTag")})` : ""} —{" "}
+                      {entry.action === "cleared"
+                        ? t("incidentExport.actionCleared")
+                        : rollCallLabelText(
+                            t,
+                            entry.action === "boarded"
+                              ? "boarded"
+                              : entry.checkpoint === "departure"
+                                ? "not_boarded"
+                                : "not_back_aboard",
+                          )}
+                    </span>
+                  )}
                   <span className="text-muted">
-                    {t("incidentExport.timelineBuddyMembers", {
-                      names: memberList.format(entry.memberNames),
-                    })}
+                    {t("incidentExport.recordedByName", { name: entry.recordedByName })}
                   </span>
-                ) : null}
-                {(entry.kind === "diver" || entry.kind === "crew") && entry.source === "offline" ? (
-                  <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-medium text-muted">
-                    {t("incidentExport.timelineOfflineTag")}
-                  </span>
-                ) : null}
-                {/* What the crew observed, on its own full-width line below the
-                    facts rather than wrapped into them (ADR
-                    20260828-a-missing-diver-gets-a-sentence). This is the half
-                    of the record a mark alone cannot carry, and the reason an
-                    investigator reading this page meets "surfaced 200 m north,
-                    picked up by Reef Runner at 14:31" instead of an
-                    unexplained red entry. It is inside the content hash, like
-                    every other fact here. */}
-                {(entry.kind === "diver" || entry.kind === "crew") && entry.note ? (
-                  <span className="basis-full text-sm">{entry.note}</span>
-                ) : null}
+                  {entry.kind === "buddy_team" ? (
+                    <span className="text-muted">
+                      {t("incidentExport.timelineBuddyMembers", {
+                        names: memberList.format(entry.memberNames),
+                      })}
+                    </span>
+                  ) : null}
+                  {(entry.kind === "diver" || entry.kind === "crew") &&
+                  entry.source === "offline" ? (
+                    <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-medium text-muted">
+                      {t("incidentExport.timelineOfflineTag")}
+                    </span>
+                  ) : null}
+                  {/* What the crew observed, on its own line below the facts, in
+                      their column, rather than wrapped into them (ADR
+                      20260828-a-missing-diver-gets-a-sentence). This is the half
+                      of the record a mark alone cannot carry, and the reason an
+                      investigator reading this page meets "surfaced 200 m north,
+                      picked up by Reef Runner at 14:31" instead of an
+                      unexplained red entry. It is inside the content hash, like
+                      every other fact here. */}
+                  {(entry.kind === "diver" || entry.kind === "crew") && entry.note ? (
+                    <span className="basis-full text-sm">{entry.note}</span>
+                  ) : null}
+                </span>
               </li>
             ))}
           </ol>
