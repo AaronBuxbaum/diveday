@@ -62,11 +62,23 @@ describe("a timeline entry", () => {
     return timeline.slice(timeline.indexOf("<li"), timeline.indexOf("</li>"));
   }
 
-  it("is two columns from sm, the time and then the rest", () => {
+  /**
+   * The columns are the list's, not each entry's. An entry that drew its own
+   * `auto` column sized it to its own timestamp, and "Jul 21, 10:05 AM EDT" is
+   * a monospace character wider than "Jul 21, 7:05 AM EDT", so on a departure
+   * that ran past ten the text started ~7px apart from row to row: the ragged
+   * column this fix exists to close. Every entry lays its parts on the list's
+   * two tracks (`subgrid`), whose time column is the widest timestamp's.
+   */
+  it("is two columns from sm, one time column for every entry", () => {
+    const timeline = section("incident-timeline-heading");
+    const list = timeline.slice(timeline.indexOf("<ol"), timeline.indexOf("<li"));
+    expect(list).toContain("sm:grid sm:grid-cols-[auto_minmax(0,1fr)]");
     const entry = timelineEntry();
     const tag = entry.slice(0, entry.indexOf(">", entry.indexOf("className=")) + 1);
-    expect(tag).toContain("sm:grid");
-    expect(tag).toContain("sm:grid-cols-[auto_minmax(0,1fr)]");
+    expect(tag).toContain("sm:col-span-2");
+    expect(tag).toContain("sm:grid sm:grid-cols-subgrid");
+    expect(tag, "an entry draws no columns of its own").not.toContain("sm:grid-cols-[");
   });
 
   it("holds every part but the time in one wrapping column", () => {
