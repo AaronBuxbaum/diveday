@@ -2850,6 +2850,11 @@ describe("OfflineManifestView — one column, one text edge", () => {
     // An uncalled crew member wears the roll call's own awaiting tone: the
     // left rule is the edge a card's border used to be.
     expect(rows[0]).toHaveClass("border-border-strong", "bg-surface-sunken");
+    // And the box behind that row is not the same fill: on a sunken box the
+    // uncalled crew member matched the ground, marked only by a grey rule and
+    // hairlines (K-474 review). The live crew list sits in a surface card.
+    expect(box).toHaveClass("bg-surface");
+    expect(box).not.toHaveClass("bg-surface-sunken");
   });
 
   it("keeps a missing crew member's row in danger ink", async () => {

@@ -1815,7 +1815,18 @@ export function OfflineManifestView() {
             the heading and stopped where the list began. The ring belongs to
             the missing person's own row (`ROLL_CALL_ROW_TONE.notBackAboard`),
             as on every roll-call row; the box keeps its danger border, fill
-            and heading. */}
+            and heading.
+
+            **A surface box while crew are still being called**, as the live
+            crew list sits in a surface card. The rows wear the roll call's
+            awaiting tone, a sunken fill, and on a sunken box an uncalled crew
+            member matched the ground behind them, marked only by a grey rule
+            and hairlines: the row a captain is looking for, read at the rail
+            in sun, with the weakest fill on the page. The dock copy's earlier
+            crew cards kept "awaiting" raised for that reason (dive-domain
+            review, 20260804); the contrast is kept here the other way round.
+            The settled and missing boxes keep their success and danger
+            fills. */}
           <section
             aria-labelledby="offline-crew-heading"
             className={`mt-3 overflow-hidden rounded-inset border ${
@@ -1823,7 +1834,7 @@ export function OfflineManifestView() {
                 ? "border-danger bg-danger/10"
                 : completeness.crewAccountedFor
                   ? "border-success/40 bg-success/10"
-                  : "border-border-strong bg-surface-sunken"
+                  : "border-border-strong bg-surface"
             }`}
           >
             <div className="p-4 sm:p-5">
