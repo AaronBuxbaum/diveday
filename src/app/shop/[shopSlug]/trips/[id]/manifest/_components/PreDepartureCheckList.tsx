@@ -125,7 +125,7 @@ export function PreDepartureCheckList({
           <SummaryCaret className="group-open/check:rotate-90" />
           <h2
             id={scopedId(idPrefix, "pre-departure-check-heading")}
-            className="text-base font-semibold group-hover/summary:underline"
+            className="text-base font-semibold text-balance group-hover/summary:underline"
           >
             {copy.summary}
           </h2>
