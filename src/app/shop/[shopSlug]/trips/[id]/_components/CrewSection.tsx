@@ -329,7 +329,7 @@ export function CrewSection({
                   event.currentTarget.value = "";
                   void handleAssign(personId);
                 }}
-                className={`${controlClass} text-sm`}
+                className={controlClass}
               >
                 <option value="">{copy.assignOption}</option>
                 {availableStaff
@@ -446,7 +446,7 @@ export function CrewSection({
                           const next = event.currentTarget.value;
                           void handleRole(entry.id, next === "" ? null : (next as TripCrewRole));
                         }}
-                        className={`${controlClass} text-sm`}
+                        className={controlClass}
                       >
                         <option value="">{copy.roleUnspecified}</option>
                         {TRIP_CREW_ROLES.map((role) => (

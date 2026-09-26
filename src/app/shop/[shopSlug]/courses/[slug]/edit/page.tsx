@@ -547,7 +547,7 @@ export default async function EditCoursePage({
                                   placeholder={t("courses.edit.photoCaptionPlaceholder", {
                                     n: index + 2,
                                   })}
-                                  className={`${controlClass} text-xs`}
+                                  className={controlClass}
                                 />
                               </Field>
                             </div>

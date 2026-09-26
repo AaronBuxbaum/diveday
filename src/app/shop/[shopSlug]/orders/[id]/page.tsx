@@ -501,7 +501,7 @@ export default async function OrderDetailPage({
                     max={refundableMajor}
                     step={minorToMajor(1, order.order.currency)}
                     defaultValue={refundableMajor}
-                    className={`${controlClass} w-32 text-sm tabular-nums`}
+                    className={`${controlClass} w-32 tabular-nums`}
                   />
                 </label>
                 <SubmitButton

@@ -832,3 +832,65 @@ describe("Field id scoping", () => {
     expect(screen.getByLabelText("Name").id).toBe("chosen-by-the-caller");
   });
 });
+
+/**
+ * **Source sweeps: a call site stays on the primitive.** A shared piece fixes
+ * a defect once only while nothing spells around it, so each rule below reads
+ * every `.tsx` under `src/` (tests aside, comments stripped, so a doc comment
+ * quoting the old spelling is not a finding) and names the file and line of
+ * anything that does.
+ */
+type SourceFile = { file: string; source: string };
+
+function sourceFiles(): SourceFile[] {
+  const found: SourceFile[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith(".tsx") && !entry.name.includes(".test.")) {
+        const source = readFileSync(full, "utf8")
+          // Block and JSX comments, kept as blank lines so line numbers hold.
+          .replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "))
+          // Whole-line `//` comments only: a `//` mid-line may be a URL.
+          .replace(/^[ \t]*\/\/.*$/gm, "");
+        found.push({ file: path.relative(process.cwd(), full), source });
+      }
+    }
+  };
+  walk(path.join(process.cwd(), "src"));
+  return found;
+}
+
+function lineOf(source: string, index: number): number {
+  return source.slice(0, index).split("\n").length;
+}
+
+describe("source sweeps", () => {
+  it("reads enough of the app to be worth asserting on", () => {
+    expect(sourceFiles().length).toBeGreaterThan(300);
+  });
+
+  /**
+   * **A control keeps its 16px type.** An appended `text-sm`/`text-xs` wins
+   * over `controlClass`'s `text-base` by stylesheet order, so one field drew
+   * at three sizes on one page — "Assign crew…" at a 10px cap beside "Every
+   * week" at 12px (trip-repeating-cadence, trip-crew-clash; K-45) — and iOS
+   * Safari zooms the page when a box under 16px takes focus. A denser control
+   * is a `controlClassFor` size that keeps 16px, never an appended size. The
+   * one exception is the embed page's read-only code snippet, which is a
+   * block of code to copy, not a box anyone types in.
+   */
+  it("never appends a smaller type size to a control's class", () => {
+    const allowed = new Set(["src/app/shop/[shopSlug]/settings/embed/SnippetField.tsx"]);
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      if (allowed.has(file)) continue;
+      for (const match of source.matchAll(/`[^`]*\$\{controlClass(?:For\([^)]*\))?\}[^`]*`/g)) {
+        if (/\btext-(xs|sm)\b/.test(match[0]))
+          offenders.push(`${file}:${lineOf(source, match.index)} ${match[0]}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

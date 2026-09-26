@@ -90,7 +90,7 @@ export function PaymentStatusControl({
           and carried a no-op `items-center` on an element that is not a flex
           container. */}
       <span className="w-fit">
-        <select name="status" defaultValue={status} className={`${controlClass} text-sm`}>
+        <select name="status" defaultValue={status} className={controlClass}>
           {/* The booking's current status is always among the options, even
               when this staffer could not have set it. Without that, a captain
               opening a booking an owner had waived would find the select
