@@ -1,7 +1,8 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { bookings } from "@/db/schema";
+import { bookings, people } from "@/db/schema";
+import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { seededShopContext } from "@/test/db";
 import { findElements } from "@/test/jsx-inspect";
 import { DiverStory } from "../divers/[personId]/_components/DiverStory";
@@ -60,5 +61,34 @@ describe("DiverSheetSection", () => {
     const wrapper = story ? parentOf(tree, story) : null;
     expect(wrapper?.type).toBe("div");
     expect(wrapper?.props.className).toBe("mt-10");
+  });
+
+  /**
+   * **A phone number is one unit** (pixel-craft class 8, K-450). The sheet's
+   * subtitle joined the email and the grouped number with ordinary spaces, so
+   * the line broke inside the number — "+1 305 555" over "0110" — which is a
+   * different number to anybody dialling it off the screen. The groups are
+   * held together; the line may still break at the separator.
+   */
+  it("keeps the diver's phone number whole in the subtitle", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const [reachable] = await db
+      .select({ id: people.id, phone: people.phone })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), isNotNull(people.phone), isNotNull(people.email)))
+      .limit(1);
+    if (!reachable?.phone) throw new Error("seeded shop has no diver with a phone and an email");
+
+    const tree = await DiverSheetSection({ shop, personId: reachable.id, locale: "en-US" });
+    const subtitle = (tree as ReactElement<{ subtitle?: unknown }> | null)?.props.subtitle;
+    if (typeof subtitle !== "string") throw new Error("the sheet was given no subtitle");
+
+    const [, number] = subtitle.split(" · ");
+    expect(number).toBeDefined();
+    // Grouped for reading, and not one of the groups can be split off.
+    expect(number).toMatch(/\u00a0/);
+    expect(number).not.toMatch(/ /);
+    expect(number?.replaceAll("\u00a0", " ")).toBe(displayStoredPhone(reachable.phone));
   });
 });

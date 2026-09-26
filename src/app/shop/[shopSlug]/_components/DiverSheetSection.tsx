@@ -58,7 +58,15 @@ export async function DiverSheetSection({
   const recordPath = shopPath(shop.slug, "divers", personId);
   // The record's own spelling of a stored number, not the raw E.164 column:
   // "+13055550230" is what the database holds and not what anybody reads.
-  const reach = [diver.person.email, displayStoredPhone(diver.person.phone)]
+  //
+  // **One number, one unit** (pixel-craft class 8, K-450). Its groups are
+  // joined by no-break spaces, so the line breaks at the separator or inside
+  // the email and never inside the number: "+1 305 555" over "0110" is a
+  // different number to somebody dialling off the sheet.
+  const reach = [
+    diver.person.email,
+    displayStoredPhone(diver.person.phone).replaceAll(" ", "\u00a0"),
+  ]
     .filter(Boolean)
     .join(" · ");
 
