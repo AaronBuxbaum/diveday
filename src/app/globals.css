@@ -967,11 +967,19 @@ textarea {
    *
    * A backstop, not the fix. It is only safe because the packet no longer
    * composes the two tabs that *are* forms: with those gone nothing
-   * value-bearing lives inside a control here, so hiding one loses no fact. The
-   * same rule applied to the old packet would have silently dropped the trip's
-   * title, date and dive plan off the sheet.
+   * value-bearing lives inside a form control here, so hiding one loses no
+   * fact. The same rule applied to the old packet would have silently dropped
+   * the trip's title, date and dive plan off the sheet.
+   *
+   * **One kind of button is the fact.** The roll call's person is a button
+   * (the tap that opens their sheet), and its content is the index and the
+   * name — so under the blanket rule both packets printed every roster row with
+   * no name in it. A button whose content must reach paper says so with
+   * `data-print-content` and keeps only its control-only parts off the sheet
+   * (`PersonSheet`'s caret is `print:hidden`). `print-bundle.test.ts` asks the
+   * DOM what this selector matches.
    */
-  .trip-print-bundle :is(button, select, textarea, input) {
+  .trip-print-bundle :is(button:not([data-print-content]), select, textarea, input) {
     display: none;
   }
 
