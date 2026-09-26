@@ -158,25 +158,46 @@ describe("next boat with space", () => {
  * **A separator sits in the middle of its gap** (pixel-craft K-175). Each
  * fragment used to open with its own "· ", so the row's 8px gap fell before
  * the dot and one space after it: 9px against 6px at 1280, 9 against 5 at
- * 390. The dot is a fragment of its own now, and the gap falls on both sides.
+ * 390. The dot is an element of its own now, with the same gap either side.
  */
 describe("the facts line", () => {
-  it("sets each dot as its own hidden fragment, so the row's gap falls evenly either side", () => {
+  function facts() {
     render(card({ skipped: 1, firstSkippedTime: "7:00 AM" }));
+    return screen.getByText("5 spots left").parentElement as HTMLElement;
+  }
 
-    const row = screen.getByText("5 spots left").parentElement as HTMLElement;
-    const fragments = [...row.children];
-    const dots = fragments.filter((fragment) => fragment.textContent === "·");
+  it("sets each dot as a hidden element of its own, with the row's gap either side", () => {
+    const row = facts();
+    const dots = [...row.querySelectorAll("span")].filter((span) => span.textContent === "·");
     expect(dots).toHaveLength(2);
-    for (const dot of dots) expect(dot).toHaveAttribute("aria-hidden", "true");
-    for (const fragment of fragments.filter((fragment) => !dots.includes(fragment))) {
-      expect(fragment.textContent).not.toMatch(/^[\s·]/);
+    for (const dot of dots) {
+      expect(dot).toHaveAttribute("aria-hidden", "true");
+      // Before the dot, the row's gap; after it, its fact's, which is the same.
+      const fact = dot.parentElement as HTMLElement;
+      expect(fact.parentElement).toBe(row);
+      expect(row).toHaveClass("gap-x-2");
+      expect(fact).toHaveClass("gap-x-2");
+      expect(dot.nextElementSibling?.textContent).not.toMatch(/^[\s·]/);
     }
     // Still one sentence to anything reading the text: the spaces are there,
     // and a flex row renders none of them.
     expect(row.textContent?.replace(/\s+/g, " ").trim()).toBe(
       "5 spots left · $120.00 per diver · the 7:00 AM boat is full",
     );
+  });
+
+  /**
+   * **And it wraps with the fact it introduces.** As a free item in the
+   * wrapping row, a dot could end a line: with a boat skipped the facts run
+   * about 356px against the card's 326 at 390, and line one ended on "·".
+   */
+  it("keeps each dot in one item with its fact, so no line ends on a dot", () => {
+    const row = facts();
+    expect([...row.children].map((fact) => fact.textContent?.replace(/\s+/g, " ").trim())).toEqual([
+      "5 spots left",
+      "· $120.00 per diver",
+      "· the 7:00 AM boat is full",
+    ]);
   });
 
   it("draws no dot for a fact the card does not have", () => {

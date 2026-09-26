@@ -111,20 +111,22 @@ export function NextBoatCard({
         </p>
         <h2 className="mt-1 text-lg font-medium text-pretty">{title}</h2>
         {description ? <p className="mt-2 line-clamp-2 text-sm text-muted">{description}</p> : null}
-        {/* Each dot is a fragment of its own, so the row's gap falls evenly
-            either side of it; opening the next fragment with "· " put the gap
-            before the dot and one space after. The spaces between fragments
-            are for anything reading the text, and a flex row renders none. */}
+        {/* Each dot is an element of its own, with the row's gap before it
+            and its fact's same gap after; opening the fact with "· " put the
+            gap before the dot and one space after. The dot and its fact are
+            one item of the wrapping row, so a line never ends on a dot. The
+            spaces are for anything reading the text; a flex row renders none
+            of them. */}
         <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-sm tabular-nums">
           <span className="font-medium">{spots}</span>
           {price ? (
             <>
               {" "}
-              <span aria-hidden="true" className="text-muted">
-                ·
-              </span>{" "}
-              <span className="text-muted">
-                {price} {t("common.perDiver")}
+              <span className="flex items-baseline gap-x-2 text-muted">
+                <span aria-hidden="true">·</span>{" "}
+                <span>
+                  {price} {t("common.perDiver")}
+                </span>
               </span>
             </>
           ) : null}
@@ -134,14 +136,14 @@ export function NextBoatCard({
           {skipped > 0 ? (
             <>
               {" "}
-              <span aria-hidden="true" className="text-muted">
-                ·
-              </span>{" "}
-              <span className="text-muted">
-                {t("schedule.nextWithSpace.earlierFull", {
-                  count: skipped,
-                  time: firstSkippedTime ?? "",
-                })}
+              <span className="flex items-baseline gap-x-2 text-muted">
+                <span aria-hidden="true">·</span>{" "}
+                <span>
+                  {t("schedule.nextWithSpace.earlierFull", {
+                    count: skipped,
+                    time: firstSkippedTime ?? "",
+                  })}
+                </span>
               </span>
             </>
           ) : null}
