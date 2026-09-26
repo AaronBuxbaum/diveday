@@ -235,8 +235,10 @@ function Row({ row }: { row: WeekLedgerRow }) {
       {/* `sm:items-baseline`: the seat group centres a 28px badge, taller than
           the title's 24px line, so top-aligned its price and chevron sat 2–3px
           below the title. On one baseline — the badge's word's — they share
-          its line. */}
-      <div className="group relative -mx-3 flex flex-col gap-2 rounded-lg px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-baseline sm:gap-4 sm:px-4 sm:py-5">
+          its line. The fill answers the row's own door (`>a`, the overlay
+          link, a direct child), not the course link nested in its meta line,
+          which lit the whole row as if the row had focus. */}
+      <div className="group relative -mx-3 flex flex-col gap-2 rounded-lg px-3 py-4 transition-colors hover:bg-surface has-[>a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-baseline sm:gap-4 sm:px-4 sm:py-5">
         {/* The ring is drawn inside the row: below `sm` the row bleeds
             `-mx-3` into a 16px gutter, 4px from the screen's edge, which cut
             the outset ring by a pixel on each side. `scroll-mt-16` keeps a

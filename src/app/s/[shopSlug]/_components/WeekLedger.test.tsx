@@ -101,6 +101,33 @@ describe("a week row is a link, never a button", () => {
       "/s/blue-mantis/courses/open-water-diver",
     );
   });
+
+  /**
+   * The row fills when its door has focus, and the fill asked for any focused
+   * link inside it: tabbing to the nested course link lit the whole row as if
+   * the row were focused, beside the course link's own ring (pixel-craft class
+   * 7). Only the row's own door — the overlay link, a direct child — lights it.
+   */
+  it("lights the row for its own door's focus, not the nested course link's", () => {
+    render(
+      <WeekLedger
+        rows={[
+          row({ course: { label: "Course session", title: "Open Water Diver", href: "/c/ow" } }),
+        ]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const box = screen.getByRole("link", { name: /Two-Tank Reef/ }).parentElement;
+    const course = screen.getByRole("link", { name: "Open Water Diver" });
+    expect(box).toHaveClass("has-[>a:focus-visible]:bg-surface");
+    expect(box?.className).not.toContain("has-[a:focus-visible]");
+    // The course link is inside the row but not a child of it, so `>a` never
+    // matches it.
+    expect(box?.contains(course)).toBe(true);
+    expect(course.parentElement).not.toBe(box);
+  });
 });
 
 describe("one meta line, and nothing stacked under it", () => {
