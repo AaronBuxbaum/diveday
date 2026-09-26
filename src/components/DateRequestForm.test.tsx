@@ -1,4 +1,7 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DateRequestCopy, InquiryFormState } from "@/lib/course-inquiry";
@@ -505,5 +508,47 @@ describe("DateRequestForm — what the request is about", () => {
 
     await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
     expect(submitInquiry.mock.calls[0]?.[1].get("interest")).toBe("Two dives on the wrecks");
+  });
+});
+
+/**
+ * **The host spaces the section** (docs/design/pixel-craft.md, class 4). The
+ * section branch baked `mt-12` into itself, and the course page's other
+ * sections sit `mt-14` apart, so "Get in touch" stood 48px under the FAQ where
+ * every other section stands 56px under its neighbour. A margin the host
+ * passes beside a baked one would resolve by stylesheet order rather than by
+ * which was written, so the component carries none of its own.
+ */
+describe("DateRequestForm — its place on the page", () => {
+  function renderSection(className?: string) {
+    return renderDiver(
+      <DateRequestForm
+        submitRequest={vi.fn()}
+        contactEmail="hello@example.com"
+        contactPhone={null}
+        className={className}
+        copy={copy}
+      />,
+    );
+  }
+
+  it("sits at the margin its host passes", () => {
+    const { container } = renderSection("mt-14");
+    const section = container.querySelector("section");
+    expect(section).toHaveClass("mt-14");
+    expect(section).not.toHaveClass("mt-12");
+  });
+
+  it("carries no margin of its own", () => {
+    const { container } = renderSection();
+    expect(container.querySelector("section")?.className).not.toMatch(/(^|\s)mt-/);
+  });
+
+  it("stands 56px under the course page's FAQ, like every course section", () => {
+    const coursePage = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../app/s/[shopSlug]/courses/[slug]/page.tsx"),
+      "utf8",
+    );
+    expect(coursePage).toMatch(/<DateRequestForm[^>]*className="mt-14"/);
   });
 });
