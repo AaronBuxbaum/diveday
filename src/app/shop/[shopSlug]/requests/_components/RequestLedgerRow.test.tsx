@@ -134,6 +134,24 @@ describe("where a request's lines may break", () => {
     const slot = [...item.children].find((child) => child.contains(book));
     expect(slot).toHaveClass("max-sm:order-3", "max-sm:basis-full");
   });
+
+  /**
+   * **As much room under the link as over the request** (pixel-craft class 5).
+   * On its own line at the row's foot, the link's 44px box keeps 12px it draws
+   * nothing in under its 20px word, and that sat on the row's 12px inset: 24px
+   * from "Create a booking" to the rule against 12px from the rule to the
+   * request's first line, on every request at 390. `block-end-phone` sinks
+   * that half into the inset below `sm`, where the link has its own line, and
+   * the box then ends on the rule, so its ring is drawn inside it.
+   */
+  it("sinks the link's unseen lower half into the row's inset below sm", () => {
+    row({});
+    expect(screen.getByRole("link", { name: "Create a booking" })).toHaveClass(
+      "max-sm:-mb-3",
+      "max-sm:align-bottom",
+      "focus-visible:focus-ring-inset",
+    );
+  });
 });
 
 /**

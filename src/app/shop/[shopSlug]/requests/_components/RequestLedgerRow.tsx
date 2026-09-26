@@ -123,12 +123,21 @@ export function RequestLedgerRow({
       align="first-line"
       // Below `sm` the booking link drops beneath the request, which takes
       // the row's whole width: beside a 112px link column the request wrapped
-      // in 230px (K-462).
+      // in 230px (K-462). There the link's unseen lower 12px sinks into the
+      // row's inset (`block-end-phone`), or the row has 24px under the word
+      // against 12px over the request; its box then ends on the rule, so its
+      // ring is drawn inside it.
       stacked
       trailing={
         <Link
           href={`${shopPath(shopSlug, "bookings", "new")}?request=${encodeURIComponent(request.id)}`}
-          className={buttonClass({ variant: "link", size: "sm", flush: true })}
+          className={buttonClass({
+            variant: "link",
+            size: "sm",
+            flush: true,
+            outdent: "block-end-phone",
+            className: "focus-visible:focus-ring-inset",
+          })}
         >
           {t("requests.createBooking")}
         </Link>
