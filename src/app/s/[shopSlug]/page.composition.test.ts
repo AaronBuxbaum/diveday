@@ -145,6 +145,27 @@ describe("the storefront's section rhythm", () => {
 });
 
 /**
+ * **The boats stand on the courses' columns** (pixel-craft class 3, K-227).
+ * The boats grid's gutter was `gap-3` under a course shelf and an identity
+ * band at `gap-4`, so at 1280 the boat cards' edges sat 1–3px off the course
+ * cards' above them, and on a phone the stacked boats were 12px apart where
+ * the courses were 16.
+ */
+describe("the boats grid", () => {
+  it("takes the course shelf's columns and gutter", () => {
+    const shelf = readFileSync(join(__dirname, "_components/CoursesShelf.tsx"), "utf8");
+    const shelfGrid = shelf.match(/<ul className="(mt-4 grid [^"]*)"/)?.[1];
+    const boats = SOURCE.slice(positionOf('aria-labelledby="boats-heading"'));
+    const boatsGrid = boats.match(/<ul className="([^"]*)"/)?.[1];
+    // One column below `sm` is what an unset grid has anyway.
+    const tokens = (classes: string | undefined) =>
+      new Set((classes ?? "").split(/\s+/).filter((token) => token !== "grid-cols-1"));
+    expect(shelfGrid).toBeDefined();
+    expect(tokens(boatsGrid)).toEqual(tokens(shelfGrid));
+  });
+});
+
+/**
  * **The boat that is out** — ADR 20260904-reef-all-the-way-down, Budget rule
  * 4, slice 16c.
  */

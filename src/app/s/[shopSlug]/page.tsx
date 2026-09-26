@@ -1346,7 +1346,9 @@ export default async function SchedulePage({
           <h2 id="boats-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
             {t("schedule.boatsHeading")}
           </h2>
-          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {/* The course shelf's columns and gutter, so the boat cards stand
+              under the course cards' edges (K-227). */}
+          <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {boats.map((boat) => (
               // The card itself, not a hand-rolled copy at `px-5 py-4`: its
               // words started 4px in from every other card's on a phone.
