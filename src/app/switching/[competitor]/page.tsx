@@ -9,7 +9,11 @@ import { MarketingFooter, MarketingFooterFallback } from "@/components/Marketing
 import { SWITCH_EMAIL, SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { groupLabelClass } from "@/components/ui/ledger";
-import { BANNER_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import {
+  BANNER_TITLE_CLASS,
+  MARKETING_EYEBROW_CLASS,
+  SECTION_TITLE_CLASS,
+} from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
@@ -173,7 +177,7 @@ async function GuideBody({
       {guide.coexist && (
         <section className="border-y border-border">
           <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+            <p className={MARKETING_EYEBROW_CLASS}>
               {t("switching.competitor.keepOrLeaveEyebrow")}
             </p>
             <h2 className={`mt-3 ${BANNER_TITLE_CLASS} sm:text-4xl`}>{t(guide.coexist.heading)}</h2>
@@ -230,9 +234,7 @@ async function GuideBody({
       {guide.website && (
         <section className="border-b border-border">
           <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("switching.competitor.websiteEyebrow")}
-            </p>
+            <p className={MARKETING_EYEBROW_CLASS}>{t("switching.competitor.websiteEyebrow")}</p>
             <h2 className={`mt-3 ${BANNER_TITLE_CLASS} sm:text-4xl`}>{t(guide.website.heading)}</h2>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.website.intro)}</p>
 

@@ -8,6 +8,7 @@ import {
   BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,
   LEAD_TITLE_CLASS,
+  MARKETING_EYEBROW_CLASS,
   SECTION_TITLE_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
@@ -71,9 +72,7 @@ export function GuideHero({
         <Link href="/switching" className="text-sm font-medium text-primary hover:underline">
           {t("switching.common.backToGuides")}
         </Link>
-        <p className="mt-6 text-sm font-semibold tracking-widest text-primary uppercase">
-          {eyebrow}
-        </p>
+        <p className={`mt-6 ${MARKETING_EYEBROW_CLASS}`}>{eyebrow}</p>
         <h1 className={`mt-4 ${DISPLAY_TITLE_CLASS} sm:text-5xl`}>{title}</h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">{lede}</p>
 
@@ -121,9 +120,7 @@ export function GuideContext({
   const t = diverTranslator(locale);
   return (
     <section className="mx-auto max-w-4xl px-6 py-14 lg:py-20">
-      <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-        {t("switching.common.contextEyebrow")}
-      </p>
+      <p className={MARKETING_EYEBROW_CLASS}>{t("switching.common.contextEyebrow")}</p>
       <div className="mt-5 max-w-2xl space-y-5">
         {paragraphs.map((paragraph) => (
           <p key={paragraph} className="text-lg leading-8 text-muted">

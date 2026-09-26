@@ -1,5 +1,5 @@
 import { buttonClass } from "@/components/ui/button";
-import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { LEAD_TITLE_CLASS, MARKETING_EYEBROW_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 
@@ -30,9 +30,7 @@ export function SwitchingConcierge({ locale }: { locale: DiverLocale }) {
   return (
     <section className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
       <div className="rounded-panel border border-primary/30 bg-primary/5 p-8 sm:p-10">
-        <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-          {t("switching.concierge.eyebrow")}
-        </p>
+        <p className={MARKETING_EYEBROW_CLASS}>{t("switching.concierge.eyebrow")}</p>
         <h2 className={`mt-3 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>
           {t("switching.concierge.title")}
         </h2>

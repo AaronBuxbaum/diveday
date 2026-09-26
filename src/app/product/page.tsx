@@ -22,6 +22,7 @@ import {
   BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,
   LEAD_TITLE_CLASS,
+  MARKETING_EYEBROW_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
@@ -192,9 +193,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       <MarketingSectionMotion />
       <section className="border-b border-border">
         <div className="mx-auto max-w-4xl px-6 py-20 text-center lg:py-28">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("marketing.product.eyebrow")}
-          </p>
+          <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.eyebrow")}</p>
           <h1 className={`mt-5 ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
             {t("marketing.product.heroTitle")}
           </h1>
@@ -424,9 +423,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       <section className="border-t border-border">
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.product.paymentEyebrow")}
-            </p>
+            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.paymentEyebrow")}</p>
             <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.product.paymentTitle")}
             </h2>
@@ -506,9 +503,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       <section className="border-y border-border bg-surface">
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.product.boxEyebrow")}
-            </p>
+            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.boxEyebrow")}</p>
             <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.product.boxTitle")}
             </h2>
@@ -580,9 +575,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
 
       <section className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("marketing.product.noEyebrow")}
-          </p>
+          <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.noEyebrow")}</p>
           <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("marketing.product.noTitle")}
           </h2>

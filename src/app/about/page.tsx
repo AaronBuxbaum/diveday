@@ -12,6 +12,7 @@ import { groupLabelClass } from "@/components/ui/ledger";
 import {
   BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,
+  MARKETING_EYEBROW_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
@@ -151,9 +152,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
       <section className="border-b border-border">
         <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.8fr] lg:items-center lg:py-24">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.about.eyebrow")}
-            </p>
+            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.eyebrow")}</p>
             <h1 className={`mt-5 ${DISPLAY_TITLE_CLASS} sm:text-5xl lg:text-6xl`}>
               {t("marketing.about.heroTitle")}
             </h1>
@@ -174,9 +173,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
           its only verifiable content far below the fold on every screen. */}
       <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("marketing.about.rulesEyebrow")}
-          </p>
+          <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.rulesEyebrow")}</p>
           <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("marketing.about.rulesTitle")}
           </h2>
@@ -236,9 +233,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
         <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
           <div className="grid gap-10 lg:grid-cols-[0.9fr_1fr] lg:items-start">
             <div>
-              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                {t("marketing.about.founderEyebrow")}
-              </p>
+              <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.founderEyebrow")}</p>
               <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.about.founderTitle")}
               </h2>
@@ -254,9 +249,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
 
       <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("marketing.about.runEyebrow")}
-          </p>
+          <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.runEyebrow")}</p>
           <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("marketing.about.runTitle")}
           </h2>
@@ -306,9 +299,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
       <section className="border-y border-border bg-surface">
         <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.about.plainlyEyebrow")}
-            </p>
+            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.plainlyEyebrow")}</p>
             <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.about.plainlyTitle")}
             </h2>
@@ -351,9 +342,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
         <div>
           <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
             <div className="max-w-2xl">
-              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                {t("marketing.about.leaveEyebrow")}
-              </p>
+              <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.leaveEyebrow")}</p>
               <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.about.leaveTitle")}
               </h2>

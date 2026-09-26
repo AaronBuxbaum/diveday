@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
-import { BANNER_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
+import {
+  BANNER_TITLE_CLASS,
+  MARKETING_EYEBROW_CLASS,
+  SUB_TITLE_CLASS,
+} from "@/components/ui/typography";
 
 /**
  * The shape both legal pages wear: `/privacy` and `/terms`.
@@ -34,7 +38,7 @@ export function LegalDocument({
   return (
     <main className="flex-1">
       <div className="mx-auto w-full max-w-3xl px-6 py-16 lg:py-24">
-        <p className="text-xs font-semibold tracking-widest text-primary uppercase">{eyebrow}</p>
+        <p className={MARKETING_EYEBROW_CLASS}>{eyebrow}</p>
         <h1 className={`mt-4 ${BANNER_TITLE_CLASS} leading-tight sm:text-4xl`}>{title}</h1>
         <p className="mt-3 text-sm text-muted">{updated}</p>
         <p className="mt-8 text-base leading-7">{intro}</p>

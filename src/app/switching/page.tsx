@@ -11,6 +11,7 @@ import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import {
   BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,
+  MARKETING_EYEBROW_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
@@ -177,9 +178,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
   return (
     <main className="flex-1">
       <section className="mx-auto max-w-4xl px-6 pt-16 pb-10 lg:pt-24 lg:pb-14">
-        <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-          {t("switching.hub.eyebrow")}
-        </p>
+        <p className={MARKETING_EYEBROW_CLASS}>{t("switching.hub.eyebrow")}</p>
         <h1 className={`mt-4 ${DISPLAY_TITLE_CLASS} sm:text-5xl`}>{t("switching.hub.title")}</h1>
         <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
           {t("switching.hub.description")}
@@ -232,9 +231,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
           page's one primary is still the pair above. */}
       <section className="border-y border-border bg-surface">
         <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("switching.hub.previewEyebrow")}
-          </p>
+          <p className={MARKETING_EYEBROW_CLASS}>{t("switching.hub.previewEyebrow")}</p>
           <h2 className={`mt-4 max-w-2xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("switching.hub.previewTitle")}
           </h2>

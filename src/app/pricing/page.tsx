@@ -10,7 +10,11 @@ import { ExportBundleFallback } from "@/components/MarketingScreenFallbacks";
 import { MarginNotes, MarketingMockup } from "@/components/MarketingSections";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
-import { BANNER_TITLE_CLASS, DISPLAY_TITLE_CLASS } from "@/components/ui/typography";
+import {
+  BANNER_TITLE_CLASS,
+  DISPLAY_TITLE_CLASS,
+  MARKETING_EYEBROW_CLASS,
+} from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -240,7 +244,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                   newlines between these three children, so without them the
                   accessible name is the single word "Founding shopEarly
                   access". */}
-              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+              <p className={MARKETING_EYEBROW_CLASS}>
                 {t(earlyAccessPrice.nameKey)}{" "}
                 <span aria-hidden="true" className="mx-1 text-border-strong">
                   ·
@@ -475,9 +479,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
         <section className="border-b border-border">
           <div className="mx-auto grid max-w-5xl gap-10 px-6 py-16 lg:grid-cols-2 lg:items-center lg:py-24">
             <div>
-              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                {t("marketing.pricing.dataExit.eyebrow")}
-              </p>
+              <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.pricing.dataExit.eyebrow")}</p>
               <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.pricing.dataExit.title")}
               </h2>
