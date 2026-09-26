@@ -86,6 +86,45 @@ describe("TripDayPlan", () => {
     expect(within(dives).queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
   });
 
+  /**
+   * **The row is the door to its site** (pixel-craft class 7, K-168). The
+   * site's name was an inline link inside a plain row: a 17px-tall target
+   * ("French Reef" 79×17 at 390), its ring hugging the words. The row now opens
+   * the site's page whichever line names it — the dive's own name, or the
+   * site under a dive the shop named itself — and a dive with no site yet stays
+   * a plain row.
+   */
+  it("makes a dive with a site the door to that site's page, and leaves one without a plain row", () => {
+    render(
+      <TripDayPlan
+        briefings={[
+          briefing({
+            diveSite: { id: "site-1", slug: "french-reef", name: "French Reef" },
+          } as unknown as Partial<DiveBriefing>),
+          briefing({
+            dive: { id: "dive-2", diveNumber: 2, title: "Wreck penetration" },
+            diveSite: null,
+          } as unknown as Partial<DiveBriefing>),
+        ]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    const dives = screen.getByRole("list");
+    const links = within(dives).getAllByRole("link");
+    expect(links).toHaveLength(1);
+    const [door] = links;
+    expect(door).toHaveAccessibleName("French Reef");
+    expect(door).toHaveAttribute("href", "/s/blue-mantis/sites/french-reef");
+    // The row's own stretched door, not a link on the words.
+    expect(door).toHaveClass("absolute", "inset-0");
+    expect(door.closest("li")).toHaveTextContent("French Reef swim-throughs");
+    expect(door.closest("li")).toHaveTextContent("French Reef");
+    expect(within(dives).getByText("Wreck penetration").closest("li")).not.toContainElement(door);
+  });
+
   it("says when the light arrives and when it goes, on a daylight departure", () => {
     // The other half of the night charter's line, and the half that speaks for
     // nearly every departure on every board: a 9:00 AM two-tank in January

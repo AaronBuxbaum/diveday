@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Fragment } from "react";
 import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
 import { StoredPhoto } from "@/components/StoredPhoto";
@@ -373,11 +372,17 @@ export function TripDayPlan({
           // there — lives at `/s/<shop>/sites/<site>`, and this run of rows is
           // the one beat on this page that names every site the day dives. A
           // page reachable only from a sitemap is a page divers never find.
-          const siteHref = diveSite ? publicDiveSitePath(shop.slug, diveSite.slug) : null;
+          //
+          // **The row is the door** (pixel-craft class 7, K-168), whichever of
+          // its lines names the site. The name was an inline link inside a
+          // plain row, a 17px-tall target ("French Reef" 79×17 at 390) with
+          // its ring hugging the words; a door row is the whole row, 52px and
+          // up, with the chevron that says it opens. A dive with no site yet
+          // has nowhere to go and stays a plain row.
+          const siteDoor = diveSite
+            ? { href: publicDiveSitePath(shop.slug, diveSite.slug), linkLabel: diveSite.name }
+            : {};
           const lead = dive.title ?? diveSite?.name ?? t("trip.siteToBeConfirmed");
-          // Linked once per row, on whichever line carries the site's name: a
-          // dive the shop named after its site has one line, not two.
-          const leadNamesSite = Boolean(diveSite && lead === diveSite.name);
           return (
             <Fragment key={dive.id}>
               <LedgerRow
@@ -386,30 +391,15 @@ export function TripDayPlan({
                 trailing={
                   depth ? <span className="text-sm text-muted tabular-nums">{depth}</span> : null
                 }
+                {...siteDoor}
               >
-                <span className="block text-sm font-medium">
-                  {siteHref && leadNamesSite ? (
-                    <Link href={siteHref} className="text-primary hover:underline">
-                      {lead}
-                    </Link>
-                  ) : (
-                    lead
-                  )}
-                </span>
+                <span className="block text-sm font-medium">{lead}</span>
                 {/* The site under the dive's own name, when the shop gave the dive
                     a name of its own that is not simply the site's. A departure
                     whose second tank has no site yet says so here rather than
                     reading as a one-site day. */}
                 {dive.title && diveSite?.name && dive.title !== diveSite.name ? (
-                  <span className="block text-sm">
-                    {siteHref ? (
-                      <Link href={siteHref} className="text-primary hover:underline">
-                        {diveSite.name}
-                      </Link>
-                    ) : (
-                      <span className="text-muted">{diveSite.name}</span>
-                    )}
-                  </span>
+                  <span className="block text-sm text-muted">{diveSite.name}</span>
                 ) : null}
                 {dive.title && !diveSite ? (
                   <span className="block text-sm text-muted">{t("trip.siteToBeConfirmed")}</span>
