@@ -216,7 +216,13 @@ export function RouteEditor({
             </MapEmbed>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          {/* Two groups that wrap whole — Zoom's pair, then Undo point with
+              Clear route — and every line ends at the column's right edge.
+              `mr-auto` pushes the controls away from the status only on the
+              status's own line; `justify-end` sends a line the controls
+              wrap onto to the same edge, where loose items had wrapped Undo
+              point to the left edge under a Zoom pair on the right (K-268). */}
+          <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
             <p className="mr-auto text-sm text-muted" aria-live="polite">
               {status}
             </p>
@@ -242,22 +248,29 @@ export function RouteEditor({
                 {copy.zoomIn}
               </button>
             </span>
-            <button
-              type="button"
-              onClick={() => setPoints((current) => current.slice(0, -1))}
-              disabled={points.length === 0}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {copy.undo}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPoints([])}
-              disabled={points.length === 0}
-              className={buttonClass({ variant: "ghost", size: "sm" })}
-            >
-              {copy.clear}
-            </button>
+            {/* Clear route is quiet and ends the row, so it is `flush`: its
+                label ends on the column's edge (it stood 12px inside it) and
+                its fill reaches 8px past. `gap-5` hands back the padding it
+                gave up beside Undo point, whose border its fill would
+                otherwise touch. */}
+            <span className="flex items-center gap-5">
+              <button
+                type="button"
+                onClick={() => setPoints((current) => current.slice(0, -1))}
+                disabled={points.length === 0}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {copy.undo}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPoints([])}
+                disabled={points.length === 0}
+                className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
+              >
+                {copy.clear}
+              </button>
+            </span>
           </div>
         </>
       ) : (
