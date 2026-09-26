@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RAIL_ROW_CLASS } from "@/components/ui/rail";
 import {
   currentSettingsRailRowId,
   SECTION_IDS,
@@ -174,19 +175,46 @@ describe("the rail as it renders", () => {
       .filter((link) => link.getAttribute("aria-current") === "true");
     expect(selected).toHaveLength(1);
     expect(selected[0]?.textContent).toBe("team");
-    // 36px, the settings ramp's row height, with the primary tint carrying
-    // selection — never the accent (ADR decision 11's coral budget has no row
-    // for a settings surface).
-    expect(selected[0]?.className).toContain("h-9");
-    expect(selected[0]?.className).toContain("text-sm font-medium");
-    expect(selected[0]?.className).toContain("bg-primary-tint text-primary");
-    expect(selected[0]?.className).toContain("rounded-lg");
+    // The primary tint carries selection — never the accent (ADR decision
+    // 11's coral budget has no row for a settings surface).
+    expect(selected[0]).toHaveClass("bg-primary-tint", "text-primary");
+  });
+
+  /**
+   * **One page rail, one row.** The settings map and the long editor's section
+   * rail are the same control, and they were two hand-rolled strings: settings
+   * rows 36px tall at `px-2`, the editor's 44px at `px-3 py-2`. The rail shows
+   * from `lg` up, which is a landscape tablet held in the hand, so the 44px
+   * floor applies. Both rails draw `RAIL_ROW_CLASS`.
+   */
+  it("draws every row as the page rail's one row, at the 44px floor", () => {
+    renderRail();
+    const links = screen.getAllByRole("link");
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) {
+      expect(link).toHaveClass(...RAIL_ROW_CLASS.split(" "));
+      expect(link).toHaveClass("min-h-11", "px-3", "py-2", "text-sm", "font-medium", "rounded-lg");
+      expect(link).not.toHaveClass("h-9");
+      expect(link).not.toHaveClass("px-2");
+    }
+  });
+
+  it("starts each group label's words on the rows' text edge", () => {
+    renderRail();
+    const nav = screen.getByRole("navigation", { name: "Settings sections" });
+    for (const group of SETTINGS_GROUPS) {
+      const label = nav.querySelector(`#settings-rail-${group.id}`);
+      const inset = [label, ...(label?.querySelectorAll("*") ?? [])].some((node) =>
+        node?.classList.contains("px-3"),
+      );
+      expect(inset, `${group.id}'s label is not inset like its rows`).toBe(true);
+    }
   });
 
   it("draws the focus ring inside each row", () => {
     // The rows sit flush with the left edge of the rail's own scroll box, which
-    // cut the outset ring's left 5px on every one of them; and they are 36px
-    // rows with no gap, so an outset ring would paint over its neighbours too.
+    // cut the outset ring's left 5px on every one of them; and they are stacked
+    // with no gap, so an outset ring would paint over its neighbours too.
     renderRail();
     for (const link of screen.getAllByRole("link")) {
       expect(link).toHaveClass("focus-visible:focus-ring-inset", "rounded-lg");

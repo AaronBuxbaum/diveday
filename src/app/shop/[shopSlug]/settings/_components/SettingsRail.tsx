@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { GroupLabel } from "@/components/ui/ledger";
+import { RAIL_ROW_CLASS, RAIL_ROW_CURRENT, RAIL_ROW_IDLE } from "@/components/ui/rail";
 import {
   currentSettingsRailRowId,
   type SettingsRailRow,
@@ -19,10 +20,10 @@ import {
  *
  * It renders from `lg` up and **nowhere else**: below that the phone keeps the
  * grouped list, which is already the right anatomy, and a directory stacked
- * above the content is the sub-nav card this repo deleted once already. That
- * is also why a row is 36px rather than the app's 44px touch floor — no finger
- * ever reaches this control, and the floor is the dock test's, an operating
- * condition for a wet hand on a phone.
+ * above the content is the sub-nav card this repo deleted once already. Its
+ * rows are the page rail's one row (`RAIL_ROW_CLASS`, shared with the long
+ * editor's section rail) at the 44px floor: `lg` starts at 1024px, which is a
+ * landscape tablet held in the hand.
  *
  * **The selection model is one thing, decided in `settings-groups.ts`.** A row
  * pointing at a sub-route selects by pathname; a row pointing at a hub section
@@ -30,9 +31,9 @@ import {
  * blur, and neither ever turns a hub section into a route.
  *
  * **Three groups, and the reader can always tell which one they are in.** The
- * map is 42 rows — about 1,700px at the settings ramp's 36px row — against
- * roughly 740px of viewport beside the bar, so it has always been a *scrolling*
- * map and no legible row height changes that. What it was missing is the part
+ * map is 42 rows — about 2,000px at the rail's 44px row — against roughly
+ * 740px of viewport beside the bar, so it has always been a *scrolling* map
+ * and no legible row height changes that. What it was missing is the part
  * that makes a long map usable: a reader landed on "Your shop" and had no
  * signal that Money and Data & integrations existed at all below the fold.
  * Each group label is sticky inside the rail's own scroll area now, so the
@@ -104,7 +105,7 @@ export function SettingsRail({
               <GroupLabel
                 id={`settings-rail-${group.id}`}
                 tone={isCurrentGroup ? "primary" : "muted"}
-                className="sticky top-0 z-10 mb-2 bg-background px-2 py-1"
+                className="sticky top-0 z-10 mb-2 bg-background px-3 py-1"
               >
                 {group.label}
               </GroupLabel>
@@ -158,15 +159,10 @@ function RailLink({
   selected: boolean;
   children: React.ReactNode;
 }) {
-  // The ring is drawn inside the row. The rows sit flush with the left edge
-  // of the rail's own scroll box, which cut the outset ring's left 5px on
-  // every one of them; and they are 36px rows with no gap between, so an
-  // outset ring would also paint over the row above and the row below.
-  // Inside, it traces the row's own rounded fill.
-  const className = `flex h-9 items-center justify-between gap-2 rounded-lg px-2 text-sm font-medium transition-brand focus-visible:focus-ring-inset ${
-    selected
-      ? "bg-primary-tint text-primary"
-      : "text-muted hover:bg-surface-sunken hover:text-foreground"
+  // The page rail's one row, ringed inside itself (`ui/rail.ts` says why);
+  // `justify-between` keeps a warning badge on the row's far edge.
+  const className = `${RAIL_ROW_CLASS} justify-between gap-2 ${
+    selected ? RAIL_ROW_CURRENT : RAIL_ROW_IDLE
   }`;
   const current = selected ? ("true" as const) : undefined;
   if (sameDocument) {
