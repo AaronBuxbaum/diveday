@@ -16,18 +16,20 @@ function blocks() {
   return { eyebrow, title, dateline, intro, sections };
 }
 
-/** How many lines a block draws below `sm` (`base`) and from it (`sm`). */
-function lineCounts(block: Element | null | undefined) {
-  const lines = Array.from(block?.children ?? []);
-  const phoneOnly = lines.filter((line) => line.classList.contains("sm:hidden")).length;
-  const deskOnly = lines.filter((line) => line.classList.contains("max-sm:hidden")).length;
-  return { base: lines.length - deskOnly, sm: lines.length - phoneOnly };
+/** Which side of `sm` each of a block's line boxes is drawn on. */
+function sides(block: Element | null | undefined) {
+  return Array.from(block?.children ?? []).map((line) =>
+    line.classList.contains("sm:hidden")
+      ? "phone"
+      : line.classList.contains("max-sm:hidden")
+        ? "desk"
+        : "both",
+  );
 }
 
-/** Each term's line counts, for the term list that is a section's only block. */
-function termCounts(section: Element | null | undefined) {
-  const [, body] = Array.from(section?.children ?? []);
-  return Array.from(body?.firstElementChild?.children ?? [], lineCounts);
+/** `both` lines drawn at every width, then `phone` lines drawn only below `sm`. */
+function lines(both: number, phone: number) {
+  return [...Array<string>(both).fill("both"), ...Array<string>(phone).fill("phone")];
 }
 
 /**
@@ -38,41 +40,39 @@ function termCounts(section: Element | null | undefined) {
  * and eight at 390, and 104px sections for sections of 224px and more. So at
  * 1280 the dateline and intro jumped up about 40px when the page landed and the
  * second section's heading 117px down, and on a phone the first heading
- * dropped 147px. It draws the document's own boxes now (`LegalDocumentSkeleton`,
- * the one skeleton `/terms` wears too), with as many line boxes as the en-US
- * words wrap to at 390 (`base`) and 1280 (`sm`), the widths the visual suite
- * captures, through both sections the fold reaches.
+ * dropped 147px. It draws through `LegalDocumentSkeleton`, the one skeleton
+ * both legal pages share (K-411), with this page's own counts: the en-US
+ * copy's lines at 390 and 1280, the widths the visual suite captures.
  */
 describe("the /privacy skeleton", () => {
   it("draws one title line from sm and two below it", () => {
-    expect(lineCounts(blocks().title)).toEqual({ base: 2, sm: 1 });
+    expect(sides(blocks().title)).toEqual(lines(1, 1));
   });
 
-  it("draws the intro's eight lines on a phone and four from sm", () => {
-    expect(lineCounts(blocks().intro)).toEqual({ base: 8, sm: 4 });
+  it("draws the intro's four lines from sm and eight below it", () => {
+    expect(sides(blocks().intro)).toEqual(lines(4, 4));
   });
 
-  it("draws 'Two different relationships' term by term, the divers' term at its eight phone lines", () => {
-    const [roles] = Array.from(blocks().sections?.children ?? []);
-    expect(termCounts(roles)).toEqual([
-      { base: 3, sm: 2 },
-      { base: 8, sm: 4 },
+  it("draws the first section's two terms at the lines they wrap to", () => {
+    const [heading, body] = Array.from(blocks().sections?.firstElementChild?.children ?? []);
+    expect(sides(heading)).toEqual(["both"]);
+    const terms = Array.from(body?.firstElementChild?.children ?? []);
+    // "With a shop's divers" is eight lines at 390, not seven: it ends
+    // "which can do both from inside DiveDay." on the eighth.
+    expect(terms.map(sides)).toEqual([lines(2, 1), lines(4, 4)]);
+  });
+
+  it("reaches past the fold with the second section's six terms, so the footer never shows early", () => {
+    const sections = Array.from(blocks().sections?.children ?? []);
+    expect(sections).toHaveLength(2);
+    const terms = Array.from(sections[1]?.lastElementChild?.firstElementChild?.children ?? []);
+    expect(terms.map(sides)).toEqual([
+      lines(2, 1),
+      lines(2, 2),
+      lines(4, 3),
+      lines(3, 3),
+      lines(2, 2),
+      lines(7, 7),
     ]);
-  });
-
-  it("draws 'What is stored' term by term", () => {
-    const [, collect] = Array.from(blocks().sections?.children ?? []);
-    expect(termCounts(collect)).toEqual([
-      { base: 3, sm: 2 },
-      { base: 4, sm: 2 },
-      { base: 7, sm: 4 },
-      { base: 6, sm: 3 },
-      { base: 4, sm: 2 },
-      { base: 14, sm: 7 },
-    ]);
-  });
-
-  it("stops after the two sections the first screen reaches", () => {
-    expect(blocks().sections?.children).toHaveLength(2);
   });
 });

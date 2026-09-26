@@ -132,9 +132,11 @@ export type LegalSkeletonBlock = SkeletonLines | { terms: ReadonlyArray<Skeleton
  *
  * `/terms` and `/privacy` each typed a copy of one skeleton (two title bars,
  * three intro bars, three short bars per section) that neither page rendered:
- * bars 16px and 20px tall with 8px gaps standing in for 28px lines, so the
- * streamed page jumped 53px on a desk, and on a phone the second section's
- * heading stood where the first section's paragraph lands.
+ * bars 16px and 20px tall with 8px gaps standing in for 28px lines. On a desk
+ * the streamed page jumped 53px (/terms) and 40px (/privacy); on a phone
+ * /terms' second section's heading stood where its first section's paragraph
+ * lands, and /privacy's first heading dropped 147px. Both pages now draw
+ * through this one skeleton, and differ only in their counts.
  *
  * Each block here wears the classes the document's element wears, so its type
  * and line height are the document's, and each line is a bar one line box tall
@@ -161,7 +163,12 @@ export function LegalDocumentSkeleton({
   titleLines: SkeletonLines;
   /** How many lines the intro wraps to. */
   introLines: SkeletonLines;
-  /** Each section's body, block by block, as the page's `LegalSection`s hold it. */
+  /**
+   * Each section's body, block by block, as the page's `LegalSection`s hold it:
+   * at least down to the fold at both widths, so the footer never shows early.
+   * Past it nothing is seen landing, so a page may stop there (`/privacy` draws
+   * two sections of its nine).
+   */
   sections: ReadonlyArray<ReadonlyArray<LegalSkeletonBlock>>;
 }) {
   return (

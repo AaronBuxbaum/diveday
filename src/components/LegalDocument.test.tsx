@@ -83,14 +83,17 @@ describe("the reading column", () => {
  * `/terms` and `/privacy` each typed a copy of one skeleton: two title bars
  * for a title that is one line from `sm` (and on /terms at every width), 16px
  * and 20px bars with an 8px gap standing in for 28px lines, three intro bars
- * for an intro of two or four lines, and three short bars per section. The
- * streamed page landed 53px higher on a desk, and on a phone the second
- * section's heading stood where the first section's paragraph lands.
+ * for an intro of two to eight lines, and three short bars per section. The
+ * streamed page landed 53px (/terms) and 40px (/privacy) higher on a desk; on
+ * a phone /terms' second section's heading stood where its first section's
+ * paragraph lands, and /privacy's first heading dropped 147px.
  *
  * So the skeleton now draws each block in the box the document draws it in —
  * the same classes, so the same type and the same line height — and each line
  * as a bar one line box tall (`h-lh`), stacked with no gap, as a paragraph's
- * line boxes are. What stays per page is how many lines its words wrap to.
+ * line boxes are. What stays per page is how many lines its words wrap to:
+ * both pages draw through this one component (`terms/loading.test.tsx`,
+ * `privacy/loading.test.tsx` hold each page's counts).
  */
 describe("the legal document's skeleton", () => {
   const SECTIONS = [[1, { terms: [1] }]] as const;
