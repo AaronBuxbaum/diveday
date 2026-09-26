@@ -284,9 +284,15 @@ describe("a row's height", () => {
  * with the name, the time and the caret, and truncated to 38–182px of its
  * 276–351px on every row — the date never showed, and a "Not sealed" row kept
  * only "Two-…". The column is 358px, wider than the longest seeded value, so
- * below `sm` the row takes `LedgerRow`'s `stacked` grammar: the name, badges,
- * time and caret on the first line, the departure under them at full width.
- * From `sm` up it is the one-line row it was.
+ * below `sm` the row takes `LedgerRow`'s `stacked` grammar: the name, time
+ * and caret on the first line, the departure under them at full width.
+ *
+ * A badge is the exception, and below `sm` it takes a line of its own under
+ * the departure. Left on the first line, "Medical follow-up flagged" (about
+ * 193px with its mark) beside a name, the time and the caret needs more than
+ * the 358px column for any name over about 62px, so on every flagged row the
+ * time and caret wrapped to a middle line at its start and the departure took
+ * a third. From `sm` up it is the one-line row it was.
  */
 describe("a row on a phone", () => {
   it("drops the departure to a full-width line under the name instead of cutting it", () => {
@@ -295,8 +301,39 @@ describe("a row on a phone", () => {
     const trip = within(summary).getByText(/Two-Tank Reef/);
     expect(trip).toHaveClass("max-sm:order-last", "max-sm:basis-full", "sm:truncate");
     expect(trip).not.toHaveClass("truncate");
-    // The name pushes the badge, time and caret to the first line's end.
+    // The name pushes the time and caret to the first line's end.
     expect(within(summary).getByText("Grace Mensah")).toHaveClass("max-sm:me-auto");
+  });
+
+  it("keeps a flagged row's time and caret on the name's line, the badges on a line of their own", () => {
+    const { container } = renderLog([
+      entry({
+        id: "a",
+        integrity: "unsealed",
+        flaggedPrompts: ["Have you had chest surgery in the last 12 months?"],
+      }),
+    ]);
+    const summary = summaryOf(container, "a");
+    const badges = within(summary).getByText("Medical follow-up flagged").parentElement;
+    expect(within(summary).getByText("Not sealed").parentElement).toBe(badges);
+    expect(badges?.parentElement).toBe(summary);
+    // Below `sm` a full-width line after the departure's; from `sm` up the
+    // badges are the row's own items again, where they always stood.
+    expect(badges).toHaveClass("max-sm:order-last", "max-sm:basis-full", "sm:contents");
+    // The name, the time and the caret keep their places on the first line.
+    const moved = [...summary.children].filter((child) =>
+      [...child.classList].some((token) => token.startsWith("max-sm:order")),
+    );
+    expect(moved).toEqual([within(summary).getByText(/Two-Tank Reef/), badges]);
+  });
+
+  it("draws no badge line on a row with nothing to flag", () => {
+    const { container } = renderLog([entry({ id: "a" })]);
+    const summary = summaryOf(container, "a");
+    const fullWidth = [...summary.children].filter((child) =>
+      child.classList.contains("max-sm:basis-full"),
+    );
+    expect(fullWidth).toEqual([within(summary).getByText(/Two-Tank Reef/)]);
   });
 });
 

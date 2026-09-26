@@ -114,6 +114,7 @@ function SignatureRow({
         }`
       : t("waiversStaff.signatures.noTrip");
   const flagged = entry.flaggedPrompts.length > 0;
+  const badged = flagged || entry.integrity !== "valid";
   // Each door is a 44px target around a 20px line, 12px of box unseen above
   // and below its words. The block's `gap-1` counts the room above; when the
   // doors end the block they sink the room below into its `pb-5`
@@ -156,18 +157,30 @@ function SignatureRow({
           {/* On a phone the departure takes a line of its own under the name,
               `LedgerRow`'s `stacked` grammar: beside the name, time and caret
               it truncated to a few words and the date never showed. The name
-              then pushes the badges, time and caret to the first line's end. */}
+              then pushes the time and caret to the first line's end. */}
           <span className="font-medium max-sm:me-auto sm:w-52 sm:shrink-0">{entry.personName}</span>
           <span className="min-w-0 flex-1 text-sm text-muted max-sm:order-last max-sm:basis-full sm:truncate">
             {trip}
           </span>
-          <IntegrityBadge entry={entry} t={t} />
-          {/* The summary badge only — never the answers, which sit in the
-              block below and are read by opening the row. */}
-          {flagged ? (
-            <Badge tone="warning" size="sm" className="shrink-0">
-              {t("waiversStaff.signatures.medicalFlag")}
-            </Badge>
+          {/* On a phone the badges, the exception, take a line of their own
+              under the departure. On the first line "Medical follow-up
+              flagged" (about 193px) beside a name, the time and the caret
+              overran the 358px column for any name over about 62px, and the
+              time and caret wrapped to the start of a middle line. From `sm`
+              up the wrapper is no box at all (`contents`): the badges are the
+              row's own items, where they always stood. Only a row with a
+              badge draws it, so no other row gains an empty line. */}
+          {badged ? (
+            <span className="flex flex-wrap gap-x-3 gap-y-1 max-sm:order-last max-sm:basis-full sm:contents">
+              <IntegrityBadge entry={entry} t={t} />
+              {/* The summary badge only — never the answers, which sit in the
+                  block below and are read by opening the row. */}
+              {flagged ? (
+                <Badge tone="warning" size="sm" className="shrink-0">
+                  {t("waiversStaff.signatures.medicalFlag")}
+                </Badge>
+              ) : null}
+            </span>
           ) : null}
           {entry.signedAt ? (
             <span className="shrink-0 text-xs text-muted tabular-nums">
