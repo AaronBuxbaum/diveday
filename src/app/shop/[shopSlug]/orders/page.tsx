@@ -7,7 +7,7 @@ import { PaymentsConnectCta } from "@/components/PaymentsConnectCta";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { canPersonManagePaymentSettings } from "@/db/authz";
@@ -88,6 +88,18 @@ const OPERATION_UNFINISHED_KEYS: Record<string, StaffMessageKey> = {
   refund: "orders.index.paymentOps.unfinished.refund",
 };
 const OPERATION_UNFINISHED_FALLBACK: StaffMessageKey = "orders.index.paymentOps.unfinished.other";
+
+/**
+ * **"Open trip" is a 44px target on a 20px line** (K-389). The notices drew
+ * it as a plain underlined word, 61.8×20px. The link takes
+ * `tapTargetLinkClass`, and this wrapper is exactly one `text-sm` line tall,
+ * so the 44px box spills 12px into the rows' `space-y-2` either side without
+ * moving the line (`EYEBROW_TAP_WRAPPER`'s idiom, a line box round a larger
+ * target). As a flex item the wrapper stands on the row's baseline by the
+ * link's words.
+ */
+const OPEN_TRIP_LINE = "inline-flex h-5 items-center";
+const OPEN_TRIP_LINK = `${tapTargetLinkClass} font-medium text-primary underline underline-offset-2`;
 
 const IMPORTED_PAYMENT_DIRECTION_KEYS: Record<"payment" | "refund" | "unknown", StaffMessageKey> = {
   payment: "orders.index.importedHistory.direction.payment",
@@ -511,12 +523,14 @@ export default async function OrdersIndexPage({
                       <span>{[tripTitle, personName].filter(Boolean).join(" · ")}</span>
                     ) : null}
                     {opTripId ? (
-                      <Link
-                        href={`/shop/${shopSlug}/trips/${opTripId}`}
-                        className="font-medium text-primary underline underline-offset-2"
-                      >
-                        {t("orders.index.paymentOps.openTrip")}
-                      </Link>
+                      <span className={OPEN_TRIP_LINE}>
+                        <Link
+                          href={`/shop/${shopSlug}/trips/${opTripId}`}
+                          className={OPEN_TRIP_LINK}
+                        >
+                          {t("orders.index.paymentOps.openTrip")}
+                        </Link>
+                      </span>
                     ) : null}
                   </p>
                   {/* The identifier a shop pastes into Stripe's own search, one
@@ -579,12 +593,14 @@ export default async function OrdersIndexPage({
                     {" · "}
                     {formatShortDate(owed.tripStartsAt, locale, shop.timezone)}
                   </span>
-                  <Link
-                    href={`/shop/${shopSlug}/trips/${owed.tripId}`}
-                    className="font-medium text-primary underline underline-offset-2"
-                  >
-                    {t("orders.index.owedRefunds.openTrip")}
-                  </Link>
+                  <span className={OPEN_TRIP_LINE}>
+                    <Link
+                      href={`/shop/${shopSlug}/trips/${owed.tripId}`}
+                      className={OPEN_TRIP_LINK}
+                    >
+                      {t("orders.index.owedRefunds.openTrip")}
+                    </Link>
+                  </span>
                 </li>
               ))}
             </ul>

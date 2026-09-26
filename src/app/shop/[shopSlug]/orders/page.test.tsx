@@ -1,7 +1,9 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
+import Link from "next/link";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Badge } from "@/components/ui/badge";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import {
@@ -213,6 +215,13 @@ function textOf(node: unknown): string {
   return "";
 }
 
+/** A node's rendered children, the `null`s of its conditionals dropped. */
+function childrenOf(node: Node): Node[] {
+  return [node.props.children]
+    .flat(Number.POSITIVE_INFINITY)
+    .filter((child): child is Node => typeof child === "object" && child !== null);
+}
+
 /** The notice a section's `aria-label` names. */
 function notice(tree: unknown, label: string): Node {
   const section = findElements<{ "aria-label"?: string; children?: unknown }>(tree, "section").find(
@@ -241,6 +250,31 @@ describe("the notices' rows", () => {
     expect(classes).toContain("min-h-11");
     expect(classes).toContain("-mb-3.5");
     expect(classes).not.toContain("-my-3.5");
+  });
+
+  /**
+   * **"Open trip" is a 44px target on a 20px line** (pixel-craft class 7;
+   * K-389). Both notices drew it as a plain underlined word, 61.8×20px. The
+   * link takes `tapTargetLinkClass` inside a wrapper exactly one `text-sm`
+   * line tall, so the box a finger meets is 44px and the line stays 20px.
+   */
+  it("makes every Open trip a 44px target that keeps its line", async () => {
+    const tree = await renderOrders("owner", troubleOnADeparture);
+    for (const label of ["Payments that need a check", "Refunds you still owe"]) {
+      const section = notice(tree, label);
+      const links = findElements<{ className?: string; href?: string }>(section, Link).filter(
+        (link) => textOf(link) === "Open trip",
+      );
+      expect(links.length, label).toBeGreaterThan(0);
+      const wrappers = findElements<{ className?: string; children?: unknown }>(section, "span");
+      for (const link of links) {
+        expect(link.props.className).toContain(tapTargetLinkClass);
+        const wrapper = wrappers.find((span) => childrenOf(span as Node).includes(link as Node));
+        expect(wrapper?.props.className?.split(" ")).toEqual(
+          expect.arrayContaining(["h-5", "items-center"]),
+        );
+      }
+    }
   });
 });
 
