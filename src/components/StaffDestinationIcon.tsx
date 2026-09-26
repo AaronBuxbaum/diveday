@@ -99,11 +99,14 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
   "chevron-right": <path d="m9 6 6 6-6 6" />,
   // `chevron-right`'s stroke, drawn from `ICON_VIEWBOX`'s ink-cropped box.
   "door-chevron": <path d="m9 6 6 6-6 6" />,
+  // Drawn at `size-4` on a row's menu trigger: a 2-unit dot is 2.7px there,
+  // and 3 units between dots keep 2px of paper, so it reads as three dots
+  // rather than three specks or a dash (pixel-craft K-89).
   more: (
     <>
-      <circle cx="6" cy="12" r="1" fill="currentColor" stroke="none" />
-      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
-      <circle cx="18" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="5" cy="12" r="2" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="2" fill="currentColor" stroke="none" />
     </>
   ),
   "waiver-action-email": (
