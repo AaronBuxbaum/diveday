@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { buttonClass } from "@/components/ui/button";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import type { SignedWaiverEntry } from "@/db/waivers";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -296,5 +297,46 @@ describe("a row on a phone", () => {
     expect(trip).not.toHaveClass("truncate");
     // The name pushes the badge, time and caret to the first line's end.
     expect(within(summary).getByText("Grace Mensah")).toHaveClass("max-sm:me-auto");
+  });
+});
+
+/**
+ * **The open record reads evenly down to its closing rule** (class 4). The
+ * pixel probe (staff-waivers-record@1280, ink to ink): the version line sat
+ * 24px under the name, the doors 34px under the version and the closing rule
+ * 31px under the doors — each door is a 44px target around a 20px line, so
+ * its 12px of unseen box above and below stacked on the block's own
+ * `gap-3` and `pb-4`. The gap counts the room above the doors (`gap-1`),
+ * and the doors sink the room below into the block's padding (`outdent`)
+ * when they end it; the padding (`pb-5`) is then the same 20px under the
+ * doors as under the flagged answers, and keeps the ring 3px clear of the rule.
+ */
+describe("the evidence block's rhythm", () => {
+  const tokens = (className: string) => className.split(/\s+/).filter(Boolean);
+
+  it("counts the doors' unseen room in its gap, and sinks it into its padding when the doors end the block", () => {
+    const { container } = renderLog([entry({ id: "a" })]);
+    const row = rowFor(container, "a");
+    expect(row.querySelector("summary + div")).toHaveClass("gap-1", "pb-5");
+    const doors = within(row).getAllByRole("link");
+    expect(doors).toHaveLength(2);
+    for (const door of doors) {
+      expect(door).toHaveClass(
+        ...tokens(buttonClass({ variant: "link", size: "sm", flush: true, outdent: "block-end" })),
+      );
+    }
+  });
+
+  it("leaves the doors whole when the flagged answers close the block", () => {
+    const { container } = renderLog([
+      entry({ id: "a", flaggedPrompts: ["Have you had chest surgery in the last 12 months?"] }),
+    ]);
+    const row = rowFor(container, "a");
+    const block = row.querySelector("summary + div");
+    expect(block).toHaveClass("gap-1", "pb-5");
+    expect(block?.lastElementChild?.textContent).toMatch(/chest surgery/);
+    for (const door of within(row).getAllByRole("link")) {
+      expect(door).not.toHaveClass("-mb-3");
+    }
   });
 });

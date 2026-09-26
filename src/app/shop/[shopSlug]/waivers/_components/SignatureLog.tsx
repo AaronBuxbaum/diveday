@@ -113,6 +113,20 @@ function SignatureRow({
           entry.tripStartsAt ? ` · ${formatShortDate(entry.tripStartsAt, locale, timezone)}` : ""
         }`
       : t("waiversStaff.signatures.noTrip");
+  const flagged = entry.flaggedPrompts.length > 0;
+  // Each door is a 44px target around a 20px line, 12px of box unseen above
+  // and below its words. The block's `gap-1` counts the room above; when the
+  // doors end the block they sink the room below into its `pb-5`
+  // (`outdent`), so the doors and the flagged answers alike end 20px above
+  // the closing rule, the ring 3px clear of it. With `gap-3 pb-4` stacked on
+  // that room, the doors sat 34px under the version and 31px over the rule,
+  // against the version's 24px under the name.
+  const door = buttonClass({
+    variant: "link",
+    size: "sm",
+    flush: true,
+    outdent: flagged ? undefined : "block-end",
+  });
   return (
     // A ledger row's box (`ledgerRowBoxClass`): the rules reach 8px past the
     // column, and the words stay on it.
@@ -150,7 +164,7 @@ function SignatureRow({
           <IntegrityBadge entry={entry} t={t} />
           {/* The summary badge only — never the answers, which sit in the
               block below and are read by opening the row. */}
-          {entry.flaggedPrompts.length > 0 ? (
+          {flagged ? (
             <Badge tone="warning" size="sm" className="shrink-0">
               {t("waiversStaff.signatures.medicalFlag")}
             </Badge>
@@ -162,7 +176,7 @@ function SignatureRow({
           ) : null}
           <DisclosureCaret className="shrink-0 text-muted group-open/signature:rotate-90" />
         </summary>
-        <div className="flex flex-col gap-3 pb-4 text-sm">
+        <div className="flex flex-col gap-1 pb-5 text-sm">
           <p className="text-muted tabular-nums">
             {t("waiversStaff.signatures.releaseVersion", { version: entry.templateVersion })}
           </p>
@@ -174,22 +188,16 @@ function SignatureRow({
             <p className="text-muted">{guardianCoSignedText(t, entry.guardian)}</p>
           ) : null}
           <div className="flex flex-wrap gap-x-4 gap-y-1">
-            <Link
-              href={`/shop/${shopSlug}/divers/${entry.personId}`}
-              className={buttonClass({ variant: "link", size: "sm", flush: true })}
-            >
+            <Link href={`/shop/${shopSlug}/divers/${entry.personId}`} className={door}>
               {t("waiversStaff.signatures.openRecord")}
             </Link>
             {entry.tripId ? (
-              <Link
-                href={`/shop/${shopSlug}/trips/${entry.tripId}`}
-                className={buttonClass({ variant: "link", size: "sm", flush: true })}
-              >
+              <Link href={`/shop/${shopSlug}/trips/${entry.tripId}`} className={door}>
                 {t("waiversStaff.signatures.openTrip")}
               </Link>
             ) : null}
           </div>
-          {entry.flaggedPrompts.length > 0 ? (
+          {flagged ? (
             <div>
               <GroupLabel as="h4">{t("waiversStaff.signatures.flaggedAnswersHeading")}</GroupLabel>
               <ul className="mt-1 flex list-disc flex-col gap-1 ps-5 text-warning-strong">
