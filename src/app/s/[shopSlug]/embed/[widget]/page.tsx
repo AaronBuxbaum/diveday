@@ -119,8 +119,12 @@ export default async function EmbedWidgetPage({
           >
             <div className="min-w-0">
               <p className="font-brand-display font-semibold">{course.title}</p>
+              {/* Two lines on a phone, as the grid's card clamps the same
+                  field: at one line every summary on a 390px frame was cut
+                  to a fragment ("How to dive between…") beside a title
+                  that wraps freely (K-376). From `sm` one line holds it. */}
               {course.summary ? (
-                <p className="line-clamp-1 text-sm text-muted">{course.summary}</p>
+                <p className="line-clamp-2 text-sm text-muted sm:line-clamp-1">{course.summary}</p>
               ) : null}
               {/* How long, in the shop's own words — the course index says it,
                   and a list that dropped it was thinner than the page it stands for. */}
