@@ -160,15 +160,17 @@ const CARET_PATHS: Record<DisclosureCaretDirection, string> = {
  * always `aria-hidden`: the destination's label (the same record the header
  * tabs and the palette read) is the accessible name, never the picture.
  *
- * **Every destination a staffer can reach has artwork now.** The map started
- * as the five `primary` tabs the dock draws, and stayed that way until the
- * command palette began drawing the same rail down all twenty-one of its rows
- * (issue #773) — where a partial set is worse than none, because two thirds of
- * the list would have been the fallback dot. The map is still typed partial and
- * the fallback still stands: a destination added tomorrow renders a neutral dot
- * rather than crashing, which is visible enough to notice and harmless to ship.
+ * **Every destination a staffer can reach has artwork, and `tsc` keeps it
+ * that way.** The map started as the five `primary` tabs the dock draws, and
+ * grew to every destination once the command palette drew the same rail down
+ * all of its rows (issue #773), where a partial set is worse than none. It was
+ * still typed partial, with a neutral dot promised for a destination added
+ * without artwork, and that dot could never render: `DiveDayIcon` tested
+ * `name in ICON_PATHS`, found nothing, and fell through to the shared marks, so
+ * "Took a call" shipped as the palette's one blank rail (pixel-craft K-275).
+ * A full record makes a destination without a picture a type error instead.
  */
-const ICON_PATHS: Partial<Record<StaffDestinationId, ReactNode>> = {
+const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
   // The day itself: a sun over the horizon line.
   today: (
     <>
@@ -223,6 +225,10 @@ const ICON_PATHS: Partial<Record<StaffDestinationId, ReactNode>> = {
       <path d="M18 8v8" />
       <path d="M14 12h8" />
     </>
+  ),
+  // Took a call: the handset a diver rang in on.
+  tookACall: (
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z" />
   ),
   // Walk-in: someone through the door, at the counter.
   walkIn: (
@@ -383,7 +389,7 @@ export function DiveDayIcon({
   const path = isCaret ? (
     <path d={CARET_PATHS[direction]} />
   ) : name in ICON_PATHS ? (
-    (ICON_PATHS[name as StaffDestinationId] ?? <circle cx="12" cy="12" r="4" />)
+    ICON_PATHS[name as StaffDestinationId]
   ) : (
     SHARED_ICON_PATHS[name as Exclude<DiveDaySharedIconName, "caret">]
   );
