@@ -27,7 +27,16 @@ describe("the kinds-of-day rows", () => {
 
   it("draws no button at sm, and sizes the armed delete's Cancel md through InlineConfirm", () => {
     expect(SOURCE).not.toContain('size: "sm"');
-    expect(SOURCE, "the confirm follows the trigger's md").not.toContain("confirmClassName");
+    // The trigger is `flush` on the row's edge and the armed block's confirm is
+    // not on that edge, so it takes a class of its own (K-06): the trigger's
+    // variant, naming no size, so it follows the trigger's md.
+    const confirms = [...SOURCE.matchAll(/confirmClassName=\{buttonClass\(\{[^}]*\}\)\}/g)];
+    expect(confirms.length, "every confirmClassName is a buttonClass call").toBe(
+      SOURCE.split("confirmClassName").length - 1,
+    );
+    for (const [confirm] of confirms) {
+      expect(confirm, "the confirm follows the trigger's md").not.toMatch(/size:|flush/);
+    }
     const armed = SOURCE.slice(
       SOURCE.indexOf("<InlineConfirm"),
       SOURCE.indexOf("/>", SOURCE.indexOf("<InlineConfirm")),
