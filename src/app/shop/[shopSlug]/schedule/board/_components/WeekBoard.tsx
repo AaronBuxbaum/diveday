@@ -12,6 +12,7 @@ import { fill } from "@/i18n/fill";
 import type { SiteMarkCode } from "@/lib/site-mark";
 import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import { isSoldOut, seatFill } from "@/lib/week-seats";
+import { WEEK_DAY_GRID_CLASS, WEEK_ROW_BOX_CLASS } from "./week-geometry";
 
 /**
  * What every departure the grid draws — a day cell or a spanning course bar —
@@ -441,7 +442,9 @@ function WeekBoat({
     // hovers and presses as one. The title was a 19–38px link inside a row
     // that painted a hover fill it did not answer to. What else in the row
     // is a control — the "⋯", a flag — stands above the door (`z-10`).
-    <div className="group/boat pressable-row relative flex items-start gap-2.5 rounded-lg px-2 py-2 hover:bg-surface has-[a:focus-visible]:bg-surface sm:gap-3">
+    <div
+      className={`group/boat pressable-row relative ${WEEK_ROW_BOX_CLASS} hover:bg-surface has-[a:focus-visible]:bg-surface`}
+    >
       {/* The drawn site mark leads the row (ADR 20260901-diveday-reimagined,
           slice 13f). No coral: the budget is one creature's detail per
           surface, and a week has no one boat to give it to. */}
@@ -685,13 +688,9 @@ export function WeekBoard({
           const empty = day.entries.length === 0 && spans.length === 0;
           return (
             <div key={day.dateIso} className="border-b border-border">
-              {/* **One rail, 72px, at every width** (pixel-craft class 3).
-                  The phone's was 3rem, narrower than the label it holds:
-                  "WED 22" ran 12–14px past it and today's disc was squeezed
-                  to an oval. The widest label below `sm` is a weekday's fixed
-                  32px, its 6px gap and today's 32px disc — 70px — and from
-                  `sm` up the stacked label was already 4.5rem wide. */}
-              <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-x-3 py-2 sm:gap-x-5">
+              {/* One rail, 72px, at every width — sized, and shared with
+                  the loading skeleton, in `week-geometry.ts`. */}
+              <div className={WEEK_DAY_GRID_CLASS}>
                 {/* **The day holds its place while its own boats scroll**
                     (ADR 20260827-clearwater-surface-language, decision 10).
                     This was the day stream's behaviour and it moves here
