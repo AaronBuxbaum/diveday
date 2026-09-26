@@ -260,13 +260,50 @@ describe("the rail as it renders", () => {
     for (const group of SETTINGS_GROUPS) {
       const label = nav.querySelector(`#settings-rail-${group.id}`);
       expect(label, `${group.id} has no label on the rail`).toBeTruthy();
-      // Sticky inside the rail's own scroll area and opaque: 42 rows do not
-      // fit beside a bar on any viewport, so the group being read has to stay
-      // named at the top of the column.
-      expect(label?.className).toContain("sticky top-0");
-      expect(label?.className).toContain("bg-background");
+      // Sticky inside the rail's own scroll area: 42 rows do not fit beside a
+      // bar on any viewport, so the group being read has to stay named at the
+      // top of the column.
+      expect(label).toHaveClass("sticky", "top-0", "settings-rail-label");
     }
     expect(nav.querySelectorAll("ul")).toHaveLength(SETTINGS_GROUPS.length);
+  });
+
+  /**
+   * **Opaque only while rows slide under it.** At rest the rail's first label
+   * sits on the staff page's water-band wash, and an always-opaque label
+   * painted a flat grey slab (#f2f2f7) across the blue: the pixel probe
+   * measured it 256×24 at y 149 on settings-address. The fill belongs to the
+   * stuck state, which a scroll-state container query can see; a browser
+   * without one keeps the opaque label, which is the safe way to be wrong.
+   */
+  it("lets the page's wash show through a label at rest", () => {
+    renderRail();
+    const nav = screen.getByRole("navigation", { name: "Settings sections" });
+    for (const group of SETTINGS_GROUPS) {
+      const label = nav.querySelector(`#settings-rail-${group.id}`);
+      expect(label).not.toHaveClass("bg-background");
+      const words = label?.querySelector(":scope > span");
+      expect(words?.textContent).toBe(group.id);
+      expect(words).not.toHaveClass("bg-background");
+    }
+  });
+
+  it("fills a label only while it is stuck, where the browser can tell", () => {
+    const css = readFileSync(join(HERE, "..", "..", "..", "..", "globals.css"), "utf8").replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
+    const supports = css.indexOf("@supports (container-type: scroll-state)");
+    expect(supports).toBeGreaterThan(-1);
+    const gated = css.slice(supports);
+    expect(gated).toMatch(/\.settings-rail-label\s*\{\s*container-type:\s*scroll-state;/);
+    expect(gated).toMatch(
+      /@container scroll-state\(stuck: top\)\s*\{\s*\.settings-rail-label > span\s*\{\s*background: var\(--background\);/,
+    );
+    // Outside the gate the label keeps the fill it always had.
+    expect(css.slice(0, supports)).toMatch(
+      /\.settings-rail-label > span\s*\{\s*background: var\(--background\);/,
+    );
   });
 
   it("tints the label of the group the current row is in, and no other", () => {
