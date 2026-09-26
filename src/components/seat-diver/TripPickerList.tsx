@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { joinFacts } from "@/lib/format";
 
 /** One departure a staffer can stand on. */
 export type TripPickerOption = {
@@ -12,14 +13,6 @@ export type TripPickerOption = {
   /** The right-hand column: seats left, or booked/capacity. */
   meta: ReactNode;
 };
-
-/**
- * The separator after a title, bound to it (pixel-craft class 8, K-525): a
- * no-break space before the dot, so a long title that wraps never opens its
- * next line on "·". The space after it still breaks, so the time may start a
- * line. By code point, because a literal one is invisible in the source.
- */
-const TITLE_SEPARATOR = `${String.fromCodePoint(0x00a0)}·`;
 
 /**
  * "Which boat?" — the departure picker both the counter walk-in and the global
@@ -45,13 +38,11 @@ export function TripPickerList({
             href={option.href}
             className="flex min-h-11 items-baseline justify-between gap-3 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm font-medium hover:border-primary/40"
           >
-            {/* Separate text nodes rather than one joined string: text is
-                shaped per DOM text node, so joining them re-kerns across the
-                old boundaries and shifts glyphs sub-pixel. */}
-            <span className="min-w-0 flex-1">
-              {option.title}
-              {TITLE_SEPARATOR} {option.when}
-            </span>
+            {/* A row's facts, joined the app's one way (K-525): `joinFacts`
+                binds the dot to the title's last word and the time to the
+                dot, so a long title that wraps never opens its next line on
+                "·" nor leaves the time alone under one. */}
+            <span className="min-w-0 flex-1">{joinFacts([option.title, option.when])}</span>
             <span className="shrink-0 tabular-nums text-muted">{option.meta}</span>
           </Link>
         </li>

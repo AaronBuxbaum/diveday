@@ -2,6 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { joinFacts } from "@/lib/format";
 import { TripPickerList } from "./TripPickerList";
 
 afterEach(cleanup);
@@ -32,27 +33,28 @@ describe("the walk-in's departure picker", () => {
   });
 
   /**
-   * **No line starts with "·"** (pixel-craft class 8, K-525). The title and
-   * the time were joined " · " with a breaking space before the dot, so at
-   * 390 a long title wrapped and the second line opened on the separator. The
-   * space before it is a no-break space, binding the dot to the title's last
-   * word; the one after it still breaks, so the time may start a line.
+   * **A title and its time are a row's facts, joined the app's one way**
+   * (pixel-craft class 8, K-525). They were joined " · " with a breaking space
+   * before the dot, so at 390 a long title wrapped and the second line opened
+   * on the separator. `joinFacts` (`src/lib/format.ts`) binds the dot to the
+   * word before it, so no line starts with "·", and binds the last fact to
+   * the one before it, so no line ends on "·" with the time alone under it.
    */
-  it("binds each separator to the title before it", () => {
+  it("joins each title and time as a row's facts, never breaking at the dot", () => {
     render(<TripPickerList options={OPTIONS} />);
-    for (const link of screen.getAllByRole("link")) {
+    const links = screen.getAllByRole("link");
+    for (const [index, link] of links.entries()) {
+      const option = OPTIONS[index];
+      // Raw `textContent`: jest-dom's `toHaveTextContent` folds U+00A0 into a
+      // plain space, which is the one difference this asserts.
       const text = link.textContent ?? "";
+      expect(text).toBe(`${joinFacts([option.title, option.when])}${option.meta}`);
       const dots = [...text.matchAll(/(.)·(.)/g)];
       expect(dots, text).toHaveLength(1);
       for (const [, before, after] of dots) {
-        expect(before, `the space before the dot in "${text}"`).toBe(" ");
-        expect(after, `the space after the dot in "${text}"`).toBe(" ");
+        expect(before, `the space before the dot in "${text}"`).toBe("\u00A0");
+        expect(after, `the space after the dot in "${text}"`).toBe("\u00A0");
       }
     }
-    // Raw `textContent`: jest-dom's `toHaveTextContent` folds U+00A0 into a
-    // plain space, which is the one difference this asserts.
-    expect(screen.getByRole("link", { name: /Two-Tank Reef/ }).textContent).toContain(
-      "Two-Tank Reef — Molasses & French · 11:00 AM – 2:30 PM",
-    );
   });
 });

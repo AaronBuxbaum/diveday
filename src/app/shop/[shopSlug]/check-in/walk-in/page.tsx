@@ -154,16 +154,14 @@ export default async function WalkInPage({
               options={trips.map((trip) => ({
                 id: trip.tripId,
                 href: `${self}/${trip.tripId}${diverq ? `?diverq=${encodeURIComponent(diverq)}` : ""}`,
-                // Two facts, not one joined label: the list binds the separator
-                // to the title (K-525) and keeps each its own text node.
+                // Two facts, not one joined label: the list joins them the
+                // way every row's facts are joined (`joinFacts`, K-525).
                 title: trip.title,
                 when: formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone),
-                // One joined string, unlike the title and time the list keeps
-                // apart: joining shifts these two numbers sub-pixel, but writing
-                // them as JSX puts a
-                // bare "/" text node in a component, which `pnpm check:copy`
-                // rightly refuses. Two digits of sub-pixel shaping is the
-                // cheaper side of that trade.
+                // A string, not JSX: joining shifts these two numbers
+                // sub-pixel, but writing them as JSX puts a bare "/" text node
+                // in a component, which `pnpm check:copy` rightly refuses. Two
+                // digits of sub-pixel shaping is the cheaper side of that trade.
                 meta: `${trip.booked}/${trip.capacity}`,
               }))}
             />
