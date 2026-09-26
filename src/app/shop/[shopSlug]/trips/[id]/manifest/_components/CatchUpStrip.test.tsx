@@ -62,12 +62,28 @@ describe("CatchUpStrip", () => {
   });
 
   it("keeps its dismiss control at a boat-sized target", () => {
-    // 44px is the floor on every safety surface; `buttonClass`'s default rung
-    // stands above it. Asserted on the class rather than a measured box because
+    // 44px is the floor on every safety surface, and `sm` stands on it. Asserted on the class rather than a measured box because
     // jsdom lays nothing out.
     render(<CatchUpStrip {...props} />);
     const button = screen.getByRole("button", { name: "Got it" });
     expect(button.className).toMatch(/min-h-1[12]/);
+  });
+
+  /**
+   * **"Got it" ends on the panel's inset, and its box stays out of the title's
+   * line** (pixel-craft class 5, K-190). At the default `md` it was 48px with
+   * `px-4`: the header row grew round it, the title sat 33px down a 16px
+   * panel, and the word ended 33px inside the right edge. At `sm`, `flush`
+   * keeps 8px of hover fill and hands it back (`-mx-2 px-2`), and `-my-2.5`
+   * hands back what the 44px target adds round its 20px line — 24px, the
+   * title's own line — so the title sits 16px down and the word ends 16px in,
+   * with the target whole.
+   */
+  it("hands the dismiss target's room back to the panel's padding", () => {
+    render(<CatchUpStrip {...props} />);
+    const button = screen.getByRole("button", { name: "Got it" });
+    expect(button).toHaveClass("-mx-2", "px-2", "-my-2.5", "text-sm");
+    expect(button.className).not.toMatch(/(^|\s)(px-4|min-h-12)(\s|$)/);
   });
 
   it("reads its critical text at 16px, like every other line on the manifest", () => {
