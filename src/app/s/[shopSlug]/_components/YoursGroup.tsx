@@ -75,8 +75,13 @@ export function YoursGroup({
           </li>
         ))}
         <li className="py-3">
+          {/* `flush`: at its size's padding "Your shelf" started 16px right of
+              the heading and the row titles above it. */}
           <form action={openMyShelfAction.bind(null, shopSlug)}>
-            <SubmitButton pendingLabel={shelfLabel} className={buttonClass({ variant: "link" })}>
+            <SubmitButton
+              pendingLabel={shelfLabel}
+              className={buttonClass({ variant: "link", flush: true })}
+            >
               {shelfLabel}
             </SubmitButton>
           </form>
