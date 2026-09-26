@@ -94,10 +94,13 @@ export function DayStrip({
 
   // Marks alternate rows only where they would otherwise collide, so a day with
   // three well-spaced boats reads on one line and a day with two at the same
-  // hour still reads at all.
+  // hour still reads at all. Only a word can collide with a word: a mark the
+  // caller gave no label (the trip page's lines-off) is skipped, where it used
+  // to push the next label up a row to clear nothing.
   let lastLabelX = Number.NEGATIVE_INFINITY;
   let lastWasRaised = false;
   const marks = geometry.marks.map((mark) => {
+    if (!markLabels[mark.id]) return { ...mark, raised: false };
     const raised = mark.x - lastLabelX < LABEL_CLEARANCE ? !lastWasRaised : false;
     lastLabelX = mark.x;
     lastWasRaised = raised;

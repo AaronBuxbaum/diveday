@@ -147,6 +147,63 @@ describe("DayStrip", () => {
     expect(roomOf("Molasses Reef")).toContain("clamp(2.60rem");
   });
 
+  /**
+   * **Only a word can collide with a word** (docs/design/pixel-craft.md,
+   * class 4). The trip page draws its lines-off mark with no label, and the
+   * first dive's label climbed a row to dodge it: "Molasses Reef" 14–15px
+   * above "6:00 PM", with the only other labelled mark 888px away
+   * (trip-crew-clash, trip-guests, trip-manage). A mark that draws no word
+   * takes no part in the collision.
+   */
+  it("does not raise a label to clear a mark that has none", () => {
+    const linesOff = dayStripGeometry({
+      from: at(6),
+      to: at(22),
+      now: at(10),
+      daylight: [{ sunriseAt: at(7), sunsetAt: at(19, 45) }],
+      daylightProgress: 0.2,
+      marks: [
+        { id: "lines-off", at: at(7) },
+        { id: "first-dive", at: at(7, 30) },
+      ],
+    });
+    const { container } = render(
+      <DayStrip
+        geometry={linesOff}
+        label="the day"
+        markLabels={{ "first-dive": "Molasses Reef" }}
+      />,
+    );
+    const word = [...container.querySelectorAll("span")].find(
+      (span) => span.textContent === "Molasses Reef",
+    );
+    expect(word?.className).toContain("-translate-y-[calc(100%+0.625rem)]");
+    expect(word?.className).not.toContain("-translate-y-[calc(100%+1.5rem)]");
+  });
+
+  it("still raises the second of two labelled marks with an unlabelled one between them", () => {
+    const crowded = dayStripGeometry({
+      from: at(6),
+      to: at(22),
+      now: at(10),
+      daylight: [{ sunriseAt: at(7), sunsetAt: at(19, 45) }],
+      daylightProgress: 0.2,
+      marks: [
+        { id: "first", at: at(7) },
+        { id: "unlabelled", at: at(7, 15) },
+        { id: "second", at: at(7, 30) },
+      ],
+    });
+    const { container } = render(
+      <DayStrip
+        geometry={crowded}
+        label="the day"
+        markLabels={{ first: "7:00", second: "7:30" }}
+      />,
+    );
+    expect(labelRows(container)).toBe(2);
+  });
+
   it("leaves both labels on one line when they do not touch", () => {
     const { container } = render(
       <DayStrip
