@@ -173,11 +173,12 @@ export function ShopfrontHero({
               minimumFractionDigits: 1,
               maximumFractionDigits: 1,
             }).format(average)}
-          </span>
-          <span className="tabular-nums">
-            {" · "}
-            {t("reviews.count", { count: aggregate.count })}
-          </span>
+          </span>{" "}
+          {/* The dot is a fragment of its own, so the row's gap falls evenly
+              either side of it; the spaces are for anything reading the text,
+              and a flex row renders none of them. */}
+          <span aria-hidden="true">·</span>{" "}
+          <span className="tabular-nums">{t("reviews.count", { count: aggregate.count })}</span>
         </p>
       )}
       <BadgeWall badges={badges} establishedYear={establishedYear} t={t} className="mt-4" />

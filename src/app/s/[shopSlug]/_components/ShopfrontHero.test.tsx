@@ -89,6 +89,26 @@ describe("the hero renders only what the shop authored", () => {
     expect(visibleText(screen.getByRole("paragraph"))).toBe("4.3 · 83 reviews");
   });
 
+  it("sets the dot as its own hidden fragment, so the row's gap falls evenly either side", () => {
+    // The count opened with " · ", so the 8px gap fell before the dot and one
+    // space after it (pixel-craft K-175, DIVER-1-32).
+    render(
+      <ShopfrontHero
+        name="Blue Mantis Divers"
+        tagline={null}
+        aggregate={{ count: 83, average: 4.3, suppressedCount: 0 }}
+        commitments={[]}
+        locale="en-US"
+        t={t}
+      />,
+    );
+
+    const dot = screen.getByText("·");
+    expect(dot).toHaveAttribute("aria-hidden", "true");
+    expect(dot.parentElement).toBe(screen.getByRole("paragraph"));
+    expect(screen.getByText("83 reviews").textContent).toBe("83 reviews");
+  });
+
   it("formats the figure for the reader's own locale", () => {
     render(
       <ShopfrontHero

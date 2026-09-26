@@ -111,24 +111,39 @@ export function NextBoatCard({
         </p>
         <h2 className="mt-1 text-lg font-medium text-pretty">{title}</h2>
         {description ? <p className="mt-2 line-clamp-2 text-sm text-muted">{description}</p> : null}
+        {/* Each dot is a fragment of its own, so the row's gap falls evenly
+            either side of it; opening the next fragment with "· " put the gap
+            before the dot and one space after. The spaces between fragments
+            are for anything reading the text, and a flex row renders none. */}
         <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-sm tabular-nums">
           <span className="font-medium">{spots}</span>
           {price ? (
-            <span className="text-muted">
-              · {price} {t("common.perDiver")}
-            </span>
+            <>
+              {" "}
+              <span aria-hidden="true" className="text-muted">
+                ·
+              </span>{" "}
+              <span className="text-muted">
+                {price} {t("common.perDiver")}
+              </span>
+            </>
           ) : null}
           {/* Why this is not the 7:00 AM boat on the week below. Quiet ink, one
               fragment on the line the card already has, and absent entirely
               when there is nothing to explain. */}
           {skipped > 0 ? (
-            <span className="text-muted">
-              ·{" "}
-              {t("schedule.nextWithSpace.earlierFull", {
-                count: skipped,
-                time: firstSkippedTime ?? "",
-              })}
-            </span>
+            <>
+              {" "}
+              <span aria-hidden="true" className="text-muted">
+                ·
+              </span>{" "}
+              <span className="text-muted">
+                {t("schedule.nextWithSpace.earlierFull", {
+                  count: skipped,
+                  time: firstSkippedTime ?? "",
+                })}
+              </span>
+            </>
           ) : null}
         </p>
       </div>

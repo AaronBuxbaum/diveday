@@ -154,6 +154,39 @@ describe("next boat with space", () => {
   });
 });
 
+/**
+ * **A separator sits in the middle of its gap** (pixel-craft K-175). Each
+ * fragment used to open with its own "· ", so the row's 8px gap fell before
+ * the dot and one space after it: 9px against 6px at 1280, 9 against 5 at
+ * 390. The dot is a fragment of its own now, and the gap falls on both sides.
+ */
+describe("the facts line", () => {
+  it("sets each dot as its own hidden fragment, so the row's gap falls evenly either side", () => {
+    render(card({ skipped: 1, firstSkippedTime: "7:00 AM" }));
+
+    const row = screen.getByText("5 spots left").parentElement as HTMLElement;
+    const fragments = [...row.children];
+    const dots = fragments.filter((fragment) => fragment.textContent === "·");
+    expect(dots).toHaveLength(2);
+    for (const dot of dots) expect(dot).toHaveAttribute("aria-hidden", "true");
+    for (const fragment of fragments.filter((fragment) => !dots.includes(fragment))) {
+      expect(fragment.textContent).not.toMatch(/^[\s·]/);
+    }
+    // Still one sentence to anything reading the text: the spaces are there,
+    // and a flex row renders none of them.
+    expect(row.textContent?.replace(/\s+/g, " ").trim()).toBe(
+      "5 spots left · $120.00 per diver · the 7:00 AM boat is full",
+    );
+  });
+
+  it("draws no dot for a fact the card does not have", () => {
+    render(card({ price: null }));
+
+    const row = screen.getByText("5 spots left").parentElement as HTMLElement;
+    expect(row.textContent).not.toContain("·");
+  });
+});
+
 describe("elevation is earned", () => {
   it("sits on the panel's bed at the panel radius — the rounded-3xl tinted hero it replaced is gone", () => {
     const { container } = render(card());
