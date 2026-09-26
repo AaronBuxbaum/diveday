@@ -519,6 +519,27 @@ describe("the diving options a shop runs", () => {
  * preview used to say nothing about that, so a shop reading it had no way to
  * know which departures it did not describe.
  */
+/**
+ * **One beat per line on a phone** (K-585). The preview was a greedy
+ * `flex-wrap` strip, so at 390 five lines held one beat each and the third
+ * held two, 25px apart, and the list read as a list with one line carrying two
+ * beats. From `sm` up it is the strip it was.
+ */
+describe("the dock-day preview's layout", () => {
+  it("stacks the beats on a phone and runs them as a strip from sm up", async () => {
+    const [row] = findElements<{ sectionId?: string; children?: unknown }>(
+      await renderSettings("owner"),
+      settingsRowsModule.SettingsRow,
+    ).filter((candidate) => candidate.props.sectionId === "dockCall");
+    const lists = findElements<{ className?: string }>(row?.props.children, "dl");
+    expect(lists).toHaveLength(1);
+    const classes = lists[0]?.props.className?.split(" ") ?? [];
+    expect(classes).toEqual(expect.arrayContaining(["grid", "sm:flex", "sm:flex-wrap"]));
+    expect(classes).not.toContain("flex");
+    expect(classes).not.toContain("flex-wrap");
+  });
+});
+
 describe("the dock-day preview and the sites that override it", () => {
   it("says nothing extra when no site sets its own bottom time", async () => {
     const hrefs = hrefsIn(await renderSettings("owner"));

@@ -1446,8 +1446,12 @@ export default async function SettingsPage({
                 is also why it stops at the last dive rather than inventing a
                 return, since each trip publishes its own. Two dives, because
                 that is what most of this catalogue is; a departure's own
-                planned count is what the diver's page lays out. */}
-              <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted">
+                planned count is what the diver's page lays out.
+
+                One beat per line on a phone and the strip from `sm` up: a
+                greedy wrap at 390 put two beats on the third of six lines
+                and one on every other (K-585). */}
+              <dl className="mt-5 grid gap-y-1 text-sm text-muted sm:flex sm:flex-wrap sm:gap-x-6">
                 {dockDayOffsets(shop).map(({ step, number, minutesFromDeparture }) => (
                   <div key={`${step}-${number ?? 0}`} className="flex items-baseline gap-2">
                     <dt>{t(DOCK_DAY_STEP_KEYS[step], { number: number ?? 1 })}</dt>
