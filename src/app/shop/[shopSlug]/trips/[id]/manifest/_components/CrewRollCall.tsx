@@ -343,8 +343,8 @@ export function CrewRollCall({
                     </PersonSheet>
                     {/* `py-2.5`, as on the diver row: 10px above centres the
                       mark on the 76px summary line, and 10px below is its
-                      focus ring's room when the mark sets the row's height
-                      (Boat mode, #1981). */}
+                      focus ring's room whenever the mark sets the row's
+                      height (#1981). */}
                     <div className="shrink-0 py-2.5 ps-3 pe-3 print:hidden">
                       {rowState.notBackAboard ? (
                         <RollCallMark state="notBack" />

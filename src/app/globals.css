@@ -2153,25 +2153,33 @@ textarea {
   line-height: 1.5rem !important;
 }
 
-/* Force all interactive targets (buttons, inputs, select, links) to be at least 44px high & wide if applicable */
-.glare-mode button,
-.glare-mode select,
-.glare-mode textarea,
-.glare-mode input:not([type="hidden"]),
-.glare-mode summary,
-.glare-mode [role="button"] {
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce touch target min-height */
-  min-height: 44px !important;
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce touch target min-width */
-  min-width: 44px !important;
+/*
+ * Every target at least 44px high and wide: **a floor, never a ceiling.**
+ *
+ * In `@layer base` and without `!important`, and that is load-bearing. It was
+ * unlayered and important, which beats every utility, so it replaced every
+ * *larger* minimum as well as the smaller ones: the roll call's `min-h-19`
+ * person button rendered at 52px beside its 56px mark, the name and index
+ * riding 11–13px above the mark's centre (pixel probe,
+ * `manifest-seen-boat-mode`). Layered, an element with no minimum of its own
+ * still gets 44px, and a component that asks for more keeps it.
+ * `glare-mode.test.ts` holds both halves.
+ */
+@layer base {
+  .glare-mode button,
+  .glare-mode select,
+  .glare-mode textarea,
+  .glare-mode input:not([type="hidden"]),
+  .glare-mode summary,
+  .glare-mode [role="button"],
+  .glare-mode a {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
-/* Standalone navigation links / controls in lists or bars should satisfy the 44px targets too */
+/* Standalone navigation links / controls in lists or bars centre their label in that box */
 .glare-mode a {
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce touch target min-height */
-  min-height: 44px !important;
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce touch target min-width */
-  min-width: 44px !important;
   /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce layout display */
   display: inline-flex !important;
   /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to center labels */
@@ -2180,15 +2188,21 @@ textarea {
   justify-content: center !important;
 }
 
-/* If a link is inline, don't force displays that disrupt sentence flow */
-.glare-mode p a,
-.glare-mode span a,
-.glare-mode .inline a {
-  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to restore normal height flow */
-  min-height: auto !important;
-  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to restore normal width flow */
-  min-width: auto !important;
-  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to restore text wrapping */
+/*
+ * A link inside a sentence stays in the sentence: no box, no floor.
+ *
+ * **Not a link that is already a tap target.** `EyebrowBackLink` is an
+ * `inline-flex min-h-11` link whose wrapper is a `<span>`, and `span a` turned
+ * it inline at 33×28, its chevron on a line of its own above "TRIP". Prose
+ * links carry no `inline-flex`; every tap-target link does.
+ *
+ * Unlayered, so its `auto` minimums beat the layered floor above without an
+ * `!important`; `display` keeps one, to beat the one on `.glare-mode a`.
+ */
+.glare-mode :is(p, span, .inline) a:not(.inline-flex) {
+  min-height: auto;
+  min-width: auto;
+  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to beat the display forced on .glare-mode a */
   display: inline !important;
 }
 
