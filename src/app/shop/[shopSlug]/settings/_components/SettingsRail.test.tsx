@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RAIL_ROW_CLASS } from "@/components/ui/rail";
 import {
@@ -31,6 +31,11 @@ import { SettingsDoorRow, SettingsRow } from "./SettingsRows";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SETTINGS_DIR = join(HERE, "..");
 const LOCALES = join(HERE, "..", "..", "..", "..", "..", "i18n", "locales");
+/** The stylesheet with its comments out, so a sentence about a rule is never read as the rule. */
+const GLOBALS_CSS = readFileSync(join(HERE, "..", "..", "..", "..", "globals.css"), "utf8").replace(
+  /\/\*[\s\S]*?\*\//g,
+  "",
+);
 
 let pathname = "/shop/blue-mantis/settings";
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
@@ -293,19 +298,39 @@ describe("the rail as it renders", () => {
   });
 
   it("fills a label only while it is stuck, where the browser can tell", () => {
-    const css = readFileSync(join(HERE, "..", "..", "..", "..", "globals.css"), "utf8").replace(
-      /\/\*[\s\S]*?\*\//g,
-      "",
-    );
-    const supports = css.indexOf("@supports (container-type: scroll-state)");
+    const supports = GLOBALS_CSS.indexOf("@supports (container-type: scroll-state)");
     expect(supports).toBeGreaterThan(-1);
-    const gated = css.slice(supports);
+    const gated = GLOBALS_CSS.slice(supports);
     expect(gated).toMatch(/\.settings-rail-label\s*\{\s*container-type:\s*scroll-state;/);
     expect(gated).toMatch(
-      /@container scroll-state\(stuck: top\)\s*\{\s*\.settings-rail-label > span\s*\{\s*background: var\(--background\);/,
+      /@container scroll-state\(stuck: top\)\s*\{\s*\.settings-rail-label > span\s*\{\s*background: var\(--rail-label-fill\);/,
     );
-    // Outside the gate the label keeps the fill it always had.
-    expect(css.slice(0, supports)).toMatch(
+    // Outside the gate every label is filled, with the same fill.
+    expect(GLOBALS_CSS.slice(0, supports)).toMatch(
+      /\.settings-rail-label > span\s*\{\s*background: var\(--rail-label-fill\);/,
+    );
+  });
+
+  /**
+   * **The fill is the wash, never a flat ground.** The rail's box starts inside
+   * the staff page's water-band wash, and the rail opens on the current row
+   * (below), so on Boats, Print, Kinds of day, Seasons and WhatsApp a label is
+   * stuck at the box's top the moment the page lands. A `var(--background)`
+   * fill put the same 256×24 #f2f2f7 slab back across the blue there, 24px
+   * higher than the one at rest. A filled label paints the band's own gradient,
+   * shifted by how deep into the band the label sits, over the ground's colour
+   * for wherever the band has run out.
+   */
+  it("fills a label with the page's own wash, at the label's depth in it", () => {
+    const fill = GLOBALS_CSS.match(/--rail-label-fill:([^;]*);/)?.[1] ?? "";
+    expect(fill).toContain("var(--background)");
+    expect(fill).toContain("var(--water-wash");
+    expect(fill).toContain("var(--rail-label-depth");
+    expect(fill).toContain("var(--water-band-h");
+    // One wash, two readers: the band paints the property it publishes.
+    const band = GLOBALS_CSS.slice(GLOBALS_CSS.indexOf(".water-band {"));
+    expect(band.slice(0, band.indexOf("}"))).toContain("background-image: var(--water-wash);");
+    expect(GLOBALS_CSS).not.toMatch(
       /\.settings-rail-label > span\s*\{\s*background: var\(--background\);/,
     );
   });
@@ -445,6 +470,133 @@ describe("the rail keeps the current row in view", () => {
     renderRail();
 
     expect(railScroller().scrollTop).toBe(0);
+  });
+});
+
+/**
+ * **A label knows how deep into the page's wash it sits.** The wash is the
+ * shop layout's `.water-band` background, which scrolls with the page, while
+ * the rail's box is sticky and scrolls on its own; no stylesheet can line a
+ * label's fill up with a background on another element. So the rail measures
+ * each label against the band, on landing and whenever the page or the rail
+ * scrolls, and publishes it as `--rail-label-depth` for the fill to shift by.
+ */
+describe("the rail lines its labels' fill up with the page's wash", () => {
+  function stubDepths(boxes: { band: number; labels: Record<string, number>; scroller: number }) {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const at = (top: number, height: number) =>
+        ({
+          x: 0,
+          y: top,
+          top,
+          left: 0,
+          width: 256,
+          height,
+          bottom: top + height,
+          right: 256,
+        }) as DOMRect;
+      if (this.classList.contains("water-band")) return at(boxes.band, 2000);
+      if (this.classList.contains("overflow-y-auto")) return at(boxes.scroller, 744);
+      const label = boxes.labels[this.id];
+      if (label !== undefined) return at(label, 24);
+      return at(0, 0);
+    });
+  }
+
+  function renderInBand() {
+    return render(<div className="water-band">{rail()}</div>);
+  }
+
+  function depth(groupId: string) {
+    const label = document.getElementById(`settings-rail-${groupId}`);
+    return label?.style.getPropertyValue("--rail-label-depth");
+  }
+
+  /** Frames the rail asked for, run when the test says the frame has come. */
+  let frames: FrameRequestCallback[] = [];
+  function nextFrame() {
+    const due = frames;
+    frames = [];
+    for (const callback of due) callback(0);
+  }
+
+  beforeEach(() => {
+    frames = [];
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      frames.push(callback);
+      return frames.length;
+    });
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("publishes each label's depth into the band when the page lands", () => {
+    // settings-boats@1280: the band starts under the bar and the demo banner,
+    // the rail's box with it; the first label rests 24px down the box.
+    stubDepths({
+      band: 125,
+      scroller: 125,
+      labels: {
+        "settings-rail-your-shop": 149,
+        "settings-rail-money": 1180,
+        "settings-rail-data-integrations": 1690,
+      },
+    });
+    renderInBand();
+
+    expect(depth("your-shop")).toBe("24px");
+    expect(depth("money")).toBe("1055px");
+    expect(depth("data-integrations")).toBe("1565px");
+  });
+
+  it("follows the page and the rail as either one scrolls", () => {
+    const boxes = {
+      band: 125,
+      scroller: 125,
+      labels: {
+        "settings-rail-your-shop": 149,
+        "settings-rail-money": 1180,
+        "settings-rail-data-integrations": 1690,
+      } as Record<string, number>,
+    };
+    stubDepths(boxes);
+    renderInBand();
+    const nav = screen.getByRole("navigation", { name: "Settings sections" });
+    const scroller = nav.querySelector<HTMLElement>(".overflow-y-auto");
+    if (!scroller) throw new Error("the rail has no scroll box");
+
+    // The rail scrolls to Print: Money's label sticks at the box's top.
+    boxes.labels["settings-rail-your-shop"] = -700;
+    boxes.labels["settings-rail-money"] = 125;
+    boxes.labels["settings-rail-data-integrations"] = 640;
+    fireEvent.scroll(scroller);
+    nextFrame();
+    expect(depth("money")).toBe("0px");
+
+    // The page scrolls 90px: the box pins under the bar, the band rises past it.
+    boxes.band = 35;
+    boxes.scroller = 56;
+    boxes.labels["settings-rail-money"] = 56;
+    fireEvent.scroll(window);
+    nextFrame();
+    expect(depth("money")).toBe("21px");
+  });
+
+  it("measures nothing on a page without a band, or while the rail is not drawn", () => {
+    stubDepths({ band: 125, scroller: 125, labels: { "settings-rail-your-shop": 149 } });
+    renderRail();
+    expect(depth("your-shop")).toBe("");
+    cleanup();
+
+    // Below `lg` the rail is `hidden` and its box measures nothing.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      () => ({ x: 0, y: 0, top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 }) as DOMRect,
+    );
+    renderInBand();
+    expect(depth("your-shop")).toBe("");
   });
 });
 
