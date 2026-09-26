@@ -62,7 +62,10 @@ function RowSummary({
   // On a phone the value stacks under the heading at full width instead of
   // truncating beside it — the row exists to *state* the answer, and the
   // dock test's device is exactly where an email or address would otherwise
-  // be cut to "hello@demo.inva…".
+  // be cut to "hello@demo.inva…". From `sm` up it is never cut either: it
+  // wraps in its own column, ending at the caret, and the row grows. It used
+  // to `truncate` there, and at 640–767px and 1024–1279px, where the pane is
+  // narrowest, Contact, Profile and Diving options were ellipsised.
   //
   // **A row with no value is its heading line alone on a phone.** The value's
   // wrapper used to render regardless, holding only the desktop caret, which
@@ -110,7 +113,7 @@ function RowSummary({
       </span>
       {inline ? null : value != null ? (
         <span className="flex min-w-0 items-center gap-3">
-          <span className="text-sm text-muted sm:truncate">{value}</span>
+          <span className="text-sm text-muted sm:text-end">{value}</span>
           {desktopCaret}
         </span>
       ) : (

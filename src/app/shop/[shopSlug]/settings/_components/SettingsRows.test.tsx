@@ -82,6 +82,20 @@ describe("where a row states its value", () => {
     expect(row.querySelector("h3")?.parentElement).not.toHaveTextContent("12 Harbour Rd");
     expect(phoneLines(row)).toHaveLength(2);
   });
+
+  /**
+   * The row exists to state the answer, and the component said so for phones
+   * only: from `sm` up the value was `truncate` beside a `shrink-0` heading,
+   * so Contact, Profile and Diving options were cut to "hello@demo.inva…" at
+   * 640–767px and 1024–1279px, where the row is narrowest (K-310,
+   * SETTINGS-1-24). A long value wraps in its column, ending at the caret.
+   */
+  it("wraps a long value in its column from sm up rather than cutting it", () => {
+    const long = "hello@demo.invalid · +1 305 555 0100";
+    const value = within(settingRow({ value: long })).getByText(long);
+    expect(value).toHaveClass("sm:text-end");
+    expect(value.className).not.toMatch(/truncate|text-ellipsis|line-clamp/);
+  });
 });
 
 describe("an opened row's body", () => {
