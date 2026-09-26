@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { SETTLED_CHECK_TEXT_INSET } from "@/components/ui/settled-mark";
 import {
   THREAD_STATUS_TEST_ID,
   ThreadSpine,
@@ -139,6 +140,18 @@ describe("ThreadSpine", () => {
     // required prop rather than a convention.
     expect(screen.getByText("Gear and sizes")).toBeVisible();
     expect(screen.getByText("Day-of details")).toBeVisible();
+  });
+
+  it("hangs a step's fact under its name, on the name's own edge", () => {
+    // The name starts after the settle mark and its gap; the fact under it
+    // was indented 32px against the name's 28, 4px right of it on every step
+    // (K-169). The inset now comes from the mark's own geometry.
+    render(
+      <ThreadSpine
+        steps={[step({ id: "sign", state: "done", stateWord: null, line: "Signed and on file." })]}
+      />,
+    );
+    expect(screen.getByText("Signed and on file.")).toHaveClass(SETTLED_CHECK_TEXT_INSET);
   });
 
   it("keeps a settled step openable when its form is still worth re-opening", () => {

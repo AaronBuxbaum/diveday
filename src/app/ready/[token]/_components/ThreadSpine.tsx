@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { SettledCheck } from "@/components/ui/SettledCheck";
+import { SETTLED_CHECK_TEXT_INSET } from "@/components/ui/settled-mark";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 import type { ThreadStepId, ThreadStepState } from "@/lib/thread-steps";
 
@@ -184,7 +185,10 @@ function StepHead({ step }: { step: ThreadSpineStep }) {
           </span>
         ) : null}
       </span>
-      {step.line ? <span className="ps-8 text-sm text-muted">{step.line}</span> : null}
+      {/* Hung on the name's own edge: the mark's width plus its gap. */}
+      {step.line ? (
+        <span className={`${SETTLED_CHECK_TEXT_INSET} text-sm text-muted`}>{step.line}</span>
+      ) : null}
     </>
   );
 }

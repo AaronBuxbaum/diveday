@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { SETTLED_MARK_GAP, SETTLED_MARK_SIZE } from "./settled-mark";
 
 /**
  * The mark a thing wears once it has settled — a station whose head count has
@@ -53,7 +54,7 @@ export function SettledCheck({
   }, [settled]);
 
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`.trim()}>
+    <span className={`inline-flex items-center ${SETTLED_MARK_GAP} ${className}`.trim()}>
       <svg
         aria-hidden="true"
         viewBox="0 0 24 24"
@@ -63,7 +64,7 @@ export function SettledCheck({
         strokeLinecap="round"
         strokeLinejoin="round"
         onAnimationEnd={() => setSettling(false)}
-        className={`size-5 shrink-0 ${settled ? "text-success" : "text-muted"} ${
+        className={`${SETTLED_MARK_SIZE} shrink-0 ${settled ? "text-success" : "text-muted"} ${
           settling && settled ? "settle-in" : ""
         }`.trim()}
       >

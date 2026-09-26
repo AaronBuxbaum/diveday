@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { SettledCheck } from "./SettledCheck";
+import { SETTLED_CHECK_TEXT_INSET } from "./settled-mark";
 
 afterEach(cleanup);
 
@@ -60,6 +61,20 @@ describe("SettledCheck", () => {
     const { container, rerender } = render(<SettledCheck settled label="Checked in" />);
     rerender(<SettledCheck settled={false} label="Not yet here" />);
     expect(mark(container)?.getAttribute("class")).not.toContain("settle-in");
+  });
+
+  it("names the inset a line under its label hangs at, from its own mark and gap", () => {
+    // A fact under a step's name used to hang at a hand-picked `ps-8`, 32px
+    // against the name's 28 — the 20px mark plus its 8px gap (K-169). The
+    // inset is derived here from the classes the component actually renders,
+    // so a resized mark or a wider gap moves both together.
+    const { container } = render(<SettledCheck settled label="Checked in" />);
+    const step = (className: string | null | undefined, prefix: string) =>
+      Number(new RegExp(`(?:^|\\s)${prefix}-(\\d+(?:\\.5)?)(?:\\s|$)`).exec(className ?? "")?.[1]);
+    const markSize = step(mark(container)?.getAttribute("class"), "size");
+    const gap = step(container.firstElementChild?.getAttribute("class"), "gap");
+    expect(markSize + gap).toBeGreaterThan(0);
+    expect(SETTLED_CHECK_TEXT_INSET).toBe(`ps-${markSize + gap}`);
   });
 
   it("drops the entrance when it un-settles mid-animation", () => {
