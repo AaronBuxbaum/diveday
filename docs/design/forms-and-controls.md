@@ -631,7 +631,7 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
 - **`focus-visible:focus-ring-inset`** is for an element flush with an `overflow-hidden` or
   scrolling edge: a list card's rows, a scroll box's options, the command palette's field, a
   `flush` ghost whose 8px of fill leave less than the ring's 5px to a clipping edge (a `p-3` row in
-  a clipped list: seasons, kinds of day, boats) or to a visible one the ring would cross (a
+  a clipped list: kinds of day, boats) or to a visible one the ring would cross (a
   `Copyable` panel's 12px inset, a security session row), and an `outdent` button whose box ends
   4px above a clipped list's rule (the team card's Disable). A ledger row's door and a
   folded horizon's `<summary>` take it too: each is the row's whole box, rule to rule, so the
