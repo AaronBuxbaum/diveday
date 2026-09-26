@@ -728,6 +728,13 @@ summary {
   :where(input[type="radio"]) {
     border-radius: 9999px;
   }
+
+  /* Tailwind v4's Preflight gives a button the arrow. `buttonClass` put the
+     hand back and every hand-written button went without; one rule here, and
+     `disabled:cursor-wait` or any other utility still wins. */
+  :where(button:not(:disabled), summary, [role="button"]) {
+    cursor: pointer;
+  }
 }
 
 /*
