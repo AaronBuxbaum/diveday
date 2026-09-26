@@ -2754,6 +2754,24 @@ describe("OfflineManifestView — one column, one text edge", () => {
     vi.mocked(readDiscardedOfflineRecords).mockResolvedValue([]);
   });
 
+  /** A saved copy with a checklist and buddy teams on both lists. */
+  function dressed(envelope: OfflineManifestEnvelope): OfflineManifestEnvelope {
+    return {
+      ...envelope,
+      snapshot: {
+        ...envelope.snapshot,
+        checklist: { items: [{ id: "item-o2", label: "Emergency oxygen aboard" }] },
+        manifests: envelope.snapshot.manifests.map((manifest) => ({
+          ...manifest,
+          crew: manifest.crew.map((member, index) =>
+            index === 0 ? { ...member, buddyTeamNames: ["Diego Alvarez", "June Park"] } : member,
+          ),
+          divers: manifest.divers.map((diver) => ({ ...diver, buddyTeamNames: ["Marcus Reed"] })),
+        })),
+      },
+    };
+  }
+
   async function renderTrip(envelope: OfflineManifestEnvelope) {
     vi.mocked(loadOfflineManifest).mockResolvedValue(envelope);
     render(<OfflineManifestView />);
@@ -2845,5 +2863,34 @@ describe("OfflineManifestView — one column, one text edge", () => {
     );
     const row = screen.getByText(/Sal Ortiz · Not back aboard/).closest("li");
     expect(row).toHaveClass("border-danger", "font-bold", "text-danger");
+  });
+
+  // K-198: on the sunken awaiting row, a sunken chip is invisible, so the
+  // number, state word and buddy team each started their ink at a different x.
+  it("paints every chip on an awaiting row, so each starts at its painted edge", async () => {
+    await renderTrip(dressed(richEnvelope("trip-1")));
+
+    const row = priyaRow();
+    expect(row).toHaveClass("bg-surface-sunken");
+    const number = within(row).getByText("01");
+    expect(number).toHaveClass("bg-surface");
+    expect(number).not.toHaveClass("bg-surface-sunken");
+    expect(within(row).getByText("Awaiting roll call")).toHaveClass(
+      "rounded-full",
+      "border",
+      "border-border",
+    );
+    expect(within(row).getByText(/Buddy team:/)).toHaveClass(
+      "rounded-full",
+      "border",
+      "border-border",
+    );
+  });
+
+  // K-210: a 32px name line top-aligned beside 56px boat buttons rode 12px high.
+  it("gives the name line the boat buttons' height from sm", async () => {
+    await renderTrip(richEnvelope("trip-1"));
+    const nameLine = within(priyaRow()).getByRole("heading", { name: "Priya Shah" }).parentElement;
+    expect(nameLine).toHaveClass("sm:min-h-14", "items-center");
   });
 });

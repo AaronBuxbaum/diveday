@@ -2162,6 +2162,9 @@ export function OfflineManifestView() {
               // the exception control's weight now reads it too — it is what
               // decides whether that control is the row's *only* one.
               const showBoardControl = ready || !isDeparture;
+              const stateWord = `${rollCallLabelText(t, rollCallLabel(checkpoint, state))}${
+                state?.pending ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}` : ""
+              }`;
               return (
                 <li
                   key={diver.bookingId}
@@ -2181,8 +2184,14 @@ export function OfflineManifestView() {
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-sunken text-sm font-bold tabular-nums">
+                      {/* `sm:min-h-14`, the boat buttons' height beside it, so
+                        a one-line name shares their centre rather than riding
+                        12px above it; a wrapped line still grows past it. */}
+                      <div className="flex flex-wrap items-center gap-2 sm:min-h-14">
+                        {/* `bg-surface`, never the awaiting row's own sunken
+                          fill: a chip painted the row's colour has no edge, and
+                          its number started 7px right of the row's. */}
+                        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
                           {String(index + 1).padStart(2, "0")}
                         </span>
                         <h3 className={SECTION_TITLE_CLASS}>{diver.fullName}</h3>
@@ -2234,18 +2243,17 @@ export function OfflineManifestView() {
                           one word list, so a diver who has not come back from
                           dive one cannot read "Not boarded" here and "Not back
                           aboard" on the captain's screen. */}
-                        <span
-                          className={
-                            missing
-                              ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"
-                              : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-semibold"
-                          }
-                        >
-                          {rollCallLabelText(t, rollCallLabel(checkpoint, state))}
-                          {state?.pending
-                            ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
-                            : ""}
-                        </span>
+                        {/* The neutral word is the shared `Badge`, whose border
+                          survives the sunken awaiting row: the hand-rolled pill
+                          was that row's own fill, so its padding was invisible
+                          and its word started at nobody's edge. */}
+                        {missing ? (
+                          <span className="rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger">
+                            {stateWord}
+                          </span>
+                        ) : (
+                          <Badge tone="neutral">{stateWord}</Badge>
+                        )}
                         {/* The saved team, always quiet here: this copy shows
                           who you are with and never judges whether the team is
                           split — that read is live-roll-call only (see the
@@ -2809,6 +2817,9 @@ function DiscardedRecordsNotice({
  * The saved team a dock-copy row wears — names only, never a verdict. There is
  * deliberately no tone variant: this copy cannot know who came back, so it must
  * never look like it is telling you (ADR 20260804-buddy-teams).
+ *
+ * The neutral `Badge` for the same reason as the state word beside it: its
+ * border is what shows the chip's box on the sunken awaiting row.
  */
 function OfflineBuddyTeamChip({
   t,
@@ -2821,10 +2832,10 @@ function OfflineBuddyTeamChip({
 }) {
   if (!names || names.length === 0) return null;
   return (
-    <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted">
+    <Badge tone="neutral">
       {t("shared.buddyTeam.with", {
         names: cachedListFormat(locale, { type: "conjunction" }).format(names),
       })}
-    </span>
+    </Badge>
   );
 }
