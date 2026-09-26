@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { buttonClass } from "./button";
 import { ForgivingInput } from "./ForgivingInput";
@@ -241,6 +241,77 @@ describe("DateField", () => {
     expect(beside).toHaveClass("min-h-12", "pe-9");
     expect(beside).not.toHaveClass("min-h-11");
     expect(stacked).toHaveClass("min-h-11");
+  });
+
+  /**
+   * **An empty date box looks empty.** A date input never matches
+   * `::placeholder`, so an empty one drew its `mm/dd/yyyy` mask in the
+   * input's own ink — `#1d1d1f`, the colour of the filled "How many divers: 1"
+   * beside it — while the real placeholders on the form were `#88888c`
+   * (schedule-off-season, took-a-call; K-69). The box says whether it is
+   * empty, and the stylesheet paints the mask in the placeholder's colour.
+   */
+  it("says it is empty until it holds a date, as the person types", () => {
+    render(<DateField name="preferredDate" aria-label="Preferred date" />);
+    const box = screen.getByLabelText("Preferred date");
+    expect(box).toHaveAttribute("data-empty");
+    fireEvent.input(box, { target: { value: "2026-10-01" } });
+    expect(box).not.toHaveAttribute("data-empty");
+    fireEvent.input(box, { target: { value: "" } });
+    expect(box).toHaveAttribute("data-empty");
+  });
+
+  it("reads a prefilled or controlled value, and follows a form reset", async () => {
+    const { rerender } = render(
+      <form>
+        <DateField name="on" aria-label="On" defaultValue="2026-07-25" />
+        <DateField name="at" aria-label="At" type="time" value="" onChange={() => {}} />
+      </form>,
+    );
+    expect(screen.getByLabelText("On")).not.toHaveAttribute("data-empty");
+    expect(screen.getByLabelText("At")).toHaveAttribute("data-empty");
+    rerender(
+      <form>
+        <DateField name="on" aria-label="On" defaultValue="2026-07-25" />
+        <DateField name="at" aria-label="At" type="time" value="07:30" onChange={() => {}} />
+      </form>,
+    );
+    expect(screen.getByLabelText("At")).not.toHaveAttribute("data-empty");
+
+    const on = screen.getByLabelText("On") as HTMLInputElement;
+    fireEvent.input(on, { target: { value: "" } });
+    expect(on).toHaveAttribute("data-empty");
+    on.form?.reset();
+    expect(on).toHaveValue("2026-07-25");
+    await waitFor(() => expect(on).not.toHaveAttribute("data-empty"));
+  });
+
+  it("hands a caller's ref the box once, not again on every keystroke", () => {
+    // The schedule builder focuses a date box through its ref; a ref handed
+    // over again on each re-render would pull focus back on every one.
+    const calls: (HTMLInputElement | null)[] = [];
+    const focusOnMount = (node: HTMLInputElement | null) => {
+      calls.push(node);
+    };
+    render(<DateField name="on" aria-label="On" ref={focusOnMount} />);
+    const box = screen.getByLabelText("On");
+    fireEvent.input(box, { target: { value: "2026-10-01" } });
+    fireEvent.input(box, { target: { value: "" } });
+    expect(calls).toEqual([box]);
+  });
+
+  it("paints an empty box's mask in the placeholder's colour", () => {
+    const css = readFileSync(path.join(process.cwd(), "src/app/globals.css"), "utf8").replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
+    const placeholder = css.match(
+      /input::placeholder,\s*textarea::placeholder\s*\{\s*color:\s*([^;]+);/,
+    )?.[1];
+    expect(placeholder).toBeDefined();
+    const mask = css.match(/input\[data-empty\]::-webkit-datetime-edit\s*\{\s*color:\s*([^;]+);/);
+    expect(mask, "input[data-empty]::-webkit-datetime-edit { color }").not.toBeNull();
+    expect(mask?.[1]).toBe(placeholder);
   });
 
   it("passes every native prop through, including a callback ref", () => {

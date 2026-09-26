@@ -11,6 +11,7 @@ import {
 import { StatusInView } from "@/components/ui/StatusInView";
 import { currencySymbol, minorToMajor } from "@/lib/money";
 import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
+import { DateInput } from "./DateInput";
 import { type ForgivingCopy, ForgivingInput } from "./ForgivingInput";
 import { StatusMark } from "./StatusMark";
 import { toneMark } from "./tone";
@@ -194,6 +195,11 @@ export function SearchField({
  * atlas, K-54). A time draws a clock; the rest draw the calendar. `size` is
  * `controlClassFor`'s: `md` for a box on a line with `md` buttons, as the
  * reports month picker's is between its arrows.
+ *
+ * **An empty box looks empty.** The input is `DateInput`, a client leaf that
+ * marks itself `data-empty` while it holds no value, and `globals.css` paints
+ * the platform's `mm/dd/yyyy` mask in the placeholder's colour when it does —
+ * it used to draw in the ink of a filled answer (K-69).
  */
 export function DateField({
   type = "date",
@@ -213,7 +219,7 @@ export function DateField({
 } & Omit<ComponentPropsWithRef<"input">, "type" | "className" | "size">) {
   return (
     <div className={`relative ${wrapperClassName}`.trim()}>
-      <input
+      <DateInput
         {...input}
         type={type}
         className={`${controlClassFor(size)} pe-9 [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`.trim()}

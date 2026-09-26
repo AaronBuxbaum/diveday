@@ -727,6 +727,18 @@ textarea::placeholder {
   color: color-mix(in srgb, var(--muted) 78%, transparent);
 }
 
+/*
+ * The same colour for an empty date, month, time or date-and-time box's mask
+ * (`mm/dd/yyyy`, `--:-- --`), which no `::placeholder` reaches: it drew in
+ * the input's own ink and read as a filled answer (the pixel probe,
+ * schedule-off-season). `DateInput` marks the box `data-empty` while it holds
+ * no value. A rule of its own, not a third selector above: a browser that
+ * does not know the pseudo-element drops the whole rule it sits in.
+ */
+input[data-empty]::-webkit-datetime-edit {
+  color: color-mix(in srgb, var(--muted) 78%, transparent);
+}
+
 summary {
   user-select: none;
 }
