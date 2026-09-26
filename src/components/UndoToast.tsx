@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 import { motionMs } from "@/lib/motion";
 
 // Matches the `.toast-dismiss` keyframe duration in globals.css. Kept as a
@@ -103,9 +104,13 @@ export function UndoToast({
           {Object.entries(fields).map(([name, value]) => (
             <input key={name} type="hidden" name={name} value={value} />
           ))}
+          {/* The shared link button at `sm`: a 44px target with the press and
+              the pointer every button has. It was hand-rolled at 52×36, under
+              the floor (pixel-craft K-347). `busy`: a SubmitButton disables
+              itself while its own undo is in flight. */}
           <SubmitButton
             pendingLabel={pendingLabel}
-            className="inline-flex min-h-9 items-center rounded-lg px-2 text-sm font-semibold text-primary underline-offset-2 hover:underline"
+            className={buttonClass({ variant: "link", size: "sm", busy: true })}
           >
             {undoLabel}
           </SubmitButton>

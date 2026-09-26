@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { UndoToast } from "./UndoToast";
+import { buttonClass } from "./ui/button";
 
 // React derives onMouseEnter/onMouseLeave from the bubbling native
 // mouseover/mouseout events, not from the (non-bubbling) mouseenter/mouseleave
@@ -20,6 +21,23 @@ const PROPS = {
   pendingLabel: "Undoing…",
   undoLabel: "Undo",
 };
+
+/**
+ * **Undo is a real button.** It hand-rolled `min-h-9 … px-2 … hover:underline`:
+ * a 52×36 target under the 44px floor, with no press and no pointer (pixel-craft
+ * K-347). It is the `link` variant at `sm` now, and `busy` because it is a
+ * `SubmitButton`, which disables itself while its own undo is in flight.
+ */
+describe("the Undo button", () => {
+  it("is the shared link button at sm, a 44px target", () => {
+    render(<UndoToast {...PROPS} />);
+    const undo = screen.getByRole("button", { name: "Undo" });
+
+    expect(undo.className).toBe(buttonClass({ variant: "link", size: "sm", busy: true }));
+    expect(undo).toHaveClass("min-h-11");
+    expect(undo).not.toHaveClass("min-h-9");
+  });
+});
 
 describe("UndoToast auto-dismiss", () => {
   it("dismisses on its own after autoDismissMs when left alone", () => {
