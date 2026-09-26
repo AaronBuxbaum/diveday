@@ -53,7 +53,7 @@ export function MinimumSeatsBand({
       >
         {t("trips.minimumSeats.eyebrow")}
       </p>
-      <h2 className={`mt-1 ${SECTION_TITLE_CLASS}`}>
+      <h2 className={`mt-1 ${SECTION_TITLE_CLASS} text-balance`}>
         {t("trips.minimumSeats.heading", { shortfall: state.shortfall, minimum: state.minimum })}
       </h2>
       <p className="mt-1 max-w-prose text-sm text-muted">
