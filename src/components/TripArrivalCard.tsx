@@ -238,10 +238,21 @@ export function TripArrivalCard({
             <ArrivalFact label={t("trip.arrivalFirstInteraction")} value={facts.firstInteraction} />
           ) : null}
         </dl>
+        {/* The links are 44px targets on a 20px line, and here they hand the
+            difference back (`-my-3`): their boxes made the line 44px tall, so
+            "Need a hand?" sat 22px over them and 17px under the rule, grouped
+            with the rule rather than with what it introduces, and the card's
+            bottom inset grew from 20px to 32 (K-14 review, readiness@390).
+            The boxes still take the tap; they overhang the line, not the
+            card. */}
         {shop.contactPhone || shop.contactEmail ? (
           <p className="border-t border-border pt-3 text-sm text-muted">
             {t("trip.arrivalSupport")}{" "}
-            <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
+            <ShopContactLinks
+              phone={shop.contactPhone}
+              email={shop.contactEmail}
+              className="-my-3"
+            />
           </p>
         ) : null}
         {/* Last in the card, under everything a diver opens it for, and the one

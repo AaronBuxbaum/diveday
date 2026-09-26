@@ -233,6 +233,23 @@ describe("the ruled rows", () => {
       expect(row).toHaveClass(`pt-${gap}`);
     }
   });
+
+  it("keeps the contact line a text line, its 44px links overhanging it", () => {
+    // The links' boxes made "Need a hand?" and its links a 44px line: 22px
+    // between the words and the links, 17px under the rule, and 12px more of
+    // card below (K-14 review, readiness@390).
+    render(
+      <TripArrivalCard
+        shop={{ ...shop, contactPhone: "+1 305 555 0100", contactEmail: "hello@reef.test" }}
+        trip={trip}
+        locale="en-US"
+      />,
+    );
+    const phone = screen.getByRole("link", { name: "+1 305 555 0100" });
+    expect(phone).toHaveClass("min-h-11");
+    // (44 − 20) / 2 above and below, handed back by the links' own row.
+    expect(phone.parentElement).toHaveClass("-my-3");
+  });
 });
 
 /**
