@@ -328,6 +328,20 @@ function tokens(element: Element | null | undefined): string[] {
 }
 
 /**
+ * A spacing utility's length in px on Tailwind's 4px scale, read off the
+ * element's own tokens: `gap-y-6` is 24, `-my-2.5` is 10, and an element with
+ * no such token is 0.
+ */
+function spacingPx(element: Element | null | undefined, utility: string): number {
+  for (const token of tokens(element)) {
+    if (!token.startsWith(`${utility}-`)) continue;
+    const step = Number(token.slice(utility.length + 1));
+    if (Number.isFinite(step)) return step * 4;
+  }
+  return 0;
+}
+
+/**
  * **How the packing list is drawn** (docs/design/pixel-craft.md). jsdom has no
  * layout, so each case pins the classes whose arithmetic the pixel probe
  * measured wrong; the probe re-measures the pixels.
@@ -357,6 +371,43 @@ describe("the packing list's geometry", () => {
       // The 44px floor, and the (44 − 20) / 2 handed back above and below, so
       // the 20px line the name sits on does not grow to 44.
       expect(tokens(link)).toEqual(expect.arrayContaining(["inline-flex", "min-h-11", "-my-3"]));
+    }
+  });
+
+  it("sets the never-asked run's rows a whole target apart, so a tap lands on the name it covers (K-146)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const lead = byText(container, t("tripPrep.missingSizesNobodyAskedLead"));
+    const run = lead.nextElementSibling as HTMLElement;
+    const rowGap = spacingPx(run, "gap-y");
+    for (const link of within(run).getAllByRole("link")) {
+      // Each target reaches its give-back above and below its line, and the
+      // next row's reaches as far up. With the rows closer than twice that, a
+      // wrapped row's targets cover the names above them, and the later one
+      // in the DOM wins the tap: a diver's record opens for the name above.
+      expect(rowGap, link.textContent ?? "").toBeGreaterThanOrEqual(2 * spacingPx(link, "-my"));
+    }
+  });
+
+  it("hands back only the height its own padding adds, so a name that wraps keeps its lines (K-146)", () => {
+    const byItem = renderPrep(everyPanelPrep()).container;
+    const neverAsked = within(
+      byText(byItem, t("tripPrep.missingSizesNobodyAskedLead")).nextElementSibling as HTMLElement,
+    ).getAllByRole("link");
+    const support = diverLinks(byItem).filter((link) =>
+      link.getAttribute("href")?.endsWith("#support"),
+    );
+    const byDiver = renderPrep(everyPanelPrep(), { grouping: "diver" }).container;
+    const carmen = diverLinks(byDiver).filter((link) => link.textContent === "Carmen Ruiz");
+    expect(carmen).toHaveLength(2);
+    for (const link of [...neverAsked, ...support, ...carmen]) {
+      // A 44px floor with a fixed give-back is right only for a name on one
+      // line: wrapped, the box outgrows the floor, the margin still hands back
+      // the same, and the second line hangs over the dive-recency note under
+      // it. Padding the box by what the margin hands back keeps the margin box
+      // exactly the name's own lines, however many there are.
+      const giveBack = spacingPx(link, "-my");
+      expect(giveBack, link.textContent ?? "").toBeGreaterThan(0);
+      expect(spacingPx(link, "py"), link.textContent ?? "").toBe(giveBack);
     }
   });
 

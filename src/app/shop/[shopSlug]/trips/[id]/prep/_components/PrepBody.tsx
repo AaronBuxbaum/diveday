@@ -271,8 +271,14 @@ export function PrepBody({
    * footer links make. The never-asked run and Dive support were 17px words
    * (pixel-craft class 7). A name inside a sentence (the bullet lines) stays
    * that sentence's link.
+   *
+   * The 12px is padding as well as the margin that hands it back, so the
+   * margin box is always exactly the name's own lines. As a bare `min-h-11`
+   * the give-back held for one line only: a name that wrapped outgrew the
+   * floor, the margin still handed back 24px, and its second line hung 10px
+   * below the line box, onto whatever came next.
    */
-  const nameLinkClass = `${tapTargetLinkClass} -my-3 font-medium hover:text-primary hover:underline`;
+  const nameLinkClass = `${tapTargetLinkClass} py-3 -my-3 font-medium hover:text-primary hover:underline`;
 
   const gearBanner = noticeFromParam(notice, GEAR_NOTICES);
   /**
@@ -502,7 +508,12 @@ export function PrepBody({
                     {neverAsked.length > 0 ? (
                       <div>
                         <p className="text-muted">{t("tripPrep.missingSizesNobodyAskedLead")}</p>
-                        <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                        {/* `gap-y-6`, twice the 12px each name's target
+                            reaches above and below its 20px line: wrapped
+                            rows sit 44px apart and their targets meet. At
+                            `gap-y-1` the second row's targets reached over
+                            the names above them, and won the tap. */}
+                        <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-6">
                           {neverAsked.map((diver) => (
                             <li key={diver.personId}>
                               <Link
@@ -857,10 +868,11 @@ export function PrepBody({
                           <div className="min-w-0">
                             <p className="font-semibold">
                               {/* The card's 16px name: `nameLinkClass`'s floor,
-                                  handing back (44 − 24) / 2 of its own line. */}
+                                  padding and handing back (44 − 24) / 2 of its
+                                  own line, so a name that wraps keeps both. */}
                               <Link
                                 href={`/shop/${shopSlug}/divers/${line.personId}`}
-                                className={`${tapTargetLinkClass} -my-2.5 hover:text-primary hover:underline`}
+                                className={`${tapTargetLinkClass} py-2.5 -my-2.5 hover:text-primary hover:underline`}
                               >
                                 {line.fullName}
                               </Link>
@@ -891,13 +903,15 @@ export function PrepBody({
                       {checklist.diverLines.map((line) => (
                         // The row's one way in, and its only one: `RowLink`'s
                         // overlay is positioned against `Tr`. Its 44px box
-                        // hands (44 − 20) / 2 into the cell's `py-3`, so the
-                        // name keeps the kit's first line and the row its height.
+                        // pads and hands (44 − 20) / 2 into the cell's `py-3`,
+                        // so the name keeps the kit's first line, the row its
+                        // height, and a wrapped name its second line clear of
+                        // the dive-recency note under it.
                         <Tr key={line.bookingId}>
                           <Td className="font-medium">
                             <RowLink
                               href={`/shop/${shopSlug}/divers/${line.personId}`}
-                              className="-my-3 hover:text-primary hover:underline"
+                              className="py-3 -my-3 hover:text-primary hover:underline"
                             >
                               {line.fullName}
                             </RowLink>
