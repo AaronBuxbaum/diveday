@@ -2916,6 +2916,23 @@ describe("OfflineManifestView — one column, one text edge", () => {
       expect(row).not.toHaveClass("gap-2");
     }
   });
+
+  // K-473: at 360 a `p-3` tile left 75px for EMBARCADOS, which needs 86.
+  it("widens the stat tiles' inner box below sm", async () => {
+    await renderTrip(richEnvelope("trip-1"));
+    const tile = screen.getByText("Awaiting", { selector: "p.uppercase" }).parentElement;
+    expect(tile).toHaveClass("px-1.5", "py-3", "sm:px-3");
+    expect(tile).not.toHaveClass("p-3");
+    expect(tile?.parentElement).toHaveClass("gap-2", "sm:gap-3");
+  });
+
+  // K-496: "After dive 2" dropped alone onto a second row at 390.
+  it("lets each wrapped row of checkpoints fill a phone's width", async () => {
+    await renderTrip(richEnvelope("trip-1"));
+    expect(screen.getByRole("navigation", { name: "Roll-call checkpoint" })).toHaveClass(
+      "max-sm:[&>*]:grow",
+    );
+  });
 });
 
 // K-255: `rounded-3xl` (24px) is off the radius ladder; a panel is 20.

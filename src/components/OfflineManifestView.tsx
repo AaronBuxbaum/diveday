@@ -1713,8 +1713,11 @@ export function OfflineManifestView() {
           </section>
         ) : null}
 
+        {/* `max-sm:[&>*]:grow`, the rule `ShopPageHeader` gives its doors: on
+            a phone each wrapped row of checkpoints fills as one band, rather
+            than leaving "After dive 2" alone and short on a row of its own. */}
         <nav
-          className="mt-6 flex flex-wrap items-center gap-3 pb-1"
+          className="mt-6 flex flex-wrap items-center gap-3 pb-1 max-sm:[&>*]:grow"
           aria-label={t("shared.offlineManifest.single.checkpointNavAria")}
         >
           {rollCallCheckpoints(manifest.trip.plannedDives).map((value) => (
@@ -1744,13 +1747,18 @@ export function OfflineManifestView() {
             the live panel — a crew that loses signal between two dives must not
             see two different completions for one fact. The heading below says
             it in words. */}
-        <section className="mt-4 grid grid-cols-3 gap-3">
+        {/* Below `sm` the tiles give their inline padding and gap to the
+            label: at 360 a `p-3` tile left 75px, and "EMBARCADOS" needs 86. */}
+        <section className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
           {[
             [t("shared.offlineManifest.single.statsDivers"), manifest.summary.totalDivers],
             [t("shared.offlineManifest.single.statsBoarded"), boarded],
             [t("shared.offlineManifest.single.statsAwaiting"), awaiting],
           ].map(([label, value]) => (
-            <div key={String(label)} className="rounded-lg border border-border bg-surface p-3">
+            <div
+              key={String(label)}
+              className="rounded-lg border border-border bg-surface px-1.5 py-3 sm:px-3"
+            >
               <p className="text-xs font-semibold text-muted uppercase">{label}</p>
               <p className={`mt-1 ${FIGURE_CLASS}`}>{value}</p>
             </div>
