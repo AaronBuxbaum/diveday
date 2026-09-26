@@ -11,6 +11,13 @@ import {
   type SettingsRailRow,
   settingsSectionFragment,
 } from "../settings-groups";
+import {
+  SETTINGS_RAIL_COLUMN_CLASS,
+  SETTINGS_RAIL_CONTENT_CLASS,
+  SETTINGS_RAIL_FRAME_CLASS,
+  SETTINGS_RAIL_LABEL_CLASS,
+  SETTINGS_RAIL_LABEL_WORDS_CLASS,
+} from "./settings-rail-geometry";
 
 /**
  * **The settings rail** — the left column of ADR
@@ -93,25 +100,24 @@ export function SettingsRail({
   useLabelWashDepth(scrollerRef);
 
   return (
-    <nav aria-label={ariaLabel} className="hidden lg:block lg:w-[264px] lg:shrink-0">
+    <nav aria-label={ariaLabel} className={SETTINGS_RAIL_COLUMN_CLASS}>
       {/* Sticky, and scrollable in its own right: the map is longer than a
           laptop viewport, and a rail that scrolled the page away with it would
           be a map you have to leave to read. It pins at the bar's own height
           token, never a number: `top-20` was a guess 24px below the 3.5rem bar,
           so the rail hung in a gap on every viewport and its scroll area was
           short by the same amount (ADR
-          20260827-clearwater-surface-language, decision 10). */}
-      <div
-        ref={scrollerRef}
-        className="sticky top-(--chrome-h) max-h-[calc(100svh-var(--chrome-h))] overflow-y-auto pe-2"
-      >
+          20260827-clearwater-surface-language, decision 10). Its frame is
+          shared with the skeleton that stands in for it while it loads
+          (`settings-rail-geometry.ts`). */}
+      <div ref={scrollerRef} className={`${SETTINGS_RAIL_FRAME_CLASS} overflow-y-auto`}>
         {/* The inset is on what the box scrolls, never on the box: a sticky
             `top-0` sticks at its scroller's padding edge, so with `py-6` on
             the box a stuck label stood 24px under its top, and the rows
             scrolled past it showed through that strip — a sliver of "Trip
             packing checklist" over "YOUR SHOP" whenever the rail opened on a
             row further down (K-221). */}
-        <div className="space-y-5 py-6">
+        <div className={SETTINGS_RAIL_CONTENT_CLASS}>
           {groups.map((group) => {
             const isCurrentGroup = group.rows.some((row) => row.id === currentId);
             return (
@@ -133,9 +139,9 @@ export function SettingsRail({
                 <GroupLabel
                   id={`settings-rail-${group.id}`}
                   tone={isCurrentGroup ? "primary" : "muted"}
-                  className="settings-rail-label sticky top-0 z-10 mb-2"
+                  className={`settings-rail-label sticky top-0 z-10 ${SETTINGS_RAIL_LABEL_CLASS}`}
                 >
-                  <span className="block px-3 py-1">{group.label}</span>
+                  <span className={SETTINGS_RAIL_LABEL_WORDS_CLASS}>{group.label}</span>
                 </GroupLabel>
                 <ul aria-labelledby={`settings-rail-${group.id}`}>
                   {group.rows.map((row) => {
