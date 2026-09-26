@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
+import { settingsPaneClass } from "../_components/settings-pane";
 
 /**
  * Header + the bundle's (collapsed) summary card + the backups half (status
@@ -14,7 +15,7 @@ import { sectionCardClass } from "@/components/ui/card";
  */
 export default function Loading() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <div className="animate-pulse">
         {/* The bundle's one-paragraph inventory is five lines at 390px and
             three at 1280, beside the download button. */}

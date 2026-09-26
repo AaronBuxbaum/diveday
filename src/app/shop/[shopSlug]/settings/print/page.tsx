@@ -15,6 +15,7 @@ import { formatShortDate } from "@/lib/format";
 import type { PrintRunSheetCode } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
+import { settingsPaneClass } from "../_components/settings-pane";
 
 export const instant = true;
 
@@ -71,7 +72,7 @@ export default async function SettingsPrintPage({
   };
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
+    <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={shopPath(shopSlug, "settings")}

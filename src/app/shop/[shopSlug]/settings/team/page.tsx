@@ -32,6 +32,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { requireShopSurface } from "@/lib/session";
 import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
 import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
+import { settingsPaneClass } from "../_components/settings-pane";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
 import {
   inviteStaffAction,
@@ -591,7 +592,7 @@ export default async function TeamSettingsPage({
   const undoRolesFor = parseRoles(priorRoles);
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass("5xl")}>
       <FlashParams
         params={[
           "notice",

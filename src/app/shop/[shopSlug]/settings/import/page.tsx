@@ -12,6 +12,7 @@ import {
   type ImportScopeRowId,
 } from "@/lib/import";
 import { requireShopSurface } from "@/lib/session";
+import { settingsPaneClass } from "../_components/settings-pane";
 import type { ImportActionErrorCode } from "./actions";
 import { ImportWizard } from "./ImportWizard";
 
@@ -344,7 +345,7 @@ export default async function ImportContactsPage({
   const staysBehind = staysBehindChip(t);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}

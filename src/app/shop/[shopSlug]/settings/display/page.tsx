@@ -14,6 +14,7 @@ import { CHECK_IN_LINK_TTL_DAYS, DISPLAY_LABEL_MAX_LENGTH } from "@/lib/display-
 import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { settingsPaneClass } from "../_components/settings-pane";
 import { savePublicBoatLineAction, saveYearOnDivedayAction } from "./actions";
 import { DisplayLinksPanel } from "./DisplayLinksPanel";
 import type { DisplayLinkCopy, DisplayLinkView } from "./display-panel-types";
@@ -150,7 +151,7 @@ export default async function LobbyDisplayPage({
   }));
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}

@@ -94,6 +94,7 @@ import { isTrialExpired, trialDaysRemaining, trialEndsAt } from "@/lib/trial";
 import { BrandColorField } from "./_components/BrandColorField";
 import { BrandPreview } from "./_components/BrandPreview";
 import { SettingsDoorRow, SettingsRow } from "./_components/SettingsRows";
+import { settingsPaneClass } from "./_components/settings-pane";
 import { AddressSearch } from "./AddressSearch";
 import {
   dischargeProcessorErasureAction,
@@ -679,7 +680,7 @@ export default async function SettingsPage({
     : notSet;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <FlashParams params={["notice", "saved"]} />
       <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("settings.main.title")} />
 

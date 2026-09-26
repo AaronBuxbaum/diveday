@@ -17,6 +17,7 @@ import { openSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { isStepUpPurpose, type StepUpPurpose, safeStepUpReturnPath } from "@/lib/security-step-up";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
+import { settingsPaneClass } from "../_components/settings-pane";
 import {
   beginTotpEnrollmentAction,
   disableTotpAction,
@@ -109,7 +110,7 @@ export default async function SecurityPage({
   });
   const isEnabled = Boolean(security?.totpEnabledAt);
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}

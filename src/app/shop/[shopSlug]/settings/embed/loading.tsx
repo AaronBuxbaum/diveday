@@ -1,10 +1,11 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
+import { settingsPaneClass } from "../_components/settings-pane";
 
 /** Panel-shaped skeleton for the embeddable-schedule settings. */
 export default function EmbedSettingsLoading() {
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass("5xl")}>
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton description descriptionWidth="w-full max-w-xl" />
         {/* Shell and gap from the same places the page takes them, so the

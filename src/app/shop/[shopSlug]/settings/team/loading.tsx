@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
+import { settingsPaneClass } from "../_components/settings-pane";
 
 /**
  * Roster-shaped skeleton for the staff-account list (design principle 1) —
@@ -7,7 +8,7 @@ import { sectionCardClass } from "@/components/ui/card";
  */
 export default function TeamSettingsLoading() {
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass("5xl")}>
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-40" description={false} />
         {/* The invite card, then the roster of person-cards — the order the

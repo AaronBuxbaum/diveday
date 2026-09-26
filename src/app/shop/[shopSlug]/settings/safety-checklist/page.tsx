@@ -12,6 +12,7 @@ import { listChecklistItems } from "@/db/pre-departure-check";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
+import { settingsPaneClass } from "../_components/settings-pane";
 import {
   addChecklistItemAction,
   deleteChecklistItemAction,
@@ -71,7 +72,7 @@ export default async function SafetyChecklistPage({
   const message = notice ? noticeMessages(t)[notice] : undefined;
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
+    <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}

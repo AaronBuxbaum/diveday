@@ -503,7 +503,10 @@ to *look for* anything. Content leads; chrome defers. Concretely:
 - **Remove until it breaks.** The test for every control and border on a finished surface: take
   it away — if the screen still works, it was noise. What survives is what the screen is.
 - **Page width says what kind of surface this is — four tiers.** A reading or settings surface
-  (Settings, the course catalog and editor) stays at `max-w-3xl`, a comfortable line length. A
+  (Settings, the course catalog and editor) stays at `max-w-3xl`, a comfortable line length.
+  Every settings page and skeleton takes its `<main>` from `settingsPaneClass`
+  (`settings/_components/settings-pane.ts`), which also starts the column on the rail's edge, so
+  the column holds still as the rail changes the page; `settings-pane.test.ts` pins that. A
   single record's own page, or a focused list rather than a dense table — the check-in queue, a
   diver's own record, promos, requests, staff reviews, and every page under one departure (the
   trip layout, so Overview/Guests/Manifest/Prep share it) — takes `max-w-4xl`: narrower than a

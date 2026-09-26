@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
+import { settingsPaneClass } from "./_components/settings-pane";
 
 /**
  * Panel-shaped skeleton for shop settings (design principle 1). It is also the
@@ -7,9 +8,9 @@ import { sectionCardClass } from "@/components/ui/card";
  */
 export default function SettingsLoading() {
   return (
-    // max-w-3xl to match SettingsPage — a wider skeleton made every navigation
+    // The pane SettingsPage takes — a wider skeleton made every navigation
     // into Settings jump sideways when the real page landed.
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-48" description={false} />
         {/* Three labelled groups, each a row list wearing the card shell — the

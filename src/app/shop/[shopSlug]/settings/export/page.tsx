@@ -19,6 +19,7 @@ import { nowDate } from "@/lib/clock";
 import { requireShopSurface } from "@/lib/session";
 import type { NoticeCodeOf, NoticeTone } from "@/lib/staff-notices";
 import { utcToWallTime } from "@/lib/zoned";
+import { settingsPaneClass } from "../_components/settings-pane";
 import { BackupsSection, deliveryErrorText } from "./_components/BackupsSection";
 import type { Notice } from "./actions";
 import { DownloadExportButton } from "./DownloadExportButton";
@@ -151,7 +152,7 @@ export default async function DataOutSettingsPage({
   const crewSheetMonths = Array.from({ length: 12 }, (_, back) => addMonths(thisMonth, -back));
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}

@@ -30,6 +30,7 @@ import {
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { AddPanel } from "../_components/AddPanel";
+import { settingsPaneClass } from "../_components/settings-pane";
 import {
   createSeasonEventAction,
   deleteSeasonEventAction,
@@ -88,7 +89,7 @@ export default async function SeasonsSettingsPage({
   const banner = noticeFromParam(notice, seasonEventNoticeMessages(t));
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}

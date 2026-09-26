@@ -14,6 +14,7 @@ import { MAX_PACKAGE_DIVE_COUNT } from "@/lib/dive-packages";
 import { formatMoneyScanned } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
+import { settingsPaneClass } from "../_components/settings-pane";
 import { createDivePackageAction, deleteDivePackageAction } from "../actions";
 import { divePackageNoticeMessages } from "../sub-page-notices";
 
@@ -60,7 +61,7 @@ export default async function DivePackagesSettingsPage({
   const banner = noticeFromParam(notice, divePackageNoticeMessages(t));
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}

@@ -1,9 +1,10 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
+import { settingsPaneClass } from "../_components/settings-pane";
 
 export default function SafetyChecklistLoading() {
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
+    <main className={settingsPaneClass()}>
       <div className="animate-pulse">
         {/* "Pre-departure checklist" wraps to two lines at 390px and its
             description to three; one and two at 1280 (K-97). */}

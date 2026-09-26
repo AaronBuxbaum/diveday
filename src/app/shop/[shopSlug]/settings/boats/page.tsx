@@ -16,6 +16,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { AddPanel } from "../_components/AddPanel";
 import { HullColorField } from "../_components/HullColorField";
+import { settingsPaneClass } from "../_components/settings-pane";
 import { createBoatAction, deleteBoatAction, updateBoatAction } from "../actions";
 import { boatNoticeMessages } from "../sub-page-notices";
 
@@ -70,7 +71,7 @@ export default async function BoatsSettingsPage({
   const banner = noticeFromParam(notice, boatNoticeMessages(t));
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
