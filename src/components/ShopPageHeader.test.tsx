@@ -352,19 +352,50 @@ describe("the back-link chevron", () => {
     expect(svg.getAttribute("viewBox")).toBe(`${left} 0 ${width} 24`);
   });
 
-  it("is sized by its height, the old square's, so it neither grows nor moves up or down", () => {
+  it("is sized by its height, the old square's, so it neither grows nor shrinks", () => {
     const svg = chevron();
     expect(svg).toHaveClass("h-3", "w-auto", "shrink-0");
     expect(svg).not.toHaveClass("size-3");
   });
 
+  /**
+   * **The chevron is centred on the words' line, not on the link's box.** The
+   * link is 44px with its content on its bottom edge (K-395). With the chevron
+   * and the words as two items of that link, both stood on the edge: the words'
+   * 16px line box at 28–44, centre 36, and the 12px chevron at 32–44, centre
+   * 38 — 2px under the capitals it used to sit exactly on, on every back-link.
+   * So the chevron and the words are one row the eyebrow's line box tall, which
+   * the link stands on its bottom edge and which centres its own two children.
+   * `min-h`, not `h`: an eyebrow that wraps grows its row upward inside the
+   * link's box rather than spilling out under it onto the title.
+   */
+  it("stands on the words' own line box, centred on it, not in the 44px link", () => {
+    const svg = chevron();
+    const link = svg.closest("a");
+    const row = svg.parentElement;
+    if (!row || !link) throw new Error("no chevron row");
+
+    expect(row).not.toBe(link);
+    expect(row.parentElement).toBe(link);
+    expect(row).toHaveClass("flex", "items-center");
+    expect(row).not.toHaveClass("items-end");
+    expect(heightOf(row.className, "min-h"), "the row is the eyebrow's line box").toBe(
+      heightOf(EYEBROW_CLASS, "leading"),
+    );
+    // The words are the row's too, so the two share one centre line.
+    expect(row.textContent).toBe("Settings");
+    expect(link.children).toHaveLength(1);
+  });
+
   it("keeps the words as far from the ink as they were", () => {
     // The square carried 3.9px of empty box on the chevron's right as well;
     // `gap-1` plus that was about 8px of ink-to-text. With the box cut to the
-    // ink the gap has to carry all of it.
-    const link = chevron().closest("a");
-    expect(link).toHaveClass("gap-2");
-    expect(link).not.toHaveClass("gap-1");
+    // ink the gap has to carry all of it — on the row that holds both, since
+    // the link now has one child and a gap there spaces nothing.
+    const svg = chevron();
+    expect(svg.parentElement).toHaveClass("gap-2");
+    expect(svg.parentElement).not.toHaveClass("gap-1");
+    expect(svg.closest("a")?.className).not.toMatch(/(?:^|\s)gap-/);
   });
 });
 

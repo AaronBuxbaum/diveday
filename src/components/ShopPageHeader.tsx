@@ -61,6 +61,10 @@ export const EYEBROW_TAP_WRAPPER = "flex h-4 items-end";
  * `EYEBROW_TAP_WRAPPER`. Spelled whole, not `tapTargetLinkClass` plus
  * `items-end`: two `align-items` utilities on one element resolve by
  * stylesheet order, not by the order they are written.
+ *
+ * Its content is **one** item, a row the eyebrow's line box tall that centres
+ * the chevron on the words. Two items on the bottom edge each stand on it by
+ * their own height, and the 12px chevron sat 2px under the 16px line's centre.
  */
 const EYEBROW_TAP_TARGET = "inline-flex min-h-11 items-end";
 
@@ -109,28 +113,38 @@ export function EyebrowBackLink({
         href={href}
         className={`${EYEBROW_TAP_TARGET} ${EYEBROW_SHAPE} ${
           onSky ? "text-(--sky-ink)" : "text-primary"
-        } gap-2 hover:underline`.trim()}
+        } hover:underline`.trim()}
       >
-        {/* **The box is the ink** (K-114). Centred in a 24-unit square, the
-            stroke (x 9–15, plus half its 2.5 width) began 3.9px into the box,
-            so every back-link stood 3–4px right of the title's column. The
-            viewBox is cut to the stroke across and kept whole down, so the
-            height and centre are the square's; the width follows the cut.
-            `gap-2` carries the ink-to-words distance the square's empty right
-            side used to share with `gap-1`. `ShopPageHeader.test.tsx`. */}
-        <svg
-          aria-hidden="true"
-          viewBox="7.75 0 8.5 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-3 w-auto shrink-0"
-        >
-          <path d="m15 18-6-6 6-6" />
-        </svg>
-        {children}
+        {/* **One row, the words' own line box, centred inside** (K-395). The
+            link stands its content on its bottom edge, and as two items of the
+            link the chevron and the words each stood there: the words' 16px
+            line at 28–44, the 12px chevron at 32–44, its centre 2px under
+            theirs. As one row they share a centre line again, and the row is
+            what stands on the edge. `min-h-4`, not `h-4`: a wrapped eyebrow
+            grows the row upward inside the link's box rather than spilling
+            below it onto the title. */}
+        <span className="flex min-h-4 items-center gap-2">
+          {/* **The box is the ink** (K-114). Centred in a 24-unit square, the
+              stroke (x 9–15, plus half its 2.5 width) began 3.9px into the
+              box, so every back-link stood 3–4px right of the title's column.
+              The viewBox is cut to the stroke across and kept whole down, so
+              the height and centre are the square's; the width follows the
+              cut. `gap-2` carries the ink-to-words distance the square's empty
+              right side used to share with `gap-1`. `ShopPageHeader.test.tsx`. */}
+          <svg
+            aria-hidden="true"
+            viewBox="7.75 0 8.5 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-3 w-auto shrink-0"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          {children}
+        </span>
       </Link>
     </span>
   );
