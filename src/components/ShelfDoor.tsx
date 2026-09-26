@@ -26,8 +26,10 @@ export function ShelfDoor({
   return (
     <form action={action} className="flex flex-wrap items-center gap-3">
       {/* The link variant, because this sits in a footer beside a real link and
-          reads as the second way onward rather than as the page's primary. */}
-      <SubmitButton pendingLabel={label} className={buttonClass({ variant: "link" })}>
+          reads as the second way onward rather than as the page's primary.
+          Flush, because that link is drawn the same way: the size's 16px
+          padding opened a 33px gap where the footer's is 16. */}
+      <SubmitButton pendingLabel={label} className={buttonClass({ variant: "link", flush: true })}>
         {label}
       </SubmitButton>
       {status ? <FormStatus tone={status.tone}>{status.text}</FormStatus> : null}

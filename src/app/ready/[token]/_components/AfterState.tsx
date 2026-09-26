@@ -795,9 +795,12 @@ export function AfterState({
             {nextDeparture.title} · {nextDeparture.when}
           </p>
         ) : null}
+        {/* The same flush link button as the shelf door beside it: one
+            drawing for the footer's two ways onward, each a target, with the
+            footer's own gap between their words. */}
         <Link
           href={publicSchedulePath(shop.slug)}
-          className="font-medium text-primary hover:underline"
+          className={buttonClass({ variant: "link", flush: true })}
         >
           {t("recap.seeWhatsNext")}
         </Link>
