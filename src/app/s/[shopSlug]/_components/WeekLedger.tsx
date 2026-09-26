@@ -236,7 +236,9 @@ function Row({ row }: { row: WeekLedgerRow }) {
             nearly — and routine availability reads as the quiet fact it is. The
             chevron is the row's one at-rest tap cue: with no border, a phone row
             (where hover does not exist) read as a text listing rather than as a
-            pressable thing. */}
+            pressable thing. Below `sm` the row is a column and this group is
+            stretched to its width, so the chevron takes `ms-auto` to hold the
+            row's end rather than trailing each row's words. */}
         <div className="flex shrink-0 items-center gap-3">
           {/* Seat state and price are the two facts a diver decides on, so they
               are critical text (principle 2's own definition: a status word, a
@@ -251,7 +253,7 @@ function Row({ row }: { row: WeekLedgerRow }) {
           {row.price ? <p className="text-base font-semibold tabular-nums">{row.price}</p> : null}
           <DiveDayIcon
             name="chevron-right"
-            className="size-4 text-muted transition-transform group-hover:translate-x-0.5"
+            className="ms-auto size-4 text-muted transition-transform group-hover:translate-x-0.5"
           />
         </div>
       </div>

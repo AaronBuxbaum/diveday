@@ -268,6 +268,20 @@ describe("seat state and price", () => {
     expect(seats.className).not.toContain("bg-warning-tint");
   });
 
+  /**
+   * Below `sm` the row is a column, so the trailing group is stretched to the
+   * row's width and packs from the start: the chevron sat just after each
+   * row's seat words and price, 14 rows at 14 x's across 114px at 390
+   * (pixel-craft class 3). `ms-auto` pins it to the row's end; from `sm` up
+   * the group has no free space and it does nothing.
+   */
+  it("pins the chevron to the end of the row", () => {
+    render(<WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />);
+
+    const chevron = screen.getByRole("listitem").querySelector("svg");
+    expect(chevron).toHaveClass("ms-auto");
+  });
+
   it("renders no price cell for a departure with no price set", () => {
     render(
       <WeekLedger
