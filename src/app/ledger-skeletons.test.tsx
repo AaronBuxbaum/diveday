@@ -22,6 +22,7 @@ import DiversLoading from "./shop/[shopSlug]/divers/loading";
 import GearLoading from "./shop/[shopSlug]/gear/loading";
 import InboxLoading from "./shop/[shopSlug]/inbox/loading";
 import TodayLoading from "./shop/[shopSlug]/loading";
+import { OrdersLedger } from "./shop/[shopSlug]/orders/_components/OrdersLedger";
 import OrdersLoading from "./shop/[shopSlug]/orders/loading";
 import PromosLoading from "./shop/[shopSlug]/promos/loading";
 import ReportsLoading from "./shop/[shopSlug]/reports/loading";
@@ -353,11 +354,17 @@ describe("the staff reviews' skeleton", () => {
  * **The orders skeleton's rows are as tall as the rows they stand in for**
  * (class 11; K-390). A `LedgerRow` at `md` is 52px — it read 48 until
  * 2026-09-02 — and the skeleton kept drawing `h-12`, so a nine-order day moved
- * 36px when it arrived. The height is read off the row itself, so the next
- * change to the floor fails here rather than on screen.
+ * 36px when it arrived. The height from `sm` is read off the row itself, so
+ * the next change to the floor fails here rather than on screen.
+ *
+ * Below `sm` the loaded row is taller than its floor: the diver and what they
+ * bought stack as two `text-base` lines (24 + 2 + 24) inside the row's `py-2`
+ * and its 1px rule, 67px (hairlines 571 to 638 at 390). A row whose detail
+ * wraps is 91px, which a skeleton cannot know about; one line is the shape
+ * every row with a detail has at least.
  */
 describe("the orders skeleton's rows", () => {
-  it("are the height of the LedgerRow they stand in for", () => {
+  it("are the height of the LedgerRow they stand in for, on a phone and from sm", () => {
     const loaded = render(
       <ul>
         <LedgerRow>Amara Osei</LedgerRow>
@@ -370,7 +377,54 @@ describe("the orders skeleton's rows", () => {
       element.classList.contains("last:border-b"),
     );
     expect(rows.length).toBeGreaterThan(0);
-    for (const row of rows) expect(row).toHaveClass(`${floor}`.replace(/^min-/, ""));
+    for (const row of rows) {
+      expect(row).toHaveClass(`sm:${floor}`.replace("min-", ""));
+      expect(row).toHaveClass("h-16.75");
+    }
+  });
+
+  /**
+   * A day's header is `GroupLabel`'s one `text-xs` line, 16px, and its rows
+   * start the list's `mt-2.5` under it: 26px. The skeleton drew `h-3` bars in
+   * `pb-2`, 20px, so every day group landed 6px lower than it was drawn.
+   */
+  it("stands each day's header in the loaded label's line and the list's gap", () => {
+    render(
+      <OrdersLedger
+        days={[
+          {
+            key: "2026-08-27",
+            label: "Today · Thu, Aug 27",
+            meta: "1 order · $60.00",
+            rows: [
+              {
+                id: "order-1",
+                href: "/shop/blue-mantis/orders/order-1",
+                linkLabel: "Amara Osei, $60.00",
+                diver: "Amara Osei",
+                detail: "Two-Tank Reef",
+                status: null,
+                amount: "$60.00",
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+    const listGap = [...(document.querySelector("ul")?.classList ?? [])].find((token) =>
+      /^mt-/.test(token),
+    );
+    expect(listGap).toBeDefined();
+    cleanup();
+    const pulse = render(<OrdersLoading />).container.querySelector(".animate-pulse");
+    const headers = [...(pulse?.querySelectorAll("*") ?? [])]
+      .filter((element) => element.nextElementSibling?.classList.contains("last:border-b"))
+      .filter((element) => !element.classList.contains("last:border-b"));
+    expect(headers).toHaveLength(2);
+    for (const header of headers) {
+      expect(header).toHaveClass("h-4", `${listGap}`.replace(/^mt-/, "mb-"));
+      expect(header).not.toHaveClass("pb-2");
+    }
   });
 });
 
