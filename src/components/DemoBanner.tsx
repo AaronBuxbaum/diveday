@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 
 /** One role card's full content, resolved server-side (icon/name are data, the rest is translated copy). */
@@ -95,7 +96,10 @@ export function DemoBanner({
 
   return (
     <div className="border-b border-accent/40 bg-accent/5 transition-all print:hidden">
-      <div className="mx-auto w-full max-w-4xl px-4 py-3 sm:px-6">
+      {/* The chrome bar's own row (`ChromeBar`: `max-w-6xl … px-4 sm:px-6`), so
+          the banner's words start on the bar's edge and the page's, not in a
+          narrower column of their own. */}
+      <div className="mx-auto w-full max-w-6xl px-4 py-3 sm:px-6">
         {/*
          * One wrapping row, not a phone-only column. The column put "Switch
          * role" on a line of its own pinned hard right (`self-end`), so on a
@@ -108,9 +112,11 @@ export function DemoBanner({
          */}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-            <span className="inline-flex items-center rounded-md border border-accent/30 bg-accent/15 px-2 py-0.5 text-xs font-semibold tracking-wide text-foreground uppercase">
+            {/* `Badge`, not a hand-rolled chip: the chip's 6px corner sat off the
+                radius ladder. A label rather than a caution, so no tone mark. */}
+            <Badge tone="warning" size="sm" toneMark={false} className="tracking-wide uppercase">
               {copy.shopLabel}
-            </span>
+            </Badge>
             <p className="text-sm text-foreground">
               {copy.viewingAs}{" "}
               <span className="font-semibold text-primary">
