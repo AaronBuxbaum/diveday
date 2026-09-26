@@ -48,4 +48,17 @@ describe("MarketingFooterView", () => {
       unmount();
     }
   });
+
+  // Nine 20px-tall words with a square ring on the text, 36px apart when the
+  // row wraps on a phone (K-19). Each is a 44px target with the control radius
+  // now, and the wrapped rows stack at that 44px pitch rather than 44 + 16.
+  it("makes every link a 44px target with a rounded ring", () => {
+    render(<MarketingFooterView locale={DEFAULT_DIVER_LOCALE} shopSlug={null} />);
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(9);
+    for (const link of links) {
+      expect(link).toHaveClass("inline-flex", "min-h-11", "items-center", "rounded-lg");
+    }
+    expect(links[0].parentElement).toHaveClass("gap-x-4", "gap-y-0");
+  });
 });
