@@ -536,28 +536,29 @@ describe("the packing list's geometry", () => {
     }
   });
 
-  it("never breaks a diver's name across two lines in a shared rental line (K-353)", () => {
+  it("breaks a shared rental line between two names, and a name only where it cannot fit whole (K-353)", () => {
     const { container } = renderPrep(everyPanelPrep());
-    const names = within(container).getAllByText("Grace Mensah", { exact: true });
-    // Her BCD L line (shared with Carmen) and her weights line, each drawn as a
-    // phone card's For list and as the table's For cell.
-    const inRentalLines = names.filter((name) => name.closest("dd, td"));
-    expect(inRentalLines).toHaveLength(4);
-    for (const name of inRentalLines) {
-      expect(name.tagName).toBe("SPAN");
-      expect(name).toHaveClass("whitespace-nowrap");
-    }
-    const shared = inRentalLines.filter((name) =>
-      /Carmen Ruiz, Grace Mensah|Grace Mensah, Carmen Ruiz/.test(
-        name.parentElement?.textContent ?? "",
-      ),
+    // Carmen and Grace share the BCD L line: drawn as a phone card's For list
+    // and as the table's For cell.
+    const shared = [...container.querySelectorAll("dd, td")].filter(
+      (cell) => cell.textContent === "Carmen Ruiz, Grace Mensah",
     );
     expect(shared).toHaveLength(2);
-    for (const name of shared) {
-      // The break is only ever the space after a comma, outside both names.
-      expect(within(name.parentElement as HTMLElement).getByText("Carmen Ruiz")).toHaveClass(
-        "whitespace-nowrap",
-      );
+    for (const cell of shared) {
+      const names = [...cell.children];
+      expect(names.map((name) => name.textContent)).toEqual(["Carmen Ruiz,", "Grace Mensah"]);
+      for (const name of names) {
+        // Its own box: it moves to the next line whole, and wraps inside
+        // itself only when it is wider than the column. Unbreakable, a name
+        // wider than a clipping cell was cut off without a mark.
+        expect(name.tagName).toBe("SPAN");
+        expect(tokens(name)).toContain("inline-block");
+        expect(tokens(name)).not.toContain("whitespace-nowrap");
+      }
+      // The comma travels with the name before it; the only break between two
+      // names is the bare space.
+      const between = [...cell.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE);
+      expect(between.map((node) => node.textContent)).toEqual([" "]);
     }
   });
 

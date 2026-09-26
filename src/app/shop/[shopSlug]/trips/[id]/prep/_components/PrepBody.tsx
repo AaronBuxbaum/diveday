@@ -209,16 +209,24 @@ export function PrepBody({
     );
   };
   /**
-   * A rental line's divers, breakable only between two names. Joined as one
-   * string, a line could end inside one: "Sam / Whitfield" in the table and the
-   * phone card alike (pixel-craft class 8).
+   * A rental line's divers, breakable between two names and inside one only
+   * when it cannot fit whole. Joined as one string, a line could end inside a
+   * name: "Sam / Whitfield" in the table and the phone card alike (pixel-craft
+   * class 8). Each name is its own `inline-block`, which moves to the next line
+   * whole and wraps inside itself only when it is wider than the column; never
+   * `whitespace-nowrap`, which in a clipping `Td` cut such a name off without a
+   * mark. The comma rides inside the name before it, so the one break between
+   * two names is the bare space.
    */
   const diverNames = (names: readonly string[]) =>
     names.map((name, place) => (
       // biome-ignore lint/suspicious/noArrayIndexKey: two divers can share a name, and the list is drawn once, never reordered
       <Fragment key={`${place}:${name}`}>
-        {place > 0 ? ", " : null}
-        <span className="whitespace-nowrap">{name}</span>
+        {place > 0 ? " " : null}
+        <span className="inline-block">
+          {name}
+          {place < names.length - 1 ? "," : null}
+        </span>
       </Fragment>
     ));
   /** The same answer in a Size column, where an unsized piece still owes a cell. */
