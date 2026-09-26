@@ -369,6 +369,24 @@ describe("the rail as it renders", () => {
       expect(words).not.toHaveClass("truncate");
     }
   });
+
+  /**
+   * **A stuck label meets the box's top edge** (K-221). A sticky `top-0`
+   * sticks at its scroller's padding edge, and the rail's scroller carried
+   * `py-6`: a label stuck 24px under the box's top, and the rows scrolled past
+   * it kept showing in that strip — once the rail opened on its current row,
+   * a 10px sliver of "Trip packing checklist" stood above "YOUR SHOP" on Kinds
+   * of day and Seasons. The inset belongs to what the box scrolls, not to the
+   * box.
+   */
+  it("keeps its inset inside what it scrolls, so a stuck label sits on the box's top edge", () => {
+    renderRail();
+    const nav = screen.getByRole("navigation", { name: "Settings sections" });
+    const scroller = nav.querySelector<HTMLElement>(".overflow-y-auto");
+    if (!scroller) throw new Error("the rail has no scroll box");
+    expect([...scroller.classList].filter((token) => /^p[tby]?-/.test(token))).toEqual([]);
+    expect(scroller.firstElementChild).toHaveClass("py-6");
+  });
 });
 
 /**

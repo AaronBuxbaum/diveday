@@ -103,13 +103,20 @@ export function SettingsRail({
           20260827-clearwater-surface-language, decision 10). */}
       <div
         ref={scrollerRef}
-        className="sticky top-(--chrome-h) max-h-[calc(100svh-var(--chrome-h))] space-y-5 overflow-y-auto py-6 pe-2"
+        className="sticky top-(--chrome-h) max-h-[calc(100svh-var(--chrome-h))] overflow-y-auto pe-2"
       >
-        {groups.map((group) => {
-          const isCurrentGroup = group.rows.some((row) => row.id === currentId);
-          return (
-            <div key={group.id}>
-              {/* Prefixed rather than reusing the group's own id: the pane
+        {/* The inset is on what the box scrolls, never on the box: a sticky
+            `top-0` sticks at its scroller's padding edge, so with `py-6` on
+            the box a stuck label stood 24px under its top, and the rows
+            scrolled past it showed through that strip — a sliver of "Trip
+            packing checklist" over "YOUR SHOP" whenever the rail opened on a
+            row further down (K-221). */}
+        <div className="space-y-5 py-6">
+          {groups.map((group) => {
+            const isCurrentGroup = group.rows.some((row) => row.id === currentId);
+            return (
+              <div key={group.id}>
+                {/* Prefixed rather than reusing the group's own id: the pane
                   already renders that id on its `<h2>`, and two of them would
                   make the fragment ambiguous.
 
@@ -123,50 +130,51 @@ export function SettingsRail({
                   container cannot style itself. And the fill is that wash,
                   lined up by `useLabelWashDepth`, because a label stuck at the
                   box's top is still inside it. */}
-              <GroupLabel
-                id={`settings-rail-${group.id}`}
-                tone={isCurrentGroup ? "primary" : "muted"}
-                className="settings-rail-label sticky top-0 z-10 mb-2"
-              >
-                <span className="block px-3 py-1">{group.label}</span>
-              </GroupLabel>
-              <ul aria-labelledby={`settings-rail-${group.id}`}>
-                {group.rows.map((row) => {
-                  const selected = row.id === currentId;
-                  const badge = badges?.[row.id];
-                  return (
-                    <li key={row.id}>
-                      <RailLink
-                        href={
-                          row.target.kind === "route"
-                            ? `${shopBasePath}${row.target.path}`
-                            : `${onHub ? "" : hubPath}#${settingsSectionFragment(row.target.id)}`
-                        }
-                        sameDocument={row.target.kind === "section" && onHub}
-                        selected={selected}
-                      >
-                        {/* Wrapped, never cut: the rail is 264px by its
+                <GroupLabel
+                  id={`settings-rail-${group.id}`}
+                  tone={isCurrentGroup ? "primary" : "muted"}
+                  className="settings-rail-label sticky top-0 z-10 mb-2"
+                >
+                  <span className="block px-3 py-1">{group.label}</span>
+                </GroupLabel>
+                <ul aria-labelledby={`settings-rail-${group.id}`}>
+                  {group.rows.map((row) => {
+                    const selected = row.id === currentId;
+                    const badge = badges?.[row.id];
+                    return (
+                      <li key={row.id}>
+                        <RailLink
+                          href={
+                            row.target.kind === "route"
+                              ? `${shopBasePath}${row.target.path}`
+                              : `${onHub ? "" : hubPath}#${settingsSectionFragment(row.target.id)}`
+                          }
+                          sameDocument={row.target.kind === "section" && onHub}
+                          selected={selected}
+                        >
+                          {/* Wrapped, never cut: the rail is 264px by its
                             design, and its rows inset their words 12px a
                             side, which left "Shopify, QuickBooks, Xero &
                             Zapier" 208px for 216px of words. The row's 44px
                             is a floor, so a second line just grows it. */}
-                        <span className="min-w-0 text-pretty">{labels[row.id]}</span>
-                        {/* At most one badge per row, and only for a warning —
+                          <span className="min-w-0 text-pretty">{labels[row.id]}</span>
+                          {/* At most one badge per row, and only for a warning —
                             the settled states of these rows are quiet text on
                             the pane, not a pill on the map. */}
-                        {badge ? (
-                          <Badge tone="warning" size="sm" toneMark={false}>
-                            {badge}
-                          </Badge>
-                        ) : null}
-                      </RailLink>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          );
-        })}
+                          {badge ? (
+                            <Badge tone="warning" size="sm" toneMark={false}>
+                              {badge}
+                            </Badge>
+                          ) : null}
+                        </RailLink>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );
