@@ -53,3 +53,29 @@ describe("TripPlanSection", () => {
     expect(section.querySelectorAll("button, input, select, textarea")).toHaveLength(0);
   });
 });
+
+/**
+ * **The door and its note read as one pair on a phone** (K-497). The row was
+ * `flex-wrap items-baseline` around a link that is a 44px box with its text
+ * centred, so on a phone the wrapped note started under the whole box: the two
+ * baselines 38px apart against the body's 24px leading. Below `sm` the pair is
+ * a column and the link's text sits at the foot of its box, so the note
+ * follows at body spacing; the 44px target stays, and none of it hangs below
+ * the words into the gap before the next section.
+ */
+describe("the door row", () => {
+  it("stacks below sm and lines up by baseline from sm", () => {
+    const { container } = plan();
+    const link = within(container).getByRole("link", { name: /Changed the plan/ });
+    const row = link.parentElement as HTMLElement;
+    expect(row).toHaveClass("flex", "flex-col", "sm:flex-row", "sm:items-baseline");
+    expect(row.className).not.toMatch(/(^|\s)items-baseline/);
+  });
+
+  it("sets the link's text at the foot of its 44px box", () => {
+    const { container } = plan();
+    const link = within(container).getByRole("link", { name: /Changed the plan/ });
+    expect(link).toHaveClass("inline-flex", "min-h-11", "items-end");
+    expect(link).not.toHaveClass("items-center");
+  });
+});
