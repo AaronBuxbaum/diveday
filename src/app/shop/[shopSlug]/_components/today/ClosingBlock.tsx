@@ -46,6 +46,24 @@ import { ACTION_KIND_META, type TodayAction } from "@/lib/today";
  * shop day settled, with the standing one-hour late-arrival buffer. While one
  * boat is out there is nothing here to find.
  */
+/**
+ * One thing a recorded close left open: what it is, then its status.
+ *
+ * **The status is one unit** (pixel-craft class 8, K-592). It wrapped at its
+ * own spaces, so a narrow card split it mid-phrase — "— Dock" over "count
+ * open", "— Carried to" over "tomorrow" alone. Held whole, a status that does
+ * not fit beside its item moves to the next line entire; the longest, Spanish
+ * "— Recuento en muelle abierto", is about 190px of a 316px column at 390.
+ */
+function OutstandingItem({ label, status }: { label: string; status: string }) {
+  return (
+    <li>
+      <span className="font-medium">{label}</span>{" "}
+      <span className="whitespace-nowrap text-muted">— {status}</span>
+    </li>
+  );
+}
+
 export function ClosingBlock({
   leftovers,
   latest,
@@ -113,28 +131,25 @@ export function ClosingBlock({
               <GroupLabel as="h4">{t("closeout.record.outstandingHeading")}</GroupLabel>
               <ul className="mt-2 space-y-1 text-sm">
                 {latest.outstanding.departures.map((departure) => (
-                  <li key={`dep-${departure.tripId}`}>
-                    <span className="font-medium">{departure.title}</span>{" "}
-                    <span className="text-muted">
-                      — {t(CLOSEOUT_STATUS_KEYS[departure.status])}
-                    </span>
-                  </li>
+                  <OutstandingItem
+                    key={`dep-${departure.tripId}`}
+                    label={departure.title}
+                    status={t(CLOSEOUT_STATUS_KEYS[departure.status])}
+                  />
                 ))}
                 {latest.outstanding.leftovers.map((leftover) => (
-                  <li key={`left-${leftover.id}`}>
-                    <span className="font-medium">{leftover.subject}</span>{" "}
-                    <span className="text-muted">
-                      — {t(CLOSEOUT_DECISION_KEYS[leftover.decision])}
-                    </span>
-                  </li>
+                  <OutstandingItem
+                    key={`left-${leftover.id}`}
+                    label={leftover.subject}
+                    status={t(CLOSEOUT_DECISION_KEYS[leftover.decision])}
+                  />
                 ))}
                 {latest.outstanding.adminTasks.map((task) => (
-                  <li key={`admin-${task.id}`}>
-                    <span className="font-medium">{t("closeout.admin.postDiveReports.label")}</span>{" "}
-                    <span className="text-muted">
-                      — {t(CLOSEOUT_ADMIN_STATUS_KEYS[task.status])}
-                    </span>
-                  </li>
+                  <OutstandingItem
+                    key={`admin-${task.id}`}
+                    label={t("closeout.admin.postDiveReports.label")}
+                    status={t(CLOSEOUT_ADMIN_STATUS_KEYS[task.status])}
+                  />
                 ))}
               </ul>
             </div>
