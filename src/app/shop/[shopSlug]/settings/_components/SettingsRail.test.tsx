@@ -53,19 +53,23 @@ function railGroups(rows: readonly SettingsRailRow[] = SETTINGS_RAIL_ROWS) {
   })).filter((group) => group.rows.length > 0);
 }
 
-function renderRail(
-  options: { rows?: readonly SettingsRailRow[]; badges?: Record<string, string> } = {},
-) {
+type RailOptions = { rows?: readonly SettingsRailRow[]; badges?: Record<string, string> };
+
+function rail(options: RailOptions = {}) {
   const rows = options.rows ?? SETTINGS_RAIL_ROWS;
-  return render(
+  return (
     <SettingsRail
       groups={railGroups(rows)}
       labels={Object.fromEntries(rows.map((row) => [row.id, row.id]))}
       badges={options.badges}
       shopBasePath={BASE}
       ariaLabel="Settings sections"
-    />,
+    />
   );
+}
+
+function renderRail(options: RailOptions = {}) {
+  return render(rail(options));
 }
 
 describe("the map covers the whole hub", () => {
@@ -322,6 +326,125 @@ describe("the rail as it renders", () => {
     // The calm state, which is nearly always: the map is words, not pills.
     const { container } = renderRail();
     expect(container.querySelectorAll("nav span.rounded-full")).toHaveLength(0);
+  });
+});
+
+/**
+ * **The current row is on screen when the page opens.** The rail scrolls in a
+ * box of its own, and the settings layout keeps it across a click inside the
+ * rail, but every other way in (a direct link, ⌘K's "Go to", the hub's own
+ * rows) landed with the box at its top: 19 grey rows and no selected one on
+ * Kinds of day, Seasons, Print and WhatsApp, whose rows sit 140–750px below
+ * the box's fold. The rail brings its own box to the row, and never the page:
+ * `scrollIntoView` would scroll the window as well.
+ */
+describe("the rail keeps the current row in view", () => {
+  type Box = { top: number; height: number };
+  type Boxes = { scroller: Box; row: Box; label: Box };
+
+  /** Measures read from `boxes` at call time, so a test can move a row. */
+  function stubBoxes(boxes: Boxes) {
+    const rect = ({ top, height }: Box) =>
+      ({
+        x: 88,
+        y: top,
+        top,
+        left: 88,
+        width: 256,
+        height,
+        bottom: top + height,
+        right: 344,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      if (this.getAttribute("aria-current") === "true") return rect(boxes.row);
+      if (this.classList.contains("overflow-y-auto")) return rect(boxes.scroller);
+      if (this.classList.contains("settings-rail-label")) return rect(boxes.label);
+      return rect({ top: 0, height: 0 });
+    });
+  }
+
+  function railScroller() {
+    const nav = screen.getByRole("navigation", { name: "Settings sections" });
+    const scroller = nav.querySelector<HTMLElement>(".overflow-y-auto");
+    if (!scroller) throw new Error("the rail has no scroll box");
+    return scroller;
+  }
+
+  const scrollIntoView = vi.fn();
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = scrollIntoView;
+    scrollIntoView.mockClear();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("scrolls its own box, never the page, to a current row below the fold", () => {
+    pathname = `${BASE}/settings/team`;
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    // The box is 744px tall under the bar; the row sits 1,500px down its list.
+    stubBoxes({
+      scroller: { top: 56, height: 744 },
+      row: { top: 1500, height: 44 },
+      label: { top: 80, height: 24 },
+    });
+    renderRail();
+
+    // The row's centre on the box's centre: 1,522 − (56 + 372).
+    expect(railScroller().scrollTop).toBe(1094);
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("leaves the box where it is when the current row is already in view", () => {
+    // A click inside the rail keeps the reader's place.
+    pathname = `${BASE}/settings/team`;
+    stubBoxes({
+      scroller: { top: 56, height: 744 },
+      row: { top: 400, height: 44 },
+      label: { top: 80, height: 24 },
+    });
+    renderRail();
+
+    expect(railScroller().scrollTop).toBe(0);
+  });
+
+  it("brings the row a reader went to out from under its group's stuck label", () => {
+    pathname = `${BASE}/settings/team`;
+    const boxes: Boxes = {
+      scroller: { top: 56, height: 744 },
+      row: { top: 400, height: 44 },
+      label: { top: 80, height: 24 },
+    };
+    stubBoxes(boxes);
+    const { rerender } = renderRail();
+    const scroller = railScroller();
+    scroller.scrollTop = 600;
+
+    // ⌘K "Go to" Boats: its row is under the stuck label at the box's top.
+    pathname = `${BASE}/settings/boats`;
+    boxes.row = { top: 60, height: 44 };
+    boxes.label = { top: 56, height: 24 };
+    rerender(rail());
+
+    // Centred from where the reader left it: 600 + (82 − 428).
+    expect(scroller.scrollTop).toBe(254);
+  });
+
+  it("does nothing while the rail is not drawn", () => {
+    // Below `lg` the rail is `hidden`, and every box measures zero.
+    pathname = `${BASE}/settings/team`;
+    stubBoxes({
+      scroller: { top: 0, height: 0 },
+      row: { top: 0, height: 0 },
+      label: { top: 0, height: 0 },
+    });
+    renderRail();
+
+    expect(railScroller().scrollTop).toBe(0);
   });
 });
 

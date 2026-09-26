@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { GroupLabel } from "@/components/ui/ledger";
 import { RAIL_ROW_CLASS, RAIL_ROW_CURRENT, RAIL_ROW_IDLE } from "@/components/ui/rail";
@@ -79,6 +79,17 @@ export function SettingsRail({
   });
   const hubPath = `${shopBasePath}/settings`;
   const onHub = pathname === hubPath;
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  // The rail scrolls in a box of its own, and the layout keeps that box across
+  // a click inside the rail. Every other way in (a direct link, ⌘K's "Go to",
+  // the hub's own rows) landed with it at the top: on Kinds of day, Seasons,
+  // Print or WhatsApp that is 19 grey rows and no selected one, the row itself
+  // 140–750px below the box's fold. So whenever the current row changes, the
+  // box comes to it — when it is out of sight, and only then.
+  useEffect(() => {
+    if (currentId && scrollerRef.current) revealCurrentRow(scrollerRef.current);
+  }, [currentId]);
 
   return (
     <nav aria-label={ariaLabel} className="hidden lg:block lg:w-[264px] lg:shrink-0">
@@ -89,7 +100,10 @@ export function SettingsRail({
           so the rail hung in a gap on every viewport and its scroll area was
           short by the same amount (ADR
           20260827-clearwater-surface-language, decision 10). */}
-      <div className="sticky top-(--chrome-h) max-h-[calc(100svh-var(--chrome-h))] space-y-5 overflow-y-auto py-6 pe-2">
+      <div
+        ref={scrollerRef}
+        className="sticky top-(--chrome-h) max-h-[calc(100svh-var(--chrome-h))] space-y-5 overflow-y-auto py-6 pe-2"
+      >
         {groups.map((group) => {
           const isCurrentGroup = group.rows.some((row) => row.id === currentId);
           return (
@@ -148,6 +162,29 @@ export function SettingsRail({
       </div>
     </nav>
   );
+}
+
+/**
+ * Scroll the rail's own box so its current row is in sight, centred, when it
+ * is not: below the box's fold, or under its group's label stuck at the top.
+ * A row already in sight is left where it is, so a click inside the rail keeps
+ * the reader's place.
+ *
+ * `scrollTop` on the box, never `scrollIntoView`: that scrolls every scrolling
+ * ancestor to the row, the page included, and the reader came to the pane.
+ * A rail that is not drawn (`hidden` below `lg`) measures zero and is left
+ * alone.
+ */
+function revealCurrentRow(scroller: HTMLElement) {
+  const row = scroller.querySelector<HTMLElement>('[aria-current="true"]');
+  if (!row) return;
+  const box = scroller.getBoundingClientRect();
+  if (box.height === 0) return;
+  const rect = row.getBoundingClientRect();
+  const label = row.closest("ul")?.previousElementSibling;
+  const cover = label instanceof HTMLElement ? label.getBoundingClientRect().height : 0;
+  if (rect.top >= box.top + cover && rect.bottom <= box.bottom) return;
+  scroller.scrollTop += rect.top + rect.height / 2 - (box.top + box.height / 2);
 }
 
 function RailLink({
