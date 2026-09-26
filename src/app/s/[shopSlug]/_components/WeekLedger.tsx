@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Fragment, type ReactNode } from "react";
+import { type CSSProperties, Fragment, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { DoorChevron } from "@/components/ui/ledger";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
@@ -86,6 +86,30 @@ export type WeekLedgerRow = {
   price: string | null;
 };
 
+/**
+ * **The price's column is as wide as the list's longest price** (pixel-craft
+ * class 3), so every row's seat state and chevron end on one x in whatever
+ * currency the shop sells in. A fixed width held a four-figure dollar or euro
+ * price and nothing longer: "$145.50" (a price with cents keeps them) runs to
+ * about 6.25ch, and a rupiah, yen or Egyptian pound shop's ordinary prices
+ * ("Rp 1.500.000", "¥15,000", "EGP 2,500") run far past it, so each such row's
+ * price set its own column again.
+ *
+ * A character a `ch`: the price is set in tabular figures, where a digit is
+ * exactly 1ch, and its separators are narrower. Half a digit more covers a
+ * currency sign a little wider than a digit (€ is about 1.1ch) in a price with
+ * no separator to give the difference back ("€95"). The width is a custom
+ * property on the list, so `ch` resolves in the price's own face, and each
+ * row's column reads it from `sm` up. Null when no row has a price: a list with
+ * nothing to charge draws no column at all.
+ */
+function priceColumnWidth(rows: readonly WeekLedgerRow[]): string | null {
+  const longest = Math.max(0, ...rows.map((row) => (row.price ? [...row.price].length : 0)));
+  return longest > 0 ? `${longest + 0.5}ch` : null;
+}
+
+type PriceColumnStyle = CSSProperties & { "--price-col": string };
+
 export function WeekLedger({
   stickyTop,
   rows,
@@ -104,20 +128,24 @@ export function WeekLedger({
   stickyTop: string;
 }) {
   let lastDayKey: string | null = null;
+  const priceColumn = priceColumnWidth(rows);
+  const style: PriceColumnStyle | undefined = priceColumn
+    ? { "--price-col": priceColumn }
+    : undefined;
   return (
     // `-mb-4 sm:-mb-5` hands back the last row's lower room — its `py-4
     // sm:py-5`, kept for the hover fill and unpainted at rest — so whatever
     // follows measures from the last row's words. Stacked on the next
     // section's margin, it put "Courses" 78px under the last meta line at
     // 1280 against the page's 56px section gap.
-    <ul className="-mb-4 flex flex-col sm:-mb-5" aria-label={listLabel}>
+    <ul className="-mb-4 flex flex-col sm:-mb-5" aria-label={listLabel} style={style}>
       {rows.map((row) => {
         const newDay = row.dayKey !== lastDayKey;
         lastDayKey = row.dayKey;
         return (
           <Fragment key={row.id}>
             {newDay ? <DayRule parts={row.dayParts} stickyTop={stickyTop} /> : null}
-            <Row row={row} />
+            <Row row={row} priceColumn={priceColumn !== null} />
           </Fragment>
         );
       })}
@@ -171,7 +199,7 @@ function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stick
  */
 const FACT = "inline-block";
 
-function Row({ row }: { row: WeekLedgerRow }) {
+function Row({ row, priceColumn }: { row: WeekLedgerRow; priceColumn: boolean }) {
   const meta: ReactNode[] = [];
   // The shop's own word leads the line, before the course and the site: it is
   // what the reader is scanning for once they have tapped a lens, and it is the
@@ -302,19 +330,21 @@ function Row({ row }: { row: WeekLedgerRow }) {
               {row.capacityText}
             </Badge>
           )}
-          {/* The price's column stands on every row, so a departure with no
-              price keeps its seat state and chevron where the others' are
-              rather than sliding 43px into the price's place. Sized for a
-              four-figure price ("$1,250", "$95.50", "1250 €", about 5.25ch in
-              tabular digits) and set to its end, so seat states end on one x
-              too. Below `sm` the group packs from the start and the chevron
-              holds the row's end by itself, so an empty column there is only
-              a gap and stands down. */}
-          <p
-            className={`text-base font-semibold tabular-nums sm:min-w-[5.5ch] sm:text-end${row.price ? "" : " max-sm:hidden"}`}
-          >
-            {row.price}
-          </p>
+          {/* The price's column stands on every row of a list that charges
+              anything, so a departure with no price keeps its seat state and
+              chevron where the others' are rather than sliding 43px into the
+              price's place. It is as wide as the list's longest price
+              (`--price-col`, `priceColumnWidth`) and set to its end, so seat
+              states end on one x too. Below `sm` the group packs from the
+              start and the chevron holds the row's end by itself, so an empty
+              column there is only a gap and stands down. */}
+          {priceColumn ? (
+            <p
+              className={`text-base font-semibold tabular-nums sm:min-w-(--price-col) sm:text-end${row.price ? "" : " max-sm:hidden"}`}
+            >
+              {row.price}
+            </p>
+          ) : null}
           <DoorChevron className="ms-auto transition-transform group-hover:translate-x-0.5" />
         </div>
       </div>

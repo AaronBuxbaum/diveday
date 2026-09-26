@@ -8,8 +8,9 @@ import { WeekLedger, type WeekLedgerRow } from "./WeekLedger";
  * The week ledger's pins for ADR 20260827-clearwater-surface-language,
  * decision 8 — the rules, never the pixels. Every "renders nothing" assertion
  * here is guarding one of the design's silences: the requirement slot on a
- * departure that demands nothing, the price cell on a departure with no price,
- * and the second detail line that used to stack under every title.
+ * departure that demands nothing, the price on a departure with no price (its
+ * column stays, empty, so the row's seat state holds its x), and the second
+ * detail line that used to stack under every title.
  */
 afterEach(cleanup);
 
@@ -476,9 +477,9 @@ describe("seat state and price", () => {
    * The price was rendered only when there was one, so a departure with no
    * price slid its seat state and chevron into the price's column: "Only 2
    * spots left" at x 952.7 on one row and 995.3 on the next at 1280
-   * (pixel-craft class 3). The column now stands on every row, sized for a
-   * four-figure price ("$1,250", "$95.50", "1250 €") and ending on one edge,
-   * and empty where there is no price.
+   * (pixel-craft class 3). The column now stands on every row, as wide as the
+   * list's longest price and ending on one edge, and empty where there is no
+   * price.
    */
   it("keeps the price's column when a departure has no price, so the seat state holds its x", () => {
     render(
@@ -496,13 +497,64 @@ describe("seat state and price", () => {
     expect(priced).toHaveLength(3);
     expect(unpriced).toHaveLength(3);
     expect(priced[1]).toHaveTextContent("$95.00");
-    expect(priced[1]).toHaveClass("sm:min-w-[5.5ch]", "sm:text-end");
+    expect(priced[1]).toHaveClass("sm:min-w-(--price-col)", "sm:text-end");
     expect(unpriced[1]).toBeEmptyDOMElement();
-    expect(unpriced[1]).toHaveClass("sm:min-w-[5.5ch]");
+    expect(unpriced[1]).toHaveClass("sm:min-w-(--price-col)");
     // Below `sm` the group packs from the start and the chevron holds the
     // row's end on its own, so an empty column there would only add a gap.
     expect(unpriced[1]).toHaveClass("max-sm:hidden");
     expect(priced[1]).not.toHaveClass("max-sm:hidden");
+  });
+
+  /**
+   * The column was a fixed 5.5ch: a four-figure dollar or euro price and
+   * nothing longer. "$145.50" (a price with cents keeps them) is about 6.25ch,
+   * and a rupiah, yen or Egyptian pound shop's ordinary prices ("Rp 1.500.000",
+   * "¥15,000", "EGP 2,500") run far past it, so each such row's price set its
+   * own column and the seat states went ragged again. The list sizes the
+   * column to its own longest price: a character a `ch` — a tabular digit is
+   * exactly 1ch, a separator narrower — and half a digit more for a currency
+   * sign a little wider than a digit (€ is about 1.1ch).
+   */
+  it("sizes the price's column to the list's longest price, in any currency", () => {
+    render(
+      <WeekLedger
+        rows={[
+          row({ id: "a", price: "Rp 150.000" }),
+          row({ id: "b", price: "Rp 1.500.000" }),
+          row({ id: "c", price: null }),
+        ]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    expect(
+      screen.getByRole("list", { name: "Upcoming trips" }).style.getPropertyValue("--price-col"),
+    ).toBe("12.5ch");
+    for (const item of screen.getAllByRole("listitem")) {
+      const column = item.querySelector("svg")?.parentElement?.children[1];
+      expect(column).toHaveClass("sm:min-w-(--price-col)");
+    }
+  });
+
+  it("draws no price column at all in a list where nothing has a price", () => {
+    render(
+      <WeekLedger
+        rows={[row({ id: "a", price: null }), row({ id: "b", price: null })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    expect(
+      screen.getByRole("list", { name: "Upcoming trips" }).style.getPropertyValue("--price-col"),
+    ).toBe("");
+    for (const item of screen.getAllByRole("listitem")) {
+      // Seat state and chevron only: an empty column on every row would be a
+      // 12px gap standing in for nothing.
+      expect(item.querySelector("svg")?.parentElement?.children).toHaveLength(2);
+    }
   });
 });
 
