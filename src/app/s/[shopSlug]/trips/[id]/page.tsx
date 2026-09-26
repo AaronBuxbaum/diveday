@@ -790,14 +790,16 @@ export default async function TripDetailPage({
             about the reader, which is what makes it safe on an anonymous page
             (DOM-M6), and it still says nothing at all on a course session,
             whose own page states its admission rule. */}
-        {/* The requirement note's rule closes the other boats when it follows
-            them, rather than drawing a second rule 33px under theirs. */}
-        <TripAlternatives alternatives={worthALookRows} closed={!requirementNote} locale={locale} />
+        {/* The other boats close their own list, and the requirement note
+            under them sits 16px below that closing rule rather than drawing a
+            second one; alone, it opens on a rule of its own (pixel-craft
+            class 6). */}
+        <TripAlternatives alternatives={worthALookRows} locale={locale} />
         {requirementNote ? (
-          // The ledger's room, so this rule is as long as the alternatives'
-          // rules just above it.
+          // The ledger's room, so its words start where the alternatives'
+          // do, and its rule is as long as theirs.
           <p
-            className={`mt-8 border-t border-border pt-4 text-sm text-muted ${ledgerRowRoomClass}`}
+            className={`${worthALookRows.length > 0 ? "mt-4" : "mt-8 border-t border-border pt-4"} text-sm text-muted ${ledgerRowRoomClass}`}
           >
             {t("trip.requirementNote", { list: requirementNote })}
           </p>

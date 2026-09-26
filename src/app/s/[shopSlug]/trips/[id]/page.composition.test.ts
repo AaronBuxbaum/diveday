@@ -54,8 +54,11 @@ const ABOVE_THE_FORM = [
 /**
  * **One rule between two blocks, never two** (pixel-craft class 6). Each list
  * on this page closes itself unless the page knows the block under it opens on
- * a rule of its own: the day's run over a pitch that opens on its door, and the
- * other boats over the requirement note.
+ * a rule of its own: the day's run over a pitch that opens on its door. The
+ * other boats always close theirs, and the requirement note under them draws
+ * none: left open over the note's rule, the last boat stood in an 89px band
+ * with its words 13px from the rule above and 46px from the one below (K-16
+ * review, site-briefing).
  */
 describe("the trip page's rules", () => {
   it("leaves the day's run open only over a pitch that opens on its door", () => {
@@ -64,9 +67,12 @@ describe("the trip page's rules", () => {
     );
   });
 
-  it("leaves the other boats open only over the requirement note", () => {
-    expect(SOURCE).toMatch(/<TripAlternatives[^>]*closed=\{!requirementNote\}/);
+  it("closes the other boats, and rules the requirement note only when it opens the block", () => {
+    expect(SOURCE).not.toMatch(/<TripAlternatives[^>]*closed=/);
     expect(positionOf("<TripAlternatives")).toBeLessThan(positionOf("{requirementNote ? ("));
+    expect(SOURCE).toMatch(
+      /worthALookRows\.length > 0 \? "mt-4" : "mt-8 border-t border-border pt-4"/,
+    );
   });
 });
 

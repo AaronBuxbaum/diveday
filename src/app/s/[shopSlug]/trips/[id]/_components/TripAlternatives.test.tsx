@@ -27,27 +27,21 @@ function alternative(over: Partial<TripAlternative> = {}): TripAlternative {
 
 describe("TripAlternatives", () => {
   /**
-   * **The page's requirement note draws the rule under the list** (pixel-craft
-   * class 6). Closed, the list's last rule sat 33px over the note's own: two
-   * parallel hairlines with nothing between them, on every departure that
-   * both offers another boat and asks for a card.
+   * **The list closes itself, always** (pixel-craft class 6). Left open over
+   * the requirement note, its last row stood in an 89px band ruled only by the
+   * note's rule 33px lower: 13px over its words and 46px under them (K-16
+   * review, site-briefing). The note under it drops its own rule instead
+   * (`page.composition.test.ts`).
    */
-  it("closes its list, or leaves the close to a rule the page puts under it", () => {
-    const rows = () => screen.getAllByRole("listitem");
-    const { rerender } = render(
-      <TripAlternatives alternatives={[alternative()]} locale={DEFAULT_DIVER_LOCALE} />,
-    );
-    for (const row of rows()) expect(row).toHaveClass("border-t", "last:border-b");
-    rerender(
+  it("closes its list with a rule under the last row", () => {
+    render(
       <TripAlternatives
-        alternatives={[alternative()]}
+        alternatives={[alternative(), alternative({ tripId: "trip-3" })]}
         locale={DEFAULT_DIVER_LOCALE}
-        closed={false}
       />,
     );
-    for (const row of rows()) {
-      expect(row).toHaveClass("border-t");
-      expect(row).not.toHaveClass("last:border-b");
+    for (const row of screen.getAllByRole("listitem")) {
+      expect(row).toHaveClass("border-t", "last:border-b");
     }
   });
 

@@ -58,17 +58,9 @@ export type TripAlternative = {
 export function TripAlternatives({
   alternatives,
   locale,
-  closed = true,
 }: {
   alternatives: readonly TripAlternative[];
   locale: string;
-  /**
-   * `false` when the page draws a rule directly under this list (the
-   * requirement note): the list leaves its close to it, where its own
-   * closing rule sat 33px over the note's, two parallel hairlines with
-   * nothing between them (pixel-craft class 6).
-   */
-  closed?: boolean;
 }) {
   if (alternatives.length === 0) return null;
   const t = diverTranslator(locale);
@@ -83,7 +75,6 @@ export function TripAlternatives({
             linkLabel={alternative.title}
             kind={{ word: alternative.when, tone: "neutral" }}
             stacked
-            closed={closed}
             trailing={
               <span className="text-sm text-muted tabular-nums">
                 {t("fallback.spotsLeft", { count: alternative.seatsOpen })}
