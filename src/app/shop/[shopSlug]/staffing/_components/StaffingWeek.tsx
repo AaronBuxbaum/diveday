@@ -633,6 +633,21 @@ export function StaffingWeek({
     const parts = formatDayParts(instant, locale, "UTC");
     return { ...day, ...parts, label: formatShortDate(instant, locale, "UTC") };
   });
+  // The day list's days, below `lg`: a day someone works, crews a boat or is
+  // away, or a boat is short of crew. Worked out before drawing, so the list
+  // knows when none did.
+  const listDays = dayFaces
+    .map((day, index) => ({
+      day,
+      rows: week.people
+        .map((person) => ({ person, cell: person.days[index] }))
+        .filter(
+          ({ cell }) =>
+            cell && (cell.shifts.length > 0 || cell.crewing.length > 0 || cell.away.length > 0),
+        ),
+      gaps: week.gapDays[index]?.gaps ?? [],
+    }))
+    .filter(({ rows, gaps }) => rows.length > 0 || gaps.length > 0);
 
   return (
     <section aria-label={words.ariaLabel}>
@@ -752,14 +767,13 @@ export function StaffingWeek({
 
       {/* ---- The same week as a day list, below `lg`. Days with nothing in
           them are absent rather than empty: the reader is paging a week, and
-          "Wednesday, nothing" seven times is chrome. */}
+          "Wednesday, nothing" seven times is chrome. A day someone is away
+          is not nothing: the grid draws it as that person's chip, and the
+          list as their row (ADR 20260902-crew-requests-and-blackouts). It
+          drew a day away only beside a shift or a boat, so a week of days
+          away drew no list at all, and no rule over the doors (K-195). */}
       <div className="mt-4 lg:hidden">
-        {dayFaces.map((day, index) => {
-          const rows = week.people
-            .map((person) => ({ person, cell: person.days[index] }))
-            .filter(({ cell }) => cell && (cell.shifts.length > 0 || cell.crewing.length > 0));
-          const gaps = week.gapDays[index]?.gaps ?? [];
-          if (rows.length === 0 && gaps.length === 0) return null;
+        {listDays.map(({ day, rows, gaps }) => {
           return (
             <div key={day.date} className="mt-6 first:mt-0">
               {/* `h2` for the same reason the grid's day headers are: the
@@ -950,10 +964,15 @@ export function StaffingWeek({
             </div>
           );
         })}
-        {/* One honest line when the whole week is blank on a phone, where the
-            grid's own emptiness is not visible to say it. */}
-        {!week.hasEntries && !week.hasGaps ? (
-          <p className="text-sm text-muted">{words.empty}</p>
+        {/* One honest line when the list has no day to draw, where the
+            grid's own emptiness is not visible to say it. It is a ledger row,
+            the list's last, so it closes the week as the day rows do, and the
+            doors below hang on their closing rules alone as under any week
+            (K-195). */}
+        {listDays.length === 0 ? (
+          <LedgerRow as="div">
+            <p className="text-sm text-muted">{words.empty}</p>
+          </LedgerRow>
         ) : null}
       </div>
     </section>

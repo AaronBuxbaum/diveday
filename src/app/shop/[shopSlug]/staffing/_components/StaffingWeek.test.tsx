@@ -876,6 +876,15 @@ describe("StaffingWeek geometry", () => {
    * under "Tell the shop you're away". Both renderings of the week close
    * themselves; a row hung under them draws its closing rule alone, with a
    * ledger row's room so the rule ends where the week's do.
+   *
+   * On a phone that holds only if the list ends on a row. An empty week drew
+   * a bare line with no rule under it, and a week whose only entries are
+   * days away drew nothing at all (the list drew a day only for a shift or a
+   * boat), so the first door had no rule above it. The empty line is now a
+   * closed ledger row, and a day someone is away is drawn as the grid draws
+   * it: a recorded holiday is something, and the week never says "nothing"
+   * over one. That rule was `staffWeek`'s `hasEntries`, which only this
+   * line read; the line now reads the list it closes.
    */
   it("closes itself in both renderings, and hangs a row under it on its closing rule alone", () => {
     const { container } = renderWeek({ gaps: [GAP] });
@@ -889,5 +898,35 @@ describe("StaffingWeek geometry", () => {
     expect(tail).toEqual(expect.arrayContaining([...ledgerRowRoomClass.split(" "), "border-b"]));
     expect(tail.filter((token) => /(?:^|:)border-t$/.test(token))).toEqual([]);
     expect(tail).not.toContain("last:border-b");
+
+    const nobodyWorking: WeekPerson = { ...KEIKO, shifts: [] };
+    cleanup();
+    const empty = branches(renderWeek({ people: [nobodyWorking] }).container).list;
+    expect(empty.children).toHaveLength(1);
+    expect(empty.lastElementChild).toHaveTextContent(WORDS.empty);
+    expect(empty.lastElementChild).toHaveClass(...ledgerRowBoxClass.split(" "));
+    expect(empty.lastElementChild).toHaveClass("last:border-b");
+
+    cleanup();
+    const awayOnly = branches(
+      renderWeek({
+        people: [nobodyWorking],
+        blocks: [
+          {
+            id: "away-1",
+            personId: KEIKO.personId,
+            startsOn: THURSDAY,
+            endsOn: THURSDAY,
+            note: "Family trip",
+          },
+        ],
+      }).container,
+    ).list;
+    expect(awayOnly).not.toHaveTextContent(WORDS.empty);
+    expect(awayOnly.children).toHaveLength(1);
+    const row = within(awayOnly).getByText("Keiko Tanaka").closest("li");
+    expect(row).toHaveTextContent("Away · Family trip");
+    expect(row).toBe(awayOnly.querySelector("ul > li:last-child"));
+    expect(row).toHaveClass("last:border-b");
   });
 });

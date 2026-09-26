@@ -123,7 +123,6 @@ describe("staffWeek", () => {
     const thursday = week.people[0]?.days.find((day) => day.date === THURSDAY);
     expect(thursday?.shifts).toEqual([]);
     expect(thursday?.crewing.map((trip) => trip.tripId)).toEqual(["trip-1"]);
-    expect(week.hasEntries).toBe(true);
   });
 
   it("puts a crew gap in the day its departure sails, carrying its own code", () => {
@@ -188,7 +187,6 @@ describe("staffWeek", () => {
     // The person keeps their row — an empty week is the fact a manager opens
     // this page to see — but nothing was placed in it.
     expect(week.people).toHaveLength(1);
-    expect(week.hasEntries).toBe(false);
     expect(week.hasGaps).toBe(false);
   });
 
@@ -648,21 +646,6 @@ describe("blackouts and requests", () => {
     // An answered request is history; the gap chip above it already says the
     // session is still short.
     expect(place("over_intro_ratio", askOn({ state: "approved" }))).toBe(false);
-  });
-
-  it("counts a week with nothing but somebody's days away as having entries", () => {
-    // The empty line is the page saying "nothing at all"; a recorded holiday is
-    // something, and the week must not claim otherwise.
-    const week = staffWeek({
-      people: [{ ...KEIKO, shifts: [] }],
-      gaps: [],
-      weekStart: MONDAY,
-      timeZone: TZ,
-      today: THURSDAY,
-      blocks: [AWAY],
-      now: BEFORE,
-    });
-    expect(week.hasEntries).toBe(true);
   });
 });
 
