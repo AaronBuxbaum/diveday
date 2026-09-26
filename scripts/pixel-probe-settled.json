@@ -14,13 +14,6 @@
       "pointer": "src/app/ready/[token]/_components/TipAmountPicker.tsx, the comment above the preset pills; docs/design/settled-questions.md"
     },
     {
-      "check": "phantom-gap",
-      "signature": "hr.border-border",
-      "container": "div.bg-surface-sunken/50 border border-border/70 p-3 rounded-inset",
-      "reason": "An <hr> has no children by nature: the 25px is the rule's own my-3 on each side of its 1px border, even above and below, not a gap an empty box took.",
-      "pointer": "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx, the comment on the blockers' <hr>"
-    },
-    {
       "check": "uneven-gaps",
       "signature": "span{block;p0,0,0,0;b0,0,0,0;r0,0,0,0;f10/400;}",
       "container": "div.gap-[3px] grid tabular-nums text-[10px] text-muted",

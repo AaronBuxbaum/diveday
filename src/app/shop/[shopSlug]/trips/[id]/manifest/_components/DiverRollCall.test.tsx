@@ -808,4 +808,24 @@ describe("the person panel's spacing", () => {
     expect(empty.length).toBeGreaterThan(0);
     for (const list of empty) expect(list).toHaveClass("empty:hidden");
   });
+
+  /**
+   * **The rule under "Resolve blockers on Guests →" sits as far from the link's
+   * words as from the next line's** (pixel-craft class 4, K-362). The link is a
+   * 44px target round a 24px line, so about 15px of its box is already air under
+   * its words; the rule's `my-3` added 12px more above and 12 below — 27px of
+   * ink to rule, against 18 from the rule to "Emergency contact". The link's
+   * own air is the space above.
+   */
+  it("spaces the blockers' rule by the ink on each side, not by its box", () => {
+    renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({ readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] } }),
+      ],
+    });
+    const rule = open("Meera Iyer").querySelector("hr");
+    expect(rule).toHaveClass("mt-0", "mb-3");
+    expect(rule?.className).not.toMatch(/(^|\s)my-/);
+  });
 });

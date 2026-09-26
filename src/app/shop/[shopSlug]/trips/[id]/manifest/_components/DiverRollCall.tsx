@@ -713,14 +713,14 @@ export function DiverRollCall({
                           >
                             {t("manifest.resolveBlockersLink")}
                           </Link>
-                          {/* **The rule is the content.** An `<hr>` has no
-                            children by nature, so the pixel probe's
-                            phantom-gap check reads 25px here (12 above, the
-                            1px rule, 12 below) where the panel's siblings sit
-                            12px apart. That span is the rule's own even
-                            margins, not a gap an empty box took (settled in
-                            docs/design/settled-questions.md). */}
-                          <hr className="my-3 border-border" />
+                          {/* **Even by ink, not by box** (pixel-craft class
+                            4). The link above is a 44px target round a 24px
+                            line, so about 15px of its box is already air under
+                            its words; a `my-3` rule added 12px more, 27px of
+                            ink to rule against 18 from the rule to the next
+                            line. The link's own air is the space above, so
+                            the rule's margin is below only. */}
+                          <hr className="mt-0 mb-3 border-border" />
                         </>
                       ) : null}
                       {/* A diver whose advisory the strip above does not already
