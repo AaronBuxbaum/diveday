@@ -186,6 +186,78 @@ describe("one meta line, and nothing stacked under it", () => {
   });
 });
 
+/**
+ * **A fact moves to the next line whole** (pixel-craft class 8). The meta line
+ * wrapped at every space, so on a phone a fact broke in two — "Advanced Open /
+ * Water or higher", "Scuba / Refresher" — five times on the schedule at 390.
+ * Each fragment is one inline box, so the line breaks at a " · " between
+ * facts, and only a fact longer than the whole line wraps inside itself. Not
+ * `whitespace-nowrap`: a long site name would run past the column.
+ */
+describe("a fact on the meta line moves whole", () => {
+  it("sets every fragment as one box", () => {
+    render(
+      <WeekLedger
+        rows={[
+          row({
+            id: "course",
+            lens: "First time back in a while",
+            course: { label: "Course session", title: "Scuba Refresher", href: "/c/refresher" },
+            site: "Molasses Reef",
+            requirements: [],
+          }),
+          row({
+            id: "above",
+            site: "USCGC Duane",
+            requirements: ["Advanced Open Water or higher", "Deep"],
+            aboveLevel: "Above your level",
+          }),
+          row({
+            id: "clears",
+            requirements: ["Advanced Open Water or higher"],
+            clears: "Your Advanced card clears this",
+          }),
+        ]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const fragments = screen
+      .getAllByRole("listitem")
+      .flatMap((item) => Array.from(bodyLines(item)[0]?.children ?? []));
+    expect(fragments.map((fragment) => fragment.textContent)).toEqual([
+      "First time back in a while",
+      "Course session · Scuba Refresher",
+      "Molasses Reef",
+      "USCGC Duane",
+      "Advanced Open Water or higher",
+      "Deep",
+      "Above your level",
+      "Molasses Reef and French Reef",
+      "Advanced Open Water or higher",
+      "Your Advanced card clears this",
+    ]);
+    for (const fragment of fragments) expect(fragment).toHaveClass("inline-block");
+  });
+
+  it("keeps a course's name whole inside its fragment, so an overlong one breaks after the label", () => {
+    render(
+      <WeekLedger
+        rows={[
+          row({
+            course: { label: "Course session", title: "Scuba Refresher", href: "/c/refresher" },
+          }),
+        ]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Scuba Refresher" })).toHaveClass("inline-block");
+  });
+});
+
 describe("the requirement slot's silence", () => {
   it("says nothing when the departure demands nothing — site, seats and price only", () => {
     render(

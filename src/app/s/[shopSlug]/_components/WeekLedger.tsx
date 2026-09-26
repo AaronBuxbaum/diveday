@@ -156,35 +156,67 @@ function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stick
   );
 }
 
+/**
+ * **A fact on the meta line is one box** (pixel-craft class 8), so the line
+ * breaks at a " · " between facts and a fact moves to the next line whole. As
+ * plain inline text it broke at any space: on a phone "Advanced Open / Water or
+ * higher" and "Scuba / Refresher" split five times on the schedule at 390.
+ * Only a fact longer than the whole line wraps inside itself — never
+ * `whitespace-nowrap`, which would run a long site name past the column.
+ */
+const FACT = "inline-block";
+
 function Row({ row }: { row: WeekLedgerRow }) {
   const meta: ReactNode[] = [];
   // The shop's own word leads the line, before the course and the site: it is
   // what the reader is scanning for once they have tapped a lens, and it is the
   // one fragment on the row written by the shop rather than by DiveDay.
-  if (row.lens) meta.push(<span key="lens">{row.lens}</span>);
-  if (row.course) {
+  if (row.lens)
     meta.push(
-      <span key="course" className="font-medium text-primary">
+      <span key="lens" className={FACT}>
+        {row.lens}
+      </span>,
+    );
+  if (row.course) {
+    // The course's name is a box of its own inside the fact, so a fact too long
+    // for the line breaks after "Course session ·" rather than inside the name.
+    meta.push(
+      <span key="course" className={`${FACT} font-medium text-primary`}>
         {row.course.label} ·{" "}
         <Link
           href={row.course.href}
-          className="relative z-10 underline-offset-2 hover:underline focus-visible:underline"
+          className={`${FACT} relative z-10 underline-offset-2 hover:underline focus-visible:underline`}
         >
           {row.course.title}
         </Link>
       </span>,
     );
   }
-  if (row.site) meta.push(<span key="site">{row.site}</span>);
-  for (const marker of row.requirements) meta.push(<span key={`req-${marker}`}>{marker}</span>);
+  if (row.site)
+    meta.push(
+      <span key="site" className={FACT}>
+        {row.site}
+      </span>,
+    );
+  for (const marker of row.requirements)
+    meta.push(
+      <span key={`req-${marker}`} className={FACT}>
+        {marker}
+      </span>,
+    );
   if (row.aboveLevel) {
     meta.push(
-      <span key="above" className="font-medium text-warning-strong">
+      <span key="above" className={`${FACT} font-medium text-warning-strong`}>
         {row.aboveLevel}
       </span>,
     );
   }
-  if (row.clears) meta.push(<span key="clears">{row.clears}</span>);
+  if (row.clears)
+    meta.push(
+      <span key="clears" className={FACT}>
+        {row.clears}
+      </span>,
+    );
   // Quiet, never disabled: the row still navigates and every control stays
   // reachable. The quiet is *measured* ink — `text-muted` on the title and
   // time — not a wrapper `opacity-60`, which dimmed every token on the row
