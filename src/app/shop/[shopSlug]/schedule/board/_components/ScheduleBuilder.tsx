@@ -19,6 +19,7 @@ import {
   legendClass,
   textareaClassFor,
 } from "@/components/ui/form";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -1514,9 +1515,7 @@ function MoveImpact({
       ))}
       {lines.length > 0 ? (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            {copy.impactTitle}
-          </p>
+          <p className={groupLabelClass("muted")}>{copy.impactTitle}</p>
           <ul className="mt-2 space-y-1 text-sm text-muted">
             {lines.map((line) => (
               <li key={line}>{line}</li>

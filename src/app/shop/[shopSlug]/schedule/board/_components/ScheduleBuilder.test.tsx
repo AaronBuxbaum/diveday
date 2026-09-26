@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import userEvent from "@testing-library/user-event";
 import { type ComponentProps, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { MovePreflight } from "@/lib/move-preflight";
 import { rendersFlush } from "@/test/button-flush";
@@ -2056,6 +2057,24 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     expect(screen.getByText("5 seats are already paid.")).toBeInTheDocument();
     expect(screen.getByText("Cancellations close 48 hours before it departs.")).toBeInTheDocument();
     expect(screen.getByText(COPY.impactTitle)).toBeInTheDocument();
+  });
+
+  /**
+   * "If you move it" is a group label like every other in the app, not a
+   * small-caps line spelled by hand at a quarter of their letter-spacing
+   * (`tracking-wide`, 0.025em, beside the week's 0.14em; pixel-craft K-336).
+   */
+  it("titles the consequences with the app's one group label", async () => {
+    loadMovePreflight.mockImplementation(async () => ({
+      blocked: null,
+      sections: [{ kind: "gear", count: 1 }],
+    }));
+    renderBoard();
+    await openMovePanel();
+
+    const title = await screen.findByText(COPY.impactTitle);
+    expect(title).toHaveClass(...groupLabelClass("muted").split(" "));
+    expect(title).not.toHaveClass("tracking-wide");
   });
 
   /**
