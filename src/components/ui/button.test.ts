@@ -95,6 +95,41 @@ describe("buttonClass", () => {
     }
   });
 
+  describe("hover", () => {
+    const hoverTokens = (classes: string) =>
+      classes.split(" ").filter((token) => /(^|:)hover:/.test(token));
+
+    it("paints nothing on a disabled button: every hover is `not-disabled:hover:`", () => {
+      // Tailwind v4's `hover:` still matches a disabled button, and `DISABLED`
+      // only dims it, so a disabled chip inside `RepeatFields`'s `<fieldset
+      // disabled>` took the sunken fill under the pointer (the state atlas,
+      // K-137). Not `enabled:`: an `<a>` styled by `buttonClass` is never
+      // `:enabled` and would lose its hover altogether.
+      for (const variant of VARIANTS) {
+        const tokens = hoverTokens(buttonClass({ variant }));
+        for (const token of tokens) {
+          expect(token, variant).toMatch(/^not-disabled:hover:/);
+        }
+      }
+    });
+
+    it("steps the fill down from whatever ground the button stands on", () => {
+      // `secondary` and `ghost` hovered to `bg-surface-sunken`, which is the
+      // ground of every sunken card and board — on one, the hover painted the
+      // card's own colour (#ececf1 on #ececf1, delta 0; the recap plan and the
+      // schedule builder, K-123). A wash of the ink colour is a step darker than
+      // any ground in light, a step lighter in dark.
+      for (const variant of ["secondary", "ghost"] as const) {
+        const tokens = hoverTokens(buttonClass({ variant }));
+        expect(
+          tokens.filter((token) => token.endsWith("bg-surface-sunken")),
+          variant,
+        ).toEqual([]);
+        expect(tokens, variant).toContain("not-disabled:hover:bg-foreground/8");
+      }
+    });
+  });
+
   it("emits no empty or malformed class tokens", () => {
     // A dangling variant prefix (`sm:`) is not a class, and a double space is
     // how one gets built by string surgery. Cheap to assert, and it is the
@@ -363,6 +398,23 @@ describe("buttonClass", () => {
 
       // Listed, not counted: the message has to name the file, because the
       // whole point is that nothing on screen will.
+      expect(offenders).toEqual([]);
+    });
+
+    it("hands no bare `hover:` to buttonClass, which would paint on a disabled button", () => {
+      // The variants guard their hovers with `not-disabled:`; a caller's own
+      // `hover:` would not be, and would bring back the fill on a disabled
+      // control that K-137 took away.
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(/(?<![\w:-])hover:[^\s"'`]+/g) ?? []) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
       expect(offenders).toEqual([]);
     });
   });

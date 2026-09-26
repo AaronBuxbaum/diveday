@@ -101,10 +101,24 @@ const DISABLED = {
  * the two — the pre-departure checklist, the offline counter's "Check in" /
  * "Checked in" — moved its label 1px sideways. The fill still paints under a
  * transparent border (`background-clip` is `border-box`), edge to edge.
+ *
+ * **Every hover is `not-disabled:hover:`.** Tailwind v4's `hover:` still
+ * matches a disabled button, and `DISABLED` above only dims it, so a disabled
+ * weekday chip inside `RepeatFields`'s `<fieldset disabled>` took its fill
+ * under the pointer. Not `enabled:`: an `<a>` styled here is never `:enabled`,
+ * and a link would lose its hover altogether. `button.test.ts` refuses a bare
+ * `hover:`, here and at a call site.
+ *
+ * **A quiet hover is a wash of the ink, not a surface.** `secondary` and
+ * `ghost` hovered to `bg-surface-sunken`, which is also the ground of every
+ * sunken card and board, so on one the hover painted the card's own colour
+ * (#ececf1 on #ececf1 on the recap's plan and the schedule builder).
+ * `bg-foreground/8` is a step off whatever the button stands on — #ededed on
+ * white, as the sunken fill was, and a visible step on the sunken ground too.
  */
 const variants = {
   primary:
-    "border border-transparent bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover",
+    "border border-transparent bg-primary text-primary-foreground shadow-sm not-disabled:hover:bg-primary-hover",
   /**
    * The demoted-but-real action: a bordered surface box whose label is **body
    * text**, not link blue.
@@ -120,18 +134,19 @@ const variants = {
    * variants no longer say the same thing in colour. Contrast improves either
    * way (light 5.36 -> 15.02, dark 9.05 -> 14.48 on `bg-surface`).
    */
-  secondary: "border border-border bg-surface text-foreground hover:bg-surface-sunken",
-  ghost: "text-muted hover:bg-surface-sunken hover:text-foreground",
-  danger: "border border-danger/40 text-danger hover:bg-danger-tint",
+  secondary: "border border-border bg-surface text-foreground not-disabled:hover:bg-foreground/8",
+  ghost: "text-muted not-disabled:hover:bg-foreground/8 not-disabled:hover:text-foreground",
+  danger: "border border-danger/40 text-danger not-disabled:hover:bg-danger-tint",
   /**
    * A destructive choice sitting among quiet siblings — a disclosed action
    * list's "Remove" next to ghost-weight items. The bordered `danger` shouts
    * inside a small menu; this keeps the warning hue without the box.
    */
-  "danger-ghost": "text-danger hover:bg-danger-tint",
-  "danger-solid": "border border-transparent bg-danger text-primary-foreground hover:bg-danger/90",
+  "danger-ghost": "text-danger not-disabled:hover:bg-danger-tint",
+  "danger-solid":
+    "border border-transparent bg-danger text-primary-foreground not-disabled:hover:bg-danger/90",
   /** Reads as inline text, but still claims a full touch target. */
-  link: "text-primary hover:underline",
+  link: "text-primary not-disabled:hover:underline",
   /**
    * **A control standing on the sky** — a `SkyBand`'s own chip.
    *
@@ -147,7 +162,7 @@ const variants = {
    * object, and the label on it is the band's own ink, so it can never drift
    * from the sentence beside it.
    */
-  sky: "bg-white/18 text-(--sky-ink) backdrop-blur-sm hover:bg-white/28",
+  sky: "bg-white/18 text-(--sky-ink) backdrop-blur-sm not-disabled:hover:bg-white/28",
   /**
    * Shape and touch target only — no colour of its own.
    *
