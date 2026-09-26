@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CourseWavePlaceholder } from "@/components/CourseWavePlaceholder";
 import { StoredPhoto } from "@/components/StoredPhoto";
+import { tapTargetLineClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -65,12 +66,16 @@ export function CoursesShelf({
         >
           {t("courses.index.title")}
         </h2>
-        <Link
-          href={allCoursesHref}
-          className="text-sm font-medium text-primary hover:underline focus-visible:underline"
-        >
-          {t("courses.shelf.allCourses")}
-        </Link>
+        {/* A 44px door on the words' 20px line: the target bleeds above and
+            below, and the baseline row stays the heading's height. */}
+        <span className={tapTargetLineClass}>
+          <Link
+            href={allCoursesHref}
+            className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline focus-visible:underline`}
+          >
+            {t("courses.shelf.allCourses")}
+          </Link>
+        </span>
       </div>
       <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {courses.map((course) => (

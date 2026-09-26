@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { tapTargetLineClass, tapTargetLinkClass } from "@/components/ui/button";
 import type { PublicReview } from "@/db/reviews";
 import { diverTranslator } from "@/i18n/messages";
 import { ShopReviews } from "./ShopReviews";
@@ -48,6 +49,24 @@ describe("the shelf's door", () => {
       "href",
       "/s/blue-mantis/reviews",
     );
+  });
+
+  it("is a 44px target on a 20px line, so the header row stays the heading's height", () => {
+    // It was a bare 70.8×20 word (pixel-craft K-237).
+    render(
+      <ShopReviews
+        aggregate={AGGREGATE}
+        reviews={[review(1)]}
+        shopSlug="blue-mantis"
+        locale="en-US"
+        timezone="America/New_York"
+        t={t}
+      />,
+    );
+    const door = screen.getByRole("link", { name: "All reviews" });
+
+    expect(door).toHaveClass(...tapTargetLinkClass.split(" "));
+    expect(door.parentElement).toHaveClass(...tapTargetLineClass.split(" "));
   });
 
   it("carries two quotes and hands the rest to the archive", () => {

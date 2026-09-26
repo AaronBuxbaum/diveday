@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { tapTargetLineClass, tapTargetLinkClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { CoursesShelf } from "./CoursesShelf";
 
@@ -47,6 +48,16 @@ describe("three cards and one door", () => {
     );
 
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("makes the door a 44px target on a 20px line, so the header row stays the heading's height", () => {
+    // It was a bare 72.7×20 word (pixel-craft K-237). The floor alone would
+    // stand the baseline row 44px tall and push the heading down 7px.
+    render(<CoursesShelf courses={[course(1)]} allCoursesHref="/s/blue-mantis/courses" t={t} />);
+    const door = screen.getByRole("link", { name: "All courses" });
+
+    expect(door).toHaveClass(...tapTargetLinkClass.split(" "));
+    expect(door.parentElement).toHaveClass(...tapTargetLineClass.split(" "));
   });
 });
 

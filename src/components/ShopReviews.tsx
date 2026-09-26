@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { StarRating } from "@/components/StarRating";
+import { tapTargetLineClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { PublicReview } from "@/db/reviews";
@@ -56,12 +57,16 @@ export function ShopReviews({
         >
           {t("reviews.sectionTitle")}
         </h2>
-        <Link
-          href={publicReviewsPath(shopSlug)}
-          className="text-sm font-medium text-primary hover:underline focus-visible:underline"
-        >
-          {t("reviews.allTitle")}
-        </Link>
+        {/* A 44px door on the words' 20px line: the target bleeds above and
+            below, and the baseline row stays the heading's height. */}
+        <span className={tapTargetLineClass}>
+          <Link
+            href={publicReviewsPath(shopSlug)}
+            className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline focus-visible:underline`}
+          >
+            {t("reviews.allTitle")}
+          </Link>
+        </span>
       </div>
       <ReviewLedger
         reviews={reviews.slice(0, SHELF_QUOTES)}
