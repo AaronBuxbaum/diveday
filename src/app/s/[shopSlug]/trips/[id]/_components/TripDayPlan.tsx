@@ -2,7 +2,12 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
 import { StoredPhoto } from "@/components/StoredPhoto";
-import { GroupLabel, LedgerRow, ledgerRowBoxClass } from "@/components/ui/ledger";
+import {
+  GroupLabel,
+  LedgerRow,
+  ledgerKindColumnClass,
+  ledgerRowBoxClass,
+} from "@/components/ui/ledger";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
@@ -404,7 +409,7 @@ export function TripDayPlan({
                   rules are theirs and a list that ends on it still closes. */}
               {seen ? (
                 <li className={`flex gap-3 py-2 ${ledgerRowBoxClass}`}>
-                  <span className="min-w-23 shrink-0" />
+                  <span className={`${ledgerKindColumnClass} shrink-0`} />
                   <SiteSeen
                     seen={seen}
                     t={t}
@@ -419,7 +424,7 @@ export function TripDayPlan({
                   rather than as a third dive. */}
               {interval ? (
                 <li className={`flex items-center gap-3 py-2 ${ledgerRowBoxClass}`}>
-                  <span className="min-w-23 shrink-0" />
+                  <span className={`${ledgerKindColumnClass} shrink-0`} />
                   <span className="text-sm text-muted tabular-nums">
                     {t("trip.dayProfile.surfaceInterval", { minutes: interval })}
                   </span>

@@ -283,6 +283,17 @@ export function LedgerGroup({
 export type LedgerRowKindTone = "danger" | "warning" | "neutral";
 
 /**
+ * **The kind's column** (pixel-craft class 3): a fixed 104px every row's kind
+ * word sits in and wraps inside, so every row's sentence starts on one edge.
+ * It was `min-w-23`, a 92px floor sized for "Waiver", and a longer word grew
+ * its own row's gutter instead: "Wed 12:30 PM" (about 97px) pushed its
+ * sentence right of its neighbours', and es-ES's "Contacto de emergencia"
+ * further still. Exported for a hand-set line that indents past an empty kind
+ * (the public trip's surface interval), so the two cannot part.
+ */
+export const ledgerKindColumnClass = "w-26";
+
+/**
  * Tone in the ink, never in a fill — a tinted fill here would be a second pill
  * grammar arriving by the back door.
  *
@@ -504,7 +515,7 @@ export function LedgerRow({
         <RowKind
           word={kind.word}
           tone={kind.tone}
-          className={stacked ? "min-w-23 max-sm:order-1" : "min-w-23"}
+          className={stacked ? `${ledgerKindColumnClass} max-sm:order-1` : ledgerKindColumnClass}
         />
       ) : null}
       {/* Every `stacked` class is a `max-sm:` one, deliberately: from `sm` up

@@ -9,6 +9,7 @@ import {
   InsetGroup,
   LedgerGroup,
   LedgerRow,
+  ledgerKindColumnClass,
   ledgerRowBoxClass,
   RowKind,
 } from "./ledger";
@@ -353,6 +354,36 @@ describe("LedgerRow", () => {
     // docs/design/forms-and-controls.md.
     expect(kind).toHaveClass("text-warning-strong");
     expect(kind.className).not.toMatch(/rounded-full|\bborder\b|\bbg-/);
+  });
+
+  /**
+   * **The kind is a column, not a floor** (pixel-craft class 3). It was
+   * `min-w-23`, 92px, sized for "Waiver": a longer word grew its own row's
+   * gutter and pushed that row's sentence right of every other row's — "Wed
+   * 12:30 PM" is about 97px, es-ES's "Contacto de emergencia" far more. The
+   * column is a fixed 104px and a longer word wraps inside it.
+   */
+  it("sets the kind in a fixed column its word wraps inside", () => {
+    render(
+      <LedgerRow as="div" kind={{ word: "Contacto de emergencia", tone: "warning" }}>
+        Priya Sharma
+      </LedgerRow>,
+    );
+    const kind = screen.getByText("Contacto de emergencia");
+    expect(kind).toHaveClass(...ledgerKindColumnClass.split(" "));
+    expect(ledgerKindColumnClass).toMatch(/(?:^|\s)w-26(?:\s|$)/);
+    expect(kind).not.toHaveClass("min-w-23");
+  });
+
+  it("is the only width a hand-set line indents past the kind by", () => {
+    // The public trip's surface interval and "seen" lines sit under the
+    // sentence column, past an empty kind: they take the column's class, or
+    // they stop lining up the day the column moves.
+    const offenders = sourceFiles(SRC_DIR)
+      .filter((file) => !SWEEP_EXEMPT.has(file))
+      .filter((file) => /\bmin-w-23\b/.test(readFileSync(file, "utf8")))
+      .map((file) => relative(SRC_DIR, file));
+    expect(offenders).toEqual([]);
   });
 
   it("makes the whole row the target when the row is a door", () => {
