@@ -4,6 +4,7 @@ import { ActivityLog } from "@/components/ActivityLog";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
+import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -210,7 +211,9 @@ export function TripRosterContent({
       )}
 
       {demand ? (
-        <section className="mt-6 rounded-inset border border-warning/40 bg-warning-tint p-5">
+        // A card in a tone (`TONE_PANEL_CLASS`), not a 12px inset box: its
+        // corners were tighter than every card's, its words 4px further in.
+        <section className={`mt-6 ${TONE_PANEL_CLASS} border-warning/40 bg-warning-tint`}>
           <p className={groupLabelClass("warning")}>{t("trips.guests.demandSignal")}</p>
           <h2 className={`mt-1 ${SECTION_TITLE_CLASS}`}>{t("trips.guests.demandHeading")}</h2>
           <p className="mt-1 text-sm text-muted">

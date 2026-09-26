@@ -11,6 +11,7 @@ import {
   PANEL_INNER_RADIUS,
   SectionCard,
   sectionCardClass,
+  TONE_PANEL_CLASS,
 } from "./card";
 
 afterEach(cleanup);
@@ -192,6 +193,26 @@ describe("cardSummaryClass", () => {
  * list, 12px in the requirements and roster notes, 12px all round at 12px type
  * under the conditions. `px-3 py-2 text-sm` was already the majority spelling.
  */
+/**
+ * **A tone panel is a card in a tone** — pixel-craft classes 3 and 12. The
+ * roster's minimum-seats and unmet-demand bands hand-rolled `p-5` with no
+ * `sm:` step and no bed, one of them at the 12px inset radius, so on a phone
+ * their words started 4px right of every card above and below them.
+ */
+describe("TONE_PANEL_CLASS", () => {
+  it("is the card's radius, bed and padding, and no colour", () => {
+    expect(TONE_PANEL_CLASS).toBe("rounded-panel border p-4 shadow-bed sm:p-5");
+    // The same inset as SectionCard's default, so a tone panel's words start
+    // where a card's do at every width.
+    for (const token of ["rounded-panel", "shadow-bed", "p-4", "sm:p-5"]) {
+      expect(sectionCardClass().split(" ")).toContain(token);
+    }
+    expect(TONE_PANEL_CLASS).not.toMatch(
+      /\b(border|bg|text)-(border|surface|warning|danger|success|primary)/,
+    );
+  });
+});
+
 describe("the inset note", () => {
   it("is one geometry, and one sunken spelling of it", () => {
     expect(INSET_NOTE_BOX).toBe("rounded-lg px-3 py-2 text-sm");

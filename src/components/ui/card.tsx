@@ -68,7 +68,8 @@ import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
  * - **A tone-carrying operational panel** — a warning, success confirmation,
  *   paid receipt or earned moment. Its border and fill communicate meaning,
  *   and `SectionCard` deliberately has no tone prop that could flatten it into
- *   neutral chrome. Keep that treatment at the call site.
+ *   neutral chrome. Keep that treatment at the call site — on the card's own
+ *   geometry, `TONE_PANEL_CLASS`, so only the colour differs.
  *
  * A card nested directly inside another card at the same radius and fill reads
  * as a rendering bug, not as structure. If that is where you have arrived, the
@@ -144,6 +145,20 @@ export function sectionCardClass({
     .replace(/\s+/g, " ")
     .trim();
 }
+
+/**
+ * **A tone panel's geometry**: the card's radius, bed and default (`md`)
+ * padding, with no colour. A tone-carrying panel (above) spells its own
+ * border colour and fill beside it, so it sits on the page as a card does and
+ * differs only in the tone that means something.
+ *
+ * The roster's minimum-seats band and its unmet-demand panel hand-rolled
+ * `p-5` with no `sm:` step and no bed, the second at the 12px inset radius:
+ * on a phone their words started 4px right of every card above and below
+ * them, and the demand panel's corners were visibly tighter (pixel-craft
+ * classes 3 and 12).
+ */
+export const TONE_PANEL_CLASS = "rounded-panel border p-4 shadow-bed sm:p-5";
 
 /**
  * **A note carved into a card** — the first of the "not a section card"
