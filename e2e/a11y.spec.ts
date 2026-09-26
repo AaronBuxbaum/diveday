@@ -1253,7 +1253,7 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
    * marine life, an embedded map and a booking form, on one page.
    *
    * It was left out because the scan used to wait for `networkidle`, which this
-   * page never reaches — `e2e/fixtures.ts` aborts its Google Maps iframe, and
+   * page never reached — `e2e/fixtures.ts` aborted its Google Maps iframe, and
    * its dive-site photos are externally hosted and proxied through
    * `/_next/image`, which the sealed e2e fleet cannot fetch. That wait was
    * removed from `expectNoA11yViolations` in PR #585 and every caller now gates
