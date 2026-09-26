@@ -18,6 +18,27 @@ function sectionAfter(marker: string) {
 }
 
 /**
+ * **The guide paints its own skeleton while its body streams** (K-342).
+ *
+ * The body's boundary fell back to an empty `<main>`: 0px against a
+ * 6,338–13,076px page, so the footer painted at the top and everything jumped
+ * when the guide arrived. No `loading.tsx` stands above this segment
+ * (`scripts/check-loading-skeletons.mjs` exempts it), so this boundary is the
+ * one that paints, and it paints the guide's hero and "you are here" band with
+ * this guide's own line counts.
+ */
+describe("the guide body's boundary", () => {
+  it("falls back to the guide skeleton, not an empty main", () => {
+    const at = SOURCE.indexOf("<LocalizedGuideBody");
+    const boundary = SOURCE.slice(SOURCE.lastIndexOf("<Suspense", at), at);
+    expect(boundary).toContain(
+      "fallback={<GuideBodySkeleton lines={GUIDE_SKELETON_LINES[guide.slug]} />}",
+    );
+    expect(SOURCE).not.toContain('fallback={<main className="flex-1" />}');
+  });
+});
+
+/**
  * **No guide stacks two rules** (K-204). `GuideContext` is ruled below now,
  * so the coexist band that follows it on the booking-channel guides is ruled
  * below only; its old `border-y` would have drawn a second hairline on top of

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { ScrollToHash } from "@/components/ScrollToHash";
+import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/ledger";
@@ -48,6 +49,18 @@ import { IMPORT_SCOPE_ROW_KEYS } from "@/lib/migration-guides";
  */
 const GUIDE_FACTS = ["moves", "time", "preview", "back"] as const;
 
+/*
+ * The boxes the hero and the "you are here" band are built from, each spelled
+ * once and shared with {@link GuideBodySkeleton}, so the skeleton cannot draw a
+ * different box from the one that replaces it.
+ */
+const HERO_BOX_CLASS = "mx-auto max-w-4xl px-6 py-16 lg:py-24";
+const FACTS_GRID_CLASS =
+  "mt-10 grid grid-cols-2 gap-x-8 gap-y-6 border-t border-border pt-6 lg:grid-cols-4";
+const CONTEXT_PARAGRAPHS_CLASS = "mt-5 max-w-2xl space-y-5";
+const DIVIDED_LIST_CLASS = "mt-8 grid gap-x-10 sm:grid-cols-2";
+const DIVIDED_ITEM_CLASS = "border-t border-border py-5";
+
 /**
  * **The box of every eyebrow-and-prose band on a guide**: "you are here", the
  * move rail, the coexist and website bands, the closing band — 64px above and
@@ -88,7 +101,7 @@ export function GuideHero({
   const t = diverTranslator(locale);
   return (
     <section className="border-b border-border">
-      <div className="mx-auto max-w-4xl px-6 py-16 lg:py-24">
+      <div className={HERO_BOX_CLASS}>
         {/* A 44px target on a line the 14px text's own 20px tall: the target
             bleeds 12px above and below, into the hero's padding and the
             eyebrow's `mt-6`, and the hero keeps its rhythm (K-192). */}
@@ -113,7 +126,7 @@ export function GuideHero({
         </div>
         <p className="mt-3 text-sm text-muted">{t("switching.common.heroCtaNote")}</p>
 
-        <dl className="mt-10 grid grid-cols-2 gap-x-8 gap-y-6 border-t border-border pt-6 lg:grid-cols-4">
+        <dl className={FACTS_GRID_CLASS}>
           {GUIDE_FACTS.map((fact) => (
             <div key={fact}>
               <dt className={groupLabelClass()}>{t(`switching.common.facts.${fact}.label`)}</dt>
@@ -158,7 +171,7 @@ export function GuideContext({
     <section className="border-b border-border">
       <div className={GUIDE_BAND_CLASS}>
         <p className={MARKETING_EYEBROW_CLASS}>{t("switching.common.contextEyebrow")}</p>
-        <div className="mt-5 max-w-2xl space-y-5">
+        <div className={CONTEXT_PARAGRAPHS_CLASS}>
           {paragraphs.map((paragraph) => (
             <p key={paragraph} className="text-lg leading-8 text-muted">
               {paragraph}
@@ -178,14 +191,133 @@ export function GuideContext({
  */
 export function DividedList({ items }: { items: { title: string; detail: string }[] }) {
   return (
-    <ul className="mt-8 grid gap-x-10 sm:grid-cols-2">
+    <ul className={DIVIDED_LIST_CLASS}>
       {items.map((item) => (
-        <li key={item.title} className="border-t border-border py-5">
+        <li key={item.title} className={DIVIDED_ITEM_CLASS}>
           <h3 className="font-semibold leading-6">{item.title}</h3>
           <p className="mt-1.5 text-sm leading-6 text-muted">{item.detail}</p>
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * How far each fact's value wraps: five, two, three and three lines in a
+ * phone's half column at 390, four, two, two and two in a desk's quarter at
+ * 1280. The facts are shared copy, so every guide wraps them alike. Between
+ * `sm` and `lg` the grid is still two columns, wider than either measured one,
+ * and the values take a line fewer than drawn; the captures hold no width
+ * there to count from.
+ */
+const GUIDE_FACT_LINES: Record<(typeof GUIDE_FACTS)[number], SkeletonLines> = {
+  moves: { base: 5, sm: 4 },
+  time: 2,
+  preview: { base: 3, sm: 2 },
+  back: { base: 3, sm: 2 },
+};
+
+/** The note under the hero's doors: two lines on a phone, one from `sm`. Shared copy. */
+const HERO_NOTE_LINES: SkeletonLines = { base: 2, sm: 1 };
+
+/**
+ * **How far one guide's own words wrap**, for {@link GuideBodySkeleton}: its
+ * title, its lede, each "you are here" paragraph, and (the spreadsheet guide's
+ * wedge list) each list item's title and detail. Each is a `SkeletonLines`, one
+ * count or one below `sm` and one from it, counted on the guide's captures at
+ * 390 and 1280. The counts live in `guide-skeleton-lines.ts`.
+ */
+export type GuideSkeletonLines = {
+  title: SkeletonLines;
+  lede: SkeletonLines;
+  context: SkeletonLines[];
+  list?: { title: SkeletonLines; detail: SkeletonLines }[];
+};
+
+/**
+ * **What a guide paints while its localized body streams** (K-342, K-410):
+ * {@link GuideHero} and {@link GuideContext}, in their own boxes (the class
+ * constants above are shared with them) and with a bar per line the guide's
+ * words wrap to — each bar the line's own height, stacked as a paragraph's line
+ * boxes are (`SkeletonLineBars`) — so the page lands where the bars stood.
+ *
+ * `/switching/[competitor]` used to paint an empty `<main>` here, 0px against a
+ * 6,338–13,076px guide, so the footer painted at the top of the screen and the
+ * whole page jumped when the body arrived. `/switching/spreadsheet` drew bars,
+ * but wrong ones: two headline lines at every width, two lede lines where a
+ * phone wraps four, 44px doors that are 48, a note and facts a line short —
+ * "Where you are today" landed 264px below its bar at 390.
+ *
+ * Nothing in it is a link, a button or a form: a fallback holds shape, never
+ * interaction (ADR 20260804-instant-navigation's 2026-08-14 amendment).
+ */
+export function GuideBodySkeleton({ lines }: { lines: GuideSkeletonLines }) {
+  const bar = "rounded bg-surface-sunken";
+  const door = "h-12 w-full rounded-lg bg-surface-sunken";
+  return (
+    <main className="flex-1 animate-pulse">
+      <section className="border-b border-border">
+        <div className={HERO_BOX_CLASS}>
+          {/* The back link's 20px line, then the eyebrow's. */}
+          <div className={`h-5 w-40 ${bar}`} />
+          <div className={`mt-6 h-5 w-52 ${bar}`} />
+          {/* `DISPLAY_TITLE_CLASS`'s 40px lines, `sm:text-5xl`'s 48. */}
+          <div className="mt-4">
+            <SkeletonLineBars lines={lines.title} height="h-10 sm:h-12" width="w-full max-w-xl" />
+          </div>
+          <div className="mt-6">
+            <SkeletonLineBars lines={lines.lede} height="h-8" width="w-full max-w-2xl" />
+          </div>
+          {/* The demo and set-up doors: md buttons, 48px, stacked below sm. */}
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className={`${door} sm:w-40`} />
+            <div className={`${door} sm:w-28`} />
+          </div>
+          <div className="mt-3">
+            <SkeletonLineBars lines={HERO_NOTE_LINES} height="h-5" width="w-full max-w-md" />
+          </div>
+          <div className={FACTS_GRID_CLASS}>
+            {GUIDE_FACTS.map((fact) => (
+              <div key={fact}>
+                <div className={`h-4 w-24 max-w-full ${bar}`} />
+                <div className="mt-1">
+                  <SkeletonLineBars lines={GUIDE_FACT_LINES[fact]} height="h-6" width="w-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-border">
+        <div className={GUIDE_BAND_CLASS}>
+          <div className={`h-5 w-44 ${bar}`} />
+          <div className={CONTEXT_PARAGRAPHS_CLASS}>
+            {lines.context.map((paragraph, index) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: bars, not records — the paragraph's place is the only identity a placeholder has
+              <div key={index}>
+                <SkeletonLineBars lines={paragraph} height="h-8" width="w-full" />
+              </div>
+            ))}
+          </div>
+          {lines.list ? (
+            <div className={DIVIDED_LIST_CLASS}>
+              {lines.list.map((item, index) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: as above
+                <div key={index} className={DIVIDED_ITEM_CLASS}>
+                  <div>
+                    <SkeletonLineBars lines={item.title} height="h-6" width="w-40 max-w-full" />
+                  </div>
+                  <div className="mt-1.5">
+                    <SkeletonLineBars lines={item.detail} height="h-6" width="w-full max-w-sm" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </section>
+    </main>
   );
 }
 

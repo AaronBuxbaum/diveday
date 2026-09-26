@@ -30,6 +30,7 @@ import {
   DividedList,
   GUIDE_BAND_CLASS,
   GUIDE_BAND_LEDE_CLASS,
+  GuideBodySkeleton,
   GuideContext,
   GuideHero,
   ImportPhase,
@@ -41,6 +42,7 @@ import {
   SourcesFootnote,
   StepList,
 } from "../_components/guide";
+import { GUIDE_SKELETON_LINES } from "../_components/guide-skeleton-lines";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -116,7 +118,12 @@ export default async function MigrationGuidePage({
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <Suspense fallback={<main className="flex-1" />}>
+      {/* No `loading.tsx` stands above this segment, so this boundary is what
+          paints while the localized body streams: the guide's hero and "you
+          are here" band as bars, a bar per line this guide's words wrap to.
+          It was an empty `<main>`, 0px against a 6,000–13,000px guide, and the
+          footer painted at the top (K-342). */}
+      <Suspense fallback={<GuideBodySkeleton lines={GUIDE_SKELETON_LINES[guide.slug]} />}>
         <LocalizedGuideBody guide={guide} />
       </Suspense>
       <Suspense fallback={<MarketingFooterFallback />}>
