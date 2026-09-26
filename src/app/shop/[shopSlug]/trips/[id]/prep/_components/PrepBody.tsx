@@ -301,9 +301,12 @@ export function PrepBody({
         {line.items.map((piece) => {
           const detail = pieceSize(piece);
           return (
-            <li key={piece.kind}>
-              <span className="font-medium">{rentalItemLabel(t, piece.kind)}</span>
-              {detail ? <> {detail}</> : null}
+            // The piece and its detail as two boxes, so a detail that wraps
+            // ("Drysuit: weight check in the water") hangs under itself, not
+            // back under the piece's name, which never wraps.
+            <li key={piece.kind} className="flex gap-1">
+              <span className="shrink-0 font-medium">{rentalItemLabel(t, piece.kind)}</span>
+              {detail ? <span>{detail}</span> : null}
             </li>
           );
         })}
@@ -800,7 +803,12 @@ export function PrepBody({
                     <THead>
                       <Th>{t("tripPrep.itemColumn")}</Th>
                       <Th>{t("tripPrep.sizeColumn")}</Th>
-                      <Th numeric>{t("tripPrep.qtyColumn")}</Th>
+                      {/* Pinned, in both tables: the fixed layout split four
+                          unnamed columns equally, and a one-digit count held
+                          244px while the names wrapped onto three lines. */}
+                      <Th numeric width="8rem">
+                        {t("tripPrep.qtyColumn")}
+                      </Th>
                       <Th>{t("tripPrep.forColumn")}</Th>
                     </THead>
                     <TBody>
@@ -858,7 +866,9 @@ export function PrepBody({
                     <THead>
                       <Th>{t("tripPrep.diverColumn")}</Th>
                       <Th>{t("tripPrep.kitColumn")}</Th>
-                      <Th numeric>{t("tripPrep.qtyColumn")}</Th>
+                      <Th numeric width="8rem">
+                        {t("tripPrep.qtyColumn")}
+                      </Th>
                     </THead>
                     <TBody>
                       {checklist.diverLines.map((line) => (

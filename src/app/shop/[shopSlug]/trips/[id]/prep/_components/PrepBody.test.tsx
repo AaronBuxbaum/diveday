@@ -389,6 +389,32 @@ describe("the packing list's geometry", () => {
     }
   });
 
+  it("pins the quantity column narrow in both tables, so the names get the room (K-148)", () => {
+    for (const grouping of ["item", "diver"] as const) {
+      const { container, unmount } = renderPrep(everyPanelPrep(), { grouping });
+      const qty = within(container)
+        .getAllByRole("columnheader")
+        .filter((th) => th.textContent === t("tripPrep.qtyColumn"));
+      expect(qty, grouping).toHaveLength(1);
+      expect(qty[0], grouping).toHaveClass("w-32");
+      unmount();
+    }
+  });
+
+  it("hangs a kit piece's wrapped detail under the detail, not under the piece (K-148)", () => {
+    const { container } = renderPrep(everyPanelPrep(), { grouping: "diver" });
+    const row = diverLinks(container)
+      .filter((link) => link.textContent === "Carmen Ruiz")[1]
+      .closest("tr") as HTMLElement;
+    const pieces = row.querySelectorAll("td:nth-child(2) li");
+    expect(pieces.length).toBeGreaterThan(1);
+    for (const piece of pieces) {
+      expect(piece).toHaveClass("flex");
+      // The piece and its detail are two boxes; no bare text between them.
+      for (const node of piece.childNodes) expect(node.nodeType).toBe(Node.ELEMENT_NODE);
+    }
+  });
+
   it("sets each card's count on its title's baseline (K-149)", () => {
     for (const grouping of ["item", "diver"] as const) {
       const { container, unmount } = renderPrep(everyPanelPrep(), { grouping });
