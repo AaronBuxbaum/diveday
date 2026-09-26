@@ -312,6 +312,43 @@ describe("the all-home line", () => {
   });
 });
 /**
+ * **A row's line reads as columns and one baseline** (pixel-craft classes 1
+ * and 3). The unit tag is set in mono, so its character count used to set
+ * where the brand and size began: 214, 222.8, 231.2 and 256px across one
+ * register at 1280 (K-248). The overdue fact led with a bare svg, which has no
+ * baseline, so the fact stood 3px high of the tag beside it and, wrapped on a
+ * phone, centred its mark on both lines (K-429).
+ */
+describe("a register row's line", () => {
+  it("gives every tag one column, so every descriptor starts on one edge", () => {
+    renderLedger({
+      onWall: wall([
+        unit("BCD #2", { item: { ...unit("BCD #2").item, brandModel: "Cressi Start" } }),
+        unit("Computer #2", {
+          item: { ...unit("Computer #2").item, id: "unit-c2", brandModel: "Shearwater" },
+        }),
+      ]),
+    });
+    for (const tag of ["BCD #2", "Computer #2"]) {
+      expect(screen.getByText(tag)).toHaveClass("font-mono", "min-w-[11ch]");
+    }
+  });
+
+  it("sets the overdue fact on its words' baseline, its mark centred on the first line", () => {
+    const { container } = renderLedger({
+      overdue: [unit("REG-03", { reservation: reservation({ reservedUntil: "2026-08-18" }) })],
+    });
+    const fact = container.querySelector(".text-warning-strong");
+    expect(fact).toHaveClass("inline-flex", "items-baseline");
+    const [mark, words] = [...(fact?.children ?? [])];
+    expect(mark).toHaveClass("h-lh", "items-center", "self-start");
+    expect(mark?.querySelector("svg")).not.toBeNull();
+    expect(words?.tagName).toBe("SPAN");
+    expect(words?.textContent).toBe("With Grace Mensah · was due Aug\u00A018, 2026");
+  });
+});
+
+/**
  * **The one reading no group owns** (ADR 20260827-the-shops-shelves, slice 9d
  * as amended after review). Out, Overdue and On the wall each absorbed a
  * retired stat tile; the service tile duplicated nothing, so deleting it with
