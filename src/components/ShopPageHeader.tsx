@@ -385,6 +385,22 @@ export function ShopStat({
   const Label = definition ? "dt" : "p";
   const Value = definition ? "dd" : "p";
   const inset = variant === "inset";
+  const valueClass = `font-semibold tracking-tight tabular-nums ${
+    inset ? "text-2xl" : "text-3xl"
+  } ${toneClass}`;
+
+  // **Two rows of the grid the tile stands in: labels, then figures** (K-75).
+  // In block flow a label that wrapped ("Divers on the / manifest") pushed its
+  // own figure 20px below the figures beside it. Subgridding onto the parent's
+  // rows — the mechanism `Field` uses for captions over controls
+  // (`ui/form.tsx`) — makes the label row as tall as the row's longest label,
+  // so every figure starts on one line. Not `flex-col` with the figure
+  // `mt-auto`: that aligns figures only when every tile carries the same lines
+  // under them, and the blowout record's first tile has no detail where its
+  // neighbours do. The row gap is the space the figure's `mt-2` / `mt-0.5`
+  // gave. Outside a grid, `subgrid` falls back to plain rows and the tile
+  // reads exactly as it did.
+  const rows = `grid row-span-2 grid-rows-subgrid ${inset ? "gap-y-0.5" : "gap-y-2"}`;
 
   return (
     <div
@@ -392,25 +408,33 @@ export function ShopStat({
       // card's spelling: a stat tile and a section card are the same object
       // (docs/design/forms-and-controls.md), so neither can drift from the
       // other. `inset` is the sunken, chrome-less variant and has none of it.
-      className={inset ? "rounded-inset bg-surface-sunken px-4 py-3" : sectionCardClass()}
+      className={
+        inset
+          ? `${rows} rounded-inset bg-surface-sunken px-4 py-3`
+          : sectionCardClass({ className: rows })
+      }
     >
       <Label
         className={inset ? "text-xs font-medium text-muted" : "text-sm font-medium text-muted"}
       >
         {label}
       </Label>
-      <Value
-        className={`font-semibold tracking-tight tabular-nums ${
-          inset ? "mt-0.5 text-2xl" : "mt-2 text-3xl"
-        } ${toneClass}`}
-      >
-        {value}
-        {/* In definition mode the detail and link live inside the <dd> — a
-            <dl>'s groups may hold only <dt>/<dd>, and the sentence *is* part
-            of the value's definition. */}
-        {definition ? statDetail({ detail, comparison, celebrate, linkHref, linkLabel }) : null}
-      </Value>
-      {definition ? null : statDetail({ detail, comparison, celebrate, linkHref, linkLabel })}
+      {definition ? (
+        <Value className={valueClass}>
+          {value}
+          {/* In definition mode the detail and link live inside the <dd> — a
+              <dl>'s groups may hold only <dt>/<dd>, and the sentence *is* part
+              of the value's definition. */}
+          {statDetail({ detail, comparison, celebrate, linkHref, linkLabel })}
+        </Value>
+      ) : (
+        // The figure and the lines under it are one row: a detail line as a
+        // third child would open a third track the neighbours do not have.
+        <div>
+          <Value className={valueClass}>{value}</Value>
+          {statDetail({ detail, comparison, celebrate, linkHref, linkLabel })}
+        </div>
+      )}
     </div>
   );
 }

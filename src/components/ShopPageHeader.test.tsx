@@ -8,6 +8,7 @@ import {
   ShopNotice,
   ShopPageHeader,
   ShopPageHeaderSkeleton,
+  ShopStat,
 } from "./ShopPageHeader";
 
 afterEach(cleanup);
@@ -182,6 +183,62 @@ describe("the header's actions below sm", () => {
     const classes = band?.className.split(/\s+/) ?? [];
     expect(classes).toContain("max-sm:[&>:is(a,button,form)]:grow");
     expect(classes).not.toContain("max-sm:[&>*]:grow");
+  });
+});
+
+/**
+ * **A row of stat tiles puts every figure on one line, whatever its label
+ * wraps to.**
+ *
+ * The tile stacked its label and its figure in block flow, so a label that
+ * wrapped ("Divers on the / manifest") pushed its own figure 20px below the
+ * figures beside it — on the departure log an insurer is handed, in print too
+ * (K-75). The ledger proposed `flex-col` with the figure `mt-auto`, which
+ * aligns figures only when every tile carries the same lines *under* them:
+ * the blowout record's first tile has no detail line and its two neighbours
+ * do, so its figure would have dropped to the bottom instead.
+ *
+ * So the tile subgrids onto two rows of the grid it stands in — labels, then
+ * figures — the same mechanism `Field` uses for captions over controls
+ * (`ui/form.tsx`). The label row is as tall as the row's longest label, and
+ * every figure starts where that row ends. The gap the figure's `mt-*` used to
+ * give is the subgrid's own row gap.
+ */
+describe("ShopStat's figure", () => {
+  it("stands on a row shared with its neighbours, not under its own label", () => {
+    const { container } = render(
+      <ShopStat label="Divers on the manifest" value={12} detail="All accounted for" />,
+    );
+    const tile = container.firstElementChild;
+    expect(tile).toHaveClass("grid", "row-span-2", "grid-rows-subgrid", "gap-y-2");
+
+    // Exactly two children, one per row: the label, and everything under it.
+    const [label, figureRow] = Array.from(tile?.children ?? []);
+    expect(tile?.children).toHaveLength(2);
+    expect(label.textContent).toBe("Divers on the manifest");
+    const figure = figureRow.firstElementChild;
+    expect(figure?.textContent).toBe("12");
+    expect(figure?.className).not.toMatch(/(?:^|\s)mt-/);
+    // The detail line rides in the figure's row, so it cannot open a third.
+    expect(figureRow.textContent).toContain("All accounted for");
+  });
+
+  it("keeps the inset tile's tighter gap as its row gap", () => {
+    const { container } = render(<ShopStat label="Skipped" value={3} variant="inset" />);
+    const tile = container.firstElementChild;
+    expect(tile).toHaveClass("grid", "row-span-2", "grid-rows-subgrid", "gap-y-0.5");
+    expect(tile?.innerHTML).not.toMatch(/\bmt-0\.5\b/);
+  });
+
+  it("puts the <dt> and the <dd> on the two rows in a definition list", () => {
+    const { container } = render(
+      <dl>
+        <ShopStat definition label="Recorded not boarded" value={0} />
+      </dl>,
+    );
+    const tile = container.querySelector("dl > div");
+    expect(Array.from(tile?.children ?? []).map((child) => child.tagName)).toEqual(["DT", "DD"]);
+    expect(tile?.querySelector("dd")?.className).not.toMatch(/(?:^|\s)mt-/);
   });
 });
 

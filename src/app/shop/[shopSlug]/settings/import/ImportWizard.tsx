@@ -337,8 +337,9 @@ export function ImportWizard({
               { label: copy.stats.extraCardRows, value: prepared.totals.merged },
               { label: copy.stats.skipped, value: prepared.totals.skipped },
               { label: copy.stats.cards, value: prepared.totals.withCard },
-              // "Specialties", not "Specialty cards": a two-line label in one
-              // tile drops that tile's number below the other five.
+              // "Specialties", not "Specialty cards": a two-line label grows
+              // the whole row's label band (ShopStat lines the numbers up
+              // across it), so the short word keeps the row one line tall.
               { label: copy.stats.specialties, value: prepared.totals.withSpecialty },
               { label: copy.stats.nitroxCards, value: prepared.totals.withNitrox },
               { label: copy.stats.waivers, value: prepared.totals.withWaiver },
