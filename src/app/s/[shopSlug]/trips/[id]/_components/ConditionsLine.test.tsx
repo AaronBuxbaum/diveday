@@ -98,6 +98,36 @@ describe("ConditionsLine — the automated marine outlook", () => {
   });
 });
 
+/**
+ * **A wrap never strands a "·"** (pixel-craft class 8, K-483). Each dot was a
+ * flex item of its own, so a line could end on it: "…18 m visibility ·" over
+ * "Glassy" at 390. Each reading now carries the dot before it in one item, so
+ * the two wrap together, and the row stands the dot and its gap (12px) left of
+ * the column inside a line that clips there: the dot that starts a line — the
+ * first reading's, and any a wrap moves to the front — is cut, and every other
+ * sits between two readings as it did.
+ */
+describe("ConditionsLine — the separators", () => {
+  it("keeps each dot with the reading after it, and clips the one that starts a line", () => {
+    renderAutomated();
+    const item = screen.getByText("Light chop").parentElement;
+    expect(item).toHaveClass("inline-flex", "gap-x-2");
+    const row = item?.parentElement;
+    expect(row).toHaveClass("flex", "flex-wrap", "gap-x-2", "-ms-3");
+    expect(row?.parentElement).toHaveClass("overflow-x-clip");
+    expect(row?.children).toHaveLength(2);
+    for (const reading of row?.children ?? []) {
+      // The dot is a sibling of the reading, never inside it, and a 4px box:
+      // with the 8px gap, exactly the row's 12px shift.
+      const [dot, words] = [...reading.children];
+      expect(dot).toHaveTextContent("·");
+      expect(dot).toHaveAttribute("aria-hidden", "true");
+      expect(dot).toHaveClass("w-1");
+      expect(words).not.toHaveTextContent("·");
+    }
+  });
+});
+
 describe("ConditionsLine — the crew's own prediction", () => {
   const trip = {
     conditionsSummary: "Calm morning, building after lunch.",
