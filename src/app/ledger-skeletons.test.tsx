@@ -28,6 +28,7 @@ import ReportsLoading from "./shop/[shopSlug]/reports/loading";
 import RequestsLoading from "./shop/[shopSlug]/requests/loading";
 import StaffReviewsLoading from "./shop/[shopSlug]/reviews/loading";
 import StaffingLoading from "./shop/[shopSlug]/staffing/loading";
+import { SignatureLog } from "./shop/[shopSlug]/waivers/_components/SignatureLog";
 import WaiversLoading from "./shop/[shopSlug]/waivers/loading";
 
 afterEach(cleanup);
@@ -369,8 +370,17 @@ describe("a loading skeleton standing in for ledger rows", () => {
  * stopped showing the release editor at rest ("The ledger leads; the editor is
  * a door", waivers/page.tsx): it is one 48px "Edit the release" button, while
  * the skeleton kept the open editor's 426px card, so "Signed records" landed
- * 378px higher than its bar at 1280. And its rows were 48px against the log's
- * 52 (a `LedgerRow`'s floor, which the signature rows now keep).
+ * 378px higher than its bar at 1280.
+ *
+ * And its rows are the loaded rows. A loaded row is the `<li>`'s 1px rule over
+ * a summary with a 51px floor (`min-h-12.75`): 52px from `sm` up, where it is
+ * one line, and 65px below `sm`, where the departure takes a line of its own
+ * (8 + the name's 24 + 4 + the departure's 20 + 8, under the rule). A skeleton
+ * row of one fixed-height line (`h-13`) was 52px at every width, so on a phone
+ * each row landed 13px taller than its bar and the second day's label moved
+ * 39px on arrival. The skeleton draws the same two boxes in the same grammar,
+ * so it matches at every width, the group's last row and its closing rule
+ * included.
  */
 describe("the waivers skeleton", () => {
   it("draws the closed release door as one 48px bar, and no editor card", () => {
@@ -387,15 +397,61 @@ describe("the waivers skeleton", () => {
     expect(door?.children).toHaveLength(0);
   });
 
-  it("draws each log row at the loaded row's 52px", () => {
+  it("draws each log row in the loaded row's grammar: one 52px line from sm up, two lines on a phone", () => {
+    // The row's height is set by these, on the summary under the rule.
+    const HEIGHT = ["flex", "flex-wrap", "min-h-12.75", "gap-y-1", "py-2"];
+    const loaded = render(
+      <SignatureLog
+        entries={[
+          {
+            id: "signed-1",
+            personId: "person-1",
+            personName: "Grace Mensah",
+            tripId: "trip-1",
+            tripTitle: "Two-Tank Reef",
+            tripStartsAt: new Date("2026-08-27T11:00:00Z"),
+            status: "completed",
+            signedAt: new Date("2026-08-28T02:41:00Z"),
+            templateVersion: 4,
+            guardian: null,
+            integrity: "valid",
+            flaggedPrompts: [],
+          },
+        ]}
+        shopSlug="blue-mantis"
+        locale="en-US"
+        timezone="America/Cancun"
+        t={staffTranslator("en-US")}
+      />,
+    ).container;
+    const summary = loaded.querySelector("summary");
+    expect(summary).toHaveClass(...HEIGHT);
+    const [name, trip] = [...(summary?.children ?? [])];
+    expect(name).toHaveClass("max-sm:me-auto");
+    expect(trip).toHaveClass("max-sm:order-last", "max-sm:basis-full");
+    cleanup();
+
     const { container } = render(<WaiversLoading />);
     const rows = [...container.querySelectorAll("*")].filter((element) =>
       element.classList.contains("last:border-b"),
     );
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
-      expect(row).toHaveClass("h-13");
-      expect(row).not.toHaveClass("h-12");
+      // The rule is the row's box; the height is the summary-shaped box in it.
+      expect(row.children).toHaveLength(1);
+      expect(row).not.toHaveClass("h-13");
+      expect(row).not.toHaveClass("min-h-13");
+      const line = row.firstElementChild;
+      expect(line).toHaveClass(...HEIGHT);
+      expect(line).not.toHaveClass("h-13");
+      const [nameBar, tripBar, timeBar] = [...(line?.children ?? [])];
+      // The name's 24px line: a 16px bar and 4px each side. It pushes the time
+      // to the first line's end on a phone, as the name does.
+      expect(nameBar).toHaveClass("h-4", "my-1", "max-sm:me-auto");
+      // The departure's 20px `text-sm` line, a full-width line of its own on a
+      // phone, as the departure is.
+      expect(tripBar).toHaveClass("h-4", "my-0.5", "max-sm:order-last", "max-sm:basis-full");
+      expect(timeBar).toHaveClass("h-4", "shrink-0");
     }
   });
 });

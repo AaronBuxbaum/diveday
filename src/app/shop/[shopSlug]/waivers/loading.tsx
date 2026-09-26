@@ -16,11 +16,20 @@ function LogRows({ count }: { count: number }) {
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: static bars, no identity of their own
           key={index}
-          className={`flex h-13 items-center gap-3 ${ledgerRowBoxClass}`}
+          className={ledgerRowBoxClass}
         >
-          <div className="h-4 w-40 shrink-0 rounded bg-surface-sunken" />
-          <div className="h-4 flex-1 rounded bg-surface-sunken" />
-          <div className="h-4 w-14 shrink-0 rounded bg-surface-sunken" />
+          {/* A signature row as `SignatureLog` draws it: the rule on the
+              row's box, and in it the summary's grammar — a 51px floor,
+              wrapping, the name's 24px line and the departure's 20px one. From
+              `sm` up that is one 52px line; below `sm` the departure bar takes
+              a full-width line of its own, as the departure does, and the row
+              is 65px. A one-line `h-13` row was 52px at every width, 13px
+              short of every phone row it stood for. */}
+          <div className="flex min-h-12.75 flex-wrap items-center gap-x-3 gap-y-1 py-2">
+            <div className="my-1 h-4 w-40 shrink-0 rounded bg-surface-sunken max-sm:me-auto" />
+            <div className="my-0.5 h-4 min-w-0 flex-1 rounded bg-surface-sunken max-sm:order-last max-sm:basis-full" />
+            <div className="h-4 w-14 shrink-0 rounded bg-surface-sunken" />
+          </div>
         </div>
       ))}
     </div>
