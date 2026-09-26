@@ -344,15 +344,23 @@ export function LedgerGroup({
 export type LedgerRowKindTone = "danger" | "warning" | "neutral";
 
 /**
- * **The kind's column** (pixel-craft class 3): a fixed 104px every row's kind
+ * **The kind's column** (pixel-craft class 3): a fixed width every row's kind
  * word sits in and wraps inside, so every row's sentence starts on one edge.
  * It was `min-w-23`, a 92px floor sized for "Waiver", and a longer word grew
  * its own row's gutter instead: "Wed 12:30 PM" (about 97px) pushed its
  * sentence right of its neighbours', and es-ES's "Contacto de emergencia"
  * further still. Exported for a hand-set line that indents past an empty kind
  * (the public trip's surface interval), so the two cannot part.
+ *
+ * **92px on a phone, 104px from `sm` up.** A fixed 104px took 12px from the
+ * sentence beside it at every width, and on a phone that is the sentence's
+ * room: the diver record's waiver line had 70px at 360, wrapped to five lines
+ * and still ran 1.4px past its box on "signature.", and the inbox's sender
+ * address spilled 12px further (the pixel probe, diver-profile-imported and
+ * staff-inbox). Below `sm` the column is the 92px it always had, and a longer
+ * word wraps inside it there too.
  */
-export const ledgerKindColumnClass = "w-26";
+export const ledgerKindColumnClass = "w-23 sm:w-26";
 
 /**
  * Tone in the ink, never in a fill — a tinted fill here would be a second pill

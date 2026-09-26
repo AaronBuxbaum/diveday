@@ -535,9 +535,15 @@ describe("LedgerRow", () => {
    * `min-w-23`, 92px, sized for "Waiver": a longer word grew its own row's
    * gutter and pushed that row's sentence right of every other row's — "Wed
    * 12:30 PM" is about 97px, es-ES's "Contacto de emergencia" far more. The
-   * column is a fixed 104px and a longer word wraps inside it.
+   * column is a fixed width and a longer word wraps inside it.
+   *
+   * **92px on a phone, 104px from `sm` up.** A fixed 104px everywhere took
+   * 12px from the sentence on a phone: the diver record's waiver line had
+   * 70px at 360 and ran 1.4px out of its box, and the inbox's sender address
+   * spilled 12px further (the pixel probe, diver-profile-imported and
+   * staff-inbox).
    */
-  it("sets the kind in a fixed column its word wraps inside", () => {
+  it("sets the kind in a fixed column its word wraps inside, 92px on a phone", () => {
     render(
       <LedgerRow as="div" kind={{ word: "Contacto de emergencia", tone: "warning" }}>
         Priya Sharma
@@ -545,8 +551,8 @@ describe("LedgerRow", () => {
     );
     const kind = screen.getByText("Contacto de emergencia");
     expect(kind).toHaveClass(...ledgerKindColumnClass.split(" "));
-    expect(ledgerKindColumnClass).toMatch(/(?:^|\s)w-26(?:\s|$)/);
-    expect(kind).not.toHaveClass("min-w-23");
+    expect(ledgerKindColumnClass.split(" ").sort()).toEqual(["sm:w-26", "w-23"]);
+    expect(kind.className).not.toMatch(/(^|\s)(sm:)?(min|max)-w-/);
   });
 
   it("is the only width a hand-set line indents past the kind by", () => {
