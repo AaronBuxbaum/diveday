@@ -747,11 +747,17 @@ export function StaffingWeek({
                 {rows.map(({ person, cell }) => (
                   <LedgerRow key={person.personId} stacked>
                     <p className="text-sm font-semibold">{person.name}</p>
-                    <div className="mt-1 flex flex-col gap-1">
+                    {/* **One pitch: every entry is a 44px line, and they abut**
+                        (K-213). A crewed departure is a door, and it was one
+                        line of text 4px from the next — 358×20, a thumb aimed
+                        at one landing on its neighbour. A manager's shift was
+                        already 44px beside its Remove; the rest now match it,
+                        so the day reads at one rhythm whoever is reading. */}
+                    <div className="mt-1 flex flex-col">
                       {cell?.shifts.map((shift) => (
                         <div
                           key={shift.id}
-                          className="flex items-center justify-between gap-2 text-sm"
+                          className="flex min-h-11 items-center justify-between gap-2 text-sm"
                         >
                           <ShiftFace
                             shift={shift}
@@ -776,7 +782,7 @@ export function StaffingWeek({
                         <Link
                           key={trip.tripId}
                           href={tripHref(shopSlug, trip.tripId)}
-                          className="flex flex-col text-sm font-medium text-primary hover:underline"
+                          className="flex min-h-11 flex-col justify-center text-sm font-medium text-primary hover:underline"
                         >
                           <span>
                             <span className="sr-only">{words.crewing}: </span>
@@ -809,7 +815,7 @@ export function StaffingWeek({
                         </Link>
                       ))}
                       {cell?.away.map((block) => (
-                        <p key={block.id} className="text-sm text-muted">
+                        <p key={block.id} className="flex min-h-11 items-center text-sm text-muted">
                           {words.away}
                           {block.note ? ` · ${block.note}` : ""}
                         </p>
