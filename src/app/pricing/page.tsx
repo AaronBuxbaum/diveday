@@ -490,10 +490,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 {t("marketing.pricing.dataExit.securityNote")}
               </p>
             </div>
-            <MarketingMockup
-              label={t("marketing.pricing.dataExit.mockupLabel")}
-              className="shadow-xl shadow-foreground/5"
-            >
+            <MarketingMockup label={t("marketing.pricing.dataExit.mockupLabel")}>
               <ExportBundleFallback locale={locale} />
             </MarketingMockup>
           </div>

@@ -489,10 +489,7 @@ async function HomeBody({
                   {screen.door}
                 </div>
                 <div className="lg:col-span-6">
-                  <MarketingMockup
-                    label={screen.mockupLabel}
-                    className="shadow-xl shadow-foreground/5"
-                  >
+                  <MarketingMockup label={screen.mockupLabel}>
                     {screen.mockup.render(locale)}
                   </MarketingMockup>
                 </div>
@@ -548,10 +545,7 @@ async function HomeBody({
                 guides' own shared key rather than a homepage wording of the
                 same promise — see `midSeasonCutover`. */}
               <p className="leading-7 text-muted">{t(midSeasonCutover.claimKey)}</p>
-              <MarketingMockup
-                label={t("marketing.home.importMockupLabel")}
-                className="shadow-xl shadow-foreground/5"
-              >
+              <MarketingMockup label={t("marketing.home.importMockupLabel")}>
                 <ImportPreviewFallback locale={locale} />
               </MarketingMockup>
               {/* The spreadsheet door, and it belongs to this column rather than

@@ -235,10 +235,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
           <h2 className={`mt-4 max-w-2xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("switching.hub.previewTitle")}
           </h2>
-          <MarketingMockup
-            label={t("switching.hub.previewMockupLabel")}
-            className="mt-8 shadow-xl shadow-foreground/5"
-          >
+          <MarketingMockup label={t("switching.hub.previewMockupLabel")} className="mt-8">
             <ImportPreviewFallback locale={locale} />
           </MarketingMockup>
           <MarginNotes

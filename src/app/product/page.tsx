@@ -251,10 +251,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
                 ]}
               />
             </div>
-            <MarketingMockup
-              label={t("marketing.product.bookingMockupLabel")}
-              className="shadow-xl shadow-foreground/5"
-            >
+            <MarketingMockup label={t("marketing.product.bookingMockupLabel")}>
               <DiverBookingFallback locale={locale} />
             </MarketingMockup>
           </div>
@@ -266,7 +263,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <MarketingMockup
               label={t("marketing.product.readinessMockupLabel")}
-              className="order-2 shadow-xl shadow-foreground/5 lg:order-1"
+              className="order-2 lg:order-1"
             >
               <FrontDeskReadinessFallback locale={locale} />
             </MarketingMockup>
@@ -306,10 +303,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
                   </h3>
                   <p className="mt-2 leading-7 text-muted">{t("marketing.product.prepShopBody")}</p>
                 </div>
-                <MarketingMockup
-                  label={t("marketing.product.prepShopMockupLabel")}
-                  className="shadow-xl shadow-foreground/5"
-                >
+                <MarketingMockup label={t("marketing.product.prepShopMockupLabel")}>
                   <ShopPrepListFallback locale={locale} />
                 </MarketingMockup>
               </div>
@@ -323,10 +317,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
                     {t("marketing.product.nightBeforeBody")}
                   </p>
                 </div>
-                <MarketingMockup
-                  label={t("marketing.product.nightBeforeMockupLabel")}
-                  className="shadow-xl shadow-foreground/5"
-                >
+                <MarketingMockup label={t("marketing.product.nightBeforeMockupLabel")}>
                   <NightBeforeBriefFallback locale={locale} />
                 </MarketingMockup>
               </div>
@@ -408,10 +399,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
                 ]}
               />
             </div>
-            <MarketingMockup
-              label={t("marketing.product.recapMockupLabel")}
-              className="shadow-xl shadow-foreground/5"
-            >
+            <MarketingMockup label={t("marketing.product.recapMockupLabel")}>
               <RecapPageFallback locale={locale} />
             </MarketingMockup>
           </div>

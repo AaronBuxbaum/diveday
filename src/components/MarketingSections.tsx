@@ -32,21 +32,40 @@ import { productFeatureGroups } from "@/lib/marketing";
  * a card on a surface band is, not a call-site override here.
  */
 /**
- * The two frames a mockup is drawn in — chosen, never overridden. The phone
- * used to pass `rounded-[1.9rem] border-0` through `className` beside the
- * panel's own `rounded-panel border`: two utilities for one property resolve
- * by stylesheet order, not by intent, and the panel's 20px corner won where
- * the bezel nests one at 25px (pixel-craft class 6).
+ * The phone `CaptainPhoneFrame` draws: a 2.5rem corner, a 9px frame, and
+ * `p-1.5` between the frame and the screen. The screen's corner below is
+ * spelled from these three values, so change one here and re-derive it there;
+ * `MarketingSections.test.tsx` fails until you do.
+ */
+const PHONE_BEZEL = "rounded-[2.5rem] border-[9px] p-1.5";
+
+/**
+ * The two frames a mockup is drawn in — chosen, never overridden. Each names
+ * its one corner and its one shadow, and no caller passes either (or a
+ * border) through `className`, because two utilities for one property on one
+ * element resolve by the order Tailwind emits them, not by intent. The phone
+ * passed `rounded-[1.9rem] border-0` beside the panel's `rounded-panel
+ * border`, and the panel's 20px corner won where the bezel nests one at 25px
+ * (pixel-craft class 6, K-295); every page passed `shadow-xl
+ * shadow-foreground/5` beside the mockup's `shadow-bed`, and the page's lift
+ * won. `MarketingSections.test.tsx` holds both lines.
  */
 const MOCKUP_FRAME = {
-  /** A screen on a page: the panel rung and one hairline. */
-  panel: "rounded-panel border border-border",
   /**
-   * The screen inside `CaptainPhoneFrame`'s bezel. No hairline, because the
-   * bezel is its edge, and a corner that runs parallel to the bezel's: 40px
-   * (`rounded-[2.5rem]`) less the 9px frame and the 6px `p-1.5` is 25px.
+   * A screen on a page: the panel rung, one hairline, and the lift every
+   * page's screenshot has always rendered with. It was passed by each of the
+   * nine callers and silently beat the mockup's own `shadow-bed`; it is the
+   * frame's own now, so the pixels are the ones those pages already had.
    */
-  screen: "rounded-[25px]",
+  panel: "rounded-panel border border-border shadow-xl shadow-foreground/5",
+  /**
+   * The screen inside `PHONE_BEZEL`. No hairline, because the bezel is its
+   * edge, and a corner that runs parallel to the bezel's: its corner less its
+   * frame and its padding, 40 − 9 − 6 = 25px at a 16px root, written as that
+   * subtraction so the two curves move together at any root size, as
+   * `PANEL_INNER_RADIUS` and `SEGMENT_CORNER` are.
+   */
+  screen: "rounded-[calc(2.5rem-9px-var(--spacing)*1.5)] shadow-bed",
 } as const;
 
 export function MarketingMockup({
@@ -64,7 +83,7 @@ export function MarketingMockup({
     <div
       role="img"
       aria-label={label}
-      className={`overflow-hidden ${MOCKUP_FRAME[frame]} bg-surface shadow-bed text-left ${className}`}
+      className={`overflow-hidden ${MOCKUP_FRAME[frame]} bg-surface text-left ${className}`}
     >
       {children}
     </div>
@@ -83,7 +102,7 @@ export function CaptainPhoneFrame({
 }) {
   return (
     <div
-      className={`marketing-roll-call-frame rounded-[2.5rem] border-[9px] border-device-frame bg-device-frame p-1.5 shadow-2xl shadow-device-frame/20 ${className}`}
+      className={`marketing-roll-call-frame ${PHONE_BEZEL} border-device-frame bg-device-frame shadow-2xl shadow-device-frame/20 ${className}`}
     >
       <div className="mx-auto mb-1.5 h-1.5 w-20 rounded-full bg-muted/50" />
       <MarketingMockup label={label} frame="screen">
