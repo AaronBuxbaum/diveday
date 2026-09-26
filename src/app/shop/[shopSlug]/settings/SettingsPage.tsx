@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Fragment } from "react";
 import { FlashParams } from "@/components/FlashParams";
+import { ImageFileInput } from "@/components/ImageFileInput";
+import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -14,7 +16,6 @@ import {
   ChoiceFieldset,
   ChoicePill,
   ChoiceRow,
-  choiceClass,
   controlClass,
   Field,
   FieldActions,
@@ -87,6 +88,7 @@ import { publicShopRegisterPath } from "@/lib/public-routes";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import {
   type CuratedTimeZone,
   type CuratedTimezoneGroupKey,
@@ -691,6 +693,14 @@ export default async function SettingsPage({
   const taxValue = t(
     shop.taxEnabled ? "settings.main.tax.enabledValue" : "settings.main.tax.disabledValue",
   );
+  // The logo's and the cover photo's pickers, in the words every photo
+  // picker in the app uses.
+  const imageInputCopy = {
+    choose: t("shared.imageInput.choose"),
+    chooseAnother: t("shared.imageInput.chooseAnother"),
+    wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+    tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+  };
   const passThroughFee = parsePassThroughFee(shop.passThroughFee);
   const passThroughValue = passThroughFee ? (
     <FactLine
@@ -965,34 +975,20 @@ export default async function SettingsPage({
                   hint={t("settings.main.profile.logoHint")}
                   htmlFor="settings-logo-file"
                 >
-                  <div className="flex flex-col gap-3">
-                    {shop.logoUrl ? (
-                      <div className="flex items-center gap-4">
-                        {/* biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo */}
-                        <img
-                          src={shop.logoUrl}
-                          alt=""
-                          className="size-16 rounded-inset border border-border bg-surface object-cover"
-                        />
-                        <label className="flex items-center gap-2 text-sm text-muted hover:text-foreground cursor-pointer">
-                          <input
-                            type="checkbox"
-                            name="removeLogo"
-                            value="true"
-                            className={choiceClass}
-                          />
-                          <span>{t("settings.main.profile.removeLogo")}</span>
-                        </label>
-                      </div>
-                    ) : null}
-                    <input
-                      id="settings-logo-file"
-                      name="logoFile"
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="text-sm file:me-3 file:rounded-lg file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:cursor-pointer hover:file:bg-surface-hover"
-                    />
-                  </div>
+                  {/* The stored logo is taken back off the way every stored
+                      photo is (K-247 follow-up), in the square it is drawn as
+                      on the storefront. */}
+                  {shop.logoUrl ? (
+                    <div className="mb-3">
+                      <RemovablePhoto
+                        url={shop.logoUrl}
+                        name="removeLogo"
+                        label={t("settings.main.profile.removeLogo")}
+                        shape="logo"
+                      />
+                    </div>
+                  ) : null}
+                  <ImageFileInput id="settings-logo-file" name="logoFile" copy={imageInputCopy} />
                 </Field>
                 <FieldGrid columns={2}>
                   <Field
@@ -1042,34 +1038,23 @@ export default async function SettingsPage({
                   hint={t("settings.main.profile.heroHint")}
                   htmlFor="settings-cover-photo-file"
                 >
-                  <div className="flex flex-col gap-3">
-                    {shop.brandHeroImageUrl ? (
-                      <div className="flex items-center gap-4">
-                        {/* biome-ignore lint/performance/noImgElement: dynamic user-uploaded photo */}
-                        <img
-                          src={shop.brandHeroImageUrl}
-                          alt={shop.brandHeroImageAlt ?? ""}
-                          className="h-16 w-28 rounded-inset border border-border bg-surface object-cover"
-                        />
-                        <label className="flex items-center gap-2 text-sm text-muted hover:text-foreground cursor-pointer">
-                          <input
-                            type="checkbox"
-                            name="removeHero"
-                            value="true"
-                            className={choiceClass}
-                          />
-                          <span>{t("settings.main.profile.removeHero")}</span>
-                        </label>
-                      </div>
-                    ) : null}
-                    <input
-                      id="settings-cover-photo-file"
-                      name="brandHeroFile"
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="text-sm file:me-3 file:rounded-lg file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:cursor-pointer hover:file:bg-surface-hover"
-                    />
-                  </div>
+                  {/* One cell of the gallery grid, as the course hero is: a
+                      full-width field holding one photo draws it at a
+                      gallery cell's size (RemovablePhoto's grid doc). */}
+                  {shop.brandHeroImageUrl ? (
+                    <div className={`mb-3 ${removablePhotoGridClass}`}>
+                      <RemovablePhoto
+                        url={shop.brandHeroImageUrl}
+                        name="removeHero"
+                        label={t("settings.main.profile.removeHero")}
+                      />
+                    </div>
+                  ) : null}
+                  <ImageFileInput
+                    id="settings-cover-photo-file"
+                    name="brandHeroFile"
+                    copy={imageInputCopy}
+                  />
                 </Field>
                 <FieldGrid columns={2}>
                   <Field label={t("settings.main.profile.heroAlt")}>

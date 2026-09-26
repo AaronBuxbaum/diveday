@@ -11,6 +11,10 @@ import { StoredPhoto } from "@/components/StoredPhoto";
  */
 export const removablePhotoGridClass = "grid grid-cols-2 gap-3 sm:grid-cols-3";
 
+/** The photo's edge, ticked or focused, whatever its shape. */
+const PHOTO_EDGE =
+  "rounded-lg border-2 border-border transition *:transition-opacity peer-checked:border-danger peer-checked:*:opacity-50 peer-focus-visible:focus-ring";
+
 /**
  * **A photo a record already holds, with the box that takes it back off.**
  *
@@ -22,9 +26,17 @@ export const removablePhotoGridClass = "grid grid-cols-2 gap-3 sm:grid-cols-3";
  * It was drawn three ways (the pixel audit, course-edit and dive-site-edit):
  * the course hero a thumbnail beside a visible checkbox, the course gallery
  * this cell, and the dive-site editor a hand copy of this cell that dropped
- * the tick. `RemovablePhoto.test.tsx` refuses a stored photo (a `StoredPhoto`
- * or a raw `<img>`) beside a checkbox anywhere else, and names the one form
- * still drawing its own: the shop settings' logo and cover photo.
+ * the tick. The shop settings' logo and cover photo were a fourth, a raw
+ * `<img>` beside a visible checkbox. `RemovablePhoto.test.tsx` refuses a
+ * stored photo (a `StoredPhoto` or a raw `<img>`) beside a checkbox anywhere
+ * else.
+ *
+ * **A logo is a square, not a cell.** Everywhere a diver meets a shop's logo
+ * (the storefront, the region directory, the staff bar) it is a square tile
+ * cropped to cover, so `shape="logo"` draws that square at the cell's 96px
+ * height rather than a full-width cell that would crop it to a strip. Its
+ * label is the tile's width, so the tick sits on the tile's corner and the
+ * caption wraps under the tile.
  *
  * **Focus lands on the photo.** The checkbox is `sr-only`, a clipped 1px box,
  * so the global ring drew on nothing a person could see and a keyboard user
@@ -43,6 +55,7 @@ export function RemovablePhoto({
   name,
   value = "true",
   label,
+  shape = "photo",
 }: {
   url: string;
   /** The form field the ticked box posts. */
@@ -51,16 +64,25 @@ export function RemovablePhoto({
   value?: string;
   /** The words under the photo, which are also the box's accessible name. */
   label: string;
+  /** `logo` for a shop's logo: the square tile it is drawn as everywhere else. */
+  shape?: "photo" | "logo";
 }) {
+  // Two literal `StoredPhoto`s rather than one fed from a table: the
+  // image-sizes guard reads each `sizes` beside its element's own width class,
+  // so the logo's 96px is checked against its `size-24` with no registry entry.
   return (
-    <label className="relative block cursor-pointer">
+    <label className={`relative block cursor-pointer ${shape === "logo" ? "w-24" : ""}`.trim()}>
       <input type="checkbox" name={name} value={value} className="peer sr-only" />
-      <StoredPhoto
-        src={url}
-        alt=""
-        className="h-24 w-full rounded-lg border-2 border-border transition *:transition-opacity peer-checked:border-danger peer-checked:*:opacity-50 peer-focus-visible:focus-ring"
-        sizes="(min-width: 640px) 25vw, 50vw"
-      />
+      {shape === "logo" ? (
+        <StoredPhoto src={url} alt="" className={`size-24 ${PHOTO_EDGE}`} sizes="96px" />
+      ) : (
+        <StoredPhoto
+          src={url}
+          alt=""
+          className={`h-24 w-full ${PHOTO_EDGE}`}
+          sizes="(min-width: 640px) 25vw, 50vw"
+        />
+      )}
       <span
         aria-hidden="true"
         // diveday:allow-tinted-ink: the tick is `text-transparent` until the box is checked, and `text-danger` on `danger/15` measures 5.01:1 over `--surface` — this sits on a card (issue #874)
@@ -68,7 +90,7 @@ export function RemovablePhoto({
       >
         <DiveDayIcon name="check" className="size-4" strokeWidth={2.2} />
       </span>
-      <span className="mt-1 block text-xs font-medium text-muted transition peer-checked:text-danger">
+      <span className="mt-1 block text-xs font-medium text-balance text-muted transition peer-checked:text-danger">
         {label}
       </span>
     </label>

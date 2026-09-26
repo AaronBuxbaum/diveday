@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { ImageFileInput } from "@/components/ImageFileInput";
+import { RemovablePhoto } from "@/components/RemovablePhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { type Fact, FactLine } from "@/components/ui/FactLine";
@@ -290,6 +292,30 @@ describe("the profile row's captions", () => {
       const [picker] = named(body, input);
       expect(picker?.props.id, input).toBe(field?.props.htmlFor);
     }
+  });
+
+  /**
+   * The logo and the cover photo were a raw `<img>` beside a visible checkbox,
+   * above a bare file input: the one form still drawing "take a stored photo
+   * back off" its own way (K-247 follow-up). They are `RemovablePhoto`s now,
+   * the logo in its square shape, picked with `ImageFileInput`, posting the
+   * same `removeLogo` / `removeHero` and `logoFile` / `brandHeroFile` the save
+   * action reads.
+   */
+  it("takes a stored logo and cover photo back off the way every stored photo is", async () => {
+    const body = await profileBody();
+    const photos = findElements<{ name?: string; value?: string; shape?: string }>(
+      body,
+      RemovablePhoto,
+    );
+    expect(photos.map(({ props }) => [props.name, props.value ?? "true", props.shape])).toEqual([
+      ["removeLogo", "true", "logo"],
+      ["removeHero", "true", undefined],
+    ]);
+    expect(
+      findElements<{ name?: string }>(body, ImageFileInput).map(({ props }) => props.name),
+    ).toEqual(["logoFile", "brandHeroFile"]);
+    expect(findElements(body, "img")).toHaveLength(0);
   });
 
   it("captions the badges as a group of choices, not with a field's label", async () => {

@@ -1,4 +1,6 @@
 import type { ReactElement } from "react";
+import { ImageFileInput } from "@/components/ImageFileInput";
+import { RemovablePhoto } from "@/components/RemovablePhoto";
 import { ChoicePill, ChoiceRow } from "@/components/ui/form";
 
 /**
@@ -93,9 +95,10 @@ export function ariaLabelsIn(node: unknown, found: string[] = []): string[] {
  */
 /**
  * Every `name` on an `<input>` anywhere in a tree, hidden ones included — and
- * on a `ChoiceRow` or `ChoicePill`, each of which renders exactly one
- * `<input>` carrying the `name` it is handed. The tree is read unrendered, so
- * without them a checkbox moved onto the shared row would vanish from here.
+ * on a `ChoiceRow`, `ChoicePill`, `ImageFileInput` or `RemovablePhoto`, each of
+ * which renders exactly one `<input>` carrying the `name` it is handed. The
+ * tree is read unrendered, so without them a control moved onto the shared
+ * component would vanish from here.
  */
 export function inputNamesIn(node: unknown, found: string[] = []): string[] {
   if (node === null || typeof node !== "object") return found;
@@ -106,7 +109,11 @@ export function inputNamesIn(node: unknown, found: string[] = []): string[] {
   if ("type" in node && "props" in node) {
     const element = node as ReactElement<{ name?: unknown; children?: unknown }>;
     const rendersAnInput =
-      element.type === "input" || element.type === ChoiceRow || element.type === ChoicePill;
+      element.type === "input" ||
+      element.type === ChoiceRow ||
+      element.type === ChoicePill ||
+      element.type === ImageFileInput ||
+      element.type === RemovablePhoto;
     if (rendersAnInput && typeof element.props?.name === "string") {
       found.push(element.props.name);
     }
