@@ -121,6 +121,9 @@ describe("the week's shared price fact", () => {
   });
 });
 
+/** The line as it is read aloud: its no-break glue heard as the spaces it replaces. */
+const spoken = (line: string) => line.replaceAll("\u00A0", " ");
+
 describe("what a week cell says under its title", () => {
   const cell = {
     status: "upcoming" as const,
@@ -134,27 +137,29 @@ describe("what a week cell says under its title", () => {
     // Titles in a column share their prefix — "Dawn Two-Tank — …", "Morning
     // Two-Tank — …" — so the site is what tells one entry from the next, and
     // it is stated where the ellipsis cannot reach it.
-    expect(weekEntryMeta(cell)).toBe("Molasses Reef · 8 of 12 · $95");
+    expect(spoken(weekEntryMeta(cell))).toBe("Molasses Reef · 8 of 12 · $95");
   });
 
   it("never says a full boat in words: the count beside it already does", () => {
     // "Full · 12 of 12" spent the same currency the grid's real warnings use
     // on a fact the two numbers already carry (issue 758).
-    expect(weekEntryMeta({ ...cell, seats: "12 of 12" })).toBe("Molasses Reef · 12 of 12 · $95");
+    expect(spoken(weekEntryMeta({ ...cell, seats: "12 of 12" }))).toBe(
+      "Molasses Reef · 12 of 12 · $95",
+    );
   });
 
   it("drops what a departure does not have rather than leaving a gap in the line", () => {
-    expect(weekEntryMeta({ ...cell, siteName: null, price: null })).toBe("8 of 12");
+    expect(spoken(weekEntryMeta({ ...cell, siteName: null, price: null }))).toBe("8 of 12");
   });
 
   it("says a boat is home before anything else, and offers it no price to book at", () => {
-    expect(weekEntryMeta({ ...cell, status: "sailed" })).toBe("Sailed · 8 of 12");
+    expect(spoken(weekEntryMeta({ ...cell, status: "sailed" }))).toBe("Sailed · 8 of 12");
   });
 
   it("names the hull after the site, since the stream that used to carry it went", () => {
     // #1923: the board lost its second composition, so a scheduling fact it
     // only ever printed there has to land here or leave the product.
-    expect(weekEntryMeta({ ...cell, vessel: "Mantis II" })).toBe(
+    expect(spoken(weekEntryMeta({ ...cell, vessel: "Mantis II" }))).toBe(
       "Molasses Reef · Mantis II · 8 of 12 · $95",
     );
   });
@@ -162,7 +167,7 @@ describe("what a week cell says under its title", () => {
   it("says shore or pool in the hull's place, because the absence is the fact", () => {
     // A shore dive has no vessel to name, and a blank there would read as a
     // boat nobody has assigned rather than as a dive that needs none.
-    expect(weekEntryMeta({ ...cell, vessel: "Shore" })).toBe(
+    expect(spoken(weekEntryMeta({ ...cell, vessel: "Shore" }))).toBe(
       "Molasses Reef · Shore · 8 of 12 · $95",
     );
   });
@@ -170,14 +175,28 @@ describe("what a week cell says under its title", () => {
   it("leaves no gap for a departure whose hull is unknown", () => {
     // Paired with the positive case above: an omitted vessel must vanish from
     // the line rather than print an empty segment between two separators.
-    expect(weekEntryMeta({ ...cell, vessel: null })).toBe("Molasses Reef · 8 of 12 · $95");
-    expect(weekEntryMeta(cell)).toBe("Molasses Reef · 8 of 12 · $95");
+    expect(spoken(weekEntryMeta({ ...cell, vessel: null }))).toBe("Molasses Reef · 8 of 12 · $95");
+    expect(spoken(weekEntryMeta(cell))).toBe("Molasses Reef · 8 of 12 · $95");
+  });
+
+  it("glues every separator to the fact before it, so no wrapped line starts with a dot", () => {
+    // On a phone the meta has a line of its own and wraps, and " · " broke
+    // on both sides: lines began with "·" or ended on one item
+    // (schedule-builder@390, K-527). The glue is `joinFacts`'s.
+    for (const line of [
+      weekEntryMeta({ ...cell, vessel: "Mantis II" }),
+      weekEntryMeta({ ...cell, status: "sailed" }),
+    ]) {
+      const beforeEachDot = line.split("·").slice(0, -1);
+      expect(beforeEachDot.length).toBeGreaterThan(0);
+      for (const before of beforeEachDot) expect(before.endsWith("\u00A0")).toBe(true);
+    }
   });
 
   it("still says only that a sailed boat sailed, whatever it sailed on", () => {
     // The hull is not a decision anyone can act on once the boat is home, and
     // this row is being read rather than worked.
-    expect(weekEntryMeta({ ...cell, status: "sailed", vessel: "Mantis II" })).toBe(
+    expect(spoken(weekEntryMeta({ ...cell, status: "sailed", vessel: "Mantis II" }))).toBe(
       "Sailed · 8 of 12",
     );
   });

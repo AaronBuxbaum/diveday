@@ -28,6 +28,7 @@ import {
   formatShortDate,
   formatTime,
   formatTimeRange,
+  joinFacts,
   weekdayNames,
 } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -740,13 +741,13 @@ export default async function ScheduleBoardPage({
       {
         tripId: span.tripId,
         title: span.title,
-        meta: [
+        // `joinFacts`, as a boat's meta is (`weekEntryMeta`): no wrapped line
+        // of it starts with "·".
+        meta: joinFacts([
           st("schedule.week.seats", { booked: span.booked, capacity: span.capacity }),
           weekMoney(span.priceCents),
           span.instructorName,
-        ]
-          .filter(Boolean)
-          .join(" · "),
+        ]),
         // The course's own first day and departure time, not the column the
         // bar happens to start in: a run that began before this week still
         // moves from where it really starts.

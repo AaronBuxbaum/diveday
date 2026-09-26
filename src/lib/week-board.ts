@@ -4,6 +4,7 @@ import {
   isValidCalendarDate,
   shiftCalendarDate,
 } from "./calendar-date";
+import { joinFacts } from "./format";
 
 /**
  * The `?week=` grammar the staff board pages by, and the calendar arithmetic
@@ -134,6 +135,10 @@ export function weekIsWhollyUnpriced(board: {
  * Every segment arrives already localised and already formatted for the shop's
  * zone; this decides only which ones there are and in what order, which is why
  * it can be a pure function with a test rather than four lines inside a page.
+ *
+ * **Joined by `joinFacts`**, so each "·" is glued to the fact before it: on a
+ * phone the line has a row of its own and wraps, and a plain " · " broke on
+ * both sides, starting lines with the dot or leaving one item alone on them.
  */
 export function weekEntryMeta(entry: {
   status: "upcoming" | "sailed";
@@ -145,6 +150,6 @@ export function weekEntryMeta(entry: {
   seats: string;
   price: string | null;
 }): string {
-  if (entry.status === "sailed") return [entry.sailedLabel, entry.seats].join(" · ");
-  return [entry.siteName, entry.vessel, entry.seats, entry.price].filter(Boolean).join(" · ");
+  if (entry.status === "sailed") return joinFacts([entry.sailedLabel, entry.seats]);
+  return joinFacts([entry.siteName, entry.vessel, entry.seats, entry.price]);
 }
