@@ -661,4 +661,84 @@ describe("StaffingWeek geometry", () => {
     expect(chips.shift).toHaveClass("hover:bg-border");
     expect(chips.crew).toHaveClass("hover:border-primary/50");
   });
+
+  /**
+   * K-241: the week's one warning glyph was drawn at 10px beside a 4px gap on
+   * the crew chip, 12px beside 6px on the gap chip, and nudged down `mt-0.5`
+   * on both, which set it 1–1.5px below its line's capitals. One line piece
+   * now: the glyph centred in a box its line tall (`h-lh`), at one size and
+   * gap per type size — 12px and 4px beside the chips' `text-xs`, 14px and
+   * 6px beside the phone list's `text-sm`.
+   */
+  it("draws the warning glyph one way per type size, centred on its line", () => {
+    const { container } = renderWeek({
+      people: [
+        {
+          ...KEIKO,
+          crewingTrips: [
+            {
+              tripId: "trip-drift",
+              title: "Reef drift",
+              meetings: [
+                {
+                  startsAt: new Date("2026-08-27T13:00:00.000Z"),
+                  endsAt: new Date("2026-08-27T17:00:00.000Z"),
+                },
+              ],
+            },
+            {
+              tripId: "trip-wreck",
+              title: "Wreck charter",
+              meetings: [
+                {
+                  startsAt: new Date("2026-08-27T14:00:00.000Z"),
+                  endsAt: new Date("2026-08-27T18:00:00.000Z"),
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      blocks: [
+        {
+          id: "away-1",
+          personId: KEIKO.personId,
+          startsOn: THURSDAY,
+          endsOn: THURSDAY,
+          note: null,
+        },
+      ],
+      gaps: [GAP],
+    });
+    const { grid, list } = branches(container);
+    const lineOf = (words: HTMLElement) => words.parentElement as HTMLElement;
+    const chipLines = [
+      ...within(grid)
+        .getAllByText(/cannot be on both/)
+        .map(lineOf),
+      ...within(grid)
+        .getAllByText(/^Away /)
+        .map(lineOf),
+      grid.querySelector<HTMLElement>(".bg-warning-tint > span") as HTMLElement,
+    ];
+    const listLines = within(list)
+      .getAllByText(/cannot be on both/)
+      .map(lineOf);
+    expect(chipLines).toHaveLength(5);
+    expect(listLines).toHaveLength(2);
+
+    for (const [lines, gap, glyph] of [
+      [chipLines, "gap-1", "size-3"],
+      [listLines, "gap-1.5", "size-3.5"],
+    ] as const) {
+      for (const line of lines) {
+        expect(line).toHaveClass("flex", "items-start", gap);
+        const box = line.firstElementChild;
+        expect(box).toHaveClass("flex", "h-lh", "shrink-0", "items-center");
+        const mark = box?.querySelector("svg");
+        expect(mark).toHaveClass(glyph);
+        expect(mark).not.toHaveClass("mt-0.5");
+      }
+    }
+  });
 });

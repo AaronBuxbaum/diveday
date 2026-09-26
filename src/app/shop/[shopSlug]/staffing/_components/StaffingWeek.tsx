@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -265,6 +266,48 @@ function ShiftChip({
 }
 
 /**
+ * The glyph and the gap beside it, per type size: the chips' `text-xs`, the
+ * phone list's `text-sm`. The glyph is its type's own size; the gap is 4px
+ * beside 12px type and 6px beside 14px, as `FormStatus` sets its mark.
+ */
+const WARNING_LINE_SIZE = {
+  xs: { gap: "gap-1", glyph: "size-3" },
+  sm: { gap: "gap-1.5", glyph: "size-3.5" },
+} as const;
+
+/**
+ * **The week's one warning line** (K-241): the glyph, then the words, in the
+ * warning ink. The crew chip drew the glyph at 10px beside a 4px gap, the gap
+ * chip at 12px beside 6px, and both nudged it down `mt-0.5`, which set it
+ * 1–1.5px below its line's capitals. Here it sits centred in a box one line
+ * of its own text tall (`h-lh`), at the top of a line that may wrap — the
+ * middle of a line box is where its capitals are centred, at any type size —
+ * so no nudge is needed, and each type size draws it one way.
+ */
+function WarningLine({
+  size,
+  className = "",
+  children,
+}: {
+  size: keyof typeof WARNING_LINE_SIZE;
+  /** The line's place among its siblings (a margin), never its geometry. */
+  className?: string;
+  children: ReactNode;
+}) {
+  const { gap, glyph } = WARNING_LINE_SIZE[size];
+  return (
+    <span
+      className={`flex items-start ${gap} font-semibold text-warning-strong ${className}`.trim()}
+    >
+      <span className="flex h-lh shrink-0 items-center">
+        <DiveDayIcon name="warning" className={glyph} />
+      </span>
+      <span>{children}</span>
+    </span>
+  );
+}
+
+/**
  * The quieter chip kind: a departure this person crews. It is deliberately not
  * a shift — a boat with nobody's shift against it is exactly what the
  * cross-link exists to show (task 165) — so it is drawn in the door's own ink
@@ -310,33 +353,26 @@ function CrewChip({
           second would leave the surface with two. The word carries the
           difference, which is this grid's own rule. */}
       {trip.clashes.map((clash) => (
-        <span
-          key={clash.tripId}
-          className="mt-0.5 flex items-start gap-1 font-semibold text-warning-strong"
-        >
-          <DiveDayIcon name="warning" className="mt-0.5 size-3 shrink-0" />
-          <span>{fill(words.crewClash, { departure: clash.title })}</span>
-        </span>
+        <WarningLine key={clash.tripId} size="xs" className="mt-0.5">
+          {fill(words.crewClash, { departure: clash.title })}
+        </WarningLine>
       ))}
       {/* **Informs, never gates** (ADR 20260902-crew-requests-and-blackouts):
           this person told the shop they were away across days this departure
           meets on. Nobody is taken off the boat and the assignment stands —
           the week says so, and the conversation is the shop's to have. */}
       {trip.awayBlocks.length > 0 ? (
-        <span className="mt-0.5 flex items-start gap-1 font-semibold text-warning-strong">
-          <DiveDayIcon name="warning" className="mt-0.5 size-3 shrink-0" />
-          <span>
-            {fill(words.awayConflict, {
-              dates: trip.awayBlocks
-                .map((block) =>
-                  block.startsOn === block.endsOn
-                    ? formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")
-                    : `${formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")} – ${formatShortDate(calendarDateToUtcMidnight(block.endsOn), locale, "UTC")}`,
-                )
-                .join(", "),
-            })}
-          </span>
-        </span>
+        <WarningLine size="xs" className="mt-0.5">
+          {fill(words.awayConflict, {
+            dates: trip.awayBlocks
+              .map((block) =>
+                block.startsOn === block.endsOn
+                  ? formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")
+                  : `${formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")} – ${formatShortDate(calendarDateToUtcMidnight(block.endsOn), locale, "UTC")}`,
+              )
+              .join(", "),
+          })}
+        </WarningLine>
       ) : null}
     </Link>
   );
@@ -398,17 +434,20 @@ function GapChip({
   const loud = GAP_TONE[gap.gap] === "warning";
   const ink = loud ? "text-warning-strong" : "text-muted";
   const act = gapAct(gap, canManage);
+  // The departure time alone, not its range: the cell is ~120px and the
+  // question here is which boat, not how long it is out.
+  const departure = (
+    <>
+      <span className="tabular-nums">{formatTime(gap.startsAt, locale, timeZone)}</span> {gap.title}
+    </>
+  );
   return (
     <div className={chipClass(loud ? "loudGap" : "gap")}>
-      <span className={`flex items-start gap-1.5 font-semibold ${ink}`}>
-        {loud ? <DiveDayIcon name="warning" className="mt-0.5 size-3.5 shrink-0" /> : null}
-        <span>
-          {/* The departure time alone, not its range: the cell is ~120px and
-              the question here is which boat, not how long it is out. */}
-          <span className="tabular-nums">{formatTime(gap.startsAt, locale, timeZone)}</span>{" "}
-          {gap.title}
-        </span>
-      </span>
+      {loud ? (
+        <WarningLine size="xs">{departure}</WarningLine>
+      ) : (
+        <span className={`font-semibold ${ink}`}>{departure}</span>
+      )}
       <span className={ink}>{gapWords[gap.gap]}</span>
       {/* **Who has asked to work it** (issue #1235). The owner's own act sits
           on the request rather than in a queue elsewhere: the departure, the
@@ -759,13 +798,9 @@ export function StaffingWeek({
                               sentence joins its accessible name rather than
                               needing a live region of its own. */}
                           {trip.clashes.map((clash) => (
-                            <span
-                              key={clash.tripId}
-                              className="flex items-start gap-1 font-semibold text-warning-strong"
-                            >
-                              <DiveDayIcon name="warning" className="mt-0.5 size-3 shrink-0" />
-                              <span>{fill(words.crewClash, { departure: clash.title })}</span>
-                            </span>
+                            <WarningLine key={clash.tripId} size="sm">
+                              {fill(words.crewClash, { departure: clash.title })}
+                            </WarningLine>
                           ))}
                         </Link>
                       ))}
