@@ -340,7 +340,9 @@ export default async function IncidentExportPage({
             {t("incidentExport.checklistEmpty")}
           </p>
         ) : (
-          <Table minWidth="36rem" shellClassName="mt-3">
+          // No scroll floor: two columns share a phone's width and wrap. The
+          // roll-call tables keep theirs, which grow a column per dive.
+          <Table shellClassName="mt-3">
             <THead>
               <Th>{t("incidentExport.checklistColItem")}</Th>
               <Th>{t("incidentExport.checklistColStatus")}</Th>
