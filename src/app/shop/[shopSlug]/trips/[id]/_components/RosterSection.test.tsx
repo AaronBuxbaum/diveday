@@ -507,15 +507,6 @@ describe("a drysuit going out with no drysuit card", () => {
 });
 
 /**
- * The seat's foot row put its controls on the panel's text column with a hand
- * `-mx-3`, which left whichever came first 4px from the card's
- * `overflow-hidden` on a phone, so both drew an inset ring
- * (`trip-guests-identity-open` at 390). Now the first control is `flush`: a
- * link's box is its label, a ghost's box reaches 8px past it, and either way
- * the app's own ring fits inside the clip (K-06). jsdom has no layout, so
- * this asks which control is flush; `button.test.ts` refuses the row bleed.
- */
-/**
  * **A missing emergency contact's line hovers** (K-501). The whole line is the
  * disclosure that opens the form, and it declared `hover:bg-warning-tint` on a
  * `bg-warning-tint` rest: the state atlas measured `#fdefdf` both ways, 0px
@@ -542,6 +533,15 @@ describe("the missing emergency contact line", () => {
   });
 });
 
+/**
+ * The seat's foot row put its controls on the panel's text column with a hand
+ * `-mx-3`, which left whichever came first 4px from the card's
+ * `overflow-hidden` on a phone, so both drew an inset ring
+ * (`trip-guests-identity-open` at 390). Now the first control is `flush`: a
+ * link's box is its label, a ghost's box reaches 8px past it, and either way
+ * the app's own ring fits inside the clip (K-06). jsdom has no layout, so
+ * this asks which control is flush; `button.test.ts` refuses the row bleed.
+ */
 describe("the seat's foot row sits on the text column through flush", () => {
   it("flushes Create order, the first control, and leaves Remove booking its padding", () => {
     renderRoster({ ...fixtures, roster: [ready], paymentsConnected: true });
