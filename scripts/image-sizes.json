@@ -63,12 +63,6 @@
   "src/app/shop/[shopSlug]/_components/today/RecapNoteEditor.tsx :: 288px": {
     "exempt": "Not yet measured. A fixed px on a `w-full` cell inside a responsive grid, so the derived path cannot read it off a class and the registered path needs the evening close-out state seeded through /api/test/seed-evening."
   },
-  "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx :: (min-width: 640px) 25vw, 50vw": {
-    "exempt": "Not yet measured. The course editor's gallery, behind a staff session and a course slug. The identical string on the dive-site surfaces below is the one PR #1347 found over-declared by 2.8x, so this is a likely finding rather than a formality."
-  },
-  "src/app/shop/[shopSlug]/dive-sites/_components/SiteFields.tsx :: (min-width: 640px) 25vw, 50vw": {
-    "exempt": "Not yet measured. The dive-site editor's photo grid. See the note on the course editor above — same string, same suspicion."
-  },
   "src/app/shop/[shopSlug]/dive-sites/page.tsx :: (min-width: 640px) 180px, 50vw": {
     "measured": "2026-09-04, /shop/blue-mantis/dive-sites?view=catalog&template=molasses-reef — the published site catalog's preview pane, which is the only place this grid renders. Its <main> is max-w-3xl, so above 640px the four columns and their three gap-x-3 gaps leave a cell that never grows again; below it the grid is two columns of a viewport-width main. PR #1347 derived the 171 from that arithmetic and shipped the fix before this guard existed; this is the same number read off the element in a browser.",
     "rendered": {
@@ -80,6 +74,9 @@
   },
   "src/components/DiveSitesPeek.tsx :: (min-width: 640px) 50vw, 100vw": {
     "exempt": "Not yet measured. Rendered only on /waivers/[token], which needs a waiver bearer token for a booking whose trip has sites with photos."
+  },
+  "src/components/RemovablePhoto.tsx :: (min-width: 640px) 25vw, 50vw": {
+    "exempt": "Not yet measured. The one removable stored photo, behind a staff session: the course editor's hero and gallery, the dive-site editor's map and route stills and photo grid, and a trip's arrival photo. It took over the two entries the course editor and the dive-site editor carried for this same string, which PR #1347 found over-declared by 2.8x on the dive-site surfaces, so this is a likely finding rather than a formality. The dive-site map and route stills take a half column (a full column below 640px) rather than a grid cell, so one declaration may be wrong in both directions."
   },
   "src/components/TripArrivalCard.tsx :: (max-width: 640px) calc(100vw - 56px), 576px": {
     "exempt": "Not yet measured. Needs a departure carrying an arrival photo, which the demo does not seed."
