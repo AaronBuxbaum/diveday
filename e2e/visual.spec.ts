@@ -61,7 +61,7 @@ import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
  * printer. Print
  * is its own concern, not a light/dark one — the `@media print` token override
  * collapses both schemes to one black-and-white palette — so each is captured
- * once, at a US-Letter width, via `capturePrint()`.
+ * once, at a US-Letter width (or a wider sheet's own), via `capturePrint()`.
  *
  * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
  * `TABLET_SURFACES` adds 16 — eight surfaces a shop runs on a tablet get a
@@ -1576,30 +1576,6 @@ async function capture(
 }
 
 /**
- * Capture a surface as it renders for the printer. Emulating `print` media
- * applies the whole `@media print` treatment — monochrome tokens, page
- * padding, `print:hidden` chrome removed — so the baseline is the document a
- * shop actually prints, not the interactive page. One shot at the current
- * (Letter-width) viewport: print output is scheme- and viewport-independent, so
- * the light/dark × phone/desktop matrix the on-screen `capture` runs would be
- * four identical copies here. `@page` margins never show in a screenshot; the
- * padding visible in the baseline is the container's own (`print:px-*`), the
- * gutter that survives a "None margins" print dialog.
- *
- * `globals.css`'s `@page` rule (real, unmodified for actual printing) combines
- * with `break-inside: avoid` on each row to push a row that would otherwise
- * split across a physical page onto the next one — correct for paper, but a
- * `fullPage` screenshot never draws a page boundary, so that push only shows up
- * as unexplained blank space. Which row (if any) sits near a Letter-height page
- * boundary shifts by a sub-pixel amount between renders, so the gap's size —
- * and therefore the whole image's height — was never reproducible: three local
- * runs of identical seeded content came back 816×1636, 816×1646, and 816×1667.
- * The capture only needs to verify the print color scheme and padding, not
- * pagination, so give it a page tall enough that no row is ever near a break —
- * scoped to this capture with `addStyleTag`, not to `globals.css`, so real
- * printing keeps its real Letter pagination.
- */
-/**
  * **A sticky footer, photographed — because `capture()` above cannot see one.**
  *
  * Chromium's full-page screenshot stitches the document at scroll 0, and a
@@ -1677,18 +1653,88 @@ async function captureFolded(page: Page, name: string, scheme: "light" | "dark")
   });
 }
 
+/**
+ * Capture a surface as it renders for the printer. Emulating `print` media
+ * applies the whole `@media print` treatment — monochrome tokens, page
+ * padding, `print:hidden` chrome removed — so the baseline is the document a
+ * shop actually prints, not the interactive page. One shot at the current
+ * (Letter-width) viewport: print output is scheme- and viewport-independent, so
+ * the light/dark × phone/desktop matrix the on-screen `capture` runs would be
+ * four identical copies here. `@page` margins never show in a screenshot; the
+ * padding visible in the baseline is the container's own (`print:px-*`), the
+ * gutter that survives a "None margins" print dialog.
+ *
+ * `globals.css`'s `@page` rule (real, unmodified for actual printing) combines
+ * with `break-inside: avoid` on each row to push a row that would otherwise
+ * split across a physical page onto the next one — correct for paper, but a
+ * `fullPage` screenshot never draws a page boundary, so that push only shows up
+ * as unexplained blank space. Which row (if any) sits near a Letter-height page
+ * boundary shifts by a sub-pixel amount between renders, so the gap's size —
+ * and therefore the whole image's height — was never reproducible: three local
+ * runs of identical seeded content came back 816×1636, 816×1646, and 816×1667.
+ * The capture only needs to verify the print color scheme and padding, not
+ * pagination, so give it a page tall enough that no row is ever near a break —
+ * scoped to this capture with `addStyleTag`, not to `globals.css`, so real
+ * printing keeps its real Letter pagination.
+ *
+ * **A sheet is the exception, twice over** (`SheetDocument`). It states its
+ * own paper in `style[data-print-sheet]`, so the Letter override would name
+ * the wrong paper, and its box is a fixed size in millimetres that can be
+ * wider than Letter: the A3 dock sign is 285mm, 1,077px, and at 816px its
+ * frame scrolled the last 261px out of the shot while `body`'s
+ * `overflow-x: clip` hid the loss (pixel probe, dock-sign-print). So a sheet
+ * keeps its own `@page`, the viewport widens by however far a sheet's frame
+ * scrolls sideways, and a sheet still cut off after that throws rather than
+ * becoming a baseline. A sheet narrower than Letter is shot at 816px as
+ * before.
+ */
 async function capturePrint(page: Page, name: string) {
+  const baseViewport = page.viewportSize();
   // Switching media repaints the whole document in print tokens, which is a
   // property change like any other and so can start transitions of its own —
   // the same class of race as the resize in `capture()`. Both `emulateMedia`
-  // calls sit inside the switch-off for that reason.
+  // calls, and the resize a wide sheet needs, sit inside the switch-off for
+  // that reason.
   await withTransitionsOff(page, async () => {
     await page.emulateMedia({ media: "print" });
-    await page.addStyleTag({ content: "@page { size: 8.5in 200in; }" });
+    const statesItsOwnPaper = (await page.locator("style[data-print-sheet]").count()) > 0;
+    if (!statesItsOwnPaper) {
+      await page.addStyleTag({ content: "@page { size: 8.5in 200in; }" });
+    }
+    // How far the widest sheet runs past the frame holding it. Read after the
+    // media switch, because the print frame drops its screen padding.
+    const sheetOverflow = () =>
+      page.evaluate(() =>
+        Math.max(
+          0,
+          ...Array.from(
+            document.querySelectorAll(".paper-sheet-frame"),
+            (frame) => frame.scrollWidth - frame.clientWidth,
+          ),
+        ),
+      );
+    const overflow = await sheetOverflow();
+    const widened = overflow > 0;
+    if (baseViewport && widened) {
+      await page.setViewportSize({
+        width: baseViewport.width + overflow,
+        height: baseViewport.height,
+      });
+    }
     // After the media switch, so the bands rasterized are the print layout's.
     await paintWholeDocument(page);
+    const stillCut = await sheetOverflow();
+    if (stillCut > 0) {
+      throw new Error(
+        `visual: a paper sheet at ${page.url()} still runs ${stillCut}px past its frame at a ` +
+          `${page.viewportSize()?.width}px viewport, so its print capture would lose its right ` +
+          "edge. `capturePrint` widens the viewport by the frame's overflow before painting; " +
+          "find what grew after that read rather than widening further.",
+      );
+    }
     await screenshotOrGiveUp(page, `e2e/screenshots/${name}-print.png`);
     await page.emulateMedia({ media: "screen" });
+    if (baseViewport && widened) await page.setViewportSize(baseViewport);
   });
 }
 
