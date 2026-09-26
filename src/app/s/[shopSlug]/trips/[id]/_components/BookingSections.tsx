@@ -71,7 +71,7 @@ export function WaitlistConfirmation({
     // (design/principles.md #3) — a seat isn't held yet, so this sits on the
     // same sunken material as the full-boat state it came from: a place in
     // line, not a seat on the boat. Only a real confirmed booking gets coral.
-    <section className="rise-in mt-10 rounded-panel bg-surface-sunken p-6">
+    <section className="rise-in rounded-panel bg-surface-sunken p-6">
       <h2 className={`${SECTION_TITLE_CLASS} text-balance`}>
         {t("booking.waitlistConfirmedHeading", { name: firstName })}
       </h2>
@@ -93,7 +93,7 @@ export function TripSailedNotice({ shopSlug, embed }: { shopSlug: string; embed?
     // here, so it must not wear the same box as a live booking form — a state
     // with no action gets no frame (design/principles.md #10, remove until it
     // breaks). The one link is the whole surface.
-    <section className="mt-12">
+    <section>
       <h2 className={`${SECTION_TITLE_CLASS} text-muted`}>{t("sailedHeading")}</h2>
       <p className="mt-1 text-muted">
         <Link
@@ -128,7 +128,7 @@ export function CancelledTripNotice({
     // This is very nearly the whole page a saved link lands on, so it speaks
     // in the masthead's own type rather than from inside a small gray box —
     // and like the sailed state, a departure with nothing to do gets no frame.
-    <section className="mt-10">
+    <section>
       <h2 className={`${LEAD_TITLE_CLASS} text-balance`}>{t("cancelledHeading")}</h2>
       <p className="mt-2 text-muted">
         <Link
@@ -153,7 +153,7 @@ export function ConditionsHoldSection() {
     // the masthead already carries the warning tone, and `holdBody` points
     // back up at it. Two amber cards saying adjacent things was the page
     // warning the diver twice about one fact (design/principles.md #9).
-    <section className="mt-10">
+    <section>
       <h2 className={SECTION_TITLE_CLASS}>{t("holdHeading")}</h2>
       <p className="mt-1 text-muted">{t("holdBody")}</p>
     </section>
@@ -219,7 +219,7 @@ export function TripFullSection({
     // when the open form moved onto the shared card, the four states that
     // replace it were briefly a size louder — "This trip is full" shouting
     // over "Grab a spot".
-    <section id="book" className="mt-10 scroll-mt-4 rounded-panel bg-surface-sunken p-5 sm:p-6">
+    <section id="book" className="scroll-mt-4 rounded-panel bg-surface-sunken p-5 sm:p-6">
       <h2 className={SECTION_TITLE_CLASS}>{t("fullHeading")}</h2>
       <p className="mt-1 text-muted">
         <Link
@@ -292,10 +292,7 @@ export function TripFullSection({
             for. */}
         <DiveDeclarationFields showNitrox={false} offerStatedLevel />
         <div>
-          <SubmitButton
-            pendingLabel={t("waitlistJoining")}
-            className={buttonClass({ busy: true })}
-          >
+          <SubmitButton pendingLabel={t("waitlistJoining")} className={buttonClass({ busy: true })}>
             {t("waitlistHeading")}
           </SubmitButton>
           {/* Same placement as the open form: the fine print sits under the
@@ -498,7 +495,10 @@ export function BookSpotSection({
       // carried by hand, so the one raised card on the page keeps its geometry
       // and only its heading steps to the shared size.
       padding="lg"
-      className="mt-10 scroll-mt-4"
+      // No top margin, here or on any state that stands in this slot: the
+      // page's `space-y-10` sets the distance above (pixel-craft class 4,
+      // K-162), where each state used to carry a top margin of its own.
+      className="scroll-mt-4"
       title={t("heading")}
       actions={
         <span className="text-sm font-medium text-primary tabular-nums">{capacityText}</span>

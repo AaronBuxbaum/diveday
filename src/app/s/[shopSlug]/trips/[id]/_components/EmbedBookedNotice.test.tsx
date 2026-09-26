@@ -114,6 +114,21 @@ describe("EmbedBookedNotice", () => {
     expect(stack).not.toHaveClass("gap-1");
   });
 
+  /**
+   * **One block of the page's stack** (pixel-craft class 4, K-162). The trip
+   * page stands its sections on one `space-y-10`; a fragment would hand each of
+   * this notice's lines its own 40px, and its own `mt-10` stood it apart from
+   * the rest of the page's rhythm.
+   */
+  it("renders as one block with no margin of its own", () => {
+    const { container } = renderNotice({ emailsOnTheWay: true });
+    expect(container.children).toHaveLength(1);
+    const margins = (element: Element) =>
+      [...element.classList].filter((token) => /^-?m[ty]?-/.test(token));
+    expect(margins(container.children[0])).toEqual([]);
+    expect(margins(container.children[0].children[0])).toEqual([]);
+  });
+
   it("promises two emails only when both actually went out", () => {
     renderNotice({ emailsOnTheWay: false });
     expect(screen.queryByText(/Two emails are on their way/)).toBeNull();

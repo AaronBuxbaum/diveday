@@ -184,25 +184,17 @@ describe("ConditionsLine — with no forecast at all", () => {
   });
 
   /**
-   * **Flush under the pitch's door, its rule is the door's close** (pixel-craft
-   * class 6). 24px below it, the door's label sat in an 80px band between two
-   * rules, 29px under one and 51px over the other.
+   * **The page sets its distance, the line opens on its rule** (pixel-craft
+   * class 4, K-162). The trip page's `space-y-10` stands it a section below
+   * what precedes it, and puts it flush under the pitch's door, where its rule
+   * is the door's close (class 6). It carried its own `mt-6`, 24px where the
+   * page's other sections stood 32 and 40.
    */
-  it("stands 24px below the page above it, or flush under the pitch's door", () => {
-    const props = {
-      shop,
-      trip: { waterTemperatureC: null } as Trip,
-      crewPrediction: false,
-      automatedForecast: automated(),
-      crewLanguages: null,
-      locale: DEFAULT_DIVER_LOCALE,
-    };
-    const { container, rerender } = render(<ConditionsLine {...props} />);
-    const section = () => container.querySelector("section");
-    expect(section()).toHaveClass("mt-6", "border-t");
-    rerender(<ConditionsLine {...props} underDoor />);
-    expect(section()).toHaveClass("border-t");
-    expect(section()).not.toHaveClass("mt-6");
+  it("opens on its rule and carries no margin of its own", () => {
+    const { container } = renderAutomated();
+    const section = container.querySelector("section");
+    expect(section).toHaveClass("border-t", "pt-4");
+    expect([...(section?.classList ?? [])].filter((token) => /^-?m[ty]?-/.test(token))).toEqual([]);
   });
 
   it("renders nothing at all when there is neither a forecast nor a language", () => {

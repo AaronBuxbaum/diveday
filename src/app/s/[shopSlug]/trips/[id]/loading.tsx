@@ -32,24 +32,34 @@ export default function TripDetailLoading() {
             </>
           }
         />
-        {/* "The day" — the run of dives, one row each. */}
-        <div className="mt-8 h-28 rounded bg-surface-sunken" />
-        {/* The pitch, in its three parts: the fact chip, the three tiles, the
-            door. Flat bands on the page background, not cards. */}
-        <div className="mt-8 h-7 w-40 rounded-full bg-surface-sunken" />
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          <div className="h-24 rounded bg-surface-sunken" />
-          <div className="h-24 rounded bg-surface-sunken" />
-          <div className="h-24 rounded bg-surface-sunken" />
+        {/* The page's one stack of sections, 40px apart (pixel-craft class 4,
+            K-162), on the same `mt-10 space-y-10` the page stands them on. */}
+        <div className="mt-10 space-y-10">
+          {/* "The day" — the run of dives, one row each. */}
+          <div className="h-28 rounded bg-surface-sunken" />
+          {/* The pitch, in its three parts — the fact chip, the three tiles,
+              the door — with the conditions line flush under the door, one
+              block as the page draws it. Flat bands on the page background,
+              not cards. */}
+          <div>
+            <div className="h-7 w-40 rounded-full bg-surface-sunken" />
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="h-24 rounded bg-surface-sunken" />
+              <div className="h-24 rounded bg-surface-sunken" />
+              <div className="h-24 rounded bg-surface-sunken" />
+            </div>
+            <div className="mt-4 h-14 rounded bg-surface-sunken" />
+            <div className="pt-4">
+              <div className="h-12 rounded bg-surface-sunken" />
+            </div>
+          </div>
+          {/* The two alternates. */}
+          <div className="h-26 rounded bg-surface-sunken" />
+          {/* The booking card's shell, from the same place `SectionCard` takes
+              it — the one raised card the page streams in, and the last thing
+              on it. */}
+          <div className={sectionCardClass({ padding: "none", className: "h-96" })} />
         </div>
-        <div className="mt-4 h-14 rounded bg-surface-sunken" />
-        {/* The conditions line, then the two alternates. */}
-        <div className="mt-6 h-12 rounded bg-surface-sunken" />
-        <div className="mt-8 h-26 rounded bg-surface-sunken" />
-        {/* The booking card's shell, from the same place `SectionCard` takes
-            it — the one raised card the page streams in, and the last thing
-            on it. */}
-        <div className={sectionCardClass({ padding: "none", className: "mt-10 h-96" })} />
       </div>
     </main>
   );

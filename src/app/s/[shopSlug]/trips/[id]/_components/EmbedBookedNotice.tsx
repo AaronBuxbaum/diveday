@@ -75,9 +75,11 @@ export function EmbedBookedNotice({
 }) {
   const t = diverTranslator(locale);
   return (
-    <>
+    // One block of the page's `space-y-10`, with no margin of its own: the
+    // page sets its distance from the section above (pixel-craft class 4,
+    // K-162), and its own lines keep their rhythm inside it.
+    <div>
       <EarnedMoment
-        className="mt-10"
         title={t("booking.confirmedHeading", {
           name: confirmed.person.fullName.split(" ")[0],
         })}
@@ -155,6 +157,6 @@ export function EmbedBookedNotice({
           {t("common.backToSchedule")}
         </Link>
       </div>
-    </>
+    </div>
   );
 }

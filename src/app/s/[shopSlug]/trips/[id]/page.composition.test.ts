@@ -70,9 +70,10 @@ describe("the trip page's rules", () => {
   it("closes the other boats, and rules the requirement note only when it opens the block", () => {
     expect(SOURCE).not.toMatch(/<TripAlternatives[^>]*closed=/);
     expect(positionOf("<TripAlternatives")).toBeLessThan(positionOf("{requirementNote ? ("));
-    expect(SOURCE).toMatch(
-      /worthALookRows\.length > 0 \? "mt-4" : "mt-8 border-t border-border pt-4"/,
-    );
+    // Alone, the note stands a section from the block above on the page's
+    // stack (K-162) and opens on its own rule; under the boats it sits 16px
+    // below their closing rule, inside the one block the two make.
+    expect(SOURCE).toMatch(/worthALookRows\.length > 0 \? "mt-4" : "border-t border-border pt-4"/);
   });
 });
 
@@ -173,6 +174,62 @@ describe("the trip page's order", () => {
     for (const source of [SOURCE, LOADING]) expect(source).not.toContain("py-16");
     // The header opens the column; the staff preview bar keeps its own `mb-6`.
     expect(HEADER).toMatch(/return \(\s*<ShopPageHeader/);
+  });
+
+  /**
+   * **One rhythm below the hero** (pixel-craft class 4, K-162;
+   * forms-and-controls.md: "`space-y-10` between a page's sections, never
+   * `mt-*`"). Each section spelled its own top margin — `mt-8` on the day,
+   * the pitch, the other boats, the requirement note and the contact line,
+   * `mt-6` on the conditions line and the change ledger, `mt-10` on the form
+   * card — so the page's sections stood 24, 32 and 40px apart. They share
+   * one `space-y-10` now, and none carries a margin of its own.
+   */
+  it("stacks every section from the day's run to the contact line 40px apart", () => {
+    const opening = '<div className="mt-10 space-y-10">';
+    const stack = positionOf(opening);
+    expect(stack).toBeGreaterThan(-1);
+    // The stack opens directly on the day's run, and holds everything to the
+    // shop's contact line.
+    expect(SOURCE.slice(stack + opening.length, positionOf("<TripDayPlan"))).not.toMatch(
+      /<[A-Za-z]/,
+    );
+    for (const marker of [
+      "<TripDayPlan",
+      "<TripAlternatives",
+      "<BookSpotSection",
+      "<ShopContactLinks",
+    ]) {
+      expect(positionOf(marker)).toBeGreaterThan(stack);
+    }
+    const region = SOURCE.slice(stack + opening.length, SOURCE.lastIndexOf("</main>"));
+    expect(region).toContain("<ShopContactLinks");
+    // No section in it spells its own distance from the one above.
+    expect(region.match(/className=(?:"|\{`)[^"`]*\bmt-(?:6|8|10|12)\b/g) ?? []).toEqual([]);
+    expect(region.match(/<TripChangeLedger[^>]*className=/g) ?? []).toEqual([]);
+    // The skeleton stands its bars on the same stack, so nothing moves when
+    // the sections land.
+    expect(readFileSync(join(__dirname, "loading.tsx"), "utf8")).toContain(opening);
+    // Under the pitch's door the conditions line sits flush, its rule the
+    // door's close; with no door the two stand a section apart.
+    expect(region).toContain(
+      '<div className={pitchHasDoor(diveBriefings, publicCrew) ? undefined : "space-y-10"}>',
+    );
+  });
+
+  it("leaves every section's own component without an outer margin", () => {
+    const component = (name: string) =>
+      readFileSync(join(__dirname, "_components", `${name}.tsx`), "utf8");
+    // The day's run, the pitch and the other boats open on a bare section.
+    // Counted rather than matched, so a failure names what it found.
+    const found = (name: string, pattern: RegExp) => component(name).match(pattern) ?? [];
+    for (const name of ["TripDayPlan", "TripPitch", "TripAlternatives"]) {
+      expect(found(name, /<section className="mt-8">/g), name).toEqual([]);
+    }
+    expect(found("ConditionsLine", /\bmt-6\b/g)).toEqual([]);
+    // Every state that stands in the form's slot.
+    expect(found("BookingSections", /\bmt-1[02]\b/g)).toEqual([]);
+    expect(found("EmbedBookedNotice", /\bmt-10\b/g)).toEqual([]);
   });
 
   it("keeps the sticky phone pill a verb pointing at the form", () => {

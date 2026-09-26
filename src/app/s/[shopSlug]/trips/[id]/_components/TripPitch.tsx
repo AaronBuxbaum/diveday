@@ -93,7 +93,7 @@ export function TripPitch({
   const doorHasContent = pitchHasDoor(briefings, crew);
   if (!fitWord && tiles.length === 0 && !doorHasContent) return null;
   return (
-    <section className="mt-8">
+    <section>
       {/* 1 — the fact line. */}
       {fitWord ? (
         <p>

@@ -273,7 +273,7 @@ export function TripDayPlan({
   );
   if (briefings.length === 0) {
     return nightSky || sunMoon?.sunriseAt ? (
-      <section className="mt-8">
+      <section>
         <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
         {sky}
       </section>
@@ -329,7 +329,7 @@ export function TripDayPlan({
   // those rows carried.
   if (briefings.every(({ dive, diveSite }) => !dive.title && !diveSite)) {
     return (
-      <section className="mt-8">
+      <section>
         <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
         {sky}
         <p className="mt-2 text-sm text-muted">
@@ -348,7 +348,7 @@ export function TripDayPlan({
   const runCloses = !(nextOpensOnRule && seenByDive.size === 0 && options.length === 0);
   const handSetBox = runCloses ? ledgerRowBoxClass : ledgerRowOpenBoxClass;
   return (
-    <section className="mt-8">
+    <section>
       <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
       {sky}
       <ul className="mt-2">
