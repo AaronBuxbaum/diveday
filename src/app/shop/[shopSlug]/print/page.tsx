@@ -13,6 +13,7 @@ import { formatDateWithYear } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { settleWithLimit } from "@/lib/settle-with-limit";
 import { AutoPrint } from "../trips/[id]/_components/AutoPrint";
+import { TRIP_SHELL_CLASS } from "../trips/[id]/_components/trip-shell";
 import { keptSheets } from "../trips/[id]/print/_components/kept-sheets";
 import {
   PACKET_READY_SELECTOR,
@@ -134,25 +135,28 @@ export default async function ShopDayPrintPage({
   );
 
   return (
-    <div className="trip-print-bundle">
-      <AutoPrint readySelector={PACKET_READY_SELECTOR} />
-      <header className="mb-10 border-b border-border pb-6 print:mb-6">
-        <p className={EYEBROW_CLASS}>DiveDay</p>
-        <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>{t("shared.printPacket.dayTitle")}</h1>
-        {/* The sheet has to say which day it is and how many boats it covers:
+    // The trip layout's shell, which this route is not under: without it the
+    // packet had no `<main>` and printed with no gutter at all.
+    <main className={TRIP_SHELL_CLASS}>
+      <div className="trip-print-bundle">
+        <AutoPrint readySelector={PACKET_READY_SELECTOR} />
+        <header className="mb-10 border-b border-border pb-6 print:mb-6">
+          <p className={EYEBROW_CLASS}>DiveDay</p>
+          <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>{t("shared.printPacket.dayTitle")}</h1>
+          {/* The sheet has to say which day it is and how many boats it covers:
             paper outlives the morning it was printed, and a captain holding
             page 7 has no other way to know a boat is missing from it. */}
-        <p className="mt-2 text-muted">
-          {t("shared.printPacket.daySubtitle", {
-            // `sheets.length`, never `departures.length`: this number is the
-            // only thing that tells a captain holding page seven that a boat
-            // is missing from the stack.
-            count: sheets.length,
-            date: formatDateWithYear(now, locale, shop.timezone),
-          })}
-        </p>
-      </header>
-      {/* **A `Fragment`, not a wrapper div.** The page breaks between sheets
+          <p className="mt-2 text-muted">
+            {t("shared.printPacket.daySubtitle", {
+              // `sheets.length`, never `departures.length`: this number is the
+              // only thing that tells a captain holding page seven that a boat
+              // is missing from the stack.
+              count: sheets.length,
+              date: formatDateWithYear(now, locale, shop.timezone),
+            })}
+          </p>
+        </header>
+        {/* **A `Fragment`, not a wrapper div.** The page breaks between sheets
           are `globals.css`'s `.print-bundle-page:first-of-type { break-before:
           auto }`, which exempts the *first* section of its parent — so a
           per-departure wrapper made every departure's dive plan a first child
@@ -160,11 +164,12 @@ export default async function ShopDayPrintPage({
           `display: contents` does not help: it is a layout value and selectors
           still match the real tree. Keeping every section a sibling is what
           makes exactly one of them the first. */}
-      {sheets.map((sheet) => (
-        <Fragment key={sheet.id}>{sheet.packet}</Fragment>
-      ))}
-      {sheets.length === 0 ? <p>{t("shared.printPacket.dayEmpty")}</p> : null}
-      <PacketReady />
-    </div>
+        {sheets.map((sheet) => (
+          <Fragment key={sheet.id}>{sheet.packet}</Fragment>
+        ))}
+        {sheets.length === 0 ? <p>{t("shared.printPacket.dayEmpty")}</p> : null}
+        <PacketReady />
+      </div>
+    </main>
   );
 }

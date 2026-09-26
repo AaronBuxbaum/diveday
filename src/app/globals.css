@@ -846,7 +846,7 @@ textarea {
  * 2. Padding. `@page` margins give each printed page its gutters — but the
  *    print dialog's "None"/"Minimum" margin setting zeroes them, and that is
  *    exactly when content slams into the paper edge. Side padding on the
- *    printed surface itself (the trip layout's `print:px-*`) is content, so it
+ *    printed surface itself (the trip shell's `print:px-*`) is content, so it
  *    survives that setting; `@page` still owns the top/bottom gutter that has
  *    to repeat across a multi-page manifest, which container padding can't.
  *

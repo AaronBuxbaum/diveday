@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { uuidParam } from "@/lib/uuid";
+import { TRIP_SHELL_CLASS } from "./_components/trip-shell";
 
 // Restored after CI. ARCH-7 removed this as provably-unread by
 // `isPageAllowedToBlock`, which stops at the outermost `instant` — the shop
@@ -41,8 +42,7 @@ export default async function TripLayout({
     // `max-w-5xl`, the staff work-surface tier (docs/design/principles.md
     // #10) — the trip family sat at the in-between `max-w-4xl` the principles
     // call legacy, and a redesign is the sanctioned moment to move to a tier.
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10 print:max-w-none print:px-10 print:py-8">
-      {children}
-    </main>
+    // The day's packet wears the same shell, for the same paper gutter.
+    <main className={TRIP_SHELL_CLASS}>{children}</main>
   );
 }
