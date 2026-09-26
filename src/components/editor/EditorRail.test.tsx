@@ -77,13 +77,6 @@ describe("the editor rail", () => {
   });
 
   /**
-   * The chrome bar's height is a token, never a number
-   * (ADR 20260827-clearwater-surface-language, decision 10). The settings rail
-   * got this wrong once and `src/components/chrome/chrome.test.ts` caught the
-   * measured offset; this is the same rule stated where the rail lives, so a
-   * rail that stops pinning at all is caught too.
-   */
-  /**
    * One page rail, one row: the settings map draws the same `RAIL_ROW_CLASS`
    * (its test asserts on the same export), so the two rails cannot drift to
    * two heights, two insets or two type sizes again.
@@ -95,6 +88,13 @@ describe("the editor rail", () => {
     }
   });
 
+  /**
+   * The chrome bar's height is a token, never a number
+   * (ADR 20260827-clearwater-surface-language, decision 10). The settings rail
+   * got this wrong once and `src/components/chrome/chrome.test.ts` caught the
+   * measured offset; this is the same rule stated where the rail lives, so a
+   * rail that stops pinning at all is caught too.
+   */
   it("pins under the chrome bar by reading its height", () => {
     render(<Editor />);
 
