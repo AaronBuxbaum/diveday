@@ -334,6 +334,66 @@ describe("buttonClass", () => {
     });
   });
 
+  /**
+   * **A `secondary` box can wear a state in its edge** (pixel-craft class 6).
+   * The waiver delivery buttons drew theirs as a `ring-2` outside the
+   * variant's grey border — two stacked edges, a hue then a hairline — and a
+   * ring takes no room, so two ringed buttons in a `gap-2` row stood 4px apart
+   * while the plain ones kept 8. The edge is the border itself, 2px, in the
+   * state's hue; the padding gives back the extra pixel a side so the box
+   * keeps its width and its label stays where it was.
+   */
+  describe("edge", () => {
+    const EDGES = {
+      success: "border-success/50",
+      danger: "border-danger/55",
+      warning: "border-warning/55",
+      strong: "border-border-strong",
+    } as const;
+
+    it("draws the state as the box's one border, never a ring outside it", () => {
+      for (const [edge, colour] of Object.entries(EDGES) as [keyof typeof EDGES, string][]) {
+        const tokens = buttonClass({ variant: "secondary", edge }).split(" ");
+        expect(tokens, edge).toContain("border-2");
+        expect(tokens, edge).toContain(colour);
+        expect(tokens, edge).not.toContain("border");
+        expect(tokens, edge).not.toContain("border-border");
+        expect(
+          tokens.filter((token) => /^(?:[\w-]+:)*ring-/.test(token)),
+          edge,
+        ).toEqual([]);
+        expect(tokens, edge).toContain("bg-surface");
+        expect(tokens, edge).toContain("text-foreground");
+      }
+    });
+
+    it("keeps the box's width: each size's padding less the pixel the edge adds a side", () => {
+      const padding = { sm: ["px-2.75"], md: ["px-3.75"], boat: ["px-5.75"] } as const;
+      for (const size of PADDED_SIZES) {
+        expect(horizontalPadding(buttonClass({ variant: "secondary", size })), size).toHaveLength(
+          1,
+        );
+        expect(
+          horizontalPadding(buttonClass({ variant: "secondary", size, edge: "danger" })),
+          size,
+        ).toEqual(padding[size]);
+      }
+      for (const size of ["icon", "icon-sm"] as const) {
+        expect(
+          horizontalPadding(buttonClass({ variant: "secondary", size, edge: "danger" })),
+          size,
+        ).toEqual(["px-0"]);
+      }
+    });
+
+    it("leaves a secondary with no state on its 1px hairline", () => {
+      const tokens = buttonClass({ variant: "secondary" }).split(" ");
+      expect(tokens).toContain("border");
+      expect(tokens).toContain("border-border");
+      expect(tokens).not.toContain("border-2");
+    });
+  });
+
   describe("shape", () => {
     const radii = (classes: string) =>
       classes.split(" ").filter((token) => /^(?:[\w-]+:)*rounded(?:-|$)/.test(token));

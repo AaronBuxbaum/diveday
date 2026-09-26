@@ -313,14 +313,37 @@ describe("the waiver group", () => {
    * The outline is what a staffer sees across a counter, and it is colour. The
    * mark beside the label is the same fact in a *shape*, so the state never
    * rests on hue alone (design principle 6).
+   *
+   * The outline is the button's own border, 2px in the state's hue (pixel-craft
+   * class 6). It was a `ring-2` outside the grey border — two stacked edges —
+   * and a ring takes no room, so a failed Email and a sent Text stood 4px apart
+   * in a row whose plain buttons keep 8.
    */
   it("never carries a channel's state in colour alone", () => {
-    renderCard(diver({ email: "priya@dive.day", waiverChannels: { email: "failed" } }));
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        phone: "+13055550142",
+        waiverChannels: { email: "failed", text: "sent" },
+      }),
+    );
 
     const button = screen.getByRole("button", { name: /Email waiver/ });
-    expect(button.className).toContain("ring-danger");
+    expect(button).toHaveClass("border-2", "border-danger/55");
+    expect(button).not.toHaveClass("border-border");
+    expect(button.className).not.toMatch(/(^|\s|:)ring-/);
     expect(button.querySelector("svg[aria-hidden='true'] path")).toBeTruthy();
     expect(button.textContent).toContain("Didn’t go out");
+
+    expect(screen.getByRole("button", { name: /Text waiver/ })).toHaveClass(
+      "border-2",
+      "border-success/50",
+    );
+    // Untried draws nothing: the plain hairline every secondary wears.
+    expect(screen.getByRole("button", { name: "Copy link" })).toHaveClass(
+      "border",
+      "border-border",
+    );
   });
 
   /**

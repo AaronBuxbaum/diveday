@@ -120,6 +120,10 @@ const DISABLED = {
   busy: "disabled:cursor-wait disabled:opacity-70 has-[input:disabled]:cursor-wait has-[input:disabled]:opacity-70",
 } as const;
 
+/** `secondary`'s face without its edge, so `edge` (see `EDGES`) can swap the one for another. */
+const SECONDARY_FACE =
+  "bg-surface text-foreground not-disabled:not-has-[input:disabled]:hover:bg-foreground/8";
+
 /**
  * **Every box carries the same 1px border, transparent where the variant is a
  * fill.** `primary` and `danger-solid` had none while `secondary` and `danger`
@@ -173,8 +177,7 @@ const variants = {
    * variants no longer say the same thing in colour. Contrast improves either
    * way (light 5.36 -> 15.02, dark 9.05 -> 14.48 on `bg-surface`).
    */
-  secondary:
-    "border border-border bg-surface text-foreground not-disabled:not-has-[input:disabled]:hover:bg-foreground/8",
+  secondary: `border border-border ${SECONDARY_FACE}`,
   /**
    * **`secondary` for the public pages: the same box, with the border that
    * holds 3:1 against the ground** (`--border-strong`, the form controls'
@@ -431,6 +434,43 @@ export const proseLinkClass = "underline hover:text-primary";
  */
 export const tapTargetLineClass = "flex h-5 items-center";
 
+/**
+ * **A `secondary` box that wears a state in its edge** — the waiver delivery
+ * buttons, each outlined in what we last knew about its channel (sent, failed,
+ * unavailable, copied).
+ *
+ * Those drew it as a `ring-2` through `className`, because a second border
+ * colour there loses to `secondary`'s own `border-border` by stylesheet
+ * order. But a ring sits *outside* the border: the box had two edges, a 2px
+ * hue and then the grey hairline inside it, and a ring takes no room, so two
+ * ringed buttons in a `gap-2` row stood 4px apart while the plain ones kept 8
+ * (pixel probe, 2026-09-25). So the edge is an option: the border itself,
+ * 2px, in the state's hue, instead of the hairline rather than beside it.
+ *
+ * The extra pixel a side comes back out of the padding (`EDGE_X`), so a
+ * button that gains or loses its state keeps its width, and its label and
+ * its neighbours stay where they were.
+ */
+const EDGES = {
+  success: "border-success/50",
+  danger: "border-danger/55",
+  warning: "border-warning/55",
+  /** A state that is neither good nor bad news — a link that was only copied. */
+  strong: "border-border-strong",
+} as const;
+
+export type ButtonEdge = keyof typeof EDGES;
+
+/** Each size's horizontal padding less the 1px a 2px edge adds on each side. Spelled whole, for Tailwind to find. */
+const EDGE_X: Record<ButtonSize, string> = {
+  sm: "px-2.75",
+  md: "px-3.75",
+  boat: "px-5.75",
+  icon: "px-0",
+  "icon-sm": "px-0",
+  mark: "px-0",
+};
+
 export type ButtonVariant = keyof typeof variants;
 export type ButtonSize = keyof typeof sizes;
 
@@ -582,6 +622,7 @@ export function buttonClass<V extends ButtonVariant = "primary">({
   size = "md",
   flush = false,
   outdent,
+  edge,
   busy = false,
   shape = "rounded",
   className = "",
@@ -605,6 +646,11 @@ export function buttonClass<V extends ButtonVariant = "primary">({
    */
   outdent?: V extends PaintedAtRest ? undefined : ButtonOutdent;
   /**
+   * A state worn as the box's own 2px border, in place of `secondary`'s
+   * hairline. `secondary` only. See `EDGES`.
+   */
+  edge?: V extends "secondary" ? ButtonEdge : undefined;
+  /**
    * This control's disabled state means "in flight", not "unavailable" — every
    * `SubmitButton`, which disables itself for the duration of its own submit.
    * Renders a wait cursor instead of a not-allowed one. See `DISABLED`.
@@ -615,9 +661,10 @@ export function buttonClass<V extends ButtonVariant = "primary">({
   const { x, rest } = sizes[size];
   const corner = SHAPES[CIRCLES.has(size) ? "pill" : shape];
   const end = blockEndOutdent(variant, size, outdent);
-  return `${base} ${DISABLED[busy ? "busy" : "default"]} ${variants[variant]} ${rest} ${corner} ${horizontalPadding(
-    variant,
-    x,
-    flush,
-  )}${end ? ` ${end}` : ""} ${className}`.trim();
+  const edged = variant === "secondary" && edge ? edge : undefined;
+  const paint = edged ? `border-2 ${EDGES[edged]} ${SECONDARY_FACE}` : variants[variant];
+  const padding = edged ? EDGE_X[size] : horizontalPadding(variant, x, flush);
+  return `${base} ${DISABLED[busy ? "busy" : "default"]} ${paint} ${rest} ${corner} ${padding}${
+    end ? ` ${end}` : ""
+  } ${className}`.trim();
 }

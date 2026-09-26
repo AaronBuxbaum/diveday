@@ -29,8 +29,8 @@
     },
     {
       "check": "fill-tight",
-      "classes": ["gap-2", "ring-2"],
-      "reason": "A diver record's waiver channel button carries its delivery state as an sr-only word. The probe reads that word's unclipped rects into the button's text box, so the text appears to run past the button and the hover fill reads as 9px short on the right. Nothing visible spills; the visible label keeps the size's 12px either side.",
+      "classes": ["gap-2", "border-2"],
+      "reason": "A diver record's waiver channel button carries its delivery state as an sr-only word. The probe reads that word's unclipped rects into the button's text box, so the text appears to run past the button and the hover fill reads as 9px short on the right. Nothing visible spills; the visible label keeps its 13px from the box's outer edge either side.",
       "pointer": "src/app/shop/[shopSlug]/divers/[personId]/_components/WaiverDeliveryActions.tsx, the comment on the sr-only state word; docs/design/settled-questions.md"
     },
     {
