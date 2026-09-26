@@ -176,20 +176,27 @@ export function SettingsDoorRow({
   // reader sees the ring around the row's name), while the stretched overlay
   // makes the whole row the pointer target.
   const linkClass = "font-medium after:absolute after:inset-0 after:content-['']";
+  // The outer box is what the group's `divide-y` hangs its rule on, and the
+  // row's height lives on the box inside it — the shape a setting has, whose
+  // `<details>` takes the rule and whose `<summary>` is 56px. With `min-h-14`
+  // on the bordered box, the rule came out of the 56px and every door drew 1px
+  // shorter than the settings it sits among.
   return (
-    <div className="relative flex min-h-14 items-center justify-between gap-4 px-4 py-3 transition-brand hover:bg-surface-sunken sm:px-5">
-      <h3 className="min-w-0 text-base">
-        {external ? (
-          <a href={href} className={linkClass}>
-            {heading}
-          </a>
-        ) : (
-          <Link href={href} className={linkClass}>
-            {heading}
-          </Link>
-        )}
-      </h3>
-      <DisclosureCaret direction="right" className="text-muted" />
+    <div>
+      <div className="relative flex min-h-14 items-center justify-between gap-4 px-4 py-3 transition-brand hover:bg-surface-sunken sm:px-5">
+        <h3 className="min-w-0 text-base">
+          {external ? (
+            <a href={href} className={linkClass}>
+              {heading}
+            </a>
+          ) : (
+            <Link href={href} className={linkClass}>
+              {heading}
+            </Link>
+          )}
+        </h3>
+        <DisclosureCaret direction="right" className="text-muted" />
+      </div>
     </div>
   );
 }
