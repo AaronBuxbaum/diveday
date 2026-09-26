@@ -938,7 +938,13 @@ export default async function WaiverPage({
         {t("waiver.signButton")}
       </SubmitButton>
       <p className="mt-4 text-sm text-muted">{t("waiver.signatureNote")}</p>
-      <div className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted">
+      {/* Two facts on one line from `sm`, split by the dot; stacked below it,
+          with no dot. The row used to wrap, and the wrap fell after the dot:
+          "Save and finish later ·" on one line at 390, the expiry alone on
+          the next (K-340). It never wraps now — from `sm` a sentence too long
+          for the line (the Spanish pair all but fills the 478px card)
+          wraps inside its own span beside the link, which does not shrink. */}
+      <div className="mt-1 flex items-center gap-x-2 text-sm text-muted max-sm:flex-col max-sm:items-start">
         <button
           type="submit"
           formAction={saveDraftAction}
@@ -950,11 +956,18 @@ export default async function WaiverPage({
           // `link`, flush: reads as inline text and still claims the
           // 44px target `base` bakes in — the wrapper's own answer to
           // "a control that is not the primary act".
-          className={buttonClass({ variant: "link", size: "sm", flush: true })}
+          className={buttonClass({
+            variant: "link",
+            size: "sm",
+            flush: true,
+            className: "shrink-0",
+          })}
         >
           {t("waiver.saveForLater")}
         </button>
-        <span aria-hidden="true">·</span>
+        <span aria-hidden="true" className="max-sm:hidden">
+          ·
+        </span>
         <span>
           {t("waiver.linkExpiresAt", {
             date: formatDateTimeTz(record.expiresAt, locale, shop.timezone),

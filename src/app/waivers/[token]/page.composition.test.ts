@@ -158,7 +158,7 @@ describe("one notice grammar", () => {
 
 describe("one primary", () => {
   it("gives Sign the full width and demotes saving to a text link", () => {
-    expect(SOURCE).toContain('buttonClass({ variant: "link", size: "sm", flush: true })');
+    expect(SOURCE).toMatch(/buttonClass\(\{\s*variant: "link",\s*size: "sm",\s*flush: true,/);
     // The bordered secondary that used to sit above the primary on a phone.
     expect(SOURCE).not.toContain('variant: "secondary"');
     expect(SOURCE).toContain("mt-6 w-full disabled:opacity-70");
@@ -178,6 +178,21 @@ describe("one primary", () => {
     expect(link).toBeGreaterThan(-1);
     expect(expiry).toBeGreaterThan(link);
     expect(expiry - link).toBeLessThan(600);
+  });
+
+  it("stacks the two on a phone, with no dot left at the end of a line", () => {
+    // The row was three wrapping siblings — the link, a standalone "·" and the
+    // expiry — and at 390 the wrap fell after the dot: "Save and finish later
+    // ·" on one line, the expiry alone on the next (waiver-active, K-340).
+    // Below `sm` the two facts stack and the dot, which only ever separated
+    // them on one line, is not drawn; from `sm` they share a line split by it.
+    const link = positionOf('t("waiver.saveForLater")');
+    const row = SOURCE.lastIndexOf("<div", link);
+    expect(SOURCE.slice(row, link)).toContain("max-sm:flex-col max-sm:items-start");
+    expect(SOURCE.slice(row, link)).not.toContain("flex-wrap");
+    expect(SOURCE.slice(link, positionOf('t("waiver.linkExpiresAt"'))).toContain(
+      '<span aria-hidden="true" className="max-sm:hidden">',
+    );
   });
 });
 
