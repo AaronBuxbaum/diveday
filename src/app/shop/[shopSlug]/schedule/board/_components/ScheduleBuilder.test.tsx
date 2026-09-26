@@ -928,6 +928,35 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     );
   });
 
+  /**
+   * The private and self-guided boxes are rows of the form, never a label
+   * inside a label. Self-guided also takes a caption track only where it has
+   * a neighbour to share one with: beside the course select, from `sm`, it
+   * spans that field's caption and control rows so its box sits on the
+   * select's row. Stacked under the select on a phone, the same empty track
+   * and its 4px gutter set it 4px lower than the private row (31px from the
+   * select's bottom to its words, against 27; pixel-craft K-330).
+   */
+  it("draws the private and self-guided boxes as rows, with no empty caption on a phone", async () => {
+    const { container } = renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+
+    for (const name of ["isPrivate", "selfGuided"]) {
+      const row = container.querySelector(`input[name="${name}"]`)?.closest("label");
+      expect(row, name).not.toBeNull();
+      expect(row?.parentElement?.closest("label"), name).toBeNull();
+    }
+
+    const wrapper = container
+      .querySelector('input[name="selfGuided"]')
+      ?.closest("label")?.parentElement;
+    const tokens = [...(wrapper?.classList ?? [])];
+    expect(tokens).toEqual(expect.arrayContaining(["sm:row-span-2", "sm:grid-rows-subgrid"]));
+    expect(tokens).not.toContain("row-span-2");
+    expect(tokens).not.toContain("grid-rows-subgrid");
+  });
+
   it("posts only the quick fields while collapsed, though the rest stay mounted", async () => {
     // The disclosure hides rather than unmounts (nothing typed is ever lost),
     // so "not on screen" has to mean "disabled" or a collapsed submission would

@@ -1150,16 +1150,19 @@ function AddPanel({
             back to an ordinary trip restores whatever they had ticked. */}
         {/* Beside the course select, in its control row: the wrapper takes a
             field's two rows (an empty caption, then the box) the way `Field`
-            does, without `Field`'s wrapping label around a label (K-13). */}
+            does, without `Field`'s wrapping label around a label (K-13).
+            Only from `sm`, where there is a neighbour's caption to share: on a
+            phone it stacks under the select, and the empty caption track and
+            its 4px gutter set the box 4px lower than the private row (K-330). */}
         <div
-          className={`row-span-2 grid min-w-0 grid-rows-subgrid gap-y-1 ${expanded && courseId === "" ? "" : "hidden"}`}
+          className={`grid min-w-0 sm:row-span-2 sm:grid-rows-subgrid sm:gap-y-1 ${expanded && courseId === "" ? "" : "hidden"}`}
         >
           <ChoiceRow
             type="checkbox"
             name="selfGuided"
             value="true"
             disabled={!expanded || courseId !== ""}
-            className="row-start-2 self-start text-sm font-medium"
+            className="self-start text-sm font-medium sm:row-start-2"
           >
             <span className="block">{copy.selfGuidedLabel}</span>
             <span className="block text-xs font-normal text-muted">{copy.selfGuidedHint}</span>
