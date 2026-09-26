@@ -226,4 +226,17 @@ describe("CourseSessions featured date", () => {
       screen.getByText(/No dates on the books right now. This course runs on request/),
     ).toBeInTheDocument();
   });
+
+  /**
+   * **The panel's corner is on the ladder** (pixel-craft class 6, K-378). It
+   * was `rounded-3xl`, 24px, a rung the ladder does not have, under a hero
+   * panel at the panel rung's 20px on the same page.
+   */
+  it("rounds the dates panel at the panel rung", () => {
+    const { container } = render(<CourseSessions sessions={[]} {...props} />);
+
+    const panel = container.querySelector("#dates > div");
+    expect(panel?.className).toMatch(/\brounded-panel\b/);
+    expect(panel?.className).not.toMatch(/\brounded-3xl\b/);
+  });
 });

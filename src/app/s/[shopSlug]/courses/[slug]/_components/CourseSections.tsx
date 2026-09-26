@@ -424,7 +424,9 @@ export function CourseSessions({
   const nextIsSoonest = next === sessions[0];
   return (
     <section id="dates" className="mt-14 scroll-mt-8">
-      <div className="rounded-3xl border border-primary/15 bg-primary/5 p-6 sm:p-8">
+      {/* The panel rung, like the hero panel above it: this was `rounded-3xl`,
+          24px, a corner the ladder does not have (K-378). */}
+      <div className="rounded-panel border border-primary/15 bg-primary/5 p-6 sm:p-8">
         <h2 className={LEAD_TITLE_CLASS}>{t("course.datesHeading")}</h2>
         {!next ? (
           <p className="mt-4 max-w-2xl text-muted">

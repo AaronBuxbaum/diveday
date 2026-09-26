@@ -141,6 +141,22 @@ describe("every panel shell wears the panel radius and the bed", () => {
       offenders((text) => /\brounded-panel\b/.test(text) && /\bshadow-sm\b/.test(text)),
     ).toEqual([]);
   });
+
+  /**
+   * `rounded-3xl` is 24px, a rung the ladder does not have (K-378: the course
+   * page's dates panel, 4px rounder than the hero panel above it). Comments
+   * are stripped first, so a note naming the retired class is not an offender.
+   */
+  it("finds no class string wearing rounded-3xl, a radius off the ladder", () => {
+    const offending = files(SRC_DIR).filter((file) =>
+      /\brounded-3xl\b/.test(
+        readFileSync(file, "utf8")
+          .replace(/\/\*[\s\S]*?\*\//g, "")
+          .replace(/^\s*\/\/.*$/gm, ""),
+      ),
+    );
+    expect(offending.map((file) => relative(SRC_DIR, file).split(/[\\/]/).join("/"))).toEqual([]);
+  });
 });
 
 /**
