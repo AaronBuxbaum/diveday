@@ -157,6 +157,12 @@ export function PaperWaiverControl({
     if (defaultOpen) setOpen(true);
   }, [defaultOpen]);
 
+  // The trigger opens its form client-side only, so a click that lands before
+  // React owns it is swallowed with nothing to show for it. It publishes the
+  // staff surfaces' `data-hydrated` flag, which the e2e suite waits on.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+
   // No wrapper element in either state: on the diver record this control is one
   // item of a wrapping flex row of peer actions, and a wrapper would take the
   // trigger out of that row. The open panel is `w-full` so it drops onto its own
@@ -166,6 +172,7 @@ export function PaperWaiverControl({
       <button
         type="button"
         onClick={() => setOpen(true)}
+        data-hydrated={hydrated ? "true" : undefined}
         className={buttonClass({
           variant,
           size: "sm",

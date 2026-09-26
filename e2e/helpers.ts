@@ -488,9 +488,11 @@ export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
  * staffer's own name are both already on the bar above it.
  *
  * A pattern rather than a fixed string, because it is today's date and the
- * suite runs every day.
+ * suite runs every day. `\s`, not a space: a formatted date keeps its month
+ * and day together with U+00A0, and a regex is matched against the raw text
+ * (a role's accessible name is normalised, `toHaveText` with a regex is not).
  */
-export const STAFF_DAY_HEADING = /^[A-Z][a-z]+ \d{1,2}$/;
+export const STAFF_DAY_HEADING = /^[A-Z][a-z]+\s\d{1,2}$/;
 
 export const HELD_SEND_TIMEOUT_MS = 20_000;
 
@@ -911,4 +913,16 @@ export async function openTripInEmbed(page: Page, title: string | RegExp): Promi
   const tripPath = new URL(fullSchedule.url()).pathname;
   await fullSchedule.close();
   await page.goto(`${tripPath}?embed=1`, { waitUntil: "domcontentloaded" });
+}
+
+/**
+ * Open the "Mark signed on paper" form inside `scope`, once React owns the
+ * trigger. The form opens client-side only, so a click that lands before
+ * hydration is swallowed and the spec waits on a form that never comes
+ * (`PaperWaiverControl` publishes the staff surfaces' `data-hydrated` flag).
+ */
+export async function openPaperWaiverForm(scope: Page | Locator) {
+  const trigger = scope.getByRole("button", { name: "Mark signed on paper" });
+  await expect(trigger).toHaveAttribute("data-hydrated", "true");
+  await trigger.click();
 }
