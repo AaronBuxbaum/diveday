@@ -29,6 +29,7 @@ import {
 } from "@/lib/season-events";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
+import { AddPanel } from "../_components/AddPanel";
 import {
   createSeasonEventAction,
   deleteSeasonEventAction,
@@ -183,8 +184,7 @@ export default async function SeasonsSettingsPage({
             </div>
           )}
 
-          <div className="border border-dashed border-border rounded-lg p-4 bg-surface-sunken">
-            <h2 className="text-sm font-medium mb-3">{t("seasonEvents.createTitle")}</h2>
+          <AddPanel title={t("seasonEvents.createTitle")}>
             <FieldGrid as="form" columns={2} action={createSeasonEventAction}>
               <Field label={t("seasonEvents.nameLabel")}>
                 <input
@@ -236,7 +236,7 @@ export default async function SeasonsSettingsPage({
                 </SubmitButton>
               </FieldActions>
             </FieldGrid>
-          </div>
+          </AddPanel>
         </div>
       </SectionCard>
     </main>

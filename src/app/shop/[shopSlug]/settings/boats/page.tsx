@@ -14,6 +14,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
+import { AddPanel } from "../_components/AddPanel";
 import { HullColorField } from "../_components/HullColorField";
 import { createBoatAction, deleteBoatAction, updateBoatAction } from "../actions";
 import { boatNoticeMessages } from "../sub-page-notices";
@@ -219,8 +220,7 @@ export default async function BoatsSettingsPage({
             </div>
           )}
 
-          <div className="border border-dashed border-border rounded-lg p-4 bg-surface-sunken">
-            <h2 className="text-sm font-medium mb-3">{t("boats.createTitle")}</h2>
+          <AddPanel title={t("boats.createTitle")}>
             <form
               action={createBoatAction}
               className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3"
@@ -263,7 +263,7 @@ export default async function BoatsSettingsPage({
                 {t("boats.addBoat")}
               </SubmitButton>
             </form>
-          </div>
+          </AddPanel>
         </div>
       </SectionCard>
     </main>

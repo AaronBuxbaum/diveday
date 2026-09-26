@@ -64,4 +64,17 @@ describe("the kinds-of-day rows", () => {
       "formAction={updateTripLensAction}",
     );
   });
+
+  /**
+   * **"Add" is a button, not a bar.** Below `sm` the add form is a column with
+   * no `items-*` of its own, so it stretched its submit across the panel:
+   * 282px against Seasons' 52px "Add" in the same panel on the next page
+   * (K-252, SETTINGS-3-25). `items-start` from the base keeps it its own
+   * width; the box's wrapper is `w-full`, so the box still fills the line.
+   */
+  it("keeps the add form's button its own width at every width", () => {
+    const create = SOURCE.slice(SOURCE.indexOf("action={createTripLensAction}"));
+    const formClass = create.match(/className="([^"]*)"/)?.[1] ?? "";
+    expect(formClass.split(" ")).toContain("items-start");
+  });
 });

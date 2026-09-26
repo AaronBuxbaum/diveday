@@ -14,6 +14,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { LENS_NAME_MAX } from "@/lib/trip-lenses";
+import { AddPanel } from "../_components/AddPanel";
 import { createTripLensAction, deleteTripLensAction, updateTripLensAction } from "../actions";
 import { lensNoticeMessages } from "../sub-page-notices";
 
@@ -171,11 +172,10 @@ export default async function KindsOfDaySettingsPage({
             </div>
           )}
 
-          <div className="border border-dashed border-border rounded-lg p-4 bg-surface-sunken">
-            <h2 className="text-sm font-medium mb-3">{t("lenses.createTitle")}</h2>
+          <AddPanel title={t("lenses.createTitle")}>
             <form
               action={createTripLensAction}
-              className="flex flex-col sm:flex-row sm:items-start gap-3"
+              className="flex flex-col items-start gap-3 sm:flex-row"
             >
               <div className="flex-1 w-full">
                 <input
@@ -199,7 +199,7 @@ export default async function KindsOfDaySettingsPage({
                 {t("lenses.add")}
               </SubmitButton>
             </form>
-          </div>
+          </AddPanel>
         </div>
       </SectionCard>
     </main>
