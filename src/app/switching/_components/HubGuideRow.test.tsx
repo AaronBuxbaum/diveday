@@ -1,9 +1,40 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { HubGuideRow } from "./HubGuideRow";
+import { HubGuideRow, HubGuideRowSkeleton } from "./HubGuideRow";
 
 afterEach(cleanup);
+
+/**
+ * **A row's skeleton is the row** (K-406): the item's own rule and 8px, then
+ * the link's 16px, a 28px title line and a 28px line per summary line, so a
+ * row lands where its bars stood. The bars were a 24px title and one 20px
+ * summary line, 105px for rows of 111–223.
+ */
+describe("a switching hub row's skeleton", () => {
+  it("wears the row's item and the link's vertical padding, with a bar per line", () => {
+    const real = render(
+      <ul>
+        <HubGuideRow href="/switching/eve" title="Switching from EVE" summary="Bring them." />
+      </ul>,
+    ).container.querySelector("li");
+    const skeleton = render(
+      <ul>
+        <HubGuideRowSkeleton summaryLines={{ base: 4, sm: 2 }} />
+      </ul>,
+    ).container.querySelector("li");
+    expect(skeleton?.className).toBe(real?.className);
+    const body = skeleton?.firstElementChild;
+    expect(body).toHaveClass("py-4");
+    const [title, summary] = Array.from(body?.children ?? []);
+    expect(title).toHaveClass("h-7");
+    expect(summary).toHaveClass("mt-1.5");
+    const lines = Array.from(summary.children);
+    expect(lines).toHaveLength(4);
+    for (const line of lines) expect(line).toHaveClass("h-7");
+    expect(lines.filter((line) => line.classList.contains("sm:hidden"))).toHaveLength(2);
+  });
+});
 
 /**
  * **The hub's rows: a hover fill that never touches its words or its rules.**

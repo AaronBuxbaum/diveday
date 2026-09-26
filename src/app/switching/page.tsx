@@ -21,6 +21,14 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { sharedLinkCard } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { HubGuideRow } from "./_components/HubGuideRow";
+import {
+  HUB_CLOSING_ROW_CLASS,
+  HUB_HERO_CLASS,
+  HUB_LIST_SECTION_CLASS,
+  HUB_PREVIEW_BAND_CLASS,
+  HUB_PREVIEW_BOX_CLASS,
+  SwitchHubBodySkeleton,
+} from "./_components/hub";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -97,53 +105,6 @@ async function LocalizedSwitchHubBody() {
 }
 
 /**
- * What the static shell paints while {@link LocalizedSwitchHubBody} resolves.
- *
- * It lives inside the page rather than in a `src/app/switching/loading.tsx`,
- * which is the arrangement ADR 20260804-instant-navigation otherwise asks for:
- * `loading.tsx` is the boundary for a segment **and everything under it**, and
- * `/switching` has children — `/switching/[competitor]`, whose hero-and-rail
- * body looks nothing like this index of links. `/switching/spreadsheet` carries
- * its own, so a file here would only ever mis-shape the competitor guides. Same
- * reasoning as `src/app/page.tsx`, for the same structural reason.
- *
- * Shaped like the hero and the index rows beneath it — one row per guide, off
- * the same registry the list itself is built from, so the two cannot drift —
- * and nothing in it is a link, a button, or a form. That is the fix, not an
- * economy.
- */
-function SwitchHubBodySkeleton() {
-  return (
-    <main className="flex-1 animate-pulse">
-      <section className="mx-auto max-w-4xl px-6 pt-16 pb-10 lg:pt-24 lg:pb-14">
-        <div className="h-4 w-44 rounded bg-surface-sunken" />
-        <div className="mt-5 h-11 w-full max-w-xl rounded bg-surface-sunken sm:h-12" />
-        <div className="mt-3 h-11 w-2/3 max-w-md rounded bg-surface-sunken sm:h-12" />
-        <div className="mt-6 h-5 w-full max-w-2xl rounded bg-surface-sunken" />
-        <div className="mt-2 h-5 w-3/4 max-w-xl rounded bg-surface-sunken" />
-      </section>
-
-      {/* The index: the spreadsheet row, then one per incumbent guide. */}
-      <section className="mx-auto max-w-4xl px-6 pb-16 lg:pb-24">
-        <ul className="border-t border-border">
-          {["spreadsheet", ...MIGRATION_GUIDES.map((guide) => guide.slug)].map((slug) => (
-            <li key={slug} className="border-b border-border py-6">
-              <div className="h-6 w-full max-w-xs rounded bg-surface-sunken" />
-              <div className="mt-3 h-5 w-full max-w-lg rounded bg-surface-sunken" />
-            </li>
-          ))}
-        </ul>
-        {/* The "something else, or nothing at all" row that closes the list. */}
-        <div className="border-b border-border py-8">
-          <div className="h-6 w-full max-w-xs rounded bg-surface-sunken" />
-          <div className="mt-3 h-5 w-full max-w-lg rounded bg-surface-sunken" />
-        </div>
-      </section>
-    </main>
-  );
-}
-
-/**
  * Cached per negotiated locale (DIVER_LOCALES — two entries) — no
  * session-scoped content.
  *
@@ -177,7 +138,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
   ];
   return (
     <main className="flex-1">
-      <section className="mx-auto max-w-4xl px-6 pt-16 pb-10 lg:pt-24 lg:pb-14">
+      <section className={HUB_HERO_CLASS}>
         <p className={MARKETING_EYEBROW_CLASS}>{t("switching.hub.eyebrow")}</p>
         <h1 className={`mt-4 ${DISPLAY_TITLE_CLASS} sm:text-5xl`}>{t("switching.hub.title")}</h1>
         <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
@@ -187,7 +148,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
 
       {/* The index. Whole-row links: the name is what a reader scans for, the
           summary is why they'd stop, and the arrow is the only chrome. */}
-      <section className="mx-auto max-w-4xl px-6 pb-16 lg:pb-24">
+      <section className={HUB_LIST_SECTION_CLASS}>
         <ul className="border-t border-border">
           {guides.map((guide) => (
             <HubGuideRow
@@ -201,7 +162,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
 
         {/* The last row of the same list, for the reader who found nothing in
             it — the closing CTA band, moved to where the question is asked. */}
-        <div className="flex flex-col gap-6 border-b border-border py-8 lg:flex-row lg:items-center lg:justify-between">
+        <div className={HUB_CLOSING_ROW_CLASS}>
           <div>
             <h2 className={SUB_TITLE_CLASS}>{t("switching.hub.dontSeeSystem")}</h2>
             <p className="mt-1.5 max-w-xl leading-7 text-muted">
@@ -229,8 +190,8 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
           door into the demo as the role that uses this screen. The door is
           link-weight, so the band's primary count stays at zero and the
           page's one primary is still the pair above. */}
-      <section className="border-y border-border bg-surface">
-        <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
+      <section className={HUB_PREVIEW_BAND_CLASS}>
+        <div className={HUB_PREVIEW_BOX_CLASS}>
           <p className={MARKETING_EYEBROW_CLASS}>{t("switching.hub.previewEyebrow")}</p>
           <h2 className={`mt-4 max-w-2xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("switching.hub.previewTitle")}
