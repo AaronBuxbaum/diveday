@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
+import { PublicShopMainContent } from "@/app/s/[shopSlug]/_components/PublicShopMainContent";
 import {
   PublicShopBrand,
   PublicShopChrome,
@@ -139,11 +140,11 @@ function DiveDayNotFound({ locale, isShell }: { locale: Locale; isShell?: boolea
  * The same frame `src/app/s/[shopSlug]/layout.tsx` puts around every live page
  * in that namespace, composed here because the refusal never reaches it: the
  * three streamed chrome components in the order the layout renders them, and
- * the `#public-shop-main-content` target their skip link points at. That
- * target is the half a move like this loses silently — `PublicShopChrome`
- * brings its own `SkipLink` but the landmark it names lives in the layout's
- * JSX, and an axe scan of this page is what would find it missing
- * (`e2e/a11y.spec.ts`).
+ * `PublicShopMainContent`, the `#public-shop-main-content` target their skip
+ * link points at. That target is the half a move like this loses silently —
+ * `PublicShopChrome` brings its own `SkipLink` but the landmark it names is
+ * the layout's to render, and an axe scan of this page is what would find it
+ * missing (`e2e/a11y.spec.ts`).
  *
  * The body is `src/app/s/[shopSlug]/not-found.tsx`'s, word for word and class
  * for class, so the two paths a diver can reach a shop's 404 by — this one,
@@ -162,7 +163,7 @@ function ShopFramedNotFound({ shopSlug, locale }: { shopSlug: string; locale: Lo
       >
         <PublicShopChrome params={params} />
       </Suspense>
-      <div id="public-shop-main-content" tabIndex={-1} className="flex-1 outline-none">
+      <PublicShopMainContent>
         <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-6 py-16 text-center">
           <h1 className={`${SHELL_TITLE_CLASS} text-balance`}>{t("notFound.shop.heading")}</h1>
           {/* No sentence under the heading, for the reason the segment file
@@ -172,7 +173,7 @@ function ShopFramedNotFound({ shopSlug, locale }: { shopSlug: string; locale: Lo
             {t("notFound.shop.action")}
           </Link>
         </main>
-      </div>
+      </PublicShopMainContent>
       <Suspense fallback={null}>
         <PublicShopFooterSection params={params} />
       </Suspense>
