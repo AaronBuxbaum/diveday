@@ -697,6 +697,26 @@ describe("the mark's room for its focus ring", () => {
     expect(mark).toHaveClass("rounded-full");
     expect(mark).not.toHaveClass("rounded-lg");
   });
+
+  it("takes the tap over the whole mark column, not only inside its circle", () => {
+    // A browser clips a hit area to the border radius, so the round mark lost
+    // its square's corners as a target, and a thumb there met the column's
+    // bare padding (K-44 review). A stretched `::after` is the target, reaching
+    // exactly as far as the column's own padding.
+    renderList({ divers: [diver()] });
+    const mark = within(screen.getByRole("listitem")).getByRole("button", {
+      name: "Mark boarded",
+    });
+    const column = mark.closest("div.shrink-0") as HTMLElement;
+    expect(column).toHaveClass("py-2.5", "ps-3", "pe-3");
+    expect(mark).toHaveClass(
+      "relative",
+      "after:absolute",
+      "after:-inset-y-2.5",
+      "after:-inset-x-3",
+    );
+    expect(mark.className).not.toMatch(/after:rounded/);
+  });
 });
 
 /**

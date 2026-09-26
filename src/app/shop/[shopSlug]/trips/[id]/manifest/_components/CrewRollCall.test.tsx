@@ -142,4 +142,15 @@ describe("the mark's room for its focus ring", () => {
     expect(column).toHaveClass("py-2.5");
     expect(column.className).not.toMatch(/(^|\s)p[tb]-/);
   });
+
+  it("takes the tap over the whole mark column, as the diver row's does", () => {
+    // The mark's stretched `::after` reaches as far as the diver row's column
+    // padding (`RollCallControls`); this column must be padded the same.
+    renderCrew({ members: [crew()] });
+    const trigger = screen.getByRole("button", { name: "Open details for Keiko Tanaka" });
+    const column = trigger.parentElement?.lastElementChild as HTMLElement;
+    const mark = column.querySelector("button");
+    expect(column).toHaveClass("py-2.5", "ps-3", "pe-3");
+    expect(mark).toHaveClass("relative", "after:-inset-y-2.5", "after:-inset-x-3");
+  });
 });

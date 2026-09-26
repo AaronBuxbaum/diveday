@@ -68,8 +68,24 @@ export const BOAT_TARGET_CLASS = buttonClass({
  * The affirmative tap itself: a bare 56px circle, no box, no label text. The
  * `RollCallMark` inside it is the drawn state and the button's accessible name
  * is the words, so nothing is carried by colour alone (decision 5).
+ *
+ * **Drawn round, tapped square — the whole column.** A browser clips an
+ * element's hit area to its border radius, so the round button (K-44, for a
+ * round focus ring) stopped taking a tap in the 56px square's corners, about a
+ * fifth of what had been its target, and a thumb landing there met the
+ * column's bare padding. This is the one-tap-per-person control, worked
+ * one-handed on a pitching deck. A square stretched `::after` takes the tap
+ * for the button over the whole mark column: `-inset-y-2.5` and `-inset-x-3`
+ * are that column's `py-2.5 ps-3 pe-3` on both rows (the roll-call tests hold
+ * the two together). It paints nothing, and radius is not inherited, so the
+ * ring stays a circle.
  */
-const MARK_BUTTON_CLASS = buttonClass({ variant: "bare", size: "mark", busy: true });
+const MARK_BUTTON_CLASS = buttonClass({
+  variant: "bare",
+  size: "mark",
+  busy: true,
+  className: "relative after:absolute after:-inset-x-3 after:-inset-y-2.5",
+});
 
 /**
  * What one roll-call record means at one checkpoint, and the fill a recorded
