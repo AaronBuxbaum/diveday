@@ -360,18 +360,23 @@ describe("the title folds into the bar", () => {
 
   /**
    * The folded title replaces the shop's name beside the same mark, so it sits
-   * on the name's line. With `leading-none` its 17px line box had negative
-   * half-leading, which Chromium splits unevenly, and the title's cap centre
-   * sat 1px above the mark's and the name's (27.0 against 28.0, the pixel
-   * audit, chrome-folded-title): the word stepped up as the two cross-faded.
-   * It inherits the line height the name has; the row centres both.
+   * on the name's line box: 24px, the name's 16px at the body's 1.5. The row
+   * centres both boxes on the mark, and where a box's top lands decides the
+   * pixel row its baseline snaps to. The name's 24px box starts on a half
+   * pixel; the title's own line box — 17px with `leading-none`, and 25.5px
+   * inherited once that went (17px × 1.5) — started on a whole one, and its
+   * cap sat 1px above the mark's centre and the name's (21–32 against 22–33,
+   * chrome-folded-title at 390): the word stepped up as the two cross-faded.
+   * Measured in the browser, every even line box (24, 26, 28px) lands the cap
+   * on 22–33 and every other one on 21–32; the name's own 24px is the one
+   * that says why.
    */
-  it("sets the folded label on the line the shop's name sits on", async () => {
+  it("sets the folded label on the shop name's own 24px line box", async () => {
     const staff = withoutComments(await read("src/components/ShopNav.tsx"));
     const slot = staff.slice(staff.indexOf("data-chrome-title-slot"));
     const tag = slot.slice(0, slot.indexOf("/>"));
     expect(tag).toContain("className=");
-    expect(tag, "the folded label sets its own line height").not.toMatch(/\bleading-/);
+    expect(tag.match(/\bleading-[\w[\].-]+/g)).toEqual(["leading-6"]);
   });
 
   it("drives the fold from the scroll, not from a timer", async () => {

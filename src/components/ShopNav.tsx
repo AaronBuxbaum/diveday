@@ -184,14 +184,17 @@ export function ShopNav({
                 up, or a reduced-motion reader — and the fold gives it the width
                 the shop's name lets go of.
 
-                No line height of its own: it inherits the one the shop's name
-                has, so the row centres the two on one line. `leading-none` gave
-                it a 17px line box whose negative half-leading set the title 1px
-                above the mark and the name it replaces. */}
+                The shop name's own line box, `leading-6`: 24px, the name's
+                16px at the body's 1.5. The row centres both boxes on the mark,
+                and where a box's top lands decides the pixel row its baseline
+                snaps to — the name's starts on a half pixel. The title's own
+                box, 17px under `leading-none` and 25.5px inherited, started on
+                a whole one, and its cap sat 1px above the mark's centre and
+                the name it replaces (K-502). */}
             <span
               data-chrome-title-slot
               aria-hidden
-              className="max-w-0 min-w-0 truncate text-[17px] font-semibold tracking-tight opacity-0"
+              className="max-w-0 min-w-0 truncate text-[17px] leading-6 font-semibold tracking-tight opacity-0"
             />
           </div>
         }
