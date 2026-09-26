@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { type ButtonSize, type ButtonVariant, buttonClass } from "./button";
+import { type ButtonSize, type ButtonVariant, buttonClass, proseLinkClass } from "./button";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -741,5 +741,36 @@ describe("buttonClass", () => {
       }
       expect(offenders).toEqual([]);
     });
+  });
+});
+
+/**
+ * **A link inside a sentence repaints under the pointer** (K-500).
+ *
+ * "support@dive.day" on /privacy and /terms, and the three guide links in
+ * Import's "coming from" line, were `className="underline"` and nothing else:
+ * under the pointer they looked exactly as they did at rest (the state atlas
+ * measured no pixel over threshold), where every other link on the site
+ * changes colour or gains its underline. `proseLinkClass` is the one spelling
+ * of an underlined link in running text, and the sweep keeps a bare copy out.
+ */
+describe("proseLinkClass", () => {
+  it("underlines at rest and paints a colour under the pointer", () => {
+    const tokens = proseLinkClass.split(" ");
+    expect(tokens).toContain("underline");
+    expect(tokens.filter((token) => token.startsWith("hover:text-"))).toHaveLength(1);
+  });
+
+  it("is what every underlined link in a sentence wears", () => {
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) return walk(full);
+        return /\.tsx$/.test(entry.name) && !/\.test\.tsx$/.test(entry.name) ? [full] : [];
+      });
+    const offenders = walk(SRC_DIR).filter((file) =>
+      /className="underline"/.test(readFileSync(file, "utf8")),
+    );
+    expect(offenders.map((file) => relative(SRC_DIR, file))).toEqual([]);
   });
 });

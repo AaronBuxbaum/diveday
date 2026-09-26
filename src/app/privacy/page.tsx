@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { LegalDocument, LegalList, LegalSection, LegalTermList } from "@/components/LegalDocument";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
+import { proseLinkClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -222,7 +223,7 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
           {t.rich("marketing.privacy.contact.body", {
             address: SUPPORT_EMAIL,
             email: (chunks) => (
-              <a className="underline" href={`mailto:${SUPPORT_EMAIL}`}>
+              <a className={proseLinkClass} href={`mailto:${SUPPORT_EMAIL}`}>
                 {chunks}
               </a>
             ),

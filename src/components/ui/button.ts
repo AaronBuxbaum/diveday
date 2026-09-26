@@ -338,6 +338,19 @@ const sizes = {
  */
 export const tapTargetLinkClass = "inline-flex min-h-11 items-center";
 
+/**
+ * **A link inside a sentence**: the words' own ink, underlined, and the link
+ * colour under the pointer.
+ *
+ * For an address or a name that sits in running text — "write to
+ * support@dive.day", "coming from EVE, DiveShop360 or a spreadsheet" — where a
+ * `link` button would break the line with its box and its target floor (a link
+ * in a sentence is exempt from the 44px target, WCAG 2.5.8). The underline
+ * says "link" at rest; the colour change says "this one" under the pointer.
+ * These were bare `underline` and looked the same hovered as at rest (K-500).
+ */
+export const proseLinkClass = "underline hover:text-primary";
+
 export type ButtonVariant = keyof typeof variants;
 export type ButtonSize = keyof typeof sizes;
 
