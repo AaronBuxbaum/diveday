@@ -129,7 +129,8 @@ describe("the mocks' primary button", () => {
  * "Crew assigned (Mateo & Sarah)" wrapped to leave "Sarah)" alone under it at
  * 390 on /product, with the badge pressed against the label (K-578). The two
  * checklist mocks draw one row: a label that wraps without a one-word last
- * line and gives way to a badge that never shrinks, 12px apart.
+ * line and gives way to a badge that never shrinks, 8px apart — at 12px the
+ * gap took the 3px "Tanks analyzed & loaded" needed to stay on one line.
  */
 describe("the mocks' checklist rows", () => {
   it.each([
@@ -140,7 +141,7 @@ describe("the mocks' checklist rows", () => {
     const label = screen.getByText(text);
     expect(label).toHaveClass("min-w-0", "text-pretty");
     const row = label.parentElement;
-    expect(row).toHaveClass("gap-3");
+    expect(row).toHaveClass("gap-2");
     expect(label.nextElementSibling).toHaveClass("shrink-0");
   });
 });
