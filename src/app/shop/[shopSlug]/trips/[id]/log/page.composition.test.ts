@@ -19,6 +19,35 @@ function section(headingId: string): string {
   return SOURCE.slice(start, SOURCE.indexOf("</section>", start));
 }
 
+describe("the log's section rhythm", () => {
+  /**
+   * The first section hung `mt-7` under the header, the next six `mt-8`, and
+   * the footer `mt-10`: three steps where the page has one (ink to ink at
+   * 1280, 36 / 41 / 43px — K-503, DEPARTURE-4-30). Section rhythm is one
+   * `space-y-10` on the wrapper, never a margin on each section
+   * (docs/design/forms-and-controls.md).
+   */
+  it("stacks the header, every section and the footer in one space-y-10", () => {
+    const body = SOURCE.slice(SOURCE.indexOf("export default async function"));
+    expect(
+      /return \(\s*<div className="space-y-10">\s*<header\b/.test(body),
+      "the page's root wrapper is one space-y-10 around the header and sections",
+    ).toBe(true);
+  });
+
+  it("hangs no margin of its own on any section or on the footer", () => {
+    const tags = SOURCE.match(/<(?:section|footer)\b[^>]*>/g) ?? [];
+    expect(tags.length, "seven sections and the footer").toBe(8);
+    for (const tag of tags) expect(tag).not.toMatch(/\bmt-/);
+  });
+
+  it("keeps the skeleton on the same rhythm, so nothing jumps when the log arrives", () => {
+    const skeleton = readFileSync(join(__dirname, "loading.tsx"), "utf8");
+    expect(skeleton).toContain('className="animate-pulse space-y-10"');
+    expect(skeleton).not.toMatch(/\bmt-[78]\b/);
+  });
+});
+
 describe("the emergency contact cell", () => {
   /**
    * "Asha Sharma (sister) · +1-305-555-0231" was breakable on both sides of
