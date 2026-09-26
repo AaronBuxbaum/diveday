@@ -25,6 +25,13 @@ export const metadata: Metadata = {
 };
 
 /**
+ * The register's two text doors — the paper pass's counter and the year
+ * poster's Reports — in one ink and with the app's text-door hover. They were
+ * `text-muted` and `text-primary`, and neither answered a hover (K-538).
+ */
+const TEXT_DOOR_CLASS = `${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`;
+
+/**
  * **The Print register** — ADR 20260908-one-hand, decision 6, lever X.
  *
  * The shop's paper, listed in the groups of where the paper goes: at the dock
@@ -129,10 +136,7 @@ export default async function SettingsPrintPage({
             line={t("print.settings.paperPass.line")}
             meta={printedMeta("paper_pass")}
             door={
-              <Link
-                href={shopPath(shopSlug, "check-in")}
-                className={`${tapTargetLinkClass} text-sm font-medium text-muted`}
-              >
+              <Link href={shopPath(shopSlug, "check-in")} className={TEXT_DOOR_CLASS}>
                 {t("print.settings.counterDoor")}
               </Link>
             }
@@ -145,10 +149,7 @@ export default async function SettingsPrintPage({
             paper={t("print.settings.yearPoster.paper")}
             line={t("print.settings.yearPoster.line")}
             door={
-              <Link
-                href={shopPath(shopSlug, "reports")}
-                className={`${tapTargetLinkClass} text-sm font-medium text-primary`}
-              >
+              <Link href={shopPath(shopSlug, "reports")} className={TEXT_DOOR_CLASS}>
                 {t("print.settings.reportsDoor")}
               </Link>
             }
