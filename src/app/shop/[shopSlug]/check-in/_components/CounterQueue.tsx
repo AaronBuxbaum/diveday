@@ -252,7 +252,11 @@ export function CounterQueue({
             </RollingFigure>
           }
         >
-          <SettledRows className="opacity-70">
+          {/* **No group opacity** (K-324). The rows recede by their own ink —
+              the name is `text-muted` — because `opacity-70` here composited
+              everything inside, the focus ring too: #0064d2 painted as
+              #498fdd, 5.02:1 against the page down to 3.01:1. */}
+          <SettledRows>
             {settled.map((row) => (
               <CounterQueueRow
                 key={row.bookingId}
