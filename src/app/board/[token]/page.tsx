@@ -154,10 +154,11 @@ export default async function DeparturesBoardPage({
           {t("board.empty")}
         </p>
       ) : (
-        // The three columns are the list's, not each row's: every row spans
-        // them as a subgrid (`BoardRow`), so the time column is the widest
-        // time's and every title starts at one x (K-467).
-        <ol className="mt-8 grid gap-4 lg:mt-10 lg:grid-cols-[auto_1fr_auto] lg:gap-x-8 lg:gap-y-5">
+        // The time column is the list's, not each row's: every row spans the
+        // list's two columns as a subgrid (`BoardRow`), so the time column is
+        // the widest time's and every title starts at one x (K-467). Only the
+        // time: the stage and count stay each row's own.
+        <ol className="mt-8 grid gap-4 lg:mt-10 lg:grid-cols-[auto_1fr] lg:gap-x-8 lg:gap-y-5">
           {departures.map((row, index) => (
             // A key reaches the RSC flight payload embedded in the HTML even
             // though this is a Server Component and the props never cross the
@@ -249,10 +250,18 @@ function outlookParts(row: BoardDeparture, shop: Shop, t: DiverTranslator): stri
  * title breaks mid-phrase and the crew line wraps under it. Stacked, that
  * width reads as one card per boat with nothing hyphenated.
  *
- * The columns are the list's: each row is `lg:grid-cols-subgrid` across the
- * `<ol>`'s template. A template per row sized each row's time column to its
+ * The time column is the list's: each row is `lg:grid-cols-subgrid` across the
+ * `<ol>`'s `auto 1fr`. A template per row sized each row's time column to its
  * own time, so "5:30 AM" and "2:30 PM" started their titles 4px apart and a
  * "10:30 AM" row a digit further (K-467).
+ *
+ * **The stage and count stay the row's own**, in a grid of their own inside
+ * that `1fr`. An `auto` track grows to its widest item before a `1fr` track
+ * gets anything, so a stage column shared down the board is as wide as its
+ * widest stage: one boat "Out on Molasses Reef" (about 370px at 36px bold,
+ * against about 257px for "9 of 12 seats booked") took that width from every
+ * row's title, and at 1024 broke every title word by word. Only the row that
+ * is out gives its title the room.
  */
 function BoardRow({
   row,
@@ -301,60 +310,62 @@ function BoardRow({
 
   return (
     <li
-      className={`grid gap-x-8 gap-y-3 rounded-panel border border-border bg-surface px-6 py-5 lg:col-span-3 lg:grid-cols-subgrid lg:items-center lg:px-8 lg:py-6 ${returned ? "text-muted" : ""}`}
+      className={`grid gap-x-8 gap-y-3 rounded-panel border border-border bg-surface px-6 py-5 lg:col-span-2 lg:grid-cols-subgrid lg:items-center lg:px-8 lg:py-6 ${returned ? "text-muted" : ""}`}
     >
       <p className="text-[2.25rem] leading-none font-bold tabular-nums lg:text-[2.75rem]">
         {formatTime(row.startsAt, locale, shop.timezone)}
       </p>
-      <div className="min-w-0">
-        <p className="text-[1.75rem] leading-tight font-bold text-balance lg:text-[2.25rem]">
-          {title.kind === "private" ? t("board.privateCharter") : bindTitleDash(title.title)}
-        </p>
-        {row.conditionsHold && !returned ? (
-          <p className="mt-1 text-[1.5rem] leading-tight font-bold text-warning">
-            {t("board.hold")}
+      <div className="grid min-w-0 gap-x-8 gap-y-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="min-w-0">
+          <p className="text-[1.75rem] leading-tight font-bold text-balance lg:text-[2.25rem]">
+            {title.kind === "private" ? t("board.privateCharter") : bindTitleDash(title.title)}
           </p>
-        ) : null}
-        {meta.length > 0 ? (
-          <p className="mt-1 flex flex-wrap items-baseline gap-x-3 text-[1.5rem] leading-tight text-muted">
-            {meta.map((part, index) => (
-              <Fragment key={part}>
-                {index > 0 ? <span aria-hidden="true">·</span> : null}
-                <span>{part}</span>
-              </Fragment>
-            ))}
-          </p>
-        ) : null}
-        {meetingPoint ? (
-          <p className="mt-1 text-[1.5rem] leading-tight">
-            {t("board.meetAt", { place: meetingPoint })}
-          </p>
-        ) : null}
-        {row.crewNames.length > 0 ? (
-          <p className="mt-1 text-[1.5rem] leading-tight text-muted">
-            {t("board.crew", { names: row.crewNames.join(", ") })}
-          </p>
-        ) : null}
-        {outlook.length > 0 ? (
-          <p className="mt-1 flex flex-wrap items-baseline gap-x-3 text-[1.5rem] leading-tight text-muted">
-            {outlook.map((part, index) => (
-              <Fragment key={part}>
-                {index > 0 ? <span aria-hidden="true">·</span> : null}
-                <span>{part}</span>
-              </Fragment>
-            ))}
-          </p>
-        ) : null}
-      </div>
-      <div className="lg:text-end">
-        {stage ? (
-          <p
-            className={`text-[1.75rem] leading-tight font-bold text-balance lg:text-[2.25rem] ${stageClass}`}
-          >
-            {stage}
-          </p>
-        ) : null}
-        <p className="text-[1.5rem] leading-tight tabular-nums lg:text-[1.75rem]">{count}</p>
+          {row.conditionsHold && !returned ? (
+            <p className="mt-1 text-[1.5rem] leading-tight font-bold text-warning">
+              {t("board.hold")}
+            </p>
+          ) : null}
+          {meta.length > 0 ? (
+            <p className="mt-1 flex flex-wrap items-baseline gap-x-3 text-[1.5rem] leading-tight text-muted">
+              {meta.map((part, index) => (
+                <Fragment key={part}>
+                  {index > 0 ? <span aria-hidden="true">·</span> : null}
+                  <span>{part}</span>
+                </Fragment>
+              ))}
+            </p>
+          ) : null}
+          {meetingPoint ? (
+            <p className="mt-1 text-[1.5rem] leading-tight">
+              {t("board.meetAt", { place: meetingPoint })}
+            </p>
+          ) : null}
+          {row.crewNames.length > 0 ? (
+            <p className="mt-1 text-[1.5rem] leading-tight text-muted">
+              {t("board.crew", { names: row.crewNames.join(", ") })}
+            </p>
+          ) : null}
+          {outlook.length > 0 ? (
+            <p className="mt-1 flex flex-wrap items-baseline gap-x-3 text-[1.5rem] leading-tight text-muted">
+              {outlook.map((part, index) => (
+                <Fragment key={part}>
+                  {index > 0 ? <span aria-hidden="true">·</span> : null}
+                  <span>{part}</span>
+                </Fragment>
+              ))}
+            </p>
+          ) : null}
+        </div>
+        <div className="lg:text-end">
+          {stage ? (
+            <p
+              className={`text-[1.75rem] leading-tight font-bold text-balance lg:text-[2.25rem] ${stageClass}`}
+            >
+              {stage}
+            </p>
+          ) : null}
+          <p className="text-[1.5rem] leading-tight tabular-nums lg:text-[1.75rem]">{count}</p>
+        </div>
       </div>
     </li>
   );
