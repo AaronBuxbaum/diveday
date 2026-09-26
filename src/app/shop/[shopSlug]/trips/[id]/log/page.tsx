@@ -120,8 +120,11 @@ export default async function IncidentExportPage({
     [t("incidentExport.summaryCrewAssigned"), doc.departureSummary.crewAssigned],
   ];
 
+  // Section rhythm is the wrapper's, one `space-y-10`, and no section hangs a
+  // margin of its own (docs/design/forms-and-controls.md): they used to step
+  // `mt-7`, `mt-8`, `mt-10`, three gaps where the page has one.
   return (
-    <div>
+    <div className="space-y-10">
       <header className="border-b border-border pb-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -165,7 +168,7 @@ export default async function IncidentExportPage({
         </p>
       </header>
 
-      <section className="mt-7" aria-labelledby="incident-summary-heading">
+      <section aria-labelledby="incident-summary-heading">
         <h2 id="incident-summary-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.summaryHeading")}
         </h2>
@@ -180,7 +183,7 @@ export default async function IncidentExportPage({
         </dl>
       </section>
 
-      <section className="mt-8" aria-labelledby="incident-roster-heading">
+      <section aria-labelledby="incident-roster-heading">
         <h2 id="incident-roster-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.rosterHeading")}
         </h2>
@@ -269,7 +272,7 @@ export default async function IncidentExportPage({
         </Table>
       </section>
 
-      <section className="mt-8" aria-labelledby="incident-crew-heading">
+      <section aria-labelledby="incident-crew-heading">
         <h2 id="incident-crew-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.crewHeading")}
         </h2>
@@ -329,7 +332,7 @@ export default async function IncidentExportPage({
       {/* Absence is stated, never blank: a shop with no checklist defined says
           so, rather than the section simply not appearing — the two mean
           different things to an investigator. */}
-      <section className="mt-8" aria-labelledby="incident-checklist-heading">
+      <section aria-labelledby="incident-checklist-heading">
         <h2 id="incident-checklist-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.checklistHeading")}
         </h2>
@@ -364,7 +367,7 @@ export default async function IncidentExportPage({
         )}
       </section>
 
-      <section className="mt-8" aria-labelledby="incident-evidence-heading">
+      <section aria-labelledby="incident-evidence-heading">
         <h2 id="incident-evidence-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.evidenceHeading")}
         </h2>
@@ -409,7 +412,7 @@ export default async function IncidentExportPage({
         </ul>
       </section>
 
-      <section className="mt-8" aria-labelledby="incident-executed-dive-heading">
+      <section aria-labelledby="incident-executed-dive-heading">
         <h2 id="incident-executed-dive-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.executedDiveHeading")}
         </h2>
@@ -480,7 +483,7 @@ export default async function IncidentExportPage({
         )}
       </section>
 
-      <section className="mt-8" aria-labelledby="incident-timeline-heading">
+      <section aria-labelledby="incident-timeline-heading">
         <h2 id="incident-timeline-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.timelineHeading")}
         </h2>
@@ -564,7 +567,7 @@ export default async function IncidentExportPage({
         )}
       </section>
 
-      <footer className="mt-10 break-inside-avoid border-t border-border pt-4 text-sm">
+      <footer className="break-inside-avoid border-t border-border pt-4 text-sm">
         <p className="font-semibold">{t("incidentExport.footerHashLabel")}</p>
         <p className="mt-1 font-mono text-xs break-all">{doc.contentHash}</p>
         <p className="mt-2 max-w-prose text-muted">{t("incidentExport.footerHashExplainer")}</p>

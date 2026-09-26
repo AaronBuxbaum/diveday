@@ -9,18 +9,18 @@ import { sectionCardClass } from "@/components/ui/card";
  */
 export default function IncidentExportLoading() {
   return (
-    <div className="animate-pulse">
+    <div className="animate-pulse space-y-10">
       <div className="border-b border-border pb-6">
         <div className="h-4 w-40 rounded bg-surface-sunken" />
         <div className="mt-2 h-9 w-64 max-w-full rounded bg-surface-sunken" />
         <div className="mt-3 h-4 w-72 max-w-full rounded bg-surface-sunken" />
       </div>
-      <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {[0, 1, 2, 3, 4].map((i) => (
           <div key={i} className={sectionCardClass({ padding: "none", className: "h-20" })} />
         ))}
       </div>
-      <div className={sectionCardClass({ padding: "none", className: "mt-8 h-64 w-full" })} />
+      <div className={sectionCardClass({ padding: "none", className: "h-64 w-full" })} />
     </div>
   );
 }
