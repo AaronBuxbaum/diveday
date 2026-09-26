@@ -8,7 +8,7 @@ import type { DiverLocale } from "@/i18n/settings";
 import { staffShopRoot } from "@/lib/staff-destinations";
 
 const navLinkClassName =
-  "inline-flex min-h-11 items-center rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-muted transition-colors hover:text-foreground md:px-3";
+  "inline-flex min-h-11 items-center rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-muted transition-colors hover:text-foreground lg:px-3";
 
 /**
  * The marketing header's markup, with the session already resolved to one
@@ -38,9 +38,11 @@ export function MarketingNavView({
   locale: DiverLocale;
   hideCta: boolean;
   /**
-   * The onboard artboard keeps only the wordmark in the phone header. It keeps
-   * the `px-6` gutter every marketing header and the page column under it sit
-   * on; a `px-5` here put the wordmark 4px left of both (K-245).
+   * The onboard artboard keeps only the wordmark in the phone header, and it
+   * keeps it for as long as the full header would take two rows (below lg), so
+   * /onboard never opens on the 132px two-row header. It keeps the `px-6`
+   * gutter every marketing header and the page column under it sit on; a
+   * `px-5` here put the wordmark 4px left of both (K-245).
    */
   compactMobile?: boolean;
   // i18n-exempt: type annotation, not copy.
@@ -55,30 +57,33 @@ export function MarketingNavView({
   ];
   // The CTA slot renders nothing for a signed-out visitor on a page that hides
   // the pitch (/dive, /onboard). With no CTA after it, the row's last link ends
-  // its word `md:px-3` short of the gutter the footer and the CTA end on, so
+  // its word `lg:px-3` short of the gutter the footer and the CTA end on, so
   // the row hangs that padding into the gutter, as `-mx-2` does on a phone
   // (K-512). With a CTA the padding is the gap before it and stays.
   const ctaSlotEmpty = !shopSlug && hideCta;
 
   return (
     <header
-      className={`bg-background/95 ${compactMobile ? "border-b-0 sm:border-b sm:border-border" : "border-b border-border"}`}
+      className={`bg-background/95 ${compactMobile ? "border-b-0 lg:border-b lg:border-border" : "border-b border-border"}`}
     >
       {/*
        * Phone layout is two deliberate rows — brand + CTA first, page links
        * second — rather than free wrapping, which used to stack the link
        * block *above* the logo and read as a broken header on the very first
-       * paint. ≥md it collapses back to the familiar single row: not ≥sm,
-       * because the row needs about 669px and at 640 the bar has 592, so the
-       * links wrapped into a block of their own up to 716 (K-88).
+       * paint. ≥lg it collapses back to the familiar single row. Not ≥sm: the
+       * row needs about 669px in en-US and at 640 the bar has 592, so the
+       * links wrapped into a block of their own up to 716 (K-88). Not ≥md
+       * either: es-ES needs about 837px ("Quiénes somos", "Iniciar sesión",
+       * "Probar la demo en vivo"), so at md's 720 the same block came back up
+       * to 884. lg's 976 holds both diver locales.
        */}
       <nav
         aria-label={t("nav.mainNavigation")}
-        className={`mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4 md:flex-nowrap ${compactMobile ? "max-sm:h-[52px] max-sm:flex-nowrap max-sm:py-0" : ""}`}
+        className={`mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4 lg:flex-nowrap ${compactMobile ? "max-lg:h-[52px] max-lg:flex-nowrap max-lg:py-0" : ""}`}
       >
         <Wordmark href="/" className="text-foreground" />
         <div
-          className={`order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 md:order-none md:mx-0 md:ml-auto md:basis-auto md:justify-end md:gap-x-2 ${ctaSlotEmpty ? "md:-me-3" : ""} ${compactMobile ? "max-sm:hidden" : ""}`}
+          className={`order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 lg:order-none lg:mx-0 lg:ml-auto lg:basis-auto lg:justify-end lg:gap-x-2 ${ctaSlotEmpty ? "lg:-me-3" : ""} ${compactMobile ? "max-lg:hidden" : ""}`}
         >
           {links.map((link) => (
             <Link key={link.href} href={link.href} className={navLinkClassName}>
@@ -107,7 +112,7 @@ export function MarketingNavView({
             href={staffShopRoot(shopSlug)}
             className={buttonClass({
               variant: "outline",
-              className: `ml-auto whitespace-nowrap md:ml-0 ${compactMobile ? "max-sm:hidden" : ""}`,
+              className: `ml-auto whitespace-nowrap lg:ml-0 ${compactMobile ? "max-lg:hidden" : ""}`,
             })}
           >
             {t("nav.goToShop")}
@@ -121,7 +126,7 @@ export function MarketingNavView({
           // first paint was a real "what do I click?" cost (design review).
           <form
             action={demoAction}
-            className={`ml-auto md:ml-0 ${compactMobile ? "max-sm:hidden" : ""}`}
+            className={`ml-auto lg:ml-0 ${compactMobile ? "max-lg:hidden" : ""}`}
           >
             <FunnelTag source="nav" />
             <SubmitButton
