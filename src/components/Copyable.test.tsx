@@ -61,19 +61,31 @@ function renderPanel() {
  * started 11px inside the left (today-first-bookable, 1280 and 390).
  */
 describe("Copyable's panel", () => {
-  it("centres its header row rather than lining it up by baseline", () => {
+  it("starts its header row's items at the top rather than lining them up by baseline", () => {
+    // With the trigger outdented 12px above, the label's 20px line and the
+    // trigger's 44px box share a centre when both start at the row's top.
     renderPanel();
     const row = screen.getByRole("button", { name: "Copy link" }).parentElement;
-    expect(row).toHaveClass("items-center");
+    expect(row).toHaveClass("items-start");
     expect(row).not.toHaveClass("items-baseline");
   });
 
-  it("gives its trigger's extra height and padding back, so the label's line is the row", () => {
+  /**
+   * **Above the label only.** Outdented below as well (`-my-3`), the 44px box
+   * ran 12px under a row the URL starts 8px beneath, so its hover wash took
+   * the top of the URL's first line and, at 390 where that line runs under the
+   * button, its inset ring lay on the URL's ink (K-108 review,
+   * today-first-bookable).
+   */
+  it("gives its trigger's extra height back above the label, and keeps it clear of the URL below", () => {
     renderPanel();
     const trigger = screen.getByRole("button", { name: "Copy link" });
-    // (44px target − 20px label line) / 2: the target stays 44px tall, and the
-    // row is exactly the label's line box.
-    expect(trigger).toHaveClass("-my-3");
+    // (44px target − 20px label line) / 2 above: the caption sets the panel's
+    // top inset, and the row keeps the box's lower half, so the URL's `mt-2`
+    // is measured from the box's bottom edge.
+    expect(trigger).toHaveClass("-mt-3");
+    expect(trigger.className).not.toMatch(/(^|\s)-m[yb]-/);
+    expect(screen.getByText(LINK)).toHaveClass("mt-2");
     // `flush` on a ghost: 8px of room for the fill, handed back as a margin,
     // so the label ends on the panel's inset as the caption starts on it.
     expect(trigger).toHaveClass("-mx-2", "px-2");
