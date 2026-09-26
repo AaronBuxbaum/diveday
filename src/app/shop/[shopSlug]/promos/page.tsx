@@ -279,7 +279,7 @@ export default async function PromosPage({
               count: promo.timesRedeemed,
               max: promo.maxRedemptions,
             }),
-      ].join(" · "),
+      ],
       ...(switchable || promo.status === "pending" || promo.status === "failed"
         ? {
             actions: switchable ? (
@@ -335,7 +335,7 @@ export default async function PromosPage({
         date: formatDateTimeTz(deal.expiresAt, locale, timezone),
       }),
       t("promos.tripDeals.recipients", { count: deal.recipientCount }),
-    ].join(" · "),
+    ],
   }));
 
   return (

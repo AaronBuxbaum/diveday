@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { Copyable } from "@/components/Copyable";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
@@ -47,11 +47,39 @@ export type PromoCodeRow = {
   badge?: { tone: BadgeTone; word: string };
   /** The shop's own note about the code. Their words, so never assumed present. */
   description?: string | null;
-  /** "Trips and courses · from Aug 1 · no end date · Redeemed 1 time". Pre-formatted. */
-  facts: string;
+  /** ["Trips and courses", "from Aug 1", "no end date", "Redeemed 1 time"]. Pre-formatted; `FactsLine` joins them. */
+  facts: readonly string[];
   /** Switch off/on, or retry and delete — the caller's forms, per its permissions. */
   actions?: ReactNode;
 };
+
+/**
+ * The facts' separator, glued to the fact it follows by a no-break space: a
+ * line may end after a dot and never opens on one.
+ */
+const SEPARATOR = "\u00a0· ";
+
+/**
+ * **A row's quiet line of facts, broken only between facts** (pixel-craft
+ * class 8; K-387). The facts arrived as one pre-joined string, so a phone
+ * broke the line at any space: "no / end date", "until Jul 20, 12:00 PM /
+ * EDT". Each fact is set whole, so a line breaks only after a dot. They are
+ * DiveDay's own words (a scope, a window's edge, a count), and the longest,
+ * a dated "until …", fits a 390px row beside its switch.
+ */
+function FactsLine({ facts }: { facts: readonly string[] }) {
+  return (
+    <p className="mt-0.5 text-sm text-muted tabular-nums">
+      {facts.map((fact, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: a row's facts are a fixed sequence, never reordered, and two may read alike
+        <Fragment key={index}>
+          {index > 0 ? SEPARATOR : null}
+          <span className="whitespace-nowrap">{fact}</span>
+        </Fragment>
+      ))}
+    </p>
+  );
+}
 
 /** One shelf's run of codes, in the order the rows arrived. */
 export type PromoCodeLedgerGroup = { group: PromoLedgerGroup; rows: PromoCodeRow[] };
@@ -124,7 +152,7 @@ export function PromoCodeLedger({
                     {row.description ? (
                       <p className="mt-0.5 text-sm text-muted">{row.description}</p>
                     ) : null}
-                    <p className="mt-0.5 text-sm text-muted tabular-nums">{row.facts}</p>
+                    <FactsLine facts={row.facts} />
                   </div>
                 </LedgerRow>
               ))}
@@ -144,8 +172,8 @@ export type TripDealRow = {
   /** The departure the deal was sent from. The row is the door to it. */
   tripTitle: string;
   href: string;
-  /** "Expires Fri, Aug 28, 6:00 PM · Sent to 9 divers". Pre-formatted. */
-  facts: string;
+  /** ["Expires Fri, Aug 28, 6:00 PM", "Sent to 9 divers"]. Pre-formatted; `FactsLine` joins them. */
+  facts: readonly string[];
 };
 
 /**
@@ -179,7 +207,7 @@ export function TripDealLedger({
               <span className="text-sm font-medium text-primary tabular-nums">{row.discount}</span>
               <span className="font-medium">{row.tripTitle}</span>
             </p>
-            <p className="mt-0.5 text-sm text-muted tabular-nums">{row.facts}</p>
+            <FactsLine facts={row.facts} />
           </div>
         </LedgerRow>
       ))}

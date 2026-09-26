@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { groupPromoRows, PromoCodeLedger, type PromoCodeRow } from "./PromoLedger";
+import {
+  groupPromoRows,
+  PromoCodeLedger,
+  type PromoCodeRow,
+  TripDealLedger,
+  type TripDealRow,
+} from "./PromoLedger";
 
 afterEach(cleanup);
 
@@ -31,7 +37,7 @@ const ROWS: PromoCodeRow[] = [
     code: "REEF10",
     discount: "10% off",
     description: "Standing returning-diver discount",
-    facts: "Trips and courses · no start date · no end date · Redeemed 1 time",
+    facts: ["Trips and courses", "no start date", "no end date", "Redeemed 1 time"],
   },
   {
     id: "winter",
@@ -41,19 +47,24 @@ const ROWS: PromoCodeRow[] = [
     // Switched off inside a live window: the shelf is the window, the switch
     // is this one row's exception.
     badge: { tone: "neutral", word: "Switched off" },
-    facts: "Trips only · no start date · no end date · Redeemed 0 times",
+    facts: ["Trips only", "no start date", "no end date", "Redeemed 0 times"],
   },
   {
     id: "ow25",
     group: "ended",
     code: "OPENWATER25",
     discount: "25% off",
-    facts: "Courses only · no start date · until Aug 27 · Redeemed 0 times of 20",
+    facts: ["Courses only", "no start date", "until Aug 27", "Redeemed 0 times of 20"],
   },
 ];
 
 function renderLedger(rows: readonly PromoCodeRow[] = ROWS) {
   return render(<PromoCodeLedger rows={rows} labels={LABELS} copy={COPY} />);
+}
+
+/** A row's line of facts: the last paragraph of its content. */
+function factsLine(row: HTMLElement | undefined) {
+  return [...(row?.querySelectorAll("p") ?? [])].at(-1);
 }
 
 describe("shelving the codes", () => {
@@ -120,6 +131,30 @@ describe("the codes ledger", () => {
     }
   });
 
+  /**
+   * **A line of facts breaks between facts, never inside one** (pixel-craft
+   * class 8; K-387). The facts arrived as one pre-joined string, so at 390 a
+   * line could end on any space: "no / end date", "12:00 PM / EDT". Each fact
+   * is set whole, and each dot is bound to the fact before it, so a line ends
+   * after a dot and never opens on one.
+   */
+  it("sets each fact whole and breaks the line only after a dot", () => {
+    renderLedger();
+    const [row] = within(screen.getByRole("list", { name: "Live" })).getAllByRole("listitem");
+    const line = factsLine(row);
+    const facts = [...(line?.querySelectorAll(":scope > span") ?? [])];
+    expect(facts.map((fact) => fact.textContent)).toEqual([
+      "Trips and courses",
+      "no start date",
+      "no end date",
+      "Redeemed 1 time",
+    ]);
+    for (const fact of facts) expect(fact).toHaveClass("whitespace-nowrap");
+    expect(line?.textContent).toBe(
+      "Trips and courses\u00a0· no start date\u00a0· no end date\u00a0· Redeemed 1 time",
+    );
+  });
+
   it("carries no count on a shelf — one Pager counts the whole run", () => {
     renderLedger();
     // A per-shelf tally would count *this page's* rows and read as the
@@ -129,5 +164,25 @@ describe("the codes ledger", () => {
     for (const heading of screen.getAllByRole("heading", { level: 2 })) {
       expect(heading.nextElementSibling?.tagName).toBe("UL");
     }
+  });
+});
+
+describe("the trip deals ledger", () => {
+  const DEAL: TripDealRow = {
+    id: "deal-1",
+    code: "LASTCALL20",
+    discount: "20% off",
+    tripTitle: "Two-Tank Reef — Molasses & French",
+    href: "/shop/blue-mantis/trips/trip-1#last-minute-deal",
+    facts: ["Expires Fri, Aug 28, 6:00 PM", "Sent to 9 divers"],
+  };
+
+  it("sets a deal's facts whole, as a code's are", () => {
+    render(<TripDealLedger labelledBy="trip-deals" rows={[DEAL]} />);
+    const line = factsLine(screen.getByRole("listitem"));
+    const facts = [...(line?.querySelectorAll(":scope > span") ?? [])];
+    expect(facts.map((fact) => fact.textContent)).toEqual([...DEAL.facts]);
+    for (const fact of facts) expect(fact).toHaveClass("whitespace-nowrap");
+    expect(line?.textContent).toBe("Expires Fri, Aug 28, 6:00 PM\u00a0· Sent to 9 divers");
   });
 });
