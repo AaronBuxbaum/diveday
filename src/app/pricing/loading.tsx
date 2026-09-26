@@ -16,16 +16,19 @@ const INVOICE_ROWS = [
 
 /**
  * What the plan covers, one entry per item with the lines it wraps to on a
- * phone (measured at 390); from `sm` the list is two columns whose rows are
- * each two lines.
+ * phone (`base`, 314px of text at 390) and in the two-column list from `sm`
+ * (measured at 1280, 376px of text a column on the hero's `max-w-4xl`). A
+ * grid row is as tall as its taller item, so the rows are two lines each; on
+ * `max-w-5xl` (440px) the practice-shop line fits on one and the middle row is
+ * one line, so its `sm` follows the measure (loading.test.tsx reads it).
  */
 const COVERS_LINES = [
-  ["item1", 3],
-  ["item2", 1],
-  ["item3", 2],
-  ["item4", 2],
-  ["item6", 1],
-  ["item7", 3],
+  ["item1", { base: 3, sm: 2 }],
+  ["item2", { base: 1, sm: 1 }],
+  ["item3", { base: 2, sm: 1 }],
+  ["item4", { base: 2, sm: 2 }],
+  ["item6", { base: 1, sm: 1 }],
+  ["item7", { base: 3, sm: 2 }],
 ] as const;
 
 /**
@@ -42,7 +45,9 @@ const COVERS_LINES = [
  * annotated invoice beside its notes, the two doors and their terms, then
  * the hairline turn into what the number buys. It predated the invoice and
  * drew the older order on `max-w-3xl`, so the doors painted where the invoice
- * lands and dropped 425px when it did. The numbers are the page's line boxes
+ * lands and dropped 425px when it did. Its measure is whatever the page's
+ * hero column wears, which the test reads from the page, since nothing else
+ * holds the two together. The numbers are the page's line boxes
  * (src/app/pricing/page.tsx), measured at 390 and 1280:
  *   - the eyebrow, one 20px `text-sm` line; the headline `mt-5`, two 40px
  *     `text-4xl` lines on a phone and one 48px `sm:text-5xl` line from `sm`;
@@ -51,7 +56,8 @@ const COVERS_LINES = [
  *     two on a phone;
  *   - the invoice `mt-12`: eight `py-3` rows of one 24px line between
  *     hairlines, beside (from `lg`) or over the notes, a 20px heading and
- *     four two-line notes `space-y-3` under it;
+ *     four notes `space-y-3` under it, each two lines on `max-w-4xl` and
+ *     `max-w-5xl` alike (329px and 386px of text beside the ledger);
  *   - the doors `mt-12`, 48px, stacked below `sm`; the demo note `mt-6` (two
  *     lines on a phone, one from `sm`) and the trial note `mt-2` (three, then
  *     two), 24px lines;
@@ -135,11 +141,7 @@ export default function PricingLoading() {
               <div className="mt-5 grid gap-x-10 gap-y-3 sm:grid-cols-2">
                 {COVERS_LINES.map(([item, lines]) => (
                   <div key={item}>
-                    <SkeletonLineBars
-                      lines={{ base: lines, sm: 2 }}
-                      height="h-6"
-                      width="w-full max-w-xs"
-                    />
+                    <SkeletonLineBars lines={lines} height="h-6" width="w-full max-w-xs" />
                   </div>
                 ))}
               </div>
