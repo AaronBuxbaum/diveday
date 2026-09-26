@@ -112,8 +112,12 @@ export function ManifestMoreMenu({
     );
   }
 
+  // **Its own gap above** (pixel-craft class 4). The page passes none, and
+  // with none the trigger's box began on the "On this phone" card's bottom
+  // border, 0px under it, its 5px focus ring drawn inside the card. `mt-3` is
+  // 12px of box and the flush ghost's 12px of air above its words.
   return (
-    <div className="hidden print:hidden lg:block">
+    <div className="mt-3 hidden print:hidden lg:block">
       <button
         ref={triggerRef}
         type="button"

@@ -68,3 +68,26 @@ describe("ManifestMoreMenu", () => {
     expect(screen.getByText("Radio first. Oxygen next.")).toBeVisible();
   });
 });
+
+describe("the footer line's place", () => {
+  /**
+   * **The footer line stands clear of the card above it** (pixel-craft class
+   * 4, K-358). Its wrapper had no margin and the page passes none, so on a
+   * desk the trigger's box began on the "On this phone" card's bottom border
+   * (0px, where the page's other blocks sit 39–64px apart) and its 5px focus
+   * ring drew inside the card. The wrapper keeps its own gap.
+   */
+  it("keeps a gap above the footer trigger", () => {
+    render(
+      <ManifestMoreMenu
+        variant="footer"
+        label="Emergency numbers & response plan"
+        closeLabel="Close emergency reference"
+      >
+        {reference()}
+      </ManifestMoreMenu>,
+    );
+    const trigger = screen.getByRole("button", { name: "Emergency numbers & response plan" });
+    expect(trigger.parentElement).toHaveClass("mt-3");
+  });
+});
