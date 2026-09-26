@@ -640,6 +640,30 @@ describe("StaffingWeek geometry", () => {
     }
   });
 
+  /** A box's start inset, in px, from its classes: its 1px edge, then its padding. */
+  function startInset(element: Element | null | undefined) {
+    const tokens = [...(element?.classList ?? [])];
+    const edge = tokens.some((token) => ["border", "border-x", "border-s"].includes(token)) ? 1 : 0;
+    const padding = tokens.map((token) => /^p[xs]-(\d+(?:\.\d+)?)$/.exec(token)).find(Boolean);
+    return edge + (padding ? Number(padding[1]) * 4 : 0);
+  }
+
+  /**
+   * K-498, carried into the opened shift. The chip reserves a 1px edge
+   * before its 8px, so its words start 9px in; the disclosure under it (the
+   * zoned range, then Remove flush on the column) started at 8px, so the
+   * opened shift was 1px ragged, the defect K-498 removed moved down a line.
+   * The disclosure reserves the same edge, transparent, on its start side.
+   */
+  it("starts the opened shift's words on the chip's own inset", () => {
+    const { chips } = renderEveryChip();
+    const disclosure = chips.shift?.nextElementSibling;
+    expect(disclosure).not.toBeNull();
+    expect(startInset(chips.shift)).toBe(9);
+    expect(startInset(disclosure)).toBe(startInset(chips.shift));
+    expect(disclosure).toHaveClass("border-transparent");
+  });
+
   /**
    * K-535, K-501: the two chips a manager can press hovered to a translucent
    * copy of their own fill, which over the page's ground is lighter, not

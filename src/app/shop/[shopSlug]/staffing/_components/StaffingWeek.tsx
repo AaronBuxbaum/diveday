@@ -258,8 +258,10 @@ function ShiftChip({
       </summary>
       {/* The facts the chip could not fit, then the one act. The zone is
           spelled out here and nowhere else on the grid: seven columns of
-          "EDT" would be the same word said 40 times. */}
-      <div className="mt-1 flex flex-col items-start gap-1 ps-2">
+          "EDT" would be the same word said 40 times. Its inset is the
+          chip's own, a transparent 1px edge and then 8px, so the range and
+          the flush Remove start on the chip's words, not 1px short (K-498). */}
+      <div className="mt-1 flex flex-col items-start gap-1 border-s border-transparent ps-2">
         <span className="text-xs text-muted tabular-nums">
           {formatTimeRangeTz(shift.startsAt, shift.endsAt, locale, timeZone)}
         </span>
