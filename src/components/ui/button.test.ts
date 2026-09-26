@@ -8,6 +8,24 @@ const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const SIZES = ["sm", "md", "boat", "icon"] as const satisfies readonly ButtonSize[];
 
+/**
+ * Every variant, as a record keyed by the type so that a variant added to
+ * `button.ts` fails the typecheck here until it is listed, and every sweep
+ * below reaches it.
+ */
+const EVERY_VARIANT: Record<ButtonVariant, true> = {
+  primary: true,
+  secondary: true,
+  ghost: true,
+  danger: true,
+  "danger-ghost": true,
+  "danger-solid": true,
+  link: true,
+  sky: true,
+  bare: true,
+};
+const VARIANTS = Object.keys(EVERY_VARIANT) as ButtonVariant[];
+
 /** The sizes that carry a horizontal padding for `flush` to act on. */
 const PADDED_SIZES = ["sm", "md", "boat"] as const satisfies readonly ButtonSize[];
 
@@ -46,6 +64,18 @@ describe("buttonClass", () => {
       const classes = buttonClass({ variant });
       expect(classes, variant).toContain("min-h-11");
       expect(classes, variant).toContain("items-center");
+    }
+  });
+
+  it("centres a wrapped label's lines, not only the box", () => {
+    // `justify-center` centres the label's box, and a label that wraps fills
+    // the box, so its lines fell back to start alignment: "One flat $99 per
+    // location / month. See the full list" on /about at 390 started 17px
+    // inside the left border and ended 43px inside the right (pixel probe,
+    // K-84). `text-center` sorts before `text-start` and `text-left`, so a
+    // row-shaped button that passes one of those still aligns to the start.
+    for (const variant of VARIANTS) {
+      expect(buttonClass({ variant }).split(" "), variant).toContain("text-center");
     }
   });
 

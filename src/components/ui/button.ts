@@ -60,8 +60,18 @@
  * over `--motion-quick`, and carries the same three colour transitions this
  * string used to name.
  */
+/**
+ * **`text-center` is the other half of `justify-center`.** That centres the
+ * label's box; a label that wraps fills the box, and its lines fell back to
+ * start alignment — "One flat $99 per location / month. See the full list" on
+ * /about at 390 started 17px inside the left border and ended 43px inside the
+ * right (pixel probe, 2026-09-25). Tailwind emits `text-center` before
+ * `text-start` and `text-left`, so a row-shaped button that passes one of those
+ * through `className` (the pre-departure checklist, the offline counter) still
+ * aligns to the start.
+ */
 const base =
-  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-lg pressable";
+  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-lg text-center pressable";
 
 /**
  * What a disabled state *means*, which is two different things this app renders
