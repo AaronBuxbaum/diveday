@@ -448,9 +448,10 @@ export function AfterState({
           (issue #1425): when they may fly, in the shop's zone, with the hours
           and who set them in the same sentence. A sentence and no panel — it
           informs, and a boxed warning would read as a gate. Off the print, which
-          is the keepsake alone. */}
+          is the keepsake alone. A section's `mt-10` like every one around it:
+          at `mt-6` it broke the page's 40px rhythm under the record (K-532). */}
       {flySafe ? (
-        <p data-testid={AFTER_STATE_TEST_IDS.flySafe} className="mt-6 text-base print:hidden">
+        <p data-testid={AFTER_STATE_TEST_IDS.flySafe} className="mt-10 text-base print:hidden">
           {t(`recap.${flySafeMessageKey(flySafe)}`, {
             when: flySafe.when,
             count: flySafe.hours,

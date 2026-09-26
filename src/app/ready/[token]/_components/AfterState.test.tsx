@@ -115,6 +115,21 @@ describe("the fly-safe line", () => {
     expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.flySafe)).toBeNull();
   });
 
+  it("stands a section's 40px under the record, as every section on the page does", () => {
+    // It was `mt-6`: 24px under the log card where the crew quote, the
+    // review, the doors and the next dive are each 40px apart (K-532).
+    render(
+      <AfterState
+        {...props({
+          flySafe: { when: "Sunday 10:20 AM", hours: 24, anchor: "last_dive", reason: "one_dive" },
+        })}
+      />,
+    );
+    const line = screen.getByTestId(AFTER_STATE_TEST_IDS.flySafe);
+    expect(line).toHaveClass("mt-10");
+    expect(line).not.toHaveClass("mt-6");
+  });
+
   it("names the instant, the hours, and the shop, worded off the last dive", () => {
     render(
       <AfterState
