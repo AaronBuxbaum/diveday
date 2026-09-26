@@ -53,7 +53,8 @@ export default function SettingsPrintLoading() {
           descriptionWidth="w-[32rem] max-w-full"
           descriptionLines={{ base: 2, sm: 1 }}
         />
-        <div className="mt-8 space-y-8">
+        {/* The page's one `space-y-10` between groups (K-521). */}
+        <div className="space-y-10">
           {GROUPS.map((group, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: bars, not records — the group's place is its only identity
             <div key={index}>

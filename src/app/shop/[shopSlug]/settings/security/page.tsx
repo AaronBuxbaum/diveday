@@ -2,7 +2,8 @@ import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import { openSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { isStepUpPurpose, type StepUpPurpose, safeStepUpReturnPath } from "@/lib/security-step-up";
 import { requireShopSurface } from "@/lib/session";
-import { type NoticeTone, noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import {
   beginTotpEnrollmentAction,
@@ -118,49 +119,46 @@ export default async function SecurityPage({
         eyebrowHref={shopPath(shopSlug, "settings")}
         title={t("settings.security.title")}
       />
-      {notice ? (
-        <div className="mt-6">
-          <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)}>
-            {notice.text}
-          </ShopNotice>
-        </div>
-      ) : null}
-      {purpose && returnTo && isEnabled ? (
-        <SectionCard
-          className="mt-6"
-          title={t("settings.security.stepUpHeading")}
-          description={t("settings.security.stepUpDescription")}
-        >
-          <form
-            action={verifyStepUpAction.bind(null, shopSlug)}
-            className="flex flex-wrap items-end gap-3"
+      {notice ? <StaffNoticeBanner tone={notice.tone}>{notice.text}</StaffNoticeBanner> : null}
+      {/* Section rhythm belongs to the page, not to each section: one
+          `space-y-10` here, and no `mt-*` on any card
+          (docs/design/forms-and-controls.md). The cards stood 24px apart,
+          and the step-up card and the notice hung `mt-6` of their own (K-521). */}
+      <div className="space-y-10">
+        {purpose && returnTo && isEnabled ? (
+          <SectionCard
+            title={t("settings.security.stepUpHeading")}
+            description={t("settings.security.stepUpDescription")}
           >
-            <input type="hidden" name="purpose" value={purpose} />
-            <input type="hidden" name="returnTo" value={returnTo} />
-            <Field
-              label={t("settings.security.stepUpCodeLabel")}
-              hint={t("settings.security.stepUpCodeHint")}
+            <form
+              action={verifyStepUpAction.bind(null, shopSlug)}
+              className="flex flex-wrap items-end gap-3"
             >
-              <input
-                name="code"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9A-Za-z-]{6,32}"
-                maxLength={32}
-                required
-                className={controlClassFor("md")}
-              />
-            </Field>
-            <SubmitButton
-              pendingLabel={t("settings.security.stepUpVerifying")}
-              className={buttonClass()}
-            >
-              {t("settings.security.stepUpVerify")}
-            </SubmitButton>
-          </form>
-        </SectionCard>
-      ) : null}
-      <div className="mt-8 space-y-6">
+              <input type="hidden" name="purpose" value={purpose} />
+              <input type="hidden" name="returnTo" value={returnTo} />
+              <Field
+                label={t("settings.security.stepUpCodeLabel")}
+                hint={t("settings.security.stepUpCodeHint")}
+              >
+                <input
+                  name="code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9A-Za-z-]{6,32}"
+                  maxLength={32}
+                  required
+                  className={controlClassFor("md")}
+                />
+              </Field>
+              <SubmitButton
+                pendingLabel={t("settings.security.stepUpVerifying")}
+                className={buttonClass()}
+              >
+                {t("settings.security.stepUpVerify")}
+              </SubmitButton>
+            </form>
+          </SectionCard>
+        ) : null}
         <SectionCard
           title={t("settings.security.twoFactorHeading")}
           description={t("settings.security.twoFactorDescription")}

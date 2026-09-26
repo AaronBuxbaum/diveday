@@ -87,7 +87,11 @@ export default async function SettingsPrintPage({
         description={t("print.settings.lede")}
       />
 
-      <div className="mt-8 space-y-8">
+      {/* Section rhythm belongs to the page, not to each section: one
+          `space-y-10` here, the header's `mb-8` above it, and no `mt-*` on a
+          group (docs/design/forms-and-controls.md). The groups stood 32px
+          apart (K-521). */}
+      <div className="space-y-10">
         <LedgerGroup as="h2" label={t("print.settings.groups.dock")}>
           <SheetRow
             name={t("print.settings.dockSign.name")}
