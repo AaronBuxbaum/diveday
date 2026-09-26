@@ -401,7 +401,11 @@ export type SkeletonLines = number | { base: number; sm: number };
  * lines read as two rather than one tall slab; the box keeps the full height.
  * A line one side of `sm` does not have is hidden on that side.
  *
- * Exported for a skeleton's own `meta`, whose line can wrap the same way.
+ * Exported for any skeleton that draws lines of words: a header skeleton's own
+ * `meta`, whose line can wrap the same way, and a whole document's lines, as
+ * `LegalDocumentSkeleton` draws the legal pages. That one passes `h-lh` inside
+ * a wrapper wearing the text's own type classes, so each bar is exactly the
+ * line box of the words it stands for, whatever their size.
  */
 export function SkeletonLineBars({
   lines,
@@ -409,7 +413,10 @@ export function SkeletonLineBars({
   width,
 }: {
   lines: SkeletonLines;
-  /** The line box's height class: `h-11` a title, `h-6` a description, `h-5` a `text-sm` line. */
+  /**
+   * The line box's height class: `h-11` a title, `h-6` a description, `h-5` a
+   * `text-sm` line; or `h-lh`, one line of whatever type the bars' parent sets.
+   */
   height: string;
   /** The bar's width classes. */
   width: string;
