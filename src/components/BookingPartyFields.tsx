@@ -307,7 +307,11 @@ export function BookingPartyFields({
                   })}
                 </p>
               ) : null}
-              <FieldGrid columns={2}>
+              {/* One box to a row. Name and Email stood side by side in a
+                  478px card body, which left Email 231px and cut a prefilled
+                  address at its right padding; the card is narrow enough on
+                  every screen that each box wants its whole width. */}
+              <FieldGrid columns={1}>
                 <Field
                   label={
                     index === 0
@@ -382,7 +386,7 @@ export function BookingPartyFields({
                       setUseLeadEmail((current) => ({ ...current, [index]: checked }));
                       if (checked) updateMember(index, { email: "" });
                     }}
-                    className="text-sm text-muted sm:col-span-2"
+                    className="text-sm text-muted"
                   >
                     {t("party.useMainContactEmail")}
                   </ChoiceRow>
@@ -391,7 +395,7 @@ export function BookingPartyFields({
                   <Field
                     label={t("party.phoneLabel")}
                     hint={t("party.phoneHint")}
-                    className="text-base sm:col-span-2"
+                    className="text-base"
                     error={fieldErrors?.phone}
                   >
                     <input

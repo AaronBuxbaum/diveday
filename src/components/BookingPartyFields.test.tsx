@@ -135,6 +135,27 @@ describe("BookingPartyFields — the group captions", () => {
   });
 });
 
+/**
+ * **An address is read whole** (docs/design/pixel-craft.md, class 8). Name
+ * and Email stood side by side in a 478px card body, so the Email box was
+ * 231px and a prefilled 35-character address was cut at its right padding
+ * (booking-known-diver at 1280). Each diver's boxes take the card's width, one
+ * under the other, as Phone already did.
+ */
+describe("BookingPartyFields — a diver's boxes", () => {
+  it("gives every box its own row, so a long address is never cut", () => {
+    renderDiver(<BookingPartyFields maxPartySize={2} leadPhone />);
+    fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
+    for (const name of ["Email", "Diver 2 email"]) {
+      const grid = screen.getByRole("textbox", { name }).closest(".grid-cols-1");
+      expect(grid).not.toBeNull();
+      expect(grid?.className).not.toMatch(/grid-cols-[2-9]/);
+    }
+    // Nothing is left spanning columns that no longer exist.
+    expect(document.querySelector('[class*="col-span-2"]')).toBeNull();
+  });
+});
+
 describe("BookingPartyFields — the party-count control", () => {
   it("renders a segmented row of radios, and no select, for a party of six or fewer", () => {
     renderDiver(<BookingPartyFields maxPartySize={6} />);
