@@ -167,7 +167,8 @@ export function RepeatFields({
                 className={buttonClass({
                   variant: on ? "primary" : "secondary",
                   size: "sm",
-                  className: "min-w-12 rounded-full has-[:focus-visible]:focus-ring",
+                  shape: "pill",
+                  className: "min-w-12 has-[:focus-visible]:focus-ring",
                 })}
               >
                 {/* The checkbox itself is the state — visually replaced by the
@@ -192,7 +193,7 @@ export function RepeatFields({
               setTouched(true);
               setWeekdays(everyDay ? (startWeekday === null ? [] : [startWeekday]) : [...WEEKDAYS]);
             }}
-            className={buttonClass({ variant: "ghost", size: "sm", className: "rounded-full" })}
+            className={buttonClass({ variant: "ghost", size: "sm", shape: "pill" })}
           >
             {copy.everyDay}
           </button>

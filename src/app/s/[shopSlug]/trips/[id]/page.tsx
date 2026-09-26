@@ -699,7 +699,8 @@ export default async function TripDetailPage({
           <a
             href="#book"
             className={buttonClass({
-              className: "fixed right-4 bottom-4 z-20 rounded-full shadow-lg sm:hidden",
+              shape: "pill",
+              className: "fixed right-4 bottom-4 z-20 shadow-lg sm:hidden",
             })}
           >
             {/* The verb, and nothing else. It carried the seat count too

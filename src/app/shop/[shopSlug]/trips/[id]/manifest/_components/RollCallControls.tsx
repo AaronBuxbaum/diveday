@@ -69,12 +69,7 @@ export const BOAT_TARGET_CLASS = buttonClass({
  * `RollCallMark` inside it is the drawn state and the button's accessible name
  * is the words, so nothing is carried by colour alone (decision 5).
  */
-const MARK_BUTTON_CLASS = buttonClass({
-  variant: "bare",
-  size: "mark",
-  busy: true,
-  className: "rounded-full",
-});
+const MARK_BUTTON_CLASS = buttonClass({ variant: "bare", size: "mark", busy: true });
 
 /**
  * What one roll-call record means at one checkpoint, and the fill a recorded

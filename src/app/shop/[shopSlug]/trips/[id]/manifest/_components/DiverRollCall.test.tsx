@@ -684,6 +684,19 @@ describe("the mark's room for its focus ring", () => {
     expect(column).toHaveClass("py-2.5");
     expect(column.className).not.toMatch(/(^|\s)p[tb]-/);
   });
+
+  it("draws the mark as a circle, so the ring around it is one too", () => {
+    // It asked for `rounded-full` through `className`, which lost to the
+    // button's own `rounded-lg`: a 56px rounded square with a rounded-square
+    // ring (pixel probe, K-44). A radius the class list carries twice is the
+    // defect, whichever one wins.
+    renderList({ divers: [diver()] });
+    const mark = within(screen.getByRole("listitem")).getByRole("button", {
+      name: "Mark boarded",
+    });
+    expect(mark).toHaveClass("rounded-full");
+    expect(mark).not.toHaveClass("rounded-lg");
+  });
 });
 
 /**

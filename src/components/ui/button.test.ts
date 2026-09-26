@@ -190,6 +190,34 @@ describe("buttonClass", () => {
     });
   });
 
+  describe("shape", () => {
+    const radii = (classes: string) =>
+      classes.split(" ").filter((token) => /^(?:[\w-]+:)*rounded(?:-|$)/.test(token));
+
+    it("draws the control rung by default, and exactly one radius", () => {
+      for (const size of SIZES) {
+        expect(radii(buttonClass({ size })), size).toEqual(["rounded-lg"]);
+      }
+    });
+
+    it("draws a pill when asked, instead of the rung rather than beside it", () => {
+      // `rounded-full` through `className` lost to the base's `rounded-lg`:
+      // Tailwind emits `.rounded-full` first, so the later rule wins whatever
+      // the attribute says. The weekday chips and the public trip's floating
+      // Book asked for a pill and drew 12px corners (pixel probe, K-44).
+      expect(radii(buttonClass({ shape: "pill" }))).toEqual(["rounded-full"]);
+      expect(radii(buttonClass({ variant: "ghost", size: "sm", shape: "pill" }))).toEqual([
+        "rounded-full",
+      ]);
+    });
+
+    it("draws the roll-call mark as the circle it is documented to be", () => {
+      // The mark's focus ring measured a rounded square (17px outer radius on
+      // the 56px box) because its `rounded-full` never applied.
+      expect(radii(buttonClass({ variant: "bare", size: "mark" }))).toEqual(["rounded-full"]);
+    });
+  });
+
   describe("icon-sm", () => {
     it("is a 44px square, level with the `sm` buttons beside it", () => {
       // A glyph-only `sm` was `px-3` around a 16px glyph: 40 wide against a
@@ -413,6 +441,23 @@ describe("buttonClass", () => {
 
       // Listed, not counted: the message has to name the file, because the
       // whole point is that nothing on screen will.
+      expect(offenders).toEqual([]);
+    });
+
+    it("hands no radius to buttonClass: the corner is `shape`'s", () => {
+      // Two radius utilities resolve by stylesheet order, and `.rounded-full`
+      // is emitted before `.rounded-lg`, so a pill asked for through
+      // `className` drew the rung's 12px corners (K-44).
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(/(?<![\w-])(?:[\w-]+:)*rounded(?:-[\w[\]/.-]+)?/g) ?? []) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
       expect(offenders).toEqual([]);
     });
 

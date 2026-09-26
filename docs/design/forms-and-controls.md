@@ -672,9 +672,11 @@ claims a full target), `sky` (a translucent chip for a control standing on a `Sk
 (shape and target only, for a control whose fill is the state of its row). Sizes: `md` (the
 default, 48px with a 16px label), `sm` (44px with a 14px label), `boat` (56px with a 16px
 semibold label), `icon` (a 48px square), `icon-sm` (a 44px square, for a glyph in a row of `sm`
-controls), and `mark` (a 56px square the roll call rounds to a circle). The base's corner is the control rung, `rounded-lg` (12px). Pass one-off adjustments
-through `className`; do not rebuild the base. If you find yourself cancelling a variant's own
-styles, the variant is wrong — add one.
+controls), and `mark` (a 56px circle, for the roll call). The corner is the control rung,
+`rounded-lg` (12px), unless `shape: "pill"` asks for a pill; `mark` is always round. A radius
+passed through `className` loses to the rung by stylesheet order, so `button.test.ts` refuses one.
+Pass one-off adjustments through `className`; do not rebuild the base. If you find yourself
+cancelling a variant's own styles, the variant is wrong — add one.
 
 **`primary` is the one thing in the app that carries a `shadow-sm` at rest**, and it is an
 exception stated at the rule rather than a second rule: ADR

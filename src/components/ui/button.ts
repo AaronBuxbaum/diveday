@@ -71,7 +71,26 @@
  * aligns to the start.
  */
 const base =
-  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-lg text-center pressable";
+  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 text-center pressable";
+
+/**
+ * **The corner is an option, not something a caller passes through
+ * `className`**, for the reason the type scale and `flush` give: two radius
+ * utilities resolve by stylesheet order, and Tailwind emits `.rounded-full`
+ * before `.rounded-lg`. The corner lived in the base as `rounded-lg`, so four
+ * call sites that asked for `rounded-full` — the roll-call mark, the schedule
+ * builder's weekday chips and "Every day", the public trip's floating Book —
+ * all drew 12px corners and rounded-square focus rings (pixel probe,
+ * 2026-09-25). `rounded` is the control rung every button takes; `pill` is
+ * the one other shape the app draws. `button.test.ts` refuses a radius at a
+ * call site.
+ */
+const SHAPES = { rounded: "rounded-lg", pill: "rounded-full" } as const;
+
+export type ButtonShape = keyof typeof SHAPES;
+
+/** The sizes that are a circle by definition, whatever `shape` says: the roll-call mark. */
+const CIRCLES: ReadonlySet<ButtonSize> = new Set(["mark"]);
 
 /**
  * What a disabled state *means*, which is two different things this app renders
@@ -262,13 +281,15 @@ const sizes = {
    * target, and this is worked one-handed on a wet deck where 56px is the
    * floor. `boat` is that 56px — but as a *minimum height* on a label-shaped
    * box, so a glyph-only button on it comes out 56 tall and about 60 wide, an
-   * almost-circle. `size-14` fixes both axes, which is what lets the caller
-   * round it to a true circle.
+   * almost-circle. `size-14` fixes both axes, which is what lets it be a true
+   * circle.
    *
    * `touch-manipulation` for the same reason `boat` carries it: it drops the
    * browser's ~300ms double-tap-to-zoom wait, and this is the exact control
    * where a tap that seems not to have registered gets tapped again — which on
    * a roll call is how one person gets marked aboard twice.
+   *
+   * It is always drawn round (`CIRCLES`), whatever `shape` says.
    */
   mark: { x: "px-0", rest: "size-14 touch-manipulation" },
 } as const;
@@ -361,10 +382,13 @@ export function buttonClass<V extends ButtonVariant = "primary">({
   size = "md",
   flush = false,
   busy = false,
+  shape = "rounded",
   className = "",
 }: {
   variant?: V;
   size?: ButtonSize;
+  /** The corner: the control rung (`rounded`, the default) or a `pill`. See `SHAPES`. */
+  shape?: ButtonShape;
   /**
    * Line the label up with adjacent text: the size's horizontal padding is
    * dropped (`link`, `bare`), or traded for 8px of room and an equal negative
@@ -381,7 +405,8 @@ export function buttonClass<V extends ButtonVariant = "primary">({
   className?: string;
 } = {}) {
   const { x, rest } = sizes[size];
-  return `${base} ${DISABLED[busy ? "busy" : "default"]} ${variants[variant]} ${rest} ${horizontalPadding(
+  const corner = SHAPES[CIRCLES.has(size) ? "pill" : shape];
+  return `${base} ${DISABLED[busy ? "busy" : "default"]} ${variants[variant]} ${rest} ${corner} ${horizontalPadding(
     variant,
     x,
     flush,
