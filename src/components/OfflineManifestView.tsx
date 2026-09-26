@@ -133,6 +133,18 @@ const OFFLINE_BOAT_TARGET_CLASS = buttonClass({
 const OFFLINE_NOTICE_CLASS = "rounded-inset border px-4 py-3 text-base leading-6 sm:px-5";
 
 /**
+ * A buddy team's names as one list, **each name held whole**: a no-break space
+ * inside every name, so a line wraps between "Diego Alvarez" and "June Park"
+ * and never inside either. The Spanish crew line split "Diego / Alvarez" at a
+ * line end, which reads as two people.
+ */
+function buddyNamesList(locale: string, names: readonly string[]): string {
+  return cachedListFormat(locale, { type: "conjunction" }).format(
+    names.map((name) => name.replace(/ /g, "\u00a0")),
+  );
+}
+
+/**
  * One diver's roll-call row id, minted here and nowhere else: this is both what
  * the row carries and what the missing-divers grid is handed to jump to.
  *
@@ -1448,7 +1460,9 @@ export function OfflineManifestView() {
               {t("shared.offlineManifest.single.expiredBanner")}
             </p>
           ) : (
-            <p className={`mt-4 ${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10`}>
+            <p
+              className={`mt-4 ${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 text-pretty`}
+            >
               {t("shared.offlineManifest.single.freshnessBanner", {
                 freshnessNote: t(`shared.offlineManifest.freshnessCopy.${freshness}`),
               })}
@@ -1899,9 +1913,7 @@ export function OfflineManifestView() {
                             <span className="ms-1 font-normal">
                               ·{" "}
                               {t("shared.buddyTeam.with", {
-                                names: cachedListFormat(locale, { type: "conjunction" }).format(
-                                  member.buddyTeamNames ?? [],
-                                ),
+                                names: buddyNamesList(locale, member.buddyTeamNames ?? []),
                               })}
                             </span>
                           ) : null}
@@ -2129,7 +2141,7 @@ export function OfflineManifestView() {
             20260804-buddy-teams). Stated the same neutral way as the crew
             limitation above: a limitation of this copy, not an alarm. */}
           {anyBuddies ? (
-            <p className="mt-3 text-sm font-semibold text-muted">
+            <p className="mt-3 text-sm font-semibold text-pretty text-muted">
               {t("shared.offlineManifest.single.buddyReadOnlyHere")}
             </p>
           ) : null}
@@ -2845,9 +2857,7 @@ function OfflineBuddyTeamChip({
   if (!names || names.length === 0) return null;
   return (
     <Badge tone="neutral">
-      {t("shared.buddyTeam.with", {
-        names: cachedListFormat(locale, { type: "conjunction" }).format(names),
-      })}
+      {t("shared.buddyTeam.with", { names: buddyNamesList(locale, names) })}
     </Badge>
   );
 }

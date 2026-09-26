@@ -2944,6 +2944,18 @@ describe("OfflineManifestView — one column, one text edge", () => {
       "hover:bg-primary-tint",
     );
   });
+
+  // K-594: Spanish paragraphs ended on one word, and "Diego / Alvarez" split.
+  it("wraps the notes prettily and never splits a buddy's name", async () => {
+    await renderTrip(dressed(richEnvelope("trip-1")));
+    expect(screen.getByText(/Readiness reflects that moment/)).toHaveClass("text-pretty");
+    expect(screen.getByText(/Buddy teams are shown as saved/)).toHaveClass("text-pretty");
+    const crewTeam = within(crewList()).getByText(/Buddy team:/);
+    expect(crewTeam.textContent).toContain("Diego\u00a0Alvarez and June\u00a0Park");
+    expect(within(priyaRow()).getByText(/Buddy team:/).textContent).toBe(
+      "Buddy team: Marcus\u00a0Reed",
+    );
+  });
 });
 
 // K-255: `rounded-3xl` (24px) is off the radius ladder; a panel is 20.
