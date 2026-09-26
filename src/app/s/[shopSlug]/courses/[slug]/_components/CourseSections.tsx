@@ -237,9 +237,12 @@ export function CourseSchedule({
             const time = formatScheduleDayTime(day, locale);
             return (
               <li key={day.title} className="relative pb-10 pl-8 last:pb-0">
+                {/* `top-2`: the 11px ring's centre on the title's cap centre,
+                    8px down a 28px `text-lg` line, where the rail starts too.
+                    At `top-1.5` it rode 2px high (K-562). */}
                 <span
                   aria-hidden="true"
-                  className="absolute top-1.5 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
+                  className="absolute top-2 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
                 />
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <h3 className={SECTION_TITLE_CLASS}>{day.title}</h3>
