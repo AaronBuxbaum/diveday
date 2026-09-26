@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { baseLayerRules, type CssBlock, readGlobalsCss, unlayeredRules } from "@/test/stylesheet";
 
 /**
  * **Glare mode's 44px targets are a floor, never a ceiling.**
@@ -26,51 +25,11 @@ import { afterEach, describe, expect, it } from "vitest";
  * jsdom has no layout, so this reads the rules and asks the DOM what their
  * selectors match. The probe measures the rows.
  */
-const CSS = readFileSync(path.join(import.meta.dirname, "globals.css"), "utf8").replace(
-  /\/\*[\s\S]*?\*\//g,
-  "",
-);
+const CSS = readGlobalsCss();
+const layerBase = baseLayerRules(CSS);
 
-type Block = { prelude: string; body: string };
-
-/** The `prelude { body }` blocks at the top level of `css`, braces balanced. */
-function topLevelBlocks(css: string): Block[] {
-  const blocks: Block[] = [];
-  let depth = 0;
-  let start = 0;
-  let open = 0;
-  for (let index = 0; index < css.length; index++) {
-    const char = css[index];
-    if (char === "{") {
-      if (depth === 0) open = index;
-      depth++;
-    } else if (char === "}") {
-      depth--;
-      if (depth === 0) {
-        blocks.push({ prelude: css.slice(start, open).trim(), body: css.slice(open + 1, index) });
-        start = index + 1;
-      }
-    } else if (char === ";" && depth === 0) {
-      start = index + 1;
-    }
-  }
-  return blocks;
-}
-
-/** Style rules outside any cascade layer; `@media`/`@supports` are walked into. */
-function unlayeredRules(css: string): Block[] {
-  return topLevelBlocks(css).flatMap((block) => {
-    if (/^@(media|supports|container)\b/.test(block.prelude)) return unlayeredRules(block.body);
-    if (block.prelude.startsWith("@")) return [];
-    return [block];
-  });
-}
-
-const layerBase = topLevelBlocks(CSS)
-  .filter((block) => block.prelude === "@layer base")
-  .flatMap((block) => topLevelBlocks(block.body));
-
-const glareRules = (rules: Block[]) => rules.filter((rule) => rule.prelude.includes(".glare-mode"));
+const glareRules = (rules: CssBlock[]) =>
+  rules.filter((rule) => rule.prelude.includes(".glare-mode"));
 
 afterEach(() => {
   document.documentElement.className = "";

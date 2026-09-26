@@ -1,6 +1,13 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  baseLayerRules,
+  declarations,
+  readGlobalsCss,
+  topLevelBlocks,
+  unlayeredRules,
+} from "@/test/stylesheet";
 
 /**
  * **One focus ring, and a cascade that lets a component choose where it sits.**
@@ -24,75 +31,12 @@ import { describe, expect, it } from "vitest";
  * geometry from the rendered box, never from a class string. Where a component
  * renders in jsdom, its own test pins which element carries the ring.
  */
-const CSS = readFileSync(path.join(import.meta.dirname, "globals.css"), "utf8").replace(
-  /\/\*[\s\S]*?\*\//g,
-  "",
-);
+const CSS = readGlobalsCss();
 
-type Block = { prelude: string; body: string };
-
-/** The `prelude { body }` blocks at the top level of `css`, braces balanced. */
-function topLevelBlocks(css: string): Block[] {
-  const blocks: Block[] = [];
-  let depth = 0;
-  let start = 0;
-  let open = 0;
-  for (let index = 0; index < css.length; index++) {
-    const char = css[index];
-    if (char === "{") {
-      if (depth === 0) open = index;
-      depth++;
-    } else if (char === "}") {
-      depth--;
-      if (depth === 0) {
-        blocks.push({ prelude: css.slice(start, open).trim(), body: css.slice(open + 1, index) });
-        start = index + 1;
-      }
-    } else if (char === ";" && depth === 0) {
-      start = index + 1;
-    }
-  }
-  return blocks;
-}
-
-/**
- * Every style rule that is **not** inside a cascade layer. `@media` and
- * `@supports` are walked into; `@layer`, `@utility`, `@theme` and the other
- * Tailwind directives are layered (or emit nothing) and are skipped.
- */
-function unlayeredRules(css: string): Block[] {
-  return topLevelBlocks(css).flatMap((block) => {
-    if (/^@(media|supports|container)\b/.test(block.prelude)) return unlayeredRules(block.body);
-    if (block.prelude.startsWith("@")) return [];
-    return [block];
-  });
-}
-
-const layerBase = topLevelBlocks(CSS)
-  .filter((block) => block.prelude === "@layer base")
-  .flatMap((block) => topLevelBlocks(block.body));
+const layerBase = baseLayerRules(CSS);
 
 const utility = (name: string) =>
   topLevelBlocks(CSS).find((block) => block.prelude === `@utility ${name}`)?.body ?? "";
-
-/** A declaration block's `property: value` pairs, whitespace-normalised. */
-const declarations = (body: string) =>
-  Object.fromEntries(
-    body
-      .split(";")
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((part) => {
-        const colon = part.indexOf(":");
-        return [
-          part.slice(0, colon).trim(),
-          part
-            .slice(colon + 1)
-            .trim()
-            .replace(/\s+/g, " "),
-        ];
-      }),
-  );
 
 const RING = { outline: "3px solid var(--focus-ring)", "outline-offset": "2px" };
 
