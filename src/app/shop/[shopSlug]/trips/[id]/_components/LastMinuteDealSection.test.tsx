@@ -295,6 +295,20 @@ describe("LastMinuteDealSection recipient review", () => {
     expect(screen.getByRole("button", { name: /Send to/ })).toHaveClass("min-h-12");
   });
 
+  /**
+   * **The send button is an `md` button, not a padded variant of one**
+   * (pixel-craft class 12, K-206). It added `px-5 py-2.5` over `md`'s own
+   * padding, and `px-5` won by stylesheet order, so "Send to 2 divers" sat
+   * 20px inside its fill where "Add diver" and "Save requirements" on the
+   * same page sit 16px in.
+   */
+  it("pads the send button as every md button is padded", () => {
+    renderSection([recipient("Ravi Menon", "advanced_open_water")], null);
+    const send = screen.getByRole("button", { name: /Send to/ });
+    const padding = send.className.split(/\s+/).filter((token) => /^p[xy]-/.test(token));
+    expect(padding).toEqual(["py-2.5", "px-4"]);
+  });
+
   it("caps the drawn list, counts the rest, and never hides someone below the bar", () => {
     const many = [
       ...Array.from({ length: 11 }, (_, index) => recipient(`Instructor ${index}`, "instructor")),
