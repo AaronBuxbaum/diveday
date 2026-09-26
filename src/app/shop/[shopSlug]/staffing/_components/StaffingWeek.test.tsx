@@ -1,12 +1,17 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { ledgerRowBoxClass, ledgerRowRoomClass } from "@/components/ui/ledger";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { AvailabilityBlock, CrewAssignmentRequest } from "@/lib/crew-requests";
 import { staffWeek, type WeekGap, type WeekPerson } from "@/lib/staffing-week";
 import { rendersFlush } from "@/test/button-flush";
-import { type GapWords, StaffingWeek, type StaffingWeekWords } from "./StaffingWeek";
+import {
+  type GapWords,
+  StaffingWeek,
+  type StaffingWeekWords,
+  weekTailRowClass,
+} from "./StaffingWeek";
 
 afterEach(cleanup);
 
@@ -830,5 +835,27 @@ describe("StaffingWeek geometry", () => {
     const { list } = renderPhoneDay({ canManage: true });
     const marker = within(list).getByText((_, element) => element?.textContent === "· Away");
     expect(marker).toHaveClass("whitespace-nowrap");
+  });
+
+  /**
+   * K-195: the page's doors drew a ledger row's box under a week that had
+   * already closed itself, so the rule above "Add a shift" was two 1px rules
+   * stacked, and with the consent row after them `last:border-b` never fired
+   * under "Tell the shop you're away". Both renderings of the week close
+   * themselves; a row hung under them draws its closing rule alone, with a
+   * ledger row's room so the rule ends where the week's do.
+   */
+  it("closes itself in both renderings, and hangs a row under it on its closing rule alone", () => {
+    const { container } = renderWeek({ gaps: [GAP] });
+    const { grid, list } = branches(container);
+    expect(grid.lastElementChild).toHaveClass("last:border-b");
+    const lastRows = list.querySelectorAll("ul > li:last-child");
+    expect(lastRows.length).toBeGreaterThan(0);
+    expect(lastRows[lastRows.length - 1]).toHaveClass("last:border-b");
+
+    const tail = weekTailRowClass.split(" ");
+    expect(tail).toEqual(expect.arrayContaining([...ledgerRowRoomClass.split(" "), "border-b"]));
+    expect(tail.filter((token) => /(?:^|:)border-t$/.test(token))).toEqual([]);
+    expect(tail).not.toContain("last:border-b");
   });
 });

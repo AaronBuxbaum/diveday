@@ -3,7 +3,13 @@ import type { ReactNode } from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { GroupLabel, groupLabelClass, LedgerRow, ledgerRowBoxClass } from "@/components/ui/ledger";
+import {
+  GroupLabel,
+  groupLabelClass,
+  LedgerRow,
+  ledgerRowBoxClass,
+  ledgerRowRoomClass,
+} from "@/components/ui/ledger";
 import { WeekPager } from "@/components/ui/week-pager";
 import { fill } from "@/i18n/fill";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
@@ -569,6 +575,17 @@ export const WEEK_GRID = {
   person: "pe-2 py-3",
   day: "flex flex-col items-start gap-1 border-s border-border px-1.5 py-2",
 } as const;
+
+/**
+ * **A row hung under the week**: the page's doors ("Add a shift", "Tell the
+ * shop you're away") and its skeleton's stand-ins for them. The week closes
+ * itself (the grid's last row, the day list's last ledger row), so a row under
+ * it draws only its own closing rule, with a ledger row's room so the rule
+ * ends where the week's do. The doors drew a ledger row's box: its top rule
+ * doubled the week's, 2px of hairline at every width, and its `last:border-b`
+ * never fired, because the consent row follows them (K-195).
+ */
+export const weekTailRowClass = `${ledgerRowRoomClass} border-b border-border`;
 
 export function StaffingWeek({
   week,
