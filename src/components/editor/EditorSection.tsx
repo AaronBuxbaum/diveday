@@ -89,15 +89,23 @@ export function EditorSection({
   const body = <div className="mt-4 flex flex-col gap-5">{children}</div>;
   if (as === "fieldset") {
     return (
-      // `<legend>` has to be the fieldset's first child, so the label is
-      // spelled with `groupLabelClass()` rather than `GroupLabel` — the one
-      // documented use of the exported class: the same spelling, on the element
-      // this element has to be.
-      <fieldset id={id} {...marker} className={shell}>
-        <legend className={groupLabelClass()}>{label}</legend>
-        {description == null ? null : <SectionDescription>{description}</SectionDescription>}
-        {body}
-      </fieldset>
+      // The rule and its air go on a box *around* the fieldset. A fieldset draws
+      // its `<legend>` in its own top border, so on the fieldset itself they put
+      // the label on the hairline and the 24px between the label and its
+      // fields: 27–28px above the label and 40px under it, where a section's
+      // label sits 29px under its rule. The anchor and the marker go with the
+      // rule, on the section's outermost element.
+      <div id={id} {...marker} className={shell}>
+        {/* `<legend>` has to be the fieldset's first child, so the label is
+            spelled with `groupLabelClass()` rather than `GroupLabel` — the one
+            documented use of the exported class: the same spelling, on the
+            element this element has to be. */}
+        <fieldset className="min-w-0">
+          <legend className={groupLabelClass()}>{label}</legend>
+          {description == null ? null : <SectionDescription>{description}</SectionDescription>}
+          {body}
+        </fieldset>
+      </div>
     );
   }
   return (

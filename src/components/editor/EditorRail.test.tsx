@@ -219,8 +219,9 @@ describe("an editor section", () => {
   it("keeps the fieldset and drops its box", () => {
     render(<Editor />);
 
-    const pricing = document.getElementById("block-pricing");
-    expect(pricing?.tagName).toBe("FIELDSET");
+    // The anchor names the section's outer box, which carries the hairline;
+    // the fieldset inside it keeps the grouping (EditorSection.test.tsx).
+    const pricing = document.getElementById("block-pricing")?.querySelector("fieldset");
     expect(pricing?.querySelector("legend")?.textContent).toBe("Pricing");
     expect(pricing?.className).not.toContain("rounded");
     // The hairline between sections is a `border-t`; the box it replaced was a
