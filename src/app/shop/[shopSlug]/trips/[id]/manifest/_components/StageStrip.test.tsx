@@ -71,3 +71,34 @@ describe("StageStrip", () => {
     expect(source).not.toMatch(/animate-|boat-leaves|settle-in|rise-in/);
   });
 });
+
+/**
+ * **Paper keeps where the boat is** (K-141). The five buttons were the only
+ * statement of the current stage, and the pressed one is a primary fill: print
+ * strips every fill and kept its white label, so on the manifest print the
+ * stage was a 75px hole the width of "Boarding", and the packets, which hide
+ * every button, said nothing at all under the eyebrow. On paper the row goes,
+ * and one line says the stage in the crew's own word.
+ */
+describe("the stage on paper", () => {
+  it("keeps the buttons off paper and prints the current stage as a word", () => {
+    const { container } = render(
+      <StageStrip
+        action={noop}
+        copy={{ ...copy, recordedLine: "Keiko Tanaka · 7:04 AM" }}
+        current="boarding"
+      />,
+    );
+    const row = screen.getByRole("button", { name: "Boarding" }).closest("form")?.parentElement;
+    expect(row).toHaveClass("print:hidden");
+    const printed = container.querySelector(".print\\:block");
+    expect(printed).not.toBeNull();
+    expect(printed).toHaveClass("hidden");
+    expect(printed?.textContent).toBe("Boarding");
+  });
+
+  it("prints no stage line when nobody has said where the boat is", () => {
+    const { container } = render(<StageStrip action={noop} copy={copy} current={null} />);
+    expect(container.querySelector(".print\\:block")).toBeNull();
+  });
+});

@@ -44,10 +44,18 @@ export function StageStrip({
   current: TripStage | null;
 }) {
   const [result, formAction, isPending] = useActionState(action, null);
+  const currentLabel = copy.taps.find((tap) => tap.stage === current)?.label;
   return (
     <section aria-label={copy.legend} className="mt-4">
       <h2 className={groupLabelClass()}>{copy.legend}</h2>
-      <div className="mt-2 flex flex-wrap gap-2">
+      {/* **Paper says the stage in a word; the buttons stay on screen.** The
+          pressed button was the only statement of the stage, and it is a
+          primary fill that print strips: the manifest printed a white label on
+          white paper, a hole the width of "Boarding", and the packets, which
+          hide every button, printed the eyebrow over nothing (K-141). The
+          word is the crew's own, the pressed tap's label, and it prints only
+          when somebody has said one. */}
+      <div className="mt-2 flex flex-wrap gap-2 print:hidden">
         {copy.taps.map((tap) => (
           <form action={formAction} key={tap.stage}>
             <input type="hidden" name="stage" value={tap.stage} />
@@ -66,6 +74,9 @@ export function StageStrip({
           </form>
         ))}
       </div>
+      {currentLabel ? (
+        <p className="mt-2 hidden text-base font-semibold print:block">{currentLabel}</p>
+      ) : null}
       {copy.recordedLine ? (
         <p className="mt-2 text-sm text-muted tabular-nums">{copy.recordedLine}</p>
       ) : null}

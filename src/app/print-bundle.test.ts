@@ -58,3 +58,26 @@ describe("the packet's print backstop", () => {
     expect(trigger?.matches(backstop?.selector ?? "*")).toBe(false);
   });
 });
+
+/**
+ * **A primary label prints in ink** (K-141). Print strips every fill
+ * (`background: transparent !important`) but the print palette kept
+ * `--primary-foreground: #ffffff`, so a label written for a primary fill
+ * printed white on white paper: the manifest's current stage was a hole the
+ * width of its word. With the fill gone, the label is ink like every other.
+ */
+describe("the print palette", () => {
+  const palette = [...CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .map(([, prelude, body]) => ({ selector: (prelude ?? "").trim(), body: body ?? "" }))
+    .find((rule) => /^:root,\s*\.boat-mode$/.test(rule.selector));
+
+  function token(name: string) {
+    return palette?.body.match(new RegExp(`--${name}:\\s*([^;]+);`))?.[1]?.trim();
+  }
+
+  it("prints a primary label in the foreground ink", () => {
+    expect(palette, "the print `:root, .boat-mode` palette").toBeDefined();
+    expect(token("foreground")).toBeDefined();
+    expect(token("primary-foreground")).toBe(token("foreground"));
+  });
+});

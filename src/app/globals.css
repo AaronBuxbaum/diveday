@@ -1099,7 +1099,9 @@ textarea {
     --muted: #374151;
     --primary: #111827;
     --primary-hover: #000000;
-    --primary-foreground: #ffffff;
+    /* Ink, not white: the rule below strips every fill, so a label written
+       for a primary fill lands on white paper (K-141, the manifest's stage). */
+    --primary-foreground: #000000;
     --accent: #374151;
     --accent-foreground: #000000;
     --success: #111827;
