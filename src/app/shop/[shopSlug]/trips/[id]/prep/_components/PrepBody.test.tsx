@@ -555,4 +555,13 @@ describe("the packing list's geometry", () => {
     expect(facts?.children.length).toBeGreaterThan(1);
     expect(tokens(facts)).toContain("gap-1");
   });
+
+  it("floors the by-item table at a width a 768px tablet holds without scrolling (K-506)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const byItem = [...container.querySelectorAll("table")].find((table) =>
+      within(table).queryByRole("columnheader", { name: t("tripPrep.itemColumn") }),
+    );
+    expect(byItem).toHaveClass("min-w-[40rem]");
+    expect(byItem).not.toHaveClass("min-w-[45rem]");
+  });
 });

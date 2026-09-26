@@ -799,13 +799,15 @@ export function PrepBody({
                       </li>
                     ))}
                   </ul>
-                  {/* The scroll strategy: the 45rem floor is what stops the four
+                  {/* The scroll strategy: the 40rem floor is what stops the four
                     columns collapsing between 640px and a real tablet, and the
                     vocabulary's `print:` overrides keep paper out of the
                     scroll rule entirely — an A4 sheet is narrower than the
                     floor, and a clipped column on a packing list is a silent
-                    one. */}
-                  <Table minWidth="45rem" shellClassName="mt-3 hidden sm:block print:block">
+                    one. Not 45rem: that is 720px, and at 768 the trip shell's
+                    column is 720px with a 718px scroll region inside the
+                    table's borders, so the table scrolled sideways by 2px. */}
+                  <Table minWidth="40rem" shellClassName="mt-3 hidden sm:block print:block">
                     <THead>
                       <Th>{t("tripPrep.itemColumn")}</Th>
                       <Th>{t("tripPrep.sizeColumn")}</Th>
@@ -866,7 +868,7 @@ export function PrepBody({
                     ))}
                   </ul>
                   {/* Three columns rather than four, so a lower floor than the
-                    by-item table's: the kit cell wraps, and forcing 45rem
+                    by-item table's: the kit cell wraps, and forcing 40rem
                     would scroll a phone-width tablet sideways for nothing. */}
                   <Table minWidth="36rem" shellClassName="mt-3 hidden sm:block print:block">
                     <THead>

@@ -49,7 +49,6 @@ const HIDE_BELOW = {
 const MIN_WIDTH = {
   "36rem": "min-w-[36rem] print:min-w-0",
   "40rem": "min-w-[40rem] print:min-w-0",
-  "45rem": "min-w-[45rem] print:min-w-0",
   // Above the widest content column any staff page offers (`max-w-5xl` less
   // `px-6` is 976px at desktop, and less than that on anything narrower), so a
   // table that names this one scrolls at every width below the desktop tier
