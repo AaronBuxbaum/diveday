@@ -286,4 +286,39 @@ describe("BookingGearFields", () => {
 
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("holds every item's info marker on one line, whatever its price's length", () => {
+    // The same pill as the gear step on /ready, and the same drift: the
+    // marker sits before the price, so "$8.00" against "$15.00" walked it a
+    // figure down the column (K-476 review). Each price keeps the widest
+    // price's width, in tabular figures, ended on the pill's edge.
+    renderDiver(
+      <BookingGearFields
+        index={0}
+        showDiverLabel={false}
+        rentalItems={["bcd", "regulator", "weights"]}
+        course={null}
+        pricing={{ ...pricing, perItemCents: { ...pricing.perItemCents, bcd: 800 } }}
+        plannedDives={2}
+        currency="usd"
+      />,
+    );
+    askForGear();
+    for (const [item, own] of [
+      ["BCD", "$8.00"],
+      ["Regulator", "$15.00"],
+      ["Weights", "$5.00"],
+    ] as const) {
+      const price = screen.getByRole("checkbox", { name: item }).closest("label")
+        ?.parentElement?.lastElementChild;
+      expect(price, item).toHaveClass("tabular-nums", "text-end");
+      const shown = [...(price?.children ?? [])].filter((c) => !c.hasAttribute("aria-hidden"));
+      expect(
+        shown.map((c) => c.textContent),
+        item,
+      ).toEqual([own]);
+      const held = price?.querySelector("[aria-hidden='true']");
+      expect(held?.textContent ?? own, item).toBe("$15.00");
+    }
+  });
 });

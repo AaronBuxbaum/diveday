@@ -135,6 +135,51 @@ export const RENTABLE_ITEM_HINT_KEYS: Partial<Record<RentableItemKind, DiverMess
 };
 
 /**
+ * The widest price among the items on offer, by length: the width every
+ * item's price keeps (`ItemPrice`). One currency formats each price the same
+ * way, so in tabular figures the longest string is the widest one.
+ */
+export function widestItemPrice(
+  offered: readonly { kind: RentableItemKind }[],
+  pricing: RentalPricing,
+  currency: ShopCurrency,
+  locale: string,
+): string {
+  let widest = "";
+  for (const { kind } of offered) {
+    const cents = pricing.perItemCents[kind];
+    if (cents === undefined) continue;
+    const price = formatMoneyCents(cents, currency, locale);
+    if (price.length > widest.length) widest = price;
+  }
+  return widest;
+}
+
+/**
+ * An item's price at the end of its pill, as wide as the widest price in the
+ * list.
+ *
+ * The info marker sits before the price, so the price's width decides where
+ * the marker stands. Tabular figures make prices of one length one width:
+ * "$15.00" against "$35.00" in proportional ones walked it 2px down the
+ * column (K-476). A shorter price also holds an invisible copy of the widest
+ * one in the same grid cell and ends on the cell's edge, so "$8.00" against
+ * "$35.00" does not walk it a whole figure either (K-476 review).
+ */
+export function ItemPrice({ price, widest }: { price: string; widest: string }) {
+  return (
+    <span className="grid text-end text-muted tabular-nums">
+      {price.length < widest.length ? (
+        <span aria-hidden="true" className="invisible col-start-1 row-start-1">
+          {widest}
+        </span>
+      ) : null}
+      <span className="col-start-1 row-start-1">{price}</span>
+    </span>
+  );
+}
+
+/**
  * The diver's rental-fit capture — the action of `/ready`'s "Gear and setup"
  * checklist row. The submit target is passed in as `action` so the surface
  * binds its own token-scoped server action. `rentalItems` is the shop's
@@ -209,6 +254,7 @@ export function RentalFitForm({
   const offers = new Set(offered.map((item) => item.kind));
   const nitroxOffered = nitroxAvailableOn(rentalItems, course);
   const showPricing = hasAnyRentalPricing(pricing);
+  const widestPrice = widestItemPrice(offered, pricing, currency, locale);
   const [rentedKinds, setRentedKinds] = useState(
     () =>
       new Set(
@@ -360,12 +406,10 @@ export function RentalFitForm({
                           />
                         ) : null}
                         {showPricing && priceCents !== undefined ? (
-                          // Tabular figures: the marker before the price
-                          // walked 2px along the column with "$15.00"
-                          // against "$35.00" in proportional ones (K-476).
-                          <span className="text-muted tabular-nums">
-                            {formatMoneyCents(priceCents, currency, locale)}
-                          </span>
+                          <ItemPrice
+                            price={formatMoneyCents(priceCents, currency, locale)}
+                            widest={widestPrice}
+                          />
                         ) : null}
                       </>
                     }

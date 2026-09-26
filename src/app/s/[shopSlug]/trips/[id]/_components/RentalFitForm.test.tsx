@@ -137,13 +137,48 @@ describe("RentalFitForm geometry", () => {
     expect(gutter(items)).toBe(gutter(sizes));
   });
 
-  it("sets each item's price in tabular figures", () => {
-    // The info marker sits before the price, so a proportional "$15.00"
-    // against "$35.00" walked it 2px along the column (K-476).
-    renderPriced();
-    const prices = screen.getAllByText("$15.00");
-    expect(prices.length).toBeGreaterThan(0);
-    for (const price of prices) expect(price).toHaveClass("tabular-nums");
+  it("holds every item's info marker on one line, whatever its price's length", () => {
+    // The marker sits before the price, so the price's width places it.
+    // Proportional figures walked it 2px between "$15.00" and "$35.00"
+    // (K-476); tabular ones still walked it a whole figure between "$8.00"
+    // and "$35.00" (K-476 review). Each price now keeps the widest price's
+    // width, in tabular figures, and ends on the pill's edge.
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={null}
+        rentalItems={["bcd", "drysuit", "weights"]}
+        course={null}
+        pricing={{
+          ...defaultPricing,
+          perItemCents: { ...defaultPricing.perItemCents, bcd: 800, drysuit: 3500 },
+        }}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+    const priceOf = (item: RegExp) =>
+      screen.getByRole("checkbox", { name: item }).closest("label")?.parentElement
+        ?.lastElementChild;
+    for (const [item, own] of [
+      [/^BCD/, "$8.00"],
+      [/^Drysuit/, "$35.00"],
+      [/^Weights/, "$5.00"],
+    ] as const) {
+      const price = priceOf(item);
+      expect(price, own).toHaveClass("tabular-nums", "text-end");
+      const shown = [...(price?.children ?? [])].filter((c) => !c.hasAttribute("aria-hidden"));
+      expect(
+        shown.map((c) => c.textContent),
+        own,
+      ).toEqual([own]);
+      // The widest price, held invisibly under a shorter one, sets its width.
+      const held = price?.querySelector("[aria-hidden='true']");
+      expect(held?.textContent ?? own, own).toBe("$35.00");
+    }
   });
 });
 

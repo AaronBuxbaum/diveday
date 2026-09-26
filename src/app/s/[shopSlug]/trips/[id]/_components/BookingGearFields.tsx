@@ -15,9 +15,11 @@ import {
   type RentalPricing,
 } from "@/lib/rentals";
 import {
+  ItemPrice,
   RENTABLE_ITEM_HINT_KEYS,
   RENTABLE_ITEM_LABEL_KEYS,
   RentalQuoteAmount,
+  widestItemPrice,
 } from "./RentalFitForm";
 
 /**
@@ -93,6 +95,7 @@ export function BookingGearFields({
   }, [index, quote.subtotalCents, onSubtotalChange]);
 
   if (!hasAnyRentalPricing(pricing) || (offered.length === 0 && !nitroxOffered)) return null;
+  const widestPrice = widestItemPrice(offered, pricing, currency, locale);
 
   return (
     // A step of one sheet, not a box inside the booking card's box (ADR
@@ -159,9 +162,10 @@ export function BookingGearFields({
                             />
                           ) : null}
                           {priceCents !== undefined ? (
-                            <span className="text-muted">
-                              {formatMoneyCents(priceCents, currency, locale)}
-                            </span>
+                            <ItemPrice
+                              price={formatMoneyCents(priceCents, currency, locale)}
+                              widest={widestPrice}
+                            />
                           ) : null}
                         </>
                       }
