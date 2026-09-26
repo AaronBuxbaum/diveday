@@ -330,6 +330,14 @@ const columnClass = {
 export type FieldGridColumns = keyof typeof columnClass;
 
 /**
+ * `FieldGrid`'s column gutter, for a two-column block that stands beside a
+ * form and has to share its columns without being one: the backup
+ * destination's summary `dl` sat on `gap-2`, its second column 4px left of the
+ * form's under it (K-588).
+ */
+export const FIELD_GRID_COLUMN_GAP = "gap-x-4";
+
+/**
  * Grid wrapper for a row (or block) of `Field`s. Each field occupies two rows —
  * caption and control — which is what lets `Field` subgrid onto them.
  *
@@ -358,7 +366,7 @@ export function FieldGrid({
   const Tag = as as ElementType;
   return (
     <Tag
-      className={`grid grid-cols-1 gap-x-4 gap-y-4 ${columnClass[columns]} ${className}`}
+      className={`grid grid-cols-1 ${FIELD_GRID_COLUMN_GAP} gap-y-4 ${columnClass[columns]} ${className}`}
       {...rest}
     >
       {children}

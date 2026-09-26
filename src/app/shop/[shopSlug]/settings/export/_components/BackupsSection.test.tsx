@@ -145,6 +145,37 @@ describe("BackupsSection's delivery history", () => {
   });
 });
 
+const DESTINATION: ShopBackupDestination = {
+  shopId: "00000000-0000-4000-8000-000000000002",
+  endpoint: "https://accountid.r2.cloudflarestorage.com",
+  region: "auto",
+  bucket: "diveday",
+  prefix: "blue-mantis/",
+  accessKeyId: "AKIAEXAMPLE",
+  secretAccessKeySealed: "sealed",
+  connectedAt: new Date("2026-08-01T12:00:00Z"),
+  verifiedAt: new Date("2026-08-09T06:02:00Z"),
+  updatedAt: new Date("2026-08-01T12:00:00Z"),
+};
+
+describe("BackupsSection's destination summary", () => {
+  it("stands its second column on the form's second column", () => {
+    // The summary above the form is a two-column `dl`; its `gap-2` put its
+    // second column 4px left of the form's (x 792 against 796 at 1280, K-588).
+    const { container } = renderSection("en-US", [], DESTINATION);
+    const columnGap = (element: Element | null) =>
+      [...(element?.classList ?? [])].filter((name) => /^gap-(x-)?\d/.test(name));
+    const summary = container.querySelector("dl");
+    const form = container.querySelector("form.grid");
+    expect(summary).toHaveClass("sm:grid-cols-2");
+    expect(form).toHaveClass("sm:grid-cols-2");
+    expect(columnGap(summary)).not.toContain("gap-2");
+    expect(columnGap(summary).filter((name) => name.startsWith("gap-x-"))).toEqual(
+      columnGap(form).filter((name) => name.startsWith("gap-x-")),
+    );
+  });
+});
+
 describe("BackupsSection's region hint", () => {
   it.each(["en-US", "es-ES"] as const)(
     "keeps the region code a staffer copies on one line (%s)",

@@ -4,7 +4,13 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import {
+  controlClass,
+  FIELD_GRID_COLUMN_GAP,
+  Field,
+  FieldActions,
+  FieldGrid,
+} from "@/components/ui/form";
 import { REFLOW_CELL_EDGE, Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ShopBackupDelivery } from "@/db/schema";
@@ -121,7 +127,9 @@ export function BackupsSection({
           }
         >
           {destination ? (
-            <dl className="grid gap-2 text-sm sm:grid-cols-2">
+            // The form below's column gutter, so the two second columns
+            // stand on one x (K-588); rows keep the list's tighter 8px.
+            <dl className={`grid ${FIELD_GRID_COLUMN_GAP} gap-y-2 text-sm sm:grid-cols-2`}>
               <div>
                 <dt className="text-muted">{t("backup.status.endpoint")}</dt>
                 <dd className="break-all">{destination.endpoint}</dd>
