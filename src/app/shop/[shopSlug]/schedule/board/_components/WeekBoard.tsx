@@ -4,7 +4,7 @@ import Link from "next/link";
 import { SiteMark } from "@/components/illustration/SiteMark";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { GroupLabel, groupLabelClass } from "@/components/ui/ledger";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { WeekPager } from "@/components/ui/week-pager";
@@ -611,11 +611,14 @@ export function WeekBoard({
       {week.allUnpriced ? <AllUnpricedNotice>{copy.noPriceSetAll}</AllUnpricedNotice> : null}
 
       {/* The week's own line. It is the one number a shop asks a week for, and
-          it belongs to the whole run rather than to any day in it. */}
-      <p className="mt-4 flex items-baseline justify-between gap-3 border-b border-border pb-2">
-        <span className={groupLabelClass("muted")}>{week.ariaLabel}</span>
-        <span className="text-sm font-semibold text-muted tabular-nums">{week.seatTally}</span>
-      </p>
+          it belongs to the whole run rather than to any day in it. A group's
+          label and its meta, so `GroupLabel` draws them: the board spelled
+          the meta twice more by hand, 14px semibold here and 14px regular
+          over the asks, beside the 12px medium every other group carries
+          (pixel-craft class 12). The rule under it is the board's own. */}
+      <div className="mt-4 border-b border-border pb-2">
+        <GroupLabel meta={week.seatTally}>{week.ariaLabel}</GroupLabel>
+      </div>
 
       {/* **Not a list of days.** Each day's boats are a list, labelled by that
           day's own heading; wrapping the seven in a second list would nest
@@ -764,12 +767,11 @@ export function WeekBoard({
           page cannot, and the reason this is not a second copy of it. */}
       {week.asked.length > 0 ? (
         <section aria-labelledby="week-asked" className="mt-8">
-          <p className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
-            <span id="week-asked" className={groupLabelClass("muted")}>
+          <div className="border-b border-border pb-2">
+            <GroupLabel id="week-asked" meta={week.askedCount}>
               {copy.asked}
-            </span>
-            <span className="text-sm text-muted tabular-nums">{week.askedCount}</span>
-          </p>
+            </GroupLabel>
+          </div>
           <ul className="flex flex-col">
             {week.asked.map((ask) => (
               <li
