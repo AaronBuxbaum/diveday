@@ -52,9 +52,16 @@ type PaletteItem = {
  */
 type PaletteGroup = { id: string; heading?: string; items: PaletteItem[] };
 
-/** The palette's own key cap — smaller than the header button's ⌘K badge. */
+/**
+ * The palette's own key cap — smaller than the header button's ⌘K badge.
+ *
+ * A fixed 16px box that centres what it holds, because the caps hold two
+ * kinds of thing: a word or a glyph (↵, esc) and a 12px drawn arrow. Sized by
+ * their content, the arrow caps' line box made them 18px beside the text caps'
+ * 16 in the same legend (the pixel audit, command-palette).
+ */
 const hintKeyClass =
-  "rounded border border-border bg-surface-sunken px-1.5 py-0.5 font-sans text-[0.65rem] leading-none font-semibold";
+  "inline-flex h-4 items-center rounded border border-border bg-surface-sunken px-1.5 font-sans text-[0.65rem] leading-none font-semibold";
 
 const EMPTY: SearchResults = {
   divers: [],

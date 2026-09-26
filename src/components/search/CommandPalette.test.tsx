@@ -121,6 +121,29 @@ describe("CommandPalette answer card", () => {
 });
 
 /**
+ * The key caps are one box. The arrow caps hold a 12px glyph, whose line box
+ * made them 18px tall beside the 16px text caps (↵, esc) in the same legend
+ * (the pixel audit, command-palette): a fixed-height flex box centres either.
+ */
+describe("CommandPalette key caps", () => {
+  it("draws every key cap at one fixed height, glyph or word", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify(results(ANSWER)), { status: 200 })),
+    );
+    renderPalette();
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    await userEvent.type(screen.getByRole("combobox"), "gra");
+    await screen.findByRole("option", { name: ANSWER.title });
+
+    const caps = [...screen.getByRole("dialog").querySelectorAll("kbd")];
+    // The answer card's ↵, and the legend's ↑ ↓ ↵ esc.
+    expect(caps).toHaveLength(5);
+    for (const cap of caps) expect(cap).toHaveClass("inline-flex", "h-4", "items-center");
+  });
+});
+
+/**
  * The field is the palette's one focus stop, flush with the dialog's
  * `overflow-hidden` on three sides: the outset global ring was cut to a bar
  * under it, and switching the ring off to hide the bar left the field with no
