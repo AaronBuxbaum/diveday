@@ -72,7 +72,8 @@ export function EmptyState({
       <Heading id={titleId} className="font-medium">
         {title}
       </Heading>
-      {body ? <p className="mx-auto mt-1 max-w-md text-sm text-muted">{body}</p> : null}
+      {/* `text-pretty`: a centred body left "booking." alone on its last line. */}
+      {body ? <p className="mx-auto mt-1 max-w-md text-pretty text-sm text-muted">{body}</p> : null}
       {action ? <div className="mt-4 flex flex-wrap justify-center gap-3">{action}</div> : null}
     </div>
   );

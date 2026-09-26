@@ -116,6 +116,13 @@ describe("EmptyState", () => {
     expect(screen.getByRole("link", { name: "Open the board" })).toBeInTheDocument();
   });
 
+  it("wraps its body so no word is left alone on the last line", () => {
+    // The schedule builder's empty board left "booking." alone on a second
+    // line of its centred body at 1280 (docs/design/pixel-craft.md, class 8).
+    render(<EmptyState title="No trips yet" body="Put a departure on the board." />);
+    expect(screen.getByText("Put a departure on the board.")).toHaveClass("text-pretty");
+  });
+
   /**
    * **The gap above the action is the card's, and nobody else's**
    * (docs/design/pixel-craft.md, class 4). The action row already sits `mt-4`
