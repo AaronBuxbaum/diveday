@@ -22,7 +22,7 @@ describe("the public schedule identity composition", () => {
   it("puts one next-boat surface directly after the shop identity", () => {
     const hero = positionOf("<ShopfrontHero");
     const nextBoat = positionOf("<NextBoatCard");
-    const schedule = positionOf('<div className={isEmbed ? undefined : "mt-10"}>');
+    const schedule = positionOf("<div className={isEmbed ? undefined : SECTION_GAP}>");
     const weekLedger = positionOf("<WeekLedger");
 
     for (const marker of [hero, nextBoat, schedule, weekLedger]) {
@@ -109,6 +109,38 @@ describe("the lens rail's place", () => {
     // the widget has literally zero navigation landmarks.
     expect(SOURCE).toContain("hasUpcoming && !isEmbed && lenses.length > 0");
     expect(SOURCE).toContain("isEmbed ? [] : await listTripLenses(");
+  });
+});
+
+/**
+ * **One gap between the storefront's sections** (docs/design/pixel-craft.md,
+ * class 4; K-176). Each section spaced itself with its own `mt-*`, and the
+ * week was `mt-10` where every other section was `mt-12`, so "Schedule" stood
+ * 8px closer to the band above it than any other heading to its neighbour.
+ * The gap is spelled once, and the route's skeleton opens its week at it too.
+ */
+describe("the storefront's section rhythm", () => {
+  it("spells the section gap once and opens every section with it", () => {
+    expect(SOURCE).toContain('const SECTION_GAP = "mt-12";');
+    expect(countOf('"mt-12"')).toBe(1);
+    expect(SOURCE).not.toMatch(/\bmt-10\b/);
+    expect(SOURCE).toContain("<div className={isEmbed ? undefined : SECTION_GAP}>");
+    for (const id of ["boats-heading", "more-ways-heading"]) {
+      expect(SOURCE).toContain(`<section aria-labelledby="${id}" className={SECTION_GAP}>`);
+    }
+    // The sections a component draws take the gap as a prop. The first JSX
+    // call of each (a comment may name the component before it does).
+    for (const component of ["<DateRequestForm\n", "<CoursesShelf\n", "<ShopReviews\n"]) {
+      const start = positionOf(component);
+      const call = SOURCE.slice(start, SOURCE.indexOf("/>", start));
+      expect(call, component).toContain("className={SECTION_GAP}");
+    }
+  });
+
+  it("opens the skeleton's week at the same gap", () => {
+    const skeleton = readFileSync(join(__dirname, "loading.tsx"), "utf8");
+    expect(skeleton).not.toMatch(/\bmt-10\b/);
+    expect(skeleton).toMatch(/className="mt-12 animate-pulse"/);
   });
 });
 

@@ -110,6 +110,17 @@ import { readShelfWelcome } from "./_lib/shelf-welcome";
 export const instant = true;
 
 /**
+ * **One gap between the storefront's sections** (pixel-craft class 4, K-176).
+ * Each section spaced itself with its own `mt-*`, and the week opened 40px
+ * under the band where the shelves, the boats, the reviews, the three asks
+ * and the off-season ask opened 48px under theirs: "Schedule" stood 8px
+ * closer to the panels above it than any other heading to its neighbour.
+ * Spelled once, and the route's `loading.tsx` opens its week at the same
+ * 48px.
+ */
+const SECTION_GAP = "mt-12";
+
+/**
  * Per-shop title, description, and canonical URL. The embed surface points its
  * canonical at the standalone page: the same departures rendered at two URLs is
  * exactly the duplication a canonical exists to resolve (docs ADR
@@ -1042,7 +1053,7 @@ export default async function SchedulePage({
           over nothing is the page apologising. The frame keeps its own
           terminal state (see the empty state inside). */}
       {hasUpcoming || isEmbed ? (
-        <div className={isEmbed ? undefined : "mt-10"}>
+        <div className={isEmbed ? undefined : SECTION_GAP}>
           {isEmbed ? null : (
             <div className="mb-4">
               <h2 className={`font-brand-display ${SECTION_TITLE_CLASS}`}>{t("schedule.title")}</h2>
@@ -1300,7 +1311,7 @@ export default async function SchedulePage({
             submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
             askInterest
             sectionId="request-a-date"
-            className="mt-12"
+            className={SECTION_GAP}
             headingClassName={`font-brand-display ${SECTION_TITLE_CLASS}`}
             contactEmail={null}
             contactPhone={null}
@@ -1323,7 +1334,7 @@ export default async function SchedulePage({
         <CoursesShelf
           courses={shelfCourses}
           allCoursesHref={publicCoursesPath(shopSlug)}
-          className="mt-12"
+          className={SECTION_GAP}
           t={t}
         />
       )}
@@ -1331,7 +1342,7 @@ export default async function SchedulePage({
           the storefront is the shop's website, and a shop's site always names
           its hulls). Only when the shop has any: an empty fleet is not a section. */}
       {isEmbed || boats.length === 0 ? null : (
-        <section aria-labelledby="boats-heading" className="mt-12">
+        <section aria-labelledby="boats-heading" className={SECTION_GAP}>
           <h2 id="boats-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
             {t("schedule.boatsHeading")}
           </h2>
@@ -1409,7 +1420,7 @@ export default async function SchedulePage({
           find-my-link door, and on a quiet board the date request has moved
           above — which between them can empty the list under the heading. */}
       {!isEmbed && (everHadDeparture || !quiet.quiet) ? (
-        <section aria-labelledby="more-ways-heading" className="mt-12">
+        <section aria-labelledby="more-ways-heading" className={SECTION_GAP}>
           <h2 id="more-ways-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
             {t("schedule.moreWaysHeading")}
           </h2>
@@ -1579,7 +1590,7 @@ async function ScheduleReviewsSection({
     <>
       <JsonLd data={structuredData} />
       <ShopReviews
-        className="mt-12"
+        className={SECTION_GAP}
         aggregate={aggregate}
         reviews={reviews}
         shopSlug={shop.slug}
@@ -1594,7 +1605,7 @@ async function ScheduleReviewsSection({
 /** Shaped like `ShopReviews` — heading, the all-reviews door, two ledger rows (design principle 1). */
 function ScheduleReviewsSkeleton() {
   return (
-    <section aria-hidden="true" className="mt-12 animate-pulse">
+    <section aria-hidden="true" className={`${SECTION_GAP} animate-pulse`}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div className="h-6 w-40 rounded bg-surface-sunken" />
         <div className="h-4 w-24 rounded bg-surface-sunken" />

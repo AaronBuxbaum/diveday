@@ -26,7 +26,7 @@ export default function TripsLoading() {
       {/* The week: its heading and timezone line, the month rail and the filter
           row — present in the shell so the streamed list lands where the
           skeleton stood instead of shifting down. */}
-      <div className="mt-10 animate-pulse">
+      <div className="mt-12 animate-pulse">
         <div className="mb-4">
           <div className="h-6 w-28 rounded bg-surface-sunken" />
           <div className="mt-1 h-4 w-72 max-w-full rounded bg-surface-sunken" />
