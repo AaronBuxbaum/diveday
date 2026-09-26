@@ -29,7 +29,11 @@ const toneClass = {
   success: "bg-success-tint text-success-strong",
   warning: "bg-warning-tint text-warning-strong",
   danger: "bg-danger-tint text-danger",
-  neutral: "border border-border bg-surface-sunken text-muted",
+  // The one tone whose fill is close to the surface it sits on, so it keeps an
+  // edge — as an inset ring, which paints the line and takes no room. A
+  // `border` made "Not here" 30px beside a 28px "Blocked" on the same line,
+  // and the only pill still outlined on paper (`badge.test.tsx`).
+  neutral: "ring-1 ring-inset ring-border bg-surface-sunken text-muted",
 } as const;
 
 export type BadgeTone = keyof typeof toneClass;

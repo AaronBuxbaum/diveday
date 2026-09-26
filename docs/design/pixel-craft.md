@@ -258,7 +258,8 @@ Each class gives its rule, its tolerance, its usual severity, the probe check th
 - **Probe.** The census's near-misses (in `REPORT.md`), `mismatched-controls`,
   `focus-ring-differs`, and the state atlas.
 - **History.** A 16px button beside a 14px one (5a81e94). Group titles inside some cards and
-  outside others (#624). A neutral `Badge` carries a border that toned badges do not.
+  outside others (#624). A neutral `Badge` carried a border the toned badges did not, 30px beside
+  28px, until its edge became an inset ring.
 
 ## Precision
 
