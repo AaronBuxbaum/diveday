@@ -1,8 +1,15 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/ledger";
-import { type BuilderWeek, WeekBoard, type WeekBoardCopy, type WeekEntry } from "./WeekBoard";
+import {
+  type BuilderWeek,
+  WeekBoard,
+  type WeekBoardCopy,
+  type WeekEntry,
+  type WeekSpan,
+} from "./WeekBoard";
 
 afterEach(cleanup);
 
@@ -201,6 +208,84 @@ describe("the day rail (K-326, K-327, K-328)", () => {
     expect(inset(screen.getByText("Thu").closest("h3"))).toEqual(["py-2"]);
     expect(inset(screen.getByText("7:00 AM").closest("li")?.firstElementChild)).toEqual(["py-2"]);
     for (const none of empty) expect(inset(none)).toEqual(["py-2"]);
+  });
+});
+
+describe("a departure row is one door (K-325, K-530)", () => {
+  const course: WeekSpan = {
+    tripId: "course-1",
+    dateIso: "2026-08-28",
+    startTime: "08:00",
+    title: "Open Water Diver — three-day course",
+    dayCount: 3,
+    status: "upcoming",
+    unpriced: false,
+    rollCallOpen: null,
+    ref: "Open Water Diver — three-day course, Aug 28 – 30, 2026",
+    meta: "4 of 5 · $595 · Marcus Webb",
+    seats: { booked: 4, capacity: 5 },
+    runsLabel: "3 days",
+    startColumn: 5,
+    columnSpan: 3,
+  };
+
+  it("makes the whole row its title's target: one stretched link, last in the row", () => {
+    // The title was a 19–38px link and the row painted a hover fill it did
+    // not answer to (schedule-builder@390, 11 of them). The ledger's door:
+    // an overlay named by the title, over a row that presses like one.
+    board(week({}, [entry()]));
+    const door = screen.getByRole("link", { name: "Two-Tank Reef" });
+    const row = screen.getByText("7:00 AM").closest("li")?.firstElementChild as HTMLElement;
+    expect(door.parentElement).toBe(row);
+    expect(row.lastElementChild).toBe(door);
+    expect(row).toHaveClass("relative", "pressable-row");
+    expect(door).toHaveClass("absolute", "inset-0", "z-0", "focus-visible:focus-ring-inset");
+    expect(door).toHaveAttribute("href", "/shop/blue-mantis/trips/t1");
+    expect(door.textContent).toBe("");
+    expect(screen.getByText("Two-Tank Reef").closest("a")).toBeNull();
+  });
+
+  it("lifts the row's own controls over that door, the flags as 44px targets that end at their words", () => {
+    // The price flag was a 16px block link running the whole column, 228px
+    // wide at 390 for 90px of words.
+    board(
+      week({}, [
+        entry({ unpriced: true }),
+        entry({
+          tripId: "t2",
+          time: "9:00 AM",
+          title: "Night Dive",
+          ref: "Night Dive, Thu, Aug 27 9:00 AM",
+          rollCallOpen: { diveNumber: 1, uncounted: 2 },
+        }),
+      ]),
+    );
+    for (const menu of screen.getAllByRole("button", { name: /^Move, copy, or remove / })) {
+      expect(menu).toHaveClass("relative", "z-10");
+    }
+    const flags = [
+      screen.getByRole("link", { name: /^Set a price for / }),
+      screen.getByRole("link", { name: /^Finish the dive 1 roll call for / }),
+    ];
+    for (const flag of flags) {
+      expect(flag).toHaveClass("relative", "z-10", ...tapTargetLinkClass.split(" "));
+      expect(flag).not.toHaveClass("flex");
+    }
+  });
+
+  it("sets a course's length in its title's own run, so it follows the last word", () => {
+    // As a flex sibling of a wrapped title, "3 days" sat at the far end of
+    // the row, 41px from the title's ink at 390.
+    board(week({ spans: [course] }));
+    const tag = screen.getByText("3 days");
+    const title = tag.parentElement as HTMLElement;
+    expect(title.tagName).toBe("P");
+    expect(title.firstChild?.textContent).toBe("Open Water Diver — three-day course");
+    expect(title).toHaveClass("line-clamp-2");
+    expect(tag).toHaveClass("whitespace-nowrap");
+    expect(
+      screen.getByRole("link", { name: "Open Water Diver — three-day course" }),
+    ).toHaveAttribute("href", "/shop/blue-mantis/trips/course-1");
   });
 });
 

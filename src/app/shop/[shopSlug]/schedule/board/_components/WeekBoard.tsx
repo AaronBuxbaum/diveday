@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { SiteMark } from "@/components/illustration/SiteMark";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel, groupLabelClass } from "@/components/ui/ledger";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
@@ -266,17 +266,18 @@ export function AllUnpricedNotice({
  * Drawn mark and words together, never hue alone, and it **outranks** the
  * price flag rather than stacking with it: one slot, one grammar (issue 758,
  * the same call the stream made).
+ *
+ * Both flags are a 44px target that ends at its words (`FLAG_CLASS`), lifted
+ * over the row's own door.
  */
 function RollCallFlag({
   departure,
   shopSlug,
   copy,
-  className,
 }: {
   departure: WeekDeparture & { rollCallOpen: { diveNumber: number; uncounted: number } };
   shopSlug: string;
   copy: { rollCallOpen: string; rollCallOpenAria: string };
-  className: string;
 }) {
   return (
     <Link
@@ -285,13 +286,23 @@ function RollCallFlag({
         ref: departure.ref,
         dive: departure.rollCallOpen.diveNumber,
       })}
-      className={`flex items-center gap-1.5 text-xs font-semibold text-danger hover:underline ${className}`}
+      className={`${FLAG_CLASS} text-danger`}
     >
       <DiveDayIcon name="warning" className="size-3.5" />
       {fill(copy.rollCallOpen, { count: departure.rollCallOpen.uncounted })}
     </Link>
   );
 }
+
+/**
+ * **A flag is its own target, over the row's door** (pixel-craft class 7). It
+ * was a block `flex` link with no floor: 16px tall, and at 390 228px wide for
+ * 90px of words, its hit area running the whole column. `tapTargetLinkClass`
+ * gives it the 44px floor and ends its box at its words; `relative z-10`
+ * stands it above the row's stretched link, so a tap on it is a tap on it.
+ * No margin above it: the 44px box's own band is the room under the title.
+ */
+const FLAG_CLASS = `${tapTargetLinkClass} relative z-10 gap-1.5 text-xs font-semibold hover:underline`;
 
 /**
  * The quieter toned mark, and only while the departure can still be booked.
@@ -304,18 +315,16 @@ function PriceFlag({
   departure,
   shopSlug,
   copy,
-  className,
 }: {
   departure: WeekDeparture;
   shopSlug: string;
   copy: { noPriceSet: string; noPriceSetAria: string };
-  className: string;
 }) {
   return (
     <Link
       href={`/shop/${shopSlug}/trips/${departure.tripId}#details`}
       aria-label={fill(copy.noPriceSetAria, { ref: departure.ref })}
-      className={`flex items-center gap-1.5 text-xs font-semibold text-warning-strong hover:underline ${className}`}
+      className={`${FLAG_CLASS} text-warning-strong`}
     >
       <DiveDayIcon name="warning" className="size-3.5" />
       {copy.noPriceSet}
@@ -426,7 +435,13 @@ function WeekBoat({
 }) {
   const sailed = departure.status === "sailed";
   return (
-    <div className="flex items-start gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:gap-3">
+    // **The row is the departure's door** (pixel-craft class 7) — the ledger
+    // row's construction (`LedgerRow`, src/components/ui/ledger.tsx): a
+    // stretched link, last in the row, named by the title, over a row that
+    // hovers and presses as one. The title was a 19–38px link inside a row
+    // that painted a hover fill it did not answer to. What else in the row
+    // is a control — the "⋯", a flag — stands above the door (`z-10`).
+    <div className="group/boat pressable-row relative flex items-start gap-2.5 rounded-lg px-2 py-2 hover:bg-surface has-[a:focus-visible]:bg-surface sm:gap-3">
       {/* The drawn site mark leads the row (ADR 20260901-diveday-reimagined,
           slice 13f). No coral: the budget is one creature's detail per
           surface, and a week has no one boat to give it to. */}
@@ -491,7 +506,7 @@ function WeekBoat({
               onToggle={onToggle}
               registerToggle={registerToggle}
               label={copy.rowActionsAria}
-              className="-my-1.5 -me-2 ms-auto shrink-0 md:ms-0"
+              className="relative z-10 -my-1.5 -me-2 ms-auto shrink-0 md:ms-0"
             />
           ) : null}
         </div>
@@ -504,18 +519,23 @@ function WeekBoat({
 
             No `block` beside `line-clamp-2`: the clamp supplies its own
             `display`, and two display utilities resolve by stylesheet order
-            rather than the order they are written. */}
-        <div className="mt-0.5 flex items-baseline gap-2">
-          <Link
-            href={`/shop/${shopSlug}/trips/${departure.tripId}`}
-            className={`text-sm leading-snug font-semibold line-clamp-2 hover:text-primary ${sailed ? "text-muted" : ""}`}
-          >
-            {departure.title}
-          </Link>
+            rather than the order they are written.
+
+            **A course's length is in the title's own run** (pixel-craft class
+            8), so it follows the last word at every width. As a flex sibling
+            of a title that wrapped, it sat at the row's far end, 41px from
+            the title's ink at 390. The words are the door's name, not a link
+            of their own: the row's stretched link below is. */}
+        <p
+          className={`mt-0.5 line-clamp-2 text-sm leading-snug font-semibold group-hover/boat:text-primary ${sailed ? "text-muted" : ""}`}
+        >
+          {departure.title}
           {runs ? (
-            <span className="shrink-0 text-xs font-medium text-primary tabular-nums">{runs}</span>
+            <span className="ms-1.5 text-xs font-medium whitespace-nowrap text-primary tabular-nums">
+              {runs}
+            </span>
           ) : null}
-        </div>
+        </p>
         {/* **The one line a departure prints about its people**, and only when
             it is the exception (#1923, principle 9). The board ran with a
             usual crew and said so on every row until this rule replaced the
@@ -547,12 +567,19 @@ function WeekBoat({
             departure={{ ...departure, rollCallOpen: departure.rollCallOpen }}
             shopSlug={shopSlug}
             copy={copy}
-            className="mt-1"
           />
         ) : departure.unpriced && !sailed ? (
-          <PriceFlag departure={departure} shopSlug={shopSlug} copy={copy} className="mt-1" />
+          <PriceFlag departure={departure} shopSlug={shopSlug} copy={copy} />
         ) : null}
       </div>
+      {/* Last, so it paints over everything before it that is positioned —
+          the seat bar is — and under only what asks to be above it. Its ring
+          is drawn inside, on the row's own corner, as a ledger door's is. */}
+      <Link
+        href={`/shop/${shopSlug}/trips/${departure.tripId}`}
+        aria-label={departure.title}
+        className="absolute inset-0 z-0 rounded-[inherit] focus-visible:focus-ring-inset"
+      />
     </div>
   );
 }
