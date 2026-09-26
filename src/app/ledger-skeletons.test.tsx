@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { BookingStoryRow } from "@/components/person/rows";
 import { ReviewLedger } from "@/components/ShopReviews";
 import { buttonClass } from "@/components/ui/button";
-import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { LedgerRow, ledgerRowBoxClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { staffTranslator } from "@/i18n/staff-messages";
 import PublicBoatLoading from "./s/[shopSlug]/boats/[tripId]/loading";
@@ -198,6 +198,56 @@ describe("the diver record's skeleton", () => {
     );
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) expect(box(row, inset)).toEqual(box(loaded, inset));
+  });
+});
+
+/**
+ * **The roster lands on its skeleton's shapes** (pixel-craft class 11). The
+ * skeleton predated three changes to the page: its four chip bars wrapped to
+ * two rows at 390 where `FilterChips` keeps one scrolling row, it drew a 44px
+ * search bar and no "Add diver" where the page has a 48px box and a 48px
+ * button (a line each on a phone), and its rows stood at 48px where a
+ * `LedgerRow` is 52. On a phone the search box a staffer is about to type
+ * into jumped 52px up when the roster arrived.
+ */
+describe("the diver roster's skeleton", () => {
+  const box = (element: Element | null | undefined, pattern: RegExp) =>
+    [...(element?.classList ?? [])].filter((token) => pattern.test(token)).sort();
+
+  it("keeps the view chips to one row on a phone, wrapping from sm like FilterChips", () => {
+    const { container } = render(<DiversLoading />);
+    const chips = container.querySelector(".rounded-full")?.parentElement;
+    expect(chips).toHaveClass("max-sm:overflow-hidden", "sm:flex-wrap");
+    expect(chips).not.toHaveClass("flex-wrap");
+  });
+
+  it("draws the md search box and the Add diver beside it at 48px", () => {
+    const { container } = render(<DiversLoading />);
+    const bars = container.querySelectorAll(".rounded-lg");
+    expect(bars).toHaveLength(2);
+    for (const bar of bars) expect(bar).toHaveClass("h-12");
+    // Add diver takes a line of its own under the full-width box on a phone.
+    expect(bars[1]).toHaveClass("max-sm:w-full");
+  });
+
+  it("draws every row at a LedgerRow's floor and inset", () => {
+    const loaded = render(
+      <ul>
+        <LedgerRow href="/shop/blue-mantis/divers/person-2" linkLabel="Mira Castellanos">
+          Mira Castellanos
+        </LedgerRow>
+      </ul>,
+    ).container.querySelector("li");
+    const shape = /^(?:min-h-|p[ytb]-)/;
+    expect(box(loaded, shape)).toEqual(["min-h-13", "py-2"]);
+    cleanup();
+
+    const { container } = render(<DiversLoading />);
+    const rows = [...container.querySelectorAll("*")].filter((element) =>
+      element.classList.contains("last:border-b"),
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(box(row, shape)).toEqual(box(loaded, shape));
   });
 });
 
