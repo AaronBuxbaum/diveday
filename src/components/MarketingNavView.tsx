@@ -53,6 +53,12 @@ export function MarketingNavView({
     { href: "/switching", label: t("nav.switch") },
     { href: "/about", label: t("nav.about") },
   ];
+  // The CTA slot renders nothing for a signed-out visitor on a page that hides
+  // the pitch (/dive, /onboard). With no CTA after it, the row's last link ends
+  // its word `md:px-3` short of the gutter the footer and the CTA end on, so
+  // the row hangs that padding into the gutter, as `-mx-2` does on a phone
+  // (K-512). With a CTA the padding is the gap before it and stays.
+  const ctaSlotEmpty = !shopSlug && hideCta;
 
   return (
     <header
@@ -72,7 +78,7 @@ export function MarketingNavView({
       >
         <Wordmark href="/" className="text-foreground" />
         <div
-          className={`order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 md:order-none md:mx-0 md:ml-auto md:basis-auto md:justify-end md:gap-x-2 ${compactMobile ? "max-sm:hidden" : ""}`}
+          className={`order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 md:order-none md:mx-0 md:ml-auto md:basis-auto md:justify-end md:gap-x-2 ${ctaSlotEmpty ? "md:-me-3" : ""} ${compactMobile ? "max-sm:hidden" : ""}`}
         >
           {links.map((link) => (
             <Link key={link.href} href={link.href} className={navLinkClassName}>
@@ -106,7 +112,7 @@ export function MarketingNavView({
           >
             {t("nav.goToShop")}
           </Link>
-        ) : hideCta ? null : (
+        ) : ctaSlotEmpty ? null : (
           // The demo leads everywhere in the funnel (docs/product/marketing.md,
           // "The two doors, and which one leads"); the nav is a single door,
           // not the pair `FunnelCtas` renders, so it carries that same door

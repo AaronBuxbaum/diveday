@@ -99,6 +99,27 @@ describe("MarketingNavView", () => {
     expect(nav.className).not.toMatch(/(^|\s)max-sm:px-/);
   });
 
+  // With no CTA after it, the last link's own `md:px-3` padding left its word
+  // 13px short of the gutter the footer and the CTA end on (K-512). The row
+  // hangs that padding into the gutter only when the CTA slot is empty.
+  it("hangs the last link's padding into the gutter only when no CTA follows", () => {
+    const rowOf = () => screen.getByRole("link", { name: "Product" }).parentElement;
+
+    const empty = renderNav({ hideCta: true });
+    expect(rowOf()).toHaveClass("md:-me-3");
+    empty.unmount();
+
+    for (const props of [
+      {},
+      { shopSlug: "blue-mantis" },
+      { shopSlug: "blue-mantis", hideCta: true },
+    ]) {
+      const { unmount } = renderNav(props);
+      expect(rowOf()).not.toHaveClass("md:-me-3");
+      unmount();
+    }
+  });
+
   it("keeps the first row at the CTA's 48px when hideCta drops the CTA", () => {
     renderNav({ hideCta: true });
     expect(screen.getByRole("link", { name: "DiveDay." })).toHaveClass("min-h-12");
