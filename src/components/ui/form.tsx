@@ -236,6 +236,13 @@ export type FieldGridColumns = keyof typeof columnClass;
 /**
  * Grid wrapper for a row (or block) of `Field`s. Each field occupies two rows —
  * caption and control — which is what lets `Field` subgrid onto them.
+ *
+ * **The column gutter is this component's, and only this component's.** Call
+ * sites that appended `gap-x-5` won by stylesheet order, so two forms on one
+ * settings page stood their columns 20px and 16px apart (the pixel probe,
+ * settings-dock-day-rhythm against settings-emergency). A form that ever
+ * wants another gutter gets a prop here; `form.test.tsx` refuses a `gap-x-*`
+ * on a `FieldGrid`'s `className`.
  */
 export function FieldGrid({
   columns = 1,

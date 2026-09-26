@@ -866,6 +866,32 @@ function lineOf(source: string, index: number): number {
   return source.slice(0, index).split("\n").length;
 }
 
+/**
+ * Every opening `<tag …>` of one JSX element name, whole: read up to the `>`
+ * that closes it, stepping over `{…}` expressions (an arrow's `=>` is not the
+ * end of a tag) and quoted attribute values.
+ */
+function openingTags(source: string, tag: string): { index: number; text: string }[] {
+  const tags: { index: number; text: string }[] = [];
+  const start = new RegExp(`<${tag}(?![A-Za-z0-9_])`, "g");
+  for (const match of source.matchAll(start)) {
+    let depth = 0;
+    let quote: string | null = null;
+    let end = match.index + match[0].length;
+    for (; end < source.length; end++) {
+      const char = source[end];
+      if (quote) {
+        if (char === quote) quote = null;
+      } else if (char === "{") depth++;
+      else if (char === "}") depth--;
+      else if (depth === 0 && (char === '"' || char === "'")) quote = char;
+      else if (depth === 0 && char === ">") break;
+    }
+    tags.push({ index: match.index, text: source.slice(match.index, end + 1) });
+  }
+  return tags;
+}
+
 describe("source sweeps", () => {
   it("reads enough of the app to be worth asserting on", () => {
     expect(sourceFiles().length).toBeGreaterThan(300);
@@ -889,6 +915,23 @@ describe("source sweeps", () => {
       for (const match of source.matchAll(/`[^`]*\$\{controlClass(?:For\([^)]*\))?\}[^`]*`/g)) {
         if (/\btext-(xs|sm)\b/.test(match[0]))
           offenders.push(`${file}:${lineOf(source, match.index)} ${match[0]}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * **One gutter between a form's columns.** `FieldGrid` draws 16px, and call
+   * sites appended `gap-x-5 gap-y-5`, which won by stylesheet order: on one
+   * settings page the dock-day and fly-safe columns stood 20px apart and the
+   * emergency and rental-price columns 16px (K-42). A form that ever wants a
+   * different gutter gets it as a prop on `FieldGrid`, not as a class.
+   */
+  it("never overrides FieldGrid's column gutter at a call site", () => {
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      for (const { index, text } of openingTags(source, "FieldGrid")) {
+        if (/\bgap-x-/.test(text)) offenders.push(`${file}:${lineOf(source, index)}`);
       }
     }
     expect(offenders).toEqual([]);

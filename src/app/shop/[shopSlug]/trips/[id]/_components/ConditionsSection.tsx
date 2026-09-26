@@ -245,7 +245,7 @@ export function ConditionsSection({
             />
           </Field>
         </FieldGrid>
-        <FieldGrid columns={3} className="gap-x-5 gap-y-5">
+        <FieldGrid columns={3}>
           <Field label={t("trips.conditions.waterTempLabel", { unit: temperatureUnitLabel })}>
             <input
               name="waterTemperature"

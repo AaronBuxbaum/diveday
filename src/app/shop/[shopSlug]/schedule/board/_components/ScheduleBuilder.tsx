@@ -985,7 +985,7 @@ function AddPanel({
       >
         <legend className="px-1 text-sm font-medium">{copy.payAtBookingLegend}</legend>
         <p className="text-sm text-muted">{copy.payAtBookingDescription}</p>
-        <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
+        <FieldGrid columns={2} className="mt-4">
           <Field
             label={copy.depositLabel}
             hint={copy.optional}

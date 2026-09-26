@@ -1357,12 +1357,7 @@ export default async function SettingsPage({
                 read DiveDay telling their divers a day they don't run. Each
                 field states what zero means where zero is meaningful, because
                 "0" is how a shop says "we don't do that one". */}
-              <FieldGrid
-                as="form"
-                action={saveDockDayRhythmAction}
-                columns={2}
-                className="mt-4 gap-x-5 gap-y-5"
-              >
+              <FieldGrid as="form" action={saveDockDayRhythmAction} columns={2} className="mt-4">
                 {DOCK_DAY_FIELDS.map((field) => (
                   <Field
                     key={field}
@@ -1473,12 +1468,7 @@ export default async function SettingsPage({
               activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="sendWindow" active={activeSection} />
-              <FieldGrid
-                as="form"
-                action={saveSendWindowAction}
-                columns={2}
-                className="mt-4 gap-x-5 gap-y-5"
-              >
+              <FieldGrid as="form" action={saveSendWindowAction} columns={2} className="mt-4">
                 <Field label={t("settings.main.sendWindow.startLabel")}>
                   <input
                     name="sendWindowStartHour"
@@ -1526,12 +1516,7 @@ export default async function SettingsPage({
               activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="flySafe" active={activeSection} />
-              <FieldGrid
-                as="form"
-                action={saveFlySafeHoursAction}
-                columns={2}
-                className="mt-4 gap-x-5 gap-y-5"
-              >
+              <FieldGrid as="form" action={saveFlySafeHoursAction} columns={2} className="mt-4">
                 {FLY_SAFE_FIELDS.map((field) => (
                   <Field
                     key={field}

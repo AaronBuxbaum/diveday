@@ -109,7 +109,7 @@ export function DetailsSection({
               renders. Free text, not the shop's own address-search box: a
               meeting point is casual by nature, and geocoding one would guess
               wrong coordinates for exactly the kind of place this names. */}
-      <FieldGrid columns={2} className="gap-x-5 gap-y-5">
+      <FieldGrid columns={2}>
         <Field
           label={t("trips.details.meetingPointLabelLabel")}
           hint={t("trips.details.optionalHint")}
@@ -140,7 +140,7 @@ export function DetailsSection({
           {t("trips.details.arrivalGuidanceLegend")}
         </legend>
         <p className="text-sm text-muted">{t("trips.details.arrivalGuidanceDescription")}</p>
-        <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
+        <FieldGrid columns={2} className="mt-4">
           <Field
             label={t("trips.details.arrivalLandmarkLabel")}
             hint={t("trips.details.optionalHint")}
@@ -276,7 +276,7 @@ export function DetailsSection({
               and the whole caption row went ragged. Three columns is also the
               shape the schedule builder's own add panel uses, so the two places
               a departure's when-and-how-many is typed now look alike. */}
-      <FieldGrid columns={3} className="gap-x-5 gap-y-5">
+      <FieldGrid columns={3}>
         <Field label={t("trips.details.dateLabel")}>
           <DateField name="date" required defaultValue={toDateInputValue(startWall)} />
         </Field>
@@ -299,7 +299,7 @@ export function DetailsSection({
           />
         </Field>
       </FieldGrid>
-      <FieldGrid columns={3} className="gap-x-5 gap-y-5">
+      <FieldGrid columns={3}>
         <Field label={t("trips.details.capacityLabel")}>
           <input
             name="capacity"
@@ -347,7 +347,7 @@ export function DetailsSection({
 
               Course is deliberately absent: a departure's curriculum is what
               its divers bought. */}
-      <FieldGrid columns={3} className="gap-x-5 gap-y-5">
+      <FieldGrid columns={3}>
         {modeOptions.length > 1 ? (
           // The same words the board's add panel uses, from the same keys:
           // the two forms describe one departure and must not call its
@@ -440,7 +440,7 @@ export function DetailsSection({
           {t("trips.details.payAtBookingLegend")}
         </legend>
         <p className="text-sm text-muted">{t("trips.details.payAtBookingDescription")}</p>
-        <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
+        <FieldGrid columns={2} className="mt-4">
           <Field
             label={t("trips.details.depositLabel")}
             description={t("trips.details.depositDescription")}
