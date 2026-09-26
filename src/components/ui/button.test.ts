@@ -101,16 +101,36 @@ describe("buttonClass", () => {
     const hoverTokens = (classes: string) =>
       classes.split(" ").filter((token) => /(^|:)hover:/.test(token));
 
-    it("paints nothing on a disabled button: every hover is `not-disabled:hover:`", () => {
+    it("paints nothing on a disabled control, nor on a label standing in for one", () => {
       // Tailwind v4's `hover:` still matches a disabled button, and `DISABLED`
-      // only dims it, so a disabled chip inside `RepeatFields`'s `<fieldset
+      // only dims it, so "Every day" inside `RepeatFields`'s `<fieldset
       // disabled>` took the sunken fill under the pointer (the state atlas,
-      // K-137). Not `enabled:`: an `<a>` styled by `buttonClass` is never
-      // `:enabled` and would lose its hover altogether.
+      // K-137). Its seven weekday chips beside it are `<label>`s round a
+      // hidden checkbox: a label is never `:disabled`, so they kept their
+      // hover after `not-disabled:` alone. The control they stand in for is
+      // what is disabled, and that is what the guard reads too. Not
+      // `enabled:`: an `<a>` styled by `buttonClass` is never `:enabled` and
+      // would lose its hover altogether.
       for (const variant of VARIANTS) {
         const tokens = hoverTokens(buttonClass({ variant }));
         for (const token of tokens) {
-          expect(token, variant).toMatch(/^not-disabled:hover:/);
+          expect(token, variant).toMatch(/^not-disabled:not-has-\[input:disabled\]:hover:/);
+        }
+      }
+    });
+
+    it("draws a label round a disabled control the way it draws a disabled button", () => {
+      // The chips kept `cursor-pointer` and full strength beside a dimmed,
+      // not-allowed "Every day". Whatever `DISABLED` does to a disabled
+      // button, a label wrapping a disabled input does too, busy or not.
+      for (const busy of [false, true]) {
+        const tokens = buttonClass({ variant: "secondary", busy }).split(" ");
+        const disabled = tokens.filter((token) => token.startsWith("disabled:"));
+        expect(disabled.length, `busy: ${busy}`).toBeGreaterThan(0);
+        for (const token of disabled) {
+          expect(tokens, `busy: ${busy}`).toContain(
+            token.replace(/^disabled:/, "has-[input:disabled]:"),
+          );
         }
       }
     });
@@ -127,7 +147,9 @@ describe("buttonClass", () => {
           tokens.filter((token) => token.endsWith("bg-surface-sunken")),
           variant,
         ).toEqual([]);
-        expect(tokens, variant).toContain("not-disabled:hover:bg-foreground/8");
+        expect(tokens, variant).toContain(
+          "not-disabled:not-has-[input:disabled]:hover:bg-foreground/8",
+        );
       }
     });
   });
@@ -682,7 +704,7 @@ describe("buttonClass", () => {
     });
 
     it("hands no bare `hover:` to buttonClass, which would paint on a disabled button", () => {
-      // The variants guard their hovers with `not-disabled:`; a caller's own
+      // The variants guard their hovers against a disabled control; a caller's own
       // `hover:` would not be, and would bring back the fill on a disabled
       // control that K-137 took away.
       const offenders: string[] = [];

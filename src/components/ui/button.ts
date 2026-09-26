@@ -106,10 +106,18 @@ const CIRCLES: ReadonlySet<ButtonSize> = new Set(["mark"]);
  * They are two spellings of one property rather than a `className` addition
  * because two utilities for one property resolve by stylesheet order, not by
  * the order you wrote them — the same reason `flush` exists (see below).
+ *
+ * Each is said twice: for the control itself, and for a `<label>` wearing
+ * `buttonClass` round the input it stands in for — a weekday chip round its
+ * hidden checkbox. A label is never `:disabled`; the input inside it is,
+ * whether by its own attribute or a `<fieldset disabled>` above, so the
+ * label reads it with `has-[input:disabled]:`. Only a label holds an input:
+ * a `<button>` or an `<a>` cannot, so nothing else is touched.
  */
 const DISABLED = {
-  default: "disabled:cursor-not-allowed disabled:opacity-60",
-  busy: "disabled:cursor-wait disabled:opacity-70",
+  default:
+    "disabled:cursor-not-allowed disabled:opacity-60 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:opacity-60",
+  busy: "disabled:cursor-wait disabled:opacity-70 has-[input:disabled]:cursor-wait has-[input:disabled]:opacity-70",
 } as const;
 
 /**
@@ -121,12 +129,15 @@ const DISABLED = {
  * "Checked in" — moved its label 1px sideways. The fill still paints under a
  * transparent border (`background-clip` is `border-box`), edge to edge.
  *
- * **Every hover is `not-disabled:hover:`.** Tailwind v4's `hover:` still
- * matches a disabled button, and `DISABLED` above only dims it, so a disabled
- * weekday chip inside `RepeatFields`'s `<fieldset disabled>` took its fill
- * under the pointer. Not `enabled:`: an `<a>` styled here is never `:enabled`,
- * and a link would lose its hover altogether. `button.test.ts` refuses a bare
- * `hover:`, here and at a call site.
+ * **Every hover is `not-disabled:not-has-[input:disabled]:hover:`.** Tailwind
+ * v4's `hover:` still matches a disabled button, and `DISABLED` above only
+ * dims it, so "Every day" inside `RepeatFields`'s `<fieldset disabled>` took
+ * its fill under the pointer. The weekday chips beside it are labels round a
+ * hidden checkbox, never `:disabled` themselves, so the guard also asks
+ * whether the input a label stands in for is (see `DISABLED`). Not
+ * `enabled:`: an `<a>` styled here is never `:enabled`, and a link would
+ * lose its hover altogether. `button.test.ts` refuses a bare `hover:`, here
+ * and at a call site.
  *
  * **A quiet hover is a wash of the ink, not a surface.** `secondary` and
  * `ghost` hovered to `bg-surface-sunken`, which is also the ground of every
@@ -137,7 +148,7 @@ const DISABLED = {
  */
 const variants = {
   primary:
-    "border border-transparent bg-primary text-primary-foreground shadow-sm not-disabled:hover:bg-primary-hover",
+    "border border-transparent bg-primary text-primary-foreground shadow-sm not-disabled:not-has-[input:disabled]:hover:bg-primary-hover",
   /**
    * The demoted-but-real action: a bordered surface box whose label is **body
    * text**, not link blue.
@@ -153,7 +164,8 @@ const variants = {
    * variants no longer say the same thing in colour. Contrast improves either
    * way (light 5.36 -> 15.02, dark 9.05 -> 14.48 on `bg-surface`).
    */
-  secondary: "border border-border bg-surface text-foreground not-disabled:hover:bg-foreground/8",
+  secondary:
+    "border border-border bg-surface text-foreground not-disabled:not-has-[input:disabled]:hover:bg-foreground/8",
   /**
    * **`secondary` for the public pages: the same box, with the border that
    * holds 3:1 against the ground** (`--border-strong`, the form controls'
@@ -165,19 +177,21 @@ const variants = {
    * than on the page's ground.
    */
   outline:
-    "border border-border-strong bg-surface text-foreground not-disabled:hover:bg-foreground/8",
-  ghost: "text-muted not-disabled:hover:bg-foreground/8 not-disabled:hover:text-foreground",
-  danger: "border border-danger/40 text-danger not-disabled:hover:bg-danger-tint",
+    "border border-border-strong bg-surface text-foreground not-disabled:not-has-[input:disabled]:hover:bg-foreground/8",
+  ghost:
+    "text-muted not-disabled:not-has-[input:disabled]:hover:bg-foreground/8 not-disabled:not-has-[input:disabled]:hover:text-foreground",
+  danger:
+    "border border-danger/40 text-danger not-disabled:not-has-[input:disabled]:hover:bg-danger-tint",
   /**
    * A destructive choice sitting among quiet siblings — a disclosed action
    * list's "Remove" next to ghost-weight items. The bordered `danger` shouts
    * inside a small menu; this keeps the warning hue without the box.
    */
-  "danger-ghost": "text-danger not-disabled:hover:bg-danger-tint",
+  "danger-ghost": "text-danger not-disabled:not-has-[input:disabled]:hover:bg-danger-tint",
   "danger-solid":
-    "border border-transparent bg-danger text-primary-foreground not-disabled:hover:bg-danger/90",
+    "border border-transparent bg-danger text-primary-foreground not-disabled:not-has-[input:disabled]:hover:bg-danger/90",
   /** Reads as inline text, but still claims a full touch target. */
-  link: "text-primary not-disabled:hover:underline",
+  link: "text-primary not-disabled:not-has-[input:disabled]:hover:underline",
   /**
    * **A control standing on the sky** — a `SkyBand`'s own chip.
    *
@@ -193,7 +207,7 @@ const variants = {
    * object, and the label on it is the band's own ink, so it can never drift
    * from the sentence beside it.
    */
-  sky: "bg-white/18 text-(--sky-ink) backdrop-blur-sm not-disabled:hover:bg-white/28",
+  sky: "bg-white/18 text-(--sky-ink) backdrop-blur-sm not-disabled:not-has-[input:disabled]:hover:bg-white/28",
   /**
    * Shape and touch target only — no colour of its own.
    *
