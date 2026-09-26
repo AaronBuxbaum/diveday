@@ -132,24 +132,31 @@ describe("the codes ledger", () => {
   });
 
   /**
-   * **A line of facts breaks between facts, never inside one** (pixel-craft
-   * class 8; K-387). The facts arrived as one pre-joined string, so at 390 a
-   * line could end on any space: "no / end date", "12:00 PM / EDT". Each fact
-   * is set whole, and each dot is bound to the fact before it, so a line ends
-   * after a dot and never opens on one.
+   * **A line of facts breaks between facts, and inside one only when it
+   * must** (pixel-craft class 8; K-387). The facts arrived as one pre-joined
+   * string, so at 390 a line could end on any space: "no / end date",
+   * "12:00 PM / EDT". Each fact is one inline box carrying the dot after it,
+   * so a line ends after a dot and never opens on one. A box rather than
+   * `whitespace-nowrap`: beside a failed code's "Try again" and "Delete" the
+   * column is about 188px, narrower than "until Jul 20, 12:00 PM EDT", and a
+   * fact wider than the whole line then wraps inside its box instead of
+   * running under the buttons.
    */
-  it("sets each fact whole and breaks the line only after a dot", () => {
+  it("sets each fact as one box and breaks the line only after a dot", () => {
     renderLedger();
     const [row] = within(screen.getByRole("list", { name: "Live" })).getAllByRole("listitem");
     const line = factsLine(row);
     const facts = [...(line?.querySelectorAll(":scope > span") ?? [])];
     expect(facts.map((fact) => fact.textContent)).toEqual([
-      "Trips and courses",
-      "no start date",
-      "no end date",
+      "Trips and courses\u00a0·",
+      "no start date\u00a0·",
+      "no end date\u00a0·",
       "Redeemed 1 time",
     ]);
-    for (const fact of facts) expect(fact).toHaveClass("whitespace-nowrap");
+    for (const fact of facts) {
+      expect(fact).toHaveClass("inline-block");
+      expect(fact).not.toHaveClass("whitespace-nowrap");
+    }
     expect(line?.textContent).toBe(
       "Trips and courses\u00a0· no start date\u00a0· no end date\u00a0· Redeemed 1 time",
     );
@@ -177,12 +184,15 @@ describe("the trip deals ledger", () => {
     facts: ["Expires Fri, Aug 28, 6:00 PM", "Sent to 9 divers"],
   };
 
-  it("sets a deal's facts whole, as a code's are", () => {
+  it("sets a deal's facts as boxes, as a code's are", () => {
     render(<TripDealLedger labelledBy="trip-deals" rows={[DEAL]} />);
     const line = factsLine(screen.getByRole("listitem"));
     const facts = [...(line?.querySelectorAll(":scope > span") ?? [])];
-    expect(facts.map((fact) => fact.textContent)).toEqual([...DEAL.facts]);
-    for (const fact of facts) expect(fact).toHaveClass("whitespace-nowrap");
+    expect(facts.map((fact) => fact.textContent)).toEqual([
+      "Expires Fri, Aug 28, 6:00 PM\u00a0·",
+      "Sent to 9 divers",
+    ]);
+    for (const fact of facts) expect(fact).toHaveClass("inline-block");
     expect(line?.textContent).toBe("Expires Fri, Aug 28, 6:00 PM\u00a0· Sent to 9 divers");
   });
 });

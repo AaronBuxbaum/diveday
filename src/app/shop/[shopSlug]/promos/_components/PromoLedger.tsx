@@ -54,18 +54,23 @@ export type PromoCodeRow = {
 };
 
 /**
- * The facts' separator, glued to the fact it follows by a no-break space: a
- * line may end after a dot and never opens on one.
+ * The dot after a fact, glued to it by a no-break space and set inside the
+ * fact's own box, so a line may end after a dot and never opens on one.
  */
-const SEPARATOR = "\u00a0· ";
+const DOT = "\u00a0·";
 
 /**
- * **A row's quiet line of facts, broken only between facts** (pixel-craft
- * class 8; K-387). The facts arrived as one pre-joined string, so a phone
- * broke the line at any space: "no / end date", "until Jul 20, 12:00 PM /
- * EDT". Each fact is set whole, so a line breaks only after a dot. They are
- * DiveDay's own words (a scope, a window's edge, a count), and the longest,
- * a dated "until …", fits a 390px row beside its switch.
+ * **A row's quiet line of facts, broken between facts** (pixel-craft class 8;
+ * K-387). The facts arrived as one pre-joined string, so a phone broke the
+ * line at any space: "no / end date", "until Jul 20, 12:00 PM / EDT". Each
+ * fact is one `inline-block` carrying the dot after it, and a line breaks at
+ * the space between two boxes. A box is kept whole while it fits the line and
+ * wraps inside itself only when it is wider than the whole line — a dated
+ * "until …" is about 197px, and beside a failed code's "Try again" and
+ * "Delete" the column is about 188px (120 in Spanish) — where
+ * `whitespace-nowrap` ran it under the buttons. The dot lives inside the box
+ * because a browser may break on either side of an atomic inline, no-break
+ * space or not.
  */
 function FactsLine({ facts }: { facts: readonly string[] }) {
   return (
@@ -73,8 +78,11 @@ function FactsLine({ facts }: { facts: readonly string[] }) {
       {facts.map((fact, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: a row's facts are a fixed sequence, never reordered, and two may read alike
         <Fragment key={index}>
-          {index > 0 ? SEPARATOR : null}
-          <span className="whitespace-nowrap">{fact}</span>
+          {index > 0 ? " " : null}
+          <span className="inline-block">
+            {fact}
+            {index < facts.length - 1 ? DOT : null}
+          </span>
         </Fragment>
       ))}
     </p>
