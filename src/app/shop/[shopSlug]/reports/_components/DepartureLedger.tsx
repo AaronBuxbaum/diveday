@@ -61,6 +61,13 @@ export type DepartureRow = {
  * dropping them there costs the reader nothing and dropping the words would
  * cost them the fact. It is the opposite of the old table's answer, which hid
  * two whole columns and had to fold "70% of what?" back into the trip cell.
+ *
+ * **From `lg` the words start the column and the bar ends it** (K-285), so
+ * every row's bar stands at one x: after the words, the bar's start was the
+ * words' length, and the seats bars wandered 18px down a month (x 236, 245,
+ * 254…). The words are set whole (K-286): a column that could not hold
+ * "10 of 10 waivers" beside its bar wrapped the fact and stood that row 85px
+ * against the others' 65. See `METER_COLUMN` for the width.
  */
 function ShareMeter({
   share,
@@ -74,7 +81,7 @@ function ShareMeter({
   const attention = remainder === "attention" && share.ratio !== null && share.ratio < 1;
   return (
     <span
-      className={`flex min-w-0 max-w-full items-center gap-2 text-sm whitespace-normal tabular-nums ${
+      className={`flex min-w-0 max-w-full items-center gap-2 text-sm whitespace-nowrap tabular-nums lg:justify-between ${
         attention ? "font-medium text-warning-strong" : "text-muted"
       } ${className}`.trim()}
     >
@@ -90,6 +97,22 @@ function ShareMeter({
     </span>
   );
 }
+
+/**
+ * **A meter's column, from `lg`: the longest real fact, the gap and the bar.**
+ * "5 of 5 waivers" measures 89px at 1280, so "10 of 10 waivers" is about 107.
+ * The longest is Spanish, "10 de 10 exenciones", about 133px; with the 8px
+ * gap and the 96px bar that is 237px, past `w-56` and 3px inside `w-60`, too
+ * close to call, so `w-64`. One class for both meters and the empty slot that
+ * holds the waivers column open, so the columns line up down every row.
+ */
+const METER_COLUMN = "lg:w-64";
+
+/**
+ * The crew count's column, set whole: "3 tripulantes" is about 78px and two
+ * digits of it 87, so `w-20` wrapped it or ran it into the gap.
+ */
+const CREW_COLUMN = "lg:w-24";
 
 export function DepartureLedger({
   label,
@@ -131,12 +154,16 @@ export function DepartureLedger({
                 </span>
               </p>
               <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:mt-1 lg:flex-nowrap">
-                <ShareMeter share={row.seats} className="lg:w-52" />
-                <span className="shrink-0 text-muted tabular-nums lg:w-20">{row.crew}</span>
+                <ShareMeter share={row.seats} className={METER_COLUMN} />
+                <span
+                  className={`shrink-0 whitespace-nowrap text-muted tabular-nums ${CREW_COLUMN}`}
+                >
+                  {row.crew}
+                </span>
                 {row.waivers ? (
-                  <ShareMeter share={row.waivers} remainder="attention" className="lg:w-52" />
+                  <ShareMeter share={row.waivers} remainder="attention" className={METER_COLUMN} />
                 ) : (
-                  <span aria-hidden="true" className="hidden shrink-0 lg:block lg:w-52" />
+                  <span aria-hidden="true" className={`hidden shrink-0 lg:block ${METER_COLUMN}`} />
                 )}
               </div>
             </div>

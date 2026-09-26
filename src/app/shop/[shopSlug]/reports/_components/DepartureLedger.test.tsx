@@ -104,6 +104,47 @@ describe("the waiver meter", () => {
   });
 });
 
+/**
+ * **Every row's meters stand at one x, and their words never wrap** (pixel-
+ * craft classes 3 and 8; K-285, K-286). A meter was its words, then an 8px
+ * gap, then its 96px bar, so each bar started where its words ended: the seats
+ * bars at x 236, 245, 254… down twenty rows, the waivers bars at 565 to 584.
+ * And a 208px column (`lg:w-52`) with `whitespace-normal` could not hold
+ * "10 of 10 waivers" beside its bar, so those rows wrapped and stood 85px
+ * against the others' 65.
+ *
+ * From `lg` the words start the column and the bar ends it. The column is
+ * sized for the longest real fact, which is Spanish: "10 de 10 exenciones" is
+ * about 133px, and with the gap and the bar that is 237px, past `w-56`'s 224
+ * and too close to `w-60`'s 240 to trust (`METER_COLUMN`). "3 tripulantes" is
+ * likewise set whole, in a crew column wide enough for two digits of it.
+ */
+describe("the meters' columns", () => {
+  const COLUMN = "lg:w-64";
+
+  it("pin every bar to its column's end and set the words whole", () => {
+    renderLedger();
+    for (const fact of ["12 of 12 seats", "9 of 12 seats", "12 of 12 waivers", "7 of 9 waivers"]) {
+      const { words } = share(fact);
+      expect(words).toHaveClass("lg:justify-between", "whitespace-nowrap", COLUMN);
+      expect(words).not.toHaveClass("whitespace-normal");
+    }
+  });
+
+  it("keep a departure nobody booked on the same columns", () => {
+    const { container } = renderLedger([UNBOOKED]);
+    // The empty waivers slot holds the column open, at the column's width.
+    const slot = container.querySelector('span[aria-hidden="true"]');
+    expect(slot?.textContent).toBe("");
+    expect(slot).toHaveClass(COLUMN);
+  });
+
+  it("set the crew count whole, in a column two digits of it fit", () => {
+    renderLedger([SHORT]);
+    expect(screen.getByText("2 crew")).toHaveClass("whitespace-nowrap", "lg:w-24");
+  });
+});
+
 describe("the row", () => {
   it("carries its own nouns, because no column header names them", () => {
     renderLedger();
