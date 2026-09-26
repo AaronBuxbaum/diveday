@@ -35,6 +35,13 @@ import { setUpMailto } from "@/lib/platform-mail";
  * phones, making the demoted action the biggest target on first paint; and a
  * full-width button is the better wet-thumb target regardless.
  *
+ * The row carries the same `w-full sm:w-auto`, because a percentage width
+ * resolves against its container: with no width of its own the row took
+ * whatever its caller's alignment left it, so on a phone the same primary
+ * rendered full width in `/product`'s hero, 155px in its `items-center`
+ * mid-page card and 158px in its `items-start` closing band. Below `sm` the
+ * pair fills the column wherever it is placed.
+ *
  * The `<form>` is `display: contents` so its button is a direct child of the
  * flex row and the two doors size and wrap as one pair.
  */
@@ -51,7 +58,7 @@ export function FunnelCtas({
   const t = diverTranslator(locale);
   const width = "w-full sm:w-auto";
   return (
-    <div className={`flex flex-col gap-3 sm:flex-row${className ? ` ${className}` : ""}`}>
+    <div className={`flex ${width} flex-col gap-3 sm:flex-row${className ? ` ${className}` : ""}`}>
       <form action={enterDemoAction} className="contents">
         <FunnelTag source={source} />
         <SubmitButton
