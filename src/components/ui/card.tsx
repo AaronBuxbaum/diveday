@@ -164,11 +164,20 @@ export const TONE_PANEL_CLASS = "rounded-panel border p-4 shadow-bed sm:p-5";
 /**
  * **The `lg` twin**: the same panel on the inset of a card a person works
  * inside (`padding="lg"`), for a tone panel among such cards — Today's
- * stations, the public trip page's booking card. Hand-rolled, those panels
+ * stations, the public trip page's booked moment. Hand-rolled, those panels
  * wore that inset with no bed, or `p-5` with no step, which set their words
  * 4px inside the card's from `sm` up (pixel-craft classes 3 and 12).
  */
 export const TONE_PANEL_LG_CLASS = "rounded-panel border p-5 shadow-bed sm:p-6";
+
+/**
+ * **The overlay twin**: the default geometry with no bed, for a tone panel
+ * carried inside a menu or a sheet — the emergency reference in the
+ * manifest's phone menu. The bed is for a panel at rest; an overlay keeps its
+ * own lift (ADR 20260901-diveday-reimagined), and a bed inside one smeared its
+ * 26px blur across the popover's padding and, in dark mode, past its edge.
+ */
+export const TONE_PANEL_IN_OVERLAY_CLASS = "rounded-panel border p-4 sm:p-5";
 
 /**
  * **A note carved into a card** — the first of the "not a section card"

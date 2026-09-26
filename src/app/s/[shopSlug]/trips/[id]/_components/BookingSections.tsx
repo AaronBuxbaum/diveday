@@ -488,8 +488,9 @@ export function BookSpotSection({
   return (
     // The page's one neutral raised card: the booking form is what this page
     // exists for. Every supporting section sits flatter than this, sunken into
-    // the page; only a warning (conditions on hold, conditions changed) stands
-    // on the same bed, as this card in its tone (`TONE_PANEL_LG_CLASS`).
+    // the page. The two weather warnings stand on the bed as tone panels, but
+    // never beside this card: a conditions hold replaces it, and conditions
+    // changed is shown only to a diver already booked.
     <SectionCard
       id="book"
       // `padding="lg"` is `p-5 sm:p-6` — the exact spelling this card already

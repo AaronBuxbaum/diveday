@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { TONE_PANEL_CLASS, TONE_PANEL_IN_OVERLAY_CLASS } from "@/components/ui/card";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { EmergencyReferenceCard } from "./EmergencyReferenceCard";
 
@@ -78,6 +79,38 @@ describe("EmergencyReferenceCard", () => {
     const emptyClass = empty.container.querySelector("section")?.className;
     expect(emptyClass).toBe(full.container.querySelector("section")?.className);
     expect(emptyClass).toContain("border-danger/40");
+  });
+
+  /**
+   * **On the bed at rest, on its overlay's lift inside one.** At rest — the
+   * offline copy, the desktop footer — the card is a card in a tone and stands
+   * on the bed like one. Inside the manifest's phone menu a popover already
+   * lifts it: ADR 20260901-diveday-reimagined gives the bed to a panel at rest
+   * only, and there the bed's blur smeared past the popover's edge in dark
+   * mode. The tone, the words and the padding are the same either way.
+   */
+  it("stands on the bed at rest, and on its overlay's own lift inside one", () => {
+    const resting = render(
+      <EmergencyReferenceCard copy={copy} reference={EMPTY_EMERGENCY_REFERENCE} />,
+    );
+    const carried = render(
+      <EmergencyReferenceCard
+        copy={copy}
+        reference={EMPTY_EMERGENCY_REFERENCE}
+        headingId="emergency-reference-in-menu"
+        inOverlay
+      />,
+    );
+
+    const atRest = resting.container.querySelector("section");
+    expect(atRest).toHaveClass(...TONE_PANEL_CLASS.split(" "), "border-danger/40", "bg-danger/5");
+    const inMenu = carried.container.querySelector("section");
+    expect(inMenu).toHaveClass(
+      ...TONE_PANEL_IN_OVERLAY_CLASS.split(" "),
+      "border-danger/40",
+      "bg-danger/5",
+    );
+    expect(inMenu).not.toHaveClass("shadow-bed");
   });
 
   it("keeps the plan's own line breaks", () => {

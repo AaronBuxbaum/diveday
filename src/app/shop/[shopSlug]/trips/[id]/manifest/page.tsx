@@ -706,9 +706,11 @@ export default async function TripManifestPage({
             label={t("manifest.emergencyMenuLabel")}
             closeLabel={t("manifest.closeEmergencyReference")}
           >
+            {/* In the popover, which lifts it: no bed of its own. */}
             <EmergencyReferenceCard
               className="mt-0"
               headingId="emergency-reference-phone-heading"
+              inOverlay
               reference={shop.emergencyReference}
               copy={emergencyCopy}
             />

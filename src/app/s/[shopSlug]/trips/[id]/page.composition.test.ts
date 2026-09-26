@@ -78,6 +78,33 @@ describe("the trip page's rules", () => {
   });
 });
 
+/**
+ * **The two weather warnings, each on its neighbour's inset** (pixel-craft
+ * K-351 follow-up). Neither stands beside the booking card. A conditions hold
+ * replaces the form with plain type (`ConditionsHoldSection`), and the one box
+ * beside its banner is the minimum-seats note directly under it, 16px in: so
+ * the banner is the default tone panel, level with that note on a phone.
+ * Conditions changed needs a booking, and a booking renders the booked moment
+ * on the `lg` rung: so that panel is the `lg` twin.
+ */
+describe("the trip page's weather warnings", () => {
+  function panelAt(marker: string): string {
+    const at = positionOf(marker);
+    expect(at).toBeGreaterThan(-1);
+    return SOURCE.slice(at, SOURCE.indexOf("</", at));
+  }
+
+  it("sets the hold banner on the default tone panel, level with the note under it", () => {
+    const hold = panelAt("{trip.conditionsHold ? (");
+    expect(hold).toMatch(/\$\{TONE_PANEL_CLASS\}/);
+    expect(hold).not.toContain("TONE_PANEL_LG_CLASS");
+  });
+
+  it("sets the conditions-changed panel on the lg twin, as the booked moment is", () => {
+    expect(panelAt("conditionsChangedSinceBooking(")).toMatch(/\$\{TONE_PANEL_LG_CLASS\}/);
+  });
+});
+
 describe("the trip page's order", () => {
   it("bounds what runs above the form, and bounds its own list", () => {
     // The count is the bound. Adding a section means editing this literal and

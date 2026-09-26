@@ -10,7 +10,7 @@ import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
+import { sectionCardClass, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { SearchField } from "@/components/ui/form";
 import { groupLabelClass, LedgerRow } from "@/components/ui/ledger";
 import { QueryForm } from "@/components/ui/QueryForm";
@@ -543,7 +543,10 @@ function TemplatePreview({
       ) : null}
 
       {briefing.fitNote ? (
-        <section className="mt-6 rounded-panel bg-primary-tint p-5">
+        // A card in a tone (`TONE_PANEL_CLASS`), under the facts and gates
+        // cards: at a hand-rolled `p-5` with no bed, its words sat 4px inside
+        // theirs on a phone. It keeps its lagoon fill, with the tone's hairline.
+        <section className={`mt-6 ${TONE_PANEL_CLASS} border-primary/30 bg-primary-tint`}>
           <h2 className={`${SECTION_TITLE_CLASS} text-primary`}>
             {t("diveSites.catalog.preview_fit")}
           </h2>

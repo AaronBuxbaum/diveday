@@ -13,6 +13,7 @@ import {
   SectionCard,
   sectionCardClass,
   TONE_PANEL_CLASS,
+  TONE_PANEL_IN_OVERLAY_CLASS,
   TONE_PANEL_LG_CLASS,
 } from "./card";
 
@@ -226,7 +227,7 @@ describe("TONE_PANEL_CLASS", () => {
 
   /**
    * The `lg` twin, for a tone panel among cards a person works inside: Today's
-   * stations and the public trip page's booking card are `padding="lg"`, and
+   * stations and the public trip page's booked moment are the `lg` rung, and
    * the tone panels beside them hand-rolled that inset with no bed, or at
    * `p-5` with no step, 4px inside the card's words from `sm` up.
    */
@@ -241,15 +242,35 @@ describe("TONE_PANEL_CLASS", () => {
       /\b(border|bg|text)-(border|surface|warning|danger|success|primary)/,
     );
   });
+
+  /**
+   * The overlay twin, for a tone panel carried inside a menu or a sheet: the
+   * manifest's phone menu holds the emergency reference. ADR
+   * 20260901-diveday-reimagined gives the bed to a panel at rest only ("menus,
+   * sheets and toasts keep their own lift"); on a popover that already lifts
+   * it, the bed's 26px blur smeared across the popover's bottom padding and,
+   * in dark mode, past its edge.
+   */
+  it("has an overlay twin: the same geometry with no bed, and no colour", () => {
+    expect(TONE_PANEL_IN_OVERLAY_CLASS.split(" ").sort()).toEqual(
+      TONE_PANEL_CLASS.split(" ")
+        .filter((token) => token !== "shadow-bed")
+        .sort(),
+    );
+    expect(TONE_PANEL_IN_OVERLAY_CLASS).not.toMatch(/\bshadow-/);
+  });
 });
 
 /**
  * The tree half: a panel that carries a tone spells the panel radius through
- * `TONE_PANEL_CLASS` (or its `lg` twin), so a literal class string holding
- * `rounded-panel` beside a tone border is one hand-rolling it — at `p-5` with
- * no step, with no bed, the drift the roster's bands and a dozen others had.
- * The panels below are deliberately something else; each says why, and each
- * must still be here, so the list cannot outlive what it excuses.
+ * `TONE_PANEL_CLASS` (or a twin), so a literal class string holding
+ * `rounded-panel` beside a tone border or a tone fill is one hand-rolling it —
+ * at `p-5` with no step, with no bed, the drift the roster's bands and a dozen
+ * others had. The fill counts on its own: the dive-site catalog's fit note was
+ * a borderless tint at `p-5` under two cards, and a sweep that asked only for
+ * the border let it through. The panels below are deliberately something
+ * else; each says why, and each must still be here, so the list cannot
+ * outlive what it excuses.
  */
 describe("every tone panel wears the card's geometry", () => {
   const NOT_A_CARD_IN_A_TONE: Record<string, string> = {
@@ -276,7 +297,8 @@ describe("every tone panel wears the card's geometry", () => {
     const strings = readFileSync(file, "utf8").match(/"[^"\n]*"|`[^`]*`/g) ?? [];
     const hit = strings.some(
       (text) =>
-        /\brounded-panel\b/.test(text) && /\bborder-(danger|warning|success|primary)\//.test(text),
+        /\brounded-panel\b/.test(text) &&
+        /\b(border|bg)-(danger|warning|success|primary)(\/|-tint\b)/.test(text),
     );
     return hit ? [relative(SRC_DIR, file).split(/[\\/]/).join("/")] : [];
   });
@@ -309,8 +331,11 @@ describe("the inset note", () => {
    * departure's notes took the constant — the builder's pattern line, the
    * draft line, a roster note, a session row, the rental estimate — so the
    * majority spelling could drift one class at a time and nothing would say.
-   * A class string that spells the whole box on the sunken fill, in any
-   * order and at either 12px radius token, is a note that should name it.
+   * A class string that sets a box 12px in on the sunken fill, in any order,
+   * at either 12px radius token, at any vertical padding and with or without
+   * a hairline, is a note that should name it: Today's waiver result note
+   * drew a third spelling (a hairline, 10px down) that a sweep asking for
+   * `py-2` could not see.
    */
   it("is spelled through the constant, never retyped on the sunken fill", () => {
     function files(dir: string): string[] {
@@ -322,7 +347,9 @@ describe("the inset note", () => {
     }
     const box = (tokens: string[]) =>
       (tokens.includes("rounded-lg") || tokens.includes("rounded-inset")) &&
-      ["bg-surface-sunken", "px-3", "py-2", "text-sm"].every((token) => tokens.includes(token));
+      tokens.includes("bg-surface-sunken") &&
+      tokens.includes("px-3") &&
+      tokens.some((token) => token.startsWith("py-"));
     const offenders: string[] = [];
     for (const file of files(SRC_DIR)) {
       const text = readFileSync(file, "utf8");

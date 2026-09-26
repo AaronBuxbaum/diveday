@@ -18,6 +18,7 @@ import {
 import { Copyable } from "@/components/Copyable";
 import { SendHold } from "@/components/SendHold";
 import { buttonClass } from "@/components/ui/button";
+import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { fill, pluralForm } from "@/i18n/fill";
 
@@ -176,10 +177,10 @@ export function ResultNotice({ state, copy }: { state: WaiverSendState; copy: Wa
   if (nothing && !state.emptySelection) return null;
 
   return (
-    <div
-      role="status"
-      className="mt-3 rounded-inset border border-border bg-surface-sunken px-3 py-2.5 text-sm"
-    >
+    // A note carved into the station's card, so the one inset box on the
+    // sunken fill: it was a third spelling, 10px down behind a hairline the
+    // sunken fill already made redundant (pixel-craft class 12).
+    <div role="status" className={`mt-3 ${INSET_NOTE_BOX} bg-surface-sunken`}>
       {state.emptySelection ? (
         <p className="flex items-start gap-1.5 text-danger">
           <StatusMark variant="danger" />

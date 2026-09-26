@@ -8,7 +8,7 @@ import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { buttonClass } from "@/components/ui/button";
-import { TONE_PANEL_LG_CLASS } from "@/components/ui/card";
+import { TONE_PANEL_CLASS, TONE_PANEL_LG_CLASS } from "@/components/ui/card";
 import { ledgerRowRoomClass } from "@/components/ui/ledger";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { readKnownDiver } from "@/db/booking-handoff";
@@ -669,17 +669,17 @@ export default async function TripDetailPage({
         {/* The hero's two conveniences, inside the hero rather than as a row of
             buttons under it. */}
         {isEmbed ? null : <TripActions calendarUrl={publicTripCalendarPath(shopSlug, tripId)} />}
-        {/* The one warning panel this page ever wears — the same shape as the
-            conditions-changed panel below, on purpose. Two amber boxes with
-            different radii and border weights read as two different systems
-            warning about one weather call. Both are the booking card in a
-            tone (`TONE_PANEL_LG_CLASS`): at a hand-rolled `p-5` their words
-            sat 4px inside the card's from `sm` up. */}
+        {/* The one warning panel this page ever wears — the same radius,
+            border and tone as the conditions-changed panel below, on purpose.
+            Two amber boxes with different radii and border weights read as two
+            different systems warning about one weather call. Each is a card in
+            a tone on its neighbour's inset. A hold replaces the booking form
+            with plain type, so this banner never stands beside the form's
+            card: the box beside it is the minimum-seats note directly under
+            it, 16px in, so it takes the default tone panel (`TONE_PANEL_CLASS`),
+            level with that note on a phone. */}
         {trip.conditionsHold ? (
-          <div
-            role="status"
-            className={`mt-5 ${TONE_PANEL_LG_CLASS} border-warning/40 bg-warning/10`}
-          >
+          <div role="status" className={`mt-5 ${TONE_PANEL_CLASS} border-warning/40 bg-warning/10`}>
             <h2 className="font-semibold">{t("trip.conditionsHoldHeading")}</h2>
             <p className="mt-1 text-sm text-muted">{t("trip.conditionsHoldBody")}</p>
           </div>
@@ -810,6 +810,8 @@ export default async function TripDetailPage({
             trip.conditionsUpdatedAt,
             confirmed.booking.conditionsBriefedAt,
           ) ? (
+            // Only a booked diver sees this, and a booking renders the booked
+            // moment on the `lg` rung below, so this panel is its `lg` twin.
             <section
               className={`${TONE_PANEL_LG_CLASS} border-warning/40 bg-warning/10`}
               role="status"
