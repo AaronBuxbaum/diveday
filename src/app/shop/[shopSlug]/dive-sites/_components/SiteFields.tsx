@@ -2,7 +2,14 @@ import type { ReactNode } from "react";
 import { EditorSection } from "@/components/editor/EditorSection";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
-import { ChoiceRow, controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoiceRow,
+  controlClass,
+  Field,
+  FieldGrid,
+  textareaClassFor,
+} from "@/components/ui/form";
 import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
 import { REQUIRABLE_CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -32,6 +39,9 @@ import {
   type SiteFormSection,
   siteFormSectionLabels,
 } from "./site-form-sections";
+
+/** The specialty boxes' grid: two across on a phone, four from `sm`. */
+const SPECIALTY_GRID = "grid grid-cols-2 gap-3 sm:grid-cols-4";
 
 /**
  * The subset of a stored dive site the form needs to prefill. `undefined`
@@ -212,6 +222,32 @@ export function SiteFields({
       ) : null}
     </>
   ) : undefined;
+
+  // What a site asks of a diver beyond a level: each specialty, then nitrox.
+  const specialtyBoxes = (
+    <>
+      {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
+        <ChoiceRow
+          key={value}
+          name="specialty"
+          type="checkbox"
+          value={value}
+          defaultChecked={values?.requiredSpecialties.includes(value as DiveSpecialty) ?? false}
+          className="text-sm font-medium"
+        >
+          {t(key)}
+        </ChoiceRow>
+      ))}
+      <ChoiceRow
+        name="requiresNitrox"
+        type="checkbox"
+        defaultChecked={values?.requiresNitrox ?? false}
+        className="text-sm font-medium"
+      >
+        {t("diveSites.form.nitroxCheckbox")}
+      </ChoiceRow>
+    </>
+  );
 
   const sections: Record<SiteFormSection, SectionParts> = {
     about: {
@@ -766,35 +802,20 @@ export function SiteFields({
               </select>
             </Field>
           </FieldGrid>
-          <div>
-            {requiredSpecialtiesLabel ? (
-              <p className="text-sm font-medium">{requiredSpecialtiesLabel}</p>
-            ) : null}
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
-                <ChoiceRow
-                  key={value}
-                  name="specialty"
-                  type="checkbox"
-                  value={value}
-                  defaultChecked={
-                    values?.requiredSpecialties.includes(value as DiveSpecialty) ?? false
-                  }
-                  className="text-sm font-medium"
-                >
-                  {t(key)}
-                </ChoiceRow>
-              ))}
-              <ChoiceRow
-                name="requiresNitrox"
-                type="checkbox"
-                defaultChecked={values?.requiresNitrox ?? false}
-                className="text-sm font-medium"
-              >
-                {t("diveSites.form.nitroxCheckbox")}
-              </ChoiceRow>
-            </div>
-          </div>
+          {/* Captioned, the boxes are one group under a legend at a field
+              caption's distance (`ChoiceFieldset`); the new form passes no
+              caption and they start at the section's own gap. A bare
+              paragraph over a grid pushed `mt-3` down read as floating
+              between the select above and its own boxes, and with no caption
+              the `mt-3` stood them 32px under the select where the section's
+              fields stand 20px apart (K-212). */}
+          {requiredSpecialtiesLabel ? (
+            <ChoiceFieldset legend={requiredSpecialtiesLabel} bodyClassName={SPECIALTY_GRID}>
+              {specialtyBoxes}
+            </ChoiceFieldset>
+          ) : (
+            <div className={SPECIALTY_GRID}>{specialtyBoxes}</div>
+          )}
         </>
       ),
     },
