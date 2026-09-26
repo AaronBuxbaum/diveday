@@ -115,6 +115,14 @@ export function MissingDiversGrid({
         <Badge tone={tone === "urgent" ? "danger" : "neutral"}>{copy.statusLabel}</Badge>
       </div>
       <p className="mt-1 text-sm text-muted">{copy.tapHint}</p>
+      {/* **One pitch, one edge.** Every tile is a fixed 80px (`w-20`), the
+          width the blocked chip needs, so every face sits 96px from the next
+          and the columns hold when the row wraps. Tiles as wide as their words
+          put the faces 16 to 39px apart in one row: the chip and the Spanish
+          "Equipo propio" widened theirs, and a plain tile was its 56px face.
+          Each tile's face and words start at its start edge, so the first face
+          sits on the heading's edge rather than centred 12px inside it
+          (docs/design/pixel-craft.md, classes 3 and 4). */}
       <div className="mt-4 flex flex-wrap justify-start gap-4">
         {divers.map((diver) => {
           const colorClass = getAvatarColor(diver.fullName);
@@ -147,7 +155,7 @@ export function MissingDiversGrid({
                   element.classList.remove("ring-4", "ring-primary/50", "ring-offset-2");
                 }, 2000);
               }}
-              className="group flex max-w-20 cursor-pointer flex-col items-center text-center transition-transform active:scale-95"
+              className="group flex w-20 cursor-pointer flex-col items-start text-start transition-transform active:scale-95"
             >
               <div
                 className={`flex h-14 w-14 items-center justify-center rounded-full border-2 text-lg font-black ${colorClass} transition-transform group-hover:scale-105`}
@@ -192,9 +200,12 @@ export function MissingDiversGrid({
                   guardó" wraps to the same two or three lines, because the
                   longest token in it — `Bloqueado`, ~57px at 12px semibold —
                   still fits the chip's 60px content box (80px tile less
-                  `px-2.5` either side). So the tile is *not* widened: that
-                  would cost every tile in every language to rescue one chip,
-                  and the chip is doing what it was built to do. The es-ES
+                  `px-2.5` either side). So the tile is *not* widened past
+                  80px: that would cost every tile in every language to rescue
+                  one chip, and the chip is doing what it was built to do.
+                  (Every tile is that 80px now, so the faces keep one pitch;
+                  see the grid above.) Its own lines stay centred in the pill
+                  while the tile's words start at its edge. The es-ES
                   string is not shortened either — the qualifier is the whole
                   reason it exists, and `es-ES/README.md` owns those words.
                   `e2e/visual.spec.ts` now photographs this grid in Spanish at
@@ -205,7 +216,7 @@ export function MissingDiversGrid({
                   tone="danger"
                   size="sm"
                   toneMark={false}
-                  className="mt-0.5 max-w-full text-balance leading-tight font-semibold"
+                  className="mt-0.5 max-w-full text-center text-balance leading-tight font-semibold"
                 >
                   {copy.blockedLabel}
                 </Badge>

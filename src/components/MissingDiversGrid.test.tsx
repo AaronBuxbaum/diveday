@@ -194,6 +194,60 @@ describe("what the grid shows", () => {
   });
 });
 
+/**
+ * The faces sit on one pitch and start on the heading's edge
+ * (docs/design/pixel-craft.md, classes 3 and 4).
+ *
+ * The tiles were content-wide up to `max-w-20`: a plain tile was its 56px
+ * face, and a tile whose words ran longer — the blocked diver's chip, or the
+ * Spanish "Equipo propio" — grew to 80. With `gap-4` between them the faces
+ * sat 28, 27, 16 and 38px apart in one row, and the blocked diver, first in
+ * the roster, stood apart from everyone else with their face centred 12px
+ * inside the heading above. jsdom lays nothing out, so this pins the two
+ * classes the geometry follows from: one fixed width for every tile, and the
+ * tile's contents starting at its start edge.
+ */
+describe("where the faces sit", () => {
+  const MIXED = [
+    { ...DIVERS[0], blocked: true },
+    DIVERS[1],
+    {
+      bookingId: "booking-3",
+      fullName: "Lena Fischer",
+      rentsKit: false,
+      rowId: rowIdOf("booking-3"),
+    },
+  ];
+  const LONG_COPY = { ...COPY, ownKitLabel: "Equipo propio", blockedLabel: "Blocked when saved" };
+
+  it("gives every tile one fixed width, blocked or not, so every face sits on one pitch", () => {
+    render(<MissingDiversGrid divers={MIXED} copy={LONG_COPY} />);
+    const tiles = screen.getAllByRole("button");
+    expect(tiles).toHaveLength(3);
+    for (const tile of tiles) {
+      expect(tile).toHaveClass("w-20");
+      // A cap is what let a tile's width follow its longest word.
+      expect(tile.className).not.toMatch(/(^|\s)max-w-/);
+    }
+  });
+
+  it("starts each face and its words on the tile's start edge, the heading's edge for the first", () => {
+    render(<MissingDiversGrid divers={MIXED} copy={LONG_COPY} />);
+    for (const tile of screen.getAllByRole("button")) {
+      expect(tile).toHaveClass("items-start", "text-start");
+      expect(tile).not.toHaveClass("items-center");
+      expect(tile).not.toHaveClass("text-center");
+    }
+  });
+
+  it("keeps the blocked chip's own lines centred inside its pill", () => {
+    // The tile's words start at its edge; a wrapped chip's lines are the chip's
+    // business, and a pill reads as one when its lines sit on its middle.
+    render(<MissingDiversGrid divers={MIXED} copy={LONG_COPY} />);
+    expect(screen.getByText("Blocked when saved")).toHaveClass("text-center");
+  });
+});
+
 describe("tapping a diver jumps to their manifest row", () => {
   it("scrolls that diver's row into view and flashes it", async () => {
     const user = userEvent.setup();

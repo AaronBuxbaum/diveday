@@ -7909,7 +7909,7 @@ for (const scheme of ["light", "dark"] as const) {
          * the offline page's qualified readiness word — "Blocked when saved",
          * which was measured and accepted at two wrapped lines — and the
          * Spanish is "Bloqueado cuando se guardó", four words and none of them
-         * short, in a tile capped at `max-w-20`. The chip **wraps** rather than
+         * short, in a tile a fixed 80px wide (`w-20`). The chip **wraps** rather than
          * truncating, on purpose (`MissingDiversGrid.tsx`: a clipped
          * "Blocked wh…" says less than the bare word it replaced), so the cost
          * lands as tile height inside a `flex-wrap` row.
