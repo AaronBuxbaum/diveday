@@ -116,14 +116,28 @@ export function MissingDiversGrid({
       </div>
       <p className="mt-1 text-sm text-muted">{copy.tapHint}</p>
       {/* **One pitch, one edge.** Every tile is a fixed 80px (`w-20`), the
-          width the blocked chip needs, so every face sits 96px from the next
+          width the blocked chip needs, so every face sits 92px from the next
           and the columns hold when the row wraps. Tiles as wide as their words
           put the faces 16 to 39px apart in one row: the chip and the Spanish
           "Equipo propio" widened theirs, and a plain tile was its 56px face.
           Each tile's face and words start at its start edge, so the first face
           sits on the heading's edge rather than centred 12px inside it
-          (docs/design/pixel-craft.md, classes 3 and 4). */}
-      <div className="mt-4 flex flex-wrap justify-start gap-4">
+          (docs/design/pixel-craft.md, classes 3 and 4).
+
+          **The density it costs, and the part bought back** (K-208). The
+          content-wide tiles fitted five to a row on a 390px phone's 358px
+          column wherever no tile widened, which is the after-dive grid in
+          English: `blocked` is gated to the dock by the caller, so that grid
+          never shows the chip, never had the uneven pitch, and pays the most
+          for the fix. With `gap-4` an 80px tile fits three to a row; the 12px
+          column gap (`gap-x-3`) fits four (4 × 80 + 3 × 12 = 356) on the same
+          one pitch, and three at 375 and 360. So nine divers take three rows
+          at 390 where they took two, and fifteen take four where they took
+          three: about 420px of faces, inside one phone screen. A narrower gap
+          buys nothing: 8px still fits only three at 375 (4 × 80 + 3 × 8 = 344
+          against 343). The rows keep `gap-y-4`, a full step between one tile's
+          last line and the face below it. */}
+      <div className="mt-4 flex flex-wrap justify-start gap-x-3 gap-y-4">
         {divers.map((diver) => {
           const colorClass = getAvatarColor(diver.fullName);
           return (

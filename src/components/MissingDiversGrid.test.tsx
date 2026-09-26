@@ -240,6 +240,19 @@ describe("where the faces sit", () => {
     }
   });
 
+  it("puts four tiles in a row at 390, with 12px between columns and 16px between rows", () => {
+    // The density the fixed tile costs, bought back where it is free: 80px
+    // tiles with `gap-4` fit three to a 390px phone's 358px column, where the
+    // content-wide tiles fitted five, so the after-dive grid (which never
+    // shows a chip) paid for a defect it never had. A 12px column gap fits
+    // four (4 × 80 + 3 × 12 = 356) on the same single pitch; the rows keep
+    // 16px between one tile's last line and the next face.
+    render(<MissingDiversGrid divers={MIXED} copy={LONG_COPY} />);
+    const row = screen.getAllByRole("button")[0].parentElement;
+    expect(row).toHaveClass("flex", "flex-wrap", "gap-x-3", "gap-y-4");
+    expect(row).not.toHaveClass("gap-4");
+  });
+
   it("keeps the blocked chip's own lines centred inside its pill", () => {
     // The tile's words start at its edge; a wrapped chip's lines are the chip's
     // business, and a pill reads as one when its lines sit on its middle.
