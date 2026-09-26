@@ -73,17 +73,47 @@ describe("the guide's back links", () => {
   });
 
   it("gives the closing band's way back a 44px target", () => {
-    render(
-      <ClosingCta
-        locale="en-US"
-        source="switching-eve-close"
-        title="Ready?"
-        body="Walk the demo first."
-        backLabel="Other switching guides →"
-      />,
-    );
+    renderClosing();
     expect(screen.getByRole("link", { name: "Other switching guides →" })).toHaveClass(
       ...TAP_TARGET,
+    );
+  });
+});
+
+function renderClosing() {
+  return render(
+    <ClosingCta
+      locale="en-US"
+      source="switching-eve-close"
+      title="Ready?"
+      body="Walk the demo first."
+      backLabel="Other switching guides →"
+    />,
+  );
+}
+
+/**
+ * **One rule at every band join, the concierge's included** (K-200).
+ *
+ * The closing band always follows `SwitchingConcierge`, and both were bare
+ * `py-16 lg:py-20` boxes, so the two paddings stacked into 164px of nothing
+ * under the concierge panel (135 at 390) where every other join on the page is
+ * 80 | rule | 80. The band is now full-bleed and ruled on top, the shape
+ * `SourcesFootnote` and `MovePath` have.
+ */
+describe("the closing band", () => {
+  it("is a full-bleed section ruled on top, holding the column's box", () => {
+    const { container } = renderClosing();
+    const band = container.firstElementChild;
+    expect(band?.tagName).toBe("SECTION");
+    expect(band).toHaveClass("border-t", "border-border");
+    expect(band?.className).not.toMatch(/max-w-|(?:^|\s)p[xy]?-/);
+    expect(band?.firstElementChild).toHaveClass(
+      "mx-auto",
+      "max-w-4xl",
+      "px-6",
+      "py-16",
+      "lg:py-20",
     );
   });
 });

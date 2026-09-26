@@ -440,6 +440,12 @@ export function MidCta({ locale, source }: { locale: DiverLocale; source: Funnel
  * `max-w-4xl` like every other section — it used to be `max-w-7xl`, so the
  * last thing on the page was also the one thing that started at a different
  * left edge from everything above it.
+ *
+ * **Full-bleed and ruled on top**, the shape `MovePath` and `SourcesFootnote`
+ * have. It always follows `SwitchingConcierge`, another `py-16 lg:py-20` box,
+ * and with no rule between them the two paddings stacked into 164px of nothing
+ * under the concierge panel (135 at 390) where every other join on the page is
+ * 80 | rule | 80 (K-200).
  */
 export function ClosingCta({
   locale,
@@ -455,25 +461,28 @@ export function ClosingCta({
   backLabel: string;
 }) {
   return (
-    // `sm:shrink-0` on the action column: at `max-w-4xl` the prose was taking
-    // the width it wanted and squeezing the buttons until "Try the live demo"
-    // and the second door both broke across two lines mid-phrase. `w-full`
-    // below `sm`: the band is `items-start` there, so without it the column
-    // shrank to its widest door and the pair's full-width doors with it (169px
-    // at 390, where every other primary on the page spans the column).
-    <section className="mx-auto flex max-w-4xl flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center lg:py-20">
-      <div className="max-w-md">
-        <h2 className={`${LEAD_TITLE_CLASS} text-balance`}>{title}</h2>
-        <p className="mt-2 max-w-xl text-muted">{body}</p>
-      </div>
-      <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:shrink-0 sm:items-end">
-        <FunnelCtas locale={locale} source={source} />
-        <Link
-          href="/switching"
-          className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}
-        >
-          {backLabel}
-        </Link>
+    <section className="border-t border-border">
+      {/* `sm:shrink-0` on the action column: at `max-w-4xl` the prose was
+          taking the width it wanted and squeezing the buttons until "Try the
+          live demo" and the second door both broke across two lines
+          mid-phrase. `w-full` below `sm`: the band is `items-start` there, so
+          without it the column shrank to its widest door and the pair's
+          full-width doors with it (169px at 390, where every other primary on
+          the page spans the column). */}
+      <div className="mx-auto flex max-w-4xl flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center lg:py-20">
+        <div className="max-w-md">
+          <h2 className={`${LEAD_TITLE_CLASS} text-balance`}>{title}</h2>
+          <p className="mt-2 max-w-xl text-muted">{body}</p>
+        </div>
+        <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:shrink-0 sm:items-end">
+          <FunnelCtas locale={locale} source={source} />
+          <Link
+            href="/switching"
+            className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}
+          >
+            {backLabel}
+          </Link>
+        </div>
       </div>
     </section>
   );
