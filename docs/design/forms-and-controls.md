@@ -995,7 +995,9 @@ A date is entered through **`DateField`** in `src/components/ui/form.tsx`, never
 
 So are a month, a time and a date-and-time: `type="month" | "time" | "datetime-local"` (a time draws a clock). Spelled bare they kept the platform's solid black indicator beside a date box's muted outline, and iOS paints nothing in an empty one; `form.test.tsx` refuses a bare temporal `<input>` anywhere else. `size="md"` stands one on a line with `md` buttons, as `controlClassFor("md")` does.
 
-An empty one looks empty. No temporal box matches `::placeholder`, so its `mm/dd/yyyy` mask drew in the ink of a filled answer beside muted placeholders; the input `DateField` renders is `DateInput` (`src/components/ui/DateInput.tsx`), a client leaf that marks itself `data-empty` while it holds no value, and `globals.css` paints `input[data-empty]::-webkit-datetime-edit` in the placeholder's colour.
+An empty one looks empty. No temporal box matches `::placeholder`, so its `mm/dd/yyyy` mask drew in the ink of a filled answer beside muted placeholders; the input `DateField` renders is `DateInput` (`src/components/ui/DateInput.tsx`), a client leaf that marks itself `data-empty` while it holds no value, and `globals.css` paints `input[data-empty]:not(:focus)::-webkit-datetime-edit` in the placeholder's colour. Not while it has focus: the value stays "" until every segment is filled, so the digits a person has typed would draw grey; and a box left half-typed (`validity.badInput`) stops saying it is empty.
+
+A box the browser does not have gets no glyph. Safari and Firefox on a desk draw `type="month"` as a text box, which reads its type back as `text`; `DateInput` marks it `data-fallback` and the calendar glyph and its inset go, since there is no picker for it to promise.
 
 ```tsx
 import { DateField, Field } from "@/components/ui/form";

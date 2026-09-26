@@ -265,11 +265,13 @@ export function DateField({
       <DateInput
         {...input}
         type={type}
-        className={`${controlClassFor(size)} pe-9 [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`.trim()}
+        className={`peer ${controlClassFor(size)} pe-9 data-[fallback]:pe-3 [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`.trim()}
       />
       {/* Inert and aria-hidden, like SearchField's magnifier: the input's own
           accessible name says what it is, and a tap here must reach the
-          control rather than the decoration. */}
+          control rather than the decoration. Gone, with its inset, where the
+          browser drew a text box instead (`data-fallback`): a glyph over a
+          month typed as "2026-09" would promise a picker that never opens. */}
       <svg
         aria-hidden="true"
         viewBox="0 0 24 24"
@@ -278,7 +280,7 @@ export function DateField({
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+        className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted peer-data-[fallback]:hidden"
       >
         {type === "time" ? (
           <>

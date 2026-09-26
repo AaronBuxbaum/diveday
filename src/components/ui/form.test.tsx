@@ -277,6 +277,33 @@ describe("DateField", () => {
     expect(container.querySelector("input")).toHaveAttribute("type", "date");
   });
 
+  /**
+   * **No glyph where there is no picker.** Safari and Firefox on a desk have
+   * no month control: `type="month"` falls back to a text box reading
+   * "2026-09", and a calendar glyph over it promises a picker that never
+   * opens (K-54 review). A browser that downgrades the type reads it back as
+   * `text`; the box says so, and the glyph and its inset go.
+   */
+  it("drops the glyph where the browser has no such control", () => {
+    const real = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "type");
+    const spy = vi.spyOn(HTMLInputElement.prototype, "type", "get").mockImplementation(function (
+      this: HTMLInputElement,
+    ) {
+      return this.getAttribute("type") === "month" ? "text" : real?.get?.call(this);
+    });
+    try {
+      const { container } = render(<DateField type="month" name="month" aria-label="Month" />);
+      const box = screen.getByLabelText("Month");
+      expect(box).toHaveAttribute("data-fallback");
+      expect(box).toHaveClass("peer", "data-[fallback]:pe-3");
+      expect(container.querySelector("svg")).toHaveClass("peer-data-[fallback]:hidden");
+    } finally {
+      spy.mockRestore();
+    }
+    render(<DateField type="month" name="month" aria-label="A month box that exists" />);
+    expect(screen.getByLabelText("A month box that exists")).not.toHaveAttribute("data-fallback");
+  });
+
   it("stands at md's 48px beside an md button, and at the field's 44px anywhere else", () => {
     const { container } = render(
       <>
@@ -305,6 +332,25 @@ describe("DateField", () => {
     fireEvent.input(box, { target: { value: "2026-10-01" } });
     expect(box).not.toHaveAttribute("data-empty");
     fireEvent.input(box, { target: { value: "" } });
+    expect(box).toHaveAttribute("data-empty");
+  });
+
+  /**
+   * **A half-typed date is not an empty one.** A temporal box's value stays
+   * "" until every segment is filled, so "09/dd/yyyy" still read as empty and
+   * the typed "09" drew in the placeholder's grey (K-69 review). The mask
+   * takes the ink while the box has focus (the stylesheet's `:not(:focus)`),
+   * and a box left half-typed — `validity.badInput` — stops saying it is
+   * empty.
+   */
+  it("stops calling a half-typed box empty once the person leaves it", () => {
+    render(<DateField name="on" aria-label="On" />);
+    const box = screen.getByLabelText("On");
+    Object.defineProperty(box, "validity", { configurable: true, value: { badInput: true } });
+    fireEvent.blur(box);
+    expect(box).not.toHaveAttribute("data-empty");
+    Object.defineProperty(box, "validity", { configurable: true, value: { badInput: false } });
+    fireEvent.blur(box);
     expect(box).toHaveAttribute("data-empty");
   });
 
@@ -356,8 +402,11 @@ describe("DateField", () => {
       /input::placeholder,\s*textarea::placeholder\s*\{\s*color:\s*([^;]+);/,
     )?.[1];
     expect(placeholder).toBeDefined();
-    const mask = css.match(/input\[data-empty\]::-webkit-datetime-edit\s*\{\s*color:\s*([^;]+);/);
-    expect(mask, "input[data-empty]::-webkit-datetime-edit { color }").not.toBeNull();
+    // Not while the box has focus: the person's own digits take the ink.
+    const mask = css.match(
+      /input\[data-empty\]:not\(:focus\)::-webkit-datetime-edit\s*\{\s*color:\s*([^;]+);/,
+    );
+    expect(mask, "input[data-empty]:not(:focus)::-webkit-datetime-edit { color }").not.toBeNull();
     expect(mask?.[1]).toBe(placeholder);
   });
 

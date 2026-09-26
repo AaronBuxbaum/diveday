@@ -740,8 +740,12 @@ textarea::placeholder {
  * schedule-off-season). `DateInput` marks the box `data-empty` while it holds
  * no value. A rule of its own, not a third selector above: a browser that
  * does not know the pseudo-element drops the whole rule it sits in.
+ *
+ * Not while the box has focus. Its value stays "" until every segment is
+ * filled, so a person typing "09" into an empty box would see their own
+ * digits in the placeholder's grey and read it as not taking the input.
  */
-input[data-empty]::-webkit-datetime-edit {
+input[data-empty]:not(:focus)::-webkit-datetime-edit {
   color: color-mix(in srgb, var(--muted) 78%, transparent);
 }
 
