@@ -111,7 +111,15 @@ export function ShopIdentityMenu({
         // The stable hook the e2e helpers open the menu by — the accessible
         // name is the shop's own (variable) name, deliberately.
         data-identity-menu
-        className="flex min-h-11 min-w-0 shrink cursor-pointer items-center gap-2 font-semibold tracking-tight"
+        // **Drawn like the bar's other controls**: `rounded-lg`, so the global
+        // ring follows a 12px corner rather than a square one, and a hover
+        // fill with 8px of room round the mark and the name. The room is
+        // handed back at the start only (`-ms-2`), so the mark stays on the
+        // bar's gutter; at the end it is what the fold needs. When the name
+        // and caret fold to nothing on scroll, the page's title lands where
+        // this box ends — 8px past the mark, where the name's first letter
+        // sat — and `min-w-11` keeps the folded door a 44px target.
+        className="-ms-2 flex min-h-11 min-w-11 shrink cursor-pointer items-center gap-2 rounded-lg px-2 font-semibold tracking-tight transition-colors hover:bg-surface-sunken"
       >
         {logoUrl ? (
           <span className="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-surface transition-transform hover:rotate-6">
