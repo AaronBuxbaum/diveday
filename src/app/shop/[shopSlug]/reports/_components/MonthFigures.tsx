@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 
@@ -182,13 +183,21 @@ export function MonthFigures({
                   ) : null}
                 </div>
               ) : null}
+              {/* **A quiet link still clears 44px.** The line box keeps the
+                  `text-sm` line's 20px (`h-5`) and the link takes the shared
+                  tap-target floor, centred on it, so its target overhangs the
+                  line 12px each side, up into the gap above it and down into
+                  the cell's `py-5`, without moving a line on the page. As an `inline-block` it was a 78x20 target
+                  on a phone (K-288). */}
               {figure.link ? (
-                <Link
-                  href={figure.link.href}
-                  className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
-                >
-                  {figure.link.label}
-                </Link>
+                <span className="mt-2 flex h-5 items-center">
+                  <Link
+                    href={figure.link.href}
+                    className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}
+                  >
+                    {figure.link.label}
+                  </Link>
+                </span>
               ) : null}
             </dd>
           </div>

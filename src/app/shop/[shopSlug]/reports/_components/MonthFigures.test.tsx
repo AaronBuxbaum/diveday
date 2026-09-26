@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { type MonthFigure, MonthFigures } from "./MonthFigures";
 
@@ -111,6 +112,25 @@ describe("the lines under a figure", () => {
     renderFigures([{ key: "alone", label: "Seats", value: "214" }]);
     const value = screen.getByText("214");
     expect(value.parentElement?.children).toHaveLength(1);
+  });
+});
+
+describe("the figure's link", () => {
+  it("is a 44px target in a 20px line, so the target grows without moving the line", () => {
+    // "View orders" was an `inline-block` 14px link, a 78x20 target on a
+    // phone (K-288). The line box keeps the text-sm line's 20px and the link
+    // takes the shared tap-target floor, overhanging it evenly.
+    renderFigures([
+      {
+        ...FIGURES[0],
+        link: { href: "/shop/blue-mantis/orders", label: "View orders" },
+      },
+      ...FIGURES.slice(1),
+    ]);
+    const link = screen.getByRole("link", { name: "View orders" });
+    expect(link.className).toContain(tapTargetLinkClass);
+    expect(link).not.toHaveClass("mt-2");
+    expect(link.parentElement).toHaveClass("mt-2", "flex", "h-5", "items-center");
   });
 });
 
