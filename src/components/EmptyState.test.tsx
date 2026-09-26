@@ -104,6 +104,20 @@ describe("EmptyState", () => {
     expect(container.firstElementChild).toHaveClass("bg-surface", "shadow-bed", "border-dashed");
   });
 
+  /**
+   * The bubbles fill their box (see the glyph's own test), so the box is
+   * sized to the ink: 28px holds the same 24px of bubbles the old 40px box
+   * drew, with 2px above them instead of 8px. That is what keeps the panel's
+   * top air (border to bubbles) level with its bottom air (button to border)
+   * rather than 7px heavier (pixel-craft K-70).
+   */
+  it("draws the bubbles in a box sized to their ink", () => {
+    const { container } = render(<EmptyState title="Nothing yet" />);
+    const glyph = container.querySelector("svg");
+    expect(glyph).toHaveClass("size-7");
+    expect(glyph).not.toHaveClass("size-10");
+  });
+
   it("carries a body and an action when there is something to say and somewhere to go", () => {
     render(
       <EmptyState

@@ -72,7 +72,9 @@ export function EmptyState({
         nested ? "bg-transparent" : "bg-surface shadow-bed"
       } p-10 text-center${className ? ` ${className}` : ""}`}
     >
-      {icon ? <DiveDayIcon name="empty" className="mx-auto mb-3 size-10 text-muted" /> : null}
+      {/* 28px: the bubbles fill their box, so this is 24px of ink with 2px of
+          box above it, and the panel's top air matches its bottom air. */}
+      {icon ? <DiveDayIcon name="empty" className="mx-auto mb-3 size-7 text-muted" /> : null}
       <Heading id={titleId} className="font-medium">
         {title}
       </Heading>

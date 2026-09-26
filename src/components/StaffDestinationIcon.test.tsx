@@ -43,6 +43,35 @@ describe("the destination icons", () => {
 });
 
 /**
+ * **The empty-state bubbles fill their box.** They reached only y 4.6–18.8 of
+ * the 24-unit square, so `EmptyState` drew 7–8px of blank box above the ink
+ * and its panel read bottom-heavy: 47px from the top border to the bubbles
+ * against 40px from its button to the bottom border (pixel-craft K-70). The
+ * glyph now spans its box and sits on its centre, so a caller sizes it by the
+ * ink it wants.
+ */
+describe("the empty glyph", () => {
+  it("spans its box's height and sits on its centre", () => {
+    const { container } = render(<DiveDayIcon name="empty" />);
+    const svg = container.querySelector("svg");
+    const half = Number(svg?.getAttribute("stroke-width")) / 2;
+    const bubbles = circles(svg);
+    const top = Math.min(...bubbles.map(({ cy, r }) => cy - r - half));
+    const bottom = Math.max(...bubbles.map(({ cy, r }) => cy + r + half));
+    const left = Math.min(...bubbles.map(({ cx, r }) => cx - r - half));
+    const right = Math.max(...bubbles.map(({ cx, r }) => cx + r + half));
+
+    expect(bubbles).toHaveLength(3);
+    expect(top).toBeLessThanOrEqual(2);
+    expect(bottom).toBeGreaterThanOrEqual(22);
+    expect(top).toBeGreaterThanOrEqual(1);
+    expect(bottom).toBeLessThanOrEqual(23);
+    expect(Math.abs((top + bottom) / 2 - 12)).toBeLessThanOrEqual(0.1);
+    expect(Math.abs((left + right) / 2 - 12)).toBeLessThanOrEqual(0.1);
+  });
+});
+
+/**
  * **The row menu's "···" reads as three dots at the 16px it is drawn at.**
  * At `r=1` in the 24-unit box they rendered as 1.3px specks, lighter than the
  * muted ink they are painted in (pixel-craft K-89). A 2-unit radius is a

@@ -985,7 +985,7 @@ export function OfflineManifestView() {
               className="mx-auto grid size-12 place-items-center rounded-inset bg-surface text-2xl"
               aria-hidden="true"
             >
-              <DiveDayIcon name="empty" className="size-7 text-primary" />
+              <DiveDayIcon name="empty" className="size-5 text-primary" />
             </div>
             <p className="mx-auto mt-4 max-w-md text-muted">
               {t("shared.offlineManifest.list.emptyHint")}
@@ -1036,7 +1036,7 @@ export function OfflineManifestView() {
             className="mx-auto grid size-12 place-items-center rounded-inset bg-surface text-2xl"
             aria-hidden="true"
           >
-            <DiveDayIcon name="empty" className="size-7 text-primary" />
+            <DiveDayIcon name="empty" className="size-5 text-primary" />
           </div>
           <p className="mx-auto mt-4 max-w-md text-muted">
             {removedForOtherShop

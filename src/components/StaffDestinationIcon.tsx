@@ -35,11 +35,16 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
       d="M12 0a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm0 5.1a1.65 1.65 0 1 0 0 3.3 1.65 1.65 0 0 0 0-3.3ZM13.8 18H10.2a1.05 1.05 0 0 1 0-2.1h.75v-3.6h-.6a1.05 1.05 0 0 1 0-2.1h2.7v5.7h.75a1.05 1.05 0 0 1 0 2.1Z"
     />
   ),
+  // Three bubbles that fill the box (ink y 1.8–22.25, x 3.5–20.5, on its
+  // centre) so a caller sizes the box by the ink it wants. They reached only
+  // y 4.6–18.8, which left 8px of blank box above them in `EmptyState` and
+  // made its panel bottom-heavy (pixel-craft K-70). Their stroke is
+  // `EMPTY_STROKE`, scaled with them.
   empty: (
     <>
-      <circle cx="12" cy="15" r="3" />
-      <circle cx="8.5" cy="7.2" r="1.8" />
-      <circle cx="15.7" cy="9" r="1.2" />
+      <circle cx="12.3" cy="16.8" r="4.35" />
+      <circle cx="7.2" cy="5.5" r="2.6" />
+      <circle cx="17.65" cy="8.1" r="1.75" />
     </>
   ),
   globe: (
@@ -150,6 +155,12 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
   ),
   "waiver-mark-unavailable": <path d="M5 12h14" />,
 };
+
+/**
+ * The bubbles' stroke: 1.5 units when they were drawn at two thirds of this
+ * size, scaled with them, so they render at the weight they always had.
+ */
+const EMPTY_STROKE = 2.2;
 
 const CARET_PATHS: Record<DisclosureCaretDirection, string> = {
   right: "m9 6 6 6-6 6",
@@ -405,7 +416,7 @@ export function DiveDayIcon({
       viewBox={ICON_VIEWBOX[name as DiveDaySharedIconName] ?? "0 0 24 24"}
       fill={isFilled ? "none" : "none"}
       stroke={isFilled ? "none" : "currentColor"}
-      strokeWidth={isMark ? 2.4 : isCaret ? 2.5 : isEmpty ? 1.5 : strokeWidth}
+      strokeWidth={isMark ? 2.4 : isCaret ? 2.5 : isEmpty ? EMPTY_STROKE : strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
