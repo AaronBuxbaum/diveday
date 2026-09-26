@@ -148,6 +148,39 @@ describe("the public shop footer", () => {
     expect(screen.getByText("Bonaire")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Bonaire" })).toBeNull();
   });
+
+  /**
+   * From `sm` up the contact row stands beside the shop's name, whose words
+   * are centred in a 44px line. A row of links is one such line; a row holding
+   * only the unlinkable address was a 20px span at the top of the cluster, so
+   * "Bonaire" sat 12px above the name beside it — the misalignment the name's
+   * own 44px line was added to prevent, reversed. The words take the same line
+   * whether or not a map can be pointed at them.
+   */
+  it("sets an address with no map link on the name's 44px line", () => {
+    render(
+      <PublicShopFooter
+        shop={{
+          ...shop,
+          contactEmail: null,
+          contactPhone: null,
+          addressStreet: null,
+          addressLocality: null,
+          addressRegion: null,
+          addressPostalCode: null,
+          addressCountry: "Bonaire",
+        }}
+        spokenLanguagesLine={null}
+        t={t}
+      />,
+    );
+
+    expect(screen.getByText("Bonaire")).toHaveClass(
+      "sm:inline-flex",
+      "sm:min-h-11",
+      "sm:items-center",
+    );
+  });
 });
 
 /**

@@ -176,8 +176,10 @@ export function PublicShopFooter({
     ) : (
       // On file, but not enough to point a map at a real place — a country and
       // a shop name would centre on a continent and present it as the front
-      // door. The words still help; the link would not.
-      <span>{addressText}</span>
+      // door. The words still help; the link would not. From `sm` up they
+      // take the 44px line a link would, so when they are the contact row's
+      // only words they sit level with the shop's name, not 12px above it.
+      <span className="sm:inline-flex sm:min-h-11 sm:items-center">{addressText}</span>
     );
 
   // **Every link down here is a 44px target** (`tapTargetLinkClass`), and the
