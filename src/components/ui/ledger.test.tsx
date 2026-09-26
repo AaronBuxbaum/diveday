@@ -455,6 +455,37 @@ describe("LedgerRow", () => {
     expect(screen.getByRole("button", { name: "Send waiver" }).parentElement).toHaveClass("-my-2");
   });
 
+  /**
+   * **A tall row can set its kind and its fix on its first line** (pixel-craft
+   * class 1). The inbox's rows are a sender over a message, and the row centred
+   * its kind word and its date on the whole block: "Email" sat 23px below
+   * "Unknown sender" it named. `first-line` sets the parts on one baseline from
+   * `sm` up (below it the row stacks, and centring stays), and pads the row so
+   * a one-line row is still centred in its 52px: 16 + 20 + 16.
+   */
+  it("sets its parts on the first line's baseline when asked, from sm up", () => {
+    const { container, rerender } = render(
+      <LedgerRow
+        as="div"
+        align="first-line"
+        kind={{ word: "Email", tone: "neutral" }}
+        trailing={<span>Sep 25</span>}
+      >
+        <p>Unknown sender</p>
+        <p>Is the Saturday boat still on?</p>
+      </LedgerRow>,
+    );
+    const row = () => container.firstElementChild as HTMLElement;
+    expect(row()).toHaveClass("items-center", "sm:items-baseline", "sm:py-4");
+    rerender(
+      <LedgerRow as="div" kind={{ word: "Email", tone: "neutral" }}>
+        Unknown sender
+      </LedgerRow>,
+    );
+    expect(row()).toHaveClass("items-center");
+    expect(row().className).not.toMatch(/items-baseline|sm:py-4/);
+  });
+
   it("owns its horizontal box: no call site sets a row's horizontal margin or padding", () => {
     // Today's spine and the first-run checklist each spelled `-mx-2 px-2` on
     // their rows by hand, and the week row then took it back from `sm` up

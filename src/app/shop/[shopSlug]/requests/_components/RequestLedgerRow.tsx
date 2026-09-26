@@ -89,6 +89,8 @@ export function RequestLedgerRow({
     <LedgerRow
       as="li"
       pad="lg"
+      // The booking link on the name's line, not centred on the whole request.
+      align="first-line"
       trailing={
         <Link
           href={`${shopPath(shopSlug, "bookings", "new")}?request=${encodeURIComponent(request.id)}`}

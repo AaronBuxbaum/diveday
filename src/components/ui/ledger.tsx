@@ -439,6 +439,7 @@ export function LedgerRow({
   linkLabel,
   size = "md",
   pad = "md",
+  align = "center",
   stacked = false,
   as: Tag = "li",
   className = "",
@@ -462,6 +463,15 @@ export function LedgerRow({
    * with a paragraph in it, `none` for a row whose one child fills its box.
    */
   pad?: keyof typeof ROW_PAD;
+  /**
+   * `first-line` for a row whose content is a block of lines (a sender over a
+   * message): from `sm` up its kind, content and fix share the first line's
+   * baseline instead of centring on the whole block, where the inbox's "Email"
+   * sat 23px below the "Unknown sender" it named (pixel-craft class 1). Below
+   * `sm` these rows stack and stay centred. `sm:py-4` keeps a one-line row
+   * centred in its 52px (16 + 20 + 16): baseline alignment starts at the top.
+   */
+  align?: "center" | "first-line";
   /** Below `sm`, drop the sentence to its own full-width line. See above. */
   stacked?: boolean;
   /**
@@ -476,7 +486,7 @@ export function LedgerRow({
     <Tag
       className={`relative flex items-center gap-3 ${ledgerRowBoxClass} ${ROW_PAD[pad]} ${
         size === "lg" ? "min-h-14" : "min-h-13"
-      } ${stacked ? "max-sm:flex-wrap" : ""} ${href ? "pressable-row hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
+      } ${align === "first-line" ? "sm:items-baseline sm:py-4" : ""} ${stacked ? "max-sm:flex-wrap" : ""} ${href ? "pressable-row hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
         .replace(/\s+/g, " ")
         .trim()}
     >
