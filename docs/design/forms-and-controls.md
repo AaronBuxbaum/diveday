@@ -620,7 +620,9 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
 - **`focus-visible:focus-ring-inset`** is for an element flush with an `overflow-hidden` or
   scrolling edge: a list card's rows, a scroll box's options, the command palette's field, a
   `flush` ghost whose 8px of fill leave less than the ring's 5px to a clipping edge (a `p-3` row in
-  a clipped list: seasons, kinds of day, boats). A ledger row's door and a
+  a clipped list: seasons, kinds of day, boats) or to a visible one the ring would cross (a
+  `Copyable` panel's 12px inset, a security session row), and an `outdent` button whose box ends
+  4px above a clipped list's rule (the team card's Disable). A ledger row's door and a
   folded horizon's `<summary>` take it too: each is the row's whole box, rule to rule, so the
   outset ring crossed both hairlines. It is the same 3px, drawn
   wholly inside the box, and on the element's own fill (the contrast of each fill is in the
@@ -731,13 +733,25 @@ the same reason (`FILL_ROOM` in `src/components/ui/ledger.tsx`). The variants pa
 (`primary`, `secondary`, `outline`, `danger`, `danger-solid`, `sky`) are boxes, and a box lines up
 by its edge, not its label, so the type refuses `flush` on them.
 
+**`flush` is for the button that starts or ends a line, and the row gives back what it gave up.**
+Mid-row, among other words, a quiet button keeps its padding: that is what keeps its hover fill
+off its neighbours. Where it starts a line, its padding was part of the space to the next control,
+so the row's gap takes it back — 12px more beside a padded neighbour (the staff credentials' review
+and Remove, `gap-2` to `gap-5`), 24px more between two flush ones (the display links' Renew and
+Revoke) — or the fill ends where the next box begins. A component that draws the button for many
+callers takes `flush` as a prop (`Copyable`), because only the caller knows where it sits. The
+button test refuses the hand cancels `flush` replaced, in a `buttonClass` call and on a row that
+wraps a quiet button.
+
 **A quiet button that ends a padded box passes `outdent`, `flush`'s vertical twin.** A `ghost`
 `sm` is a 44px box around a 20px line, so 12px of box sits under its word; last in a card, that box
 adds to the card's padding (the team card measured 21px over the name and 33px under "Disable").
 `outdent: "block-end"` gives the unseen half back as a negative bottom margin and keeps the target
 whole; `"block-end-phone"` does it below `sm` only, for actions that drop to a line of their own
 there. Never on a button that shares its line with a visible box: centred in the row, it would
-rise by half the margin.
+rise by half the margin. The box then ends `padding − 12px` from the container's edge, so with
+under 17px of padding its 5px ring needs drawing inside (the team card, 16px) or the container
+needs the padding (the safety checklist's rows, `max-sm:py-5`).
 
 The same trap applies to the type scale, which is why it lives on the sizes: a `text-base` passed
 through `className` cannot reliably beat a size's `text-sm`. Pick the size that already says it.

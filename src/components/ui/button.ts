@@ -381,8 +381,8 @@ const FLUSH = "px-0";
  * quiet button, where a `-mx-3` row did the same for the whole row. Two things
  * stay the call site's to decide. A flush control has given up the padding
  * that spaced it from its neighbours, so the row's gap takes that room back —
- * 8px more beside a padded neighbour (the staff credentials' review and
- * Remove), 16px more between two flush ones (the display links' Renew and
+ * 12px more beside a padded neighbour (the staff credentials' review and
+ * Remove), 24px more between two flush ones (the display links' Renew and
  * Revoke) — or its fill ends where the next box begins. And a flush fill
  * reaches 8px out and its ring 13px, so a box with less than 13px between the
  * label and its edge — an `overflow-hidden` card, which cuts the ring, or a
