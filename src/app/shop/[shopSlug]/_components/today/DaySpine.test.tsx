@@ -367,6 +367,28 @@ describe("the station is a panel (16a)", () => {
     expect(door.className).toContain("text-primary");
   });
 
+  /**
+   * **The dial's words centre on the dial** (pixel-craft class 1, K-186). The
+   * column beside the 76px dial is centred on it, and the log door's 44px
+   * target stacked in that column as 44px of box under a 20px line: "3 spots
+   * open / Generate log" sat 4.5px high, 8px clear of the dial's top and 17px
+   * of its bottom. The door stands in a box its own line tall, so the column
+   * measures its words, and the target reaches past the line into the room
+   * below it rather than taking room in the column.
+   */
+  it("stands the log door in a box one line tall, so its target takes no room in the dial's column", () => {
+    renderSpine({ departures: [departure({ tripId: "t1" })], evening: evening([]) });
+    const door = screen.getByRole("link", { name: "Generate log" });
+    const line = door.parentElement;
+    const column = screen.getByText("2 spots open").parentElement;
+    expect(line?.parentElement).toBe(column);
+    // text-sm's line box is 20px: `h-5`.
+    expect(line).toHaveClass("h-5");
+    // The target is still 44px, standing from the top of the line.
+    expect(door).toHaveClass("min-h-11", "items-start");
+    expect(line).toHaveClass("items-start");
+  });
+
   it("renders a settled station as the same panel", () => {
     const { container } = renderSpine({
       departures: [],

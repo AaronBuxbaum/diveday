@@ -55,6 +55,16 @@ import { StationSettles } from "./StationSettles";
  * departure at the call site is how a plural ends up wired to the wrong count.
  */
 
+/**
+ * `tapTargetLinkClass`'s 44px floor with its words on the box's top edge
+ * rather than centred, for the log door beside the dial (see its call site).
+ * Spelled whole, not `tapTargetLinkClass` plus `items-start`: two
+ * `align-items` utilities on one element resolve by stylesheet order, not by
+ * the order they are written (`EYEBROW_TAP_TARGET` in ShopPageHeader.tsx made
+ * the same call for the same reason).
+ */
+const LOG_DOOR_TARGET = "inline-flex min-h-11 items-start";
+
 /** What one aboard group is blocked on, in words. */
 function aboardReasonKey(kind: AboardBlockerKind) {
   if (kind === "medical") return "shopHome.spine.aboardReasonMedical" as const;
@@ -255,14 +265,26 @@ export function DayStation({
                 the ink left the closing station's identical link at 20px
                 tall, under WCAG 2.5.8's floor, until the evening a11y scan
                 reached it. This one had the same defect and a quieter place
-                to hide in. */}
+                to hide in.
+
+                **The target takes no room in the column** (pixel-craft
+                K-186). The column is centred on the 76px dial, and a 44px box
+                under a 20px line put its words 4.5px high of the dial's
+                centre, 8px under its top and 17px over its bottom. The link
+                stands in a box its own line tall (`h-5`, text-sm's 20px), so
+                the column measures its words; the 44px target starts at the
+                line's top (`LOG_DOOR_TARGET`) and reaches the 24px spare
+                downward, into the room under the header — not upward, where
+                its focus ring would run through "3 spots open". */}
             {canOpenLog ? (
-              <Link
-                href={`/shop/${shopSlug}/trips/${station.tripId}/log`}
-                className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}
-              >
-                {t("incidentExport.openLink")}
-              </Link>
+              <span className="flex h-5 items-start">
+                <Link
+                  href={`/shop/${shopSlug}/trips/${station.tripId}/log`}
+                  className={`${LOG_DOOR_TARGET} text-sm font-medium text-primary hover:underline`}
+                >
+                  {t("incidentExport.openLink")}
+                </Link>
+              </span>
             ) : null}
           </div>
         </div>
