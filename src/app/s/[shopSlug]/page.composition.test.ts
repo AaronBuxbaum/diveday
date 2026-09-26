@@ -37,27 +37,35 @@ describe("the public schedule identity composition", () => {
 });
 
 /**
+ * **The pager row reads the list's own gate.** The week's list hands its last
+ * row's 16px (20px from `sm`) of hover room back below itself (`WeekLedger`),
+ * so the section after it measures from the last row's words. The "Show later
+ * departures" row takes that room into its own margin
+ * (`WEEK_LEDGER_FOLLOWER_CLASS`, spelled beside the hand-back) and so still
+ * sits 20px under the last row's box. Under an empty state nothing is handed
+ * back, and it keeps its 20px. The list and the margin are chosen on one name,
+ * so a state added to the render cannot leave the pager's margin on the old
+ * condition.
+ */
+describe("the schedule's pager row", () => {
+  it("takes the list's follower margin exactly when the list renders", () => {
+    expect(countOf("const showsWeekLedger = ")).toBe(1);
+    expect(countOf("<WeekLedger")).toBe(1);
+    // The list renders on that name, and on nothing else.
+    expect(SOURCE).toMatch(/\{showsWeekLedger \? \(\s*<WeekLedger\b/);
+    const pager = SOURCE.slice(positionOf("(nextCursor || after || explicitMonth) ? ("));
+    expect(pager).toMatch(
+      /^[^<]*<div\s+className=\{`flex flex-wrap items-center gap-3 \$\{showsWeekLedger \? WEEK_LEDGER_FOLLOWER_CLASS : "mt-5"\}`\}/,
+    );
+  });
+});
+
+/**
  * **One rung for the storefront's section heads** (docs/design/pixel-craft.md,
  * class 12). The off-season "Ask us for a day" is a `DateRequestForm` section,
  * which heads itself as a lead (24px) unless told otherwise; every other h2
  * here is the brand face at `SECTION_TITLE_CLASS` (18px).
  */
-/**
- * The week's list hands its last row's 16px (20px from `sm`) of hover room back
- * below itself (`WeekLedger`), so the section after it measures from the last
- * row's words. The "Show later departures" row takes that room into its own
- * margin, and so sits where it did: 16 + 20px under the words, 20 + 20 from
- * `sm`. Under an empty state nothing is handed back, and it keeps its 20px.
- */
-describe("the schedule's pager row", () => {
-  it("keeps its place under the list's last row, and under an empty state", () => {
-    const pager = SOURCE.slice(positionOf("(nextCursor || after || explicitMonth) ? ("));
-    expect(pager).toMatch(
-      /^[^<]*<div\s+className=\{`flex flex-wrap items-center gap-3 \$\{hasUpcoming && visibleUpcoming\.length > 0 \? "mt-9 sm:mt-10" : "mt-5"\}`\}/,
-    );
-  });
-});
-
 describe("the off-season ask's heading", () => {
   it("is handed the rung the page's other section heads use", () => {
     const start = positionOf("<DateRequestForm");

@@ -93,7 +93,11 @@ import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { SeasonBand } from "./_components/SeasonBand";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
-import { WeekLedger, type WeekLedgerRow } from "./_components/WeekLedger";
+import {
+  WEEK_LEDGER_FOLLOWER_CLASS,
+  WeekLedger,
+  type WeekLedgerRow,
+} from "./_components/WeekLedger";
 import { YoursGroup, type YoursRow } from "./_components/YoursGroup";
 import { readShelfWelcome } from "./_lib/shelf-welcome";
 
@@ -771,6 +775,14 @@ export default async function SchedulePage({
         trip.priceCents !== null ? formatMoneyScanned(trip.priceCents, currency, locale) : null,
     };
   });
+  /**
+   * **The one gate for the week's list.** The list, or the state standing in
+   * for it, is chosen on this name, and the pager row under it reads the same
+   * name for its margin: the list hands its last row's room back below itself
+   * and only a row under the list takes it back in. Two spellings of the
+   * condition would disagree the day a state is added to one of them.
+   */
+  const showsWeekLedger = hasUpcoming && visibleUpcoming.length > 0;
 
   // The shelf takes the first three rungs in progression order; "All courses"
   // is the rest. `{depth18}` markers resolve into the shop's own unit before
@@ -1174,43 +1186,42 @@ export default async function SchedulePage({
               and the middle one is the sentence that reads as a shop which has
               stopped. The widget keeps it: `?embed=1` renders neither of those
               two, and a blank iframe on a shop's own website says nothing at
-              all. */}
-          {!hasUpcoming ? (
-            isEmbed ? (
-              <EmptyState
-                title={t("schedule.noTrips")}
-                body={t(
-                  shop.contactPhone || shop.contactEmail
-                    ? "schedule.noTripsPublic"
-                    : "schedule.noTripsPublicNoPhone",
-                )}
-              />
-            ) : null
-          ) : visibleUpcoming.length === 0 ? (
-            <EmptyState
-              title={filteredView ? t("schedule.filters.noMatches") : t("schedule.noTripsMonth")}
-            />
-          ) : (
+              all. The list itself renders on `showsWeekLedger`, the name the
+              pager row's margin below reads too. */}
+          {showsWeekLedger ? (
             <WeekLedger
               rows={weekRows}
               listLabel={t("schedule.tripListLabel")}
               stickyTop={isEmbed ? "top-0" : "top-(--chrome-h)"}
             />
-          )}
+          ) : hasUpcoming ? (
+            <EmptyState
+              title={filteredView ? t("schedule.filters.noMatches") : t("schedule.noTripsMonth")}
+            />
+          ) : isEmbed ? (
+            <EmptyState
+              title={t("schedule.noTrips")}
+              body={t(
+                shop.contactPhone || shop.contactEmail
+                  ? "schedule.noTripsPublic"
+                  : "schedule.noTripsPublicNoPhone",
+              )}
+            />
+          ) : null}
         </div>
       ) : null}
       {/* No pager in the frame either. "Show later departures" is the same
           nested navigation the fixed height caused — a second page loaded
           inside somebody else's site — and the widget already offers the way
           out to the real schedule below (issue #805). Under the week's list
-          the row's margin is `mt-9 sm:mt-10`: the list hands its last row's
-          16px (20px) of hover room back below itself, and this row takes it
-          into its margin, so it still sits 20px under that row's box. Under
-          an empty state (a month or a filter with nothing in it) no room is
-          handed back. */}
+          the row takes `WEEK_LEDGER_FOLLOWER_CLASS`: the list hands its last
+          row's 16px (20px) of hover room back below itself, and this row
+          takes it into its margin, so it still sits 20px under that row's
+          box. Under an empty state (a month or a filter with nothing in it)
+          no room is handed back. */}
       {!isEmbed && (nextCursor || after || explicitMonth) ? (
         <div
-          className={`flex flex-wrap items-center gap-3 ${hasUpcoming && visibleUpcoming.length > 0 ? "mt-9 sm:mt-10" : "mt-5"}`}
+          className={`flex flex-wrap items-center gap-3 ${showsWeekLedger ? WEEK_LEDGER_FOLLOWER_CLASS : "mt-5"}`}
         >
           {(() => {
             const backStack = decodeCursorStack(back);

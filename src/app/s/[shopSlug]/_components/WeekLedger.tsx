@@ -110,6 +110,17 @@ function priceColumnWidth(rows: readonly WeekLedgerRow[]): string | null {
 
 type PriceColumnStyle = CSSProperties & { "--price-col": string };
 
+/**
+ * **The margin of a row that belongs under the list** — the schedule's pager,
+ * "Show later departures". The list hands its last row's lower room back
+ * below itself (`-mb-4 sm:-mb-5`, below), so a section after it measures from
+ * the last row's words; a row that belongs to the list takes that room back
+ * into its own margin, and so sits 20px under the last row's box at every
+ * width (16 + 20, and 20 + 20 from `sm`). Spelled here, beside the hand-back
+ * it cancels, so the two change together.
+ */
+export const WEEK_LEDGER_FOLLOWER_CLASS = "mt-9 sm:mt-10";
+
 export function WeekLedger({
   stickyTop,
   rows,
@@ -137,7 +148,8 @@ export function WeekLedger({
     // sm:py-5`, kept for the hover fill and unpainted at rest — so whatever
     // follows measures from the last row's words. Stacked on the next
     // section's margin, it put "Courses" 78px under the last meta line at
-    // 1280 against the page's 56px section gap.
+    // 1280 against the page's 56px section gap. A row that belongs under the
+    // list takes it back in (`WEEK_LEDGER_FOLLOWER_CLASS`).
     <ul className="-mb-4 flex flex-col sm:-mb-5" aria-label={listLabel} style={style}>
       {rows.map((row) => {
         const newDay = row.dayKey !== lastDayKey;

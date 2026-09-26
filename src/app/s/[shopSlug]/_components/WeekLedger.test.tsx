@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DoorChevron } from "@/components/ui/ledger";
-import { WeekLedger, type WeekLedgerRow } from "./WeekLedger";
+import { WEEK_LEDGER_FOLLOWER_CLASS, WeekLedger, type WeekLedgerRow } from "./WeekLedger";
 
 /**
  * The week ledger's pins for ADR 20260827-clearwater-surface-language,
@@ -572,6 +572,24 @@ describe("the list's close", () => {
     const box = screen.getByRole("link", { name: /Two-Tank Reef/ }).parentElement;
     expect(box).toHaveClass("py-4", "sm:py-5");
     expect(screen.getByRole("list", { name: "Upcoming trips" })).toHaveClass("-mb-4", "sm:-mb-5");
+  });
+
+  /**
+   * A row that belongs under the list — the pager's "Show later departures" —
+   * takes the handed-back room into its own margin, which is spelled here
+   * beside the hand-back so the two cannot drift apart: 20px (five steps)
+   * under the last row's box at every width, where it sat before the list
+   * handed anything back.
+   */
+  it("gives a row under the list the margin that takes that room back in", () => {
+    render(<WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />);
+
+    const list = screen.getByRole("list", { name: "Upcoming trips" }).className;
+    const step = (classes: string, pattern: RegExp) => Number(classes.match(pattern)?.[1]);
+    expect(
+      step(WEEK_LEDGER_FOLLOWER_CLASS, /(?:^| )mt-(\d+)/) - step(list, /(?:^| )-mb-(\d+)/),
+    ).toBe(5);
+    expect(step(WEEK_LEDGER_FOLLOWER_CLASS, /sm:mt-(\d+)/) - step(list, /sm:-mb-(\d+)/)).toBe(5);
   });
 });
 
