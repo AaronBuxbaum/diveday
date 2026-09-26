@@ -1773,12 +1773,14 @@ export default async function SettingsPage({
             <SettingsRow
               heading={t("settings.main.emergency.heading")}
               value={emergencyValue}
+              // The row's description, where every row's first body line sits:
+              // as a `<p>` inside the `mt-4` form it sat 16px lower (K-437).
+              description={t("settings.main.emergency.intro")}
               sectionId="emergency"
               activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="emergency" active={activeSection} />
               <form action={saveEmergencyReferenceAction} className="mt-4 flex flex-col gap-4">
-                <p className="text-sm text-muted">{t("settings.main.emergency.intro")}</p>
                 <FieldGrid columns={2}>
                   {EMERGENCY_LINE_SLOTS.map((slot, index) => (
                     <Fragment key={slot}>

@@ -420,6 +420,36 @@ describe("the dock-day preview and the sites that override it", () => {
 });
 
 /**
+ * **The emergency reference row**, drawn like every other row on the hub. It
+ * is the one thing on this page a crew reads when something has gone wrong,
+ * and it was the one row whose body was spelled its own way.
+ */
+describe("the emergency reference row", () => {
+  const EMERGENCY = STAFF_MESSAGES["en-US"].settings.main.emergency;
+
+  async function emergencyRow() {
+    const rows = findElements<{ sectionId?: string; description?: string; children?: unknown }>(
+      await renderSettings("owner"),
+      settingsRowsModule.SettingsRow,
+    ).filter((row) => row.props.sectionId === "emergency");
+    expect(rows).toHaveLength(1);
+    return rows[0] as NonNullable<(typeof rows)[number]>;
+  }
+
+  /**
+   * Its intro was a `<p>` inside the `mt-4` form, not the row's description,
+   * so its first line sat 16px lower than every other row's (55px from label
+   * to first line at 1280, against 39 on the rows around it; K-437).
+   */
+  it("says what it is for in the row's description, where every row does", async () => {
+    const row = await emergencyRow();
+    expect(row.props.description).toBe(EMERGENCY.intro);
+    const paragraphs = findElements<{ children?: unknown }>(row.props.children, "p");
+    expect(paragraphs.filter((p) => p.props.children === EMERGENCY.intro)).toHaveLength(0);
+  });
+});
+
+/**
  * **The support door at the foot of the page.** A bare `<a>` after a block
  * `<p>` is not a link inside a sentence, so the inline-link exception to the
  * 44px floor does not apply to it: "Email support@dive.day" was a 159×17
