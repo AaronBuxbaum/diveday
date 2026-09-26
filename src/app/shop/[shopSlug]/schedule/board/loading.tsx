@@ -1,5 +1,10 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { WEEK_DAY_GRID_CLASS, WEEK_ROW_BOX_CLASS } from "./_components/week-geometry";
+import {
+  WEEK_DAY_GRID_CLASS,
+  WEEK_EMPTY_DAY_CLASS,
+  WEEK_MARK_CLASS,
+  WEEK_ROW_BOX_CLASS,
+} from "./_components/week-geometry";
 
 /**
  * How many departures each of the skeleton's seven days draws: a week with
@@ -17,8 +22,9 @@ const DEPARTURES_PER_DAY = [1, 2, 0, 1, 0, 2, 0];
  * It drew the two compositions that list replaced until 2026-09 — seven
  * columns from `xl`, with 40px pager squares, and a stream of card-shaped
  * days below it with no pager at all — so every width's skeleton resolved
- * into a different page. The rail and the row box come from
- * `week-geometry.ts`, the board's own, so the two cannot drift again.
+ * into a different page. The rail, the row box, the site mark's offset and
+ * an empty day's line come from `week-geometry.ts`, the board's own, so the
+ * two cannot drift again.
  */
 export default function ScheduleBoardLoading() {
   return (
@@ -63,15 +69,17 @@ export default function ScheduleBoardLoading() {
                 </div>
                 <div className="min-w-0">
                   {departures === 0 ? (
-                    // "No boats", in the first-line box the departures use.
-                    <div className="flex min-h-8 items-center px-2 py-2">
+                    // "No boats", on the first line the departures use.
+                    <div className={WEEK_EMPTY_DAY_CLASS}>
                       <div className="h-3.5 w-16 rounded bg-surface-sunken" />
                     </div>
                   ) : (
                     Array.from({ length: departures }, (_, departure) => (
                       // biome-ignore lint/suspicious/noArrayIndexKey: a skeleton row's only identity is its place in the day
                       <div key={departure} className={WEEK_ROW_BOX_CLASS}>
-                        <div className="mt-0.5 h-7.5 w-11 shrink-0 rounded-lg bg-surface-sunken" />
+                        <div
+                          className={`${WEEK_MARK_CLASS} h-7.5 w-11 rounded-lg bg-surface-sunken`}
+                        />
                         <div className="min-w-0 flex-1">
                           {/* The first line: the time in its slot, the seat
                               bar, and the meta inline from `md`. */}

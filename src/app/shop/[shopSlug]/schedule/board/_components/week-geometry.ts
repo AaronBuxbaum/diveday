@@ -26,3 +26,19 @@ export const WEEK_DAY_GRID_CLASS =
  * row's fill on every side.
  */
 export const WEEK_ROW_BOX_CLASS = "flex items-start gap-2.5 rounded-lg px-2 py-2 sm:gap-3";
+
+/**
+ * **A departure's site mark, centred on its row's 32px first line.** The
+ * `sm` tile is 30px, so 1px down the row puts its centre on the line's 16.
+ */
+export const WEEK_MARK_CLASS = "mt-px shrink-0";
+
+/**
+ * **An empty day's "No boats": the same 32px first line, 8px down**, where
+ * the rail's weekday and a departure's time sit. The 8px is a margin, outside
+ * the box that carries the floor, as a departure's 8px is its row's padding
+ * outside its line box. Every box is border-box, so `min-h-8` with `py-2` on
+ * one element is a 16px floor under a 20px line: the floor does nothing, and
+ * the words sat 6px above the weekday beside them.
+ */
+export const WEEK_EMPTY_DAY_CLASS = "my-2 flex min-h-8 items-center px-2";

@@ -10,6 +10,7 @@ import {
   type WeekEntry,
   type WeekSpan,
 } from "./WeekBoard";
+import { WEEK_EMPTY_DAY_CLASS, WEEK_MARK_CLASS } from "./week-geometry";
 
 afterEach(cleanup);
 
@@ -157,8 +158,52 @@ function token(element: Element, pattern: RegExp): string {
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-/** The one first-line box a day's label, a departure's lead and "No boats" share. */
-const FIRST_LINE = ["flex", "min-h-8", "items-center"];
+/** The widths the rail's label has two shapes at: its phone line, and `sm` up. */
+type Width = "phone" | "sm";
+
+/**
+ * A spacing utility's px on `element` at a width, from the first of
+ * `utilities` it carries — a longhand before its pair (`pt` over `py`), an
+ * `sm:` class over the bare one from `sm` up, a negative step signed and
+ * `px` one pixel. 0 when it carries none.
+ */
+function spacing(element: Element, utilities: string[], at: Width): number {
+  const variants = at === "sm" ? ["sm", ""] : [""];
+  for (const variant of variants) {
+    for (const utility of utilities) {
+      for (const name of element.classList) {
+        const match = name.match(/^(?:(sm):)?(-?)([a-z]+(?:-[a-z])?)-(px|[\d.]+)$/);
+        if (!match || (match[1] ?? "") !== variant || match[3] !== utility) continue;
+        const size = match[4] === "px" ? 1 : px(match[4] ?? "0");
+        return match[2] ? -size : size;
+      }
+    }
+  }
+  return 0;
+}
+
+/**
+ * Where a first-line box's line centres, in px under the top of its day's
+ * rail grid, at a width. **The line is the box's `min-h` less its own
+ * vertical padding**: Tailwind's preflight makes every box border-box, so
+ * padding on the element that carries the floor comes out of the line rather
+ * than sitting around it. The line then sits under every top margin and
+ * padding from the box up to the grid.
+ */
+function firstLineCentre(box: Element, at: Width): number {
+  const line =
+    spacing(box, ["min-h"], at) - spacing(box, ["pt", "py"], at) - spacing(box, ["pb", "py"], at);
+  expect(line, `the first line of "${box.className}" at ${at}`).toBe(32);
+  let above = 0;
+  for (
+    let element: Element | null = box;
+    element && !element.classList.contains("grid");
+    element = element.parentElement
+  ) {
+    above += spacing(element, ["mt", "my"], at) + spacing(element, ["pt", "py"], at);
+  }
+  return above + line / 2;
+}
 
 describe("the day rail (K-326, K-327, K-328)", () => {
   it("is one width at every width, and holds its longest label: a fixed weekday, the gap and today's disc", () => {
@@ -190,24 +235,44 @@ describe("the day rail (K-326, K-327, K-328)", () => {
     expect(screen.getByText("27")).toHaveClass("size-8", "shrink-0");
   });
 
-  it("sets the weekday, a departure's first line and 'No boats' in one 32px first-line box", () => {
+  it("centres the weekday, a departure's first line and 'No boats' on one 32px line, 8px down the day", () => {
     // The weekday's cap sat 9px above the first departure's time at 1280, and
-    // 4px above "No boats" on an empty day.
+    // 4px above "No boats" on an empty day. Then "No boats" read 6px high:
+    // `min-h-8` and `py-2` on one border-box <p> left a 16px floor under its
+    // 20px line, so the floor did nothing and the words centred at 8 + 10.
     board(week({}, [entry()]));
-    // Below sm the weekday and its numeral share that line; from sm up the
-    // weekday takes it alone, over its numeral.
-    expect(screen.getByText("Thu").parentElement).toHaveClass(...FIRST_LINE);
-    expect(screen.getByText("Thu")).toHaveClass("sm:flex", "sm:min-h-8", "sm:items-center");
-    expect(screen.getByText("7:00 AM").parentElement).toHaveClass(...FIRST_LINE);
+    const weekday = screen.getByText("Thu");
+    const time = screen.getByText("7:00 AM").parentElement as HTMLElement;
     const empty = screen.getAllByText("No boats");
     expect(empty).toHaveLength(6);
-    for (const none of empty) expect(none).toHaveClass(...FIRST_LINE);
-    // Each under the same 8px: the rail's, the row's and the empty day's own.
-    const inset = (element: Element | null | undefined) =>
-      [...(element?.classList ?? [])].filter((name) => /^p[ty]-/.test(name));
-    expect(inset(screen.getByText("Thu").closest("h3"))).toEqual(["py-2"]);
-    expect(inset(screen.getByText("7:00 AM").closest("li")?.firstElementChild)).toEqual(["py-2"]);
-    for (const none of empty) expect(inset(none)).toEqual(["py-2"]);
+    // Below sm the weekday and its numeral share the line; from sm up the
+    // weekday takes it alone, over its numeral.
+    const labels: [Width, Element][] = [
+      ["phone", weekday.parentElement as HTMLElement],
+      ["sm", weekday],
+    ];
+    for (const [at, label] of labels) {
+      const rail = firstLineCentre(label, at);
+      expect(rail).toBe(8 + 32 / 2);
+      expect(firstLineCentre(time, at)).toBe(rail);
+      for (const none of empty) expect(firstLineCentre(none, at)).toBe(rail);
+    }
+    // The skeleton draws an empty day from the same string (loading.test.tsx).
+    for (const none of empty) expect(none).toHaveClass(...WEEK_EMPTY_DAY_CLASS.split(" "));
+  });
+
+  it("centres a departure's site mark on that first line", () => {
+    // The 30px tile hung 2px down its row, so its centre sat 1px under the
+    // line's, as it had under the 36px line before.
+    board(week({}, [entry()]));
+    const first = screen.getByText("7:00 AM").parentElement as HTMLElement;
+    const tile = first.closest("li")?.querySelector("[data-site-mark]") as HTMLElement;
+    expect(tile.parentElement).toHaveClass("items-start");
+    const height = Number(token(tile, /^h-\[(\d+)px\]$/));
+    const line = spacing(first, ["min-h"], "phone");
+    expect(spacing(tile, ["mt", "my"], "phone") + height / 2).toBe(line / 2);
+    // The skeleton's tile takes the same offset (loading.test.tsx).
+    expect(tile).toHaveClass(...WEEK_MARK_CLASS.split(" "));
   });
 });
 
@@ -265,6 +330,7 @@ describe("a departure row is one door (K-325, K-530)", () => {
     expect(row).toHaveClass("relative", "pressable-row");
     expect(door).toHaveClass("absolute", "inset-0", "z-0", "focus-visible:focus-ring-inset");
     expect(door).toHaveAttribute("href", "/shop/blue-mantis/trips/t1");
+    expect(door).toHaveAttribute("data-departure-door", "");
     expect(door.textContent).toBe("");
     expect(screen.getByText("Two-Tank Reef").closest("a")).toBeNull();
   });
@@ -297,6 +363,32 @@ describe("a departure row is one door (K-325, K-530)", () => {
     }
   });
 
+  it("hooks each door, and only the door, for a spec that may read neither its copy nor its place", () => {
+    // The door carries no text and follows the row's flags, so a spec that
+    // took the week's first trip link and read its text got "" — or, when
+    // that departure had a flag, the flag's `#details` or
+    // `/manifest?checkpoint=` href, with `/print` appended to it.
+    const { container } = board(
+      week({}, [
+        entry({ unpriced: true }),
+        entry({
+          tripId: "t2",
+          time: "9:00 AM",
+          title: "Night Dive",
+          ref: "Night Dive, Thu, Aug 27 9:00 AM",
+          rollCallOpen: { diveNumber: 1, uncounted: 2 },
+        }),
+      ]),
+    );
+    const doors = [...container.querySelectorAll("[data-week-board] a[data-departure-door]")];
+    expect(
+      doors.map((door) => [door.getAttribute("aria-label"), door.getAttribute("href")]),
+    ).toEqual([
+      ["Two-Tank Reef", "/shop/blue-mantis/trips/t1"],
+      ["Night Dive", "/shop/blue-mantis/trips/t2"],
+    ]);
+  });
+
   it("sets a course's length in its title's own run, so it follows the last word", () => {
     // As a flex sibling of a wrapped title, "3 days" sat at the far end of
     // the row, 41px from the title's ink at 390.
@@ -305,11 +397,21 @@ describe("a departure row is one door (K-325, K-530)", () => {
     const title = tag.parentElement as HTMLElement;
     expect(title.tagName).toBe("P");
     expect(title.firstChild?.textContent).toBe("Open Water Diver — three-day course");
-    expect(title).toHaveClass("line-clamp-2");
     expect(tag).toHaveClass("whitespace-nowrap");
     expect(
       screen.getByRole("link", { name: "Open Water Diver — three-day course" }),
     ).toHaveAttribute("href", "/shop/blue-mantis/trips/course-1");
+  });
+
+  it("never clamps a course's length away: its title runs whole, where a boat's stops at two lines", () => {
+    // Nothing else on a course's row says how long it runs (its meta is
+    // seats, price and instructor), and a two-line clamp on a title that
+    // filled both phone lines ellipsed "3 days" away with its last words.
+    board(week({ spans: [course] }, [entry()]));
+    const clamps = (element: Element) =>
+      [...element.classList].filter((name) => name.includes("line-clamp"));
+    expect(clamps(screen.getByText("3 days").parentElement as HTMLElement)).toEqual([]);
+    expect(clamps(screen.getByText("Two-Tank Reef"))).toEqual(["line-clamp-2"]);
   });
 });
 

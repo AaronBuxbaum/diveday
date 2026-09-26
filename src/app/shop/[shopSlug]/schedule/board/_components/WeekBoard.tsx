@@ -12,7 +12,12 @@ import { fill } from "@/i18n/fill";
 import type { SiteMarkCode } from "@/lib/site-mark";
 import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import { isSoldOut, seatFill } from "@/lib/week-seats";
-import { WEEK_DAY_GRID_CLASS, WEEK_ROW_BOX_CLASS } from "./week-geometry";
+import {
+  WEEK_DAY_GRID_CLASS,
+  WEEK_EMPTY_DAY_CLASS,
+  WEEK_MARK_CLASS,
+  WEEK_ROW_BOX_CLASS,
+} from "./week-geometry";
 
 /**
  * What every departure the grid draws — a day cell or a spanning course bar —
@@ -448,7 +453,7 @@ function WeekBoat({
       {/* The drawn site mark leads the row (ADR 20260901-diveday-reimagined,
           slice 13f). No coral: the budget is one creature's detail per
           surface, and a week has no one boat to give it to. */}
-      {mark ? <SiteMark mark={mark} size="sm" coral={false} className="mt-0.5 shrink-0" /> : null}
+      {mark ? <SiteMark mark={mark} size="sm" coral={false} className={WEEK_MARK_CLASS} /> : null}
       <div className="min-w-0 flex-1">
         {/* The lead line is what the canvas draws: when it leaves, how full it
             is, and the count. The bar sits between them rather than after, so
@@ -528,9 +533,15 @@ function WeekBoat({
             8), so it follows the last word at every width. As a flex sibling
             of a title that wrapped, it sat at the row's far end, 41px from
             the title's ink at 390. The words are the door's name, not a link
-            of their own: the row's stretched link below is. */}
+            of their own: the row's stretched link below is.
+
+            **And a course's run is never clamped**: nothing else on its row
+            says how long it runs (the meta is seats, price and instructor),
+            and a clamp ellipses the end of the run, which is where the length
+            is. A course's title is one of a day's few, not one of a week of
+            shared prefixes. */}
         <p
-          className={`mt-0.5 line-clamp-2 text-sm leading-snug font-semibold group-hover/boat:text-primary ${sailed ? "text-muted" : ""}`}
+          className={`mt-0.5 text-sm leading-snug font-semibold group-hover/boat:text-primary ${runs ? "" : "line-clamp-2"} ${sailed ? "text-muted" : ""}`}
         >
           {departure.title}
           {runs ? (
@@ -577,10 +588,17 @@ function WeekBoat({
       </div>
       {/* Last, so it paints over everything before it that is positioned —
           the seat bar is — and under only what asks to be above it. Its ring
-          is drawn inside, on the row's own corner, as a ledger door's is. */}
+          is drawn inside, on the row's own corner, as a ledger door's is.
+
+          `data-departure-door` is the copy-free hook a spec takes a departure
+          by: the door has no text of its own to filter on, and it follows the
+          row's flags, whose links go to the same trip's `#details` and
+          `/manifest`, so "the week's first trip link" is a flag on any week
+          whose first departure carries one. */}
       <Link
         href={`/shop/${shopSlug}/trips/${departure.tripId}`}
         aria-label={departure.title}
+        data-departure-door=""
         className="absolute inset-0 z-0 rounded-[inherit] focus-visible:focus-ring-inset"
       />
     </div>
@@ -799,9 +817,7 @@ export function WeekBoard({
                       gave the blank its meaning; one empty row in a run of
                       rows is just a gap. */}
                   {empty ? (
-                    <p className="flex min-h-8 items-center px-2 py-2 text-sm text-muted">
-                      {copy.noBoats}
-                    </p>
+                    <p className={`${WEEK_EMPTY_DAY_CLASS} text-sm text-muted`}>{copy.noBoats}</p>
                   ) : null}
                   {/* Never on a day that has already been: a departure is put
                       on the board, and the board is ahead. */}
