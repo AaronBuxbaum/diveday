@@ -14,6 +14,7 @@ const {
   GuideContext,
   GuideHero,
   MovePath,
+  MovePhase,
   SourcesFootnote,
 } = await import("./guide");
 
@@ -179,5 +180,35 @@ describe("the move rail's lede", () => {
     expect(lede?.tagName).toBe("P");
     expect(lede?.className).toBe(GUIDE_BAND_LEDE_CLASS);
     expect(lede).toHaveClass("mt-5");
+  });
+});
+
+/**
+ * **A phase's heading shares its marker's centre** (K-205).
+ *
+ * The marker was a 36px circle and the heading's first line a 32px box nudged
+ * down `pt-1`, so the line's centre sat at 20 against the marker's 18: the
+ * probe measured the cap centre 1.5–3px low on every phase of every guide. The
+ * marker is now the line's own 32px, at the line's top, with no nudge, so both
+ * centres are 16px down; the rail still leaves from the marker's centre line,
+ * 8px under it.
+ */
+describe("a move phase", () => {
+  it("sizes its marker to the heading's 32px first line, with no nudge", () => {
+    render(
+      <ol>
+        <MovePhase number={2} title="What comes across" />
+      </ol>,
+    );
+    const heading = screen.getByRole("heading", { name: "What comes across" });
+    // `text-2xl` carries a 32px line (2rem); nothing pads it off the top.
+    expect(heading).toHaveClass("text-2xl");
+    expect(heading.className).not.toMatch(/(?:^|\s)(?:p[ty]?|m[ty]?)-/);
+    const [marker, rail] = Array.from(
+      heading.parentElement?.querySelectorAll("[aria-hidden]") ?? [],
+    );
+    expect(marker.textContent).toBe("2");
+    expect(marker).toHaveClass("absolute", "top-0", "left-0", "size-8");
+    expect(rail).toHaveClass("top-10", "left-4");
   });
 });
