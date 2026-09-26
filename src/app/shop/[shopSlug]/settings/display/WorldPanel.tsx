@@ -47,7 +47,9 @@ export function WorldPanel({
 }) {
   return (
     <InsetGroup as="h2" label={copy.heading} className="mt-10">
-      <div className="p-4 sm:p-5">
+      {/* The `lg` card inset, which every other card on this page takes, so
+          the checkbox and its Save share their left edge. */}
+      <div className="p-5 sm:p-6">
         <FieldGrid as="form" action={action} columns={1}>
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <label className="flex min-h-11 items-center gap-3 text-base font-semibold">

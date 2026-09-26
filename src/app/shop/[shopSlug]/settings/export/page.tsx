@@ -258,8 +258,10 @@ export default async function DataOutSettingsPage({
             same owner/manager gate as the bundle above it, on the one "your
             data leaves with you" surface (ADR 20260806-one-data-out-surface).
             A plain GET form: the month is a path the browser navigates to, so
-            the download needs no client component and no popup. */}
-        <SectionCard>
+            the download needs no client component and no popup. `lg`, the
+            inset of the bundle above it and every Backups card below, so the
+            page's headings share one left edge. */}
+        <SectionCard padding="lg">
           <h2 className={SECTION_TITLE_CLASS}>{t("settings.crewSheet.heading")}</h2>
           <p className="mt-1 max-w-2xl text-sm text-muted">{t("settings.crewSheet.description")}</p>
           {/* The one sentence that earns its place here: hours and a tips

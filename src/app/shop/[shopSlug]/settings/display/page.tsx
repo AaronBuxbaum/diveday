@@ -190,7 +190,7 @@ export default async function LobbyDisplayPage({
         unqualified "Save" is ambiguous to a screen reader reading the page's
         controls, and to anything else addressing them one at a time.
       */}
-      <SectionCard as="section" className="mt-10 p-5 sm:p-6">
+      <SectionCard as="section" padding="lg" className="mt-10">
         <h2 id={YEAR_SECTION_ID} className={SECTION_TITLE_CLASS}>
           {t("display.year.heading")}
         </h2>
