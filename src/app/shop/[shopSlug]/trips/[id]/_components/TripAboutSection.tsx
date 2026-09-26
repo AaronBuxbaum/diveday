@@ -14,9 +14,14 @@ import { AboutRowDetails } from "./AboutRowDetails";
  * past the panel's column (`ROWS_CLASS`) and the grid takes the 8px back, so
  * the words stay on the column and an editable row's fill, which is its whole
  * summary, runs rule to rule.
+ *
+ * `sm:items-baseline`: the label, the value's first line and the "Edit …"
+ * words share one baseline. The action's words centre in its 44px box, so
+ * top-aligned they sat 12px under the value they edit, and the 12px label 3px
+ * off the 14px value (K-180). The value's later lines run on below.
  */
 const ROW_GRID =
-  "grid w-full gap-1 px-2 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-start sm:gap-4";
+  "grid w-full gap-1 px-2 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-baseline sm:gap-4";
 
 /**
  * The rows' rules, a ledger's length: 8px past the panel's column on each side,
@@ -58,7 +63,7 @@ function AboutRow({ row }: { row: TripAboutRow }) {
       <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:focus-ring-inset">
         <span className={ROW_GRID}>
           {beat}
-          <span className="inline-flex min-h-11 w-fit items-center gap-1 self-start text-sm font-semibold text-primary sm:justify-self-end">
+          <span className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-semibold text-primary sm:justify-self-end">
             {row.editLabel}
             <DisclosureCaret direction="down" className="size-4 group-open/row:rotate-180" />
           </span>
