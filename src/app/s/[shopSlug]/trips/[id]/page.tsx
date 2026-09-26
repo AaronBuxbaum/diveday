@@ -705,20 +705,28 @@ export default async function TripDetailPage({
             the `#book` anchor: `BookSpotSection` and `TripFullSection`'s
             wait-list form each carry it. */}
         {!confirmed && !inPast && !trip.conditionsHold ? (
-          <a
-            href="#book"
-            className={buttonClass({
-              shape: "pill",
-              className: "fixed right-4 bottom-4 z-20 shadow-lg sm:hidden",
-            })}
+          // **A bar at the foot, not a pill over the page** (pixel-craft class
+          // 9, K-139). A 70×48 pill fixed 16px off the corner of a phone
+          // screen sat on the page's own controls at rest — the depth
+          // picker's caret, a sighting's "logged dives", a dive's "water" —
+          // with no room reserved for it. The bar spans the screen in the
+          // chrome's materials (the page ground behind a blur, one hairline,
+          // no shadow), and `data-foot-bar` is what `globals.css` ends the
+          // document that much lower by, so the page's last line and the
+          // shop's footer scroll clear of it.
+          <div
+            data-foot-bar=""
+            className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:hidden print:hidden"
           >
-            {/* The verb, and nothing else. It carried the seat count too
-                ("Book · 3 left"), which is the very fact the card it scrolls to
-                states in its own corner — a floating pill repeating the number
-                it is taking you to read (ADR 20260827-the-divers-thread,
-                decision 2). */}
-            {full ? t("booking.waitlistHeading") : t("booking.bookVerb")}
-          </a>
+            <a href="#book" className={buttonClass({ className: "w-full" })}>
+              {/* The verb, and nothing else. It carried the seat count too
+                  ("Book · 3 left"), which is the very fact the card it scrolls
+                  to states in its own corner — a floating pill repeating the
+                  number it is taking you to read (ADR 20260827-the-divers-thread,
+                  decision 2). */}
+              {full ? t("booking.waitlistHeading") : t("booking.bookVerb")}
+            </a>
+          </div>
         ) : null}
 
         {/* **One rhythm below the hero** (pixel-craft class 4, K-162;

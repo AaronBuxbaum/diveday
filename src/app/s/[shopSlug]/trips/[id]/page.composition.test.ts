@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { declarations, readGlobalsCss, topLevelBlocks } from "@/test/stylesheet";
 
 /**
  * **The order the trip page composes in, pinned as a rule.**
@@ -232,7 +233,35 @@ describe("the trip page's order", () => {
     expect(found("EmbedBookedNotice", /\bmt-10\b/g)).toEqual([]);
   });
 
-  it("keeps the sticky phone pill a verb pointing at the form", () => {
+  /**
+   * **The phone's Book is a bar at the foot, not a pill over the page**
+   * (pixel-craft class 9, K-139). A 70×48 pill fixed 16px off the corner of
+   * every phone screen sat on the page's own controls at rest — the depth
+   * picker's caret, "…on 2 of 3 logged dives", a dive's "water" — and nothing
+   * reserved room for it. It is now a full-width bar in the chrome's materials,
+   * and the document ends that bar's height lower, so the last of the page and
+   * the shop's footer scroll clear of it and a field or fragment lands above it.
+   */
+  it("pins the phone's Book as a bar the document ends clear of", () => {
+    expect(SOURCE.includes("fixed right-4 bottom-4")).toBe(false);
+    const bar = SOURCE.match(
+      /<div\s+data-foot-bar=""\s+className="([^"]*)"\s*>\s*(?:\{\/\*[\s\S]*?\*\/\}\s*)?<a href="#book" className=\{buttonClass\(\{ className: "w-full" \}\)\}>/,
+    );
+    expect(bar?.[1]).toBe(
+      "fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:hidden print:hidden",
+    );
+    // The bar's height: the md button (3rem), its `py-3` (1.5rem), its hairline.
+    const height = "calc(3rem + 1.5rem + 1px)";
+    const phone = topLevelBlocks(readGlobalsCss())
+      .filter((block) => block.prelude === "@media (width < 40rem)")
+      .flatMap((block) => topLevelBlocks(block.body));
+    const rule = (selector: string) =>
+      declarations(phone.find((candidate) => candidate.prelude === selector)?.body ?? "");
+    expect(rule("body:has([data-foot-bar])")["padding-bottom"]).toBe(height);
+    expect(rule("html:has([data-foot-bar])")["scroll-padding-bottom"]).toBe(height);
+  });
+
+  it("keeps the phone's Book bar a verb pointing at the form", () => {
     // It carried the seat count ("Book · 3 left"), which is the fact the card
     // it scrolls to already states in its own corner.
     expect(SOURCE).toContain("bookVerb");

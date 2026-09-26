@@ -534,6 +534,24 @@ html:has([data-sticky-actions]) {
   scroll-padding-bottom: var(--sticky-actions-h, calc(3rem + 1.5rem + 1px));
 }
 
+/*
+ * A bar *fixed* to the viewport's foot on a phone — the public trip's Book
+ * bar (`data-foot-bar`) — stands over whatever the document ends with, the
+ * shop's footer included, and nothing in the flow knows it is there. So the
+ * document ends that much lower, and a field or a fragment lands above it
+ * (pixel-craft class 9, K-139). Its one-row height: the md button (3rem), its
+ * `py-3` (1.5rem) and its hairline. Below `sm` only, where the bar is.
+ */
+@media (width < 40rem) {
+  html:has([data-foot-bar]) {
+    scroll-padding-bottom: calc(3rem + 1.5rem + 1px);
+  }
+
+  body:has([data-foot-bar]) {
+    padding-bottom: calc(3rem + 1.5rem + 1px);
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
