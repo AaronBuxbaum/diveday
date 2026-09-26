@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { dayStripGeometry } from "@/lib/day-strip";
 import { TripAddDiverLink } from "./TripPageHeader";
-import { VoyageHeader } from "./VoyageHeader";
+import { VoyageHeader, VoyageHeaderSkeleton } from "./VoyageHeader";
 
 afterEach(cleanup);
 
@@ -238,6 +238,40 @@ describe("VoyageHeader", () => {
     expect(back?.className).not.toContain("text-primary");
     expect(action?.className).toContain("text-(--sky-ink)");
     expect(action?.className).not.toContain("text-primary");
+  });
+
+  /**
+   * **The loading frame stands on the band's own box** (pixel-craft class 11,
+   * K-197). The departure's skeleton drew the retired masthead's three bars on
+   * the page ground, so a full-width sky arrived when the page landed and the
+   * About card dropped 171px at 1280. The frame is exported from here and
+   * built from the band's own classes, so the two cannot drift: the band less
+   * its paint is the frame's band less its fill, the column is one column, and
+   * the strip's block is the strip's height.
+   */
+  it("draws its loading frame on the band's own box", () => {
+    const { container } = render(
+      <VoyageHeader
+        scheme="day"
+        back={<a href="/back">Board</a>}
+        hour="2:30 PM"
+        title="Two-Tank Reef"
+        facts={["Mantis I", "9 of 12 seats taken"]}
+        strip={strip}
+      />,
+    );
+    const { container: frame } = render(<VoyageHeaderSkeleton />);
+    const classes = (element: Element | null | undefined, ...drop: string[]) =>
+      [...(element?.classList ?? [])].filter((name) => !drop.includes(name)).sort();
+    const band = container.querySelector(".sky");
+    const frameBand = frame.querySelector("header")?.firstElementChild;
+    expect(classes(band)).toContain("w-screen");
+    expect(classes(frameBand, "bg-surface-sunken")).toEqual(classes(band, "sky"));
+    expect(classes(frameBand?.firstElementChild)).toEqual(classes(band?.firstElementChild));
+    const drawn = screen.getByRole("img", { name: /drawn as its voyage/ });
+    expect(
+      classes(frameBand?.firstElementChild?.lastElementChild, "rounded", "bg-surface"),
+    ).toEqual(classes(drawn, "relative"));
   });
 
   /**

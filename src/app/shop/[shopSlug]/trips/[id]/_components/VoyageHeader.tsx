@@ -48,6 +48,33 @@ import type { SkyScheme } from "@/lib/sky-scheme";
  */
 const FACT_SEPARATOR = "\u00a0·";
 
+/**
+ * **The band's box**, worn by the band and by `VoyageHeaderSkeleton`, so the
+ * frame a navigation paints and the band that replaces it cannot drift
+ * (pixel-craft class 11: the skeleton drew the retired masthead's bars, and
+ * the About card dropped 171px when the page landed).
+ *
+ * Sky to both edges, exactly as `DayHeader` does it and for the same reason:
+ * the trip shell is `mx-auto max-w-5xl`, so a band stopping at its content box
+ * would be a panel of sky with the page's ground either side of it.
+ * `mx-[calc(50%-50vw)] w-screen` walks it back out to the viewport from inside
+ * that centred column, which is safe because `body { overflow-x: clip }`
+ * contains the scrollbar without opening a horizontal scroll container.
+ * `-mt-8 sm:-mt-10` eats the shell's own top padding, because a sky with a
+ * margin above it is a picture of sky.
+ */
+const BAND_CLASS =
+  "mx-[calc(50%-50vw)] -mt-8 mb-5 w-screen pt-5 pb-5 print:mx-0 print:w-full sm:-mt-10 sm:pt-7";
+
+/** The page's column again, inside the full-bleed band. */
+const BAND_COLUMN_CLASS = "mx-auto w-full max-w-5xl px-4 sm:px-6";
+
+/** The line of facts' type, whose line box (15px at the inherited 1.5) the skeleton's bars take. */
+const FACTS_LINE_CLASS = "mt-1 text-[15px]";
+
+/** The voyage strip's box. */
+const STRIP_CLASS = "mt-3 h-24 w-full sm:h-28";
+
 export function VoyageHeader({
   scheme,
   back,
@@ -85,21 +112,8 @@ export function VoyageHeader({
 }) {
   return (
     <header className="mb-5">
-      {/*
-       * Sky to both edges, exactly as `DayHeader` does it and for the same
-       * reason: the trip shell is `mx-auto max-w-5xl`, so a band stopping at
-       * its content box would be a panel of sky with the page's ground either
-       * side of it. `mx-[calc(50%-50vw)] w-screen` walks it back out to the
-       * viewport from inside that centred column, which is safe because
-       * `body { overflow-x: clip }` contains the scrollbar without opening a
-       * horizontal scroll container. `-mt-8 sm:-mt-10` eats the shell's own
-       * top padding, because a sky with a margin above it is a picture of sky.
-       */}
-      <SkyBand
-        scheme={scheme}
-        className="mx-[calc(50%-50vw)] -mt-8 mb-5 w-screen pt-5 pb-5 print:mx-0 print:w-full sm:-mt-10 sm:pt-7"
-      >
-        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
+      <SkyBand scheme={scheme} className={BAND_CLASS}>
+        <div className={BAND_COLUMN_CLASS}>
           <div className="flex items-center gap-3">
             {back}
             {/* The slot lays its children out itself: the page hands over
@@ -127,7 +141,7 @@ export function VoyageHeader({
            * and glued whole it could run off a phone (the reason `joinFacts`
            * leaves ordinary words breakable).
            */}
-          <p className="mt-1 text-[15px] text-(--sky-ink-soft)">
+          <p className={`${FACTS_LINE_CLASS} text-(--sky-ink-soft)`}>
             {facts.map((fact, index) => {
               const last = index === facts.length - 1;
               return (
@@ -142,9 +156,48 @@ export function VoyageHeader({
               );
             })}
           </p>
-          {strip ? <DayStrip {...strip} className="mt-3 h-24 w-full sm:h-28" /> : null}
+          {strip ? <DayStrip {...strip} className={STRIP_CLASS} /> : null}
         </div>
       </SkyBand>
+    </header>
+  );
+}
+
+/**
+ * **The band as a navigation paints it**, for the departure's `loading.tsx`:
+ * the band's own box on the neutral fill (the hour the page will be read at is
+ * not known yet, and a day sky that turns to night is a flash), holding one
+ * bar per line of the band, each its line's own height.
+ *
+ * - `h-11`, the back row: the band's two chips are `sm`, 44px.
+ * - `h-10`, the hour's `leading-10`; `h-6`, the title's `leading-6`, on one
+ *   line, as a title is at 390.
+ * - The facts at their own type, one `h-lh` box per line: two on a phone,
+ *   where the seeded line wraps ("… 9 of 12 seats" / "taken · Tue, Jul 21 …"),
+ *   one from `sm`.
+ * - The strip's own box.
+ */
+export function VoyageHeaderSkeleton() {
+  const bar = "rounded bg-surface";
+  return (
+    <header className="mb-5">
+      <div className={`${BAND_CLASS} bg-surface-sunken`}>
+        <div className={BAND_COLUMN_CLASS}>
+          <div className="flex h-11 items-center gap-3">
+            <div className={`h-4 w-20 ${bar}`} />
+            <div className="ms-auto h-11 w-48 rounded-lg bg-surface" />
+          </div>
+          <div className={`mt-3 h-10 w-36 ${bar}`} />
+          <div className={`mt-1 h-6 w-72 max-w-full ${bar}`} />
+          <div className={FACTS_LINE_CLASS}>
+            <div className={`h-lh w-80 max-w-full ${bar}`} />
+            <div className="h-lh pt-1 sm:hidden">
+              <div className={`h-full w-48 ${bar}`} />
+            </div>
+          </div>
+          <div className={`${STRIP_CLASS} ${bar}`} />
+        </div>
+      </div>
     </header>
   );
 }
