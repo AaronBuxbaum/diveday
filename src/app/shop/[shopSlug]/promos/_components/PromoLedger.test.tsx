@@ -105,6 +105,21 @@ describe("the codes ledger", () => {
     expect(live[0]?.textContent).not.toContain("Switched off");
   });
 
+  /**
+   * **A code's line is the code's 24px line** (pixel-craft class 5; K-386).
+   * The inline Copy is a ghost `sm` button, 44px tall, and as a flex item of
+   * the code's line it made that line 44px: 26px from the row's rule to
+   * "REEF10" against 14px from the last line to the next rule. Its wrapper is
+   * the line's own 24px, so the button's box overhangs it evenly into the
+   * row's `py-3` and the words set the inset.
+   */
+  it("keeps the copy button's 44px out of the code's line", () => {
+    renderLedger();
+    for (const button of screen.getAllByRole("button", { name: "Copy code" })) {
+      expect(button.parentElement).toHaveClass("flex", "h-6", "items-center");
+    }
+  });
+
   it("carries no count on a shelf — one Pager counts the whole run", () => {
     renderLedger();
     // A per-shelf tally would count *this page's* rows and read as the

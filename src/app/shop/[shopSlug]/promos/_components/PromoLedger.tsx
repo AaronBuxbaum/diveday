@@ -98,8 +98,15 @@ export function PromoCodeLedger({
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span className="font-mono font-semibold">{row.code}</span>
+                      {/* `flex h-6 items-center` on the button's wrapper: the
+                          code's own 24px line, so the ghost `sm` button's 44px
+                          box overhangs it 10px a side into the row's `py-3`
+                          instead of making the line 44px and the row's air
+                          26px over the code against 14px under the facts
+                          (K-386; `EYEBROW_TAP_WRAPPER`'s idiom). */}
                       <Copyable
                         layout="inline"
+                        className="flex h-6 items-center"
                         value={row.code}
                         copyLabel={copy.copyLabel}
                         copiedLabel={copy.copiedLabel}
