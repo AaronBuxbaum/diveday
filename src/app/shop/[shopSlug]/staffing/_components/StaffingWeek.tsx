@@ -171,8 +171,26 @@ function ShiftFace({
   );
 }
 
-const CHIP_CLASS =
-  "flex w-full flex-col gap-px rounded-lg bg-surface-sunken px-2 py-1.5 text-start text-xs";
+/**
+ * **Every chip's box: one shape, one inset and one 1px border, on all four
+ * kinds** (K-498). The crew and away chips drew a border and the shift and gap
+ * chips none, so in one day column the chips' words started 1px apart and a
+ * bordered chip stood 2px taller for the same lines. Every kind reserves the
+ * pixel; a kind only colours it (`CHIP_KIND`), transparent where it draws none.
+ */
+const CHIP_BOX = "flex w-full flex-col rounded-lg border px-2 py-1.5 text-start text-xs";
+
+const CHIP_KIND = {
+  shift: "gap-px border-transparent bg-surface-sunken",
+  crew: "gap-px border-primary/25 bg-primary-tint text-primary",
+  away: "gap-px border-dashed border-border bg-surface-sunken text-muted",
+  gap: "gap-1 border-transparent bg-surface-sunken",
+  loudGap: "gap-1 border-transparent bg-warning-tint",
+} as const;
+
+function chipClass(kind: keyof typeof CHIP_KIND) {
+  return `${CHIP_BOX} ${CHIP_KIND[kind]}`;
+}
 
 /**
  * One shift in a day cell. A manager gets the disclosure — the chip is the
@@ -202,12 +220,12 @@ function ShiftChip({
   deleteShiftAction: (formData: FormData) => void;
 }) {
   const face = <ShiftFace shift={shift} locale={locale} timeZone={timeZone} isPast={isPast} />;
-  if (!canManage) return <span className={CHIP_CLASS}>{face}</span>;
+  if (!canManage) return <span className={chipClass("shift")}>{face}</span>;
   return (
     <details className="group/shift w-full">
       <summary
         aria-label={fill(words.shiftAria, { person: personName, day: dayLabel })}
-        className={`${CHIP_CLASS} cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/70`}
+        className={`${chipClass("shift")} cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/70`}
       >
         {face}
       </summary>
@@ -254,7 +272,7 @@ function CrewChip({
   return (
     <Link
       href={tripHref(shopSlug, trip.tripId)}
-      className="flex w-full flex-col gap-px rounded-lg border border-primary/25 bg-primary-tint px-2 py-1.5 text-xs text-primary transition-colors hover:bg-primary-tint/70"
+      className={`${chipClass("crew")} transition-colors hover:bg-primary-tint/70`}
     >
       <span className="sr-only">{words.crewing}: </span>
       <span className="font-semibold tabular-nums">
@@ -320,7 +338,7 @@ function CrewChip({
  */
 function AwayChip({ block, words }: { block: AvailabilityBlock; words: StaffingWeekWords }) {
   return (
-    <span className={`${CHIP_CLASS} border border-dashed border-border text-muted`}>
+    <span className={chipClass("away")}>
       <span className="font-semibold">{words.away}</span>
       {block.note ? <span className="font-medium">{block.note}</span> : null}
     </span>
@@ -367,9 +385,7 @@ function GapChip({
   const ink = loud ? "text-warning-strong" : "text-muted";
   const act = gapAct(gap, canManage);
   return (
-    <div
-      className={`flex w-full flex-col gap-1 rounded-lg px-2 py-1.5 text-xs ${loud ? "bg-warning-tint" : "bg-surface-sunken"}`}
-    >
+    <div className={chipClass(loud ? "loudGap" : "gap")}>
       <span className={`flex items-start gap-1.5 font-semibold ${ink}`}>
         {loud ? <DiveDayIcon name="warning" className="mt-0.5 size-3.5 shrink-0" /> : null}
         <span>

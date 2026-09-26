@@ -572,4 +572,65 @@ describe("StaffingWeek geometry", () => {
       expect(cell).not.toHaveClass("pb-2");
     }
   });
+
+  /** One of each chip kind, in Thursday's column and Wednesday's. */
+  function renderEveryChip({ canManage = true } = {}) {
+    const rendered = renderWeek({
+      canManage,
+      people: [
+        {
+          ...KEIKO,
+          crewingTrips: [
+            {
+              tripId: "trip-drift",
+              title: "Reef drift",
+              meetings: [
+                {
+                  startsAt: new Date("2026-08-27T13:00:00.000Z"),
+                  endsAt: new Date("2026-08-27T17:00:00.000Z"),
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      blocks: [
+        {
+          id: "away-1",
+          personId: KEIKO.personId,
+          startsOn: "2026-08-26",
+          endsOn: "2026-08-26",
+          note: null,
+        },
+      ],
+      gaps: [GAP],
+    });
+    const { grid } = branches(rendered.container);
+    const chips = {
+      shift: canManage
+        ? grid.querySelector("summary")
+        : within(grid).getByText("6:30 AM – 12:00 PM").closest("span.flex-col")?.parentElement,
+      crew: grid.querySelector('a[href="/shop/blue-mantis/trips/trip-drift#crew"]'),
+      away: within(grid).getByText("Away").parentElement,
+      gap: within(grid).getByText("Nobody in the water").parentElement,
+    };
+    return { ...rendered, grid, chips };
+  }
+
+  /**
+   * K-498: the crew and away chips carried a 1px border and the shift and gap
+   * chips none, so in one day column the chips' words started 1px apart and a
+   * bordered chip stood 2px taller for the same lines. Every kind reserves the
+   * pixel; a kind only colours it.
+   */
+  it("reserves one 1px border on every chip kind, so their words share an edge", () => {
+    for (const canManage of [true, false]) {
+      const { chips, unmount } = renderEveryChip({ canManage });
+      for (const [kind, chip] of Object.entries(chips)) {
+        expect(chip, kind).not.toBeNull();
+        expect(chip, kind).toHaveClass("border", "rounded-lg", "px-2", "py-1.5");
+      }
+      unmount();
+    }
+  });
 });
