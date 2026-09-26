@@ -54,4 +54,21 @@ describe("the first-bookable card", () => {
     expect(link).toHaveClass("inline-flex", "min-h-11", "items-center");
     expect(link.parentElement).toHaveClass("flex", "h-5", "items-center");
   });
+
+  /**
+   * **Its focus ring clears the link panel above it** (the reviewer's K-452
+   * follow-up). The 44px box overhangs its 20px line by 12px, so under a
+   * `mt-3` its top met the sunken panel's foot and the 5px outset ring drew
+   * inside that panel. `button.ts` (`FLUSH_HOVER_FILL`) says a ring that
+   * would cross a sunken box is drawn inset or given the room; inset, on a
+   * link with no padding, it would sit on the first and last letters. So the
+   * line stands `mt-5` off the panel: 8px between box and panel, 3px clear
+   * of the ring, the same 3px it keeps from the card's border below at 390.
+   */
+  it("stands the link's line far enough off the panel for its ring", () => {
+    renderCard();
+    const line = screen.getByRole("link", { name: COPY.viewAsDiver }).parentElement;
+    expect(line).toHaveClass("mt-5");
+    expect(line).not.toHaveClass("mt-3");
+  });
 });

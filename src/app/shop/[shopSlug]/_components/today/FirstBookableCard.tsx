@@ -56,9 +56,12 @@ export function FirstBookableCard({
       />
       {/* **A 44px target on a 20px line** (K-452). The line is `h-5`, the
           text-sm line box, and centres the link's `tapTargetLinkClass` box on
-          it, so the 12px of target above and below overhang the `mt-3` and the
-          card's padding instead of stacking under the card's last line. */}
-      <p className="mt-3 flex h-5 items-center text-sm">
+          it, so the 12px of target above and below overhang the `mt-5` and the
+          card's padding instead of stacking under the card's last line.
+          `mt-5`, not `mt-3`: the box's top met the sunken panel's foot, and
+          the 5px focus ring drew inside it. 20px leaves the box 8px under the
+          panel and the ring 3px clear, as it is of the card's border below. */}
+      <p className="mt-5 flex h-5 items-center text-sm">
         <Link
           href={scheduleHref}
           className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
