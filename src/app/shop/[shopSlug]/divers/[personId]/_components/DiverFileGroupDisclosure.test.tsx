@@ -140,6 +140,35 @@ describe("DiverFileGroupDisclosure", () => {
     );
     expect(value).not.toHaveClass("shrink-0");
   });
+
+  /**
+   * From `sm` up a stacked fact shares the label's line, and the fact is what
+   * gives way. It used to be `sm:shrink-0` beside a `min-w-0 flex-1` label, so
+   * a long fact (an unverified card's amber sentence) kept its whole width and
+   * the label collapsed to what was left: the pixel probe measured "Certification
+   * records" in a 20px box at 640, its words running 71px out under the fact.
+   */
+  it("keeps the label on one line from sm up and wraps a long fact beside it", () => {
+    render(
+      <DiverFileGroupDisclosure
+        id="certifications"
+        label="Certification records"
+        summary="PADI Advanced Open Water · self-declared, not yet checked against the card"
+        summaryTone="warning"
+        stacked
+      >
+        <p>Certification rows</p>
+      </DiverFileGroupDisclosure>,
+    );
+
+    const summary = screen.getByTestId("diver-file-group-certifications").querySelector("summary");
+    const label = summary?.querySelector("h2");
+    const value = summary?.querySelector("span.text-sm");
+
+    expect(label).toHaveClass("flex-1", "sm:min-w-max");
+    expect(value).toHaveClass("min-w-0", "sm:text-end");
+    expect(value).not.toHaveClass("sm:shrink-0");
+  });
 });
 
 /**

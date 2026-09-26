@@ -150,10 +150,18 @@ export function DiverFileGroupDisclosure({
   // `flex-wrap` rather than a phone-only column: the caret and the label keep
   // the first line and only the fact drops beneath them, which a `flex-col`
   // would have put the caret on a line of its own to achieve.
+  //
+  // From `sm` up a stacked fact shares the label's line, and it is the fact
+  // that gives way: the label keeps its one-line width (`sm:min-w-max`) and
+  // the fact shrinks and wraps beside it. The other way round, a `sm:shrink-0`
+  // fact beside a `min-w-0` label, an unverified card's long amber sentence
+  // crushed "Certification records" into a 20px box at 640 and ran its words
+  // under the fact (the pixel probe's `text-spill`).
   const summaryLayoutClass = stacked ? "max-sm:flex-wrap max-sm:py-2" : "";
+  const labelFloorClass = stacked ? "min-w-0 sm:min-w-max" : "min-w-0";
   const toneClass = summaryTone === "warning" ? "font-medium text-warning-strong" : "text-muted";
   const summaryFactClass = stacked
-    ? `min-w-0 max-w-full text-sm ${toneClass} tabular-nums max-sm:ms-6 max-sm:basis-full max-sm:whitespace-normal max-sm:break-words sm:shrink-0 sm:text-end`
+    ? `min-w-0 max-w-full text-sm ${toneClass} tabular-nums max-sm:ms-6 max-sm:basis-full max-sm:whitespace-normal max-sm:break-words sm:text-end`
     : `shrink-0 text-sm ${toneClass} tabular-nums`;
 
   return (
@@ -180,7 +188,7 @@ export function DiverFileGroupDisclosure({
           className={`flex min-h-11 cursor-pointer items-center gap-3 border-y border-border px-1 py-3 group-open/diver-file:border-b-0 ${summaryLayoutClass}`.trim()}
         >
           <DisclosureCaret className="shrink-0 text-muted group-open/diver-file:rotate-90" />
-          <h2 id={id} className="min-w-0 flex-1 scroll-mt-24 text-base font-medium">
+          <h2 id={id} className={`${labelFloorClass} flex-1 scroll-mt-24 text-base font-medium`}>
             {label}
           </h2>
           <span className={summaryFactClass}>{summary}</span>
