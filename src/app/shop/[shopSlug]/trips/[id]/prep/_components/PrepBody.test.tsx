@@ -372,6 +372,21 @@ describe("the packing list's geometry", () => {
     expect(row.closest("tr")).toHaveClass("relative");
   });
 
+  it("sets each card's count on its title's baseline (K-149)", () => {
+    for (const grouping of ["item", "diver"] as const) {
+      const { container, unmount } = renderPrep(everyPanelPrep(), { grouping });
+      const counts = [...container.querySelectorAll("ul.sm\\:hidden > li p")].filter((p) =>
+        tokens(p).includes(FIGURE_CLASS.split(" ")[0]),
+      );
+      expect(counts.length, grouping).toBeGreaterThan(0);
+      for (const count of counts) {
+        expect(tokens(count.parentElement), grouping).toContain("items-baseline");
+        expect(tokens(count.parentElement), grouping).not.toContain("items-start");
+      }
+      unmount();
+    }
+  });
+
   it("titles every section at the one size a card's own title has (K-151)", () => {
     const { container } = renderPrep(everyPanelPrep(), { notice: "gear-assigned" });
     const headings = container.querySelectorAll("h2");

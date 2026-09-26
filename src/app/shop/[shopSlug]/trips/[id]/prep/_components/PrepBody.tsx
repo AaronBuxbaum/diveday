@@ -749,7 +749,10 @@ export function PrepBody({
                   <ul className="mt-3 flex flex-col gap-3 sm:hidden print:hidden">
                     {checklist.lines.map((line) => (
                       <li key={`${line.kind}:${prepLineKey(line)}`} className={sectionCardClass()}>
-                        <div className="flex items-start justify-between gap-3">
+                        {/* `items-baseline`, in this card and the by-diver one:
+                            top-aligned, the 24/32 count's baseline sat 6px
+                            under the 16/24 title's (pixel-craft class 1). */}
+                        <div className="flex items-baseline justify-between gap-3">
                           <p className="font-semibold">{rentalItemLabel(t, line.kind)}</p>
                           <p className={`shrink-0 ${FIGURE_CLASS}`}>
                             <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
@@ -807,7 +810,7 @@ export function PrepBody({
                   <ul className="mt-3 flex flex-col gap-3 sm:hidden print:hidden">
                     {checklist.diverLines.map((line) => (
                       <li key={line.bookingId} className={sectionCardClass()}>
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-baseline justify-between gap-3">
                           <div className="min-w-0">
                             <p className="font-semibold">
                               {/* The card's 16px name: `nameLinkClass`'s floor,
