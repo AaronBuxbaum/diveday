@@ -94,3 +94,25 @@ describe("the coexist and website callout links", () => {
     expect(SOURCE).not.toContain("inline-block font-medium text-primary underline");
   });
 });
+
+/**
+ * **"In FareHarbor" stays one line over its column** (K-579).
+ *
+ * The website ledger's phone column was `7.5rem`, 120px, and the tracked
+ * small-caps head "IN FAREHARBOR" needs about 122: it broke after "IN". `8rem`
+ * holds it (es-ES "EN FAREHARBOR" is the same length), and the head row and
+ * the ledger rows take one class, so the heads stay over their columns.
+ */
+describe("the website ledger's columns", () => {
+  const constant = SOURCE.match(/const WEBSITE_LEDGER_COLUMNS =\s*"([^"]*)";/);
+
+  it("are 8rem on a phone and 15rem from sm, one class for heads and rows", () => {
+    expect(constant, "WEBSITE_LEDGER_COLUMNS is declared in the page").not.toBeNull();
+    expect(constant?.[1]).toMatch(/(?:^|\s)grid-cols-\[8rem_1fr\](?:\s|$)/);
+    expect(constant?.[1]).toContain("sm:grid-cols-[15rem_1fr]");
+    const at = SOURCE.indexOf("{guide.website && (");
+    const band = SOURCE.slice(at, SOURCE.indexOf("</section>", at));
+    expect(band.match(/\$\{WEBSITE_LEDGER_COLUMNS\}/g)).toHaveLength(2);
+    expect(band).not.toMatch(/grid-cols-\[[\d.]+rem_1fr\]/);
+  });
+});

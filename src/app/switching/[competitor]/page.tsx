@@ -149,6 +149,14 @@ async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
 const CALLOUT_LINK_CLASS = `${tapTargetLinkClass} font-medium text-primary underline underline-offset-4 hover:decoration-2`;
 
 /**
+ * The website ledger's two columns, one class for the head row and every
+ * ledger row so the heads stay over their columns. `8rem` on a phone: at
+ * `7.5rem` (120px) the tracked small-caps head "IN FAREHARBOR", about 122px,
+ * broke after "IN" (K-579); es-ES "EN FAREHARBOR" is the same length.
+ */
+const WEBSITE_LEDGER_COLUMNS = "grid-cols-[8rem_1fr] gap-3 sm:grid-cols-[15rem_1fr] sm:gap-4";
+
+/**
  * Cached per (negotiated locale, guide) — `guide` is a plain, serializable
  * data object (`src/lib/migration-guides.ts`), safe as a `"use cache"`
  * argument. `importCta` carries {@link SwitchingImportCta} (session-scoped —
@@ -254,7 +262,7 @@ async function GuideBody({
             {/* The two column labels render at every width — on a phone the
                 rows are two narrow columns rather than a stack, so a reader
                 who never sees a desktop still knows which side is whose. */}
-            <div className="mt-8 grid grid-cols-[7.5rem_1fr] gap-3 sm:grid-cols-[15rem_1fr] sm:gap-4">
+            <div className={`mt-8 grid ${WEBSITE_LEDGER_COLUMNS}`}>
               <span className={groupLabelClass()}>
                 {t("switching.competitor.websiteTheirs", { competitor: guide.competitor })}
               </span>
@@ -264,7 +272,7 @@ async function GuideBody({
               {guide.website.ledger.map((row) => (
                 <li
                   key={row.theirs}
-                  className="grid grid-cols-[7.5rem_1fr] items-baseline gap-3 py-3 sm:grid-cols-[15rem_1fr] sm:gap-4"
+                  className={`grid ${WEBSITE_LEDGER_COLUMNS} items-baseline py-3`}
                 >
                   <span className="font-medium text-foreground">{t(row.theirs)}</span>
                   <span className="text-sm leading-6 text-muted">{t(row.ours)}</span>
