@@ -91,10 +91,12 @@ export function ManifestMoreMenu({
           >
             <div className="mb-2 flex items-center justify-between gap-3 px-1">
               <p className={groupLabelClass()}>{label}</p>
+              {/* `size-11`, the 44px floor: at `size-9` this was the one
+                  control on the manifest a wet thumb had 36px of. */}
               <button
                 type="button"
                 aria-label={closeLabel}
-                className="grid size-9 place-items-center rounded-full text-muted hover:bg-surface-sunken hover:text-foreground"
+                className="grid size-11 place-items-center rounded-full text-muted hover:bg-surface-sunken hover:text-foreground"
                 onClick={close}
               >
                 <svg

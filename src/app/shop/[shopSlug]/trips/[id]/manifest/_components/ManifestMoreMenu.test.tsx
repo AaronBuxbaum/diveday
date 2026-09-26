@@ -117,3 +117,27 @@ describe("the menu's glyphs", () => {
     expect(close.querySelector("svg")).toHaveClass("size-5");
   });
 });
+
+describe("the panel's close button", () => {
+  /**
+   * **A whole target** (pixel-craft class 7, principles.md §2). The phone
+   * panel's × was `size-9`, a 36px circle on the surface a wet thumb reaches
+   * for, under the 44px floor every other control on the manifest clears. It
+   * is `size-11`, the person sheet's own close button.
+   */
+  it("gives the phone panel's close button the 44px floor", () => {
+    render(
+      <ManifestMoreMenu
+        variant="header"
+        label="Emergency numbers & response plan"
+        closeLabel="Close emergency reference"
+      >
+        {reference()}
+      </ManifestMoreMenu>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Emergency numbers & response plan" }));
+    const close = screen.getByRole("button", { name: "Close emergency reference" });
+    expect(close).toHaveClass("size-11");
+    expect(close).not.toHaveClass("size-9");
+  });
+});
