@@ -842,6 +842,15 @@ describe("the postcard (ADR 20260901-diveday-reimagined, slice 13i)", () => {
     expect(screen.getByRole("heading", { level: 2, name: "recap.logbookHeading" })).toBeTruthy();
     expect(screen.getAllByTestId(AFTER_STATE_TEST_IDS.sites)).toHaveLength(1);
   });
+
+  it("lets the stamp leave the heading's row when the row cannot hold all three", () => {
+    // At 390 the 120px mark and the stamp left "Dive log entry" 101px of the
+    // 140 it needs, and it broke onto a second line for one word (K-596).
+    // Wrapping, the stamp drops under the mark and the heading keeps one line.
+    render(<AfterState {...props({ visitCount: 1 })} />);
+    const face = screen.getByTestId(AFTER_STATE_TEST_IDS.face);
+    expect(face).toHaveClass("flex", "flex-wrap", "gap-y-3");
+  });
 });
 
 /**

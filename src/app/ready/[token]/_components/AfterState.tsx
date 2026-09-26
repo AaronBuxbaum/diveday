@@ -926,10 +926,14 @@ function DiveRecord({
       {/* The postcard's face: the site, drawn, and the heading in the shop's
           face on the lagoon wash. The band is the wash, so the tile takes the
           shell to keep its edge. In print the band drops its wash and its
-          drawing and the heading stands alone at the top of the sheet. */}
+          drawing and the heading stands alone at the top of the sheet.
+
+          It wraps: on a phone the 120px mark and the stamp left the heading
+          101px of the 140 "Dive log entry" needs, and one word broke onto a
+          line of its own (K-596). The stamp drops under the mark instead. */}
       <div
         data-testid={AFTER_STATE_TEST_IDS.face}
-        className="flex items-center justify-between gap-4 bg-primary-tint px-5 py-4 sm:px-6 print:bg-transparent print:px-0 print:py-0"
+        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 bg-primary-tint px-5 py-4 sm:px-6 print:bg-transparent print:px-0 print:py-0"
       >
         <div className="flex min-w-0 items-center gap-4">
           {/* `data-postcard-mark` is `SavePostcard`'s reach into the live DOM:
