@@ -508,7 +508,7 @@ export default async function IncidentExportPage({
           <ol
             className={sectionCardClass({
               padding: "none",
-              className: "mt-3 divide-y divide-border",
+              className: "mt-3 divide-y divide-border sm:grid sm:grid-cols-[auto_minmax(0,1fr)]",
             })}
           >
             {doc.timeline.map((entry, index) => (
@@ -519,9 +519,12 @@ export default async function IncidentExportPage({
                 // Two columns from `sm`: the time, then every other part
                 // wrapping inside a column of its own, so a part that wraps
                 // hangs under the text and never falls back under the time
-                // (it did, at x = 169 on one row and 720 on the next). On a
-                // phone the parts take the line under the time.
-                className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:px-5"
+                // (it did, at x = 169 on one row and 720 on the next). The
+                // columns are the list's, laid through each entry by
+                // `subgrid`, so the time column is the widest timestamp's and
+                // "10:05 AM" does not push its row's text a character right of
+                // "7:05 AM". On a phone the parts take the line under the time.
+                className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:col-span-2 sm:grid sm:grid-cols-subgrid sm:px-5"
               >
                 <span className="font-mono text-xs text-muted tabular-nums">
                   {dateTime(entry.occurredAt)}
