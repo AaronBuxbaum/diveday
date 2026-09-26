@@ -735,8 +735,8 @@ export function FormStatus({
  * shop never sees `type="number"` inputs in one place and free-text decimals
  * in another.
  *
- * Everything currency-dependent here is derived, never assumed: the prefix is
- * the currency's own symbol rather than a literal `$`, the prefill divides by
+ * Everything currency-dependent here is derived, never assumed: the symbol is
+ * the currency's own rather than a literal `$`, the prefill divides by
  * the currency's minor unit rather than 100, and `step` follows the currency's
  * decimal places — a zero-decimal currency like JPY gets whole-number entry,
  * because `step="0.01"` would invite ¥1,234.56, which does not exist.
@@ -746,6 +746,12 @@ export function FormStatus({
  * switched (ADR 20260731-shop-currency), and a defaulted locale is the hard-coded
  * formatting `pnpm check:locale` exists to keep out — the caller has the
  * negotiated one in hand either way.
+ *
+ * **The symbol is in the box, once.** A money box settles to a label that
+ * already carries it ("$45"), and an empty one shows it as its placeholder.
+ * A prefix beside the box used to print it a second time ("$ $45") and push
+ * the box 17px right of its caption, where every other control starts on its
+ * own (the pixel probe, settings-payments at 1280).
  */
 export function PriceField({
   id,
@@ -772,20 +778,17 @@ export function PriceField({
   // form, and the hidden control submits the major-unit figure the old number
   // input sent, so the server sees no difference.
   return (
-    <Field label={label} htmlFor={id} hint={hint}>
-      <div className="flex items-start gap-2">
-        <span className="pt-3 text-sm text-muted">{currencySymbol(currency, locale)}</span>
-        <ForgivingInput
-          kind="money"
-          id={id}
-          name={name}
-          locale={locale}
-          currency={currency}
-          copy={copy}
-          defaultValue={cents === null ? "" : String(minorToMajor(cents, currency))}
-          placeholder="—"
-        />
-      </div>
+    <Field label={label} hint={hint}>
+      <ForgivingInput
+        kind="money"
+        id={id}
+        name={name}
+        locale={locale}
+        currency={currency}
+        copy={copy}
+        defaultValue={cents === null ? "" : String(minorToMajor(cents, currency))}
+        placeholder={currencySymbol(currency, locale)}
+      />
     </Field>
   );
 }

@@ -13,6 +13,7 @@ import {
   FieldActions,
   FieldGrid,
   FormStatus,
+  PriceField,
   SearchField,
   StickyFormActions,
 } from "./form";
@@ -223,6 +224,51 @@ describe("DateField", () => {
     expect(box).toHaveAttribute("max", "2026-08-31");
     expect(box).toHaveClass("tabular-nums");
     expect(focused).toBe(box);
+  });
+});
+
+/**
+ * **One currency symbol, and the box on its caption's edge.** PriceField used
+ * to print the symbol in a prefix beside a money box that already settles to
+ * "$45", so a price read "$ $45", and the prefix pushed the box 17px right of
+ * its label where every other control starts on its own (settings-payments at
+ * 1280: prefix ink 450–456, box border at 466, caption at 449; K-90).
+ */
+describe("PriceField", () => {
+  it("prints the symbol once, in the box, with the box as the field's own control", () => {
+    render(
+      <PriceField
+        id="price"
+        name="priceCents"
+        label="Price"
+        cents={4500}
+        currency="USD"
+        locale="en-US"
+        copy={COPY}
+      />,
+    );
+    const box = screen.getByLabelText("Price");
+    expect(box).toHaveValue("$45");
+    // Field's control slot holds the forgiving box itself — no prefix span, no
+    // flex row beside it.
+    const slot = box.closest("span.grid");
+    expect(slot?.textContent).not.toMatch(/^\$/);
+    expect(slot?.querySelectorAll("span.text-muted")).toHaveLength(0);
+    expect(screen.queryByText("$")).toBeNull();
+  });
+
+  it("carries the symbol in an empty box's placeholder", () => {
+    render(
+      <PriceField
+        name="depositCents"
+        label="Deposit"
+        cents={null}
+        currency="EUR"
+        locale="en-US"
+        copy={COPY}
+      />,
+    );
+    expect(screen.getByLabelText("Deposit")).toHaveAttribute("placeholder", "€");
   });
 });
 
