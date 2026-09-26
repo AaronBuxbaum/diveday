@@ -33,7 +33,14 @@ describe("the Undo button", () => {
     render(<UndoToast {...PROPS} />);
     const undo = screen.getByRole("button", { name: "Undo" });
 
-    expect(undo.className).toBe(buttonClass({ variant: "link", size: "sm", busy: true }));
+    expect(undo.className).toBe(
+      buttonClass({
+        variant: "link",
+        size: "sm",
+        busy: true,
+        className: "focus-visible:focus-ring-inset",
+      }),
+    );
     expect(undo).toHaveClass("min-h-11");
     expect(undo).not.toHaveClass("min-h-9");
   });
@@ -57,6 +64,19 @@ describe("the Undo button", () => {
 
     expect(toast).not.toHaveClass("px-4");
     expect(px(toast, "pe") + px(undo, "px")).toBe(px(toast, "ps"));
+  });
+
+  /**
+   * That end padding is 4px, and the outset ring reaches 5px past the button
+   * (3px wide, 2px off): focused, Undo's ring ran over the toast's own border
+   * at 1280 (pixel-craft K-102, regressed by the padding above). The ring is
+   * drawn inside the button's box, which is 4px clear of the toast's edge.
+   */
+  it("rings Undo inside its own box, clear of the toast's edge", () => {
+    render(<UndoToast {...PROPS} />);
+    expect(screen.getByRole("button", { name: "Undo" })).toHaveClass(
+      "focus-visible:focus-ring-inset",
+    );
   });
 });
 

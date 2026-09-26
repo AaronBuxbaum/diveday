@@ -110,10 +110,17 @@ export function UndoToast({
           {/* The shared link button at `sm`: a 44px target with the press and
               the pointer every button has. It was hand-rolled at 52×36, under
               the floor (pixel-craft K-347). `busy`: a SubmitButton disables
-              itself while its own undo is in flight. */}
+              itself while its own undo is in flight. Its ring is drawn inside
+              its box: the toast's `pe-1` leaves 4px of room at the end, and the
+              outset ring's 5px ran over the toast's border (K-102). */}
           <SubmitButton
             pendingLabel={pendingLabel}
-            className={buttonClass({ variant: "link", size: "sm", busy: true })}
+            className={buttonClass({
+              variant: "link",
+              size: "sm",
+              busy: true,
+              className: "focus-visible:focus-ring-inset",
+            })}
           >
             {undoLabel}
           </SubmitButton>
