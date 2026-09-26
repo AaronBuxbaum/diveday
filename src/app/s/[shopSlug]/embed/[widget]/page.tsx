@@ -232,10 +232,15 @@ function DepartureCard({
       <p className="text-sm tabular-nums">{when}</p>
       {site ? <p className="text-sm text-muted">{site}</p> : null}
       <div className="mt-auto flex items-center justify-between gap-3 pt-2">
-        <span className="text-sm">
+        {/* The price at the footer's own size, as a course card's price in
+            the same slot of the same grid; only the seats step down. Both
+            were `text-sm`, so "$95" stood 2px shorter than "$175" (K-377). */}
+        <span>
           {price ? <span className="font-semibold tabular-nums">{price}</span> : null}
-          {price ? " · " : ""}
-          <span className="text-muted">{seats}</span>
+          <span className="text-sm">
+            {price ? " · " : ""}
+            <span className="text-muted">{seats}</span>
+          </span>
         </span>
         <Link href={href} target="_top" className={buttonClass({ size: "sm" })}>
           {t("embed.book")}
