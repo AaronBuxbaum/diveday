@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
@@ -9,7 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
+import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { type BlowoutDiverState, getTripBlowout } from "@/db/blowouts";
 import type { PaymentStatus } from "@/db/schema";
 import { getTripRoster, getTripWithBooked } from "@/db/trips";
@@ -245,15 +244,18 @@ export default async function BlowoutPage({
               const message = MESSAGE_BADGE[diver.messageStatus];
               return (
                 // `align="baseline"` on every cell: the two Badge columns put
-                // their word on the row's line, not under it.
-                <tr key={diver.id}>
+                // their word on the row's line, not under it. A `Tr`, because
+                // the name's `RowLink` overlay positions against its
+                // `relative`: the name is the row's one door, and it was a
+                // 17–37px target (K-322).
+                <Tr key={diver.id}>
                   <Td align="baseline">
-                    <Link
+                    <RowLink
                       href={shopPath(shopSlug, "divers", diver.personId)}
                       className="font-medium text-foreground hover:text-primary hover:underline"
                     >
                       {diver.fullName}
-                    </Link>
+                    </RowLink>
                     {diver.messageStatus === "no_email" && diver.phone ? (
                       <div className="text-xs text-muted">
                         {t("blowout.record.callThem", {
@@ -293,7 +295,7 @@ export default async function BlowoutPage({
                       </Badge>
                     )}
                   </Td>
-                </tr>
+                </Tr>
               );
             })}
           </TBody>
