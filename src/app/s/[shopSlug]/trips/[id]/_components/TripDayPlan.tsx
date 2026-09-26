@@ -6,7 +6,7 @@ import {
   GroupLabel,
   LedgerRow,
   ledgerKindColumnClass,
-  ledgerRowBoxClass,
+  ledgerRowOpenBoxClass,
 } from "@/components/ui/ledger";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
@@ -333,6 +333,11 @@ export function TripDayPlan({
     <section className="mt-8">
       <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
       {sky}
+      {/* **The run leaves its close to the beat under it** (pixel-craft class
+          6): the pitch's door and the conditions line each open with their
+          own rule, and a closing rule here sat 32px over the door's, two
+          parallel hairlines with nothing between them. Every line in it,
+          hand-set or not, takes the open box. */}
       <ul className="mt-2">
         {briefings.map(({ dive, diveSite }) => {
           const bottomTime = bottomTimes.get(dive.diveNumber) ?? null;
@@ -362,6 +367,7 @@ export function TripDayPlan({
           return (
             <Fragment key={dive.id}>
               <LedgerRow
+                closed={false}
                 kind={{ word: t("trip.diveNumber", { number: dive.diveNumber }), tone: "neutral" }}
                 trailing={
                   depth ? <span className="text-sm text-muted tabular-nums">{depth}</span> : null
@@ -406,9 +412,9 @@ export function TripDayPlan({
                   screen — and three sentences of reading set in it wrapped
                   every line twice. The surface interval below already has this
                   shape for the same reason. It takes the dive rows' box, so its
-                  rules are theirs and a list that ends on it still closes. */}
+                  rules are theirs. */}
               {seen ? (
-                <li className={`flex gap-3 py-2 ${ledgerRowBoxClass}`}>
+                <li className={`flex gap-3 py-2 ${ledgerRowOpenBoxClass}`}>
                   <span className={`${ledgerKindColumnClass} shrink-0`} />
                   <SiteSeen
                     seen={seen}
@@ -423,7 +429,7 @@ export function TripDayPlan({
                   Indented past the kind word so it reads as part of the run
                   rather than as a third dive. */}
               {interval ? (
-                <li className={`flex items-center gap-3 py-2 ${ledgerRowBoxClass}`}>
+                <li className={`flex items-center gap-3 py-2 ${ledgerRowOpenBoxClass}`}>
                   <span className={`${ledgerKindColumnClass} shrink-0`} />
                   <span className="text-sm text-muted tabular-nums">
                     {t("trip.dayProfile.surfaceInterval", { minutes: interval })}

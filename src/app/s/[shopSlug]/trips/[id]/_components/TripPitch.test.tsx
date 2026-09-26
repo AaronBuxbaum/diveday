@@ -3,7 +3,7 @@ import { cleanup, render, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { PublicCrewMember } from "@/db/trips";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { TripPitch } from "./TripPitch";
+import { pitchHasDoor, TripPitch } from "./TripPitch";
 import type { DiveBriefing } from "./types";
 
 /**
@@ -203,6 +203,25 @@ describe("TripPitch", () => {
     expect(container.querySelectorAll("details")).toHaveLength(0);
     // Only the fact chip is left, which is the whole block.
     expect(container.firstElementChild?.children).toHaveLength(1);
+  });
+
+  /**
+   * The page sits the conditions line flush under the door, so its rule is the
+   * door's close (pixel-craft class 6); it asks the same question this block
+   * answers, never a second detector. Open, the door's body keeps 24px above
+   * that rule.
+   */
+  it("says whether it ends in a door, exactly as it renders one", () => {
+    const full = [briefing({ creatures: CREATURES.map(creature) })];
+    const { container } = render(
+      <TripPitch briefings={full} crew={CREW} locale={DEFAULT_DIVER_LOCALE} />,
+    );
+    expect(pitchHasDoor(full, CREW)).toBe(true);
+    expect(container.querySelector("section")?.lastElementChild?.tagName).toBe("DETAILS");
+    expect(container.querySelector("[data-pitch-door-body]")).toHaveClass("pb-6");
+    cleanup();
+    const bare = [briefing({ diveSite: null } as unknown as Partial<DiveBriefing>)];
+    expect(pitchHasDoor(bare, [])).toBe(false);
   });
 
   it("renders nothing at all for a bare course session", () => {

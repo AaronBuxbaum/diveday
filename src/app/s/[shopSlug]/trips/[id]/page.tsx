@@ -81,7 +81,7 @@ import { TripActions } from "./_components/TripActions";
 import { TripAlternatives } from "./_components/TripAlternatives";
 import { TripDayPlan } from "./_components/TripDayPlan";
 import { TripHeader } from "./_components/TripHeader";
-import { TripPitch } from "./_components/TripPitch";
+import { pitchHasDoor, TripPitch } from "./_components/TripPitch";
 import { TripTerms } from "./_components/TripTerms";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { offerHandoff } from "./actions";
@@ -749,6 +749,9 @@ export default async function TripDetailPage({
             a section, and `page.composition.test.ts` is what says so. */}
         <TripPitch briefings={diveBriefings} crew={publicCrew} locale={locale} embed={isEmbed} />
         <ConditionsLine
+          // Flush under the pitch's door when there is one, so its rule is the
+          // door's close rather than a second rule 24px below it.
+          underDoor={pitchHasDoor(diveBriefings, publicCrew)}
           shop={shop}
           trip={trip}
           crewPrediction={crewPrediction}

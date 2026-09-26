@@ -165,7 +165,16 @@ const ROW_GLYPH_INK = {
   neutral: "text-muted",
 } as const;
 
-function StationRow({ action, controls }: { action: TodayAction; controls: RowControls }) {
+function StationRow({
+  action,
+  controls,
+  closed = true,
+}: {
+  action: TodayAction;
+  controls: RowControls;
+  /** `false` inside a station's panel, whose own edge closes the list. */
+  closed?: boolean;
+}) {
   const { t } = controls;
   const performs = Boolean(
     action.waiver ||
@@ -287,6 +296,7 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
         tone,
       }}
       trailing={control}
+      closed={closed}
       {...door}
     >
       {body}
@@ -297,9 +307,11 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
 function StationRows({ rows, controls }: { rows: readonly TodayAction[]; controls: RowControls }) {
   if (rows.length === 0) return null;
   return (
+    // The panel's own edge closes the list: a closing rule its padding above
+    // the panel's border was two parallel lines with nothing between them.
     <ul className="mt-4">
       {rows.map((action) => (
-        <StationRow key={rowKey(action)} action={action} controls={controls} />
+        <StationRow key={rowKey(action)} action={action} controls={controls} closed={false} />
       ))}
     </ul>
   );

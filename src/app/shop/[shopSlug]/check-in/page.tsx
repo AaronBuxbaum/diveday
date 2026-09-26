@@ -779,6 +779,8 @@ export default async function CheckInPage({
               // than working: its receipts are the point, so they arrive open.
               settledOpen={hasSailed(focus.startsAt, now)}
               settledHeadingLevel="h3"
+              // The walk-in door follows, flush, as the queue's last line.
+              endsOpen
               t={t}
             />
           ) : (
@@ -900,7 +902,13 @@ export default async function CheckInPage({
             // the last line of the list, not a second primary competing with
             // the taps above it (ADR 20260827-clearwater-surface-language,
             // decision 9).
-            <div className="mt-6">
+            //
+            // **Flush under the queue, as that last line** (pixel-craft class
+            // 6): the queue leaves its close to this row (`endsOpen`), where a
+            // closing rule 24px above the door's own was two parallel hairlines
+            // with nothing between them. Under the empty state it keeps its
+            // distance.
+            <div className={queue.length > 0 && focus ? undefined : "mt-6"}>
               <LedgerRow
                 as="div"
                 size="lg"

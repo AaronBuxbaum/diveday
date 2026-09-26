@@ -11,6 +11,7 @@ import {
   LedgerRow,
   ledgerKindColumnClass,
   ledgerRowBoxClass,
+  ledgerRowOpenBoxClass,
   RowKind,
 } from "./ledger";
 
@@ -431,6 +432,28 @@ describe("LedgerRow", () => {
     const row = container.firstElementChild;
     expect(row).toHaveClass("border-t", "border-border", "last:border-b", "min-h-13");
     expect(row?.className).not.toMatch(/rounded|shadow|bg-surface\b/);
+  });
+
+  /**
+   * **A list decides whether it closes** (pixel-craft class 6). `last:border-b`
+   * is right on the page ground and wrong where a rule already follows: inside
+   * a card whose edge is the close, or above a block that opens with its own
+   * rule — the counter's walk-in door, the public trip's pitch door — where it
+   * left two parallel hairlines with nothing between them.
+   */
+  it("leaves its close to what follows when its list does not close", () => {
+    const { container, rerender } = render(
+      <LedgerRow as="div" closed={false}>
+        Tom Okafor
+      </LedgerRow>,
+    );
+    const row = () => container.firstElementChild as HTMLElement;
+    expect(row()).toHaveClass(...ledgerRowOpenBoxClass.split(" "));
+    expect(row()).not.toHaveClass("last:border-b");
+    rerender(<LedgerRow as="div">Tom Okafor</LedgerRow>);
+    expect(row()).toHaveClass("last:border-b");
+    // One box, with and without its close.
+    expect(ledgerRowBoxClass).toBe(`${ledgerRowOpenBoxClass} last:border-b`);
   });
 
   it("takes the counter's taller target at size lg", () => {

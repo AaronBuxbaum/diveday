@@ -56,6 +56,7 @@ export function CounterQueue({
   salvageFor,
   settledOpen,
   settledHeadingLevel,
+  endsOpen = false,
   t,
 }: {
   /** One departure's rows, in the reader's order. */
@@ -122,11 +123,20 @@ export function CounterQueue({
    * is an axe `heading-order` finding on a surface `e2e/a11y.spec.ts` scans.
    */
   settledHeadingLevel: "h3" | "h4";
+  /**
+   * The walk-in door follows, flush, with its own rule: the queue's last list
+   * leaves its close to it rather than drawing a second hairline 24px above
+   * the door's (pixel-craft class 6). Only the last list — the ones above it
+   * are followed by a group's label, not a rule.
+   */
+  endsOpen?: boolean;
   t: StaffTranslator;
 }) {
   const settled = rows.filter(isSettledAtCounter);
   const notHere = rows.filter(isNoShowAtCounter);
   const waiting = rows.filter((row) => !counterIsDone(row));
+  const lastList = settled.length > 0 ? "settled" : notHere.length > 0 ? "notHere" : "waiting";
+  const closes = (list: typeof lastList) => !(endsOpen && list === lastList);
   /**
    * **Boarding is the group's fact, not the row's** (principle 9). Five
    * receipts each wearing an identical "Boarded" pill is the same word printed
@@ -153,6 +163,7 @@ export function CounterQueue({
           {waiting.map((row) => (
             <CounterQueueRow
               key={row.bookingId}
+              closed={closes("waiting")}
               row={row}
               shopSlug={shopSlug}
               today={today}
@@ -193,6 +204,7 @@ export function CounterQueue({
             {notHere.map((row) => (
               <CounterQueueRow
                 key={row.bookingId}
+                closed={closes("notHere")}
                 row={row}
                 shopSlug={shopSlug}
                 today={today}
@@ -238,6 +250,7 @@ export function CounterQueue({
             {settled.map((row) => (
               <CounterQueueRow
                 key={row.bookingId}
+                closed={closes("settled")}
                 row={row}
                 shopSlug={shopSlug}
                 today={today}

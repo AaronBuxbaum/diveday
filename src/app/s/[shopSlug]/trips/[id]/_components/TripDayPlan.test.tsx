@@ -231,6 +231,27 @@ describe("TripDayPlan's profile", () => {
     expect(within(screen.getByRole("list")).queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
   });
 
+  it("leaves the day's run open: the beat under it draws its own rule", () => {
+    // Closed, the run's last rule sat 32px over the pitch door's own: two
+    // parallel hairlines with nothing between them (pixel-craft class 6).
+    render(
+      <TripDayPlan
+        briefings={[briefing(), wall]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+      />,
+    );
+    const lines = [...screen.getByRole("list").children];
+    expect(lines.length).toBeGreaterThan(2);
+    for (const line of lines) {
+      expect(line).toHaveClass("border-t");
+      expect(line).not.toHaveClass("last:border-b");
+    }
+  });
+
   it("says nothing about a surface interval on a one-tank day", () => {
     render(
       <TripDayPlan

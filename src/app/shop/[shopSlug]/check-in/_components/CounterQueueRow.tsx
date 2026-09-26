@@ -205,6 +205,7 @@ export function CounterQueueRow({
   confirmIdentityAction,
   identityCopy,
   salvage,
+  closed = true,
   t,
 }: {
   row: QueueRow;
@@ -255,6 +256,8 @@ export function CounterQueueRow({
    * Absent on every row that is not marked not here.
    */
   salvage?: NoShowSalvageCopy;
+  /** `false` when this row's list leaves its close to the walk-in door under it. */
+  closed?: boolean;
   t: StaffTranslator;
 }) {
   const refusedWaiver = waiverNotice?.bookingId === row.bookingId ? waiverNotice : undefined;
@@ -269,7 +272,7 @@ export function CounterQueueRow({
          deactivated — and the Undo beside it is the whole reason the row stays
          on this page instead of vanishing: the diver who walks in as the lines
          come off needs somewhere for a staffer to walk it back. */
-      <LedgerRow as="article" size="lg" pad="lg">
+      <LedgerRow as="article" size="lg" pad="lg" closed={closed}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <DiverIdentity
@@ -317,6 +320,7 @@ export function CounterQueueRow({
         size="lg"
         // The undo is the row's whole box and pads itself, rule to rule.
         pad="none"
+        closed={closed}
         trailing={<PassDoor shopSlug={shopSlug} row={row} t={t} />}
       >
         <CheckInActionForm
@@ -371,6 +375,7 @@ export function CounterQueueRow({
         size="lg"
         // The tap is the row's whole box and pads itself, rule to rule.
         pad="none"
+        closed={closed}
         // **The sink, in CSS.** `QueueRowButton` disables itself while the tap
         // is in flight, so the row can play the existing `fade-out` (150ms,
         // `--ease-in-soft` — an exit, so the exit curve) off that one fact
@@ -575,7 +580,7 @@ export function CounterQueueRow({
     </RowActionForm>
   ) : null;
   return (
-    <LedgerRow as="article" size="lg" pad="lg">
+    <LedgerRow as="article" size="lg" pad="lg" closed={closed}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <DiverIdentity

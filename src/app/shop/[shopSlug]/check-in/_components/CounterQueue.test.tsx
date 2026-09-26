@@ -53,6 +53,7 @@ function renderQueue(
   confirmIdentityAction: (formData: FormData) => Promise<void> = vi
     .fn()
     .mockResolvedValue(undefined),
+  endsOpen = false,
 ) {
   return render(
     <CounterQueue
@@ -78,10 +79,34 @@ function renderQueue(
       salvageFor={() => undefined}
       settledOpen={settledOpen}
       settledHeadingLevel="h3"
+      endsOpen={endsOpen}
       t={t}
     />,
   );
 }
+
+/**
+ * **The walk-in door is the queue's last line** (pixel-craft class 6). The
+ * queue closed its last row with a rule and the door opened with its own 24px
+ * below it: two parallel hairlines with nothing between them. With `endsOpen`
+ * the queue leaves its last list's close to the door, which sits flush.
+ */
+describe("a queue with the walk-in door under it", () => {
+  const article = (name: string) => screen.getByText(name).closest("article");
+
+  it("leaves its last list open, and only its last", () => {
+    renderQueue([row("Tom Okafor"), settled("Nadia Petrov")], true, true, undefined, true);
+    // The working list is followed by the settled group's label, not a rule.
+    expect(article("Tom Okafor")).toHaveClass("last:border-b");
+    expect(article("Nadia Petrov")).not.toHaveClass("last:border-b");
+    expect(article("Nadia Petrov")).toHaveClass("border-t");
+  });
+
+  it("closes itself on its own", () => {
+    renderQueue([row("Tom Okafor")]);
+    expect(article("Tom Okafor")).toHaveClass("last:border-b");
+  });
+});
 
 describe("a send that does not go through", () => {
   /**

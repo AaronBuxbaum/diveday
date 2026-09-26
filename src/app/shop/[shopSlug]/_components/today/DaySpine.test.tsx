@@ -376,6 +376,17 @@ describe("the station is a panel (16a)", () => {
     expect(container.querySelector('[class*="grid-cols-[112px_112px_1fr]"]')).toBeNull();
   });
 
+  it("leaves a station's last row to the panel's own edge", () => {
+    // A closing rule 20px above the panel's border was two parallel lines with
+    // nothing between them (pixel-craft class 6).
+    renderSpine({
+      actions: [action({ id: "r1", subject: "Priya Sharma", departure: boat("t1") })],
+    });
+    const row = screen.getByText("Priya Sharma").closest("li");
+    expect(row).toHaveClass("border-t");
+    expect(row).not.toHaveClass("last:border-b");
+  });
+
   it("says a row as one line: the person, then the sentence", () => {
     renderSpine({
       actions: [

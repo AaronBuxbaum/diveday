@@ -124,15 +124,24 @@ const FILL_ROOM = "-mx-2 px-2";
 export const ledgerRowRoomClass = FILL_ROOM;
 
 /**
+ * **A ledger row's box in a list that leaves its close to what follows**: its
+ * room and its top rule, without the `last:border-b` that closes a list on the
+ * page ground. For a list inside a card, whose edge is the close, or above a
+ * block that opens with its own rule (pixel-craft class 6) — `LedgerRow`'s
+ * `closed={false}`, and a hand-set line in such a list.
+ */
+export const ledgerRowOpenBoxClass = `${FILL_ROOM} border-t border-border`;
+
+/**
  * **A ledger row's box, for a row `LedgerRow` does not draw**: its room and its
  * two rules. A loading skeleton standing in for a list of `LedgerRow`s takes
  * it, or its rules sit 8px inside the loaded rows' and jump on arrival
  * (docs/design/pixel-craft.md, class 11); so does a hand-set line inside a
- * ledger's list — the public trip's surface interval — or it steps the list's
- * rules. `LedgerRow` spells its own box with it, so there is one string to
- * keep.
+ * ledger's list, or it steps the list's rules. `LedgerRow` spells its own box
+ * with it (or, in a list that does not close, `ledgerRowOpenBoxClass`), so
+ * there is one string to keep.
  */
-export const ledgerRowBoxClass = `${FILL_ROOM} border-t border-border last:border-b`;
+export const ledgerRowBoxClass = `${ledgerRowOpenBoxClass} last:border-b`;
 
 /**
  * A ledger row's focus ring, drawn inside the row instead of 2px outside it:
@@ -419,6 +428,14 @@ const ROW_PAD = { md: "py-2", lg: "py-3", none: "" } as const;
  * The hairline is `border-t` plus a `last:border-b`, so a group closes itself
  * without any row having to know it is last.
  *
+ * **Unless its list leaves the close to what follows** (`closed={false}`,
+ * pixel-craft class 6). The close is right on the page ground and wrong where
+ * a rule already follows: inside a card, whose edge is the close (Today's
+ * station rows), or above a block that opens with its own rule (the counter's
+ * walk-in door, the public trip's pitch door) — there it drew two parallel
+ * hairlines with nothing between them. It is the list's decision, passed to
+ * each of its rows; only the last one draws anything different.
+ *
  * **A door draws its own chevron.** A row with an `href` ends in the shared
  * door glyph (`DoorChevron`), after whatever `trailing` carries, so the affordance
  * that says "this row opens" is one decision rather than one per surface.
@@ -487,6 +504,7 @@ export function LedgerRow({
   size = "md",
   pad = "md",
   align = "center",
+  closed = true,
   stacked = false,
   as: Tag = "li",
   className = "",
@@ -519,6 +537,11 @@ export function LedgerRow({
    * centred in its 52px (16 + 20 + 16): baseline alignment starts at the top.
    */
   align?: "center" | "first-line";
+  /**
+   * `false` where the row's list leaves its close to what follows — a card's
+   * edge, or a block with a rule of its own. See above.
+   */
+  closed?: boolean;
   /** Below `sm`, drop the sentence to its own full-width line. See above. */
   stacked?: boolean;
   /**
@@ -531,7 +554,9 @@ export function LedgerRow({
 } & LedgerRowDoor) {
   return (
     <Tag
-      className={`relative flex items-center gap-3 ${ledgerRowBoxClass} ${ROW_PAD[pad]} ${
+      className={`relative flex items-center gap-3 ${
+        closed ? ledgerRowBoxClass : ledgerRowOpenBoxClass
+      } ${ROW_PAD[pad]} ${
         size === "lg" ? "min-h-14" : "min-h-13"
       } ${align === "first-line" ? "sm:items-baseline sm:py-4" : ""} ${stacked ? "max-sm:flex-wrap max-sm:gap-y-1" : ""} ${href ? "pressable-row hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
         .replace(/\s+/g, " ")

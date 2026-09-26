@@ -90,16 +90,7 @@ export function TripPitch({
   // row, and the certification the trip asks for is the page's own
   // requirement note under this block.
   const fitWord = dayFitWord(briefings, t);
-  // Whether the door opens onto anything, asked of the same four builders the
-  // beats themselves read — never a second detector, which is how a door ends
-  // up promising a reader something and costing them a tap to find out there
-  // was nothing.
-  const doorHasContent =
-    cards.length > 0 ||
-    crew.length > 0 ||
-    routeSitesFor(briefings).length > 0 ||
-    dayMomentsFor(briefings).length > 0 ||
-    siteNotePassagesFor(briefings).length > 0;
+  const doorHasContent = pitchHasDoor(briefings, crew);
   if (!fitWord && tiles.length === 0 && !doorHasContent) return null;
   return (
     <section className="mt-8">
@@ -164,7 +155,9 @@ export function TripPitch({
           // promoted faces belong inside it too rather than losing their prose.
           meta={cards.length > 0 ? t("trip.pitchDoorSpecies", { count: cards.length }) : undefined}
         >
-          <div data-pitch-door-body>
+          {/* `pb-6`: open, the body keeps 24px above the conditions line,
+              which sits flush under this door (`pitchHasDoor`). */}
+          <div data-pitch-door-body className="pb-6">
             <TripLookFor briefings={briefings} locale={locale} />
             <TripRoutes briefings={briefings} locale={locale} />
             <TripMoments briefings={briefings} locale={locale} />
@@ -174,6 +167,26 @@ export function TripPitch({
         </LedgerGroup>
       ) : null}
     </section>
+  );
+}
+
+/**
+ * Whether the pitch ends in its door: asked of the same builders the beats
+ * behind it read — never a second detector, which is how a door ends up
+ * promising a reader something and costing them a tap to find out there was
+ * nothing. The page asks it too, to sit the conditions line flush under the
+ * door so its rule is the door's close (pixel-craft class 6).
+ */
+export function pitchHasDoor(
+  briefings: DiveBriefing[],
+  crew: readonly PublicCrewMember[],
+): boolean {
+  return (
+    fieldGuideCardsFor(briefings).length > 0 ||
+    crew.length > 0 ||
+    routeSitesFor(briefings).length > 0 ||
+    dayMomentsFor(briefings).length > 0 ||
+    siteNotePassagesFor(briefings).length > 0
   );
 }
 
