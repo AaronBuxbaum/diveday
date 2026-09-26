@@ -7,8 +7,15 @@ import { tapTargetLinkClass } from "@/components/ui/button";
 // reference, not the session and database behind it.
 vi.mock("@/app/actions/demo", () => ({ enterDemoAction: vi.fn() }));
 
-const { ClosingCta, GUIDE_BAND_CLASS, GuideContext, GuideHero, MovePath, SourcesFootnote } =
-  await import("./guide");
+const {
+  ClosingCta,
+  GUIDE_BAND_CLASS,
+  GUIDE_BAND_LEDE_CLASS,
+  GuideContext,
+  GuideHero,
+  MovePath,
+  SourcesFootnote,
+} = await import("./guide");
 
 afterEach(cleanup);
 
@@ -156,5 +163,21 @@ describe("the you-are-here band", () => {
     cleanup();
     const rail = render(<MovePath locale="en-US">{null}</MovePath>).container;
     expect(rail.firstElementChild?.firstElementChild?.className).toBe(GUIDE_BAND_CLASS);
+  });
+});
+
+/**
+ * **One step from a band's heading to its lede** (K-495). The move rail's lede
+ * was `mt-4` where the coexist and website bands' are `mt-5`, a 4px step
+ * between bands of one kind at both widths.
+ */
+describe("the move rail's lede", () => {
+  it("sits under its heading at the band lede's step", () => {
+    render(<MovePath locale="en-US">{null}</MovePath>);
+    const heading = screen.getByRole("heading", { name: "How the move works" });
+    const lede = heading.nextElementSibling;
+    expect(lede?.tagName).toBe("P");
+    expect(lede?.className).toBe(GUIDE_BAND_LEDE_CLASS);
+    expect(lede).toHaveClass("mt-5");
   });
 });

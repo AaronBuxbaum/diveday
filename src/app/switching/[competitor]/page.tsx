@@ -28,6 +28,7 @@ import {
   ClosingCta,
   DividedList,
   GUIDE_BAND_CLASS,
+  GUIDE_BAND_LEDE_CLASS,
   GuideContext,
   GuideHero,
   ImportPhase,
@@ -183,7 +184,7 @@ async function GuideBody({
               {t("switching.competitor.keepOrLeaveEyebrow")}
             </p>
             <h2 className={`mt-3 ${BANNER_TITLE_CLASS} sm:text-4xl`}>{t(guide.coexist.heading)}</h2>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.coexist.intro)}</p>
+            <p className={GUIDE_BAND_LEDE_CLASS}>{t(guide.coexist.intro)}</p>
 
             {/* Shared messages — two of them interpolate the competitor's name. */}
             <DividedList
@@ -238,7 +239,7 @@ async function GuideBody({
           <div className={GUIDE_BAND_CLASS}>
             <p className={MARKETING_EYEBROW_CLASS}>{t("switching.competitor.websiteEyebrow")}</p>
             <h2 className={`mt-3 ${BANNER_TITLE_CLASS} sm:text-4xl`}>{t(guide.website.heading)}</h2>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.website.intro)}</p>
+            <p className={GUIDE_BAND_LEDE_CLASS}>{t(guide.website.intro)}</p>
 
             {/* The two column labels render at every width — on a phone the
                 rows are two narrow columns rather than a stack, so a reader

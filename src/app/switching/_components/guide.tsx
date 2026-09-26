@@ -60,6 +60,14 @@ const GUIDE_FACTS = ["moves", "time", "preview", "back"] as const;
 export const GUIDE_BAND_CLASS = "mx-auto max-w-4xl px-6 py-16 lg:py-20";
 
 /**
+ * **The lede under a band's heading** — the move rail's, the coexist band's,
+ * the website band's. One step from heading to lede: the move rail's was
+ * `mt-4` where the other two were `mt-5`, a 4px step between bands of one
+ * kind at every width (K-495).
+ */
+export const GUIDE_BAND_LEDE_CLASS = "mt-5 max-w-2xl text-lg leading-8 text-muted";
+
+/**
  * The guide hero: back link, eyebrow, headline, lede, the buyer's first door
  * out — and {@link GUIDE_FACTS}, stated in the first screenful instead of
  * four to eight sections down.
@@ -205,9 +213,7 @@ export function MovePath({ locale, children }: { locale: DiverLocale; children: 
     <section className="border-y border-border bg-surface">
       <div className={GUIDE_BAND_CLASS}>
         <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>{t("switching.common.moveTitle")}</h2>
-        <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
-          {t("switching.common.moveIntro")}
-        </p>
+        <p className={GUIDE_BAND_LEDE_CLASS}>{t("switching.common.moveIntro")}</p>
         <ol className="mt-12">
           {/* Inside the list, so mounting proves the id-bearing phase exists.
               A phase's `id` (see MovePhase below) is a link target reached by

@@ -50,4 +50,14 @@ describe("the guide's own bands", () => {
       expect(tagAfter(marker, "<div")).toContain("className={GUIDE_BAND_CLASS}");
     }
   });
+
+  /** K-495: every band's heading-to-lede step is the guide module's one value. */
+  it("set their lede with the guide module's band lede class", () => {
+    for (const marker of ["{guide.coexist && (", "{guide.website && ("]) {
+      const at = SOURCE.indexOf(marker);
+      const band = SOURCE.slice(at, SOURCE.indexOf("</section>", at));
+      expect(band).toContain("<p className={GUIDE_BAND_LEDE_CLASS}>");
+    }
+    expect(SOURCE).not.toContain("max-w-2xl text-lg leading-8 text-muted");
+  });
 });
