@@ -156,23 +156,31 @@ export function MonthFigures({
                   different size, and inheriting one to override it three times
                   is how a ramp drifts. */}
               <span className={`block ${FIGURE_LARGE_CLASS}`}>{figure.value}</span>
-              {figure.earned ? (
-                <EarnedMomentLine animate={false} className="mt-2">
-                  {figure.earned}
-                </EarnedMomentLine>
-              ) : figure.detail ? (
-                <span
-                  className={`mt-2 block text-sm ${
-                    figure.detailTone === "attention" ? "text-warning-strong" : "text-muted"
-                  }`}
-                >
-                  {figure.detail}
-                </span>
-              ) : null}
-              {figure.comparison ? (
-                <span className="mt-1 block text-sm text-muted tabular-nums">
-                  {figure.comparison}
-                </span>
+              {/* **One block owns the lines under the value**, so the first of
+                  them starts 8px down whichever it is. The detail took `mt-2`
+                  and the comparison `mt-1`, so a figure with no detail (net
+                  revenue) set its comparison 4px higher than every
+                  neighbour's first line (K-287). Rendered only when it holds
+                  something: an empty `mt-2` block is a phantom gap. */}
+              {figure.earned || figure.detail || figure.comparison ? (
+                <div className="mt-2 space-y-1">
+                  {figure.earned ? (
+                    <EarnedMomentLine animate={false}>{figure.earned}</EarnedMomentLine>
+                  ) : figure.detail ? (
+                    <span
+                      className={`block text-sm ${
+                        figure.detailTone === "attention" ? "text-warning-strong" : "text-muted"
+                      }`}
+                    >
+                      {figure.detail}
+                    </span>
+                  ) : null}
+                  {figure.comparison ? (
+                    <span className="block text-sm text-muted tabular-nums">
+                      {figure.comparison}
+                    </span>
+                  ) : null}
+                </div>
               ) : null}
               {figure.link ? (
                 <Link

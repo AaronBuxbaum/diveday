@@ -69,6 +69,51 @@ describe("the band's rules", () => {
   });
 });
 
+describe("the lines under a figure", () => {
+  it("start 8px under the value whichever of them render: one mt-2 space-y-1 block holds the detail and the comparison", () => {
+    // Revenue has a comparison and no detail; its comparison was the first
+    // line under its value at `mt-1`, where every other figure's first line
+    // (a detail) sat at `mt-2` — 4px higher than its neighbours' (K-287).
+    renderFigures([
+      ...FIGURES.slice(0, 1),
+      { ...FIGURES[1], comparison: "up 4% vs $615" },
+      ...FIGURES.slice(2),
+    ]);
+    const revenueComparison = screen.getByText("up 18% vs $10,560");
+    const tipsDetail = screen.getByText("31 tips");
+    const tipsComparison = screen.getByText("up 4% vs $615");
+    for (const line of [revenueComparison, tipsDetail]) {
+      expect(line.parentElement).toHaveClass("mt-2", "space-y-1");
+    }
+    // A detail and its comparison share the block, a step apart.
+    expect(tipsComparison.parentElement).toBe(tipsDetail.parentElement);
+    // No line spaces itself: the block owns the offset and the step.
+    for (const line of [revenueComparison, tipsDetail, tipsComparison]) {
+      expect([...line.classList].filter((token) => /^m[ty]?-/.test(token))).toEqual([]);
+    }
+  });
+
+  it("holds the earned line in the same block, without a margin of its own", () => {
+    renderFigures(
+      FIGURES.map((figure) =>
+        figure.key === "waivers"
+          ? { ...figure, detail: undefined, earned: "Everyone’s paperwork is in" }
+          : figure,
+      ),
+    );
+    const earned = screen.getByText("Everyone’s paperwork is in");
+    expect(earned.parentElement).toHaveClass("mt-2", "space-y-1");
+    expect(earned).not.toHaveClass("mt-2");
+  });
+
+  it("draws no empty block under a figure that speaks alone", () => {
+    // An empty `mt-2` block is a phantom 8px under the value.
+    renderFigures([{ key: "alone", label: "Seats", value: "214" }]);
+    const value = screen.getByText("214");
+    expect(value.parentElement?.children).toHaveLength(1);
+  });
+});
+
 describe("the figures are unboxed", () => {
   it("wears no card chrome anywhere in the row", () => {
     const { container } = renderFigures();
