@@ -68,10 +68,13 @@ export function FollowShareRow({
         // words a second time. `TripActions` carries one because its
         // announcement is different copy from its label; a live region echoing
         // the label is two announcements of one event.
+        //
+        // A 44px floor across as well as down: "Share" alone is 43px wide
+        // (K-159), and the label centres in the floor.
         <button
           type="button"
           onClick={share}
-          className="inline-flex min-h-11 shrink-0 items-center font-medium text-primary hover:underline"
+          className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center font-medium text-primary hover:underline"
         >
           {label}
         </button>
