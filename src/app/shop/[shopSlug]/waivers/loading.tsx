@@ -1,10 +1,9 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
  * Body-shaped skeleton for the waiver surface (design principle 1): the
- * version line under the title, the release editor in its card, then the
+ * version line under the title, the closed "Edit the release" door, then the
  * signature log as hairline day groups beneath it — the shape ADR
  * 20260827-people-not-lists gave this page when the Signatures tab folded into
  * it. It owns the `<main>` shell now, the sub-nav layout that used to render
@@ -36,11 +35,11 @@ export default function WaiversLoading() {
           description={false}
           meta={<div className="h-5 w-56 max-w-full rounded bg-surface-sunken" />}
         />
-        <div className={sectionCardClass({ padding: "lg" })}>
-          <div className="h-4 w-28 rounded bg-surface-sunken" />
-          <div className="mt-2 h-72 rounded bg-surface-sunken" />
-          <div className="mt-5 h-11 w-32 rounded-lg bg-surface-sunken" />
-        </div>
+        {/* The release editor is a door at rest (`waivers/page.tsx`: "the
+            ledger leads; the editor is a door"), one `md` secondary button.
+            The open editor's card stood here, 426px of it, and the log landed
+            378px above its own bars. */}
+        <div className="h-12 w-40 rounded-lg bg-surface-sunken" />
         <div className="mt-10">
           <div className="h-4 w-36 rounded bg-surface-sunken" />
           <div className="mt-4 space-y-8">

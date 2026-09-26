@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { BookingStoryRow } from "@/components/person/rows";
 import { ReviewLedger } from "@/components/ShopReviews";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { LedgerRow, ledgerRowBoxClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -364,11 +365,28 @@ describe("a loading skeleton standing in for ledger rows", () => {
 });
 
 /**
- * **The waivers skeleton's rows stand at the log's 52px** (class 11): 48px
- * against the loaded rows' 52 (a `LedgerRow`'s floor, which the signature
- * rows now keep), so the log grew 4px a row as it landed.
+ * **The waivers skeleton draws the page the log lands on** (class 11). The page
+ * stopped showing the release editor at rest ("The ledger leads; the editor is
+ * a door", waivers/page.tsx): it is one 48px "Edit the release" button, while
+ * the skeleton kept the open editor's 426px card, so "Signed records" landed
+ * 378px higher than its bar at 1280. And its rows were 48px against the log's
+ * 52 (a `LedgerRow`'s floor, which the signature rows now keep).
  */
 describe("the waivers skeleton", () => {
+  it("draws the closed release door as one 48px bar, and no editor card", () => {
+    const { container } = render(<WaiversLoading />);
+    const card = sectionCardClass({ padding: "lg" }).split(" ");
+    const cards = [...container.querySelectorAll("*")].filter((element) =>
+      card.every((token) => element.classList.contains(token)),
+    );
+    expect(cards).toHaveLength(0);
+    const main = container.querySelector("main > div");
+    // The header, then the door, then the log.
+    const door = main?.children[1];
+    expect(door).toHaveClass("h-12", "rounded-lg");
+    expect(door?.children).toHaveLength(0);
+  });
+
   it("draws each log row at the loaded row's 52px", () => {
     const { container } = render(<WaiversLoading />);
     const rows = [...container.querySelectorAll("*")].filter((element) =>
