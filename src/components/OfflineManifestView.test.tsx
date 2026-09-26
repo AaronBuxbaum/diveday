@@ -3011,6 +3011,15 @@ describe("OfflineManifestView — one column, one text edge", () => {
       "Buddy team: Marcus\u00a0Reed",
     );
   });
+
+  // K-594 review: a name longer than its column cannot be held whole, and the
+  // diver list and crew box are both `overflow-hidden`, so a 41-character
+  // Spanish name at glare's 16px ran past its column and lost its surname.
+  it("breaks an overlong buddy name as a last resort rather than clipping it", async () => {
+    await renderTrip(dressed(richEnvelope("trip-1")));
+    expect(within(crewList()).getByText(/Buddy team:/)).toHaveClass("wrap-anywhere");
+    expect(within(priyaRow()).getByText(/Buddy team:/)).toHaveClass("wrap-anywhere");
+  });
 });
 
 // K-255: `rounded-3xl` (24px) is off the radius ladder; a panel is 20.

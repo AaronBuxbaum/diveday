@@ -124,12 +124,23 @@ const OFFLINE_BOAT_TARGET_CLASS = buttonClass({
  * inside every name, so a line wraps between "Diego Alvarez" and "June Park"
  * and never inside either. The Spanish crew line split "Diego / Alvarez" at a
  * line end, which reads as two people.
+ *
+ * **Whole is a preference, not a promise.** A name longer than its column
+ * ("María de los Ángeles Fernández Gutiérrez", 41 characters, at glare's 16px
+ * on a phone) cannot be held whole, and the diver list and the crew box are
+ * both `overflow-hidden`: it ran past its column and the box clipped the
+ * surname off. So every place these names are set breaks an overlong name
+ * anywhere as a last resort (`BUDDY_NAMES_WRAP`), which an ordinary name
+ * never reaches.
  */
 function buddyNamesList(locale: string, names: readonly string[]): string {
   return cachedListFormat(locale, { type: "conjunction" }).format(
     names.map((name) => name.replace(/ /g, "\u00a0")),
   );
 }
+
+/** Breaks a name too long for its column, last, rather than letting it be clipped. */
+const BUDDY_NAMES_WRAP = "wrap-anywhere";
 
 /**
  * One diver's roll-call row id, minted here and nowhere else: this is both what
@@ -1915,7 +1926,7 @@ export function OfflineManifestView() {
                             leading three groups needs the dock copy to say
                             which bodies they are responsible for. */}
                           {(member.buddyTeamNames ?? []).length > 0 ? (
-                            <span className="ms-1 font-normal">
+                            <span className={`ms-1 font-normal ${BUDDY_NAMES_WRAP}`}>
                               ·{" "}
                               {t("shared.buddyTeam.with", {
                                 names: buddyNamesList(locale, member.buddyTeamNames ?? []),
@@ -2879,7 +2890,7 @@ function OfflineBuddyTeamChip({
 }) {
   if (!names || names.length === 0) return null;
   return (
-    <Badge tone="neutral">
+    <Badge tone="neutral" className={BUDDY_NAMES_WRAP}>
       {t("shared.buddyTeam.with", { names: buddyNamesList(locale, names) })}
     </Badge>
   );
