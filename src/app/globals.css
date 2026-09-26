@@ -1088,7 +1088,13 @@ textarea {
     display: none;
   }
 
+  /* `:root.glare-mode` because glare mode's own palettes (light and dark,
+     further down) are a bare `.glare-mode`: as heavy as `:root` and later in
+     the file, they won on paper, and a page outside a `.boat-mode` box
+     printed its primary labels white (and, in the dark, all its ink). One
+     class heavier, the print palette wins wherever either stands. */
   :root,
+  :root.glare-mode,
   .boat-mode {
     --background: #ffffff;
     --surface: #ffffff;
