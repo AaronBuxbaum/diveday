@@ -3,7 +3,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { RemovablePhoto, removablePhotoGridClass } from "./RemovablePhoto";
+import { RemovablePhoto } from "./RemovablePhoto";
 
 afterEach(cleanup);
 
@@ -70,22 +70,46 @@ describe("RemovablePhoto", () => {
     expect(screen.getByText("Remove")).toHaveClass("peer-checked:text-danger");
   });
 
-  it("sizes a full-width field's photos by one grid, so a lone photo is a gallery cell", () => {
-    expect(removablePhotoGridClass).toBe("grid grid-cols-2 gap-3 sm:grid-cols-3");
+  /**
+   * Opacity is the element's whole rendering, outline included. With the dim
+   * on the ringed box, a keyboard user who pressed Space to tick a photo saw
+   * the ring they had just been given fade to half, below the 3:1 a focus
+   * indicator needs, at the moment they acted. The image dims; the box and
+   * its ring do not.
+   */
+  it("dims a ticked photo's image, never the box its focus ring draws on", () => {
+    render(<RemovablePhoto url="/dive-sites/map.jpg" name="removeHero" label="Remove" />);
+
+    const photo = screen.getByRole("checkbox", { name: "Remove" }).nextElementSibling;
+    expect(photo).toHaveClass("peer-focus-visible:focus-ring");
+    expect(photo?.className).not.toMatch(/(^|\s)(peer-checked:)?opacity-/);
+    expect(photo).toHaveClass("peer-checked:*:opacity-50", "*:transition-opacity");
   });
 
   /**
    * The drift started as a copy: the dive-site editor re-drew the course
-   * gallery's cell by hand and left the tick behind. A `StoredPhoto` beside a
-   * checkbox anywhere else is the next copy.
+   * gallery's cell by hand and left the tick behind. A stored photo — a
+   * `StoredPhoto` or a raw `<img>` — beside a checkbox anywhere else is the
+   * next copy.
+   *
+   * One is known and named rather than hidden by a narrower match: the shop
+   * settings' logo and cover photo are still a raw `<img>` thumbnail beside a
+   * visible checkbox, beside a bare file input rather than `ImageFileInput`.
+   * A logo is not a photo cell, so that form's drawing is its own change (the
+   * follow-up filed with this one). Moving it on turns this list empty, and
+   * the test says so.
    */
   it("is the only place a stored photo sits beside a checkbox", async () => {
     const offenders: string[] = [];
     for (const file of await sourceFiles("src")) {
       if (file === path.join("src", "components", "RemovablePhoto.tsx")) continue;
       const source = await readFile(path.join(ROOT, file), "utf8");
-      if (source.includes("<StoredPhoto") && /type="checkbox"/.test(source)) offenders.push(file);
+      if (/<(StoredPhoto|img)\b/.test(source) && /type="checkbox"/.test(source)) {
+        offenders.push(file);
+      }
     }
-    expect(offenders).toEqual([]);
+    expect(offenders).toEqual([
+      path.join("src", "app", "shop", "[shopSlug]", "settings", "SettingsPage.tsx"),
+    ]);
   });
 });

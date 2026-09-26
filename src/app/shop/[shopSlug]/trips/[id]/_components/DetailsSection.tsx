@@ -1,5 +1,5 @@
 import { ImageFileInput } from "@/components/ImageFileInput";
-import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
+import { RemovablePhoto } from "@/components/RemovablePhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
@@ -219,9 +219,12 @@ export function DetailsSection({
             description={t("trips.details.arrivalPhotoDescription")}
             htmlFor="arrival-photo"
           >
-            {/* The shared removable photo; `on` is what the save reads. */}
+            {/* The shared removable photo; `on` is what the save reads. This
+                field is a half column from `sm` up, so the photo takes the
+                column, as the dive-site editor's map and route stills do: in
+                the gallery's three-across grid it was a third of a half. */}
             {trip.arrivalPhotoUrl ? (
-              <div className={`mb-3 ${removablePhotoGridClass}`}>
+              <div className="mb-3">
                 <RemovablePhoto
                   url={trip.arrivalPhotoUrl}
                   name="removeArrivalPhoto"
