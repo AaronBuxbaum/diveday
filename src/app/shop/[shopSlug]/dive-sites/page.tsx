@@ -250,7 +250,6 @@ export default async function DiveSitesPage({
         href={pageHref}
         total={t("diveSites.list.pagination.total", { count: sitePage.total })}
         words={staffPagerWords(t)}
-        className="mt-4"
       />
     </main>
   );
@@ -418,7 +417,6 @@ async function CatalogView({
         href={pageHref}
         total={t("diveSites.catalog.pagination.total", { count: catalog.total })}
         words={staffPagerWords(t)}
-        className="mt-6"
       />
     </main>
   );

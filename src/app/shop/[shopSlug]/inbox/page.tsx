@@ -140,7 +140,6 @@ export default async function InboxPage({
         href={pageHref}
         total={t("inbox.pagination.total", { count: messages.total })}
         words={staffPagerWords(t)}
-        className="mt-6"
       />
     </main>
   );

@@ -677,7 +677,6 @@ export default async function OrdersIndexPage({
         pageCount={orderPage.pageCount}
         href={(target) => hrefWith({ page: target })}
         words={staffPagerWords(t)}
-        className="mt-8"
       />
 
       {/* One disclosure row at the foot, where a second full table and a second
@@ -798,7 +797,6 @@ export default async function OrdersIndexPage({
               pageCount={importedHistoryPage.pageCount}
               href={(target) => hrefWith({ importedPage: target })}
               words={staffPagerWords(t)}
-              className="mt-4"
             />
           </LedgerGroup>
         </section>

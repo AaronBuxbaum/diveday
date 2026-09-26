@@ -336,7 +336,6 @@ export default async function WaiversPage({
               href={pageHref}
               total={t("waiversStaff.signatures.pagination.total", { count: auditPage.total })}
               words={staffPagerWords(t)}
-              className="mt-6"
             />
           </>
         )}

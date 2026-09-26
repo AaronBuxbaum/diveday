@@ -380,7 +380,6 @@ export function BackupsSection({
                 href={(nextPage) => `${basePath}?page=${nextPage}#backups`}
                 words={staffPagerWords(t)}
                 total={t("backup.history.total", { count: deliveries.total })}
-                className="mt-4"
               />
             </>
           )}

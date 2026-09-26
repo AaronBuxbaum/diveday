@@ -718,7 +718,6 @@ export default async function ReportsPage({
                     }`
                   }
                   words={staffPagerWords(t)}
-                  className="mt-4"
                 />
               }
             />

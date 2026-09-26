@@ -553,7 +553,6 @@ export default async function PromosPage({
         href={promosHref}
         total={t("promos.pagination.total", { count: promoPage.total })}
         words={staffPagerWords(t)}
-        className="mt-4"
       />
 
       {/* One heading over both branches — the list and its empty state stand
@@ -587,7 +586,6 @@ export default async function PromosPage({
         href={dealsHref}
         total={t("promos.tripDeals.pagination.total", { count: dealPage.total })}
         words={staffPagerWords(t)}
-        className="mt-4"
       />
     </main>
   );

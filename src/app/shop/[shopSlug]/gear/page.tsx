@@ -309,7 +309,6 @@ export default async function GearRegisterPage({
                   href={(target) => gearHref({ deleted: true, page: target })}
                   total={t("gear.fleet.pagination.total", { count: deletedPage.total })}
                   words={staffPagerWords(t)}
-                  className="mt-4"
                 />
               </>
             ) : showService ? (

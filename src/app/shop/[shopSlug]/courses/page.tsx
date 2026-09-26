@@ -245,7 +245,6 @@ export default async function CoursesPage({
         href={pageHref}
         total={st("courses.list.pagination.total", { count: coursePage.total })}
         words={staffPagerWords(st)}
-        className="mt-6"
       />
     </main>
   );
