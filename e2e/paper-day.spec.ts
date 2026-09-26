@@ -143,6 +143,24 @@ test.describe("the paper day", () => {
         );
     });
     expect(controls).toEqual([]);
+
+    // **And every roll-call name is on it.** The person is the one button the
+    // packet prints on purpose: its content is the index and the name, and
+    // while the backstop hid it with every other button the day's two
+    // departures printed 8 + 2 and 9 + 2 roster rows with no name in any of
+    // them. Every person the sheet carries is on paper and says who they are.
+    const people = await popup
+      .locator(".trip-print-bundle button[data-print-content]")
+      .evaluateAll((elements) =>
+        elements.map((element) => ({
+          onPaper:
+            getComputedStyle(element).display !== "none" &&
+            element.getBoundingClientRect().height > 0,
+          text: (element as HTMLElement).innerText.trim(),
+        })),
+      );
+    expect(people.length).toBeGreaterThan(0);
+    expect(people.filter((person) => !person.onPaper || !/\p{L}/u.test(person.text))).toEqual([]);
     await popup.emulateMedia({ media: "screen" });
     await popup.close();
   });
