@@ -469,6 +469,11 @@ function StaffRow({
                   // box ignores both.
                   flush: true,
                   outdent: "block-end",
+                  // The outdent leaves the box 4px above the row's rule, inside
+                  // a list that clips: the outset ring would paint over the
+                  // hairline, and lose its last pixel on the last card. The
+                  // Enable box sits 16px clear and keeps the app's ring.
+                  className: isDisabled ? undefined : "focus-visible:focus-ring-inset",
                 })}
               >
                 {isDisabled

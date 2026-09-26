@@ -92,7 +92,12 @@ export default async function SafetyChecklistPage({
             {items.map((item, index) => (
               <li
                 key={item.id}
-                className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-3"
+                // `max-sm:py-5`: below `sm` the actions drop to the row's last
+                // line and sink their unseen 12px into its padding. At `p-3`
+                // that put their boxes on the border, the hover fill against
+                // the hairline and the ring across it; 20px leaves the boxes
+                // 8px clear and the text over and the ink under both ~24px.
+                className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-3 max-sm:py-5"
               >
                 <span className="min-w-0 flex-1 break-words text-sm">{item.label}</span>
                 <ListItemActions>

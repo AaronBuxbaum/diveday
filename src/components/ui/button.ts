@@ -413,6 +413,14 @@ function horizontalPadding(variant: ButtonVariant, x: string, flush: boolean) {
  * form's line, and the line's strut would keep a pixel of the height the
  * margin gave back. Aligned to the line's bottom, the line is the margin box.
  *
+ * The box then ends `padding − 12px` from the container's edge (`− 16px` on
+ * the 56px sizes). The outset ring reaches 5px past the box, so a container
+ * with under 17px of padding draws the ring inside
+ * (`focus-visible:focus-ring-inset`) — the team card's 16px left the box 4px
+ * above a `divide-y` rule in a list that clips — or gains the padding, as the
+ * safety checklist's rows do below `sm` (20px, the box 8px clear of the border
+ * and its hover fill with it).
+ *
  * Only on a variant that paints nothing at rest — a bordered box's end is its
  * border, not its word — and never where the button shares its line with a
  * visible box: centred in a row, the pulled-up margin would lift it 6px.
