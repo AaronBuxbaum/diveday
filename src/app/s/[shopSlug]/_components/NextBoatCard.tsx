@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
 
@@ -99,7 +99,9 @@ export function NextBoatCard({
   return (
     <SectionCard as="section" ariaLabel={eyebrow} className="flex h-full flex-col gap-4">
       <div className="min-w-0 flex-1">
-        <p className={EYEBROW_CLASS}>{eyebrow}</p>
+        {/* The rung the Right now and In season panels beside it use; the
+            lagoon ink is this card's, the page's subject. */}
+        <p className={groupLabelClass("primary")}>{eyebrow}</p>
         {/* The departure time is the figure a returning diver came to check,
             with the day reading as its caption (decision 3: numbers that lead
             render as figures). */}

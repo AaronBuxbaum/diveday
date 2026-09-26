@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { NextBoatCard } from "./NextBoatCard";
 
@@ -125,6 +127,21 @@ describe("next boat with space", () => {
       screen.getByRole("region", { name: "Next boat with space in this view" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Next boat with space in this view")).toBeInTheDocument();
+  });
+
+  /**
+   * **One rung for the identity band's eyebrows** (pixel-craft K-218). This
+   * one was the page header's 11px bold "where you are" rung beside the Right
+   * now and In season panels' 12px semibold group label: three eyebrows on one
+   * row, two type sizes. The card keeps its lagoon ink, which marks it as the
+   * page's subject; the rung is the panels'.
+   */
+  it("draws its eyebrow on the rung the panels beside it use, in its own lagoon ink", () => {
+    render(card());
+
+    const eyebrow = screen.getByText("Next boat with space");
+    expect(eyebrow.className).toBe(groupLabelClass("primary"));
+    expect(eyebrow.className).not.toBe(EYEBROW_CLASS);
   });
 
   it("claims the shop's own next boat when nothing is narrowed", () => {
