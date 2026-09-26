@@ -7,7 +7,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneOptions";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import {
   ChoicePill,
@@ -2425,7 +2425,12 @@ export default async function SettingsPage({
 
       <footer className="mt-12 border-t border-border pt-6 text-sm text-muted">
         <p>{t("settings.main.support.description")}</p>
-        <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-primary hover:underline">
+        {/* A link under a paragraph, not inside a sentence, so it takes the
+            44px floor: it was a 159×17 target at 390 (K-153). */}
+        <a
+          href={`mailto:${SUPPORT_EMAIL}`}
+          className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
+        >
           {t("settings.main.support.emailCta", { email: SUPPORT_EMAIL })}
         </a>
       </footer>

@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
@@ -11,6 +12,7 @@ import { listShopStaff } from "@/db/staff-accounts";
 import { STAFF_MESSAGES } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { seededTestDb } from "@/test/db";
 import {
   ariaLabelsIn,
@@ -413,6 +415,25 @@ describe("the dock-day preview and the sites that override it", () => {
         .where(eq(diveSites.id, site.id));
     });
     expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/dive-sites/${overridden}`);
+  });
+});
+
+/**
+ * **The support door at the foot of the page.** A bare `<a>` after a block
+ * `<p>` is not a link inside a sentence, so the inline-link exception to the
+ * 44px floor does not apply to it: "Email support@dive.day" was a 159×17
+ * target on every settings capture at 390 (K-153).
+ */
+describe("the page's footer", () => {
+  it("makes the support email a 44px target", async () => {
+    const links = findElements<{ href?: string; className?: string }>(
+      await renderSettings("owner"),
+      "a",
+    ).filter((link) => link.props.href === `mailto:${SUPPORT_EMAIL}`);
+    expect(links).toHaveLength(1);
+    expect(links[0]?.props.className?.split(" ")).toEqual(
+      expect.arrayContaining(tapTargetLinkClass.split(" ")),
+    );
   });
 });
 
