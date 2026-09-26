@@ -84,6 +84,24 @@ describe("where a row states its value", () => {
   });
 });
 
+describe("an opened row's body", () => {
+  /**
+   * The detail's `mt-1` is the step down from a description. On a row that
+   * has a detail and no description it was a margin under nothing: the body
+   * began 4px lower than on every other row (label ink to first line 43px at
+   * 1280, against 39) — Address, Dock-day rhythm (K-309, SETTINGS-1-10).
+   */
+  it("starts a detail at the body's top when there is no description above it", () => {
+    const row = settingRow({ detail: "Printed on the counter card." });
+    expect(within(row).getByText("Printed on the counter card.")).not.toHaveClass("mt-1");
+  });
+
+  it("still sets a detail one step under its description", () => {
+    const row = settingRow({ description: "What we charge on top.", detail: "Shown at checkout." });
+    expect(within(row).getByText("Shown at checkout.")).toHaveClass("mt-1");
+  });
+});
+
 describe("one focus ring, whichever kind of row", () => {
   /**
    * A setting's `<summary>` is ringed inside itself across the whole row
