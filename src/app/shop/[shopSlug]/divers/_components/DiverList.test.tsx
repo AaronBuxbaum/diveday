@@ -238,7 +238,10 @@ describe("DiverList empty state", () => {
     expect(css).not.toContain("animate-slide-in-right");
     expect(css).not.toContain("animate-slide-out-right");
     expect(css).not.toContain("--quick-add-shift");
-    expect(css).not.toContain("@media (width < 40rem)");
+    // No phone breakpoint cutting a motion short, which is what that block
+    // was. A phone breakpoint for anything else — the public trip's foot bar
+    // reserving its height (K-139) — is not this row's business.
+    expect(css).not.toMatch(/@media \(width < 40rem\)\s*\{[^}]*animation/);
   });
 
   /**
