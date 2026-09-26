@@ -31,6 +31,7 @@ vi.mock("@/app/shop/[shopSlug]/actions", () => ({
 }));
 
 import { SITE_MARK_SIZES } from "@/components/illustration/SiteMark";
+import { tapTargetOverhangClass } from "@/components/ui/button";
 import type { FirstBooking } from "@/db/first-booking";
 import type { DayTakings as DayTakingsReading } from "@/lib/closeout";
 import { assembleEveningClose, type CloseoutDeparture } from "@/lib/closeout";
@@ -390,6 +391,10 @@ describe("the station is a panel (16a)", () => {
     // The target is still 44px, standing from the top of the line.
     expect(door).toHaveClass("min-h-11", "items-start");
     expect(line).toHaveClass("items-start");
+    // The eyebrow back-link's shape, reaching the other way: one decision in
+    // button.ts, not a second hand-spelled copy of it.
+    expect(door).toHaveClass(...tapTargetOverhangClass.down.target.split(" "));
+    expect(line).toHaveClass(...tapTargetOverhangClass.down.line.split(" "));
   });
 
   /**

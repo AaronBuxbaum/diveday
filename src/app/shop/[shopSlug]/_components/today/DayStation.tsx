@@ -3,7 +3,7 @@ import { BoatDrift } from "@/components/illustration/BoatDrift";
 import { SiteMark } from "@/components/illustration/SiteMark";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
-import { tapTargetLinkClass } from "@/components/ui/button";
+import { tapTargetLinkClass, tapTargetOverhangClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { INLINE_LINE_BOX } from "@/components/ui/StatusMark";
 import { FIGURE_CLASS, FIGURE_DIAL_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -55,16 +55,6 @@ import { StationSettles } from "./StationSettles";
  * a station's counts are per-boat, and pre-resolving four plurals per
  * departure at the call site is how a plural ends up wired to the wrong count.
  */
-
-/**
- * `tapTargetLinkClass`'s 44px floor with its words on the box's top edge
- * rather than centred, for the log door beside the dial (see its call site).
- * Spelled whole, not `tapTargetLinkClass` plus `items-start`: two
- * `align-items` utilities on one element resolve by stylesheet order, not by
- * the order they are written (`EYEBROW_TAP_TARGET` in ShopPageHeader.tsx made
- * the same call for the same reason).
- */
-const LOG_DOOR_TARGET = "inline-flex min-h-11 items-start";
 
 /**
  * A title cut before its last word: everything up to and including the last
@@ -310,14 +300,14 @@ export function DayStation({
                 centre, 8px under its top and 17px over its bottom. The link
                 stands in a box its own line tall (`h-5`, text-sm's 20px), so
                 the column measures its words; the 44px target starts at the
-                line's top (`LOG_DOOR_TARGET`) and reaches the 24px spare
+                line's top (`tapTargetOverhangClass.down`) and reaches the 24px spare
                 downward, into the room under the header — not upward, where
                 its focus ring would run through "3 spots open". */}
             {canOpenLog ? (
-              <span className="flex h-5 items-start">
+              <span className={`${tapTargetOverhangClass.down.line} h-5`}>
                 <Link
                   href={`/shop/${shopSlug}/trips/${station.tripId}/log`}
-                  className={`${LOG_DOOR_TARGET} text-sm font-medium text-primary hover:underline`}
+                  className={`${tapTargetOverhangClass.down.target} text-sm font-medium text-primary hover:underline`}
                 >
                   {t("incidentExport.openLink")}
                 </Link>

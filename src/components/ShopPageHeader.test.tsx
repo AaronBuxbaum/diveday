@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { tapTargetOverhangClass } from "@/components/ui/button";
 import {
   EYEBROW_CLASS,
   EYEBROW_TAP_WRAPPER,
@@ -147,6 +148,9 @@ describe("the eyebrow's line box", () => {
     // line a `<p>` eyebrow's would, with the whole spare 28px above them.
     expect(link).toHaveClass("inline-flex", "min-h-11", "items-end");
     expect(link).not.toHaveClass("items-center");
+    // The shape is button.ts's, shared with the log door that reaches down.
+    expect(wrapper).toHaveClass(...tapTargetOverhangClass.up.line.split(" "));
+    expect(link).toHaveClass(...tapTargetOverhangClass.up.target.split(" "));
   });
 
   it("wraps the link rather than giving it a margin, because an inline box's margins do not move a line box", () => {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { FoldedPageTitle } from "@/components/chrome/FoldedPageTitle";
+import { tapTargetOverhangClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { toneMark } from "@/components/ui/tone";
@@ -53,20 +54,19 @@ export const EYEBROW_CLASS = `${EYEBROW_SHAPE} text-primary`;
  * top padding (32px on a phone, 40 from `sm`), and in the trip band it rises
  * inside the 44px row it is centred in.
  */
-export const EYEBROW_TAP_WRAPPER = "flex h-4 items-end";
+export const EYEBROW_TAP_WRAPPER = `${tapTargetOverhangClass.up.line} h-4`;
 
 /**
  * `tapTargetLinkClass`'s 44px floor with its content on the box's bottom edge
  * rather than centred — the bottom edge is the eyebrow's line, see
- * `EYEBROW_TAP_WRAPPER`. Spelled whole, not `tapTargetLinkClass` plus
- * `items-end`: two `align-items` utilities on one element resolve by
- * stylesheet order, not by the order they are written.
+ * `EYEBROW_TAP_WRAPPER`. It is `tapTargetOverhangClass.up` in button.ts, the
+ * shape the Today log door takes the other way up.
  *
  * Its content is **one** item, a row the eyebrow's line box tall that centres
  * the chevron on the words. Two items on the bottom edge each stand on it by
  * their own height, and the 12px chevron sat 2px under the 16px line's centre.
  */
-const EYEBROW_TAP_TARGET = "inline-flex min-h-11 items-end";
+const EYEBROW_TAP_TARGET = tapTargetOverhangClass.up.target;
 
 /**
  * The eyebrow-as-breadcrumb, for a header that is not `ShopPageHeader`.

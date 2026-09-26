@@ -322,6 +322,30 @@ const sizes = {
 } as const;
 
 /**
+ * **A 44px target that takes only its line's room**, reaching past the line on
+ * one side. `tapTargetLinkClass`'s floor, for a quiet link whose row cannot
+ * spare 44px of flow: the link stands on a block exactly its words' line box
+ * (`line`, plus that line's height: `h-4` for a 16px line, `h-5` for text-sm's
+ * 20px), so the flow measures the words, and the target's spare reaches out of
+ * the block on the one side where nothing is drawn.
+ *
+ * - `up`: the content on the box's bottom edge, the spare above the line. The
+ *   eyebrow back-link over a page title (`EYEBROW_TAP_WRAPPER`, K-395), whose
+ *   focus ring ran through the title's cap tops while the box was centred.
+ * - `down`: the content on the box's top edge, the spare below the line. The
+ *   log door under "3 spots open" beside the seat dial (`DayStation.tsx`,
+ *   K-186), where a centred ring would run through the line above.
+ *
+ * `target` goes on the link and is spelled whole, not `tapTargetLinkClass`
+ * plus an `items-*`: two `align-items` utilities on one element resolve by
+ * stylesheet order, not by the order they are written.
+ */
+export const tapTargetOverhangClass = {
+  up: { line: "flex items-end", target: "inline-flex min-h-11 items-end" },
+  down: { line: "flex items-start", target: "inline-flex min-h-11 items-start" },
+} as const;
+
+/**
  * **A text link that is also a tap target**, for the one case a button is not:
  * the link that opens the record a row or a card is about.
  *
