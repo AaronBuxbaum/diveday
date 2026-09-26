@@ -515,6 +515,33 @@ describe("a drysuit going out with no drysuit card", () => {
  * the app's own ring fits inside the clip (K-06). jsdom has no layout, so
  * this asks which control is flush; `button.test.ts` refuses the row bleed.
  */
+/**
+ * **A missing emergency contact's line hovers** (K-501). The whole line is the
+ * disclosure that opens the form, and it declared `hover:bg-warning-tint` on a
+ * `bg-warning-tint` rest: the state atlas measured `#fdefdf` both ways, 0px
+ * changed, so the pointer never said the line would open.
+ */
+describe("the missing emergency contact line", () => {
+  it("hovers a step past its resting fill", () => {
+    const { container } = renderRoster({
+      ...fixtures,
+      roster: [entry("e", "Noor Haddad", { emergencyContactName: "", emergencyContactPhone: "" })],
+      readiness: new Map([["e", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map([["e", signedWaiver]]) as WaiverByBooking,
+    });
+
+    const summary = container.querySelector('[class~="group/missing-contact"] > summary');
+    expect(summary).not.toBeNull();
+    const tokens = [...(summary?.classList ?? [])];
+    const rest = tokens.filter((token) => token.startsWith("bg-"));
+    const hover = tokens.filter((token) => token.startsWith("hover:bg-"));
+    expect(rest).toEqual(["bg-warning-tint"]);
+    expect(hover).toHaveLength(1);
+    expect(hover[0]).not.toBe("hover:bg-warning-tint");
+    expect(hover[0]).not.toMatch(/^hover:bg-warning-tint\//);
+  });
+});
+
 describe("the seat's foot row sits on the text column through flush", () => {
   it("flushes Create order, the first control, and leaves Remove booking its padding", () => {
     renderRoster({ ...fixtures, roster: [ready], paymentsConnected: true });

@@ -193,6 +193,20 @@ function chipClass(kind: keyof typeof CHIP_KIND) {
 }
 
 /**
+ * **A chip a person can press hovers one step past its rest** (K-535, K-501).
+ * Both hovered to a translucent copy of their own fill, which over the page's
+ * ground is lighter, not deeper: `#e6f0ff` to `#eaf1fd` on the crew chip,
+ * `#ececf1` to `#eeeef3` on the shift chip, 0px changed at the state atlas's
+ * threshold. The shift chip steps to the next well down the surface ladder,
+ * opaque so the step is the same on any ground (`#e3e3e8` light, `#2c2c2e`
+ * dark); the crew chip deepens the rule it already draws.
+ */
+const CHIP_HOVER = {
+  shift: "hover:bg-border",
+  crew: "hover:border-primary/50",
+} as const;
+
+/**
  * One shift in a day cell. A manager gets the disclosure — the chip is the
  * summary, and it opens onto the shift's zoned range and its one act. Everyone
  * else gets the same chip with nothing to press, because a control that
@@ -225,7 +239,7 @@ function ShiftChip({
     <details className="group/shift w-full">
       <summary
         aria-label={fill(words.shiftAria, { person: personName, day: dayLabel })}
-        className={`${chipClass("shift")} cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/70`}
+        className={`${chipClass("shift")} cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden ${CHIP_HOVER.shift}`}
       >
         {face}
       </summary>
@@ -272,7 +286,7 @@ function CrewChip({
   return (
     <Link
       href={tripHref(shopSlug, trip.tripId)}
-      className={`${chipClass("crew")} transition-colors hover:bg-primary-tint/70`}
+      className={`${chipClass("crew")} transition-colors ${CHIP_HOVER.crew}`}
     >
       <span className="sr-only">{words.crewing}: </span>
       <span className="font-semibold tabular-nums">

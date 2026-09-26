@@ -633,4 +633,32 @@ describe("StaffingWeek geometry", () => {
       unmount();
     }
   });
+
+  /**
+   * K-535, K-501: the two chips a manager can press hovered to a translucent
+   * copy of their own fill, which over the page's ground is lighter, not
+   * deeper — `#e6f0ff` to `#eaf1fd` on the crew chip, `#ececf1` to `#eeeef3`
+   * on the shift chip, 0px changed at the state atlas's threshold. Each now
+   * hovers one step past where it rests.
+   */
+  it("hovers each chip a person can press a step past its rest, never a fainter copy of it", () => {
+    const { chips } = renderEveryChip();
+    for (const [kind, chip] of [
+      ["shift", chips.shift],
+      ["crew", chips.crew],
+    ] as const) {
+      const tokens = [...(chip?.classList ?? [])];
+      const rest = tokens.filter((token) => /^(?:bg|border)-/.test(token));
+      const hover = tokens.filter((token) => token.startsWith("hover:"));
+      expect(hover.length, kind).toBeGreaterThan(0);
+      for (const paint of rest) {
+        for (const token of hover) {
+          expect(token, kind).not.toBe(`hover:${paint}`);
+          expect(token.startsWith(`hover:${paint}/`), `${kind}: ${token}`).toBe(false);
+        }
+      }
+    }
+    expect(chips.shift).toHaveClass("hover:bg-border");
+    expect(chips.crew).toHaveClass("hover:border-primary/50");
+  });
 });
