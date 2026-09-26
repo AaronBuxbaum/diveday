@@ -1102,6 +1102,30 @@ describe("Field's caption wraps prettily", () => {
     );
     expect(screen.getByText("Party")).toHaveClass("text-pretty");
   });
+
+  /**
+   * `text-pretty` repairs a last line of one word, and after an ordinary space
+   * the marker was a word of its own: "diving *" was two, and Chromium left it
+   * alone on the fly-safe caption's last line (K-586 review, settings-fly-safe
+   * at 1280 and 390). A no-break space makes the marker part of the last word.
+   */
+  it("binds the required marker to the caption's last word", () => {
+    render(
+      <>
+        <Field label="Hours between repetitive dives">
+          <input name="hours" required />
+        </Field>
+        <ChoiceFieldset legend="Outcome" required>
+          <ChoicePill type="radio" name="outcome" value="cleared" required>
+            Cleared
+          </ChoicePill>
+        </ChoiceFieldset>
+      </>,
+    );
+    const markers = screen.getAllByText("*");
+    expect(markers).toHaveLength(2);
+    for (const marker of markers) expect(marker.textContent).toBe("\u00A0*");
+  });
 });
 
 /**

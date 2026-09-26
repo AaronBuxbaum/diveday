@@ -562,10 +562,15 @@ export function Field({
   // matching doesn't uniformly respect aria-hidden the way real accessible-
   // name computation does — nesting it inside would make an exact-text
   // match against "Name" miss a required field labelled "Name *".
+  //
+  // A no-break space before it, so the marker is part of the caption's last
+  // word. After an ordinary space it was a word of its own, and "diving *"
+  // counted as two words on a last line: `text-pretty` repairs a last line of
+  // one word and left the fly-safe caption's "diving *" alone under 280px of
+  // text (the pixel probe, settings-fly-safe, K-586).
   const requiredMarker = isRequired ? (
     <span aria-hidden="true" className="text-danger">
-      {" "}
-      *
+      {"\u00A0"}*
     </span>
   ) : null;
   const captionContent = (
@@ -842,10 +847,10 @@ export function ChoiceFieldset({
     <fieldset className={className || undefined} {...fieldset}>
       <legend className="text-sm font-medium text-pretty">
         {legend}
+        {/* Bound to the legend's last word, as `Field`'s marker is. */}
         {required ? (
           <span aria-hidden="true" className="text-danger">
-            {" "}
-            *
+            {"\u00A0"}*
           </span>
         ) : null}
       </legend>
