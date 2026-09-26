@@ -4,10 +4,14 @@ import {
   rentableItemLabel,
   rentalFitLineText,
   rentalItemLabel,
+  statedSizesText,
 } from "./rental-labels";
 import { staffTranslator } from "./staff-messages";
 
 const t = staffTranslator("en-US");
+
+/** U+00A0: the only space a rental piece may hold. */
+const NBSP = "\u00A0";
 
 describe("rental item labels", () => {
   it("resolves a dive-prep packing-list item's word, including boots", () => {
@@ -53,7 +57,32 @@ describe("rentalFitLineText", () => {
           { kind: "wetsuit", size: "5mm M" },
         ],
       }),
-    ).toBe("BCD M, Regulator, Wetsuit 5mm M");
+    ).toBe(`BCD${NBSP}M, Regulator, Wetsuit${NBSP}5mm${NBSP}M`);
+  });
+
+  it("wraps only between pieces, never inside one", () => {
+    // "Weights 6 / kg" broke on the manifest's person panel at 390, where the
+    // subtitle column is about 165px wide (K-66). Each piece is one unit; the
+    // list's own separator is the only place a line may end.
+    const text = rentalFitLineText(t, "en-US", {
+      state: "rents",
+      items: [
+        { kind: "weights", size: "6 kg" },
+        { kind: "mask_fins", size: "L" },
+        { kind: "bcd", size: "M" },
+      ],
+    });
+    expect(text).toBe(`Weights${NBSP}6${NBSP}kg, Mask${NBSP}&${NBSP}fins${NBSP}L, BCD${NBSP}M`);
+    expect(text.split(", ").every((piece) => !piece.includes(" "))).toBe(true);
+  });
+
+  it("keeps a no-longer-rented piece whole, while its explanation can still wrap", () => {
+    expect(
+      rentalFitLineText(t, "en-US", {
+        state: "rents",
+        items: [{ kind: "drysuit", size: "ML", notOffered: true }],
+      }),
+    ).toBe(`Drysuit${NBSP}ML (shop no longer rents this)`);
   });
 
   it("says a drysuit diver's fins have to clear the boot, with and without a size", () => {
@@ -67,12 +96,23 @@ describe("rentalFitLineText", () => {
           { kind: "drysuit", size: "ML" },
         ],
       }),
-    ).toBe("Mask & fins over a drysuit boot, shoe US 9, Drysuit ML");
+    ).toBe(`Mask & fins over a drysuit boot, shoe US${NBSP}9, Drysuit${NBSP}ML`);
     expect(
       rentalFitLineText(t, "en-US", {
         state: "rents",
         items: [{ kind: "mask_fins", size: null, drysuitFinFit: true }],
       }),
     ).toBe("Mask & fins over a drysuit boot");
+  });
+});
+
+describe("statedSizesText", () => {
+  it("keeps each stated size with its item, and breaks only between them", () => {
+    expect(
+      statedSizesText(t, "en-US", [
+        { kind: "bcd", size: "L" },
+        { kind: "boots", size: "US 9" },
+      ]),
+    ).toBe(`BCD${NBSP}L, Boots${NBSP}US${NBSP}9`);
   });
 });

@@ -49,6 +49,17 @@ export function catalogItemLabel(t: StaffTranslator, kind: ShopCatalogKind): str
 }
 
 /**
+ * **One rental piece is one unit on the line**: its spaces become U+00A0, so a
+ * list of pieces breaks only at its own separators. Free-text sizes ("6 kg",
+ * "US 9") and two-word items ("Mask & fins") broke inside themselves on the
+ * manifest's person panel at 390 — "Weights 6" at the end of one line, "kg" on
+ * the next — where the subtitle column is about 165px wide.
+ */
+function oneUnit(text: string): string {
+  return text.replace(/\s+/g, "\u00A0");
+}
+
+/**
  * A staff-fit diver's stated sizes, one piece per item — "BCD L, Wetsuit M" —
  * for the packing line the captain reads with no way to open the profile.
  * Same `Intl.ListFormat` join as `rentalFitLineText`, just without a size
@@ -61,7 +72,9 @@ export function statedSizesText(
   items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[],
 ): string {
   const parts = items.map((item) =>
-    t("shared.rentalFit.itemWithSize", { item: rentalItemLabel(t, item.kind), size: item.size }),
+    oneUnit(
+      t("shared.rentalFit.itemWithSize", { item: rentalItemLabel(t, item.kind), size: item.size }),
+    ),
   );
   return cachedListFormat(locale, { style: "long", type: "unit" }).format(parts);
 }
@@ -90,17 +103,17 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
     case "rents": {
       const parts = line.items.map((item) => {
         const label = rentalItemLabel(t, item.kind);
+        const size = item.size ? oneUnit(item.size) : null;
         // A drysuit diver's fins. The stated size is the shoe size the fit
         // forms ask for, and the pair has to clear a vulcanised boot two to
         // three sizes bigger, so the rail reads the job rather than a number
-        // to hand over (src/lib/dive-prep.ts's `rentedItems`).
+        // to hand over (src/lib/dive-prep.ts's `rentedItems`). A sentence, so
+        // only its size is one unit; the words around it can still wrap.
         const piece = item.drysuitFinFit
-          ? item.size
-            ? t("shared.rentalFit.itemOverDrysuitBootWithSize", { item: label, size: item.size })
+          ? size
+            ? t("shared.rentalFit.itemOverDrysuitBootWithSize", { item: label, size })
             : t("shared.rentalFit.itemOverDrysuitBoot", { item: label })
-          : item.size
-            ? t("shared.rentalFit.itemWithSize", { item: label, size: item.size })
-            : label;
+          : oneUnit(size ? t("shared.rentalFit.itemWithSize", { item: label, size }) : label);
         // Wrapped rather than substituted, so the piece keeps whatever it
         // already said and gains the contradiction. A staffer reading the rail
         // is about to go and fetch this: "Drysuit ML" with nothing on it sends
