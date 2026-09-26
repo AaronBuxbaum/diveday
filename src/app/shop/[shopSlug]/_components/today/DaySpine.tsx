@@ -154,8 +154,18 @@ function rowKey(action: TodayAction): string {
  * on a phone the two horizons keep the row grammar they always had, one under
  * the other, because a panel's own padding was what pushed "Tomorrow · Wed,
  * Jul 22" onto two lines at 390px.
+ *
+ * **A hover shows on the panel's edge** (pixel-craft class 7, K-261). The rows
+ * inside hover to `bg-surface-sunken`, which on this sunken panel is #ececf1
+ * on #ececf1: hovering either door painted nothing at all. So the panel's
+ * edge steps to `border-strong` while its door — Tomorrow's summary, the
+ * week's row, each the panel's direct child — is under the pointer. An inset
+ * ring, not a border: it is drawn at rest too, clear, so neither the hover nor
+ * its arrival moves a pixel. The rows keep their fills for the phone, where no
+ * panel is painted under them.
  */
-const HORIZON_PANEL_CLASS = "sm:rounded-panel sm:bg-surface-sunken sm:px-5 sm:py-1";
+const HORIZON_PANEL_CLASS =
+  "sm:rounded-panel sm:bg-surface-sunken sm:px-5 sm:py-1 sm:inset-ring sm:inset-ring-transparent sm:has-[>summary:hover,>li:hover]:inset-ring-border-strong";
 
 /** The status family's shape for each kind tone, and the ink it takes. */
 const ROW_GLYPH = { danger: "danger", warning: "warning", neutral: "pending" } as const;
@@ -912,7 +922,7 @@ export function DaySpine({
               // `last:border-b` under the pair — or, with no week row, a
               // closing rule of Tomorrow's own. Taking Tomorrow's top rule
               // away left the pair open above (pixel-craft K-230).
-              className={`${HORIZON_PANEL_CLASS} open:sm:col-span-2 sm:[&>summary]:border-0 sm:[&>summary]:rounded-panel [&>summary]:hover:bg-surface-sunken ${
+              className={`${HORIZON_PANEL_CLASS} open:sm:col-span-2 sm:[&>summary]:border-0 sm:[&>summary]:rounded-panel ${
                 spine.week.jobs > 0 ? "" : "max-sm:[&>summary]:border-b"
               }`}
               label={t("shopHome.spine.tomorrow", {
@@ -947,7 +957,7 @@ export function DaySpine({
                 // it back there (`sm:mx-0 sm:px-0`), which left the fill
                 // flush against "This week" while Tomorrow's summary in the
                 // panel beside it kept its 8px.
-                className="hover:bg-surface-sunken sm:rounded-panel sm:border-transparent sm:last:border-transparent"
+                className="sm:rounded-panel sm:border-transparent sm:last:border-transparent"
                 href={`/shop/${shopSlug}/schedule/board`}
                 linkLabel={t("shopHome.spine.openBoard")}
                 trailing={

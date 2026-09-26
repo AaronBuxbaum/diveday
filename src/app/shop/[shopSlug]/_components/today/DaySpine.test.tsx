@@ -815,6 +815,40 @@ describe("the two horizon rows", () => {
     expect(week).toHaveClass("border-t", "last:border-b");
   });
 
+  /**
+   * **Hovering a horizon panel changes something you can see** (pixel-craft
+   * class 7, K-261). From `sm` up the panels are `bg-surface-sunken`, and the
+   * rows inside them hovered to `bg-surface-sunken` too — #ececf1 on #ececf1,
+   * a hover that painted nothing. The panel's own edge steps instead, on both
+   * doors alike; the rows keep their fills for the phone, where no panel is
+   * painted under them.
+   */
+  it("answers a hover on either horizon door with the panel's edge, not a fill the panel hides", () => {
+    const { container } = renderSpine({
+      actions: [
+        action({ id: "today", departure: boat("t1") }),
+        action({ id: "tomorrow", departure: boat("t2") }),
+        action({ id: "friday", departure: boat("t9") }),
+      ],
+      tomorrow: [departure({ tripId: "t2", title: "Night Dive", startsAt: hoursFromNow(26) })],
+    });
+    const fold = container.querySelector("details");
+    const weekPanel = screen.getByText("This week").closest("li")?.parentElement;
+    const step = (element: Element | null | undefined) =>
+      (element?.className ?? "")
+        .split(/\s+/)
+        .filter((name) => /^sm:has-\[.*:hover.*\]:inset-ring-border-strong$/.test(name));
+    expect(step(fold)).toHaveLength(1);
+    expect(step(weekPanel)).toEqual(step(fold));
+    // Resting, the edge is there and clear, so the hover moves no pixel.
+    expect(fold).toHaveClass("sm:inset-ring", "sm:inset-ring-transparent");
+    expect(weekPanel).toHaveClass("sm:inset-ring", "sm:inset-ring-transparent");
+    // No call site adds a sunken fill of its own inside the sunken panel.
+    expect(fold?.className).not.toContain("[&>summary]:hover:bg-surface-sunken");
+    const weekRow = screen.getByText("This week").closest("li");
+    expect(weekRow?.className.split(/\s+/)).not.toContain("hover:bg-surface-sunken");
+  });
+
   it("renders no Tomorrow row on a day with nothing sailing tomorrow", () => {
     renderSpine({ actions: [action({ id: "today", departure: boat("t1") })] });
     expect(screen.queryByText(/^Tomorrow/)).toBeNull();
