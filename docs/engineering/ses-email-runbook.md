@@ -86,14 +86,15 @@ not say "wrong region" — it says the identity does not exist.
 
 ### Moving mail to another region
 
-When `PRIMARY_REGION` moves too, follow [region-migration.md](region-migration.md) instead — it
-takes the old email stack down first and hands the rest to `pnpm infra:migrate-region`; steps 4–7
-below still apply afterwards. This section is for mail moving on its own.
+When `PRIMARY_REGION` moves too, follow [region-migration.md](region-migration.md) instead:
+`pnpm infra:migrate-region` takes the old email stack down itself (rule set first) and redeploys it
+with a retry for SES still placing the inbound bucket in its old region; steps 4–7 below still apply
+afterwards. This section is for mail moving on its own.
 
 Changing `SES_REGION` and deploying is not enough on its own: a deploy into the new region never
 touches the stack in the old one, and `diveday-inbound-mail` is a global bucket name the old stack
-still holds (`RemovalPolicy.RETAIN`). `pnpm infra:migrate-region` moves `PRIMARY_REGION` and does not
-do this. Pre-pilot, nothing in the old stack is worth keeping, so the move is a teardown. In order,
+still holds (`RemovalPolicy.RETAIN`). `pnpm infra:migrate-region` only runs when `PRIMARY_REGION`
+moves, so a mail-only move is still these steps by hand. Pre-pilot, nothing in the old stack is worth keeping, so the move is a teardown. In order,
 with the `diveday-admin` profile, `<old>` the region mail is leaving and `<new>` the new `SES_REGION`:
 
 1. **Deactivate the old receipt rule set.** CloudFormation cannot delete an active one, and the stack

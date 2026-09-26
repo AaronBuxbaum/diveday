@@ -4,6 +4,7 @@
     "@aws-cdk/core:newStyleStackSynthesis": true,
     "cloudfrontVerified": true,
     "mediaDomainName": "",
-    "mediaCertificateArn": ""
+    "mediaCertificateArn": "",
+    "dmarcReportEmail": "aaron@dive.day"
   }
 }

@@ -18,10 +18,24 @@
  * once. So it is a script, and the script defaults to telling you what it would
  * do rather than doing it.
  *
+ * The us-east-2 -> us-east-1 move (2026-09-26) added three more, each now
+ * handled here rather than by the operator:
+ *
+ * - A re-run from step 1 against an estate already built in the new region
+ *   destroyed it. Step 1 finds the old estate by *global* name, so with the new
+ *   stacks up every name it looks for is theirs. Step 1 now refuses outright
+ *   when either new stack exists, and a bucket counts as old only when S3 puts
+ *   it in `--from`.
+ * - The old `diveday-email` stack had to be taken down by hand. Step 1 now does
+ *   it when mail is moving too, rule set first.
+ * - The email stack's create failed on SES still seeing the recreated inbound
+ *   bucket in its old region, and the rollback orphaned that bucket. Step 4 now
+ *   gives the email stack the same sweep-wait-retry as step 3 gives the main one.
+ *
  * Usage:
  *   node scripts/migrate-region.mjs                      # inventory only
  *   node scripts/migrate-region.mjs --execute            # do it, with prompts
- *   node scripts/migrate-region.mjs --execute --from-step 2
+ *   node scripts/migrate-region.mjs --execute --from-step 3
  *
  * `--from us-east-2` names the region being left; it defaults to the region
  * the main stack was last deployed into before it came back to us-east-1.
@@ -33,12 +47,19 @@ import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import {
   EMAIL_STACK_ID,
+  EMAIL_STACK_NAME,
   GLOBAL_STACK_ID,
   MAIN_STACK_ID,
   MAIN_STACK_NAME,
   PRIMARY_REGION,
+  SES_REGION,
 } from "../config/aws-regions.mjs";
 import { ensureAwsLogin } from "./aws-login.mjs";
+import {
+  mailLeavesWithTheEstate,
+  regionFromLocationConstraint,
+  settlingKind,
+} from "./migrate-region-rules.mjs";
 import { orphansFrom, templateFileNameFor } from "./stack-orphans.mjs";
 import { readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
@@ -56,15 +77,27 @@ const repoRoot = join(scriptDirectory, "..");
  * bucket is versioned is a thing that can be wrong.
  *
  * Names rather than construct ids because the name is what is global, and being
- * global is the entire reason this script exists.
+ * global is the entire reason this script exists. A name alone is also not
+ * enough to call a bucket *old*: the new estate uses the same names, so step 0
+ * asks S3 which region each one is in and only `--from`'s count.
+ *
+ * `mail` marks the one the email stack owns, which stays out of the inventory
+ * entirely when mail is not leaving `--from`.
  */
 const OLD_BUCKETS = [
   { name: "diveday-vrt", retained: false },
   { name: "diveday-backups", retained: true },
   { name: "diveday-database-dumps", retained: true },
   { name: "diveday-media", retained: true },
-  { name: "diveday-inbound-mail", retained: true },
+  { name: "diveday-inbound-mail", retained: true, mail: true },
 ];
+
+/**
+ * The receipt rule set the email stack creates. Hard-coded because its home,
+ * SES_INBOUND_RULE_SET_NAME in infra/lib/stack-config.ts, is TypeScript and
+ * this is not; step 5 below prints the same name for the same reason.
+ */
+const INBOUND_RULE_SET_NAME = "diveday-inbound";
 
 /**
  * Secrets that outlive the stack that owned them.
@@ -171,28 +204,47 @@ function aws(args, timeoutMs = SUBPROCESS_TIMEOUTS.awsApi) {
   });
 }
 
-function stackExists(stackName, region) {
-  return (
-    awsMaybe([
-      "cloudformation",
-      "describe-stacks",
-      "--stack-name",
-      stackName,
-      "--region",
-      region,
-      "--query",
-      "Stacks[0].StackStatus",
-      "--output",
-      "text",
-    ]) !== null
-  );
+/** A stack's status in one region, or null when there is no such stack. */
+function stackStatus(stackName, region) {
+  const status = awsMaybe([
+    "cloudformation",
+    "describe-stacks",
+    "--stack-name",
+    stackName,
+    "--region",
+    region,
+    "--query",
+    "Stacks[0].StackStatus",
+    "--output",
+    "text",
+  ]);
+  return status === null ? null : status.trim();
 }
 
 function bucketExists(name) {
   // `--region` is deliberately absent: a bucket name is global, and asking the
   // wrong region for one answers a redirect rather than a 404. What this needs
-  // to know is whether the name is taken at all.
+  // to know is whether the name is taken at all -- *where* is bucketRegion's.
   return awsMaybe(["s3api", "head-bucket", "--bucket", name]) !== null;
+}
+
+/**
+ * The region a bucket lives in, or null when S3 would not say.
+ *
+ * The question step 1 did not ask on 2026-09-26. A bucket name answering
+ * `head-bucket` says only that *somebody* holds it, and once the new estate is
+ * up, that somebody is the new estate. Every delete of a bucket below is gated
+ * on this naming the region being cleared; a null is "could not tell", and a
+ * bucket this could not place is never touched.
+ */
+function bucketRegion(name) {
+  const raw = awsMaybe(["s3api", "get-bucket-location", "--bucket", name, "--output", "json"]);
+  if (raw === null) return null;
+  try {
+    return regionFromLocationConstraint(JSON.parse(raw || "{}").LocationConstraint);
+  } catch {
+    return null;
+  }
 }
 
 function userExists(name) {
@@ -363,39 +415,27 @@ function recentFailureReasons(stackName, region) {
 }
 
 /**
- * Whether a deploy failed because an S3 bucket name is not creatable *yet*.
+ * Whether a deploy failed because AWS has not caught up with a bucket that was
+ * just deleted or recreated, and if so which way (`settlingKind` in
+ * scripts/migrate-region-rules.mjs has both reasons and their wording).
  *
- * S3's bucket namespace is global and eventually consistent, and deleting a
- * bucket does not immediately free its name: for some minutes afterwards
- * `head-bucket` answers 404 -- the name looks free -- while `create-bucket`
- * answers 409 OperationAborted, "A conflicting conditional operation is
- * currently in progress against this resource".
- *
- * Step 1's check reads the first of those and the deploy hits the second, which
- * is exactly the gap this closes. There is no API that answers "is this name
- * creatable", so the only honest test is to try, and the only fix is to wait
- * and try again.
+ * S3's bucket namespace is global and eventually consistent: for some minutes
+ * after a delete `head-bucket` answers 404 -- the name looks free -- while
+ * `create-bucket` answers 409 OperationAborted. And SES, checking that the
+ * inbound bucket is in its own region, can go on seeing the region a
+ * recreated bucket used to be in. There is no API that answers "is this
+ * creatable yet", so the only honest test is to try, and the only fix is to
+ * wait and try again.
  */
-function isBucketNameStillSettling(stackName, region) {
+function settlingFailure(stackName, region) {
   const reasons = recentFailureReasons(stackName, region);
   if (reasons === null) {
     log("  Could not read the stack's events, so could not tell why the deploy failed.");
-    return false;
+    return null;
   }
-  return reasons.some(
-    (reason) =>
-      reason.includes("conflicting conditional operation") || reason.includes("OperationAborted"),
-  );
+  return settlingKind(reasons);
 }
 
-/**
- * Delete a stack that a failed *create* left behind.
- *
- * A stack whose first CREATE rolled back sits in ROLLBACK_COMPLETE, and
- * CloudFormation will not update it -- the only legal operation is delete. A
- * retry that skipped this would fail on that instead of on whatever it was
- * actually retrying, which reads as a different bug.
- */
 /**
  * Statuses that mean a real, deployed stack. This is an update, and its log
  * groups are its own.
@@ -426,20 +466,13 @@ const UNLANDED_STACK_STATUSES = new Set([
   "REVIEW_IN_PROGRESS",
 ]);
 
-async function prepareForCreate(stackName, region) {
-  const status = awsMaybe([
-    "cloudformation",
-    "describe-stacks",
-    "--stack-name",
-    stackName,
-    "--region",
-    region,
-    "--query",
-    "Stacks[0].StackStatus",
-    "--output",
-    "text",
-  ]);
-  const trimmed = status === null ? null : status.trim();
+/**
+ * Clear the way for `stackId` to be created as `stackName` in `region`: delete
+ * a stack a failed create left behind, then sweep what that create orphaned.
+ * A deployed stack is left alone -- the deploy is an update.
+ */
+async function prepareForCreate(stackId, stackName, region) {
+  const trimmed = stackStatus(stackName, region);
 
   if (trimmed !== null && DEPLOYED_STACK_STATUSES.has(trimmed)) return { bucketsFreed: 0 };
 
@@ -466,7 +499,7 @@ async function prepareForCreate(stackName, region) {
   // also the argument for the sweep being safe -- if no stack owns these names,
   // nothing does, so anything holding one is debris from a create that did not
   // finish.
-  return deleteWhatTheLastCreateLeft(region);
+  return deleteWhatTheLastCreateLeft(stackId, region);
 }
 
 /**
@@ -488,20 +521,22 @@ async function prepareForCreate(stackName, region) {
  * sibling) do not even carry the word diveday, so a name filter would miss
  * them too.
  *
- * Safe because of where it is called: only after a *create* rolled back in the
- * region the estate is being built into, where by definition nothing else of
- * ours exists yet.
+ * Safe because of where it is called: only when no stack named for `stackId`
+ * stands in `region`, the region the estate is being built into, so nothing of
+ * ours owns these names there. A bucket is additionally deleted only when S3
+ * puts it in `region` -- a same-named bucket anywhere else is not debris from
+ * this create, and is refused with its region named rather than touched.
  */
-function deleteWhatTheLastCreateLeft(region) {
+function deleteWhatTheLastCreateLeft(stackId, region) {
   // The cloud assembly is written relative to the repository, not to the
   // working directory, so the override exists for the tests: a fixture in a
   // temp directory cannot otherwise reach the file this reads, and that gap is
   // exactly why a wrong filename survived a green test run.
   const assemblyDirectory = process.env.DIVEDAY_CDK_OUT || join(repoRoot, "cdk.out");
-  const templatePath = join(assemblyDirectory, templateFileNameFor(MAIN_STACK_ID));
+  const templatePath = join(assemblyDirectory, templateFileNameFor(stackId));
   let template;
   try {
-    runBounded("pnpm", ["infra:synth", MAIN_STACK_ID, "--quiet"], {
+    runBounded("pnpm", ["infra:synth", stackId, "--quiet"], {
       cwd: repoRoot,
       env: awsEnvironment,
       stdio: "ignore",
@@ -588,6 +623,12 @@ function deleteWhatTheLastCreateLeft(region) {
       `bucket ${name}`,
       () => bucketExists(name),
       () => {
+        const where = bucketRegion(name);
+        if (where !== region) {
+          throw new Error(
+            `the name is held in ${where ?? "a region S3 would not name"}, not ${region}, so it is not this create's to delete. Find out who owns it.`,
+          );
+        }
         emptyBucket(name);
         aws(["s3api", "delete-bucket", "--bucket", name, "--region", region]);
       },
@@ -651,6 +692,90 @@ function pnpm(args, timeoutMs) {
 }
 
 /**
+ * Deploy one stack that may be a create, and retry only the failures that are
+ * AWS catching up.
+ *
+ * Step 3 had this loop for the main stack; step 4 deployed the email stack
+ * bare, and on 2026-09-26 its create failed on SES still placing the freshly
+ * recreated `diveday-inbound-mail` in its old region. The rollback then kept
+ * that RETAIN bucket, so the next create would have failed "already exists" --
+ * the operator deleted the stack and the bucket by hand. Each attempt here
+ * starts with `prepareForCreate`, which is exactly that cleanup.
+ */
+async function deployCreatingStack(stackId, stackName, region) {
+  // Overridable so the tests can drive the waits without sleeping through
+  // them. Not a knob for operators: the default is the only value anybody
+  // running a migration should use, and shortening it in anger just spends
+  // the attempts faster.
+  const settleMs = Number(process.env.DIVEDAY_BUCKET_SETTLE_MS || 5 * 60_000);
+  const attempts = 7;
+  for (let attempt = 1; ; attempt += 1) {
+    const { bucketsFreed } = await prepareForCreate(stackId, stackName, region);
+    // Wait when the sweep just deleted a bucket. S3 frees a bucket name some
+    // minutes after the delete, and the sweep runs *immediately* before this
+    // deploy -- so without this, the migration reliably races itself and
+    // burns a create, a rollback, and a fresh set of orphans on every run.
+    // The retry below still covers the case where this is not long enough;
+    // this is here so the common path does not need it.
+    if (bucketsFreed > 0) {
+      log(
+        `  Waiting ${Math.round(settleMs / 1000)}s before deploying: S3 frees a deleted bucket name minutes after the delete, and ${bucketsFreed} of them went just now.`,
+      );
+      await sleep(settleMs);
+    }
+    try {
+      pnpm(["infra:deploy", stackId, "--require-approval", "never"], SUBPROCESS_TIMEOUTS.cdkDeploy);
+      return;
+    } catch (error) {
+      const kind = settlingFailure(stackName, region);
+      if (kind === null) throw error;
+      if (attempt >= attempts) {
+        throw new Error(
+          `${stackName} still cannot create its buckets after ` +
+            `${Math.round((attempts * settleMs) / 60_000)} minutes of waiting for AWS to catch up ` +
+            "with the buckets deleted and recreated in this migration. That usually takes minutes; " +
+            "this is longer than that, so read the stack events rather than waiting further.",
+        );
+      }
+      log("");
+      log(
+        kind === "ses-bucket-region"
+          ? `  SES still places the inbound mail bucket in the region it just left -- the create was refused as "not in the same region as your Amazon SES configuration". Waiting and retrying (attempt ${attempt} of ${attempts}).`
+          : `  S3 has not freed the bucket names yet -- create answered 409 while head-bucket says the names are gone. Waiting and retrying (attempt ${attempt} of ${attempts}).`,
+      );
+      await sleep(settleMs);
+    }
+  }
+}
+
+/**
+ * Take the old email stack down, receipt rule set first.
+ *
+ * CloudFormation cannot delete an *active* receipt rule set, so deleting the
+ * stack with it active lands in DELETE_FAILED. Deactivation is region-wide --
+ * there is one active set per region, with no name argument meaning "none" --
+ * so it only happens when the active set is ours: a set somebody else made
+ * active in that region is not this script's to switch off, and the stack
+ * delete is then free to proceed because our set is not the active one.
+ */
+async function tearDownOldEmailStack(region) {
+  const active = JSON.parse(
+    aws(["ses", "describe-active-receipt-rule-set", "--region", region, "--output", "json"]) ||
+      "{}",
+  );
+  const activeName = active?.Metadata?.Name ?? null;
+  if (activeName === INBOUND_RULE_SET_NAME) {
+    log(`  deactivating receipt rule set ${INBOUND_RULE_SET_NAME} in ${region}...`);
+    aws(["ses", "set-active-receipt-rule-set", "--region", region]);
+  } else if (activeName !== null) {
+    log(`  the active receipt rule set in ${region} is ${activeName}, not ours; leaving it on.`);
+  }
+  log(`  deleting stack ${EMAIL_STACK_NAME} in ${region}...`);
+  aws(["cloudformation", "delete-stack", "--stack-name", EMAIL_STACK_NAME, "--region", region]);
+  await waitForStackDeletion(EMAIL_STACK_NAME, region);
+}
+
+/**
  * Ask before something irreversible.
  *
  * `--confirm-teardown <region>` is the non-interactive escape hatch, and it has
@@ -710,18 +835,59 @@ log(`DiveDay region migration: ${oldRegion} -> ${PRIMARY_REGION}`);
 log(`Account ${account}, as ${identity.Arn ?? "unknown"}`);
 log("");
 
-const oldStackPresent = stackExists(MAIN_STACK_NAME, oldRegion);
-const bucketsPresent = OLD_BUCKETS.filter((bucket) => bucketExists(bucket.name));
+// Whether the email stack is part of this move at all. When SES_REGION is the
+// region being left, mail is staying where it is: its stack and its inbound
+// bucket are live, and nothing below may touch either.
+const mailMoves = mailLeavesWithTheEstate({ oldRegion, sesRegion: SES_REGION });
+
+// The stacks this migration builds, where it builds them. Either one existing
+// means step 1 has already run and the deploys have begun -- and step 1 finds
+// the old estate by global name, so against a built new estate every name it
+// looks for is the new estate's. That is how a re-run on 2026-09-26 emptied
+// and deleted the new buckets and then asked the operator to delete its users.
+const newStacks = [
+  { name: MAIN_STACK_NAME, region: PRIMARY_REGION },
+  ...(mailMoves ? [{ name: EMAIL_STACK_NAME, region: SES_REGION }] : []),
+]
+  .map((stack) => ({ ...stack, status: stackStatus(stack.name, stack.region) }))
+  .filter((stack) => stack.status !== null);
+
+const oldStackPresent = stackStatus(MAIN_STACK_NAME, oldRegion) !== null;
+const oldEmailStackPresent = mailMoves && stackStatus(EMAIL_STACK_NAME, oldRegion) !== null;
+
+// A bucket is old when S3 puts it in --from, and only then. A same-named bucket
+// in any other region -- the new estate's, an orphan of a rolled-back create,
+// anybody's -- is reported and never touched.
+const oldBucketNames = OLD_BUCKETS.filter((bucket) => mailMoves || !bucket.mail);
+const bucketsHeld = oldBucketNames
+  .filter((bucket) => bucketExists(bucket.name))
+  .map((bucket) => ({ ...bucket, region: bucketRegion(bucket.name) }));
+const bucketsPresent = bucketsHeld.filter((bucket) => bucket.region === oldRegion);
+const bucketsElsewhere = bucketsHeld.filter((bucket) => bucket.region !== oldRegion);
 const secretsPresent = OLD_SECRETS.filter((secret) => secretExists(secret.id, oldRegion));
 const usersPresent = GLOBAL_USER_NAMES.filter((name) => userExists(name));
 
+const describeElsewhere = (bucket) => `${bucket.name} (${bucket.region ?? "region unknown"})`;
+
 log("What is there now:");
 log(`  stack ${MAIN_STACK_NAME} in ${oldRegion}: ${oldStackPresent ? "present" : "already gone"}`);
+if (mailMoves) {
+  log(
+    `  stack ${EMAIL_STACK_NAME} in ${oldRegion}: ${oldEmailStackPresent ? "present" : "already gone"}`,
+  );
+} else {
+  log(`  stack ${EMAIL_STACK_NAME}: mail stays in ${SES_REGION}, so it is not part of this move`);
+}
 log(
-  `  buckets holding a global name: ${
+  `  buckets in ${oldRegion}: ${
     bucketsPresent.length === 0 ? "none" : bucketsPresent.map((b) => b.name).join(", ")
   }`,
 );
+if (bucketsElsewhere.length > 0) {
+  log(
+    `  same-named buckets elsewhere, left alone: ${bucketsElsewhere.map(describeElsewhere).join(", ")}`,
+  );
+}
 log(
   `  secrets readable in ${oldRegion}: ${
     secretsPresent.length === 0 ? "none" : secretsPresent.map((s) => s.id).join(", ")
@@ -732,11 +898,18 @@ log(
     usersPresent.length === 0 ? "none" : usersPresent.join(", ")
   }`,
 );
+for (const stack of newStacks) {
+  log(`  new estate: ${stack.name} in ${stack.region} is ${stack.status}`);
+}
 log("");
 
 if (!execute) {
   log("This was an inventory. Nothing has been changed.");
   log("");
+  if (newStacks.length > 0) {
+    log("The new estate already exists, so step 1 will refuse. Resume with --from-step 3.");
+    log("");
+  }
   log("If that list is what you expect to lose, re-run with --execute.");
   log("Read docs/engineering/region-migration.md first -- in particular, this");
   log("deletes the visual-regression baselines, every backup bundle, every");
@@ -747,10 +920,32 @@ if (!execute) {
 
 // --- The destructive run ---------------------------------------------------
 
+// Said before anything else happens, so a missing or mistyped --from-step shows
+// up here rather than in the first thing it deletes.
+log(`Starting at step ${fromStep} of 5.`);
+log("");
+
+// Refused before the confirmation prompt and before the first delete: nothing
+// step 1 could do against a built new estate is anything but destruction.
+if (fromStep <= 1 && newStacks.length > 0) {
+  console.error(
+    `Refusing to run step 1: the new estate already exists (${newStacks
+      .map((stack) => `${stack.name} in ${stack.region} is ${stack.status}`)
+      .join("; ")}).`,
+  );
+  console.error(
+    "Step 1 identifies the old estate by global name, and the new stacks hold those names now: it would empty and delete the new estate's buckets and then stop on its IAM users.",
+  );
+  console.error(
+    `Resume with --from-step 3 (or --from-step 4 once ${MAIN_STACK_NAME} has deployed). Whatever is left in ${oldRegion} is step 5's last check.`,
+  );
+  process.exit(1);
+}
+
 try {
   if (fromStep <= 1) {
     log("Step 1/5: tear down the old estate.");
-    if (bucketsPresent.length > 0 || oldStackPresent) {
+    if (bucketsPresent.length > 0 || oldStackPresent || oldEmailStackPresent) {
       await confirm(
         `This permanently deletes the above from ${oldRegion}. Type ${oldRegion} to continue: `,
         oldRegion,
@@ -779,10 +974,18 @@ try {
       await waitForStackDeletion(MAIN_STACK_NAME, oldRegion);
     }
 
+    // Before the retained buckets, because the email stack retains
+    // diveday-inbound-mail: once the stack is gone the bucket is swept with the
+    // others below. Left standing, the stack would keep the name, and the new
+    // region's email stack could not take it.
+    if (oldEmailStackPresent) await tearDownOldEmailStack(oldRegion);
+
     // Retained by design, so CloudFormation left them. Deleted here because the
     // new region cannot create a bucket whose global name is still taken.
     for (const bucket of bucketsPresent.filter((candidate) => candidate.retained)) {
-      if (!bucketExists(bucket.name)) continue;
+      // Asked again rather than trusted from step 0: only a bucket S3 still
+      // puts in the old region is deleted, and a gone one answers null.
+      if (bucketRegion(bucket.name) !== oldRegion) continue;
       log(`  deleting bucket ${bucket.name}...`);
       // Emptied a second time on purpose: SES can have received more mail into
       // diveday-inbound-mail while the stack was deleting, and delete-bucket
@@ -809,16 +1012,38 @@ try {
       ]);
     }
 
-    const stillTaken = [
-      ...OLD_BUCKETS.filter((bucket) => bucketExists(bucket.name)).map((b) => `bucket ${b.name}`),
+    // Two different answers, and they must not read alike. A name still in the
+    // old region is this step's unfinished business. A name held anywhere else
+    // is not the old estate's -- no stack of ours exists in the new region, or
+    // the refusal above would have stopped the run -- so something this script
+    // does not know about owns it, and deleting it to make this pass is how an
+    // estate gets destroyed.
+    const remaining = oldBucketNames
+      .filter((bucket) => bucketExists(bucket.name))
+      .map((bucket) => ({ ...bucket, region: bucketRegion(bucket.name) }));
+    const stillInOld = remaining.filter((bucket) => bucket.region === oldRegion);
+    const heldElsewhere = [
+      ...remaining.filter((bucket) => bucket.region !== oldRegion).map(describeElsewhere),
+      // IAM has no region to ask, and with the old stack gone nothing of ours
+      // should hold these names.
       ...GLOBAL_USER_NAMES.filter((name) => userExists(name)).map((name) => `IAM user ${name}`),
     ];
-    if (stillTaken.length > 0) {
-      throw new Error(
-        `Still taken, so the next deploy would fail part-way: ${stillTaken.join(", ")}. ` +
-          "Delete them by hand, then re-run with --from-step 2.",
+    const problems = [];
+    if (stillInOld.length > 0) {
+      problems.push(
+        `Still taken in ${oldRegion}, so the next deploy would fail part-way: ${stillInOld
+          .map((bucket) => `bucket ${bucket.name}`)
+          .join(
+            ", ",
+          )}. Re-run step 1 -- it only deletes what is in ${oldRegion} -- and read the error it stops on.`,
       );
     }
+    if (heldElsewhere.length > 0) {
+      problems.push(
+        `Still taken by something outside ${oldRegion}: ${heldElsewhere.join(", ")}. No stack of the old estate owns these, so this script will not touch them. Stop and find out what does before going further. If it is a part-built new estate in ${PRIMARY_REGION}, resume with --from-step 3, which sweeps what a rolled-back create left.`,
+      );
+    }
+    if (problems.length > 0) throw new Error(problems.join("\n\n"));
     // Free as in "nothing answers for them", which is not the same as "S3 will
     // let you create them". The deploy in step 3 is what finds out, and it is
     // written to wait rather than to fail.
@@ -837,58 +1062,22 @@ try {
     log(`Step 3/5: deploy ${MAIN_STACK_ID} alone, to widen the deploy grants.`);
     log("  Its own per-region grants come from this stack, so nothing else can");
     log("  be deployed or diffed until it has landed once.");
-    // Retried, and only on the one failure worth retrying. The buckets this
-    // stack creates carry the names step 1 just deleted, and S3 frees a bucket
-    // name minutes after the delete rather than at it -- so the first attempt
-    // here can fail on names that step 1 correctly reported as gone.
-    // Overridable so the tests can drive the waits without sleeping through
-    // them. Not a knob for operators: the default is the only value anybody
-    // running a migration should use, and shortening it in anger just spends
-    // the attempts faster.
-    const settleMs = Number(process.env.DIVEDAY_BUCKET_SETTLE_MS || 5 * 60_000);
-    const attempts = 7;
-    for (let attempt = 1; ; attempt += 1) {
-      const { bucketsFreed } = await prepareForCreate(MAIN_STACK_NAME, PRIMARY_REGION);
-      // Wait when the sweep just deleted a bucket. S3 frees a bucket name some
-      // minutes after the delete, and the sweep runs *immediately* before this
-      // deploy -- so without this, the migration reliably races itself and
-      // burns a create, a rollback, and a fresh set of orphans on every run.
-      // The retry below still covers the case where this is not long enough;
-      // this is here so the common path does not need it.
-      if (bucketsFreed > 0) {
-        log(
-          `  Waiting ${Math.round(settleMs / 1000)}s before deploying: S3 frees a deleted bucket name minutes after the delete, and ${bucketsFreed} of them went just now.`,
-        );
-        await sleep(settleMs);
-      }
-      try {
-        pnpm(
-          ["infra:deploy", MAIN_STACK_ID, "--require-approval", "never"],
-          SUBPROCESS_TIMEOUTS.cdkDeploy,
-        );
-        break;
-      } catch (error) {
-        if (!isBucketNameStillSettling(MAIN_STACK_NAME, PRIMARY_REGION)) throw error;
-        if (attempt >= attempts) {
-          throw new Error(
-            `${MAIN_STACK_NAME} still cannot create its buckets after ` +
-              `${Math.round((attempts * settleMs) / 60_000)} minutes of waiting for the names ` +
-              "deleted in step 1 to become creatable. S3 usually frees a name in minutes; this " +
-              "is longer than that, so read the stack events rather than waiting further.",
-          );
-        }
-        log("");
-        log(
-          `  S3 has not freed the bucket names yet -- create answered 409 while head-bucket says the names are gone. Waiting and retrying (attempt ${attempt} of ${attempts}).`,
-        );
-        await sleep(settleMs);
-      }
-    }
+    // Retried, and only on the failures worth retrying. The buckets this stack
+    // creates carry the names step 1 just deleted, and S3 frees a bucket name
+    // minutes after the delete rather than at it -- so the first attempt here
+    // can fail on names that step 1 correctly reported as gone.
+    await deployCreatingStack(MAIN_STACK_ID, MAIN_STACK_NAME, PRIMARY_REGION);
   }
 
   if (fromStep <= 4) {
     log("");
-    log(`Step 4/5: deploy ${MAIN_STACK_ID}, ${EMAIL_STACK_ID} and ${GLOBAL_STACK_ID}.`);
+    log(
+      `Step 4/5: deploy ${EMAIL_STACK_ID}, then ${MAIN_STACK_ID}, ${EMAIL_STACK_ID} and ${GLOBAL_STACK_ID}.`,
+    );
+    // The email stack alone first, through the same sweep-wait-retry as step 3:
+    // its create recreates diveday-inbound-mail, and SES can go on placing that
+    // bucket in the region it just left for some minutes after.
+    await deployCreatingStack(EMAIL_STACK_ID, EMAIL_STACK_NAME, SES_REGION);
     pnpm(["infra:deploy", "--require-approval", "never"], SUBPROCESS_TIMEOUTS.cdkDeploy);
   }
 } catch (error) {

@@ -3,7 +3,17 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { PRIMARY_REGION } from "../config/aws-regions.mjs";
+import {
+  EMAIL_STACK_NAME,
+  MAIN_STACK_NAME,
+  PRIMARY_REGION,
+  SES_REGION,
+} from "../config/aws-regions.mjs";
+import {
+  mailLeavesWithTheEstate,
+  regionFromLocationConstraint,
+  settlingKind,
+} from "./migrate-region-rules.mjs";
 
 /** Any region that is not PRIMARY_REGION: the one the estate is being moved out of. */
 const OLD_REGION = PRIMARY_REGION === "us-east-2" ? "us-east-1" : "us-east-2";
@@ -19,6 +29,17 @@ const OLD_REGION = PRIMARY_REGION === "us-east-2" ? "us-east-1" : "us-east-2";
  */
 
 const directories = [];
+
+/** A fully authorized non-interactive run against the old region. */
+const teardown = [
+  "--from",
+  OLD_REGION,
+  "--execute",
+  "--confirm-account",
+  "123456789012",
+  "--confirm-teardown",
+  OLD_REGION,
+];
 
 /**
  * A fake `aws` that answers STS and reports every other resource as absent, so
@@ -41,6 +62,17 @@ function fixture({
   logGroupsPresent = null,
   logGroupDeleteError = null,
   secretPresent = null,
+  // Where get-bucket-location puts every bucket that exists, unless
+  // bucketLocations names that one. The old region by default, so a fixture
+  // that says resources exist describes the old estate, as it always has.
+  bucketRegion = OLD_REGION,
+  bucketLocations = {},
+  // Stacks present in one region only, keyed "<stack name>@<region>". Checked
+  // before stackStatus, which answers for every stack in every region.
+  stacks = {},
+  activeRuleSet = null,
+  emailDeployFailures = 0,
+  emailTemplate = null,
 } = {}) {
   const directory = mkdtempSync(join(tmpdir(), "diveday-migrate-"));
   directories.push(directory);
@@ -66,6 +98,14 @@ function fixture({
   }
   writeFileSync(join(directory, "log-group-delete-error"), logGroupDeleteError ?? "");
   writeFileSync(join(directory, "secret-present"), secretPresent ?? "");
+  writeFileSync(join(directory, "bucket-region"), bucketRegion);
+  for (const [name, region] of Object.entries(bucketLocations)) {
+    writeFileSync(join(directory, `location-${name}`), region);
+  }
+  for (const [key, status] of Object.entries(stacks)) {
+    writeFileSync(join(directory, `stack-${key}`), status);
+  }
+  writeFileSync(join(directory, "active-rule-set"), activeRuleSet ?? "");
   // A real synthesized template when the test supplies one, written where the
   // cloud assembly puts it. `pnpm infra:synth` is faked, so the fixture stands
   // in for what it would have produced -- but the *filename* is the fixture's
@@ -75,10 +115,45 @@ function fixture({
     mkdirSync(join(directory, "cdk.out"), { recursive: true });
     writeFileSync(join(directory, "cdk.out", "DiveDay.template.json"), JSON.stringify(template));
   }
+  if (emailTemplate) {
+    mkdirSync(join(directory, "cdk.out"), { recursive: true });
+    writeFileSync(
+      join(directory, "cdk.out", "DiveDayEmail.template.json"),
+      JSON.stringify(emailTemplate),
+    );
+  }
   writeFileSync(
     join(bin, "aws"),
     `#!/bin/sh
 printf '%s\\n' "$AWS_PROFILE:$*" >> "$DIVEDAY_AWS_LOG"
+# The value after a flag, e.g. arg --region "$@".
+arg() {
+  flag=$1; shift
+  while [ $# -gt 0 ]; do
+    if [ "$1" = "$flag" ]; then printf '%s' "$2"; return 0; fi
+    shift
+  done
+}
+if [ "$2" = "get-bucket-location" ]; then
+  ${resourcesExist ? "" : "exit 1"}
+  b=$(arg --bucket "$@")
+  if [ -f "$DIVEDAY_DIR/location-$b" ]; then r=$(cat "$DIVEDAY_DIR/location-$b"); else r=$(cat "$DIVEDAY_DIR/bucket-region"); fi
+  # S3's own answer for us-east-1 is a null constraint, not the region's name.
+  if [ "$r" = "us-east-1" ]; then printf '%s' '{"LocationConstraint": null}'; else printf '{"LocationConstraint": "%s"}' "$r"; fi
+  exit 0
+fi
+if [ "$2" = "describe-active-receipt-rule-set" ]; then
+  if [ -s "$DIVEDAY_DIR/active-rule-set" ]; then
+    printf '{"Metadata":{"Name":"%s"},"Rules":[]}' "$(cat "$DIVEDAY_DIR/active-rule-set")"
+  else
+    printf '%s' '{}'
+  fi
+  exit 0
+fi
+if [ "$2" = "set-active-receipt-rule-set" ]; then
+  : > "$DIVEDAY_DIR/active-rule-set"
+  exit 0
+fi
 if [ "$2" = "describe-stack-events" ]; then
   cat "$DIVEDAY_DIR/stack-events.json"
   exit 0
@@ -88,8 +163,13 @@ if [ "$1" = "sts" ]; then
   exit 0
 fi
 if [ "$2" = "delete-stack" ]; then
+  rm -f "$DIVEDAY_DIR/stack-$(arg --stack-name "$@")@$(arg --region "$@")"
   : > "$DIVEDAY_DIR/stack-deleted"
   exit 0
+fi
+if [ "$2" = "describe-stacks" ]; then
+  f="$DIVEDAY_DIR/stack-$(arg --stack-name "$@")@$(arg --region "$@")"
+  if [ -f "$f" ]; then cat "$f"; exit 0; fi
 fi
 if [ "$2" = "describe-stacks" ] && [ -f "$DIVEDAY_DIR/stack-deleted" ]; then
   exit 1
@@ -144,6 +224,11 @@ if [ "$1" = "infra:deploy" ] && [ "$2" = "DiveDay" ]; then
   printf '%s' "$((n + 1))" > "$DIVEDAY_DEPLOY_COUNTER"
   if [ "$n" -lt ${deployFailures} ]; then exit 1; fi
 fi
+if [ "$1" = "infra:deploy" ] && [ "$2" = "DiveDayEmail" ]; then
+  n=$(cat "$DIVEDAY_EMAIL_DEPLOY_COUNTER" 2>/dev/null || echo 0)
+  printf '%s' "$((n + 1))" > "$DIVEDAY_EMAIL_DEPLOY_COUNTER"
+  if [ "$n" -lt ${emailDeployFailures} ]; then exit 1; fi
+fi
 exit 0
 `,
   );
@@ -165,6 +250,7 @@ function run(directory, ...arguments_) {
         DIVEDAY_DIR: directory,
         DIVEDAY_PAGE_COUNTER: join(directory, "page-counter"),
         DIVEDAY_DEPLOY_COUNTER: join(directory, "deploy-counter"),
+        DIVEDAY_EMAIL_DEPLOY_COUNTER: join(directory, "email-deploy-counter"),
         // Drives the retry loop without sleeping through its real five minutes.
         DIVEDAY_BUCKET_SETTLE_MS: "10",
         DIVEDAY_CDK_OUT: join(directory, "cdk.out"),
@@ -320,8 +406,11 @@ describe("infra:migrate-region", () => {
       .split("\n")
       .filter((line) => line.startsWith("infra:bootstrap") || line.startsWith("infra:deploy"));
     expect(commands[0]).toContain("infra:bootstrap --confirm-account 123456789012");
-    expect(commands[1]).toContain("infra:deploy DiveDay");
-    expect(commands[2]).toBe("infra:deploy --require-approval never");
+    expect(commands[1]).toContain("infra:deploy DiveDay --");
+    // The email stack alone next, through the same retry as the main one, and
+    // only then all three.
+    expect(commands[2]).toContain("infra:deploy DiveDayEmail --");
+    expect(commands.at(-1)).toBe("infra:deploy --require-approval never");
   });
 
   it("sweeps versions and delete markers, not just the current objects", () => {
@@ -652,6 +741,8 @@ describe("infra:migrate-region", () => {
         },
       },
       resourcesExist: true,
+      // Where a rolled-back create in the new region would have left it.
+      bucketRegion: PRIMARY_REGION,
       stackStatus: "",
     });
     const result = run(
@@ -694,5 +785,288 @@ describe("infra:migrate-region", () => {
     // check it rather than letting the address card go quiet.
     expect(result.stdout).toContain("geo-places search-text");
     expect(result.stdout).toContain("docs/engineering/region-migration.md");
+  });
+
+  it("says which step it starts at before it does anything", () => {
+    // A missing or mistyped --from-step is otherwise discovered by what the
+    // run deletes first.
+    const fromThree = fixture();
+    const resumed = run(fromThree, ...teardown, "--from-step", "3");
+    expect(resumed.stdout).toContain("Starting at step 3 of 5.");
+
+    const fromOne = fixture();
+    const fresh = run(fromOne, ...teardown);
+    expect(fresh.stdout).toContain("Starting at step 1 of 5.");
+    expect(fresh.stdout.indexOf("Starting at step 1 of 5.")).toBeLessThan(
+      fresh.stdout.indexOf("Step 1/5"),
+    );
+  });
+
+  it.each([
+    [MAIN_STACK_NAME, PRIMARY_REGION, "CREATE_COMPLETE"],
+    [EMAIL_STACK_NAME, SES_REGION, "ROLLBACK_COMPLETE"],
+  ])("refuses step 1 when %s already exists in %s", (stackName, region, status) => {
+    // The 2026-09-26 re-run. Every name step 1 looks for was the new estate's,
+    // so it emptied and deleted the new buckets and then told the operator to
+    // delete the new stack's IAM users by hand.
+    const directory = fixture({
+      resourcesExist: true,
+      bucketRegion: PRIMARY_REGION,
+      stacks: { [`${stackName}@${region}`]: status },
+      activeRuleSet: "diveday-inbound",
+    });
+    const result = run(directory, ...teardown);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`${stackName} in ${region} is ${status}`);
+    expect(result.stderr).toContain("identifies the old estate by global name");
+    expect(result.stderr).toContain("--from-step 3");
+    expect(result.stderr).not.toContain("by hand");
+    const log = awsLog(directory);
+    expect(log).not.toContain("delete-objects");
+    expect(log).not.toContain("delete-bucket");
+    expect(log).not.toContain("delete-stack");
+    expect(log).not.toContain("delete-secret");
+    expect(log).not.toContain("set-active-receipt-rule-set");
+    expect(pnpmLog(directory)).toBe("");
+  });
+
+  it("names the new estate in the inventory and says step 1 will refuse", () => {
+    const directory = fixture({
+      stacks: { [`${MAIN_STACK_NAME}@${PRIMARY_REGION}`]: "UPDATE_COMPLETE" },
+    });
+    const result = run(directory, "--from", OLD_REGION, "--confirm-account", "123456789012");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(`new estate: ${MAIN_STACK_NAME} in ${PRIMARY_REGION}`);
+    expect(result.stdout).toContain("step 1 will refuse. Resume with --from-step 3");
+  });
+
+  it("never empties or deletes a same-named bucket that lives outside --from", () => {
+    // Global names, regional buckets. diveday-media answering head-bucket
+    // says somebody holds the name; only get-bucket-location says it is not
+    // the old estate.
+    const directory = fixture({
+      resourcesExist: true,
+      bucketLocations: { "diveday-media": PRIMARY_REGION },
+    });
+    const result = run(directory, ...teardown);
+
+    const log = awsLog(directory).split("\n");
+    const touching = (bucket) =>
+      log.filter(
+        (line) =>
+          line.includes(`--bucket ${bucket}`) &&
+          (line.includes("delete-") || line.includes("list-object-versions")),
+      );
+    expect(touching("diveday-media")).toEqual([]);
+    // The old region's buckets are still emptied and deleted, so the check
+    // above is not passing because nothing ran.
+    expect(touching("diveday-backups").length).toBeGreaterThan(0);
+    expect(log.some((line) => line.includes("delete-bucket --bucket diveday-backups"))).toBe(true);
+
+    expect(result.stdout).toContain(
+      `same-named buckets elsewhere, left alone: diveday-media (${PRIMARY_REGION})`,
+    );
+    // The fake keeps every name held, so the run ends on the check -- and the
+    // two kinds of "still taken" read differently.
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`Still taken in ${OLD_REGION}`);
+    expect(result.stderr).toContain(
+      `Still taken by something outside ${OLD_REGION}: diveday-media (${PRIMARY_REGION})`,
+    );
+    expect(result.stderr).toContain("Stop and find out what does");
+    expect(result.stderr).not.toContain("by hand");
+  });
+
+  it("leaves every bucket alone when all of them are in the new region", () => {
+    const directory = fixture({ resourcesExist: true, bucketRegion: PRIMARY_REGION });
+    const result = run(directory, ...teardown);
+
+    const log = awsLog(directory);
+    expect(log).not.toContain("delete-objects");
+    expect(log).not.toContain("delete-bucket");
+    expect(log).not.toContain("list-object-versions");
+    expect(result.stdout).toContain(`buckets in ${OLD_REGION}: none`);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Still taken by something outside");
+  });
+
+  it("deactivates the old region's rule set, then deletes the old email stack", () => {
+    const directory = fixture({
+      stacks: { [`${EMAIL_STACK_NAME}@${OLD_REGION}`]: "UPDATE_COMPLETE" },
+      activeRuleSet: "diveday-inbound",
+    });
+
+    // Its presence alone is enough to need the confirmation.
+    const unconfirmed = run(
+      directory,
+      "--from",
+      OLD_REGION,
+      "--execute",
+      "--confirm-account",
+      "123456789012",
+    );
+    expect(unconfirmed.status).toBe(1);
+    expect(unconfirmed.stderr).toContain("Refusing to delete anything non-interactively");
+    expect(awsLog(directory)).not.toContain("delete-stack");
+
+    const result = run(directory, ...teardown);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(`stack ${EMAIL_STACK_NAME} in ${OLD_REGION}: present`);
+    const log = awsLog(directory).split("\n");
+    const deactivate = log.findIndex((line) => line.includes("ses set-active-receipt-rule-set"));
+    const deleteStack = log.findIndex((line) =>
+      line.includes(`delete-stack --stack-name ${EMAIL_STACK_NAME} --region ${OLD_REGION}`),
+    );
+    expect(deactivate).toBeGreaterThanOrEqual(0);
+    expect(deleteStack).toBeGreaterThan(deactivate);
+    // No name: that is what deactivates. With one it would activate.
+    expect(log[deactivate]).toContain(`--region ${OLD_REGION}`);
+    expect(log[deactivate]).not.toContain("--rule-set-name");
+  });
+
+  it("leaves another active rule set on and still deletes the old email stack", () => {
+    const directory = fixture({
+      stacks: { [`${EMAIL_STACK_NAME}@${OLD_REGION}`]: "UPDATE_COMPLETE" },
+      activeRuleSet: "somebody-elses-rules",
+    });
+    const result = run(directory, ...teardown);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("is somebody-elses-rules, not ours");
+    const log = awsLog(directory);
+    expect(log).not.toContain("ses set-active-receipt-rule-set");
+    expect(log).toContain(`delete-stack --stack-name ${EMAIL_STACK_NAME} --region ${OLD_REGION}`);
+  });
+
+  it("retries the email stack's create while SES still sees its bucket in the old region", () => {
+    // The 2026-09-26 step-4 failure, word for word.
+    const directory = fixture({
+      emailDeployFailures: 2,
+      stackEventReasons: [
+        "Could not publish to bucket diveday-inbound-mail. Your bucket must be in the same region as your Amazon SES configuration.",
+      ],
+    });
+    const result = run(directory, ...teardown, "--from-step", "4");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("SES still places the inbound mail bucket");
+    const commands = pnpmLog(directory).trim().split("\n");
+    expect(commands.filter((line) => line.startsWith("infra:deploy DiveDayEmail "))).toHaveLength(
+      3,
+    );
+    // And the whole-estate deploy the existing step 4 always ended on.
+    expect(commands.at(-1)).toBe("infra:deploy --require-approval never");
+  });
+
+  it("retries the email stack's create on a bucket name S3 has not freed", () => {
+    const directory = fixture({
+      emailDeployFailures: 1,
+      stackEventReasons: [
+        "A conflicting conditional operation is currently in progress against this resource. Please try again.",
+      ],
+    });
+    const result = run(directory, ...teardown, "--from-step", "4");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("S3 has not freed the bucket names yet");
+    expect(pnpmLog(directory).match(/infra:deploy DiveDayEmail /g)).toHaveLength(2);
+  });
+
+  it("gives up on an email-stack failure that is not AWS catching up", () => {
+    const directory = fixture({
+      emailDeployFailures: 1,
+      stackEventReasons: ["Resource handler returned message: not authorized"],
+    });
+    const result = run(directory, ...teardown, "--from-step", "4");
+
+    expect(result.status).toBe(1);
+    expect(pnpmLog(directory).match(/infra:deploy DiveDayEmail /g)).toHaveLength(1);
+    expect(pnpmLog(directory)).not.toContain("infra:deploy --require-approval never");
+  });
+
+  it("sweeps a rolled-back email stack and the inbound bucket it retained", () => {
+    // What the operator did by hand on 2026-09-26: delete the
+    // ROLLBACK_COMPLETE stack, then the RETAIN bucket its rollback kept, whose
+    // get-bucket-location answered null -- us-east-1.
+    const directory = fixture({
+      resourcesExist: true,
+      bucketRegion: SES_REGION,
+      stacks: { [`${EMAIL_STACK_NAME}@${SES_REGION}`]: "ROLLBACK_COMPLETE" },
+      emailTemplate: {
+        Resources: {
+          B: {
+            Type: "AWS::S3::Bucket",
+            DeletionPolicy: "Retain",
+            Properties: { BucketName: "diveday-inbound-mail" },
+          },
+        },
+      },
+    });
+    const result = run(directory, ...teardown, "--from-step", "4");
+
+    expect(result.status).toBe(0);
+    const log = awsLog(directory);
+    expect(log).toContain(`delete-stack --stack-name ${EMAIL_STACK_NAME} --region ${SES_REGION}`);
+    expect(log).toContain(`delete-bucket --bucket diveday-inbound-mail --region ${SES_REGION}`);
+    expect(result.stdout).toContain("Deleted bucket diveday-inbound-mail");
+    expect(result.stdout).toContain("1 of them went just now");
+    // The synth was of the email stack, not the main one.
+    expect(pnpmLog(directory)).toContain("infra:synth DiveDayEmail --quiet");
+  });
+
+  it("refuses to sweep a retained bucket that lives in another region", () => {
+    const directory = fixture({
+      resourcesExist: true,
+      bucketRegion: OLD_REGION,
+      emailTemplate: {
+        Resources: {
+          B: {
+            Type: "AWS::S3::Bucket",
+            DeletionPolicy: "Retain",
+            Properties: { BucketName: "diveday-inbound-mail" },
+          },
+        },
+      },
+    });
+    const result = run(directory, ...teardown, "--from-step", "4");
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("bucket diveday-inbound-mail");
+    expect(result.stderr).toContain("not this create's to delete");
+    const log = awsLog(directory);
+    expect(log).not.toContain("delete-bucket");
+    expect(log).not.toContain("delete-objects");
+    expect(pnpmLog(directory)).not.toContain("infra:deploy DiveDayEmail");
+  });
+});
+
+describe("the migration's decisions", () => {
+  it("tears the email stack down only when mail is leaving too", () => {
+    expect(mailLeavesWithTheEstate({ oldRegion: "us-east-2", sesRegion: "us-east-1" })).toBe(true);
+    // Mail staying put: its stack and its inbound bucket are live, and a
+    // PRIMARY_REGION move must never touch either.
+    expect(mailLeavesWithTheEstate({ oldRegion: "us-east-2", sesRegion: "us-east-2" })).toBe(false);
+  });
+
+  it("reads S3's location answers as regions", () => {
+    expect(regionFromLocationConstraint(null)).toBe("us-east-1");
+    expect(regionFromLocationConstraint("")).toBe("us-east-1");
+    expect(regionFromLocationConstraint("EU")).toBe("eu-west-1");
+    expect(regionFromLocationConstraint("us-east-2")).toBe("us-east-2");
+    // No field at all is "could not tell", never us-east-1.
+    expect(regionFromLocationConstraint(undefined)).toBeNull();
+  });
+
+  it("retries only AWS catching up, never a real failure", () => {
+    expect(
+      settlingKind([
+        "Could not publish to bucket diveday-inbound-mail. Your bucket must be in the same region as your Amazon SES configuration.",
+      ]),
+    ).toBe("ses-bucket-region");
+    expect(settlingKind(["OperationAborted"])).toBe("bucket-name");
+    expect(settlingKind(["Resource handler returned message: not authorized"])).toBeNull();
+    expect(settlingKind([])).toBeNull();
   });
 });
