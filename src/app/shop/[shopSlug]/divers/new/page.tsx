@@ -367,7 +367,9 @@ export default async function NewDiverPage({
           <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
           <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
           <input type="hidden" name="request" value={requestParam ?? ""} />
-          <FieldActions className="mt-6">
+          {/* No margin: the trio's grid gap is the one field gap every form
+              stands its action row under (K-182). */}
+          <FieldActions>
             <SubmitButton pendingLabel={t("divers.page.adding")} className={buttonClass()}>
               {submitLabel}
             </SubmitButton>

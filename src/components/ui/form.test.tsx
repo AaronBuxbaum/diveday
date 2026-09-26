@@ -1674,4 +1674,25 @@ describe("source sweeps", () => {
     }
     expect(offenders).toEqual([]);
   });
+
+  /**
+   * **An action row stands one field gap under the last control.** Inside a
+   * `FieldGrid` that gap is the grid's own `gap-y-4`, so the row takes no
+   * margin; a row set after a grid rather than in one takes `mt-4`, the same
+   * 16px. "Add a diver" stacked an `mt-6` on the grid's gap and put its buttons
+   * 40px under the phone field, and "Took a call" stood its row 24px under its
+   * note, where every other form stands it 16px under (K-182).
+   */
+  it("never spaces a FieldActions row by anything but one field gap", () => {
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      for (const { index, text } of openingTags(source, "FieldActions")) {
+        const margins = text.match(/(?<![\w-])m[ty]-[\w.[\]-]+/g) ?? [];
+        if (margins.some((margin) => margin !== "mt-4")) {
+          offenders.push(`${file}:${lineOf(source, index)} ${margins.join(" ")}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
 });
