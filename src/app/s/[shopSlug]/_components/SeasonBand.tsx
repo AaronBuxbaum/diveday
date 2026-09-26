@@ -61,7 +61,12 @@ export function SeasonBand({
               <Link
                 href={entry.lens.href}
                 scroll={false}
-                className={buttonClass({ variant: "link", size: "sm", className: "mt-2 px-0" })}
+                className={buttonClass({
+                  variant: "link",
+                  size: "sm",
+                  flush: true,
+                  className: "mt-2",
+                })}
               >
                 {entry.lens.label}
               </Link>

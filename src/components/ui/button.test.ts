@@ -613,6 +613,27 @@ describe("buttonClass", () => {
       expect(offenders).toEqual([]);
     });
 
+    it("hands no zero inline padding to buttonClass: dropping the size's padding is `flush`", () => {
+      // `className: "px-0"` reads as though someone lined the words up, and
+      // does nothing: Tailwind emits `px-0` before the size's `px-3`, so the
+      // size wins by stylesheet order. The storefront's "See After dark
+      // departures" rendered 12px inside the season note above it that way,
+      // and the builder's "Start blank" and a form draft's "Start over" sat
+      // 12px further from their status line than they asked (pixel-craft
+      // K-194). `flush` is the spelling that works.
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(/(?<![\w-])(?:[\w-]+:)*p[xse]-0(?![\w.[\]])/g) ?? []) {
+            offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
     /**
      * Every element whose own `className` literal pulls it sideways with a
      * negative inline margin and which wraps a quiet button — the hand cancel

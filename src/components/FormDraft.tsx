@@ -107,7 +107,7 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
           <button
             type="button"
             onClick={startOver}
-            className={buttonClass({ variant: "link", size: "sm", className: "px-0" })}
+            className={buttonClass({ variant: "link", size: "sm", flush: true })}
           >
             {copy.startOver}
           </button>

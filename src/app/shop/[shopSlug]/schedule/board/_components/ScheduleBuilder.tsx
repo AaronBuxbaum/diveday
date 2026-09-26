@@ -634,7 +634,7 @@ function AddPanel({
           <button
             type="button"
             onClick={startBlank}
-            className={buttonClass({ variant: "link", size: "sm", className: "px-0" })}
+            className={buttonClass({ variant: "link", size: "sm", flush: true })}
           >
             {copy.patternStartBlank}
           </button>
