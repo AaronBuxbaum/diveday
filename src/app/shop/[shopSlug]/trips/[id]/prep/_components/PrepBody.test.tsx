@@ -501,6 +501,15 @@ describe("the packing list's geometry", () => {
     expect(tokens(block).filter((token) => /^mt-/.test(token))).toEqual([]);
   });
 
+  it("keeps a diver's header row to their name's line when a ticket link sits beside it (K-280)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const ticket = within(container).getByRole("link", { name: t("gear.prep.ticketDoor") });
+    // (44 − 24) / 2 handed back, and the ring drawn inside the clipping card.
+    expect(tokens(ticket)).toEqual(
+      expect.arrayContaining(["-my-2.5", "focus-visible:focus-ring-inset", "-mx-2", "px-2"]),
+    );
+  });
+
   it("never breaks a diver's name across two lines in a shared rental line (K-353)", () => {
     const { container } = renderPrep(everyPanelPrep());
     const names = within(container).getAllByText("Grace Mensah", { exact: true });

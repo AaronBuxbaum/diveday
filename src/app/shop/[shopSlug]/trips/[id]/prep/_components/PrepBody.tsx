@@ -972,7 +972,15 @@ export function PrepBody({
                       {/* The slip's door, and only once there is something to
                           put on it — a ticket listing nothing is a wrong slip,
                           not a short one. Hidden on paper: the departure packet
-                          is already printing this diver's units. */}
+                          is already printing this diver's units.
+
+                          `-my-2.5` hands (44 − 24) / 2 back, so the row keeps
+                          the name's 24px line: the 44px ghost set a diver with
+                          a unit 8–11px lower than the diver above (pixel-craft
+                          class 4). `flush` ends the label on the column's edge,
+                          as the name starts on it. The box then reaches into
+                          the row's padding of a card that clips, so its ring
+                          is drawn inside. */}
                       {assigned.length > 0 ? (
                         <Link
                           href={shopPath(
@@ -983,7 +991,12 @@ export function PrepBody({
                             "ticket",
                             diver.bookingId,
                           )}
-                          className={`${buttonClass({ variant: "ghost", size: "sm" })} print:hidden`}
+                          className={buttonClass({
+                            variant: "ghost",
+                            size: "sm",
+                            flush: true,
+                            className: "-my-2.5 focus-visible:focus-ring-inset print:hidden",
+                          })}
                         >
                           {t("gear.prep.ticketDoor")}
                         </Link>
