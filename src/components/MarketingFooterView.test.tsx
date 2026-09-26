@@ -61,4 +61,17 @@ describe("MarketingFooterView", () => {
     }
     expect(links[0].parentElement).toHaveClass("gap-x-4", "gap-y-0");
   });
+
+  // Tagline and links need 897px on one row (286 + 595 + a 16px gap). Going
+  // one-row at sm put them side by side from 640, so up to about 944 the
+  // tagline wrapped and "support@dive.day" dropped alone onto a second line
+  // (K-133). From lg the column is 976px wide, which holds the row.
+  it("puts the tagline and links on one row only from lg, where they fit", () => {
+    const { container } = render(
+      <MarketingFooterView locale={DEFAULT_DIVER_LOCALE} shopSlug={null} />,
+    );
+    const row = container.querySelector("footer > div");
+    expect(row).toHaveClass("flex-col", "lg:flex-row", "lg:items-center", "lg:justify-between");
+    expect(row?.className).not.toMatch(/\bsm:/);
+  });
 });
