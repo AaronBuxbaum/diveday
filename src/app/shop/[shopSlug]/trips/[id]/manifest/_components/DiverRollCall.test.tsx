@@ -737,4 +737,13 @@ describe("the roll call on paper", () => {
     expect(caret).not.toBeNull();
     expect(caret).toHaveClass("print:hidden");
   });
+
+  it("prints the name as one line, not at the deck's 76px row", () => {
+    // The mark does not print, so its 76px row and 12px inset have nothing to
+    // hold on paper; carried there, every name was a 16mm band and a full
+    // boat's roll call ran to extra pages (K-02 review).
+    renderList({ divers: [diver()] });
+    const trigger = screen.getByRole("button", { name: "Open details for Meera Iyer" });
+    expect(trigger).toHaveClass("print:min-h-0", "print:py-1");
+  });
 });

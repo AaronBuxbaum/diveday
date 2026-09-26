@@ -161,6 +161,27 @@ test.describe("the paper day", () => {
       );
     expect(people.length).toBeGreaterThan(0);
     expect(people.filter((person) => !person.onPaper || !/\p{L}/u.test(person.text))).toEqual([]);
+
+    // **And each name is one line on paper, not the deck's 76px row.** The
+    // person button's floor and inset are its 56px mark's, and the mark does
+    // not print: carried to paper they made every name a 16mm band, and a full
+    // boat's roll call ran to extra sheets of the packet a captain counts
+    // pages on. On paper the button is its content and 4px a side.
+    const slack = await popup
+      .locator(".trip-print-bundle button[data-print-content]")
+      .evaluateAll((elements) =>
+        elements.map((element) => {
+          const tallest = Math.max(
+            0,
+            ...[...element.children].map((child) => child.getBoundingClientRect().height),
+          );
+          return {
+            text: (element as HTMLElement).innerText.trim().slice(0, 30),
+            slack: Math.round(element.getBoundingClientRect().height - tallest),
+          };
+        }),
+      );
+    expect(slack.filter((person) => person.slack > 10)).toEqual([]);
     await popup.emulateMedia({ media: "screen" });
     await popup.close();
   });

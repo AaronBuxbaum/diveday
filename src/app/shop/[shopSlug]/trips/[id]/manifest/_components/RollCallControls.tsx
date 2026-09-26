@@ -180,9 +180,16 @@ export function rollCallScrollMargin(isDeparture: boolean): string {
  * corners nest in the card's without the row having to know it is an end —
  * which it cannot by `:first-child`, since an alarmed row is `order-first`.
  * The button paints nothing, so the radius shapes the ring and nothing else.
+ *
+ * **On paper it is one line of name** (`print:min-h-0 print:py-1`). The 76px
+ * floor and 12px inset are the 56px mark's row on a deck; the mark does not
+ * print, and once the name reached paper (it is `data-print-content`) the
+ * button carried its screen height there too, about 16mm a row at the 13px
+ * print root, adding pages to a day packet's roll call — the sheet whose page
+ * count a captain checks for a missing one. `paper-day.spec.ts` measures it.
  */
 export const ROW_DISCLOSURE_SUMMARY_CLASS =
-  "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 rounded-panel py-3 ps-4 pe-2 text-start select-none focus-visible:focus-ring-inset [&::-webkit-details-marker]:hidden";
+  "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 rounded-panel py-3 ps-4 pe-2 text-start select-none focus-visible:focus-ring-inset print:min-h-0 print:py-1 [&::-webkit-details-marker]:hidden";
 export const ROW_DISCLOSURE_PANEL_CLASS =
   "mx-4 mb-4 rounded-inset border border-border/70 bg-surface-sunken/50 p-3";
 
