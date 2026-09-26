@@ -79,6 +79,19 @@ describe("Copyable's panel", () => {
     expect(trigger).toHaveClass("-mx-2", "px-2");
     expect(trigger).not.toHaveClass("px-3");
   });
+
+  /**
+   * **A URL breaks at its own seams** (class 8). `break-all` broke the slug at
+   * any letter — "bookable-l" / "ight" on a phone. `wrap-anywhere` takes the
+   * break after a hyphen first and still breaks an unbroken token that cannot
+   * fit.
+   */
+  it("wraps the value at its hyphens before it breaks a word", () => {
+    renderPanel();
+    const value = screen.getByText(LINK);
+    expect(value).toHaveClass("wrap-anywhere");
+    expect(value).not.toHaveClass("break-all");
+  });
 });
 
 describe("Copyable inline", () => {

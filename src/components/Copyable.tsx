@@ -154,7 +154,10 @@ export function Copyable({
         {button}
       </div>
       {hint ? <p className="mt-0.5 text-xs text-muted">{hint}</p> : null}
-      <p className="mt-2 font-mono text-xs break-all text-foreground">{value}</p>
+      {/* `wrap-anywhere`, not `break-all`: a URL breaks after its hyphens
+          first ("bookable-" / "light"), and only a token too long for the
+          line is broken mid-word. `break-all` split the slug at any letter. */}
+      <p className="mt-2 font-mono text-xs wrap-anywhere text-foreground">{value}</p>
     </div>
   );
 }
