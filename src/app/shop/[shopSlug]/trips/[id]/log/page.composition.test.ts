@@ -92,6 +92,26 @@ describe("a timeline entry", () => {
   });
 });
 
+describe("the roster's diver cell", () => {
+  /**
+   * The row number and the name were one inline string, "01 Theo Lindqvist",
+   * so a name that wrapped in the 144px Diver column returned under its
+   * number: "Lindqvist" at x = 169, 22px left of "Theo" (K-553,
+   * DEPARTURE-4-49). The number is its own box and the name hangs in a
+   * column beside it; the space between them stays in the text, so the cell
+   * still reads "01 Theo Lindqvist".
+   */
+  it("hangs a wrapped name on its own column, clear of the row number", () => {
+    const roster = section("incident-roster-heading");
+    const body = roster.indexOf("<TBody>");
+    const cell = roster.slice(roster.indexOf("<Td>", body), roster.indexOf("</Td>", body));
+    expect(cell).toMatch(/^<Td>\s*<span className="[^"]*\bflex\b[^"]*">/);
+    expect(cell).toMatch(
+      /<span className="[^"]*\bshrink-0\b[^"]*\btabular-nums\b[^"]*">\s*\{String\(index \+ 1\)\.padStart\(2, "0"\)\}\s*<\/span>\{" "\}\s*<span className="[^"]*\bmin-w-0\b[^"]*">\s*\{diver\.fullName\}\s*<\/span>/,
+    );
+  });
+});
+
 describe("the emergency contact cell", () => {
   /**
    * "Asha Sharma (sister) · +1-305-555-0231" was breakable on both sides of
