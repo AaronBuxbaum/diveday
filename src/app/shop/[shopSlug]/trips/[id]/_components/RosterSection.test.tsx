@@ -673,4 +673,30 @@ describe("the roster's row geometry", () => {
     expectMarkOnFirstLine(fact.closest("p"));
     expect(fact.closest("p")).not.toHaveClass("items-start");
   });
+
+  /**
+   * K-267: the facts' column right-aligned each line (`sm:items-end`), so
+   * the red marks in front of them stepped left line by line (x 888, 827,
+   * 741 on minimum-seats). The column stays at the band's end, placed there
+   * by the band's `justify-between`; its lines start on one edge.
+   */
+  it("starts every shared fact on one edge, so their marks form a column", () => {
+    const roster = [blocked, entry("c", "Mina Patel"), entry("d", "Owen Reed")];
+    const blocker = [{ code: "certification_missing", params: undefined }];
+    renderRoster({
+      roster,
+      readiness: new Map(
+        roster.map((seat) => [seat.booking.id, readinessRow("blocked", blocker)]),
+      ) as ReadinessByBooking,
+      waivers: new Map(roster.map((seat) => [seat.booking.id, signedWaiver])) as WaiverByBooking,
+    });
+
+    const band = screen.getByRole("heading", { name: "Still to clear · 3" }).parentElement;
+    expect(band).toHaveClass("justify-between");
+    const facts = within(band as HTMLElement)
+      .getByText(/3 divers: No certification/)
+      .closest("p")?.parentElement;
+    expect(facts).toHaveClass("sm:items-start");
+    expect(facts).not.toHaveClass("sm:items-end");
+  });
 });

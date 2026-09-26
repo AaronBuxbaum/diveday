@@ -1539,9 +1539,14 @@ export function RosterSection({
                     The band aligns its title on this column's first baseline,
                     so each line is `items-baseline` with its mark a column of
                     its own: the words set that baseline, not the mark's foot
-                    (K-181: the title sat 5px under the first fact). */}
+                    (K-181: the title sat 5px under the first fact).
+
+                    From `sm` the column sits at the band's end, put there by
+                    the band's `justify-between`, but its lines start on one
+                    edge so their marks form a column (K-267: right-aligned,
+                    they stepped left line by line). */}
                 {sharedFacts.length > 0 ? (
-                  <div className="flex w-full min-w-0 flex-col gap-1 text-xs sm:w-auto sm:max-w-[68%] sm:items-end">
+                  <div className="flex w-full min-w-0 flex-col gap-1 text-xs sm:w-auto sm:max-w-[68%] sm:items-start">
                     {sharedFacts.map(({ sentence, count, tone }) => (
                       <p
                         key={sentence}
