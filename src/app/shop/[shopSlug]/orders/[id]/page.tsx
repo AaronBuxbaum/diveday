@@ -8,7 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, FormStatus } from "@/components/ui/form";
+import { controlClassFor, FormStatus } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -484,7 +484,13 @@ export default async function OrderDetailPage({
                  `max` is the balance and `step` the currency's own minor unit,
                  so the browser catches the ordinary slip. It is a courtesy,
                  never the gate: `refundOrder` re-reads the row under its own
-                 lock and Stripe refuses an over-refund behind that. */
+                 lock and Stripe refuses an over-refund behind that.
+
+                 The box is `md`, the danger button's 48px: a row with a text
+                 control in it is an `md` row, and at the field's 44px it stood
+                 4px below the button's top in this `items-end` row (K-10). Its
+                 width is the wrapper's, since `controlClassFor` already carries
+                 `w-full` and two widths resolve by stylesheet order. */
               <form action={refundAction} className="flex flex-wrap items-end gap-2">
                 <input type="hidden" name="orderId" value={order.order.id} />
                 <label className="flex flex-col gap-1 text-sm">
@@ -493,16 +499,18 @@ export default async function OrderDetailPage({
                       currency: currencySymbol(order.order.currency, locale),
                     })}
                   </span>
-                  <input
-                    type="number"
-                    name="amountMajor"
-                    inputMode="decimal"
-                    min={minorToMajor(1, order.order.currency)}
-                    max={refundableMajor}
-                    step={minorToMajor(1, order.order.currency)}
-                    defaultValue={refundableMajor}
-                    className={`${controlClass} w-32 tabular-nums`}
-                  />
+                  <span className="w-32">
+                    <input
+                      type="number"
+                      name="amountMajor"
+                      inputMode="decimal"
+                      min={minorToMajor(1, order.order.currency)}
+                      max={refundableMajor}
+                      step={minorToMajor(1, order.order.currency)}
+                      defaultValue={refundableMajor}
+                      className={`${controlClassFor("md")} tabular-nums`}
+                    />
+                  </span>
                 </label>
                 <SubmitButton
                   pendingLabel={t("orders.detail.refunding")}
