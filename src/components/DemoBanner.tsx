@@ -122,8 +122,13 @@ export function DemoBanner({
               <span className="font-semibold text-primary">
                 {activeInfo?.icon} {activeInfo?.title}
               </span>
+              {/* One unit: the name wraps whole, never leaving "Reyes)" alone on a
+                  line, so the space before it sits outside the unbreakable span. */}
               {currentName && currentRole !== "diver" ? (
-                <span className="text-muted text-xs"> ({currentName})</span>
+                <>
+                  {" "}
+                  <span className="whitespace-nowrap text-muted text-xs">({currentName})</span>
+                </>
               ) : null}
             </p>
           </div>

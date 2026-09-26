@@ -56,6 +56,15 @@ function maxWidthOf(element: Element | null): string | undefined {
  * 6 and 8).
  */
 describe("DemoBanner", () => {
+  it("keeps the viewer's name whole, with the space before it outside the unit", () => {
+    // In Spanish "Viendo como Propietaria (Dana Reyes)" broke inside the
+    // parentheses at 390px, leaving "Reyes)" alone on a second line.
+    renderBanner();
+    const name = screen.getByText("(Dana Reyes)");
+    expect(name.textContent).toBe("(Dana Reyes)");
+    expect(name).toHaveClass("whitespace-nowrap");
+  });
+
   it("draws the shop label as a Badge pill, with no hand-rolled 6px corner anywhere in the banner", () => {
     const { container } = renderBanner();
     expect(screen.getByText("Demo shop")).toHaveClass("rounded-full");
