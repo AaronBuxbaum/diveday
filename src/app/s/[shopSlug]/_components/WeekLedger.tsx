@@ -289,7 +289,19 @@ function Row({ row }: { row: WeekLedgerRow }) {
               {row.capacityText}
             </Badge>
           )}
-          {row.price ? <p className="text-base font-semibold tabular-nums">{row.price}</p> : null}
+          {/* The price's column stands on every row, so a departure with no
+              price keeps its seat state and chevron where the others' are
+              rather than sliding 43px into the price's place. Sized for a
+              four-figure price ("$1,250", "$95.50", "1250 €", about 5.25ch in
+              tabular digits) and set to its end, so seat states end on one x
+              too. Below `sm` the group packs from the start and the chevron
+              holds the row's end by itself, so an empty column there is only
+              a gap and stands down. */}
+          <p
+            className={`text-base font-semibold tabular-nums sm:min-w-[5.5ch] sm:text-end${row.price ? "" : " max-sm:hidden"}`}
+          >
+            {row.price}
+          </p>
           <DiveDayIcon
             name="chevron-right"
             className="ms-auto size-4 text-muted transition-transform group-hover:translate-x-0.5"

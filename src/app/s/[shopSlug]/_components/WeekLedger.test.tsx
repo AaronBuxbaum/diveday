@@ -388,7 +388,7 @@ describe("seat state and price", () => {
     expect(chevron).toHaveClass("ms-auto");
   });
 
-  it("renders no price cell for a departure with no price set", () => {
+  it("prints no price for a departure with no price set", () => {
     render(
       <WeekLedger
         rows={[row({ price: null })]}
@@ -398,6 +398,39 @@ describe("seat state and price", () => {
     );
 
     expect(screen.getByRole("listitem").textContent).not.toContain("$");
+  });
+
+  /**
+   * The price was rendered only when there was one, so a departure with no
+   * price slid its seat state and chevron into the price's column: "Only 2
+   * spots left" at x 952.7 on one row and 995.3 on the next at 1280
+   * (pixel-craft class 3). The column now stands on every row, sized for a
+   * four-figure price ("$1,250", "$95.50", "1250 €") and ending on one edge,
+   * and empty where there is no price.
+   */
+  it("keeps the price's column when a departure has no price, so the seat state holds its x", () => {
+    render(
+      <WeekLedger
+        rows={[row({ id: "priced" }), row({ id: "unpriced", price: null })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const [priced, unpriced] = screen
+      .getAllByRole("listitem")
+      .map((item) => Array.from(item.querySelector("svg")?.parentElement?.children ?? []));
+    // Seat state, the price's column, the chevron — on both rows.
+    expect(priced).toHaveLength(3);
+    expect(unpriced).toHaveLength(3);
+    expect(priced[1]).toHaveTextContent("$95.00");
+    expect(priced[1]).toHaveClass("sm:min-w-[5.5ch]", "sm:text-end");
+    expect(unpriced[1]).toBeEmptyDOMElement();
+    expect(unpriced[1]).toHaveClass("sm:min-w-[5.5ch]");
+    // Below `sm` the group packs from the start and the chevron holds the
+    // row's end on its own, so an empty column there would only add a gap.
+    expect(unpriced[1]).toHaveClass("max-sm:hidden");
+    expect(priced[1]).not.toHaveClass("max-sm:hidden");
   });
 });
 
