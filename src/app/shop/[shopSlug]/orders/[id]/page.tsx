@@ -382,10 +382,14 @@ export default async function OrderDetailPage({
           </dl>
         ) : null}
 
+        {/* `items-baseline`: a description is free text, the one thing on
+            the row that wraps, and centred the price floated between its two
+            lines instead of on the one that names the item (K-575). Both
+            sides are `text-sm`, so a one-line row sits as it always did. */}
         <ul className="mt-4 divide-y divide-border">
           {order.lineItems.map((item) => (
-            <li key={item.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-              <span>
+            <li key={item.id} className="flex items-baseline justify-between gap-3 py-2 text-sm">
+              <span className="min-w-0">
                 {item.description}{" "}
                 <span className="text-muted">
                   ({KIND_KEYS[item.kind] ? t(KIND_KEYS[item.kind]) : item.kind}
