@@ -632,6 +632,32 @@ describe("buttonClass", () => {
       expect(offenders).toEqual([]);
     });
 
+    it("hands no font size to buttonClass: the type, and the line it sets, are the size's", () => {
+      // The self check-in kiosk passed `text-[1.25rem]` over `boat`'s
+      // `text-base`. The arbitrary size won the font, and `text-base`'s
+      // unitless 1.5 line-height scaled with it: 14 + 30 + 14 made a 58px
+      // `boat` where every other one is 56 (K-339). A label size a surface
+      // needs is a size here, with its own leading, decided once.
+      //
+      // A repeat of the size's own token fights nothing and is not counted
+      // here; the sweep above refuses it as noise (K-481).
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          const size = (args.match(/\bsize:\s*"([\w-]+)"/)?.[1] ?? "md") as ButtonSize;
+          const own = new Set(buttonClass({ size }).split(/\s+/));
+          for (const token of args.match(
+            /(?<![\w-])(?:[\w-]+:)*text-(?:xs|sm|base|lg|\d?xl|\[[^\]\s]+\])(?:\/[\w.[\]]+)?(?![\w-])/g,
+          ) ?? []) {
+            if (!own.has(token)) offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
     it("hands no negative inline margin to buttonClass: the sideways outdent is `flush`", () => {
       // A ghost's invisible padding put its label 12px inside the column it
       // started or ended — seasons' Delete at x 478 against the fields' 466 —
