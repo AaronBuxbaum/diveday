@@ -674,13 +674,28 @@ function ServiceCard({
       {history.length > 0 ? (
         // Open on a deleted unit: the history is the whole reason that record
         // is reachable, so folding it would hide what the reader came for.
-        <details open={readOnly} className="mt-6 border-t border-border pt-4">
-          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">
+        //
+        // Its door is drawn as the log door above it is, caret and all: a
+        // flex summary drops the browser's marker, and a bare label was the
+        // one disclosure on the card that did not say it opened (K-302).
+        <details open={readOnly} className="group mt-6 border-t border-border pt-4">
+          <summary
+            className={buttonClass({
+              variant: "link",
+              size: "sm",
+              flush: true,
+              className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+            })}
+          >
             {t("gear.unit.history.title", { count: history.length })}
+            <DisclosureCaret direction="down" className="group-open:rotate-180" />
           </summary>
+          {/* `first:pt-0 last:pb-0`: the rules go between entries, and the
+              card's padding is the room at its foot, so a lone entry is not
+              41px from the summary above and from the card's edge (K-432). */}
           <ul className="mt-2 divide-y divide-border">
             {history.map((event) => (
-              <li key={event.id} className="py-3">
+              <li key={event.id} className="py-3 first:pt-0 last:pb-0">
                 <p className="text-sm">
                   <span className="font-medium">{gearServiceKindLabel(t, event.kind)}</span>
                   <span className="text-muted">
