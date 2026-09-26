@@ -2917,3 +2917,24 @@ describe("OfflineManifestView — one column, one text edge", () => {
     }
   });
 });
+
+// K-255: `rounded-3xl` (24px) is off the radius ladder; a panel is 20.
+describe("OfflineManifestView — the empty panels sit on the panel rung", () => {
+  it("rounds the device-wide empty panel as a panel", async () => {
+    searchParams = new URLSearchParams();
+    vi.mocked(listOfflineManifests).mockResolvedValue([]);
+    render(<OfflineManifestView />);
+    const hint = await screen.findByText(/open any shop page/);
+    expect(hint.parentElement).toHaveClass("rounded-panel");
+    expect(hint.parentElement).not.toHaveClass("rounded-3xl");
+  });
+
+  it("rounds the single-trip empty panel as a panel", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(null);
+    render(<OfflineManifestView />);
+    const hint = await screen.findByText(/open the trip’s live manifest/);
+    expect(hint.parentElement).toHaveClass("rounded-panel");
+    expect(hint.parentElement).not.toHaveClass("rounded-3xl");
+  });
+});

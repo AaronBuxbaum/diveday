@@ -981,7 +981,7 @@ export function OfflineManifestView() {
             )}
           </ul>
         ) : (
-          <div className="mt-6 rounded-3xl border border-border bg-surface-sunken p-8 text-center sm:p-10">
+          <div className="mt-6 rounded-panel border border-border bg-surface-sunken p-8 text-center sm:p-10">
             <div
               className="mx-auto grid size-12 place-items-center rounded-inset bg-surface text-2xl"
               aria-hidden="true"
@@ -1032,7 +1032,7 @@ export function OfflineManifestView() {
             </p>
           }
         />
-        <div className="mt-6 rounded-3xl border border-border bg-surface-sunken p-8 text-center sm:p-10">
+        <div className="mt-6 rounded-panel border border-border bg-surface-sunken p-8 text-center sm:p-10">
           <div
             className="mx-auto grid size-12 place-items-center rounded-inset bg-surface text-2xl"
             aria-hidden="true"
