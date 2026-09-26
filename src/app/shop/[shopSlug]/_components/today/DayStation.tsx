@@ -5,6 +5,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { INLINE_LINE_BOX } from "@/components/ui/StatusMark";
 import { FIGURE_CLASS, FIGURE_DIAL_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -64,6 +65,17 @@ import { StationSettles } from "./StationSettles";
  * the same call for the same reason).
  */
 const LOG_DOOR_TARGET = "inline-flex min-h-11 items-start";
+
+/**
+ * A title cut before its last word: everything up to and including the last
+ * space, then the last word. The last word rides with the title's chevron as
+ * one unbreakable unit (K-464); a one-word title is all last word.
+ */
+function lastWordApart(title: string): [head: string, last: string] {
+  const match = title.match(/^([\s\S]*\s)?(\S+)\s*$/);
+  if (!match?.[2]) return ["", title];
+  return [match[1] ?? "", match[2]];
+}
 
 /** What one aboard group is blocked on, in words. */
 function aboardReasonKey(kind: AboardBlockerKind) {
@@ -141,6 +153,7 @@ export function DayStation({
   // a shop could collect answers for weeks and meet them only by opening a fold
   // on a safety surface.
   const intentLine = staffDiveIntentLine(t, station.intents ?? [], locale);
+  const [titleHead, titleLast] = lastWordApart(station.title);
   // The whole readiness fact, not the split counts: when every blocked diver on
   // a boat is marked `not_boarded` both split counts are zero, and a station
   // that went quiet there would be affirming the opposite of its own numbers.
@@ -213,11 +226,25 @@ export function DayStation({
               href={`/shop/${shopSlug}/trips/${station.tripId}`}
               className={`${tapTargetLinkClass} group/station -mx-2 rounded-lg px-2 transition-colors hover:bg-surface-sunken hover:no-underline`}
             >
-              {station.title}
-              <DiveDayIcon
-                name="chevron-right"
-                className="size-4 shrink-0 text-muted transition-transform group-hover/station:translate-x-0.5"
-              />
+              {/* **One run of text, its chevron on the end of it** (pixel-craft
+                  K-464). As the link's two flex items, a title that wrapped
+                  was one box and the chevron the next, centred beside the
+                  whole block: at 390 it floated 45px right of the words,
+                  between the two lines. Inside one span the title wraps as
+                  text, and its last word and the chevron are one unbreakable
+                  unit, the chevron centred on the line it ends. */}
+              <span>
+                {titleHead}
+                <span className="whitespace-nowrap">
+                  {titleLast}
+                  <span className={INLINE_LINE_BOX}>
+                    <DiveDayIcon
+                      name="chevron-right"
+                      className="size-4 shrink-0 text-muted transition-transform group-hover/station:translate-x-0.5"
+                    />
+                  </span>
+                </span>
+              </span>
             </Link>
             {crewed ? <Badge tone="primary">{t("shopHome.spine.crewing")}</Badge> : null}
           </h3>

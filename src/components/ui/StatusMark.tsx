@@ -33,8 +33,11 @@ const sizeClass = {
  * is where that line's capitals are centred. Not a `vertical-align` nudge on
  * the svg itself: the right nudge depends on the mark's size against the
  * text's, and this box is right at any of them.
+ *
+ * Exported for any glyph that stands in a run of text the same way — Today's
+ * station title ends in its chevron on the last line it wraps to (K-464).
  */
-const INLINE_LINE_BOX = "inline-flex h-lh items-center align-top";
+export const INLINE_LINE_BOX = "inline-flex h-lh items-center align-top";
 
 export function StatusMark({
   variant,

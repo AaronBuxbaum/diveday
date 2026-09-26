@@ -195,7 +195,9 @@ describe("a station owns its departure's facts", () => {
     });
     // Once, in the station header — never again beneath it, not even by the
     // row that is *about* the departure, which leads with its detail instead.
-    expect(screen.getAllByText("Two-Tank Reef")).toHaveLength(1);
+    // Counted in the page's words, not by element: the header sets the
+    // title's last word in a span of its own, beside its chevron.
+    expect(document.body.textContent?.split("Two-Tank Reef")).toHaveLength(2);
     expect(screen.getByRole("link", { name: /Two-Tank Reef/ })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/trips/t1",
@@ -414,6 +416,33 @@ describe("the station is a panel (16a)", () => {
     expect(px(row?.className, /(?:^|\s)gap-(\d+)(?:\s|$)/)).toBe(
       px(header?.className, /(?:^|\s)gap-x-(\d+)(?:\s|$)/),
     );
+  });
+
+  /**
+   * **The title's chevron stays with its last word** (pixel-craft class 2,
+   * K-464). The link is `inline-flex`, so a title that wrapped became one
+   * anonymous flex item and the chevron the next, centred beside the whole
+   * block: at 390 it floated 45px right of the text, between the two lines.
+   * The title is one run of text now, and its last word and the chevron are
+   * one unbreakable unit at the end of it.
+   */
+  it("keeps the title's chevron with the title's last word", () => {
+    renderSpine({ departures: [departure({ title: "Dawn Two-Tank — Molasses Reef" })] });
+    const link = screen.getByRole("link", { name: "Dawn Two-Tank — Molasses Reef" });
+    const chevron = link.querySelector("svg");
+    const unit = chevron?.closest(".whitespace-nowrap");
+    expect(unit).not.toBeNull();
+    expect(link.contains(unit ?? null)).toBe(true);
+    expect(unit?.textContent).toBe("Reef");
+    // One run of text: the words before the unit sit in the same element as it.
+    expect(unit?.parentElement?.textContent).toBe("Dawn Two-Tank — Molasses Reef");
+    // Centred on the line it ends, not on the whole wrapped title.
+    expect(chevron?.parentElement).toHaveClass("h-lh", "items-center", "align-top");
+
+    cleanup();
+    renderSpine({ departures: [departure({ title: "Snorkel" })] });
+    const lone = screen.getByRole("link", { name: "Snorkel" });
+    expect(lone.querySelector("svg")?.closest(".whitespace-nowrap")?.textContent).toBe("Snorkel");
   });
 
   it("renders a settled station as the same panel", () => {
@@ -1570,7 +1599,7 @@ describe("the evening reading", () => {
     expect(titles).toEqual(["Dawn Two-Tank", "Night Dive"]);
     // The live station won the trip it shares with the closing list — one
     // departure is one station, never two.
-    expect(screen.getAllByText("Night Dive")).toHaveLength(1);
+    expect(document.body.textContent?.split("Night Dive")).toHaveLength(2);
   });
 });
 
