@@ -3,6 +3,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { rendersFlush } from "@/test/button-flush";
 import { FormDraft } from "./FormDraft";
 
 const saveFormDraftAction = vi.fn(async (_form: string, _fields: Array<[string, string]>) => {});
@@ -69,6 +70,19 @@ describe("FormDraft", () => {
     expect(screen.getByLabelText("Name")).toHaveValue("");
     expect(screen.queryByRole("status")).toBeNull();
     expect(discardFormDraftAction).toHaveBeenCalledWith("new_diver");
+  });
+
+  /**
+   * The line is one sentence and its act: "Start over" follows the words at
+   * the row's own gap, not the gap and the link's padding. A `px-0` handed
+   * through `className` lost to the size's `px-3` by stylesheet order
+   * (pixel-craft K-223); `flush` is the spelling that works.
+   */
+  it("sets Start over after the line's words at the row's gap, with no padding of its own", () => {
+    renderForm({ fields: { fullName: "Emmet O'Brien" }, savedAtLabel: "6:02 AM" });
+    expect(rendersFlush(screen.getByRole("button", { name: "Start over" }), "link", "sm")).toBe(
+      true,
+    );
   });
 
   it("keeps a draft of what is typed on blur, without the never-list", async () => {

@@ -5,6 +5,7 @@ import { type ComponentProps, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { MovePreflight } from "@/lib/move-preflight";
+import { rendersFlush } from "@/test/button-flush";
 import {
   type BuilderCopy,
   type BuilderMoreOptions,
@@ -600,6 +601,22 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
     expect(screen.queryByRole("checkbox", { name: /Wreck Trip/ })).not.toBeInTheDocument();
   });
 
+  /**
+   * "start blank" finishes the sentence that offers it ("…Change anything, or
+   * start blank"), so it sits a word space after "or", not a word space and
+   * a button's padding (pixel-craft K-223). A `px-0` handed through
+   * `className` loses to the size's padding; `flush` is how a quiet button
+   * lines up with the words around it.
+   */
+  it("sets start blank inside the sentence that offers it", async () => {
+    renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    await screen.findByText(/Filled from your last 6 Sat departures/);
+    expect(rendersFlush(screen.getByRole("button", { name: "start blank" }), "link", "sm")).toBe(
+      true,
+    );
+  });
+
   it("asks for no pattern when the panel arrived with something to say already", async () => {
     renderBuilder({
       addDraft: { fields: { title: "Night dive" }, savedAtLabel: "4:12 PM" },
@@ -892,6 +909,23 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     // Still one submit — expanding deepens the form, it never forks it.
     expect(screen.getAllByRole("button", { name: "Put it on the board" })).toHaveLength(1);
     expect(submittedKeys(container)).toContain("dayCount");
+  });
+
+  /**
+   * The disclosure is a line of the form, so its caret starts on the column
+   * every label and box above it starts on. Unflushed, the link's `sm`
+   * padding set "More options" 12px inside that column at every width
+   * (pixel-craft K-223, schedule-builder-add at 1280: 117 against 105).
+   */
+  it("starts More options and Fewer options on the form's column", async () => {
+    renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    const more = screen.getByRole("button", { name: /More options/ });
+    expect(rendersFlush(more, "link", "sm")).toBe(true);
+    await userEvent.click(more);
+    expect(rendersFlush(screen.getByRole("button", { name: /Fewer options/ }), "link", "sm")).toBe(
+      true,
+    );
   });
 
   it("posts only the quick fields while collapsed, though the rest stay mounted", async () => {

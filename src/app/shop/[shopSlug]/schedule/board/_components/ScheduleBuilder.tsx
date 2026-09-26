@@ -1296,13 +1296,16 @@ function AddPanel({
       ) : null}
       {/* The rare half, collapsed by default (design principles #8). The hint
           names what is behind it — a bare "More options" would hide the
-          multi-day and repeat mechanisms behind a shrug. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          multi-day and repeat mechanisms behind a shrug. `flush` starts the
+          caret on the column every label above it starts on (K-223); the 12px
+          of padding it gives up comes back in the row's gap, so the hint stays
+          24px after the words. */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
         <button
           type="button"
           onClick={toggleExpanded}
           aria-expanded={expanded}
-          className={buttonClass({ variant: "link", size: "sm" })}
+          className={buttonClass({ variant: "link", size: "sm", flush: true })}
         >
           {/* The affordance a ghost button has none of: which way this goes,
               before you press it. Decorative — `aria-expanded` is the state a
