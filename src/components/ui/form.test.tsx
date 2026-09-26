@@ -590,6 +590,31 @@ describe("ChoicePill and ChoiceRow", () => {
     expect(pill).toContainElement(screen.getByRole("button", { name: "What are fins?" }));
   });
 
+  /**
+   * **The label beside an aside is a 44px target, not 42.** It stretches to
+   * the pill's line (`self-stretch`), and the line is the pill's content box:
+   * `min-h-11` less its two 1px borders. So the label was 42px, and every
+   * rental and nitrox box in the booking's gear step fell back to its own
+   * 16px square as a target (the pixel probe, thread-prep-current-step: eight
+   * `size-4` flags where there had been none). A stretched item's margin box
+   * is the line's, so `-my-px` hands the label the pill's whole 44px.
+   */
+  it("stretches the label over the pill's borders, so its target is the pill's 44px", () => {
+    render(
+      <ChoicePill type="checkbox" name="mask" aside={<span>$6</span>}>
+        Mask
+      </ChoicePill>,
+    );
+    const label = screen.getByRole("checkbox", { name: "Mask" }).closest("label");
+    const pill = label?.parentElement;
+    // The pill's floor is its border box: 44px, 1px of border top and bottom.
+    expect(pill).toHaveClass("min-h-11", "border");
+    expect(pill?.className).not.toMatch(/(^|\s)border-[xytb]?-?\d/);
+    // The label fills that line and reaches 1px past it each way: 42 + 2.
+    expect(label).toHaveClass("self-stretch", "-my-px");
+    expect(label?.className).not.toMatch(/(^|\s)(min-h-|h-|my-|mt-|mb-)/);
+  });
+
   it("puts a 16px checkbox on the first line of a 44px row, and passes every input prop", () => {
     let node: HTMLInputElement | null = null;
     render(

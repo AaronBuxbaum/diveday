@@ -784,9 +784,17 @@ export function ChoicePill({
   // The label stretches to the pill's height (`self-stretch`, no floor of its
   // own), so the pill is 44px like a plain one rather than 44px of label
   // inside two borders, and the whole height left of the aside is its target.
+  //
+  // **And over the pill's borders** (`-my-px`). A stretched item fills the
+  // line, and the line is the pill's content box: 44px less two 1px borders,
+  // so the label was 42px and every rental and nitrox box fell back to its own
+  // 16px square as a target (the pixel probe, thread-prep-current-step). A
+  // stretched item's margin box is the line's, so a 1px negative margin top
+  // and bottom makes its border box the pill's full 44px. Not across the start
+  // border: that would move the box 1px off the plain pills' column.
   return (
     <div className={`flex min-h-11 items-center gap-2 ${pill} pe-4 ${className}`.trim()}>
-      <label className={`${row} flex-1 self-stretch ps-4`}>
+      <label className={`${row} -my-px flex-1 self-stretch ps-4`}>
         <span className={CHOICE_BOX_LINE}>
           <input type={type} {...input} className={choiceClass} />
         </span>
