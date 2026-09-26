@@ -510,6 +510,19 @@ describe("the packing list's geometry", () => {
     );
   });
 
+  it("sets the dive-recency mark on the note's first line, not its middle (K-281)", () => {
+    const { container } = renderPrep(everyPanelPrep(), { grouping: "diver" });
+    const words = diveRecencyText(t, "over_five_years") ?? "";
+    const notes = [...container.querySelectorAll("span")].filter(
+      (span) => span.textContent === words && span.children.length > 0,
+    );
+    expect(notes.length).toBeGreaterThan(0);
+    for (const note of notes) {
+      expect(tokens(note)).toEqual(expect.arrayContaining(["flex", "items-start", "gap-2"]));
+      expect(tokens(note)).not.toContain("items-center");
+    }
+  });
+
   it("never breaks a diver's name across two lines in a shared rental line (K-353)", () => {
     const { container } = renderPrep(everyPanelPrep());
     const names = within(container).getAllByText("Grace Mensah", { exact: true });

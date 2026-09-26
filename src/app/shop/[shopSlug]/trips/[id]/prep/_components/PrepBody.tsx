@@ -278,11 +278,15 @@ export function PrepBody({
    * nothing here filters, sorts, or refuses. `diveRecencyText` returns null for
    * a diver who was never asked, so silence renders nothing rather than a "not
    * said" line on every seat booked before the question existed.
+   *
+   * `items-start`: the `md` mark is 20px, the `text-sm` line, so it sits on the
+   * note's first line; centred, it stood 9px low beside a note that wrapped.
+   * `gap-2`, as the roster draws the same fact.
    */
   const diveRecencyLine = (band: (typeof checklist.diverLines)[number]["lastDivedBand"]) => {
     if (!diveRecencyIsNotable(band)) return null;
     return (
-      <span className="mt-0.5 flex items-center gap-1 text-sm font-normal text-warning-strong">
+      <span className="mt-0.5 flex items-start gap-2 text-sm font-normal text-warning-strong">
         <StatusMark variant="warning" size="md" />
         {diveRecencyText(t, band)}
       </span>
