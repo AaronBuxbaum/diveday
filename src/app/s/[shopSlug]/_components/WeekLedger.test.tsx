@@ -66,6 +66,19 @@ describe("a week row is a link, never a button", () => {
     );
   });
 
+  /**
+   * The day rule pins over the list, 60px tall, and the page's scroll inset
+   * clears only the chrome above it: a row focused anywhere from 56 to 116px
+   * down counted as in view and stayed under its own rule (pixel-craft class
+   * 9). The row's door keeps 64px — the rule and 4px — clear of the top, on
+   * the page (on top of the chrome's inset) and in the embed.
+   */
+  it("keeps a focused row's door clear of the day rule pinned above it", () => {
+    render(<WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />);
+
+    expect(screen.getByRole("link", { name: /Two-Tank Reef/ })).toHaveClass("scroll-mt-16");
+  });
+
   it("adds the course's own link as the row's one nested door", () => {
     render(
       <WeekLedger

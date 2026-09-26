@@ -234,10 +234,13 @@ function Row({ row }: { row: WeekLedgerRow }) {
       <div className="group relative -mx-3 flex flex-col gap-2 rounded-lg px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-baseline sm:gap-4 sm:px-4 sm:py-5">
         {/* The ring is drawn inside the row: below `sm` the row bleeds
             `-mx-3` into a 16px gutter, 4px from the screen's edge, which cut
-            the outset ring by a pixel on each side. */}
+            the outset ring by a pixel on each side. `scroll-mt-16` keeps a
+            focused row clear of the day rule pinned over the list (60px, and
+            4px): the page's scroll inset clears only the chrome above it, so a
+            row focused 56–116px down stayed under its own rule. */}
         <Link
           href={row.href}
-          className="absolute inset-0 z-0 rounded-inset focus-visible:focus-ring-inset"
+          className="absolute inset-0 z-0 rounded-inset scroll-mt-16 focus-visible:focus-ring-inset"
           aria-label={row.linkLabel}
         />
         {/* The date lives on the day rule above, so the row carries only its
