@@ -1021,6 +1021,31 @@ describe("the next dive", () => {
   });
 
   /**
+   * **The target grows, the name's line does not** (K-187). As a 44px box in
+   * the flow, the name's line grew 8px a side: 12px from the name to its date,
+   * the same 12 as from the date to the reason, so the title and its date no
+   * longer read as a pair. The 16px the target adds is padding its own
+   * negative margin gives back, and the name's `<p>` is a flex line, so the
+   * margin comes off the line and no strut holds it open. The date sits 8px
+   * under the name, the room the target reaches down, so the focus ring (5px
+   * outside the box) ends above the date's ink rather than across it.
+   */
+  it("keeps the name's line its words' height, and its date nearer it than the reason", () => {
+    render(<AfterState {...props({ nextDive: pick, nextDiveWorded: worded })} />);
+    const link = screen.getByRole("link", { name: pick.title });
+    expect(link).toHaveClass("-my-2", "py-2");
+    const line = link.parentElement;
+    expect(line).toHaveClass("flex", "text-lg");
+
+    const date = screen.getByText(worded.when);
+    expect(line?.nextElementSibling).toBe(date);
+    expect(date).toHaveClass("mt-2");
+    const reason = screen.getByText(worded.reason);
+    expect(date.nextElementSibling).toBe(reason);
+    expect(reason).toHaveClass("mt-3");
+  });
+
+  /**
    * Two "here is what is next" claims one scroll apart, naming two different
    * departures, is the page arguing with itself — so the footer's bare fact
    * stands down whenever the card rendered.
