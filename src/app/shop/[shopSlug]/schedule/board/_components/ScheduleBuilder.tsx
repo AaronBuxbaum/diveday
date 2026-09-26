@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { applyFormFields } from "@/components/apply-form-fields";
 import { FormDraft, type FormDraftActions, type FormDraftProps } from "@/components/FormDraft";
 import { RepeatFields } from "@/components/RepeatFields";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
@@ -1276,7 +1277,8 @@ function AddPanel({
                     onClick={() => setCrew((current) => current.filter((c) => c.id !== member.id))}
                     className="ms-1 rounded-full px-1 text-muted hover:text-foreground"
                   >
-                    <span aria-hidden="true">×</span>
+                    {/* The crew row's drawn cross (pixel-craft K-545), at the chip's 14px. */}
+                    <DiveDayIcon name="close" className="size-3.5" />
                   </button>
                 </li>
               ))}

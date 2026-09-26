@@ -1,4 +1,7 @@
 // @vitest-environment jsdom
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -237,6 +240,35 @@ describe("the close glyph", () => {
     expect(svg?.querySelectorAll("path")).toHaveLength(2);
     expect(svg).toHaveAttribute("stroke-width", "1.8");
     expect(svg).toHaveAttribute("viewBox", "0 0 24 24");
+  });
+
+  /**
+   * The tree half: one act, one drawing (pixel-craft class 12). The builder's
+   * crew chip, the site list's clear-search and the manifest's buddy remove
+   * typed the character after the crew row drew it, so removing a person was
+   * drawn two ways. A JSX text node that is nothing but a cross, or a pending
+   * label that is one, is a typed remove mark. A cross inside an expression
+   * (`ConnectivityStatus`'s offline status beside its "●") is a status, not a
+   * control, and is not matched.
+   */
+  it("is what every remove control draws; none types the character", () => {
+    const srcDir = join(dirname(fileURLToPath(import.meta.url)), "..");
+    function files(dir: string): string[] {
+      return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) return files(full);
+        return /\.tsx$/.test(entry.name) && !/\.test\.tsx$/.test(entry.name) ? [full] : [];
+      });
+    }
+    const offenders: string[] = [];
+    for (const file of files(srcDir)) {
+      const text = readFileSync(file, "utf8");
+      for (const match of text.matchAll(/>\s*×\s*<|pendingLabel="×"/g)) {
+        const line = text.slice(0, match.index).split("\n").length;
+        offenders.push(`${relative(srcDir, file).split(/[\\/]/).join("/")}:${line}`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });
 

@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -182,12 +183,13 @@ export default async function DiveSitesPage({
             className="w-full min-w-0 sm:w-80"
           />
           {query ? (
-            // The glyph a search box clears with everywhere else, through the
-            // shared `size: "icon"` box rather than a hand-spelled square —
-            // 48px, and the same construction as the crew chip's unassign and
-            // the report navigator's arrows. The words survive as the
-            // accessible name, so nothing is lost to a screen reader or to
-            // the e2e spec that clicks it by name.
+            // The drawn cross every remove control shares (the crew row's
+            // unassign, the builder's crew chip), through the shared
+            // `size: "icon"` box rather than a hand-spelled square — 48px,
+            // the same construction as the report navigator's arrows, the
+            // mark at the field's 16px. The words survive as the accessible
+            // name, so nothing is lost to a screen reader or to the e2e spec
+            // that clicks it by name.
             <Link
               href={`/shop/${shopSlug}/dive-sites`}
               scroll={false}
@@ -195,7 +197,7 @@ export default async function DiveSitesPage({
               title={t("diveSites.list.searchClear")}
               className={buttonClass({ variant: "ghost", size: "icon" })}
             >
-              <span aria-hidden="true">×</span>
+              <DiveDayIcon name="close" className="size-4" />
             </Link>
           ) : null}
         </QueryForm>

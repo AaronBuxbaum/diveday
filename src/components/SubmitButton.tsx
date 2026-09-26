@@ -19,7 +19,8 @@ export function SubmitButton({
   formNoValidate,
 }: {
   children: React.ReactNode;
-  pendingLabel: string;
+  /** Usually words; a drawn mark where the control is an icon, so the pending state keeps its drawing. */
+  pendingLabel: React.ReactNode;
   className?: string;
   confirmMessage?: string;
   /** For an action the form is not ready for yet; the server still re-checks. */

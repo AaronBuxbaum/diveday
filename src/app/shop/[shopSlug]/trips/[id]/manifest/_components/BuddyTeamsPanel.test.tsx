@@ -64,6 +64,24 @@ describe("a buddy team's member chips", () => {
     expect(remove).toHaveClass("size-11", "rounded-full", "focus-visible:focus-ring-inset");
   });
 
+  /**
+   * **The remove mark is drawn**, the cross every remove control shares, at
+   * the names' 16px (pixel-craft K-545). It was a typed "×" at `text-lg`, so
+   * removing a person was drawn one way here and another on the crew row. The
+   * accessible name stays the sentence naming who leaves the team.
+   */
+  it("draws its remove mark, named by the sentence rather than the glyph", () => {
+    renderPanel([team(["Marie Tharp", "Sylvia Earle", "Eugenie Clark"])]);
+    const remove = screen.getByRole("button", {
+      name: "manifest.buddyRemoveMember:Sylvia Earle",
+    });
+    const mark = remove.querySelector("svg");
+    expect(mark).not.toBeNull();
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+    expect(mark).toHaveClass("size-4");
+    expect(remove).not.toHaveTextContent("×");
+  });
+
   it("offers no remove button on a team of two, where the act is a dissolve", () => {
     renderPanel([team(["Marie Tharp", "Sylvia Earle"])]);
     expect(screen.queryByRole("button", { name: /manifest\.buddyRemoveMember/ })).toBeNull();
