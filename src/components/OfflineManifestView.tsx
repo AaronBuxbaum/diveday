@@ -1516,7 +1516,9 @@ export function OfflineManifestView() {
                       className={buttonClass({
                         variant: checked ? "primary" : "secondary",
                         size: "boat",
-                        className: "w-full justify-start gap-2 text-start",
+                        // `gap-3`, the counter row's below: the same mark and
+                        // label, so the words start on one x in both lists.
+                        className: "w-full justify-start gap-3 text-start",
                       })}
                     >
                       <StatusMark variant={checked ? "checked" : "unchecked"} size="md" />
@@ -1611,7 +1613,9 @@ export function OfflineManifestView() {
                   return (
                     <li
                       key={diver.bookingId}
-                      className="rounded-lg border border-border bg-surface-sunken px-4 py-3"
+                      // `px-6`, the `boat` rows' own inset beside it, so the
+                      // name starts where their marks do.
+                      className="rounded-lg border border-border bg-surface-sunken px-6 py-3"
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="truncate font-medium text-ink">{diver.fullName}</p>

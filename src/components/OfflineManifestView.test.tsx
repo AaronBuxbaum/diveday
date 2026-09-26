@@ -2893,4 +2893,27 @@ describe("OfflineManifestView — one column, one text edge", () => {
     const nameLine = within(priyaRow()).getByRole("heading", { name: "Priya Shah" }).parentElement;
     expect(nameLine).toHaveClass("sm:min-h-14", "items-center");
   });
+
+  // K-209: the blocked counter row's `px-4` sat 8px inside the `boat` rows' `px-6`.
+  it("insets a blocked counter row like the boat rows beside it", async () => {
+    await renderTrip(richEnvelope("trip-1", { readiness: "blocked" }));
+    const counter = screen.getByRole("region", { name: "At the counter" });
+    const row = within(counter).getByText("Priya Shah").closest("li");
+    expect(row).toHaveClass("px-6");
+    expect(row).not.toHaveClass("px-4");
+  });
+
+  // K-472: one checkbox row, one gap, on both lists.
+  it("spaces the checklist's mark and label as the counter spaces its mark and name", async () => {
+    await renderTrip(dressed(richEnvelope("trip-1")));
+    const check = screen.getByRole("button", { name: /Emergency oxygen aboard/ });
+    const counter = within(screen.getByRole("region", { name: "At the counter" })).getByRole(
+      "button",
+      { name: /Priya Shah/ },
+    );
+    for (const row of [check, counter]) {
+      expect(row).toHaveClass("gap-3");
+      expect(row).not.toHaveClass("gap-2");
+    }
+  });
 });
