@@ -214,8 +214,15 @@ export const ROLL_CALL_ROW_CLASS =
  */
 export const ROW_DISCLOSURE_SUMMARY_CLASS =
   "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 rounded-panel py-3 ps-4 pe-2 text-start select-none focus-visible:focus-ring-inset print:min-h-0 print:py-1 [&::-webkit-details-marker]:hidden";
+/**
+ * The box that holds a person's details, the blockers and the exception
+ * control. It is drawn inside `PersonSheet`, whose body already pads the sheet
+ * (`px-5 sm:px-7` and its own foot), so it carries **no margin of its own**:
+ * the row-disclosure inset it had (`mx-4 mb-4`) stood it 16px inside the
+ * "Buddy team" box above it, two box widths and three left edges on one sheet.
+ */
 export const ROW_DISCLOSURE_PANEL_CLASS =
-  "mx-4 mb-4 rounded-inset border border-border/70 bg-surface-sunken/50 p-3";
+  "rounded-inset border border-border/70 bg-surface-sunken/50 p-3";
 
 /**
  * Which drawn mark a row wears, from the same row state every other reader
