@@ -8,13 +8,12 @@ import { DateRequestForm } from "@/components/DateRequestForm";
 import { EmbedCredit } from "@/components/EmbedCredit";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
-import { ShopReviews } from "@/components/ShopReviews";
+import { ShopReviews, ShopReviewsSkeleton } from "@/components/ShopReviews";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureRowList } from "@/components/ui/disclosure";
 import { FilterChips } from "@/components/ui/FilterChips";
-import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
@@ -1385,7 +1384,7 @@ export default async function SchedulePage({
           is already in hand — it belongs to the hero now, and is handed down
           here rather than read a second time. */}
       {showReviews ? (
-        <Suspense fallback={<ScheduleReviewsSkeleton />}>
+        <Suspense fallback={<ShopReviewsSkeleton className={SECTION_GAP} />}>
           <ScheduleReviewsSection
             db={db}
             shop={shop}
@@ -1601,26 +1600,5 @@ async function ScheduleReviewsSection({
         t={t}
       />
     </>
-  );
-}
-
-/** Shaped like `ShopReviews` — heading, the all-reviews door, two ledger rows (design principle 1). */
-function ScheduleReviewsSkeleton() {
-  return (
-    <section aria-hidden="true" className={`${SECTION_GAP} animate-pulse`}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div className="h-6 w-40 rounded bg-surface-sunken" />
-        <div className="h-4 w-24 rounded bg-surface-sunken" />
-      </div>
-      <div className="mt-4 flex flex-col">
-        {[0, 1].map((row) => (
-          <div key={row} className={`py-4 ${ledgerRowBoxClass}`}>
-            <div className="h-4 w-24 rounded bg-surface-sunken" />
-            <div className="mt-1.5 h-5 w-80 max-w-full rounded bg-surface-sunken" />
-            <div className="mt-1.5 h-4 w-56 max-w-full rounded bg-surface-sunken" />
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
