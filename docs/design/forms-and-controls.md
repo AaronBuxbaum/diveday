@@ -769,11 +769,18 @@ under 17px of padding its 5px ring needs drawing inside (the team card, 16px) or
 needs the padding (the safety checklist's rows, `max-sm:py-5`).
 
 **A `text-sm` link with a line of its own stands on `tapTargetLineClass`.** A block exactly the
-words' 20px line box, centring the 44px link on it, so the target bleeds 12px either way and the
+words' 20px line box, centring the 44px link on it, so the target reaches 12px either way and the
 flow pays 20px: the storefront's "Follow" and season link at the end of their cards (which
 `outdent` would only half fix, leaving 12px of box between each and the sentence above it), and a
 section header's "All courses" beside its heading, where the bare target would stand the row 44px
-tall. It is `EYEBROW_TAP_WRAPPER`'s trade at the `sm` line.
+tall. **Centred, the line needs 17px free of ink above and below its words**, the box's 12px and
+the ring's 5px. After a line of text it opens with `mt-4`, whose 16px plus that line's empty bottom
+pixel make the 17: with `mt-2` the ring's top band ran 6 to 9px up through the x-height of the
+sentence above, and the target covered that sentence's bottom 4px. A card it ends needs 17px of
+padding under it, so the storefront's two cards take `max-sm:pb-5` over a phone's 16px, where the
+ring lay 1px on the border. Drawing the ring inside is no way out: on a flush link it crosses the
+first and last letters. This is not `EYEBROW_TAP_WRAPPER`'s trade, which stands its box on the
+line's bottom edge (`items-end`) because centred its ring ran through the title under it (K-395).
 
 The same trap applies to the type scale, which is why it lives on the sizes: a `text-base` passed
 through `className` cannot reliably beat a size's `text-sm`. Pick the size that already says it.

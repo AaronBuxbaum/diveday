@@ -369,13 +369,28 @@ export const proseLinkClass = "underline hover:text-primary";
  *
  * So the link stands on a block exactly its words' line box, which centres it:
  * the words land where a plain line's would, the flow is 20px, and the target
- * bleeds 12px either way into space nothing else uses. It is the trade
- * `EYEBROW_TAP_WRAPPER` (`ShopPageHeader.tsx`) makes at the eyebrow's 16px
- * line, for the reason that constant records (#1857): a negative margin on the
- * inline-flex link itself is not what gives its line back. Not `outdent`,
- * which returns only the half below: a link that follows a line of text keeps
- * the 12px above its words too, and "See After dark departures" sat 20px under
- * its note where the note's own lines are 8px apart.
+ * reaches 12px either way into space nothing else uses. A negative margin on
+ * the inline-flex link itself would not give the line back, for the reason
+ * `EYEBROW_TAP_WRAPPER` (`ShopPageHeader.tsx`) records (#1857). Not
+ * `outdent`, which returns only the half below and leaves the 12px above the
+ * words in the flow.
+ *
+ * **Centred, it needs 17px free of ink above and below its words**: the box's
+ * 12px and the focus ring's 5px (3px at a 2px offset). The ring is drawn
+ * outside the box, and drawn inside it would cross a flush link's first and
+ * last letters. So a line after a line of text opens with `mt-4`: 16px, and
+ * the text line's empty bottom pixel under its descenders is the 17th. With
+ * `mt-2` the ring's top band ran 6 to 9px up inside the line above, through
+ * the x-height of "around 6:00 PM." over "Follow", and the target covered
+ * that line's bottom 4px (pixel-craft K-185, K-219). A card the line ends
+ * needs 17px of padding under it: `max-sm:pb-5` on a `SectionCard`, whose
+ * phone padding is 16px, or the ring lies 1px on the border. Beside a heading
+ * on an `items-baseline` row the heading's 28px line takes part of each half,
+ * and the row's `mt-4` to what follows holds the rest.
+ *
+ * This is not `EYEBROW_TAP_WRAPPER`'s trade. That line stands its box on its
+ * bottom edge (`items-end`), with all the spare height above, because centred
+ * its ring ran through the page title 8px under it (K-395).
  *
  * Only for a link set in `text-sm` (`buttonClass`'s `sm`, or
  * `tapTargetLinkClass` with `text-sm`); the line is that size's 20px.

@@ -46,10 +46,14 @@ export function SeasonBand({
   entries: readonly SeasonBandEntry[];
 }) {
   if (entries.length === 0) return null;
+  // A card whose last season ends in its link takes 20px under it on a phone,
+  // as it does from `sm`: the link's focus ring reaches 17px under its words
+  // (`tapTargetLineClass`), and the phone's 16px put it on the border.
+  const endsInLink = entries[entries.length - 1]?.lens != null;
   return (
     // No width and no margin of its own: the identity band's row owns both, so
     // the four panels share one column width however many of them render.
-    <SectionCard className="h-full">
+    <SectionCard className={endsInLink ? "h-full max-sm:pb-5" : "h-full"}>
       <p className={groupLabelClass()}>{eyebrow}</p>
       <ul className="mt-1 space-y-4">
         {entries.map((entry) => (
@@ -60,8 +64,10 @@ export function SeasonBand({
             {entry.lens ? (
               // On a line its words' height: the 44px target bleeds into the
               // card's padding and the gap to the next season, not adding to
-              // either.
-              <p className={`mt-2 ${tapTargetLineClass}`}>
+              // either. 16px under the note, because the target reaches 12px
+              // above the words and its ring 17: after 8px the ring crossed
+              // the note's x-height.
+              <p className={`mt-4 ${tapTargetLineClass}`}>
                 <Link
                   href={entry.lens.href}
                   scroll={false}
