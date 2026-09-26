@@ -163,10 +163,22 @@ export function ShopPageHeader({
   const hasBrand = Boolean(brand?.logoUrl || brand?.tagline || brand?.description);
   return (
     <header className="mb-8">
+      {/* **From `sm` up, a row with doors is a grid, so the title keeps its
+          longest word.** As a flex row beside a `shrink-0` band of doors, the
+          title column took whatever the doors left: at 640 the schedule
+          board's three doors left "Board" 103.6px of the 106 it needs, and the
+          word ran past its column. The title's track is at least its longest
+          word and takes the rest (`minmax(min-content, 1fr)`); the doors' is
+          `auto`, which keeps them on one row while there is room and folds
+          them only once the title has wrapped as far as it can — the order the
+          flex row had, without the overrun. With no doors there is no second
+          track to leave a gap for, and the row stays the flex row it was. */}
       <div
-        className={`flex flex-col gap-5 sm:flex-row sm:justify-between ${
-          align === "start" ? "sm:items-start" : "sm:items-end"
-        }`}
+        className={`flex flex-col gap-5 ${
+          actions
+            ? "sm:grid sm:grid-cols-[minmax(min-content,1fr)_auto]"
+            : "sm:flex-row sm:justify-between"
+        } ${align === "start" ? "sm:items-start" : "sm:items-end"}`}
       >
         <div className="min-w-0">
           {hasBrand ? (

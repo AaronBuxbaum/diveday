@@ -23,6 +23,35 @@ describe("ShopPageHeader's title", () => {
 });
 
 /**
+ * **The title never gives up a word to its doors** (pixel-craft class 2). The
+ * row was a flex row with a `shrink-0` actions band, so the title column took
+ * every pixel the doors did not: at 640 the schedule board's three doors left
+ * "Board" 103.6px for a word that needs 106, and the word ran past its column.
+ * With doors, the row is a grid whose title track is at least its longest word
+ * (`minmax(min-content, 1fr)`) and whose doors' track is `auto`: the doors keep
+ * their one row while there is room, the title wraps first as it always did,
+ * and only then do the doors fold onto a second row. jsdom has no layout, so
+ * the template is the assertion.
+ */
+describe("the header's row", () => {
+  const row = (container: HTMLElement) =>
+    container.querySelector("header")?.firstElementChild as HTMLElement;
+
+  it("keeps the title's longest word whole, folding the doors first", () => {
+    const { container } = render(
+      <ShopPageHeader title="Board" actions={<a href="/shop/x/schedule">View public page</a>} />,
+    );
+    expect(row(container)).toHaveClass("sm:grid", "sm:grid-cols-[minmax(min-content,1fr)_auto]");
+  });
+
+  it("stays a flex row when there are no doors to leave a track for", () => {
+    const { container } = render(<ShopPageHeader title="Board" />);
+    expect(row(container)).toHaveClass("sm:flex-row");
+    expect(row(container).className).not.toMatch(/grid-cols/);
+  });
+});
+
+/**
  * **One number, in three places, that nothing else checks.**
  *
  * The header's eyebrow is 16px of line box. A page that links its eyebrow
