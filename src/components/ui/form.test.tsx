@@ -649,6 +649,21 @@ describe("ChoicePill and ChoiceRow", () => {
     expect(node).toBe(box);
   });
 
+  it("never leaves the last word of a row's words alone on its line", () => {
+    // A row's words are a sentence — a waiver's agreement, a readiness answer
+    // — set in a `<span>`, which the app's pretty wrap for running text does
+    // not reach: the guardian's agreement ended "…as far as I / know." at 390
+    // (waiver-guardian, K-534).
+    render(
+      <ChoiceRow type="checkbox" name="guardianAcknowledged">
+        The health answers above are complete and accurate as far as I know.
+      </ChoiceRow>,
+    );
+    const words = screen.getByText(/as far as I know/);
+    expect(words.tagName).toBe("SPAN");
+    expect(words).toHaveClass("text-pretty");
+  });
+
   /**
    * **A row that ends its box sinks the half of its target nobody sees.** A
    * one-line row is a 24px line centred in 44px, so 10px of target sits under

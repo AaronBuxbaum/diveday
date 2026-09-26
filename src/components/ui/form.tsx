@@ -759,7 +759,8 @@ export function ChoiceRow({
       <span className={CHOICE_BOX_LINE}>
         <input type={type} {...input} className={choiceClass} />
       </span>
-      <span>{children}</span>
+      {/* A sentence, often: `text-pretty` so it never ends on one word (K-534). */}
+      <span className="text-pretty">{children}</span>
     </label>
   );
 }
