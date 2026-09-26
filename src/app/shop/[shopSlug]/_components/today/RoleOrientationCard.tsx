@@ -98,7 +98,11 @@ export function RoleOrientationLine({
   copy: Pick<RoleOrientationCardCopy, "heading" | "dismiss" | "tryThis">;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+    // "Got it" is flush: on a phone it wraps to a line of its own and its word
+    // lands on the sentence's column, not 12px inside it. On one line with the
+    // sentence, `gap-x-5` hands back the 12px it gave up, so the word stays
+    // 20px from the link and its hover fill 12px.
+    <div className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-muted">
       <p className="min-w-0">
         {copy.heading}{" "}
         <Link href={tourHref} className="font-medium text-primary hover:underline">
@@ -108,7 +112,7 @@ export function RoleOrientationLine({
       <form action={dismissAction} className="shrink-0" data-scroll-reset="true">
         <SubmitButton
           pendingLabel={copy.dismiss}
-          className={buttonClass({ variant: "ghost", size: "sm" })}
+          className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
         >
           {copy.dismiss}
         </SubmitButton>

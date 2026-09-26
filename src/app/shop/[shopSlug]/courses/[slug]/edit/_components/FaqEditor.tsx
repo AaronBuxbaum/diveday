@@ -94,7 +94,10 @@ export function FaqEditor({
       {rows.map((row, index) => (
         <div
           key={row.key}
-          className="rounded-inset border border-border bg-surface-sunken p-3 sm:p-4"
+          // `p-4` at every width: Remove is flush, so its fill reaches 8px
+          // past its word and its ring 13px. At a phone's `p-3` the ring's
+          // outer pixel lay on this card's border.
+          className="rounded-inset border border-border bg-surface-sunken p-4"
         >
           <FieldGrid columns={1} className="gap-y-3">
             <Field label={fill(copy.questionLabel, { number: index + 1 })}>

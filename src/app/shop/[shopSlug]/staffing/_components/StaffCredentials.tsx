@@ -116,7 +116,10 @@ export function StaffCredentials({
             {/* Both acts on every row, whatever the clock says. H-59: a
                 credential inside its renewal window is not a row with fewer
                 options than one comfortably ahead. */}
-            <div className="mt-1 flex flex-wrap gap-2">
+            {/* `gap-5`: the review button is flush and Remove is not, so the
+                gap hands back the 12px the first gave up — the words 32px
+                apart, the two hover fills 12px. */}
+            <div className="mt-1 flex flex-wrap gap-5">
               <form action={reviewAction}>
                 <input type="hidden" name="credentialId" value={row.id} />
                 <input type="hidden" name="status" value={row.reviewed ? "pending" : "verified"} />

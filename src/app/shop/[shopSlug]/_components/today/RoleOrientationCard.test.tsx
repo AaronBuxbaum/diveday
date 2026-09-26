@@ -2,6 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { rendersFlush } from "@/test/button-flush";
 import {
   RoleOrientationCard,
   type RoleOrientationCardCopy,
@@ -64,7 +65,9 @@ describe("RoleOrientationLine", () => {
     expect(
       screen.getByRole("link", { name: "Open Board to see this week’s departures." }),
     ).toHaveAttribute("href", "/shop/blue-mantis/schedule/board");
-    expect(screen.getByRole("button", { name: "Got it" })).toBeInTheDocument();
+    // On a phone "Got it" wraps to a line of its own, where it sat 12px inside
+    // the sentence above it (pixel probe, STAFF-DAY-1-17, K-06).
+    expect(rendersFlush(screen.getByRole("button", { name: "Got it" }), "ghost", "sm")).toBe(true);
     // No emoji on a staff surface: the lightbulb that led both forms is
     // gone and the words carry it (ADR 20260827-clearwater-surface-language,
     // and the floor of ADR 20260911-clear-the-deck).

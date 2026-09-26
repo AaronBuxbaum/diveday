@@ -209,7 +209,11 @@ export function SeenGroup({
       {tallies.length > 0 ? (
         <ul className="mt-4 divide-y divide-border" aria-live="polite">
           {tallies.map((tally) => (
-            <li key={tally.slug} className="flex min-h-14 items-center gap-3 py-2">
+            // `gap-6`: Delete is flush, so its word ends on the rule's end as
+            // the name starts on its start, and the 12px it gave up comes back
+            // as gap — the count stays 24px from the word and 16px from its
+            // hover fill.
+            <li key={tally.slug} className="flex min-h-14 items-center gap-6 py-2">
               <span className="min-w-0 flex-1 text-base font-medium">{tally.name}</span>
               <span className="text-base font-semibold tabular-nums">{tally.count}</span>
               <SeenTap
@@ -218,7 +222,12 @@ export function SeenGroup({
                 action={deleteAction}
                 onResult={onResult}
                 ariaLabel={tally.deleteLabel}
-                className={buttonClass({ variant: "danger-ghost", size: "sm", busy: true })}
+                className={buttonClass({
+                  variant: "danger-ghost",
+                  size: "sm",
+                  busy: true,
+                  flush: true,
+                })}
               >
                 {copy.delete}
               </SeenTap>

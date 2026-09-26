@@ -1091,17 +1091,21 @@ export default async function ManageTripPage({
         ]}
         actions={
           <>
+            {/* All three flush, so whichever starts a line — the first, or one
+                wrapped on a phone — puts its word on the panel's column; the
+                row's gap hands back what they gave up (TripAboutSection). */}
             <CopyLinkButton
               path={publicTripPath(shopSlug, tripId)}
               label={t("trips.detail.copyBookingLink")}
               copiedLabel={t("trips.detail.linkCopied")}
               failedLabel={t("trips.detail.linkCopyFailed")}
+              flush
             />
             <Link
               href={publicTripPath(shopSlug, tripId)}
               target="_blank"
               rel="noreferrer"
-              className={buttonClass({ variant: "ghost", size: "sm" })}
+              className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
             >
               {t("trips.about.viewPublic")}
             </Link>
@@ -1110,6 +1114,7 @@ export default async function ManageTripPage({
               label={t("trips.about.printPacket")}
               popupBlockedLabel={t("shared.printButton.popupBlocked")}
               recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
+              flush
             />
           </>
         }
