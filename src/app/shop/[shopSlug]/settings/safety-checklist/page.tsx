@@ -103,7 +103,7 @@ export default async function SafetyChecklistPage({
                       type="submit"
                       disabled={index === 0}
                       aria-label={t("settings.safetyChecklist.moveUp")}
-                      className={buttonClass({ variant: "ghost", size: "sm" })}
+                      className={buttonClass({ variant: "ghost", size: "icon-sm" })}
                     >
                       <DiveDayIcon name="arrow-up" className="size-4" />
                     </button>
@@ -115,7 +115,7 @@ export default async function SafetyChecklistPage({
                       type="submit"
                       disabled={index === items.length - 1}
                       aria-label={t("settings.safetyChecklist.moveDown")}
-                      className={buttonClass({ variant: "ghost", size: "sm" })}
+                      className={buttonClass({ variant: "ghost", size: "icon-sm" })}
                     >
                       <DiveDayIcon name="arrow-down" className="size-4" />
                     </button>

@@ -227,7 +227,7 @@ function RowActions({
       onClick={() => onToggle(key)}
       aria-expanded={openKey === key}
       aria-label={fill(label, { ref: departure.ref })}
-      className={buttonClass({ variant: "ghost", size: "sm", className })}
+      className={buttonClass({ variant: "ghost", size: "icon-sm", className })}
     >
       <DiveDayIcon name="more" className="size-4" />
     </button>

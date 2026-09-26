@@ -245,6 +245,15 @@ const sizes = {
    */
   icon: { x: "px-0", rest: "w-12 min-h-12 text-base" },
   /**
+   * `icon`'s square at `sm`'s height: 44px, for a glyph with no label in a row
+   * of `sm` controls — a review row's "more", the week board's departure
+   * menu, the safety checklist's arrows. A glyph-only `sm` was `px-3` around a
+   * 16px glyph, 40px wide against the 44px floor (pixel probe, 2026-09-25),
+   * and `icon` would stand 4px taller than the buttons beside it. `w-11`
+   * against the base's `min-h-11`, for the reason `icon` gives.
+   */
+  "icon-sm": { x: "px-0", rest: "w-11 text-sm" },
+  /**
    * The roll-call mark: a **circular 56px** target holding one drawn glyph and
    * no label at all, for the manifest's one-tap-per-person row (ADR
    * 20260827-the-departure-is-two-working-surfaces, decision 3).

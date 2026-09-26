@@ -671,8 +671,8 @@ box, for a destructive row in a quiet menu), `danger-solid`, `link` (reads as in
 claims a full target), `sky` (a translucent chip for a control standing on a `SkyBand`), and `bare`
 (shape and target only, for a control whose fill is the state of its row). Sizes: `md` (the
 default, 48px with a 16px label), `sm` (44px with a 14px label), `boat` (56px with a 16px
-semibold label), `icon` (a 48px square), and `mark` (a 56px square the roll call rounds to a
-circle). The base's corner is the control rung, `rounded-lg` (12px). Pass one-off adjustments
+semibold label), `icon` (a 48px square), `icon-sm` (a 44px square, for a glyph in a row of `sm`
+controls), and `mark` (a 56px square the roll call rounds to a circle). The base's corner is the control rung, `rounded-lg` (12px). Pass one-off adjustments
 through `className`; do not rebuild the base. If you find yourself cancelling a variant's own
 styles, the variant is wrong — add one.
 

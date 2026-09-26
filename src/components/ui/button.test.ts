@@ -6,7 +6,7 @@ import { type ButtonSize, type ButtonVariant, buttonClass } from "./button";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-const SIZES = ["sm", "md", "boat", "icon"] as const satisfies readonly ButtonSize[];
+const SIZES = ["sm", "md", "boat", "icon", "icon-sm"] as const satisfies readonly ButtonSize[];
 
 /**
  * Every variant, as a record keyed by the type so that a variant added to
@@ -190,6 +190,21 @@ describe("buttonClass", () => {
     });
   });
 
+  describe("icon-sm", () => {
+    it("is a 44px square, level with the `sm` buttons beside it", () => {
+      // A glyph-only `sm` was `px-3` around a 16px glyph: 40 wide against a
+      // 44px floor, on every review row's "more", the week board's departure
+      // menu and the safety checklist's arrows (pixel probe, K-41). `icon` is
+      // 48 and would stand 4px above its `sm` neighbours.
+      const tokens = buttonClass({ variant: "ghost", size: "icon-sm" }).split(" ");
+      expect(tokens).toContain("w-11");
+      expect(tokens).toContain("min-h-11");
+      expect(tokens).not.toContain("min-h-12");
+      expect(tokens).toContain("text-sm");
+      expect(horizontalPadding(tokens.join(" "))).toEqual(["px-0"]);
+    });
+  });
+
   describe("flush", () => {
     it("drops the size's horizontal padding rather than appending to it", () => {
       // The whole point: `className: "px-0"` cannot do this. Two utilities for
@@ -282,7 +297,7 @@ describe("buttonClass", () => {
     it("leaves a size with no horizontal padding exactly as it was", () => {
       // An icon square has no padding to drop and no text to line up: `flush`
       // on it must not shove the square 8px out of place.
-      for (const size of ["icon", "mark"] as const) {
+      for (const size of ["icon", "icon-sm", "mark"] as const) {
         for (const variant of ["link", "danger-ghost"] as const) {
           expect(buttonClass({ variant, size, flush: true }), `${variant}/${size}`).toBe(
             buttonClass({ variant, size }),
