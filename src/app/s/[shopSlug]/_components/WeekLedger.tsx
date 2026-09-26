@@ -128,6 +128,14 @@ export function WeekLedger({
  * Presentational: every row's own stretched-link label already speaks its full
  * date, so a screen reader loses nothing and the announced item count stays the
  * number of bookable departures.
+ *
+ * **Each part stands in a fixed column**, so every rule's hairline starts at one
+ * x (pixel-craft class 3). Shrink-wrapped, the hairline started 15px past each
+ * weekday's own ink — nine rules 9px apart at 1280 — and a one-digit day would
+ * have pulled its weekday and hairline 19px further left. The numeral's box is
+ * two tabular digits (`2ch`); the weekday column holds the longest label either
+ * locale prints, es-ES "SEPT" (about 51px with its tracking; en-US "MON" is 46).
+ * `loading.tsx` draws its rule on the same columns.
  */
 function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stickyTop: string }) {
   return (
@@ -136,8 +144,8 @@ function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stick
       aria-hidden="true"
       className={`sticky ${stickyTop} z-20 mt-8 flex items-center gap-3 bg-background pt-2 pb-3 first:mt-0`}
     >
-      <span className={`${FIGURE_LARGE_CLASS} leading-none`}>{parts.day}</span>
-      <span className="flex flex-col justify-center leading-tight">
+      <span className={`${FIGURE_LARGE_CLASS} min-w-[2ch] leading-none`}>{parts.day}</span>
+      <span className="flex min-w-14 flex-col justify-center leading-tight">
         <span className="text-base font-bold tracking-[0.18em] uppercase">{parts.weekday}</span>
         <span className="text-base font-medium tracking-[0.18em] text-muted uppercase">
           {parts.month}

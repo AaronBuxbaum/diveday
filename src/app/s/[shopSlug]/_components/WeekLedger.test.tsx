@@ -323,4 +323,39 @@ describe("the day rule", () => {
     // the list.
     expect(container.querySelector(".sticky")?.className).toContain("top-0");
   });
+
+  /**
+   * **Every part of the rule stands in a fixed column** (pixel-craft class 3).
+   * The numeral and the weekday block were shrink-wrapped and the hairline
+   * took what was left, so it started at the weekday's ink edge + 15px: nine
+   * rules at 1280 started at nine x's across 9px, and a one-digit day would
+   * have moved its weekday and hairline a further 19px left.
+   */
+  it("sets a one-digit day in a two-digit box", () => {
+    render(
+      <WeekLedger
+        rows={[row({ dayParts: { day: "7", weekday: "Mon", month: "Sep" } })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    // The numeral is `tabular-nums`, so 2ch is exactly two digits.
+    expect(screen.getByText("7")).toHaveClass("min-w-[2ch]");
+  });
+
+  it("sets the weekday and the month in one column wide enough for the longest label", () => {
+    render(
+      <WeekLedger
+        rows={[row({ dayParts: { day: "7", weekday: "lun", month: "sept" } })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const column = screen.getByText("lun").parentElement;
+    expect(screen.getByText("sept").parentElement).toBe(column);
+    // 56px: es-ES "SEPT" at its tracking is about 51px, en-US "MON" 46.
+    expect(column).toHaveClass("min-w-14");
+  });
 });

@@ -34,12 +34,14 @@ export default function TripsLoading() {
           <div className="h-5 w-24 rounded bg-surface-sunken" />
         </div>
         {/* Two day groups: the calendar date block, then borderless rows with
-            one meta line each. */}
+            one meta line each. The block stands on the day rule's columns —
+            two digits (40px), then the 56px weekday column — so the hairline
+            starts where the loaded rule's does. */}
         {[0, 1].map((day) => (
           <div key={day} className={day === 0 ? "" : "mt-8"}>
             <div className="flex items-center gap-3 pt-2 pb-3">
-              <div className="h-8 w-9 rounded bg-surface-sunken" />
-              <div className="flex flex-col gap-1">
+              <div className="h-8 w-10 rounded bg-surface-sunken" />
+              <div className="flex w-14 flex-col gap-1">
                 <div className="h-3 w-10 rounded bg-surface-sunken" />
                 <div className="h-3 w-10 rounded bg-surface-sunken" />
               </div>
