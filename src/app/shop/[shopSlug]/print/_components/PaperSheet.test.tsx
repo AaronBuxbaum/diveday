@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { BOAT_CARD_DAY, BOAT_CARD_NIGHT, PRINT_SHEET_BOX_MM } from "@/lib/print-sheets";
+import { declarations, readGlobalsCss, unlayeredRules } from "@/test/stylesheet";
 import { PaperSheet, SheetMark, SheetValue } from "./PaperSheet";
 
 /**
@@ -104,5 +105,27 @@ describe("the mark in the band", () => {
   it("survives a one-word name", () => {
     render(<SheetMark name="Reeflight" />);
     expect(screen.getByText("R")).toBeTruthy();
+  });
+});
+
+/**
+ * **A blank runs to the column's edge.** It was an 8ch inline block, so each
+ * rule was about 13mm long and ended wherever its label happened to end: the
+ * boat card's three oxygen and first-aid blanks stopped at three x positions
+ * 25px apart, in a column that ran on to its edge (pixel probe,
+ * `boat-card-print`). A skipper writing a location needs the width, and one
+ * right edge is what makes three rules read as a form.
+ */
+describe("the ruled blank", () => {
+  it("fills its definition's width, one line tall", () => {
+    const blank = unlayeredRules(readGlobalsCss()).find(
+      (rule) => rule.prelude === ".paper-sheet-blank",
+    );
+    const style = declarations(blank?.body ?? "");
+    expect(style.display).toBe("block");
+    expect(style.width).toBe("100%");
+    expect(style["min-height"]).toBe("1lh");
+    expect(style).not.toHaveProperty("min-width");
+    expect(style["border-bottom"]).toBe("1px solid var(--sheet-rule)");
   });
 });

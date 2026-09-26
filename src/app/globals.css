@@ -978,10 +978,13 @@ textarea {
   letter-spacing: 0.02em;
 }
 
-/* A ruled blank a skipper fills in by hand - never an invented number. */
+/* A ruled blank a skipper fills in by hand - never an invented number. It
+   runs to its column's edge, one line tall: an 8ch inline block was 13mm of
+   rule ending wherever its label ended, three blanks at three x positions. */
 .paper-sheet-blank {
-  display: inline-block;
-  min-width: 8ch;
+  display: block;
+  width: 100%;
+  min-height: 1lh;
   border-bottom: 1px solid var(--sheet-rule);
 }
 
