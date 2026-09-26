@@ -2275,7 +2275,11 @@ export default async function SettingsPage({
                   })}
                 </p>
                 <p className="mt-1 text-sm">{t("settings.main.dataJobs.mediaDeletions.detail")}</p>
-                <ul className="mt-3 space-y-2 text-sm">
+                {/* Each item is its words as one line of facts, then its
+                    actions on a line of their own, so no line opens with "·"
+                    and every item's buttons start at one x (K-341). An item's
+                    two lines sit 8px apart, and items 16px. */}
+                <ul className="mt-3 space-y-4 text-sm">
                   {pendingMediaDeletions.map((attempt) => (
                     // The provider's own words are deliberately not here. A
                     // shop read "Blob storage returned 503" beside a photo and
@@ -2283,23 +2287,31 @@ export default async function SettingsPage({
                     // already say what happened and what to do, and tonight's
                     // retry is what actually fixes it. The reason stays on the
                     // row in the database for whoever is on call.
-                    <li key={attempt.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="font-medium">{t(MEDIA_KIND_KEYS[attempt.kind])}</span>
-                      <span className="text-muted">
-                        ·{" "}
-                        {t("settings.main.dataJobs.mediaDeletions.queued", {
-                          date: formatShortDate(attempt.createdAt, locale, shop.timezone),
-                        })}
-                      </span>
-                      <form action={retryMediaDeletionAction}>
-                        <input type="hidden" name="attemptId" value={attempt.id} />
-                        <SubmitButton
-                          pendingLabel={t("settings.main.dataJobs.mediaDeletions.retrying")}
-                          className={buttonClass({ variant: "secondary", size: "sm" })}
-                        >
-                          {t("settings.main.dataJobs.mediaDeletions.retry")}
-                        </SubmitButton>
-                      </form>
+                    <li key={attempt.id} className="flex flex-col items-start gap-2">
+                      <p className="min-w-0">
+                        <FactLine
+                          facts={[
+                            { value: t(MEDIA_KIND_KEYS[attempt.kind]), className: "font-medium" },
+                            {
+                              value: t("settings.main.dataJobs.mediaDeletions.queued", {
+                                date: formatShortDate(attempt.createdAt, locale, shop.timezone),
+                              }),
+                              className: "text-muted",
+                            },
+                          ]}
+                        />
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <form action={retryMediaDeletionAction}>
+                          <input type="hidden" name="attemptId" value={attempt.id} />
+                          <SubmitButton
+                            pendingLabel={t("settings.main.dataJobs.mediaDeletions.retrying")}
+                            className={buttonClass({ variant: "secondary", size: "sm" })}
+                          >
+                            {t("settings.main.dataJobs.mediaDeletions.retry")}
+                          </SubmitButton>
+                        </form>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -2331,41 +2343,63 @@ export default async function SettingsPage({
                 <p className="mt-1 text-sm">
                   {t("settings.main.dataJobs.processorErasures.detail")}
                 </p>
-                <ul className="mt-3 space-y-2 text-sm">
+                <ul className="mt-3 space-y-4 text-sm">
                   {owedProcessorErasures.map((obligation) => (
-                    <li key={obligation.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="font-medium">
-                        {t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target])}
-                      </span>
-                      <span className="font-mono">{obligation.externalId}</span>
-                      <span className="text-muted">
-                        ·{" "}
-                        {t("settings.main.dataJobs.processorErasures.raised", {
-                          date: formatShortDate(obligation.createdAt, locale, shop.timezone),
-                        })}
-                        {obligation.lastError ? ` · ${obligation.lastError}` : ""}
-                      </span>
-                      {canErase && obligation.target === "stripe_customer" ? (
-                        <form action={retryProcessorErasureAction}>
-                          <input type="hidden" name="obligationId" value={obligation.id} />
-                          <SubmitButton
-                            pendingLabel={t("settings.main.dataJobs.processorErasures.retrying")}
-                            className={buttonClass({ variant: "secondary", size: "sm" })}
-                          >
-                            {t("settings.main.dataJobs.processorErasures.retry")}
-                          </SubmitButton>
-                        </form>
-                      ) : null}
+                    <li key={obligation.id} className="flex flex-col items-start gap-2">
+                      <p className="min-w-0">
+                        <FactLine
+                          facts={[
+                            {
+                              value: t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target]),
+                              className: "font-medium",
+                            },
+                            { value: obligation.externalId, className: "font-mono" },
+                            {
+                              value: t("settings.main.dataJobs.processorErasures.raised", {
+                                date: formatShortDate(obligation.createdAt, locale, shop.timezone),
+                              }),
+                              className: "text-muted",
+                            },
+                            // Stripe's own words, so free text that wraps.
+                            obligation.lastError
+                              ? {
+                                  value: obligation.lastError,
+                                  className: "text-muted",
+                                  wraps: true,
+                                }
+                              : null,
+                          ]}
+                        />
+                      </p>
+                      {/* Only an owner may close an erasure, so a manager's
+                          item is its words alone, with no empty row under it. */}
                       {canErase ? (
-                        <form action={dischargeProcessorErasureAction}>
-                          <input type="hidden" name="obligationId" value={obligation.id} />
-                          <SubmitButton
-                            pendingLabel={t("settings.main.dataJobs.processorErasures.discharging")}
-                            className={buttonClass({ variant: "secondary", size: "sm" })}
-                          >
-                            {t("settings.main.dataJobs.processorErasures.discharge")}
-                          </SubmitButton>
-                        </form>
+                        <div className="flex flex-wrap gap-2">
+                          {obligation.target === "stripe_customer" ? (
+                            <form action={retryProcessorErasureAction}>
+                              <input type="hidden" name="obligationId" value={obligation.id} />
+                              <SubmitButton
+                                pendingLabel={t(
+                                  "settings.main.dataJobs.processorErasures.retrying",
+                                )}
+                                className={buttonClass({ variant: "secondary", size: "sm" })}
+                              >
+                                {t("settings.main.dataJobs.processorErasures.retry")}
+                              </SubmitButton>
+                            </form>
+                          ) : null}
+                          <form action={dischargeProcessorErasureAction}>
+                            <input type="hidden" name="obligationId" value={obligation.id} />
+                            <SubmitButton
+                              pendingLabel={t(
+                                "settings.main.dataJobs.processorErasures.discharging",
+                              )}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                            >
+                              {t("settings.main.dataJobs.processorErasures.discharge")}
+                            </SubmitButton>
+                          </form>
+                        </div>
                       ) : null}
                     </li>
                   ))}

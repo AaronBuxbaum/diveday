@@ -424,6 +424,38 @@ describe("the data-compliance queues' drawing", () => {
       );
     }
   });
+
+  /**
+   * Each item was one `flex flex-wrap` run of name, id, a meta span that
+   * *started* with "·", and the forms, so at 390 a line opened on the dot and
+   * the buttons landed wherever the words ended, at a different x on every
+   * item (K-341). The words are one `FactLine` now, and the forms a group of
+   * their own under them.
+   */
+  it("sets each item's words as one line of facts, and its actions on a line of their own", async () => {
+    const strings = (node: unknown): string[] => {
+      if (typeof node === "string") return [node];
+      if (Array.isArray(node)) return node.flatMap(strings);
+      if (node && typeof node === "object" && "props" in node) {
+        return strings((node as ReactElement<{ children?: unknown }>).props.children);
+      }
+      return [];
+    };
+    let items = 0;
+    for (const panel of await queuePanels()) {
+      for (const item of findElements<{ children?: unknown }>(panel.props.children, "li")) {
+        items++;
+        const children = [item.props.children].flat(Number.POSITIVE_INFINITY);
+        expect(children.filter((child) => (child as ReactElement)?.type === "form")).toEqual([]);
+        const holdingForms = children.filter((child) => findElements(child, "form").length > 0);
+        expect(holdingForms).toHaveLength(1);
+        expect(findElements(holdingForms[0], FactLine)).toHaveLength(0);
+        expect(findElements(item.props.children, FactLine)).toHaveLength(1);
+        for (const text of strings(item.props.children)) expect(text).not.toMatch(/^\s*·/);
+      }
+    }
+    expect(items).toBe(2);
+  });
 });
 
 describe("the diving options a shop runs", () => {
