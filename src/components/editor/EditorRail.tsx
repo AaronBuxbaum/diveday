@@ -3,6 +3,17 @@
 import { useEffect, useState } from "react";
 import type { EditorSectionRef, EditorUnsavedCopy } from "./EditorSection";
 
+/** The rail's outer box, shared with `EditorRailSkeleton`. */
+const RAIL_CLASS = "mb-6 lg:sticky lg:top-(--chrome-h) lg:mb-0 lg:self-start lg:pt-1";
+
+/**
+ * The list inside it: a wrap-row below `lg`, a column from `lg` up — the jump
+ * row's own shape, without a second landmark to carry it. Shared with
+ * `EditorRailSkeleton`.
+ */
+const RAIL_LIST_CLASS =
+  "-ms-3 flex flex-wrap items-center gap-x-1 lg:ms-0 lg:flex-col lg:items-stretch lg:gap-x-0 lg:gap-y-0.5";
+
 /**
  * **Where you are in a long editor** — ADR 20260827-the-shops-shelves, the
  * long-form editor pattern: "a sticky section rail beside unboxed sections …
@@ -43,13 +54,8 @@ export function EditorRail({
     // Hiding one with `lg:hidden` does not help: both are in the accessibility
     // tree at every width, and it is the *landmark* that duplicates, not the
     // pixels. So the list changes shape at `lg` and the landmark does not.
-    <nav
-      aria-label={navLabel}
-      className="mb-6 lg:sticky lg:top-(--chrome-h) lg:mb-0 lg:self-start lg:pt-1"
-    >
-      {/* A wrap-row below `lg`, a column from `lg` up — the jump row's own
-          shape, without a second landmark to carry it. */}
-      <ul className="-ms-3 flex flex-wrap items-center gap-x-1 lg:ms-0 lg:flex-col lg:items-stretch lg:gap-x-0 lg:gap-y-0.5">
+    <nav aria-label={navLabel} className={RAIL_CLASS}>
+      <ul className={RAIL_LIST_CLASS}>
         {sections.map((section) => {
           // Current is a *desktop* state: the phone row sits above the section
           // you are already looking at, so marking one there says nothing.
@@ -82,6 +88,31 @@ export function EditorRail({
         })}
       </ul>
     </nav>
+  );
+}
+
+/**
+ * **The rail, before the editor arrives** — for a long editor's `loading.tsx`
+ * (docs/design/pixel-craft.md, class 11: a skeleton has the loaded page's
+ * geometry).
+ *
+ * The same two boxes as `EditorRail`, holding one 44px stub per section in
+ * place of each link: a borderless wrap below `lg` with the rail's `mb-6`, a
+ * column from `lg` up. The editors' skeletons each drew a rail of their own — one
+ * row of three 36px pills over a hairline with `mb-8` — so on a phone the whole
+ * form dropped about 131px when the eleven-section dive-site editor arrived.
+ * `count` is the editor's own section count, read from its section list where
+ * the page has one.
+ */
+export function EditorRailSkeleton({ count }: { count: number }) {
+  return (
+    <div className={RAIL_CLASS}>
+      <div className={RAIL_LIST_CLASS}>
+        {[...Array(count).keys()].map((entry) => (
+          <div key={entry} className="h-11 w-24 rounded-lg bg-surface-sunken lg:w-full" />
+        ))}
+      </div>
+    </div>
   );
 }
 

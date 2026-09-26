@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { EditorRail, UnsavedSections } from "./EditorRail";
+import { EditorRail, EditorRailSkeleton, UnsavedSections } from "./EditorRail";
 import { EditorSection, type EditorSectionRef, type EditorUnsavedCopy } from "./EditorSection";
 
 afterEach(cleanup);
@@ -130,6 +130,32 @@ describe("the editor rail", () => {
     expect(
       Array.from(navs[0].querySelectorAll("a")).map((link) => link.getAttribute("href")),
     ).toEqual(SECTIONS.map((section) => `#${section.id}`));
+  });
+});
+
+/**
+ * **The rail's skeleton is the rail's geometry** (docs/design/pixel-craft.md,
+ * class 11: 0px of shift on load). The editors' loading pages drew the phone
+ * rail as one row of three 36px pills over a hairline with `mb-8`, about 77px;
+ * the loaded rail at 390 is a borderless wrap of 44px links with `mb-6`, so on
+ * the new-site editor the whole form dropped about 131px when it arrived.
+ */
+describe("the editor rail's skeleton", () => {
+  it("draws one 44px stub per section, in the rail's own two boxes", () => {
+    render(<Editor />);
+    const rail = railNav();
+    const list = rail.querySelector("ul");
+    const { container } = render(<EditorRailSkeleton count={11} />);
+    const skeleton = container.firstElementChild;
+    const stubs = skeleton?.firstElementChild;
+
+    expect(skeleton?.className).toBe(rail.className);
+    expect(stubs?.className).toBe(list?.className);
+    expect(skeleton).toHaveClass("mb-6", "lg:pt-1");
+    expect(skeleton).not.toHaveClass("border-b");
+    expect(stubs).toHaveClass("flex-wrap");
+    expect(stubs?.children).toHaveLength(11);
+    for (const stub of stubs?.children ?? []) expect(stub).toHaveClass("h-11");
   });
 });
 
