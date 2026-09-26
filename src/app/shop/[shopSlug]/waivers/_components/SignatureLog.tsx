@@ -133,8 +133,12 @@ function SignatureRow({
             global ring sits 2-5px outside the box, and the pinned bar sits
             2-4px outside it, so a keyboard reaching the pinned record painted
             the ring over the one mark that says which record the link
-            resolved (dive-domain-expert review, 2026-09-25). */}
-        <summary className="-mx-2 flex min-h-12 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/60 focus-visible:focus-ring-inset">
+            resolved (dive-domain-expert review, 2026-09-25).
+
+            51px (`min-h-12.75`) under the row's 1px rule is a `LedgerRow`'s
+            52: its `min-h-13` sits on the element carrying its rule. The old
+            `min-h-12` stood these rows 49px apart in an app of 52px ledgers. */}
+        <summary className="-mx-2 flex min-h-12.75 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/60 focus-visible:focus-ring-inset">
           <span className="font-medium sm:w-52 sm:shrink-0">{entry.personName}</span>
           <span className="min-w-0 flex-1 truncate text-sm text-muted">{trip}</span>
           <IntegrityBadge entry={entry} t={t} />

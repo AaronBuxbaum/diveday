@@ -252,3 +252,27 @@ describe("the evidence block", () => {
     expect(within(row).getByText("Imported record")).toBeInTheDocument();
   });
 });
+
+function summaryOf(container: HTMLElement, id: string) {
+  const summary = rowFor(container, id).querySelector("summary");
+  if (!(summary instanceof HTMLElement)) throw new Error(`no summary for ${id}`);
+  return summary;
+}
+
+/**
+ * **A signature row is a ledger row's height** (docs/design/pixel-craft.md,
+ * class 12). The pixel probe (staff-waivers, 2026-09-25) measured the rows 49px
+ * apart against every other hairline ledger's 52: the summary kept the
+ * ledger's old `min-h-12` under the row's 1px rule. A `LedgerRow` is
+ * `min-h-13` on the element that carries its rule, so the summary under this
+ * row's rule is the 51px left.
+ */
+describe("a row's height", () => {
+  it("stands 52px from rule to rule, a LedgerRow's floor: the 1px rule and a 51px summary", () => {
+    const { container } = renderLog([entry({ id: "a" })]);
+    expect(rowFor(container, "a").closest("li")).toHaveClass("border-t");
+    const summary = summaryOf(container, "a");
+    expect(summary).toHaveClass("min-h-12.75");
+    expect(summary).not.toHaveClass("min-h-12");
+  });
+});

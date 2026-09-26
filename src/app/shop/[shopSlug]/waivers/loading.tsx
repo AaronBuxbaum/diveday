@@ -17,7 +17,7 @@ function LogRows({ count }: { count: number }) {
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: static bars, no identity of their own
           key={index}
-          className={`flex h-12 items-center gap-3 ${ledgerRowBoxClass}`}
+          className={`flex h-13 items-center gap-3 ${ledgerRowBoxClass}`}
         >
           <div className="h-4 w-40 shrink-0 rounded bg-surface-sunken" />
           <div className="h-4 flex-1 rounded bg-surface-sunken" />

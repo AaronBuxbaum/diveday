@@ -362,3 +362,22 @@ describe("a loading skeleton standing in for ledger rows", () => {
     },
   );
 });
+
+/**
+ * **The waivers skeleton's rows stand at the log's 52px** (class 11): 48px
+ * against the loaded rows' 52 (a `LedgerRow`'s floor, which the signature
+ * rows now keep), so the log grew 4px a row as it landed.
+ */
+describe("the waivers skeleton", () => {
+  it("draws each log row at the loaded row's 52px", () => {
+    const { container } = render(<WaiversLoading />);
+    const rows = [...container.querySelectorAll("*")].filter((element) =>
+      element.classList.contains("last:border-b"),
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row).toHaveClass("h-13");
+      expect(row).not.toHaveClass("h-12");
+    }
+  });
+});
