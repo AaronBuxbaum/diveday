@@ -541,6 +541,11 @@ export function bindTitleDash(title: string): string {
  * Ordinary words keep their breaking spaces on purpose: a fact is free text a
  * shop typed, and a fact glued whole could run off a 390px row. A missing or
  * blank fact is dropped, not printed as an empty separator.
+ *
+ * Facts that are our own bounded copy and must stay whole ("6:1 divers per
+ * divemaster", a phone number), or that carry their own ink, are rendered with
+ * `FactLine` (src/components/ui/FactLine.tsx), which breaks only after a
+ * separator and never glues the last fact on.
  */
 export function joinFacts(facts: readonly (string | null | undefined | false)[]): string {
   const kept = facts

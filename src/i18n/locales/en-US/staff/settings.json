@@ -314,6 +314,7 @@
     },
     "passThrough": {
       "heading": "Marine park or conservation fee",
+      "value": "{price} / diver",
       "description": "Optionally add a per-diver fee collected for a named third party.",
       "detail": "It is shown as its own line at checkout and kept separate from shop revenue reports.",
       "nameLabel": "Fee name",

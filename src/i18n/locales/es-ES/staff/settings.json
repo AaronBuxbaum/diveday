@@ -314,6 +314,7 @@
     },
     "passThrough": {
       "heading": "Cuota del parque marino o de conservación",
+      "value": "{price} / buceador",
       "description": "Añade opcionalmente una cuota por buceador para un tercero identificado.",
       "detail": "Se muestra como una línea propia en el checkout y se mantiene fuera de los ingresos del centro.",
       "nameLabel": "Nombre de la cuota",

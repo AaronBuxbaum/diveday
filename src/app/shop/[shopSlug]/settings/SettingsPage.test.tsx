@@ -5,11 +5,12 @@ import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { type Fact, FactLine } from "@/components/ui/FactLine";
 import { Field, FieldActions } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
-import { diveSites, mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
+import { diveSites, mediaDeletionAttempts, processorErasureObligations, shops } from "@/db/schema";
 import { getShopBySlug, setShopDivingOptions } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import { STAFF_MESSAGES } from "@/i18n/staff-messages";
@@ -336,6 +337,63 @@ describe("the data-compliance queues in the Data group", () => {
     });
     expect(ariaLabelsIn(element)).toContain(ERASURE_PANEL);
     expect(hiddenInputNamesIn(element)).not.toContain("obligationId");
+  });
+});
+
+/**
+ * **A row's answer wraps only between its facts** (K-235). Five closed rows
+ * state several facts joined by " · ", and each was one plain string, so any
+ * space in any fact was a place to break: the contact row ended a line on
+ * "+1" with "305 555 0142" under it (SETTINGS-1-07), and Diving options broke
+ * "6:1 divers / per divemaster" (SETTINGS-1-21). Each is a `FactLine` now,
+ * which keeps our own words whole and lets only the shop's free text wrap.
+ */
+describe("the hub's summary values", () => {
+  const PHONE = "+1 305 555 0231";
+
+  async function valueFacts(sectionId: SectionId) {
+    const element = await renderSettings("owner", async (db, session) => {
+      await db
+        .update(shops)
+        .set({
+          contactPhone: PHONE,
+          tagline: "Diving the Keys since 2012",
+          passThroughFee: { name: "Marine park fee", amountCents: 500 },
+        })
+        .where(eq(shops.id, session.user.shopId));
+    });
+    const [row] = findElements<{ sectionId?: string; value?: unknown }>(
+      element,
+      settingsRowsModule.SettingsRow,
+    ).filter((candidate) => candidate.props.sectionId === sectionId);
+    expect(row, sectionId).toBeDefined();
+    const lines = findElements<{ facts: readonly Fact[] }>(row?.props.value, FactLine);
+    expect(lines, `${sectionId}'s value is a FactLine`).toHaveLength(1);
+    return lines[0]?.props.facts ?? [];
+  }
+
+  it("keeps the contact phone whole, so the line breaks only after its dot", async () => {
+    const facts = await valueFacts("contact");
+    expect(facts.filter(Boolean).at(-1)).toBe(PHONE);
+  });
+
+  it("keeps each of our own facts whole on the units and diving-options rows", async () => {
+    for (const sectionId of ["units", "divingOptions"] as const) {
+      const facts = (await valueFacts(sectionId)).filter(Boolean);
+      expect(facts.length, sectionId).toBeGreaterThan(1);
+      for (const fact of facts) expect(typeof fact, `${sectionId}: ${fact}`).toBe("string");
+    }
+    expect(await valueFacts("divingOptions")).toContain("6:1 divers per divemaster");
+  });
+
+  it("lets only the shop's own words wrap: the tagline and the fee's name", async () => {
+    const [tagline, ...profile] = (await valueFacts("profile")).filter(Boolean);
+    expect(tagline).toEqual({ value: "Diving the Keys since 2012", wraps: true });
+    for (const fact of profile) expect(typeof fact).toBe("string");
+
+    const [feeName, price] = await valueFacts("passThrough");
+    expect(feeName).toEqual({ value: "Marine park fee", wraps: true });
+    expect(price).toBe("$5 / diver");
   });
 });
 

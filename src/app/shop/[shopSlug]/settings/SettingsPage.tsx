@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneOptions";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { FactLine } from "@/components/ui/FactLine";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import {
   ChoicePill,
@@ -587,7 +588,12 @@ export default async function SettingsPage({
   const zoneId = shop.timezone || DEFAULT_TIMEZONE;
   const timezoneValue =
     zoneId in CURATED_TIMEZONE_KEYS ? t(CURATED_TIMEZONE_KEYS[zoneId as CuratedTimeZone]) : zoneId;
-  const contactText = [shop.contactEmail, shop.contactPhone].filter(Boolean).join(" · ") || notSet;
+  // The rows below that state several facts do it through `FactLine`, so a
+  // line wraps only between facts: as one `.join(" · ")` string the contact
+  // row broke "+1" / "305 555 0142" and Diving options "6:1 divers" / "per
+  // divemaster" at 390 (K-235). Only the shop's own free text wraps inside
+  // itself (a tagline, a fee's name).
+  const contactText = <FactLine facts={[shop.contactEmail, shop.contactPhone]} empty={notSet} />;
   // An address the shop has not yet confirmed is the one exceptional state on
   // this row: until the link sent there is opened, diver replies are not
   // routed to it (issue #1288). Confirmed is the quiet default and says nothing.
@@ -603,17 +609,19 @@ export default async function SettingsPage({
   // when it had to be darkened so the owner learns here, not on the storefront.
   const brandTheme = shop.brandColor ? deriveBrandTheme(shop.brandColor) : null;
   const brandNightTheme = shop.brandColor ? deriveDarkBrandTheme(shop.brandColor) : null;
-  const profileValue =
-    [
-      shop.tagline,
-      shop.description ? t("settings.main.profile.descriptionSet") : null,
-      shop.logoUrl ? t("settings.main.profile.logoSet") : null,
-      shop.brandBadges.length > 0
-        ? t("settings.main.profile.badgesSet", { count: shop.brandBadges.length })
-        : null,
-    ]
-      .filter(Boolean)
-      .join(" · ") || notSet;
+  const profileValue = (
+    <FactLine
+      facts={[
+        shop.tagline ? { value: shop.tagline, wraps: true } : null,
+        shop.description ? t("settings.main.profile.descriptionSet") : null,
+        shop.logoUrl ? t("settings.main.profile.logoSet") : null,
+        shop.brandBadges.length > 0
+          ? t("settings.main.profile.badgesSet", { count: shop.brandBadges.length })
+          : null,
+      ]}
+      empty={notSet}
+    />
+  );
   const addressValue =
     [shop.addressStreet, shop.addressLocality].filter(Boolean).join(", ") || notSet;
   const reviewLinkValue = (() => {
@@ -641,24 +649,32 @@ export default async function SettingsPage({
     single: shop.flySafeHoursSingle,
     repetitive: shop.flySafeHoursRepetitive,
   });
-  const unitsValue = [
-    t(shop.depthUnit === "feet" ? "settings.main.units.feet" : "settings.main.units.meters"),
-    t(
-      shop.temperatureUnit === "fahrenheit"
-        ? "settings.main.units.fahrenheit"
-        : "settings.main.units.celsius",
-    ),
-    shopCurrency.toUpperCase(),
-  ].join(" · ");
-  const divingOptionsValue = [
-    shop.hasBoatDiving ? t("boats.boatEnabled") : t("boats.boatDisabled"),
-    shop.hasShoreDiving ? t("boats.shoreEnabled") : t("boats.shoreDisabled"),
-    shop.hasPoolDiving ? t("boats.poolEnabled") : t("boats.poolDisabled"),
-    // The row's other setting, in the notation the rest of the product shows it
-    // in. A hub row states what it holds, and a target nobody can see without
-    // opening the row is a target nobody remembers they set.
-    t("boats.diversPerDivemasterValue", { ratio: shop.diversPerDivemaster }),
-  ].join(" · ");
+  const unitsValue = (
+    <FactLine
+      facts={[
+        t(shop.depthUnit === "feet" ? "settings.main.units.feet" : "settings.main.units.meters"),
+        t(
+          shop.temperatureUnit === "fahrenheit"
+            ? "settings.main.units.fahrenheit"
+            : "settings.main.units.celsius",
+        ),
+        shopCurrency.toUpperCase(),
+      ]}
+    />
+  );
+  const divingOptionsValue = (
+    <FactLine
+      facts={[
+        shop.hasBoatDiving ? t("boats.boatEnabled") : t("boats.boatDisabled"),
+        shop.hasShoreDiving ? t("boats.shoreEnabled") : t("boats.shoreDisabled"),
+        shop.hasPoolDiving ? t("boats.poolEnabled") : t("boats.poolDisabled"),
+        // The row's other setting, in the notation the rest of the product shows it
+        // in. A hub row states what it holds, and a target nobody can see without
+        // opening the row is a target nobody remembers they set.
+        t("boats.diversPerDivemasterValue", { ratio: shop.diversPerDivemaster }),
+      ]}
+    />
+  );
   // A count, not the numbers themselves: this row is read on the hub and the
   // numbers belong on the boat, not on a settings list somebody is scrolling.
   const emergencyValue = hasEmergencyReference(shop.emergencyReference)
@@ -675,9 +691,18 @@ export default async function SettingsPage({
     shop.taxEnabled ? "settings.main.tax.enabledValue" : "settings.main.tax.disabledValue",
   );
   const passThroughFee = parsePassThroughFee(shop.passThroughFee);
-  const passThroughValue = passThroughFee
-    ? `${passThroughFee.name} · ${formatMoneyScanned(passThroughFee.amountCents, shopCurrency, locale)} / diver`
-    : notSet;
+  const passThroughValue = passThroughFee ? (
+    <FactLine
+      facts={[
+        { value: passThroughFee.name, wraps: true },
+        t("settings.main.passThrough.value", {
+          price: formatMoneyScanned(passThroughFee.amountCents, shopCurrency, locale),
+        }),
+      ]}
+    />
+  ) : (
+    notSet
+  );
 
   return (
     <main className={settingsPaneClass()}>
