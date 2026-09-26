@@ -306,6 +306,39 @@ describe("LedgerGroup", () => {
     expect(screen.getByText("3 departures")).toHaveClass("max-sm:basis-full", "max-sm:text-end");
   });
 
+  /**
+   * **A horizon and a door are one door** (pixel-craft class 12). Tomorrow's
+   * summary drew the 12px disclosure caret, 4×8px of ink, and the door row
+   * under it the 16px chevron, 6×10px, ending 3px further in: two arrows at
+   * two sizes on two right edges, under a comment saying they read as the
+   * same door. The summary draws the door's glyph, turned when open.
+   */
+  it("draws a horizon row's arrow as the door's chevron, turned when open", () => {
+    const { container } = render(
+      <>
+        <LedgerGroup label="Tomorrow" folded summaryVariant="row">
+          <p>a row</p>
+        </LedgerGroup>
+        <LedgerRow as="div" href="/shop/blue-mantis/trips/1" linkLabel="Open the trip">
+          Reef Dive
+        </LedgerRow>
+      </>,
+    );
+    const horizon = container.querySelector("summary svg");
+    const door = container.querySelector("div > svg");
+    expect(horizon).not.toBeNull();
+    expect(door).not.toBeNull();
+    for (const attribute of ["viewBox", "stroke-width"]) {
+      expect(horizon?.getAttribute(attribute), attribute).toBe(door?.getAttribute(attribute));
+    }
+    expect(horizon?.innerHTML).toBe(door?.innerHTML);
+    for (const token of ["h-4", "w-auto", "shrink-0", "text-muted"]) {
+      expect(horizon, token).toHaveClass(token);
+      expect(door, token).toHaveClass(token);
+    }
+    expect(horizon).toHaveClass("group-open/fold:rotate-90");
+  });
+
   it("rings a horizon row's summary inside itself, as a ledger row's door is ringed", () => {
     // The summary is a ledger row's box, rule to rule. The outset ring crossed
     // the hairlines, and inside an embed frame, whose column is 12px from the
@@ -578,8 +611,27 @@ describe("LedgerRow", () => {
     const chevron = children[children.indexOf(link) - 1];
     expect(chevron?.tagName).toBe("svg");
     expect(chevron).toHaveAttribute("aria-hidden", "true");
-    expect(chevron).toHaveClass("size-4", "shrink-0", "text-muted");
+    expect(chevron).toHaveClass("h-4", "w-auto", "shrink-0", "text-muted");
     expect(screen.getByText("$148.00").parentElement?.nextElementSibling).toBe(chevron);
+  });
+
+  /**
+   * **The chevron ends where the row's words end** (pixel-craft class 2). The
+   * 24-unit `chevron-right` drawn in a 16px square left about 5px of empty box
+   * right of its ink, so every door's arrow stopped 5px inside the edge the
+   * header button, the hairline's column and "0 of 5 done" all end on. The
+   * door draws the same stroke from a box cropped to its ink across (the
+   * height stays 24 units, so the glyph is the size it was).
+   */
+  it("draws the door's chevron from a box cropped to its ink across", () => {
+    const { container } = render(
+      <LedgerRow as="div" href="/shop/blue-mantis/courses/1" linkLabel="Open Discover Scuba">
+        Discover Scuba
+      </LedgerRow>,
+    );
+    const chevron = container.querySelector("svg");
+    expect(chevron).toHaveAttribute("viewBox", "7.75 0 8.5 24");
+    expect(chevron).not.toHaveClass("size-4");
   });
 
   it("draws no chevron on a row that is not a door", () => {

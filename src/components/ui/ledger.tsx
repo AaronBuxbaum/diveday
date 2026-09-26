@@ -158,6 +158,26 @@ const HORIZON_SUMMARY_CLASS = `${FILL_ROOM} flex min-h-14 cursor-pointer list-no
 const HORIZON_LABEL_CLASS = "min-w-0 flex-1 text-base font-semibold tracking-tight";
 const HORIZON_META_CLASS = "shrink-0 text-sm font-medium text-muted tabular-nums";
 
+/**
+ * **The door's glyph**, at the end of a ledger row that opens and of a
+ * horizon row that folds: one glyph, one box, one right edge.
+ *
+ * The chevron's box is cropped to its ink across (`door-chevron`), so the
+ * arrow ends on the edge the rest of its row ends on rather than 5px inside it
+ * (pixel-craft class 2). A horizon's summary draws the same glyph turned a
+ * quarter when open — it drew the 12px disclosure caret, 4×8px of ink beside
+ * the door's 6×10 and 3px further out, two arrows under a comment saying they
+ * read as the same door (class 12).
+ */
+function DoorChevron({ className = "" }: { className?: string }) {
+  return (
+    <DiveDayIcon
+      name="door-chevron"
+      className={`h-4 w-auto shrink-0 text-muted ${className}`.trim()}
+    />
+  );
+}
+
 /** Heading levels a group label may be. `p` for chrome that is not page structure (a menu section). */
 type GroupLabelElement = "h2" | "h3" | "h4" | "p";
 
@@ -248,13 +268,14 @@ export function LedgerGroup({
           below so their label, count and door match the sibling week row. */}
       {summaryVariant === "row" ? (
         <summary className={HORIZON_SUMMARY_CLASS}>
-          {/* The caret stays at the edge of a horizon row, beside its counts,
-              so Tomorrow and This week read as the same door. */}
+          {/* The door's own glyph at the edge of a horizon row, beside its
+              counts, so Tomorrow and This week read as the same door — turned
+              a quarter when the fold is open. */}
           <SummaryLabel id={id} className={HORIZON_LABEL_CLASS}>
             {label}
           </SummaryLabel>
           {meta != null ? <span className={HORIZON_META_CLASS}>{meta}</span> : null}
-          <DisclosureCaret className="text-muted group-open/fold:rotate-90" />
+          <DoorChevron className="transition-transform group-open/fold:rotate-90" />
         </summary>
       ) : (
         <summary
@@ -393,7 +414,7 @@ const ROW_PAD = { md: "py-2", lg: "py-3", none: "" } as const;
  * without any row having to know it is last.
  *
  * **A door draws its own chevron.** A row with an `href` ends in the shared
- * `chevron-right` glyph, after whatever `trailing` carries, so the affordance
+ * door glyph (`DoorChevron`), after whatever `trailing` carries, so the affordance
  * that says "this row opens" is one decision rather than one per surface.
  * Before this it was drawn by hand on nine surfaces and left off on five —
  * the orders ledger, the promo ledger, the reports ledger, the course roster
@@ -560,15 +581,14 @@ export function LedgerRow({
         // instead of marking the row's own right edge. With a `trailing` it
         // is that element that carries the push (below) and the chevron
         // follows it, as it always has.
-        <DiveDayIcon
-          name="chevron-right"
-          className={`size-4 shrink-0 text-muted ${
+        <DoorChevron
+          className={
             stacked
               ? kind && trailing == null
                 ? "max-sm:order-2 max-sm:ms-auto"
                 : "max-sm:order-2"
               : ""
-          }`.trim()}
+          }
         />
       ) : null}
       {href ? (

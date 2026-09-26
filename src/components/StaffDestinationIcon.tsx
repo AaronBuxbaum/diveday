@@ -20,6 +20,7 @@ export type DiveDaySharedIconName =
   | "arrow-down"
   | "chevron-left"
   | "chevron-right"
+  | "door-chevron"
   | "more"
   | "warning"
   | "boat"
@@ -96,6 +97,8 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
   ),
   "chevron-left": <path d="m15 6-6 6 6 6" />,
   "chevron-right": <path d="m9 6 6 6-6 6" />,
+  // `chevron-right`'s stroke, drawn from `ICON_VIEWBOX`'s ink-cropped box.
+  "door-chevron": <path d="m9 6 6 6-6 6" />,
   more: (
     <>
       <circle cx="6" cy="12" r="1" fill="currentColor" stroke="none" />
@@ -342,6 +345,24 @@ const ICON_PATHS: Partial<Record<StaffDestinationId, ReactNode>> = {
 };
 
 /**
+ * **A mark whose box is cropped to its ink across** — the one exception to the
+ * 24-unit square, spelled here so it cannot drift into a component.
+ *
+ * `door-chevron` is `chevron-right` for the end of a ledger row, drawn at a
+ * height and an automatic width (`h-4 w-auto`). The square left about 5px of
+ * empty box right of the stroke at 16px, so every door's arrow stopped 5px
+ * inside the edge the rest of its row ends on (pixel-craft class 2). The box
+ * runs from the stroke's left to its right edge (x 8.1–15.9, round caps and
+ * join at width 1.8) with 0.35 units either side, and keeps the full 24-unit
+ * height, so the glyph is drawn at exactly the size it was. A new name rather
+ * than a cropped `chevron-right`, because that one's users size it square,
+ * where a narrow viewBox would be scaled up to fill the square.
+ */
+const ICON_VIEWBOX: Partial<Record<DiveDaySharedIconName, string>> = {
+  "door-chevron": "7.75 0 8.5 24",
+};
+
+/**
  * The rest of DiveDay's small marks belong to the same 24px drawn family as
  * staff destinations. Keeping the SVG root here means a caret, empty-state
  * bubble, info hint, language globe, and waiver mark cannot drift into their
@@ -372,7 +393,7 @@ export function DiveDayIcon({
   return (
     <svg
       aria-hidden="true"
-      viewBox="0 0 24 24"
+      viewBox={ICON_VIEWBOX[name as DiveDaySharedIconName] ?? "0 0 24 24"}
       fill={isFilled ? "none" : "none"}
       stroke={isFilled ? "none" : "currentColor"}
       strokeWidth={isMark ? 2.4 : isCaret ? 2.5 : isEmpty ? 1.5 : strokeWidth}
