@@ -7,9 +7,8 @@ import { EditorRail } from "@/components/editor/EditorRail";
 import { EditorSection, type EditorSectionRef } from "@/components/editor/EditorSection";
 import { FlashParams } from "@/components/FlashParams";
 import { ImageFileInput } from "@/components/ImageFileInput";
+import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
@@ -449,22 +448,15 @@ export default async function EditCoursePage({
                       hint={t("courses.edit.heroPhotoHint")}
                       htmlFor="course-hero-photo"
                     >
+                      {/* One cell of the gallery's grid, so the hero is drawn
+                          the way every other stored photo here is taken off. */}
                       {course.heroImageUrl ? (
-                        <div className="mb-2 flex items-center gap-3">
-                          <StoredPhoto
-                            src={course.heroImageUrl}
-                            alt=""
-                            className="h-16 w-24 shrink-0 rounded-lg border border-border"
-                            sizes="96px"
-                          />
-                          <ChoiceRow
-                            type="checkbox"
+                        <div className={`mb-3 ${removablePhotoGridClass}`}>
+                          <RemovablePhoto
+                            url={course.heroImageUrl}
                             name="removeHero"
-                            value="true"
-                            className="text-sm"
-                          >
-                            {t("courses.edit.removeCurrentPhoto")}
-                          </ChoiceRow>
+                            label={t("courses.edit.removeCurrentPhoto")}
+                          />
                         </div>
                       ) : null}
                       <ImageFileInput
@@ -504,35 +496,15 @@ export default async function EditCoursePage({
                       htmlFor="course-gallery-photos"
                     >
                       {course.galleryPhotos.length > 0 ? (
-                        <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        <div className={`mb-3 ${removablePhotoGridClass}`}>
                           {course.galleryPhotos.map(({ url, alt }, index) => (
                             <div key={url} className="flex flex-col gap-1.5">
-                              {/* The whole cell is one label wrapping its own checkbox, so a
-                            tap on the photo toggles *that* photo — not the first one. */}
-                              <label className="relative block cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  name="removeGalleryUrls"
-                                  value={url}
-                                  className="peer sr-only"
-                                />
-                                <StoredPhoto
-                                  src={url}
-                                  alt=""
-                                  className="h-24 w-full rounded-lg border-2 border-border transition peer-checked:border-danger peer-checked:opacity-50"
-                                  sizes="(min-width: 640px) 25vw, 50vw"
-                                />
-                                <span
-                                  aria-hidden="true"
-                                  // diveday:allow-tinted-ink: the tick is `text-transparent` until the box is checked, and `text-danger` on `danger/15` measures 5.01:1 over `--surface` — this sits on a card (issue #874)
-                                  className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-full border border-border-strong bg-surface/90 text-sm text-transparent shadow-sm transition peer-checked:border-danger peer-checked:bg-danger/15 peer-checked:text-danger"
-                                >
-                                  <DiveDayIcon name="check" className="size-4" strokeWidth={2.2} />
-                                </span>
-                                <span className="mt-1 block text-xs font-medium text-muted transition peer-checked:text-danger">
-                                  {t("courses.edit.removeLabel")}
-                                </span>
-                              </label>
+                              <RemovablePhoto
+                                url={url}
+                                name="removeGalleryUrls"
+                                value={url}
+                                label={t("courses.edit.removeLabel")}
+                              />
                               <input type="hidden" name="galleryAltUrls" value={url} />
                               <Field
                                 label={t("courses.edit.photoCaptionLabel")}

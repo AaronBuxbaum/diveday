@@ -246,3 +246,30 @@ describe("SiteFields — answering the tide station prompt (issue #1731)", () =>
     expect(confirmedBox()).not.toBeRequired();
   });
 });
+
+/**
+ * The site's stored photos are taken off the way the course editor's are —
+ * one `RemovablePhoto`, with the tick this form's hand-drawn copy had left
+ * behind and a ring on the photo when its hidden box has focus.
+ */
+describe("SiteFields — a stored photo", () => {
+  it("draws every stored photo as the shared removable photo", () => {
+    renderFields(null, "meters", "en-US", {
+      ...STORED,
+      satelliteImageUrl: "/dive-sites/molasses-map.jpg",
+      routeImageUrl: "/dive-sites/molasses-route.jpg",
+      imageUrls: ["/dive-sites/molasses-1.jpg", "/dive-sites/molasses-2.jpg"],
+    });
+
+    const boxes = [
+      ...document.querySelectorAll<HTMLInputElement>(
+        'input[name="removeSatelliteImage"], input[name="removeRouteImage"], input[name="removeSiteImageUrls"]',
+      ),
+    ];
+    expect(boxes).toHaveLength(4);
+    for (const box of boxes) {
+      expect(box.nextElementSibling).toHaveClass("peer-focus-visible:focus-ring", "border-2");
+      expect(box.nextElementSibling?.nextElementSibling).toHaveAttribute("aria-hidden", "true");
+    }
+  });
+});

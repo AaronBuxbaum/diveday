@@ -1,5 +1,5 @@
 import { ImageFileInput } from "@/components/ImageFileInput";
-import { StoredPhoto } from "@/components/StoredPhoto";
+import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
@@ -219,17 +219,15 @@ export function DetailsSection({
             description={t("trips.details.arrivalPhotoDescription")}
             htmlFor="arrival-photo"
           >
+            {/* The shared removable photo; `on` is what the save reads. */}
             {trip.arrivalPhotoUrl ? (
-              <div className="mb-3 flex flex-wrap items-start gap-3">
-                <StoredPhoto
-                  src={trip.arrivalPhotoUrl}
-                  alt=""
-                  className="h-20 w-32 rounded-lg border border-border"
-                  sizes="128px"
+              <div className={`mb-3 ${removablePhotoGridClass}`}>
+                <RemovablePhoto
+                  url={trip.arrivalPhotoUrl}
+                  name="removeArrivalPhoto"
+                  value="on"
+                  label={t("trips.details.arrivalPhotoRemove")}
                 />
-                <ChoiceRow type="checkbox" name="removeArrivalPhoto" className="text-sm">
-                  {t("trips.details.arrivalPhotoRemove")}
-                </ChoiceRow>
               </div>
             ) : null}
             <ImageFileInput
