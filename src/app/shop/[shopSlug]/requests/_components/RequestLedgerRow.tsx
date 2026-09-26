@@ -21,6 +21,21 @@ const EXPERIENCE_KEYS: Record<CourseInquiryExperience, StaffMessageKey> = {
 };
 
 /**
+ * **A 44px target that leaves its line alone** (principles.md §2; pixel-craft
+ * class 7, K-458). The row's two own links sit in lines of text — the name in
+ * its 24px line, the address in a 20px one — and a `min-h-11` box would push
+ * every line under them 20px or more down. So each keeps its line and
+ * stretches an `::after` to 44px, which the rubric counts as the target as far
+ * as nothing clips it (docs/design/pixel-craft.md, "Targets"); nothing in the
+ * row clips. The name's flex box is 24px, so 10px a side; the address is a
+ * 20px inline block, so 12. A block rather than an inline run, because an
+ * inline link split over two lines would stretch its overlay across both.
+ */
+const NAME_TARGET = "relative after:absolute after:inset-x-0 after:-inset-y-2.5";
+const ADDRESS_TARGET =
+  "relative inline-block max-w-full wrap-anywhere after:absolute after:inset-x-0 after:-inset-y-3";
+
+/**
  * **One request, as a ledger row** (ADR 20260827-people-not-lists, decision 5;
  * the language is 20260827-clearwater-surface-language).
  *
@@ -105,7 +120,7 @@ export function RequestLedgerRow({
           {request.personId ? (
             <Link
               href={shopPath(shopSlug, "divers", request.personId)}
-              className="inline-flex max-w-full items-center gap-1 text-primary hover:underline"
+              className={`${NAME_TARGET} inline-flex max-w-full items-center gap-1 text-primary hover:underline`}
             >
               <span className="truncate">{name}</span>
               <DiveDayIcon name="chevron-right" className="size-4 shrink-0" />
@@ -128,7 +143,10 @@ export function RequestLedgerRow({
                 // found by the scan added in issue #1056). The booking link in
                 // the row's trailing slot stands alone, so the rule does not
                 // reach it and it keeps the hover underline.
-                <a href={`mailto:${request.email}`} className="text-primary underline">
+                <a
+                  href={`mailto:${request.email}`}
+                  className={`${ADDRESS_TARGET} text-primary underline`}
+                >
                   {request.email}
                 </a>
               ) : null}

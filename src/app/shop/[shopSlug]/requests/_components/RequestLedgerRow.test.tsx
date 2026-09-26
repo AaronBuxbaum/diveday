@@ -137,6 +137,33 @@ describe("the door", () => {
     expect(screen.getByText("Tomás Ferreira")).toBeTruthy();
   });
 
+  /**
+   * **Both of the row's own links are thumb-sized, and neither grows its
+   * line** (principles.md §2; pixel-craft class 7, K-458). The name was a
+   * 121×24 target and each address a 17px one (188×17, 182×17, 177×17 at 390).
+   * A `min-h-11` box would push every line under it 20px down, so each link
+   * keeps its line and stretches its `::after` to 44px — the name's 24px flex
+   * box by 10px a side, the address's 20px inline block by 12.
+   */
+  it("gives the diver link a 44px target that overhangs its 24px line", () => {
+    row({ personId: "aaaaaaaa-1111-4222-8333-444444444444" });
+    expect(screen.getByRole("link", { name: "Tomás Ferreira" })).toHaveClass(
+      "relative",
+      "after:absolute",
+      "after:inset-x-0",
+      "after:-inset-y-2.5",
+    );
+  });
+
+  it("gives the address a 44px target that overhangs its 20px line, as one box", () => {
+    row({});
+    const email = screen.getByRole("link", { name: "tomas.ferreira@example.com" });
+    // One box, not an inline run: an inline link split over two lines would
+    // stretch its overlay across the gap between them.
+    expect(email).toHaveClass("relative", "inline-block", "max-w-full", "wrap-anywhere");
+    expect(email).toHaveClass("after:absolute", "after:inset-x-0", "after:-inset-y-3");
+  });
+
   it("carries the request into the booking flow, whether or not it is linked", () => {
     row({});
     const book = screen.getByRole("link", { name: "Create a booking" });
