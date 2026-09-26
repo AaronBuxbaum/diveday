@@ -2863,6 +2863,15 @@ describe("OfflineManifestView — one column, one text edge", () => {
     );
     const row = screen.getByText(/Sal Ortiz · Not back aboard/).closest("li");
     expect(row).toHaveClass("border-danger", "font-bold", "text-danger");
+    // The ring is the missing person's, as on every roll-call row. The box
+    // keeps its danger border and fill but no inset ring of its own: the
+    // flush roster painted over it, so it ringed the heading and stopped
+    // where the list began.
+    expect(row).toHaveClass("ring-1", "ring-danger/40");
+    const box = screen.getByRole("region", { name: "Crew aboard" });
+    expect(box).toHaveClass("border-danger", "bg-danger/10");
+    expect(box).not.toHaveClass("ring-1");
+    expect(box).not.toHaveClass("ring-inset");
   });
 
   // K-198: on the sunken awaiting row, a sunken chip is invisible, so the
@@ -2875,11 +2884,13 @@ describe("OfflineManifestView — one column, one text edge", () => {
     const number = within(row).getByText("01");
     expect(number).toHaveClass("bg-surface");
     expect(number).not.toHaveClass("bg-surface-sunken");
-    expect(within(row).getByText("Awaiting roll call")).toHaveClass(
-      "rounded-full",
-      "border",
-      "border-border",
-    );
+    const stateWord = within(row).getByText("Awaiting roll call");
+    expect(stateWord).toHaveClass("rounded-full", "border", "border-border", "bg-surface");
+    // The row's state in words keeps the ink it had before its box was
+    // painted: the pill's edge was the defect, never the word's weight.
+    expect(stateWord).toHaveClass("font-semibold");
+    expect(stateWord).not.toHaveClass("text-muted");
+    expect(stateWord).not.toHaveClass("bg-surface-sunken");
     expect(within(row).getByText(/Buddy team:/)).toHaveClass(
       "rounded-full",
       "border",
@@ -2888,10 +2899,46 @@ describe("OfflineManifestView — one column, one text edge", () => {
   });
 
   // K-210: a 32px name line top-aligned beside 56px boat buttons rode 12px high.
-  it("gives the name line the boat buttons' height from sm", async () => {
-    await renderTrip(richEnvelope("trip-1"));
-    const nameLine = within(priyaRow()).getByRole("heading", { name: "Priya Shah" }).parentElement;
-    expect(nameLine).toHaveClass("sm:min-h-14", "items-center");
+  // A min height on the whole name line only centred a line that fit on one
+  // row, and on most rows the state word and buddy team wrap under the name
+  // (32 + 8 + 30 = 70px, past 56), so the *first* flex line takes the
+  // buttons' height, through the number chip's wrapper.
+  it("gives the name line's first row the boat buttons' height from sm, wrapped or not", async () => {
+    await renderTrip(dressed(richEnvelope("trip-1", { withCarriedNotBoarded: true })));
+    const list = document.getElementById("offline-roll-call");
+    if (!list) throw new Error("diver list missing");
+    const rows = [...list.children] as HTMLElement[];
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      const nameLine = within(row).getByRole("heading", { level: 3 }).parentElement;
+      if (!nameLine) throw new Error("name line missing");
+      expect(nameLine).toHaveClass("flex", "flex-wrap", "items-center");
+      expect(nameLine).not.toHaveClass("sm:min-h-14");
+      // The row that wraps: its buddy team shares the name's flex box.
+      expect(within(nameLine).getByText(/Buddy team:/)).toBeInTheDocument();
+      const wrapper = nameLine.firstElementChild;
+      expect(wrapper).toHaveClass("flex", "shrink-0", "items-center", "sm:h-14");
+      expect(wrapper?.textContent).toMatch(/^\d{2}$/);
+      expect(wrapper?.firstElementChild).toHaveClass("size-8", "bg-surface");
+    }
+  });
+
+  // K-210, the row with no buttons: an expired copy holds one `text-sm`
+  // sentence where the buttons were, so a 56px first line would ride the name
+  // 18px below it. There the line stays the chip's 32px, and the sentence's
+  // first line is centred on it.
+  it("keeps an expired row's name line level with its one sentence", async () => {
+    await renderTrip(
+      dressed(richEnvelope("trip-1", {}, { expiresAt: new Date(FROZEN_MS - 1000).toISOString() })),
+    );
+    const row = priyaRow();
+    const wrapper = within(row).getByText("01").parentElement;
+    expect(wrapper).toHaveClass("flex", "shrink-0", "items-center");
+    expect(wrapper).not.toHaveClass("sm:h-14");
+    expect(within(row).getByText("Expired — record on the live manifest")).toHaveClass(
+      "text-sm",
+      "sm:py-1.5",
+    );
   });
 
   // K-209: the blocked counter row's `px-4` sat 8px inside the `boat` rows' `px-6`.

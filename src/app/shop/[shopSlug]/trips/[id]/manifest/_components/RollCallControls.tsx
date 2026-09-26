@@ -107,9 +107,10 @@ export {
 } from "@/lib/manifests";
 /**
  * The fills themselves live in the shared row-tone vocabulary
- * (`src/components/row-tones.ts`), beside the offline manifest's crew map —
- * one module so the two surfaces a crew reads minutes apart, often on two
- * devices at once, can never drift into two meanings for one colour.
+ * (`src/components/row-tones.ts`), which the offline manifest's diver and crew
+ * rows read too — one map so the two surfaces a crew reads minutes apart,
+ * often on two devices at once, can never drift into two meanings for one
+ * colour.
  * Re-exported here because this file is where every roll-call consumer
  * already looks for them.
  */

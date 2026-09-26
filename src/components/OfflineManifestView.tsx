@@ -18,6 +18,7 @@ import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import { MissingDiversGrid } from "@/components/MissingDiversGrid";
 import { freshnessInkClass, OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
+import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -117,20 +118,6 @@ const OFFLINE_BOAT_TARGET_CLASS = buttonClass({
   busy: true,
   className: "w-full sm:w-auto",
 });
-
-/**
- * **The toned notice this page draws, in one anatomy**, with its tone added at
- * each call site: the expired and freshness banners and the discarded-records
- * alert.
- *
- * They were three copies of `rounded-lg … p-3`, which started their text 8px
- * left of the `p-4 sm:p-5` panels below them in the same column (4px on a
- * phone), so the page had two text edges a few pixels apart
- * (docs/design/pixel-craft.md, class 3). The inline padding is the panels'
- * own. Not `ShopNotice`: that is the desk's 14px notice with a mark, and these
- * are read at 16px on a wet deck.
- */
-const OFFLINE_NOTICE_CLASS = "rounded-inset border px-4 py-3 text-base leading-6 sm:px-5";
 
 /**
  * A buddy team's names as one list, **each name held whole**: a no-break space
@@ -1821,12 +1808,19 @@ export function OfflineManifestView() {
             below them. `overflow-hidden` rounds the last row's fill into the
             box's corner; every control in a row sits a whole padding clear of
             that edge, so no focus ring reaches it. A `section` named by its
-            heading, as the counter's is. */}
+            heading, as the counter's is.
+
+            **No inset ring on the missing box.** An inset ring paints under
+            the box's children, and the flush roster covers it, so it ringed
+            the heading and stopped where the list began. The ring belongs to
+            the missing person's own row (`ROLL_CALL_ROW_TONE.notBackAboard`),
+            as on every roll-call row; the box keeps its danger border, fill
+            and heading. */}
           <section
             aria-labelledby="offline-crew-heading"
             className={`mt-3 overflow-hidden rounded-inset border ${
               crewMissing
-                ? "border-danger bg-danger/10 ring-1 ring-inset ring-danger/40"
+                ? "border-danger bg-danger/10"
                 : completeness.crewAccountedFor
                   ? "border-success/40 bg-success/10"
                   : "border-border-strong bg-surface-sunken"
@@ -2208,15 +2202,24 @@ export function OfflineManifestView() {
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      {/* `sm:min-h-14`, the boat buttons' height beside it, so
-                        a one-line name shares their centre rather than riding
-                        12px above it; a wrapped line still grows past it. */}
-                      <div className="flex flex-wrap items-center gap-2 sm:min-h-14">
-                        {/* `bg-surface`, never the awaiting row's own sunken
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* **The first line takes the boat buttons' height,
+                          through the chip's wrapper** (`sm:h-14`), so the
+                          chip, the name and the readiness badge share the
+                          56px buttons' centre rather than riding 12px above
+                          it. On the wrapper and not the whole box: on most
+                          rows the state word and buddy team wrap to a second
+                          line (32 + 8 + 30 = 70px, past 56), and a min height
+                          on the box did nothing there. Not on an expired copy,
+                          whose right column is one sentence, not buttons.
+
+                          `bg-surface`, never the awaiting row's own sunken
                           fill: a chip painted the row's colour has no edge, and
                           its number started 7px right of the row's. */}
-                        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
-                          {String(index + 1).padStart(2, "0")}
+                        <span className={`flex shrink-0 items-center${expired ? "" : " sm:h-14"}`}>
+                          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
                         </span>
                         <h3 className={SECTION_TITLE_CLASS}>{diver.fullName}</h3>
                         {/* The shared pill, and the shared tone resolver. The
@@ -2267,16 +2270,22 @@ export function OfflineManifestView() {
                           one word list, so a diver who has not come back from
                           dive one cannot read "Not boarded" here and "Not back
                           aboard" on the captain's screen. */}
-                        {/* The neutral word is the shared `Badge`, whose border
-                          survives the sunken awaiting row: the hand-rolled pill
-                          was that row's own fill, so its padding was invisible
-                          and its word started at nobody's edge. */}
+                        {/* The neutral word wears a border and the surface
+                          fill, so its box is painted on the sunken awaiting
+                          row: the pill used to be that row's own fill, so its
+                          padding was invisible and its word started at
+                          nobody's edge. It keeps its foreground semibold ink,
+                          not the neutral `Badge`'s muted medium: this is the
+                          row's state in words, read across a wet deck, and
+                          the defect was the pill's edge, never the word. */}
                         {missing ? (
                           <span className="rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger">
                             {stateWord}
                           </span>
                         ) : (
-                          <Badge tone="neutral">{stateWord}</Badge>
+                          <span className="rounded-full border border-border bg-surface px-3 py-1 text-sm font-semibold">
+                            {stateWord}
+                          </span>
                         )}
                         {/* The saved team, always quiet here: this copy shows
                           who you are with and never judges whether the team is
@@ -2374,7 +2383,10 @@ export function OfflineManifestView() {
                     </div>
                     <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                       {expired ? (
-                        <p className="text-sm font-semibold text-danger">
+                        // `sm:py-1.5` centres the sentence's first 20px line on
+                        // the name line's 32px beside it, which keeps the
+                        // chip's height on an expired copy (above).
+                        <p className="text-sm font-semibold text-danger sm:py-1.5">
                           {t("shared.offlineManifest.single.record.expiredRecordOnLive")}
                         </p>
                       ) : (
