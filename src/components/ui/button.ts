@@ -129,6 +129,15 @@ const DISABLED = {
  * "Checked in" — moved its label 1px sideways. The fill still paints under a
  * transparent border (`background-clip` is `border-box`), edge to edge.
  *
+ * **The quiet variants carry it too, transparent at rest and under the hover
+ * wash.** The gear return's "Service concern" is `ghost` until it is opened
+ * and `secondary` once it is, and it moved its label 1px and grew its box 2px
+ * as the note opened; the team card's Disable (`danger-ghost`) and Enable
+ * (`secondary`) are one control either side of a submit. `link`, `sky` and
+ * `bare` swap with nothing bordered and are left as they are. A flush quiet
+ * button takes the pixel back from its padding (`FLUSH_HOVER_FILL`), so its
+ * label still sits on the column it is flushed to.
+ *
  * **Every hover is `not-disabled:not-has-[input:disabled]:hover:`.** Tailwind
  * v4's `hover:` still matches a disabled button, and `DISABLED` above only
  * dims it, so "Every day" inside `RepeatFields`'s `<fieldset disabled>` took
@@ -179,7 +188,7 @@ const variants = {
   outline:
     "border border-border-strong bg-surface text-foreground not-disabled:not-has-[input:disabled]:hover:bg-foreground/8",
   ghost:
-    "text-muted not-disabled:not-has-[input:disabled]:hover:bg-foreground/8 not-disabled:not-has-[input:disabled]:hover:text-foreground",
+    "border border-transparent text-muted not-disabled:not-has-[input:disabled]:hover:bg-foreground/8 not-disabled:not-has-[input:disabled]:hover:text-foreground",
   danger:
     "border border-danger/40 text-danger not-disabled:not-has-[input:disabled]:hover:bg-danger-tint",
   /**
@@ -187,7 +196,8 @@ const variants = {
    * list's "Remove" next to ghost-weight items. The bordered `danger` shouts
    * inside a small menu; this keeps the warning hue without the box.
    */
-  "danger-ghost": "text-danger not-disabled:not-has-[input:disabled]:hover:bg-danger-tint",
+  "danger-ghost":
+    "border border-transparent text-danger not-disabled:not-has-[input:disabled]:hover:bg-danger-tint",
   "danger-solid":
     "border border-transparent bg-danger text-primary-foreground not-disabled:not-has-[input:disabled]:hover:bg-danger/90",
   /** Reads as inline text, but still claims a full touch target. */
@@ -452,9 +462,12 @@ const FLUSH = "px-0";
  * measured `danger-ghost`'s hover tint at 0px either side of "Delete Morgan
  * Vale" on every diver record, and of a gear unit's "Delete" (2026-09-25).
  *
- * So a flush ghost keeps 8px of padding and hands the same 8px back as a
+ * So a flush ghost keeps 8px of room and hands the same 8px back as a
  * negative margin: the label sits exactly where a padless one would — which
  * is all `flush` promises — and the tint reaches 8px past it on each side.
+ * The room is the quiet box's transparent 1px border (see `variants`) and 7px
+ * of padding; 8px of padding inside that border stood the label 1px off its
+ * column.
  * 8px, not the size's own padding, so the tint and the 5px focus ring around
  * it stay inside a phone's 16px gutter. It is the room `ledger.tsx` gives a
  * row's fill, and for the same reason.
@@ -474,7 +487,7 @@ const FLUSH = "px-0";
  * (`focus-visible:focus-ring-inset`) or gains the padding (the FAQ editor's
  * cards, `p-4`).
  */
-const FLUSH_HOVER_FILL = "-mx-2 px-2";
+const FLUSH_HOVER_FILL = "-mx-2 px-1.75";
 
 /** The variants that paint nothing of their own around their words, hover included. */
 const PAINTS_NOTHING: ReadonlySet<ButtonVariant> = new Set(["link", "bare"]);

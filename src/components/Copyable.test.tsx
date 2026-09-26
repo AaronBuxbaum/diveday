@@ -88,7 +88,7 @@ describe("Copyable's panel", () => {
     expect(screen.getByText(LINK)).toHaveClass("mt-2");
     // `flush` on a ghost: 8px of room for the fill, handed back as a margin,
     // so the label ends on the panel's inset as the caption starts on it.
-    expect(trigger).toHaveClass("-mx-2", "px-2");
+    expect(rendersFlush(trigger, "ghost", "sm")).toBe(true);
     expect(trigger).not.toHaveClass("px-3");
   });
 

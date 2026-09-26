@@ -748,8 +748,11 @@ above them that way. `flush` drops the size's horizontal padding at every breakp
 **What `flush` does depends on what the variant paints.** `link` and `bare` paint nothing of their
 own around their words (a link's hover is an underline), so their padding goes to `px-0`. `ghost`
 and `danger-ghost` paint only on hover, and their tint with the padding gone sat 0px from either
-side of "Delete Morgan Vale" (pixel probe, 2026-09-25), so they get `-mx-2 px-2`: the label sits
-where a padless one would, and the tint reaches 8px past it. A ledger row keeps the same 8px, for
+side of "Delete Morgan Vale" (pixel probe, 2026-09-25), so they keep 8px of room and hand it back
+as `-mx-2`: the label sits where a padless one would, and the tint reaches 8px past it. The room is
+their transparent 1px border and `px-1.75`, because the quiet variants carry the same border box as
+the painted ones: a toggle that swaps `ghost` for `secondary` (the gear return's "Service concern")
+keeps its label still. A ledger row keeps the same 8px, for
 the same reason (`FILL_ROOM` in `src/components/ui/ledger.tsx`). The variants painted at rest
 (`primary`, `secondary`, `outline`, `danger`, `danger-solid`, `sky`) are boxes, and a box lines up
 by its edge, not its label, so the type refuses `flush` on them.

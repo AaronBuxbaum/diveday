@@ -103,6 +103,26 @@ describe("buttonClass", () => {
     }
   });
 
+  it("draws the quiet variants in the same box, so a toggle from quiet to bordered keeps its label still", () => {
+    // The gear return's "Service concern" is `ghost` until it is opened and
+    // `secondary` once it is (GearReturnPane): with no border on `ghost`, the
+    // label moved 1px sideways and the box grew 2px as the note opened (the
+    // K-83 follow-up). `danger-ghost` swaps with `secondary` on the team
+    // card's Disable / Enable. The border is transparent, so nothing is drawn
+    // at rest; the hover wash paints under it, edge to edge.
+    for (const variant of HOVER_FILL_VARIANTS) {
+      const tokens = buttonClass({ variant }).split(" ");
+      expect(tokens, variant).toContain("border");
+      expect(tokens, variant).toContain("border-transparent");
+      for (const size of PADDED_SIZES) {
+        // The same border and the same padding as the bordered box: one box.
+        expect(horizontalPadding(buttonClass({ variant, size })), `${variant}/${size}`).toEqual(
+          horizontalPadding(buttonClass({ variant: "secondary", size })),
+        );
+      }
+    }
+  });
+
   describe("hover", () => {
     const hoverTokens = (classes: string) =>
       classes.split(" ").filter((token) => /(^|:)hover:/.test(token));
@@ -431,12 +451,15 @@ describe("buttonClass", () => {
       // comes off again as an equal negative margin: the words sit where a
       // padless label would, and the tint reaches 8px past them. 8px rather
       // than the size's own padding, so the tint and the 5px focus ring stay
-      // inside a phone's 16px gutter.
+      // inside a phone's 16px gutter. The 8px is the quiet box's transparent
+      // 1px border and 7px of padding: 8px of padding inside that border
+      // stood the label 1px off the column it was flushed to.
       for (const variant of HOVER_FILL_VARIANTS) {
         for (const size of PADDED_SIZES) {
           const classes = buttonClass({ variant, size, flush: true });
-          expect(horizontalPadding(classes), `${variant}/${size}`).toEqual(["px-2"]);
+          expect(horizontalPadding(classes), `${variant}/${size}`).toEqual(["px-1.75"]);
           expect(classes.split(" "), `${variant}/${size}`).toContain("-mx-2");
+          expect(classes.split(" "), `${variant}/${size}`).toContain("border");
         }
       }
     });

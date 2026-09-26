@@ -80,6 +80,9 @@ export function GearReturnPane({
         >
           {labels.fitAdjusted}
         </button>
+        {/* Quiet until armed, then a box: one box either way, since `ghost`
+            carries `secondary`'s border, transparent (`button.ts`), so the
+            label does not move as the note opens. */}
         <button
           type="button"
           onClick={() => setConcernOpen(!concernOpen)}

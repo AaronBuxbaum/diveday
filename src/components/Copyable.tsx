@@ -117,10 +117,11 @@ export function Copyable({
 
   // In the panel, the trigger gives back what its 44px target adds above the
   // label's 20px line — `-mt-3`, with the row's items at its top so the label
-  // and "Copy link" share one centre — and `flush`'s `-mx-2 px-2` at the
-  // sides, so the caption sets the panel's top inset and its start edge. With
-  // its whole box in the header row, lined up by baseline, the target made the
-  // band above the caption 27px deep against 13px under the URL, and ended
+  // and "Copy link" share one centre — and `flush`'s 8px of room handed back
+  // as `-mx-2` at the sides, so the caption sets the panel's top inset and its
+  // start edge. With its whole box in the header row, lined up by baseline,
+  // the target made the band above the caption 27px deep against 13px under
+  // the URL, and ended
   // "Copy link" 23px inside the edge the caption starts 11px inside.
   //
   // **Only above.** Given back below as well (`-my-3`), the box ran 12px under
