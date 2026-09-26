@@ -55,6 +55,25 @@ function AppBar({ label }: { label: string }) {
   );
 }
 
+/**
+ * One line of a mock checklist (the ready brief's, the trip prep's): a label
+ * and its done badge. The label wraps without leaving one word alone ("Crew
+ * assigned (Mateo & / Sarah)" at 390 on /product, K-578) and gives way to the
+ * badge, which keeps its size 12px clear of it.
+ */
+function ChecklistRow({ label, status, tone }: { label: string; status: string; tone: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-2.5">
+      <span className="min-w-0 text-sm font-semibold text-pretty">{label}</span>
+      <span
+        className={`inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}
+      >
+        <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} /> {status}
+      </span>
+    </div>
+  );
+}
+
 export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
   return (
@@ -478,17 +497,7 @@ export function NightBeforeBriefFallback({ locale }: { locale: DiverLocale }) {
                 "text-success-strong bg-success-tint",
               ],
             ].map(([label, status, tone]) => (
-              <div
-                key={label}
-                className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-2.5"
-              >
-                <span className="text-sm font-semibold">{label}</span>
-                <span
-                  className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}
-                >
-                  <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} /> {status}
-                </span>
-              </div>
+              <ChecklistRow key={label} label={label} status={status} tone={tone} />
             ))}
           </div>
         </div>
@@ -545,17 +554,7 @@ export function ShopPrepListFallback({ locale }: { locale: DiverLocale }) {
                 "text-success-strong bg-success-tint",
               ],
             ].map(([label, status, tone]) => (
-              <div
-                key={label}
-                className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-2.5"
-              >
-                <span className="text-sm font-semibold">{label}</span>
-                <span
-                  className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}
-                >
-                  <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} /> {status}
-                </span>
-              </div>
+              <ChecklistRow key={label} label={label} status={status} tone={tone} />
             ))}
           </div>
         </div>

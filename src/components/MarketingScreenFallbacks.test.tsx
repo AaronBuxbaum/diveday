@@ -97,6 +97,26 @@ describe("the mocks' primary button", () => {
   });
 });
 
+/**
+ * "Crew assigned (Mateo & Sarah)" wrapped to leave "Sarah)" alone under it at
+ * 390 on /product, with the badge pressed against the label (K-578). The two
+ * checklist mocks draw one row: a label that wraps without a one-word last
+ * line and gives way to a badge that never shrinks, 12px apart.
+ */
+describe("the mocks' checklist rows", () => {
+  it.each([
+    ["ShopPrepListFallback", ShopPrepListFallback, "Crew assigned (Mateo & Sarah)"],
+    ["NightBeforeBriefFallback", NightBeforeBriefFallback, "Waiver"],
+  ] as const)("%s wraps a long label cleanly beside its badge", (_name, Mock, text) => {
+    render(<Mock locale="en-US" />);
+    const label = screen.getByText(text);
+    expect(label).toHaveClass("min-w-0", "text-pretty");
+    const row = label.parentElement;
+    expect(row).toHaveClass("gap-3");
+    expect(label.nextElementSibling).toHaveClass("shrink-0");
+  });
+});
+
 describe("MarketingScreenFallbacks", () => {
   describe("ShopPrepListFallback", () => {
     it("renders in English with crew staging checklist", () => {
