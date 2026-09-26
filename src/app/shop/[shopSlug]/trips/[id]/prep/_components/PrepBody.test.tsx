@@ -357,6 +357,23 @@ describe("the packing list's geometry", () => {
     }
   });
 
+  it("hangs a bullet's wrapped line under its words, not under the bullet (K-154)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const bullets = within(container).getAllByText("•", { exact: true });
+    // The nitrox blocker, the partial fit and the hands-on fit.
+    expect(bullets).toHaveLength(3);
+    for (const bullet of bullets) {
+      expect(bullet.tagName).toBe("SPAN");
+      expect(bullet).toHaveAttribute("aria-hidden", "true");
+      const item = bullet.parentElement as HTMLElement;
+      expect(item.tagName).toBe("LI");
+      expect(tokens(item)).toEqual(expect.arrayContaining(["flex", "gap-1.5"]));
+      // The bullet and the words are the item's only two boxes.
+      expect(item.childNodes).toHaveLength(2);
+      expect(item.lastChild?.nodeName).toBe("SPAN");
+    }
+  });
+
   it("holds no empty list open above the never-asked names (K-184)", () => {
     // Only divers nobody asked: the partial list has nothing to say.
     const prep = everyPanelPrep();

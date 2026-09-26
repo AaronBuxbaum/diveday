@@ -390,16 +390,21 @@ export function PrepBody({
                     {t("tripPrep.nitroxBlockedHeading")}
                   </h2>
                   <p className="mt-1 text-sm">{t("tripPrep.nitroxBlockedDescription")}</p>
+                  {/* A bullet is its own box and the words another, here and
+                      in the two lists below, so a wrapped line hangs under the
+                      words it continues rather than back under the bullet. */}
                   <ul className="mt-2 flex flex-col gap-1 text-sm">
                     {checklist.nitroxBlockers.map((blocker) => (
-                      <li key={blocker.bookingId}>
-                        •{" "}
-                        <Link
-                          href={`/shop/${shopSlug}/divers/${blocker.personId}`}
-                          className="font-medium hover:text-primary hover:underline"
-                        >
-                          {blocker.fullName}
-                        </Link>
+                      <li key={blocker.bookingId} className="flex gap-1.5">
+                        <span aria-hidden="true">•</span>
+                        <span>
+                          <Link
+                            href={`/shop/${shopSlug}/divers/${blocker.personId}`}
+                            className="font-medium hover:text-primary hover:underline"
+                          >
+                            {blocker.fullName}
+                          </Link>
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -430,21 +435,23 @@ export function PrepBody({
                     {partialFit.length > 0 ? (
                       <ul className="flex flex-col gap-1">
                         {partialFit.map((diver) => (
-                          <li key={diver.personId}>
-                            •{" "}
-                            <Link
-                              href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                              className="font-medium hover:text-primary hover:underline"
-                            >
-                              {diver.fullName}
-                            </Link>{" "}
-                            <span className="text-muted">
-                              {t("tripPrep.missingSizesItems", {
-                                items: cachedListFormat(locale, {
-                                  style: "long",
-                                  type: "conjunction",
-                                }).format(diver.missing.map((kind) => rentalItemLabel(t, kind))),
-                              })}
+                          <li key={diver.personId} className="flex gap-1.5">
+                            <span aria-hidden="true">•</span>
+                            <span>
+                              <Link
+                                href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                                className="font-medium hover:text-primary hover:underline"
+                              >
+                                {diver.fullName}
+                              </Link>{" "}
+                              <span className="text-muted">
+                                {t("tripPrep.missingSizesItems", {
+                                  items: cachedListFormat(locale, {
+                                    style: "long",
+                                    type: "conjunction",
+                                  }).format(diver.missing.map((kind) => rentalItemLabel(t, kind))),
+                                })}
+                              </span>
                             </span>
                           </li>
                         ))}
@@ -482,40 +489,42 @@ export function PrepBody({
                   <p className="mt-1 text-sm text-muted">{t("tripPrep.staffFitDescription")}</p>
                   <ul className="mt-2 flex flex-col gap-1 text-sm">
                     {checklist.diversNeedingStaffFit.map((diver) => (
-                      <li key={diver.personId}>
-                        •{" "}
-                        <Link
-                          href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                          className="font-medium hover:text-primary hover:underline"
-                        >
-                          {diver.fullName}
-                        </Link>
-                        {diver.note ? <span className="text-muted"> — {diver.note}</span> : null}
-                        {/* What they asked for. The captain doing the fit can't edit
-                        the profile and sees no size on the packing line, so
-                        without this there is nothing to bring a range around. */}
-                        {diver.statedSizes.length > 0 ? (
+                      <li key={diver.personId} className="flex gap-1.5">
+                        <span aria-hidden="true">•</span>
+                        <span>
+                          <Link
+                            href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                            className="font-medium hover:text-primary hover:underline"
+                          >
+                            {diver.fullName}
+                          </Link>
+                          {diver.note ? <span className="text-muted"> — {diver.note}</span> : null}
+                          {/* What they asked for. The captain doing the fit can't edit
+                          the profile and sees no size on the packing line, so
+                          without this there is nothing to bring a range around. */}
+                          {diver.statedSizes.length > 0 ? (
+                            <span className="text-muted">
+                              {" "}
+                              {t("tripPrep.askedFor", {
+                                sizes: statedSizesText(t, locale, diver.statedSizes),
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-muted"> {t("tripPrep.noSizesOnFile")}</span>
+                          )}
+                          {/* How old the flag is: a shortage is about one day, so a
+                          months-old flag is a prompt to re-ask, not to trust. */}
                           <span className="text-muted">
                             {" "}
-                            {t("tripPrep.askedFor", {
-                              sizes: statedSizesText(t, locale, diver.statedSizes),
+                            {t("tripPrep.flaggedAgo", {
+                              when:
+                                diver.flaggedDaysAgo === 0
+                                  ? t("tripPrep.today")
+                                  : diver.flaggedDaysAgo === 1
+                                    ? t("tripPrep.yesterday")
+                                    : t("tripPrep.daysAgo", { count: diver.flaggedDaysAgo }),
                             })}
                           </span>
-                        ) : (
-                          <span className="text-muted"> {t("tripPrep.noSizesOnFile")}</span>
-                        )}
-                        {/* How old the flag is: a shortage is about one day, so a
-                        months-old flag is a prompt to re-ask, not to trust. */}
-                        <span className="text-muted">
-                          {" "}
-                          {t("tripPrep.flaggedAgo", {
-                            when:
-                              diver.flaggedDaysAgo === 0
-                                ? t("tripPrep.today")
-                                : diver.flaggedDaysAgo === 1
-                                  ? t("tripPrep.yesterday")
-                                  : t("tripPrep.daysAgo", { count: diver.flaggedDaysAgo }),
-                          })}
                         </span>
                       </li>
                     ))}
