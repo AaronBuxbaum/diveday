@@ -483,22 +483,6 @@ describe("no ring the probe measured cut is cut any more", () => {
 });
 
 /**
- * **A round radio gets a round ring.** An outline follows the element's
- * `border-radius`, and a native radio computes a radius of 0 however round
- * the browser draws it — so the global ring drew a 3px square around a 16px
- * circle on the waiver's guardian choice, `/ready`'s easing-back answers and
- * the calls log (pixel probe, state atlas). In the base layer beside the ring,
- * so a radio that styles itself can still say otherwise.
- */
-describe("the ring on a native radio", () => {
-  it("follows the circle the browser draws", () => {
-    const radio = layerBase.find((rule) => /input\[type="radio"\]/.test(rule.prelude));
-    expect(radio, 'an input[type="radio"] rule inside @layer base').toBeDefined();
-    expect(declarations(radio?.body ?? "")["border-radius"]).toMatch(/^(9999px|50%)$/);
-  });
-});
-
-/**
  * **On the sky, the ring is the sky's ink.** `--focus-ring` is `--primary`,
  * measured against the app's light surfaces, and a `SkyBand` is none of
  * them: lagoon on the day sky measured 1.78–1.89:1 and 1.28:1 at the band's

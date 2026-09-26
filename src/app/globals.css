@@ -739,12 +739,6 @@ summary {
     outline-offset: 2px;
   }
 
-  /* An outline follows `border-radius`, and a native radio computes 0 however
-     round it is drawn: the ring above was a square round a circle. */
-  :where(input[type="radio"]) {
-    border-radius: 9999px;
-  }
-
   /* Tailwind v4's Preflight gives a button the arrow. `buttonClass` put the
      hand back and every hand-written button went without; one rule here, and
      `disabled:cursor-wait` or any other utility still wins. */
