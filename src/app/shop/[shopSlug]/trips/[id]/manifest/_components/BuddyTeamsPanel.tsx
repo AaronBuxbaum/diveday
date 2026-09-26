@@ -108,10 +108,7 @@ export function BuddyTeamsPanel({
   const builderError = buddyErrorForm === "builder" && showBuilder ? buddyErrorText : null;
   const panelError = builderError ? null : buddyErrorText;
   return (
-    <section
-      aria-labelledby={scopedId(idPrefix, "buddy-teams-heading")}
-      className="mt-9 print:hidden"
-    >
+    <section aria-labelledby={scopedId(idPrefix, "buddy-teams-heading")} className="print:hidden">
       {/* The whole panel sits behind one disclosure line. Grouping people is
           dock/desk prep, done once per departure — but the open panel (team
           rows, per-team pickers, dissolve buttons) stood at permanent height
@@ -128,10 +125,13 @@ export function BuddyTeamsPanel({
             baseline beside it. Flattened into a single baseline row the caret
             hung off the text's baseline like a stray comma; centred on the
             whole block it floated between the lines once the count wrapped
-            (9.5–20px low at 390, most in Spanish). `py-2` round the 28px title
-            line is the 44px floor, so one line still centres; `-mx-2 px-2
-            rounded-lg` gives the ring room off the words. */}
-        <summary className="-mx-2 flex min-h-11 w-fit cursor-pointer list-none items-start gap-2 rounded-lg px-2 py-2 select-none [&::-webkit-details-marker]:hidden">
+            (9.5–20px low at 390, most in Spanish). `p-2` round the 28px title
+            line is the 44px floor, so one line still centres, and gives the
+            ring room off the words; `-m-2` hands the same 8px back on every
+            side, so the box overhangs the section gap rather than adding to it
+            — above, it stood "Buddy teams" 8px further from the plan than the
+            page's 40px (K-189). */}
+        <summary className="-m-2 flex min-h-11 w-fit cursor-pointer list-none items-start gap-2 rounded-lg p-2 select-none [&::-webkit-details-marker]:hidden">
           <SummaryCaret
             line={`h-lh ${SECTION_TITLE_CLASS}`}
             className="size-4 text-muted group-open/buddypanel:rotate-90"

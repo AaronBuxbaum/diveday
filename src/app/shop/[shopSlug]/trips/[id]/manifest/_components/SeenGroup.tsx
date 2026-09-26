@@ -159,7 +159,7 @@ export function SeenGroup({
   const onResult = (result: SightingResult) => setRefused(result.status === "error");
   const headingId = scopedId(idPrefix, "seen-heading");
   return (
-    <section className="mt-8 print:hidden" aria-labelledby={headingId}>
+    <section className="print:hidden" aria-labelledby={headingId}>
       <h2 id={headingId} className={SECTION_TITLE_CLASS}>
         {copy.heading}
       </h2>

@@ -368,7 +368,7 @@ export function DiverRollCall({
     <section
       id={scopedId(idPrefix, "roll-call-list")}
       tabIndex={-1}
-      className={`mt-8 outline-none ${rollCallScrollMargin(isDeparture)}`}
+      className={`outline-none ${rollCallScrollMargin(isDeparture)}`}
     >
       {/* **"Skip to roll call" lands here, below the pinned count card**
           (pixel-craft class 9). With no scroll margin the section landed on
@@ -574,11 +574,11 @@ export function DiverRollCall({
             <li key={diver.bookingId} id={diverRowId(diver.bookingId)} className={rowClass}>
               <div className={ruleClass}>
                 {/* The name column *is* the disclosure. One tap on the person
-                    opens everything the rail does not need this second — the
-                    "one tap away" tier of decision 2 — which is what lets the
-                    row at rest be a name and a mark instead of the name, two
-                    badges, a blocker list, a link, a note thread and two
-                    summary lines it used to be. */}
+                  opens everything the rail does not need this second — the
+                  "one tap away" tier of decision 2 — which is what lets the
+                  row at rest be a name and a mark instead of the name, two
+                  badges, a blocker list, a link, a note thread and two
+                  summary lines it used to be. */}
                 <PersonSheet
                   name={diver.fullName}
                   triggerLabel={t("manifest.openPersonDetails", { name: diver.fullName })}
@@ -648,46 +648,46 @@ export function DiverRollCall({
                           </span>
                           {capsule}
                           {/* **The desk wrote this one off** (#1209). On the
-                              row and not in the sheet, unlike "Checked in":
-                              that one is routine and a tap away is fine, this
-                              is the reason a crew member should stop looking.
-                              A released seat and a diver still walking down
-                              the dock read identically without it, which is
-                              how a head count at the rail chases a name the
-                              counter settled forty minutes ago
-                              (`dive-domain-expert` review 20260911).
+                            row and not in the sheet, unlike "Checked in":
+                            that one is routine and a tap away is fine, this
+                            is the reason a crew member should stop looking.
+                            A released seat and a diver still walking down
+                            the dock read identically without it, which is
+                            how a head count at the rail chases a name the
+                            counter settled forty minutes ago
+                            (`dive-domain-expert` review 20260911).
 
-                              Neutral, and outside the one-capsule priority
-                              chain — the same licence the welcome word takes
-                              below. It is not an exception the crew must act
-                              on; it is the absence of one, and colouring it
-                              would put a second loud thing on the row that
-                              most wants a quiet one. The row keeps its mark:
-                              nothing here refuses a boarding, and a diver who
-                              turns up after all is tapped aboard exactly as
-                              before. */}
+                            Neutral, and outside the one-capsule priority
+                            chain — the same licence the welcome word takes
+                            below. It is not an exception the crew must act
+                            on; it is the absence of one, and colouring it
+                            would put a second loud thing on the row that
+                            most wants a quiet one. The row keeps its mark:
+                            nothing here refuses a boarding, and a diver who
+                            turns up after all is tapped aboard exactly as
+                            before. */}
                           {diver.notHere ? (
                             <Badge tone="neutral">{t("manifest.notHerePill")}</Badge>
                           ) : null}
                         </span>
                         {/* **The welcome word** (issue #1182, delight report
-                            D22; ADR 20260904-reef-all-the-way-down slice 16d):
-                            "first time with us", "back after 3 years".
+                          D22; ADR 20260904-reef-all-the-way-down slice 16d):
+                          "first time with us", "back after 3 years".
 
-                            Muted text under the name, never a `Badge` and never
-                            inside the roll-call circle — a badge is the profile
-                            decoration D22's boundary rules out, and it would
-                            also take the row's one capsule away from an
-                            exception the crew has to act on. It does not enter
-                            that priority chain at all, so a diver with a cue
-                            and a birthday shows the birthday capsule *and* this
-                            line.
+                          Muted text under the name, never a `Badge` and never
+                          inside the roll-call circle — a badge is the profile
+                          decoration D22's boundary rules out, and it would
+                          also take the row's one capsule away from an
+                          exception the crew has to act on. It does not enter
+                          that priority chain at all, so a diver with a cue
+                          and a birthday shows the birthday capsule *and* this
+                          line.
 
-                            `text-base`, not the 12.5px the canvas drew: this is
-                            a manifest, where AGENTS.md's licence to trade
-                            legibility for restraint stops. It costs a second
-                            line on some rows, which is the price of it being
-                            readable at the rail. */}
+                          `text-base`, not the 12.5px the canvas drew: this is
+                          a manifest, where AGENTS.md's licence to trade
+                          legibility for restraint stops. It costs a second
+                          line on some rows, which is the price of it being
+                          readable at the rail. */}
                         {diver.welcomeCue ? (
                           <span className="mt-0.5 block text-base text-muted">
                             {welcomeCueText(t, diver.welcomeCue)}
@@ -699,29 +699,29 @@ export function DiverRollCall({
                 >
                   <div className={ROW_DISCLOSURE_PANEL_CLASS}>
                     {/* Blockers, and their one fix, at the dock only. After a
-                        dive readiness gates nothing — the diver is already
-                        aboard — so a red list here would be worrying about a
-                        paperwork state at the checkpoint where the only thing
-                        that matters is bodies (decision 4). The count panel
-                        says nothing about it either, for the same reason. */}
+                      dive readiness gates nothing — the diver is already
+                      aboard — so a red list here would be worrying about a
+                      paperwork state at the checkpoint where the only thing
+                      that matters is bodies (decision 4). The count panel
+                      says nothing about it either, for the same reason. */}
                     {!ready && isDeparture ? (
                       <>
                         <ul className="flex flex-col gap-1 text-base text-danger">
                           {/* Keyed on the sentence, not the code: a trip
-                              requiring two specialties yields two blockers with
-                              one code and different params. */}
+                            requiring two specialties yields two blockers with
+                            one code and different params. */}
                           {diver.readiness.blockers.map((blocker) => {
                             const text = readinessBlockerText(t, blocker);
                             return <li key={text}>• {text}</li>;
                           })}
                         </ul>
                         {/* The Guests ledger groups its blocked divers under
-                            "Still to clear" at the top of the list (ADR
-                            20260827-the-departure-is-two-working-surfaces,
-                            slice 5d), so the anchor alone lands the captain on
-                            this diver's row with the group band saying why —
-                            the `?rf=blocked` filter this link used to carry is
-                            retired with the chips. */}
+                          "Still to clear" at the top of the list (ADR
+                          20260827-the-departure-is-two-working-surfaces,
+                          slice 5d), so the anchor alone lands the captain on
+                          this diver's row with the group band saying why —
+                          the `?rf=blocked` filter this link used to carry is
+                          retired with the chips. */}
                         <Link
                           href={`/shop/${shopSlug}/trips/${tripId}#booking-${diver.bookingId}`}
                           className="mt-2 inline-flex min-h-11 items-center text-base font-semibold text-primary hover:underline"
@@ -729,19 +729,19 @@ export function DiverRollCall({
                           {t("manifest.resolveBlockersLink")}
                         </Link>
                         {/* **Even by ink, not by box** (pixel-craft class
-                            4). The link above is a 44px target round a 24px
-                            line, so about 15px of its box is already air under
-                            its words; a `my-3` rule added 12px more, 27px of
-                            ink to rule against 18 from the rule to the next
-                            line. The link's own air is the space above, so
-                            the rule's margin is below only. */}
+                          4). The link above is a 44px target round a 24px
+                          line, so about 15px of its box is already air under
+                          its words; a `my-3` rule added 12px more, 27px of
+                          ink to rule against 18 from the rule to the next
+                          line. The link's own air is the space above, so
+                          the rule's margin is below only. */}
                         <hr className="mt-0 mb-3 border-border" />
                       </>
                     ) : null}
                     {/* A diver whose advisory the strip above does not already
-                        state by name keeps the full sentence — here, where the
-                        plan for dive two is read during the surface interval.
-                        Warning tone, never a gate (H-08). */}
+                      state by name keeps the full sentence — here, where the
+                      plan for dive two is read during the surface interval.
+                      Warning tone, never a gate (H-08). */}
                     {diver.depthAdvisory?.status === "exceeds" &&
                     !sharedAdvisoryTexts.has(depthWarningText(t, diver.depthAdvisory)) ? (
                       <p className="mb-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong">
@@ -758,26 +758,26 @@ export function DiverRollCall({
                       t={t}
                     />
                     {/* The facts the row's one capsule could not carry — who
-                        this diver is paired with, the counter's arrival, the age
-                        the crew is entitled to know. Quiet, in words, one tap
-                        away: a team label is not an exception, so it does not
-                        earn the row's single capsule, but "who am I supposed to
-                        be with?" is a question asked at the rail and the answer
-                        has to be on the screen as well as on paper.
+                      this diver is paired with, the counter's arrival, the age
+                      the crew is entitled to know. Quiet, in words, one tap
+                      away: a team label is not an exception, so it does not
+                      earn the row's single capsule, but "who am I supposed to
+                      be with?" is a question asked at the rail and the answer
+                      has to be on the screen as well as on paper.
 
-                        `empty:hidden` because every item is conditional: a
-                        diver with neither rendered the list empty, and its
-                        `mt-3` stood on the note form's, 24px where the panel's
-                        blocks sit 12 apart (pixel-craft class 4). */}
+                      `empty:hidden` because every item is conditional: a
+                      diver with neither rendered the list empty, and its
+                      `mt-3` stood on the note form's, 24px where the panel's
+                      blocks sit 12 apart (pixel-craft class 4). */}
                     <ul className="mt-3 flex flex-wrap gap-2 empty:hidden">
                       {/* **A sighting and a claim wear different words.**
-                          A staffer's tap means the desk has seen this person;
-                          a lobby-tablet tap means somebody typed a surname,
-                          quite possibly on their behalf, which is the ordinary
-                          way a self-serve kiosk gets used. Flattening the two
-                          into one badge is how a crew member at the rail stops
-                          looking for a diver who never arrived (N-24,
-                          `dive-domain-expert` review). */}
+                        A staffer's tap means the desk has seen this person;
+                        a lobby-tablet tap means somebody typed a surname,
+                        quite possibly on their behalf, which is the ordinary
+                        way a self-serve kiosk gets used. Flattening the two
+                        into one badge is how a crew member at the rail stops
+                        looking for a diver who never arrived (N-24,
+                        `dive-domain-expert` review). */}
                       {diver.checkedIn ? (
                         <li>
                           <Badge tone="neutral">
@@ -788,13 +788,13 @@ export function DiverRollCall({
                         </li>
                       ) : null}
                       {/* The age, and — when something louder took the row's
-                          one capsule — **the minor flag with it**. A blocked
-                          diver and a split team are exactly the cases where a
-                          13-year-old is most likely to be on the row that lost
-                          it, and the captain reading the boarding list has no
-                          other way to know a booked diver is 12 (H-21). Gated
-                          on which capsule the row actually rendered, never on
-                          `minor` itself (dive-domain review, slice 5a). */}
+                        one capsule — **the minor flag with it**. A blocked
+                        diver and a split team are exactly the cases where a
+                        13-year-old is most likely to be on the row that lost
+                        it, and the captain reading the boarding list has no
+                        other way to know a booked diver is 12 (H-21). Gated
+                        on which capsule the row actually rendered, never on
+                        `minor` itself (dive-domain review, slice 5a). */}
                       {diver.age !== null && diver.age !== undefined && capsuleKind !== "minor" ? (
                         <li>
                           <Badge tone={diver.minor ? "warning" : "neutral"} tabularNums>
@@ -807,10 +807,10 @@ export function DiverRollCall({
                     </ul>
                     <StaffNotes notes={bookingNotes} locale={locale} timezone={timezone} t={t} />
                     {/* `print:hidden` like the notes above it: an unsaved
-                        sentence a staffer was mid-way through typing about a
-                        customer is the last thing that should ride the sheet
-                        that goes ashore, and the packet's own stylesheet only
-                        covers the packet (security review, slice 5a). */}
+                      sentence a staffer was mid-way through typing about a
+                      customer is the last thing that should ride the sheet
+                      that goes ashore, and the packet's own stylesheet only
+                      covers the packet (security review, slice 5a). */}
                     <div className="mt-3 print:hidden">
                       <PrivateNoteForm
                         action={addPrivateNoteAction}
@@ -826,12 +826,12 @@ export function DiverRollCall({
                       />
                     </div>
                     {/* Both directions out of a stated "not back aboard", at
-                        the same cost: "Mark back aboard" here, and the
-                        retraction on the settled control below it. Neither is
-                        on the row (ADR 20260815-offline-can-unsay-a-missing-diver
-                        — retracting a mark may never be harder than making
-                        one, and asserting aboard over a missing mark is not a
-                        thumb-under-a-list act). */}
+                      the same cost: "Mark back aboard" here, and the
+                      retraction on the settled control below it. Neither is
+                      on the row (ADR 20260815-offline-can-unsay-a-missing-diver
+                      — retracting a mark may never be harder than making
+                      one, and asserting aboard over a missing mark is not a
+                      thumb-under-a-list act). */}
                     {rowState.notBackAboard ? (
                       <RollCallBackAboardControl
                         kind="diver"
@@ -844,8 +844,8 @@ export function DiverRollCall({
                       />
                     ) : null}
                     {/* The deliberate second step. It is here, and nowhere
-                        else on this page, because reaching it has to cost a
-                        tap on the person's own name first (decision 3). */}
+                      else on this page, because reaching it has to cost a
+                      tap on the person's own name first (decision 3). */}
                     <RollCallExceptionControl
                       kind="diver"
                       subjectId={diver.bookingId}

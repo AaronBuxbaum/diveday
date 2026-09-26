@@ -151,7 +151,7 @@ export function ExecutedDiveLog({
   const byNumber = new Map(executed.map((row) => [row.executed.diveNumber, row]));
   const activeDiveNumber = Number(/^after_dive_(\d+)$/.exec(checkpoint)?.[1] ?? 0);
   return (
-    <section className="mt-8" aria-labelledby={scopedId(idPrefix, "executed-dive-heading")}>
+    <section aria-labelledby={scopedId(idPrefix, "executed-dive-heading")}>
       <h2 id={scopedId(idPrefix, "executed-dive-heading")} className={SECTION_TITLE_CLASS}>
         {labels.heading}
       </h2>

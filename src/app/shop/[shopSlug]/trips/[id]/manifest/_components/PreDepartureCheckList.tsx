@@ -118,7 +118,7 @@ export function PreDepartureCheckList({
   return (
     <section
       aria-labelledby={scopedId(idPrefix, "pre-departure-check-heading")}
-      className={sectionCardClass({ padding: "none", className: "mt-5" })}
+      className={sectionCardClass({ padding: "none" })}
     >
       <details className="group/check print:hidden">
         <summary className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}>

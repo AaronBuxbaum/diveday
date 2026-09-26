@@ -44,10 +44,7 @@ export function TripPlanSection({
 }) {
   if (dives.length === 0) return null;
   return (
-    <section
-      className="mt-8 print:hidden"
-      aria-labelledby={scopedId(idPrefix, "trip-plan-heading")}
-    >
+    <section className="print:hidden" aria-labelledby={scopedId(idPrefix, "trip-plan-heading")}>
       <h2 id={scopedId(idPrefix, "trip-plan-heading")} className={SECTION_TITLE_CLASS}>
         {heading}
       </h2>

@@ -128,7 +128,7 @@ export function CrewRollCall({
 }) {
   const crewAssigned = crew.length;
   return (
-    <section className="mt-9">
+    <section>
       <h2 className={SECTION_TITLE_CLASS}>{t("manifest.crewHeading")}</h2>
       {crewAssigned === 0 ? (
         // An empty crew list holds the checkpoint open (`crew_none_assigned`),
