@@ -108,10 +108,10 @@ export function EarnedMoment({
     <section
       className={`relative overflow-hidden rise-in rounded-panel border border-accent/40 bg-accent/10 p-6 sm:p-7 ${className}`.trim()}
     >
-      {eyebrow ? <p className={EYEBROW_CLASS}>{eyebrow}</p> : null}
-      <Heading
-        className={`mt-1 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl ${titleClassName}`.trim()}
-      >
+      {/* The 4px between eyebrow and heading belongs to the eyebrow: on the
+          heading it pushed a lone title 2px below the panel's centre. */}
+      {eyebrow ? <p className={`mb-1 ${EYEBROW_CLASS}`}>{eyebrow}</p> : null}
+      <Heading className={`${LEAD_TITLE_CLASS} text-balance sm:text-3xl ${titleClassName}`.trim()}>
         {title}
       </Heading>
       {children ? <div className="mt-3 text-muted">{children}</div> : null}
