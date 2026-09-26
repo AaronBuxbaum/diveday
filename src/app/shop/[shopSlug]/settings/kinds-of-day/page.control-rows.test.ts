@@ -35,4 +35,24 @@ describe("the kinds-of-day rows", () => {
     expect(armed, "the first InlineConfirm is the one with a message").toContain("message=");
     expect(armed).toContain('size="md"');
   });
+
+  /**
+   * **Save and Delete share one line** (pixel-craft class 12). Delete had a
+   * form of its own after the rename form, and at 390px the row became a 180px
+   * block: the box, Save alone on the right, Delete alone on the left. Delete
+   * now sits in the rename form's action row and posts to its own action
+   * through `InlineConfirm`'s `formAction`.
+   */
+  it("puts Delete in the rename form, after Save, posting to its own action", () => {
+    const row = SOURCE.slice(SOURCE.indexOf("shopLenses.map("), SOURCE.indexOf("createTitle"));
+    expect(row.split("<form").length - 1, "one form per word").toBe(1);
+    expect(row).not.toContain("action={deleteTripLensAction}");
+    expect(row.split("formAction={deleteTripLensAction}").length - 1, "both confirms").toBe(2);
+    // Save first in the tree, so Enter in the box renames and never deletes:
+    // implicit submission presses a form's first submit button.
+    expect(row.indexOf("<SubmitButton")).toBeLessThan(row.indexOf("<InlineConfirm"));
+    expect(row, "Save's pending state is the rename's alone").toContain(
+      "formAction={updateTripLensAction}",
+    );
+  });
 });

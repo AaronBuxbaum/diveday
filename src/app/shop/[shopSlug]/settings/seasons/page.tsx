@@ -152,36 +152,32 @@ export default async function SeasonsSettingsPage({
                         className={textareaClassFor(2)}
                       />
                     </Field>
+                    {/* **Save and Delete on one line.** Delete had a form of
+                        its own under this one, a line by itself that cost 56px
+                        per season. The confirm posts to the delete through
+                        `formAction`, taking the row's hidden `eventId` with it;
+                        Save comes first, so Enter in a field saves and never
+                        deletes, and names its own action so a delete in flight
+                        never reads as a save. Save's box now starts the line
+                        on the fields' edge, so Delete, after it, keeps its
+                        padding: it starts no column for `flush` to meet. */}
                     <FieldActions>
                       <SubmitButton
                         pendingLabel={t("seasonEvents.submitting")}
                         className={buttonClass({ variant: "secondary", size: "sm" })}
+                        formAction={updateSeasonEventAction}
                       >
                         {t("seasonEvents.submit")}
                       </SubmitButton>
+                      <InlineConfirm
+                        formAction={deleteSeasonEventAction}
+                        triggerLabel={t("seasonEvents.delete")}
+                        confirmLabel={t("seasonEvents.deleteConfirm")}
+                        pendingLabel={t("seasonEvents.deletePending")}
+                        triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                      />
                     </FieldActions>
                   </FieldGrid>
-                  {/* Its own form beside the edit, never inside it:
-                      `InlineConfirm` submits the form it sits in, and forms
-                      cannot nest. */}
-                  <form action={deleteSeasonEventAction}>
-                    <input type="hidden" name="eventId" value={season.id} />
-                    <InlineConfirm
-                      triggerLabel={t("seasonEvents.delete")}
-                      confirmLabel={t("seasonEvents.deleteConfirm")}
-                      pendingLabel={t("seasonEvents.deletePending")}
-                      // `flush` puts "Delete" on the fields' edge. The row's
-                      // `p-3` leaves 12px to the list's `overflow-hidden`, a
-                      // pixel short of an outset ring past the flush fill, so
-                      // the ring is drawn inside.
-                      triggerClassName={buttonClass({
-                        variant: "danger-ghost",
-                        size: "sm",
-                        flush: true,
-                        className: "focus-visible:focus-ring-inset",
-                      })}
-                    />
-                  </form>
                 </div>
               ))}
             </div>
