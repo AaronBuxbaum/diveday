@@ -93,17 +93,24 @@ export function EyebrowBackLink({
         href={href}
         className={`${tapTargetLinkClass} ${EYEBROW_SHAPE} ${
           onSky ? "text-(--sky-ink)" : "text-primary"
-        } gap-1 hover:underline`.trim()}
+        } gap-2 hover:underline`.trim()}
       >
+        {/* **The box is the ink** (K-114). Centred in a 24-unit square, the
+            stroke (x 9–15, plus half its 2.5 width) began 3.9px into the box,
+            so every back-link stood 3–4px right of the title's column. The
+            viewBox is cut to the stroke across and kept whole down, so the
+            height and centre are the square's; the width follows the cut.
+            `gap-2` carries the ink-to-words distance the square's empty right
+            side used to share with `gap-1`. `ShopPageHeader.test.tsx`. */}
         <svg
           aria-hidden="true"
-          viewBox="0 0 24 24"
+          viewBox="7.75 0 8.5 24"
           fill="none"
           stroke="currentColor"
           strokeWidth={2.5}
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="size-3 shrink-0"
+          className="h-3 w-auto shrink-0"
         >
           <path d="m15 18-6-6 6-6" />
         </svg>

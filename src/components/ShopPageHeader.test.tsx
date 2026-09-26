@@ -160,6 +160,56 @@ describe("the eyebrow's line box", () => {
  * lines up with the words' first line, wherever that line is.
  */
 /**
+ * **The chevron's box is its ink**, so the way back starts on the title's
+ * column rather than 4px inside it.
+ *
+ * It was drawn centred in a 24-unit square at `size-3`: the stroke spans x 9
+ * to 15 plus half its width, so the ink began 3.9px into the box, and every
+ * back-linked header's chevron stood 3–4px right of the `<h1>`, description
+ * and card edge below it (K-114, measured on 31 captures). The viewBox is cut
+ * to the stroke horizontally and kept whole vertically, so the chevron's
+ * height and centre do not move; it is sized by its height, and its width
+ * follows the cropped box.
+ */
+describe("the back-link chevron", () => {
+  function chevron() {
+    render(<EyebrowBackLink href="/shop/blue-mantis/settings">Settings</EyebrowBackLink>);
+    const svg = screen.getByRole("link", { name: "Settings" }).querySelector("svg");
+    if (!svg) throw new Error("no chevron");
+    return svg;
+  }
+
+  it("crops its viewBox to the stroke, so the ink starts on the box's edge", () => {
+    const svg = chevron();
+    const d = svg.querySelector("path")?.getAttribute("d") ?? "";
+    const stroke = Number(svg.getAttribute("stroke-width"));
+    // `m x y dx dy dx dy …`: one absolute point, then relative steps.
+    const [x0, , ...steps] = (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+    const xs = [x0];
+    for (let i = 0; i < steps.length; i += 2) xs.push(xs[xs.length - 1] + steps[i]);
+    const left = Math.min(...xs) - stroke / 2;
+    const width = Math.max(...xs) - Math.min(...xs) + stroke;
+
+    expect(svg.getAttribute("viewBox")).toBe(`${left} 0 ${width} 24`);
+  });
+
+  it("is sized by its height, the old square's, so it neither grows nor moves up or down", () => {
+    const svg = chevron();
+    expect(svg).toHaveClass("h-3", "w-auto", "shrink-0");
+    expect(svg).not.toHaveClass("size-3");
+  });
+
+  it("keeps the words as far from the ink as they were", () => {
+    // The square carried 3.9px of empty box on the chevron's right as well;
+    // `gap-1` plus that was about 8px of ink-to-text. With the box cut to the
+    // ink the gap has to carry all of it.
+    const link = chevron().closest("a");
+    expect(link).toHaveClass("gap-2");
+    expect(link).not.toHaveClass("gap-1");
+  });
+});
+
+/**
  * **Below `sm` the header's doors share the band; what is not a door keeps
  * its own width.** Two buttons stretched to equal halves read as one tidy
  * row. But the rule grew *every* child, and the offline manifest passes two
