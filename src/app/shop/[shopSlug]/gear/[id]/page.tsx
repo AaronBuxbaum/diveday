@@ -16,6 +16,7 @@ import {
   FieldActions,
   FieldGrid,
   FormStatus,
+  textareaClassFor,
 } from "@/components/ui/form";
 import { type GearItemDetail, getGearItemDetail } from "@/db/gear";
 import {
@@ -643,7 +644,7 @@ function ServiceCard({
                 maxLength={500}
                 rows={3}
                 placeholder={t("gear.unit.service.notePlaceholder")}
-                className={controlClass}
+                className={textareaClassFor(3)}
               />
             </Field>
             {item.status === "needs_service" ? (

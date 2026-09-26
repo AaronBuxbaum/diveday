@@ -1,6 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions } from "@/components/ui/form";
+import { Field, FieldActions, textareaClassFor } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { ThreadEntry } from "@/db/inbound-messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -150,7 +150,7 @@ export function ConversationSection({
                   rows={4}
                   maxLength={REPLY_BODY_MAX_LENGTH}
                   placeholder={t("inbox.reply.placeholder")}
-                  className={controlClass}
+                  className={textareaClassFor(4)}
                 />
               </Field>
               <SubmitButton

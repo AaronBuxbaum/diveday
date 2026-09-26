@@ -62,9 +62,11 @@ describe("LandmarkEditor", () => {
     expect(kind).not.toHaveClass("min-h-11");
   });
 
-  it("leaves the note, which has no button on its line, at the field size", () => {
+  // A textarea is sized by its lines, not by a button's rung: it shows its
+  // two rows and grows with its text (`textareaClassFor`, K-46).
+  it("leaves the note, which has no button on its line, at its own two rows", () => {
     const { note } = renderOne();
-    expect(note).toHaveClass("min-h-11", "text-base");
+    expect(note).toHaveClass("field-sizing-content", "min-h-[calc(2lh+1.125rem)]", "text-base");
     expect(note).not.toHaveClass("min-h-12");
   });
 

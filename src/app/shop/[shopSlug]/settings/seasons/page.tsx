@@ -6,7 +6,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import {
+  controlClass,
+  DateField,
+  Field,
+  FieldActions,
+  FieldGrid,
+  textareaClassFor,
+} from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { listSeasonEvents } from "@/db/season-events";
@@ -142,7 +149,7 @@ export default async function SeasonsSettingsPage({
                         rows={2}
                         maxLength={SEASON_EVENT_NOTE_MAX}
                         defaultValue={season.note ?? ""}
-                        className={controlClass}
+                        className={textareaClassFor(2)}
                       />
                     </Field>
                     <FieldActions>
@@ -221,7 +228,7 @@ export default async function SeasonsSettingsPage({
                   name="note"
                   rows={2}
                   maxLength={SEASON_EVENT_NOTE_MAX}
-                  className={controlClass}
+                  className={textareaClassFor(2)}
                 />
               </Field>
               <FieldActions>

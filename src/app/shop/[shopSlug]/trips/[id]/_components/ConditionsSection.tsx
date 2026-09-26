@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_CLASS } from "@/components/ui/card";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus, textareaClassFor } from "@/components/ui/form";
 import { compassText } from "@/i18n/compass-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -241,7 +241,7 @@ export function ConditionsSection({
               maxLength={600}
               defaultValue={trip.conditionsSummary ?? ""}
               placeholder={t("trips.conditions.overviewPlaceholder")}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
         </FieldGrid>

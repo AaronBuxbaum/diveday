@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass } from "@/components/ui/form";
+import { textareaClassFor } from "@/components/ui/form";
 import { StatusMark, type StatusMarkVariant } from "@/components/ui/StatusMark";
 import { FIGURE_CLASS, SECTION_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
@@ -318,7 +318,7 @@ function OfflineRollCallNote({
         placeholder={label}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`${controlClass} text-base`}
+        className={`${textareaClassFor(2)} text-base`}
       />
     </p>
   );

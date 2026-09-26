@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
-import { controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { telHref } from "@/lib/contact-links";
 import {
@@ -395,7 +395,7 @@ export function DateRequestForm({
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
                 placeholder={copy.messagePlaceholder}
-                className={controlClass}
+                className={textareaClassFor(4)}
               />
             </Field>
           </FieldGrid>

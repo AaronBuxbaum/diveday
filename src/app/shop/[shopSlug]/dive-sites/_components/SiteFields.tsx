@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { EditorSection } from "@/components/editor/EditorSection";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { StoredPhoto } from "@/components/StoredPhoto";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
 import { REQUIRABLE_CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -277,7 +277,7 @@ export function SiteFields({
               rows={3}
               maxLength={1200}
               defaultValue={values?.description ?? ""}
-              className={controlClass}
+              className={textareaClassFor(3)}
             />
           </Field>
         </FieldGrid>
@@ -514,7 +514,7 @@ export function SiteFields({
               rows={3}
               maxLength={1200}
               defaultValue={values?.marineLifeDescription ?? ""}
-              className={controlClass}
+              className={textareaClassFor(3)}
             />
           </Field>
         </FieldGrid>
@@ -622,7 +622,7 @@ export function SiteFields({
                 rows={2}
                 maxLength={500}
                 defaultValue={values?.currentNote ?? ""}
-                className={controlClass}
+                className={textareaClassFor(2)}
               />
             </Field>
             <Field
@@ -635,7 +635,7 @@ export function SiteFields({
                 maxLength={1200}
                 defaultValue={values?.divePlan ?? ""}
                 placeholder={t("diveSites.form.divePlanPlaceholder")}
-                className={controlClass}
+                className={textareaClassFor(3)}
               />
             </Field>
             <Field
@@ -648,7 +648,7 @@ export function SiteFields({
                 maxLength={600}
                 defaultValue={values?.conservationNote ?? ""}
                 placeholder={t("diveSites.form.conservationNotePlaceholder")}
-                className={controlClass}
+                className={textareaClassFor(3)}
               />
             </Field>
           </FieldGrid>
@@ -688,7 +688,7 @@ export function SiteFields({
               maxLength={MAX_PLANNING_NOTE_LENGTH}
               defaultValue={values?.planningNote ?? ""}
               placeholder={t("diveSites.form.planningNotePlaceholder")}
-              className={controlClass}
+              className={textareaClassFor(3)}
             />
           </Field>
         </FieldGrid>
@@ -719,7 +719,7 @@ export function SiteFields({
               maxLength={400}
               defaultValue={values?.fitNote ?? ""}
               placeholder={t("diveSites.form.fitNotePlaceholder")}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
         </FieldGrid>

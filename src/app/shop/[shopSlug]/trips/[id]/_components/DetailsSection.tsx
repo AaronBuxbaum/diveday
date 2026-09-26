@@ -10,6 +10,7 @@ import {
   FieldGrid,
   FormStatus,
   legendClass,
+  textareaClassFor,
 } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
@@ -105,7 +106,7 @@ export function DetailsSection({
             rows={2}
             maxLength={500}
             defaultValue={trip.description ?? ""}
-            className={controlClass}
+            className={textareaClassFor(2)}
           />
         </Field>
       </FieldGrid>
@@ -158,7 +159,7 @@ export function DetailsSection({
               rows={2}
               maxLength={300}
               defaultValue={trip.arrivalLandmark ?? ""}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
           <Field
@@ -171,7 +172,7 @@ export function DetailsSection({
               rows={2}
               maxLength={300}
               defaultValue={trip.arrivalLookFor ?? ""}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
           <Field
@@ -184,7 +185,7 @@ export function DetailsSection({
               rows={2}
               maxLength={300}
               defaultValue={trip.arrivalFirstInteraction ?? ""}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
           <Field
@@ -196,7 +197,7 @@ export function DetailsSection({
               rows={2}
               maxLength={300}
               defaultValue={trip.arrivalParkingNote ?? ""}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
           <Field
@@ -208,7 +209,7 @@ export function DetailsSection({
               rows={2}
               maxLength={300}
               defaultValue={trip.arrivalTransitNote ?? ""}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
           <Field

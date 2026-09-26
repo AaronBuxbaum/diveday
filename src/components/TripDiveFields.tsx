@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { controlClass, Field, FieldGrid, legendClass } from "@/components/ui/form";
+import {
+  controlClass,
+  Field,
+  FieldGrid,
+  legendClass,
+  textareaClassFor,
+} from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
 import { DOCK_DAY_LIMITS } from "@/lib/diver-planning";
 
@@ -189,7 +195,7 @@ export function TripDiveFields({
                     rows={2}
                     maxLength={500}
                     defaultValue={initial?.description ?? ""}
-                    className={controlClass}
+                    className={textareaClassFor(2)}
                   />
                 </Field>
               </FieldGrid>

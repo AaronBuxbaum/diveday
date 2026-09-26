@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions } from "@/components/ui/form";
+import { Field, FieldActions, textareaClassFor } from "@/components/ui/form";
 import { Modal } from "@/components/ui/Modal";
 
 /**
@@ -51,7 +51,7 @@ export function PullForServiceButton({
               maxLength={300}
               rows={3}
               placeholder={copy.notePlaceholder}
-              className={controlClass}
+              className={textareaClassFor(3)}
             />
           </Field>
           <FieldActions>

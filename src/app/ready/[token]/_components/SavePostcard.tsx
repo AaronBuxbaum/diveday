@@ -2,7 +2,7 @@
 
 import { type ReactNode, useId, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { textareaClassFor } from "@/components/ui/form";
 import {
   drawPostcard,
   POSTCARD_FRAME,
@@ -179,7 +179,7 @@ export function SavePostcard({
           onChange={(event) => setLine(event.target.value)}
           placeholder={copy.linePlaceholder}
           aria-describedby={hintId}
-          className={`${controlClass} mt-1.5`}
+          className={`${textareaClassFor(2)} mt-1.5`}
         />
         <p id={hintId} className="mt-1.5 text-xs text-muted">
           {copy.lineHint}

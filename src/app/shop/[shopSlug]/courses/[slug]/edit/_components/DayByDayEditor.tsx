@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
 import { MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "@/lib/course-limits";
 import type { CourseScheduleDay } from "@/lib/courses";
@@ -209,7 +209,7 @@ export function DayByDayEditor({
                   rows={6}
                   maxLength={MAX_SCHEDULE_DAY_ITEMS * 200}
                   placeholder={copy.itemsPlaceholder}
-                  className={controlClass}
+                  className={textareaClassFor(6)}
                 />
               </Field>
             </FieldGrid>

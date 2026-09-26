@@ -17,6 +17,7 @@ import {
   Field,
   FieldGrid,
   legendClass,
+  textareaClassFor,
 } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
@@ -769,7 +770,7 @@ function AddPanel({
           maxLength={500}
           disabled={!expanded}
           placeholder={copy.descriptionPlaceholder}
-          className={controlClass}
+          className={textareaClassFor(2)}
         />
       </Field>
       <Field label={null} className={expanded ? undefined : "hidden"}>

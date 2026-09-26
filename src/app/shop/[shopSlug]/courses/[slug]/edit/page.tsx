@@ -21,6 +21,7 @@ import {
   FormStatus,
   PriceField,
   StickyFormActions,
+  textareaClassFor,
 } from "@/components/ui/form";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -382,7 +383,7 @@ export default async function EditCoursePage({
                         rows={8}
                         maxLength={6000}
                         defaultValue={course.overview ?? ""}
-                        className={controlClass}
+                        className={textareaClassFor(8)}
                       />
                     </Field>
                     {/* Beside the boxes it governs rather than in a panel above the
@@ -651,7 +652,7 @@ export default async function EditCoursePage({
                         maxLength={400}
                         defaultValue={course.prerequisiteNote ?? ""}
                         placeholder={t("courses.edit.prerequisitePlaceholder")}
-                        className={controlClass}
+                        className={textareaClassFor(4)}
                       />
                     </Field>
                   </FieldGrid>
@@ -670,7 +671,7 @@ export default async function EditCoursePage({
                         maxLength={2000}
                         defaultValue={course.includes.join("\n")}
                         placeholder={t("courses.edit.includedPlaceholder")}
-                        className={controlClass}
+                        className={textareaClassFor(6)}
                       />
                     </Field>
                     <Field
@@ -684,7 +685,7 @@ export default async function EditCoursePage({
                         maxLength={2000}
                         defaultValue={course.excludes.join("\n")}
                         placeholder={t("courses.edit.notIncludedPlaceholder")}
-                        className={controlClass}
+                        className={textareaClassFor(6)}
                       />
                     </Field>
                   </FieldGrid>

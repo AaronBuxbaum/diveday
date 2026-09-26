@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
 import { MAX_FAQS } from "@/lib/course-limits";
 import type { CourseFaq } from "@/lib/courses";
@@ -117,7 +117,7 @@ export function FaqEditor({
                 value={row.answer}
                 placeholder={copy.answerPlaceholder}
                 onChange={(event) => update(row.key, { answer: event.target.value })}
-                className={controlClass}
+                className={textareaClassFor(3)}
               />
             </Field>
           </FieldGrid>

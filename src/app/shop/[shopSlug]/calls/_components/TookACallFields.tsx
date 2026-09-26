@@ -8,6 +8,7 @@ import {
   DateField,
   Field,
   FieldGrid,
+  textareaClassFor,
 } from "@/components/ui/form";
 import {
   CALL_OUTCOMES,
@@ -140,7 +141,7 @@ export function TookACallFields({
             />
           </Field>
           <Field label={copy.noteLabel} hint={copy.optionalHint} className="sm:col-span-2">
-            <textarea name="message" rows={3} maxLength={1500} className={controlClass} />
+            <textarea name="message" rows={3} maxLength={1500} className={textareaClassFor(3)} />
           </Field>
         </FieldGrid>
       </fieldset>

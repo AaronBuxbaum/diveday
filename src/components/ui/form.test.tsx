@@ -21,6 +21,7 @@ import {
   PriceField,
   SearchField,
   StickyFormActions,
+  textareaClassFor,
 } from "./form";
 
 afterEach(cleanup);
@@ -146,6 +147,34 @@ describe("controlClassFor", () => {
         size,
       ).toHaveLength(1);
     }
+  });
+});
+
+/**
+ * **A textarea grows with what is in it.** Every textarea picked a fixed
+ * `rows` for a typical value, so a longer one scrolled inside its box and its
+ * next line showed as a sliver on the bottom border: the course FAQ answer
+ * (1,200 characters, three rows) with a fourth line's ink 2px above the
+ * border at 390, the seasons notes (280 characters, two rows) with a third
+ * line's ascenders on it (K-46). `field-sizing: content` grows the box; the
+ * minimum keeps today's rows, so an empty box is no smaller than it was.
+ */
+describe("textareaClassFor", () => {
+  it("grows with its content and never stands shorter than its rows", () => {
+    const tokens = textareaClassFor(3).split(/\s+/);
+    expect(tokens).toContain("field-sizing-content");
+    // Three lines of the box's own line-height, and py-2 (16px) plus the
+    // border (2px) around them.
+    expect(tokens).toContain("min-h-[calc(3lh+1.125rem)]");
+    expect(textareaClassFor(2).split(/\s+/)).toContain("min-h-[calc(2lh+1.125rem)]");
+  });
+
+  it("is the control's body, and spells one minimum height and one padding", () => {
+    const tokens = textareaClassFor(4).split(/\s+/);
+    for (const shared of controlClass.split(/\s+/).filter((token) => !token.startsWith("min-h-")))
+      expect(tokens).toContain(shared);
+    expect(tokens.filter((token) => token.startsWith("min-h-"))).toHaveLength(1);
+    expect(tokens.filter((token) => token.startsWith("py-"))).toHaveLength(1);
   });
 });
 
@@ -1160,7 +1189,9 @@ describe("source sweeps", () => {
     const offenders: string[] = [];
     for (const { file, source } of sourceFiles()) {
       if (allowed.has(file)) continue;
-      for (const match of source.matchAll(/`[^`]*\$\{controlClass(?:For\([^)]*\))?\}[^`]*`/g)) {
+      const templates =
+        /`[^`]*\$\{(?:controlClass(?:For\([^)]*\))?|textareaClassFor\([^)]*\))\}[^`]*`/g;
+      for (const match of source.matchAll(templates)) {
         if (/\btext-(xs|sm)\b/.test(match[0]))
           offenders.push(`${file}:${lineOf(source, match.index)} ${match[0]}`);
       }
@@ -1266,6 +1297,27 @@ describe("source sweeps", () => {
       for (const { index, text } of openingTags(source, "input")) {
         if (/type="(date|month|time|datetime-local|week)"/.test(text))
           offenders.push(`${file}:${lineOf(source, index)}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * A textarea on the bare control class stops growing with its text (K-46),
+   * and one whose minimum disagrees with its `rows` draws two sizes: the
+   * minimum where `field-sizing` works and `rows` where it does not.
+   */
+  it("draws every textarea with textareaClassFor, at its own rows", () => {
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      if (file === "src/components/ui/form.tsx") continue;
+      for (const { index, text } of openingTags(source, "textarea")) {
+        const where = `${file}:${lineOf(source, index)}`;
+        if (/\bcontrolClass(For)?\b/.test(text)) offenders.push(`${where} on controlClass`);
+        const min = text.match(/textareaClassFor\(([^)]*)\)/)?.[1]?.trim();
+        const rows = text.match(/\brows=\{([^}]+)\}/)?.[1]?.trim();
+        if (min !== undefined && min !== rows)
+          offenders.push(`${where} rows={${rows}} but textareaClassFor(${min})`);
       }
     }
     expect(offenders).toEqual([]);

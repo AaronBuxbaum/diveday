@@ -13,7 +13,7 @@ import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_CLASS, sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -939,7 +939,7 @@ export function RosterSection({
                   rows={2}
                   maxLength={280}
                   defaultValue={courseNextStepByBooking?.get(booking.id) ?? ""}
-                  className={controlClass}
+                  className={textareaClassFor(2)}
                 />
               </Field>
               <SubmitButton

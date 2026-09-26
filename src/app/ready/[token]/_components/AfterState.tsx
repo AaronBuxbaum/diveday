@@ -13,7 +13,7 @@ import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass, FormStatus } from "@/components/ui/form";
+import { controlClass, FormStatus, textareaClassFor } from "@/components/ui/form";
 import {
   SECTION_TITLE_CLASS,
   SHELL_TITLE_CLASS,
@@ -517,7 +517,7 @@ export function AfterState({
             maxLength={MAX_REVIEW_COMMENT_LENGTH}
             defaultValue={ownReview?.comment ?? ""}
             placeholder={t("reviews.commentPlaceholder")}
-            className={controlClass}
+            className={textareaClassFor(3)}
           />
           <div>
             <SubmitButton

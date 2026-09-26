@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, controlClassFor, Field } from "@/components/ui/form";
+import { controlClassFor, Field, textareaClassFor } from "@/components/ui/form";
 import {
   DIVE_SITE_LANDMARK_KINDS,
   type DiveSiteLandmark,
@@ -134,7 +134,7 @@ export function LandmarkEditor({
                   rows={2}
                   maxLength={400}
                   placeholder={copy.notePlaceholder}
-                  className={controlClass}
+                  className={textareaClassFor(2)}
                 />
               </Field>
             </li>

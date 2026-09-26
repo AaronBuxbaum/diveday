@@ -38,7 +38,7 @@ import { ThreadShell } from "@/components/thread/ThreadShell";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ChoiceRow, controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -1105,7 +1105,7 @@ function DayOfDetails({
             rows={2}
             maxLength={300}
             defaultValue={data.rentalFit?.note ?? ""}
-            className={controlClass}
+            className={textareaClassFor(2)}
           />
         </Field>
         <div>
@@ -1339,7 +1339,7 @@ function DayOfDetails({
               rows={2}
               maxLength={300}
               defaultValue={data.supportNeeds?.equipmentAdaptation ?? ""}
-              className={controlClass}
+              className={textareaClassFor(2)}
             />
           </Field>
           <Field label={t("ready.supportDivesWithLabel")} htmlFor="support-dives-with">

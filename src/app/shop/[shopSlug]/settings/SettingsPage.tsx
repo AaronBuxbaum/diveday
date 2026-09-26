@@ -17,6 +17,7 @@ import {
   FieldActions,
   FieldGrid,
   PriceField,
+  textareaClassFor,
 } from "@/components/ui/form";
 import { GroupLabel, InsetGroup } from "@/components/ui/ledger";
 import {
@@ -917,7 +918,7 @@ export default async function SettingsPage({
                     maxLength={1000}
                     defaultValue={shop.description ?? ""}
                     placeholder={t("settings.main.profile.descriptionPlaceholder")}
-                    className={controlClass}
+                    className={textareaClassFor(3)}
                   />
                 </Field>
                 <Field
@@ -1105,7 +1106,7 @@ export default async function SettingsPage({
                     rows={2}
                     maxLength={280}
                     defaultValue={shop.welcomeNote ?? ""}
-                    className={controlClass}
+                    className={textareaClassFor(2)}
                   />
                 </Field>
                 <Field label={t("settings.main.hospitality.dockCallLabel")}>
@@ -1114,7 +1115,7 @@ export default async function SettingsPage({
                     rows={2}
                     maxLength={280}
                     defaultValue={shop.dockCallNote ?? ""}
-                    className={controlClass}
+                    className={textareaClassFor(2)}
                   />
                 </Field>
                 <Field label={t("settings.main.hospitality.signOffLabel")}>
@@ -1123,7 +1124,7 @@ export default async function SettingsPage({
                     rows={2}
                     maxLength={280}
                     defaultValue={shop.signOffNote ?? ""}
-                    className={controlClass}
+                    className={textareaClassFor(2)}
                   />
                 </Field>
                 <FieldActions>
@@ -1345,7 +1346,7 @@ export default async function SettingsPage({
                     rows={6}
                     maxLength={1212}
                     defaultValue={shop.packingList.join("\n")}
-                    className={controlClass}
+                    className={textareaClassFor(6)}
                   />
                 </Field>
                 <FieldActions>
@@ -1819,7 +1820,7 @@ export default async function SettingsPage({
                     rows={4}
                     maxLength={2000}
                     defaultValue={shop.emergencyReference.plan}
-                    className={controlClass}
+                    className={textareaClassFor(4)}
                   />
                 </Field>
                 <div>

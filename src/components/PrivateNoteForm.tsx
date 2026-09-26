@@ -1,7 +1,7 @@
 // i18n-exempt-file: type-only action signature; all visible copy arrives as translated props.
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field } from "@/components/ui/form";
+import { Field, type TextareaRows, textareaClassFor } from "@/components/ui/form";
 
 export type PrivateNoteAction = (formData: FormData) => void | Promise<void>;
 
@@ -33,7 +33,8 @@ export function PrivateNoteForm({
   hiddenFields?: Readonly<Record<string, string>>;
   resetKey?: string | number;
   copy: PrivateNoteFormCopy;
-  rows?: number;
+  /** The box's fewest lines; it grows past them with its text. */
+  rows?: TextareaRows;
   className?: string;
 }) {
   return (
@@ -48,7 +49,7 @@ export function PrivateNoteForm({
           maxLength={1_000}
           rows={rows}
           placeholder={copy.placeholder}
-          className={controlClass}
+          className={textareaClassFor(rows)}
         />
       </Field>
       <SubmitButton

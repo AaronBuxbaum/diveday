@@ -8,7 +8,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { Field, FieldGrid, FormStatus, textareaClassFor } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/ledger";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import {
@@ -283,7 +283,7 @@ export default async function WaiversPage({
                   maxLength={12_000}
                   defaultValue={current?.body ?? DEFAULT_WAIVER_BODY}
                   placeholder={t("waiversStaff.placeholder")}
-                  className={controlClass}
+                  className={textareaClassFor(14)}
                 />
               </Field>
             </FieldGrid>

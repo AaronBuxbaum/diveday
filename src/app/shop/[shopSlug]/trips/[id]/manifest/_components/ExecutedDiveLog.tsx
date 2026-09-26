@@ -4,7 +4,14 @@ import { useActionState, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
-import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import {
+  controlClass,
+  DateField,
+  Field,
+  FieldGrid,
+  FormStatus,
+  textareaClassFor,
+} from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ExecutedDive } from "@/db/schema";
 import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
@@ -344,7 +351,7 @@ function ExecutedDiveForm({
             maxLength={PLAN_CHANGE_NOTE_MAX}
             value={planChangeNote}
             onChange={(event) => setPlanChangeNote(event.target.value)}
-            className={controlClass}
+            className={textareaClassFor(2)}
           />
         </Field>
         <Field

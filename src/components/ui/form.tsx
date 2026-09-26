@@ -78,8 +78,45 @@ export function controlClassFor(size: ControlSize): string {
   return `${controlSizes[size]} ${controlBody}`;
 }
 
-/** Shared control styling for inputs, selects, and textareas, at the `field` size. */
+/** Shared control styling for inputs and selects, at the `field` size. */
 export const controlClass = controlClassFor("field");
+
+/**
+ * The fewest lines each textarea shows: its `rows`, as a minimum height of
+ * that many of its own lines plus `py-2` (16px) and the border (2px). Spelled
+ * out per count so Tailwind can see every class; a count nobody uses has no
+ * rung.
+ */
+const textareaMinHeight = {
+  2: "min-h-[calc(2lh+1.125rem)]",
+  3: "min-h-[calc(3lh+1.125rem)]",
+  4: "min-h-[calc(4lh+1.125rem)]",
+  6: "min-h-[calc(6lh+1.125rem)]",
+  8: "min-h-[calc(8lh+1.125rem)]",
+  14: "min-h-[calc(14lh+1.125rem)]",
+} as const;
+
+export type TextareaRows = keyof typeof textareaMinHeight;
+
+/**
+ * **A textarea that grows with what is in it**, never shorter than `rows`.
+ *
+ * Every textarea picked a fixed `rows` for a typical value, so a longer one
+ * scrolled inside its box and its next line showed as a sliver on the bottom
+ * border: the course FAQ answer (1,200 characters in three rows) with a
+ * fourth line's ink 2px above the border at 390, the seasons notes (280
+ * characters in two) with a third line's ascenders on it (the pixel probe,
+ * course-edit-save-bar and settings-seasons). `field-sizing: content` grows
+ * the box with its text; the minimum keeps the rows it had, so an empty box
+ * reads as the size of answer it asks for.
+ *
+ * Pass the same number as the textarea's own `rows`, which is what a browser
+ * without `field-sizing` still draws. `form.test.tsx` refuses a textarea on
+ * `controlClass` itself.
+ */
+export function textareaClassFor(rows: TextareaRows): string {
+  return `py-2 ${controlBody} field-sizing-content ${textareaMinHeight[rows]}`;
+}
 
 /**
  * **The one search box** — a `type="search"` control wearing `controlClass`,

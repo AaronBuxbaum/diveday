@@ -4,7 +4,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass, FormStatus } from "@/components/ui/form";
+import { FormStatus, textareaClassFor } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -180,7 +180,7 @@ export function RecapNoteEditor({
           disabled={recapLocked}
           placeholder={t("trips.recapNote.placeholder")}
           aria-label={t("trips.recapNote.heading")}
-          className={controlClass}
+          className={textareaClassFor(3)}
         />
         <div className="flex flex-wrap items-center gap-3">
           {!recapLocked ? (
