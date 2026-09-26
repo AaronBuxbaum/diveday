@@ -68,12 +68,16 @@ export default async function DemoStoryPage({ params }: { params: Promise<{ stor
       // The whole action is one button, so no box around it.
       panel={false}
     >
+      {/* The form is a shrink-wrapped item of the shell's `items-center`
+          column, so the button is as wide as its words; a `w-full` on it had
+          no width to fill, and the skeleton drew the full-width bar it asked
+          for (K-576). */}
       <form action={enterDemoAction}>
         <FunnelTag source={storySource(story)} />
         <input type="hidden" name="story" value={story} />
         <SubmitButton
           pendingLabel={t("marketing.common.gettingReady")}
-          className={buttonClass({ busy: true, className: "w-full" })}
+          className={buttonClass({ busy: true })}
         >
           {t("demo.stories.enter")}
         </SubmitButton>
