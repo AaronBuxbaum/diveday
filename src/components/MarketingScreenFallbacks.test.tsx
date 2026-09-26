@@ -2,13 +2,50 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  CaptainRollCallFallback,
+  DiverBookingFallback,
   ExportBundleFallback,
+  FrontDeskReadinessFallback,
   ImportPreviewFallback,
   NightBeforeBriefFallback,
+  RecapPageFallback,
   ShopPrepListFallback,
 } from "./MarketingScreenFallbacks";
 
 afterEach(cleanup);
+
+const EVERY_MOCK = [
+  ["CaptainRollCallFallback", CaptainRollCallFallback],
+  ["FrontDeskReadinessFallback", FrontDeskReadinessFallback],
+  ["ImportPreviewFallback", ImportPreviewFallback],
+  ["ExportBundleFallback", ExportBundleFallback],
+  ["DiverBookingFallback", DiverBookingFallback],
+  ["RecapPageFallback", RecapPageFallback],
+  ["NightBeforeBriefFallback", NightBeforeBriefFallback],
+  ["ShopPrepListFallback", ShopPrepListFallback],
+] as const;
+
+/** A mock's two parts: its app bar and the body under it. */
+function barAndBody(Mock: (typeof EVERY_MOCK)[number][1]) {
+  const { container } = render(<Mock locale="en-US" />);
+  const [bar, body] = Array.from(container.firstElementChild?.children ?? []);
+  return { bar, body };
+}
+
+/**
+ * The bar's label sat 16px in over bodies inset 20px, so the shop name and the
+ * body's eyebrow missed each other by 4px on every mock but the roll call,
+ * whose body was 16px too (K-51). One 20px inset now, bar and body alike.
+ */
+describe("the mock family's inset", () => {
+  it.each(EVERY_MOCK)("%s starts its bar and its body on one 20px edge", (_name, Mock) => {
+    const { bar, body } = barAndBody(Mock);
+    expect(bar).toHaveClass("px-5");
+    expect(body).toHaveClass("px-5");
+    expect(bar.className).not.toMatch(/(^|\s)p[xl]?-4(\s|$)/);
+    expect(body.className).not.toMatch(/(^|\s)p[xl]?-4(\s|$)/);
+  });
+});
 
 describe("MarketingScreenFallbacks", () => {
   describe("ShopPrepListFallback", () => {

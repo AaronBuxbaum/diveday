@@ -16,9 +16,20 @@ import type { DiverLocale } from "@/i18n/settings";
  * AGENTS.md's `cacheComponents` notes.
  */
 
+/**
+ * **One inset for the whole mock family.** The app bar's shop name and the
+ * body's first line share one 20px edge. The bar was `px-4` over bodies at
+ * `p-5`, so the two missed each other by 4px on every mock but the roll call,
+ * whose body was `p-4` as well (K-51).
+ */
+const MOCK_INSET_X = "px-5";
+const MOCK_BODY = `${MOCK_INSET_X} py-5`;
+
 function AppBar({ label }: { label: string }) {
   return (
-    <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 text-xs text-muted">
+    <div
+      className={`flex items-center justify-between border-b border-border bg-surface ${MOCK_INSET_X} py-3 text-xs text-muted`}
+    >
       {/* i18n-exempt: sample shop name used only in marketing mockups */}
       <span className="font-semibold tracking-wide text-primary uppercase">Blue Mantis Divers</span>
       <span>{label}</span>
@@ -31,7 +42,7 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.offlineCopy")} />
-      <div className="space-y-4 p-4">
+      <div className={`space-y-4 ${MOCK_BODY}`}>
         <div>
           <p className={groupLabelClass("primary")}>{t("fallback.boatManifest")}</p>
           <h3 className={`mt-1 ${SECTION_TITLE_CLASS}`}>{t("fallback.tripName")}</h3>
@@ -90,7 +101,7 @@ export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) 
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.tripDetail")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <p className={groupLabelClass("primary")}>{t("fallback.readiness")}</p>
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.answerBeforeDock")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.noDiverClears")}</p>
@@ -131,7 +142,7 @@ export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.import.label")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <p className={groupLabelClass("primary")}>{t("fallback.import.eyebrow")}</p>
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.import.title")}</h3>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -237,7 +248,7 @@ export function ExportBundleFallback({ locale }: { locale: DiverLocale }) {
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.export.label")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className={groupLabelClass("primary")}>{t("fallback.export.eyebrow")}</p>
@@ -291,7 +302,7 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.schedule")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <p className={groupLabelClass("primary")}>{t("fallback.upcomingTrips")}</p>
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.findNextDive")}</h3>
         <div className="mt-4 space-y-3">
@@ -344,7 +355,7 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.recap.label")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <h3 className={SUB_TITLE_CLASS}>{t("fallback.recap.greeting")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
 
@@ -423,7 +434,7 @@ export function NightBeforeBriefFallback({ locale }: { locale: DiverLocale }) {
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.nightBefore.label")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <p className={groupLabelClass("primary")}>{t("fallback.nightBefore.eyebrow")}</p>
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.nightBefore.title")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.nightBefore.time")}</p>
@@ -485,7 +496,7 @@ export function ShopPrepListFallback({ locale }: { locale: DiverLocale }) {
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.shopPrep.label")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <p className={groupLabelClass("primary")}>{t("fallback.shopPrep.eyebrow")}</p>
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.shopPrep.title")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.shopPrep.time")}</p>
