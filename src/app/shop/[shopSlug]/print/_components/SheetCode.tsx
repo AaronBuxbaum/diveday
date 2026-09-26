@@ -14,6 +14,14 @@ import QRCode from "qrcode";
  * Rendered at 512 device pixels whatever its printed size, which is about
  * 400 dpi at the 32mm the sheets draw it — past what a phone camera needs and
  * past what a laser blurs.
+ *
+ * **No quiet zone inside the image** (`margin: 0`). The sheet's own white is
+ * the quiet zone, so the code's ink starts at the edge of its box and lines up
+ * with the text column the box sits in. With one white module inside the
+ * image, the pixel probe measured the pass's code 3px right of its title and
+ * the dock sign's 2px and 4px right of their captions. The price is that each
+ * call site keeps four modules of paper clear on every side: about 3.3mm
+ * around the pass's 24mm code, 4.7mm around the sticker's 34mm one.
  */
 const CODE_PIXELS = 512;
 
@@ -32,7 +40,7 @@ export async function SheetCode({
   label: string;
   className?: string;
 }) {
-  const dataUrl = await QRCode.toDataURL(value, { margin: 1, width: CODE_PIXELS });
+  const dataUrl = await QRCode.toDataURL(value, { margin: 0, width: CODE_PIXELS });
   return (
     // biome-ignore lint/performance/noImgElement: a data: URL this server render just produced.
     <img src={dataUrl} alt={label} className={className} />

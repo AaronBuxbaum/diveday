@@ -110,7 +110,10 @@ export default async function PaperPassPage({
             {t("print.sheet.pass.bringHeading")}: {shop.packingList.join(", ")}
           </p>
         ) : null}
-        <div className="mt-4 flex items-center gap-3">
+        {/* `gap-4`, 3.4mm at the print root: the code carries no quiet zone
+            of its own (`SheetCode`), and four of its 0.8mm modules must stay
+            clear of the words beside it. */}
+        <div className="mt-4 flex items-center gap-4">
           <SheetCode
             value={passCodePayload(booking.bookingId)}
             label={t("print.sheet.pass.eyebrow")}
