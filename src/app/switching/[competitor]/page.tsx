@@ -173,9 +173,10 @@ async function GuideBody({
       {/* Coexist framing: for a booking channel a shop keeps (FareHarbor,
           Rezdy), the "keep the storefront, we run the water" division of
           labor, plus the honest alternative of leaving. Absent for the
-          leave-it guides. */}
+          leave-it guides. Ruled below only: `GuideContext` above it draws the
+          rule on top (K-204). */}
       {guide.coexist && (
-        <section className="border-y border-border">
+        <section className="border-b border-border">
           <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
             <p className={MARKETING_EYEBROW_CLASS}>
               {t("switching.competitor.keepOrLeaveEyebrow")}

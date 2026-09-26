@@ -7,7 +7,7 @@ import { tapTargetLinkClass } from "@/components/ui/button";
 // reference, not the session and database behind it.
 vi.mock("@/app/actions/demo", () => ({ enterDemoAction: vi.fn() }));
 
-const { ClosingCta, GuideHero, SourcesFootnote } = await import("./guide");
+const { ClosingCta, GuideContext, GuideHero, SourcesFootnote } = await import("./guide");
 
 afterEach(cleanup);
 
@@ -115,5 +115,29 @@ describe("the closing band", () => {
       "py-16",
       "lg:py-20",
     );
+  });
+});
+
+function renderContext() {
+  return render(<GuideContext locale="en-US" paragraphs={["EVE ran the back office."]} />);
+}
+
+/**
+ * **The mid-page card sits between two rules** (K-204).
+ *
+ * On the leave-it guides and the spreadsheet guide nothing ruled the "you are
+ * here" band off from the demo card under it, so the band's bottom padding and
+ * the card's top padding stacked: 144px above the card at 1280 (169 on the
+ * spreadsheet guide) against 64 below it. The band is now full-bleed and ruled
+ * below, as the hero is, so the card sits 64 | card | 64 between rules.
+ */
+describe("the you-are-here band", () => {
+  it("is a full-bleed section ruled below, holding the column's box", () => {
+    const { container } = renderContext();
+    const band = container.firstElementChild;
+    expect(band?.tagName).toBe("SECTION");
+    expect(band).toHaveClass("border-b", "border-border");
+    expect(band?.className).not.toMatch(/max-w-|(?:^|\s)p[xy]?-/);
+    expect(band?.firstElementChild).toHaveClass("mx-auto", "max-w-4xl", "px-6");
   });
 });

@@ -115,6 +115,14 @@ export function GuideHero({
  * section by its eyebrow, the mechanics by a numbered marker — and this one
  * was four unlabelled paragraphs, so a skimmer met a wall of body text with
  * nothing telling them what it was for.
+ *
+ * **Full-bleed and ruled below**, as the hero is. On the leave-it guides and
+ * the spreadsheet guide the demo card follows directly, and with no rule
+ * between them this band's bottom padding and the card's top padding stacked:
+ * 144px above the card at 1280 (169 on the spreadsheet guide) against 64
+ * below it. Ruled, the card sits 64 | card | 64 between rules on every guide
+ * (K-204); the coexist band after it is ruled below only, so no guide draws
+ * two hairlines together.
  */
 export function GuideContext({
   locale,
@@ -128,16 +136,18 @@ export function GuideContext({
 }) {
   const t = diverTranslator(locale);
   return (
-    <section className="mx-auto max-w-4xl px-6 py-14 lg:py-20">
-      <p className={MARKETING_EYEBROW_CLASS}>{t("switching.common.contextEyebrow")}</p>
-      <div className="mt-5 max-w-2xl space-y-5">
-        {paragraphs.map((paragraph) => (
-          <p key={paragraph} className="text-lg leading-8 text-muted">
-            {paragraph}
-          </p>
-        ))}
+    <section className="border-b border-border">
+      <div className="mx-auto max-w-4xl px-6 py-14 lg:py-20">
+        <p className={MARKETING_EYEBROW_CLASS}>{t("switching.common.contextEyebrow")}</p>
+        <div className="mt-5 max-w-2xl space-y-5">
+          {paragraphs.map((paragraph) => (
+            <p key={paragraph} className="text-lg leading-8 text-muted">
+              {paragraph}
+            </p>
+          ))}
+        </div>
+        {children}
       </div>
-      {children}
     </section>
   );
 }
