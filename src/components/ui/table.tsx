@@ -58,17 +58,21 @@ const MIN_WIDTH = {
   // so the shell never scrolled and the columns packed instead (issue #1035).
   "56rem": "min-w-[56rem] print:min-w-0",
   // The same table with more roll-call columns. The departure log's roster is
-  // three fixed columns plus one per checkpoint, and a checkpoint is a dive:
+  // three text columns plus one per checkpoint, and a checkpoint is a dive:
   // `rollCallCheckpoints` clamps `plannedDives` to 1..4 and the DB check
   // constraint `trips_planned_dives_range` agrees, so the count is five to
-  // eight columns and nothing wider exists. `56rem` holds six of them at the
-  // ~149px issue #1035 measured; the same floor gives seven 128px and eight
-  // 112px, which is that crush returning on a shop that runs more dives per
-  // departure than the seed does. This one holds seven at 165px and eight at
-  // 144px. Wider than the `max-w-5xl` staff work surface on purpose — at eight
-  // columns the document scrolls sideways at every width including desktop,
-  // which is the answer #1035 settled on for a table that is a document, and
-  // `print:min-w-0` still hands paper the whole thing (issue #1052).
+  // eight columns and nothing wider exists. The log pins each checkpoint
+  // column at `8rem` and the text columns share the rest, so at `56rem` they
+  // get ~213px beside two checkpoints and ~171px beside three, but only 128px
+  // beside four and 85px beside five: the crush issue #1035 measured, back on a
+  // shop that runs more dives per departure than the seed does. This floor
+  // gives them ~213px beside four and ~171px beside five
+  // (`rollCallTableMinWidth`, trips/[id]/log/_components/roll-call-columns.ts).
+  // Wider than the `max-w-5xl` staff work surface on purpose — at seven and
+  // eight columns the document scrolls sideways at every width including
+  // desktop, which is the answer #1035 settled on for a table that is a
+  // document, and `print:min-w-0` still hands paper the whole thing (issue
+  // #1052).
   "72rem": "min-w-[72rem] print:min-w-0",
 } as const;
 
@@ -91,16 +95,15 @@ export type TableMinWidth = keyof typeof MIN_WIDTH;
  * see an interpolated arbitrary value — and deliberately few: this is a hint
  * about a column's *role*, not a layout escape hatch.
  *
- * **Released in print**, as `MIN_WIDTH`'s floors are. On screen a table that
- * pins columns has a floor to scroll against; paper has only its own width,
- * and the departure log pins one column per checkpoint — five of them at 8rem
- * are 640px of a ~750px page, which would leave the diver's name 37px.
+ * A pin holds on paper too. A table whose pinned columns could outgrow a page
+ * says so at its call site with a `print:` width in `className`, as the
+ * departure log does for its per-dive checkpoint columns.
  */
 const COLUMN_WIDTH = {
-  "8rem": "w-32 print:w-auto",
-  "10rem": "w-40 print:w-auto",
-  "12rem": "w-48 print:w-auto",
-  "14rem": "w-56 print:w-auto",
+  "8rem": "w-32",
+  "10rem": "w-40",
+  "12rem": "w-48",
+  "14rem": "w-56",
 } as const;
 
 export type TableColumnWidth = keyof typeof COLUMN_WIDTH;

@@ -4,7 +4,7 @@ import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components
 import { PrintButton } from "@/components/PrintButton";
 import { EYEBROW_CLASS, EyebrowBackLink, ShopStat } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
-import { Table, type TableMinWidth, TBody, Td, THead, Th } from "@/components/ui/table";
+import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getIncidentExport } from "@/db/incident-export";
@@ -26,6 +26,10 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { CertificationLine } from "./_components/CertificationLine";
+import {
+  rollCallCheckpointPrintClass,
+  rollCallTableMinWidth,
+} from "./_components/roll-call-columns";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — the claim every trips/[id] sibling makes (ADR
@@ -107,6 +111,11 @@ export default async function IncidentExportPage({
     formatDateTimeTz(new Date(isoString), locale, doc.meta.timezone);
   const checkpointText = (checkpoint: string) =>
     rollCallCheckpointText(t, checkpoint as RollCallCheckpoint);
+  // A checkpoint column is pinned narrow on screen (`width="8rem"`) and on
+  // paper (this share), so fixed layout stops splitting a roll-call table into
+  // equal columns: "Awaiting roll call" had as much room as a buddy team,
+  // which ran four and five lines. The text columns keep the rest.
+  const checkpointPrintClass = rollCallCheckpointPrintClass(doc.meta.checkpoints.length);
   // The trail's names join in the reader's own locale, never a hard-coded ", ".
   const memberList = cachedListFormat(locale, { type: "conjunction" });
   const agencyText = (agency: string) =>
@@ -195,12 +204,8 @@ export default async function IncidentExportPage({
             <Th>{t("incidentExport.colDiver")}</Th>
             <Th>{t("incidentExport.colEmergencyContact")}</Th>
             <Th>{t("incidentExport.colBuddy")}</Th>
-            {/* Pinned, so fixed layout stops splitting the row into equal
-                columns: "Awaiting roll call" had as much room as a buddy team,
-                which ran four and five lines. The unpinned three keep the rest;
-                `Table` releases the pin on paper. */}
             {doc.meta.checkpoints.map((checkpoint) => (
-              <Th key={checkpoint} width="8rem">
+              <Th key={checkpoint} width="8rem" className={checkpointPrintClass}>
                 {checkpointText(checkpoint)}
               </Th>
             ))}
@@ -295,7 +300,7 @@ export default async function IncidentExportPage({
               <Th>{t("incidentExport.colRoles")}</Th>
               <Th>{t("incidentExport.colCrewTeams")}</Th>
               {doc.meta.checkpoints.map((checkpoint) => (
-                <Th key={checkpoint} width="8rem">
+                <Th key={checkpoint} width="8rem" className={checkpointPrintClass}>
                   {checkpointText(checkpoint)}
                 </Th>
               ))}
@@ -592,27 +597,6 @@ export default async function IncidentExportPage({
 }
 
 /** One roll-call result cell: the manifest's own word, plus when and by whom. */
-/**
- * The scroll floor for the two roll-call tables, which is the one thing on this
- * page whose column count is not fixed: three columns plus one per checkpoint,
- * and a checkpoint is a dive. `rollCallCheckpoints` clamps to 1..4 dives (as
- * does the `trips_planned_dives_range` check constraint), so this answers for
- * five to eight columns and there is no ninth case to miss.
- *
- * A two-branch pick rather than arithmetic, because `MIN_WIDTH` is a static map
- * of literal Tailwind classes: a computed `min-w-[${n}rem]` typechecks, lints
- * and renders with no width at all, since the scanner never sees the class.
- * The arithmetic lives here rather than in `Table` for the reason that
- * component's own doc gives — its width props are a hint about a table's
- * strategy, not a layout escape hatch, and this page is the only call site that
- * has a column count to count (issue #1052).
- */
-function rollCallTableMinWidth(checkpointCount: number): TableMinWidth {
-  // Seven columns and up. Six at `56rem` is ~149px each, the width issue #1035
-  // measured and settled on; seven would be 128px at that floor and eight 112px.
-  return checkpointCount >= 4 ? "72rem" : "56rem";
-}
-
 function RollCallCell({
   t,
   result,
