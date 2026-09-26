@@ -2372,6 +2372,14 @@ textarea {
  * closed-state rule carries the exit curve because that is the direction it
  * describes.
  *
+ * **The rise lands on `none`, never `0 0`.** Any other `translate` makes the
+ * body a stacking context, painted after the normal-flow content around it,
+ * and that includes its own summary's outset focus ring: wherever an open
+ * body starts flush with a filled card, the card covered the ring's bottom
+ * arm (the atlas caught the diver record's groups with three-sided rings). A
+ * body at rest is no layer of its own; `none` interpolates as the identity,
+ * so the rise still runs.
+ *
  * A browser without `::details-content` matches none of this and opens
  * instantly, which is the honest fallback. So does one that has it while a row
  * is deep-linked open (`AutoOpenDetails`): an element rendered already-open
@@ -2388,7 +2396,7 @@ details::details-content {
 
 details[open]::details-content {
   opacity: 1;
-  translate: 0 0;
+  translate: none;
   transition-timing-function: var(--ease-out-soft);
 }
 

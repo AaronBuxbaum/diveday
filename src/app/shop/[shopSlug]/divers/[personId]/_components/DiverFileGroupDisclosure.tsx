@@ -182,17 +182,10 @@ export function DiverFileGroupDisclosure({
         {/* `<summary>` takes phrasing content intermixed with heading content,
             which is what lets the row's own label be the group's `<h2>` — one
             heading per group rather than the row label plus a second, uppercase
-            copy of it inside.
-
-            `relative focus-visible:z-10`: open, the summary drops its bottom
-            rule and the body starts flush under it. An open body is its own
-            stacking context (`details[open]::details-content` is translated,
-            globals.css), so it paints after the summary's ring, and on the
-            record its `InsetGroup` card covered the ring's bottom arm. A
-            focused summary paints above what follows it. */}
+            copy of it inside. */}
         <summary
           aria-controls={`${id}-content`}
-          className={`relative flex min-h-11 cursor-pointer items-center gap-3 border-y border-border px-1 py-3 group-open/diver-file:border-b-0 focus-visible:z-10 ${summaryLayoutClass}`.trim()}
+          className={`flex min-h-11 cursor-pointer items-center gap-3 border-y border-border px-1 py-3 group-open/diver-file:border-b-0 ${summaryLayoutClass}`.trim()}
         >
           <DisclosureCaret className="shrink-0 text-muted group-open/diver-file:rotate-90" />
           <h2 id={id} className={`${labelFloorClass} flex-1 scroll-mt-24 text-base font-medium`}>

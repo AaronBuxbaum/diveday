@@ -36,9 +36,11 @@ const PANEL_WIDTH = 288;
  *
  * **The panel is rendered into `document.body`, not beside its trigger.** A
  * `position: fixed` box is only laid out in viewport coordinates while no
- * ancestor has made itself a containing block — and in Chromium every
- * `<details>` does, through the `::details-content` pseudo-element the UA wraps
- * its body in. That pseudo is invisible to an ancestor walk (it is not an
+ * ancestor has made itself a containing block — and every open `<details>`
+ * did, through the `::details-content` pseudo-element the UA wraps its body
+ * in, which the disclosure-arrival rule (globals.css) left translated. It
+ * comes to rest on `translate: none` now, but a body still arriving is
+ * translated, and that pseudo is invisible to an ancestor walk (it is not an
  * `Element`), which is why this looked impossible before it was measured: the
  * panel's computed `left`/`top` were exactly right and its rendered box was
  * 89px right and 552px down from them, on a page where every hint sits inside

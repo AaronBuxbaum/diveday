@@ -39,6 +39,22 @@ describe("the disclosure body's motion", () => {
     }
   });
 
+  /**
+   * **An open body comes to rest as no layer of its own.** Any `translate`
+   * but `none` makes an element a stacking context, and `0 0` is not `none`:
+   * every open disclosure's body was one, painted after the normal-flow
+   * content around it, its summary's outset focus ring included. Wherever a
+   * body starts flush with a filled card under its summary, the card covered
+   * the ring's bottom arm — the atlas caught the diver record's groups with a
+   * three-sided ring. `none` interpolates as the identity, so the rise still
+   * runs; it just stops being a layer when it lands.
+   */
+  it("lands the open body on no translate at all, so it stops being a layer", () => {
+    const open = rule("details[open]::details-content");
+    expect(open).toContain("translate: none");
+    expect(open).not.toMatch(/translate: 0 0/);
+  });
+
   /** Without it the closing half cannot run: the content is `content-visibility: hidden` when shut. */
   it("keeps the content visible long enough to fade out", () => {
     expect(rule("details::details-content")).toContain(

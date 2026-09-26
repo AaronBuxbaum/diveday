@@ -36,25 +36,6 @@ describe("DiverFileGroupDisclosure", () => {
   });
 
   /**
-   * Open, the summary drops its bottom rule and the group's body starts flush
-   * under it. The open body is a stacking context of its own (its
-   * `::details-content` is translated), so it paints after the summary's ring:
-   * the atlas captured the focused header with three sides, the ring's bottom
-   * arm surviving only left of the record's `InsetGroup` card's rounded
-   * corner. A focused summary paints above what follows it.
-   */
-  it("paints its focus ring above the body that starts flush under it", () => {
-    render(
-      <DiverFileGroupDisclosure id="conversation" label="Conversation" summary="2 messages" open>
-        <div className="overflow-hidden rounded-panel">Thread</div>
-      </DiverFileGroupDisclosure>,
-    );
-
-    const summary = screen.getByTestId("diver-file-group-conversation").querySelector("summary");
-    expect(summary).toHaveClass("relative", "focus-visible:z-10");
-  });
-
-  /**
    * The whole point of this sweep: one grammar. A group is a door at every
    * width, so nothing here may reach for a breakpoint to hide the summary or
    * force the body open — the two classes the retired "legacy" branch used.
