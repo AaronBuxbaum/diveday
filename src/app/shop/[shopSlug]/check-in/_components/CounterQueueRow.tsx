@@ -229,6 +229,14 @@ const RELEASED_LINE_CLASS = "flex flex-wrap items-center justify-between gap-x-2
  * the row's 12px inset above and over the meta's top edge below. The name
  * truncates in an inner span, because `truncate` on the link itself is
  * `overflow: hidden`, which would clip the target it draws.
+ *
+ * **Not a 44px link box hung over the line**, the overhang the first-bookable
+ * card's link uses. The target would be the same, but the focus ring draws
+ * 5px round the link's box: its lower band would cross the meta's letters
+ * 10–13px under the name, and its upper band the row's top rule. On the
+ * `::after` the ring stays on the 28px line. The pixel probe measures the
+ * target the same way a finger meets it (`hitBox`,
+ * `scripts/pixel-probe/analyze.mjs`).
  */
 const NAME_DOOR_CLASS = `relative block min-w-0 ${SECTION_TITLE_CLASS} text-primary hover:underline after:absolute after:inset-x-0 after:-inset-y-2`;
 
