@@ -212,6 +212,59 @@ describe("the skeleton's description bar", () => {
 });
 
 /**
+ * **One bar per line the page's words wrap to, per side of `sm`.**
+ *
+ * The skeleton could draw one title line and one description line, and a
+ * width cannot stand in for text that wraps. WhatsApp's description is three
+ * lines at 390px and two at 1280, so its card landed 48px and 24px below where
+ * the skeleton put it (K-97); `/dive` and `/dive/[region]` wrap title and
+ * description the same way on a phone (K-292). A line count, or one count
+ * below `sm` and one from it, draws each line's box — the line's own height,
+ * stacked with no gap, as a paragraph's line boxes are — and hides the ones a
+ * width does not have.
+ */
+describe("the skeleton's line counts", () => {
+  const boxesOf = (container: HTMLElement, height: string) =>
+    Array.from(container.querySelectorAll(`.${height}`)).filter(
+      (box) => !box.parentElement?.classList.contains(height),
+    );
+
+  it("draws a description line per line, hiding the ones sm does not wrap to", () => {
+    const { container } = render(
+      <ShopPageHeaderSkeleton description descriptionLines={{ base: 3, sm: 2 }} />,
+    );
+    const lines = boxesOf(container, "h-6");
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).not.toHaveClass("sm:hidden");
+    expect(lines[1]).not.toHaveClass("sm:hidden");
+    expect(lines[2]).toHaveClass("sm:hidden");
+  });
+
+  it("draws title lines the same way, and hides a line only a wide screen has below sm", () => {
+    const { container } = render(
+      <ShopPageHeaderSkeleton description={false} titleLines={{ base: 1, sm: 2 }} />,
+    );
+    const lines = boxesOf(container, "h-11");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).not.toHaveClass("max-sm:hidden");
+    expect(lines[1]).toHaveClass("max-sm:hidden");
+  });
+
+  it("keeps each line to its line box, so two lines are exactly twice one", () => {
+    const { container } = render(<ShopPageHeaderSkeleton description descriptionLines={2} />);
+    const lines = boxesOf(container, "h-6");
+    expect(lines).toHaveLength(2);
+    for (const line of lines) expect(line.className).not.toMatch(/(?:^|\s)m[ty]-/);
+  });
+
+  it("draws one line of each by default", () => {
+    const { container } = render(<ShopPageHeaderSkeleton description />);
+    expect(boxesOf(container, "h-11")).toHaveLength(1);
+    expect(boxesOf(container, "h-6")).toHaveLength(1);
+  });
+});
+
+/**
  * **A meta that renders nothing takes no room.** Check-in's meta is a
  * connectivity pill that renders `null` while the counter is online — nearly
  * always — and the wrapper around it still carried its `mt-3`: 12px of

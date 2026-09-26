@@ -19,11 +19,14 @@ export default function RegionsLoading() {
       <MarketingNavFallback hideCta />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         <div className="animate-pulse">
+          {/* The description is three lines on a phone and two from `sm`
+              (K-292). */}
           <ShopPageHeaderSkeleton
             eyebrow={false}
             titleWidth="w-64"
             description
             descriptionWidth="w-full max-w-2xl"
+            descriptionLines={{ base: 3, sm: 2 }}
           />
         </div>
         <div className="animate-pulse divide-y divide-border border-y border-border">

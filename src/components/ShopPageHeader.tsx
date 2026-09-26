@@ -301,19 +301,25 @@ export function ShopPageHeader({
  *     and `mb-8` on the wrapper — all straight off `<header className="mb-8">`.
  *
  * Widths stay per-caller: a bar should be about as wide as the words it stands
- * in for, and that is the page's business, not this component's.
+ * in for, and that is the page's business, not this component's. So do line
+ * counts (`titleLines`, `descriptionLines`): a width cannot stand in for text
+ * that wraps, and how far a page's words wrap at 390px is the page's too.
  */
 export function ShopPageHeaderSkeleton({
   eyebrow = true,
   titleWidth = "w-64",
+  titleLines = 1,
   description,
   descriptionWidth = "w-80",
+  descriptionLines = 1,
   meta,
 }: {
   /** Pass `false` for a header with no eyebrow — the `<h1>` then loses its `mt-2`, same as the real one. */
   eyebrow?: boolean;
   /** Tailwind width classes for the title bar (e.g. `"w-72 max-w-full"`). */
   titleWidth?: string;
+  /** How many lines the `<h1>` wraps to — see `SkeletonLines`. */
+  titleLines?: SkeletonLines;
   /**
    * Whether the page's header has a description line. **Required** (K-28):
    * it used to default to `true`, and most loading files took the default,
@@ -323,19 +329,57 @@ export function ShopPageHeaderSkeleton({
   description: boolean;
   /** Tailwind width classes for the description bar. */
   descriptionWidth?: string;
+  /** How many lines the description wraps to — see `SkeletonLines`. */
+  descriptionLines?: SkeletonLines;
   /** Bars for a header that carries `meta` — the trip tabs' seat badge and date line. */
   meta?: React.ReactNode;
 }) {
   return (
     <div className="mb-8">
       {eyebrow ? <div className="h-4 w-24 rounded bg-surface-sunken" /> : null}
-      <div className={`h-11 ${titleWidth} rounded bg-surface-sunken${eyebrow ? " mt-2" : ""}`} />
+      <div className={eyebrow ? "mt-2" : undefined}>{lineBars(titleLines, "h-11", titleWidth)}</div>
       {description ? (
-        <div className={`mt-2 h-6 ${descriptionWidth} rounded bg-surface-sunken`} />
+        <div className="mt-2">{lineBars(descriptionLines, "h-6", descriptionWidth)}</div>
       ) : null}
       {meta ? <div className="mt-3">{meta}</div> : null}
     </div>
   );
+}
+
+/**
+ * **How many lines a heading or a description wraps to**, for
+ * `ShopPageHeaderSkeleton`: one count, or one below `sm` and one from it —
+ * `{ base: 3, sm: 2 }` for a description that is three lines on a phone and two
+ * on a desk. The skeleton could once draw only one line of each, so every
+ * header that wrapped dropped the page 24px a line when it landed (K-97:
+ * WhatsApp's card 48px lower at 390, 24px at 1280; K-292: `/dive`).
+ */
+export type SkeletonLines = number | { base: number; sm: number };
+
+/**
+ * One box per line, each the line's own height (`h-11`, `h-6`) and stacked
+ * with no gap, because a paragraph's line boxes have none — so N lines are
+ * exactly N line-heights, the one number that decides where the page below
+ * lands. A second line's bar is inset `pt-1` inside its box so two lines read
+ * as two rather than one tall slab; the box keeps the full height. A line one
+ * side of `sm` does not have is hidden on that side.
+ */
+function lineBars(lines: SkeletonLines, height: string, width: string) {
+  const { base, sm } = typeof lines === "number" ? { base: lines, sm: lines } : lines;
+  const bar = `${width} rounded bg-surface-sunken`;
+  return Array.from({ length: Math.max(base, sm) }, (_, line) => {
+    const onlyOneSide =
+      line < base && line < sm ? "" : line < base ? " sm:hidden" : " max-sm:hidden";
+    return line === 0 ? (
+      // biome-ignore lint/suspicious/noArrayIndexKey: bars, not records — the line number is the only identity a placeholder line has
+      <div key={line} className={`${height} ${bar}${onlyOneSide}`} />
+    ) : (
+      // biome-ignore lint/suspicious/noArrayIndexKey: as above
+      <div key={line} className={`${height} pt-1${onlyOneSide}`}>
+        <div className={`h-full ${bar}`} />
+      </div>
+    );
+  });
 }
 
 /**

@@ -5,9 +5,13 @@ import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 /**
  * One town's `<Suspense>` boundary (ADR 20260804-instant-navigation). Its own
  * file rather than the parent's, because the two bodies are different shapes:
- * this one carries the eyebrow back to `/dive` and a logo square on every row,
- * and a skeleton painting the wrong page is the defect
- * `pnpm check:loading-skeletons` exists to catch.
+ * this one carries the eyebrow back to `/dive`, and a skeleton painting the
+ * wrong page is the defect `pnpm check:loading-skeletons` exists to catch.
+ *
+ * No logo square on the rows: the page draws one only for a shop that has
+ * uploaded a logo, and the common case is none, so a square on every row put
+ * every row's words 72px from where they land (K-292). The title and the
+ * description are two lines each on a phone, one each from `sm`.
  */
 export default function RegionLoading() {
   return (
@@ -17,14 +21,15 @@ export default function RegionLoading() {
         <div className="animate-pulse">
           <ShopPageHeaderSkeleton
             titleWidth="w-72 max-w-full"
+            titleLines={{ base: 2, sm: 1 }}
             description
             descriptionWidth="w-full max-w-2xl"
+            descriptionLines={{ base: 2, sm: 1 }}
           />
         </div>
         <div className="animate-pulse divide-y divide-border border-y border-border">
           {[0, 1, 2].map((row) => (
             <div key={row} className="flex items-center gap-4 py-5">
-              <div className="size-14 shrink-0 rounded-inset bg-surface-sunken" />
               <div className="min-w-0 flex-1">
                 <div className="h-7 w-52 max-w-full rounded bg-surface-sunken" />
                 <div className="mt-1 h-5 w-full max-w-sm rounded bg-surface-sunken" />
