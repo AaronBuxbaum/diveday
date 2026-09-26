@@ -176,6 +176,24 @@ describe("textareaClassFor", () => {
     expect(tokens.filter((token) => token.startsWith("min-h-"))).toHaveLength(1);
     expect(tokens.filter((token) => token.startsWith("py-"))).toHaveLength(1);
   });
+
+  /**
+   * **It grows to a screenful and no further.** Unbounded, the waiver editor
+   * (14 rows, 12,000 characters allowed) opens on the default release, about
+   * 5,700 characters, and grew to roughly 80 lines at 1280 — Publish and the
+   * materiality choice a thousand pixels below where they sat under a 14-row
+   * box; the course overview did the same (K-46 review). Past 60% of the
+   * viewport's height the box scrolls, which is still more of the text than
+   * the fixed rows showed. A minimum taller than the cap (14 rows on a short
+   * landscape phone) wins, as CSS has it.
+   */
+  it("stops growing at a screenful, and scrolls past it", () => {
+    for (const rows of [2, 3, 4, 6, 8, 14] as const) {
+      const tokens = textareaClassFor(rows).split(/\s+/);
+      expect(tokens).toContain("max-h-[60svh]");
+      expect(tokens.filter((token) => token.startsWith("max-h-"))).toHaveLength(1);
+    }
+  });
 });
 
 describe("DateField", () => {

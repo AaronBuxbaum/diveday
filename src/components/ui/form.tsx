@@ -114,9 +114,14 @@ export type TextareaRows = keyof typeof textareaMinHeight;
  * Pass the same number as the textarea's own `rows`, which is what a browser
  * without `field-sizing` still draws. `form.test.tsx` refuses a textarea on
  * `controlClass` itself.
+ *
+ * **It grows to a screenful and no further** (`max-h-[60svh]`), then scrolls.
+ * Unbounded, the waiver editor opened on the default release, about 5,700
+ * characters, grew to some 80 lines at 1280 and put Publish a thousand pixels
+ * below where it sat. A minimum taller than the cap wins, as CSS has it.
  */
 export function textareaClassFor(rows: TextareaRows): string {
-  return `py-2 ${controlBody} field-sizing-content ${textareaMinHeight[rows]}`;
+  return `py-2 ${controlBody} field-sizing-content ${textareaMinHeight[rows]} max-h-[60svh]`;
 }
 
 /**

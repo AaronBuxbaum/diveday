@@ -950,7 +950,9 @@ radii on 2026-09-19. They are these now:
 
 A `<textarea>` wears `textareaClassFor(rows)`, never `controlClass`, and passes the same number as
 its own `rows`. It grows with its text (`field-sizing: content`) and never stands shorter than
-`rows` lines, which is also what a browser without `field-sizing` draws. A fixed box scrolled a
+`rows` lines, which is also what a browser without `field-sizing` draws; past 60% of the
+viewport's height it stops and scrolls, so a 5,700-character waiver does not push Publish a
+thousand pixels down. A fixed box scrolled a
 longer answer inside itself and showed its next line as a sliver on the bottom border — the course
 FAQ answer, 1,200 characters in three rows, with a fourth line's ink 2px above the border at 390.
 `form.test.tsx` refuses a textarea on `controlClass`, and one whose minimum disagrees with its
