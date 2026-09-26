@@ -1371,13 +1371,6 @@ describe("source sweeps", () => {
   });
 
   /**
-   * **One gutter between a form's columns.** `FieldGrid` draws 16px, and call
-   * sites appended `gap-x-5 gap-y-5`, which won by stylesheet order: on one
-   * settings page the dock-day and fly-safe columns stood 20px apart and the
-   * emergency and rental-price columns 16px (K-42). A form that ever wants a
-   * different gutter gets it as a prop on `FieldGrid`, not as a class.
-   */
-  /**
    * **A bordered fieldset's legend starts on its fields' edge.** `px-1` pads
    * the notch the legend cuts in the border, and on its own it also moved the
    * words 4px right of every field under them (orders-new: legend text at 326,
@@ -1549,6 +1542,13 @@ describe("source sweeps", () => {
     expect(offenders).toEqual([]);
   });
 
+  /**
+   * **One gutter between a form's columns.** `FieldGrid` draws 16px, and call
+   * sites appended `gap-x-5 gap-y-5`, which won by stylesheet order: on one
+   * settings page the dock-day and fly-safe columns stood 20px apart and the
+   * emergency and rental-price columns 16px (K-42). A form that ever wants a
+   * different gutter gets it as a prop on `FieldGrid`, not as a class.
+   */
   it("never overrides FieldGrid's column gutter at a call site", () => {
     const offenders: string[] = [];
     for (const { file, source } of sourceFiles()) {
