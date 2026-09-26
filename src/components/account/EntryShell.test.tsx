@@ -198,15 +198,50 @@ describe("the door's panel", () => {
  * text, so the pixel probe measured it at 96.3 × 17px on forgot-password, the
  * staff invite, reset-password and verify. The slot owns the floor, so a link
  * passed into it is 44px tall whatever the page typed.
+ *
+ * **And the line it sits on stays a line.** A 44px link is an atomic inline
+ * box, and an atomic inline's margin box is what sizes its line, so the slot
+ * hands back (44 − 20) / 2 above and below it. Without that, every line
+ * holding a link grew from 20px to 44px: a two-row footer's words stood 24px
+ * apart instead of 8, and a sentence that wraps its link onto a second line
+ * (the closed onboarding door's "Try the live demo") set its two lines 32px
+ * apart instead of 20.
  */
 describe("a door's links are tap targets", () => {
   /**
-   * `tapTargetLinkClass`, applied by the slot to every link inside it — under
-   * `:where(&)`, so the rule weighs (0,0,1) and a link's own class wins. The
-   * plain `[&_a]:` form weighs (0,1,1) and would cut a `buttonClass()` link's
-   * `min-h-12` to 44px (ExpiredLinkCard hands this slot one on `/ready`).
+   * `tapTargetLinkClass`, applied by the slot to its links — under `:where(&)`,
+   * so the rule weighs (0,0,1) and a link's own class wins. The plain `[&_a]:`
+   * form weighs (0,1,1) and would cut a `buttonClass()` link's `min-h-12` to
+   * 44px. The footer reaches every link in it (`_a`); a terminal door's action
+   * reaches only a link that is the whole action (`>a`).
    */
-  const SLOT_FLOOR = tapTargetLinkClass.split(" ").map((utility) => `[:where(&)_a]:${utility}`);
+  const FOOTER = "[:where(&)_a]:";
+  const ACTION = "[:where(&)>a]:";
+  const floorOf = (variant: string) =>
+    tapTargetLinkClass.split(" ").map((utility) => `${variant}${utility}`);
+
+  /** Tailwind's `--spacing`: `min-h-11` is 44px, `-my-3` hands back 12. */
+  const SPACING_PX = 4;
+  /** `text-sm`'s line box, which both slots set their words in. */
+  const TEXT_SM_LINE_PX = 20;
+
+  /** The px one of the slot's rules sets on its links: `…min-h-11` → 44, `…-my-3` → 12. */
+  function step(slot: Element | null | undefined, variant: string, utility: string): number {
+    const prefix = `${variant}${utility}-`;
+    const found = [...(slot?.classList ?? [])].find((name) => name.startsWith(prefix));
+    return found ? Number(found.slice(prefix.length)) * SPACING_PX : 0;
+  }
+
+  /** How much of its line a link takes: its 44px box less what the slot hands back. */
+  function lineTaken(slot: Element | null | undefined, variant: string): number {
+    return step(slot, variant, "min-h") - 2 * step(slot, variant, "-my");
+  }
+
+  /** The gap between a flex column's rows: `gap-2` → 8. */
+  function rowGap(slot: Element | null | undefined): number {
+    const found = [...(slot?.classList ?? [])].find((name) => /^gap-\d/.test(name));
+    return found ? Number(found.slice("gap-".length)) * SPACING_PX : 0;
+  }
 
   it("floors every link in the shell's footer", () => {
     render(
@@ -215,10 +250,57 @@ describe("a door's links are tap targets", () => {
       </EntryShell>,
     );
     const footer = screen.getByRole("link", { name: "Back to sign in" }).closest("footer");
-    for (const utility of SLOT_FLOOR) expect(footer).toHaveClass(utility);
+    for (const utility of floorOf(FOOTER)) expect(footer).toHaveClass(utility);
+    expect(step(footer, FOOTER, "min-h")).toBe(44);
   });
 
-  it("floors the one link a terminal door offers", () => {
+  it("keeps a two-row footer's rows 8px apart, 28px from line to line", () => {
+    render(
+      <EntryShell
+        title="Open your shop"
+        footer={
+          <>
+            <p>
+              The demo is a sample shop. <a href="/">Try the live demo</a>
+            </p>
+            <p>
+              Already have a shop? <a href="/sign-in">Sign in</a>
+            </p>
+          </>
+        }
+      >
+        <form />
+      </EntryShell>,
+    );
+    const footer = screen.getByRole("link", { name: "Sign in" }).closest("footer");
+    expect(footer).toHaveClass("mt-8", "gap-2");
+    expect(lineTaken(footer, FOOTER)).toBe(TEXT_SM_LINE_PX);
+    expect(lineTaken(footer, FOOTER) + rowGap(footer)).toBe(28);
+  });
+
+  it("keeps a sentence's link on the sentence's 20px line, wrapped or not", () => {
+    render(
+      <EntryShell
+        title="Sign in"
+        footer={
+          <p>
+            Need a shop? <a href="mailto:hello@example.com">Write to hello@example.com</a>
+          </p>
+        }
+      >
+        <form />
+      </EntryShell>,
+    );
+    const link = screen.getByRole("link", { name: "Write to hello@example.com" });
+    const footer = link.closest("footer");
+    // Inside the sentence, not a row of its own: the footer's rule reaches it
+    // as a descendant, and it takes its line's 20px, not 44.
+    expect(link.parentElement?.tagName).toBe("P");
+    for (const utility of floorOf(FOOTER)) expect(footer).toHaveClass(utility);
+    expect(lineTaken(footer, FOOTER)).toBe(TEXT_SM_LINE_PX);
+  });
+
+  it("floors the one link a terminal door offers, 24px under the body as before", () => {
     render(
       <EntryDone
         glyph="expired"
@@ -228,15 +310,47 @@ describe("a door's links are tap targets", () => {
       />,
     );
     const slot = screen.getByRole("link", { name: "Back to sign in" }).parentElement;
-    for (const utility of SLOT_FLOOR) expect(slot).toHaveClass(utility);
+    for (const utility of floorOf(ACTION)) expect(slot).toHaveClass(utility);
+    expect(step(slot, ACTION, "min-h")).toBe(44);
+    expect(slot).toHaveClass("mt-6");
+    expect(lineTaken(slot, ACTION)).toBe(TEXT_SM_LINE_PX);
   });
 
   /**
-   * The 44px box is 24px taller than the 20px line it replaced, 12px above the
-   * words and 12px below. The footer's margin gives the upper 12px back, so its
-   * words sit where they sat and only the invisible target grew; the skeleton
-   * stands its footnote in the same 44px row at the same margin, so nothing
-   * shifts when the door streams in (class 11).
+   * `ExpiredLinkCard` hands the action a column: a `buttonClass()` link or a
+   * form, then "Need help? Contact {shop}." The column is the action, so
+   * nothing in it is this slot's to size: the button is 48px already, and the
+   * contact sentence keeps its 20px line, 16px under the button.
+   */
+  it("leaves the links in a column handed to it alone", () => {
+    render(
+      <EntryDone
+        glyph="expired"
+        title="This link has expired"
+        text="Ask for a fresh one."
+        action={
+          <div className="flex flex-col items-center gap-4">
+            <a href="/s/reef" className="min-h-12">
+              See the schedule
+            </a>
+            <p>
+              Need help? <a href="mailto:hi@reef.example">Contact Reef</a>.
+            </p>
+          </div>
+        }
+      />,
+    );
+    const column = screen.getByRole("link", { name: "See the schedule" }).parentElement;
+    const slot = column?.parentElement;
+    expect(slot).toHaveClass("mt-6");
+    expect([...(slot?.classList ?? [])].filter((name) => name.startsWith(FOOTER))).toEqual([]);
+    for (const utility of floorOf(ACTION)) expect(slot).toHaveClass(utility);
+  });
+
+  /**
+   * The footer is back at its `mt-8`, since a link no longer grows its line;
+   * the skeleton stands its footnote bar in the same 20px row at the same
+   * margin, so nothing shifts when the door streams in (class 11).
    */
   it("keeps the words where they were, in the shell and in its skeleton", () => {
     render(
@@ -245,13 +359,12 @@ describe("a door's links are tap targets", () => {
       </EntryShell>,
     );
     const footer = screen.getByRole("link", { name: "Back to sign in" }).closest("footer");
-    expect(footer).toHaveClass("mt-5");
-    expect(footer).not.toHaveClass("mt-8");
+    expect(footer).toHaveClass("mt-8");
     cleanup();
 
     const { container } = render(<EntryShellSkeleton fields={["email"]} />);
     const footnote = container.querySelector("main > div")?.lastElementChild;
-    expect(footnote).toHaveClass("mt-5", "h-11");
+    expect(footnote).toHaveClass("mt-8", "h-5");
   });
 });
 

@@ -76,11 +76,13 @@ export function EntryShellSkeleton({
         ) : (
           <div className="mx-auto mt-8 h-12 w-44 rounded-lg bg-surface-sunken" />
         )}
-        {/* The footer's row: `EntryShell`'s footer is `mt-5` over links that
-            are 44px targets (`DOOR_LINK_SLOT`), so the bar stands centred in
-            an `h-11` row at the same margin rather than at `mt-8 h-4`. */}
+        {/* The footer's row: `EntryShell`'s footer is `mt-8` over `text-sm`
+            lines, and its 44px links hand back what they add to the line
+            (`FOOTER_LINK_SLOT`), so the row is 20px. The bar stands centred
+            in an `h-5` row at the same margin; it was a bare `h-4` bar, 4px
+            short of the line it stood in for. */}
         {footnote ? (
-          <div className="mt-5 flex h-11 items-center justify-center">
+          <div className="mt-8 flex h-5 items-center justify-center">
             <div className="h-4 w-44 rounded bg-surface-sunken" />
           </div>
         ) : null}

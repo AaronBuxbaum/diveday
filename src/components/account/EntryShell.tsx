@@ -90,7 +90,7 @@ export function EntryShell({
       )}
       {footer ? (
         <footer
-          className={`mt-5 flex flex-col items-center text-center text-sm text-muted ${DOOR_LINK_SLOT}`}
+          className={`mt-8 flex flex-col items-center gap-2 text-center text-sm text-muted ${FOOTER_LINK_SLOT}`}
         >
           {footer}
         </footer>
@@ -107,7 +107,7 @@ export function EntryShell({
  * 96.3 × 17px, under the 44px floor, on forgot-password, the staff invite,
  * reset-password, verify and sign-in (the pixel probe's `small-target`). The
  * slot is the layer that owns them all, so it lays `tapTargetLinkClass`'s floor
- * on every link inside it and no page has to remember.
+ * on its links and no page has to remember.
  *
  * Spelled out rather than built from `tapTargetLinkClass`, because Tailwind
  * only generates a class it can read whole in the source; `EntryShell.test.tsx`
@@ -116,18 +116,29 @@ export function EntryShell({
  * **A floor, never a ceiling.** `:where(&)` takes the slot's class out of the
  * selector's weight, so the rule is `:where(.slot) a` at (0,0,1) and any class
  * on the link itself outranks it. The plain `[&_a]:` spelling is `.slot a` at
- * (0,1,1), which beats a link's own `min-h-12`: the stranded diver's and the
- * recap's "See the schedule", a `buttonClass()` link handed to this slot
- * through `ExpiredLinkCard`, would have shrunk from 48px to 44px.
+ * (0,1,1), which beats a link's own `min-h-12`.
  *
- * The footer holds text links only, so its top margin gives back the 12px the
- * 44px box adds above a 20px line (`mt-8` → `mt-5`) and its words sit where
- * they sat; its `gap-2` went too, since two 44px rows already clear each other.
- * EntryDone's action keeps its `mt-6`, because a button handed to it is 48px
- * already and would otherwise move up.
+ * **The target grows; the line does not.** `inline-flex` makes the link an
+ * atomic inline, and an atomic inline's *margin* box is what sizes its line.
+ * So `-my-3` hands back (44 − 20) / 2 above and below — the give-back
+ * Copyable's panel trigger uses — and the link takes exactly the 20px line it
+ * sits on while the box a finger meets is 44px. Without it every line holding
+ * a link grew to 44px: a two-row footer's words stood 24px apart instead of 8,
+ * and where a sentence wraps its link onto a second line (the closed
+ * onboarding door's "Try the live demo", at 1280 and 390) its two lines sat
+ * 32px apart instead of 20. With it the footer keeps the `mt-8 gap-2` it has
+ * always had, and a terminal door's link sits 24px under the body.
+ *
+ * **Which links.** The footer reaches every link in it (`_a`), a sentence's
+ * included — its rows are only ever text. A terminal door's action reaches
+ * only a link that is the whole action (`>a`): `ExpiredLinkCard` hands it a
+ * column holding a `buttonClass()` link or a form, then "Need help? Contact
+ * {shop}.", and neither is this slot's to size.
  */
-const DOOR_LINK_SLOT =
-  "[:where(&)_a]:inline-flex [:where(&)_a]:min-h-11 [:where(&)_a]:items-center";
+const FOOTER_LINK_SLOT =
+  "[:where(&)_a]:inline-flex [:where(&)_a]:min-h-11 [:where(&)_a]:items-center [:where(&)_a]:-my-3";
+const ACTION_LINK_SLOT =
+  "[:where(&)>a]:inline-flex [:where(&)>a]:min-h-11 [:where(&)>a]:items-center [:where(&)>a]:-my-3";
 
 /**
  * The centered column every door shares. Exported so `EntryShellSkeleton`
@@ -270,7 +281,7 @@ export function EntryDone({
           two-line body ended on "do." or "one." alone, and verify's split
           "Sign" from "in" across its two lines. */}
       <p className="mt-3 max-w-prose text-balance text-muted">{text}</p>
-      {action ? <div className={`mt-6 text-sm ${DOOR_LINK_SLOT}`}>{action}</div> : null}
+      {action ? <div className={`mt-6 text-sm ${ACTION_LINK_SLOT}`}>{action}</div> : null}
     </main>
   );
 }
