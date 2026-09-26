@@ -675,7 +675,7 @@ export function DaySpine({
               href={`/shop/${shopSlug}/trips/${firstBooking.tripId}`}
               linkLabel={firstBooking.tripTitle}
             >
-              <div className="min-w-0 py-2">
+              <div className="min-w-0">
                 <p className="text-base font-medium break-words">
                   {firstBooking.diverName}{" "}
                   <span className="font-normal text-muted">· {firstBooking.tripTitle}</span>
@@ -834,7 +834,7 @@ export function DaySpine({
                 href={draft.href}
                 linkLabel={t("today.unfinished.resume")}
               >
-                <p className="py-2 text-sm text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</p>
+                <p className="text-sm text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</p>
               </LedgerRow>
             ))}
             {showPaymentsRow ? (
@@ -842,7 +842,7 @@ export function DaySpine({
                 href={`/shop/${shopSlug}/settings#stripe`}
                 linkLabel={t("shopHome.spine.deskPaymentsAction")}
               >
-                <p className="py-2 text-sm text-muted">{t("shopHome.spine.deskPaymentsRow")}</p>
+                <p className="text-sm text-muted">{t("shopHome.spine.deskPaymentsRow")}</p>
               </LedgerRow>
             ) : null}
           </ul>

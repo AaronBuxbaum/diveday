@@ -122,7 +122,7 @@ export function DepartureLedger({
       <ul className="mt-2">
         {rows.map((row) => (
           <LedgerRow key={row.tripId} href={row.href} linkLabel={row.title}>
-            <div className="min-w-0 py-2">
+            <div className="min-w-0">
               <p className="min-w-0 text-base font-medium break-words">
                 {row.title}
                 <span className="font-normal text-muted tabular-nums">

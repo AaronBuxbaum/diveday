@@ -364,6 +364,18 @@ export function RowKind({
 type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkLabel?: never };
 
 /**
+ * **The row's vertical inset, owned here** (pixel-craft class 5). A row had
+ * none: any row taller than its floor put its words on its rules (the public
+ * trip's three-line dive rows, cap tops 5px under one rule and descenders 3px
+ * over the next), and callers made up for it four ways — `py-3` on the row,
+ * `py-2` on its content, both, or nothing. `md` is the 8px a padded row
+ * already had; `lg` the 12px of a record with a paragraph to read; `none` is
+ * for a row whose one child paints its whole box and pads itself (the
+ * counter's one-tap button, rule to rule).
+ */
+const ROW_PAD = { md: "py-2", lg: "py-3", none: "" } as const;
+
+/**
  * A hairline row on the page background — the ledger's only row shape.
  *
  * The hairline is `border-t` plus a `last:border-b`, so a group closes itself
@@ -412,6 +424,11 @@ type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkL
  * the room at its end (`CheckInActionForm`'s `ROW_ROOM`). A call site
  * never sets the row's horizontal margin or padding; `ledger.test.tsx` sweeps
  * for it.
+ *
+ * **Its vertical inset is its own too** (`pad`, `ROW_PAD` above), and the same
+ * sweep refuses a `py-*` at a call site. The trailing slot overhangs it
+ * (`-my-2`): the inset is room around the *words*, and a 44px control laid in
+ * it would make every row with a Send or an Assign 60px instead of 52.
  */
 export function LedgerRow({
   leading,
@@ -421,6 +438,7 @@ export function LedgerRow({
   href,
   linkLabel,
   size = "md",
+  pad = "md",
   stacked = false,
   as: Tag = "li",
   className = "",
@@ -439,6 +457,11 @@ export function LedgerRow({
    * counter's queue and the horizon rows. It read 48 until 2026-09-02.
    */
   size?: "md" | "lg";
+  /**
+   * The inset above and below the words: `md` 8px, `lg` 12px for a record
+   * with a paragraph in it, `none` for a row whose one child fills its box.
+   */
+  pad?: keyof typeof ROW_PAD;
   /** Below `sm`, drop the sentence to its own full-width line. See above. */
   stacked?: boolean;
   /**
@@ -451,9 +474,9 @@ export function LedgerRow({
 } & LedgerRowDoor) {
   return (
     <Tag
-      className={`relative flex items-center gap-3 ${ledgerRowBoxClass} ${
+      className={`relative flex items-center gap-3 ${ledgerRowBoxClass} ${ROW_PAD[pad]} ${
         size === "lg" ? "min-h-14" : "min-h-13"
-      } ${stacked ? "max-sm:flex-wrap max-sm:py-2" : ""} ${href ? "pressable-row hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
+      } ${stacked ? "max-sm:flex-wrap" : ""} ${href ? "pressable-row hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
         .replace(/\s+/g, " ")
         .trim()}
     >
@@ -480,13 +503,16 @@ export function LedgerRow({
         {children}
       </div>
       {trailing != null ? (
+        // `-my-2`: a 44px control overhangs the row's 8px inset rather than
+        // growing a one-line row to 60px. Not on a stacked phone line of its
+        // own (`max-sm:my-0`), where the overhang would put it on the rule.
         <div
           className={
             stacked
               ? kind
-                ? "relative z-10 min-w-0 max-w-full shrink-0 max-sm:order-2 max-sm:ms-auto"
-                : "relative z-10 min-w-0 max-w-full shrink-0 max-sm:order-3 max-sm:flex max-sm:basis-full max-sm:justify-end"
-              : "relative z-10 min-w-0 max-w-full shrink-0"
+                ? "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-2 max-sm:ms-auto"
+                : "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-3 max-sm:my-0 max-sm:flex max-sm:basis-full max-sm:justify-end"
+              : "relative z-10 -my-2 min-w-0 max-w-full shrink-0"
           }
         >
           {trailing}

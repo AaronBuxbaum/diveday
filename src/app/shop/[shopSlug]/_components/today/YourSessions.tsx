@@ -35,7 +35,7 @@ export function YourSessions({
             href={`/shop/${shopSlug}/trips/${session.tripId}`}
             linkLabel={t("today.yourSessions.openRoster")}
           >
-            <div className="min-w-0 py-2">
+            <div className="min-w-0">
               <p className="font-medium">{session.title}</p>
               <p className="mt-0.5 text-sm text-muted tabular-nums">
                 {formatShortDate(session.startsAt, locale, timeZone)} ·{" "}

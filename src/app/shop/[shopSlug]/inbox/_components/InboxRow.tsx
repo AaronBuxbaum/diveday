@@ -118,7 +118,7 @@ export function InboxRow({
     <LedgerRow
       as="li"
       stacked
-      className="py-3"
+      pad="lg"
       kind={{ word: t(CHANNEL_KEYS[message.channel]), tone: "neutral" }}
       trailing={
         <span className="flex items-center gap-3">

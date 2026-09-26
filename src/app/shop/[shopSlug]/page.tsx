@@ -1114,7 +1114,7 @@ async function TodayBody({
                 href={`/shop/${shopSlug}/trips/${nextDeparture.tripId}`}
                 linkLabel={nextDeparture.title}
               >
-                <div className="min-w-0 py-2">
+                <div className="min-w-0">
                   <p className="font-medium break-words">{nextDeparture.title}</p>
                   <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 text-sm text-muted tabular-nums">
                     <span>{t("shopHome.quietNextDepartureLabel")}</span>

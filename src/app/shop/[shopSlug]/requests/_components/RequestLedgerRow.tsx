@@ -88,7 +88,7 @@ export function RequestLedgerRow({
   return (
     <LedgerRow
       as="li"
-      className="py-3"
+      pad="lg"
       trailing={
         <Link
           href={`${shopPath(shopSlug, "bookings", "new")}?request=${encodeURIComponent(request.id)}`}

@@ -100,7 +100,7 @@ export function ReviewLedger({
   return (
     <ul className="mt-4 flex flex-col">
       {reviews.map((review) => (
-        <LedgerRow key={review.id} className="py-4">
+        <LedgerRow key={review.id} pad="lg">
           <StarRating
             rating={review.rating}
             label={t("reviews.ratingOption", { rating: review.rating })}

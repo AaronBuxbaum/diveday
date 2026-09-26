@@ -269,8 +269,8 @@ export function CounterQueueRow({
          deactivated — and the Undo beside it is the whole reason the row stays
          on this page instead of vanishing: the diver who walks in as the lines
          come off needs somewhere for a staffer to walk it back. */
-      <LedgerRow as="article" size="lg" className="py-1">
-        <div className="flex flex-wrap items-center justify-between gap-2 py-2">
+      <LedgerRow as="article" size="lg" pad="lg">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <DiverIdentity
               row={row}
@@ -312,7 +312,13 @@ export function CounterQueueRow({
          because the waiting row is one tap by design — the whole surface is
          built so a staffer with wet hands cannot miss it — and a second control
          beside that tap is the mis-tap this row spent a slice removing. */
-      <LedgerRow as="article" size="lg" trailing={<PassDoor shopSlug={shopSlug} row={row} t={t} />}>
+      <LedgerRow
+        as="article"
+        size="lg"
+        // The undo is the row's whole box and pads itself, rule to rule.
+        pad="none"
+        trailing={<PassDoor shopSlug={shopSlug} row={row} t={t} />}
+      >
         <CheckInActionForm
           action={undoAction}
           bookingId={row.bookingId}
@@ -363,6 +369,8 @@ export function CounterQueueRow({
       <LedgerRow
         as="article"
         size="lg"
+        // The tap is the row's whole box and pads itself, rule to rule.
+        pad="none"
         // **The sink, in CSS.** `QueueRowButton` disables itself while the tap
         // is in flight, so the row can play the existing `fade-out` (150ms,
         // `--ease-in-soft` — an exit, so the exit curve) off that one fact
@@ -567,7 +575,7 @@ export function CounterQueueRow({
     </RowActionForm>
   ) : null;
   return (
-    <LedgerRow as="article" size="lg" className="py-3">
+    <LedgerRow as="article" size="lg" pad="lg">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <DiverIdentity

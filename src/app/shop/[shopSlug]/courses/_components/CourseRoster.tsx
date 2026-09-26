@@ -115,7 +115,7 @@ export function CourseRoster({
                   linkLabel={course.linkLabel}
                   trailing={course.actions}
                   stacked
-                  className="py-3"
+                  pad="lg"
                 >
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2">
