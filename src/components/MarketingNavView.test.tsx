@@ -90,6 +90,15 @@ describe("MarketingNavView", () => {
     }
   });
 
+  // The compact /onboard bar was `max-sm:px-5`, so its wordmark sat 4px left
+  // of every other marketing header's and of the page column under it (K-245).
+  it("keeps the compact phone bar on the same 24px gutter as every header", () => {
+    renderNav({ compactMobile: true, hideCta: true });
+    const nav = screen.getByRole("navigation");
+    expect(nav).toHaveClass("px-6");
+    expect(nav.className).not.toMatch(/(^|\s)max-sm:px-/);
+  });
+
   it("keeps the first row at the CTA's 48px when hideCta drops the CTA", () => {
     renderNav({ hideCta: true });
     expect(screen.getByRole("link", { name: "DiveDay." })).toHaveClass("min-h-12");

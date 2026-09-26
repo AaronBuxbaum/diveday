@@ -37,7 +37,11 @@ export function MarketingNavView({
   shopSlug: string | null;
   locale: DiverLocale;
   hideCta: boolean;
-  /** The onboard artboard keeps only the wordmark in the phone header. */
+  /**
+   * The onboard artboard keeps only the wordmark in the phone header. It keeps
+   * the `px-6` gutter every marketing header and the page column under it sit
+   * on; a `px-5` here put the wordmark 4px left of both (K-245).
+   */
   compactMobile?: boolean;
   // i18n-exempt: type annotation, not copy.
   demoAction: (formData: FormData) => void | Promise<void>;
@@ -64,7 +68,7 @@ export function MarketingNavView({
        */}
       <nav
         aria-label={t("nav.mainNavigation")}
-        className={`mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4 md:flex-nowrap ${compactMobile ? "max-sm:h-[52px] max-sm:flex-nowrap max-sm:px-5 max-sm:py-0" : ""}`}
+        className={`mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4 md:flex-nowrap ${compactMobile ? "max-sm:h-[52px] max-sm:flex-nowrap max-sm:py-0" : ""}`}
       >
         <Wordmark href="/" className="text-foreground" />
         <div
