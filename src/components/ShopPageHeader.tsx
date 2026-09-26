@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { FoldedPageTitle } from "@/components/chrome/FoldedPageTitle";
-import { tapTargetLinkClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { toneMark } from "@/components/ui/tone";
@@ -40,13 +39,30 @@ export const EYEBROW_CLASS = `${EYEBROW_SHAPE} text-primary`;
  * wrong rather than the arithmetic.
  *
  * So the link is wrapped instead. The wrapper is block-level and exactly the
- * eyebrow's line box; `items-center` centres the 44px link on it and lets it
- * bleed 14px into the padding above and the title's `mt-2` below, where there
- * is nothing to hit. The link's text then lands on the same line as a `<p>`
- * eyebrow's — it used to sit 6px lower — and the header is the same height
+ * eyebrow's line box, and the link's text lands on the same line as a `<p>`
+ * eyebrow's — it used to sit 6px lower — so the header is the same height
  * either way. `ShopPageHeader.test.tsx` pins it.
+ *
+ * **The spare 28px goes above the line, none below it** (K-395). The wrapper
+ * used to centre the link, bleeding 14px each way — and 14px below is into the
+ * title's `mt-2`, which is only 8. There was nothing to *hit* there, but the
+ * focus ring draws 5px outside the box, and it ran a 3px band through the
+ * title's cap tops. `items-end` stands the box on the line's bottom edge (and
+ * `EYEBROW_TAP_TARGET` keeps the words there too), so the ring ends 5px under
+ * the eyebrow, inside the `mt-2`. Above, the box reaches 28px into the page's
+ * top padding (32px on a phone, 40 from `sm`), and in the trip band it rises
+ * inside the 44px row it is centred in.
  */
-export const EYEBROW_TAP_WRAPPER = "flex h-4 items-center";
+export const EYEBROW_TAP_WRAPPER = "flex h-4 items-end";
+
+/**
+ * `tapTargetLinkClass`'s 44px floor with its content on the box's bottom edge
+ * rather than centred — the bottom edge is the eyebrow's line, see
+ * `EYEBROW_TAP_WRAPPER`. Spelled whole, not `tapTargetLinkClass` plus
+ * `items-end`: two `align-items` utilities on one element resolve by
+ * stylesheet order, not by the order they are written.
+ */
+const EYEBROW_TAP_TARGET = "inline-flex min-h-11 items-end";
 
 /**
  * The eyebrow-as-breadcrumb, for a header that is not `ShopPageHeader`.
@@ -91,7 +107,7 @@ export function EyebrowBackLink({
     <span className={`${EYEBROW_TAP_WRAPPER} ${className}`.trim()}>
       <Link
         href={href}
-        className={`${tapTargetLinkClass} ${EYEBROW_SHAPE} ${
+        className={`${EYEBROW_TAP_TARGET} ${EYEBROW_SHAPE} ${
           onSky ? "text-(--sky-ink)" : "text-primary"
         } gap-2 hover:underline`.trim()}
       >

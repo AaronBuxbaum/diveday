@@ -126,6 +126,29 @@ describe("the eyebrow's line box", () => {
     }
   });
 
+  /**
+   * **The target spills upward, never onto the title.** Centred on its 16px
+   * line, the 44px box hung 14px below it, and the title sits only `mt-2`
+   * (8px) under the eyebrow: the box already overlapped the `<h1>`'s line
+   * box, and the focus ring 5px outside it drew a 3px band straight through
+   * the title's cap tops (K-395, measured on `/dive/[region]` at both
+   * widths). Bottom-aligned, the box sits 28px above the line and none below
+   * it, so the ring ends 5px under the eyebrow, inside the title's `mt-2`.
+   */
+  it("bleeds its 44px box upward, so the focus ring ends before the title starts", () => {
+    render(<EyebrowBackLink href="/shop/blue-mantis/settings">Settings</EyebrowBackLink>);
+    const link = screen.getByRole("link", { name: "Settings" });
+    const wrapper = link.parentElement;
+
+    // The wrapper stands the box on the line's bottom edge…
+    expect(wrapper).toHaveClass("flex", "h-4", "items-end");
+    expect(wrapper).not.toHaveClass("items-center");
+    // …and the link keeps its words on that edge too, so they stay on the
+    // line a `<p>` eyebrow's would, with the whole spare 28px above them.
+    expect(link).toHaveClass("inline-flex", "min-h-11", "items-end");
+    expect(link).not.toHaveClass("items-center");
+  });
+
   it("wraps the link rather than giving it a margin, because an inline box's margins do not move a line box", () => {
     const { container } = render(
       <EyebrowBackLink href="/shop/blue-mantis/settings">Settings</EyebrowBackLink>,
