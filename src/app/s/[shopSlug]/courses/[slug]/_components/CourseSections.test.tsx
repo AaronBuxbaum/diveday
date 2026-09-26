@@ -167,6 +167,18 @@ describe("CourseSchedule's day marks", () => {
       expect(ring.className).not.toMatch(/\btop-1\.5\b/);
     }
   });
+
+  /**
+   * **A day's title never ends on one word** (pixel-craft class 8, K-563):
+   * "Day 2 — confined water and first open / water" at 390px.
+   */
+  it("balances each day's title", () => {
+    render(<CourseSchedule days={days} locale="en-US" t={t} />);
+
+    const titles = screen.getAllByRole("heading", { level: 3 });
+    expect(titles).toHaveLength(2);
+    for (const title of titles) expect(title.className).toMatch(/\btext-balance\b/);
+  });
 });
 
 /**

@@ -245,7 +245,9 @@ export function CourseSchedule({
                   className="absolute top-2 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
                 />
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <h3 className={SECTION_TITLE_CLASS}>{day.title}</h3>
+                  {/* Balanced: a day's title that wraps keeps more than one
+                      word on its last line (K-563). */}
+                  <h3 className={`${SECTION_TITLE_CLASS} text-balance`}>{day.title}</h3>
                   {time ? <p className="text-sm tabular-nums text-muted">{time}</p> : null}
                 </div>
                 {day.items.length > 0 ? (
