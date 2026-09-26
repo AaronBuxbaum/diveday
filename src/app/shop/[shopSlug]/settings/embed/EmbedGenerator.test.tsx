@@ -213,6 +213,54 @@ describe("EmbedGenerator", () => {
       expect(label).not.toHaveClass("min-h-9");
     }
   });
+
+  /**
+   * The platform chips are their radios' tap targets too, and they were the
+   * last of the three at `min-h-9`: 36px chips 4px apart (K-443,
+   * SETTINGS-2-23). The probe cannot see them, since the radio is `sr-only`.
+   */
+  it("gives every platform chip the 44px floor, a gap apart", () => {
+    renderGenerator();
+    const radios = screen.getAllByRole("radio", { name: /^platform / });
+    expect(radios).toHaveLength(PLATFORMS.length);
+    for (const radio of radios) {
+      const chip = radio.closest("label");
+      expect(chip).toHaveClass("min-h-11", "inline-flex", "items-center");
+      expect(chip).not.toHaveClass("min-h-9");
+      expect(chip?.parentElement).toHaveClass("gap-2");
+    }
+  });
+
+  /**
+   * A kind tile is stretched to the taller tile beside it in its grid row, and
+   * `justify-center` then pushed the shorter one's title down: "Button" 9px
+   * under "Lightbox" at 1280 and 17px at 390 (K-442, SETTINGS-2-21). Titles
+   * start at the top, so one row's titles share a line.
+   */
+  it("starts every kind tile's title at its top", () => {
+    renderGenerator();
+    for (const radio of screen.getAllByRole("radio", { name: /^kind / })) {
+      const tile = radio.closest("label");
+      expect(tile).toHaveClass("justify-start");
+      expect(tile).not.toHaveClass("justify-center");
+    }
+  });
+
+  /**
+   * Look and Language stood side by side in a two-column grid inside the
+   * form's 26rem column: 200px each, so the select cut "Follow the visitor's
+   * browser" at "br" (K-144, SETTINGS-2-02), and the 54px Look track stood
+   * beside the 44px select (K-445, SETTINGS-2-32). One column gives each
+   * control the column's whole width and a row of its own.
+   */
+  it("stacks Look and Language, each on a row of its own", () => {
+    renderGenerator();
+    const language = screen.getByRole("combobox", { name: "Language" });
+    const grid = language.closest(".row-span-2")?.parentElement;
+    expect(grid).toContainElement(screen.getByRole("radio", { name: "DiveDay" }));
+    expect(grid).toHaveClass("grid", "grid-cols-1");
+    expect(grid?.className).not.toMatch(/(?:^|\s)\w+:grid-cols-/);
+  });
 });
 
 /**
