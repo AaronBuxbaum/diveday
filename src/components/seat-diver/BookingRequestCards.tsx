@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
@@ -41,12 +42,14 @@ export function BookingRequestContext({
         {name} <span className="font-normal text-muted">({diversLabel})</span>
       </p>
       <p className="mt-1 text-sm text-muted">{subject}</p>
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm font-medium">
-        <Link href={sourceHref} className="text-primary hover:underline">
+      {/* 44px targets, whose boxes carry the 12px above the words that `mt-3`
+          used to, and the air between wrapped lines. */}
+      <div className="flex flex-wrap gap-x-4 gap-y-0 text-sm font-medium">
+        <Link href={sourceHref} className={`${tapTargetLinkClass} text-primary hover:underline`}>
           {sourceLabel}
         </Link>
         {personHref && personLabel ? (
-          <Link href={personHref} className="text-primary hover:underline">
+          <Link href={personHref} className={`${tapTargetLinkClass} text-primary hover:underline`}>
             {personLabel}
           </Link>
         ) : null}
@@ -73,12 +76,17 @@ export function RelevantBookingRequests({
   return (
     <SectionCard title={title} description={description} className={className} padding="lg">
       <ul className="grid gap-2">
+        {/* From `sm` up a row never wraps: the words take the width and wrap
+            themselves, so "Book from this request" stays at the row's right on
+            every row instead of dropping under the one whose words ran long.
+            On a phone the link wraps under the words, and its 44px box is the
+            air between them. */}
         {items.map((item) => (
           <li
             key={item.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-inset border border-border bg-surface-sunken px-4 py-3"
+            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0 rounded-inset border border-border bg-surface-sunken px-4 py-3 sm:flex-nowrap"
           >
-            <div className="min-w-0">
+            <div className="min-w-0 sm:flex-1">
               <p className="font-medium">
                 {item.name} <span className="font-normal text-muted">({item.diversLabel})</span>
               </p>
@@ -89,7 +97,7 @@ export function RelevantBookingRequests({
             </div>
             <Link
               href={item.href}
-              className="shrink-0 text-sm font-medium text-primary hover:underline"
+              className={`${tapTargetLinkClass} shrink-0 text-sm font-medium text-primary hover:underline`}
             >
               {openLabel}
             </Link>
