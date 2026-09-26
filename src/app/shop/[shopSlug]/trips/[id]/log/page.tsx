@@ -208,9 +208,16 @@ export default async function IncidentExportPage({
           <TBody>
             {doc.roster.map((diver, index) => (
               <tr key={diver.bookingId}>
+                {/* The number is its own box and the name hangs beside it, so
+                    a name that wraps stays in its column rather than returning
+                    under "01". The space stays in the text: the cell still
+                    reads "01 Theo Lindqvist". */}
                 <Td>
-                  <span className="font-semibold">
-                    {String(index + 1).padStart(2, "0")} {diver.fullName}
+                  <span className="flex gap-1 font-semibold">
+                    <span className="shrink-0 tabular-nums">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>{" "}
+                    <span className="min-w-0">{diver.fullName}</span>
                   </span>
                 </Td>
                 {/* The name may wrap; the number may not. This is the one
