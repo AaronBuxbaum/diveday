@@ -318,6 +318,19 @@ describe("one primary, and the rest are the rows themselves", () => {
   });
 
   /**
+   * **A thumb's target, not a 20px word** (pixel-craft class 7, K-451). Beside
+   * the row rather than the row, it has no stretched overlay to borrow a target
+   * from, and it measured 144 × 20px at 390. It takes the 44px floor; the row
+   * centres its trailing slot and lets it overhang the row's inset, so the
+   * target costs the row no height.
+   */
+  it("gives Stripe's fix the 44px floor", () => {
+    renderFresh();
+    const stripe = screen.getByRole("link", { name: "Connect Stripe" });
+    expect(stripe).toHaveClass("inline-flex", "min-h-11", "items-center");
+  });
+
+  /**
    * **Its arrow is the doors' arrow** (pixel-craft class 2). It wears the
    * doors' words and chevron, and drew the square `chevron-right`, whose ink
    * stops 5px inside its 16px box: on today-empty the doors' arrows ended on
