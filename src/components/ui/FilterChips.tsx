@@ -60,8 +60,8 @@ export function FilterChips({
           gear kinds wrapped to four rows at 390px and pushed the list they
           narrow below the fold; a row a thumb can flick through keeps the
           control one line tall at every width. The negative margin lets the
-          row bleed to the screen edge so the last chip peeks in from the
-          right, which is the only affordance a scrolling row has.
+          row bleed to the screen edge, so a chip past it is cut by the
+          screen rather than by the page's gutter.
 
           A scroll box clips both axes, and the chips sat flush with its top
           and bottom, so the focus ring's 5px went on both (every filtered
@@ -70,11 +70,13 @@ export function FilterChips({
           scroller is its own box inside the nav: a caller's `mb-5` on the
           same element would lose to the negative margin.
 
-          Whether a last chip peeks in depends on the labels, though — at 390
-          "Wrecks" ended at 386 and the next chip started off screen, so the
-          row read as complete. `chip-scroller` fades whichever end has more
-          to show, animated on the row's own scroll so the last chip and its
-          ring are whole once the row reaches its end (globals.css).
+          A chip peeking in from the edge cannot be the row's affordance,
+          because whether one peeks depends on the labels: at 390 "Wrecks"
+          ended at 386 and the next chip started off screen, so the row read
+          as complete. `chip-scroller` is the affordance: it fades whichever
+          end has more to show, animated on the row's own scroll so the last
+          chip and its ring are whole once the row reaches its end
+          (globals.css).
 
           `scroll-px-6` is where a focused chip is scrolled to: the 16px fade
           and the ring's 5px reach clear of the row's end. Without it

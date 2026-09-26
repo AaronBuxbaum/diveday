@@ -189,12 +189,6 @@ describe("cardSummaryClass", () => {
 });
 
 /**
- * **A note carved into a card is one box** — pixel-craft class 12. The
- * departure's panels spelled it three ways: 16px in and 16px down in the crew
- * list, 12px in the requirements and roster notes, 12px all round at 12px type
- * under the conditions. `px-3 py-2 text-sm` was already the majority spelling.
- */
-/**
  * **A tone panel is a card in a tone** — pixel-craft classes 3 and 12. The
  * roster's minimum-seats and unmet-demand bands hand-rolled `p-5` with no
  * `sm:` step and no bed, one of them at the 12px inset radius, so on a phone
@@ -214,6 +208,12 @@ describe("TONE_PANEL_CLASS", () => {
   });
 });
 
+/**
+ * **A note carved into a card is one box** — pixel-craft class 12. The
+ * departure's panels spelled it three ways: 16px in and 16px down in the crew
+ * list, 12px in the requirements and roster notes, 12px all round at 12px type
+ * under the conditions. `px-3 py-2 text-sm` was already the majority spelling.
+ */
 describe("the inset note", () => {
   it("is one geometry, and one sunken spelling of it", () => {
     expect(INSET_NOTE_BOX).toBe("rounded-lg px-3 py-2 text-sm");
