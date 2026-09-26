@@ -38,11 +38,7 @@ export function LastMinuteSendButton({
 
   return (
     <span ref={containerRef}>
-      <SubmitButton
-        pendingLabel={pendingLabel}
-        disabled={count === 0}
-        className={buttonClass()}
-      >
+      <SubmitButton pendingLabel={pendingLabel} disabled={count === 0} className={buttonClass()}>
         {(count === 1 ? singularLabel : pluralLabel).replace(/\d+/, String(count))}
       </SubmitButton>
     </span>
