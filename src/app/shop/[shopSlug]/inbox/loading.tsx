@@ -17,7 +17,7 @@ function MessageRows({ count }: { count: number }) {
           className={`flex items-center gap-3 py-3 ${ledgerRowBoxClass}`}
         >
           <div className="h-4 w-20 shrink-0 rounded bg-surface-sunken" />
-          <div className="h-4 w-32 shrink-0 rounded bg-surface-sunken max-sm:hidden" />
+          <div className="h-4 w-32 shrink-0 rounded bg-surface-sunken max-md:hidden" />
           <div className="flex-1 space-y-2">
             <div className="h-4 w-2/3 rounded bg-surface-sunken" />
             <div className="h-3 w-1/2 rounded bg-surface-sunken" />

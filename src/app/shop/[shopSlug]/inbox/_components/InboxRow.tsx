@@ -115,12 +115,13 @@ export function InboxRow({
         linkLabel: t("inbox.openRecord", { name }),
       }
     : { reserveDoorSlot: true };
-  // **A stranger's words wrap** (pixel-craft class 8, K-460). A door row's
-  // excerpt is one line because the whole message is on the record one tap
-  // away; a stranger has no record, so one line cut their words mid-sentence
-  // with nothing able to open the rest. Three lines hold a 140-character
-  // excerpt at a phone's width.
-  const wordsCut = message.personId ? "truncate" : "line-clamp-3 wrap-anywhere";
+  // **A stranger's words wrap, whole** (pixel-craft class 8, K-460). A door
+  // row's excerpt is one line because the whole message is on the record one
+  // tap away; a stranger has no record, so one line cut their words
+  // mid-sentence with nothing able to open the rest. No line count cuts them
+  // either: three lines held the seeded message only where its column was
+  // wide. The 140-character excerpt is what bounds the row.
+  const wordsCut = message.personId ? "truncate" : "wrap-anywhere";
   const facts = [
     // The address is on the stranger's row only: for a diver on file the name
     // above already says who this is, and their address is on their record.
@@ -145,8 +146,12 @@ export function InboxRow({
       }
       {...door}
     >
-      <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-4">
-        <p className="min-w-0 truncate font-semibold sm:w-44 sm:shrink-0">{name}</p>
+      {/* The name beside the message from `md`, not `sm`: beside the kind
+          column, the date and the door's slot, its 176px column left the
+          message ~122px at 640 (K-460, K-461). Below `md` the name sits over
+          the message, which takes the body's whole width. */}
+      <div className="flex min-w-0 flex-col gap-1 md:flex-row md:items-baseline md:gap-4">
+        <p className="min-w-0 truncate font-semibold md:w-44 md:shrink-0">{name}</p>
         <div className="min-w-0 flex-1">
           {/* A WhatsApp message has no subject and never will, so the row's
               lead line is the diver's own first words rather than a slot
