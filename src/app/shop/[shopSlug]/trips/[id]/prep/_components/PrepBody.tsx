@@ -392,8 +392,11 @@ export function PrepBody({
                   <p className="mt-1 text-sm">{t("tripPrep.nitroxBlockedDescription")}</p>
                   {/* A bullet is its own box and the words another, here and
                       in the two lists below, so a wrapped line hangs under the
-                      words it continues rather than back under the bullet. */}
-                  <ul className="mt-2 flex flex-col gap-1 text-sm">
+                      words it continues rather than back under the bullet.
+                      `mt-4` is `SectionCard`'s header-to-body gap, as in the
+                      staff-fit panel: `mt-2` crowded both lists 8px closer to
+                      their description than "Sizes still missing" sits. */}
+                  <ul className="mt-4 flex flex-col gap-1 text-sm">
                     {checklist.nitroxBlockers.map((blocker) => (
                       <li key={blocker.bookingId} className="flex gap-1.5">
                         <span aria-hidden="true">•</span>
@@ -487,7 +490,7 @@ export function PrepBody({
                     {t("tripPrep.staffFitHeading")}
                   </h2>
                   <p className="mt-1 text-sm text-muted">{t("tripPrep.staffFitDescription")}</p>
-                  <ul className="mt-2 flex flex-col gap-1 text-sm">
+                  <ul className="mt-4 flex flex-col gap-1 text-sm">
                     {checklist.diversNeedingStaffFit.map((diver) => (
                       <li key={diver.personId} className="flex gap-1.5">
                         <span aria-hidden="true">•</span>

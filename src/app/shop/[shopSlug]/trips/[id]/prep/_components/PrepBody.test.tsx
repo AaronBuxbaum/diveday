@@ -374,6 +374,16 @@ describe("the packing list's geometry", () => {
     }
   });
 
+  it("opens a tone panel's list at the gap a card opens its body (K-173)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    for (const key of ["tripPrep.nitroxBlockedHeading", "tripPrep.staffFitHeading"] as const) {
+      const panel = byText(container, t(key)).closest("section") as HTMLElement;
+      const list = panel.querySelector("ul");
+      expect(tokens(list), key).toContain("mt-4");
+      expect(tokens(list), key).not.toContain("mt-2");
+    }
+  });
+
   it("holds no empty list open above the never-asked names (K-184)", () => {
     // Only divers nobody asked: the partial list has nothing to say.
     const prep = everyPanelPrep();
