@@ -1,9 +1,26 @@
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PRIMARY_REGION, SES_REGION } from "../config/aws-regions.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * The context committed in cdk.json, which `cdk` reads under every deploy and
+ * a `--context` flag overrides. The wizard used to see only the flags, so a
+ * value set where the manual actions say to set it -- `dmarcReportEmail` in
+ * cdk.json -- never reached it, and the DMARC record was never published.
+ * `{}` when the file is missing or unreadable: every caller has a fallback.
+ */
+export function committedContext(path = join(scriptDirectory, "..", "cdk.json")) {
+  try {
+    const context = JSON.parse(readFileSync(path, "utf8"))?.context;
+    return context && typeof context === "object" ? context : {};
+  } catch {
+    return {};
+  }
+}
 
 export function contextValue(arguments_, name, fallback) {
   for (let index = 0; index < arguments_.length; index += 1) {
@@ -50,6 +67,8 @@ export async function runPostDeployWizard({
   // infra-deploy.mjs's isCiDeploy comment for why an ambient signal is unsafe
   // here). Never true when called from the interactive branch.
   ciUnattended = false,
+  // Injectable so a test does not read whatever this checkout commits.
+  committed = committedContext(),
 }) {
   // Every step below is bounded. A wizard question answered "yes" that then
   // never comes back is the worst shape this script can take: it runs *after* a
@@ -260,8 +279,16 @@ export async function runPostDeployWizard({
   const vercelScopeArguments = vercelScope?.startsWith("team_") ? ["--scope", vercelScope] : [];
 
   const readSesDnsPlan = () => {
-    const emailDomain = contextValue(cdkArguments, "sesEmailDomain", "ses.dive.day");
-    const mailFromDomain = contextValue(cdkArguments, "sesMailFromDomain", `mail.${emailDomain}`);
+    const emailDomain = contextValue(
+      cdkArguments,
+      "sesEmailDomain",
+      committed.sesEmailDomain ?? "ses.dive.day",
+    );
+    const mailFromDomain = contextValue(
+      cdkArguments,
+      "sesMailFromDomain",
+      committed.sesMailFromDomain ?? `mail.${emailDomain}`,
+    );
     const dnsZone = syncEnvironment?.VERCEL_DNS_ZONE?.trim() || "dive.day";
     // **This read is the one that runs after `cdk deploy` has already
     // succeeded**, so it may not throw (issue #1525). The `aws` call fails for
@@ -415,7 +442,11 @@ export async function runPostDeployWizard({
     // context and is never guessed: reports sent to a mailbox nobody reads are
     // the same as no reports, and worse, they read as done.
     const dmarcName = recordName(`_dmarc.${emailDomain}`, dnsZone);
-    const dmarcReportEmail = contextValue(cdkArguments, "dmarcReportEmail", "");
+    const dmarcReportEmail = contextValue(
+      cdkArguments,
+      "dmarcReportEmail",
+      committed.dmarcReportEmail ?? "",
+    );
     const dmarcValue = `v=DMARC1; p=none; rua=mailto:${dmarcReportEmail}`;
 
     const desiredRecords = [

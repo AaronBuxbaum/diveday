@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { SES_REGION } from "../config/aws-regions.mjs";
-import { contextValue, runPostDeployWizard } from "./post-deploy-wizard.mjs";
+import { committedContext, contextValue, runPostDeployWizard } from "./post-deploy-wizard.mjs";
 import { SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const allHandoffsNeedUpdate = {
@@ -14,8 +14,10 @@ const allHandoffsNeedUpdate = {
   sesDns: true,
 };
 
+// `committed: {}` unless a test says otherwise, so no test reads what this
+// checkout happens to commit in cdk.json.
 const wizard = (options) =>
-  runPostDeployWizard({ checkUpdates: allHandoffsNeedUpdate, ...options });
+  runPostDeployWizard({ checkUpdates: allHandoffsNeedUpdate, committed: {}, ...options });
 
 describe("post-deploy wizard", () => {
   it("honors CDK context values", () => {
@@ -211,6 +213,7 @@ describe("post-deploy wizard", () => {
     const questions = [];
     const commands = [];
     await runPostDeployWizard({
+      committed: {},
       ask: async (question) => {
         questions.push(question);
         return "no";
@@ -241,6 +244,7 @@ describe("post-deploy wizard", () => {
     const questions = [];
     const commands = [];
     await runPostDeployWizard({
+      committed: {},
       ask: async (question) => {
         questions.push(question);
         return "no";
@@ -302,6 +306,7 @@ describe("post-deploy wizard", () => {
     const logs = [];
     const commands = [];
     await runPostDeployWizard({
+      committed: {},
       ask: async (question) =>
         question === "Add the SES DNS records through Vercel DNS? [y/N] " ? "yes" : "no",
       checkUpdates: {
@@ -345,6 +350,7 @@ describe("post-deploy wizard", () => {
     const answers = ["no", "no", "no", "no", "no", "yes", "no"];
     const commands = [];
     await runPostDeployWizard({
+      committed: {},
       ask: async () => answers.shift() ?? "no",
       checkUpdates: {
         awsProfiles: true,
@@ -395,6 +401,7 @@ describe("post-deploy wizard", () => {
     const answers = ["no", "no", "no", "no", "no", "yes", "no"];
     const commands = [];
     await runPostDeployWizard({
+      committed: {},
       ask: async () => answers.shift() ?? "no",
       checkUpdates: {
         awsProfiles: true,
@@ -733,6 +740,67 @@ describe("post-deploy wizard", () => {
     expect(printed).toMatch(/dmarcReportEmail/);
   });
 
+  /**
+   * cdk.json is where the `dmarc-dns` manual action says to set the address,
+   * and `cdk` reads it under every deploy. The wizard read only `--context`
+   * flags, so the committed value never reached it and the record was never
+   * published.
+   */
+  it("publishes DMARC from the address committed in cdk.json", async () => {
+    const commands = [];
+    await wizard({
+      ask: async (question) => (/SES DNS/.test(question) ? "yes" : "no"),
+      cdkArguments: [],
+      committed: { sesEmailDomain: "ses.example.com", dmarcReportEmail: "reports@example.com" },
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2", VERCEL_DNS_ZONE: "example.com" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws") return JSON.stringify(["first"]);
+        return "";
+      },
+      log: () => {},
+    });
+
+    const dmarcAdd = commands.find(
+      ({ arguments_ }) => arguments_[3] === "add" && arguments_[5] === "_dmarc.ses",
+    );
+    expect(dmarcAdd?.arguments_).toEqual(
+      expect.arrayContaining(["TXT", "v=DMARC1; p=none; rua=mailto:reports@example.com"]),
+    );
+  });
+
+  it("lets a --context flag override the committed value, as cdk does", async () => {
+    const commands = [];
+    await wizard({
+      ask: async (question) => (/SES DNS/.test(question) ? "yes" : "no"),
+      cdkArguments: ["--context", "dmarcReportEmail=flag@example.com"],
+      committed: { sesEmailDomain: "ses.example.com", dmarcReportEmail: "reports@example.com" },
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2", VERCEL_DNS_ZONE: "example.com" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws") return JSON.stringify(["first"]);
+        return "";
+      },
+      log: () => {},
+    });
+
+    const dmarcAdd = commands.find(
+      ({ arguments_ }) => arguments_[3] === "add" && arguments_[5] === "_dmarc.ses",
+    );
+    expect(dmarcAdd?.arguments_).toEqual(
+      expect.arrayContaining(["TXT", "v=DMARC1; p=none; rua=mailto:flag@example.com"]),
+    );
+  });
+
+  it("reads the committed context, and nothing from a file it cannot read", () => {
+    // A dive.day mailbox: a rua address in the reported domain's own
+    // organizational domain needs no authorization record at the destination.
+    expect(committedContext().dmarcReportEmail).toMatch(/^[^@\s]+@dive\.day$/);
+    expect(committedContext("/nonexistent/cdk.json")).toEqual({});
+  });
+
   // A listing failure is unknown state, not empty state. `vercel dns add` has no
   // upsert, so inferring "empty" from "unreadable" is what would put a second
   // "v=spf1" TXT on the live zone and break SPF for every outbound mail -- the
@@ -779,6 +847,7 @@ describe("post-deploy wizard", () => {
     const questions = [];
     const messages = [];
     await runPostDeployWizard({
+      committed: {},
       ask: async (question) => {
         questions.push(question);
         return "no";
