@@ -14,17 +14,23 @@ import { entryMainClass, entryPanelClass } from "@/components/account/EntryShell
 export function EntryShellSkeleton({
   wordmark = false,
   eyebrow = false,
+  description = true,
   width = "sm",
   panel = true,
   fields = [],
+  trailingLink = false,
   footnote = true,
 }: {
   wordmark?: boolean;
   /** Stands in for the small uppercase line above the title. */
   eyebrow?: boolean;
+  /** `false` for a door whose shell has no `description` (sign-in, verify, onboarding). */
+  description?: boolean;
   width?: "sm" | "lg";
   panel?: boolean;
   fields?: readonly string[];
+  /** A text link after the last field — sign-in's "Forgot password?". */
+  trailingLink?: boolean;
   footnote?: boolean;
 }) {
   return (
@@ -41,7 +47,17 @@ export function EntryShellSkeleton({
         <div
           className={`mx-auto h-9 w-56 max-w-full rounded bg-surface-sunken ${wordmark ? "mt-8" : ""}`}
         />
-        <div className="mx-auto mt-2 h-6 w-72 max-w-full rounded bg-surface-sunken" />
+        {description ? (
+          <div className="mx-auto mt-2 h-6 w-72 max-w-full rounded bg-surface-sunken" />
+        ) : null}
+        {/* The form's own rhythm: every door's form is `flex flex-col gap-4`
+            around a `buttonClass()` submit, which is `md`, 48px — so the
+            button bar is `mt-4 h-12`. It was `mt-6 h-11`, drawn before `md`
+            was 48px, and the form moved 4px when it streamed in.
+
+            Sign-in's "Forgot password?" is a 48px link pulled to 32px of flow
+            by its `-my-2`, between two of those 16px gaps: an `h-8` row with
+            a text bar at its end, where the link's words end. */}
         {panel ? (
           <div className={entryPanelClass}>
             {fields.map((slot, index) => (
@@ -50,10 +66,15 @@ export function EntryShellSkeleton({
                 <div className="mt-2 h-11 w-full rounded-lg bg-surface-sunken" />
               </div>
             ))}
-            <div className="mt-6 h-11 w-full rounded-lg bg-surface-sunken" />
+            {trailingLink ? (
+              <div className="mt-4 flex h-8 items-center justify-end">
+                <div className="h-4 w-32 rounded bg-surface-sunken" />
+              </div>
+            ) : null}
+            <div className="mt-4 h-12 w-full rounded-lg bg-surface-sunken" />
           </div>
         ) : (
-          <div className="mx-auto mt-8 h-11 w-44 rounded-lg bg-surface-sunken" />
+          <div className="mx-auto mt-8 h-12 w-44 rounded-lg bg-surface-sunken" />
         )}
         {/* The footer's row: `EntryShell`'s footer is `mt-5` over links that
             are 44px targets (`DOOR_LINK_SLOT`), so the bar stands centred in

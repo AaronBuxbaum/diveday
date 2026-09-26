@@ -256,6 +256,68 @@ describe("a door's links are tap targets", () => {
 });
 
 /**
+ * **The skeleton is the door's own geometry** (docs/design/pixel-craft.md,
+ * class 11). It drew 44px button bars 24px under the last field, where every
+ * door's form is `flex flex-col gap-4` around a 48px `buttonClass()` — 16 +
+ * 48, not 24 + 44 — and a description bar on sign-in, verify and onboarding,
+ * which have none, and no row for sign-in's "Forgot password?", a 48px link
+ * pulled to 32px of flow by its `-my-2`. Each one moved the form when the
+ * page streamed in.
+ */
+describe("the door's skeleton", () => {
+  /** The panel the skeleton draws, found by the constant it shares with the shell. */
+  function panelOf(container: HTMLElement) {
+    const panel = [...container.querySelectorAll("div")].find(
+      (node) => node.className === entryPanelClass,
+    );
+    if (!panel) throw new Error("no panel");
+    return panel;
+  }
+
+  it("stands its button 16px under the fields, 48px tall", () => {
+    const { container } = render(<EntryShellSkeleton fields={["email"]} />);
+    const button = panelOf(container).lastElementChild;
+    expect(button).toHaveClass("mt-4", "h-12");
+    expect(button).not.toHaveClass("mt-6");
+    expect(button).not.toHaveClass("h-11");
+  });
+
+  it("stands a single-button door's button 48px tall", () => {
+    const { container } = render(<EntryShellSkeleton wordmark panel={false} footnote={false} />);
+    const pulse = container.querySelector(".animate-pulse");
+    expect(pulse?.lastElementChild).toHaveClass("h-12");
+  });
+
+  it("draws a description bar only for a door that has a description", () => {
+    const withBar = render(<EntryShellSkeleton fields={["email"]} />);
+    expect(panelOf(withBar.container).previousElementSibling).toHaveClass("h-6");
+    withBar.unmount();
+
+    const { container } = render(<EntryShellSkeleton description={false} fields={["email"]} />);
+    // The title bar is what the panel follows when there is no description.
+    expect(panelOf(container).previousElementSibling).toHaveClass("h-9");
+  });
+
+  it("keeps sign-in's forgot-password row between the last field and the button", () => {
+    const { container } = render(
+      <EntryShellSkeleton description={false} trailingLink fields={["email", "password"]} />,
+    );
+    const rows = [...panelOf(container).children];
+    const link = rows.at(-2);
+    expect(link).toHaveClass("mt-4", "h-8");
+    expect(rows.at(-1)).toHaveClass("mt-4", "h-12");
+  });
+
+  it("is what sign-in, verify and onboarding stream in under — none has a description", () => {
+    expect(read("app/sign-in/page.tsx")).toMatch(
+      /<EntryShellSkeleton description=\{false\} trailingLink fields=/,
+    );
+    expect(read("app/verify/[token]/loading.tsx")).toContain("description={false}");
+    expect(read("app/onboard/loading.tsx")).toContain("description={false}");
+  });
+});
+
+/**
  * **A door's sentences balance, not just its question** (class 8). EntryDone
  * balanced its heading and left the body to break greedily, so a two-line body
  * ended on "do." or "one." alone on the stranded-diver and expired-link doors,
