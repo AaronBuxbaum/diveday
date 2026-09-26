@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { DoorChevron } from "@/components/ui/ledger";
 import { WeekLedger, type WeekLedgerRow } from "./WeekLedger";
 
 /**
@@ -434,6 +435,29 @@ describe("seat state and price", () => {
 
     const chevron = screen.getByRole("listitem").querySelector("svg");
     expect(chevron).toHaveClass("ms-auto");
+  });
+
+  /**
+   * The chevron was the square `chevron-right`, whose ink stops 5px inside its
+   * 16px box: pinned to a phone row's end, its arrow ended 5px short of the day
+   * rule's hairline, where every other ledger's door arrow ends on the edge
+   * its row ends on (pixel-craft class 2). It draws the doors' own glyph.
+   */
+  it("draws the doors' ink-cropped chevron, so its arrow ends on the row's edge", () => {
+    const { container } = render(
+      <>
+        <DoorChevron />
+        <WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />
+      </>,
+    );
+
+    const door = container.firstElementChild;
+    const chevron = screen.getByRole("listitem").querySelector("svg");
+    expect(door?.tagName.toLowerCase()).toBe("svg");
+    expect(chevron?.getAttribute("viewBox")).toBe(door?.getAttribute("viewBox"));
+    expect(chevron?.innerHTML).toBe(door?.innerHTML);
+    expect(chevron).toHaveClass("h-4", "w-auto", "text-muted");
+    expect(chevron).not.toHaveClass("size-4");
   });
 
   it("prints no price for a departure with no price set", () => {

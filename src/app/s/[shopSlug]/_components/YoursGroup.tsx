@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { openMyShelfAction } from "@/app/actions/shelf-door";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { DoorChevron } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 export type YoursRow = {
@@ -36,7 +36,9 @@ export type YoursRow = {
  *
  * The card is the page's card (`sectionCardClass`): it sits directly under the
  * storefront's status panels, and hand-rolled it had a 12px corner against
- * their 20px, no bed, and its words 4px further in.
+ * their 20px, no bed, and its words 4px further in. A row's arrow is the
+ * doors' (`DoorChevron`), cropped to its ink, so it ends on the card's column
+ * where the rules between the rows do, not 5px inside it.
  */
 export function YoursGroup({
   heading,
@@ -69,10 +71,7 @@ export function YoursGroup({
                   {row.because ? `${row.because} · ${row.when}` : row.when}
                 </span>
               </span>
-              <DiveDayIcon
-                name="chevron-right"
-                className="size-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5"
-              />
+              <DoorChevron className="transition-transform group-hover:translate-x-0.5" />
             </Link>
           </li>
         ))}

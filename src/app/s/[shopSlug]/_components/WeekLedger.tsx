@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
+import { DoorChevron } from "@/components/ui/ledger";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 
 /**
@@ -287,7 +287,10 @@ function Row({ row }: { row: WeekLedgerRow }) {
             (where hover does not exist) read as a text listing rather than as a
             pressable thing. Below `sm` the row is a column and this group is
             stretched to its width, so the chevron takes `ms-auto` to hold the
-            row's end rather than trailing each row's words. */}
+            row's end rather than trailing each row's words. It is the doors'
+            glyph (`DoorChevron`), its box cropped to its ink, so the arrow
+            ends on the row's edge — the day rule's hairline's — rather than
+            5px inside it. */}
         <div className="flex shrink-0 items-center gap-3">
           {/* Seat state and price are the two facts a diver decides on, so they
               are critical text (principle 2's own definition: a status word, a
@@ -312,10 +315,7 @@ function Row({ row }: { row: WeekLedgerRow }) {
           >
             {row.price}
           </p>
-          <DiveDayIcon
-            name="chevron-right"
-            className="ms-auto size-4 text-muted transition-transform group-hover:translate-x-0.5"
-          />
+          <DoorChevron className="ms-auto transition-transform group-hover:translate-x-0.5" />
         </div>
       </div>
     </li>

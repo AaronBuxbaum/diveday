@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { sectionCardClass } from "@/components/ui/card";
+import { DoorChevron } from "@/components/ui/ledger";
 import { rendersFlush } from "@/test/button-flush";
 import { YoursGroup } from "./YoursGroup";
 
@@ -41,6 +42,30 @@ describe("the Yours card", () => {
 
     const card = screen.getByRole("region", { name: "Yours" });
     expect(card.className).toBe(sectionCardClass({ className: "mt-8" }));
+  });
+});
+
+/**
+ * **A row's arrow ends on the card's column** (pixel-craft class 2). It was the
+ * square `chevron-right`, whose ink stops 5px inside its 16px box, so every
+ * row's arrow ended 5px short of the rules between the rows. It draws the
+ * doors' own glyph, cropped to its ink across.
+ */
+describe("a row's door", () => {
+  it("draws the doors' ink-cropped chevron", () => {
+    const { container } = render(<DoorChevron />);
+    const door = container.querySelector("svg");
+    const viewBox = door?.getAttribute("viewBox");
+    const ink = door?.innerHTML;
+    cleanup();
+    renderGroup();
+
+    const chevron = screen.getByRole("link", { name: /Night Dive/ }).querySelector("svg");
+    expect(viewBox).toBeTruthy();
+    expect(chevron?.getAttribute("viewBox")).toBe(viewBox);
+    expect(chevron?.innerHTML).toBe(ink);
+    expect(chevron).toHaveClass("h-4", "w-auto", "text-muted");
+    expect(chevron).not.toHaveClass("size-4");
   });
 });
 
