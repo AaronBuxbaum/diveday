@@ -154,6 +154,29 @@ export function WeekLedger({
 }
 
 /**
+ * **The ledger's columns, which its skeleton draws on too** (pixel-craft class
+ * 11: 0px of shift on load). `loading.tsx` builds its day rules and rows from
+ * these strings, so its hairline, time bar and title start where the loaded
+ * ones will by construction. Copied by hand they drifted: the skeleton's rows
+ * missed the row's `sm:px-4`, which stood its title 16px left of the loaded
+ * one from `sm` up, and its numeral was a fixed 40px block beside the loaded
+ * numeral's two tabular digits.
+ *
+ * The row's box: below `sm` it bleeds `-mx-3` into the gutter so its hover
+ * fill has room and its words stay on the column; from `sm` it sits on the
+ * column with 16px inside. Its `py-4 sm:py-5` is the room the list hands back
+ * below itself.
+ */
+export const WEEK_ROW_BOX_CLASS =
+  "-mx-3 flex flex-col gap-2 px-3 py-4 sm:mx-0 sm:flex-row sm:gap-4 sm:px-4 sm:py-5";
+/** The row's time rail, wide enough for an eight-digit range. */
+export const WEEK_TIME_RAIL_CLASS = "shrink-0 sm:w-44";
+/** The day rule's numeral: two tabular digits wide whatever the day. */
+export const DAY_NUMERAL_CLASS = `${FIGURE_LARGE_CLASS} min-w-[2ch] leading-none`;
+/** The day rule's weekday-over-month column, as wide as the longest label. */
+export const DAY_LABEL_COLUMN_CLASS = "flex min-w-14 flex-col justify-center leading-tight";
+
+/**
  * The day header as a calendar block — a numeral a reader catches mid-scroll,
  * answering "which day can I go?" faster than a sentence-case date. Sticky, so
  * mid-list the rows under a thumb always belong to a named day.
@@ -177,8 +200,8 @@ function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stick
       aria-hidden="true"
       className={`sticky ${stickyTop} z-20 mt-8 flex items-center gap-3 bg-background pt-2 pb-3 first:mt-0`}
     >
-      <span className={`${FIGURE_LARGE_CLASS} min-w-[2ch] leading-none`}>{parts.day}</span>
-      <span className="flex min-w-14 flex-col justify-center leading-tight">
+      <span className={DAY_NUMERAL_CLASS}>{parts.day}</span>
+      <span className={DAY_LABEL_COLUMN_CLASS}>
         <span className="text-base font-bold tracking-[0.18em] uppercase">{parts.weekday}</span>
         <span className="text-base font-medium tracking-[0.18em] text-muted uppercase">
           {parts.month}
@@ -266,7 +289,9 @@ function Row({ row, priceColumn }: { row: WeekLedgerRow; priceColumn: boolean })
           its line. The fill answers the row's own door (`>a`, the overlay
           link, a direct child), not the course link nested in its meta line,
           which lit the whole row as if the row had focus. */}
-      <div className="group relative -mx-3 flex flex-col gap-2 rounded-lg px-3 py-4 transition-colors hover:bg-surface has-[>a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-baseline sm:gap-4 sm:px-4 sm:py-5">
+      <div
+        className={`${WEEK_ROW_BOX_CLASS} group relative rounded-lg transition-colors hover:bg-surface has-[>a:focus-visible]:bg-surface sm:items-baseline`}
+      >
         {/* The ring is drawn inside the row: below `sm` the row bleeds
             `-mx-3` into a 16px gutter, 4px from the screen's edge, which cut
             the outset ring by a pixel on each side. `scroll-mt-16` keeps a
@@ -284,7 +309,7 @@ function Row({ row, priceColumn }: { row: WeekLedgerRow; priceColumn: boolean })
             the longest range, eight digits ("10:00 AM – 12:30 PM", about
             166px); the seed's seven-digit ones sized it at 160, which an
             eight-digit range overran by 7px toward the title. */}
-        <div className="shrink-0 sm:w-44">
+        <div className={WEEK_TIME_RAIL_CLASS}>
           <p
             className={`text-base font-semibold tabular-nums whitespace-nowrap${quiet ? " text-muted" : ""}`}
           >

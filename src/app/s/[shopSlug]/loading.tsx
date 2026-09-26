@@ -1,4 +1,10 @@
 import { sectionCardClass } from "@/components/ui/card";
+import {
+  DAY_LABEL_COLUMN_CLASS,
+  DAY_NUMERAL_CLASS,
+  WEEK_ROW_BOX_CLASS,
+  WEEK_TIME_RAIL_CLASS,
+} from "./_components/WeekLedger";
 
 /**
  * Content-shaped skeleton for the shopfront (design principle 1): the identity
@@ -34,23 +40,24 @@ export default function TripsLoading() {
           <div className="h-5 w-24 rounded bg-surface-sunken" />
         </div>
         {/* Two day groups: the calendar date block, then borderless rows with
-            one meta line each. The block stands on the day rule's columns —
-            two digits (40px), then the 56px weekday column — so the hairline
-            starts where the loaded rule's does. */}
+            one meta line each. The block and the rows are drawn from the
+            ledger's own column classes — the numeral's two tabular digits,
+            the weekday column, the row's box and its time rail — so the
+            hairline, the time and the title start where the loaded ones do.
+            An empty numeral block is exactly its `2ch` minimum. */}
         {[0, 1].map((day) => (
           <div key={day} className={day === 0 ? "" : "mt-8"}>
             <div className="flex items-center gap-3 pt-2 pb-3">
-              <div className="h-8 w-10 rounded bg-surface-sunken" />
-              <div className="flex w-14 flex-col gap-1">
+              <div className={`${DAY_NUMERAL_CLASS} h-8 rounded bg-surface-sunken`} />
+              <div className={`${DAY_LABEL_COLUMN_CLASS} gap-1`}>
                 <div className="h-3 w-10 rounded bg-surface-sunken" />
                 <div className="h-3 w-10 rounded bg-surface-sunken" />
               </div>
               <div className="h-px flex-1 bg-border" />
             </div>
             {[0, 1].map((row) => (
-              <div key={row} className="flex flex-col gap-2 py-4 sm:flex-row sm:gap-4 sm:py-5">
-                {/* The row's time rail, so the title lands where it will. */}
-                <div className="shrink-0 sm:w-44">
+              <div key={row} className={WEEK_ROW_BOX_CLASS}>
+                <div className={WEEK_TIME_RAIL_CLASS}>
                   <div className="h-5 w-36 rounded bg-surface-sunken" />
                 </div>
                 <div className="min-w-0 flex-1">
