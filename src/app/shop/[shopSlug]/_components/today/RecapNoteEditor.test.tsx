@@ -135,3 +135,35 @@ describe("the settled station's post-trip recap note", () => {
     expect(screen.queryByRole("button", { name: "Upload photo" })).not.toBeInTheDocument();
   });
 });
+
+describe("the recap row at rest", () => {
+  const WAITING = "This recap will go out automatically in about 3 hours.";
+
+  function renderClosed() {
+    return render(
+      <RecapNoteEditor
+        action={vi.fn()}
+        shoutout={null}
+        saved={false}
+        t={t}
+        recapStatusSummary={WAITING}
+      />,
+    );
+  }
+
+  /**
+   * **The sentence keeps the words that are its meaning** (pixel-craft class 8,
+   * K-150). One truncated line was sized for a staff-written note, and the
+   * same span carries the status sentence, whose last words are when it goes:
+   * at 390 it ran 360px in a 316px box and lost "3 hours." to the ellipsis. The
+   * stacked phone summary has room for two lines; from `sm` the one line is
+   * wide enough.
+   */
+  it("gives the status sentence two lines on a phone rather than lose its time", () => {
+    renderClosed();
+    const note = screen.getByText(WAITING);
+    expect(note.closest("summary")).not.toBeNull();
+    expect(note).toHaveClass("max-sm:line-clamp-2", "sm:truncate");
+    expect(note).not.toHaveClass("truncate");
+  });
+});

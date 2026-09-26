@@ -118,16 +118,19 @@ export function RecapNoteEditor({
           <DisclosureCaret className="text-muted group-open/recap:rotate-90" />
           {t("closeout.recap.summaryHeading")}
         </span>
-        {/* The note itself at rest, one line of it — what a passing glance
-            needs is "is there one, and does it still read right", not the
-            form. `min-w-0 truncate` so a long note ellipses instead of pushing
-            the row wider than the card; `ps-5` on the stacked layout keeps it
-            under the label rather than under the caret. Hidden once open: the
-            body below says the same thing at least once already (the
-            paragraph when the recap already went out, "Recap sending"'s own
-            line otherwise), and a passing-glance summary has nothing left to
-            add beside its own open form. */}
-        <span className="min-w-0 truncate ps-5 text-muted group-open/recap:hidden sm:ps-0">
+        {/* The note itself at rest — what a passing glance needs is "is there
+            one, and does it still read right", not the form. Clamped so a
+            long note ellipses instead of pushing the row wider than the card:
+            one line from `sm`, **two on a phone** (K-150), because the same
+            span carries the status sentence, and its last words are when the
+            recap goes ("…in about 3 hours."), which one 316px line cut off.
+            `ps-5` on the stacked layout keeps it under the label rather than
+            under the caret. Hidden once open: the body below says the same
+            thing at least once already (the paragraph when the recap already
+            went out, "Recap sending"'s own line otherwise), and a
+            passing-glance summary has nothing left to add beside its own open
+            form. */}
+        <span className="min-w-0 ps-5 text-muted group-open/recap:hidden max-sm:line-clamp-2 sm:truncate sm:ps-0">
           {recapSummary}
         </span>
       </summary>
