@@ -4,11 +4,11 @@ import { EmptyState } from "@/components/EmptyState";
 import { ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatusMark } from "@/components/ui/StatusMark";
-import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
+import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { FIGURE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripPrep } from "@/db/trips-prep";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
@@ -242,6 +242,17 @@ export function PrepBody({
    */
   const kitLineClass = "grid gap-x-3 gap-y-1 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-baseline";
 
+  /**
+   * **A diver's name that stands on a line of its own, as the way into their
+   * record**: the 44px floor (`tapTargetLinkClass`, principles §2), with the
+   * (44 − 20) / 2 it adds handed back above and below, so the target grows and
+   * the 20px line the name sits on does not — the give-back `EntryShell`'s
+   * footer links make. The never-asked run and Dive support were 17px words
+   * (pixel-craft class 7). A name inside a sentence (the bullet lines) stays
+   * that sentence's link.
+   */
+  const nameLinkClass = `${tapTargetLinkClass} -my-3 font-medium hover:text-primary hover:underline`;
+
   const gearBanner = noticeFromParam(notice, GEAR_NOTICES);
   /**
    * Years dry, beside the name, on exactly the terms the roster states it
@@ -468,7 +479,7 @@ export function PrepBody({
                             <li key={diver.personId}>
                               <Link
                                 href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                                className="font-medium hover:text-primary hover:underline"
+                                className={nameLinkClass}
                               >
                                 {diver.fullName}
                               </Link>
@@ -572,7 +583,7 @@ export function PrepBody({
                         looking at (issue #1069). */}
                         <Link
                           href={`/shop/${shopSlug}/divers/${diver.personId}#support`}
-                          className="font-medium hover:text-primary hover:underline"
+                          className={nameLinkClass}
                         >
                           {diver.fullName}
                         </Link>
@@ -799,9 +810,11 @@ export function PrepBody({
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="font-semibold">
+                              {/* The card's 16px name: `nameLinkClass`'s floor,
+                                  handing back (44 − 24) / 2 of its own line. */}
                               <Link
                                 href={`/shop/${shopSlug}/divers/${line.personId}`}
-                                className="hover:text-primary hover:underline"
+                                className={`${tapTargetLinkClass} -my-2.5 hover:text-primary hover:underline`}
                               >
                                 {line.fullName}
                               </Link>
@@ -828,19 +841,23 @@ export function PrepBody({
                     </THead>
                     <TBody>
                       {checklist.diverLines.map((line) => (
-                        <tr key={line.bookingId}>
+                        // The row's one way in, and its only one: `RowLink`'s
+                        // overlay is positioned against `Tr`. Its 44px box
+                        // hands (44 − 20) / 2 into the cell's `py-3`, so the
+                        // name keeps the kit's first line and the row its height.
+                        <Tr key={line.bookingId}>
                           <Td className="font-medium">
-                            <Link
+                            <RowLink
                               href={`/shop/${shopSlug}/divers/${line.personId}`}
-                              className="hover:text-primary hover:underline"
+                              className="-my-3 hover:text-primary hover:underline"
                             >
                               {line.fullName}
-                            </Link>
+                            </RowLink>
                             {diveRecencyLine(line.lastDivedBand)}
                           </Td>
                           <Td>{kitCell(line)}</Td>
                           <Td numeric>{line.items.length}</Td>
-                        </tr>
+                        </Tr>
                       ))}
                     </TBody>
                   </Table>

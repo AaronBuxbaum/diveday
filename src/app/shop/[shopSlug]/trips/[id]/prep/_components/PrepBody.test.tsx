@@ -344,6 +344,34 @@ describe("the packing list's geometry", () => {
     }
   });
 
+  it("gives every diver's name that stands on its own line a 44px target, and keeps the line (K-146)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const lead = byText(container, t("tripPrep.missingSizesNobodyAskedLead"));
+    const neverAsked = within(lead.nextElementSibling as HTMLElement).getAllByRole("link");
+    const support = diverLinks(container).filter((link) =>
+      link.getAttribute("href")?.endsWith("#support"),
+    );
+    expect(neverAsked.map((link) => link.textContent)).toEqual(["Theo Lindqvist", "Nadia Petrov"]);
+    expect(support.map((link) => link.textContent)).toEqual(["Nadia Petrov"]);
+    for (const link of [...neverAsked, ...support]) {
+      // The 44px floor, and the (44 − 20) / 2 handed back above and below, so
+      // the 20px line the name sits on does not grow to 44.
+      expect(tokens(link)).toEqual(expect.arrayContaining(["inline-flex", "min-h-11", "-my-3"]));
+    }
+  });
+
+  it("gives the phone card's name a 44px target on its 24px line, and the table's row the RowLink (K-146)", () => {
+    const { container } = renderPrep(everyPanelPrep(), { grouping: "diver" });
+    const carmen = diverLinks(container).filter((link) => link.textContent === "Carmen Ruiz");
+    expect(carmen).toHaveLength(2);
+    const [card, row] = carmen;
+    expect(tokens(card)).toEqual(expect.arrayContaining(["inline-flex", "min-h-11", "-my-2.5"]));
+    // The table's first cell is the row's one way in: `RowLink`'s overlay,
+    // positioned against `Tr`'s `relative`, never against the page.
+    expect(tokens(row)).toEqual(expect.arrayContaining(["min-h-11", "after:absolute", "-my-3"]));
+    expect(row.closest("tr")).toHaveClass("relative");
+  });
+
   it("titles every section at the one size a card's own title has (K-151)", () => {
     const { container } = renderPrep(everyPanelPrep(), { notice: "gear-assigned" });
     const headings = container.querySelectorAll("h2");
