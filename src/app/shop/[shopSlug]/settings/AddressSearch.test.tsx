@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AddressLookupResult, ShopAddressFields } from "@/lib/address-lookup";
+import { rendersFlush } from "@/test/button-flush";
 import { AddressSearch } from "./AddressSearch";
 
 // The actions drag better-auth (and the whole Next server runtime) in behind them.
@@ -223,12 +224,12 @@ describe("the address card with a geocoder", () => {
    * `overflow-hidden` on a phone and needed an inset ring to survive
    * (`settings-address` at 390). Flush keeps 8px of room outside the label,
    * so the box sits 8px from the clip and the app's own ring fits (K-06).
-   * jsdom has no layout, so this pins the classes that decide it.
+   * jsdom has no layout, so this asks whether the button is flush.
    */
   it("lines the Remove address label up with the address through flush, clear of the card's clip", () => {
     renderCard({ initial: KEY_LARGO_ADDRESS });
     const remove = screen.getByRole("button", { name: copy.removeLabel });
-    expect(remove).toHaveClass("-mx-2", "px-2");
+    expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(true);
     expect(remove).not.toHaveClass("focus-visible:focus-ring-inset");
   });
 

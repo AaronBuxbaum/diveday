@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { emptyMedicalAnswers, flaggedMedicalPrompts, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
+import { rendersFlush } from "@/test/button-flush";
 import { RosterSection } from "./RosterSection";
 import type {
   NitroxByBooking,
@@ -512,7 +513,7 @@ describe("a drysuit going out with no drysuit card", () => {
  * (`trip-guests-identity-open` at 390). Now the first control is `flush`: a
  * link's box is its label, a ghost's box reaches 8px past it, and either way
  * the app's own ring fits inside the clip (K-06). jsdom has no layout, so
- * this pins the classes that decide it.
+ * this asks which control is flush; `button.test.ts` refuses the row bleed.
  */
 describe("the seat's foot row sits on the text column through flush", () => {
   it("flushes Create order, the first control, and leaves Remove booking its padding", () => {
@@ -520,9 +521,8 @@ describe("the seat's foot row sits on the text column through flush", () => {
 
     const remove = screen.getByRole("button", { name: "Remove booking" });
     const order = screen.getByRole("link", { name: "Create order" });
-    expect(order).toHaveClass("px-0");
-    expect(remove).toHaveClass("px-3");
-    expect(remove.closest(".-mx-3")).toBeNull();
+    expect(rendersFlush(order, "link", "sm")).toBe(true);
+    expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(false);
     for (const control of [order, remove]) {
       expect(control).not.toHaveClass("focus-visible:focus-ring-inset");
     }
@@ -533,7 +533,7 @@ describe("the seat's foot row sits on the text column through flush", () => {
 
     const remove = screen.getByRole("button", { name: "Remove booking" });
     expect(screen.queryByRole("link", { name: "Create order" })).toBeNull();
-    expect(remove).toHaveClass("-mx-2", "px-2");
+    expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(true);
     expect(remove).not.toHaveClass("focus-visible:focus-ring-inset");
   });
 });

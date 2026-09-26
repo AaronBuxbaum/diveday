@@ -362,13 +362,19 @@ const FLUSH = "px-0";
  * row's fill, and for the same reason.
  *
  * `flush` is the one sideways outdent: `button.test.ts` refuses a negative inline
- * margin at a call site, where `-ml-3`, `-mr-4` and `-ms-2` each cancelled one
- * side of one size by hand. Two things stay the call site's to decide. A pair
- * of controls that both go flush has given up the padding that spaced them, so
- * its gap takes that room back (the display links' Renew and Revoke). And a
- * flush fill reaches 8px out and its ring 13px, so a row with less than that
- * between the label and an `overflow-hidden` edge — a `p-3` row in a clipped
- * list — draws the ring inside (`focus-visible:focus-ring-inset`).
+ * margin written into a `buttonClass` call, where `-ml-3`, `-mr-4` and `-ms-2`
+ * each cancelled one side of one size by hand, and on the element wrapping a
+ * quiet button, where a `-mx-3` row did the same for the whole row. Two things
+ * stay the call site's to decide. A flush control has given up the padding
+ * that spaced it from its neighbours, so the row's gap takes that room back —
+ * 8px more beside a padded neighbour (the staff credentials' review and
+ * Remove), 16px more between two flush ones (the display links' Renew and
+ * Revoke) — or its fill ends where the next box begins. And a flush fill
+ * reaches 8px out and its ring 13px, so a box with less than 13px between the
+ * label and its edge — an `overflow-hidden` card, which cuts the ring, or a
+ * bordered or sunken box, which the ring would cross — draws the ring inside
+ * (`focus-visible:focus-ring-inset`) or gains the padding (the FAQ editor's
+ * cards, `p-4`).
  */
 const FLUSH_HOVER_FILL = "-mx-2 px-2";
 

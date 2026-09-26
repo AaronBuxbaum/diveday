@@ -573,6 +573,11 @@ describe("buttonClass", () => {
       // `overflow-hidden` cards, and left the next site to find its own
       // number (pixel probe, K-06). `flush` is the one sideways outdent: it knows the
       // size's padding and keeps 8px of room for a hover fill.
+      //
+      // This reads what is written in the call. A class that reaches
+      // `buttonClass` through a prop is outside it — the week board's
+      // `RowActions` takes `-me-2` that way, on an `icon-sm` square, which has
+      // no label to line up and which `flush` leaves alone.
       const offenders: string[] = [];
       for (const file of sourceFiles(SRC_DIR)) {
         const source = readFileSync(file, "utf8");
@@ -581,6 +586,79 @@ describe("buttonClass", () => {
           for (const token of args.match(/(?<![\w-])(?:[\w-]+:)*-m[xlrse]-[\w.[\]]+/g) ?? []) {
             offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
           }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    /**
+     * Every element whose own `className` literal pulls it sideways with a
+     * negative inline margin and which wraps a quiet button — the hand cancel
+     * of the test above, one level up. A margin the same element hands back as
+     * padding (`-mx-2 px-2`, a fill's room) moves no word and is not one.
+     *
+     * Read by indentation, which Biome keeps honest: an element runs from its
+     * opening `<tag` to the first `</tag>` at the same indent. A quiet button
+     * is a `buttonClass({ variant: "ghost" | "danger-ghost" … })` written
+     * inside it; one drawn by a component (`Copyable`) is not seen.
+     */
+    function bleedingWrappers(source: string): string[] {
+      const lines = source.split("\n");
+      const found: string[] = [];
+      const negativeInline = /(?<![\w-])((?:[\w-]+:)*)-m([xlrse])-([\w.[\]]+)/g;
+      for (const [at, line] of lines.entries()) {
+        for (const literal of line.match(/className=(?:"[^"]*"|\{`[^`]*`\})/g) ?? []) {
+          const classes = literal.split(/[\s"`{}=]+/);
+          for (const [token, prefix, side, size] of literal.matchAll(negativeInline)) {
+            if (classes.includes(`${prefix}p${side}-${size}`)) continue;
+            let open = at;
+            while (open >= 0 && !/^\s*<[A-Za-z]/.test(lines[open])) open -= 1;
+            const [, indent, tag] = lines[open]?.match(/^(\s*)<([\w.]+)/) ?? [];
+            if (!tag) continue;
+            let end = at;
+            while (end < lines.length && !/[^=]>\s*$|^\s*>\s*$/.test(lines[end])) end += 1;
+            if (/\/>\s*$/.test(lines[end] ?? "")) continue;
+            const close = lines.findIndex((l, i) => i > end && l.startsWith(`${indent}</${tag}>`));
+            if (close < 0) continue;
+            const body = lines.slice(open, close).join("\n");
+            if (/buttonClass\(\{[^}]*variant: "(?:danger-)?ghost"/.test(body)) {
+              found.push(`${token} on line ${at + 1}`);
+            }
+          }
+        }
+      }
+      return found;
+    }
+
+    it("bleeds no wrapper of a quiet button sideways: the row's first control goes `flush`", () => {
+      // The roster's foot row was `-mx-3` around a link and a danger-ghost, so
+      // the pair sat on the text column and the first control stood 4px from
+      // the card's clip, where its ring needed drawing inside (K-06). The
+      // shape as it was, so the sweep is known to see it:
+      const roster = [
+        '        <div className="mt-4 border-t border-border pt-4">',
+        '          <div className="-mx-3 flex flex-wrap items-center gap-x-1 gap-y-2">',
+        "            <form action={removeBookingAction}>",
+        "              <InlineConfirm",
+        "                triggerClassName={buttonClass({",
+        '                  variant: "danger-ghost",',
+        '                  size: "sm",',
+        "                })}",
+        "              />",
+        "            </form>",
+        "          </div>",
+        "        </div>",
+      ].join("\n");
+      expect(bleedingWrappers(roster)).toEqual(["-mx-3 on line 2"]);
+      // A fill's room is handed straight back and moves nothing.
+      expect(bleedingWrappers(roster.replace("-mx-3 ", "-mx-2 px-2 "))).toEqual([]);
+
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const hit of bleedingWrappers(source)) {
+          offenders.push(`${relative(SRC_DIR, file)}: ${hit}`);
         }
       }
       expect(offenders).toEqual([]);
