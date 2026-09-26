@@ -50,6 +50,7 @@ export function TripDiveFields({
   disabled = false,
   onCountChange,
   onFirstDiveSiteChange,
+  frameClassName,
 }: {
   diveSites: DiveOption[];
   initialCount?: number;
@@ -67,6 +68,15 @@ export function TripDiveFields({
   onCountChange?: (count: number) => void;
   /** Fires when dive one's site changes, likewise. */
   onFirstDiveSiteChange?: (diveSiteId: string) => void;
+  /**
+   * The block's frame (corner, border, fill, padding), replaced whole: it is
+   * drawn like the groups around it on whichever form it sits in, so it takes
+   * that form's own spelling of their frame and keeps none of its own. A
+   * fixed 20px panel corner and 16px phone inset matched neither the trip
+   * page's sunken insets nor the schedule builder's 12px fieldsets, and sat
+   * inside the builder's 12px add panel (pixel-craft K-95).
+   */
+  frameClassName: string;
 }) {
   const [count, setCount] = useState(Math.min(4, Math.max(1, initialCount)));
 
@@ -76,7 +86,7 @@ export function TripDiveFields({
       // state of an unmounted subtree, and these are a staff member's typed
       // dive plans.
       hidden={disabled}
-      className="rounded-panel border border-border bg-surface-sunken/45 p-4 sm:p-5"
+      className={frameClassName}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>

@@ -683,7 +683,6 @@ export function PrepBody({
                       className={buttonClass({
                         variant: "secondary",
                         size: "sm",
-                        className: "mt-4",
                       })}
                     >
                       {t("tripPrep.rentalKitEmptyAction")}

@@ -48,4 +48,41 @@ describe("MarketingFooterView", () => {
       unmount();
     }
   });
+
+  // Nine 20px-tall words with a square ring on the text, 36px apart when the
+  // row wraps on a phone (K-19). Each is a 44px target with the control radius
+  // now, and the wrapped rows stack at that 44px pitch rather than 44 + 16.
+  // Height alone was not the floor: "About" is 38.8px wide and "Terms" 39.7,
+  // so five of the nine were still narrower than 44. Each link carries 8px a
+  // side (every link at least 54.8px wide), which is the 16px between words,
+  // and the row hangs that padding into the gutter, so the first word stays
+  // on x 24 and at lg the last one ends on 1256.
+  it("makes every link a 44px target both ways, with a rounded ring", () => {
+    render(<MarketingFooterView locale={DEFAULT_DIVER_LOCALE} shopSlug={null} />);
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(9);
+    for (const link of links) {
+      expect(link).toHaveClass("inline-flex", "min-h-11", "items-center", "rounded-lg", "px-2");
+    }
+    const row = links[0].parentElement;
+    expect(row).toHaveClass("-mx-2", "flex", "flex-wrap");
+    // The links' padding is the spacing; a gap on top of it would double it.
+    expect(row?.className).not.toMatch(/\bgap-(?:[xy]-)?[1-9]/);
+  });
+
+  // Tagline and links need 897px side by side in en-US (286 + 595 + a 16px
+  // gap) and about 1173 in es-ES (404 + 753 + 16). Going one-row at sm put
+  // them side by side from 640, so the tagline wrapped and
+  // "support@dive.day" dropped alone onto a second line (K-133); going
+  // one-row at lg still did that in es-ES from 1024 to about 1220. No
+  // breakpoint holds every language, so the row wraps: the links go under
+  // the tagline whenever the two do not fit side by side.
+  it("puts the tagline and links on one row only when they fit", () => {
+    const { container } = render(
+      <MarketingFooterView locale={DEFAULT_DIVER_LOCALE} shopSlug={null} />,
+    );
+    const row = container.querySelector("footer > div");
+    expect(row).toHaveClass("flex", "flex-wrap", "items-center", "justify-between", "gap-4");
+    expect(row?.className).not.toMatch(/(?:^|\s)(?:[a-z0-9]+:)?flex-(?:row|col)\b/);
+  });
 });

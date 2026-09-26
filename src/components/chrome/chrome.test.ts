@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { declarations, readGlobalsCss, topLevelBlocks } from "@/test/stylesheet";
-import { CHROME_BAR_CLASS } from "./ChromeBar";
+import { CHROME_BAR_CLASS, CHROME_CENTER_SLOT_CLASS } from "./ChromeBar";
 
 /**
  * The chrome bar's rules, as a test — ADR
@@ -278,6 +278,17 @@ describe("the chrome bar", () => {
     expect(CHROME_BAR_CLASS).not.toContain("shadow");
   });
 
+  it("draws its centre slot only from lg up, where the tab strip it holds is drawn", () => {
+    // Rendered empty below `lg`, the slot still took a flex gap: 16px between
+    // the shop's name and the trailing cluster where every other pair sits 8px
+    // apart, and at 390 those 8px came out of the name, which ellipsized
+    // ("Harbour Lantern Dive …", "Slack Tide Dive Chart…"; the pixel probe).
+    const tokens = CHROME_CENTER_SLOT_CLASS.split(/\s+/);
+    expect(tokens).toContain("hidden");
+    expect(tokens).toContain("lg:flex");
+    expect(tokens.filter((token) => /^(flex|inline-flex|block|grid)$/.test(token))).toEqual([]);
+  });
+
   it("is the only bar either shell renders, so both are one height", async () => {
     for (const shell of ["src/components/ShopNav.tsx", "src/components/PublicShopChrome.tsx"]) {
       const source = withoutComments(await read(shell));
@@ -345,6 +356,27 @@ describe("the title folds into the bar", () => {
     expect(slot.slice(0, slot.indexOf("/>")), "the folded label is exposed twice").toContain(
       "aria-hidden",
     );
+  });
+
+  /**
+   * The folded title replaces the shop's name beside the same mark, so it sits
+   * on the name's line box: 24px, the name's 16px at the body's 1.5. The row
+   * centres both boxes on the mark, and where a box's top lands decides the
+   * pixel row its baseline snaps to. The name's 24px box starts on a half
+   * pixel; the title's own line box — 17px with `leading-none`, and 25.5px
+   * inherited once that went (17px × 1.5) — started on a whole one, and its
+   * cap sat 1px above the mark's centre and the name's (21–32 against 22–33,
+   * chrome-folded-title at 390): the word stepped up as the two cross-faded.
+   * Measured in the browser, every even line box (24, 26, 28px) lands the cap
+   * on 22–33 and every other one on 21–32; the name's own 24px is the one
+   * that says why.
+   */
+  it("sets the folded label on the shop name's own 24px line box", async () => {
+    const staff = withoutComments(await read("src/components/ShopNav.tsx"));
+    const slot = staff.slice(staff.indexOf("data-chrome-title-slot"));
+    const tag = slot.slice(0, slot.indexOf("/>"));
+    expect(tag).toContain("className=");
+    expect(tag.match(/\bleading-[\w[\].-]+/g)).toEqual(["leading-6"]);
   });
 
   it("drives the fold from the scroll, not from a timer", async () => {

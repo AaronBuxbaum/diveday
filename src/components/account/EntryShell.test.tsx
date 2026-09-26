@@ -4,9 +4,17 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { DIVER_MESSAGES } from "@/i18n/messages";
 import { DIVER_LOCALES } from "@/i18n/settings";
-import { DOOR_GLYPH_IDS, type DoorGlyphId, EntryDone, entryPanelClass } from "./EntryShell";
+import {
+  DOOR_GLYPH_IDS,
+  type DoorGlyphId,
+  EntryDone,
+  EntryShell,
+  entryPanelClass,
+} from "./EntryShell";
+import { EntryShellSkeleton } from "./EntryShellSkeleton";
 
 /**
  * **Slice 10a of ADR 20260827-first-light: the door speaks Clearwater.**
@@ -180,6 +188,267 @@ describe("the door's panel", () => {
 
   it("hands the skeleton the same frame, so neither can drift", () => {
     expect(read("components/account/EntryShellSkeleton.tsx")).toContain("entryPanelClass");
+  });
+});
+
+/**
+ * **The way out is a target, not a word** (docs/design/pixel-craft.md, class
+ * 7). Every door hands its "Back to sign in" to one of two slots — the shell's
+ * footer or a terminal door's action — and each page typed the link as bare
+ * text, so the pixel probe measured it at 96.3 × 17px on forgot-password, the
+ * staff invite, reset-password and verify. The slot owns the floor, so a link
+ * passed into it is 44px tall whatever the page typed.
+ *
+ * **And the line it sits on stays a line.** A 44px link is an atomic inline
+ * box, and an atomic inline's margin box is what sizes its line, so the slot
+ * hands back (44 − 20) / 2 above and below it. Without that, every line
+ * holding a link grew from 20px to 44px: a two-row footer's words stood 24px
+ * apart instead of 8, and a sentence that wraps its link onto a second line
+ * (the closed onboarding door's "Try the live demo") set its two lines 32px
+ * apart instead of 20.
+ */
+describe("a door's links are tap targets", () => {
+  /**
+   * `tapTargetLinkClass`, applied by the slot to its links — under `:where(&)`,
+   * so the rule weighs (0,0,1) and a link's own class wins. The plain `[&_a]:`
+   * form weighs (0,1,1) and would cut a `buttonClass()` link's `min-h-12` to
+   * 44px. The footer reaches every link in it (`_a`); a terminal door's action
+   * reaches only a link that is the whole action (`>a`).
+   */
+  const FOOTER = "[:where(&)_a]:";
+  const ACTION = "[:where(&)>a]:";
+  const floorOf = (variant: string) =>
+    tapTargetLinkClass.split(" ").map((utility) => `${variant}${utility}`);
+
+  /** Tailwind's `--spacing`: `min-h-11` is 44px, `-my-3` hands back 12. */
+  const SPACING_PX = 4;
+  /** `text-sm`'s line box, which both slots set their words in. */
+  const TEXT_SM_LINE_PX = 20;
+
+  /** The px one of the slot's rules sets on its links: `…min-h-11` → 44, `…-my-3` → 12. */
+  function step(slot: Element | null | undefined, variant: string, utility: string): number {
+    const prefix = `${variant}${utility}-`;
+    const found = [...(slot?.classList ?? [])].find((name) => name.startsWith(prefix));
+    return found ? Number(found.slice(prefix.length)) * SPACING_PX : 0;
+  }
+
+  /** How much of its line a link takes: its 44px box less what the slot hands back. */
+  function lineTaken(slot: Element | null | undefined, variant: string): number {
+    return step(slot, variant, "min-h") - 2 * step(slot, variant, "-my");
+  }
+
+  /** The gap between a flex column's rows: `gap-2` → 8. */
+  function rowGap(slot: Element | null | undefined): number {
+    const found = [...(slot?.classList ?? [])].find((name) => /^gap-\d/.test(name));
+    return found ? Number(found.slice("gap-".length)) * SPACING_PX : 0;
+  }
+
+  it("floors every link in the shell's footer", () => {
+    render(
+      <EntryShell title="Reset your password" footer={<a href="/sign-in">Back to sign in</a>}>
+        <form />
+      </EntryShell>,
+    );
+    const footer = screen.getByRole("link", { name: "Back to sign in" }).closest("footer");
+    for (const utility of floorOf(FOOTER)) expect(footer).toHaveClass(utility);
+    expect(step(footer, FOOTER, "min-h")).toBe(44);
+  });
+
+  it("keeps a two-row footer's rows 8px apart, 28px from line to line", () => {
+    render(
+      <EntryShell
+        title="Open your shop"
+        footer={
+          <>
+            <p>
+              The demo is a sample shop. <a href="/">Try the live demo</a>
+            </p>
+            <p>
+              Already have a shop? <a href="/sign-in">Sign in</a>
+            </p>
+          </>
+        }
+      >
+        <form />
+      </EntryShell>,
+    );
+    const footer = screen.getByRole("link", { name: "Sign in" }).closest("footer");
+    expect(footer).toHaveClass("mt-8", "gap-2");
+    expect(lineTaken(footer, FOOTER)).toBe(TEXT_SM_LINE_PX);
+    expect(lineTaken(footer, FOOTER) + rowGap(footer)).toBe(28);
+  });
+
+  it("keeps a sentence's link on the sentence's 20px line, wrapped or not", () => {
+    render(
+      <EntryShell
+        title="Sign in"
+        footer={
+          <p>
+            Need a shop? <a href="mailto:hello@example.com">Write to hello@example.com</a>
+          </p>
+        }
+      >
+        <form />
+      </EntryShell>,
+    );
+    const link = screen.getByRole("link", { name: "Write to hello@example.com" });
+    const footer = link.closest("footer");
+    // Inside the sentence, not a row of its own: the footer's rule reaches it
+    // as a descendant, and it takes its line's 20px, not 44.
+    expect(link.parentElement?.tagName).toBe("P");
+    for (const utility of floorOf(FOOTER)) expect(footer).toHaveClass(utility);
+    expect(lineTaken(footer, FOOTER)).toBe(TEXT_SM_LINE_PX);
+  });
+
+  it("floors the one link a terminal door offers, 24px under the body as before", () => {
+    render(
+      <EntryDone
+        glyph="expired"
+        title="This link has expired"
+        text="Ask for a fresh one."
+        action={<a href="/sign-in">Back to sign in</a>}
+      />,
+    );
+    const slot = screen.getByRole("link", { name: "Back to sign in" }).parentElement;
+    for (const utility of floorOf(ACTION)) expect(slot).toHaveClass(utility);
+    expect(step(slot, ACTION, "min-h")).toBe(44);
+    expect(slot).toHaveClass("mt-6");
+    expect(lineTaken(slot, ACTION)).toBe(TEXT_SM_LINE_PX);
+  });
+
+  /**
+   * `ExpiredLinkCard` hands the action a column: a `buttonClass()` link or a
+   * form, then "Need help? Contact {shop}." The column is the action, so
+   * nothing in it is this slot's to size: the button is 48px already, and the
+   * contact sentence keeps its 20px line, 16px under the button.
+   */
+  it("leaves the links in a column handed to it alone", () => {
+    render(
+      <EntryDone
+        glyph="expired"
+        title="This link has expired"
+        text="Ask for a fresh one."
+        action={
+          <div className="flex flex-col items-center gap-4">
+            <a href="/s/reef" className="min-h-12">
+              See the schedule
+            </a>
+            <p>
+              Need help? <a href="mailto:hi@reef.example">Contact Reef</a>.
+            </p>
+          </div>
+        }
+      />,
+    );
+    const column = screen.getByRole("link", { name: "See the schedule" }).parentElement;
+    const slot = column?.parentElement;
+    expect(slot).toHaveClass("mt-6");
+    expect([...(slot?.classList ?? [])].filter((name) => name.startsWith(FOOTER))).toEqual([]);
+    for (const utility of floorOf(ACTION)) expect(slot).toHaveClass(utility);
+  });
+
+  /**
+   * The footer is back at its `mt-8`, since a link no longer grows its line;
+   * the skeleton stands its footnote bar in the same 20px row at the same
+   * margin, so nothing shifts when the door streams in (class 11).
+   */
+  it("keeps the words where they were, in the shell and in its skeleton", () => {
+    render(
+      <EntryShell title="Reset your password" footer={<a href="/sign-in">Back to sign in</a>}>
+        <form />
+      </EntryShell>,
+    );
+    const footer = screen.getByRole("link", { name: "Back to sign in" }).closest("footer");
+    expect(footer).toHaveClass("mt-8");
+    cleanup();
+
+    const { container } = render(<EntryShellSkeleton fields={["email"]} />);
+    const footnote = container.querySelector("main > div")?.lastElementChild;
+    expect(footnote).toHaveClass("mt-8", "h-5");
+  });
+});
+
+/**
+ * **The skeleton is the door's own geometry** (docs/design/pixel-craft.md,
+ * class 11). It drew 44px button bars 24px under the last field, where every
+ * door's form is `flex flex-col gap-4` around a 48px `buttonClass()` — 16 +
+ * 48, not 24 + 44 — and a description bar on sign-in, verify and onboarding,
+ * which have none, and no row for sign-in's "Forgot password?", a 48px link
+ * pulled to 32px of flow by its `-my-2`. Each one moved the form when the
+ * page streamed in.
+ */
+describe("the door's skeleton", () => {
+  /** The panel the skeleton draws, found by the constant it shares with the shell. */
+  function panelOf(container: HTMLElement) {
+    const panel = [...container.querySelectorAll("div")].find(
+      (node) => node.className === entryPanelClass,
+    );
+    if (!panel) throw new Error("no panel");
+    return panel;
+  }
+
+  it("stands its button 16px under the fields, 48px tall", () => {
+    const { container } = render(<EntryShellSkeleton fields={["email"]} />);
+    const button = panelOf(container).lastElementChild;
+    expect(button).toHaveClass("mt-4", "h-12");
+    expect(button).not.toHaveClass("mt-6");
+    expect(button).not.toHaveClass("h-11");
+  });
+
+  it("stands a single-button door's button 48px tall", () => {
+    const { container } = render(<EntryShellSkeleton wordmark panel={false} footnote={false} />);
+    const pulse = container.querySelector(".animate-pulse");
+    expect(pulse?.lastElementChild).toHaveClass("h-12");
+  });
+
+  it("draws a description bar only for a door that has a description", () => {
+    const withBar = render(<EntryShellSkeleton fields={["email"]} />);
+    expect(panelOf(withBar.container).previousElementSibling).toHaveClass("h-6");
+    withBar.unmount();
+
+    const { container } = render(<EntryShellSkeleton description={false} fields={["email"]} />);
+    // The title bar is what the panel follows when there is no description.
+    expect(panelOf(container).previousElementSibling).toHaveClass("h-9");
+  });
+
+  it("keeps sign-in's forgot-password row between the last field and the button", () => {
+    const { container } = render(
+      <EntryShellSkeleton description={false} trailingLink fields={["email", "password"]} />,
+    );
+    const rows = [...panelOf(container).children];
+    const link = rows.at(-2);
+    expect(link).toHaveClass("mt-4", "h-8");
+    expect(rows.at(-1)).toHaveClass("mt-4", "h-12");
+  });
+
+  it("is what sign-in, verify and onboarding stream in under — none has a description", () => {
+    expect(read("app/sign-in/page.tsx")).toMatch(
+      /<EntryShellSkeleton description=\{false\} trailingLink fields=/,
+    );
+    expect(read("app/verify/[token]/loading.tsx")).toContain("description={false}");
+    expect(read("app/onboard/loading.tsx")).toContain("description={false}");
+  });
+});
+
+/**
+ * **A door's sentences balance, not just its question** (class 8). EntryDone
+ * balanced its heading and left the body to break greedily, so a two-line body
+ * ended on "do." or "one." alone on the stranded-diver and expired-link doors,
+ * and the verify door's first line ended on "Sign" with "in" below it.
+ */
+describe("a door's body text balances", () => {
+  it("balances a terminal door's body", () => {
+    render(<EntryDone glyph="expired" title="Expired" text="Ask the shop for a new one." />);
+    expect(screen.getByText("Ask the shop for a new one.")).toHaveClass("text-balance");
+  });
+
+  it("balances the shell's description", () => {
+    render(
+      <EntryShell title="Reset your password" description="Pick a new one for your account.">
+        <form />
+      </EntryShell>,
+    );
+    expect(screen.getByText("Pick a new one for your account.")).toHaveClass("text-balance");
   });
 });
 

@@ -85,7 +85,11 @@ export default function SignInPage({
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <Suspense fallback={<EntryShellSkeleton fields={["email", "password"]} />}>
+      <Suspense
+        fallback={
+          <EntryShellSkeleton description={false} trailingLink fields={["email", "password"]} />
+        }
+      >
         <SignInForm searchParams={searchParams} />
       </Suspense>
       <Suspense fallback={<MarketingFooterFallback />}>

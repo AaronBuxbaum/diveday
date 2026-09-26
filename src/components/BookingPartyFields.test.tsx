@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { SEGMENT_CORNER, segmentedTrackClass } from "@/components/ui/segmented";
+import { saveReturningDiver } from "@/lib/returning-diver";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { renderDiver } from "@/test/intl";
 import { BookingPartyFields } from "./BookingPartyFields";
@@ -100,6 +101,71 @@ describe("BookingPartyFields", () => {
     // A dive club of nine and a family of eight are the cases the old cap of
     // six turned into two unrelated parties.
     expect(options.at(-1)).toHaveTextContent(String(MAX_PUBLIC_PARTY_SIZE));
+  });
+});
+
+/**
+ * **One caption, one gap** (docs/design/pixel-craft.md, class 12). The
+ * booking card's group captions were drawn three ways, and "Your details" was
+ * the muted one, with nothing between it and the "Name" label under it: its
+ * line box ended on the label's (site-briefing at 1280). It takes the party
+ * count's caption as it is, in foreground ink, and the same 8px to what it
+ * captions that the count's track keeps (`mt-2`) — whatever comes first under
+ * it, the "Name" label or a remembered diver's "Booking as …" line.
+ */
+describe("BookingPartyFields — the group captions", () => {
+  it("captions the lead's details exactly as it captions the party count, 8px above the fields", () => {
+    renderDiver(<BookingPartyFields maxPartySize={4} />);
+    const countCaption = screen.getByText("Number of divers");
+    const detailsCaption = screen.getByText("Your details");
+    expect(detailsCaption.tagName).toBe("LEGEND");
+    expect(detailsCaption.className.split(" ").sort()).toEqual(
+      countCaption.className.split(" ").sort(),
+    );
+    // The 8px lives on the body after the legend, as ChoiceFieldset's does: a
+    // legend carries no margin of its own (form.test.tsx's sweep, K-72).
+    expect(detailsCaption.nextElementSibling).toHaveClass("mt-2");
+    expect(detailsCaption).not.toHaveClass("text-muted");
+    expect(countCaption).toHaveClass("text-sm", "font-semibold");
+  });
+
+  /**
+   * The line kept a `-mt-1` from before the caption had a gap, which then
+   * cancelled half of it: 8 − 4 left 4px. The caption's gap is the one gap.
+   */
+  it("keeps a remembered diver's line the caption's 8px under it, with no margin pulling it up", () => {
+    saveReturningDiver({ fullName: "Marco Rossi", email: "marco@example.com" });
+    try {
+      renderDiver(<BookingPartyFields maxPartySize={4} remember />);
+      const line = screen.getByRole("button", { name: "Not you?" }).closest("p");
+      expect(line).toHaveTextContent("Booking as Marco Rossi");
+      expect(screen.getByText("Your details").nextElementSibling).toHaveClass("mt-2");
+      expect(line?.parentElement).toBe(screen.getByText("Your details").nextElementSibling);
+      expect(line?.className.split(" ").filter((name) => /^-?m[ty]-/.test(name))).toEqual([]);
+    } finally {
+      localStorage.clear();
+    }
+  });
+});
+
+/**
+ * **An address is read whole** (docs/design/pixel-craft.md, class 8). Name
+ * and Email stood side by side in a 478px card body, so the Email box was
+ * 231px and a prefilled 35-character address was cut at its right padding
+ * (booking-known-diver at 1280). Each diver's boxes take the card's width, one
+ * under the other, as Phone already did.
+ */
+describe("BookingPartyFields — a diver's boxes", () => {
+  it("gives every box its own row, so a long address is never cut", () => {
+    renderDiver(<BookingPartyFields maxPartySize={2} leadPhone />);
+    fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
+    for (const name of ["Email", "Diver 2 email"]) {
+      const grid = screen.getByRole("textbox", { name }).closest(".grid-cols-1");
+      expect(grid).not.toBeNull();
+      expect(grid?.className).not.toMatch(/grid-cols-[2-9]/);
+    }
+    // Nothing is left spanning columns that no longer exist.
+    expect(document.querySelector('[class*="col-span-2"]')).toBeNull();
   });
 });
 

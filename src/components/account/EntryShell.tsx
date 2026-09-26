@@ -79,7 +79,9 @@ export function EntryShell({
             (ADR 20260827-the-divers-thread, decision 1). `width` still decides
             the column; it no longer decides the type. */}
         <h1 className={`${SHELL_TITLE_CLASS} text-balance`}>{title}</h1>
-        {description ? <p className="mx-auto mt-2 max-w-prose text-muted">{description}</p> : null}
+        {description ? (
+          <p className="mx-auto mt-2 max-w-prose text-balance text-muted">{description}</p>
+        ) : null}
       </header>
       {panel ? (
         <div className={entryPanelClass}>{children}</div>
@@ -87,13 +89,56 @@ export function EntryShell({
         <div className="mt-8 flex flex-col items-center gap-4 text-center">{children}</div>
       )}
       {footer ? (
-        <footer className="mt-8 flex flex-col items-center gap-2 text-center text-sm text-muted">
+        <footer
+          className={`mt-8 flex flex-col items-center gap-2 text-center text-sm text-muted ${FOOTER_LINK_SLOT}`}
+        >
           {footer}
         </footer>
       ) : null}
     </main>
   );
 }
+
+/**
+ * **A link a door hands on is a tap target**, whatever the page typed.
+ *
+ * Every door's way out — the footer's "Back to sign in", a terminal door's one
+ * action — arrived from its page as a bare `font-medium text-primary` link:
+ * 96.3 × 17px, under the 44px floor, on forgot-password, the staff invite,
+ * reset-password, verify and sign-in (the pixel probe's `small-target`). The
+ * slot is the layer that owns them all, so it lays `tapTargetLinkClass`'s floor
+ * on its links and no page has to remember.
+ *
+ * Spelled out rather than built from `tapTargetLinkClass`, because Tailwind
+ * only generates a class it can read whole in the source; `EntryShell.test.tsx`
+ * holds the two in step.
+ *
+ * **A floor, never a ceiling.** `:where(&)` takes the slot's class out of the
+ * selector's weight, so the rule is `:where(.slot) a` at (0,0,1) and any class
+ * on the link itself outranks it. The plain `[&_a]:` spelling is `.slot a` at
+ * (0,1,1), which beats a link's own `min-h-12`.
+ *
+ * **The target grows; the line does not.** `inline-flex` makes the link an
+ * atomic inline, and an atomic inline's *margin* box is what sizes its line.
+ * So `-my-3` hands back (44 − 20) / 2 above and below — the give-back
+ * Copyable's panel trigger uses — and the link takes exactly the 20px line it
+ * sits on while the box a finger meets is 44px. Without it every line holding
+ * a link grew to 44px: a two-row footer's words stood 24px apart instead of 8,
+ * and where a sentence wraps its link onto a second line (the closed
+ * onboarding door's "Try the live demo", at 1280 and 390) its two lines sat
+ * 32px apart instead of 20. With it the footer keeps the `mt-8 gap-2` it has
+ * always had, and a terminal door's link sits 24px under the body.
+ *
+ * **Which links.** The footer reaches every link in it (`_a`), a sentence's
+ * included — its rows are only ever text. A terminal door's action reaches
+ * only a link that is the whole action (`>a`): `ExpiredLinkCard` hands it a
+ * column holding a `buttonClass()` link or a form, then "Need help? Contact
+ * {shop}.", and neither is this slot's to size.
+ */
+const FOOTER_LINK_SLOT =
+  "[:where(&)_a]:inline-flex [:where(&)_a]:min-h-11 [:where(&)_a]:items-center [:where(&)_a]:-my-3";
+const ACTION_LINK_SLOT =
+  "[:where(&)>a]:inline-flex [:where(&)>a]:min-h-11 [:where(&)>a]:items-center [:where(&)>a]:-my-3";
 
 /**
  * The centered column every door shares. Exported so `EntryShellSkeleton`
@@ -232,8 +277,11 @@ export function EntryDone({
         </svg>
       </div>
       <h1 className={`mt-6 ${SHELL_TITLE_CLASS} text-balance`}>{title}</h1>
-      <p className="mt-3 max-w-prose text-muted">{text}</p>
-      {action ? <div className="mt-6 text-sm">{action}</div> : null}
+      {/* Balanced like the heading above it: left to break greedily, a
+          two-line body ended on "do." or "one." alone, and verify's split
+          "Sign" from "in" across its two lines. */}
+      <p className="mt-3 max-w-prose text-balance text-muted">{text}</p>
+      {action ? <div className={`mt-6 text-sm ${ACTION_LINK_SLOT}`}>{action}</div> : null}
     </main>
   );
 }

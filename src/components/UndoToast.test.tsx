@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { UndoToast } from "./UndoToast";
+import { buttonClass } from "./ui/button";
 
 // React derives onMouseEnter/onMouseLeave from the bubbling native
 // mouseover/mouseout events, not from the (non-bubbling) mouseenter/mouseleave
@@ -20,6 +21,64 @@ const PROPS = {
   pendingLabel: "Undoing…",
   undoLabel: "Undo",
 };
+
+/**
+ * **Undo is a real button.** It hand-rolled `min-h-9 … px-2 … hover:underline`:
+ * a 52×36 target under the 44px floor, with no press and no pointer (pixel-craft
+ * K-347). It is the `link` variant at `sm` now, and `busy` because it is a
+ * `SubmitButton`, which disables itself while its own undo is in flight.
+ */
+describe("the Undo button", () => {
+  it("is the shared link button at sm, a 44px target", () => {
+    render(<UndoToast {...PROPS} />);
+    const undo = screen.getByRole("button", { name: "Undo" });
+
+    expect(undo.className).toBe(
+      buttonClass({
+        variant: "link",
+        size: "sm",
+        busy: true,
+        className: "focus-visible:focus-ring-inset",
+      }),
+    );
+    expect(undo).toHaveClass("min-h-11");
+    expect(undo).not.toHaveClass("min-h-9");
+  });
+
+  /**
+   * The toast's end padding and Undo's own padding add up to its start
+   * padding, so the word "Undo" ends as far from the toast's end as the
+   * message starts from its start. Both sides were `px-4` with the button's
+   * padding on top: 19px in at the start, 26px at the end (pixel-craft K-102).
+   */
+  it("ends as far inside the toast as the message starts", () => {
+    render(<UndoToast {...PROPS} />);
+    const toast = screen.getByRole("status");
+    const undo = screen.getByRole("button", { name: "Undo" });
+    const px = (element: HTMLElement, prefix: string) =>
+      Number(
+        [...element.classList]
+          .map((token) => token.match(new RegExp(`^${prefix}-(\\d+(?:\\.\\d+)?)$`)))
+          .find(Boolean)?.[1],
+      ) * 4;
+
+    expect(toast).not.toHaveClass("px-4");
+    expect(px(toast, "pe") + px(undo, "px")).toBe(px(toast, "ps"));
+  });
+
+  /**
+   * That end padding is 4px, and the outset ring reaches 5px past the button
+   * (3px wide, 2px off): focused, Undo's ring ran over the toast's own border
+   * at 1280 (pixel-craft K-102, regressed by the padding above). The ring is
+   * drawn inside the button's box, which is 4px clear of the toast's edge.
+   */
+  it("rings Undo inside its own box, clear of the toast's edge", () => {
+    render(<UndoToast {...PROPS} />);
+    expect(screen.getByRole("button", { name: "Undo" })).toHaveClass(
+      "focus-visible:focus-ring-inset",
+    );
+  });
+});
 
 describe("UndoToast auto-dismiss", () => {
   it("dismisses on its own after autoDismissMs when left alone", () => {

@@ -265,7 +265,8 @@ test.describe("staff", () => {
     await photos.click();
     await expect(page).toHaveURL(/#briefing-photos$/);
     await expect(photos).toHaveAttribute("aria-current", "true");
-    // The section it landed on is a group with a name and no box.
+    // The section it landed on is a group with a name and no box; its legend
+    // carries the hairline (EditorSection).
     await expect(page.locator("fieldset#briefing-photos")).toBeVisible();
 
     // One edit names its section by name; a second stops naming and counts.

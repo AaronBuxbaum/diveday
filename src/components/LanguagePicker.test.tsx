@@ -32,6 +32,28 @@ const horizontalPadding = (element: Element) =>
   [...element.classList].filter((token) => /^(p|px|pl|pr|ps|pe)-/.test(token)).sort();
 
 /**
+ * The closed control is a 44px target at every width (docs/design/
+ * pixel-craft.md, class 7). Below `sm` the endonym goes `sr-only` and the
+ * globe carries the control alone, which left a 28×44 button — the size of
+ * the globe and its padding — in every shopfront's phone header.
+ */
+describe("LanguagePicker — the closed control", () => {
+  it("keeps a 44px square when the globe stands alone, its glyph centred in it", () => {
+    render(
+      <LanguagePicker
+        current="es-ES"
+        currentLabel="Español"
+        choices={CHOICES}
+        setLocale={vi.fn()}
+        copy={{ ariaLabel: "Change language", heading: "Language" }}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: "Change language" });
+    expect(trigger).toHaveClass("min-h-11", "min-w-11", "justify-center");
+  });
+});
+
+/**
  * The public header's language picker is the other panel that lists
  * `LanguageChoices`, so it takes the same recipe as the staff identity menu
  * (pixel-craft.md, classes 3 and 6). Its heading sat at `px-2`, 24px left of

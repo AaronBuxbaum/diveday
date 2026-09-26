@@ -10,6 +10,7 @@ export default function OnboardLoading() {
   return (
     <EntryShellSkeleton
       eyebrow
+      description={false}
       width="lg"
       fields={["shop", "slug", "timezone", "owner", "email", "password"]}
     />

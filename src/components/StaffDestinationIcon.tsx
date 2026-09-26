@@ -22,6 +22,7 @@ export type DiveDaySharedIconName =
   | "chevron-right"
   | "door-chevron"
   | "more"
+  | "close"
   | "warning"
   | "boat"
   | `waiver-action-${WaiverActionIconName}`
@@ -35,11 +36,16 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
       d="M12 0a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm0 5.1a1.65 1.65 0 1 0 0 3.3 1.65 1.65 0 0 0 0-3.3ZM13.8 18H10.2a1.05 1.05 0 0 1 0-2.1h.75v-3.6h-.6a1.05 1.05 0 0 1 0-2.1h2.7v5.7h.75a1.05 1.05 0 0 1 0 2.1Z"
     />
   ),
+  // Three bubbles that fill the box (ink y 1.8–22.25, x 3.5–20.5, on its
+  // centre) so a caller sizes the box by the ink it wants. They reached only
+  // y 4.6–18.8, which left 8px of blank box above them in `EmptyState` and
+  // made its panel bottom-heavy (pixel-craft K-70). Their stroke is
+  // `EMPTY_STROKE`, scaled with them.
   empty: (
     <>
-      <circle cx="12" cy="15" r="3" />
-      <circle cx="8.5" cy="7.2" r="1.8" />
-      <circle cx="15.7" cy="9" r="1.2" />
+      <circle cx="12.3" cy="16.8" r="4.35" />
+      <circle cx="7.2" cy="5.5" r="2.6" />
+      <circle cx="17.65" cy="8.1" r="1.75" />
     </>
   ),
   globe: (
@@ -99,11 +105,22 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
   "chevron-right": <path d="m9 6 6 6-6 6" />,
   // `chevron-right`'s stroke, drawn from `ICON_VIEWBOX`'s ink-cropped box.
   "door-chevron": <path d="m9 6 6 6-6 6" />,
+  // Drawn at `size-4` on a row's menu trigger: a 2-unit dot is 2.7px there,
+  // and 3 units between dots keep 2px of paper, so it reads as three dots
+  // rather than three specks or a dash (pixel-craft K-89).
   more: (
     <>
-      <circle cx="6" cy="12" r="1" fill="currentColor" stroke="none" />
-      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
-      <circle cx="18" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="5" cy="12" r="2" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="2" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // A remove control's cross, in the family's weight: a typed "×" renders at
+  // the font's size, 8px of ink in a 48px icon button (pixel-craft K-545).
+  close: (
+    <>
+      <path d="M6 6l12 12" />
+      <path d="M18 6 6 18" />
     </>
   ),
   "waiver-action-email": (
@@ -148,6 +165,12 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
   "waiver-mark-unavailable": <path d="M5 12h14" />,
 };
 
+/**
+ * The bubbles' stroke: 1.5 units when they were drawn at two thirds of this
+ * size, scaled with them, so they render at the weight they always had.
+ */
+const EMPTY_STROKE = 2.2;
+
 const CARET_PATHS: Record<DisclosureCaretDirection, string> = {
   right: "m9 6 6 6-6 6",
   down: "m6 9 6 6 6-6",
@@ -160,15 +183,17 @@ const CARET_PATHS: Record<DisclosureCaretDirection, string> = {
  * always `aria-hidden`: the destination's label (the same record the header
  * tabs and the palette read) is the accessible name, never the picture.
  *
- * **Every destination a staffer can reach has artwork now.** The map started
- * as the five `primary` tabs the dock draws, and stayed that way until the
- * command palette began drawing the same rail down all twenty-one of its rows
- * (issue #773) — where a partial set is worse than none, because two thirds of
- * the list would have been the fallback dot. The map is still typed partial and
- * the fallback still stands: a destination added tomorrow renders a neutral dot
- * rather than crashing, which is visible enough to notice and harmless to ship.
+ * **Every destination a staffer can reach has artwork, and `tsc` keeps it
+ * that way.** The map started as the five `primary` tabs the dock draws, and
+ * grew to every destination once the command palette drew the same rail down
+ * all of its rows (issue #773), where a partial set is worse than none. It was
+ * still typed partial, with a neutral dot promised for a destination added
+ * without artwork, and that dot could never render: `DiveDayIcon` tested
+ * `name in ICON_PATHS`, found nothing, and fell through to the shared marks, so
+ * "Took a call" shipped as the palette's one blank rail (pixel-craft K-275).
+ * A full record makes a destination without a picture a type error instead.
  */
-const ICON_PATHS: Partial<Record<StaffDestinationId, ReactNode>> = {
+const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
   // The day itself: a sun over the horizon line.
   today: (
     <>
@@ -223,6 +248,10 @@ const ICON_PATHS: Partial<Record<StaffDestinationId, ReactNode>> = {
       <path d="M18 8v8" />
       <path d="M14 12h8" />
     </>
+  ),
+  // Took a call: the handset a diver rang in on.
+  tookACall: (
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z" />
   ),
   // Walk-in: someone through the door, at the counter.
   walkIn: (
@@ -344,6 +373,44 @@ const ICON_PATHS: Partial<Record<StaffDestinationId, ReactNode>> = {
   ),
 };
 
+type DiveDayIconName = StaffDestinationId | DiveDaySharedIconName;
+
+/**
+ * **Where a glyph's ink starts and ends across its box**, for the glyphs a
+ * caller may draw `trim`med: the path's own geometry, x from and x to, before
+ * the stroke (which `trimmedViewBox` adds, so a heavier stroke still fits).
+ *
+ * A glyph leading a row lines up by its ink, the way the words beside it do
+ * (docs/design/pixel-craft.md, classes 2 and 3), and one ending a row ends on
+ * its ink. In the shared 24-unit square the dive-site catalog door's pin
+ * started 3px inside the column its row's words start on (pixel-craft K-519),
+ * the back-link's chevron 3–4px right of its title's column (K-114), and a
+ * ledger door's chevron 5px inside its row's end (K-118).
+ *
+ * **This is the one way to draw a glyph on its ink.** Not a second name for a
+ * cropped copy of a path, and not a viewBox written by hand at the call site:
+ * `trim` is opt-in per call, so a glyph's square users keep the square, and
+ * the crop follows the stroke the caller draws. An entry here is measured
+ * from the path above it, never guessed: a wrong one crops the ink it was
+ * meant to align.
+ */
+const TRIM_X = {
+  // The pin's teardrop: its arc and both curves reach x 5 and x 19.
+  diveSites: [5, 19],
+  // Both chevrons run between x 9 and x 15, point and arms.
+  "chevron-left": [9, 15],
+  "chevron-right": [9, 15],
+} as const satisfies Partial<Record<DiveDayIconName, readonly [number, number]>>;
+
+/** A glyph whose horizontal ink is recorded, so `trim` can crop its box to it. */
+export type TrimmableIconName = keyof typeof TRIM_X;
+
+function trimmedViewBox(name: TrimmableIconName, stroke: number) {
+  const [from, to] = TRIM_X[name];
+  const round = (value: number) => Number(value.toFixed(3));
+  return `${round(from - stroke / 2)} 0 ${round(to - from + stroke)} 24`;
+}
+
 /**
  * **A mark whose box is cropped to its ink across** — the one exception to the
  * 24-unit square, spelled here so it cannot drift into a component.
@@ -368,35 +435,49 @@ const ICON_VIEWBOX: Partial<Record<DiveDaySharedIconName, string>> = {
  * bubble, info hint, language globe, and waiver mark cannot drift into their
  * own viewBox or stroke grammar in another component.
  */
-export function DiveDayIcon({
+export function DiveDayIcon<N extends DiveDayIconName>({
   name,
   className = "size-4",
   direction = "right",
   strokeWidth = 1.8,
+  trim,
 }: {
-  name: StaffDestinationId | DiveDaySharedIconName;
+  name: N;
   className?: string;
   direction?: DisclosureCaretDirection;
   strokeWidth?: number;
+  /**
+   * Crop the box to the glyph's horizontal ink, stroke included, and keep its
+   * full height, so a glyph that leads a row starts where the row's words do.
+   * Size it by height, `h-5 w-auto`: the box then comes out as wide as the
+   * ink, where a square class would centre the ink in the square again.
+   * Accepted only on a glyph `TRIM_X` has measured.
+   */
+  trim?: [N] extends [TrimmableIconName] ? boolean : never;
 }) {
   const isCaret = name === "caret";
   const path = isCaret ? (
     <path d={CARET_PATHS[direction]} />
   ) : name in ICON_PATHS ? (
-    (ICON_PATHS[name as StaffDestinationId] ?? <circle cx="12" cy="12" r="4" />)
+    ICON_PATHS[name as StaffDestinationId]
   ) : (
     SHARED_ICON_PATHS[name as Exclude<DiveDaySharedIconName, "caret">]
   );
   const isFilled = name === "info";
   const isEmpty = name === "empty";
   const isMark = name.startsWith("waiver-mark-");
+  const stroke = isMark ? 2.4 : isCaret ? 2.5 : isEmpty ? EMPTY_STROKE : strokeWidth;
   return (
     <svg
       aria-hidden="true"
-      viewBox={ICON_VIEWBOX[name as DiveDaySharedIconName] ?? "0 0 24 24"}
+      viewBox={
+        trim && name in TRIM_X
+          ? trimmedViewBox(name as TrimmableIconName, stroke)
+          : (ICON_VIEWBOX[name as DiveDaySharedIconName] ?? "0 0 24 24")
+      }
       fill={isFilled ? "none" : "none"}
       stroke={isFilled ? "none" : "currentColor"}
-      strokeWidth={isMark ? 2.4 : isCaret ? 2.5 : isEmpty ? 1.5 : strokeWidth}
+      strokeWidth={stroke}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}

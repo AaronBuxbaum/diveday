@@ -304,8 +304,9 @@ export function CrewSection({
 
       {staff.length === 0 ? (
         // The shared empty-section grammar, not a bare paragraph
-        // (design/principles.md #4).
-        <EmptyState title={copy.noStaff} />
+        // (design/principles.md #4). `nested`: this sits in the About card
+        // too, and its own bed shadow would fall on the card's white.
+        <EmptyState title={copy.noStaff} nested />
       ) : (
         <div className="flex flex-col gap-3">
           {hasUnassignedStaff ? (
@@ -349,8 +350,9 @@ export function CrewSection({
             // states follow one rule") — it was a bare `<p>`, so one component
             // said "nothing here" two ways. `icon={false}`: this one sits under
             // the assign picker rather than standing alone, so the bubbles
-            // would outweigh the line of text.
-            <EmptyState title={copy.notAssignedYet} icon={false} />
+            // would outweigh the line of text. `nested`: it sits in the Crew
+            // card, whose white it would otherwise shadow.
+            <EmptyState title={copy.notAssignedYet} icon={false} nested />
           ) : (
             // A sunken inset, not a card in a card — the roster is carved into
             // the Crew card the way ShopStat's `inset` variant is (see
@@ -471,7 +473,7 @@ export function CrewSection({
                       className={buttonClass({ variant: "danger-ghost", size: "icon" })}
                       aria-label={fill(copy.unassignAria, { name: entry.fullName })}
                     >
-                      ×
+                      <DiveDayIcon name="close" className="size-4" />
                     </button>
                   </span>
                 </li>

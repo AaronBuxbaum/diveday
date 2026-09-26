@@ -19,7 +19,12 @@ import {
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/ledger";
-import { BANNER_TITLE_CLASS, LEAD_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
+import {
+  BANNER_TITLE_CLASS,
+  LEAD_TITLE_CLASS,
+  MARKETING_EYEBROW_CLASS,
+  SUB_TITLE_CLASS,
+} from "@/components/ui/typography";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -407,9 +412,7 @@ async function HomeBody({
       <section className="relative overflow-hidden border-b border-border">
         <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:py-24">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.home.eyebrow")}
-            </p>
+            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.home.eyebrow")}</p>
             <h1 className="mt-5 text-5xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl lg:text-7xl">
               {t("marketing.home.heroTitle")}
             </h1>
@@ -486,10 +489,7 @@ async function HomeBody({
                   {screen.door}
                 </div>
                 <div className="lg:col-span-6">
-                  <MarketingMockup
-                    label={screen.mockupLabel}
-                    className="shadow-xl shadow-foreground/5"
-                  >
+                  <MarketingMockup label={screen.mockupLabel}>
                     {screen.mockup.render(locale)}
                   </MarketingMockup>
                 </div>
@@ -545,10 +545,7 @@ async function HomeBody({
                 guides' own shared key rather than a homepage wording of the
                 same promise — see `midSeasonCutover`. */}
               <p className="leading-7 text-muted">{t(midSeasonCutover.claimKey)}</p>
-              <MarketingMockup
-                label={t("marketing.home.importMockupLabel")}
-                className="shadow-xl shadow-foreground/5"
-              >
+              <MarketingMockup label={t("marketing.home.importMockupLabel")}>
                 <ImportPreviewFallback locale={locale} />
               </MarketingMockup>
               {/* The spreadsheet door, and it belongs to this column rather than

@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DateRequestCopy, InquiryFormState } from "@/lib/course-inquiry";
 import { renderDiver } from "@/test/intl";
 import { DateRequestForm } from "./DateRequestForm";
@@ -505,5 +509,74 @@ describe("DateRequestForm — what the request is about", () => {
 
     await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
     expect(submitInquiry.mock.calls[0]?.[1].get("interest")).toBe("Two dives on the wrecks");
+  });
+});
+
+/**
+ * **The host spaces the section** (docs/design/pixel-craft.md, class 4). The
+ * section branch baked `mt-12` into itself, and the course page's other
+ * sections sit `mt-14` apart, so "Get in touch" stood 48px under the FAQ where
+ * every other section stands 56px under its neighbour. A margin the host
+ * passes beside a baked one would resolve by stylesheet order rather than by
+ * which was written, so the component carries none of its own.
+ */
+describe("DateRequestForm — its place on the page", () => {
+  function renderSection(className?: string) {
+    return renderDiver(
+      <DateRequestForm
+        submitRequest={vi.fn()}
+        contactEmail="hello@example.com"
+        contactPhone={null}
+        className={className}
+        copy={copy}
+      />,
+    );
+  }
+
+  it("sits at the margin its host passes", () => {
+    const { container } = renderSection("mt-14");
+    const section = container.querySelector("section");
+    expect(section).toHaveClass("mt-14");
+    expect(section).not.toHaveClass("mt-12");
+  });
+
+  it("carries no margin of its own", () => {
+    const { container } = renderSection();
+    expect(container.querySelector("section")?.className).not.toMatch(/(^|\s)mt-/);
+  });
+
+  /**
+   * **The host picks the heading's rung** (class 12). The section headed
+   * itself with `LEAD_TITLE_CLASS`, 24px, which is its course page's rung; on
+   * the off-season storefront every other heading is the brand face at
+   * `SECTION_TITLE_CLASS`, 18px, so "Ask us for a day" stood a size above
+   * "What divers say" and "Other ways we can help".
+   */
+  it("heads its section at the rung its host passes", () => {
+    renderDiver(
+      <DateRequestForm
+        submitRequest={vi.fn()}
+        contactEmail="hello@example.com"
+        contactPhone={null}
+        headingClassName={`font-brand-display ${SECTION_TITLE_CLASS}`}
+        copy={copy}
+      />,
+    );
+    const heading = screen.getByRole("heading", { level: 2, name: "Get in touch" });
+    expect(heading.className).toBe(`font-brand-display ${SECTION_TITLE_CLASS}`);
+  });
+
+  it("heads its section as a lead when the host says nothing", () => {
+    renderSection();
+    const heading = screen.getByRole("heading", { level: 2, name: "Get in touch" });
+    expect(heading.className).toBe(LEAD_TITLE_CLASS);
+  });
+
+  it("stands 56px under the course page's FAQ, like every course section", () => {
+    const coursePage = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../app/s/[shopSlug]/courses/[slug]/page.tsx"),
+      "utf8",
+    );
+    expect(coursePage).toMatch(/<DateRequestForm[^>]*className="mt-14"/);
   });
 });

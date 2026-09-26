@@ -225,6 +225,7 @@ export default async function CoursePage({
         <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["inquiry"]}>
           <DateRequestForm
             submitRequest={submitInquiryAction.bind(null, shopSlug, slug)}
+            className="mt-14"
             contactEmail={shop.contactEmail}
             contactPhone={shop.contactPhone}
             copy={dateRequestCopy(t, "course")}

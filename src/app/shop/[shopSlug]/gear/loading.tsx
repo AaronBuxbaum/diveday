@@ -12,7 +12,7 @@ export default function GearLoading() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton descriptionWidth="w-80 max-w-full" />
+        <ShopPageHeaderSkeleton description={false} />
         {/* The chip band, at `FilterChips`' own 44px control height. No top
             margin of its own: the header skeleton's `mb-8` is the same gap the
             real page opens with, and doubling it is a layout jump. */}

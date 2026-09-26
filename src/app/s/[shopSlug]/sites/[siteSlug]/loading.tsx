@@ -18,8 +18,12 @@ export default function DiveSitePageLoading() {
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton
           titleWidth="w-72 max-w-full"
+          description
           descriptionWidth="w-96 max-w-full"
+          // The site's description is two lines at 390px, one at 1280.
+          descriptionLines={{ base: 2, sm: 1 }}
           meta={<div className="h-5 w-56 max-w-full rounded bg-surface-sunken" />}
+          actions
         />
         <div className="aspect-[3/2] w-full rounded-panel bg-surface-sunken sm:aspect-[5/2]" />
         <div className="mt-8 space-y-3">

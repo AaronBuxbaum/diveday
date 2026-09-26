@@ -16,12 +16,72 @@ import type { DiverLocale } from "@/i18n/settings";
  * AGENTS.md's `cacheComponents` notes.
  */
 
-function AppBar({ label }: { label: string }) {
+/**
+ * **One edge for a mock's bar and body.** The app bar's shop name and the
+ * body's first line start on one inset. The bar was `px-4` over bodies at
+ * `p-5`, so the two missed each other by 4px on the seven card mocks (K-51),
+ * which are all 20px now.
+ *
+ * The roll call is a phone screen and keeps a phone's 16px, bar and body, as
+ * it always had. At 20px its bar no longer held "BLUE MANTIS DIVERS" and
+ * "Offline copy · up to date" on one line in the landing hero's phone at 390
+ * (135 + 136 in 272), and es-ES's "EMBARCADOS" (69.3px) outgrew its stat
+ * tile's 67.3px label box.
+ */
+const MOCK_INSET_X = "px-5";
+const MOCK_BODY = `${MOCK_INSET_X} py-5`;
+const PHONE_INSET_X = "px-4";
+const PHONE_BODY = `${PHONE_INSET_X} py-4`;
+
+/**
+ * The one primary button the mocks draw ("Mark boarded", "Download", "Leave my
+ * review"), at the `sm` rung's 44px. The recap's was `min-h-10`, a 40px step
+ * off the button ladder, in an otherwise identical string (K-516).
+ */
+const MOCK_PRIMARY_BUTTON =
+  "inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground";
+
+/**
+ * The shop name and the screen's label are each one unit. In /about's 290px
+ * phone screen the pair does not fit on one line, and both used to wrap inside
+ * themselves ("BLUE MANTIS / DIVERS" beside "Offline copy · up to / date",
+ * K-398). Now the label moves under the name whole. Not `truncate`: the
+ * ellipsis would land on "up to date", the half of the label that means
+ * something. `gap-x-1.5` is only the floor between the two on one line,
+ * where `justify-between` spreads them: the landing hero's phone holds the
+ * pair with 9px to spare, and a 12px floor broke it onto two lines.
+ */
+function AppBar({ label, inset = MOCK_INSET_X }: { label: string; inset?: string }) {
   return (
-    <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 text-xs text-muted">
+    <div
+      className={`flex flex-wrap items-center justify-between gap-x-1.5 gap-y-0.5 border-b border-border bg-surface ${inset} py-3 text-xs text-muted`}
+    >
       {/* i18n-exempt: sample shop name used only in marketing mockups */}
-      <span className="font-semibold tracking-wide text-primary uppercase">Blue Mantis Divers</span>
-      <span>{label}</span>
+      <span className="font-semibold tracking-wide whitespace-nowrap text-primary uppercase">
+        Blue Mantis Divers
+      </span>
+      <span className="whitespace-nowrap">{label}</span>
+    </div>
+  );
+}
+
+/**
+ * One line of a mock checklist (the ready brief's, the trip prep's): a label
+ * and its done badge. The label wraps without leaving one word alone ("Crew
+ * assigned (Mateo & / Sarah)" at 390 on /product, K-578) and gives way to the
+ * badge, which keeps its size 8px clear of it: at 12px the gap took the 3px
+ * "Tanks analyzed & loaded" needed at 390, and a row that had fitted wrapped
+ * to start its second line with "&" (K-578 review).
+ */
+function ChecklistRow({ label, status, tone }: { label: string; status: string; tone: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface px-4 py-2.5">
+      <span className="min-w-0 text-sm font-semibold text-pretty">{label}</span>
+      <span
+        className={`inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}
+      >
+        <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} /> {status}
+      </span>
     </div>
   );
 }
@@ -30,8 +90,8 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
   return (
     <div className="bg-background">
-      <AppBar label={t("fallback.offlineCopy")} />
-      <div className="space-y-4 p-4">
+      <AppBar label={t("fallback.offlineCopy")} inset={PHONE_INSET_X} />
+      <div className={`space-y-4 ${PHONE_BODY}`}>
         <div>
           <p className={groupLabelClass("primary")}>{t("fallback.boatManifest")}</p>
           <h3 className={`mt-1 ${SECTION_TITLE_CLASS}`}>{t("fallback.tripName")}</h3>
@@ -63,11 +123,7 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
                     <p className="text-sm font-semibold">{name}</p>
                     <p className="text-xs text-success">{t("fallback.readyToBoard")}</p>
                   </div>
-                  <button
-                    type="button"
-                    disabled
-                    className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"
-                  >
+                  <button type="button" disabled className={MOCK_PRIMARY_BUTTON}>
                     {t("fallback.markBoarded")}
                   </button>
                 </div>
@@ -90,7 +146,7 @@ export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) 
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.tripDetail")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <p className={groupLabelClass("primary")}>{t("fallback.readiness")}</p>
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.answerBeforeDock")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.noDiverClears")}</p>
@@ -131,7 +187,7 @@ export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.import.label")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <p className={groupLabelClass("primary")}>{t("fallback.import.eyebrow")}</p>
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.import.title")}</h3>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -152,13 +208,19 @@ export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
           ))}
         </div>
         <p className="mt-3 text-xs text-warning">{t("fallback.import.ignored")}</p>
-        <dl className="mt-4 grid grid-cols-3 gap-2">
+        {/* No tile narrower than its longest word: es-ES's "Certificaciones"
+            is one word of about 72.9px, past even the 68.67px `px-2` leaves
+            at 360, so its column takes that and the other two share the rest.
+            In en-US every label fits and the three stay equal (K-122). */}
+        <dl className="mt-4 grid grid-cols-[repeat(3,minmax(min-content,1fr))] gap-2">
           {[
             [t("fallback.import.statDivers"), "128"],
             [t("fallback.import.statCards"), "96"],
             [t("fallback.import.statSkipped"), "2"],
           ].map(([label, value]) => (
-            <div key={label} className="rounded-lg bg-surface-sunken px-3 py-2">
+            // `px-2` below sm: three tiles at 360 leave a 60.67px label box
+            // with `px-3`, and "Certifications" is 64.8px (K-122).
+            <div key={label} className="rounded-lg bg-surface-sunken px-2 py-2 sm:px-3">
               <dt className="text-[10px] text-muted">{label}</dt>
               <dd className={FIGURE_INLINE_CLASS}>{value}</dd>
             </div>
@@ -237,17 +299,13 @@ export function ExportBundleFallback({ locale }: { locale: DiverLocale }) {
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.export.label")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className={groupLabelClass("primary")}>{t("fallback.export.eyebrow")}</p>
             <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.export.title")}</h3>
           </div>
-          <button
-            type="button"
-            disabled
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"
-          >
+          <button type="button" disabled className={`shrink-0 ${MOCK_PRIMARY_BUTTON}`}>
             {t("fallback.export.download")}
           </button>
         </div>
@@ -291,7 +349,7 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.schedule")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <p className={groupLabelClass("primary")}>{t("fallback.upcomingTrips")}</p>
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.findNextDive")}</h3>
         <div className="mt-4 space-y-3">
@@ -344,7 +402,7 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.recap.label")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <h3 className={SUB_TITLE_CLASS}>{t("fallback.recap.greeting")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
 
@@ -405,11 +463,7 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
               </svg>
             ))}
           </div>
-          <button
-            type="button"
-            disabled
-            className="mt-3 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"
-          >
+          <button type="button" disabled className={`mt-3 ${MOCK_PRIMARY_BUTTON}`}>
             {t("fallback.recap.reviewSubmit")}
           </button>
         </div>
@@ -423,7 +477,7 @@ export function NightBeforeBriefFallback({ locale }: { locale: DiverLocale }) {
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.nightBefore.label")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <p className={groupLabelClass("primary")}>{t("fallback.nightBefore.eyebrow")}</p>
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.nightBefore.title")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.nightBefore.time")}</p>
@@ -461,17 +515,7 @@ export function NightBeforeBriefFallback({ locale }: { locale: DiverLocale }) {
                 "text-success-strong bg-success-tint",
               ],
             ].map(([label, status, tone]) => (
-              <div
-                key={label}
-                className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-2.5"
-              >
-                <span className="text-sm font-semibold">{label}</span>
-                <span
-                  className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}
-                >
-                  <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} /> {status}
-                </span>
-              </div>
+              <ChecklistRow key={label} label={label} status={status} tone={tone} />
             ))}
           </div>
         </div>
@@ -485,7 +529,7 @@ export function ShopPrepListFallback({ locale }: { locale: DiverLocale }) {
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.shopPrep.label")} />
-      <div className="p-5">
+      <div className={MOCK_BODY}>
         <p className={groupLabelClass("primary")}>{t("fallback.shopPrep.eyebrow")}</p>
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.shopPrep.title")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.shopPrep.time")}</p>
@@ -528,17 +572,7 @@ export function ShopPrepListFallback({ locale }: { locale: DiverLocale }) {
                 "text-success-strong bg-success-tint",
               ],
             ].map(([label, status, tone]) => (
-              <div
-                key={label}
-                className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-2.5"
-              >
-                <span className="text-sm font-semibold">{label}</span>
-                <span
-                  className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}
-                >
-                  <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} /> {status}
-                </span>
-              </div>
+              <ChecklistRow key={label} label={label} status={status} tone={tone} />
             ))}
           </div>
         </div>

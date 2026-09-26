@@ -49,10 +49,23 @@ import type { RollCallRecordedTone } from "@/lib/manifests";
  * class of emergency at arm's length in glare, and it would make the most
  * closed row on the page louder than `awaiting`, which is the state that
  * still needs a human (dive-domain review 20260804).
+ *
+ * **Every roll-call row on both surfaces wears it, crew included.** The
+ * offline crew list used to be a stack of cards with a map of its own, whose
+ * `awaiting` was raised rather than sunken because a card has no column edge
+ * for a left rule to sit against. Cards inside a padded box also ended their
+ * controls 5–9px inside the diver controls below them, so that list is now
+ * this ruled list laid flush in its box, as the live crew list is: it has the
+ * edge, and needs no second map.
  */
 export const ROLL_CALL_ROW_TONE = {
-  /** A stated "did not come back" — the loudest thing on the page, and the only ring. */
-  notBackAboard: "border-danger bg-danger/15 ring-1 ring-danger/40",
+  /**
+   * A stated "did not come back" — the loudest thing on the page, and the only
+   * ring. Inset, because the roll-call lists are `overflow-hidden` panels: an
+   * outer ring fell outside the clip on three sides and under the next row on
+   * the fourth, so it never showed at all (the pixel audit).
+   */
+  notBackAboard: "border-danger bg-danger/15 ring-1 ring-inset ring-danger/40",
   boarded: "border-success bg-success/20",
   notBoarded: "border-warning bg-warning/15",
   /** Carried forward from the dock rather than recorded here — same hue, quieter. */
@@ -65,29 +78,3 @@ export const ROLL_CALL_ROW_TONE = {
   // here while a surface still asks for it, is a compile error rather than a
   // roll-call row that silently renders unstyled.
 } as const satisfies Record<RollCallRecordedTone | "awaiting" | "blocked", string>;
-
-/**
- * The offline manifest's **crew** rows — the same meanings again, on a card
- * rather than a left rule.
- *
- * The shape differs because the offline crew list is a panel of full-width
- * cards, not a ruled list: there is no column edge for a `border-l-4` to sit
- * against. The *hues* are the roll call's, deliberately, because both lists
- * are read on the same deck and often on two devices at once — a crew member
- * must not read as a warning on the phone and as settled on the tablet
- * (dive-domain review 20260804).
- *
- * `awaiting` is the one entry that is not a restatement of the roll call's:
- * it is **raised, not sunken**. These used to be small chips, where
- * `bg-surface-sunken` read as a chip against the panel; as full-width rows
- * carrying controls, that same fill *is* the panel's own background, and an
- * uncalled crew member would have no edge at all — the one row a captain is
- * looking for.
- */
-export const OFFLINE_CREW_ROW_TONE = {
-  notBackAboard: "bg-danger/15 font-bold text-danger",
-  boarded: "bg-success/20",
-  notBoarded: "bg-warning/15",
-  notBoardedImplied: "bg-warning/5",
-  awaiting: "border border-border bg-surface",
-} as const satisfies Record<RollCallRecordedTone | "awaiting", string>;

@@ -72,13 +72,15 @@ export function EmergencyReferenceCard({
               <span className="font-mono tabular-nums">{line.phone}</span>
             </p>
           ))}
+          {/* `text-pretty` on the two free-text lines: the shop's own words
+              wrap, and in Spanish the vessel line ended on one word. */}
           {reference.vessel ? (
-            <p>
+            <p className="text-pretty">
               <span className="font-medium">{copy.vesselLabel}</span> {reference.vessel}
             </p>
           ) : null}
           {reference.shoreContact ? (
-            <p>
+            <p className="text-pretty">
               <span className="font-medium">{copy.shoreContactLabel}</span> {reference.shoreContact}
             </p>
           ) : null}

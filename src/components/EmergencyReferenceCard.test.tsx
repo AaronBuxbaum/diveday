@@ -90,4 +90,21 @@ describe("EmergencyReferenceCard", () => {
 
     expect(screen.getByText(/Give O2/)).toHaveClass("whitespace-pre-line");
   });
+
+  // K-594: the Spanish vessel line ended on one word at 390.
+  it("wraps the vessel and shore-contact lines without a one-word last line", () => {
+    render(
+      <EmergencyReferenceCard
+        copy={copy}
+        reference={{
+          ...EMPTY_EMERGENCY_REFERENCE,
+          vessel: "Mantis II, moored at the fuel dock",
+          shoreContact: "Front desk until 18:00",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Vessel:").parentElement).toHaveClass("text-pretty");
+    expect(screen.getByText("Shore contact:").parentElement).toHaveClass("text-pretty");
+  });
 });

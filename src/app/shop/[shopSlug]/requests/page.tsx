@@ -236,7 +236,6 @@ export default async function RequestsPage({
         href={pageHref}
         total={t("requests.pagination.total", { count: requestPage.total })}
         words={staffPagerWords(t)}
-        className="mt-6"
       />
     </main>
   );

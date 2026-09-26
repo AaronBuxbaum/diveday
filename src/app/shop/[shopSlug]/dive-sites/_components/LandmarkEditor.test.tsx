@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  REPEATING_ITEM_CARD_CLASS,
+  repeatingItemAddClass,
+  repeatingItemRemoveClass,
+} from "@/components/editor/RepeatingItemCard";
 import { LandmarkEditor, type LandmarkEditorCopy } from "./LandmarkEditor";
 
 afterEach(cleanup);
@@ -35,6 +40,7 @@ function renderOne() {
   );
   const row = screen.getByRole("listitem");
   return {
+    row,
     name: within(row).getByRole("textbox", { name: copy.nameLabel }),
     kind: within(row).getByRole("combobox", { name: copy.kindLabel }),
     note: within(row).getByRole("textbox", { name: copy.noteLabel }),
@@ -43,23 +49,34 @@ function renderOne() {
 }
 
 /**
- * **A landmark's row is the field guide's row, on the same page: one `md`
- * size.** The name box and the kind select are 16px controls, and Remove was
- * `sm`, a 14px word beside them; the field guide beside it was moved to `md`
- * on 2026-09-25, so the editor drew its two rows at two sizes.
+ * **A landmark is the editors' one repeating-item card** (docs/design/
+ * pixel-craft.md, class 12). It was a grey card at 12px of padding with a grey
+ * Remove standing in the row of fields, where the course editor's days and
+ * questions and the field guide beside it drew their Remove three other ways.
+ * Remove now sits at the head of the card, so the name box and the kind select
+ * are a row of controls only, which stands at the field size.
  *
  * jsdom lays nothing out, so these pin which element carries which size and
  * where each caption lives, not the pixels.
  */
 describe("LandmarkEditor", () => {
-  it("gives the name box, the kind select and Remove the md height and 16px type", () => {
-    const { name, kind, remove } = renderOne();
-    for (const control of [name, kind, remove]) {
-      expect(control).toHaveClass("min-h-12", "text-base");
-      expect(control).not.toHaveClass("text-sm");
+  it("draws each landmark on the repeating-item card, with Remove at its head", () => {
+    const { row, name, remove } = renderOne();
+    expect(row).toHaveClass(...REPEATING_ITEM_CARD_CLASS.split(" "));
+    expect(row.firstElementChild?.lastElementChild).toBe(remove);
+    expect(row.firstElementChild).not.toContainElement(name);
+    expect(remove).toHaveClass(...repeatingItemRemoveClass.split(" "));
+    expect(screen.getByRole("button", { name: copy.add })).toHaveClass(
+      ...repeatingItemAddClass.split(" "),
+    );
+  });
+
+  it("stands the name box and the kind select, a row of controls only, at the field size", () => {
+    const { name, kind } = renderOne();
+    for (const control of [name, kind]) {
+      expect(control).toHaveClass("min-h-11", "text-base");
+      expect(control).not.toHaveClass("min-h-12");
     }
-    expect(name).not.toHaveClass("min-h-11");
-    expect(kind).not.toHaveClass("min-h-11");
   });
 
   // A textarea is sized by its lines, not by a button's rung: it shows its

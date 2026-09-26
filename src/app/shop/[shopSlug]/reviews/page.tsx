@@ -450,7 +450,6 @@ export default async function ReviewsPage({
         href={pageHref}
         total={t("reviews.pagination.total", { count: moderatedPage.total })}
         words={staffPagerWords(t)}
-        className="mt-8"
       />
     </main>
   );

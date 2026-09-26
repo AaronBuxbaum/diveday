@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { buttonClass } from "@/components/ui/button";
+import {
+  RepeatingItemCard,
+  repeatingItemAddClass,
+  repeatingItemRemoveClass,
+} from "@/components/editor/RepeatingItemCard";
 import { controlClass, DateField, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
 import { MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "@/lib/course-limits";
@@ -119,23 +123,21 @@ export function DayByDayEditor({
       {days.map((day, dayIndex) => {
         const dayNumber = dayIndex + 1;
         return (
-          <div
+          <RepeatingItemCard
             // biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id and are only ever appended/removed by position, never reordered.
             key={dayIndex}
-            className="rounded-inset border border-border p-4"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <h4 className="font-medium">{fill(copy.dayLabel, { number: dayNumber })}</h4>
+            title={<h4 className="font-medium">{fill(copy.dayLabel, { number: dayNumber })}</h4>}
+            remove={
               <button
                 type="button"
                 onClick={() => removeDay(dayIndex)}
-                className={buttonClass({ variant: "danger", size: "sm" })}
+                className={repeatingItemRemoveClass}
               >
                 {copy.removeDay}
               </button>
-            </div>
-
-            <FieldGrid columns={1} className="mt-3 gap-y-4">
+            }
+          >
+            <FieldGrid columns={1}>
               <Field label={fill(copy.dayTitleLabel, { number: dayNumber })}>
                 <input
                   value={day.title}
@@ -213,14 +215,14 @@ export function DayByDayEditor({
                 />
               </Field>
             </FieldGrid>
-          </div>
+          </RepeatingItemCard>
         );
       })}
       <button
         type="button"
         onClick={addDay}
         disabled={days.length >= MAX_SCHEDULE_DAYS}
-        className={buttonClass({ variant: "secondary", className: "self-start" })}
+        className={`${repeatingItemAddClass} self-start`}
       >
         {days.length >= MAX_SCHEDULE_DAYS
           ? fill(

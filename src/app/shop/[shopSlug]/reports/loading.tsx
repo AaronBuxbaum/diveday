@@ -17,7 +17,7 @@ export default function ReportsLoading() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton descriptionWidth="w-80 max-w-full" />
+        <ShopPageHeaderSkeleton description={false} />
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="h-6 w-40 rounded bg-surface-sunken" />
           <div className="flex flex-wrap gap-2">

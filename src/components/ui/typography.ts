@@ -142,3 +142,17 @@ export const FIGURE_INLINE_CLASS = "text-lg font-semibold tabular-nums";
  * carries a warning about in AGENTS.md).
  */
 export const FIGURE_DIAL_CLASS = "text-2xl leading-none font-bold tabular-nums";
+
+/**
+ * **The reading ramp's eyebrow** — the small-caps line over a marketing,
+ * switching or legal heading ("THE PEOPLE BEHIND IT", "LEGAL").
+ *
+ * Not the app's `EYEBROW_CLASS` (`ShopPageHeader.tsx`, 11px bold): this one
+ * sits over a `BANNER_TITLE_CLASS` or `DISPLAY_TITLE_CLASS` heading, so it is
+ * drawn at 14px. It was typed by hand at twenty-one call sites in nine files,
+ * and the one on the legal pages had drifted to 12px (K-207). Named here, so a
+ * step in the eyebrow is one edit; `LegalDocument.test.tsx` refuses a hand
+ * copy anywhere else.
+ */
+export const MARKETING_EYEBROW_CLASS =
+  "text-sm font-semibold tracking-widest text-primary uppercase";

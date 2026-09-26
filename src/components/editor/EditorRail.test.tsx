@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { EditorRail, UnsavedSections } from "./EditorRail";
+import { EditorRail, EditorRailSkeleton, UnsavedSections } from "./EditorRail";
 import { EditorSection, type EditorSectionRef, type EditorUnsavedCopy } from "./EditorSection";
 
 afterEach(cleanup);
@@ -91,6 +91,29 @@ describe("the editor rail", () => {
   });
 
   /**
+   * The current section's tint is a desktop state (`lg:bg-primary-tint`), and a
+   * bare `hover:bg-surface-sunken` on every row outranked it: under the
+   * pointer the one tinted row went grey with foreground text. Hover belongs to
+   * the rows that are not current, and to the current one only below `lg`,
+   * where it carries no tint to lose.
+   */
+  it("keeps the current section's tint under the pointer", () => {
+    render(<Editor />);
+
+    const rail = railNav();
+    const tokens = (link: Element | null | undefined) => link?.className.split(/\s+/) ?? [];
+    const current = tokens(rail.querySelector("a[aria-current='true']"));
+    expect(current).toContain("lg:bg-primary-tint");
+    expect(current).not.toContain("hover:bg-surface-sunken");
+    expect(current).not.toContain("hover:text-foreground");
+    expect(current).toContain("max-lg:hover:bg-surface-sunken");
+
+    const other = tokens(rail.querySelector("a:not([aria-current])"));
+    expect(other).toContain("hover:bg-surface-sunken");
+    expect(other).toContain("hover:text-foreground");
+  });
+
+  /**
    * **One landmark, whatever the width.** This rail was first written as the
    * app's `JumpNav` for the phone beside a sticky column for the desktop, which
    * read as reuse of the one "places on this page" grammar — but `JumpNav`
@@ -107,6 +130,55 @@ describe("the editor rail", () => {
     expect(
       Array.from(navs[0].querySelectorAll("a")).map((link) => link.getAttribute("href")),
     ).toEqual(SECTIONS.map((section) => `#${section.id}`));
+  });
+});
+
+/**
+ * **The rail's skeleton is the rail's geometry** (docs/design/pixel-craft.md,
+ * class 11: 0px of shift on load). The editors' loading pages drew the phone
+ * rail as one row of three 36px pills over a hairline with `mb-8`, about 77px;
+ * the loaded rail at 390 is a borderless wrap of 44px links with `mb-6`, so on
+ * the new-site editor the whole form dropped about 131px when it arrived.
+ */
+describe("the editor rail's skeleton", () => {
+  it("draws one 44px stub per section, in the rail's own two boxes", () => {
+    render(<Editor />);
+    const rail = railNav();
+    const list = rail.querySelector("ul");
+    const { container } = render(<EditorRailSkeleton count={11} />);
+    const skeleton = container.firstElementChild;
+    const stubs = skeleton?.firstElementChild;
+
+    expect(skeleton?.className).toBe(rail.className);
+    expect(stubs?.className).toBe(list?.className);
+    expect(skeleton).toHaveClass("mb-6", "lg:pt-1");
+    expect(skeleton).not.toHaveClass("border-b");
+    expect(stubs).toHaveClass("flex-wrap");
+    expect(stubs?.children).toHaveLength(11);
+    for (const stub of stubs?.children ?? []) expect(stub).toHaveClass("h-11", "w-24", "lg:w-full");
+  });
+
+  /**
+   * The stubs' widths decide how many rows the phone wrap takes, and every row
+   * is 44px of form pushed down. Eleven uniform `w-24` stubs wrap three to a
+   * row at 390, four rows, where the dive-site editor's own labels wrap
+   * 3/3/2/2/1, five: the form still dropped 44px. An editor whose labels wrap
+   * differently from uniform stubs names each stub's width instead.
+   */
+  it("draws each stub at the width its editor names, still a column from lg", () => {
+    const { container } = render(<EditorRailSkeleton widths={["w-20", "w-38", "w-49"]} />);
+    const stubs = [...(container.firstElementChild?.firstElementChild?.children ?? [])];
+
+    expect(stubs).toHaveLength(3);
+    expect(stubs.map((stub) => [...stub.classList].find((token) => /^w-/.test(token)))).toEqual([
+      "w-20",
+      "w-38",
+      "w-49",
+    ]);
+    for (const stub of stubs) {
+      expect(stub).toHaveClass("h-11", "lg:w-full");
+      expect(stub).not.toHaveClass("w-24");
+    }
   });
 });
 
@@ -182,8 +254,14 @@ describe("an editor section", () => {
   it("opens without a rule above it and separates the rest with one", () => {
     render(<Editor />);
 
-    expect(document.getElementById("block-pitch")?.className).not.toContain("border-t");
-    expect(document.getElementById("block-pricing")?.className).toContain("border-t border-border");
+    // A fieldset draws the rule on its legend, above the label, where a
+    // section draws it on itself (EditorSection.test.tsx).
+    const rule = (id: string) => {
+      const section = document.getElementById(id);
+      return section?.tagName === "FIELDSET" ? section.querySelector("legend") : section;
+    };
+    expect(rule("block-pitch")?.className).not.toContain("border-t");
+    expect(rule("block-pricing")?.className).toContain("border-t border-border");
   });
 
   /**

@@ -22,6 +22,7 @@ import {
   BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,
   LEAD_TITLE_CLASS,
+  MARKETING_EYEBROW_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
@@ -192,9 +193,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       <MarketingSectionMotion />
       <section className="border-b border-border">
         <div className="mx-auto max-w-4xl px-6 py-20 text-center lg:py-28">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("marketing.product.eyebrow")}
-          </p>
+          <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.eyebrow")}</p>
           <h1 className={`mt-5 ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
             {t("marketing.product.heroTitle")}
           </h1>
@@ -252,10 +251,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
                 ]}
               />
             </div>
-            <MarketingMockup
-              label={t("marketing.product.bookingMockupLabel")}
-              className="shadow-xl shadow-foreground/5"
-            >
+            <MarketingMockup label={t("marketing.product.bookingMockupLabel")}>
               <DiverBookingFallback locale={locale} />
             </MarketingMockup>
           </div>
@@ -267,7 +263,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <MarketingMockup
               label={t("marketing.product.readinessMockupLabel")}
-              className="order-2 shadow-xl shadow-foreground/5 lg:order-1"
+              className="order-2 lg:order-1"
             >
               <FrontDeskReadinessFallback locale={locale} />
             </MarketingMockup>
@@ -307,10 +303,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
                   </h3>
                   <p className="mt-2 leading-7 text-muted">{t("marketing.product.prepShopBody")}</p>
                 </div>
-                <MarketingMockup
-                  label={t("marketing.product.prepShopMockupLabel")}
-                  className="shadow-xl shadow-foreground/5"
-                >
+                <MarketingMockup label={t("marketing.product.prepShopMockupLabel")}>
                   <ShopPrepListFallback locale={locale} />
                 </MarketingMockup>
               </div>
@@ -324,10 +317,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
                     {t("marketing.product.nightBeforeBody")}
                   </p>
                 </div>
-                <MarketingMockup
-                  label={t("marketing.product.nightBeforeMockupLabel")}
-                  className="shadow-xl shadow-foreground/5"
-                >
+                <MarketingMockup label={t("marketing.product.nightBeforeMockupLabel")}>
                   <NightBeforeBriefFallback locale={locale} />
                 </MarketingMockup>
               </div>
@@ -409,10 +399,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
                 ]}
               />
             </div>
-            <MarketingMockup
-              label={t("marketing.product.recapMockupLabel")}
-              className="shadow-xl shadow-foreground/5"
-            >
+            <MarketingMockup label={t("marketing.product.recapMockupLabel")}>
               <RecapPageFallback locale={locale} />
             </MarketingMockup>
           </div>
@@ -424,9 +411,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       <section className="border-t border-border">
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.product.paymentEyebrow")}
-            </p>
+            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.paymentEyebrow")}</p>
             <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.product.paymentTitle")}
             </h2>
@@ -506,9 +491,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       <section className="border-y border-border bg-surface">
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.product.boxEyebrow")}
-            </p>
+            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.boxEyebrow")}</p>
             <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.product.boxTitle")}
             </h2>
@@ -580,9 +563,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
 
       <section className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("marketing.product.noEyebrow")}
-          </p>
+          <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.noEyebrow")}</p>
           <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("marketing.product.noTitle")}
           </h2>

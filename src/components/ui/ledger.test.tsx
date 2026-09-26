@@ -147,7 +147,7 @@ function ledgerRowContents(source: string): { row: string; className: string }[]
 /**
  * These are small-caps by design but are not group labels: the public eyebrow,
  * the earned-moment eyebrow, the shop initials, the schedule's calendar header,
- * the print and legal eyebrows, the demo chip, the held-water status, the
+ * the print eyebrows, the demo chip, the held-water status, the
  * selected-trip/request context labels, and the offline manifest specimen.
  */
 const LABEL_SWEEP_EXEMPT = new Set([
@@ -155,7 +155,6 @@ const LABEL_SWEEP_EXEMPT = new Set([
   join(SRC_DIR, "components/EarnedMoment.tsx"),
   join(SRC_DIR, "components/ShopPageHeader.tsx"),
   join(SRC_DIR, "components/DemoBanner.tsx"),
-  join(SRC_DIR, "components/LegalDocument.tsx"),
   join(SRC_DIR, "components/WaterLocker.tsx"),
   join(SRC_DIR, "components/seat-diver/SelectedTripCard.tsx"),
   join(SRC_DIR, "components/seat-diver/BookingRequestCards.tsx"),

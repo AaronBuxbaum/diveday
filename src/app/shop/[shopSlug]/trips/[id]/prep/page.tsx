@@ -114,10 +114,7 @@ export default async function TripPrepPage({
             title={t("tripPrep.emptyHeading")}
             body={t("tripPrep.noDivers")}
             action={
-              <Link
-                href={shopPath(shopSlug, "trips", tripId)}
-                className={buttonClass({ className: "mt-4" })}
-              >
+              <Link href={shopPath(shopSlug, "trips", tripId)} className={buttonClass()}>
                 {t("tripPrep.emptyAction")}
               </Link>
             }

@@ -37,6 +37,24 @@ describe("the public schedule identity composition", () => {
 });
 
 /**
+ * **One rung for the storefront's section heads** (docs/design/pixel-craft.md,
+ * class 12). The off-season "Ask us for a day" is a `DateRequestForm` section,
+ * which heads itself as a lead (24px) unless told otherwise; every other h2
+ * here is the brand face at `SECTION_TITLE_CLASS` (18px).
+ */
+describe("the off-season ask's heading", () => {
+  it("is handed the rung the page's other section heads use", () => {
+    const start = positionOf("<DateRequestForm");
+    const end = SOURCE.indexOf("/>", start);
+    const call = SOURCE.slice(start, end);
+    expect(call).toContain("headingClassName={`font-brand-display ${SECTION_TITLE_CLASS}`}");
+    expect(SOURCE).toContain(
+      '<h2 id="boats-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>',
+    );
+  });
+});
+
+/**
  * **The lens rail's place** — ADR 20260904-reef-all-the-way-down, decision 2
  * (issue #1162).
  *

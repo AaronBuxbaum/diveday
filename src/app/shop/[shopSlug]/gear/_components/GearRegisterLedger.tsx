@@ -121,7 +121,6 @@ export function GearRegisterLedger({
             pageCount={groups.onWall.pageCount}
             href={pageHref}
             words={staffPagerWords(t)}
-            className="mt-4"
           />
         </div>
       )}

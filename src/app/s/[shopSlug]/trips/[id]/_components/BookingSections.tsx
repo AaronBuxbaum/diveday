@@ -520,7 +520,16 @@ export function BookSpotSection({
             decides what the rest of the card asks for. A radio group rather
             than a toggle: both answers are ordinary, and neither is a mode the
             reader is switching *into*. */}
-        <ChoiceFieldset legend={t("giftChoiceLabel")} bodyClassName="flex flex-col gap-2">
+        <ChoiceFieldset
+          legend={
+            // The card's caption, as "Number of divers" and "Your details"
+            // draw it (BookingPartyFields), not a third weight of its own:
+            // semibold over ChoiceFieldset's field-caption weight. The
+            // fieldset still owns the 4px to the choices.
+            <span className="text-sm font-semibold">{t("giftChoiceLabel")}</span>
+          }
+          bodyClassName="flex flex-col gap-2"
+        >
           <ChoiceRow
             type="radio"
             name="bookingFor"

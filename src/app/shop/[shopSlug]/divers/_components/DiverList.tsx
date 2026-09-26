@@ -404,7 +404,7 @@ export function DiverList({
         </p>
       </div>
       {/* Bare and class-less on purpose: the ledger's `mt-8` and the pager's
-          own `mt-8` keep the exact gaps they had as direct section children. */}
+          own offset keep the exact gaps they had as direct section children. */}
       <div ref={rosterRef}>
         {rows.length === 0 ? (
           <EmptyState

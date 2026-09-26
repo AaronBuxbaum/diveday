@@ -4,6 +4,7 @@ import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguagePicker, type LanguagePickerCopy } from "@/components/LanguagePicker";
 import { LogoMark } from "@/components/Logo";
 import { PublicShopNav, type PublicShopNavItem } from "@/components/PublicShopNav";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import type { DiverTranslator } from "@/i18n/messages";
 import {
   conservationCommitmentLabel,
@@ -168,25 +169,36 @@ export function PublicShopFooter({
         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="hover:text-foreground hover:underline"
+        className={`${tapTargetLinkClass} hover:text-foreground hover:underline`}
       >
         {addressText}
       </a>
     ) : (
       // On file, but not enough to point a map at a real place — a country and
       // a shop name would centre on a continent and present it as the front
-      // door. The words still help; the link would not.
-      <span>{addressText}</span>
+      // door. The words still help; the link would not. From `sm` up they
+      // take the 44px line a link would, so when they are the contact row's
+      // only words they sit level with the shop's name, not 12px above it.
+      <span className="sm:inline-flex sm:min-h-11 sm:items-center">{addressText}</span>
     );
 
+  // **Every link down here is a 44px target** (`tapTargetLinkClass`), and the
+  // footer is laid out around that box rather than around the 20px word: the
+  // address, phone, email and credit were bare text links a thumb had to hit
+  // at 20px (the pixel probe, every storefront page). The boxes carry their own
+  // air, so the credit drops its `mt-1` and the contact row its row gap, and
+  // from `sm` up the shop's name takes the same 44px line so the contact row
+  // beside it does not sit 12px lower.
   return (
     <footer className="border-t border-border bg-surface">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-muted sm:flex-row sm:items-start sm:justify-between sm:px-6">
         <div>
-          <p>{t("shopChrome.footerLine", { shop: shop.name })}</p>
+          <p className="sm:flex sm:min-h-11 sm:items-center">
+            {t("shopChrome.footerLine", { shop: shop.name })}
+          </p>
           {/* The credit line — the only DiveDay-coloured pixels on a shop's
               storefront (Harbor, ADR 20260901-diveday-reimagined). */}
-          <Link href="/" className="mt-1 inline-flex items-center gap-1.5 hover:text-foreground">
+          <Link href="/" className={`${tapTargetLinkClass} gap-1.5 hover:text-foreground`}>
             <LogoMark className="size-4" />
             <span>{t("shopChrome.credit")}</span>
           </Link>
@@ -214,12 +226,12 @@ export function PublicShopFooter({
             8px gap under the credit line (the pixel probe,
             public-schedule-new-shop). */}
         {addressNode || shop.contactPhone || shop.contactEmail ? (
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-0">
             {addressNode}
             {shop.contactPhone ? (
               <a
                 href={telHref(shop.contactPhone)}
-                className="hover:text-foreground hover:underline"
+                className={`${tapTargetLinkClass} hover:text-foreground hover:underline`}
               >
                 {shop.contactPhone}
               </a>
@@ -227,7 +239,7 @@ export function PublicShopFooter({
             {shop.contactEmail ? (
               <a
                 href={mailtoHref(shop.contactEmail)}
-                className="hover:text-foreground hover:underline"
+                className={`${tapTargetLinkClass} hover:text-foreground hover:underline`}
               >
                 {shop.contactEmail}
               </a>

@@ -979,6 +979,24 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     expect(screen.getAllByLabelText(/^Name/)[0]).toHaveValue("Morning reef");
   });
 
+  // One frame for the expanded form's three groups, so a sibling cannot drift
+  // from the others again: the dive plan had its own corner and phone inset
+  // between Pay at booking and Repeat (pixel-craft K-95).
+  it("frames the dive plan exactly like Pay at booking and Repeat around it", async () => {
+    renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+
+    const frame = (element: Element | null) => element?.getAttribute("class");
+    const pay = screen.getByRole("group", { name: "Pay at booking" });
+    const repeat = screen.getByRole("group", { name: "Repeat" });
+    const divePlan = screen.getByRole("heading", { name: "The dive plan" }).closest("section");
+
+    expect(frame(pay)).toContain("rounded-lg");
+    expect(frame(divePlan)).toBe(frame(pay));
+    expect(frame(repeat)).toBe(frame(pay));
+  });
+
   it("mirrors the dive plan's count back to the quick box on the way down", async () => {
     renderBuilder();
     await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));

@@ -6,7 +6,7 @@ export default function EmbedSettingsLoading() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton descriptionWidth="w-full max-w-xl" />
+        <ShopPageHeaderSkeleton description descriptionWidth="w-full max-w-xl" />
         {/* Shell and gap from the same places the page takes them, so the
             skeleton cannot drift into a layout jump. */}
         <div className="space-y-10">

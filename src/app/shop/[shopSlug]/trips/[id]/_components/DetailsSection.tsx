@@ -1,5 +1,5 @@
 import { ImageFileInput } from "@/components/ImageFileInput";
-import { StoredPhoto } from "@/components/StoredPhoto";
+import { RemovablePhoto } from "@/components/RemovablePhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
@@ -27,6 +27,14 @@ import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { toDateInputValue, toTimeInputValue, type WallTime } from "@/lib/zoned";
 import type { DiveSiteList, Trip, TripDiveList } from "./types";
+
+/**
+ * The frame of a group inside the Details card: a sunken inset, not a second
+ * card, because surface never stacks on surface (see SectionCard's "what is
+ * not a section card"). Arrival guidance, the Dive plan and Pay at booking
+ * wear it, spelled once so none of them drifts (pixel-craft K-95).
+ */
+const GROUP_INSET = "rounded-inset bg-surface-sunken p-4 sm:p-5";
 
 export function DetailsSection({
   action,
@@ -144,7 +152,7 @@ export function DetailsSection({
           />
         </Field>
       </FieldGrid>
-      <fieldset className="rounded-inset bg-surface-sunken p-4 sm:p-5">
+      <fieldset className={GROUP_INSET}>
         <legend className={`${legendClass} text-sm font-medium`}>
           {t("trips.details.arrivalGuidanceLegend")}
         </legend>
@@ -219,17 +227,18 @@ export function DetailsSection({
             description={t("trips.details.arrivalPhotoDescription")}
             htmlFor="arrival-photo"
           >
+            {/* The shared removable photo; `on` is what the save reads. This
+                field is a half column from `sm` up, so the photo takes the
+                column, as the dive-site editor's map and route stills do: in
+                the gallery's three-across grid it was a third of a half. */}
             {trip.arrivalPhotoUrl ? (
-              <div className="mb-3 flex flex-wrap items-start gap-3">
-                <StoredPhoto
-                  src={trip.arrivalPhotoUrl}
-                  alt=""
-                  className="h-20 w-32 rounded-lg border border-border"
-                  sizes="128px"
+              <div className="mb-3">
+                <RemovablePhoto
+                  url={trip.arrivalPhotoUrl}
+                  name="removeArrivalPhoto"
+                  value="on"
+                  label={t("trips.details.arrivalPhotoRemove")}
                 />
-                <ChoiceRow type="checkbox" name="removeArrivalPhoto" className="text-sm">
-                  {t("trips.details.arrivalPhotoRemove")}
-                </ChoiceRow>
               </div>
             ) : null}
             <ImageFileInput
@@ -246,6 +255,7 @@ export function DetailsSection({
         </FieldGrid>
       </fieldset>
       <TripDiveFields
+        frameClassName={GROUP_INSET}
         diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
         initialCount={trip.plannedDives}
         initialDives={tripDiveList.map(({ dive }) => ({
@@ -437,10 +447,7 @@ export function DetailsSection({
           </Field>
         )}
       </FieldGrid>
-      {/* A sunken inset, not a second card: this group sits *inside* the
-              Details card, and surface never stacks on surface (see
-              SectionCard's "what is not a section card"). */}
-      <fieldset className="rounded-inset bg-surface-sunken p-4 sm:p-5">
+      <fieldset className={GROUP_INSET}>
         <legend className={`${legendClass} text-sm font-medium`}>
           {t("trips.details.payAtBookingLegend")}
         </legend>

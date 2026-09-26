@@ -243,7 +243,9 @@ function CatalogDoor({ href, count, t }: { href: string; count: number; t: Staff
         as="div"
         href={href}
         linkLabel={title}
-        leading={<DiveDayIcon name="diveSites" className="size-5 text-muted" />}
+        // Trimmed and sized by height: the pin's ink starts on the column the
+        // row's words start on, 12px (the row's gap) before them.
+        leading={<DiveDayIcon name="diveSites" trim className="h-5 w-auto text-muted" />}
       >
         <div className="min-w-0">
           <p className="font-medium">{title}</p>

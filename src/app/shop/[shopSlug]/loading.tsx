@@ -23,7 +23,7 @@ export default function ShopSurfaceLoading() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-56" descriptionWidth="w-72 max-w-full" />
+        <ShopPageHeaderSkeleton titleWidth="w-56" description descriptionWidth="w-72 max-w-full" />
         {/* Three station-shaped panels (ADR 20260904-reef-all-the-way-down,
             slice 16a): the shell the spine paints into, so the skeleton and
             the page share one silhouette. */}

@@ -142,8 +142,13 @@ export default async function BlowoutPage({
           <p className="text-sm">{t("blowout.confirm.lead", { tripTitle: trip.title })}</p>
           <p className="mt-3 text-sm text-muted">{t("blowout.confirm.moneyNote")}</p>
           {roster.length === 0 ? (
-            // Nested inside the confirm card, so no icon.
-            <EmptyState title={t("blowout.confirm.noDivers")} icon={false} className="mt-5" />
+            // Nested inside the confirm card, so no icon, fill or shadow.
+            <EmptyState
+              title={t("blowout.confirm.noDivers")}
+              icon={false}
+              nested
+              className="mt-5"
+            />
           ) : (
             <div className="mt-5">
               <h2 className="text-sm font-semibold">

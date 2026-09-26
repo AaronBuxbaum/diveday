@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { EditorSection } from "@/components/editor/EditorSection";
 import { ImageFileInput } from "@/components/ImageFileInput";
-import { StoredPhoto } from "@/components/StoredPhoto";
+import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { ChoiceRow, controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
 import { REQUIRABLE_CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
@@ -78,41 +78,6 @@ export type SiteFieldValues = {
   /** When it was written, so the editor can say whether it is still on the site list. */
   planningNoteAt: Date | null;
 };
-
-/**
- * One photo the site already holds, with the box that takes it back off.
- *
- * The whole cell is a `<label>` wrapping its own checkbox, so a tap on the
- * photo toggles *that* photo rather than the first one — the same shape the
- * course editor's gallery uses.
- */
-function ExistingPhoto({
-  url,
-  removeName,
-  removeValue = "true",
-  removeLabel,
-}: {
-  url: string;
-  removeName: string;
-  /** The gallery posts the photo's own URL; a single-photo field posts "true". */
-  removeValue?: string;
-  removeLabel: string;
-}) {
-  return (
-    <label className="block cursor-pointer">
-      <input type="checkbox" name={removeName} value={removeValue} className="peer sr-only" />
-      <StoredPhoto
-        src={url}
-        alt=""
-        className="h-24 w-full rounded-lg border-2 border-border transition peer-checked:border-danger peer-checked:opacity-50"
-        sizes="(min-width: 640px) 25vw, 50vw"
-      />
-      <span className="mt-1 block text-xs font-medium text-muted transition peer-checked:text-danger">
-        {removeLabel}
-      </span>
-    </label>
-  );
-}
 
 /** Which sections say something the fields cannot say for themselves. */
 type SectionParts = {
@@ -433,10 +398,10 @@ export function SiteFields({
               </Field>
               {values?.satelliteImageUrl ? (
                 <div className="mt-2">
-                  <ExistingPhoto
+                  <RemovablePhoto
                     url={values.satelliteImageUrl}
-                    removeName="removeSatelliteImage"
-                    removeLabel={t("diveSites.form.removeCurrentPhoto")}
+                    name="removeSatelliteImage"
+                    label={t("diveSites.form.removeCurrentPhoto")}
                   />
                 </div>
               ) : null}
@@ -451,10 +416,10 @@ export function SiteFields({
               </Field>
               {values?.routeImageUrl ? (
                 <div className="mt-2">
-                  <ExistingPhoto
+                  <RemovablePhoto
                     url={values.routeImageUrl}
-                    removeName="removeRouteImage"
-                    removeLabel={t("diveSites.form.removeCurrentPhoto")}
+                    name="removeRouteImage"
+                    label={t("diveSites.form.removeCurrentPhoto")}
                   />
                 </div>
               ) : null}
@@ -478,14 +443,14 @@ export function SiteFields({
               />
             </Field>
             {values && values.imageUrls.length > 0 ? (
-              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className={`mt-3 ${removablePhotoGridClass}`}>
                 {values.imageUrls.map((url) => (
-                  <ExistingPhoto
+                  <RemovablePhoto
                     key={url}
                     url={url}
-                    removeName="removeSiteImageUrls"
-                    removeValue={url}
-                    removeLabel={t("diveSites.form.removeLabel")}
+                    name="removeSiteImageUrls"
+                    value={url}
+                    label={t("diveSites.form.removeLabel")}
                   />
                 ))}
               </div>

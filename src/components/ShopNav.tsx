@@ -132,7 +132,8 @@ export function ShopNav({
        * in the centre slot; below it they fold into the calendar beside the
        * search, because the bar is a fixed height and nothing in it may wrap —
        * every slot shrinks instead, and a long shop name ellipses (see
-       * ShopIdentityMenu, whose button and label both carry `min-w-0`).
+       * ShopIdentityMenu: its button shrinks, down to the 44px `min-w-11`
+       * round the mark, and its label carries `min-w-0`).
        */}
       <ChromeBar
         staffChrome
@@ -181,11 +182,19 @@ export function ShopNav({
                 `max-w-0` at rest so the label costs the row nothing wherever
                 the fold does not run — no scroll-driven animations, `lg` and
                 up, or a reduced-motion reader — and the fold gives it the width
-                the shop's name lets go of. */}
+                the shop's name lets go of.
+
+                The shop name's own line box, `leading-6`: 24px, the name's
+                16px at the body's 1.5. The row centres both boxes on the mark,
+                and where a box's top lands decides the pixel row its baseline
+                snaps to — the name's starts on a half pixel. The title's own
+                box, 17px under `leading-none` and 25.5px inherited, started on
+                a whole one, and its cap sat 1px above the mark's centre and
+                the name it replaces (K-502). */}
             <span
               data-chrome-title-slot
               aria-hidden
-              className="max-w-0 min-w-0 truncate text-[17px] leading-none font-semibold tracking-tight opacity-0"
+              className="max-w-0 min-w-0 truncate text-[17px] leading-6 font-semibold tracking-tight opacity-0"
             />
           </div>
         }

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { FoldedPageTitle } from "@/components/chrome/FoldedPageTitle";
-import { tapTargetLinkClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { toneMark } from "@/components/ui/tone";
@@ -40,13 +39,34 @@ export const EYEBROW_CLASS = `${EYEBROW_SHAPE} text-primary`;
  * wrong rather than the arithmetic.
  *
  * So the link is wrapped instead. The wrapper is block-level and exactly the
- * eyebrow's line box; `items-center` centres the 44px link on it and lets it
- * bleed 14px into the padding above and the title's `mt-2` below, where there
- * is nothing to hit. The link's text then lands on the same line as a `<p>`
- * eyebrow's — it used to sit 6px lower — and the header is the same height
+ * eyebrow's line box, and the link's text lands on the same line as a `<p>`
+ * eyebrow's — it used to sit 6px lower — so the header is the same height
  * either way. `ShopPageHeader.test.tsx` pins it.
+ *
+ * **The spare 28px goes above the line, none below it** (K-395). The wrapper
+ * used to centre the link, bleeding 14px each way — and 14px below is into the
+ * title's `mt-2`, which is only 8. There was nothing to *hit* there, but the
+ * focus ring draws 5px outside the box, and it ran a 3px band through the
+ * title's cap tops. `items-end` stands the box on the line's bottom edge (and
+ * `EYEBROW_TAP_TARGET` keeps the words there too), so the ring ends 5px under
+ * the eyebrow, inside the `mt-2`. Above, the box reaches 28px into the page's
+ * top padding (32px on a phone, 40 from `sm`), and in the trip band it rises
+ * inside the 44px row it is centred in.
  */
-export const EYEBROW_TAP_WRAPPER = "flex h-4 items-center";
+export const EYEBROW_TAP_WRAPPER = "flex h-4 items-end";
+
+/**
+ * `tapTargetLinkClass`'s 44px floor with its content on the box's bottom edge
+ * rather than centred — the bottom edge is the eyebrow's line, see
+ * `EYEBROW_TAP_WRAPPER`. Spelled whole, not `tapTargetLinkClass` plus
+ * `items-end`: two `align-items` utilities on one element resolve by
+ * stylesheet order, not by the order they are written.
+ *
+ * Its content is **one** item, a row the eyebrow's line box tall that centres
+ * the chevron on the words. Two items on the bottom edge each stand on it by
+ * their own height, and the 12px chevron sat 2px under the 16px line's centre.
+ */
+const EYEBROW_TAP_TARGET = "inline-flex min-h-11 items-end";
 
 /**
  * The eyebrow-as-breadcrumb, for a header that is not `ShopPageHeader`.
@@ -91,23 +111,40 @@ export function EyebrowBackLink({
     <span className={`${EYEBROW_TAP_WRAPPER} ${className}`.trim()}>
       <Link
         href={href}
-        className={`${tapTargetLinkClass} ${EYEBROW_SHAPE} ${
+        className={`${EYEBROW_TAP_TARGET} ${EYEBROW_SHAPE} ${
           onSky ? "text-(--sky-ink)" : "text-primary"
-        } gap-1 hover:underline`.trim()}
+        } hover:underline`.trim()}
       >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="size-3 shrink-0"
-        >
-          <path d="m15 18-6-6 6-6" />
-        </svg>
-        {children}
+        {/* **One row, the words' own line box, centred inside** (K-395). The
+            link stands its content on its bottom edge, and as two items of the
+            link the chevron and the words each stood there: the words' 16px
+            line at 28–44, the 12px chevron at 32–44, its centre 2px under
+            theirs. As one row they share a centre line again, and the row is
+            what stands on the edge. `min-h-4`, not `h-4`: a wrapped eyebrow
+            grows the row upward inside the link's box rather than spilling
+            below it onto the title. */}
+        <span className="flex min-h-4 items-center gap-2">
+          {/* **The box is the ink** (K-114). Centred in a 24-unit square, the
+              stroke (x 9–15, plus half its 2.5 width) began 3.9px into the
+              box, so every back-link stood 3–4px right of the title's column.
+              The viewBox is cut to the stroke across and kept whole down, so
+              the height and centre are the square's; the width follows the
+              cut. `gap-2` carries the ink-to-words distance the square's empty
+              right side used to share with `gap-1`. `ShopPageHeader.test.tsx`. */}
+          <svg
+            aria-hidden="true"
+            viewBox="7.75 0 8.5 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-3 w-auto shrink-0"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          {children}
+        </span>
       </Link>
     </span>
   );
@@ -235,13 +272,21 @@ export function ShopPageHeader({
               serves both shells and only one of them folds. */}
           <FoldedPageTitle title={title} />
           {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}
-          {meta ? <div className="mt-3">{meta}</div> : null}
+          {/* `empty:hidden`: a meta whose content renders nothing (check-in's
+              offline-only pill, online) leaves no 12px of margin behind. */}
+          {meta ? <div className="mt-3 empty:hidden">{meta}</div> : null}
         </div>
         {/* Below `sm` the header stacks and its actions share the row, each
             growing to an equal share, so two doors read as one tidy band
-            rather than two buttons of different widths hugging the left. */}
+            rather than two buttons of different widths hugging the left.
+            Doors only — a link, a button, a form holding one. The offline
+            manifest's actions are two status pills, and growing every child
+            stretched each into a half-width bar with its words hugging the
+            left and 91px of empty fill beside them (K-65). */}
         {actions ? (
-          <div className="flex shrink-0 flex-wrap gap-2 max-sm:[&>*]:grow">{actions}</div>
+          <div className="flex shrink-0 flex-wrap gap-2 max-sm:[&>:is(a,button,form)]:grow">
+            {actions}
+          </div>
         ) : null}
       </div>
     </header>
@@ -270,35 +315,120 @@ export function ShopPageHeader({
  *     and `mb-8` on the wrapper — all straight off `<header className="mb-8">`.
  *
  * Widths stay per-caller: a bar should be about as wide as the words it stands
- * in for, and that is the page's business, not this component's.
+ * in for, and that is the page's business, not this component's. So do line
+ * counts (`titleLines`, `descriptionLines`): a width cannot stand in for text
+ * that wraps, and how far a page's words wrap at 390px is the page's too.
  */
 export function ShopPageHeaderSkeleton({
   eyebrow = true,
   titleWidth = "w-64",
-  description = true,
+  titleLines = 1,
+  description,
   descriptionWidth = "w-80",
+  descriptionLines = 1,
   meta,
+  actions = false,
 }: {
   /** Pass `false` for a header with no eyebrow — the `<h1>` then loses its `mt-2`, same as the real one. */
   eyebrow?: boolean;
   /** Tailwind width classes for the title bar (e.g. `"w-72 max-w-full"`). */
   titleWidth?: string;
-  description?: boolean;
+  /** How many lines the `<h1>` wraps to — see `SkeletonLines`. */
+  titleLines?: SkeletonLines;
+  /**
+   * Whether the page's header has a description line. **Required** (K-28):
+   * it used to default to `true`, and most loading files took the default,
+   * including pages whose header has none — a 32px bar-and-gap the page never
+   * had, and a drop of everything below it when the page landed.
+   */
+  description: boolean;
   /** Tailwind width classes for the description bar. */
   descriptionWidth?: string;
+  /** How many lines the description wraps to — see `SkeletonLines`. */
+  descriptionLines?: SkeletonLines;
   /** Bars for a header that carries `meta` — the trip tabs' seat badge and date line. */
   meta?: React.ReactNode;
+  /**
+   * The header carries `actions`: `true` for one row of doors, or the number
+   * of rows they wrap to on a phone. Below `sm` the header stacks them under
+   * the title, `gap-5` down, each grown to the row at `md`'s 48px — part of
+   * its height, so the skeleton draws them there (K-86: 68px of drop on
+   * Reviews and a dive site's page without). From `sm` they sit beside the
+   * title and add nothing, so the bars are phone-only.
+   */
+  actions?: boolean | number;
 }) {
+  const actionRows = actions === true ? 1 : actions === false ? 0 : actions;
   return (
     <div className="mb-8">
       {eyebrow ? <div className="h-4 w-24 rounded bg-surface-sunken" /> : null}
-      <div className={`h-11 ${titleWidth} rounded bg-surface-sunken${eyebrow ? " mt-2" : ""}`} />
+      <div className={eyebrow ? "mt-2" : undefined}>
+        <SkeletonLineBars lines={titleLines} height="h-11" width={titleWidth} />
+      </div>
       {description ? (
-        <div className={`mt-2 h-6 ${descriptionWidth} rounded bg-surface-sunken`} />
+        <div className="mt-2">
+          <SkeletonLineBars lines={descriptionLines} height="h-6" width={descriptionWidth} />
+        </div>
       ) : null}
       {meta ? <div className="mt-3">{meta}</div> : null}
+      {actionRows > 0 ? (
+        <div className="mt-5 flex flex-col gap-2 sm:hidden">
+          {Array.from({ length: actionRows }, (_, row) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: bars, not records — the row number is the only identity a placeholder row has
+            <div key={row} className="h-12 w-full rounded-lg bg-surface-sunken" />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
+}
+
+/**
+ * **How many lines a heading or a description wraps to**, for
+ * `ShopPageHeaderSkeleton`: one count, or one below `sm` and one from it —
+ * `{ base: 3, sm: 2 }` for a description that is three lines on a phone and two
+ * on a desk. The skeleton could once draw only one line of each, so every
+ * header that wrapped dropped the page 24px a line when it landed (K-97:
+ * WhatsApp's card 48px lower at 390, 24px at 1280; K-292: `/dive`).
+ */
+export type SkeletonLines = number | { base: number; sm: number };
+
+/**
+ * One box per line, each the line's own height (`h-11`, `h-6`, a meta line's
+ * `h-5`) and stacked with no gap, because a paragraph's line boxes have none —
+ * so N lines are exactly N line-heights, the one number that decides where the
+ * page below lands. A second line's bar is inset `pt-1` inside its box so two
+ * lines read as two rather than one tall slab; the box keeps the full height.
+ * A line one side of `sm` does not have is hidden on that side.
+ *
+ * Exported for a skeleton's own `meta`, whose line can wrap the same way.
+ */
+export function SkeletonLineBars({
+  lines,
+  height,
+  width,
+}: {
+  lines: SkeletonLines;
+  /** The line box's height class: `h-11` a title, `h-6` a description, `h-5` a `text-sm` line. */
+  height: string;
+  /** The bar's width classes. */
+  width: string;
+}) {
+  const { base, sm } = typeof lines === "number" ? { base: lines, sm: lines } : lines;
+  const bar = `${width} rounded bg-surface-sunken`;
+  return Array.from({ length: Math.max(base, sm) }, (_, line) => {
+    const onlyOneSide =
+      line < base && line < sm ? "" : line < base ? " sm:hidden" : " max-sm:hidden";
+    return line === 0 ? (
+      // biome-ignore lint/suspicious/noArrayIndexKey: bars, not records — the line number is the only identity a placeholder line has
+      <div key={line} className={`${height} ${bar}${onlyOneSide}`} />
+    ) : (
+      // biome-ignore lint/suspicious/noArrayIndexKey: as above
+      <div key={line} className={`${height} pt-1${onlyOneSide}`}>
+        <div className={`h-full ${bar}`} />
+      </div>
+    );
+  });
 }
 
 /**
@@ -379,6 +509,22 @@ export function ShopStat({
   const Label = definition ? "dt" : "p";
   const Value = definition ? "dd" : "p";
   const inset = variant === "inset";
+  const valueClass = `font-semibold tracking-tight tabular-nums ${
+    inset ? "text-2xl" : "text-3xl"
+  } ${toneClass}`;
+
+  // **Two rows of the grid the tile stands in: labels, then figures** (K-75).
+  // In block flow a label that wrapped ("Divers on the / manifest") pushed its
+  // own figure 20px below the figures beside it. Subgridding onto the parent's
+  // rows — the mechanism `Field` uses for captions over controls
+  // (`ui/form.tsx`) — makes the label row as tall as the row's longest label,
+  // so every figure starts on one line. Not `flex-col` with the figure
+  // `mt-auto`: that aligns figures only when every tile carries the same lines
+  // under them, and the blowout record's first tile has no detail where its
+  // neighbours do. The row gap is the space the figure's `mt-2` / `mt-0.5`
+  // gave. Outside a grid, `subgrid` falls back to plain rows and the tile
+  // reads exactly as it did.
+  const rows = `grid row-span-2 grid-rows-subgrid ${inset ? "gap-y-0.5" : "gap-y-2"}`;
 
   return (
     <div
@@ -386,25 +532,33 @@ export function ShopStat({
       // card's spelling: a stat tile and a section card are the same object
       // (docs/design/forms-and-controls.md), so neither can drift from the
       // other. `inset` is the sunken, chrome-less variant and has none of it.
-      className={inset ? "rounded-inset bg-surface-sunken px-4 py-3" : sectionCardClass()}
+      className={
+        inset
+          ? `${rows} rounded-inset bg-surface-sunken px-4 py-3`
+          : sectionCardClass({ className: rows })
+      }
     >
       <Label
         className={inset ? "text-xs font-medium text-muted" : "text-sm font-medium text-muted"}
       >
         {label}
       </Label>
-      <Value
-        className={`font-semibold tracking-tight tabular-nums ${
-          inset ? "mt-0.5 text-2xl" : "mt-2 text-3xl"
-        } ${toneClass}`}
-      >
-        {value}
-        {/* In definition mode the detail and link live inside the <dd> — a
-            <dl>'s groups may hold only <dt>/<dd>, and the sentence *is* part
-            of the value's definition. */}
-        {definition ? statDetail({ detail, comparison, celebrate, linkHref, linkLabel }) : null}
-      </Value>
-      {definition ? null : statDetail({ detail, comparison, celebrate, linkHref, linkLabel })}
+      {definition ? (
+        <Value className={valueClass}>
+          {value}
+          {/* In definition mode the detail and link live inside the <dd> — a
+              <dl>'s groups may hold only <dt>/<dd>, and the sentence *is* part
+              of the value's definition. */}
+          {statDetail({ detail, comparison, celebrate, linkHref, linkLabel })}
+        </Value>
+      ) : (
+        // The figure and the lines under it are one row: a detail line as a
+        // third child would open a third track the neighbours do not have.
+        <div>
+          <Value className={valueClass}>{value}</Value>
+          {statDetail({ detail, comparison, celebrate, linkHref, linkLabel })}
+        </div>
+      )}
     </div>
   );
 }
@@ -497,10 +651,23 @@ export function ShopNotice({
       // feedback vehicle with no entrance — a tap acknowledged itself, the
       // page reloaded, and the outcome was simply there. The same arrival the
       // toast and the earned moment make; `prefers-reduced-motion` stills it.
-      className={`rise-in rounded-inset border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
+      //
+      // **A row aligned on the first baseline** (K-15). The mark used to be a
+      // bare svg in front of the words, which preflight makes a block, so it
+      // stood alone on a line above them. Not `items-start`: a notice's first
+      // line is not always at its top — the trip banner's words sit centred
+      // beside a 44px Undo, the duplicate-diver warning opens on a 16px
+      // heading — so the mark's column carries one line of the notice's own
+      // text (`StatusMark inline`) and the row lines that line's baseline up
+      // with the words' first one, wherever it is. `ShopPageHeader.test.tsx`.
+      className={`rise-in flex items-baseline gap-2 rounded-inset border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
     >
-      {mark ? <StatusMark variant={mark} className="me-1" /> : null}
-      {children}
+      {mark ? (
+        <span className="shrink-0">
+          <StatusMark variant={mark} inline />
+        </span>
+      ) : null}
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }

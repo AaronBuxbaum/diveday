@@ -18,8 +18,9 @@ import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import { MissingDiversGrid } from "@/components/MissingDiversGrid";
 import { freshnessInkClass, OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
+import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { OFFLINE_CREW_ROW_TONE, ROLL_CALL_ROW_TONE } from "@/components/row-tones";
+import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SkipLink } from "@/components/SkipLink";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -117,6 +118,29 @@ const OFFLINE_BOAT_TARGET_CLASS = buttonClass({
   busy: true,
   className: "w-full sm:w-auto",
 });
+
+/**
+ * A buddy team's names as one list, **each name held whole**: a no-break space
+ * inside every name, so a line wraps between "Diego Alvarez" and "June Park"
+ * and never inside either. The Spanish crew line split "Diego / Alvarez" at a
+ * line end, which reads as two people.
+ *
+ * **Whole is a preference, not a promise.** A name longer than its column
+ * ("María de los Ángeles Fernández Gutiérrez", 41 characters, at glare's 16px
+ * on a phone) cannot be held whole, and the diver list and the crew box are
+ * both `overflow-hidden`: it ran past its column and the box clipped the
+ * surname off. So every place these names are set breaks an overlong name
+ * anywhere as a last resort (`BUDDY_NAMES_WRAP`), which an ordinary name
+ * never reaches.
+ */
+function buddyNamesList(locale: string, names: readonly string[]): string {
+  return cachedListFormat(locale, { type: "conjunction" }).format(
+    names.map((name) => name.replace(/ /g, "\u00a0")),
+  );
+}
+
+/** Breaks a name too long for its column, last, rather than letting it be clipped. */
+const BUDDY_NAMES_WRAP = "wrap-anywhere";
 
 /**
  * One diver's roll-call row id, minted here and nowhere else: this is both what
@@ -967,12 +991,12 @@ export function OfflineManifestView() {
             )}
           </ul>
         ) : (
-          <div className="mt-6 rounded-3xl border border-border bg-surface-sunken p-8 text-center sm:p-10">
+          <div className="mt-6 rounded-panel border border-border bg-surface-sunken p-8 text-center sm:p-10">
             <div
               className="mx-auto grid size-12 place-items-center rounded-inset bg-surface text-2xl"
               aria-hidden="true"
             >
-              <DiveDayIcon name="empty" className="size-7 text-primary" />
+              <DiveDayIcon name="empty" className="size-5 text-primary" />
             </div>
             <p className="mx-auto mt-4 max-w-md text-muted">
               {t("shared.offlineManifest.list.emptyHint")}
@@ -1018,12 +1042,12 @@ export function OfflineManifestView() {
             </p>
           }
         />
-        <div className="mt-6 rounded-3xl border border-border bg-surface-sunken p-8 text-center sm:p-10">
+        <div className="mt-6 rounded-panel border border-border bg-surface-sunken p-8 text-center sm:p-10">
           <div
             className="mx-auto grid size-12 place-items-center rounded-inset bg-surface text-2xl"
             aria-hidden="true"
           >
-            <DiveDayIcon name="empty" className="size-7 text-primary" />
+            <DiveDayIcon name="empty" className="size-5 text-primary" />
           </div>
           <p className="mx-auto mt-4 max-w-md text-muted">
             {removedForOtherShop
@@ -1428,11 +1452,15 @@ export function OfflineManifestView() {
             }
           />
           {expired ? (
-            <p className="mt-4 rounded-lg border border-danger/40 bg-danger-tint p-3 text-base leading-6 font-semibold text-danger">
+            <p
+              className={`mt-4 ${OFFLINE_NOTICE_CLASS} border-danger/40 bg-danger-tint font-semibold text-danger`}
+            >
               {t("shared.offlineManifest.single.expiredBanner")}
             </p>
           ) : (
-            <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-base leading-6">
+            <p
+              className={`mt-4 ${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 text-pretty`}
+            >
               {t("shared.offlineManifest.single.freshnessBanner", {
                 freshnessNote: t(`shared.offlineManifest.freshnessCopy.${freshness}`),
               })}
@@ -1500,7 +1528,9 @@ export function OfflineManifestView() {
                       className={buttonClass({
                         variant: checked ? "primary" : "secondary",
                         size: "boat",
-                        className: "w-full justify-start gap-2 text-start",
+                        // `gap-3`, the counter row's below: the same mark and
+                        // label, so the words start on one x in both lists.
+                        className: "w-full justify-start gap-3 text-start",
                       })}
                     >
                       <StatusMark variant={checked ? "checked" : "unchecked"} size="md" />
@@ -1595,7 +1625,9 @@ export function OfflineManifestView() {
                   return (
                     <li
                       key={diver.bookingId}
-                      className="rounded-lg border border-border bg-surface-sunken px-4 py-3"
+                      // `px-6`, the `boat` rows' own inset beside it, so the
+                      // name starts where their marks do.
+                      className="rounded-lg border border-border bg-surface-sunken px-6 py-3"
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="truncate font-medium text-ink">{diver.fullName}</p>
@@ -1693,8 +1725,11 @@ export function OfflineManifestView() {
           </section>
         ) : null}
 
+        {/* `max-sm:[&>*]:grow`, the rule `ShopPageHeader` gives its doors: on
+            a phone each wrapped row of checkpoints fills as one band, rather
+            than leaving "After dive 2" alone and short on a row of its own. */}
         <nav
-          className="mt-6 flex flex-wrap items-center gap-3 pb-1"
+          className="mt-6 flex flex-wrap items-center gap-3 pb-1 max-sm:[&>*]:grow"
           aria-label={t("shared.offlineManifest.single.checkpointNavAria")}
         >
           {rollCallCheckpoints(manifest.trip.plannedDives).map((value) => (
@@ -1724,14 +1759,30 @@ export function OfflineManifestView() {
             the live panel — a crew that loses signal between two dives must not
             see two different completions for one fact. The heading below says
             it in words. */}
-        <section className="mt-4 grid grid-cols-3 gap-3">
+        {/* **The label fits its tile, or wraps inside it; it never spills
+            into the next.** Uppercase, "EMBARCADOS" needed 86px where a `p-3`
+            tile leaves 75 at 360, and glare mode (this page mounts it) forces
+            every `text-xs` to 16px, where no inset a phone tile can give holds
+            it: about 112px in a 100px box at 390. Narrowing the tiles' inset
+            below `sm` fixed only the 360 case and left every phone's tiles
+            reading cramped, 7px from their borders beside panels inset 16-20.
+            In sentence case the words fit a `p-3` tile at 12px, and at glare's
+            16px they hyphenate in the page's language (`lang`) or, where the
+            browser has no dictionary, break inside the tile. The gap stays 8px
+            below `sm`: three tiles on a phone. */}
+        <section className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
           {[
             [t("shared.offlineManifest.single.statsDivers"), manifest.summary.totalDivers],
             [t("shared.offlineManifest.single.statsBoarded"), boarded],
             [t("shared.offlineManifest.single.statsAwaiting"), awaiting],
           ].map(([label, value]) => (
             <div key={String(label)} className="rounded-lg border border-border bg-surface p-3">
-              <p className="text-xs font-semibold text-muted uppercase">{label}</p>
+              <p
+                lang={locale}
+                className="text-xs font-semibold text-muted hyphens-auto wrap-break-word"
+              >
+                {label}
+              </p>
               <p className={`mt-1 ${FIGURE_CLASS}`}>{value}</p>
             </div>
           ))}
@@ -1770,46 +1821,80 @@ export function OfflineManifestView() {
            * either way: the checkpoint reads open here exactly as it does
            * online, never the reverse.
            */}
-          <div
-            className={
+          {/* **A panel's inset for the words, and the roster flush.** The box
+            pads its heading and status like every panel in this column
+            (`p-4 sm:p-5`), and its roster is the diver roll call's own ruled
+            list laid edge to edge inside it, the shape the live crew list
+            already has (`CrewRollCall`). The rows were `px-3` cards inside a
+            `p-3` box, so their controls ended 5–9px inside the diver controls
+            below them. `overflow-hidden` rounds the last row's fill into the
+            box's corner; every control in a row sits a whole padding clear of
+            that edge, so no focus ring reaches it. A `section` named by its
+            heading, as the counter's is.
+
+            **No inset ring on the missing box.** An inset ring paints under
+            the box's children, and the flush roster covers it, so it ringed
+            the heading and stopped where the list began. The ring belongs to
+            the missing person's own row (`ROLL_CALL_ROW_TONE.notBackAboard`),
+            as on every roll-call row; the box keeps its danger border, fill
+            and heading.
+
+            **A surface box while crew are still being called**, as the live
+            crew list sits in a surface card. The rows wear the roll call's
+            awaiting tone, a sunken fill, and on a sunken box an uncalled crew
+            member matched the ground behind them, marked only by a grey rule
+            and hairlines: the row a captain is looking for, read at the rail
+            in sun, with the weakest fill on the page. The dock copy's earlier
+            crew cards kept "awaiting" raised for that reason (dive-domain
+            review, 20260804); the contrast is kept here the other way round.
+            The settled and missing boxes keep their success and danger
+            fills. */}
+          <section
+            aria-labelledby="offline-crew-heading"
+            className={`mt-3 overflow-hidden rounded-inset border ${
               crewMissing
-                ? "mt-3 rounded-inset border border-danger bg-danger/10 p-3 ring-1 ring-inset ring-danger/40"
+                ? "border-danger bg-danger/10"
                 : completeness.crewAccountedFor
-                  ? "mt-3 rounded-inset border border-success/40 bg-success/10 p-3"
-                  : "mt-3 rounded-inset border border-border-strong bg-surface-sunken p-3"
-            }
+                  ? "border-success/40 bg-success/10"
+                  : "border-border-strong bg-surface"
+            }`}
           >
-            <p className={`text-sm font-bold${crewMissing ? " text-danger" : ""}`}>
-              {t("shared.offlineManifest.single.crewHeading")}
-            </p>
-            <p className="mt-1 text-sm">
-              {crewMissing
-                ? t("shared.offlineManifest.single.crewNotBackAboard", {
-                    count: crewCounts.crewNotBackAboard,
-                  })
-                : completeness.crewReason === "crew_awaiting"
-                  ? t("shared.offlineManifest.single.crewAwaiting", {
-                      count: crewCounts.crewAwaiting,
+            <div className="p-4 sm:p-5">
+              <p
+                id="offline-crew-heading"
+                className={`text-sm font-bold${crewMissing ? " text-danger" : ""}`}
+              >
+                {t("shared.offlineManifest.single.crewHeading")}
+              </p>
+              <p className="mt-1 text-sm">
+                {crewMissing
+                  ? t("shared.offlineManifest.single.crewNotBackAboard", {
+                      count: crewCounts.crewNotBackAboard,
                     })
-                  : completeness.crewReason === "crew_none_assigned"
-                    ? t("shared.offlineManifest.single.crewNoneAssigned")
-                    : completeness.crewReason === "crew_none_aboard"
-                      ? t("shared.offlineManifest.single.crewNoneAboard")
-                      : t("shared.offlineManifest.single.crewAllAccountedFor", {
-                          assigned: crewAssigned,
-                        })}
-            </p>
-            {/* The one remaining limitation, and it belongs to the *copy*, not
+                  : completeness.crewReason === "crew_awaiting"
+                    ? t("shared.offlineManifest.single.crewAwaiting", {
+                        count: crewCounts.crewAwaiting,
+                      })
+                    : completeness.crewReason === "crew_none_assigned"
+                      ? t("shared.offlineManifest.single.crewNoneAssigned")
+                      : completeness.crewReason === "crew_none_aboard"
+                        ? t("shared.offlineManifest.single.crewNoneAboard")
+                        : t("shared.offlineManifest.single.crewAllAccountedFor", {
+                            assigned: crewAssigned,
+                          })}
+              </p>
+              {/* The one remaining limitation, and it belongs to the *copy*, not
               to the feature: a snapshot older than H-46 has crew with no id,
               so there is nobody for a tap to be about. Named with a count, so
               a captain can tell whether it is the whole crew or one late
               addition, and pointed at the two things that fix it. Absent
               entirely on a current copy. */}
-            {crewWithoutId > 0 ? (
-              <p className="mt-1 text-sm font-semibold text-muted">
-                {t("shared.offlineManifest.single.crewOlderCopy", { count: crewWithoutId })}
-              </p>
-            ) : null}
+              {crewWithoutId > 0 ? (
+                <p className="mt-1 text-sm font-semibold text-muted">
+                  {t("shared.offlineManifest.single.crewOlderCopy", { count: crewWithoutId })}
+                </p>
+              ) : null}
+            </div>
             {/* Who, not just how many — and now with the controls to answer for
               each one, the same two the diver rows carry. */}
             {crewAssigned > 0 ? (
@@ -1817,7 +1902,10 @@ export function OfflineManifestView() {
               // are now lists of rows with roll-call controls on them, so
               // anything reaching for "the first Mark aboard button" has to be
               // able to say which list it means.
-              <ul id="offline-crew-roll-call" className="mt-2 space-y-2">
+              <ul
+                id="offline-crew-roll-call"
+                className="divide-y divide-border border-t border-border"
+              >
                 {crewWithKeys.map((member) => {
                   // Hoisted so the guard below narrows it for both handlers: a
                   // crew member with no id has no subject to record against.
@@ -1829,13 +1917,13 @@ export function OfflineManifestView() {
                   return (
                     <li
                       key={member.key}
-                      // One colour vocabulary with the live manifest's rows,
-                      // now by import rather than by copy — see
-                      // `OFFLINE_CREW_ROW_TONE` for why the shape differs and
-                      // the hues do not.
-                      className={`rounded-lg px-3 py-2 text-sm ${
-                        crewTone ? OFFLINE_CREW_ROW_TONE[crewTone] : OFFLINE_CREW_ROW_TONE.awaiting
-                      }`}
+                      // The diver rows' own left rule, tone and inset, and the
+                      // live crew list's: one colour vocabulary by import. A
+                      // missing crew member's words go danger as well, because
+                      // their state is part of a sentence here, not a pill.
+                      className={`border-l-4 p-4 text-sm sm:p-5 ${
+                        crewTone ? ROLL_CALL_ROW_TONE[crewTone] : ROLL_CALL_ROW_TONE.awaiting
+                      }${missingCrew ? " font-bold text-danger" : ""}`}
                     >
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <p>
@@ -1849,12 +1937,10 @@ export function OfflineManifestView() {
                             leading three groups needs the dock copy to say
                             which bodies they are responsible for. */}
                           {(member.buddyTeamNames ?? []).length > 0 ? (
-                            <span className="ms-1 font-normal">
+                            <span className={`ms-1 font-normal ${BUDDY_NAMES_WRAP}`}>
                               ·{" "}
                               {t("shared.buddyTeam.with", {
-                                names: cachedListFormat(locale, { type: "conjunction" }).format(
-                                  member.buddyTeamNames ?? [],
-                                ),
+                                names: buddyNamesList(locale, member.buddyTeamNames ?? []),
                               })}
                             </span>
                           ) : null}
@@ -1931,7 +2017,7 @@ export function OfflineManifestView() {
                                   ? "border border-border-strong bg-surface-sunken"
                                   : member.state?.state === "boarded"
                                     ? "border border-success bg-success/15 text-success"
-                                    : "border border-primary bg-surface text-primary"
+                                    : "border border-primary bg-surface text-primary hover:bg-primary-tint"
                               }`}
                             >
                               {busyBooking === crewPersonId ? (
@@ -2075,14 +2161,14 @@ export function OfflineManifestView() {
                 })}
               </ul>
             ) : null}
-          </div>
+          </section>
           {/* Buddy teams are display-only on the dock copy, and the split-team
             read ("someone back, someone not") belongs to the live roll call
             alone — a snapshot cannot know who came back (ADR
             20260804-buddy-teams). Stated the same neutral way as the crew
             limitation above: a limitation of this copy, not an alarm. */}
           {anyBuddies ? (
-            <p className="mt-3 text-sm font-semibold text-muted">
+            <p className="mt-3 text-sm font-semibold text-pretty text-muted">
               {t("shared.offlineManifest.single.buddyReadOnlyHere")}
             </p>
           ) : null}
@@ -2127,6 +2213,9 @@ export function OfflineManifestView() {
               // the exception control's weight now reads it too — it is what
               // decides whether that control is the row's *only* one.
               const showBoardControl = ready || !isDeparture;
+              const stateWord = `${rollCallLabelText(t, rollCallLabel(checkpoint, state))}${
+                state?.pending ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}` : ""
+              }`;
               return (
                 <li
                   key={diver.bookingId}
@@ -2147,8 +2236,23 @@ export function OfflineManifestView() {
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-sunken text-sm font-bold tabular-nums">
-                          {String(index + 1).padStart(2, "0")}
+                        {/* **The first line takes the boat buttons' height,
+                          through the chip's wrapper** (`sm:h-14`), so the
+                          chip, the name and the readiness badge share the
+                          56px buttons' centre rather than riding 12px above
+                          it. On the wrapper and not the whole box: on most
+                          rows the state word and buddy team wrap to a second
+                          line (32 + 8 + 30 = 70px, past 56), and a min height
+                          on the box did nothing there. Not on an expired copy,
+                          whose right column is one sentence, not buttons.
+
+                          `bg-surface`, never the awaiting row's own sunken
+                          fill: a chip painted the row's colour has no edge, and
+                          its number started 7px right of the row's. */}
+                        <span className={`flex shrink-0 items-center${expired ? "" : " sm:h-14"}`}>
+                          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
                         </span>
                         <h3 className={SECTION_TITLE_CLASS}>{diver.fullName}</h3>
                         {/* The shared pill, and the shared tone resolver. The
@@ -2199,18 +2303,23 @@ export function OfflineManifestView() {
                           one word list, so a diver who has not come back from
                           dive one cannot read "Not boarded" here and "Not back
                           aboard" on the captain's screen. */}
-                        <span
-                          className={
-                            missing
-                              ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"
-                              : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-semibold"
-                          }
-                        >
-                          {rollCallLabelText(t, rollCallLabel(checkpoint, state))}
-                          {state?.pending
-                            ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
-                            : ""}
-                        </span>
+                        {/* The neutral word wears a border and the surface
+                          fill, so its box is painted on the sunken awaiting
+                          row: the pill used to be that row's own fill, so its
+                          padding was invisible and its word started at
+                          nobody's edge. It keeps its foreground semibold ink,
+                          not the neutral `Badge`'s muted medium: this is the
+                          row's state in words, read across a wet deck, and
+                          the defect was the pill's edge, never the word. */}
+                        {missing ? (
+                          <span className="rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger">
+                            {stateWord}
+                          </span>
+                        ) : (
+                          <span className="rounded-full border border-border bg-surface px-3 py-1 text-sm font-semibold">
+                            {stateWord}
+                          </span>
+                        )}
                         {/* The saved team, always quiet here: this copy shows
                           who you are with and never judges whether the team is
                           split — that read is live-roll-call only (see the
@@ -2307,7 +2416,10 @@ export function OfflineManifestView() {
                     </div>
                     <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                       {expired ? (
-                        <p className="text-sm font-semibold text-danger">
+                        // `sm:py-1.5` centres the sentence's first 20px line on
+                        // the name line's 32px beside it, which keeps the
+                        // chip's height on an expired copy (above).
+                        <p className="text-sm font-semibold text-danger sm:py-1.5">
                           {t("shared.offlineManifest.single.record.expiredRecordOnLive")}
                         </p>
                       ) : (
@@ -2371,7 +2483,7 @@ export function OfflineManifestView() {
                                   ? "border border-border-strong bg-surface-sunken"
                                   : state?.state === "boarded"
                                     ? "border border-success bg-success/15 text-success"
-                                    : "border border-primary bg-surface text-primary"
+                                    : "border border-primary bg-surface text-primary hover:bg-primary-tint"
                               }`}
                             >
                               {busyBooking === diver.bookingId ? (
@@ -2745,10 +2857,7 @@ function DiscardedRecordsNotice({
   if (records.length === 0) return null;
   const lostEvents = records.reduce((sum, record) => sum + record.pendingEvents, 0);
   return (
-    <section
-      role="alert"
-      className="mb-4 rounded-lg border border-danger/40 bg-danger/10 p-3 text-base leading-6"
-    >
+    <section role="alert" className={`mb-4 ${OFFLINE_NOTICE_CLASS} border-danger/40 bg-danger/10`}>
       <p className="font-bold text-danger">{t("shared.offlineManifest.discarded.heading")}</p>
       <p className="mt-1">{t("shared.offlineManifest.discarded.body", { count: lostEvents })}</p>
       <ul className="mt-2 space-y-1 text-sm font-semibold">
@@ -2777,6 +2886,9 @@ function DiscardedRecordsNotice({
  * The saved team a dock-copy row wears — names only, never a verdict. There is
  * deliberately no tone variant: this copy cannot know who came back, so it must
  * never look like it is telling you (ADR 20260804-buddy-teams).
+ *
+ * The neutral `Badge` for the same reason as the state word beside it: its
+ * edge, an inset ring, is what shows the chip's box on the sunken awaiting row.
  */
 function OfflineBuddyTeamChip({
   t,
@@ -2789,10 +2901,8 @@ function OfflineBuddyTeamChip({
 }) {
   if (!names || names.length === 0) return null;
   return (
-    <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted">
-      {t("shared.buddyTeam.with", {
-        names: cachedListFormat(locale, { type: "conjunction" }).format(names),
-      })}
-    </span>
+    <Badge tone="neutral" className={BUDDY_NAMES_WRAP}>
+      {t("shared.buddyTeam.with", { names: buddyNamesList(locale, names) })}
+    </Badge>
   );
 }

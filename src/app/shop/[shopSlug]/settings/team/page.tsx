@@ -685,7 +685,7 @@ export default async function TeamSettingsPage({
             <EmptyState
               title={t("settings.team.current.empty")}
               action={
-                <a href="#invite" className={buttonClass({ size: "sm", className: "mt-4" })}>
+                <a href="#invite" className={buttonClass({ size: "sm" })}>
                   {t("settings.team.current.emptyAction")}
                 </a>
               }

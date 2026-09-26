@@ -211,8 +211,10 @@ export default async function DiveSitesPage({
               // header drops its actions when the library is empty precisely so
               // this card owns them, and a shop reading "start with a site your
               // crew knows well" can start from that sentence.
-              // Same pair, same order as the header's: the primary last.
-              <div className="mt-4 flex flex-wrap justify-center gap-3">
+              // Same pair, same order as the header's: the primary last. A
+              // fragment, not a row of its own: the card's action row already
+              // is one, with its own gap under the body.
+              <>
                 <Link
                   href={catalogHref}
                   scroll={false}
@@ -223,7 +225,7 @@ export default async function DiveSitesPage({
                 <Link href={`/shop/${shopSlug}/dive-sites/new`} className={buttonClass()}>
                   {t("diveSites.list.createSite")}
                 </Link>
-              </div>
+              </>
             )
           }
           className="mt-4"
@@ -248,7 +250,6 @@ export default async function DiveSitesPage({
         href={pageHref}
         total={t("diveSites.list.pagination.total", { count: sitePage.total })}
         words={staffPagerWords(t)}
-        className="mt-4"
       />
     </main>
   );
@@ -416,7 +417,6 @@ async function CatalogView({
         href={pageHref}
         total={t("diveSites.catalog.pagination.total", { count: catalog.total })}
         words={staffPagerWords(t)}
-        className="mt-6"
       />
     </main>
   );

@@ -99,6 +99,33 @@ describe("the public shop footer", () => {
     expect(columns?.querySelectorAll(":scope > :empty")).toHaveLength(0);
   });
 
+  /**
+   * The address, the phone, the email and the credit line were bare text
+   * links, 20px tall, on every storefront page (the pixel probe: 158×20 for
+   * "Bookings by DiveDay", 109.9×20 for the phone). A diver reaching for the
+   * shop's number on a phone gets the button floor like any other target.
+   */
+  it("gives every footer link the 44px target floor", () => {
+    const { container } = render(<PublicShopFooter shop={shop} spokenLanguagesLine={null} t={t} />);
+
+    const links = [...container.querySelectorAll("footer a")];
+    expect(links).toHaveLength(4);
+    for (const link of links) expect(link).toHaveClass("inline-flex", "min-h-11", "items-center");
+    // The credit's box carries its own air now, so the 4px nudge above it goes.
+    expect(screen.getByRole("link", { name: /Bookings by DiveDay/ }).className).not.toMatch(
+      /(^|\s)mt-/,
+    );
+    // Wrapped contact lines are a 44px box apart already; a row gap would add air between them.
+    expect(screen.getByText("+1 305 555 0142").closest("p")).toHaveClass("gap-y-0");
+    // Beside the contact row from `sm` up, the shop's name takes the same 44px line, so the
+    // row's text does not sit 12px below it.
+    expect(screen.getByText("Blue Mantis Divers")).toHaveClass(
+      "sm:flex",
+      "sm:min-h-11",
+      "sm:items-center",
+    );
+  });
+
   it("shows the words without a map link when there is too little to point at", () => {
     // A country and a shop name would centre a map on the middle of a continent
     // and present it as the shop's front door — `shopMapQuery`'s own rule. The
@@ -120,6 +147,39 @@ describe("the public shop footer", () => {
 
     expect(screen.getByText("Bonaire")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Bonaire" })).toBeNull();
+  });
+
+  /**
+   * From `sm` up the contact row stands beside the shop's name, whose words
+   * are centred in a 44px line. A row of links is one such line; a row holding
+   * only the unlinkable address was a 20px span at the top of the cluster, so
+   * "Bonaire" sat 12px above the name beside it — the misalignment the name's
+   * own 44px line was added to prevent, reversed. The words take the same line
+   * whether or not a map can be pointed at them.
+   */
+  it("sets an address with no map link on the name's 44px line", () => {
+    render(
+      <PublicShopFooter
+        shop={{
+          ...shop,
+          contactEmail: null,
+          contactPhone: null,
+          addressStreet: null,
+          addressLocality: null,
+          addressRegion: null,
+          addressPostalCode: null,
+          addressCountry: "Bonaire",
+        }}
+        spokenLanguagesLine={null}
+        t={t}
+      />,
+    );
+
+    expect(screen.getByText("Bonaire")).toHaveClass(
+      "sm:inline-flex",
+      "sm:min-h-11",
+      "sm:items-center",
+    );
   });
 });
 

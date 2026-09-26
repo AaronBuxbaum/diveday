@@ -359,6 +359,14 @@ function focusOnMount(el: HTMLElement | null) {
 }
 
 /**
+ * The frame of each group the add panel's "More options" opens: Pay at
+ * booking, the Dive plan and Repeat. One spelling, so a sibling cannot drift
+ * from the others: the Dive plan once carried its own 20px corner and 16px
+ * phone inset between two of these (pixel-craft K-95).
+ */
+const GROUP_FRAME = "rounded-lg border border-border bg-surface p-5";
+
+/**
  * The one form that creates a departure, pre-dated to whichever day header it
  * was opened from. Two depths, one form, one action: "More options" discloses
  * the rest of what a trip can be (ADR 20260806-one-trip-create-form).
@@ -985,11 +993,7 @@ function AddPanel({
           block leaves the submission in one attribute while it is hidden. */}
       {/* A legend names this payment control group; it must remain a
           fieldset rather than becoming a generic SectionCard. */}
-      <fieldset
-        hidden={!expanded}
-        disabled={!expanded}
-        className="rounded-lg border border-border bg-surface p-5"
-      >
+      <fieldset hidden={!expanded} disabled={!expanded} className={GROUP_FRAME}>
         <legend className={`${legendClass} text-sm font-medium`}>{copy.payAtBookingLegend}</legend>
         <p className="text-sm text-muted">{copy.payAtBookingDescription}</p>
         <FieldGrid columns={2} className="mt-4">
@@ -1221,15 +1225,12 @@ function AddPanel({
           onCountChange={setPlannedDives}
           onFirstDiveSiteChange={setDiveSiteId}
           copy={more.diveFields}
+          frameClassName={GROUP_FRAME}
         />
       )}
       {/* A legend names this recurrence control group; it must remain a
           fieldset rather than becoming a generic SectionCard. */}
-      <fieldset
-        hidden={!expanded}
-        disabled={!expanded}
-        className="rounded-lg border border-border bg-surface p-5"
-      >
+      <fieldset hidden={!expanded} disabled={!expanded} className={GROUP_FRAME}>
         <legend className={`${legendClass} text-sm font-medium`}>{copy.repeatLegend}</legend>
         <RepeatFields
           startDate={startDate}

@@ -1281,6 +1281,8 @@ export default async function SchedulePage({
             submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
             askInterest
             sectionId="request-a-date"
+            className="mt-12"
+            headingClassName={`font-brand-display ${SECTION_TITLE_CLASS}`}
             contactEmail={null}
             contactPhone={null}
             copy={{

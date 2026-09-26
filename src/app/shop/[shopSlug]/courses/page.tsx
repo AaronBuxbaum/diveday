@@ -228,7 +228,7 @@ export default async function CoursesPage({
             canSchedule ? (
               <Link
                 href={`/shop/${shopSlug}/schedule/board`}
-                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {st("courses.list.emptyAction")}
               </Link>
@@ -245,7 +245,6 @@ export default async function CoursesPage({
         href={pageHref}
         total={st("courses.list.pagination.total", { count: coursePage.total })}
         words={staffPagerWords(st)}
-        className="mt-6"
       />
     </main>
   );

@@ -281,128 +281,142 @@ export function BookingPartyFields({
           // exactly where the step's own name sits.
           <div key={slot} className="rise-in border-t border-border pt-4">
             <fieldset>
-              <legend className="text-sm font-semibold text-muted">
+              {/* The card's one caption — "Number of divers" above, "Who is
+                  diving" in the card — in foreground ink, with the same 8px to
+                  what it captions that the count's track keeps (`mt-2`). It
+                  was the muted one of three spellings, sitting on "Name". The
+                  8px is the body's `mt-2`, as `ChoiceFieldset` puts its gap on
+                  its body and never on the legend (K-72): the one gap under
+                  it, to "Name" or to the remembered line, and nothing under it
+                  takes a margin of its own. */}
+              <legend className="text-sm font-semibold">
                 {index === 0 ? t("party.yourDetails") : t("party.diverN", { number: index + 1 })}
               </legend>
-              {index === 0 && rememberedDiver ? (
-                <p className="-mt-1 mb-3 text-sm text-muted">
-                  {t.rich("party.rememberedChip", {
-                    name: rememberedDiver.fullName,
-                    strong: (chunks) => (
-                      <strong className="font-semibold text-foreground">{chunks}</strong>
-                    ),
-                    button: (chunks) => (
-                      <button
-                        type="button"
-                        onClick={forgetRememberedDiver}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {chunks}
-                      </button>
-                    ),
-                  })}
-                </p>
-              ) : null}
-              <FieldGrid columns={2}>
-                <Field
-                  label={
-                    index === 0
-                      ? t("party.nameLabel")
-                      : t("party.diverNameLabel", { number: index + 1 })
-                  }
-                  className="text-base"
-                  error={nameError}
-                >
-                  <input
-                    name={`fullName-${index}`}
-                    required
-                    maxLength={120}
-                    // Every slot gets a real autofill token (task 22) — a
-                    // browser scopes repeated `name`/`email` tokens per
-                    // fieldset via `section-*`, so diver 2's autofill offer
-                    // never collides with diver 1's. `autoComplete="off"` here
-                    // used to suppress that entirely for every diver past the
-                    // first, which is exactly the friction Priya hits typing
-                    // three names by hand on a phone.
-                    autoComplete={index === 0 ? "name" : `section-diver${index} name`}
-                    value={member.fullName}
-                    onChange={(event) => updateMember(index, { fullName: event.target.value })}
-                    className={controlClass}
-                  />
-                </Field>
-                {index === 0 || !useLeadEmail[index] ? (
+              <div className="mt-2">
+                {index === 0 && rememberedDiver ? (
+                  <p className="mb-3 text-sm text-muted">
+                    {t.rich("party.rememberedChip", {
+                      name: rememberedDiver.fullName,
+                      strong: (chunks) => (
+                        <strong className="font-semibold text-foreground">{chunks}</strong>
+                      ),
+                      button: (chunks) => (
+                        <button
+                          type="button"
+                          onClick={forgetRememberedDiver}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {chunks}
+                        </button>
+                      ),
+                    })}
+                  </p>
+                ) : null}
+                {/* One box to a row. Name and Email stood side by side in a
+                  478px card body, which left Email 231px and cut a prefilled
+                  address at its right padding; the card is narrow enough on
+                  every screen that each box wants its whole width. */}
+                <FieldGrid columns={1}>
                   <Field
                     label={
                       index === 0
-                        ? t("party.emailLabel")
-                        : t("party.diverEmailLabel", { number: index + 1 })
+                        ? t("party.nameLabel")
+                        : t("party.diverNameLabel", { number: index + 1 })
                     }
                     className="text-base"
-                    error={emailError}
-                    description={
-                      suggestion ? (
-                        <button
-                          type="button"
-                          onClick={() => updateMember(index, { email: suggestion })}
-                          className="justify-self-start text-xs font-medium text-primary hover:underline"
-                        >
-                          {t("party.didYouMeanEmail", { email: suggestion })}
-                        </button>
-                      ) : undefined
-                    }
+                    error={nameError}
                   >
                     <input
-                      name={`email-${index}`}
-                      type="email"
-                      required={index === 0 || !useLeadEmail[index]}
-                      maxLength={200}
-                      inputMode="email"
-                      autoComplete={index === 0 ? "email" : `section-diver${index} email`}
-                      value={member.email}
-                      onChange={(event) => updateMember(index, { email: event.target.value })}
-                      onBlur={() => {
-                        setBlurred((current) => ({ ...current, [index]: true }));
-                        const settled = member.email.trim();
-                        if (index === 0 && settled) onLeadEmailSettled?.(settled);
+                      name={`fullName-${index}`}
+                      required
+                      maxLength={120}
+                      // Every slot gets a real autofill token (task 22) — a
+                      // browser scopes repeated `name`/`email` tokens per
+                      // fieldset via `section-*`, so diver 2's autofill offer
+                      // never collides with diver 1's. `autoComplete="off"` here
+                      // used to suppress that entirely for every diver past the
+                      // first, which is exactly the friction Priya hits typing
+                      // three names by hand on a phone.
+                      autoComplete={index === 0 ? "name" : `section-diver${index} name`}
+                      value={member.fullName}
+                      onChange={(event) => updateMember(index, { fullName: event.target.value })}
+                      className={controlClass}
+                    />
+                  </Field>
+                  {index === 0 || !useLeadEmail[index] ? (
+                    <Field
+                      label={
+                        index === 0
+                          ? t("party.emailLabel")
+                          : t("party.diverEmailLabel", { number: index + 1 })
+                      }
+                      className="text-base"
+                      error={emailError}
+                      description={
+                        suggestion ? (
+                          <button
+                            type="button"
+                            onClick={() => updateMember(index, { email: suggestion })}
+                            className="justify-self-start text-xs font-medium text-primary hover:underline"
+                          >
+                            {t("party.didYouMeanEmail", { email: suggestion })}
+                          </button>
+                        ) : undefined
+                      }
+                    >
+                      <input
+                        name={`email-${index}`}
+                        type="email"
+                        required={index === 0 || !useLeadEmail[index]}
+                        maxLength={200}
+                        inputMode="email"
+                        autoComplete={index === 0 ? "email" : `section-diver${index} email`}
+                        value={member.email}
+                        onChange={(event) => updateMember(index, { email: event.target.value })}
+                        onBlur={() => {
+                          setBlurred((current) => ({ ...current, [index]: true }));
+                          const settled = member.email.trim();
+                          if (index === 0 && settled) onLeadEmailSettled?.(settled);
+                        }}
+                        className={controlClass}
+                      />
+                    </Field>
+                  ) : null}
+                  {index > 0 ? (
+                    <ChoiceRow
+                      type="checkbox"
+                      checked={!!useLeadEmail[index]}
+                      onChange={(event) => {
+                        const checked = event.target.checked;
+                        setUseLeadEmail((current) => ({ ...current, [index]: checked }));
+                        if (checked) updateMember(index, { email: "" });
                       }}
-                      className={controlClass}
-                    />
-                  </Field>
-                ) : null}
-                {index > 0 ? (
-                  <ChoiceRow
-                    type="checkbox"
-                    checked={!!useLeadEmail[index]}
-                    onChange={(event) => {
-                      const checked = event.target.checked;
-                      setUseLeadEmail((current) => ({ ...current, [index]: checked }));
-                      if (checked) updateMember(index, { email: "" });
-                    }}
-                    className="text-sm text-muted sm:col-span-2"
-                  >
-                    {t("party.useMainContactEmail")}
-                  </ChoiceRow>
-                ) : null}
-                {index === 0 && leadPhone ? (
-                  <Field
-                    label={t("party.phoneLabel")}
-                    hint={t("party.phoneHint")}
-                    className="text-base sm:col-span-2"
-                    error={fieldErrors?.phone}
-                  >
-                    <input
-                      name="phone"
-                      type="tel"
-                      maxLength={30}
-                      autoComplete="tel"
-                      inputMode="tel"
-                      value={phone}
-                      onChange={(event) => setPhone(event.target.value)}
-                      className={controlClass}
-                    />
-                  </Field>
-                ) : null}
-              </FieldGrid>
+                      className="text-sm text-muted"
+                    >
+                      {t("party.useMainContactEmail")}
+                    </ChoiceRow>
+                  ) : null}
+                  {index === 0 && leadPhone ? (
+                    <Field
+                      label={t("party.phoneLabel")}
+                      hint={t("party.phoneHint")}
+                      className="text-base"
+                      error={fieldErrors?.phone}
+                    >
+                      <input
+                        name="phone"
+                        type="tel"
+                        maxLength={30}
+                        autoComplete="tel"
+                        inputMode="tel"
+                        value={phone}
+                        onChange={(event) => setPhone(event.target.value)}
+                        className={controlClass}
+                      />
+                    </Field>
+                  ) : null}
+                </FieldGrid>
+              </div>
             </fieldset>
           </div>
         );

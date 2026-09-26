@@ -26,10 +26,7 @@ export function HandEntryPrompt({
       title={heading}
       body={body}
       action={
-        <Link
-          href={href}
-          className={buttonClass({ variant: "primary", size: "sm", className: "mt-4" })}
-        >
+        <Link href={href} className={buttonClass({ variant: "primary", size: "sm" })}>
           {actionLabel}
         </Link>
       }

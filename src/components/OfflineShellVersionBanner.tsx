@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { buttonClass } from "@/components/ui/button";
 import { getActiveOfflineShellVersion } from "@/lib/offline-manifest-store";
 import { OFFLINE_MANIFEST_SHELL_VERSION } from "@/lib/offline-manifests";
@@ -45,7 +46,9 @@ export function OfflineShellVersionBanner({ copy }: { copy: OfflineShellVersionB
   // resolves outright, so there's nothing left to warn about separately.
   if (updateReady) {
     return (
-      <p className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-accent/40 bg-accent/10 p-3 text-sm font-semibold">
+      <p
+        className={`mb-4 flex flex-wrap items-center gap-3 ${OFFLINE_NOTICE_CLASS} border-accent/40 bg-accent/10 font-semibold`}
+      >
         {copy.updateBanner}
         <button
           type="button"
@@ -60,7 +63,7 @@ export function OfflineShellVersionBanner({ copy }: { copy: OfflineShellVersionB
 
   if (stale) {
     return (
-      <p className="mb-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm font-semibold">
+      <p className={`mb-4 ${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 font-semibold`}>
         {copy.staleBanner}
       </p>
     );

@@ -6,7 +6,7 @@ export default function TookACallLoading() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-48" />
+        <ShopPageHeaderSkeleton description={false} titleWidth="w-48" />
         <div className={sectionCardClass({ padding: "lg", className: "mt-8" })}>
           <div className="h-5 w-32 rounded bg-surface-sunken" />
           <div className="mt-4 grid gap-4 sm:grid-cols-3">

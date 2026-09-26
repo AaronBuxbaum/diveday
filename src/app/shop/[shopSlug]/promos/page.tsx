@@ -524,7 +524,7 @@ export default async function PromosPage({
              unconnected the banner above is the only next move there is. */
           action={
             connected ? (
-              <a href="#new-code" className={buttonClass({ className: "mt-4" })}>
+              <a href="#new-code" className={buttonClass()}>
                 {t("promos.empty.action")}
               </a>
             ) : null
@@ -553,7 +553,6 @@ export default async function PromosPage({
         href={promosHref}
         total={t("promos.pagination.total", { count: promoPage.total })}
         words={staffPagerWords(t)}
-        className="mt-4"
       />
 
       {/* One heading over both branches — the list and its empty state stand
@@ -571,7 +570,7 @@ export default async function PromosPage({
           action={
             <Link
               href={`/shop/${shopSlug}/schedule/board`}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
             >
               {t("promos.tripDeals.emptyAction")}
             </Link>
@@ -587,7 +586,6 @@ export default async function PromosPage({
         href={dealsHref}
         total={t("promos.tripDeals.pagination.total", { count: dealPage.total })}
         words={staffPagerWords(t)}
-        className="mt-4"
       />
     </main>
   );

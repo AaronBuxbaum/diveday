@@ -76,6 +76,8 @@ export function DateRequestForm({
   contactEmail,
   contactPhone,
   collapsible = false,
+  className = "",
+  headingClassName = LEAD_TITLE_CLASS,
   copy,
 }: {
   submitRequest: (prevState: InquiryFormState, formData: FormData) => Promise<InquiryFormState>;
@@ -93,6 +95,25 @@ export function DateRequestForm({
   contactPhone: string | null;
   /** Collapse the low-frequency schedule request behind its own disclosure. */
   collapsible?: boolean;
+  /**
+   * The section's place among its host's sections — its top margin. The host
+   * owns it, because only the host knows the rhythm its sections keep: the
+   * course page's are `mt-14` apart, the storefront's `mt-12`. The section
+   * used to bake `mt-12` in, and stood 48px under the course page's FAQ where
+   * every other section there stands 56px; a margin passed beside a baked one
+   * resolves by stylesheet order, not by which was written. Ignored by the
+   * collapsible row, which is one row of its host's group.
+   */
+  className?: string;
+  /**
+   * The section heading's rung, which is the host's: a lead (24px) on the
+   * course page, whose sections all head themselves that way, and the brand
+   * face at `SECTION_TITLE_CLASS` (18px) on the storefront, where every other
+   * section head is. Hard-coded, it made "Ask us for a day" the one 24px head
+   * on an off-season storefront. Ignored by the collapsible row, whose
+   * `DisclosureRow` owns its heading.
+   */
+  headingClassName?: string;
   copy: DateRequestCopy;
 }) {
   const t = useTranslations();
@@ -455,8 +476,12 @@ export function DateRequestForm({
   }
 
   return (
-    <section id={sectionId} aria-labelledby={headingId} className="mt-12 scroll-mt-8">
-      <h2 id={headingId} className={LEAD_TITLE_CLASS}>
+    <section
+      id={sectionId}
+      aria-labelledby={headingId}
+      className={`scroll-mt-8 ${className}`.trim()}
+    >
+      <h2 id={headingId} className={headingClassName}>
         {copy.heading}
       </h2>
       {body}

@@ -3,6 +3,17 @@
 import { useEffect, useState } from "react";
 import type { EditorSectionRef, EditorUnsavedCopy } from "./EditorSection";
 
+/** The rail's outer box, shared with `EditorRailSkeleton`. */
+const RAIL_CLASS = "mb-6 lg:sticky lg:top-(--chrome-h) lg:mb-0 lg:self-start lg:pt-1";
+
+/**
+ * The list inside it: a wrap-row below `lg`, a column from `lg` up — the jump
+ * row's own shape, without a second landmark to carry it. Shared with
+ * `EditorRailSkeleton`.
+ */
+const RAIL_LIST_CLASS =
+  "-ms-3 flex flex-wrap items-center gap-x-1 lg:ms-0 lg:flex-col lg:items-stretch lg:gap-x-0 lg:gap-y-0.5";
+
 /**
  * **Where you are in a long editor** — ADR 20260827-the-shops-shelves, the
  * long-form editor pattern: "a sticky section rail beside unboxed sections …
@@ -43,13 +54,8 @@ export function EditorRail({
     // Hiding one with `lg:hidden` does not help: both are in the accessibility
     // tree at every width, and it is the *landmark* that duplicates, not the
     // pixels. So the list changes shape at `lg` and the landmark does not.
-    <nav
-      aria-label={navLabel}
-      className="mb-6 lg:sticky lg:top-(--chrome-h) lg:mb-0 lg:self-start lg:pt-1"
-    >
-      {/* A wrap-row below `lg`, a column from `lg` up — the jump row's own
-          shape, without a second landmark to carry it. */}
-      <ul className="-ms-3 flex flex-wrap items-center gap-x-1 lg:ms-0 lg:flex-col lg:items-stretch lg:gap-x-0 lg:gap-y-0.5">
+    <nav aria-label={navLabel} className={RAIL_CLASS}>
+      <ul className={RAIL_LIST_CLASS}>
         {sections.map((section) => {
           // Current is a *desktop* state: the phone row sits above the section
           // you are already looking at, so marking one there says nothing.
@@ -59,12 +65,20 @@ export function EditorRail({
               {/* The ring is inside the row, as on the settings rail: from
                   `lg` up this is a column of stacked rows, and below it the
                   row's `-ms-3` puts the first link 4px from a 390px screen's
-                  edge, which cut an outset ring by a pixel. */}
+                  edge, which cut an outset ring by a pixel.
+
+                  Hover lives in each branch, not on every row: a bare
+                  `hover:bg-surface-sunken` outranked the current row's
+                  `lg:bg-primary-tint`, so the one tinted row went grey under
+                  the pointer. Below `lg` the current row carries no tint, so
+                  there it hovers like the rest. */}
               <a
                 href={`#${section.id}`}
                 aria-current={active ? "true" : undefined}
-                className={`flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-sunken hover:text-foreground focus-visible:focus-ring-inset lg:w-full ${
-                  active ? "text-muted lg:bg-primary-tint lg:text-primary" : "text-muted"
+                className={`flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:focus-ring-inset lg:w-full ${
+                  active
+                    ? "text-muted max-lg:hover:bg-surface-sunken max-lg:hover:text-foreground lg:bg-primary-tint lg:text-primary"
+                    : "text-muted hover:bg-surface-sunken hover:text-foreground"
                 }`}
               >
                 {section.label}
@@ -74,6 +88,44 @@ export function EditorRail({
         })}
       </ul>
     </nav>
+  );
+}
+
+/**
+ * **The rail, before the editor arrives** — for a long editor's `loading.tsx`
+ * (docs/design/pixel-craft.md, class 11: a skeleton has the loaded page's
+ * geometry).
+ *
+ * The same two boxes as `EditorRail`, holding one 44px stub per section in
+ * place of each link: a borderless wrap below `lg` with the rail's `mb-6`, a
+ * column from `lg` up. The editors' skeletons each drew a rail of their own — one
+ * row of three 36px pills over a hairline with `mb-8` — so on a phone the whole
+ * form dropped about 131px when the eleven-section dive-site editor arrived.
+ *
+ * **How many rows the phone wrap takes is the stubs' widths**, and each row is
+ * 44px of form. `count` draws uniform `w-24` stubs, which is right where the
+ * editor's labels wrap the way they do (the course editor's eight, at every
+ * swept width). `widths` names each stub's width class instead, in section
+ * order, for an editor whose labels do not: eleven `w-24` stubs wrap three to a
+ * row at 390, four rows, where the dive-site editor's labels wrap 3/3/2/2/1,
+ * five, so its form still dropped 44px. Either way the count is the editor's
+ * own, read from its section list where the page has one.
+ */
+export function EditorRailSkeleton(props: { count: number } | { widths: readonly string[] }) {
+  const widths =
+    "widths" in props ? props.widths : Array.from({ length: props.count }, () => "w-24");
+  return (
+    <div className={RAIL_CLASS}>
+      <div className={RAIL_LIST_CLASS}>
+        {widths.map((width, entry) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: a fixed run of placeholders, never reordered.
+            key={entry}
+            className={`h-11 ${width} rounded-lg bg-surface-sunken lg:w-full`}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
