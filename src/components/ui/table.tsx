@@ -159,7 +159,10 @@ export function Table({
         .replace(/\s+/g, " ")
         .trim()}
     >
-      <div className="overflow-x-auto print:overflow-visible">
+      {/* `table-scroll-shell` fades the far edge while more table lies past it
+          (globals.css): a wide log table was cut mid-word at the card edge
+          with no sign that it scrolls. */}
+      <div className="table-scroll-shell overflow-x-auto print:overflow-visible">
         <table
           className={`w-full table-layout-fixed text-sm ${minWidth ? MIN_WIDTH[minWidth] : ""} ${className}`.trim()}
           style={{ tableLayout: "fixed" }}

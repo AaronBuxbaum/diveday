@@ -1,4 +1,7 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "./table";
@@ -225,6 +228,34 @@ describe("Table", () => {
     expect(baseline).toHaveClass("align-baseline");
     expect(baseline).not.toHaveClass("align-top");
     expect(screen.getByRole("cell", { name: "Default" })).toHaveClass("align-top");
+  });
+
+  it("fades the scroll region's far edge while there is more table to scroll to", () => {
+    // A 1152px log table in a 974px shell was cut mid-word at the card edge
+    // with nothing to say it scrolls (K-91). The fade is a scroll-driven
+    // animation on the region's own inline scroll, so a table that fits has an
+    // inactive timeline and no fade, and paper never gets one.
+    render(
+      <Table minWidth="72rem">
+        <TBody>
+          <tr>
+            <Td>Row</Td>
+          </tr>
+        </TBody>
+      </Table>,
+    );
+    const scrollRegion = screen.getByRole("table").parentElement;
+    expect(scrollRegion).toHaveClass("overflow-x-auto", "table-scroll-shell");
+
+    const css = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../../app/globals.css"),
+      "utf8",
+    ).replace(/\/\*[\s\S]*?\*\//g, "");
+    const rule = css.match(/\.table-scroll-shell\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(rule).toMatch(/animation-timeline:\s*scroll\(self inline\)/);
+    expect(rule).toMatch(/mask-image:/);
+    const print = css.match(/@media print\s*\{\s*\.table-scroll-shell\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(print).toMatch(/mask-image:\s*none/);
   });
 
   it("keeps a printed row on one page", () => {

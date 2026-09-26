@@ -2562,6 +2562,51 @@ details[open]::details-content {
   }
 }
 
+/*
+ * **A table wider than its shell says so at the far edge.** `Table`'s scroll
+ * region (src/components/ui/table.tsx) scrolls sideways by design — at eight
+ * roll-call columns the departure log is wider than the desktop column (#1035,
+ * #1052) — and it cut the last column mid-word at the card edge with nothing to
+ * say more lay past it: 178px hidden at 1280. The region's inline-end edge now
+ * fades out over 2rem, and the fade closes as the reader scrolls to the end.
+ *
+ * The scroll is the clock, as in the title fold above: `scroll(self inline)`
+ * reads the region's own sideways scroll. A table that fits has nothing to
+ * scroll, so its timeline is inactive, the animation applies nothing, and the
+ * mask's stop sits at its `0px` initial value — no fade. Nothing moves here; the
+ * fade follows the hand, so it needs no reduced-motion stop of its own. Paper
+ * prints the whole table (`print:overflow-visible`) and gets no fade.
+ */
+@property --table-scroll-fade {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@supports (animation-timeline: scroll()) {
+  .table-scroll-shell {
+    mask-image: linear-gradient(to left, transparent, #000 var(--table-scroll-fade));
+    animation: table-scroll-fade linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+
+@keyframes table-scroll-fade {
+  from {
+    --table-scroll-fade: 2rem;
+  }
+  to {
+    --table-scroll-fade: 0px;
+  }
+}
+
+@media print {
+  .table-scroll-shell {
+    mask-image: none;
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
