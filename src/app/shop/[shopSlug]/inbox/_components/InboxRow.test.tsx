@@ -149,6 +149,43 @@ describe("where the row sets its date and its Delete", () => {
   });
 });
 
+/**
+ * **A stranger's words are read here or nowhere** (pixel-craft class 8,
+ * K-460). A door row's excerpt is one line because the whole message is on
+ * the record one tap away; a stranger's row has no record, so its one line cut
+ * "Hello, do you run night dives in October? Two of us, b…" at 328px of a
+ * 534px line and nothing could open the rest. It wraps, up to three lines.
+ */
+describe("a stranger's message, which has no record to be read on", () => {
+  const WORDS = "Hello, do you run night dives in October? Two of us, both AOW.";
+
+  it("wraps the stranger's words instead of cutting them at one line", () => {
+    renderRow({ personId: null, fromAddress: "marta.keller@example.net", body: WORDS }, null);
+    const words = screen.getByText(WORDS);
+    expect(words).toHaveClass("line-clamp-3", "wrap-anywhere");
+    expect(words).not.toHaveClass("truncate");
+  });
+
+  it("wraps them on a channel with no subject too", () => {
+    renderRow(
+      {
+        personId: null,
+        channel: "whatsapp",
+        subject: null,
+        fromAddress: "+13055550142",
+        body: WORDS,
+      },
+      null,
+    );
+    expect(screen.getByText(WORDS)).toHaveClass("line-clamp-3");
+  });
+
+  it("keeps a door row's excerpt to one line, since the record holds the rest", () => {
+    renderRow({ body: WORDS });
+    expect(screen.getByText(WORDS)).toHaveClass("truncate");
+  });
+});
+
 describe("what a row with a record behind it does not offer", () => {
   it("has no Delete: it has a door and a composer, and the way to finish it is to answer it", () => {
     renderRow();

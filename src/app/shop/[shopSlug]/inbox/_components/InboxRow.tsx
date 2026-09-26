@@ -33,7 +33,8 @@ const KEYWORD_KEYS: Record<"cancel" | "move" | "confirm", StaffMessageKey> = {
 /**
  * The first line of what a diver wrote, for a list that is scanned rather than
  * read. The whole message is on their record one tap away, and a row carrying
- * three paragraphs would bury the twelve rows under it.
+ * three paragraphs would bury the twelve rows under it. A stranger has no
+ * record, so their row wraps this instead of cutting it (`wordsCut` below).
  */
 const EXCERPT_LENGTH = 140;
 
@@ -114,6 +115,12 @@ export function InboxRow({
         linkLabel: t("inbox.openRecord", { name }),
       }
     : { reserveDoorSlot: true };
+  // **A stranger's words wrap** (pixel-craft class 8, K-460). A door row's
+  // excerpt is one line because the whole message is on the record one tap
+  // away; a stranger has no record, so one line cut their words mid-sentence
+  // with nothing able to open the rest. Three lines hold a 140-character
+  // excerpt at a phone's width.
+  const wordsCut = message.personId ? "truncate" : "line-clamp-3 wrap-anywhere";
   const facts = [
     // The address is on the stranger's row only: for a diver on file the name
     // above already says who this is, and their address is on their record.
@@ -146,7 +153,7 @@ export function InboxRow({
               apologising for an empty one. */}
           {subject ? <p className="truncate font-medium">{subject}</p> : null}
           {/* The diver's own words, and nothing added to them. */}
-          <p className={subject ? "mt-0.5 truncate text-sm text-muted" : "truncate"}>
+          <p className={subject ? `mt-0.5 ${wordsCut} text-sm text-muted` : wordsCut}>
             {excerpt(message.body)}
           </p>
           {facts.length > 0 ? (
