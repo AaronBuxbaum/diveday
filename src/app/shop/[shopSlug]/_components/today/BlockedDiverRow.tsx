@@ -163,7 +163,7 @@ export function BlockedDiverRow({
         className={
           layout === "below"
             ? buttonClass({ variant: "secondary", size: "sm" })
-            : buttonClass({ variant: "secondary", className: "shrink-0" })
+            : buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })
         }
       >
         {fix.label}
