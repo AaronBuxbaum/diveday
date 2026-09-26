@@ -18,7 +18,7 @@ const EMBEDDABLE_TRIP_PAGE = /^\/s\/[a-z0-9-]+\/trips\/[^/]+\/?$/;
  * The calendar is the schedule page in its `?embed=1` mode, as before. It
  * renders from `embed/schedule` (see `embedRenderPath`), which is deliberately
  * not on this list: a widget is framable by path alone, and that segment is
- * only ever reached through the proxy's rewrite.
+ * framable only in the shape the proxy's rewrite gives it, with `?embed=1`.
  */
 export const EMBED_WIDGETS = ["grid", "departure", "courses"] as const;
 export type EmbedWidget = (typeof EMBED_WIDGETS)[number];
@@ -100,15 +100,33 @@ const INTERNAL_EMBED_ROUTE = new RegExp(
 );
 
 /**
- * Either internal segment, named in the URL. They exist to be rewritten onto,
- * never to be asked for: a direct hit is not an embed request, so it would
- * render the frame's view of a page at a second URL, and the proxy refuses it
- * with a plain 404 before anything else runs. The shop segment is matched at
- * any spelling, because refusing more than the router would serve costs
- * nothing here.
+ * Either internal segment, named in the URL. They exist to be rewritten onto:
+ * the proxy passes one on only in the shape its own rewrite gives it (see
+ * `embedPublicPath`) and refuses it with a plain 404 in any other, before
+ * anything else runs. The shop segment is matched at any spelling, because
+ * refusing more than the router would serve costs nothing here.
  */
 export function isInternalEmbedRoute(pathname: string): boolean {
   return INTERNAL_EMBED_ROUTE.test(pathname);
+}
+
+const EMBEDDED_SCHEDULE_PATH = new RegExp(`^(/s/[a-z0-9-]+)/embed/${EMBEDDED_SCHEDULE_SEGMENT}/?$`);
+const EMBEDDED_TRIP_PATH = new RegExp(`^(/s/[a-z0-9-]+/trips/[^/]+)/${EMBEDDED_TRIP_SEGMENT}/?$`);
+
+/**
+ * **The public page an internal segment stands for** — `embedRenderPath`
+ * undone, or `null` for any path that is not one of its results.
+ *
+ * On a server started on `127.0.0.1` the proxy's rewrite is not routed
+ * internally: Next hands it back to the same server as a request of its own,
+ * and the proxy runs a second time with the internal path as its pathname
+ * ("Whether the proxy runs twice" in `src/proxy.ts`). That pass has to judge
+ * the page the host framed — its existence, its framing exception, the path
+ * the shell is told — and this is how it knows which page that is, from the
+ * URL alone rather than from a header a client could send.
+ */
+export function embedPublicPath(pathname: string): string | null {
+  return (EMBEDDED_SCHEDULE_PATH.exec(pathname) ?? EMBEDDED_TRIP_PATH.exec(pathname))?.[1] ?? null;
 }
 
 /**

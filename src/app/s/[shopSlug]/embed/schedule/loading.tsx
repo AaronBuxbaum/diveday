@@ -1,3 +1,4 @@
+import { EmbedChromeCollapse } from "../../_components/EmbedChromeCollapse";
 import { WeekLedgerSkeleton } from "../../_components/WeekLedgerSkeleton";
 
 /**
@@ -10,12 +11,16 @@ import { WeekLedgerSkeleton } from "../../_components/WeekLedgerSkeleton";
  * then vanished when the list arrived 12px from it.
  *
  * `loading.test.tsx` reads the column off the page's own embed branch, so the
- * two cannot drift apart.
+ * two cannot drift apart. Nothing above it either: `EmbedChromeCollapse` keeps
+ * the layout's chrome bar out of the frame.
  */
 export default function EmbeddedScheduleLoading() {
   return (
-    <main className="w-full flex-1 px-3 py-4">
-      <WeekLedgerSkeleton />
-    </main>
+    <>
+      <EmbedChromeCollapse />
+      <main className="w-full flex-1 px-3 py-4">
+        <WeekLedgerSkeleton />
+      </main>
+    </>
   );
 }

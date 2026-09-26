@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { uuidParam } from "@/lib/uuid";
+import { EmbedChromeCollapse } from "../../../_components/EmbedChromeCollapse";
 import TripDetailPage, { generateMetadata as tripMetadata } from "../page";
 
 // The frame paints inside its own shell like every route (ADR
@@ -18,15 +19,17 @@ export function generateMetadata(props: {
 /**
  * **The framed trip page** (K-382; ADR 20260726-schedule-embed, amendment
  * 2026-09-25). `src/proxy.ts` rewrites `/s/<slug>/trips/<id>?embed=1` here
- * (`embedRenderPath` in `src/lib/embed-routes.ts`) and refuses this path to
- * anybody who asks for it by name, because a segment's `loading.tsx` cannot
- * read a query string: under the trip page's own segment a shop's booking
- * widget painted a centred 528px column and then snapped to the frame's.
+ * (`embedRenderPath` in `src/lib/embed-routes.ts`), because a segment's
+ * `loading.tsx` cannot read a query string: under the trip page's own segment
+ * a shop's booking widget painted a centred 528px column and then snapped to
+ * the frame's. It refuses this path in any shape but the one its rewrite
+ * gives it (`isInternalEmbedRoute`).
  *
  * It is the trip page itself, in embed mode, and nothing else: the booking,
  * its capacity check and its server actions stay in one place. The mode is set
  * here as well as by the query the rewrite carries, so this segment can never
- * render the unframed page.
+ * render the unframed page. `EmbedChromeCollapse` goes on keeping the
+ * layout's chrome bar hidden if this lands before the chrome does.
  */
 export default async function EmbeddedTripPage({
   params,
@@ -38,9 +41,12 @@ export default async function EmbeddedTripPage({
   const { id } = await params;
   if (!uuidParam(id)) notFound();
   return (
-    <TripDetailPage
-      params={params}
-      searchParams={searchParams.then((query) => ({ ...query, embed: "1" }))}
-    />
+    <>
+      <EmbedChromeCollapse />
+      <TripDetailPage
+        params={params}
+        searchParams={searchParams.then((query) => ({ ...query, embed: "1" }))}
+      />
+    </>
   );
 }

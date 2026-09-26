@@ -297,6 +297,7 @@ export function PublicShopChromePlaceholder({ label }: { label: DiverTranslator 
       <div
         className="h-(--chrome-h) border-b border-border bg-background"
         data-suspense-placeholder
+        data-public-shop-chrome-placeholder
         aria-hidden
       />
     </>

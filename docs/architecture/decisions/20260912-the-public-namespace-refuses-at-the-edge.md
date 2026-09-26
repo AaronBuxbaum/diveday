@@ -221,14 +221,27 @@ the edge can verify. The private-charter departure looks like the same hole and 
 id is a random uuid with no namespace to sweep, and the trip page carries no `isPrivate` check at
 all, so whoever holds the id already reads the whole booking page.
 
-**The proxy runs twice on a refusal, and the second pass is the one the page sees.** Next routes a
-rewrite from the top, matcher included, so `proxy` is re-entered with `/_not-found` as its own
-pathname and recomputes every header the first pass stamped against a URL that names nothing. Left
-alone that blanks them: `REQUEST_PATH_HEADER` came back as the literal string `/_not-found` and the
-refused shop came back empty, so decision 3's frame silently reverted to DiveDay's sales-page 404 —
-green in the unit tests, wrong in a real build. The second pass carries those two values forward
-instead of re-deriving them; `src/proxy.ts` holds the reasoning and `src/proxy.test.ts` the
-regression guard. Anything else that has to reach a refusal's render pays the same tax.
+**Whether the proxy runs twice depends on the host the server was started on, and on a refusal
+the second pass, where there is one, is the one the page sees.** A rewrite is an absolute URL built
+from `req.nextUrl`, and `NextURL` spells every loopback host `localhost`
+(`next/dist/server/web/next-url.js`). Next's router compares that URL's origin with the one it built
+the request from, which keeps `--hostname` as given (`getRelativeURL` in
+`next/dist/server/lib/router-utils/resolve-routes.js`). A server started on `127.0.0.1`, as every
+e2e server is (`e2e/servers.ts`), gets a mismatch on every rewrite, takes it for an external one and
+proxies it back to itself as a new request (`proxyRequest` in
+`next/dist/server/lib/router-server.js`): `proxy` runs again with `/_not-found` as its own pathname
+and would recompute every header the first pass stamped against a URL that names nothing. A server
+started on `localhost` routes the rewrite internally and runs the proxy once. This paragraph used to
+say Next routes every rewrite "from the top, matcher included"; measured on a minimal app under
+`next build` + `next start` of Next 16.3.6 on 2026-09-26, that holds for the first host and not the
+second, and it holds for an ordinary rewrite exactly as for this one. Left alone the second pass blanks both
+headers: `REQUEST_PATH_HEADER` came back as the literal string `/_not-found` and the refused shop
+came back empty, so decision 3's frame silently reverted to DiveDay's sales-page 404 — green in the
+unit tests, wrong in a real build. The second pass carries those two values forward instead of
+re-deriving them; `src/proxy.ts` holds the reasoning and `src/proxy.test.ts` the regression guard.
+Every other rewrite the proxy makes has to be right on both kinds of server too; ADR
+20260726-schedule-embed's 2026-09-25 amendment is the second one, and it judges its second pass
+from the URL instead of carrying anything.
 
 **The refusal carries its own `no-store`, and it is a dependence removed rather than a leak fixed.**
 Answering with a rewrite keeps the original URL, so whatever cache directive the `/_not-found` render

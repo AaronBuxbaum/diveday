@@ -26,6 +26,7 @@ import {
   EMBED_FONT_HEADER,
   EMBED_LOCALE_HEADER,
   EMBED_REQUEST_HEADER,
+  embedPublicPath,
   embedRenderPath,
   isEmbeddableShopRoute,
   isEmbedWidgetRoute,
@@ -482,12 +483,16 @@ function reportRefusedQuery(shape: PublicRouteShape["kind"], code: string, now: 
  * This used to ask a second time, which made a dead URL the most expensive
  * request in the public namespace — three reads, unauthenticated, for a path
  * nobody legitimate requests.
+ *
+ * `pathname` is the public page being judged: the request's own, or, for an
+ * internal segment a framed page renders from, the page it stands for.
  */
 async function refusedPublicRoute(
   req: NextRequest,
+  pathname: string,
 ): Promise<{ liveShopSlug: string | null } | null> {
   if (req.method !== "GET" && req.method !== "HEAD") return null;
-  const shape = publicRouteShape(req.nextUrl.pathname);
+  const shape = publicRouteShape(pathname);
   if (!shape) return null;
   // Already an answer. A segment judged against a closed list this repository
   // holds — a switching guide, a demo story, a town whose slug no locality
@@ -618,16 +623,28 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // (`!== "1"`, so the page renders its full non-embed chrome) — a page
   // framable by whoever crafted that URL. `getAll()` and requiring
   // exactly one value keeps this in lockstep with how the page reads it.
+  const embedParams = req.nextUrl.searchParams.getAll("embed");
+  const asksForEmbed = embedParams.length === 1 && embedParams[0] === "1";
+  // An internal segment a framed page renders from, reached as a request of
+  // its own: the embed rewrite below, coming back through this function on a
+  // server where rewrites do (see "Whether the proxy runs twice"). It stands
+  // for the public page the host framed, and everything below judges that
+  // page — its existence, its framing exception, the path the shell is told —
+  // so the second pass reaches the first's verdict instead of refusing the
+  // frame or stamping `DENY` over it. Read off the URL, never off a header
+  // the first pass left: a client can send those.
+  const embedStandsFor = asksForEmbed ? embedPublicPath(req.nextUrl.pathname) : null;
+  const publicPath = embedStandsFor ?? req.nextUrl.pathname;
   // An embed path naming no widget is a 404 here, not in the page: the
   // static shell would already have answered 200 (see isUnknownEmbedWidgetRoute).
-  // So is either segment a framed page renders from, asked for by name: they
-  // exist to be rewritten onto (below), never to be requested
-  // (isInternalEmbedRoute).
+  // So is an internal segment in any shape the rewrite does not give it
+  // (isInternalEmbedRoute) — and `embed/schedule` names no widget either.
   // With a body: Chromium treats a bodiless error status as a failed
   // navigation (ERR_HTTP_RESPONSE_CODE_FAILURE) rather than a 404 page.
   if (
-    isUnknownEmbedWidgetRoute(req.nextUrl.pathname) ||
-    isInternalEmbedRoute(req.nextUrl.pathname)
+    (isUnknownEmbedWidgetRoute(req.nextUrl.pathname) ||
+      isInternalEmbedRoute(req.nextUrl.pathname)) &&
+    !embedStandsFor
   ) {
     return new NextResponse("Not found", {
       status: 404,
@@ -648,16 +665,34 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // every route this can refuse is in the public namespace, where the gate has
   // never had anything to say.
   //
-  // **The proxy runs twice on a refusal, and the second pass is the one the
-  // page sees.** Next's router applies the rewrite and then routes the new
-  // path from the top, matcher included — so `proxy` is re-entered with
-  // `/_not-found` as its own pathname, and every header the first pass stamped
-  // is recomputed from a URL that names nothing. Left alone it blanks them
-  // both: `REQUEST_PATH_HEADER` came back as the literal string
+  // **Whether the proxy runs twice depends on the host the server was started
+  // on, so every rewrite here is written to be right either way.** A rewrite
+  // is an absolute URL built from `req.nextUrl`, and `NextURL` spells every
+  // loopback host `localhost` (next/dist/server/web/next-url.js). The router
+  // compares that URL's origin with the one it built the request from, which
+  // keeps `--hostname` as given (`getRelativeURL` in
+  // next/dist/server/lib/router-utils/resolve-routes.js). A server started on
+  // `127.0.0.1` — every e2e server (`e2e/servers.ts`) — gets a mismatch on
+  // every rewrite, takes it for an external one, and proxies it back to itself
+  // as a new request (`proxyRequest` in next/dist/server/lib/router-server.js):
+  // `proxy` runs again with the rewritten path as its own pathname and the
+  // first pass's request headers on the request, and both passes' response
+  // headers reach the browser, the second's winning where they collide. A
+  // server started on `localhost` routes the rewrite internally and runs this
+  // function once. Measured on a minimal app under `next build` + `next start`
+  // of Next 16.3.6, both ways, for a rewrite to `/_not-found` and for the embed
+  // rewrite alike (2026-09-26).
+  //
+  // So on a refusal the second pass, where there is one, is the one the page
+  // sees: `/_not-found` is its pathname, and every header the first pass
+  // stamped would be recomputed from a URL that names nothing. Left alone it
+  // blanks them both: `REQUEST_PATH_HEADER` came back as the literal string
   // `/_not-found`, and the refused shop came back empty, which is a
   // shop-framed 404 silently reverting to DiveDay's sales-page one (issue
   // #765). The facts belong to the pass that did the lookups, so this pass
   // carries them rather than re-deriving them from a path they are not in.
+  // The embed rewrite's second pass carries nothing: its own path says which
+  // page it stands for (`embedStandsFor`, above).
   //
   // Carrying a value off the incoming request is the one place this file does
   // not overwrite a client-supplied header, so what forging one buys is worth
@@ -680,15 +715,12 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // lookup is weighed where the lookup would have to go: the note on
   // `refusedShopSlug` in `src/app/not-found.tsx`.
   const isRefusalRender = req.nextUrl.pathname === NOT_FOUND_ROUTE;
-  const refused = isRefusalRender ? null : await refusedPublicRoute(req);
-  const embedParams = req.nextUrl.searchParams.getAll("embed");
+  const refused = isRefusalRender ? null : await refusedPublicRoute(req, publicPath);
   // A widget view is an embed by path; the schedule and trip pages are embeds
-  // only with exactly one `?embed=1` (see the note above).
+  // only with exactly one `?embed=1` (see the note above), at their public
+  // path or at the internal segment that stands for it.
   const isEmbedRequest =
-    isEmbedWidgetRoute(req.nextUrl.pathname) ||
-    (isEmbeddableShopRoute(req.nextUrl.pathname) &&
-      embedParams.length === 1 &&
-      embedParams[0] === "1");
+    isEmbedWidgetRoute(req.nextUrl.pathname) || (isEmbeddableShopRoute(publicPath) && asksForEmbed);
   // What the host page told the loader about itself (Harbor's "inherit the
   // host page"), validated here and forwarded as headers. Only on an embed
   // request: a visitor on the storefront itself cannot recolour it by URL.
@@ -714,9 +746,12 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // frame's column. This is the one layer that reads the query before the
   // shell goes out, so an embed request is rewritten onto the internal segment
   // `embedRenderPath` names, query and all, whose skeleton is the frame's own.
-  // Everything else above and below is decided by the request the host page
-  // made: the framing exception, the embed header, and the original pathname.
-  // A refusal and the auth gate both outrank it.
+  // Everything else above and below is decided by the page the host framed:
+  // the framing exception, the embed header, and the public pathname. Where
+  // the rewrite comes back through here, the internal path is judged as that
+  // page (`publicPath`), and it is not rewritten again: `embedRenderPath`
+  // names no segment for a segment. A refusal and the auth gate both outrank
+  // the rewrite.
   const embedRender = isEmbedRequest ? embedRenderPath(req.nextUrl.pathname) : null;
   const res = refused
     ? NextResponse.rewrite(new URL(NOT_FOUND_ROUTE, req.nextUrl))
@@ -743,9 +778,10 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // `no-store` rather than the referral cookies' `private, no-store`, and
   // stamped before them so their stronger directive wins where both apply.
   //
-  // Both passes: Next routes the rewrite from the top, so the second pass sees
-  // `/_not-found` with `refused` null, and a bare `notFound()` from anywhere
-  // else in the app lands there too. No 404 in this product is worth caching.
+  // Both passes: where the rewrite comes back through here (see "Whether the
+  // proxy runs twice"), the second pass sees `/_not-found` with `refused`
+  // null, and so does anything that asks for `/_not-found` by name. No 404 in
+  // this product is worth caching.
   if (refused || isRefusalRender) res.headers.set("Cache-Control", "no-store");
   rememberPartnerReferral(req, res);
   rememberBuddyReferral(req, res);
@@ -772,7 +808,7 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
     [EMBED_LOCALE_HEADER]: embedLocale,
     [REQUEST_PATH_HEADER]: isRefusalRender
       ? (req.headers.get(REQUEST_PATH_HEADER) ?? req.nextUrl.pathname)
-      : req.nextUrl.pathname,
+      : publicPath,
     [REFUSED_SHOP_SLUG_HEADER]: isRefusalRender
       ? (req.headers.get(REFUSED_SHOP_SLUG_HEADER) ?? "")
       : (refused?.liveShopSlug ?? ""),

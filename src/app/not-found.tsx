@@ -93,7 +93,8 @@ async function RequestScopedNotFound() {
  * **A claim rather than a fact, and deliberately left one.** `src/proxy.ts`
  * overwrites this header on every request it sees except the refusal's own
  * render, where it carries the incoming value forward instead — there is no
- * other way, because Next routes a rewrite from the top and the pass that
+ * other way, because on a server where the refusal's rewrite comes back
+ * through the proxy ("Whether the proxy runs twice" there) the pass that
  * reaches this page is the one whose URL is `/_not-found` and which knows
  * nothing — and its matcher carries a static-asset escape hatch besides. So a
  * client that is not a browser can request `/_not-found` with this header set

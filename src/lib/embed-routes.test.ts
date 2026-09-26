@@ -5,6 +5,7 @@ import { pathToRegexp } from "next/dist/compiled/path-to-regexp";
 import { describe, expect, it } from "vitest";
 import {
   EMBED_WIDGETS,
+  embedPublicPath,
   embedRenderPath,
   isEmbeddableShopRoute,
   isEmbedWidgetRoute,
@@ -140,8 +141,9 @@ describe("isUnknownEmbedWidgetRoute", () => {
  * page streamed into a shop's iframe under their full-page skeletons — a
  * centred column under a bar — and then snapped to the frame's full-width
  * column. The proxy rewrites an embed request onto an internal segment whose
- * skeleton is the frame's own; these pin where each one goes, and that neither
- * segment is a URL anyone may ask for.
+ * skeleton is the frame's own; these pin where each one goes, which public
+ * page each segment stands for when the rewrite comes back through the proxy,
+ * and that neither segment is framable by its path.
  */
 describe("embedRenderPath", () => {
   it("sends the framed schedule and trip page to their own segments", () => {
@@ -202,5 +204,33 @@ describe("isInternalEmbedRoute", () => {
     expect(isInternalEmbedRoute("/s/blue-mantis/embed/grid")).toBe(false);
     expect(isInternalEmbedRoute("/s/blue-mantis/trips/abc-123/calendar")).toBe(false);
     expect(isInternalEmbedRoute("/shop/blue-mantis/trips/abc-123/embed")).toBe(false);
+  });
+});
+
+describe("embedPublicPath", () => {
+  it("names the public page each internal segment stands for, undoing embedRenderPath", () => {
+    // On a server started on 127.0.0.1 the rewrite is a request of its own,
+    // and this is how the proxy's second pass knows which page it is judging.
+    for (const path of ["/s/blue-mantis", "/s/blue-mantis/trips/abc-123"]) {
+      const internal = embedRenderPath(path) ?? "";
+      expect(embedPublicPath(internal), internal).toBe(path);
+      expect(embedPublicPath(`${internal}/`), internal).toBe(path);
+    }
+  });
+
+  it("stands for nothing on any other path, or at a shop spelling no embed request has", () => {
+    for (const path of [
+      "/s/blue-mantis",
+      "/s/blue-mantis/trips/abc-123",
+      "/s/blue-mantis/embed/grid",
+      "/s/blue-mantis/embed/nope",
+      "/s/blue-mantis/trips/abc-123/calendar",
+      "/shop/blue-mantis/embed/schedule",
+      "/s/Blue-Mantis/embed/schedule",
+      "/s/blue%2Dmantis/trips/abc-123/embed",
+      "/s/blue-mantis/trips/embed",
+    ]) {
+      expect(embedPublicPath(path), path).toBeNull();
+    }
   });
 });
