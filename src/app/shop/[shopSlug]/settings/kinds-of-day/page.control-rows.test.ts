@@ -66,15 +66,19 @@ describe("the kinds-of-day rows", () => {
   });
 
   /**
-   * **"Add" is a button, not a bar.** Below `sm` the add form is a column with
-   * no `items-*` of its own, so it stretched its submit across the panel:
-   * 282px against Seasons' 52px "Add" in the same panel on the next page
-   * (K-252, SETTINGS-3-25). `items-start` from the base keeps it its own
-   * width; the box's wrapper is `w-full`, so the box still fills the line.
+   * **"Add" is a button, not a bar** (pixel-craft class 12). Below `sm` the
+   * add form is a column, and with no cross-axis alignment at its base the
+   * Add button stretched to the panel's width, 282px at 390, where Seasons'
+   * same panel ends in a 52px Add at the start (K-252, SETTINGS-3-25). The
+   * box keeps its full width through its own `w-full` wrapper.
    */
-  it("keeps the add form's button its own width at every width", () => {
-    const create = SOURCE.slice(SOURCE.indexOf("action={createTripLensAction}"));
-    const formClass = create.match(/className="([^"]*)"/)?.[1] ?? "";
-    expect(formClass.split(" ")).toContain("items-start");
+  it("keeps the add form's button its own width on a phone", () => {
+    const form = SOURCE.slice(SOURCE.indexOf("action={createTripLensAction}"));
+    const [formClass, boxWrapperClass] = [...form.matchAll(/className="([^"]*)"/g)].map((match) =>
+      match[1].split(/\s+/),
+    );
+    expect(formClass).toContain("flex-col");
+    expect(formClass, "aligned at the base, not only from sm").toContain("items-start");
+    expect(boxWrapperClass, "the box still takes the panel's width").toContain("w-full");
   });
 });
