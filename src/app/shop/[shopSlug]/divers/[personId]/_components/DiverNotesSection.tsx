@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { FieldActions } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { listDiverRecordNotes } from "@/db/operations";
@@ -68,10 +68,13 @@ export function DiverNotesSection({
                   date: formatDateTimeTz(note.createdAt, locale, timezone),
                 })}
               </p>
+              {/* The shared link floor: 14px of text was a 20px target on one
+                  line and 40px on two. The 44px box is also the room above it
+                  that an `mt-1` used to stand in for. */}
               {tripId && tripTitle && tripStartsAt ? (
                 <Link
                   href={`/shop/${shopSlug}/trips/${tripId}`}
-                  className="mt-1 inline-block text-sm text-primary hover:underline"
+                  className={`${tapTargetLinkClass} text-sm text-primary hover:underline`}
                 >
                   {t("divers.notes.fromTrip", {
                     trip: tripTitle,
