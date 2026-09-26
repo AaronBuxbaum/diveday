@@ -537,3 +537,19 @@ describe("no ring the probe measured cut is cut any more", () => {
     ).not.toHaveLength(0);
   });
 });
+
+/**
+ * **A round radio gets a round ring.** An outline follows the element's
+ * `border-radius`, and a native radio computes a radius of 0 however round
+ * the browser draws it — so the global ring drew a 3px square around a 16px
+ * circle on the waiver's guardian choice, `/ready`'s easing-back answers and
+ * the calls log (pixel probe, state atlas). In the base layer beside the ring,
+ * so a radio that styles itself can still say otherwise.
+ */
+describe("the ring on a native radio", () => {
+  it("follows the circle the browser draws", () => {
+    const radio = layerBase.find((rule) => /input\[type="radio"\]/.test(rule.prelude));
+    expect(radio, 'an input[type="radio"] rule inside @layer base').toBeDefined();
+    expect(declarations(radio?.body ?? "")["border-radius"]).toMatch(/^(9999px|50%)$/);
+  });
+});

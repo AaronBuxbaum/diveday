@@ -722,6 +722,12 @@ summary {
     outline: 3px solid var(--focus-ring);
     outline-offset: 2px;
   }
+
+  /* An outline follows `border-radius`, and a native radio computes 0 however
+     round it is drawn: the ring above was a square round a circle. */
+  :where(input[type="radio"]) {
+    border-radius: 9999px;
+  }
 }
 
 /*
