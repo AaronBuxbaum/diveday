@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { CaptainPhoneFrame, MarketingMockup, marketingMockups } from "./MarketingSections";
+import {
+  CaptainPhoneFrame,
+  FeatureGroupsGrid,
+  MarketingMockup,
+  marketingMockups,
+} from "./MarketingSections";
 
 afterEach(cleanup);
 
@@ -97,5 +102,16 @@ describe("CaptainPhoneFrame", () => {
     expect(screenBox).not.toHaveClass("border");
     expect(screenBox).not.toHaveClass("border-0");
     expect(screenBox).not.toHaveClass("rounded-[1.9rem]");
+  });
+});
+
+describe("FeatureGroupsGrid", () => {
+  it("balances every group heading, so none ends on one word", () => {
+    render(<FeatureGroupsGrid locale="en-US" />);
+    const headings = screen.getAllByRole("heading", { level: 3 });
+    expect(headings).toHaveLength(4);
+    for (const heading of headings) {
+      expect(heading, heading.textContent ?? "").toHaveClass("text-balance");
+    }
   });
 });

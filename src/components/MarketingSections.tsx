@@ -205,7 +205,10 @@ export function FeatureGroupsGrid({ locale }: { locale: DiverLocale }) {
             {index + 1}
           </span>
           <p className={`mt-4 ${groupLabelClass("primary")}`}>{t(group.eyebrow)}</p>
-          <h3 className="mt-3 font-semibold leading-6">{t(group.title)}</h3>
+          {/* Balanced, as the ramp leaves each heading that wraps to decide:
+              in the four-up grid's 246px column one title left "money" alone
+              on its last line. */}
+          <h3 className="mt-3 font-semibold leading-6 text-balance">{t(group.title)}</h3>
           <p className="mt-3 text-sm leading-6 text-muted">{t(group.summary)}</p>
         </li>
       ))}
