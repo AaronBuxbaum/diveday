@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { DayStrip, type DayStripProps } from "@/components/day/DayStrip";
 import { SkyBand } from "@/components/day/SkyBand";
 import type { SkyScheme } from "@/lib/sky-scheme";
@@ -40,12 +40,20 @@ import type { SkyScheme } from "@/lib/sky-scheme";
  * does, which is why it needs nothing).
  */
 
+/**
+ * The dot between two facts, glued to the fact before it by a no-break space.
+ * It rides *inside* that fact's box: a line may break on either side of an
+ * atomic inline box whatever character stands beside it, so a dot outside the
+ * box could start a line.
+ */
+const FACT_SEPARATOR = "\u00a0·";
+
 export function VoyageHeader({
   scheme,
   back,
   hour,
   title,
-  line,
+  facts,
   strip,
   action,
   badge,
@@ -57,8 +65,12 @@ export function VoyageHeader({
   hour: string;
   /** The departure's own name, under its hour. */
   title: string;
-  /** The boat, its crew and how full it is, in one line. */
-  line: string;
+  /**
+   * The boat, each crew member, how full it is, the day and the price — each
+   * fact already worded, read as one line and set so it breaks only between
+   * two of them.
+   */
+  facts: readonly string[];
   /** The voyage drawn: lines off, the dives, the way back. Null with nothing to draw. */
   strip: DayStripProps | null;
   /** The band's one action. */
@@ -99,7 +111,31 @@ export function VoyageHeader({
             {badge ? <span className="shrink-0">{badge}</span> : null}
           </div>
           <h1 className="mt-1 text-[19px] leading-6 font-semibold text-balance">{title}</h1>
-          <p className="mt-1 text-[15px] text-(--sky-ink-soft)">{line}</p>
+          {/*
+           * **A line breaks between facts, never inside one** (pixel-craft class
+           * 8). One string joined with " · " broke at any space: "· Tue," /
+           * "Jul 21", "9 of 12 seats" / "taken" at 390. Each fact is an
+           * `inline-block`, an atomic box, so a line ends only between two, and
+           * one longer than the whole line still wraps inside its own box. Not
+           * `whitespace-nowrap`: a boat or a crew name is free text a shop typed,
+           * and glued whole it could run off a phone (the reason `joinFacts`
+           * leaves ordinary words breakable).
+           */}
+          <p className="mt-1 text-[15px] text-(--sky-ink-soft)">
+            {facts.map((fact, index) => {
+              const last = index === facts.length - 1;
+              return (
+                // biome-ignore lint/suspicious/noArrayIndexKey: two crew members may share a name, and the facts never reorder
+                <Fragment key={index}>
+                  <span className="inline-block">
+                    {fact}
+                    {last ? null : FACT_SEPARATOR}
+                  </span>
+                  {last ? null : " "}
+                </Fragment>
+              );
+            })}
+          </p>
           {strip ? <DayStrip {...strip} className="mt-3 h-24 w-full sm:h-28" /> : null}
         </div>
       </SkyBand>

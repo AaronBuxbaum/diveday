@@ -488,8 +488,8 @@ export default async function ManageTripPage({
   // gets no hull, which is correct — it has a roster and no boat.
   const boat = shopBoats.find((row) => row.id === trip.boatId);
   const boatName = boat?.name;
-  const boatCrewSummary =
-    [boatName, ...assignedCrew].filter(Boolean).join(" · ") || t("trips.about.noBoat");
+  const boatAndCrew = [boatName, ...assignedCrew].filter((part): part is string => Boolean(part));
+  const boatCrewSummary = boatAndCrew.join(" · ") || t("trips.about.noBoat");
 
   /**
    * **The voyage, drawn** — ADR 20260919-one-idea, decision I · Tide, slice
@@ -603,7 +603,9 @@ export default async function ManageTripPage({
   });
   /**
    * The boat, its crew, how full it is, which day it is and what a seat costs —
-   * joined the way `boatCrewSummary` above joins its own parts.
+   * each its own fact, because `VoyageHeader` sets the line so it breaks only
+   * between two of them ("9 of 12 seats" / "taken" and "Tue," / "Jul 21" were
+   * the breaks inside one string joined with " · "; pixel-craft class 8).
    *
    * **The price is here because nothing else on this page says it.** Retiring
    * the capacity ring from the header was deliberate (the count is in words
@@ -611,19 +613,16 @@ export default async function ManageTripPage({
    * it appears on this page is as an editable field behind About's disclosure.
    * A staffer quoting a walk-in should not have to open an editor to read it.
    */
-  const voyageLine = [
-    t("trips.voyage.line", {
-      boat: boatCrewSummary,
-      booked: trip.booked,
-      capacity: trip.capacity,
-    }),
+  const voyageFacts = [
+    ...(boatAndCrew.length > 0 ? boatAndCrew : [t("trips.about.noBoat")]),
+    t("trips.voyage.seats", { booked: trip.booked, capacity: trip.capacity }),
     formatShortDate(trip.startsAt, locale, shop.timezone),
-    trip.priceCents === null
-      ? null
-      : `${formatMoneyCents(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t("trips.about.perSeat")}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+    ...(trip.priceCents === null
+      ? []
+      : [
+          `${formatMoneyCents(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t("trips.about.perSeat")}`,
+        ]),
+  ];
   const voyageStrip: DayStripProps = {
     geometry: dayStripGeometry({
       from: voyageWindow.from,
@@ -784,7 +783,7 @@ export default async function ManageTripPage({
         }
         hour={formatTime(trip.startsAt, locale, shop.timezone)}
         title={trip.title}
-        line={voyageLine}
+        facts={voyageFacts}
         strip={voyageStrip}
         badge={
           cancelled ? (

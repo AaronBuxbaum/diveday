@@ -31,6 +31,17 @@ const strip = {
   markLabels: { off: "7:00 AM", back: "11:45 AM" },
 };
 
+/**
+ * The line of facts read as a person reads it: the paragraph's whole text, with
+ * its no-break spaces read as spaces. Each fact is a box of its own, so no one
+ * element's own text is the line.
+ */
+function factsLine(text: string) {
+  return screen.getByText(
+    (_, element) => element?.tagName === "P" && element.textContent?.replace(/\s+/g, " ") === text,
+  );
+}
+
 describe("VoyageHeader", () => {
   /**
    * **The hour is the name.** A crew standing on a dock at 6:58 knows which
@@ -45,7 +56,7 @@ describe("VoyageHeader", () => {
         back={<a href="/shop/blue-mantis/schedule/board">Board</a>}
         hour="7:00 AM"
         title="Two-Tank Reef — Molasses & French"
-        line="Mantis I · Keiko Tanaka · 9 of 12 seats taken"
+        facts={["Mantis I", "Keiko Tanaka", "9 of 12 seats taken"]}
         strip={strip}
       />,
     );
@@ -57,7 +68,48 @@ describe("VoyageHeader", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Two-Tank Reef — Molasses & French" }),
     ).toBeTruthy();
-    expect(screen.getByText("Mantis I · Keiko Tanaka · 9 of 12 seats taken")).toBeTruthy();
+    expect(factsLine("Mantis I · Keiko Tanaka · 9 of 12 seats taken")).toBeTruthy();
+  });
+
+  /**
+   * **The line breaks between facts, never inside one** (pixel-craft class 8,
+   * K-158). It was one string joined with " · ", so the browser broke it at
+   * any space: "· Tue," / "Jul 21" on a crew-clash departure at 390, and "9 of
+   * 12 seats" / "taken" on another. Each fact is now its own atomic box, so a
+   * line ends only between two of them; one longer than the whole line still
+   * wraps inside its own box rather than running off a phone, which a boat or a
+   * crew name — free text a shop typed — could. The dot rides inside the fact
+   * before it: a line can break on either side of an atomic box whatever
+   * character stands there, so a dot outside one could start a line.
+   */
+  it("sets each fact whole, with its dot kept on the fact before it", () => {
+    const { container } = render(
+      <VoyageHeader
+        scheme="dawn"
+        back={<a href="/back">Board</a>}
+        hour="7:00 AM"
+        title="Two-Tank Reef"
+        facts={["Blue Mantis", "Sal Moretti", "9 of 12 seats taken", "Tue, Jul 21"]}
+        strip={null}
+      />,
+    );
+    const line = factsLine("Blue Mantis · Sal Moretti · 9 of 12 seats taken · Tue, Jul 21");
+    const pieces = [...line.children];
+    expect(pieces.map((piece) => piece.textContent)).toEqual([
+      "Blue Mantis\u00a0·",
+      "Sal Moretti\u00a0·",
+      "9 of 12 seats taken\u00a0·",
+      "Tue, Jul 21",
+    ]);
+    for (const piece of pieces) {
+      expect(piece.tagName).toBe("SPAN");
+      expect(piece).toHaveClass("inline-block");
+      expect(piece.className).not.toContain("whitespace-nowrap");
+    }
+    expect(line.textContent).toBe(
+      "Blue Mantis\u00a0· Sal Moretti\u00a0· 9 of 12 seats taken\u00a0· Tue, Jul 21",
+    );
+    expect(container.querySelector(".sky")?.textContent).not.toContain(" · ");
   });
 
   it("wears the hour it is read at, and nothing else decides it", () => {
@@ -67,7 +119,7 @@ describe("VoyageHeader", () => {
         back={<a href="/back">Board</a>}
         hour="7:30 PM"
         title="Night Dive"
-        line="Skiff · 3 of 8 seats taken"
+        facts={["Skiff", "3 of 8 seats taken"]}
         strip={null}
       />,
     );
@@ -85,7 +137,7 @@ describe("VoyageHeader", () => {
         back={<a href="/back">Board</a>}
         hour="1:00 PM"
         title="Wreck Trip"
-        line="Mantis II · 12 of 12 seats taken"
+        facts={["Mantis II", "12 of 12 seats taken"]}
         strip={strip}
       />,
     );
@@ -96,7 +148,7 @@ describe("VoyageHeader", () => {
         back={<a href="/back">Board</a>}
         hour="1:00 PM"
         title="Wreck Trip"
-        line="Mantis II · 12 of 12 seats taken"
+        facts={["Mantis II", "12 of 12 seats taken"]}
         strip={null}
       />,
     );
@@ -115,7 +167,7 @@ describe("VoyageHeader", () => {
         back={<a href="/back">Board</a>}
         hour="7:00 AM"
         title="Two-Tank Reef"
-        line="Mantis I · 9 of 12 seats taken"
+        facts={["Mantis I", "9 of 12 seats taken"]}
         strip={null}
         badge={<span>Cancelled</span>}
       />,
@@ -145,7 +197,7 @@ describe("VoyageHeader", () => {
         }
         hour="2:30 PM"
         title="Two-Tank Reef"
-        line="Mantis I · 9 of 12 seats taken"
+        facts={["Mantis I", "9 of 12 seats taken"]}
         strip={null}
         action={<TripAddDiverLink onSky href="#add-diver" label="Add diver" />}
       />,
