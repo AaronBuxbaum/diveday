@@ -10,7 +10,7 @@ import { SiteMark } from "@/components/illustration/SiteMark";
 import { SubmitButton } from "@/components/SubmitButton";
 import { sendHoldCopy } from "@/components/send-hold-copy";
 import { buttonClass } from "@/components/ui/button";
-import { GroupLabel, LedgerGroup, LedgerRow } from "@/components/ui/ledger";
+import { GroupLabel, LedgerGroup, LedgerRow, type LedgerRowKindTone } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DayCloseoutRecord } from "@/db/closeout";
@@ -175,6 +175,69 @@ const ROW_GLYPH_INK = {
   neutral: "text-muted",
 } as const;
 
+/**
+ * **A spine row's anatomy, owned once**: the glyph, one word of kind, the one
+ * sentence at reading size, the one fix. `StationRow` draws a job this way, and
+ * so does a desk row that is not a job — a form draft to pick back up, the
+ * payments setup row — so every sentence in a list starts on one column in one
+ * size. Drawn by hand, the payments row had no glyph and no kind and a 14px
+ * grey sentence, a draft's row a kind and no glyph: at 1280 the payments
+ * sentence started at the glyph column (x 153) under a Setup row whose
+ * sentence starts at 289, and read as that row's continuation (pixel-craft
+ * K-317).
+ */
+function SpineRow({
+  tone,
+  kind,
+  trailing,
+  closed = true,
+  door,
+  children,
+}: {
+  tone: LedgerRowKindTone;
+  /** One word of kind, in the row's own type. */
+  kind: string;
+  /** The row's fix when it performs one — a real control beside the words. */
+  trailing?: React.ReactNode;
+  /** `false` inside a station's panel, whose own edge closes the list. */
+  closed?: boolean;
+  /**
+   * Where the row's own tap goes, and its name for a screen reader. One object,
+   * not two props: `LedgerRow`'s door is a union, so a link never reaches a
+   * reader without an accessible name. Absent on a row that performs its fix.
+   */
+  door?: { href: string; linkLabel: string };
+  /** The sentence's words. */
+  children: React.ReactNode;
+}) {
+  // Both halves or neither, as one value: the union `LedgerRow` takes.
+  const doorProps: { href: string; linkLabel: string } | { href?: never; linkLabel?: never } =
+    door ?? {};
+  return (
+    <LedgerRow
+      // Stacked below `sm`: the kind and the fix share the first line and the
+      // sentence takes the width beneath them, which is the phone artboard's
+      // reading and the only one where a full sentence has room to be read.
+      stacked
+      // The row's glyph — the first of the anatomy's four parts (glyph, one
+      // word of kind, one sentence, one fix), drawn from the shipped status
+      // family and never from the illustration hand: a status glyph is a
+      // status, and the ADR keeps drawings out of that job. The kind word
+      // beside it carries the meaning; the glyph is what a scan reads first.
+      leading={<StatusMark variant={ROW_GLYPH[tone]} size="md" className={ROW_GLYPH_INK[tone]} />}
+      kind={{ word: kind, tone }}
+      trailing={trailing}
+      closed={closed}
+      {...doorProps}
+    >
+      {/* One line per row (ADR 20260904-reef-all-the-way-down, slice 16a):
+          the sentence at reading size — a subject over a detail at 14px was
+          the rail's grammar, and a panel reads as one sentence. */}
+      <p className="min-w-0 text-base leading-snug">{children}</p>
+    </LedgerRow>
+  );
+}
+
 function StationRow({
   action,
   controls,
@@ -193,18 +256,15 @@ function StationRow({
       action.payment?.orderId ||
       action.helpRequest,
   );
-  // One line per row (ADR 20260904-reef-all-the-way-down, slice 16a): the
-  // person, then the sentence, at reading size — a subject over a detail at
-  // 14px was the rail's grammar, and a panel reads as one sentence with a name
-  // in it. Each half keeps its own element so a reader (and a test) can find
-  // either by its own words.
+  // The person, then the sentence, in one line (`SpineRow`). Each half keeps
+  // its own element so a reader (and a test) can find either by its own words.
   const tone = ACTION_KIND_META[action.kind].tone;
   // A row whose subject already is the whole fact carries no detail at all
   // (the desk's two counting rows), so neither the separator nor the second
   // span renders — a dangling " · " is the shape of a sentence that was
   // deleted rather than one that never existed.
-  const body = (
-    <p className="min-w-0 text-base leading-snug">
+  const sentence = (
+    <>
       {action.aboutDeparture ? null : (
         <>
           <span className="font-medium">{action.subject}</span>
@@ -218,7 +278,7 @@ function StationRow({
       {action.detail ? (
         <span className={tone === "neutral" ? "text-muted" : undefined}>{action.detail}</span>
       ) : null}
-    </p>
+    </>
   );
   const control = action.waiver ? (
     <WaiverSendControl
@@ -282,35 +342,21 @@ function StationRow({
   // chevron.
   null;
 
-  // One object, not two props. `LedgerRow`'s door is a union — a row carries
-  // both `href` and a `linkLabel` or neither, so a link can never reach a
-  // reader without an accessible name. Two independent ternaries cannot prove
-  // that correlation to the compiler, and a row that performs its own fix
-  // inline is deliberately not a door: the tap is the control beside it.
-  const door = performs || !action.href ? {} : { href: action.href, linkLabel: action.actionLabel };
+  // A row that performs its own fix inline is deliberately not a door: the
+  // tap is the control beside it.
+  const door =
+    performs || !action.href ? undefined : { href: action.href, linkLabel: action.actionLabel };
 
   return (
-    <LedgerRow
-      // Stacked below `sm`: the kind and the fix share the first line and the
-      // sentence takes the width beneath them, which is the phone artboard's
-      // reading and the only one where a full sentence has room to be read.
-      stacked
-      // The row's glyph — the first of the anatomy's four parts (glyph, one
-      // word of kind, one sentence, one fix), drawn from the shipped status
-      // family and never from the illustration hand: a status glyph is a
-      // status, and the ADR keeps drawings out of that job. The kind word
-      // beside it carries the meaning; the glyph is what a scan reads first.
-      leading={<StatusMark variant={ROW_GLYPH[tone]} size="md" className={ROW_GLYPH_INK[tone]} />}
-      kind={{
-        word: t(ACTION_KIND_KEYS[action.kind]),
-        tone,
-      }}
+    <SpineRow
+      tone={tone}
+      kind={t(ACTION_KIND_KEYS[action.kind])}
       trailing={control}
       closed={closed}
-      {...door}
+      door={door}
     >
-      {body}
-    </LedgerRow>
+      {sentence}
+    </SpineRow>
   );
 }
 
@@ -849,23 +895,30 @@ export function DaySpine({
             ))}
             {/* What the reader started and did not finish — a draft is theirs
                 alone, so the row is too. Renders nothing when there is none. */}
+            {/* The two desk rows that are not jobs take a job's anatomy all
+                the same (`SpineRow`), so their sentences start on the column
+                and at the size every row's above them does. */}
             {drafts.map((draft) => (
-              <LedgerRow
+              <SpineRow
                 key={`draft:${draft.form}`}
-                kind={{ word: t("today.unfinished.label"), tone: "neutral" }}
-                href={draft.href}
-                linkLabel={t("today.unfinished.resume")}
+                tone="neutral"
+                kind={t("today.unfinished.label")}
+                door={{ href: draft.href, linkLabel: t("today.unfinished.resume") }}
               >
-                <p className="text-sm text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</p>
-              </LedgerRow>
+                <span className="text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</span>
+              </SpineRow>
             ))}
             {showPaymentsRow ? (
-              <LedgerRow
-                href={`/shop/${shopSlug}/settings#stripe`}
-                linkLabel={t("shopHome.spine.deskPaymentsAction")}
+              <SpineRow
+                tone="neutral"
+                kind={t("shopHome.spine.deskPaymentsKind")}
+                door={{
+                  href: `/shop/${shopSlug}/settings#stripe`,
+                  linkLabel: t("shopHome.spine.deskPaymentsAction"),
+                }}
               >
-                <p className="text-sm text-muted">{t("shopHome.spine.deskPaymentsRow")}</p>
-              </LedgerRow>
+                <span className="text-muted">{t("shopHome.spine.deskPaymentsRow")}</span>
+              </SpineRow>
             ) : null}
           </ul>
         </LedgerGroup>

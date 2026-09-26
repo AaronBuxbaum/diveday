@@ -33,7 +33,7 @@ vi.mock("@/app/shop/[shopSlug]/actions", () => ({
 import type { FirstBooking } from "@/db/first-booking";
 import type { DayTakings as DayTakingsReading } from "@/lib/closeout";
 import { assembleEveningClose, type CloseoutDeparture } from "@/lib/closeout";
-import { DaySpine, type EveningReading } from "./DaySpine";
+import { DaySpine, type EveningReading, type SpineDraft } from "./DaySpine";
 
 afterEach(() => {
   cleanup();
@@ -149,6 +149,7 @@ function renderSpine({
   tomorrow?: SpineDeparture[];
   withheldCount?: number;
   showPaymentsRow?: boolean;
+  drafts?: SpineDraft[];
   crewedTripIds?: string[];
   sessions?: React.ReactNode;
   firstRun?: React.ReactNode;
@@ -526,6 +527,47 @@ describe("the desk group", () => {
       "href",
       "/shop/blue-mantis/settings#stripe",
     );
+  });
+
+  /**
+   * **Every desk row is drawn one way** (pixel-craft class 3, K-317). The
+   * payments row had no glyph and no kind, and a draft's row a kind but no
+   * glyph, each with a 14px grey sentence — so at 1280 the payments sentence
+   * started at the glyph column (x 153) under a Setup row whose sentence
+   * starts at 289, in smaller type, and read as that row's continuation.
+   */
+  it("gives the payments and draft rows the desk's anatomy: glyph, kind, reading-size sentence", () => {
+    renderSpine({
+      actions: [
+        action({ id: "on-boat", departure: boat("t1") }),
+        action({
+          id: "chore",
+          kind: "reviews_pending",
+          subject: "1 review",
+          detail: "One review is waiting on you.",
+        }),
+      ],
+      showPaymentsRow: true,
+      drafts: [{ form: "add_departure", href: "/shop/blue-mantis/schedule/board?add=1" }],
+    });
+    const sentence = (text: string) => screen.getByText(text).closest("p");
+    const chore = sentence("One review is waiting on you.");
+    const draft = sentence("A departure you started adding.");
+    const payments = sentence(
+      "Payments aren’t connected, so divers can book and pay at the counter.",
+    );
+    expect(chore).toHaveClass("text-base", "leading-snug");
+    for (const [row, kind] of [
+      [draft, "Unfinished"],
+      [payments, "Setup"],
+    ] as const) {
+      expect(row?.className).toBe(chore?.className);
+      const line = row?.closest("li");
+      if (!line) throw new Error("the desk row rendered outside a list item");
+      // The glyph leads the row, then the kind word, as on every station row.
+      expect(line.firstElementChild?.querySelector("svg")).not.toBeNull();
+      expect(within(line).getByText(kind)).toBeInTheDocument();
+    }
   });
 
   it("renders no payments row once the shop can take payment", () => {
