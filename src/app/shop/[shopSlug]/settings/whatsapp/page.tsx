@@ -151,6 +151,17 @@ export default async function WhatsAppSettingsPage({
               ? t("whatsapp.status.connectedHeading")
               : t("whatsapp.status.notConnectedHeading")
           }
+          // With no number, the state is one sentence, and it is the card's
+          // description, `mt-1` under the title like every card's sentence. As
+          // the body, behind the card's `mt-4`, it sat 28px under the title
+          // where the security and team cards' sit 15px (K-315).
+          description={
+            account
+              ? undefined
+              : canConnect
+                ? t("whatsapp.status.notConnectedDescription")
+                : t("whatsapp.status.unavailableDescription")
+          }
           actions={
             account ? (
               <Badge tone={account.verifiedAt ? "success" : "neutral"}>
@@ -176,22 +187,14 @@ export default async function WhatsAppSettingsPage({
                 <dd>{formatDateTimeTz(account.connectedAt, locale, shop.timezone)}</dd>
               </div>
             </dl>
-          ) : (
-            <p className="text-sm text-muted">
-              {canConnect
-                ? t("whatsapp.status.notConnectedDescription")
-                : t("whatsapp.status.unavailableDescription")}
-            </p>
-          )}
-          {!canConnect && !account ? (
-            <div className="mt-5">
-              {/* Inert on purpose, and the only control on the card: a shop
-                  can see what is coming and cannot start a flow Meta would
-                  refuse. */}
-              <button type="button" disabled className={buttonClass()}>
-                {t("whatsapp.signup.connect")}
-              </button>
-            </div>
+          ) : !canConnect ? (
+            // Inert on purpose, and the only control on the card: a shop can
+            // see what is coming and cannot start a flow Meta would refuse.
+            // The card's body, so it takes the card's `mt-4` and no margin of
+            // its own.
+            <button type="button" disabled className={buttonClass()}>
+              {t("whatsapp.signup.connect")}
+            </button>
           ) : null}
         </SectionCard>
 
