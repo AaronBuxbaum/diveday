@@ -372,6 +372,23 @@ describe("the packing list's geometry", () => {
     expect(row.closest("tr")).toHaveClass("relative");
   });
 
+  it("starts both values of a kit card at one x, however long the names run (K-147)", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    const cards = container.querySelectorAll("ul.sm\\:hidden > li dl");
+    expect(cards.length).toBeGreaterThan(0);
+    for (const dl of cards) {
+      expect(tokens(dl)).toEqual(
+        expect.arrayContaining(["grid", "grid-cols-[auto_minmax(0,1fr)]", "gap-x-2"]),
+      );
+      expect(dl.children).toHaveLength(2);
+      for (const pair of dl.children) {
+        expect(tokens(pair)).toEqual(
+          expect.arrayContaining(["col-span-2", "grid", "grid-cols-subgrid"]),
+        );
+      }
+    }
+  });
+
   it("sets each card's count on its title's baseline (K-149)", () => {
     for (const grouping of ["item", "diver"] as const) {
       const { container, unmount } = renderPrep(everyPanelPrep(), { grouping });

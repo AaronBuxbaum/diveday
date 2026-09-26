@@ -759,12 +759,17 @@ export function PrepBody({
                             {line.count}
                           </p>
                         </div>
-                        <dl className="mt-2 flex flex-col gap-1 text-sm">
-                          <div className="flex flex-wrap gap-x-2">
+                        {/* One grid for both pairs, each a subgrid row, so
+                            both values start at the wider label plus 8px and a
+                            long "For" list wraps in its own column: as two
+                            flex rows the values stood 6px apart and the names
+                            fell back under the label. */}
+                        <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 text-sm">
+                          <div className="col-span-2 grid grid-cols-subgrid">
                             <dt className="text-muted">{t("tripPrep.sizeColumn")}</dt>
                             <dd>{sizeCell(line)}</dd>
                           </div>
-                          <div className="flex flex-wrap gap-x-2">
+                          <div className="col-span-2 grid grid-cols-subgrid">
                             <dt className="text-muted">{t("tripPrep.forColumn")}</dt>
                             <dd className="text-muted">{line.divers.join(", ")}</dd>
                           </div>
