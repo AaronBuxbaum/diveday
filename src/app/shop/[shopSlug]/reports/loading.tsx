@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { figureCellClass } from "./_components/MonthFigures";
 
 /**
  * Body-shaped skeleton for Reports (design principle 1) — the monthly
@@ -28,24 +29,14 @@ export default function ReportsLoading() {
         </div>
         {/* The figure row: unboxed, one hairline above and below, and the same
             one/two/five column run the figures themselves wear — reaching 8px
-            past the column, as the figures' band and the ledger below do. */}
+            past the column, as the figures' band and the ledger below do. Each
+            cell is the figures' own `figureCellClass`, not a copy of it: the
+            copy kept a phone's 24px end gutter after the figures dropped it. */}
         <div className="-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-5">
           {[0, 1, 2, 3, 4].map((index) => (
             <div
               key={index}
-              className={`py-5 ps-2 pe-6 ${
-                index === 0
-                  ? ""
-                  : index === 1
-                    ? "border-t border-border sm:border-t-0"
-                    : "border-t border-border lg:border-t-0"
-              } ${
-                index === 0
-                  ? ""
-                  : index % 2 === 1
-                    ? "sm:border-s sm:border-border sm:ps-6"
-                    : "lg:border-s lg:border-border lg:ps-6"
-              } ${index === 4 ? "sm:col-span-2 lg:col-span-1" : ""}`}
+              className={`${figureCellClass(index)}${index === 4 ? " sm:col-span-2 lg:col-span-1" : ""}`}
             >
               <div className="h-3 w-20 rounded bg-surface-sunken" />
               <div className="mt-3 h-8 w-28 rounded bg-surface-sunken" />

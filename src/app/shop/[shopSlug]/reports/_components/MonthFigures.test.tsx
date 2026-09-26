@@ -54,6 +54,19 @@ describe("the band's rules", () => {
     expect(cells[1]).toHaveClass("sm:ps-6");
     expect(cells[2]).toHaveClass("lg:ps-6");
   });
+
+  it("gives a stacked figure the band's 8px back on the right too, and the 24px gutter only where it has a neighbour", () => {
+    // On a phone the figures stack one to a row, and a figure alone in its row
+    // has nothing beside it for a gutter to keep it from: an unconditional
+    // `pe-6` left the rule running 24px past the words on the right and 8px
+    // on the left (K-573, reports-figures at 390).
+    const { container } = renderFigures();
+    const cells = [...(container.querySelector("dl")?.children ?? [])];
+    for (const cell of cells) {
+      expect(cell).toHaveClass("pe-2", "sm:pe-6");
+      expect(cell).not.toHaveClass("pe-6");
+    }
+  });
 });
 
 describe("the figures are unboxed", () => {

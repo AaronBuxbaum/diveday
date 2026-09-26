@@ -78,8 +78,19 @@ export type MonthFigure = {
  * instead. The first figure of each visual row starts on the column, and the
  * band's rules, the rules between its stacked rows and the ledger's rules
  * below all end at one x.
+ *
+ * **The end gutter is a column gutter, so it waits for a column.** On a phone
+ * the figures stack one to a row with nothing beside them, and a stacked figure
+ * takes the band's 8px back on the right exactly as it does on the left
+ * (`pe-2`); the 24px `pe-6` that keeps a figure off its neighbour's rule starts
+ * at `sm`, where the neighbour does. It was `pe-6` at every width, and a
+ * stacked figure's words stopped 24px short of its rule on the right and 8px
+ * on the left (K-573).
+ *
+ * Exported for the route's loading skeleton, which stands the same cells in
+ * for these and would otherwise be a second spelling of where they sit.
  */
-function figureCellClass(index: number): string {
+export function figureCellClass(index: number): string {
   const rule =
     index === 0
       ? ""
@@ -94,7 +105,7 @@ function figureCellClass(index: number): string {
         index % 2 === 1
         ? "sm:border-s sm:border-border sm:ps-6"
         : "lg:border-s lg:border-border lg:ps-6";
-  return `py-5 ps-2 pe-6 ${rule} ${gutter}`.replace(/\s+/g, " ").trim();
+  return `py-5 ps-2 pe-2 sm:pe-6 ${rule} ${gutter}`.replace(/\s+/g, " ").trim();
 }
 
 /**
