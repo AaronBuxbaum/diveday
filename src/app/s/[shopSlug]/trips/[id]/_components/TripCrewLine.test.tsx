@@ -71,6 +71,19 @@ describe("TripCrewLine", () => {
     expect(heading).not.toHaveClass("text-sm");
   });
 
+  it("brings no outer margin of its own", () => {
+    // Its two callers space it differently — `/ready` in the thread's one
+    // `space-y-10` run, the pitch's door body 24px under the beat above — and
+    // a built-in `mt-6` stepped /ready's column 24px where every other
+    // section stood 40 apart (K-233). The caller says where it sits.
+    const { container } = render(<TripCrewLine crew={[member()]} locale="en-US" />);
+    expect(container.querySelector("section")?.className ?? "").not.toMatch(/(^|\s)m[ty]?-/);
+
+    cleanup();
+    const placed = render(<TripCrewLine crew={[member()]} locale="en-US" className="mt-6" />);
+    expect(placed.container.querySelector("section")).toHaveClass("mt-6");
+  });
+
   it("names somebody who has declared no languages, and claims none for them", () => {
     render(<TripCrewLine crew={[member({ languages: [] })]} locale="en-US" />);
     const row = screen.getByRole("listitem");

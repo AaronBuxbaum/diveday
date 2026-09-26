@@ -162,7 +162,7 @@ export function TripPitch({
             <TripRoutes briefings={briefings} locale={locale} />
             <TripMoments briefings={briefings} locale={locale} />
             <TripSiteNotes briefings={briefings} locale={locale} />
-            <TripCrewLine crew={crew} locale={locale} />
+            <TripCrewLine crew={crew} locale={locale} className="mt-6" />
           </div>
         </LedgerGroup>
       ) : null}

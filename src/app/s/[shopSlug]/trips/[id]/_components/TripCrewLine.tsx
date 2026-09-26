@@ -23,6 +23,9 @@ import { cachedListFormat } from "@/lib/intl-cache";
  * biography: D21's boundary is exactly those three facts, and a photo is
  * optional in a feature nobody has asked for and never required by an
  * operational record.
+ *
+ * **No outer margin.** Its callers place it: `/ready` in the thread's one
+ * `space-y-10` run, the pitch's door 24px under the beat above (K-233).
  */
 export function TripCrewLine({
   crew,
@@ -36,7 +39,7 @@ export function TripCrewLine({
   if (crew.length === 0) return null;
   const t = diverTranslator(locale);
   return (
-    <section className={`mt-6 ${className}`}>
+    <section className={className || undefined}>
       {/* The door's own label, as its sibling sections open (pixel-craft
           class 12, K-381): a 14px semibold heading here read as a sub-heading
           of the last dive site above it. */}

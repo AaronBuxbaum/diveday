@@ -116,6 +116,45 @@ describe("the thread column's cards", () => {
   });
 });
 
+/**
+ * **One rhythm under the spine.** The sections after it each brought their
+ * own top margin — the arrival card 32px, the crew line 24, the change ledger
+ * 24, the party panel 32, the packing list and the cancel door 40 — so the
+ * column stepped 32, 24, 40, 40 down one scroll (K-233). The page sets the
+ * gap once, `space-y-10`, and the sections carry none of their own.
+ */
+describe("the thread's sections under the spine", () => {
+  const RUN = '<div className="mt-10 space-y-10">';
+  const SECTIONS = [
+    "<TripArrivalCard",
+    "<TripCrewLine",
+    "<TripChangeLedger",
+    "<PartyClaimPanel",
+    "<PackingSection",
+    "<InlineConfirm",
+  ];
+
+  it("stand in one space-y-10 run after the spine", () => {
+    expect(countOf(RUN)).toBe(1);
+    const run = positionOf(RUN);
+    expect(run).toBeGreaterThan(positionOf("<ThreadSpine"));
+    for (const section of SECTIONS) {
+      expect(positionOf(section), section).toBeGreaterThan(run);
+    }
+  });
+
+  it("carry no top margin of their own", () => {
+    for (const section of SECTIONS.slice(0, 5)) {
+      const start = positionOf(section);
+      const tag = SOURCE.slice(start, SOURCE.indexOf("/>", start));
+      expect(tag, section).not.toMatch(/className="[^"]*\bmt-/);
+    }
+    const door = SOURCE.lastIndexOf("<section", positionOf("<InlineConfirm"));
+    const doorTag = SOURCE.slice(door, SOURCE.indexOf(">", door));
+    expect(doorTag).not.toMatch(/\bmt-\d/);
+  });
+});
+
 describe("status is said once", () => {
   it("renders exactly one status statement", () => {
     expect(countOf("<ThreadStatus")).toBe(1);

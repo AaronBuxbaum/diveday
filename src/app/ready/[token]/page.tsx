@@ -2323,115 +2323,125 @@ export default async function DiverReadinessPage({
             <ThreadSpine steps={spineSteps} />
           </>
         )}
-        {fullShop && fullTrip ? (
-          <TripArrivalCard
-            shop={{
-              name: fullShop.name,
-              slug: fullShop.slug,
-              timezone: fullShop.timezone,
-              contactPhone: fullShop.contactPhone,
-              contactEmail: fullShop.contactEmail,
-              dockCallNote: fullShop.dockCallNote,
-              address: {
-                street: fullShop.addressStreet,
-                locality: fullShop.addressLocality,
-                region: fullShop.addressRegion,
-                postalCode: fullShop.addressPostalCode,
-                country: fullShop.addressCountry,
-              },
-            }}
-            trip={fullTrip}
-            locale={locale}
-            // Where the day is planned to go, in the order it runs them. It
-            // wears the Plan chip (Budget rule 5) — the shop wrote it down, and
-            // the ledger below is where a change to it would appear.
-            sites={tripDives
-              .map(({ diveSite }) => diveSite?.name)
-              .filter((name): name is string => Boolean(name))}
-            downloadHref={`${publicTripArrivalCardPath(fullShop.slug, fullTrip.id)}?booking=${encodeURIComponent(
-              token,
-            )}`}
-            // The way out of a lost printout (issue #1729). Bound to this
-            // page's own readiness token, which is what the action re-verifies
-            // — the arrival code itself is never held here, and there is
-            // nothing to hand it.
-            stopCodeAction={hasArrivalCode ? stopArrivalCodesFromReady.bind(null, token) : null}
-            // The thread's one map, in the one card about where to go. It used
-            // to sit in a trailing "Your dive shop" card that said this card's
-            // address, phone, email and map link over again.
-            showMap
-            className="mt-8"
-          />
-        ) : null}
-        <TripCrewLine crew={publicCrew} locale={locale} />
-        <TripChangeLedger
-          events={changeEvents}
-          locale={locale}
-          timeZone={detail.shop.timezone}
-          className="mt-6"
-        />
-        <PartyClaimPanel locale={locale} seats={partySeats} className="mt-8" />
-        {partyAllSet ? (
-          <p className="mt-3">
-            <SettledCheck settled label={t("thread.partyAllSet")} className="text-sm text-muted" />
-          </p>
-        ) : null}
-        {/* What to put in the bag. Below the spine — which carries the gear
-            form as one of its steps — because this page's job is still "what's
-            left before you sail", and this is what a diver reads once that is
-            settled. The dive briefings that used to follow it are the trip
-            page's "The day" list and the after-state's keepsake now: what
-            you'll see down there is pitch and memory, not preparation. */}
-        {fullShop && fullTrip ? (
-          <PackingSection
-            shop={fullShop}
-            trip={fullTrip}
-            rentalFit={data.rentalFit}
-            // Never the "every day follows this shape" note here, even on a
-            // course weekend: this page is what a diver reads the morning they
-            // sail, about the day in front of them.
-            multiDay={false}
-            siteBottomTimes={siteBottomTimes}
-            legTravelTimes={legTravelTimes}
-            // This page renders no conditions card at all, so the suit line
-            // has nowhere else to land — and the morning of a dive is exactly
-            // when a diver is deciding what to put in the car.
-            temperatureStatedAbove={false}
-            locale={locale}
-          />
-        ) : null}
-        {/* The diver may release their own seat; moving it is the shop's
-            (ADR 20260821-the-diver-may-release-their-own-seat). It sits last,
-            under everything the page is actually for, and above the shop card
-            whose phone number answers every plan change this button does not.
-            Rendered only when `selfCancelBooking` would actually honour it, so
-            there is no control here that could only come back refused. */}
-        {data.canCancelBooking ? (
-          <section className="mt-10 border-t border-border pt-6">
-            {cancelPreviewKey ? (
-              <p className="text-base text-muted">{t(cancelPreviewKey)}</p>
-            ) : null}
-            <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
-              {/* The refund preview is repeated inside the confirm rather than
-                  left further up the page: the diver reads what it costs at the
-                  moment of commitment, not once on the way past. */}
-              <InlineConfirm
-                triggerLabel={t("ready.cancelSpot")}
-                triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
-                message={[
-                  t("ready.cancelConfirm", { trip: detail.trip.title }),
-                  cancelPreviewKey ? t(cancelPreviewKey) : null,
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                confirmLabel={t("ready.cancelConfirmButton")}
-                cancelLabel={t("ready.neverMind")}
-                pendingLabel={t("ready.cancelling")}
-                confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
-              />
-            </form>
-          </section>
-        ) : null}
+        {/* **One rhythm under the spine** (K-233): the sections below set no
+            margin of their own, and this run spaces them 40px apart once.
+            Each brought its own before — 32, 24, 24, 32, 40, 40 — so the
+            column stepped unevenly down one scroll. */}
+        <div className="mt-10 space-y-10">
+          {fullShop && fullTrip ? (
+            <TripArrivalCard
+              shop={{
+                name: fullShop.name,
+                slug: fullShop.slug,
+                timezone: fullShop.timezone,
+                contactPhone: fullShop.contactPhone,
+                contactEmail: fullShop.contactEmail,
+                dockCallNote: fullShop.dockCallNote,
+                address: {
+                  street: fullShop.addressStreet,
+                  locality: fullShop.addressLocality,
+                  region: fullShop.addressRegion,
+                  postalCode: fullShop.addressPostalCode,
+                  country: fullShop.addressCountry,
+                },
+              }}
+              trip={fullTrip}
+              locale={locale}
+              // Where the day is planned to go, in the order it runs them. It
+              // wears the Plan chip (Budget rule 5) — the shop wrote it down, and
+              // the ledger below is where a change to it would appear.
+              sites={tripDives
+                .map(({ diveSite }) => diveSite?.name)
+                .filter((name): name is string => Boolean(name))}
+              downloadHref={`${publicTripArrivalCardPath(fullShop.slug, fullTrip.id)}?booking=${encodeURIComponent(
+                token,
+              )}`}
+              // The way out of a lost printout (issue #1729). Bound to this
+              // page's own readiness token, which is what the action re-verifies
+              // — the arrival code itself is never held here, and there is
+              // nothing to hand it.
+              stopCodeAction={hasArrivalCode ? stopArrivalCodesFromReady.bind(null, token) : null}
+              // The thread's one map, in the one card about where to go. It used
+              // to sit in a trailing "Your dive shop" card that said this card's
+              // address, phone, email and map link over again.
+              showMap
+            />
+          ) : null}
+          <TripCrewLine crew={publicCrew} locale={locale} />
+          <TripChangeLedger events={changeEvents} locale={locale} timeZone={detail.shop.timezone} />
+          {/* The party's panel and its all-set line are one section: the line
+              is the panel's close, 12px under it, not a section of its own. */}
+          {partySeats.length > 0 ? (
+            <div>
+              <PartyClaimPanel locale={locale} seats={partySeats} />
+              {partyAllSet ? (
+                <p className="mt-3">
+                  <SettledCheck
+                    settled
+                    label={t("thread.partyAllSet")}
+                    className="text-sm text-muted"
+                  />
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {/* What to put in the bag. Below the spine — which carries the gear
+              form as one of its steps — because this page's job is still "what's
+              left before you sail", and this is what a diver reads once that is
+              settled. The dive briefings that used to follow it are the trip
+              page's "The day" list and the after-state's keepsake now: what
+              you'll see down there is pitch and memory, not preparation. */}
+          {fullShop && fullTrip ? (
+            <PackingSection
+              shop={fullShop}
+              trip={fullTrip}
+              rentalFit={data.rentalFit}
+              // Never the "every day follows this shape" note here, even on a
+              // course weekend: this page is what a diver reads the morning they
+              // sail, about the day in front of them.
+              multiDay={false}
+              siteBottomTimes={siteBottomTimes}
+              legTravelTimes={legTravelTimes}
+              // This page renders no conditions card at all, so the suit line
+              // has nowhere else to land — and the morning of a dive is exactly
+              // when a diver is deciding what to put in the car.
+              temperatureStatedAbove={false}
+              locale={locale}
+            />
+          ) : null}
+          {/* The diver may release their own seat; moving it is the shop's
+              (ADR 20260821-the-diver-may-release-their-own-seat). It sits last,
+              under everything the page is actually for, and above the shop card
+              whose phone number answers every plan change this button does not.
+              Rendered only when `selfCancelBooking` would actually honour it, so
+              there is no control here that could only come back refused. */}
+          {data.canCancelBooking ? (
+            <section className="border-t border-border pt-6">
+              {cancelPreviewKey ? (
+                <p className="text-base text-muted">{t(cancelPreviewKey)}</p>
+              ) : null}
+              <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
+                {/* The refund preview is repeated inside the confirm rather than
+                    left further up the page: the diver reads what it costs at the
+                    moment of commitment, not once on the way past. */}
+                <InlineConfirm
+                  triggerLabel={t("ready.cancelSpot")}
+                  triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
+                  message={[
+                    t("ready.cancelConfirm", { trip: detail.trip.title }),
+                    cancelPreviewKey ? t(cancelPreviewKey) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  confirmLabel={t("ready.cancelConfirmButton")}
+                  cancelLabel={t("ready.neverMind")}
+                  pendingLabel={t("ready.cancelling")}
+                  confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
+                />
+              </form>
+            </section>
+          ) : null}
+        </div>
       </ThreadShell>
     </DiverIntlProvider>
   );

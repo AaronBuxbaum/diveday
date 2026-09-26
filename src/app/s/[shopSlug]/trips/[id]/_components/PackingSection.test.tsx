@@ -48,6 +48,16 @@ function renderPacking(overrides: { waterTemperatureC: number | null; statedAbov
   );
 }
 
+describe("PackingSection — its place on the page", () => {
+  it("brings no outer margin of its own", () => {
+    // `/ready` sets its sections 40px apart once, with `space-y-10`; a
+    // built-in `mt-10` here was one of five per-child margins that stepped the
+    // column 32, 24 and 40 (K-233).
+    const { container } = renderPacking({ waterTemperatureC: null, statedAbove: false });
+    expect(container.querySelector("section")?.className ?? "").not.toMatch(/(^|\s)m[ty]?-/);
+  });
+});
+
 describe("PackingSection — the exposure-suit line", () => {
   it("names the suit when no conditions card above it has", () => {
     // The `/ready/[token]` case: no card on the page, so this is the only

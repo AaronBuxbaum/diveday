@@ -303,7 +303,10 @@ export function PackingSection({
     // loud as its own `h1` sitting under a spine of `text-base` steps. This is
     // Clearwater's closed ramp's section heading (ADR
     // 20260827-clearwater-surface-language, decision 3).
-    <section className="mt-10">
+    //
+    // No outer margin: `/ready`, its one caller, spaces its sections once
+    // with `space-y-10` (K-233).
+    <section>
       <h2 className={SECTION_TITLE_CLASS}>{t("trip.packTitle")}</h2>
       {exposureSuit ? (
         <p className="mt-2 text-sm text-muted">{t(EXPOSURE_SUIT_KEYS[exposureSuit])}</p>
