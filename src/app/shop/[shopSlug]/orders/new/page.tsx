@@ -53,6 +53,15 @@ const LINE_ITEM_KINDS = [
 
 type LineItemKind = (typeof LINE_ITEM_KINDS)[number]["value"];
 
+/**
+ * **The form's two kinds of box inside its card** — the billing address and
+ * each line item — spelled once, so their controls start on one x and end on
+ * one. The address took `p-4` and the line items `p-3`, and the line items'
+ * controls sat 4px outside the address's on the left and 3px on the right
+ * (318 against 322, 961 against 958 at 1280; K-571).
+ */
+const INSET_BOX_CLASS = "rounded-lg border border-border p-4";
+
 // A notice query param maps to a message key, never to a sentence — the words
 // come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
 const NOTICE_KEYS: Record<string, StaffMessageKey> = {
@@ -246,7 +255,7 @@ export default async function NewOrderPage({
               every invoice — a worse failure than an empty field, because it
               looks answered. A real shop still types it. */}
           {shop.taxEnabled ? (
-            <fieldset className="rounded-lg border border-border p-4">
+            <fieldset className={INSET_BOX_CLASS}>
               <legend className={`${legendClass} text-sm font-medium`}>
                 {t("orders.new.taxLocationLegend")}
               </legend>
@@ -336,7 +345,7 @@ export default async function NewOrderPage({
                 <div
                   // biome-ignore lint/suspicious/noArrayIndexKey: a fixed set of static rows, never reordered
                   key={i}
-                  className="grid grid-cols-1 gap-2 rounded-lg border border-border p-3 sm:grid-cols-[7rem_1fr_5rem_6rem]"
+                  className={`grid grid-cols-1 gap-2 ${INSET_BOX_CLASS} sm:grid-cols-[7rem_1fr_5rem_6rem]`}
                 >
                   <select
                     name={`kind-${i}`}

@@ -164,4 +164,31 @@ describe("the line items", () => {
     // No hand-set legend left to carry a gap of its own.
     expect(findElements(tree, "legend")).toHaveLength(0);
   });
+
+  /**
+   * Two bordered boxes in one card, the billing address at `p-4` and each line
+   * item at `p-3`, so the line items' controls started 4px left of the
+   * address's (318 against 322 at 1280) and ended 3px right of them (K-571).
+   */
+  it("inset their controls as far as the billing address box does", async () => {
+    const { db, shop } = await shopThatCanBill();
+    await setShopTaxEnabled(db, shop.id, true);
+    const tree = await renderWith();
+
+    const boxes = [
+      ...findElements<{ className?: string }>(tree, "fieldset"),
+      ...findElements<{ className?: string }>(tree, "div"),
+    ].filter((element) => /\bborder\b/.test(element.props.className ?? ""));
+    // The address box, and one per line item.
+    expect(boxes.length).toBeGreaterThan(1);
+    const insets = new Set(
+      boxes.map((box) =>
+        (box.props.className ?? "")
+          .split(" ")
+          .filter((token) => /^p-/.test(token))
+          .join(" "),
+      ),
+    );
+    expect([...insets]).toEqual(["p-4"]);
+  });
 });
