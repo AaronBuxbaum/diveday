@@ -131,7 +131,11 @@ test.describe("the paper day", () => {
           box.height > 0
         );
       };
-      return [...document.querySelectorAll("button, select, textarea, input")]
+      // Less the roll call's person buttons, whose content is the name the
+      // sheet exists to carry (`button[data-print-content]`, as in trips.spec).
+      return [
+        ...document.querySelectorAll("button:not([data-print-content]), select, textarea, input"),
+      ]
         .filter(visible)
         .map(
           (element) =>

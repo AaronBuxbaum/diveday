@@ -602,9 +602,12 @@ test.describe("the printed trip packet", () => {
           box.height > 0
         );
       };
-      const found = [...document.querySelectorAll("button, select, textarea, input")].filter(
-        visible,
-      );
+      // `button[data-print-content]` is the roll call's person: a button
+      // whose content is the name, which the packet exists to print
+      // (`globals.css`'s backstop lets it through; its caret stays off paper).
+      const found = [
+        ...document.querySelectorAll("button:not([data-print-content]), select, textarea, input"),
+      ].filter(visible);
       // Named, not counted: a failure that says "3" sends the next reader
       // hunting, and one that says "Cancel trip" sends them to the section.
       return found.map(
