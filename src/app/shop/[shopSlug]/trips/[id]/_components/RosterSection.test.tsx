@@ -778,4 +778,19 @@ describe("the roster's row geometry", () => {
       .closest("details");
     expect(notes?.lastElementChild).toHaveClass("mt-2", "pb-2");
   });
+
+  /**
+   * K-551: "Review certifications →" is 14px of text in a 44px box, and the
+   * next line's `mt-3` stacked on the box's unseen 12px below it: 45px from
+   * the link's ink to the note row's, where the row's other steps are 24–26.
+   * The link gives that unseen half back (`-mb-3`, with `align-bottom` so its
+   * line's strut keeps none of it, as `buttonClass`'s `outdent` does), and the
+   * target stays whole.
+   */
+  it("gives back the unseen lower half of the certification link's target", () => {
+    renderRoster(fixtures);
+
+    const link = screen.getByRole("link", { name: /Review certifications/ });
+    expect(link).toHaveClass("min-h-11", "-mb-3", "align-bottom");
+  });
 });

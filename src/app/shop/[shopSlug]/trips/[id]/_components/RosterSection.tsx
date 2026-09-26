@@ -791,13 +791,19 @@ export function RosterSection({
             {/* Every named problem carries its handle. The waiver, payment,
                 and identity blockers already do — their controls are on this
                 row — but a certification-family blocker's fix lives on the
-                diver's record (design review 2026-08-21). */}
+                diver's record (design review 2026-08-21).
+
+                Its 44px box carries 12px nobody sees under the words, and the
+                next line's `mt-3` stacked on it: 45px of air between two text
+                lines (K-551). `-mb-3 align-bottom` gives that half back, as
+                `buttonClass`'s `outdent` does for a quiet button, so the next
+                line's box meets this one's and the target stays whole. */}
             {blockerTexts.some(
               ({ blocker }) => BLOCKER_CATEGORY[blocker.code] === "certification",
             ) ? (
               <Link
                 href={`/shop/${shopSlug}/divers/${person.id}#cards`}
-                className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+                className="mt-2 -mb-3 inline-flex min-h-11 items-center align-bottom text-sm font-semibold text-primary hover:underline"
               >
                 {t("trips.roster.reviewCertificationsLink")}
               </Link>
