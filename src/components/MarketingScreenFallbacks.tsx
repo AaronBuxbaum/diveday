@@ -206,7 +206,11 @@ export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
           ))}
         </div>
         <p className="mt-3 text-xs text-warning">{t("fallback.import.ignored")}</p>
-        <dl className="mt-4 grid grid-cols-3 gap-2">
+        {/* No tile narrower than its longest word: es-ES's "Certificaciones"
+            is one word of about 72.9px, past even the 68.67px `px-2` leaves
+            at 360, so its column takes that and the other two share the rest.
+            In en-US every label fits and the three stay equal (K-122). */}
+        <dl className="mt-4 grid grid-cols-[repeat(3,minmax(min-content,1fr))] gap-2">
           {[
             [t("fallback.import.statDivers"), "128"],
             [t("fallback.import.statCards"), "96"],

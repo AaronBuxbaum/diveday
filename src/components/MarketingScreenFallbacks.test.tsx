@@ -203,13 +203,22 @@ describe("MarketingScreenFallbacks", () => {
 
     // Three tiles in a row leave a 60.67px label box at 360, and "Certifications"
     // is 64.8px at 10px, so it ran 4px past its tile (K-122). The tiles give up
-    // 4px of padding a side below sm, where the row is narrowest.
-    it("pads its stat tiles so the longest label fits at 360", () => {
-      render(<ImportPreviewFallback locale="en-US" />);
-      for (const label of ["Divers in file", "Certifications", "Skipped"]) {
+    // 4px of padding a side below sm, where the row is narrowest. That is not
+    // enough for es-ES's "Certificaciones", one word of about 72.9px against
+    // the 68.67px box, so the columns also never shrink a tile below its own
+    // longest word: the other two tiles give up the difference.
+    it.each([
+      ["en-US", ["Divers in file", "Certifications", "Skipped"]],
+      ["es-ES", ["Buceadores en el archivo", "Certificaciones", "Omitidos"]],
+    ] as const)("keeps every %s stat label inside its tile at 360", (locale, labels) => {
+      render(<ImportPreviewFallback locale={locale} />);
+      for (const label of labels) {
         const tile = screen.getByText(label).parentElement;
         expect(tile).toHaveClass("px-2", "sm:px-3");
         expect(tile).not.toHaveClass("px-3");
+        const grid = tile?.parentElement;
+        expect(grid).toHaveClass("grid-cols-[repeat(3,minmax(min-content,1fr))]");
+        expect(grid).not.toHaveClass("grid-cols-3");
       }
     });
   });
