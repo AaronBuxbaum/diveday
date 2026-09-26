@@ -120,8 +120,11 @@ describe("BookingPartyFields — the group captions", () => {
     const detailsCaption = screen.getByText("Your details");
     expect(detailsCaption.tagName).toBe("LEGEND");
     expect(detailsCaption.className.split(" ").sort()).toEqual(
-      [...countCaption.className.split(" "), "mb-2"].sort(),
+      countCaption.className.split(" ").sort(),
     );
+    // The 8px lives on the body after the legend, as ChoiceFieldset's does: a
+    // legend carries no margin of its own (form.test.tsx's sweep, K-72).
+    expect(detailsCaption.nextElementSibling).toHaveClass("mt-2");
     expect(detailsCaption).not.toHaveClass("text-muted");
     expect(countCaption).toHaveClass("text-sm", "font-semibold");
   });
@@ -136,7 +139,8 @@ describe("BookingPartyFields — the group captions", () => {
       renderDiver(<BookingPartyFields maxPartySize={4} remember />);
       const line = screen.getByRole("button", { name: "Not you?" }).closest("p");
       expect(line).toHaveTextContent("Booking as Marco Rossi");
-      expect(screen.getByText("Your details")).toHaveClass("mb-2");
+      expect(screen.getByText("Your details").nextElementSibling).toHaveClass("mt-2");
+      expect(line?.parentElement).toBe(screen.getByText("Your details").nextElementSibling);
       expect(line?.className.split(" ").filter((name) => /^-?m[ty]-/.test(name))).toEqual([]);
     } finally {
       localStorage.clear();
