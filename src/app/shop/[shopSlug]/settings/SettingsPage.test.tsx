@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { InsetGroup } from "@/components/ui/ledger";
@@ -434,6 +435,23 @@ describe("the page's footer", () => {
     expect(links[0]?.props.className?.split(" ")).toEqual(
       expect.arrayContaining(tapTargetLinkClass.split(" ")),
     );
+  });
+
+  /**
+   * The page's sections sit 40px apart in one `space-y-10`, and the footer
+   * sat outside that stack on its own `mt-12`, 48px under the last card
+   * (K-488). It is the stack's last child now, and carries no margin of its own.
+   */
+  it("sits in the page's section stack, a section's gap under the last card", async () => {
+    const stacks = findElements<{ className?: string; children?: unknown }>(
+      await renderSettings("owner"),
+      "div",
+    ).filter((div) => div.props.className === "space-y-10");
+    expect(stacks).toHaveLength(1);
+    const children = [stacks[0]?.props.children].flat(Number.POSITIVE_INFINITY);
+    const footer = children.at(-1) as ReactElement<{ className?: string }> | undefined;
+    expect(footer?.type).toBe("footer");
+    expect(footer?.props.className).not.toMatch(/(^|\s)m[ty]-/);
   });
 });
 

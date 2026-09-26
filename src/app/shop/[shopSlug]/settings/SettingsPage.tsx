@@ -2421,19 +2421,22 @@ export default async function SettingsPage({
             ) : null}
           </InsetGroup>
         </SettingsGroup>
-      </div>
 
-      <footer className="mt-12 border-t border-border pt-6 text-sm text-muted">
-        <p>{t("settings.main.support.description")}</p>
-        {/* A link under a paragraph, not inside a sentence, so it takes the
+        {/* The stack's last child, so it sits a section's 40px under the last
+            card like every section above it; on its own `mt-12` it sat 48px
+            under (K-488). */}
+        <footer className="border-t border-border pt-6 text-sm text-muted">
+          <p>{t("settings.main.support.description")}</p>
+          {/* A link under a paragraph, not inside a sentence, so it takes the
             44px floor: it was a 159×17 target at 390 (K-153). */}
-        <a
-          href={`mailto:${SUPPORT_EMAIL}`}
-          className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
-        >
-          {t("settings.main.support.emailCta", { email: SUPPORT_EMAIL })}
-        </a>
-      </footer>
+          <a
+            href={`mailto:${SUPPORT_EMAIL}`}
+            className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
+          >
+            {t("settings.main.support.emailCta", { email: SUPPORT_EMAIL })}
+          </a>
+        </footer>
+      </div>
     </main>
   );
 }
