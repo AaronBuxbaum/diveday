@@ -872,11 +872,11 @@ describe("LedgerRow", () => {
   /**
    * **A plain row among doors keeps the door's slot** (pixel-craft class 3).
    * The inbox mixes the two: a stranger's message has no record to open, so
-   * its date ended where its siblings' chevrons begin, 18px right of every
-   * other date in the column — and 50px left of them once a Delete stood
-   * beside it (K-459). The slot is the door's own glyph, unseen, rather than a
-   * spacer a call site sizes by hand: a 16px guess would have outlived the
-   * glyph's crop to its 5.7px of ink by 10px.
+   * with nothing after it its date would end on the chevrons' edge, 18px
+   * right of every other date in the column — and it ended 50px left of them
+   * while a Delete stood beside it (K-459). The slot is the door's own glyph,
+   * unseen, rather than a spacer a call site sizes by hand: a 16px guess would
+   * have outlived the glyph's crop to its 5.7px of ink by 10px.
    */
   it("keeps the door glyph's box, unseen, on a plain row that asks for it", () => {
     const { container } = render(

@@ -451,7 +451,8 @@ type LedgerRowDoor =
        * class 3): the door's own glyph, unseen, so this row's `trailing` ends
        * on the edge its siblings' does. The inbox's strangers are the case — a
        * message with no record behind it, among messages with one — whose
-       * date stood 18px right of every other date in the column. The glyph
+       * date, with nothing after it, would end on the chevrons' edge, 18px
+       * right of every other date in the column. The glyph
        * itself rather than a spacer a call site sizes, so the slot is whatever
        * the door's box is: a hand-set `size-4` would have been 10px wider than
        * the 5.7px of ink the chevron is cropped to.
