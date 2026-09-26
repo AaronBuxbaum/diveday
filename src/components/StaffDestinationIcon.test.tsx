@@ -74,6 +74,67 @@ describe("a trimmed glyph", () => {
 });
 
 /**
+ * A chevron's x extent, read from its own path: a move then relative lines
+ * (`m9 6 6 6-6 6`), which is how every chevron in the family is drawn.
+ */
+function chevronInkX(d: string) {
+  if (!/^m[\d\s.-]+$/.test(d)) throw new Error(`not a move-and-lines path: ${d}`);
+  const [x0 = 0, , ...steps] = (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+  const xs = [x0];
+  for (let index = 0; index < steps.length; index += 2) {
+    xs.push((xs.at(-1) ?? 0) + (steps[index] ?? 0));
+  }
+  return [Math.min(...xs), Math.max(...xs)] as const;
+}
+
+/**
+ * **One crop for every glyph drawn on its ink.** The back-link's chevron
+ * (pixel-craft K-114) and a ledger door's (K-118) have the pin's defect: a
+ * 24-unit square leaves 3–5px of empty box between the ink and the edge it
+ * should sit on. `trim` is their box too, derived from the path and whatever
+ * stroke the caller draws, so neither needs a crop of its own or a second
+ * name: it is opt-in per call site, and every square user of a chevron keeps
+ * the square.
+ */
+describe("a trimmed chevron", () => {
+  it.each(["chevron-left", "chevron-right"] as const)(
+    "crops %s across to its stroke, measured from its own path",
+    (name) => {
+      for (const stroke of [1.8, 2.5]) {
+        const { container, unmount } = render(
+          <DiveDayIcon name={name} trim strokeWidth={stroke} className="h-4 w-auto" />,
+        );
+        const svg = container.querySelector("svg");
+        const [from, to] = chevronInkX(svg?.querySelector("path")?.getAttribute("d") ?? "");
+        const [x, y, width, height] = (svg?.getAttribute("viewBox") ?? "").split(" ").map(Number);
+
+        expect(x).toBeCloseTo(from - stroke / 2, 5);
+        expect(width).toBeCloseTo(to - from + stroke, 5);
+        expect([y, height]).toEqual([0, 24]);
+        unmount();
+      }
+    },
+  );
+
+  it("gives the back-link's chevron, at its 2.5 stroke, exactly the box it was cut by hand", () => {
+    const { container } = render(
+      <DiveDayIcon name="chevron-left" trim strokeWidth={2.5} className="h-3 w-auto" />,
+    );
+    expect(container.querySelector("svg")).toHaveAttribute("viewBox", "7.75 0 8.5 24");
+  });
+
+  it("gives a door's chevron, at the family's 1.8 stroke, the stroke's own box", () => {
+    const { container } = render(<DiveDayIcon name="chevron-right" trim className="h-4 w-auto" />);
+    expect(container.querySelector("svg")).toHaveAttribute("viewBox", "8.1 0 7.8 24");
+  });
+
+  it("leaves a chevron drawn without it in the shared square", () => {
+    const { container } = render(<DiveDayIcon name="chevron-right" className="size-4" />);
+    expect(container.querySelector("svg")).toHaveAttribute("viewBox", "0 0 24 24");
+  });
+});
+
+/**
  * **A remove control draws its cross**, in the family's stroke, rather than
  * typing a "×" that renders at the font's size and weight (pixel-craft K-545).
  */

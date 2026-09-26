@@ -381,14 +381,25 @@ type DiveDayIconName = StaffDestinationId | DiveDaySharedIconName;
  * the stroke (which `trimmedViewBox` adds, so a heavier stroke still fits).
  *
  * A glyph leading a row lines up by its ink, the way the words beside it do
- * (docs/design/pixel-craft.md, classes 2 and 3). In the shared 24-unit square
- * the dive-site catalog door's pin started 3px inside the column its row's
- * words start on (pixel-craft K-519). An entry here is measured from the path
- * above it, never guessed: a wrong one crops the ink it was meant to align.
+ * (docs/design/pixel-craft.md, classes 2 and 3), and one ending a row ends on
+ * its ink. In the shared 24-unit square the dive-site catalog door's pin
+ * started 3px inside the column its row's words start on (pixel-craft K-519),
+ * the back-link's chevron 3–4px right of its title's column (K-114), and a
+ * ledger door's chevron 5px inside its row's end (K-118).
+ *
+ * **This is the one way to draw a glyph on its ink.** Not a second name for a
+ * cropped copy of a path, and not a viewBox written by hand at the call site:
+ * `trim` is opt-in per call, so a glyph's square users keep the square, and
+ * the crop follows the stroke the caller draws. An entry here is measured
+ * from the path above it, never guessed: a wrong one crops the ink it was
+ * meant to align.
  */
 const TRIM_X = {
   // The pin's teardrop: its arc and both curves reach x 5 and x 19.
   diveSites: [5, 19],
+  // Both chevrons run between x 9 and x 15, point and arms.
+  "chevron-left": [9, 15],
+  "chevron-right": [9, 15],
 } as const satisfies Partial<Record<DiveDayIconName, readonly [number, number]>>;
 
 /** A glyph whose horizontal ink is recorded, so `trim` can crop its box to it. */
