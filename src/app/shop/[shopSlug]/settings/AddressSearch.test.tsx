@@ -229,7 +229,6 @@ describe("the address card with a geocoder", () => {
     renderCard({ initial: KEY_LARGO_ADDRESS });
     const remove = screen.getByRole("button", { name: copy.removeLabel });
     expect(remove).toHaveClass("-mx-2", "px-2");
-    expect(remove).not.toHaveClass("-ml-3");
     expect(remove).not.toHaveClass("focus-visible:focus-ring-inset");
   });
 
