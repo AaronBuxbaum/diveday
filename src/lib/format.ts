@@ -482,6 +482,22 @@ export function formatCalendarDateRange(
 }
 
 /**
+ * **A title's em dash stays with the word before it** — "Two-Tank Reef — Benwood
+ * & Elbow" becomes "Two-Tank Reef\u00A0— Benwood & Elbow".
+ *
+ * Trip titles are free text a shop types, and they are "X — Y" throughout. A
+ * balanced heading (`text-balance`) breaks at whichever space evens its lines,
+ * and the space before the dash is often it: the departures board and the
+ * thread's pages opened line two with "— Benwood & Elbow". Binding the space
+ * before the dash leaves the one after it free, so a line may end on the dash
+ * and never begin with it. For a title rendered as a balanced heading; a title
+ * in running text needs nothing.
+ */
+export function bindTitleDash(title: string): string {
+  return title.replaceAll(" — ", "\u00A0— ");
+}
+
+/**
  * Localized ordinal representation (e.g. 1st, 2nd, 3rd, 4th in English; 1.º, 2.º, 4.º in Spanish).
  */
 export function formatOrdinal(count: number, locale = "en-US"): string {

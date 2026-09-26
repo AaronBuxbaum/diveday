@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  bindTitleDash,
   formatByteSize,
   formatDateTimeTz,
   formatDateWithYear,
@@ -17,6 +18,24 @@ import {
 
 const morning = new Date("2026-07-17T07:30:00Z");
 const midday = new Date("2026-07-17T11:00:00Z");
+
+describe("bindTitleDash", () => {
+  it("binds a title's em dash to the word before it, so no line starts with the dash", () => {
+    // A balanced heading broke at the plain space before " — ", leaving the
+    // dash at the start of line two on the departures board at 390 (K-117).
+    expect(bindTitleDash("Two-Tank Reef — Benwood & Elbow")).toBe(
+      "Two-Tank Reef\u00A0— Benwood & Elbow",
+    );
+    expect(bindTitleDash("Night Dive — Molasses — Deep")).toBe(
+      "Night Dive\u00A0— Molasses\u00A0— Deep",
+    );
+  });
+
+  it("leaves a title with no spaced em dash as it is", () => {
+    expect(bindTitleDash("Two-Tank Reef")).toBe("Two-Tank Reef");
+    expect(bindTitleDash("Reef—Wreck")).toBe("Reef—Wreck");
+  });
+});
 
 describe("isValidTimeZone (CR-014)", () => {
   it("accepts real IANA zones", () => {

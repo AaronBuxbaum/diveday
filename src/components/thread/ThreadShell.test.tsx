@@ -75,6 +75,14 @@ describe("ThreadShell", () => {
     expect(screen.getByText("Blue Mantis Divers").tagName).toBe("P");
   });
 
+  it("keeps a trip title's em dash off the start of a line", () => {
+    // The h1 balances its wrap, and balancing broke at the space before the
+    // dash: "— Benwood & Elbow" opened line two (K-117).
+    render(<ThreadShell shopName="Blue Mantis Divers" title="Two-Tank Reef — Benwood & Elbow" />);
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading.textContent).toBe("Two-Tank Reef\u00A0— Benwood & Elbow");
+  });
+
   it("puts the thread's column on its own <main> landmark", () => {
     const { container } = render(<ThreadShell shopName="Blue Mantis Divers" title="Waivers" />);
     const main = container.querySelector("main");

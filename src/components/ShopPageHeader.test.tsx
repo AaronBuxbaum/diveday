@@ -5,10 +5,22 @@ import {
   EYEBROW_CLASS,
   EYEBROW_TAP_WRAPPER,
   EyebrowBackLink,
+  ShopPageHeader,
   ShopPageHeaderSkeleton,
 } from "./ShopPageHeader";
 
 afterEach(cleanup);
+
+describe("ShopPageHeader's title", () => {
+  it("keeps a trip title's em dash off the start of a line", () => {
+    // The title rung balances its wrap, and balancing broke at the space
+    // before the dash on the public trip page at 390 (K-117).
+    render(<ShopPageHeader title="Two-Tank Reef — Benwood & Elbow" />);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      "Two-Tank Reef\u00A0— Benwood & Elbow",
+    );
+  });
+});
 
 /**
  * **One number, in three places, that nothing else checks.**

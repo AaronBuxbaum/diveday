@@ -6,6 +6,7 @@ import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { toneMark } from "@/components/ui/tone";
 import { GREETING_TITLE_CLASS, PAGE_TITLE_CLASS } from "@/components/ui/typography";
+import { bindTitleDash } from "@/lib/format";
 
 /**
  * The eyebrow — "where you are", one line above the title. Reef's rung: 11px,
@@ -213,7 +214,7 @@ export function ShopPageHeader({
             data-chrome-fold-title
             className={`${titleFace === "brand" ? "font-brand-display " : ""}${display ? GREETING_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}`}
           >
-            {title}
+            {bindTitleDash(title)}
           </h1>
           {/* The same words, delivered into the staff shell's bar so they can
               fold into it as the page scrolls (ADR
