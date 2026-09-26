@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { NextDivePick } from "@/lib/next-dive";
@@ -54,11 +55,12 @@ export function NextDiveCard({
       {/* The departure's own name, not a heading: `SectionCard` already owns the
           only heading on this card, and a second one would give a keepsake two
           titles a screen reader reads in a row. Weighted rather than ramped for
-          the same reason (`pnpm check:type-ramp`). */}
+          the same reason (`pnpm check:type-ramp`). The card's one door, so a
+          44px target (`tapTargetLinkClass`): bare, it was 21px tall (K-187). */}
       <p className="mt-1 text-lg font-medium">
         <Link
           href={href ?? publicTripPath(shopSlug, pick.tripId)}
-          className="text-primary hover:underline"
+          className={`${tapTargetLinkClass} text-primary hover:underline`}
         >
           {pick.title}
         </Link>

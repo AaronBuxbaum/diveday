@@ -1009,6 +1009,17 @@ describe("the next dive", () => {
     expect(screen.queryByText("recap.nextDiveHeading")).toBeNull();
   });
 
+  it("makes the departure's name a 44px target, not a 21px line of text", () => {
+    // The card's one door was a bare inline link, 244.7 x 21 on every recap
+    // capture (K-187); `tapTargetLinkClass` gives it the 44px floor.
+    render(<AfterState {...props({ nextDive: pick, nextDiveWorded: worded })} />);
+    expect(screen.getByRole("link", { name: pick.title })).toHaveClass(
+      "inline-flex",
+      "min-h-11",
+      "items-center",
+    );
+  });
+
   /**
    * Two "here is what is next" claims one scroll apart, naming two different
    * departures, is the page arguing with itself — so the footer's bare fact
