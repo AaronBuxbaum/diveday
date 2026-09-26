@@ -216,11 +216,14 @@ export default async function IncidentExportPage({
                     somebody has to reassemble while reading it aloud in a
                     hurry (issue #1035). `Td numeric` would nowrap it, but it
                     would also right-align the whole cell and make a name a
-                    figure — so the rule goes on the number itself. */}
+                    figure — so the rule goes on the number itself. The dot
+                    before it is glued to the name by a no-break space, so a
+                    narrow cell never starts a line with "·". */}
                 <Td muted>
                   {diver.emergencyContactName && diver.emergencyContactPhone ? (
                     <>
-                      {diver.emergencyContactName} ·{" "}
+                      {diver.emergencyContactName}
+                      {"\u00a0"}·{" "}
                       <span className="whitespace-nowrap">{diver.emergencyContactPhone}</span>
                     </>
                   ) : (

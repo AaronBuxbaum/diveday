@@ -10,6 +10,13 @@ import type { CertificationLevel } from "@/lib/readiness";
  */
 const NUMBER_SLOT = "\u{E000}";
 
+/**
+ * The line's separator, glued to what it follows by a no-break space: a wrap
+ * falls after a dot, never before one, so no line of the evidence starts with
+ * "· Certified". The messages' own " · " joins get the same glue.
+ */
+const SEPARATOR = "\u00a0· ";
+
 /** One held card, as the shop's records state it. */
 export function CertificationLine({
   t,
@@ -57,17 +64,20 @@ export function CertificationLine({
             agency: agencyText(card.agency),
             identifier,
           });
-  const line = translated.split(NUMBER_SLOT).flatMap((part, index) =>
-    index === 0
-      ? [part]
-      : [
-          // biome-ignore lint/suspicious/noArrayIndexKey: the message's own order, never reordered
-          <span key={index} className="whitespace-nowrap">
-            {card.identifier}
-          </span>,
-          part,
-        ],
-  );
+  const line = translated
+    .replaceAll(" · ", SEPARATOR)
+    .split(NUMBER_SLOT)
+    .flatMap((part, index) =>
+      index === 0
+        ? [part]
+        : [
+            // biome-ignore lint/suspicious/noArrayIndexKey: the message's own order, never reordered
+            <span key={index} className="whitespace-nowrap">
+              {card.identifier}
+            </span>,
+            part,
+          ],
+    );
   const status =
     card.status === "verified"
       ? card.reviewedAt
@@ -83,10 +93,22 @@ export function CertificationLine({
       : t("incidentExport.certStatusPending");
   return (
     <>
-      {line} · {status}
-      {card.imported ? <> · {t("incidentExport.certImportedTag")}</> : null}
+      {line}
+      {SEPARATOR}
+      {status}
+      {card.imported ? (
+        <>
+          {SEPARATOR}
+          {t("incidentExport.certImportedTag")}
+        </>
+      ) : null}
       {/* The weakest thing on the page, and it has to read that way. */}
-      {card.selfDeclared ? <> · {t("incidentExport.certSelfDeclaredTag")}</> : null}
+      {card.selfDeclared ? (
+        <>
+          {SEPARATOR}
+          {t("incidentExport.certSelfDeclaredTag")}
+        </>
+      ) : null}
     </>
   );
 }
