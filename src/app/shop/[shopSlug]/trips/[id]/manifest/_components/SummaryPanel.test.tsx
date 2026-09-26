@@ -457,3 +457,56 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
     }
   });
 });
+
+/**
+ * **The prose under the pinned card starts on the card's content edge, and an
+ * empty status line adds nothing** (K-554, K-558).
+ *
+ * The card is `border p-4`, so its chips start 17px in; the prose block under
+ * it was `px-4`, and its chips started a pixel left of the card's. And the
+ * live status line stays mounted (it must exist before its words arrive), but
+ * with divers still to call it has nothing to say, and the lines after it
+ * still spaced themselves off it: 4px of margin above "1 diver is blocked."
+ * against a 0px line.
+ */
+describe("the prose under the pinned card", () => {
+  function renderAwaiting() {
+    return renderPanel({
+      isDeparture: true,
+      checkpoint: "departure",
+      completeness: completeness({ reason: "divers_awaiting" }),
+      summary: summary({
+        totalDivers: 3,
+        ready: 2,
+        blocked: 1,
+        boarded: 1,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 2,
+      }),
+      uncalled: [
+        { bookingId: "b-2", fullName: "Diego Marín", blocked: false },
+        { bookingId: "b-3", fullName: "Priya Sharma", blocked: true },
+      ],
+      notBackAboardDivers: [],
+    });
+  }
+
+  it("insets its content by the card's border as well as its padding", () => {
+    renderAwaiting();
+    const prose = screen.getByRole("list", { name: "People still to call" }).parentElement;
+    expect(prose).toHaveClass("border-x", "border-transparent", "px-4");
+  });
+
+  it("spaces nothing off the live line while it is empty", () => {
+    renderAwaiting();
+    const live = document.querySelector('[aria-live="polite"]');
+    expect(live?.tagName).toBe("P");
+    expect(live).toBeEmptyDOMElement();
+    const list = screen.getByRole("list", { name: "People still to call" });
+    expect(list.previousElementSibling).toBe(live);
+    expect(list).toHaveClass("[p:empty+&]:mt-0");
+    const blocked = screen.getByText("1 diver is blocked.");
+    expect(blocked).toHaveClass("[p:empty+&]:mt-0");
+  });
+});
