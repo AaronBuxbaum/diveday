@@ -689,7 +689,9 @@ type ChoiceProps = {
  * not `items-center`, which would hang the box beside the middle of a
  * paragraph. The input is written out in each, not in a shared child, so
  * the label visibly holds its control (Biome's `noLabelWithoutControl`
- * cannot see through a component).
+ * cannot see through a component). The words' column is `1fr`, whose floor
+ * is their longest word: a pill in a wrapping flex row never shrinks below
+ * its words and spills them over its border.
  */
 const CHOICE_BOX_LINE = "flex h-lh items-center";
 
@@ -706,7 +708,7 @@ const CHOICE_BOX_LINE = "flex h-lh items-center";
 export function ChoiceRow({ type, className = "", children, ...input }: ChoiceProps) {
   return (
     <label
-      className={`grid min-h-11 cursor-pointer grid-cols-[auto_minmax(0,1fr)] content-center items-start gap-x-3 ${className}`.trim()}
+      className={`grid min-h-11 cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-3 ${className}`.trim()}
     >
       <span className={CHOICE_BOX_LINE}>
         <input type={type} {...input} className={choiceClass} />
@@ -741,7 +743,7 @@ export function ChoicePill({
 }: ChoiceProps & { size?: "sm" | "md" }) {
   return (
     <label
-      className={`grid min-h-11 cursor-pointer grid-cols-[auto_minmax(0,1fr)] content-center items-start gap-x-2 rounded-lg border border-border bg-surface px-4 py-2 transition-colors hover:bg-surface-sunken ${size === "md" ? "text-base" : "text-sm"} ${className}`.trim()}
+      className={`grid min-h-11 cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-2 rounded-lg border border-border bg-surface px-4 py-2 transition-colors hover:bg-surface-sunken ${size === "md" ? "text-base" : "text-sm"} ${className}`.trim()}
     >
       <span className={CHOICE_BOX_LINE}>
         <input type={type} {...input} className={choiceClass} />
