@@ -1,6 +1,7 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { SEGMENT_CORNER, SEGMENT_RAISED, segmentedTrackClass } from "@/components/ui/segmented";
+import { CREW_COLUMN, METER_COLUMN } from "./_components/DepartureLedger";
 import { figureCellClass } from "./_components/MonthFigures";
 
 /**
@@ -69,7 +70,9 @@ export default function ReportsLoading() {
         {/* Each departure row as `LedgerRow` draws it (`md`: `min-h-13`,
             `py-2`) holding the loaded row's two lines: the title's 24px line,
             then the facts' 20px line, 8px down on a phone and 4px from `sm`
-            (DepartureLedger). 69px and 65px, as the rows that replace them. */}
+            (DepartureLedger). 69px and 65px, as the rows that replace them.
+            From `lg` the facts' bars fill the ledger's own seats, crew and
+            waivers columns (K-285), so they end where the loaded ones do. */}
         <div className="mt-2">
           {[0, 1, 2, 3, 4, 5].map((row) => (
             <div key={row} className={`flex min-h-13 items-center py-2 ${ledgerRowBoxClass}`}>
@@ -78,9 +81,9 @@ export default function ReportsLoading() {
                   <div className="h-4 w-3/4 rounded bg-surface-sunken sm:w-80" />
                 </div>
                 <div className="mt-2 flex h-5 items-center gap-4 sm:mt-1">
-                  <div className="h-3 w-20 rounded bg-surface-sunken lg:w-52" />
-                  <div className="h-3 w-12 rounded bg-surface-sunken lg:w-20" />
-                  <div className="h-3 w-20 rounded bg-surface-sunken lg:w-52" />
+                  <div className={`h-3 w-20 rounded bg-surface-sunken ${METER_COLUMN}`} />
+                  <div className={`h-3 w-12 rounded bg-surface-sunken ${CREW_COLUMN}`} />
+                  <div className={`h-3 w-20 rounded bg-surface-sunken ${METER_COLUMN}`} />
                 </div>
               </div>
             </div>

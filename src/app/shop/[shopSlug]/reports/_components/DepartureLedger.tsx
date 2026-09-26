@@ -105,14 +105,15 @@ function ShareMeter({
  * gap and the 96px bar that is 237px, past `w-56` and 3px inside `w-60`, too
  * close to call, so `w-64`. One class for both meters and the empty slot that
  * holds the waivers column open, so the columns line up down every row.
+ * Exported for the Reports skeleton, whose bars stand in these columns.
  */
-const METER_COLUMN = "lg:w-64";
+export const METER_COLUMN = "lg:w-64";
 
 /**
  * The crew count's column, set whole: "3 tripulantes" is about 78px and two
  * digits of it 87, so `w-20` wrapped it or ran it into the gap.
  */
-const CREW_COLUMN = "lg:w-24";
+export const CREW_COLUMN = "lg:w-24";
 
 export function DepartureLedger({
   label,

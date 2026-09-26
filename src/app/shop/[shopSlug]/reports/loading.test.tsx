@@ -2,6 +2,7 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { segmentedTrackClass } from "@/components/ui/segmented";
+import { CREW_COLUMN, METER_COLUMN } from "./_components/DepartureLedger";
 import { figureCellClass } from "./_components/MonthFigures";
 import ReportsLoading from "./loading";
 
@@ -60,6 +61,23 @@ describe("the Reports skeleton", () => {
       const lines = row.querySelectorAll(":scope > div > div");
       expect(lines[0]).toHaveClass("h-6");
       expect(lines[1]).toHaveClass("mt-2", "sm:mt-1", "h-5");
+    }
+  });
+
+  /**
+   * From `lg` the loaded facts stand in fixed columns — seats, crew, waivers —
+   * sized for the longest real fact (K-285). Drawn at the old `lg:w-52` and
+   * `lg:w-20`, the bars ended 48px and 112px left of the loaded columns.
+   */
+  it("draws the facts' bars in the ledger's own seats, crew and waivers columns", () => {
+    const { container } = render(<ReportsLoading />);
+    const facts = container.querySelectorAll(".mt-2.h-5");
+    expect(facts.length).toBeGreaterThan(0);
+    for (const line of facts) {
+      const widths = [...line.children].map((bar) =>
+        [...bar.classList].filter((token) => token.startsWith("lg:w-")).join(" "),
+      );
+      expect(widths).toEqual([METER_COLUMN, CREW_COLUMN, METER_COLUMN]);
     }
   });
 
