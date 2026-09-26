@@ -83,8 +83,17 @@ export function DeparturePicker({
                     </span>
                   }
                 >
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                    <span className="shrink-0 text-sm text-muted tabular-nums">{row.time}</span>
+                  {/* **The time is a column from `sm`** (K-455): a box as wide
+                      as its own words started each title after a different
+                      string, 11px of spread down one day. 144px holds the
+                      longest 12-hour range ("10:00 AM – 11:30 AM", about
+                      140px; es-ES reads 24-hour and is narrower), and the line
+                      stops wrapping there so a long title wraps inside its own
+                      column instead of dropping under the time. */}
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 sm:flex-nowrap">
+                    <span className="shrink-0 text-sm text-muted tabular-nums sm:w-36">
+                      {row.time}
+                    </span>
                     <span className="min-w-0 font-medium">{row.title}</span>
                   </div>
                 </LedgerRow>
