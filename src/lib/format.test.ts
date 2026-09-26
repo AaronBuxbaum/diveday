@@ -54,6 +54,19 @@ describe("joinFacts", () => {
     expect(joinFacts(["Next Sat, Jul 21", "Open Water or higher"])).toContain(`Jul${NBSP}21`);
   });
 
+  it("keeps a numeric range whole, so no line ends on its dash", () => {
+    // The en dash is a break opportunity, and once the glues left a range's
+    // dash the only one inside its run, Chrome broke there: "1– / 2 days" and
+    // "4– / 8 weeks" on the course list at 390 (K-246 review).
+    const WORD_JOINER = "\u2060";
+    expect(joinFacts(["1–2 days · 3 dives", "$225"])).toBe(
+      `1–${WORD_JOINER}2${NBSP}days${NBSP}· 3${NBSP}dives${NBSP}·${NBSP}$225`,
+    );
+    expect(joinFacts(["4–8 weeks"])).toBe(`4–${WORD_JOINER}8${NBSP}weeks`);
+    // A dash between words is left to break, as every ordinary word is.
+    expect(joinFacts(["Reef–wreck combo"])).toBe("Reef–wreck combo");
+  });
+
   it("keeps every separator with the fact before it, so no line starts with one", () => {
     expect(line).not.toMatch(/ ·/);
     expect(line.match(/\u00A0·/g)).toHaveLength(4);

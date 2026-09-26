@@ -532,6 +532,12 @@ export function bindTitleDash(title: string): string {
  * - **The last fact to the one before it**, so "$225" never sits alone on a
  *   line under a "·" that ended the one above (the course list at 1280).
  *
+ * **And a numeric range is one number** — a word joiner (U+2060) after the en
+ * dash of "1–2" or "4–8". The line may break after an en dash, and once the
+ * glues above left a range's dash the only break inside a run, Chrome took it:
+ * "1– / 2 days · 3 dives · $225" on the course list at 390, and "4– / 8
+ * weeks" (K-246 review).
+ *
  * Ordinary words keep their breaking spaces on purpose: a fact is free text a
  * shop typed, and a fact glued whole could run off a 390px row. A missing or
  * blank fact is dropped, not printed as an empty separator.
@@ -544,7 +550,8 @@ export function joinFacts(facts: readonly (string | null | undefined | false)[])
       fact
         .replace(/(\d)\s+(?=\S)/g, "$1\u00A0")
         .replace(/([^\s·])\s+(?=\d)/g, "$1\u00A0")
-        .replace(/\s+·(?=\s)/g, "\u00A0·"),
+        .replace(/\s+·(?=\s)/g, "\u00A0·")
+        .replace(/(\d)–(?=\d)/g, "$1–\u2060"),
     );
   return kept
     .map((fact, index) => {
