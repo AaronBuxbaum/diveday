@@ -19,6 +19,15 @@ import { bindTitleDash } from "@/lib/format";
 export const THREAD_MEASURE_CLASS = "mx-auto w-full max-w-xl flex-1 px-5 py-8 sm:px-6 sm:py-12";
 
 /**
+ * A section of the thread set off by a hairline above it — the rare acts at
+ * the foot of a page (release my seat, forget this phone) and this shell's own
+ * contrast footer. One inset under the rule: the footer opened 20px under its
+ * rule while the cancel door above it opened 24 (K-156). The spacing *before*
+ * the rule stays the caller's.
+ */
+export const THREAD_FOOT_SECTION_CLASS = "border-t border-border pt-6";
+
+/**
  * **One measure for the diver's thread** (ADR 20260827-the-divers-thread,
  * decision 1) — the shell every page a *booked* diver walks is built on:
  * `/ready`, `/waivers`, `/recap` and `/claim`, the four screens that arrive as
@@ -120,7 +129,7 @@ export function ThreadShell({
          * roll call. `print:hidden` and the rest of its chrome come from the
          * control itself.
          */
-        <div className="mt-10 border-t border-border pt-5">
+        <div className={`mt-10 ${THREAD_FOOT_SECTION_CLASS}`}>
           <AmbientContrastControl copy={contrastCopy} className="" />
         </div>
       ) : null}

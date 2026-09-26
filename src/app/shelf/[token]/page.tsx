@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { EntryDone } from "@/components/account/EntryShell";
 import { BrandStyle } from "@/components/BrandStyle";
 import { SubmitButton } from "@/components/SubmitButton";
-import { ThreadShell } from "@/components/thread/ThreadShell";
+import { THREAD_FOOT_SECTION_CLASS, ThreadShell } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
@@ -473,7 +473,7 @@ function Forget({
   forgot: boolean;
 }) {
   return (
-    <form action={forgetShelfAction.bind(null, token)} className="border-t border-border pt-6">
+    <form action={forgetShelfAction.bind(null, token)} className={THREAD_FOOT_SECTION_CLASS}>
       <h2 className="text-base font-semibold">{t("shelf.forgetHeading")}</h2>
       <p className="mt-1 text-sm text-muted">
         {t("shelf.forgetBody", { shopName: data.shop.name })}

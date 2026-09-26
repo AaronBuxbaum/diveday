@@ -9,7 +9,7 @@ import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
-import { THREAD_MEASURE_CLASS, ThreadShell } from "./ThreadShell";
+import { THREAD_FOOT_SECTION_CLASS, THREAD_MEASURE_CLASS, ThreadShell } from "./ThreadShell";
 
 afterEach(cleanup);
 
@@ -386,6 +386,15 @@ describe("the thread's contrast control", () => {
     // document element, so the fact under test is that the effect ran at all.
     expect(document.documentElement.classList.contains("glare-mode")).toBe(false);
     expect(screen.queryByRole("group", { name: "Screen contrast" })).toBeNull();
+  });
+
+  it("opens under its rule at the thread's one hairline-section inset", () => {
+    // The contrast footer sat 20px under its rule (`pt-5`) while the cancel
+    // door above it sat 24 under its own (K-156). One spelling now.
+    expect(THREAD_FOOT_SECTION_CLASS).toBe("border-t border-border pt-6");
+    render(<ThreadShell shopName="Blue Mantis" title="Two-Tank Reef" contrastCopy={copy} />);
+    const foot = screen.getByRole("group", { name: "Screen contrast" }).closest("main > div");
+    for (const name of THREAD_FOOT_SECTION_CLASS.split(" ")) expect(foot).toHaveClass(name);
   });
 
   it("renders the three states as one radio group when a page asks for them", () => {

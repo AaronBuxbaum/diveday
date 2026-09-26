@@ -155,6 +155,34 @@ describe("the thread's sections under the spine", () => {
   });
 });
 
+/**
+ * **The cancel door opens 24px under its rule, preview or not.** The form
+ * carried `mt-3` to clear the refund preview above it, which renders only
+ * when there is a refund to preview — so with none, "Cancel my spot" stood
+ * 36px under the rule where the section asks for 24 (K-156). The gap now
+ * lives between the two children, and exists only when both do.
+ */
+describe("the cancel door", () => {
+  const door = () => {
+    const start = SOURCE.lastIndexOf("<section", positionOf("<InlineConfirm"));
+    return SOURCE.slice(start, SOURCE.indexOf("</section>", start));
+  };
+
+  it("spaces the preview and the form by a gap, never by the form's own margin", () => {
+    const section = door();
+    expect(section.slice(0, section.indexOf(">"))).toContain("flex flex-col gap-3");
+    const form = section.slice(
+      section.indexOf("<form"),
+      section.indexOf(">", section.indexOf("<form")),
+    );
+    expect(form).not.toMatch(/className="[^"]*\bmt-/);
+  });
+
+  it("sits under its rule at the thread's one hairline-section inset", () => {
+    expect(door().slice(0, door().indexOf(">"))).toContain("THREAD_FOOT_SECTION_CLASS");
+  });
+});
+
 describe("status is said once", () => {
   it("renders exactly one status statement", () => {
     expect(countOf("<ThreadStatus")).toBe(1);

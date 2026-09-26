@@ -34,7 +34,7 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripArrivalCard } from "@/components/TripArrivalCard";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
-import { ThreadShell } from "@/components/thread/ThreadShell";
+import { THREAD_FOOT_SECTION_CLASS, ThreadShell } from "@/components/thread/ThreadShell";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
@@ -2416,11 +2416,14 @@ export default async function DiverReadinessPage({
               Rendered only when `selfCancelBooking` would actually honour it, so
               there is no control here that could only come back refused. */}
           {data.canCancelBooking ? (
-            <section className="border-t border-border pt-6">
+            // `gap-3`, not a margin on the form: the preview renders only when
+            // there is a refund to preview, and the form's own `mt-3` stood
+            // "Cancel my spot" 36px under the rule without one (K-156).
+            <section className={`flex flex-col gap-3 ${THREAD_FOOT_SECTION_CLASS}`}>
               {cancelPreviewKey ? (
                 <p className="text-base text-muted">{t(cancelPreviewKey)}</p>
               ) : null}
-              <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
+              <form action={cancelMyBookingAction.bind(null, token)}>
                 {/* The refund preview is repeated inside the confirm rather than
                     left further up the page: the diver reads what it costs at the
                     moment of commitment, not once on the way past. */}
