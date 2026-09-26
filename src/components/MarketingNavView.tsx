@@ -8,7 +8,7 @@ import type { DiverLocale } from "@/i18n/settings";
 import { staffShopRoot } from "@/lib/staff-destinations";
 
 const navLinkClassName =
-  "inline-flex min-h-11 items-center rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-muted transition-colors hover:text-foreground sm:px-3";
+  "inline-flex min-h-11 items-center rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-muted transition-colors hover:text-foreground md:px-3";
 
 /**
  * The marketing header's markup, with the session already resolved to one
@@ -58,15 +58,17 @@ export function MarketingNavView({
        * Phone layout is two deliberate rows — brand + CTA first, page links
        * second — rather than free wrapping, which used to stack the link
        * block *above* the logo and read as a broken header on the very first
-       * paint. ≥sm it collapses back to the familiar single row.
+       * paint. ≥md it collapses back to the familiar single row: not ≥sm,
+       * because the row needs about 669px and at 640 the bar has 592, so the
+       * links wrapped into a block of their own up to 716 (K-88).
        */}
       <nav
         aria-label={t("nav.mainNavigation")}
-        className={`mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4 sm:flex-nowrap ${compactMobile ? "max-sm:h-[52px] max-sm:flex-nowrap max-sm:px-5 max-sm:py-0" : ""}`}
+        className={`mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4 md:flex-nowrap ${compactMobile ? "max-sm:h-[52px] max-sm:flex-nowrap max-sm:px-5 max-sm:py-0" : ""}`}
       >
         <Wordmark href="/" className="text-foreground" />
         <div
-          className={`order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 sm:order-none sm:mx-0 sm:ml-auto sm:basis-auto sm:justify-end sm:gap-x-2 ${compactMobile ? "max-sm:hidden" : ""}`}
+          className={`order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 md:order-none md:mx-0 md:ml-auto md:basis-auto md:justify-end md:gap-x-2 ${compactMobile ? "max-sm:hidden" : ""}`}
         >
           {links.map((link) => (
             <Link key={link.href} href={link.href} className={navLinkClassName}>
@@ -95,7 +97,7 @@ export function MarketingNavView({
             href={staffShopRoot(shopSlug)}
             className={buttonClass({
               variant: "outline",
-              className: `ml-auto whitespace-nowrap sm:ml-0 ${compactMobile ? "max-sm:hidden" : ""}`,
+              className: `ml-auto whitespace-nowrap md:ml-0 ${compactMobile ? "max-sm:hidden" : ""}`,
             })}
           >
             {t("nav.goToShop")}
@@ -109,7 +111,7 @@ export function MarketingNavView({
           // first paint was a real "what do I click?" cost (design review).
           <form
             action={demoAction}
-            className={`ml-auto sm:ml-0 ${compactMobile ? "max-sm:hidden" : ""}`}
+            className={`ml-auto md:ml-0 ${compactMobile ? "max-sm:hidden" : ""}`}
           >
             <FunnelTag source="nav" />
             <SubmitButton

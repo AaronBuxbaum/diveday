@@ -71,6 +71,25 @@ describe("MarketingNavView", () => {
   // The first row's height is its tallest child. With the CTA gone it used to
   // fall to the 24px wordmark, so the logo sat 12px higher on /dive than on /
   // (K-178); the home link's own 48px floor now holds the row at the CTA's height.
+  // Wordmark, five links, the CTA and two gaps need about 669px on one row;
+  // at 640 the nav has 592. Switching to one row at sm squeezed the links into
+  // a wrapped block between 640 and 716 (K-88). Up to md the header keeps its
+  // two phone rows, links included at their phone padding, so no class in the
+  // bar may switch at sm.
+  it("switches to one row at md, not sm", () => {
+    for (const shopSlug of [null, "blue-mantis"]) {
+      const { unmount } = renderNav({ shopSlug });
+      const nav = screen.getByRole("navigation");
+      expect(nav).toHaveClass("flex-wrap", "md:flex-nowrap");
+      const links = screen.getByRole("link", { name: "Product" }).parentElement;
+      expect(links).toHaveClass("basis-full", "md:basis-auto", "md:ml-auto");
+      for (const element of [nav, ...nav.querySelectorAll("*")]) {
+        expect(element.getAttribute("class") ?? "").not.toMatch(/(^|\s)sm:/);
+      }
+      unmount();
+    }
+  });
+
   it("keeps the first row at the CTA's 48px when hideCta drops the CTA", () => {
     renderNav({ hideCta: true });
     expect(screen.getByRole("link", { name: "DiveDay." })).toHaveClass("min-h-12");
