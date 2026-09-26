@@ -31,8 +31,10 @@ export default function OrdersIndexLoading() {
                 <div className="h-3 w-32 rounded bg-surface-sunken" />
                 <div className="h-3 w-28 rounded bg-surface-sunken" />
               </div>
+              {/* `h-13`: a `LedgerRow`'s 52px floor, which read 48 until
+                  2026-09-02 (K-390). */}
               {[0, 1, 2].map((row) => (
-                <div key={row} className={`h-12 ${ledgerRowBoxClass}`} />
+                <div key={row} className={`h-13 ${ledgerRowBoxClass}`} />
               ))}
             </div>
           ))}

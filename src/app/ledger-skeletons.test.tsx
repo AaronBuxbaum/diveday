@@ -349,6 +349,31 @@ describe("the staff reviews' skeleton", () => {
   });
 });
 
+/**
+ * **The orders skeleton's rows are as tall as the rows they stand in for**
+ * (class 11; K-390). A `LedgerRow` at `md` is 52px — it read 48 until
+ * 2026-09-02 — and the skeleton kept drawing `h-12`, so a nine-order day moved
+ * 36px when it arrived. The height is read off the row itself, so the next
+ * change to the floor fails here rather than on screen.
+ */
+describe("the orders skeleton's rows", () => {
+  it("are the height of the LedgerRow they stand in for", () => {
+    const loaded = render(
+      <ul>
+        <LedgerRow>Amara Osei</LedgerRow>
+      </ul>,
+    ).container.querySelector("li");
+    const floor = [...(loaded?.classList ?? [])].find((token) => /^min-h-\d+$/.test(token));
+    expect(floor).toBeDefined();
+    cleanup();
+    const rows = [...render(<OrdersLoading />).container.querySelectorAll("*")].filter((element) =>
+      element.classList.contains("last:border-b"),
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(row).toHaveClass(`${floor}`.replace(/^min-/, ""));
+  });
+});
+
 describe("a loading skeleton standing in for ledger rows", () => {
   it.each(SKELETONS)(
     "draws every %s hairline row on the ledger box its loaded list (%s) draws",
