@@ -16,7 +16,18 @@ export default function WaiverLoading() {
       <div className="animate-pulse">
         <div className="h-4 w-32 rounded bg-surface-sunken" />
         <div className="mt-2 h-9 w-72 max-w-full rounded bg-surface-sunken" />
-        <div className="mt-2 h-5 w-56 max-w-full rounded bg-surface-sunken" />
+        {/* The description, one `text-base` line: 24px, not the 20 it was
+            drawn at (K-226). */}
+        <div className="mt-2 h-6 w-56 max-w-full rounded bg-surface-sunken" />
+        {/* The trip line a booked waiver prints under it (`mt-3`, 24px lines).
+            Two of them: a trip's title, date and zoned time range wrap to two
+            on a phone, and did at 1280 in the booked-waiver capture; with no
+            placeholder the rail and the release below it landed 64px high
+            (K-226). Two 20px bars 8px apart fill the 48px of two lines. */}
+        <div className="mt-3 flex flex-col gap-2">
+          <div className="h-5 w-full rounded bg-surface-sunken" />
+          <div className="h-5 w-2/3 rounded bg-surface-sunken" />
+        </div>
         {/* The step rail (`WaiverStepRail`): hairlines above and below, three
             marked segments, the count pushed to the end. It holds the rail's
             own height, which is the whole job — a skeleton that skipped it
