@@ -54,6 +54,20 @@ describe("PersonSheet", () => {
     expect(screen.getByRole("button", { name: "Mark boarded" })).toBeInTheDocument();
   });
 
+  /**
+   * **The close × is drawn at the text's size, not the button's**
+   * (pixel-craft class 2, K-555). An `<svg>` with a `viewBox` and no size
+   * stretches to its grid cell: the × filled 26px of its 44px target, heavier
+   * than the 24px name beside it. `size-5` is the size `DiverSheet` draws the
+   * same × at.
+   */
+  it("draws its close mark at the size its sibling sheet does", () => {
+    render(<PersonSheet {...props} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    const close = screen.getByRole("button", { name: "Close person details" });
+    expect(close.querySelector("svg")).toHaveClass("size-5");
+  });
+
   it("closes from the explicit control, Escape, and the scrim", () => {
     render(<PersonSheet {...props} />);
     const trigger = screen.getByRole("button", { name: "Open details for Meera Iyer" });

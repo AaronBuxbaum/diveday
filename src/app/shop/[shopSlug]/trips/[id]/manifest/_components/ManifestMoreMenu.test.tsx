@@ -91,3 +91,29 @@ describe("the footer line's place", () => {
     expect(trigger.parentElement).toHaveClass("mt-3");
   });
 });
+
+describe("the menu's glyphs", () => {
+  /**
+   * **The ••• and the × are drawn at the text's size, not the button's**
+   * (pixel-craft class 2, K-555). An `<svg>` with a `viewBox` and no size
+   * stretches to its grid cell: the dots ran 34px across a 48px circle, 7px
+   * from its border, and the × filled its button. `size-5` is the size
+   * `DiverSheet` draws the same × at.
+   */
+  it("sizes the trigger's dots and the panel's close mark", () => {
+    render(
+      <ManifestMoreMenu
+        variant="header"
+        label="Emergency numbers & response plan"
+        closeLabel="Close emergency reference"
+      >
+        {reference()}
+      </ManifestMoreMenu>,
+    );
+    const trigger = screen.getByRole("button", { name: "Emergency numbers & response plan" });
+    expect(trigger.querySelector("svg")).toHaveClass("size-5");
+    fireEvent.click(trigger);
+    const close = screen.getByRole("button", { name: "Close emergency reference" });
+    expect(close.querySelector("svg")).toHaveClass("size-5");
+  });
+});

@@ -66,8 +66,12 @@ export function ManifestMoreMenu({
           className="grid size-12 place-items-center rounded-full border border-border bg-surface text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
           onClick={() => setOpen((current) => !current)}
         >
+          {/* `size-5` on both marks here: an svg with only a `viewBox`
+              stretches to its grid cell, which ran the dots 34px across this
+              48px circle and the panel's × to its button's edge. */}
           <svg
             aria-hidden="true"
+            className="size-5"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -95,6 +99,7 @@ export function ManifestMoreMenu({
               >
                 <svg
                   aria-hidden="true"
+                  className="size-5"
                   viewBox="0 0 20 20"
                   fill="none"
                   stroke="currentColor"

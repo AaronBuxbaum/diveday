@@ -163,8 +163,12 @@ export function PersonSheet({
               className="grid size-11 place-items-center rounded-full text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
               onClick={close}
             >
+              {/* `size-5`, as `DiverSheet` draws the same ×: with only a
+                  `viewBox` it stretched to its cell, 26px of ink beside the
+                  name. */}
               <svg
                 aria-hidden="true"
+                className="size-5"
                 viewBox="0 0 20 20"
                 fill="none"
                 stroke="currentColor"
