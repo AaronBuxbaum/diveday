@@ -204,6 +204,28 @@ describe("DayStrip", () => {
     expect(labelRows(container)).toBe(2);
   });
 
+  /**
+   * **An end dot stays inside the strip** (docs/design/pixel-craft.md, class
+   * 10). The geometry's inset is in viewBox units, 1% of the width, which is
+   * 9.8px on a desk and 3.6px on a phone, while the dot is 11px at every
+   * width: at 390 the first dot hung 2px past the column the header's
+   * "‹ BOARD" and title start on, and the last 1px past its end. The dot's
+   * centre is held half a dot in, as a label's is held half a word in.
+   */
+  it("holds a mark's dot half a dot in from the strip's ends", () => {
+    const edge = dayStripGeometry({
+      from: at(7),
+      to: at(19),
+      now: at(10),
+      daylight: [{ sunriseAt: at(7), sunsetAt: at(19, 45) }],
+      daylightProgress: 0.2,
+      marks: [{ id: "first", at: at(7) }],
+    });
+    const { container } = render(<DayStrip geometry={edge} label="the day" />);
+    const dot = container.querySelector("span.size-\\[11px\\]");
+    expect(dot?.getAttribute("style")).toContain("clamp(5.5px,");
+  });
+
   it("leaves both labels on one line when they do not touch", () => {
     const { container } = render(
       <DayStrip

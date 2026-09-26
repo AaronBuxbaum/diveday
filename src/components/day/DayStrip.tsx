@@ -216,12 +216,16 @@ export function DayStrip({
           />
         ) : null}
 
-        {/* Each departure, on its own hour. */}
+        {/* Each departure, on its own hour. The dot's centre is held half a
+            dot in from either end, as a label's is held half a word in: the
+            geometry's end inset is 1% of the width, 3.6px on a phone against
+            the dot's 5.5px radius, so an end dot hung past the column the
+            header shares. It moves at most a pixel or two, and only there. */}
         {marks.map((mark) => (
           <div key={mark.id}>
             <span
               className="absolute size-[11px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-(--sky-ink)"
-              style={{ left: px(mark.x), top: horizon }}
+              style={{ left: centred(mark.x, "5.5px"), top: horizon }}
             />
             {markLabels[mark.id] ? (
               <span
