@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { copyToClipboard } from "@/components/Copyable";
-import { SiteMark } from "@/components/illustration/SiteMark";
+import { BoatMarkRow } from "./BoatMarkRow";
 
 /**
  * **Share with whoever is waiting for you** — ADR 20260908-one-hand, decision
@@ -57,25 +57,25 @@ export function FollowShareRow({
 
   const label = status === "copied" ? copiedLabel : status === "failed" ? copyFailed : action;
 
+  // The boat's line's own row (`BoatMarkRow`, K-155), with the share at its end.
   return (
-    <div className="mt-6 flex items-center gap-3 rounded-panel bg-surface-sunken p-4">
-      <SiteMark mark="boat" size="sm" ground="surface" coral={false} />
-      <div className="min-w-0 flex-1">
-        <p className="text-base font-medium">{heading}</p>
-        <p className="mt-0.5 text-sm text-muted">{detail}</p>
-      </div>
-      {/* The button's own name is the whole feedback, and it keeps focus after
-          the tap — so there is no `aria-live` twin here saying the same three
-          words a second time. `TripActions` carries one because its
-          announcement is different copy from its label; a live region echoing
-          the label is two announcements of one event. */}
-      <button
-        type="button"
-        onClick={share}
-        className="inline-flex min-h-11 shrink-0 items-center font-medium text-primary hover:underline"
-      >
-        {label}
-      </button>
-    </div>
+    <BoatMarkRow
+      line={heading}
+      detail={detail}
+      action={
+        // The button's own name is the whole feedback, and it keeps focus after
+        // the tap — so there is no `aria-live` twin here saying the same three
+        // words a second time. `TripActions` carries one because its
+        // announcement is different copy from its label; a live region echoing
+        // the label is two announcements of one event.
+        <button
+          type="button"
+          onClick={share}
+          className="inline-flex min-h-11 shrink-0 items-center font-medium text-primary hover:underline"
+        >
+          {label}
+        </button>
+      }
+    />
   );
 }
