@@ -37,11 +37,11 @@ describe("DiverFileGroupDisclosure", () => {
 
   /**
    * Open, the summary drops its bottom rule and the group's body starts flush
-   * under it — on the record, an `InsetGroup` card whose `overflow-hidden`
-   * gives it a paint layer of its own, laid over the summary's ring. The atlas
-   * captured the focused header with three sides: the ring's bottom arm
-   * survived only left of the card's rounded corner. A focused summary paints
-   * above what follows it.
+   * under it. The open body is a stacking context of its own (its
+   * `::details-content` is translated), so it paints after the summary's ring:
+   * the atlas captured the focused header with three sides, the ring's bottom
+   * arm surviving only left of the record's `InsetGroup` card's rounded
+   * corner. A focused summary paints above what follows it.
    */
   it("paints its focus ring above the body that starts flush under it", () => {
     render(

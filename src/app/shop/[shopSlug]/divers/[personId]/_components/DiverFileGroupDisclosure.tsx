@@ -185,10 +185,11 @@ export function DiverFileGroupDisclosure({
             copy of it inside.
 
             `relative focus-visible:z-10`: open, the summary drops its bottom
-            rule and the body starts flush under it, and on the record that
-            body is an `InsetGroup` card whose `overflow-hidden` gives it a
-            paint layer of its own, laid over the ring's bottom arm. A focused
-            summary paints above what follows it. */}
+            rule and the body starts flush under it. An open body is its own
+            stacking context (`details[open]::details-content` is translated,
+            globals.css), so it paints after the summary's ring, and on the
+            record its `InsetGroup` card covered the ring's bottom arm. A
+            focused summary paints above what follows it. */}
         <summary
           aria-controls={`${id}-content`}
           className={`relative flex min-h-11 cursor-pointer items-center gap-3 border-y border-border px-1 py-3 group-open/diver-file:border-b-0 focus-visible:z-10 ${summaryLayoutClass}`.trim()}
