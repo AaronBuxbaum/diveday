@@ -1833,14 +1833,16 @@ export default async function SettingsPage({
                     className={textareaClassFor(4)}
                   />
                 </Field>
-                <div>
+                {/* The hub's one Save: `md` in `FieldActions`. It was `sm` in
+                    a bare div, 44px beside every other row's 48px (K-308). */}
+                <FieldActions>
                   <SubmitButton
                     pendingLabel={t("settings.main.emergency.saving")}
-                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                    className={buttonClass({ variant: "secondary" })}
                   >
                     {t("settings.main.emergency.submit")}
                   </SubmitButton>
-                </div>
+                </FieldActions>
               </form>
             </SettingsRow>
             {shop.hasBoatDiving ? (

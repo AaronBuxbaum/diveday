@@ -3,7 +3,9 @@ import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { tapTargetLinkClass } from "@/components/ui/button";
+import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { FieldActions } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
@@ -446,6 +448,21 @@ describe("the emergency reference row", () => {
     expect(row.props.description).toBe(EMERGENCY.intro);
     const paragraphs = findElements<{ children?: unknown }>(row.props.children, "p");
     expect(paragraphs.filter((p) => p.props.children === EMERGENCY.intro)).toHaveLength(0);
+  });
+
+  /**
+   * Its Save was `size: "sm"` in a bare `<div>`: 44px with a 14px label, where
+   * every other Save on the hub is the default 48px with 16px, in
+   * `FieldActions` (K-308).
+   */
+  it("saves with the hub's one Save, at its size and in its row", async () => {
+    const row = await emergencyRow();
+    const saves = findElements<{ children?: unknown; className?: string }>(
+      findElements(row.props.children, FieldActions),
+      SubmitButton,
+    ).filter((button) => button.props.children === EMERGENCY.submit);
+    expect(saves).toHaveLength(1);
+    expect(saves[0]?.props.className).toBe(buttonClass({ variant: "secondary" }));
   });
 });
 
