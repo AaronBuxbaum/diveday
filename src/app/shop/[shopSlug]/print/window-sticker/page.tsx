@@ -63,7 +63,10 @@ export default async function WindowStickerPage({
         })}
         foldRight={storefrontAddress(shopSlug, origin)}
       >
-        <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+        {/* `gap-5`, 4.3mm at the print root: the code carries no quiet zone of
+            its own (`SheetCode`), and four of its 1.2mm modules must stay clear
+            of the sentence's descenders above it. */}
+        <div className="flex h-full flex-col items-center justify-center gap-5 text-center">
           <p className="font-brand-display text-xl leading-tight font-extrabold">
             {t("print.sheet.sticker.title")}
           </p>
