@@ -19,6 +19,21 @@ function section(headingId: string): string {
   return SOURCE.slice(start, SOURCE.indexOf("</section>", start));
 }
 
+describe("the pre-departure check", () => {
+  /**
+   * Two columns — the item and who checked it when — under a `36rem` scroll
+   * floor: 576px in a phone's 356px shell, so the Status column began at
+   * x ≈ 321 and 220px of it sat off screen behind a sideways scroll (K-279,
+   * DEPARTURE-4-22). Two columns share a phone's width and wrap; the floor is
+   * for the roll-call tables, whose column count grows with the dives.
+   */
+  it("lets its two columns share a phone's width rather than scroll", () => {
+    const tables = section("incident-checklist-heading").match(/<Table\b[^>]*>/g) ?? [];
+    expect(tables).toHaveLength(1);
+    expect(tables[0]).not.toContain("minWidth");
+  });
+});
+
 describe("the roll-call tables' columns", () => {
   /**
    * Under `table-layout: fixed` a table that names no widths splits into equal
