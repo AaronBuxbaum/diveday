@@ -973,12 +973,15 @@ textarea {
 }
 
 /* A ruled blank a skipper fills in by hand - never an invented number. It
-   runs to its column's edge, one line tall: an 8ch inline block was 13mm of
-   rule ending wherever its label ended, three blanks at three x positions. */
+   runs to its column's edge and lies on its label's baseline. An 8ch inline
+   block was 13mm of rule ending wherever its label ended, three blanks at
+   three x positions; a one-line block reached the edge but dropped its rule
+   to the foot of the line, 3.4px under the words. Inline-level and as wide as
+   its definition, it is both: an empty inline block's bottom edge is the
+   line's baseline (`PaperSheet.test.tsx`, `e2e/shop-on-paper.spec.ts`). */
 .paper-sheet-blank {
-  display: block;
+  display: inline-block;
   width: 100%;
-  min-height: 1lh;
   border-bottom: 1px solid var(--sheet-rule);
 }
 
