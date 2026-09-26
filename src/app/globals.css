@@ -991,6 +991,21 @@ textarea {
   padding: 1.25rem;
 }
 
+/*
+ * A sign rather than a document (`PaperSheet`'s `layout="poster"`): the dock
+ * sign and the window sticker hold a few fixed things and none of the shop's
+ * prose, so their content is centred on the paper instead of running from the
+ * band and leaving the rest of the sheet blank. The body already fills the
+ * sheet's height, so this is the only place the centring can live: a child's
+ * `h-full` has no definite height to resolve against in a sheet whose height
+ * is a floor.
+ */
+.paper-sheet-body-poster {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 .paper-sheet-muted {
   color: var(--sheet-muted);
 }

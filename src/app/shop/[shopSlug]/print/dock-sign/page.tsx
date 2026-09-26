@@ -60,6 +60,7 @@ export default async function DockSignPage({ params }: { params: Promise<{ shopS
     >
       <PaperSheet
         paper={spec.paper}
+        layout="poster"
         tone={{ band: theme.primary, bandInk: theme.primaryForeground }}
         band={
           <>

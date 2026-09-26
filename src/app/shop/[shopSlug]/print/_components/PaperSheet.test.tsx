@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { BOAT_CARD_DAY, BOAT_CARD_NIGHT, PRINT_SHEET_BOX_MM } from "@/lib/print-sheets";
@@ -26,6 +28,42 @@ function renderSheet(overrides: Partial<Parameters<typeof PaperSheet>[0]> = {}) 
     </PaperSheet>,
   );
 }
+
+/**
+ * **A sign is centred on its paper.** The dock sign and the window sticker
+ * hold a few fixed things and none of the shop's prose, and the body flowed
+ * them from the band down: the pixel probe measured the A3 sign's content
+ * ending 1,063px above the fold (72% of its body blank) and the sticker's
+ * code 96px above it, with 20px over the title. The sticker's own
+ * `h-full … justify-center` could not help, because a percentage height has
+ * nothing to resolve against in a sheet whose height is only a floor.
+ */
+describe("a sign", () => {
+  const PRINT = path.join(import.meta.dirname, "..");
+
+  it("centres its body's content on the paper", () => {
+    const { container } = renderSheet({ layout: "poster" });
+    const body = container.querySelector(".paper-sheet-body");
+    expect(body).toHaveClass("paper-sheet-body-poster");
+    expect(body?.textContent).toBe("the body");
+  });
+
+  it("is a centred column in the stylesheet", () => {
+    const css = readFileSync(path.join(PRINT, "..", "..", "..", "globals.css"), "utf8");
+    const rule = css.match(/\.paper-sheet-body-poster\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(rule).toMatch(/display:\s*flex/);
+    expect(rule).toMatch(/flex-direction:\s*column/);
+    expect(rule).toMatch(/justify-content:\s*center/);
+  });
+
+  it("is how the dock sign and the window sticker are laid out", () => {
+    for (const sheet of ["dock-sign", "window-sticker"]) {
+      const source = readFileSync(path.join(PRINT, sheet, "page.tsx"), "utf8");
+      expect(source, sheet).toContain('layout="poster"');
+      expect(source, sheet).not.toMatch(/\bh-full\b/);
+    }
+  });
+});
 
 describe("every sheet", () => {
   it("carries the day it was printed and where the shop lives", () => {
@@ -69,6 +107,14 @@ describe("every sheet", () => {
     const sheet = container.querySelector<HTMLElement>(".paper-sheet");
     expect(sheet?.style.getPropertyValue("--sheet-band")).toBe(BOAT_CARD_DAY.band);
     expect(sheet?.style.getPropertyValue("--sheet-band-ink")).toBe(BOAT_CARD_DAY.bandInk);
+  });
+
+  it("flows a document's body from the band down", () => {
+    // A briefing card, the pass and the boat card are documents whose length
+    // is the shop's own prose: top-aligned flow is right for them.
+    const { container } = renderSheet();
+    expect(container.querySelector(".paper-sheet-body")).not.toBeNull();
+    expect(container.querySelector(".paper-sheet-body-poster")).toBeNull();
   });
 
   it("wears the night ground only when the sheet asks for it", () => {
