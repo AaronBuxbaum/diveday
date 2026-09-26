@@ -69,10 +69,14 @@ export function StarRatingInput({
               className="peer absolute inset-0 size-full cursor-pointer opacity-0"
             />
             {/* The ring shows keyboard focus, which the transparent input above
-                would otherwise hide entirely. */}
+                would otherwise hide entirely. It rings the star's own box, 8px
+                inside the 44px target, not the target: the hang lifts the
+                target 4px over the legend, and a ring 5px outside that ran
+                through the legend's letters (pixel-craft K-478). Here its top
+                arm sits just under the legend, as it did before the hang. */}
             <span
               aria-hidden="true"
-              className={`pointer-events-none flex size-11 items-center justify-center rounded-lg peer-focus-visible:focus-ring ${
+              className={`pointer-events-none flex size-7 rounded-lg peer-focus-visible:focus-ring ${
                 value <= lit ? "text-warning" : "text-border-strong"
               }`}
             >

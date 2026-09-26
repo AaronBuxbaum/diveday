@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { STAR_INK_VIEWBOX, STAR_PATH } from "./StarRating";
@@ -16,6 +18,19 @@ function spacing(className: string | null | undefined, prefix: string) {
     .find(Boolean);
   if (!match) throw new Error(`no ${prefix}-* in "${className}"`);
   return Number(match[1]) * 4;
+}
+
+/**
+ * How far the shared `focus-ring` reaches outside its element: the outline's
+ * width plus its offset, read from the utility in `globals.css`.
+ */
+function ringReach() {
+  const css = readFileSync(path.join(import.meta.dirname, "../app/globals.css"), "utf8");
+  const utility = css.match(/@utility focus-ring \{([^}]*)\}/)?.[1] ?? "";
+  const width = utility.match(/outline:\s*(\d+)px/)?.[1];
+  const offset = utility.match(/outline-offset:\s*(-?\d+)px/)?.[1];
+  if (width === undefined || offset === undefined) throw new Error("no focus-ring utility");
+  return Number(width) + Number(offset);
 }
 
 /** The star path's ink box, read from its own coordinates. */
@@ -51,6 +66,36 @@ describe("the star row", () => {
       (spacing(target?.className, "size") - spacing(glyph?.getAttribute("class"), "size")) / 2;
     expect(spacing(row?.className, "-mx")).toBe(air);
     expect(spacing(target?.className, "size")).toBe(44);
+  });
+
+  /**
+   * **A focused star's ring stays under the legend.** The hang pulls each
+   * target 4px up over the legend (`-mt-1`), and while the ring sat on the
+   * 44px target it reached 5px further, 9px above the legend's bottom, through
+   * the letters of "Your rating". On the star's own box it is 8px inside the
+   * target: its top arm is back 1px above the legend's bottom, under the
+   * descenders, where it sat before the hang, and it stands 5px outside the
+   * column rather than 13.
+   */
+  it("rings the star's own box, not the 44px target, so the ring clears the legend", () => {
+    const { container } = render(<StarRatingInput legend="Your rating" optionLabels={LABELS} />);
+    const row = container.querySelector("fieldset > div");
+    const target = container.querySelector("label");
+    const glyph = container.querySelector("label svg");
+    const ringed = container.querySelectorAll("label [class*='focus-visible:focus-ring']");
+
+    expect(ringed).toHaveLength(5);
+    const box = ringed[0];
+    expect(box).not.toHaveClass("size-11");
+    expect(box).toContainElement(glyph as SVGElement | null);
+    expect(spacing(box.getAttribute("class"), "size")).toBe(
+      spacing(glyph?.getAttribute("class"), "size"),
+    );
+
+    const air =
+      (spacing(target?.className, "size") - spacing(box.getAttribute("class"), "size")) / 2;
+    const ringTop = air - spacing(row?.className, "-mt") - ringReach();
+    expect(ringTop).toBeGreaterThanOrEqual(-1);
   });
 
   it("draws each star in a box exactly as wide as its ink, centred on it", () => {
