@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { buttonClass } from "@/components/ui/button";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { RouteEditor } from "./RouteEditor";
 import { routeEditorCopy } from "./route-editor-copy";
@@ -87,10 +88,12 @@ describe("RouteEditor's toolbar", () => {
     expect(screen.getByText(copy.status[POINTS.length]).parentElement).toBe(row);
   });
 
-  it("sets Clear route's label on the column's edge, its fill 8px past it", () => {
+  it("sets Clear route's label on the column's edge: a flush quiet button", () => {
     renderEditor();
     const clear = screen.getByRole("button", { name: copy.clear });
-    expect(clear).toHaveClass("-mx-2", "px-2");
-    expect(clear).not.toHaveClass("px-3");
+    // The contract, not its spelling: how much room a flush fill keeps is
+    // button.ts's to say, and a hand-written outdent would not match it.
+    expect(clear.className).toBe(buttonClass({ variant: "ghost", size: "sm", flush: true }));
+    expect(clear.className).not.toBe(buttonClass({ variant: "ghost", size: "sm" }));
   });
 });
