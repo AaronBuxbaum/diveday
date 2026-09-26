@@ -30,7 +30,7 @@ import {
   isValidCalendarDate,
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import { formatMoneyCents, formatShortDate, joinFacts } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { isManagedStorageUrl } from "@/lib/storage/blob-host";
@@ -580,18 +580,28 @@ export default async function OrdersIndexPage({
               {owedRefunds.map((owed) => (
                 <li key={owed.bookingId} className="flex flex-wrap items-baseline gap-x-2">
                   <span className="font-medium">{owed.diverName}</span>
-                  <span>· {owed.tripTitle}</span>
-                  <span className="text-muted">
-                    ·{" "}
-                    {/* A counter mark often records no amount. Saying so beats
-                        printing a confident 0.00 the shop would have to
-                        distrust. */}
-                    {owed.amountCents === null
-                      ? t("orders.index.owedRefunds.unrecordedAmount")
-                      : formatMoneyCents(owed.amountCents, owed.currency, locale)}
-                    {owed.depositOnly ? ` · ${t("orders.index.owedRefunds.depositOnly")}` : ""}
-                    {" · "}
-                    {formatShortDate(owed.tripStartsAt, locale, shop.timezone)}
+                  {/* **One span for the facts, joined, as the danger list
+                      joins its own** (K-569). Each used to be a flex item
+                      opening on its own "·", so the row spaced its dots two
+                      ways (the row's `gap-x-2` before the first, a space
+                      inside the rest) and, wrapped on a phone, began lines
+                      "· $60.00". Every dot is now bound to the word before
+                      it, so no line opens on one. */}
+                  <span>
+                    {owed.tripTitle}
+                    <span className="text-muted">
+                      {"\u00A0· "}
+                      {joinFacts([
+                        // A counter mark often records no amount. Saying so
+                        // beats printing a confident 0.00 the shop would have
+                        // to distrust.
+                        owed.amountCents === null
+                          ? t("orders.index.owedRefunds.unrecordedAmount")
+                          : formatMoneyCents(owed.amountCents, owed.currency, locale),
+                        owed.depositOnly && t("orders.index.owedRefunds.depositOnly"),
+                        formatShortDate(owed.tripStartsAt, locale, shop.timezone),
+                      ])}
+                    </span>
                   </span>
                   <span className={OPEN_TRIP_LINE}>
                     <Link

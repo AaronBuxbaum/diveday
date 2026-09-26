@@ -276,6 +276,27 @@ describe("the notices' rows", () => {
       }
     }
   });
+
+  /**
+   * **An owed row never opens a line on a dot** (pixel-craft class 4; K-569).
+   * Its facts were separate flex items, `<span>· {trip}</span>` and a muted
+   * `· $60.00 · …`, so the row spaced its dots two ways (9px before, 6px after
+   * the first; 4-5px round the ones inside a span) and, wrapped at 390, began
+   * lines "· $60.00" and "· $180.00". The danger list above already joins its
+   * facts inside one span.
+   */
+  it("joins an owed row's facts rather than starting a flex item on a dot", async () => {
+    const tree = await renderOrders("owner", troubleOnADeparture);
+    const rows = findElements<{ children?: unknown }>(notice(tree, "Refunds you still owe"), "li");
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      const items = childrenOf(row as Node).map((item) => textOf(item).trim());
+      expect(items.length).toBeGreaterThan(1);
+      for (const item of items) expect(item.startsWith("·"), item).toBe(false);
+      // Every dot is bound to the word before it.
+      expect(items.join(" ")).not.toMatch(/ ·/);
+    }
+  });
 });
 
 describe("imported payment history", () => {
