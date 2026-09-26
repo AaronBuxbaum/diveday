@@ -352,6 +352,23 @@ describe("the rail as it renders", () => {
     const { container } = renderRail();
     expect(container.querySelectorAll("nav span.rounded-full")).toHaveLength(0);
   });
+
+  /**
+   * **A row's words wrap; they are never cut.** The rail is 264px by its
+   * design (SPEC 6g, `lg:grid-cols-[264px_1fr]`), and the page rail's row
+   * insets its words 12px a side, which left "Shopify, QuickBooks, Xero &
+   * Zapier" 208px for 216px of words: truncated on every settings capture at
+   * 1280. The row is a 44px floor, not a height, so a label that needs a
+   * second line takes one.
+   */
+  it("wraps a long row's words onto a second line instead of cutting them off", () => {
+    renderRail();
+    for (const link of screen.getAllByRole("link")) {
+      const words = link.querySelector(":scope > span");
+      expect(words).toHaveClass("min-w-0", "text-pretty");
+      expect(words).not.toHaveClass("truncate");
+    }
+  });
 });
 
 /**

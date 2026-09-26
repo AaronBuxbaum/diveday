@@ -145,7 +145,12 @@ export function SettingsRail({
                         sameDocument={row.target.kind === "section" && onHub}
                         selected={selected}
                       >
-                        <span className="truncate">{labels[row.id]}</span>
+                        {/* Wrapped, never cut: the rail is 264px by its
+                            design, and its rows inset their words 12px a
+                            side, which left "Shopify, QuickBooks, Xero &
+                            Zapier" 208px for 216px of words. The row's 44px
+                            is a floor, so a second line just grows it. */}
+                        <span className="min-w-0 text-pretty">{labels[row.id]}</span>
                         {/* At most one badge per row, and only for a warning —
                             the settled states of these rows are quiet text on
                             the pane, not a pill on the map. */}
