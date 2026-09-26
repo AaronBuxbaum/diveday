@@ -138,8 +138,13 @@ export function DiverHeader({
         {/* The summary and the full-width form need different flex slots. When
             open, let the native disclosure keep owning both while its children
             participate directly in this row: the summary stays beside Book,
-            and the form wraps below without moving that control. */}
-        <details open={editOpen} className="group open:contents">
+            and the form wraps below without moving that control.
+
+            What participates is the body's box, `::details-content`, not the
+            form, and a flex item shrink-wraps: the card stopped at its longest
+            hint, 167px short of the column's edge at 1280. `basis-full` on
+            that box gives it the whole line, and the form's `w-full` with it. */}
+        <details open={editOpen} className="group open:contents open:details-content:basis-full">
           <summary
             id="edit-details"
             className={buttonClass({
