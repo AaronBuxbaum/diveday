@@ -135,8 +135,12 @@ export function EmbedBookedNotice({
           A bare `<a>` rather than `next/link` for the first: it leaves the app
           either way, and `next/link` would *prefetch* the route — which mints a
           capability, putting us straight back to the per-render minting this
-          route exists to stop. */}
-      <div className="mt-4 flex flex-col items-start gap-1">
+          route exists to stop.
+
+          `gap-2`: the focus ring reaches 5px, and at `gap-1` a focused way
+          back drew its top arm on the button's own green (pixel-craft class
+          7, K-536). */}
+      <div className="mt-4 flex flex-col items-start gap-2">
         <a
           href={readinessLink}
           target="_top"
