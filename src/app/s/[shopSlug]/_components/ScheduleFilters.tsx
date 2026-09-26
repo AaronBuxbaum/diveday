@@ -128,7 +128,10 @@ export function ScheduleFilters({
           <DisclosureCaret className="group-open/filters:rotate-90" />
           {copy.disclosure}
         </summary>
-        <div className="mt-3 flex flex-wrap items-end gap-3">
+        {/* A column below `sm`: wrapped by the selects' own widths, a phone
+            got two selects ending 49px apart and a checkbox riding up beside
+            the second, three ragged rows. */}
+        <div className="mt-3 flex flex-wrap items-end gap-3 max-sm:flex-col max-sm:items-stretch">
           <FieldGrid columns={1} className="min-w-40">
             <Field label={copy.tripType}>
               <select
