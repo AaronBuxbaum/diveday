@@ -718,6 +718,10 @@ type ChoiceProps = {
  */
 const CHOICE_BOX_LINE = "flex h-lh items-center";
 
+/** `ChoiceRow`'s `outdent="block-end"`: see `ChoiceRow`. `--spacing(11)` is the 44px floor. */
+const CHOICE_ROW_OUTDENT =
+  "last:content-end last:pb-[calc((--spacing(11)-1lh)/2)] last:-mb-[calc((--spacing(11)-1lh)/2)]";
+
 /**
  * **A checkbox or radio with its words beside it** — a waiver's agreement, a
  * readiness answer, a publish choice.
@@ -727,11 +731,30 @@ const CHOICE_BOX_LINE = "flex h-lh items-center";
  * that height (`content-center`) and a longer one grows. Label rows had no
  * such floor, and the ready page's answers were 20px targets (K-13). Every
  * native input prop passes through to the box, `ref` and `aria-*` included.
+ *
+ * `outdent="block-end"` is the button's `outdent` for a row that ends a
+ * padded box. A one-line row is its line centred in 44px, so half the spare
+ * height sits under its words where nobody sees it, and last in a card it adds
+ * to the padding: the waiver's signer card read 30px above its heading and
+ * 37px under "…agree to it." (K-493). A plain negative margin would be wrong
+ * the moment the words wrap and there is no spare height to give back (a
+ * phone, Spanish), so that half becomes padding under the words,
+ * `(44px − 1lh) / 2`, handed back as an equal negative margin, with the words
+ * at the end of the box: one line lands where centring put it, several stand
+ * where they did, and the box's layout ends at the last line either way, its
+ * target still 44px. Only while the row is its box's last child — a refusal
+ * rendered under it takes the room back.
  */
-export function ChoiceRow({ type, className = "", children, ...input }: ChoiceProps) {
+export function ChoiceRow({
+  type,
+  outdent,
+  className = "",
+  children,
+  ...input
+}: ChoiceProps & { outdent?: "block-end" }) {
   return (
     <label
-      className={`grid min-h-11 cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-3 ${className}`.trim()}
+      className={`grid min-h-11 cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-3${outdent ? ` ${CHOICE_ROW_OUTDENT}` : ""} ${className}`.trim()}
     >
       <span className={CHOICE_BOX_LINE}>
         <input type={type} {...input} className={choiceClass} />

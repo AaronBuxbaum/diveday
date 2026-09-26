@@ -943,8 +943,13 @@ export default async function WaiverPage({
           "Save and finish later ·" on one line at 390, the expiry alone on
           the next (K-340). It never wraps now — from `sm` a sentence too long
           for the line (the Spanish pair all but fills the 478px card)
-          wraps inside its own span beside the link, which does not shrink. */}
-      <div className="mt-1 flex items-center gap-x-2 text-sm text-muted max-sm:flex-col max-sm:items-start">
+          wraps inside its own span beside the link, which does not shrink.
+          From `sm` the link ends the card, and the unseen half of its 44px
+          box sank into the card's padding instead of adding to it: 38px under
+          these words against 30px over the heading (K-493). The row lines its
+          words up by their baseline, which the pulled-up margin cannot move;
+          below `sm` the expiry sits under the link, so the box stays whole. */}
+      <div className="mt-1 flex items-baseline gap-x-2 text-sm text-muted max-sm:flex-col max-sm:items-start">
         <button
           type="submit"
           formAction={saveDraftAction}
@@ -960,6 +965,7 @@ export default async function WaiverPage({
             variant: "link",
             size: "sm",
             flush: true,
+            outdent: "block-end-wide",
             className: "shrink-0",
           })}
         >
@@ -1254,6 +1260,11 @@ export default async function WaiverPage({
               aria-describedby={
                 namedFieldError?.anchor === "acknowledged" ? "acknowledged-error" : undefined
               }
+              // Last in the card when the guardian's card carries the Sign
+              // button, and then its target's unseen half sat under the
+              // agreement, 37px to the border against 30px over the heading
+              // (K-493). It gives that half back only while it ends the card.
+              outdent="block-end"
               className="mt-4 text-base"
             >
               {t("waiver.agreementCheckbox")}

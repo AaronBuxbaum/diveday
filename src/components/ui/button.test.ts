@@ -248,6 +248,23 @@ describe("buttonClass", () => {
       expect(phone).not.toContain("-mb-3");
     });
 
+    it("pulls it up from sm only, for a button that stands above its line's words on a phone", () => {
+      // The waiver's "Save and finish later" ends the signature card from `sm`,
+      // on one line with the expiry sentence, and stacks over that sentence on
+      // a phone — where the unseen half of its box would lie over the words
+      // under it, and a tap on them would save the draft (K-493).
+      const wide = tokens(
+        buttonClass({ variant: "link", size: "sm", flush: true, outdent: "block-end-wide" }),
+      );
+      expect(wide).toContain("sm:-mb-3");
+      expect(wide).toContain("sm:align-bottom");
+      expect(wide).not.toContain("-mb-3");
+      expect(wide).not.toContain("max-sm:-mb-3");
+      expect(
+        tokens(buttonClass({ variant: "ghost", size: "boat", outdent: "block-end-wide" })),
+      ).toContain("sm:-mb-4");
+    });
+
     it("measures the unseen half from the size: 12px on sm and md, 16px on the 56px dock target", () => {
       for (const size of ["sm", "md", "icon", "icon-sm"] as const) {
         expect(

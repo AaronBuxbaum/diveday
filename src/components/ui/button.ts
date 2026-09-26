@@ -487,7 +487,10 @@ function horizontalPadding(variant: ButtonVariant, x: string, flush: boolean) {
  * 28px (pixel probe, 2026-09-25). `block-end` gives the unseen half back as a
  * negative bottom margin, so the target stays whole while that half sits in
  * the padding; `block-end-phone` does it below `sm` only, for a button that
- * drops to a line of its own there (`ListItemActions`).
+ * drops to a line of its own there (`ListItemActions`); `block-end-wide` does
+ * it from `sm` up only, for a button that ends its box beside words there and
+ * stacks over words below `sm`, where its unseen half would lie over them and
+ * take their taps (the waiver's "Save and finish later", K-493).
  *
  * `align-bottom` rides with it: a button in a `<form>` is an inline box on the
  * form's line, and the line's strut would keep a pixel of the height the
@@ -503,9 +506,11 @@ function horizontalPadding(variant: ButtonVariant, x: string, flush: boolean) {
  *
  * Only on a variant that paints nothing at rest — a bordered box's end is its
  * border, not its word — and never where the button shares its line with a
- * visible box: centred in a row, the pulled-up margin would lift it 6px.
+ * visible box: centred in a row, the pulled-up margin would lift it 6px. Beside
+ * words, the row lines them up by their baseline (`items-baseline`), which a
+ * margin cannot move.
  */
-export type ButtonOutdent = "block-end" | "block-end-phone";
+export type ButtonOutdent = "block-end" | "block-end-phone" | "block-end-wide";
 
 /**
  * The unseen half of each size's box, (height − line) / 2: 12px on the 44px
@@ -514,10 +519,12 @@ export type ButtonOutdent = "block-end" | "block-end-phone";
 const OUTDENT_12 = {
   "block-end": "-mb-3 align-bottom",
   "block-end-phone": "max-sm:-mb-3 max-sm:align-bottom",
+  "block-end-wide": "sm:-mb-3 sm:align-bottom",
 } as const;
 const OUTDENT_16 = {
   "block-end": "-mb-4 align-bottom",
   "block-end-phone": "max-sm:-mb-4 max-sm:align-bottom",
+  "block-end-wide": "sm:-mb-4 sm:align-bottom",
 } as const;
 const OUTDENT: Record<ButtonSize, Record<ButtonOutdent, string>> = {
   sm: OUTDENT_12,
@@ -555,7 +562,8 @@ export function buttonClass<V extends ButtonVariant = "primary">({
   flush?: V extends PaintedAtRest ? false : boolean;
   /**
    * Sink the unseen lower half of a quiet button's target into the padding of
-   * the box it ends, everywhere (`block-end`) or below `sm` (`block-end-phone`).
+   * the box it ends, everywhere (`block-end`), below `sm` (`block-end-phone`) or
+   * from `sm` up (`block-end-wide`).
    * Refused on a variant painted at rest. See `OUTDENT`.
    */
   outdent?: V extends PaintedAtRest ? undefined : ButtonOutdent;

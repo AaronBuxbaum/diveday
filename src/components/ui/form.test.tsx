@@ -648,6 +648,42 @@ describe("ChoicePill and ChoiceRow", () => {
     expect(box.closest("label")).toHaveClass("min-h-11", "items-start", "text-base");
     expect(node).toBe(box);
   });
+
+  /**
+   * **A row that ends its box sinks the half of its target nobody sees.** A
+   * one-line row is a 24px line centred in 44px, so 10px of target sits under
+   * its words; last in a card, that adds to the card's padding, and the
+   * waiver's signer card read 30px above its heading and 37px under "…agree to
+   * it." (waiver-guardian 1280, K-493). A negative margin alone would be wrong
+   * the moment the words wrap, when there is no unseen half to give back — on
+   * a phone, or in Spanish. So the unseen half becomes padding under the
+   * words, `(44px − 1lh) / 2`, handed back as an equal negative margin, and
+   * the words sit at the box's end: one line lands where centring put it,
+   * several lines stand where they did, and either way the box's layout ends
+   * at the words' last line while the target keeps its 44px. Only while the
+   * row is its box's last child: a refusal rendered under it takes the room
+   * back.
+   */
+  it("outdents only on request, and only while it is the last thing in its box", () => {
+    const outdent = [
+      "last:content-end",
+      "last:pb-[calc((--spacing(11)-1lh)/2)]",
+      "last:-mb-[calc((--spacing(11)-1lh)/2)]",
+    ];
+    const { rerender } = render(
+      <ChoiceRow type="checkbox" name="acknowledged" outdent="block-end" className="text-base">
+        I agree.
+      </ChoiceRow>,
+    );
+    const label = () => screen.getByRole("checkbox", { name: "I agree." }).closest("label");
+    expect(label()).toHaveClass("min-h-11", "content-center", ...outdent);
+    rerender(
+      <ChoiceRow type="checkbox" name="acknowledged" className="text-base">
+        I agree.
+      </ChoiceRow>,
+    );
+    for (const token of outdent) expect(label()).not.toHaveClass(token);
+  });
 });
 
 /**

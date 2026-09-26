@@ -194,6 +194,30 @@ describe("one primary", () => {
       '<span aria-hidden="true" className="max-sm:hidden">',
     );
   });
+
+  it("ends each signing card at its words, not under a target nobody sees", () => {
+    // Both of the page's cards can end in a 44px target around a 20–24px line:
+    // the fine print's save link from `sm`, and the diver's agreement when the
+    // guardian's card follows. That unseen half added to the card's 24px
+    // padding — 30px above the heading against 38px under the last words
+    // (waiver-active 1280), 30 against 37 (waiver-guardian) — K-493.
+    //
+    // The link sinks it through the button's own outdent, from `sm` only: on
+    // a phone the expiry sits under it, and would sit under its box. Its row
+    // lines its words up by their baseline, which a pulled-up margin cannot
+    // move, where centring would lift the link 6px off the sentence beside it.
+    const link = positionOf('t("waiver.saveForLater")');
+    const row = SOURCE.slice(SOURCE.lastIndexOf("<div", link), link);
+    expect(row).toContain("items-baseline");
+    expect(row).not.toContain("items-center");
+    expect(row).toContain('outdent: "block-end-wide"');
+    // The agreement row outdents itself, and only while it ends the card.
+    const agreement = SOURCE.slice(
+      SOURCE.lastIndexOf("<ChoiceRow", positionOf('t("waiver.agreementCheckbox")')),
+      positionOf('t("waiver.agreementCheckbox")'),
+    );
+    expect(agreement).toContain('outdent="block-end"');
+  });
 });
 
 /**
