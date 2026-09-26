@@ -147,6 +147,29 @@ export function rollCallScrollMargin(isDeparture: boolean): string {
 }
 
 /**
+ * The box every roll-call row is, diver and crew alike: the 4px state stripe
+ * on its leading edge (its colour is the row's tone), kept whole across a
+ * printed page break.
+ *
+ * **On paper the first and last rows carry the card's corner themselves.** The
+ * print packets lift every `overflow` clip on purpose (`.trip-print-bundle *`
+ * in globals.css — a clipped box on paper is content that does not exist), so
+ * the card's rounded corner stops cutting the rows, and the stripe and the
+ * row's fill stood square across the curve: 14px of stripe past it at each end
+ * of the day packet's diver list (pixel-craft class 6). The corner is the
+ * card's inner one, `PANEL_INNER_RADIUS` (`ui/card.tsx`) — the panel's 20px
+ * less its 1px border — on the corners each end row actually touches. Do not
+ * reinstate clipping in the bundle instead.
+ *
+ * **Print only**, because on screen the lists are `overflow-hidden` and clip
+ * anyway, and because only on paper is `:first-child` the first row painted:
+ * on screen an alarmed diver row is `order-first`, while the printed list is
+ * block layout in manifest order (`print:order-none`).
+ */
+export const ROLL_CALL_ROW_CLASS =
+  "border-l-4 break-inside-avoid print:first:rounded-t-[calc(var(--radius-panel)-1px)] print:last:rounded-b-[calc(var(--radius-panel)-1px)]";
+
+/**
  * The person row's disclosure: the whole name column is the summary, and one
  * tap opens everything the rail does not need this second — contact, gear,
  * medical, notes, the readiness blockers and their fix, and the exception

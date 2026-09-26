@@ -25,6 +25,7 @@ import { PersonBuddyList } from "./PersonBuddyList";
 import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
 import { personTrailWithCurrentRecord } from "./person-trail";
 import {
+  ROLL_CALL_ROW_CLASS,
   ROLL_CALL_ROW_TONE,
   ROW_DISCLOSURE_PANEL_CLASS,
   ROW_DISCLOSURE_SUMMARY_CLASS,
@@ -233,8 +234,9 @@ export function CrewRollCall({
                   // `break-inside-avoid` for the same reason a diver's row
                   // carries it: this sheet is printed and goes ashore, and a
                   // crew member's name split across a page boundary is a
-                  // defect in the record rather than a layout nit.
-                  className={`border-l-4 break-inside-avoid ${rollCallScrollMargin(isDeparture)} ${
+                  // defect in the record rather than a layout nit
+                  // (`ROLL_CALL_ROW_CLASS`, with the card's corner on paper).
+                  className={`${ROLL_CALL_ROW_CLASS} ${rollCallScrollMargin(isDeparture)} ${
                     recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : ROLL_CALL_ROW_TONE.awaiting
                   }`}
                 >

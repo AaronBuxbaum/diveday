@@ -37,6 +37,7 @@ import { PersonBuddyList } from "./PersonBuddyList";
 import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
 import { personTrailWithCurrentRecord } from "./person-trail";
 import {
+  ROLL_CALL_ROW_CLASS,
   ROLL_CALL_ROW_TONE,
   ROW_DISCLOSURE_PANEL_CLASS,
   ROW_DISCLOSURE_SUMMARY_CLASS,
@@ -483,7 +484,8 @@ export function DiverRollCall({
           // page boundary — a name split in half on the sheet a coastguard
           // reads is a defect (dive-domain review 20260828). The printed table
           // rows do the same, for the same reason (`src/components/ui/table.tsx`).
-          const rowClass = `border-l-4 break-inside-avoid ${alarmed ? "order-first print:order-none" : ""} ${rollCallScrollMargin(isDeparture)} ${
+          // `ROLL_CALL_ROW_CLASS` carries it, with the card's corner on paper.
+          const rowClass = `${ROLL_CALL_ROW_CLASS} ${alarmed ? "order-first print:order-none" : ""} ${rollCallScrollMargin(isDeparture)} ${
             recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
           }`;
           // The hairline above this row, in each of the two orders. On screen

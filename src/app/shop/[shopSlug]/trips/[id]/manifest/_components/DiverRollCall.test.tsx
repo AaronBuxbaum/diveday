@@ -314,6 +314,25 @@ describe("a recorded alarm sorts to the top, and paper does not (decision 4)", (
     }
   });
 
+  it("gives the first and last rows the card's inner corner on paper, where nothing clips them", () => {
+    // The print packets lift every `overflow` clip on purpose (a clipped box
+    // on paper is content that does not exist), so the card's rounded corner
+    // stopped cutting the rows and the 4px state stripe stood square across
+    // it (pixel probe, day-packet-print: 14px of stripe past the curve at each
+    // end). On paper the list is block layout in manifest order, so
+    // `:first-child` is the first row painted — which it is not on screen,
+    // where an alarmed row is `order-first` and the card still clips.
+    const { container } = renderList({ divers: roster() });
+    for (const row of container.querySelectorAll<HTMLElement>("li[id^='diver-row-']")) {
+      expect(row).toHaveClass(
+        "border-l-4",
+        "print:first:rounded-t-[calc(var(--radius-panel)-1px)]",
+        "print:last:rounded-b-[calc(var(--radius-panel)-1px)]",
+      );
+      expect(row.className).not.toMatch(/(^|\s)(first|last):rounded/);
+    }
+  });
+
   it("keeps two alarmed rows in manifest order among themselves", () => {
     // Equal `order` values fall back to document order, so a second alarm does
     // not reshuffle the first. Worth pinning: a boat with two divers still in
