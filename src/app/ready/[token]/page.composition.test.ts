@@ -90,8 +90,9 @@ describe("the thread page's order", () => {
  * **One inset down the thread's column.** "Where to go" (`TripArrivalCard`)
  * and "Anything changed" (`TripChangeLedger`) are `md` cards; the party panel
  * under them was `lg`, so "Your group's seats" started 4px right of "Where to
- * go" above it — 41 against 37 at 390, 401 against 397 at 1280 (K-52,
- * TOKEN-2-07). The panel is consistent with itself; the column was not.
+ * go" above it — 41 against 37 at 390, 401 against 397 at 1280 — and the
+ * coral booked moment at the top of the column 8px right, at 45 and 405 (K-52,
+ * TOKEN-2-07). Each panel was consistent with itself; the column was not.
  */
 describe("the thread column's cards", () => {
   it("share the md inset", () => {
@@ -106,6 +107,12 @@ describe("the thread column's cards", () => {
         `${component} steps off the column's inset`,
       ).toBe(false);
     }
+  });
+
+  it("sets the booked moment above them at the same inset", () => {
+    const moments = SOURCE.match(/<EarnedMoment\b[^>]*>/g) ?? [];
+    expect(moments).toHaveLength(1);
+    expect(moments[0]).toContain('inset="card"');
   });
 });
 

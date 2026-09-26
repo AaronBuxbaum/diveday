@@ -93,3 +93,30 @@ describe("EARNED_MOMENT_SURFACE", () => {
     expect(EARNED_MOMENT_SURFACE).toContain("bg-accent/10");
   });
 });
+
+describe("the whole-page moment's inset", () => {
+  function momentFor(title: string) {
+    return screen.getByRole("heading", { name: title }).closest("section");
+  }
+
+  /**
+   * On /ready the booked moment heads a column of `md` cards, and its own
+   * `p-6 sm:p-7` started "You’re on the boat" 8px inside "Where to go": 45
+   * against 37 at 390, 405 against 397 at 1280 (K-52, TOKEN-2-07). Asked to,
+   * it sits at the card inset, so the column's titles share one left edge.
+   */
+  it("sits at a card's md inset when asked to", () => {
+    render(<EarnedMoment title="You’re on the boat" inset="card" />);
+    const cardInset = sectionCardClass()
+      .split(" ")
+      .filter((name) => /^(sm:)?p-\d/.test(name));
+    expect(cardInset).toEqual(["p-4", "sm:p-5"]);
+    expect(momentFor("You’re on the boat")).toHaveClass(...cardInset);
+    expect(momentFor("You’re on the boat")?.className).not.toMatch(/(^|\s)(sm:)?p-[67](\s|$)/);
+  });
+
+  it("keeps its own wider inset where it opens a page", () => {
+    render(<EarnedMoment as="h1" title="Waiver signed" />);
+    expect(momentFor("Waiver signed")).toHaveClass("p-6", "sm:p-7");
+  });
+});
