@@ -99,6 +99,37 @@ describe("the public reviews' rows", () => {
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) expect(inset(row)).toEqual(loaded);
   });
+
+  /**
+   * **The archive's skeleton stands the page's own lines** (class 11, K-383).
+   * It was written before the five-row rating histogram joined the page, and
+   * sized each review 16px short: a 16px star line, a 20px quote and a 16px
+   * byline where the page draws a 24px star line, a 24px quote and a 20px
+   * byline. The first review arrived 144px below its grey row at 1280, and
+   * every one after it 16px further. On a phone the quote wraps to two lines.
+   */
+  it("draws the histogram's five rows, then each review at its loaded line heights", () => {
+    const { container } = render(<PublicReviewsLoading />);
+    const histogram = container.querySelector("[data-histogram]");
+    expect(histogram).toHaveClass("mt-4", "max-w-sm", "gap-1.5");
+    expect(histogram?.children).toHaveLength(5);
+    for (const bar of histogram?.children ?? []) expect(bar).toHaveClass("h-5");
+
+    const firstRow = [...container.querySelectorAll("*")].find((element) =>
+      element.classList.contains("last:border-b"),
+    );
+    // Between the aggregate and the first review, as the page draws it.
+    expect(histogram?.compareDocumentPosition(firstRow as Node)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    const heights = (element: Element) =>
+      [...element.classList].filter((token) => /^(?:mt-|h-|sm:hidden$)/.test(token)).join(" ");
+    const [stars, quote, byline] = [...(firstRow?.children ?? [])];
+    expect(heights(stars)).toBe("h-6");
+    expect(heights(quote)).toBe("mt-1.5");
+    expect([...quote.children].map(heights)).toEqual(["h-6", "h-6 sm:hidden"]);
+    expect(heights(byline)).toBe("mt-1.5 h-5");
+  });
 });
 
 describe("a loading skeleton standing in for ledger rows", () => {
