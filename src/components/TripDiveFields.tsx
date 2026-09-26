@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   controlClass,
   Field,
@@ -50,6 +50,7 @@ export function TripDiveFields({
   disabled = false,
   onCountChange,
   onFirstDiveSiteChange,
+  firstDiveSiteDescription,
   frameClassName,
 }: {
   diveSites: DiveOption[];
@@ -68,6 +69,13 @@ export function TripDiveFields({
   onCountChange?: (count: number) => void;
   /** Fires when dive one's site changes, likewise. */
   onFirstDiveSiteChange?: (diveSiteId: string) => void;
+  /**
+   * A line about dive one's site, set as its select's description: the
+   * schedule builder's tide at the chosen site, which follows the day's site
+   * to dive one's select once its form is expanded. Only dive one's, the site
+   * `onFirstDiveSiteChange` reports. Nothing renders while it is empty.
+   */
+  firstDiveSiteDescription?: ReactNode;
   /**
    * The block's frame (corner, border, fill, padding), replaced whole: it is
    * drawn like the groups around it on whichever form it sits in, so it takes
@@ -155,7 +163,11 @@ export function TripDiveFields({
                     className={controlClass}
                   />
                 </Field>
-                <Field label={copy.diveSiteLabel} hint={copy.optionalHint}>
+                <Field
+                  label={copy.diveSiteLabel}
+                  hint={copy.optionalHint}
+                  description={number === 1 ? firstDiveSiteDescription : undefined}
+                >
                   <select
                     name={`dive-${number}-siteId`}
                     defaultValue={initial?.diveSiteId ?? ""}

@@ -486,20 +486,23 @@ function AddPanel({
 
   /**
    * **The tide at the chosen site**, one line under the site select (ADR
-   * 20260907-noaa-tide-predictions). Asked of the server the moment a site
+   * 20260907-noaa-tide-predictions): that select's own description, and dive
+   * one's once the form is expanded, so it is set and read the way every
+   * field's description is (K-337). Asked of the server the moment a site
    * is picked and again whenever the form's own "when" changes — the date is
    * state, but the time and mode are uncontrolled boxes, so the form's
    * `change` event is what re-asks. The answer is already a sentence in the
    * reader's language; null is the ordinary case and renders nothing.
    */
   const [tideLine, setTideLine] = useState<string | null>(null);
-  const tideAnchor = useRef<HTMLParagraphElement>(null);
+  /** The quick row's site select: always mounted, so the effect reaches the form through it. */
+  const tideAnchor = useRef<HTMLSelectElement>(null);
   useEffect(() => {
     if (!loadTideWindow || !diveSiteId) {
       setTideLine(null);
       return;
     }
-    const form = tideAnchor.current?.closest("form") ?? null;
+    const form = tideAnchor.current?.form ?? null;
     let live = true;
     // Typing a time fires `change` per keystroke-committed box, so two asks
     // can be in flight at once and the network decides which lands last.
@@ -1179,9 +1182,11 @@ function AddPanel({
         <Field
           label={copy.diveSite}
           hint={copy.optional}
+          description={tideLine}
           className={expanded ? "hidden" : undefined}
         >
           <select
+            ref={tideAnchor}
             name="diveSiteId"
             value={diveSiteId}
             disabled={expanded}
@@ -1206,12 +1211,6 @@ function AddPanel({
           </select>
         </Field>
       </FieldGrid>
-      {/* Always mounted, empty or not: the effect above finds the form
-          through this element, and it has to be there before a site is
-          picked. Hidden rather than absent while there is nothing to say. */}
-      <p ref={tideAnchor} hidden={!tideLine} className="text-sm text-muted">
-        {tideLine}
-      </p>
       {diveSeed === null ? null : (
         <TripDiveFields
           diveSites={(options?.diveSites ?? []).map((site) => ({
@@ -1232,6 +1231,7 @@ function AddPanel({
           disabled={!expanded}
           onCountChange={setPlannedDives}
           onFirstDiveSiteChange={setDiveSiteId}
+          firstDiveSiteDescription={tideLine}
           copy={more.diveFields}
           frameClassName={GROUP_FRAME}
         />

@@ -50,3 +50,51 @@ describe("the Dive plan's frame", () => {
     expect(frame()?.getAttribute("class")).toBe(frameClassName);
   });
 });
+
+/**
+ * A line the caller has about dive one's site (the schedule builder's tide at
+ * the chosen site) is that select's own description: under its box, in a
+ * field description's type, and read with it (pixel-craft K-337). Only dive
+ * one's, the site `onFirstDiveSiteChange` reports.
+ */
+describe("dive one's site description", () => {
+  const sites = [{ id: "molasses", name: "Molasses Reef" }];
+  const describedBy = (control: Element | null) =>
+    (control?.getAttribute("aria-describedby") ?? "")
+      .split(" ")
+      .filter(Boolean)
+      .map((id) => document.getElementById(id)?.textContent ?? "");
+
+  it("describes dive one's site select, and no other dive's", () => {
+    const { container } = render(
+      <TripDiveFields
+        diveSites={sites}
+        copy={COPY}
+        frameClassName=""
+        firstDiveSiteDescription="Next high water at 9:12 AM."
+      />,
+    );
+
+    expect(describedBy(container.querySelector('select[name="dive-1-siteId"]'))).toEqual([
+      "Next high water at 9:12 AM.",
+    ]);
+    expect(
+      container.querySelector('select[name="dive-2-siteId"]')?.getAttribute("aria-describedby"),
+    ).toBeNull();
+  });
+
+  it("describes nothing while there is nothing to say", () => {
+    const { container } = render(
+      <TripDiveFields
+        diveSites={sites}
+        copy={COPY}
+        frameClassName=""
+        firstDiveSiteDescription={null}
+      />,
+    );
+
+    expect(
+      container.querySelector('select[name="dive-1-siteId"]')?.getAttribute("aria-describedby"),
+    ).toBeNull();
+  });
+});
