@@ -2,7 +2,8 @@
 
 DiveDay's regions are three constants in [config/aws-regions.mjs](../../config/aws-regions.mjs), and this is what changing one of them actually costs.
 
-Today `PRIMARY_REGION` and `SES_REGION` are both `us-east-2`; `ROUTE53_METRICS_REGION` is `us-east-1` and is not a choice (ADR [20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md)).
+Today all three are `us-east-1` (ADR [20260924-one-region-in-us-east-1](../architecture/decisions/20260924-one-region-in-us-east-1.md)); `ROUTE53_METRICS_REGION` is not a choice (ADR [20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md)).
+This page and `pnpm infra:migrate-region` move `PRIMARY_REGION`, with `SES_REGION` alongside it; moving `SES_REGION` on its own is [its own procedure](ses-email-runbook.md#moving-mail-to-another-region).
 
 Read this before editing either of the first two.
 The edit is one line; the move is not.
@@ -62,14 +63,24 @@ There is a script: `pnpm infra:migrate-region`.
 It defaults to an inventory and changes nothing. Run it first, read what it says it would delete, and only then re-run with `--execute`.
 
 ```bash
-pnpm infra:migrate-region --from us-east-1                       # inventory only
-pnpm infra:migrate-region --from us-east-1 --execute             # do it
-pnpm infra:migrate-region --from us-east-1 --execute --from-step 3   # resume
+pnpm infra:migrate-region --from us-east-2                       # inventory only
+pnpm infra:migrate-region --from us-east-2 --execute             # do it
+pnpm infra:migrate-region --from us-east-2 --execute --from-step 3   # resume
 ```
 
 It uses the `diveday-admin` profile, strips any ambient deployer key, reads the account off `sts:GetCallerIdentity` rather than assuming it, and makes you type the region name before the first delete.
 With no terminal to ask in it refuses outright unless `--confirm-teardown <region>` is passed, which is a flag that names what it destroys and authorizes nothing else.
 Steps 1 to 4 are idempotent: a resource that is already gone is "already done", not an error, so a run that dies half-way can be resumed rather than restarted.
+
+**Before the script, when mail is moving too:** the script deletes `diveday-infra` and never `diveday-email`, so take the old email stack down by hand first — otherwise it survives in the old region with its identity and an active rule set, and the new region's deploy still cannot take `diveday-inbound-mail`:
+
+```bash
+aws ses set-active-receipt-rule-set --region <old region>    # no name: deactivates; an active set blocks the delete
+aws cloudformation delete-stack --region <old region> --stack-name diveday-email
+aws cloudformation wait stack-delete-complete --region <old region> --stack-name diveday-email
+```
+
+The inbound bucket it leaves behind (`RETAIN`) is one of the buckets step 1 empties and deletes.
 
 What each step does:
 

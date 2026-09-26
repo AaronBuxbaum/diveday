@@ -5,6 +5,9 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { PRIMARY_REGION } from "../config/aws-regions.mjs";
 
+/** Any region that is not PRIMARY_REGION: the one the estate is being moved out of. */
+const OLD_REGION = PRIMARY_REGION === "us-east-2" ? "us-east-1" : "us-east-2";
+
 /**
  * The one script in this repository that deletes production-shaped resources.
  *
@@ -189,7 +192,7 @@ afterEach(() => {
 describe("infra:migrate-region", () => {
   it("reports what it would delete and changes nothing without --execute", () => {
     const directory = fixture({ resourcesExist: true });
-    const result = run(directory, "--from", "us-east-1", "--confirm-account", "123456789012");
+    const result = run(directory, "--from", OLD_REGION, "--confirm-account", "123456789012");
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("This was an inventory. Nothing has been changed.");
@@ -206,9 +209,9 @@ describe("infra:migrate-region", () => {
 
   it("names the account and the direction of travel before anything else", () => {
     const directory = fixture({ resourcesExist: true });
-    const result = run(directory, "--from", "us-east-1", "--confirm-account", "123456789012");
+    const result = run(directory, "--from", OLD_REGION, "--confirm-account", "123456789012");
 
-    expect(result.stdout).toContain(`us-east-1 -> ${PRIMARY_REGION}`);
+    expect(result.stdout).toContain(`${OLD_REGION} -> ${PRIMARY_REGION}`);
     expect(result.stdout).toContain("Account 123456789012");
     // Read off the caller identity, never assumed: the failure this prevents is
     // tearing down the estate in somebody else's account.
@@ -227,7 +230,7 @@ describe("infra:migrate-region", () => {
 
   it("refuses when the confirmed account is not the signed-in one", () => {
     const directory = fixture({ resourcesExist: true });
-    const result = run(directory, "--from", "us-east-1", "--confirm-account", "210987654321");
+    const result = run(directory, "--from", OLD_REGION, "--confirm-account", "210987654321");
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Refusing to run against account 123456789012");
@@ -245,7 +248,7 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",
@@ -253,7 +256,7 @@ describe("infra:migrate-region", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Refusing to delete anything non-interactively");
-    expect(result.stderr).toContain("--confirm-teardown us-east-1");
+    expect(result.stderr).toContain(`--confirm-teardown ${OLD_REGION}`);
     const log = awsLog(directory);
     expect(log).not.toContain("delete-stack");
     expect(log).not.toContain("delete-objects");
@@ -265,7 +268,7 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",
@@ -280,7 +283,7 @@ describe("infra:migrate-region", () => {
 
   it("refuses a --from-step outside the five steps", () => {
     const directory = fixture();
-    const result = run(directory, "--from", "us-east-1", "--execute", "--from-step", "9");
+    const result = run(directory, "--from", OLD_REGION, "--execute", "--from-step", "9");
 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("--from-step must be a step number between 1 and 5");
@@ -291,7 +294,7 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",
@@ -342,12 +345,12 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",
       "--confirm-teardown",
-      "us-east-1",
+      OLD_REGION,
     );
 
     const log = awsLog(directory);
@@ -384,12 +387,12 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",
       "--confirm-teardown",
-      "us-east-1",
+      OLD_REGION,
     );
 
     expect(result.status).toBe(0);
@@ -410,12 +413,12 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",
       "--confirm-teardown",
-      "us-east-1",
+      OLD_REGION,
     );
 
     expect(result.status).toBe(1);
@@ -444,12 +447,12 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",
       "--confirm-teardown",
-      "us-east-1",
+      OLD_REGION,
     );
 
     expect(result.status).toBe(1);
@@ -478,12 +481,12 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",
       "--confirm-teardown",
-      "us-east-1",
+      OLD_REGION,
     );
 
     expect(result.status).toBe(0);
@@ -515,12 +518,12 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",
       "--confirm-teardown",
-      "us-east-1",
+      OLD_REGION,
       // From step 3: step 1 would delete the old region's stack and the
       // fixture's single stack status would follow it, which is not the state
       // under test here.
@@ -550,12 +553,12 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",
       "--confirm-teardown",
-      "us-east-1",
+      OLD_REGION,
       // From step 3: step 1 would delete the old region's stack and the
       // fixture's single stack status would follow it, which is not the state
       // under test here.
@@ -576,12 +579,12 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",
       "--confirm-teardown",
-      "us-east-1",
+      OLD_REGION,
       // From step 3: step 1 would delete the old region's stack and the
       // fixture's single stack status would follow it, which is not the state
       // under test here.
@@ -616,12 +619,12 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",
       "--confirm-teardown",
-      "us-east-1",
+      OLD_REGION,
       "--from-step",
       "3",
     );
@@ -654,12 +657,12 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",
       "--confirm-teardown",
-      "us-east-1",
+      OLD_REGION,
       "--from-step",
       "3",
     );
@@ -675,7 +678,7 @@ describe("infra:migrate-region", () => {
     const result = run(
       directory,
       "--from",
-      "us-east-1",
+      OLD_REGION,
       "--execute",
       "--confirm-account",
       "123456789012",

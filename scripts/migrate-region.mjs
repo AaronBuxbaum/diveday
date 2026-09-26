@@ -23,8 +23,8 @@
  *   node scripts/migrate-region.mjs --execute            # do it, with prompts
  *   node scripts/migrate-region.mjs --execute --from-step 2
  *
- * `--from us-east-1` names the region being left; it defaults to the only
- * region this repository has ever deployed the main stack into.
+ * `--from us-east-2` names the region being left; it defaults to the region
+ * the main stack was last deployed into before it came back to us-east-1.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -102,7 +102,7 @@ const flagValue = (flag, fallback) => {
   const index = parameters.indexOf(flag);
   return index >= 0 ? parameters[index + 1]?.trim() : fallback;
 };
-const oldRegion = flagValue("--from", "us-east-1");
+const oldRegion = flagValue("--from", "us-east-2");
 const fromStep = Number(flagValue("--from-step", "1"));
 const confirmedAccount = flagValue("--confirm-account", undefined);
 // Separate from --confirm-account on purpose. That one asserts *which account*

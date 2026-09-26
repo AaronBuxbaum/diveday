@@ -139,7 +139,11 @@ describe("the stack split", () => {
     );
     // The old region's ARNs match nothing once the identity has moved, and an
     // IAM policy does not complain about naming a resource that is not there.
-    expect(resources).not.toContain(":ses:us-east-1:");
+    // So every SES ARN the main stack writes names SES_REGION, whatever that is.
+    const sesRegions = new Set(
+      [...resources.matchAll(/:ses:([a-z0-9-]+):/g)].map(([, region]) => region),
+    );
+    expect([...sesRegions]).toEqual([SES_REGION]);
   });
 
   it("lets the sender read the received mail, and only under the prefix SES writes it", () => {

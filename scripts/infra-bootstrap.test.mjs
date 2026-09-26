@@ -11,6 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { DEPLOY_REGIONS } from "../config/aws-regions.mjs";
 
 const directories = [];
 
@@ -75,15 +76,15 @@ describe("infra:bootstrap", () => {
     expect(readFileSync(join(directory, "aws.log"), "utf8")).toContain(
       "diveday-admin:s3control put-public-access-block --account-id 123456789012",
     );
-    // Every region a stack names, in one run, in registry order. The email
-    // stack and the main stack share us-east-2 and the uptime stack is pinned
-    // to us-east-1 because Route 53 publishes its metric nowhere else (ADR
-    // 20260910-one-region-in-us-east-2). Bootstrap is per region, so a run that did
-    // only the first leaves a deploy failing on an AssumeRole whose role name
-    // ends in a region nobody bootstrapped.
+    // Every region a stack names, in one run, in registry order, once each.
+    // Bootstrap is per region, so a run that skipped one leaves a deploy
+    // failing on an AssumeRole whose role name ends in a region nobody
+    // bootstrapped. Read from the registry so the estate being one region
+    // (ADR 20260924-one-region-in-us-east-1) or three needs no edit here.
     expect(readFileSync(join(directory, "cdk.log"), "utf8")).toBe(
-      "bootstrap aws://123456789012/us-east-2 --qualifier dive\n" +
-        "bootstrap aws://123456789012/us-east-1 --qualifier dive\n",
+      DEPLOY_REGIONS.map(
+        (region) => `bootstrap aws://123456789012/${region} --qualifier dive\n`,
+      ).join(""),
     );
   });
 

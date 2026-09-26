@@ -62,10 +62,12 @@ made — DiveDay records the issue without spending a send. The demo seed intent
 
 ### Which region
 
-**`us-east-2`**, along with the rest of the estate. The sandbox is per region and AWS refused the
-us-east-1 request, so mail moved; the rest of the estate followed rather than leaving a border down
-the middle of it
-(ADR [20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md)).
+**`us-east-1`**, along with the rest of the estate
+(ADR [20260924-one-region-in-us-east-1](../architecture/decisions/20260924-one-region-in-us-east-1.md)).
+The sandbox is per region. Mail went to us-east-2 after us-east-1 refused production access in
+August (ADR [20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md));
+the us-east-2 case was then closed in September with no decision, and the whole estate came back to
+us-east-1, beside the database, for a new request there.
 
 Mail still has its own stack, `diveday-email`, holding everything CloudFormation can only create in
 the sending region: the identity, the configuration set, the event topic, the two reputation alarms,
@@ -76,11 +78,49 @@ region over deploys cleanly and receives nothing at all.
 Everything else — the `diveday-ses-sender` IAM user, its key, and the credentials document — stays in
 `diveday-infra`. One constant decides the region, `SES_REGION` in `config/aws-regions.mjs`, and it
 stays a separate constant from `PRIMARY_REGION` on purpose: mail is the one part of this estate whose
-region AWS gets a vote in, and it has already been refused once.
+region AWS gets a vote in.
 
 Practically, **every `aws ses*` and SES-topic `aws sns` command on this page wants
-`--region us-east-2`**, and the SES console has to be switched to it. A call to the wrong region does
+`--region us-east-1`**, and the SES console has to be switched to it. A call to the wrong region does
 not say "wrong region" — it says the identity does not exist.
+
+### Moving mail to another region
+
+When `PRIMARY_REGION` moves too, follow [region-migration.md](region-migration.md) instead — it
+takes the old email stack down first and hands the rest to `pnpm infra:migrate-region`; steps 4–7
+below still apply afterwards. This section is for mail moving on its own.
+
+Changing `SES_REGION` and deploying is not enough on its own: a deploy into the new region never
+touches the stack in the old one, and `diveday-inbound-mail` is a global bucket name the old stack
+still holds (`RemovalPolicy.RETAIN`). `pnpm infra:migrate-region` moves `PRIMARY_REGION` and does not
+do this. Pre-pilot, nothing in the old stack is worth keeping, so the move is a teardown. In order,
+with the `diveday-admin` profile, `<old>` the region mail is leaving and `<new>` the new `SES_REGION`:
+
+1. **Deactivate the old receipt rule set.** CloudFormation cannot delete an active one, and the stack
+   deletion fails part-way if you skip this:
+   `aws ses set-active-receipt-rule-set --region <old>` (no rule-set name deactivates).
+2. **Delete the old email stack**, then the bucket it leaves behind:
+   ```bash
+   aws cloudformation delete-stack --region <old> --stack-name diveday-email
+   aws cloudformation wait stack-delete-complete --region <old> --stack-name diveday-email
+   aws s3 rm s3://diveday-inbound-mail --recursive
+   aws s3api delete-bucket --bucket diveday-inbound-mail
+   ```
+   The global name can take a few minutes to free after the delete; a `BucketAlreadyExists` or
+   `OperationAborted` on the next step means wait and rerun.
+3. **Bootstrap and deploy.** `pnpm infra:bootstrap` covers every region in `DEPLOY_REGIONS`, then
+   `pnpm infra:deploy`. The main stack's grants and the credentials document's `SES_AWS_REGION` and
+   topic ARNs follow the constant.
+4. **Redo the DNS** from the new `SesDkimRecords`, `SesMailFromRecords` and `SesInboundMxRecord`
+   outputs: three new DKIM CNAMEs (delete the old region's three), and both MX records as a
+   delete-then-add. The post-deploy wizard at the end of `pnpm infra:deploy` does the adds and names any rival MX to remove.
+5. **Activate the rule set** in the new region:
+   `aws ses set-active-receipt-rule-set --region <new> --rule-set-name diveday-inbound`.
+6. **Redeploy the app** so it reads the new region and ARNs, then confirm the three SNS subscriptions
+   in the new region — the event webhook, the inbound webhook and the SES alarm topic's email — are
+   real ARNs, not `PendingConfirmation`.
+7. **Run [Before you file](#before-you-file)** in the new region, including the two mailbox-simulator
+   sends, then [file the case](#where-to-file-it) there. The new region starts in the sandbox.
 
 | Variable | Enables | Without it |
 | --- | --- | --- |
@@ -100,7 +140,7 @@ not say "wrong region" — it says the identity does not exist.
    not the org domain: automated mail and human correspondence should not share a sending
    reputation, and this keeps a bulk-mail problem from affecting the address people actually write to
    you at.
-2. **Request SES production access** (an AWS Support case — CDK cannot do this), in **us-east-2**.
+2. **Request SES production access** (an AWS Support case — CDK cannot do this), in **us-east-1**.
    SES starts in sandbox mode, which can only send to pre-verified recipient addresses. The case is
    written out below in [Production access: the request](#production-access-the-request) — paste
    that text, do not improvise a shorter one.
@@ -158,7 +198,7 @@ Two records, on `mail.ses.dive.day`, both in the `SesMailFromRecords` stack outp
 
 | Type | Value |
 | --- | --- |
-| MX | `10 feedback-smtp.us-east-2.amazonses.com` — the region must match `SES_AWS_REGION`; a move re-points it |
+| MX | `10 feedback-smtp.us-east-1.amazonses.com` — the region must match `SES_AWS_REGION`; a move re-points it |
 | TXT | `v=spf1 include:amazonses.com ~all` |
 
 **Exactly one MX record.** SES fails the whole MAIL FROM setup if that subdomain has more than one.
@@ -171,7 +211,7 @@ so the CDK stack has no hosted zone to write them into. It configures the AWS si
 values; add the MAIL FROM pair with:
 
 ```bash
-pnpm exec vercel dns add dive.day mail.ses MX feedback-smtp.us-east-2.amazonses.com 10
+pnpm exec vercel dns add dive.day mail.ses MX feedback-smtp.us-east-1.amazonses.com 10
 pnpm exec vercel dns add dive.day mail.ses TXT 'v=spf1 include:amazonses.com ~all'
 ```
 
@@ -185,7 +225,7 @@ which point the setup has to be restarted.
 normally is not evidence the envelope domain took:
 
 ```bash
-aws sesv2 get-email-identity --region us-east-2 --email-identity ses.dive.day \
+aws sesv2 get-email-identity --region us-east-1 --email-identity ses.dive.day \
   --query 'MailFromAttributes' --output json
 ```
 
@@ -219,10 +259,22 @@ account rate moves the graph says whether it was DiveDay's mail.
 
 ## Production access: the request
 
-The sandbox is **per region**, and us-east-2 is its own: this is a first request there, against a
-fresh sandbox, judged on its own text. What decides one is whether the reviewer can tick every row
-of their checklist from what is in front of them — a one-paragraph "we send booking confirmations"
-is the shape that gets refused, and the case below is the shape that does not.
+The sandbox is **per region**, and each request is judged on its own text. What decides one is
+whether the reviewer can tick every row of their checklist from what is in front of them — a
+one-paragraph "we send booking confirmations" is the shape that gets refused. AWS's own guidance adds
+two things this text now does: say whether an earlier request was denied, and describe what changed
+since ([AWS Messaging Blog](https://aws.amazon.com/blogs/messaging-and-targeting/how-large-senders-can-move-from-sandbox-to-production-using-amazon-ses/)).
+
+### Case history
+
+Add a row when a case moves. The next request names every earlier one, so this table is its source.
+
+| Case | Region | Filed | Outcome |
+| --- | --- | --- | --- |
+| 178576512200471 | us-east-1 | 2026-08-03 | Follow-up answered; refused Aug 5 and Aug 6 with no reason, closed as final Aug 15 ("identifiable patterns and signals"). |
+| 178839371400539 | us-east-1 | 2026-09-02 | Asked why. AWS's automated reply (Sep 3): submit a **new** request that describes what changed since the refusal. |
+| 178905641100543 | us-east-2 | 2026-09-10 | Follow-up answered within 25 minutes with the case text; closed with no decision. Two comments on the closed case (Sep 12, Sep 14) drew no reply — a comment on a closed case does not reach the reviewer, so open a new one. |
+| — | us-east-1 | pending | The text below, after the move in [region-migration.md](region-migration.md). |
 
 ### Before you file
 
@@ -230,17 +282,17 @@ Every one of these is something the reviewer may check, and every one is done by
 repository plus the DNS steps above. Confirm, do not assume:
 
 ```bash
-aws sesv2 get-email-identity --region us-east-2 --email-identity ses.dive.day \
+aws sesv2 get-email-identity --region us-east-1 --email-identity ses.dive.day \
   --query '{dkim:DkimAttributes.Status,mailFrom:MailFromAttributes.MailFromDomainStatus,verified:VerifiedForSendingStatus}'
 # want: dkim SUCCESS, mailFrom SUCCESS, verified true
-aws sns list-subscriptions-by-topic --region us-east-2 --topic-arn <SesEventNotificationsTopicArn> \
+aws sns list-subscriptions-by-topic --region us-east-1 --topic-arn <SesEventNotificationsTopicArn> \
   --query 'Subscriptions[].SubscriptionArn'
 # want: a real ARN, not PendingConfirmation
-aws sesv2 get-configuration-set --region us-east-2 \
+aws sesv2 get-configuration-set --region us-east-1 \
   --configuration-set-name diveday-transactional-email \
   --query 'SuppressionOptions.SuppressedReasons'
 # want: BOUNCE and COMPLAINT -- this is where the stack sets them (infra/lib/email-stack.ts)
-aws sesv2 get-account --region us-east-2 \
+aws sesv2 get-account --region us-east-1 \
   --query '{production:ProductionAccessEnabled,suppression:SuppressionAttributes}'
 # want: production false until the case below is granted. SuppressionAttributes is the
 # *account default*, which the configuration set overrides and this stack never sets --
@@ -285,72 +337,86 @@ whose first row is the four `CLOUDWATCH_*` variables, a partial set of which is 
 
 In order. Stop at the first that works.
 
-1. **A new case, filed in us-east-2.** In the Support Center: *Account and billing* → *Service*
-   SES → *Category* Sending limits (or the **Request production access** button on the SES
-   console's *Get set up* page, switched to us-east-2, which opens the same kind of case). Choose
-   **Transactional**, website `https://dive.day`, contacts `aaron@dive.day`. Put the whole text
-   below in the case body. The console form has no free-text field any more; the case it opens
-   does, and the reviewer's follow-up ("please describe your use case in more detail") is where the
-   text goes if the form gave you nowhere.
-2. **Answer the follow-up inside 48 hours.** The reviewer's questions are the standard set in the
-   table after the case text. A case that goes quiet is closed as refused.
-3. **Another region.** The sandbox is per region, and a verdict in one carries no automatic weight
-   in another. Mail lives in **us-east-2**
-   (ADR [20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md)),
-   so the case below is filed there and nothing of DiveDay's is left in us-east-1 but the uptime
-   alarms. Moving again is `SES_REGION` in `config/aws-regions.mjs`, a deploy, the DKIM CNAMEs and
-   both MX records re-added from the new outputs (each MX is a delete-then-add: SES refuses a
-   subdomain with two), the receipt rule set activated in the new region, and a fresh request there.
-   Going back to us-east-1 is no longer the plan — it would put a region border back through an
-   estate that no longer has one ([region-migration.md](region-migration.md)).
-4. **A support plan.** Developer Support ($29/month, cancel after) gives a named human on the case
-   who can tell you which row failed; Business Support adds chat. Neither changes the reviewer, but
-   both change "no reason given". Take this before another attempt, not after.
+1. **A new case, filed in `SES_REGION`** — us-east-1 today. The **Request production access** button
+   on the SES console's *Get set up* page, switched to that region: choose **Transactional**,
+   website `https://dive.day`, contacts `aaron@dive.day`. The form has no free-text field; the case
+   it opens does, so paste the whole text below into that case as soon as it exists rather than
+   waiting for the reviewer to ask. Never reopen a closed case with a comment.
+2. **Answer any follow-up inside 48 hours**, on the same case. The questions are the standard set in
+   the table after the case text. A case that goes quiet is closed as refused.
+3. **Ask the account team in parallel.** An *Account and billing* case or chat is free on Basic
+   support. Ask whether account 417160702652 still carries a verification or risk hold that affects
+   SES (it had one for CloudFront in early September), and ask them to route the new case to the SES
+   team. A new account with little billing history is the most common reason given for a no-reason
+   refusal, and no case text fixes it.
+4. **A support plan.** Developer Support ($29/month, cancel after) gives a named engineer on the
+   case who can ask the SES team which row failed. Take it before another attempt, not after.
+5. **Not another region.** The reviewer sees the whole account's history, and if the account is the
+   problem, a third region is the same answer after another round of DNS.
 
 ### The case text
 
-Fill the bracketed values. Send it whole — the length is the point; the reviewer is looking for the
-rows, and every paragraph is one of them.
+Send it whole. Every paragraph is a row of the reviewer's checklist, in the order their follow-up
+email asks: how often, how addresses are kept, bounces and complaints and unsubscribes, samples. The
+samples are rendered by `messageFor` (`src/lib/notifications/render.ts`) from made-up data; when a
+kind is added, add it to *What we send*. Update the history and the volume line before each filing.
 
 ```text
-Subject: SES production access for dive.day in us-east-2 (transactional)
+Subject: SES production access for dive.day in us-east-1 (transactional)
+
+Summary
+DiveDay (https://dive.day) is booking software for scuba dive shops. We need SES to send one-to-one transactional mail - booking confirmations, waiver links, trip reminders, weather cancellations, password resets - to divers and shop staff, about 50-300 messages a day across 10 pilot shops from November 2026. Every address is typed by the recipient or their dive shop; we have no bulk-send feature. The sending domain ses.dive.day is verified in us-east-1 with DKIM, a custom MAIL FROM domain and its own DMARC record, and bounce and complaint handling is built and tested.
+
+Previous requests, and what has changed since
+- Case 178576512200471 (us-east-1, Aug 3-15): refused without a specific reason.
+- Case 178905641100543 (us-east-2, Sep 10): I answered the follow-up the same day and the case was closed without a decision.
+AWS Support (case 178839371400539) advised a new request describing what changed after the refusal. Since August 15 we have:
+- Set Reply-To on every message to the dive shop's own front-desk address, used only after the shop confirms that address by clicking a link we send to it. Before, replies went to an unmonitored noreply address.
+- Added the shop's postal address to every optional (commercial) message, alongside the one-click unsubscribe it already had.
+- Made a spam complaint opt the address out of every optional message in our own records, not just SES's suppression list, and tagged every send with its shop and message type so each complaint is traceable to the shop that caused it.
+- Added CloudWatch alarms on Reputation.BounceRate (5%) and Reputation.ComplaintRate (0.1%).
+- Published a DMARC record for the sending subdomain itself, with aggregate reports to an address we read.
+- Tested bounce and complaint handling end to end against the mailbox simulator.
+- Written out below every message type the product can send, with real subjects and a full sample.
 
 Who we are
-DiveDay (https://dive.day) is booking and operations software for scuba dive shops: trip scheduling, seat booking, liability waivers, certification checks, boat manifests. It is built and operated by Aaron Buxbaum (aaron@dive.day), a US sole proprietor. The product is pre-launch with [N] pilot dive shops onboarding in [MONTH YEAR]. Our privacy policy (https://dive.day/privacy) names AWS as the processor for email and how long delivery records are kept; our terms are https://dive.day/terms.
+DiveDay is built and operated by Aaron Buxbaum (aaron@dive.day), a US sole proprietor. The whole product already runs on this AWS account (S3, Lambda, CloudWatch, SNS, deployed with CDK); SES is the last piece. Privacy policy: https://dive.day/privacy (names AWS as our email processor and how long delivery records are kept). Terms: https://dive.day/terms.
 
-What we send, and what triggers it
-Transactional mail only, one message per recipient per event, each triggered by an action the recipient or their dive shop took in the product:
-- Booking confirmation, when a diver books a seat on a trip (or a shop books it for them at the counter).
-- Waiver link, when a shop sends a diver their liability waiver to sign.
-- Trip reminders 7 days and 24 hours before departure, only for a booked seat.
-- Trip changes: a departure put on hold for conditions, cancelled for weather, or cancelled for not meeting its minimum - only to the divers booked on it.
-- Account mail to shop staff: email verification, password reset, staff invitation, welcome.
-- Three courtesy messages a diver asked for: a wait-list seat opening (they joined the wait list for that trip), a last-minute deal (they joined the shop's last-minute list on a form), and a post-trip recap. These carry a one-click unsubscribe (RFC 8058 List-Unsubscribe and List-Unsubscribe-Post headers plus an in-body link) and the shop's postal address.
-We do not send newsletters, cold outreach, or anything to a purchased or rented list, and the product has no feature that could.
+What we send, and when
+All mail is branded as the dive shop and sent from noreply@ses.dive.day. Every message is to one person about one event.
+1. About a booking the diver has (the large majority of volume): booking confirmation when the seat is booked; waiver link when the shop requests a waiver; reminders 7 days and 24 hours before departure; weather hold or cancellation, and cancellation for not reaching the minimum number of divers, only to divers booked on that trip; a copy of the signed release to a parent who co-signed a minor's waiver; a gift pass to the person who paid for someone else's seat.
+2. Links a person asked for: a replacement trip-prep link when theirs expired; a booking link with their saved details when they type their address into a shop's booking form; their own diver page when shop staff send it from the diver's record.
+3. Account mail to shop staff: welcome, email verification, password reset, password-changed notice, staff invitation; and to the shop itself, a course inquiry from its public page and a confirmation of its front-desk address.
+4. Optional messages the diver opted into (these carry unsubscribe; see below): a wait-list seat opening, for a trip they joined the wait list for; a last-minute discount, if they joined the shop's last-minute list; one reminder about an unfinished checkout; a post-trip recap.
+5. Written by staff, one person at a time: a reply to a diver who wrote to the shop, and an invitation to one named diver for one departure (a diver who asked the shop for that date, or who already dives with that shop). One click sends one message; there is no select-all.
 
-Sample: booking confirmation
+Sample: booking confirmation (full text)
 Subject: You're on the boat - Two-Tank Reef
-Hi Nora, you're booked on Two-Tank Reef with Blue Mantis. Sat, Aug 1, 9:00 AM - 1:00 PM EDT.
-[button: Track what's left to do] Bring: certification card, mask, fins. See you at the dock.
-(The message is branded as the dive shop. Reply-To is the shop's own front-desk address, and only once the shop has confirmed it by opening a link we send to that address; every message carries Auto-Submitted: auto-generated.)
+Hi Nora,
+Your spot on Two-Tank Reef is confirmed.
+Sat, Nov 14, 8:00 AM - 12:00 PM EST
+Please be at the dock 30 minutes early. Blue Mantis Divers will take it from there.
+Track what's left before you sail: https://dive.day/ready/...
+Pre-Trip Checklist Reminder: Certification card, Mask, Fins
 
-How we get addresses
-Every address is typed by the diver themselves at booking or on an opt-in form, or by shop staff onto that diver's record at the counter. A record a shop imports from a spreadsheet receives no mail until that diver books a trip or is sent a waiver. There is no bulk send; every message is addressed to one person about one event.
+Other subject lines, as sent: "Complete your waiver for Two-Tank Reef" / "You sail tomorrow - Two-Tank Reef" / "Conditions hold - Two-Tank Reef" / "Trip cancelled - Two-Tank Reef" / "A spot opened up on Two-Tank Reef" / "Finish booking Two-Tank Reef?" / "Reset your DiveDay password". I can send a full rendered copy of any message type.
 
-Volume
-Launch: [N] shops, roughly 20-60 messages a day, peaks of about 200 on a busy weekend morning, well under 1 message per second. We are requesting a 1,000/day quota and 5/second; we will ask again with real numbers before we need more.
+How often we send, and volume
+Mail is sent only when its event happens; nothing is scheduled in bulk. From November 2026: 10 shops, about 50-300 messages a day (roughly 350-2,000 a week), peaks of about 500 on a busy weekend morning, and a peak rate well under 1 message per second. We are requesting 2,000 messages/day and 5/second, and will open a new case with real numbers before we need more.
 
-Sending identity and authentication
-We send from the verified domain identity ses.dive.day (Easy DKIM, all three CNAMEs resolving), with a custom MAIL FROM domain mail.ses.dive.day (MX and SPF published, status SUCCESS) so the envelope aligns with our From domain under DMARC. That sending domain publishes its own DMARC record at p=none with an aggregate reporting address we read, while dive.day itself publishes p=reject for our human mail; we will tighten the sending domain once the aggregate reports show both senders aligned. abuse@dive.day and postmaster@dive.day are monitored mailboxes. Automated mail is deliberately on a subdomain so it never shares reputation with our human correspondence. Every message has both text/plain and text/html parts and an Auto-Submitted: auto-generated header.
+How we get and maintain addresses
+Every address is typed by the person themselves (booking, checkout, wait-list or last-minute sign-up, course inquiry, account sign-up, a guardian co-signing a waiver) or by shop staff onto that diver's record at the counter. A record a shop imports from a spreadsheet gets no mail until that diver books, is sent a waiver, or is invited individually by staff. We have never bought, rented or scraped a list, and the product cannot send to one. Addresses that bounce or complain are suppressed automatically (below), and the shop sees the failure on that diver's booking so they can correct a typo with the diver.
 
-Bounce and complaint handling (tested)
-Our SES configuration set publishes BOUNCE, COMPLAINT, DELIVERY, DELIVERY_DELAY, REJECT and RENDERING_FAILURE events to an SNS topic subscribed to our HTTPS endpoint, which verifies the SNS signature and topic ARN before acting; email feedback forwarding on the identity is off, so the event stream is the one record. Each outcome is recorded against the message that produced it and shown to the shop as an email issue on their dashboard. The configuration set enables account-level suppression for BOUNCE and COMPLAINT, so a hard-bounced or complained-about address is never sent to again. A complaint additionally opts that address out of every courtesy message in our own records, and off any list it joined, so the opt-out survives a later change of address. We have exercised this end to end against the SES mailbox simulator (bounce@ and complaint@) from the deployed application. We have CloudWatch alarms on the account's Reputation.BounceRate and Reputation.ComplaintRate at AWS's review thresholds (5% and 0.1%), notifying our operations mailbox. We do not enable open or click tracking.
+Bounces and complaints (built and tested)
+Our SES configuration set sends BOUNCE, COMPLAINT, DELIVERY, DELIVERY_DELAY, REJECT and RENDERING_FAILURE events to an SNS topic subscribed to our HTTPS endpoint, which checks the SNS signature and topic ARN before acting. Each outcome is recorded against the message that produced it and shown to the shop on their dashboard. The configuration set suppresses BOUNCE and COMPLAINT, so those addresses are never mailed again. A complaint also opts the address out of every optional message in our own records. We have tested this end to end from the deployed app against the mailbox simulator (bounce@ and complaint@). CloudWatch alarms on Reputation.BounceRate (5%) and Reputation.ComplaintRate (0.1%) notify our operations mailbox. We do not use open or click tracking.
 
-Opting out
-Courtesy messages carry List-Unsubscribe and List-Unsubscribe-Post one-click headers and an in-body link; the link never expires, and one click opts the person out permanently. Transactional messages about a booking that exists (confirmation, waiver, reminders, cancellations) do not carry an unsubscribe because they are the service the person bought; nobody receives them without a booking.
+Unsubscribe
+Every optional message (group 4) carries RFC 8058 one-click List-Unsubscribe and List-Unsubscribe-Post headers, an in-body link that never expires, and the shop's postal address. Messages about a booking that exists, and mail a person asked for, carry no unsubscribe because they are the service itself; cancelling the booking or closing the account ends them.
 
-Anything else
-We are happy to answer any question about the above, or to provide a full sample of any message type.
+Sending identity
+Verified domain ses.dive.day in us-east-1: Easy DKIM (three CNAMEs, SUCCESS), custom MAIL FROM mail.ses.dive.day (MX and SPF, SUCCESS), and its own DMARC record (p=none, aggregate reports to an address we read). dive.day, our human mail domain, publishes p=reject; automated mail stays on its own subdomain so the two never share reputation. abuse@dive.day and postmaster@dive.day are monitored. Every message has text and HTML parts and Auto-Submitted: auto-generated.
+
+Happy to answer anything else here in this case.
 ```
 
 ### The reviewer's follow-up, answered
@@ -365,11 +431,11 @@ The follow-up mail, when it comes, is one of these. Answer on the case, not in a
 | "What is your expected sending volume and rate?" | The *Volume* paragraph with today's real numbers. Ask for less than you think you need; a quota is raised on evidence, in a later case that is routinely approved |
 | "Please provide a sample of the email you will send" | Paste the booking-confirmation sample and, if asked for HTML, the `messageFor` output of `pnpm test src/lib/notifications/render.test.ts` — or send a real one to yourself from the deployed app and forward it |
 | "Do you have a website / privacy policy?" | `https://dive.day`, `https://dive.day/privacy`, `https://dive.day/terms` |
-| "Is this mail marketing?" | "No. Every message is triggered by an action the recipient or their dive shop took, addressed to that one person about that one event. The three courtesy kinds are opt-in and carry one-click unsubscribe" |
+| "Is this mail marketing?" | "No. Every message is triggered by an action the recipient or their dive shop took, addressed to that one person about that one event. The four optional kinds are opt-in and carry one-click unsubscribe" |
 | "Who can replies reach?" / "How do you know the Reply-To address is the sender's?" | "Reply-To is the dive shop's own front-desk address, and we set it only after the shop has opened a one-time link we sent to that address (`shops.contact_email_confirmed_at`). A changed address starts unconfirmed again. Until then messages carry no Reply-To at all" |
 
-Record the outcome — case id, date, verdict — in this section when it comes, so the next person
-does not start from the same blank page.
+Record the outcome in [Case history](#case-history) when it comes, so the next person does not
+start from the same blank page.
 
 ## The delivery webhook
 
@@ -450,7 +516,7 @@ of its own. The SES sender user gets `s3:GetObject` on the bucket and nothing el
 (`ses-inbound-mx-dns` and `ses-inbound-rule-set-active`; neither is on the short account-approval
 list that renders to [manual-actions.md](manual-actions.md)): the MX record for
 `inbound.ses.dive.day` (Vercel DNS, the `SesInboundMxRecord` output spells it out), and
-activating the rule set — `aws ses set-active-receipt-rule-set --region us-east-2 --rule-set-name diveday-inbound`.
+activating the rule set — `aws ses set-active-receipt-rule-set --region us-east-1 --rule-set-name diveday-inbound`.
 SES allows one active set per region and the switch has no CloudFormation resource, so the stack
 never flips it. Then set `EMAIL_INBOUND_SNS_TOPIC_ARN` and `EMAIL_INBOUND_S3_BUCKET` from the
 outputs (`pnpm infra:deploy` writes both) and redeploy the app; until they are set the route
