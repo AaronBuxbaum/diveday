@@ -189,6 +189,21 @@ function DiverIdentity({
   );
 }
 
+/**
+ * **The first line of a row that carries its state beside the name** — the
+ * blocked row and the released seat: who, then the state (and its act) at the
+ * row's end, at every width (pixel-craft class 3, K-222).
+ *
+ * The line used to wrap, over an identity that took only its content's width,
+ * so a name wearing a second badge ("No emergency contact") grew the identity
+ * until the row wrapped and the Blocked badge dropped under the name at the
+ * row's start, while the next row's badge stood at its end. The line does not
+ * wrap: the identity takes the room (`flex-1`) and wraps its own badges inside
+ * itself, and the name truncates in it.
+ */
+const STATE_LINE_CLASS = "flex items-center justify-between gap-2";
+const STATE_LINE_IDENTITY_CLASS = "min-w-0 flex-1";
+
 export function CounterQueueRow({
   row,
   shopSlug,
@@ -273,8 +288,8 @@ export function CounterQueueRow({
          on this page instead of vanishing: the diver who walks in as the lines
          come off needs somewhere for a staffer to walk it back. */
       <LedgerRow as="article" size="lg" pad="lg" closed={closed}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
+        <div className={STATE_LINE_CLASS}>
+          <div className={STATE_LINE_IDENTITY_CLASS}>
             <DiverIdentity
               row={row}
               showEmail={showEmail}
@@ -581,8 +596,8 @@ export function CounterQueueRow({
   ) : null;
   return (
     <LedgerRow as="article" size="lg" pad="lg" closed={closed}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
+      <div className={STATE_LINE_CLASS}>
+        <div className={STATE_LINE_IDENTITY_CLASS}>
           <DiverIdentity
             row={row}
             showEmail={showEmail}

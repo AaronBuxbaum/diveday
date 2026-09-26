@@ -608,3 +608,46 @@ describe("the row's box", () => {
     expect(undo.className).not.toMatch(/(?:^|\s)p[xe]-/);
   });
 });
+
+/**
+ * **A row's state stays at the row's end, however much the name carries**
+ * (pixel-craft class 3, K-222). The first line was a wrapping row whose
+ * identity took only its content's width, so a name wearing a second badge
+ * ("No emergency contact") grew the identity until the row wrapped and the
+ * Blocked badge dropped under the name at the row's start, while every other
+ * row's badge stood at its end. The line does not wrap; the identity takes
+ * the room and wraps its own badges inside itself.
+ */
+describe("a row's first line", () => {
+  const LONG = "Nadia Petrova-Castellanos de la Fuente";
+
+  function header(stateWord: string) {
+    const state = screen.getByText(stateWord);
+    // `LedgerRow`'s content box, then the row's own first line inside it.
+    const line = state.closest("article > div > div");
+    expect(line, "the row's first line").not.toBeNull();
+    return { line, identity: line?.firstElementChild, state };
+  }
+
+  it("keeps a blocked row's badge at the end beside a name with a badge of its own", () => {
+    renderRow({ ...owesWaiver, personName: LONG, missingEmergencyContact: true });
+    const { line, identity, state } = header("Blocked");
+    expect(line).toHaveClass("flex", "items-center");
+    expect(line).not.toHaveClass("flex-wrap");
+    expect(identity).toHaveClass("min-w-0", "flex-1");
+    // The gap badge rides with the name; the gate stays the line's last word.
+    expect(identity).toHaveTextContent("No emergency contact");
+    expect(identity).not.toContainElement(state);
+    expect(line?.lastElementChild).toContainElement(state);
+    // Laid out, never decided: still the gate, still no check-in control.
+    expect(screen.queryByRole("button", { name: `Check in ${LONG}` })).not.toBeInTheDocument();
+  });
+
+  it("keeps a released seat's word and undo at the end the same way", () => {
+    renderRow({ bookingStatus: "no_show", personName: LONG, missingEmergencyContact: true });
+    const { line, identity, state } = header("Not here");
+    expect(line).not.toHaveClass("flex-wrap");
+    expect(identity).toHaveClass("min-w-0", "flex-1");
+    expect(identity).not.toContainElement(state);
+  });
+});
