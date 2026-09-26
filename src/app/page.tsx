@@ -3,6 +3,7 @@ import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { type ReactNode, Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
+import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { ScreenDoor } from "@/app/_components/ScreenDoor";
 import { ShopYearBand } from "@/app/_components/ShopYearBand";
@@ -148,81 +149,6 @@ async function LocalizedHomeBody() {
         </Suspense>
       }
     />
-  );
-}
-
-/**
- * What the static shell paints while {@link LocalizedHomeBody} resolves — this
- * page's equivalent of the `loading.tsx` that `/product` and `/pricing` now
- * carry, living inside the page because the root segment cannot have one (see
- * the `instant` note above).
- *
- * Shaped like the hero and the first daily-moment row so the streamed body
- * lands where the bars stood. Nothing in here is a link, a button, or a form:
- * that is the fix, not an economy.
- */
-function HomeBodySkeleton() {
-  return (
-    <main className="flex-1 animate-pulse">
-      <section className="border-b border-border">
-        <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:py-24">
-          <div className="max-w-2xl">
-            <div className="h-4 w-40 rounded bg-surface-sunken" />
-            <div className="mt-6 h-14 w-full rounded bg-surface-sunken sm:h-16" />
-            <div className="mt-3 h-14 w-4/5 rounded bg-surface-sunken sm:h-16" />
-            <div className="mt-7 h-5 w-full max-w-xl rounded bg-surface-sunken" />
-            <div className="mt-2 h-5 w-2/3 max-w-lg rounded bg-surface-sunken" />
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
-              <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
-            </div>
-            <div className="mt-4 h-4 w-72 max-w-full rounded bg-surface-sunken" />
-            <div className="mt-2 h-4 w-64 max-w-full rounded bg-surface-sunken" />
-            {/* The three fields the hero takes, so the streamed panel lands
-                where its bars stood rather than pushing the phone down. */}
-            <div className="mt-8 rounded-panel border border-border bg-surface p-5">
-              <div className="h-4 w-64 max-w-full rounded bg-surface-sunken" />
-              <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_1fr_auto]">
-                <div className="h-16 rounded bg-surface-sunken" />
-                <div className="h-16 rounded bg-surface-sunken" />
-                <div className="h-16 rounded bg-surface-sunken sm:w-32" />
-              </div>
-              <div className="mt-4 h-11 w-full rounded-lg bg-surface-sunken sm:w-36" />
-            </div>
-          </div>
-          {/* The captain's phone, and the card that overlaps its lower edge. */}
-          <div className="mx-auto w-full max-w-sm lg:max-w-md">
-            <div className="h-[30rem] rounded-[2.5rem] border border-border bg-surface" />
-            <div className="mx-auto -mt-5 w-[88%] rounded-inset border border-border bg-surface px-4 py-3">
-              <div className="h-3 w-24 rounded bg-surface-sunken" />
-              <div className="mt-2 h-4 w-40 max-w-full rounded bg-surface-sunken" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* The day, told in alternating proof rows — one of them, at height. */}
-      <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
-        <div className="max-w-2xl">
-          <div className="h-9 w-full max-w-lg rounded bg-surface-sunken" />
-          <div className="mt-3 h-9 w-3/4 max-w-md rounded bg-surface-sunken" />
-        </div>
-        <div className="mt-14 grid items-center gap-8 lg:mt-20 lg:grid-cols-11 lg:gap-14">
-          <div className="lg:col-span-5">
-            <div className="flex items-center gap-4">
-              <div className="h-4 w-28 rounded bg-surface-sunken" />
-              <span aria-hidden="true" className="h-px flex-1 bg-border" />
-            </div>
-            <div className="mt-4 h-8 w-full max-w-sm rounded bg-surface-sunken" />
-            <div className="mt-3 h-4 w-full max-w-md rounded bg-surface-sunken" />
-            <div className="mt-2 h-4 w-2/3 max-w-sm rounded bg-surface-sunken" />
-          </div>
-          <div className="lg:col-span-6">
-            <div className="h-80 rounded-panel border border-border bg-surface shadow-bed" />
-          </div>
-        </div>
-      </section>
-    </main>
   );
 }
 
