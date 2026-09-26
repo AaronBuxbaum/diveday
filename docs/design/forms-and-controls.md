@@ -309,6 +309,13 @@ to the window.
 Reach for it when a form is taller than a phone screen with content still below the fold. A
 two-field panel wearing one is a bar hovering over nothing.
 
+**Nothing lands under it.** The bar marks itself `data-sticky-actions`, and `globals.css` pads the
+viewport's bottom by its height (`html:has([data-sticky-actions]) { scroll-padding-bottom }`), the
+twin of the chrome bar's `scroll-padding-top`, so a field that takes focus or a fragment a link
+jumps to scrolls into view above it. Its bleed is spelled for the containers it sits in — a
+`<main>` padded `px-4 sm:px-6`, and from `lg` the editor rail's unpadded form cell — so its rule
+runs to the screen's edges on a phone and with the form's column on a desk.
+
 **Say what the form is holding, not what it did.** "Unsaved changes" beside the button is a state
 the surface cannot show on its own; a confirmation that the save worked belongs in `FormStatus` or
 the control's own face (see the ephemeral-acknowledgement section below).

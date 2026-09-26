@@ -497,6 +497,33 @@ describe("StickyFormActions", () => {
     expect(bar).not.toHaveClass("sm:-mx-5");
     expect(bar).not.toHaveClass("sm:px-5");
   });
+
+  /**
+   * **A field Tab lands on, or a fragment a link jumps to, lands above the
+   * bar.** The bar is 73px and 95% opaque, and nothing inset the scrollport
+   * for it, so a field scrolled to the bottom edge sat under it whole: "Name *"
+   * and its box at 757–817 under a bar at 771–845 (dive-site-far-station at
+   * 390, K-01). The bar marks itself, and the stylesheet pads the viewport's
+   * bottom by the bar's height only on a page that has one — the same `:has()`
+   * shape as the chrome bar's top padding.
+   */
+  it("marks itself so the page's scrollport keeps focus clear of it", () => {
+    const { container } = render(
+      <StickyFormActions>
+        <button type="submit">Save</button>
+      </StickyFormActions>,
+    );
+    expect(container.firstElementChild).toHaveAttribute("data-sticky-actions");
+
+    const css = readFileSync(path.join(process.cwd(), "src/app/globals.css"), "utf8").replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
+    const rule = css.match(/html:has\(\[data-sticky-actions\]\)\s*\{([^}]*)\}/);
+    expect(rule, "html:has([data-sticky-actions]) { … }").not.toBeNull();
+    // The md button (3rem), the bar's py-3 (1.5rem) and its hairline.
+    expect(rule?.[1]).toMatch(/scroll-padding-bottom:\s*calc\(3rem \+ 1\.5rem \+ 1px\)/);
+  });
 });
 
 /**
