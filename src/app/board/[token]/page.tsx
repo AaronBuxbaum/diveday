@@ -154,7 +154,10 @@ export default async function DeparturesBoardPage({
           {t("board.empty")}
         </p>
       ) : (
-        <ol className="mt-8 grid gap-4 lg:mt-10 lg:gap-5">
+        // The three columns are the list's, not each row's: every row spans
+        // them as a subgrid (`BoardRow`), so the time column is the widest
+        // time's and every title starts at one x (K-467).
+        <ol className="mt-8 grid gap-4 lg:mt-10 lg:grid-cols-[auto_1fr_auto] lg:gap-x-8 lg:gap-y-5">
           {departures.map((row, index) => (
             // A key reaches the RSC flight payload embedded in the HTML even
             // though this is a Server Component and the props never cross the
@@ -245,6 +248,11 @@ function outlookParts(row: BoardDeparture, shop: Shop, t: DiverTranslator): stri
  * and three columns there squeeze the middle one until the departure's own
  * title breaks mid-phrase and the crew line wraps under it. Stacked, that
  * width reads as one card per boat with nothing hyphenated.
+ *
+ * The columns are the list's: each row is `lg:grid-cols-subgrid` across the
+ * `<ol>`'s template. A template per row sized each row's time column to its
+ * own time, so "5:30 AM" and "2:30 PM" started their titles 4px apart and a
+ * "10:30 AM" row a digit further (K-467).
  */
 function BoardRow({
   row,
@@ -293,7 +301,7 @@ function BoardRow({
 
   return (
     <li
-      className={`grid gap-x-8 gap-y-3 rounded-panel border border-border bg-surface px-6 py-5 lg:grid-cols-[auto_1fr_auto] lg:items-center lg:px-8 lg:py-6 ${returned ? "text-muted" : ""}`}
+      className={`grid gap-x-8 gap-y-3 rounded-panel border border-border bg-surface px-6 py-5 lg:col-span-3 lg:grid-cols-subgrid lg:items-center lg:px-8 lg:py-6 ${returned ? "text-muted" : ""}`}
     >
       <p className="text-[2.25rem] leading-none font-bold tabular-nums lg:text-[2.75rem]">
         {formatTime(row.startsAt, locale, shop.timezone)}
