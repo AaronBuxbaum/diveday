@@ -99,6 +99,29 @@ describe("the editor rail", () => {
    * not help: both are in the accessibility tree at every width. The list
    * changes shape at `lg`; the landmark does not.
    */
+  /**
+   * The current section's tint is a desktop state (`lg:bg-primary-tint`), and a
+   * bare `hover:bg-surface-sunken` on every row outranked it: under the
+   * pointer the one tinted row went grey with foreground text. Hover belongs to
+   * the rows that are not current, and to the current one only below `lg`,
+   * where it carries no tint to lose.
+   */
+  it("keeps the current section's tint under the pointer", () => {
+    render(<Editor />);
+
+    const rail = railNav();
+    const tokens = (link: Element | null | undefined) => link?.className.split(/\s+/) ?? [];
+    const current = tokens(rail.querySelector("a[aria-current='true']"));
+    expect(current).toContain("lg:bg-primary-tint");
+    expect(current).not.toContain("hover:bg-surface-sunken");
+    expect(current).not.toContain("hover:text-foreground");
+    expect(current).toContain("max-lg:hover:bg-surface-sunken");
+
+    const other = tokens(rail.querySelector("a:not([aria-current])"));
+    expect(other).toContain("hover:bg-surface-sunken");
+    expect(other).toContain("hover:text-foreground");
+  });
+
   it("is one navigation landmark, holding every anchor exactly once", () => {
     render(<Editor />);
 
