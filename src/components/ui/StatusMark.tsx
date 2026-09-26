@@ -56,6 +56,29 @@ export function StatusMark({
   return inline ? <span className={INLINE_LINE_BOX}>{mark}</span> : mark;
 }
 
+/**
+ * **The mark as the first column of a row of text** — a notice, a blocker
+ * line, a group band's fact: a `flex` row whose words are the next item.
+ *
+ * A bare mark heading a row has no line to sit on. In a stretched row it
+ * stands at the top of the words' line, 2.5px above its centre on a 20px line
+ * (K-494). And flex synthesizes a missing baseline from the mark's foot, so a
+ * row that is itself a baseline for its parent hands that parent the foot: the
+ * roster's group band sat its title 5px under the fact beside it (K-181).
+ *
+ * This column is a block (the row's flex item) holding the `inline` one-line
+ * box: a real line of the row's own text, so a real first baseline, with the
+ * mark centred on it. First in a row aligned `items-baseline`, it lines up
+ * with the words' first line wherever that line is (`ShopNotice`, K-15).
+ */
+export function StatusMarkColumn(props: Omit<Parameters<typeof StatusMark>[0], "inline">) {
+  return (
+    <span className="shrink-0">
+      <StatusMark {...props} inline />
+    </span>
+  );
+}
+
 function drawMark(variant: StatusMarkVariant, classes: string) {
   if (variant === "success" || variant === "checked") {
     return (

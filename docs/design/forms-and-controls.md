@@ -559,6 +559,12 @@ A mark inside running text (the printed pre-departure list) takes `inline` too, 
 mark is a block: preflight makes every `svg` `display: block`, so it stands on a line of its own
 above its words, and a margin on it spaces it from nothing.
 
+A mark that heads a `flex` row of words (`ShopNotice`, the roster's blocker and warning lines, a
+group band's fact) is `StatusMarkColumn`, first in a row aligned `items-baseline`: a block holding
+that one-line box, so the mark centres on the words' first line and the row keeps the words'
+baseline. A bare mark there stood 2.5px above a 20px line (K-494), and handed a parent aligning on
+the row the mark's foot for a baseline (K-181).
+
 These replaced the emoji (✅ ⚠️ ❌) on 2026-08-29. The emoji had replaced text dingbats (`✓ ▲ ✕`),
 which took the surrounding font and read at badge size as a font falling back. Don't swap a glyph
 back in.

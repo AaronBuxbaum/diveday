@@ -610,4 +610,67 @@ describe("the roster's row geometry", () => {
       expect(mark).not.toHaveClass("top-2.5");
     }
   });
+
+  /** A row that opens on a mark, then its words: the mark stands on the words' first line. */
+  function expectMarkOnFirstLine(row: Element | null) {
+    expect(row).toHaveClass("flex", "items-baseline");
+    const column = row?.firstElementChild;
+    expect(column).toHaveClass("shrink-0");
+    expect(column?.firstElementChild).toHaveClass("h-lh", "items-center");
+    expect(column?.querySelector("svg")).not.toBeNull();
+  }
+
+  /**
+   * K-494: a bare 16px mark in a stretched `flex gap-2` row stood at the top
+   * of the words' 20px line, 2.5–3px above its centre, on every blocker and
+   * warning line. Each mark is now the row's `StatusMarkColumn`, a block one
+   * line of the row's text tall with the mark centred in it.
+   */
+  it("stands each blocker's and warning's mark on the first line of its words", () => {
+    const rusty = entry("r", "Olga Rust");
+    renderRoster({
+      roster: [
+        blocked,
+        { ...rusty, booking: { ...rusty.booking, lastDivedBand: "over_five_years" } },
+      ] as RosterEntry[],
+      readiness: new Map([
+        ["a", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+        ["r", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map([
+        ["a", signedWaiver],
+        ["r", signedWaiver],
+      ]) as WaiverByBooking,
+    });
+
+    const blocker = screen.getByText("No certification is on file for this trip.");
+    expectMarkOnFirstLine(blocker.closest("li"));
+    const warning = screen.getByText(/^Last dived/);
+    expectMarkOnFirstLine(warning.closest("p"));
+  });
+
+  /**
+   * K-181: the band aligns its title on the first baseline of the facts
+   * beside it. Each fact line was `items-start` with a bare mark first, so
+   * its baseline was the mark's foot and "STILL TO CLEAR · 3" sat 5px under
+   * the sentence. The line is `items-baseline` now, its mark a column with a
+   * line of its own, so the fact's words set the baseline the title meets.
+   */
+  it("lines the band's title up with its first fact's words, not the fact's mark", () => {
+    const roster = [blocked, entry("c", "Mina Patel"), entry("d", "Owen Reed")];
+    const blocker = [{ code: "certification_missing", params: undefined }];
+    renderRoster({
+      roster,
+      readiness: new Map(
+        roster.map((seat) => [seat.booking.id, readinessRow("blocked", blocker)]),
+      ) as ReadinessByBooking,
+      waivers: new Map(roster.map((seat) => [seat.booking.id, signedWaiver])) as WaiverByBooking,
+    });
+
+    const band = screen.getByRole("heading", { name: "Still to clear · 3" }).parentElement;
+    expect(band).toHaveClass("items-baseline");
+    const fact = within(band as HTMLElement).getByText(/3 divers: No certification/);
+    expectMarkOnFirstLine(fact.closest("p"));
+    expect(fact.closest("p")).not.toHaveClass("items-start");
+  });
 });

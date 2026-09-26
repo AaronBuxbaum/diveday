@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { FoldedPageTitle } from "@/components/chrome/FoldedPageTitle";
 import { tapTargetOverhangClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { StatusMark } from "@/components/ui/StatusMark";
+import { StatusMarkColumn } from "@/components/ui/StatusMark";
 import { toneMark } from "@/components/ui/tone";
 import { GREETING_TITLE_CLASS, PAGE_TITLE_CLASS } from "@/components/ui/typography";
 import { bindTitleDash } from "@/lib/format";
@@ -680,15 +680,11 @@ export function ShopNotice({
       // line is not always at its top — the trip banner's words sit centred
       // beside a 44px Undo, the duplicate-diver warning opens on a 16px
       // heading — so the mark's column carries one line of the notice's own
-      // text (`StatusMark inline`) and the row lines that line's baseline up
+      // text (`StatusMarkColumn`) and the row lines that line's baseline up
       // with the words' first one, wherever it is. `ShopPageHeader.test.tsx`.
       className={`rise-in flex items-baseline gap-2 rounded-inset border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
     >
-      {mark ? (
-        <span className="shrink-0">
-          <StatusMark variant={mark} inline />
-        </span>
-      ) : null}
+      {mark ? <StatusMarkColumn variant={mark} /> : null}
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );

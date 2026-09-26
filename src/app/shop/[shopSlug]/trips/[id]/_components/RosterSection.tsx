@@ -16,7 +16,7 @@ import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
-import { StatusMark } from "@/components/ui/StatusMark";
+import { StatusMark, StatusMarkColumn } from "@/components/ui/StatusMark";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { listBookingNotes } from "@/db/operations";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
@@ -758,11 +758,14 @@ export function RosterSection({
 
         {blockerTexts.length > 0 ? (
           <>
+            {/* Each line's mark is its first column, one line of the words
+                tall, so it centres on their first line whatever wraps below
+                it (K-494: a bare mark sat 2.5px above the line). */}
             {/* diveday:allow-tinted-ink: a 5% wash, not the status tint — `text-danger` on `danger/5` measures 5.66:1 over `--background` in the app palette (issue #874) */}
             <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
               {uniqueBlockers.map(({ text }) => (
-                <li key={text} className="flex gap-2">
-                  <StatusMark variant="danger" />
+                <li key={text} className="flex items-baseline gap-2">
+                  <StatusMarkColumn variant="danger" />
                   <span>{text}</span>
                 </li>
               ))}
@@ -771,8 +774,8 @@ export function RosterSection({
                   diver's blockers — the count keeps the row honest, and the
                   reference panel has their full list. */}
               {sharedBlockerCount > 0 ? (
-                <li className="flex gap-2">
-                  <StatusMark variant="danger" />
+                <li className="flex items-baseline gap-2">
+                  <StatusMarkColumn variant="danger" />
                   <span>{t("trips.roster.sharedOnCard", { count: sharedBlockerCount })}</span>
                 </li>
               ) : null}
@@ -800,8 +803,8 @@ export function RosterSection({
             around (H-08). An advisory the group already states for much of
             the boat shrinks to the capsule in this row's header instead. */}
         {depthText !== null && !depthShared ? (
-          <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-            <StatusMark variant="warning" />
+          <p className="mt-3 flex items-baseline gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+            <StatusMarkColumn variant="warning" />
             <span>{depthText}</span>
           </p>
         ) : null}
@@ -812,8 +815,8 @@ export function RosterSection({
             may be running the orientation itself, so this is a conversation
             before the first dive and never a refusal (src/lib/drysuit-card.ts). */}
         {drysuitCard.status !== "ok" ? (
-          <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-            <StatusMark variant="warning" />
+          <p className="mt-3 flex items-baseline gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+            <StatusMarkColumn variant="warning" />
             <span>{drysuitCardWarningText(t, drysuitCard)}</span>
           </p>
         ) : null}
@@ -824,8 +827,8 @@ export function RosterSection({
             is: this diver boards. It is a refresher conversation and a buddy
             pairing, not a refusal. */}
         {diveRecencyIsNotable(booking.lastDivedBand) ? (
-          <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-            <StatusMark variant="warning" />
+          <p className="mt-3 flex items-baseline gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+            <StatusMarkColumn variant="warning" />
             <span>{diveRecencyText(t, booking.lastDivedBand)}</span>
           </p>
         ) : null}
@@ -1531,17 +1534,22 @@ export function RosterSection({
                 {/* The facts much of the boat shares, said once in the group
                     band instead of photocopied down its rows (principle 9).
                     They move below the label on a phone so the state word keeps
-                    its own readable line. */}
+                    its own readable line.
+
+                    The band aligns its title on this column's first baseline,
+                    so each line is `items-baseline` with its mark a column of
+                    its own: the words set that baseline, not the mark's foot
+                    (K-181: the title sat 5px under the first fact). */}
                 {sharedFacts.length > 0 ? (
                   <div className="flex w-full min-w-0 flex-col gap-1 text-xs sm:w-auto sm:max-w-[68%] sm:items-end">
                     {sharedFacts.map(({ sentence, count, tone }) => (
                       <p
                         key={sentence}
-                        className={`flex min-w-0 items-start gap-1.5 ${
+                        className={`flex min-w-0 items-baseline gap-1.5 ${
                           tone === "danger" ? "text-danger" : "text-warning-strong"
                         }`}
                       >
-                        <StatusMark variant={tone === "danger" ? "danger" : "warning"} />
+                        <StatusMarkColumn variant={tone === "danger" ? "danger" : "warning"} />
                         <span>{t("trips.roster.sharedFactLine", { count, sentence })}</span>
                       </p>
                     ))}
