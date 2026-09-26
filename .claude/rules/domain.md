@@ -107,12 +107,13 @@ a wall-clock time of day) says `timeZone: "UTC"` explicitly — see `src/lib/cal
 Every `Intl` formatter is built through `src/lib/intl-cache.ts`, never a bare `new Intl.*` at the
 call site (constructing one costs ~12x reusing it; `pnpm check:intl-cache`).
 
-A formatted date or time is one unit on the line: the formatters join their parts through
-`keepUnitsWhole` (`src/lib/date-parts.ts`), so "Jul 21" and "7:05 AM EDT" carry U+00A0 inside them
-and a line breaks only at a comma or a range dash. A test matches them through a query that
-normalizes whitespace (`getByText`, `toHaveTextContent`) or spells `\u00A0`; a string that leaves
-the page plain says so where it leaves (the SMS transport, a field's own value in
-`formatWallTime`).
+A formatted date or time is one unit on the line: every formatter in `format.ts` and
+`calendar-date.ts` that prints one joins its parts through `keepUnitsWhole`
+(`src/lib/date-parts.ts`), so "Jul 21" and "7:05 AM EDT" carry U+00A0 inside them and a line
+breaks only where the pattern has more than a space (a comma, a range dash, Spanish "de"). A new
+one joins the same way. A test matches them through a query that normalizes whitespace
+(`getByText`, `toHaveTextContent`) or spells `\u00A0`; a string that leaves the page plain says so
+where it leaves (the SMS transport, a field's own value in `formatWallTime`).
 
 ## Safety and security
 

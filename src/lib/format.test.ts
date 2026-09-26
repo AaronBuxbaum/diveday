@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   bindTitleDash,
   formatByteSize,
+  formatCalendarDateRange,
   formatDateTimeTz,
   formatDateWithYear,
   formatDayParts,
   formatHourShort,
+  formatMonthDay,
   formatOrdinal,
   formatRelativeDay,
   formatShortDate,
@@ -13,6 +15,7 @@ import {
   formatTimeRange,
   formatTimeRangeTz,
   formatTimeTz,
+  formatWeekdayTime,
   isValidTimeZone,
   joinFacts,
   weekdayNames,
@@ -112,6 +115,26 @@ describe("a date or a time is one unit on the line", () => {
     expect(formatTimeRange(departs, returns, "en-US", zone)).toBe(`7:05${NB}AM – 11:00${NB}AM`);
     expect(formatTimeRangeTz(departs, returns, "en-US", zone)).toBe(
       `7:05${NB}AM – 11:00${NB}AM${NB}EDT`,
+    );
+  });
+
+  it("binds a weekday's time, an hour's day period and a month's day the same way", () => {
+    // The recap's fly-safe line, a tick on the day strip, the season start.
+    // Each still carried Intl's breakable space after the rule said none did.
+    expect(formatWeekdayTime(departs, "en-US", zone)).toBe(`Tuesday${NB}7:05${NB}AM`);
+    expect(formatWeekdayTime(departs, "es-ES", zone)).toBe("martes, 7:05");
+    expect(formatHourShort(6, "en-US")).toBe(`6${NB}AM`);
+    expect(formatMonthDay(7, 21, "en-US")).toBe(`July${NB}21`);
+  });
+
+  it("keeps each end of a calendar range whole, and the range free to break at its dash", () => {
+    // The week board's title: "Aug / 24 – 30" split the month from its day.
+    const week = formatCalendarDateRange("2026-08-24", "2026-08-30", "en-US");
+    expect(week.startsWith(`Aug${NB}24`)).toBe(true);
+    expect(week.endsWith("30, 2026")).toBe(true);
+    expect(formatCalendarDateRange("2026-08-31", "2026-09-06", "en-US")).toContain(`Sep${NB}6,`);
+    expect(formatCalendarDateRange("2026-08-24", "2026-08-30", "es-ES")).toBe(
+      `24–30${NB}ago${NB}2026`,
     );
   });
 });
@@ -384,10 +407,10 @@ describe("formatHourShort", () => {
    * digit nobody reads.
    */
   it("says the hour and no minute", () => {
-    expect(formatHourShort(6, "en-US")).toBe("6 AM");
-    expect(formatHourShort(12, "en-US")).toBe("12 PM");
-    expect(formatHourShort(18, "en-US")).toBe("6 PM");
-    expect(formatHourShort(0, "en-US")).toBe("12 AM");
+    expect(formatHourShort(6, "en-US")).toBe("6\u00A0AM");
+    expect(formatHourShort(12, "en-US")).toBe("12\u00A0PM");
+    expect(formatHourShort(18, "en-US")).toBe("6\u00A0PM");
+    expect(formatHourShort(0, "en-US")).toBe("12\u00A0AM");
   });
 
   it("follows the reader's locale to a 24-hour clock", () => {

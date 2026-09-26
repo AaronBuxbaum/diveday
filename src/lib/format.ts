@@ -138,7 +138,8 @@ export function formatDateWithYear(date: Date, locale = "en-US", timeZone: strin
 /**
  * "7:30 AM", with U+00A0 before the day period so it never wraps away from the
  * time (`keepUnitsWhole`, src/lib/date-parts.ts). Every formatter here that
- * prints a time, a month and day, or a zone joins its parts the same way.
+ * prints a time with its day period or zone, or a month with its day, joins
+ * its parts the same way; `formatTimeZoneName` is a name, and stays words.
  */
 export function formatTime(date: Date, locale = "en-US", timeZone: string): string {
   return keepUnitsWhole(
@@ -158,12 +159,14 @@ export function formatTime(date: Date, locale = "en-US", timeZone: string): stri
  * would be more to read for nothing more to know.
  */
 export function formatWeekdayTime(date: Date, locale = "en-US", timeZone: string): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    weekday: "long",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone,
-  }).format(date);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      weekday: "long",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone,
+    }).formatToParts(date),
+  );
 }
 
 /**
@@ -224,10 +227,12 @@ export function formatHourOfDay(hour: number, locale = "en-US"): string {
  * {@link formatHourOfDay}, which this is the short form of.
  */
 export function formatHourShort(hour: number, locale = "en-US"): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    hour: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(2000, 0, 1, hour)));
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      hour: "numeric",
+      timeZone: "UTC",
+    }).formatToParts(new Date(Date.UTC(2000, 0, 1, hour))),
+  );
 }
 
 export function formatTimeZoneName(locale = "en-US", timeZone: string, now = nowDate()): string {
@@ -460,11 +465,13 @@ export function shortMonthNames(locale = "en-US"): string[] {
 }
 
 export function formatMonthDay(month: number, day: number, locale = "en-US"): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(2025, month - 1, day)));
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      month: "long",
+      day: "numeric",
+      timeZone: "UTC",
+    }).formatToParts(new Date(Date.UTC(2025, month - 1, day))),
+  );
 }
 
 /**
@@ -483,12 +490,15 @@ export function formatCalendarDateRange(
   to: CalendarDate,
   locale = "en-US",
 ): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).formatRange(calendarDateToUtcMidnight(from), calendarDateToUtcMidnight(to));
+  // Each end whole ("Aug 24"), the dash between them still a place to break.
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    }).formatRangeToParts(calendarDateToUtcMidnight(from), calendarDateToUtcMidnight(to)),
+  );
 }
 
 /**

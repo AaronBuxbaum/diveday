@@ -386,9 +386,9 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "dives_recorded" },
     });
     expect(afterDive.text).toContain(
-      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: 24 hours after your last dive with us, following DAN’s guidance.",
+      "Blue Mantis asks you to wait at least until Sunday\u00A010:10\u00A0AM before flying: 24 hours after your last dive with us, following DAN’s guidance.",
     );
-    expect(afterDive.html).toContain("wait at least until Sunday 10:10 AM before flying");
+    expect(afterDive.html).toContain("wait at least until Sunday\u00A010:10\u00A0AM before flying");
 
     const afterReturn = tripRecapEmail({
       ...recapBase,
@@ -421,7 +421,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "earlier_day" },
     });
     expect(afterDive.text).toContain(
-      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: our records show another dive day in the last two days, so 24 hours after your last dive with us, following DAN’s guidance.",
+      "Blue Mantis asks you to wait at least until Sunday\u00A010:10\u00A0AM before flying: our records show another dive day in the last two days, so 24 hours after your last dive with us, following DAN’s guidance.",
     );
 
     const afterReturn = tripRecapEmail({
@@ -429,7 +429,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "scheduled_return", reason: "earlier_day" },
     });
     expect(afterReturn.text).toContain(
-      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: our records show another dive day in the last two days, so 24 hours after the day was due to end, following DAN’s guidance.",
+      "Blue Mantis asks you to wait at least until Sunday\u00A010:10\u00A0AM before flying: our records show another dive day in the last two days, so 24 hours after the day was due to end, following DAN’s guidance.",
     );
 
     const spanish = tripRecapEmail({
@@ -457,7 +457,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "scheduled_return", reason: "dives_planned" },
     });
     expect(planned.text).toContain(
-      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: we planned more than one dive, so 24 hours after the day was due to end, following DAN’s guidance.",
+      "Blue Mantis asks you to wait at least until Sunday\u00A010:10\u00A0AM before flying: we planned more than one dive, so 24 hours after the day was due to end, following DAN’s guidance.",
     );
     // It may not claim the dive it cannot see: the crew logged at most one.
     expect(planned.text).not.toContain("your last dive with us");
