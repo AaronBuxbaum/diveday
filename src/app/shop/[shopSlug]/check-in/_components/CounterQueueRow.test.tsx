@@ -657,6 +657,36 @@ describe("a row's first line", () => {
     expect(screen.queryByRole("button", { name: `Check in ${LONG}` })).not.toBeInTheDocument();
   });
 
+  /**
+   * **The blocked name is a 28px line with a 44px target** (pixel-craft class
+   * 12, K-321). The blocked row's name is its record's door, and it was a
+   * `tapTargetLinkClass` box, 44px tall around a 28px line, where the ready
+   * row's name is the plain line: the meta under it sat 36px from the name's
+   * cap top on a blocked row and 28px on a ready one. The link is the line, and
+   * its target reaches 8px above and below it as a stretched `::after`; the
+   * name truncates inside it, so the link's own box never clips that target.
+   */
+  it("spaces a blocked name and its meta as a ready row does, keeping the target", () => {
+    renderRow({ ...owesWaiver, bookingStatus: "checked_in" });
+    const link = screen.getByRole("link", { name: "Nadia Petrov" });
+    expect(link).toHaveAttribute("href", "/shop/blue-mantis/divers/person-1");
+    expect(link.className).not.toMatch(/(?:^|\s)(?:min-h-11|inline-flex|truncate)(?:\s|$)/);
+    expect(link).toHaveClass(
+      "relative",
+      "block",
+      "min-w-0",
+      "text-lg",
+      "after:absolute",
+      "after:inset-x-0",
+      "after:-inset-y-2",
+    );
+    const words = link.firstElementChild;
+    expect(words).toHaveTextContent("Nadia Petrov");
+    expect(words).toHaveClass("block", "truncate");
+    // The meta line still follows the name, as a ready row's does.
+    expect(screen.getByText(/Checked in/)).toHaveClass("mt-0.5");
+  });
+
   it("keeps a released seat's word and undo at the end the same way", () => {
     renderRow({ bookingStatus: "no_show", personName: LONG, missingEmergencyContact: true });
     const { line, identity, state } = header("Not here");

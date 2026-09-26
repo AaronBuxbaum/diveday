@@ -6,7 +6,7 @@ import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { LedgerRow } from "@/components/ui/ledger";
@@ -203,6 +203,21 @@ function DiverIdentity({
  */
 const STATE_LINE_CLASS = "flex items-center justify-between gap-2";
 const STATE_LINE_IDENTITY_CLASS = "min-w-0 flex-1";
+
+/**
+ * **The blocked row's name: its record's door, a 28px line with a 44px
+ * target** (pixel-craft class 12, K-321).
+ *
+ * It was a `tapTargetLinkClass` box — 44px tall round the 28px line — where
+ * the ready row's name is the plain line, so the identity block was spaced two
+ * ways on one counter: the meta sat 36px under a blocked name's cap top and
+ * 28px under a ready one's. Now the link is the line, and its target is a
+ * stretched `::after` reaching 8px above and below it (28 + 16 = 44), inside
+ * the row's 12px inset above and over the meta's top edge below. The name
+ * truncates in an inner span, because `truncate` on the link itself is
+ * `overflow: hidden`, which would clip the target it draws.
+ */
+const NAME_DOOR_CLASS = `relative block min-w-0 ${SECTION_TITLE_CLASS} text-primary hover:underline after:absolute after:inset-x-0 after:-inset-y-2`;
 
 export function CounterQueueRow({
   row,
@@ -613,11 +628,8 @@ export function CounterQueueRow({
               // and the diver's record is one of the doors. Primary ink at
               // rest: on a phone there is no hover, and an invisible link is
               // no door at all.
-              <Link
-                href={`/shop/${shopSlug}/divers/${row.personId}`}
-                className={`${tapTargetLinkClass} truncate ${SECTION_TITLE_CLASS} text-primary hover:underline`}
-              >
-                {row.personName}
+              <Link href={`/shop/${shopSlug}/divers/${row.personId}`} className={NAME_DOOR_CLASS}>
+                <span className="block truncate">{row.personName}</span>
               </Link>
             }
           />
