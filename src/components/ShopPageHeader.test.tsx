@@ -5,6 +5,7 @@ import {
   EYEBROW_CLASS,
   EYEBROW_TAP_WRAPPER,
   EyebrowBackLink,
+  ShopNotice,
   ShopPageHeader,
   ShopPageHeaderSkeleton,
 } from "./ShopPageHeader";
@@ -136,5 +137,61 @@ describe("the eyebrow's line box", () => {
     // behind would silently re-open the gap this closed, and would read as
     // deliberate to whoever found it next.
     expect(link.className).not.toMatch(/(?:^|\s)-?my-/);
+  });
+});
+
+/**
+ * **The mark opens the notice's first line; it is not a line of its own.**
+ *
+ * The notice used to be a block holding `<StatusMark className="me-1" />` and
+ * then its words. Preflight makes every `svg` a block, so the mark stood alone
+ * on a line above the sentence it marks, its `me-1` spacing it from nothing:
+ * 16px of every toned notice spent on a lone glyph, on orders, check-in, the
+ * trip packet and the rest (K-15).
+ *
+ * The root is a row. The words keep their own block in the second column, so
+ * a notice holding a heading, a paragraph and a list still stacks them. The
+ * row aligns on the first baseline, not the top, because not every notice's
+ * first line starts at its top: the trip banner's words sit centred beside a
+ * 44px Undo, and the duplicate-diver warning opens on a 16px heading. So the
+ * mark's column holds one line of the notice's own text — a box `h-lh` tall
+ * with the mark centred in it — and that line's baseline is the one the row
+ * lines up with the words' first line, wherever that line is.
+ */
+describe("ShopNotice's mark", () => {
+  it("sits beside the first line of the words rather than on a line above them", () => {
+    render(
+      <ShopNotice tone="danger" role="alert">
+        <p>Two refunds are owed.</p>
+        <ul>
+          <li>Ana Silva</li>
+        </ul>
+      </ShopNotice>,
+    );
+    const notice = screen.getByRole("alert");
+    expect(notice).toHaveClass("flex", "items-baseline", "gap-2");
+
+    const [markColumn, words] = Array.from(notice.children);
+    // A block (a flex item) holding a one-line inline box: a real line, so a
+    // real baseline for the row to align.
+    expect(markColumn).toHaveClass("shrink-0");
+    const lineBox = markColumn.firstElementChild;
+    expect(lineBox).toHaveClass("inline-flex", "h-lh", "items-center", "align-top");
+    expect(lineBox?.querySelector("svg")).not.toBeNull();
+
+    expect(words).toHaveClass("min-w-0", "flex-1");
+    expect(words.firstElementChild?.textContent).toBe("Two refunds are owed.");
+    // The spacing belongs to the row's gap now; a margin on the mark is the
+    // one that never worked.
+    expect(notice.innerHTML).not.toMatch(/\bme-1\b/);
+  });
+
+  it("gives an untoned notice the same column for its words and no mark at all", () => {
+    render(<ShopNotice tone="neutral">The demo was reset.</ShopNotice>);
+    const notice = screen.getByRole("status");
+
+    expect(notice.querySelector("svg")).toBeNull();
+    expect(notice.children).toHaveLength(1);
+    expect(notice.firstElementChild).toHaveClass("min-w-0", "flex-1");
   });
 });

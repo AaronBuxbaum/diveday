@@ -146,9 +146,12 @@ export function PreDepartureCheckList({
         <ul className="mt-1 flex flex-col gap-1">
           {items.map((item) => (
             <li key={item.id} className="text-sm">
+              {/* `inline`: a bare mark is a block (preflight), and printed the
+                  box above its line rather than in front of it (K-15). */}
               <StatusMark
                 variant={item.checkedByLine !== undefined ? "checked" : "unchecked"}
                 size="sm"
+                inline
               />{" "}
               {item.printLine}
             </li>

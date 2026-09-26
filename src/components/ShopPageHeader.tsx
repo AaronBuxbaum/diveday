@@ -497,10 +497,23 @@ export function ShopNotice({
       // feedback vehicle with no entrance — a tap acknowledged itself, the
       // page reloaded, and the outcome was simply there. The same arrival the
       // toast and the earned moment make; `prefers-reduced-motion` stills it.
-      className={`rise-in rounded-inset border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
+      //
+      // **A row aligned on the first baseline** (K-15). The mark used to be a
+      // bare svg in front of the words, which preflight makes a block, so it
+      // stood alone on a line above them. Not `items-start`: a notice's first
+      // line is not always at its top — the trip banner's words sit centred
+      // beside a 44px Undo, the duplicate-diver warning opens on a 16px
+      // heading — so the mark's column carries one line of the notice's own
+      // text (`StatusMark inline`) and the row lines that line's baseline up
+      // with the words' first one, wherever it is. `ShopPageHeader.test.tsx`.
+      className={`rise-in flex items-baseline gap-2 rounded-inset border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
     >
-      {mark ? <StatusMark variant={mark} className="me-1" /> : null}
-      {children}
+      {mark ? (
+        <span className="shrink-0">
+          <StatusMark variant={mark} inline />
+        </span>
+      ) : null}
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }
