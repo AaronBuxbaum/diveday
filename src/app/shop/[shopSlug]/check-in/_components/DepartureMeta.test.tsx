@@ -54,6 +54,6 @@ describe("a departure's meta line on the counter", () => {
     // and CI box is UTC) would print 4:30 PM on the screen a staffer uses to
     // decide which boat they are working.
     const { container } = renderMeta("2026-08-27T16:30:00.000Z");
-    expect(container.textContent).toContain("12:30 PM");
+    expect(container.textContent).toContain("12:30\u00A0PM");
   });
 });

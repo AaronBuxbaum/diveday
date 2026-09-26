@@ -3,11 +3,19 @@ import {
   calendarDateInTimezone,
   calendarDateWeekday,
   calendarDaysBetween,
+  formatCalendarDate,
   groupByLocalDay,
   isCalendarDateExpired,
   isValidCalendarDate,
   shiftCalendarDate,
 } from "./calendar-date";
+
+describe("formatCalendarDate", () => {
+  it("binds the month to its day, so a line can break only after the comma (K-12)", () => {
+    expect(formatCalendarDate("2026-07-18", "en-US")).toBe("Jul\u00A018, 2026");
+    expect(formatCalendarDate("2026-07-18", "es-ES")).toBe("18\u00A0jul\u00A02026");
+  });
+});
 
 describe("isValidCalendarDate", () => {
   it("accepts real calendar dates, including a leap day", () => {

@@ -15,6 +15,7 @@
  */
 import { type CalendarDate, calendarDateToUtcMidnight } from "./calendar-date";
 import { nowDate } from "./clock";
+import { keepUnitsWhole } from "./date-parts";
 import { cachedFormatter } from "./intl-cache";
 import { minorToMajor } from "./money";
 
@@ -102,12 +103,14 @@ export function formatMoneyScanned(cents: number, currency = "usd", locale = "en
  * purpose — not here with the argument dropped.
  */
 export function formatShortDate(date: Date, locale = "en-US", timeZone: string): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone,
-  }).format(date);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      timeZone,
+    }).formatToParts(date),
+  );
 }
 
 /**
@@ -122,20 +125,29 @@ export function formatShortDate(date: Date, locale = "en-US", timeZone: string):
  * `timeZone` stays required for the reason stated above `formatShortDate`.
  */
 export function formatDateWithYear(date: Date, locale = "en-US", timeZone: string): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone,
-  }).format(date);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone,
+    }).formatToParts(date),
+  );
 }
 
+/**
+ * "7:30 AM", with U+00A0 before the day period so it never wraps away from the
+ * time (`keepUnitsWhole`, src/lib/date-parts.ts). Every formatter here that
+ * prints a time, a month and day, or a zone joins its parts the same way.
+ */
 export function formatTime(date: Date, locale = "en-US", timeZone: string): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone,
-  }).format(date);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone,
+    }).formatToParts(date),
+  );
 }
 
 /**
@@ -264,14 +276,16 @@ export function formatByteSize(bytes: number, locale = "en-US"): string {
  * nothing downstream would notice.
  */
 export function formatDateTimeTz(date: Date, locale = "en-US", timeZone: string): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-    timeZone,
-  }).format(date);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone,
+    }).formatToParts(date),
+  );
 }
 
 /** "7:30 AM – 11:00 AM" — en dash, no repeated day. */
@@ -295,13 +309,7 @@ export function formatTimeRangeTz(
   locale = "en-US",
   timeZone: string,
 ): string {
-  const endWithZone = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-    timeZone,
-  }).format(end);
-  return `${formatTime(start, locale, timeZone)} – ${endWithZone}`;
+  return `${formatTime(start, locale, timeZone)} – ${formatTimeTz(end, locale, timeZone)}`;
 }
 
 /**
@@ -315,12 +323,14 @@ export function formatTimeRangeTz(
  * leave for the dock.
  */
 export function formatTimeTz(date: Date, locale = "en-US", timeZone: string): string {
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-    timeZone,
-  }).format(date);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone,
+    }).formatToParts(date),
+  );
 }
 
 /**

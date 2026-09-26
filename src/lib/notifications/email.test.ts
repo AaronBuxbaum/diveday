@@ -765,7 +765,7 @@ describe("courseInquiryEmail", () => {
       preferredDate: "2026-08-06",
       alternateDate: "2026-08-13",
     });
-    expect(email.text).toContain("Dates asked for: Aug 6, 2026 or Aug 13, 2026");
+    expect(email.text).toContain("Dates asked for: Aug\u00A06, 2026 or Aug\u00A013, 2026");
     // The structured answer leads; the free text qualifies it.
     expect(email.text.indexOf("Dates asked for:")).toBeLessThan(email.text.indexOf("When:"));
   });
@@ -776,7 +776,7 @@ describe("courseInquiryEmail", () => {
       preferredDate: "2026-08-06",
       dateFlexible: true,
     });
-    expect(email.text).toContain("Dates asked for: Aug 6, 2026 (can move a few days)");
+    expect(email.text).toContain("Dates asked for: Aug\u00A06, 2026 (can move a few days)");
     // One date named, so no disjunction to build.
     expect(email.text).not.toContain(" or ");
   });
@@ -792,8 +792,8 @@ describe("courseInquiryEmail", () => {
     // 2026-08-06 is a date, not an instant. A renderer that went through a
     // negative-offset zone would print Aug 5 for every shop west of Greenwich.
     const email = courseInquiryEmail({ ...inquiry, preferredDate: "2026-08-06" });
-    expect(email.text).toContain("Aug 6, 2026");
-    expect(email.text).not.toContain("Aug 5, 2026");
+    expect(email.text).toContain("Aug\u00A06, 2026");
+    expect(email.text).not.toContain("Aug\u00A05, 2026");
   });
 });
 

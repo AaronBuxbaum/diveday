@@ -29,10 +29,10 @@ describe("nightSkyFor", () => {
   it("puts sunset and civil dusk where the almanac does, across the year", () => {
     const cases = [
       // Local evening   sunset      civil dusk
-      ["2026-06-21", "8:14 PM", "8:40 PM"],
-      ["2026-09-07", "7:35 PM", "7:58 PM"],
-      ["2026-03-15", "7:30 PM", "7:53 PM"],
-      ["2026-01-01", "5:43 PM", "6:08 PM"],
+      ["2026-06-21", "8:14\u00A0PM", "8:40\u00A0PM"],
+      ["2026-09-07", "7:35\u00A0PM", "7:58\u00A0PM"],
+      ["2026-03-15", "7:30\u00A0PM", "7:53\u00A0PM"],
+      ["2026-01-01", "5:43\u00A0PM", "6:08\u00A0PM"],
     ] as const;
     for (const [date, sunset, dusk] of cases) {
       const sky = nightSkyFor({ startsAt: lateEvening(date), timeZone: EASTERN, ...KEY_LARGO });
@@ -52,7 +52,7 @@ describe("nightSkyFor", () => {
       timeZone: EASTERN,
       ...KEY_LARGO,
     });
-    expect(eastern(sky?.sunsetAt ?? null)).toBe("5:37 PM");
+    expect(eastern(sky?.sunsetAt ?? null)).toBe("5:37\u00A0PM");
   });
 
   it("works south of the equator and east of the meridian", () => {
@@ -63,7 +63,7 @@ describe("nightSkyFor", () => {
       latitude: -33.87,
       longitude: 151.21,
     });
-    expect(sky && formatTime(sky.sunsetAt, "en-US", "Australia/Sydney")).toBe("4:53 PM");
+    expect(sky && formatTime(sky.sunsetAt, "en-US", "Australia/Sydney")).toBe("4:53\u00A0PM");
   });
 
   it("counts a departure that is still out at sunset", () => {
@@ -77,7 +77,7 @@ describe("nightSkyFor", () => {
       timeZone: EASTERN,
       ...KEY_LARGO,
     });
-    expect(eastern(sky?.sunsetAt ?? null)).toBe("8:11 PM");
+    expect(eastern(sky?.sunsetAt ?? null)).toBe("8:11\u00A0PM");
   });
 
   it("judges a multi-day run on its start, never on its last day's end", () => {

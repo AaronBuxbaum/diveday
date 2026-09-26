@@ -12,6 +12,7 @@ import {
   formatTime,
   formatTimeRange,
   formatTimeRangeTz,
+  formatTimeTz,
   isValidTimeZone,
   joinFacts,
   weekdayNames,
@@ -75,6 +76,46 @@ describe("joinFacts", () => {
   });
 });
 
+/**
+ * **A date or a time is one unit on the line** (K-12). V8 hands back ICU's
+ * pattern with an ordinary U+0020 before the day period, between month and
+ * day, and before the zone, so every caller printing one in wrapping text could
+ * split it: "7:05 / AM EDT" in the departure log's buddy cells, "Jul / 21" on a
+ * certification line, "12:00 / PM" on the rental ticket. Only the spaces
+ * *inside* a unit are bound; a comma or a range dash between two units still
+ * lets the line break there.
+ */
+describe("a date or a time is one unit on the line", () => {
+  const NB = "\u00A0";
+  const departs = new Date("2026-07-21T11:05:00Z"); // 7:05 AM EDT, a Tuesday
+  const returns = new Date("2026-07-21T15:00:00Z");
+  const zone = "America/New_York";
+
+  it("binds a time to its day period and its zone", () => {
+    expect(formatTime(departs, "en-US", zone)).toBe(`7:05${NB}AM`);
+    expect(formatTimeTz(departs, "en-US", zone)).toBe(`7:05${NB}AM${NB}EDT`);
+  });
+
+  it("binds a month to its day, and leaves the comma after the weekday free", () => {
+    expect(formatShortDate(departs, "en-US", zone)).toBe(`Tue, Jul${NB}21`);
+    expect(formatShortDate(departs, "es-ES", zone)).toBe(`mar, 21${NB}jul`);
+    expect(formatDateWithYear(departs, "en-US", zone)).toBe(`Jul${NB}21, 2026`);
+  });
+
+  it("keeps a timestamp to two units, breakable only between the date and the time", () => {
+    const stamp = formatDateTimeTz(departs, "en-US", zone);
+    expect(stamp).toBe(`Jul${NB}21, 7:05${NB}AM${NB}EDT`);
+    expect(stamp.split(" ")).toEqual([`Jul${NB}21,`, `7:05${NB}AM${NB}EDT`]);
+  });
+
+  it("keeps each end of a range whole, and the range free to break at its dash", () => {
+    expect(formatTimeRange(departs, returns, "en-US", zone)).toBe(`7:05${NB}AM – 11:00${NB}AM`);
+    expect(formatTimeRangeTz(departs, returns, "en-US", zone)).toBe(
+      `7:05${NB}AM – 11:00${NB}AM${NB}EDT`,
+    );
+  });
+});
+
 describe("isValidTimeZone (CR-014)", () => {
   it("accepts real IANA zones", () => {
     expect(isValidTimeZone("America/New_York")).toBe(true);
@@ -94,19 +135,19 @@ describe("isValidTimeZone (CR-014)", () => {
 
 describe("formatShortDate", () => {
   it("renders weekday, month, and day", () => {
-    expect(formatShortDate(morning, "en-US", "UTC")).toBe("Fri, Jul 17");
+    expect(formatShortDate(morning, "en-US", "UTC")).toBe("Fri, Jul\u00A017");
   });
 });
 
 describe("formatDateWithYear", () => {
   it("names the year and drops the weekday", () => {
-    expect(formatDateWithYear(morning, "en-US", "UTC")).toBe("Jul 17, 2026");
+    expect(formatDateWithYear(morning, "en-US", "UTC")).toBe("Jul\u00A017, 2026");
   });
 
   it("resolves the day in the named zone rather than the host's", () => {
     // Late on the 16th in Honolulu, already the 17th in UTC — the assertion
     // that fails if the `timeZone` argument is ever dropped on a UTC CI box.
-    expect(formatDateWithYear(morning, "en-US", "Pacific/Honolulu")).toBe("Jul 16, 2026");
+    expect(formatDateWithYear(morning, "en-US", "Pacific/Honolulu")).toBe("Jul\u00A016, 2026");
   });
 });
 
@@ -134,13 +175,13 @@ describe("formatDayParts", () => {
 
 describe("formatTime", () => {
   it("renders 12-hour time with minutes", () => {
-    expect(formatTime(morning, "en-US", "UTC")).toBe("7:30 AM");
+    expect(formatTime(morning, "en-US", "UTC")).toBe("7:30\u00A0AM");
   });
 });
 
 describe("formatDateTimeTz", () => {
   it("includes a timezone on safety-relevant timestamps", () => {
-    expect(formatDateTimeTz(morning, "en-US", "UTC")).toBe("Jul 17, 7:30 AM UTC");
+    expect(formatDateTimeTz(morning, "en-US", "UTC")).toBe("Jul\u00A017, 7:30\u00A0AM\u00A0UTC");
   });
 
   /**
@@ -168,15 +209,17 @@ describe("formatDateTimeTz", () => {
 
 describe("formatTimeRange", () => {
   it("joins start and end with an en dash", () => {
-    expect(formatTimeRange(morning, midday, "en-US", "UTC")).toBe("7:30 AM – 11:00 AM");
+    expect(formatTimeRange(morning, midday, "en-US", "UTC")).toBe("7:30\u00A0AM – 11:00\u00A0AM");
   });
 });
 
 describe("formatTimeRangeTz", () => {
   it("labels the end time with the zone", () => {
-    expect(formatTimeRangeTz(morning, midday, "en-US", "UTC")).toBe("7:30 AM – 11:00 AM UTC");
+    expect(formatTimeRangeTz(morning, midday, "en-US", "UTC")).toBe(
+      "7:30\u00A0AM – 11:00\u00A0AM\u00A0UTC",
+    );
     expect(formatTimeRangeTz(morning, midday, "en-US", "America/New_York")).toBe(
-      "3:30 AM – 7:00 AM EDT",
+      "3:30\u00A0AM – 7:00\u00A0AM\u00A0EDT",
     );
   });
 });
@@ -197,37 +240,37 @@ describe("rendering a stored instant in the shop's zone", () => {
   const winterDeparture = new Date("2026-01-15T12:30:00Z"); // 07:30 EST (UTC-5)
 
   it("reads back the published wall-clock hour on both sides of DST", () => {
-    expect(formatTime(summerDeparture, "en-US", "America/New_York")).toBe("7:30 AM");
-    expect(formatTime(winterDeparture, "en-US", "America/New_York")).toBe("7:30 AM");
+    expect(formatTime(summerDeparture, "en-US", "America/New_York")).toBe("7:30\u00A0AM");
+    expect(formatTime(winterDeparture, "en-US", "America/New_York")).toBe("7:30\u00A0AM");
   });
 
   it("names the zone that is actually in force, not a fixed one", () => {
     const summerEnd = new Date(summerDeparture.getTime() + 3 * 3_600_000);
     const winterEnd = new Date(winterDeparture.getTime() + 3 * 3_600_000);
     expect(formatTimeRangeTz(summerDeparture, summerEnd, "en-US", "America/New_York")).toBe(
-      "7:30 AM – 10:30 AM EDT",
+      "7:30\u00A0AM – 10:30\u00A0AM\u00A0EDT",
     );
     expect(formatTimeRangeTz(winterDeparture, winterEnd, "en-US", "America/New_York")).toBe(
-      "7:30 AM – 10:30 AM EST",
+      "7:30\u00A0AM – 10:30\u00A0AM\u00A0EST",
     );
   });
 
   it("converts once — the host zone (UTC here) is never applied on top", () => {
     // If anything double-converted, the summer departure would read 3:30 AM
     // (shifted twice) rather than the 7:30 AM the shop published.
-    expect(formatTime(summerDeparture, "en-US", "America/New_York")).toBe("7:30 AM");
+    expect(formatTime(summerDeparture, "en-US", "America/New_York")).toBe("7:30\u00A0AM");
     // And the same instant in UTC is the untranslated storage value, four
     // hours later — the reading a dropped `timeZone` argument would produce.
-    expect(formatTime(summerDeparture, "en-US", "UTC")).toBe("11:30 AM");
+    expect(formatTime(summerDeparture, "en-US", "UTC")).toBe("11:30\u00A0AM");
   });
 
   it("keeps a night dive on the day it sails, which UTC would roll forward", () => {
     const nightDive = new Date("2026-07-16T01:00:00Z"); // 9:00 PM Jul 15 in New York
-    expect(formatShortDate(nightDive, "en-US", "America/New_York")).toBe("Wed, Jul 15");
-    expect(formatTime(nightDive, "en-US", "America/New_York")).toBe("9:00 PM");
+    expect(formatShortDate(nightDive, "en-US", "America/New_York")).toBe("Wed, Jul\u00A015");
+    expect(formatTime(nightDive, "en-US", "America/New_York")).toBe("9:00\u00A0PM");
     // The bug this guards: rendered in UTC it is already Thursday the 16th, so
     // the boat disappears off the day its divers are looking at.
-    expect(formatShortDate(nightDive, "en-US", "UTC")).toBe("Thu, Jul 16");
+    expect(formatShortDate(nightDive, "en-US", "UTC")).toBe("Thu, Jul\u00A016");
   });
 
   it("handles a half-hour DST zone, where an hour-based fix would still be wrong", () => {
@@ -235,8 +278,8 @@ describe("rendering a stored instant in the shop's zone", () => {
     // (southern) summer, UTC+10:30 in winter.
     const lordHoweSummer = new Date("2026-01-15T21:00:00Z"); // 08:00 +11:00
     const lordHoweWinter = new Date("2026-07-15T21:30:00Z"); // 08:00 +10:30
-    expect(formatTime(lordHoweSummer, "en-US", "Australia/Lord_Howe")).toBe("8:00 AM");
-    expect(formatTime(lordHoweWinter, "en-US", "Australia/Lord_Howe")).toBe("8:00 AM");
+    expect(formatTime(lordHoweSummer, "en-US", "Australia/Lord_Howe")).toBe("8:00\u00A0AM");
+    expect(formatTime(lordHoweWinter, "en-US", "Australia/Lord_Howe")).toBe("8:00\u00A0AM");
   });
 });
 
@@ -296,10 +339,10 @@ describe("formatter caching", () => {
   // into each other's cached instance.
   it("never cross-contaminates results across interleaved locales and timezones", () => {
     for (let i = 0; i < 3; i++) {
-      expect(formatTime(morning, "en-US", "UTC")).toBe("7:30 AM");
-      expect(formatTime(morning, "en-US", "America/New_York")).toBe("3:30 AM");
-      expect(formatShortDate(morning, "en-US", "UTC")).toBe("Fri, Jul 17");
-      expect(formatShortDate(morning, "en-US", "Pacific/Honolulu")).toBe("Thu, Jul 16");
+      expect(formatTime(morning, "en-US", "UTC")).toBe("7:30\u00A0AM");
+      expect(formatTime(morning, "en-US", "America/New_York")).toBe("3:30\u00A0AM");
+      expect(formatShortDate(morning, "en-US", "UTC")).toBe("Fri, Jul\u00A017");
+      expect(formatShortDate(morning, "en-US", "Pacific/Honolulu")).toBe("Thu, Jul\u00A016");
     }
   });
 });
