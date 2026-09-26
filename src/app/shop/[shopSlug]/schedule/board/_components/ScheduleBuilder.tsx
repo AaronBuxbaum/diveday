@@ -10,7 +10,7 @@ import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFi
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
-import { controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldGrid, legendClass } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -638,7 +638,7 @@ function AddPanel({
            the same defect the day headers had. It reads `--chrome-h` like they
            do (ADR 20260827-clearwater-surface-language, decision 10). */
         <fieldset className="sticky top-(--chrome-h) z-10 rounded-lg border border-primary/30 bg-primary/5 p-4 shadow-sm">
-          <legend className="px-1 text-sm font-semibold text-primary">
+          <legend className={`${legendClass} text-sm font-semibold text-primary`}>
             {copy.requestPlanHeading ?? ""}
           </legend>
           <p className="text-sm text-muted">{copy.requestPlanDescription ?? ""}</p>
@@ -983,7 +983,7 @@ function AddPanel({
         disabled={!expanded}
         className="rounded-lg border border-border bg-surface p-5"
       >
-        <legend className="px-1 text-sm font-medium">{copy.payAtBookingLegend}</legend>
+        <legend className={`${legendClass} text-sm font-medium`}>{copy.payAtBookingLegend}</legend>
         <p className="text-sm text-muted">{copy.payAtBookingDescription}</p>
         <FieldGrid columns={2} className="mt-4">
           <Field
@@ -1221,7 +1221,7 @@ function AddPanel({
         disabled={!expanded}
         className="rounded-lg border border-border bg-surface p-5"
       >
-        <legend className="px-1 text-sm font-medium">{copy.repeatLegend}</legend>
+        <legend className={`${legendClass} text-sm font-medium`}>{copy.repeatLegend}</legend>
         <RepeatFields
           startDate={startDate}
           disabled={!expanded}

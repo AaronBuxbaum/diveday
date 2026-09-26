@@ -13,6 +13,7 @@ import {
   FieldActions,
   FieldGrid,
   FormStatus,
+  legendClass,
   PriceField,
   SearchField,
   StickyFormActions,
@@ -927,6 +928,24 @@ describe("source sweeps", () => {
    * emergency and rental-price columns 16px (K-42). A form that ever wants a
    * different gutter gets it as a prop on `FieldGrid`, not as a class.
    */
+  /**
+   * **A bordered fieldset's legend starts on its fields' edge.** `px-1` pads
+   * the notch the legend cuts in the border, and on its own it also moved the
+   * words 4px right of every field under them (orders-new: legend text at 326,
+   * fields at 322; K-289). `legendClass` is the notch with the words pulled
+   * back, and nothing spells the padding by hand.
+   */
+  it("keeps a legend's notch padding in legendClass", () => {
+    expect(legendClass).toBe("-ms-1 px-1");
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      for (const { index, text } of openingTags(source, "legend")) {
+        if (/\bpx-1\b/.test(text)) offenders.push(`${file}:${lineOf(source, index)} ${text}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   it("never overrides FieldGrid's column gutter at a call site", () => {
     const offenders: string[] = [];
     for (const { file, source } of sourceFiles()) {

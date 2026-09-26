@@ -7,7 +7,7 @@ import { listShopStaff } from "@/db/staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import { seededTestDb } from "@/test/db";
-import { hiddenInputNamesIn, inputNamesIn } from "@/test/jsx-inspect";
+import { findElements, hiddenInputNamesIn, inputNamesIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 
 // Same mocking shape as ../page.test.tsx: the page is invoked directly,
@@ -121,5 +121,27 @@ describe("the tax location form", () => {
         "customerAddressCountry",
       ]),
     );
+  });
+
+  /**
+   * The legend's `px-1` pads the notch it cuts in the fieldset's border, and
+   * also moved its words 4px right of every field under it (x 326 against 322
+   * at 1280, 58 against 54 at 390; K-289). `legendClass` keeps the notch and
+   * pulls the words back onto the content edge.
+   */
+  it("starts the tax-location legend's words on its fields' edge", async () => {
+    const { db, shop } = await shopThatCanBill();
+    await setShopTaxEnabled(db, shop.id, true);
+
+    // The bordered fieldset's legend: the one that cuts a notch.
+    const bordered = findElements<{ className?: string; children?: unknown }>(
+      await renderWith(),
+      "fieldset",
+    ).filter((fieldset) => /\bborder\b/.test(fieldset.props.className ?? ""));
+    const legends = bordered.flatMap((fieldset) =>
+      findElements<{ className?: string }>(fieldset.props.children, "legend"),
+    );
+    expect(legends).toHaveLength(1);
+    expect(legends[0]?.props.className).toContain("-ms-1 px-1");
   });
 });

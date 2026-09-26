@@ -224,6 +224,16 @@ export function DateField({
   );
 }
 
+/**
+ * **The legend of a bordered `<fieldset>`**, whose words sit in a notch cut
+ * in the box's top border. `px-1` pads the notch so the border stops short of
+ * the words; `-ms-1` pulls the whole legend back by the same 4px, so the
+ * words start on the content edge every field under them starts on. `px-1`
+ * alone moved them 4px right of the fields (the pixel probe, orders-new:
+ * legend text at 326, fields at 322). Type classes stay the caller's.
+ */
+export const legendClass = "-ms-1 px-1";
+
 const columnClass = {
   1: "",
   2: "sm:grid-cols-2",

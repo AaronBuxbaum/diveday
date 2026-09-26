@@ -3,7 +3,14 @@ import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import {
+  controlClass,
+  DateField,
+  Field,
+  FieldGrid,
+  FormStatus,
+  legendClass,
+} from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
 import {
@@ -136,7 +143,7 @@ export function DetailsSection({
         </Field>
       </FieldGrid>
       <fieldset className="rounded-inset bg-surface-sunken p-4 sm:p-5">
-        <legend className="px-1 text-sm font-medium">
+        <legend className={`${legendClass} text-sm font-medium`}>
           {t("trips.details.arrivalGuidanceLegend")}
         </legend>
         <p className="text-sm text-muted">{t("trips.details.arrivalGuidanceDescription")}</p>
@@ -436,7 +443,7 @@ export function DetailsSection({
               Details card, and surface never stacks on surface (see
               SectionCard's "what is not a section card"). */}
       <fieldset className="rounded-inset bg-surface-sunken p-4 sm:p-5">
-        <legend className="px-1 text-sm font-medium">
+        <legend className={`${legendClass} text-sm font-medium`}>
           {t("trips.details.payAtBookingLegend")}
         </legend>
         <p className="text-sm text-muted">{t("trips.details.payAtBookingDescription")}</p>
