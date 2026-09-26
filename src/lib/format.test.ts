@@ -13,6 +13,7 @@ import {
   formatTimeRange,
   formatTimeRangeTz,
   isValidTimeZone,
+  joinFacts,
   weekdayNames,
 } from "./format";
 
@@ -34,6 +35,43 @@ describe("bindTitleDash", () => {
   it("leaves a title with no spaced em dash as it is", () => {
     expect(bindTitleDash("Two-Tank Reef")).toBe("Two-Tank Reef");
     expect(bindTitleDash("Reef—Wreck")).toBe("Reef—Wreck");
+  });
+});
+
+describe("joinFacts", () => {
+  const NBSP = "\u00A0";
+  const line = joinFacts(["Not scheduled", "Advanced or higher", "1 day · 2 dives", "$225"]);
+
+  it("never splits a number from the word beside it, even inside the shop's own words", () => {
+    // "2 / dives" broke on six course rows at 390, and most of the units come
+    // from the shop's `durationText`, not from the join (K-246).
+    expect(line).toContain(`1${NBSP}day`);
+    expect(line).toContain(`2${NBSP}dives`);
+    expect(joinFacts(["Next Sat, Jul 21", "Open Water or higher"])).toContain(`Jul${NBSP}21`);
+  });
+
+  it("keeps every separator with the fact before it, so no line starts with one", () => {
+    expect(line).not.toMatch(/ ·/);
+    expect(line.match(/\u00A0·/g)).toHaveLength(4);
+  });
+
+  it("never leaves the last fact alone on a line", () => {
+    // At 1280 "·" ended a line and "$225" sat alone on the next.
+    expect(line.endsWith(`2${NBSP}dives${NBSP}·${NBSP}$225`)).toBe(true);
+  });
+
+  it("leaves ordinary words free to wrap, so a long fact a shop typed cannot run off the row", () => {
+    expect(line).toBe(
+      `Not scheduled${NBSP}· Advanced or higher${NBSP}· 1${NBSP}day${NBSP}· 2${NBSP}dives${NBSP}·${NBSP}$225`,
+    );
+  });
+
+  it("drops a missing or blank fact rather than printing an empty separator", () => {
+    expect(joinFacts(["Key Largo", null, "  ", undefined, "Version 3"])).toBe(
+      `Key Largo${NBSP}·${NBSP}Version${NBSP}3`,
+    );
+    expect(joinFacts(["Open to uncertified divers"])).toBe("Open to uncertified divers");
+    expect(joinFacts([])).toBe("");
   });
 });
 

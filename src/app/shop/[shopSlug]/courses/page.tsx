@@ -14,7 +14,7 @@ import { nextSessionStartByCourse } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyScanned, formatShortDate } from "@/lib/format";
+import { formatMoneyScanned, formatShortDate, joinFacts } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursesPath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
@@ -125,7 +125,9 @@ export default async function CoursesPage({
    */
   const metaLine = (course: (typeof courseList)[number]) => {
     const nextStart = nextSessions.get(course.id);
-    return [
+    // `joinFacts`, not `.join(" · ")`: the line wraps only after a separator,
+    // never inside "2 dives" or before a lone price.
+    return joinFacts([
       // **First, so it is a column rather than a footnote.** It is the one fact
       // on this line that changes, and the reason the roster has a time in it
       // at all; appended last it landed at the end of a wrapped second line at
@@ -149,9 +151,7 @@ export default async function CoursesPage({
       course.priceCents === null
         ? null
         : formatMoneyScanned(course.priceCents, toShopCurrency(shop.currency), locale),
-    ]
-      .filter(Boolean)
-      .join(" · ");
+    ]);
   };
 
   const rows: CourseRosterRow[] = courseList.map((course) => ({

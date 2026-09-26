@@ -498,6 +498,43 @@ export function bindTitleDash(title: string): string {
 }
 
 /**
+ * **A row's quiet line of facts, joined so it wraps only where a reader would**
+ * — "Not scheduled · Advanced or higher · 1 day · 2 dives · $225".
+ *
+ * Three glues, all U+00A0, and nothing else touched:
+ *
+ * - **A number and the word beside it**: "2 dives", "Jul 21", "Version 3".
+ *   It runs over the facts themselves, not only the joins, because most of the
+ *   split units came from the shop's own `durationText` ("1 day · 2 dives"):
+ *   six course rows broke "2 / dives" at 390.
+ * - **Every separator to the word before it**, the shop's own " · " included,
+ *   so no line starts with "·".
+ * - **The last fact to the one before it**, so "$225" never sits alone on a
+ *   line under a "·" that ended the one above (the course list at 1280).
+ *
+ * Ordinary words keep their breaking spaces on purpose: a fact is free text a
+ * shop typed, and a fact glued whole could run off a 390px row. A missing or
+ * blank fact is dropped, not printed as an empty separator.
+ */
+export function joinFacts(facts: readonly (string | null | undefined | false)[]): string {
+  const kept = facts
+    .map((fact) => (fact ? fact.trim() : ""))
+    .filter((fact) => fact.length > 0)
+    .map((fact) =>
+      fact
+        .replace(/(\d)\s+(?=\S)/g, "$1\u00A0")
+        .replace(/([^\s·])\s+(?=\d)/g, "$1\u00A0")
+        .replace(/\s+·(?=\s)/g, "\u00A0·"),
+    );
+  return kept
+    .map((fact, index) => {
+      if (index === 0) return fact;
+      return `${index === kept.length - 1 ? "\u00A0·\u00A0" : "\u00A0· "}${fact}`;
+    })
+    .join("");
+}
+
+/**
  * Localized ordinal representation (e.g. 1st, 2nd, 3rd, 4th in English; 1.º, 2.º, 4.º in Spanish).
  */
 export function formatOrdinal(count: number, locale = "en-US"): string {

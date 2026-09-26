@@ -35,6 +35,7 @@ import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-label
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
+import { joinFacts } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
@@ -394,12 +395,10 @@ async function CatalogView({
             <div className="min-w-0">
               <p className="font-medium">{version.briefing.name}</p>
               <p className="mt-0.5 text-sm text-muted">
-                {[
+                {joinFacts([
                   version.briefing.locationName,
                   t("diveSites.catalog.templateVersion", { version: version.version }),
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
+                ])}
               </p>
               {/* The one paragraph that earns a row of its own: a shop choosing
                   among thirty-four reefs it has never dived has nothing else to
