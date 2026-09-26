@@ -42,7 +42,7 @@ export function MinimumSeatsBand({
     // A card in a tone (`TONE_PANEL_CLASS`): at a hand-rolled `p-5` its words
     // started 4px right of the cards around it on a phone.
     <section
-      className={`mt-6 ${TONE_PANEL_CLASS} ${
+      className={`${TONE_PANEL_CLASS} ${
         due ? "border-danger/40 bg-danger/10" : "border-warning/40 bg-warning/10"
       }`}
     >

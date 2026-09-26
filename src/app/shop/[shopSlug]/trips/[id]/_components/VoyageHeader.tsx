@@ -61,10 +61,12 @@ const FACT_SEPARATOR = "\u00a0·";
  * that centred column, which is safe because `body { overflow-x: clip }`
  * contains the scrollbar without opening a horizontal scroll container.
  * `-mt-8 sm:-mt-10` eats the shell's own top padding, because a sky with a
- * margin above it is a picture of sky.
+ * margin above it is a picture of sky. No margin below: the page's
+ * `space-y-10` spaces the masthead from what follows it (K-262), and the
+ * skeleton stands on the same stack.
  */
 const BAND_CLASS =
-  "mx-[calc(50%-50vw)] -mt-8 mb-5 w-screen pt-5 pb-5 print:mx-0 print:w-full sm:-mt-10 sm:pt-7";
+  "mx-[calc(50%-50vw)] -mt-8 w-screen pt-5 pb-5 print:mx-0 print:w-full sm:-mt-10 sm:pt-7";
 
 /** The page's column again, inside the full-bleed band. */
 const BAND_COLUMN_CLASS = "mx-auto w-full max-w-5xl px-4 sm:px-6";
@@ -111,7 +113,7 @@ export function VoyageHeader({
   badge?: ReactNode;
 }) {
   return (
-    <header className="mb-5">
+    <header>
       <SkyBand scheme={scheme} className={BAND_CLASS}>
         <div className={BAND_COLUMN_CLASS}>
           <div className="flex items-center gap-3">
@@ -180,7 +182,7 @@ export function VoyageHeader({
 export function VoyageHeaderSkeleton() {
   const bar = "rounded bg-surface";
   return (
-    <header className="mb-5">
+    <header>
       <div className={`${BAND_CLASS} bg-surface-sunken`}>
         <div className={BAND_COLUMN_CLASS}>
           <div className="flex h-11 items-center gap-3">

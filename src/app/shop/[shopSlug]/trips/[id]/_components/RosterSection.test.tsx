@@ -822,3 +822,23 @@ describe("the roster's row geometry", () => {
     expect(band).not.toHaveClass("border-t");
   });
 });
+
+/**
+ * **On the departure page the roster is spaced by the page** (K-262). It hung
+ * `mt-5` there, one of five different steps between the page's sections; the
+ * page's one `space-y-10` spaces it now. The standalone /guests compatibility
+ * route, which has no stack, keeps its own step.
+ */
+describe("the roster's place on the departure page", () => {
+  it("carries no top margin of its own when compact", () => {
+    const { container } = renderRoster({
+      roster: [],
+      readiness: new Map() as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+      compact: true,
+    });
+    const roster = container.querySelector("#roster");
+    expect(roster).not.toBeNull();
+    expect(roster?.className).not.toMatch(/(^|\s)mt-/);
+  });
+});

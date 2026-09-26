@@ -53,3 +53,59 @@ describe("the cancelled departure's band", () => {
     expect(tag).not.toMatch(/\b(rounded-panel|p-5)\b/);
   });
 });
+
+describe("the departure's section rhythm", () => {
+  /**
+   * **Every section under the masthead sits 40px from the next** (K-262). Each
+   * piece hung its own margin — the masthead `mb-5`, the cancelled band and
+   * the unmet-demand card `mt-6`, the pulse links `mt-4`, the hull `mt-6`, the
+   * roster `mt-5`, the packing list `mt-10`, the tail `mt-8` — so the page
+   * stepped 16, 20, 24, 32 and 40px between sections of one kind. One
+   * `space-y-10` holds the masthead and the page's blocks; the roster's
+   * content is `display: contents`, so it carries the same stack for its own
+   * children, which lie in the page's flow.
+   */
+  const COMPONENTS = join(__dirname, "_components");
+  const body = SOURCE.slice(SOURCE.indexOf("export default async function"));
+
+  it("holds the masthead and every block under it in one space-y-10", () => {
+    expect(
+      /<div className="space-y-10">\s*(\{\/\*[\s\S]*?\*\/\}\s*)?<VoyageHeader\b/.test(body),
+    ).toBe(true);
+    const roster = readFileSync(join(COMPONENTS, "TripRosterContent.tsx"), "utf8");
+    expect(roster).toContain('<div data-trip-guests-ready className="contents space-y-10">');
+  });
+
+  it("hangs no margin of its own on any block in it", () => {
+    const blocks = [
+      body.slice(
+        body.indexOf("{cancelled && (canConfigure"),
+        body.indexOf("<FormStatus", body.indexOf("{cancelled && (canConfigure")),
+      ),
+      body.slice(body.indexOf("{pulseFacts.length > 0 ? ("), body.indexOf("{pulseFacts.map")),
+      body.slice(
+        body.indexOf("<div id={PREP_SECTION_ID}"),
+        body.indexOf("<Suspense", body.indexOf("<div id={PREP_SECTION_ID}")),
+      ),
+    ];
+    for (const block of blocks) expect(block).not.toMatch(/(^|[\s"`])mt-(4|5|6|8|10)\b/);
+
+    const voyage = readFileSync(join(COMPONENTS, "VoyageHeader.tsx"), "utf8");
+    expect(voyage).not.toMatch(/\bmb-5\b/);
+    const seats = readFileSync(join(COMPONENTS, "MinimumSeatsBand.tsx"), "utf8");
+    expect(seats).not.toMatch(/(^|[\s"`])mt-6\b/);
+
+    const roster = readFileSync(join(COMPONENTS, "TripRosterContent.tsx"), "utf8");
+    const own = roster.slice(roster.indexOf('className="contents space-y-10"'));
+    // The demand card, the hull's wrapper and the quiet tail.
+    expect(own).not.toMatch(/className=\{`mt-6 \$\{TONE_PANEL_CLASS\}/);
+    expect(own).not.toContain('<div className="mt-6">');
+    expect(own).not.toContain('<div className="mt-8">');
+  });
+
+  it("keeps the skeleton on the same rhythm, so nothing jumps when the page arrives", () => {
+    const skeleton = readFileSync(join(__dirname, "loading.tsx"), "utf8");
+    expect(skeleton).toContain('className="animate-pulse space-y-10"');
+    expect(skeleton).not.toMatch(/\b(mb-8|mt-10)\b/);
+  });
+});
