@@ -323,6 +323,26 @@ export function displayStoredPhone(stored: string | null | undefined): string {
   return readTypedPhone(text, null)?.label ?? text;
 }
 
+/** A number's characters, with an extension after it: what may be held whole. */
+const PHONE_RUN = /^[+\d\s().-]+(?:\s*(?:x|ext\.?)\s*\d+)?$/i;
+
+/**
+ * {@link displayStoredPhone}, held as one unit for a line that says more than
+ * the number (pixel-craft class 8, K-450). A contact line joins the email and
+ * the number, and with ordinary spaces a narrow column broke inside the
+ * number: "+1 305 555" over "0110" is a different number to somebody dialling
+ * it off the screen. Its spaces become no-break spaces, so the line breaks at
+ * its separator or inside the email. A note stored where a number should be
+ * keeps its spaces: it is words, and may wrap like words.
+ *
+ * For the screen only. An SMS body or a field's value takes
+ * `displayStoredPhone`, whose spaces are plain.
+ */
+export function displayStoredPhoneWhole(stored: string | null | undefined): string {
+  const shown = displayStoredPhone(stored);
+  return PHONE_RUN.test(shown) ? shown.replaceAll(" ", "\u00a0") : shown;
+}
+
 function reading(value: string): TypedReading {
   return { canonical: value, label: value };
 }
