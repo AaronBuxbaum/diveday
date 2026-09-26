@@ -169,6 +169,44 @@ describe("Table", () => {
     expect(cell.closest("tbody")).toHaveClass("divide-y", "block");
   });
 
+  it("puts a table's outer text on the card column from sm, without widening the inner gaps", () => {
+    // A card pads `p-4 sm:p-5` (sectionCardClass md). The cells padded `px-4`
+    // at every width, so from sm a table's first column sat 4px left of every
+    // card row around it ("ITEM" at 170 against "Dive support" at 174, K-20).
+    // Only the outer edges step up; the gap between two columns stays 32px.
+    render(
+      <Table>
+        <THead>
+          <Th>Item</Th>
+          <Th numeric>Qty</Th>
+        </THead>
+        <TBody>
+          <tr>
+            <Td>BCD</Td>
+            <Td numeric>2</Td>
+            <Td pad={false}>Reflowed</Td>
+          </tr>
+        </TBody>
+      </Table>,
+    );
+    for (const name of ["Item", "Qty"]) {
+      expect(screen.getByRole("columnheader", { name })).toHaveClass(
+        "px-4",
+        "sm:first:ps-5",
+        "sm:last:pe-5",
+      );
+    }
+    for (const name of ["BCD", "2"]) {
+      expect(screen.getByRole("cell", { name })).toHaveClass(
+        "px-4",
+        "sm:first:ps-5",
+        "sm:last:pe-5",
+      );
+    }
+    // A cell whose row owns the padding is left to its row.
+    expect(screen.getByRole("cell", { name: "Reflowed" })).not.toHaveClass("sm:first:ps-5");
+  });
+
   it("keeps a printed row on one page", () => {
     render(
       <Table>

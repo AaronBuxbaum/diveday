@@ -101,6 +101,18 @@ const COLUMN_WIDTH = {
 export type TableColumnWidth = keyof typeof COLUMN_WIDTH;
 
 /**
+ * **A cell's padding, and the column the table's outer text sits on.**
+ *
+ * `px-4` between columns at every width; from `sm` the first and last cells
+ * step out to 20px, because a card pads `p-4 sm:p-5` (`sectionCardClass` md)
+ * and a table sits among cards. With `px-4` on both edges the first column
+ * started 4px left of every card row around it on the trip page ("ITEM" at
+ * 170, "Dive support" at 174). Only the outer edges move, so the gap between
+ * two columns stays 32px.
+ */
+const CELL_PAD = "px-4 py-3 sm:first:ps-5 sm:last:pe-5";
+
+/**
  * The table plus its shell, as one piece so neither can be forgotten or
  * hand-rolled. The outer shell clips rounded corners; its inner scroll region
  * keeps wide tables usable on a phone. Separating those two responsibilities
@@ -198,7 +210,7 @@ export function Th({
   return (
     <th
       scope={scope}
-      className={`overflow-hidden bg-clip-padding px-4 py-3 font-semibold ${numeric ? "text-right" : ""} ${
+      className={`overflow-hidden bg-clip-padding ${CELL_PAD} font-semibold ${numeric ? "text-right" : ""} ${
         hideBelow ? HIDE_BELOW[hideBelow] : ""
       } ${width ? COLUMN_WIDTH[width] : ""} ${className}`.trim()}
     >
@@ -362,7 +374,7 @@ export function Td({
 }) {
   return (
     <td
-      className={`${clip ? "overflow-hidden" : ""} bg-clip-padding ${align === "middle" ? "align-middle" : "align-top"} ${pad ? "px-4 py-3" : ""} ${
+      className={`${clip ? "overflow-hidden" : ""} bg-clip-padding ${align === "middle" ? "align-middle" : "align-top"} ${pad ? CELL_PAD : ""} ${
         numeric ? "text-right whitespace-nowrap tabular-nums" : ""
       } ${muted ? "text-muted" : ""} ${hideBelow ? HIDE_BELOW[hideBelow] : ""} ${className}`
         .replace(/\s+/g, " ")
