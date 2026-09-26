@@ -399,6 +399,19 @@ describe("the packing list's geometry", () => {
       expect(qty[0], grouping).toHaveClass("w-32");
       unmount();
     }
+    // The by-item table's short Item column is pinned too, so Size and For
+    // share what is left: with three unnamed columns splitting it, For held
+    // two names a line at 1280 and the fifth fell alone onto a third.
+    const { container } = renderPrep(everyPanelPrep());
+    const item = within(container).getByRole("columnheader", { name: t("tripPrep.itemColumn") });
+    expect(item).toHaveClass("w-40");
+    for (const unpinned of [t("tripPrep.sizeColumn"), t("tripPrep.forColumn")]) {
+      const header = within(container).getByRole("columnheader", { name: unpinned });
+      expect(
+        tokens(header).filter((token) => /^w-/.test(token)),
+        unpinned,
+      ).toEqual([]);
+    }
   });
 
   it("hangs a kit piece's wrapped detail under the detail, not under the piece (K-148)", () => {

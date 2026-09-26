@@ -807,11 +807,14 @@ export function PrepBody({
                     table's borders, so the table scrolled sideways by 2px. */}
                   <Table minWidth="40rem" shellClassName="mt-3 hidden sm:block print:block">
                     <THead>
-                      <Th>{t("tripPrep.itemColumn")}</Th>
-                      <Th>{t("tripPrep.sizeColumn")}</Th>
-                      {/* Pinned, in both tables: the fixed layout split four
+                      {/* Pinned, the short Item column and the count, so Size
+                          and For share the rest: with only the count pinned,
+                          For held two names a line at 1280 and a fifth fell
+                          alone onto a third. The fixed layout split four
                           unnamed columns equally, and a one-digit count held
-                          244px while the names wrapped onto three lines. */}
+                          244px. */}
+                      <Th width="10rem">{t("tripPrep.itemColumn")}</Th>
+                      <Th>{t("tripPrep.sizeColumn")}</Th>
                       <Th numeric width="8rem">
                         {t("tripPrep.qtyColumn")}
                       </Th>
