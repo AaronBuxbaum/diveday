@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { WEEK_GRID } from "./_components/StaffingWeek";
 
 /**
  * Body-shaped skeleton for the staffing week (design principle 1): the week
@@ -27,26 +28,25 @@ export default function StaffingLoading() {
           <div className="ms-2 h-5 w-40 rounded bg-surface-sunken" />
         </div>
 
-        <div className="mt-4 hidden border-t border-border lg:block">
-          <div className="grid grid-cols-[9rem_repeat(7,minmax(0,1fr))]">
-            <div className="px-2 pt-3 pb-2" />
+        {/* The grid's own parts (`WEEK_GRID`), so its columns, insets and
+            rules cannot drift from the loaded grid's. */}
+        <div className="mt-4 hidden lg:block">
+          <div className={WEEK_GRID.row}>
+            <div className={WEEK_GRID.personHead} />
             {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-              <div key={day} className="border-s border-border px-2 pt-3 pb-2">
+              <div key={day} className={WEEK_GRID.dayHead}>
                 <div className="h-3 w-14 rounded bg-surface-sunken" />
               </div>
             ))}
           </div>
           {[0, 1, 2, 3, 4].map((row) => (
-            <div
-              key={row}
-              className="grid grid-cols-[9rem_repeat(7,minmax(0,1fr))] border-t border-border"
-            >
-              <div className="px-2 py-3">
+            <div key={row} className={WEEK_GRID.row}>
+              <div className={WEEK_GRID.person}>
                 <div className="h-4 w-24 rounded bg-surface-sunken" />
                 <div className="mt-1 h-3 w-16 rounded bg-surface-sunken" />
               </div>
               {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-                <div key={day} className="border-s border-border px-1.5 py-2">
+                <div key={day} className={WEEK_GRID.day}>
                   {/* A shift lands in some cells and not others; a full grid of
                       bars would promise a week nobody works. */}
                   {(row + day) % 3 === 0 ? (
@@ -56,7 +56,7 @@ export default function StaffingLoading() {
               ))}
             </div>
           ))}
-          <div className="h-12 border-t border-b border-border" />
+          <div className={`h-12 ${WEEK_GRID.row}`} />
         </div>
 
         <div className="mt-4 space-y-7 lg:hidden">

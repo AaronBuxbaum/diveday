@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { AvailabilityBlock, CrewAssignmentRequest } from "@/lib/crew-requests";
 import { staffWeek, type WeekGap, type WeekPerson } from "@/lib/staffing-week";
@@ -490,6 +491,85 @@ describe("StaffingWeek standing crew clash", () => {
       // warning, not about a week that failed to render.
       expect(within(branch).getAllByText(/Reef drift/).length).toBeGreaterThan(0);
       expect(within(branch).getAllByText(/Afternoon single/).length).toBeGreaterThan(0);
+    }
+  });
+});
+
+/**
+ * **The week's geometry, pinned as classes** (docs/design/pixel-craft.md). The
+ * probe's `small-target` runs at 390 and 820, where the grid is `hidden`, and
+ * shared edges are leads it cannot confirm, so what was measured on the 1280
+ * and 390 captures is held here instead.
+ */
+describe("StaffingWeek geometry", () => {
+  function branches(container: HTMLElement) {
+    const grid = container.querySelector<HTMLElement>('[class~="lg:block"]');
+    const list = container.querySelector<HTMLElement>('[class~="lg:hidden"]');
+    if (!grid || !list) throw new Error("the week should render a grid and a day list");
+    return { grid, list };
+  }
+  const horizontalInset = (element: Element | undefined) =>
+    [...(element?.classList ?? [])].filter((token) => /^p[xse]-/.test(token));
+
+  /**
+   * K-239: the names and "Needs crew" started 8px inside the column every
+   * other line on the page starts on (the pager, the h1, the ledger's words).
+   * The day columns need an inset for their left rule; the person column has
+   * no rule on its left, so it keeps only the 8px before the first day's.
+   */
+  it("starts the person column's words on the page's own edge", () => {
+    const { container } = renderWeek({ gaps: [GAP] });
+    const rows = [...branches(container).grid.children];
+    expect(rows).toHaveLength(3);
+    expect(within(rows[2] as HTMLElement).getByText("Needs crew")).toBeVisible();
+    for (const row of rows) {
+      expect(row.firstElementChild).toHaveClass("pe-2");
+      expect(row.firstElementChild).not.toHaveClass("px-2");
+    }
+  });
+
+  /**
+   * And its rules are a ledger row's. Every rule under the grid (the doors,
+   * the credentials) runs 8px past the column with its row's room
+   * (`FILL_ROOM`), so a grid drawing its hairlines on the column stepped 8px
+   * where the two met.
+   */
+  it("draws each grid row on the ledger's box, so its rules end where the page's do", () => {
+    const { container } = renderWeek({ gaps: [GAP] });
+    const { grid } = branches(container);
+    expect(grid).not.toHaveClass("border-t");
+    expect(grid).not.toHaveClass("border-b");
+    for (const row of grid.children) expect(row).toHaveClass(...ledgerRowBoxClass.split(" "));
+  });
+
+  /**
+   * K-240: a day's label started 2px right of its chips' painted edge and
+   * 6–8px left of their words. The header takes the day cells' inset, so each
+   * label starts on its chips' edge.
+   */
+  it("insets each day's label as its day cells inset their chips", () => {
+    const { container } = renderWeek({ gaps: [GAP] });
+    const [header, person, gapRow] = branches(container).grid.children;
+    const heads = [...header.children].slice(1);
+    expect(heads).toHaveLength(7);
+    for (const [index, head] of heads.entries()) {
+      expect(horizontalInset(head)).toEqual(["px-1.5"]);
+      expect(horizontalInset(head)).toEqual(horizontalInset(person.children[index + 1]));
+      expect(horizontalInset(head)).toEqual(horizontalInset(gapRow.children[index + 1]));
+    }
+  });
+
+  /**
+   * K-499: `pt-3 pb-2` set the band's caps 15px under its top rule and 12px
+   * over its bottom one, 1.5px below the band's centre. One inset each side.
+   */
+  it("centres the day-header band's labels between its rules", () => {
+    const { container } = renderWeek();
+    const [header] = branches(container).grid.children;
+    for (const cell of header.children) {
+      expect(cell).toHaveClass("py-2.5");
+      expect(cell).not.toHaveClass("pt-3");
+      expect(cell).not.toHaveClass("pb-2");
     }
   });
 });

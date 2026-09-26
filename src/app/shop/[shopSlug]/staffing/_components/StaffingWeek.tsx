@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { GroupLabel, groupLabelClass, LedgerRow } from "@/components/ui/ledger";
+import { GroupLabel, groupLabelClass, LedgerRow, ledgerRowBoxClass } from "@/components/ui/ledger";
 import { WeekPager } from "@/components/ui/week-pager";
 import { fill } from "@/i18n/fill";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
@@ -473,6 +473,30 @@ function GapChip({
 
 const GRID_CLASS = "grid grid-cols-[9rem_repeat(7,minmax(0,1fr))]";
 
+/**
+ * **The grid's parts, one spelling each**, shared with its skeleton
+ * (`../loading.tsx`), which drew its own copies and drifted from them.
+ *
+ * - `row`: every row is a ledger row's box (`ledgerRowBoxClass`). Its rules
+ *   run 8px past the column with the row's room, as every rule under the grid
+ *   does (the doors, the credentials), and the last row closes the grid, so
+ *   the ledger closes itself whether or not the gap row is there. On the
+ *   column, the grid's rules stepped 8px where they met the doors' (K-239).
+ * - `personHead` / `person`: the person column has no rule on its left, so it
+ *   keeps only the 8px before the first day's rule, and its words start on the
+ *   column the pager, the h1 and the ledger's words start on (K-239).
+ * - `dayHead` / `day`: a day's label takes its cells' inset, so it starts on
+ *   its chips' painted edge (K-240). The band is `py-2.5` a side: `pt-3 pb-2`
+ *   set its caps 1.5px below its centre (K-499).
+ */
+export const WEEK_GRID = {
+  row: `${GRID_CLASS} ${ledgerRowBoxClass}`,
+  personHead: "pe-2 py-2.5",
+  dayHead: "border-s border-border px-1.5 py-2.5",
+  person: "pe-2 py-3",
+  day: "flex flex-col items-start gap-1 border-s border-border px-1.5 py-2",
+} as const;
+
 export function StaffingWeek({
   week,
   gapWords,
@@ -522,15 +546,15 @@ export function StaffingWeek({
         words={words}
       />
 
-      {/* ---- The grid, from `lg` up. The bottom hairline is the container's,
-          so the ledger closes itself whether or not the gap row is there. */}
-      <div className="mt-4 hidden border-t border-b border-border lg:block">
-        <div className={GRID_CLASS}>
-          <div className="px-2 pt-3 pb-2">
+      {/* ---- The grid, from `lg` up. Its rules are its rows' (`WEEK_GRID`),
+          so the last row there closes it, gap row or not. */}
+      <div className="mt-4 hidden lg:block">
+        <div className={WEEK_GRID.row}>
+          <div className={WEEK_GRID.personHead}>
             <span className="sr-only">{words.person}</span>
           </div>
           {dayFaces.map((day) => (
-            <div key={day.date} className="border-s border-border px-2 pt-3 pb-2">
+            <div key={day.date} className={WEEK_GRID.dayHead}>
               {/* `h2`, not `h3`: the page's own `<h1>` is directly above and a
                   skipped level is an axe `heading-order` failure on a route
                   e2e/a11y.spec.ts scans. */}
@@ -553,8 +577,8 @@ export function StaffingWeek({
         </div>
 
         {week.people.map((person) => (
-          <div key={person.personId} className={`${GRID_CLASS} border-t border-border`}>
-            <div className="px-2 py-3">
+          <div key={person.personId} className={WEEK_GRID.row}>
+            <div className={WEEK_GRID.person}>
               <p className="text-sm font-semibold">{person.name}</p>
               {person.roles.length > 0 ? (
                 <p className="text-xs text-muted">{person.roles.join(" · ")}</p>
@@ -563,10 +587,7 @@ export function StaffingWeek({
             {person.days.map((cell, index) => {
               const day = week.days[index];
               return (
-                <div
-                  key={cell.date}
-                  className="flex flex-col items-start gap-1 border-s border-border px-1.5 py-2"
-                >
+                <div key={cell.date} className={WEEK_GRID.day}>
                   {cell.shifts.map((shift) => (
                     <ShiftChip
                       key={shift.id}
@@ -604,15 +625,12 @@ export function StaffingWeek({
             seven empty cells under "Needs crew" would be the page saying
             nothing at the volume of something. */}
         {week.hasGaps ? (
-          <div className={`${GRID_CLASS} border-t border-border`}>
-            <div className="px-2 py-3">
+          <div className={WEEK_GRID.row}>
+            <div className={WEEK_GRID.person}>
               <p className="text-sm font-semibold text-muted">{words.needsCrew}</p>
             </div>
             {week.gapDays.map((cell) => (
-              <div
-                key={cell.date}
-                className="flex flex-col items-start gap-1 border-s border-border px-1.5 py-2"
-              >
+              <div key={cell.date} className={WEEK_GRID.day}>
                 {cell.gaps.map((gap) => (
                   <GapChip
                     key={gap.tripId}
