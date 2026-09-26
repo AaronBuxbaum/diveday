@@ -132,26 +132,42 @@ const blockSpacing = (element: Element) =>
   [...element.classList].filter((token) => /^(?:[\w-]+:)*-?[pm][ytb]-/.test(token));
 
 /**
- * **The active chapter's underline sits on the bar's rule** (K-400).
+ * **The active chapter's underline sits on the bar's rule, and its words on
+ * the bar's middle** (K-400).
  *
  * The strip padded 4px under its tabs, first for nothing and then as room for
  * the tabs' outset focus ring (a scroll box clips both axes), so the 2px
  * underline and the nav's 1px rule ran 4px apart: two stacked lines where one
  * edge was meant. The tabs take the ring inset now, drawn wholly inside their
- * own box, which needs no room — so the strip pads the top alone (`pt-2`,
- * keeping the bar 53px: 8 + 44 + the rule) and the underline is the last
- * thing above the rule. The inset ring also cannot reach past the screen's
- * top while the bar is stuck, which the outset one did by a pixel. jsdom has
- * no layout, so this pins the structure, and the pixel probe measures it.
+ * own box, which needs no room. A first cut then padded the strip's top alone
+ * (`pt-2` over 44px tabs), which put the underline on the rule but every
+ * label and the strip's title 4px below the bar's middle: 20px of air above
+ * the line and 12px below it. So the strip pads nothing and the tabs are the
+ * bar's whole height (`min-h-13`, 52px, the bar still 53 with its rule): the
+ * underline is the last thing above the rule and the words are centred
+ * between the hero's hairline and the rule. The inset ring also cannot reach
+ * past the screen's top while the bar is stuck, which the outset one did by a
+ * pixel (#1977). jsdom has no layout, so this pins the structure, and the
+ * pixel probe measures it.
  */
 describe("the chapter strip's underline and rule", () => {
-  it("pads the scrolling strip above its tabs and not below them", () => {
+  it("gives the scrolling strip no block padding, so its tabs fill the bar", () => {
     const { box } = renderNav();
     const nav = screen.getByRole("navigation", { name: "Chapters" });
     expect(box.parentElement).toBe(nav);
     expect(nav).toHaveClass("border-b");
-    expect(box).toHaveClass("overflow-x-auto");
-    expect(blockSpacing(box)).toEqual(["pt-2"]);
+    expect(box).toHaveClass("overflow-x-auto", "items-center");
+    expect(blockSpacing(box)).toEqual([]);
+  });
+
+  it("makes every chapter the bar's whole 52px, with no block padding of its own", () => {
+    renderNav();
+    for (const chapter of CHAPTERS) {
+      const link = screen.getByRole("link", { name: new RegExp(chapter.label) });
+      expect(link).toHaveClass("min-h-13", "items-center", "border-b-2");
+      expect(link).not.toHaveClass("min-h-11");
+      expect(blockSpacing(link)).toEqual([]);
+    }
   });
 
   it("rings every chapter inset, inside the box that scrolls", () => {
@@ -160,6 +176,23 @@ describe("the chapter strip's underline and rule", () => {
       expect(screen.getByRole("link", { name: new RegExp(chapter.label) })).toHaveClass(
         "focus-visible:focus-ring-inset",
       );
+    }
+  });
+
+  it("keeps the inset ring 9px clear of a chapter's words from sm, without moving the words", () => {
+    // The inset ring fills a tab's outer 3px. At `sm:px-1` its inner edge sat
+    // 1px from the "0" of "01" and from the label's last letter. `sm:px-3`
+    // leaves 9px, the room every other inset-ring row has; the gaps give back
+    // the 16px the padding takes, so the words stand where they stood (40px
+    // label to label, 36px title to first chapter).
+    const { box } = renderNav();
+    const list = box.querySelector("ol");
+    expect(box).toHaveClass("sm:gap-x-6");
+    expect(list).toHaveClass("sm:gap-x-4");
+    for (const chapter of CHAPTERS) {
+      const link = screen.getByRole("link", { name: new RegExp(chapter.label) });
+      expect(link).toHaveClass("sm:px-3");
+      expect(link).not.toHaveClass("sm:px-1");
     }
   });
 });

@@ -135,24 +135,29 @@ export function ProductChapterNav({
       aria-label={ariaLabel}
       className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm"
     >
-      {/* `pt-2` and no bottom padding: the active tab's 2px underline sits
-          directly on the nav's rule, one edge, where 4px of strip under the
-          tabs used to float it above the rule as a second line (K-400). The
-          bar stays 53px — 8 + the 44px tabs + the rule — and the rule stays on
-          the nav because it runs the full width while the strip is
-          `max-w-6xl`. The strip scrolls, and a scroll box clips both axes, so
-          the tabs take the ring inset (`focus-ring-inset`) rather than asking
-          the strip for room around an outset one; drawn inside the tab, it
-          also stays on screen while the bar is stuck at the top.
+      {/* No block padding: the tabs are the bar's whole height (`min-h-13`,
+          52px, and the bar 53 with its rule), so the active tab's 2px
+          underline sits directly on the nav's rule, one edge, and every label
+          and the title (`items-center`) sit on the bar's middle. 4px of strip
+          under the tabs used to float the underline above the rule as a
+          second line, and padding the top alone then set the words 4px low
+          (K-400). The rule stays on the nav because it runs the full width
+          while the strip is `max-w-6xl`. The strip scrolls, and a scroll box
+          clips both axes, so the tabs take the ring inset
+          (`focus-ring-inset`) rather than asking the strip for room around an
+          outset one; drawn inside the tab, it also stays on screen while the
+          bar is stuck at the top (#1977). From `sm` the tabs' `px-3` keeps
+          that ring 9px clear of their words, and the gaps give the padding
+          back, so the words stand where they did.
 
           `px-6` at every width, the gutter of every section on /product; a
           phone's `px-4` ran the strip 8px nearer the edge (K-401). */}
       <div
         ref={stripRef}
-        className="mx-auto flex max-w-6xl items-center gap-x-4 sm:gap-x-8 px-6 pt-2 text-sm overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        className="mx-auto flex max-w-6xl items-center gap-x-4 sm:gap-x-6 px-6 text-sm overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       >
         <p className="shrink-0 py-2 text-xs sm:text-sm font-semibold tracking-tight">{title}</p>
-        <ol className="flex items-center gap-x-2 sm:gap-x-8 shrink-0">
+        <ol className="flex items-center gap-x-2 sm:gap-x-4 shrink-0">
           {chapters.map((chapter) => {
             const active = chapter.id === activeId;
             return (
@@ -162,7 +167,7 @@ export function ProductChapterNav({
                   data-chapter={chapter.id}
                   aria-current={active ? "step" : undefined}
                   onClick={() => setActiveId(chapter.id)}
-                  className={`flex min-h-11 items-center gap-1.5 sm:gap-2 border-b-2 px-1.5 sm:px-1 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap focus-visible:focus-ring-inset ${
+                  className={`flex min-h-13 items-center gap-1.5 sm:gap-2 border-b-2 px-1.5 sm:px-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap focus-visible:focus-ring-inset ${
                     active
                       ? "border-primary text-foreground"
                       : "border-transparent text-muted hover:text-foreground"

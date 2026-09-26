@@ -25,7 +25,8 @@ function linesIn(scope: Element | null, type: string) {
  * line under the demo note, and the strip as a wrapping row of 16px bars — so
  * the strip landed 36px lower at 1280 and 156px lower at 390, where six bars
  * had wrapped to three rows. Each bar is now a line box of the text it stands
- * for, and the strip is one row of 44px items under the strip's own padding.
+ * for, and the strip is one row of 52px items with no padding above or below
+ * them, as the real strip's tabs fill its bar (K-400).
  */
 describe("the /product skeleton", () => {
   it("draws the title as three lines of its own type below sm and two from it", () => {
@@ -48,13 +49,16 @@ describe("the /product skeleton", () => {
     expect(linesIn(hero, "text-sm")).toEqual({ count: 5, phoneOnly: 2 });
   });
 
-  it("stands in for the strip with one unwrapping row of 44px items under the strip's padding", () => {
+  it("stands in for the strip with one unwrapping row of 52px items and no block padding", () => {
     const { container } = render(<ProductLoading />);
     const strip = container.querySelector("main > div > div");
-    expect(strip).toHaveClass("flex-nowrap", "overflow-hidden", "pt-2", "px-6");
+    expect(strip).toHaveClass("flex-nowrap", "overflow-hidden", "px-6");
     expect(strip).not.toHaveClass("flex-wrap");
+    expect(
+      [...(strip?.classList ?? [])].filter((token) => /^(?:[\w-]+:)*-?[pm][ytb]-/.test(token)),
+    ).toEqual([]);
     const items = Array.from(strip?.children ?? []);
     expect(items).toHaveLength(6);
-    for (const item of items) expect(item).toHaveClass("h-11", "shrink-0");
+    for (const item of items) expect(item).toHaveClass("h-13", "shrink-0");
   });
 });

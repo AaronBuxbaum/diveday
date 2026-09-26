@@ -28,7 +28,8 @@ import { DISPLAY_TITLE_CLASS, MARKETING_EYEBROW_CLASS } from "@/components/ui/ty
  * scrolling. The hero's bars are its line boxes, `h-lh` in the type of the
  * text they stand for, as many as the English wraps to at 1280 and at a 390px
  * phone (`SkeletonLineBars`, the phone's extra lines `sm:hidden`); the strip
- * is the real strip's one 44px row under its `pt-2`, and never wraps. They
+ * is the real strip's one row of 52px tabs with no padding above or below
+ * them (K-400), and never wraps. They
  * used to be 48px bars for 40px title lines, 20px bars for 32px lede lines, no
  * price line, and a strip that wrapped to three rows on a phone, so the strip
  * landed 36px lower at 1280 and 156px lower at 390 (K-409). A rewrite that
@@ -84,16 +85,16 @@ export default function ProductLoading() {
         </section>
 
         {/* The anchor strip: a label plus five chapters in one row that never
-            wraps, each item the tabs' 44px under the strip's `pt-2`, so the
-            bar is the real one's 53px with its rule and the chapter below it
-            does not jump when the real strip lands. */}
+            wraps, each item the tabs' 52px with no padding around them, so
+            the bar is the real one's 53px with its rule and the chapter below
+            it does not jump when the real strip lands. */}
         <div className="border-b border-border">
-          <div className="mx-auto flex max-w-6xl flex-nowrap items-center gap-x-4 overflow-hidden px-6 pt-2 sm:gap-x-8">
-            <div className="flex h-11 shrink-0 items-center">
+          <div className="mx-auto flex max-w-6xl flex-nowrap items-center gap-x-4 overflow-hidden px-6 sm:gap-x-8">
+            <div className="flex h-13 shrink-0 items-center">
               <div className="h-4 w-24 rounded bg-surface-sunken" />
             </div>
             {[0, 1, 2, 3, 4].map((entry) => (
-              <div key={entry} className="flex h-11 shrink-0 items-center">
+              <div key={entry} className="flex h-13 shrink-0 items-center">
                 <div className="h-4 w-28 rounded bg-surface-sunken" />
               </div>
             ))}
