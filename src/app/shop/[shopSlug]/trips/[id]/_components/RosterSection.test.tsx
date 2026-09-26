@@ -793,4 +793,32 @@ describe("the roster's row geometry", () => {
     const link = screen.getByRole("link", { name: /Review certifications/ });
     expect(link).toHaveClass("min-h-11", "-mb-3", "align-bottom");
   });
+
+  /**
+   * K-354: every group band opens with a hairline except "ADD A DIVER". The
+   * band draws `border-t … first:border-t-0`, and the add-diver band sat
+   * first inside the `#add-diver` wrapper, so `first:` stripped its rule
+   * though it is the card's last group. The group's rule is drawn by the
+   * element that is the card's child: the band, or the box holding it.
+   */
+  it("opens the add-diver group with the same rule as every other group", () => {
+    const { container } = renderRoster({
+      ...fixtures,
+      addDiverGroup: <p>Find a returning diver</p>,
+    });
+
+    const addDiver = container.querySelector("#add-diver");
+    const ready = screen.getByRole("heading", { name: "Ready · 1" }).parentElement;
+    // Siblings in the card, each drawing the rule between groups.
+    expect(addDiver?.parentElement).toBe(ready?.parentElement);
+    for (const group of [addDiver, ready]) {
+      expect(group).toHaveClass("border-t", "first:border-t-0");
+    }
+    // The band inside the add-diver box draws none of its own.
+    const band = within(addDiver as HTMLElement).getByRole("heading", {
+      name: "Add a diver",
+    }).parentElement;
+    expect(band).not.toBe(addDiver);
+    expect(band).not.toHaveClass("border-t");
+  });
 });

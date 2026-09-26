@@ -54,7 +54,7 @@ import {
   type PaymentStatusControlCopy,
 } from "./PaymentStatusControl";
 import { RosterAllClear } from "./RosterAllClear";
-import { RosterGroupBand } from "./RosterGroupBand";
+import { RosterGroup, RosterGroupBand } from "./RosterGroupBand";
 import { SHARED_FACT_MIN, UNGROUPABLE_BLOCKER_CODES } from "./shared-facts";
 import type {
   NitroxByBooking,
@@ -1599,11 +1599,12 @@ export function RosterSection({
           ) : null}
           {waitingGroup}
           {invitedGroup}
+          {/* One box, so `#add-diver` holds the form its links and specs
+              scope to; the box draws the group's rule (K-354). */}
           {addDiverGroup ? (
-            <div id="add-diver" className="scroll-mt-24">
-              <RosterGroupBand label={t("trips.addDiver.heading")} />
+            <RosterGroup id="add-diver" label={t("trips.addDiver.heading")}>
               <div className="px-4 py-5 sm:px-5">{addDiverGroup}</div>
-            </div>
+            </RosterGroup>
           ) : null}
         </div>
       ) : null}
