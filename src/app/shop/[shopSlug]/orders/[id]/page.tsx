@@ -385,18 +385,21 @@ export default async function OrderDetailPage({
         {/* `items-baseline`: a description is free text, the one thing on
             the row that wraps, and centred the price floated between its two
             lines instead of on the one that names the item (K-575). Both
-            sides are `text-sm`, so a one-line row sits as it always did. */}
+            sides are `text-sm`, so a one-line row sits as it always did.
+            `min-w-0` lets the description shrink below its longest word, so
+            `break-words` lets that word break: a SKU or a pasted URL would
+            otherwise paint over the price. The price never shrinks. */}
         <ul className="mt-4 divide-y divide-border">
           {order.lineItems.map((item) => (
             <li key={item.id} className="flex items-baseline justify-between gap-3 py-2 text-sm">
-              <span className="min-w-0">
+              <span className="min-w-0 break-words">
                 {item.description}{" "}
                 <span className="text-muted">
                   ({KIND_KEYS[item.kind] ? t(KIND_KEYS[item.kind]) : item.kind}
                   {item.quantity > 1 ? ` × ${item.quantity}` : ""})
                 </span>
               </span>
-              <span className="tabular-nums">
+              <span className="shrink-0 tabular-nums">
                 {formatMoneyCents(
                   item.unitAmountCents * item.quantity,
                   order.order.currency,

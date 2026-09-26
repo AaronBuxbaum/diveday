@@ -28,8 +28,15 @@ describe("the receipt's line items", () => {
     expect(row.split(" ")).not.toContain("items-center");
   });
 
+  /**
+   * `min-w-0` lets the description shrink below its longest word, so that
+   * word has to be allowed to break: a SKU or a pasted URL in the free text
+   * otherwise painted over the price. And the price never shrinks.
+   */
   it("let the description shrink and wrap rather than push the price out", () => {
     const description = LINE_ITEMS.match(/<li[^>]*>\s*<span className="([^"]*)"/)?.[1] ?? "";
-    expect(description.split(" ")).toContain("min-w-0");
+    expect(description.split(" ")).toEqual(expect.arrayContaining(["min-w-0", "break-words"]));
+    const price = LINE_ITEMS.match(/<span className="([^"]*tabular-nums[^"]*)"/)?.[1] ?? "";
+    expect(price.split(" ")).toContain("shrink-0");
   });
 });
