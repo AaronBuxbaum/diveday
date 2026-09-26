@@ -178,7 +178,15 @@ export function BackupsSection({
                 className={controlClass}
               />
             </Field>
-            <Field label={t("backup.form.regionLabel")} description={t("backup.form.regionHint")}>
+            <Field
+              label={t("backup.form.regionLabel")}
+              // The code is wrapped rather than spelled with non-breaking
+              // hyphens: a staffer copies it into the field below, and a
+              // U+2011 would paste as a different character.
+              description={t.rich("backup.form.regionHint", {
+                nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>,
+              })}
+            >
               <input
                 name="region"
                 required
