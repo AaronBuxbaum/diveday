@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { addDepartureHref } from "@/lib/date-requests";
 import { adviseRequests, type DepartureShape } from "@/lib/request-advisor";
+import RequestsLoading from "../loading";
 import { RequestDayGroup, requestAdviceLines } from "./RequestDayGroup";
 
 afterEach(cleanup);
@@ -133,6 +134,33 @@ describe("the group header's height", () => {
       </RequestDayGroup>,
     );
     expect(screen.getByRole("heading", { level: 2 }).parentElement).toHaveClass(...HEADER_ROW);
+  });
+
+  /**
+   * **The skeleton draws the header the page lands with** (class 11: 0px of
+   * shift on load). It drew the act as a 40px bar in a header that neither
+   * wrapped nor took the act's 44px, so every dated header grew 4px when the
+   * page arrived, and below `sm` the act stayed beside a label it wraps under.
+   */
+  it("is the header the loading skeleton draws, with the act at its 44px", () => {
+    render(
+      <RequestDayGroup
+        id="date-2027-03-06"
+        label="Mar 6, 2027 — 2 groups · 5 divers"
+        add={{ href: addDepartureHref("blue-mantis", "2027-03-06", ["r1"]), label: "Add" }}
+      >
+        <li>a request</li>
+      </RequestDayGroup>,
+    );
+    const loaded = screen.getByRole("heading", { level: 2 }).parentElement?.className;
+    cleanup();
+    const { container } = render(<RequestsLoading />);
+    const headers = [...container.querySelectorAll(".justify-between")];
+    expect(headers.length).toBeGreaterThan(0);
+    for (const header of headers) {
+      expect(header.className).toBe(loaded);
+      expect(header.lastElementChild).toHaveClass("h-11");
+    }
   });
 });
 
