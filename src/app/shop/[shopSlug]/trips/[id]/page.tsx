@@ -8,6 +8,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManagePaymentSettings, canPersonRefund } from "@/db/authz";
@@ -840,7 +841,10 @@ export default async function ManageTripPage({
       <TripNoticeBanner notice={rootPageNotice} locale={locale} />
 
       {cancelled && (canConfigure || blowoutCalled || lifecycleStatus) ? (
-        <section className="mt-6 rounded-panel border border-danger/40 bg-danger/10 p-5">
+        // A card in a tone: the card's radius, bed and inset, so its words
+        // start where the cards around it do; only the border and fill are its
+        // own (pixel-craft classes 3 and 12).
+        <section className={`mt-6 ${TONE_PANEL_CLASS} border-danger/40 bg-danger/10`}>
           <FormStatus tone={lifecycleStatus?.tone} className="mb-3">
             {lifecycleStatus?.text}
           </FormStatus>

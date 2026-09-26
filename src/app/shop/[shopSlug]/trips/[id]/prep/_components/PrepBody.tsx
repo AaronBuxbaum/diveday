@@ -5,7 +5,7 @@ import { ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard, sectionCardClass } from "@/components/ui/card";
+import { SectionCard, sectionCardClass, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
@@ -358,8 +358,8 @@ export function PrepBody({
                   // its heading rung — and only the border and fill say which of
                   // them is a problem. `SectionCard` has no tone prop on purpose
                   // (see its docblock), so a tone-carrying panel spells the chrome
-                  // here and matches it rung for rung.
-                  className="mt-8 rounded-panel border border-warning/40 bg-warning/10 p-4 shadow-bed sm:p-5"
+                  // here on the card's own geometry (`TONE_PANEL_CLASS`).
+                  className={`mt-8 ${TONE_PANEL_CLASS} border-warning/40 bg-warning/10`}
                 >
                   <h2
                     id={scopedId(idPrefix, "nitrox-blocked-heading")}
@@ -452,7 +452,7 @@ export function PrepBody({
               {checklist.diversNeedingStaffFit.length > 0 ? (
                 <section
                   aria-labelledby={scopedId(idPrefix, "staff-fit-heading")}
-                  className="mt-8 rounded-panel border border-warning/40 bg-warning/5 p-4 shadow-bed sm:p-5"
+                  className={`mt-8 ${TONE_PANEL_CLASS} border-warning/40 bg-warning/5`}
                 >
                   <h2 id={scopedId(idPrefix, "staff-fit-heading")} className={LEAD_TITLE_CLASS}>
                     {t("tripPrep.staffFitHeading")}
