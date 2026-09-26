@@ -56,7 +56,8 @@ function FactRow({
   footnote,
 }: {
   label: string;
-  value: string;
+  /** What is on file, as nodes: a size or a phone inside it is set whole (K-471). */
+  value: ReactNode;
   changeWord: string;
   children: ReactNode;
   /**
@@ -124,20 +125,44 @@ export function ChangedFacts({
   // What the shop is holding, item by item — never a summary the page composed.
   // A diver bringing their own kit has no sizes and reads their own answer back
   // (`rental.ownGear`) rather than an empty line.
+  //
+  // Each item is set whole and the list breaks only between them: joined into
+  // one string, a narrow line ended on "Weights 16" and began the next with
+  // "lb" (K-471).
   const sizes = SIZED_RENTAL_KINDS.map((kind) => {
     const size = sizeForRentalItem(fit, kind);
     return size
       ? t("ready.changesItemWithSize", { item: t(DIVER_SIZED_ITEM_KEYS[kind]), size })
       : null;
   }).filter((part): part is string => part !== null);
-  const sizesValue =
+  const sizesValue: ReactNode =
     sizes.length > 0
-      ? cachedListFormat(locale, { style: "long", type: "unit" }).format(sizes)
+      ? cachedListFormat(locale, { style: "long", type: "unit" })
+          .formatToParts(sizes)
+          .map((part) =>
+            part.type === "element" ? (
+              <span key={part.value} className="whitespace-nowrap">
+                {part.value}
+              </span>
+            ) : (
+              part.value
+            ),
+          )
       : t("rental.ownGear");
 
-  const contactValue =
-    [emergencyContact.name, emergencyContact.phone].filter(Boolean).join(" · ") ||
-    t("ready.contactNotOnFile");
+  // The phone is set whole — it broke after its last hyphen at 390 (K-471) —
+  // and the dot keeps to the name before it, so no line starts with "·".
+  const { name: contactName, phone: contactPhone } = emergencyContact;
+  const contactValue: ReactNode =
+    contactName || contactPhone ? (
+      <>
+        {contactName}
+        {contactName && contactPhone ? "\u00a0· " : null}
+        {contactPhone ? <span className="whitespace-nowrap">{contactPhone}</span> : null}
+      </>
+    ) : (
+      t("ready.contactNotOnFile")
+    );
 
   return (
     <div className="divide-y divide-border">
