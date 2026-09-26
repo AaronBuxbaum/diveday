@@ -17,6 +17,24 @@ import { formatTime } from "@/lib/format";
 import { ACTION_KIND_META, type TodayAction } from "@/lib/today";
 
 /**
+ * One thing a recorded close left open: what it is, then its status.
+ *
+ * **The status is one unit** (pixel-craft class 8, K-592). It wrapped at its
+ * own spaces, so a narrow card split it mid-phrase — "— Dock" over "count
+ * open", "— Carried to" over "tomorrow" alone. Held whole, a status that does
+ * not fit beside its item moves to the next line entire; the longest, Spanish
+ * "— Recuento en muelle abierto", is about 190px of a 316px column at 390.
+ */
+function OutstandingItem({ label, status }: { label: string; status: string }) {
+  return (
+    <li>
+      <span className="font-medium">{label}</span>{" "}
+      <span className="whitespace-nowrap text-muted">— {status}</span>
+    </li>
+  );
+}
+
+/**
  * **The closing block** — what stands beneath the spine once every departure
  * of the shop day has settled (ADR 20260827-clearwater-surface-language,
  * decision 4, and H-62, which folded `/close-out` into this).
@@ -46,24 +64,6 @@ import { ACTION_KIND_META, type TodayAction } from "@/lib/today";
  * shop day settled, with the standing one-hour late-arrival buffer. While one
  * boat is out there is nothing here to find.
  */
-/**
- * One thing a recorded close left open: what it is, then its status.
- *
- * **The status is one unit** (pixel-craft class 8, K-592). It wrapped at its
- * own spaces, so a narrow card split it mid-phrase — "— Dock" over "count
- * open", "— Carried to" over "tomorrow" alone. Held whole, a status that does
- * not fit beside its item moves to the next line entire; the longest, Spanish
- * "— Recuento en muelle abierto", is about 190px of a 316px column at 390.
- */
-function OutstandingItem({ label, status }: { label: string; status: string }) {
-  return (
-    <li>
-      <span className="font-medium">{label}</span>{" "}
-      <span className="whitespace-nowrap text-muted">— {status}</span>
-    </li>
-  );
-}
-
 export function ClosingBlock({
   leftovers,
   latest,
