@@ -252,8 +252,11 @@ function Row({ row }: { row: WeekLedgerRow }) {
         />
         {/* The date lives on the day rule above, so the row carries only its
             time — `whitespace-nowrap` so a range never breaks at the space
-            before AM/PM and strands "PM" on a line of its own. */}
-        <div className="shrink-0 sm:w-40">
+            before AM/PM and strands "PM" on a line of its own. 176px holds
+            the longest range, eight digits ("10:00 AM – 12:30 PM", about
+            166px); the seed's seven-digit ones sized it at 160, which an
+            eight-digit range overran by 7px toward the title. */}
+        <div className="shrink-0 sm:w-44">
           <p
             className={`text-base font-semibold tabular-nums whitespace-nowrap${quiet ? " text-muted" : ""}`}
           >

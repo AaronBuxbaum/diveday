@@ -49,7 +49,10 @@ export default function TripsLoading() {
             </div>
             {[0, 1].map((row) => (
               <div key={row} className="flex flex-col gap-2 py-4 sm:flex-row sm:gap-4 sm:py-5">
-                <div className="h-5 w-36 rounded bg-surface-sunken" />
+                {/* The row's time rail, so the title lands where it will. */}
+                <div className="shrink-0 sm:w-44">
+                  <div className="h-5 w-36 rounded bg-surface-sunken" />
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="h-5 w-56 max-w-full rounded bg-surface-sunken" />
                   <div className="mt-1 h-4 w-64 max-w-full rounded bg-surface-sunken" />

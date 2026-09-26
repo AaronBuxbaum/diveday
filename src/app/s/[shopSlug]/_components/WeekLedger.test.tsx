@@ -130,6 +130,27 @@ describe("a week row is a link, never a button", () => {
   });
 });
 
+/**
+ * The time rail was sized for the seed's seven-digit ranges: "12:00 PM – 4:00
+ * PM" is 153px, so a digit is 11px and an eight-digit range ("10:00 AM – 12:30
+ * PM") about 166px, which ran 7px out of a 160px rail toward the title
+ * (pixel-craft class 8, latent). The rail is 176px.
+ */
+describe("the time rail", () => {
+  it("is wide enough for an eight-digit range", () => {
+    render(
+      <WeekLedger
+        rows={[row({ timeRange: "10:00 AM – 12:30 PM" })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const rail = screen.getByText("10:00 AM – 12:30 PM").parentElement;
+    expect(rail).toHaveClass("shrink-0", "sm:w-44");
+  });
+});
+
 describe("one meta line, and nothing stacked under it", () => {
   it("joins the course, the site and every requirement into a single line", () => {
     render(
