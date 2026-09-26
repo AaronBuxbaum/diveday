@@ -154,8 +154,10 @@ export function DiverStatusLedger({
                   href={fixHref(row, shopSlug, recordPath)}
                   // Through `buttonClass` so the 44px target is structural
                   // rather than a remembered `min-h-11` — this is the one tap
-                  // the row exists for.
-                  className={buttonClass({ variant: "link", size: "sm" })}
+                  // the row exists for. `flush`, so its words end on the
+                  // column's edge with the file groups' facts below, not 12px
+                  // inside it.
+                  className={buttonClass({ variant: "link", size: "sm", flush: true })}
                 >
                   {t(row.action.labelKey)}
                 </FixLink>

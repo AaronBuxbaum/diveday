@@ -162,6 +162,26 @@ describe("an open item", () => {
     );
   });
 
+  /**
+   * **The fix's words end on the column's edge** (pixel-craft class 3). A
+   * `link` `sm` keeps the size's 12px either side, so "Send the waiver"
+   * stopped 12px short of the hairline its row ends on, and of the file
+   * groups' facts below it. `flush` drops the padding and keeps the 44px.
+   */
+  it("ends its fix on the row's edge, not 12px inside it", () => {
+    renderLedger([
+      {
+        kind: "waiver",
+        tone: "danger",
+        sentence: { blocker: { code: "waiver_not_sent" } },
+        action: { labelKey: "divers.status.acts.sendWaiver", target: "send_waiver" },
+      },
+    ]);
+    const fix = screen.getByRole("link", { name: "Send the waiver" });
+    expect(fix).toHaveClass("px-0", "min-h-11");
+    expect(fix).not.toHaveClass("px-3");
+  });
+
   /** A row the shop cannot act on renders no fix rather than an invented one. */
   it("renders no link for a row with no fix", () => {
     renderLedger([

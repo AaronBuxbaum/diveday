@@ -182,10 +182,14 @@ export function DiverFileGroupDisclosure({
         {/* `<summary>` takes phrasing content intermixed with heading content,
             which is what lets the row's own label be the group's `<h2>` — one
             heading per group rather than the row label plus a second, uppercase
-            copy of it inside. */}
+            copy of it inside.
+
+            No inline padding: the summary paints no fill, so a `px-1` held
+            nothing and only set the caret 4px in from the column and the fact
+            4px short of it, against the status ledger's kind and fix above. */}
         <summary
           aria-controls={`${id}-content`}
-          className={`flex min-h-11 cursor-pointer items-center gap-3 border-y border-border px-1 py-3 group-open/diver-file:border-b-0 ${summaryLayoutClass}`.trim()}
+          className={`flex min-h-11 cursor-pointer items-center gap-3 border-y border-border py-3 group-open/diver-file:border-b-0 ${summaryLayoutClass}`.trim()}
         >
           <DisclosureCaret className="shrink-0 text-muted group-open/diver-file:rotate-90" />
           <h2 id={id} className={`${labelFloorClass} flex-1 scroll-mt-24 text-base font-medium`}>

@@ -90,6 +90,26 @@ describe("DiverFileGroupDisclosure", () => {
   });
 
   /**
+   * **The door's ends are the column's** (pixel-craft class 3). The summary
+   * paints no fill of its own, so a `px-1` there was an inset with nothing to
+   * hold: the caret started 4px right of the status ledger's kind above it and
+   * the fact ended 4px short of the fix link's end, on every group of the
+   * record.
+   */
+  it("starts the caret and ends the fact on the column's own edges", () => {
+    render(
+      <DiverFileGroupDisclosure id="notes" label="Diver notes" summary="1 note">
+        <p>Note body</p>
+      </DiverFileGroupDisclosure>,
+    );
+    const summary = screen.getByTestId("diver-file-group-notes").querySelector("summary");
+    const inline = [...(summary?.classList ?? [])].filter((token) =>
+      /^(?:[a-z-]+:)*-?(?:p[xse]|m[xse])-/.test(token),
+    );
+    expect(inline).toEqual([]);
+  });
+
+  /**
    * The row's own label is the group's heading, and it carries the fragment the
    * `?notice=` redirects and the prep panel's `#support` link land on. A second
    * uppercase copy of it inside the body was what made the desktop record read
