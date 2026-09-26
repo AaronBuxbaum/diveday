@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { BANNER_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
@@ -70,9 +71,13 @@ export async function ShopYearBand({ locale }: { locale: DiverLocale }) {
               {t("shopYear.band.source")}
             </p>
             <p className="mt-3 text-sm text-muted">{t("shopYear.band.note")}</p>
+            {/* The band's one door, so a 44px target (K-396): it was an
+                `inline-block` word, 144 × 24px on a phone. The box centres its
+                24px line, 10px of box above it, so the margin gives those
+                10px back and the words stay 24px under the note. */}
             <Link
               href={publicSchedulePath(shop.slug)}
-              className="mt-6 inline-block font-medium text-primary hover:underline"
+              className={`mt-3.5 ${tapTargetLinkClass} font-medium text-primary hover:underline`}
             >
               {t("shopYear.band.door")}
             </Link>
