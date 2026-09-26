@@ -524,13 +524,15 @@ export default async function EditDiveSitePage({
               `overflow-hidden` clips that fill to the corner radius. The same
               clip cut the outset focus ring on both sides, so the ring is drawn
               inside the row, and the last row takes the card's bottom corners
-              so the clip cannot shave the ring's. */}
+              so the clip cannot shave the ring's. Each row pads back exactly
+              what the list bleeds, `sm:` included, or from 640px up its words
+              start 4px left of the card's heading (K-412). */}
           <ul className="-mx-4 -mb-4 divide-y divide-border border-t border-border sm:-mx-5 sm:-mb-5">
             {upcomingTrips.map((trip) => (
               <li key={trip.tripId} className="last:rounded-b-panel">
                 <Link
                   href={`/shop/${shopSlug}/trips/${trip.tripId}`}
-                  className="flex flex-col gap-1 rounded-[inherit] px-4 py-3 text-sm hover:bg-surface-sunken focus-visible:focus-ring-inset sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-3"
+                  className="flex flex-col gap-1 rounded-[inherit] px-4 py-3 text-sm hover:bg-surface-sunken focus-visible:focus-ring-inset sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-3 sm:px-5"
                 >
                   <span className="font-medium">{trip.title}</span>
                   <span className="text-muted">
