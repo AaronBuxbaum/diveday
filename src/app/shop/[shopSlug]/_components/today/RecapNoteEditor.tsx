@@ -6,7 +6,7 @@ import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FormStatus, textareaClassFor } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel, ledgerKindColumnClass } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { RecapSendControl } from "./RecapSendControl";
@@ -107,15 +107,21 @@ export function RecapNoteEditor({
     // pixels under that row's own closing one, with nothing at all between
     // them.
     <details open={saved} className="group/recap">
-      {/* Stacked below `sm`, one line from there. Inline at phone width the
-          label and the note fought over ~340px and the three-word heading
-          broke across three lines beside a single line of note. */}
-      {/* `sm:justify-start`: once the row turns horizontal, `justify-center`
-          would centre the label and note in the card instead of centring them
-          in the row's own height, which is all it is there for. */}
-      <summary className="flex min-h-11 cursor-pointer list-none flex-col justify-center gap-0.5 text-sm [&::-webkit-details-marker]:hidden sm:flex-row sm:items-center sm:justify-start sm:gap-2">
-        <span className="flex shrink-0 items-center gap-2 font-medium">
-          <DisclosureCaret className="text-muted group-open/recap:rotate-90" />
+      {/* **The unsold-seats row's anatomy** (K-260), the `LedgerRow` with a
+          kind that sits above this under the same rule: the word in the
+          kind's column (`ledgerKindColumnClass`), the note a `gap-3` after it,
+          on the edge that row's sentence starts on, and the caret at the row's
+          end, where a door's glyph is. It led with the caret and set the note
+          `gap-2` after the word, so "Recap" started 20px right of "Unsold
+          seats" and its note 35px left of that row's sentence.
+
+          Stacked below `sm` as a stacked `LedgerRow` is: the word and the
+          caret on one line, the note full width beneath them (`order-last
+          basis-full`). Inline at phone width the label and the note fought
+          over ~340px and the heading broke across lines beside one line of
+          note. `content-center` centres the lines in the 44px target. */}
+      <summary className="flex min-h-11 cursor-pointer list-none flex-wrap content-center items-center gap-x-3 gap-y-0.5 text-sm [&::-webkit-details-marker]:hidden sm:flex-nowrap">
+        <span className={`${ledgerKindColumnClass} shrink-0 font-medium`}>
           {t("closeout.recap.summaryHeading")}
         </span>
         {/* The note itself at rest — what a passing glance needs is "is there
@@ -124,15 +130,14 @@ export function RecapNoteEditor({
             one line from `sm`, **two on a phone** (K-150), because the same
             span carries the status sentence, and its last words are when the
             recap goes ("…in about 3 hours."), which one 316px line cut off.
-            `ps-5` on the stacked layout keeps it under the label rather than
-            under the caret. Hidden once open: the body below says the same
-            thing at least once already (the paragraph when the recap already
-            went out, "Recap sending"'s own line otherwise), and a
-            passing-glance summary has nothing left to add beside its own open
-            form. */}
-        <span className="min-w-0 ps-5 text-muted group-open/recap:hidden max-sm:line-clamp-2 sm:truncate sm:ps-0">
+            Hidden once open: the body below says the same thing at least once
+            already (the paragraph when the recap already went out, "Recap
+            sending"'s own line otherwise), and a passing-glance summary has
+            nothing left to add beside its own open form. */}
+        <span className="min-w-0 text-muted group-open/recap:hidden max-sm:order-last max-sm:basis-full max-sm:line-clamp-2 sm:flex-1 sm:truncate">
           {recapSummary}
         </span>
+        <DisclosureCaret className="ms-auto text-muted group-open/recap:rotate-90" />
       </summary>
       {/* Only for a recap that already went out: nothing below restates it in
           that case. A recap still waiting to send drops this paragraph

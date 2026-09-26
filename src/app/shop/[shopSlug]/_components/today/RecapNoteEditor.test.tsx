@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ledgerKindColumnClass } from "@/components/ui/ledger";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { RecapNoteEditor } from "./RecapNoteEditor";
 
@@ -165,5 +166,30 @@ describe("the recap row at rest", () => {
     expect(note.closest("summary")).not.toBeNull();
     expect(note).toHaveClass("max-sm:line-clamp-2", "sm:truncate");
     expect(note).not.toHaveClass("truncate");
+  });
+
+  /**
+   * **One row anatomy under the settled station's rule** (pixel-craft class 3,
+   * K-260). The unsold-seats row above is a `LedgerRow` with a kind: its word in
+   * the kind's column, its sentence a `gap-3` after it. The recap led with its
+   * caret and set its note `gap-2` after the word, so "Recap" started 20px right
+   * of "Unsold seats" and its note 35px left of that row's sentence. The word
+   * takes the kind's column, the note the row's gap, and the caret goes to the
+   * row's end, where a door's glyph is.
+   */
+  it("lays its word and note on the ledger's kind column and sentence edge", () => {
+    const { container } = renderClosed();
+    const summary = container.querySelector("summary");
+    const [label, note] = [...(summary?.children ?? [])];
+    expect(label).toHaveTextContent("Recap");
+    expect(label).toHaveClass(ledgerKindColumnClass, "shrink-0");
+    expect(note).toHaveTextContent(WAITING);
+    expect(summary).toHaveClass("gap-x-3");
+    expect(summary?.className).not.toMatch(/(?:^|\s)(?:sm:)?gap-2(?:\s|$)/);
+    // The caret is last, so nothing stands before the word; and with it gone
+    // from the start, the stacked note has no caret to clear.
+    expect(summary?.lastElementChild?.tagName.toLowerCase()).toBe("svg");
+    expect(summary?.lastElementChild).toHaveClass("ms-auto");
+    expect(note.className).not.toMatch(/(?:^|\s)ps-/);
   });
 });
