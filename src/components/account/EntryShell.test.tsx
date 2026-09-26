@@ -256,6 +256,28 @@ describe("a door's links are tap targets", () => {
 });
 
 /**
+ * **A door's sentences balance, not just its question** (class 8). EntryDone
+ * balanced its heading and left the body to break greedily, so a two-line body
+ * ended on "do." or "one." alone on the stranded-diver and expired-link doors,
+ * and the verify door's first line ended on "Sign" with "in" below it.
+ */
+describe("a door's body text balances", () => {
+  it("balances a terminal door's body", () => {
+    render(<EntryDone glyph="expired" title="Expired" text="Ask the shop for a new one." />);
+    expect(screen.getByText("Ask the shop for a new one.")).toHaveClass("text-balance");
+  });
+
+  it("balances the shell's description", () => {
+    render(
+      <EntryShell title="Reset your password" description="Pick a new one for your account.">
+        <form />
+      </EntryShell>,
+    );
+    expect(screen.getByText("Pick a new one for your account.")).toHaveClass("text-balance");
+  });
+});
+
+/**
  * **The dead-link law, in two tiers** (ADR 20260827-first-light, decision 3).
  * Already true in the code before this slice; normative from it.
  *

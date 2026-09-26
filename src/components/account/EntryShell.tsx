@@ -79,7 +79,9 @@ export function EntryShell({
             (ADR 20260827-the-divers-thread, decision 1). `width` still decides
             the column; it no longer decides the type. */}
         <h1 className={`${SHELL_TITLE_CLASS} text-balance`}>{title}</h1>
-        {description ? <p className="mx-auto mt-2 max-w-prose text-muted">{description}</p> : null}
+        {description ? (
+          <p className="mx-auto mt-2 max-w-prose text-balance text-muted">{description}</p>
+        ) : null}
       </header>
       {panel ? (
         <div className={entryPanelClass}>{children}</div>
@@ -264,7 +266,10 @@ export function EntryDone({
         </svg>
       </div>
       <h1 className={`mt-6 ${SHELL_TITLE_CLASS} text-balance`}>{title}</h1>
-      <p className="mt-3 max-w-prose text-muted">{text}</p>
+      {/* Balanced like the heading above it: left to break greedily, a
+          two-line body ended on "do." or "one." alone, and verify's split
+          "Sign" from "in" across its two lines. */}
+      <p className="mt-3 max-w-prose text-balance text-muted">{text}</p>
       {action ? <div className={`mt-6 text-sm ${DOOR_LINK_SLOT}`}>{action}</div> : null}
     </main>
   );
