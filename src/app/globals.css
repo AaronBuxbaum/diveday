@@ -82,6 +82,12 @@
    * keyboard user could lose entirely in sun. Undiluted, the worst case across
    * every skin and surface is 4.66:1 (light on --surface-sunken); light 4.66–
    * 5.36, dark 9.05–10.57, boat 6.69–11.38, glare 6.87–12.59.
+   *
+   * **Not on the sky.** A `SkyBand` is dark in both schemes, and lagoon on it
+   * measured 1.02–3.62:1 (1.28 at the day sky's foot), so `.sky` retokens the
+   * ring to its own white ink: 5.24 at worst (dawn's foot), day 7.17–10.62,
+   * dusk 5.70–17.04, night 16.44–20.23, and 17.10 / 17.84 on the flattened
+   * `prefers-contrast` and glare skies.
    */
   --focus-ring: var(--primary);
 
@@ -1597,6 +1603,10 @@ textarea {
 .sky {
   background: var(--sky-day);
   color: var(--sky-ink);
+  /* Every focusable on a band stands on the sky itself, where lagoon's ring
+     measured under 2:1; the band's white ink clears 5.2:1 on every stop (the
+     ratios are under `--focus-ring`). */
+  --focus-ring: var(--sky-ink);
 }
 
 .sky[data-scheme="dawn"] {

@@ -497,3 +497,20 @@ describe("the ring on a native radio", () => {
     expect(declarations(radio?.body ?? "")["border-radius"]).toMatch(/^(9999px|50%)$/);
   });
 });
+
+/**
+ * **On the sky, the ring is the sky's ink.** `--focus-ring` is `--primary`,
+ * measured against the app's light surfaces, and a `SkyBand` is none of
+ * them: lagoon on the day sky measured 1.78–1.89:1 and 1.28:1 at the band's
+ * foot, under the 3:1 a focus indicator owes (pixel probe, state atlas, the
+ * BOARD back link on `trip-repeating-panel`). Every focusable on a band —
+ * `VoyageHeader`, `DayHeader`, `ShopfrontHero` — stands on the sky itself, so
+ * the band retokens the ring once for all of them.
+ */
+describe("the ring on a SkyBand", () => {
+  it("is the band's own ink", () => {
+    const sky = unlayeredRules(CSS).find((rule) => rule.prelude === ".sky");
+    expect(sky, "a .sky rule").toBeDefined();
+    expect(declarations(sky?.body ?? "")["--focus-ring"]).toBe("var(--sky-ink)");
+  });
+});
