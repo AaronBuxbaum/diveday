@@ -22,29 +22,49 @@ import { productFeatureGroups } from "@/lib/marketing";
  * **Neither panel in this file is a `SectionCard`, deliberately.**
  * `MarketingMockup` is a *device frame* rather than a section of a page: it is
  * a `role="img"`, it clips its contents (`overflow-hidden`), and
- * `CaptainPhoneFrame` overrides its radius and removes its border outright to
- * sit inside a phone bezel — three things the canonical card has no prop for
- * and should not grow one for. `FeatureGroupsGrid`'s cards are `bg-background`
+ * `CaptainPhoneFrame` draws it as a `screen` — a corner concentric with a phone
+ * bezel and no border — three things the canonical card has no prop for and
+ * should not grow one for. `FeatureGroupsGrid`'s cards are `bg-background`
  * because they render on a `bg-surface` band on the homepage, and `SectionCard`
  * hard-codes `bg-surface`; passing a second background utility through
  * `className` would be resolved by stylesheet order rather than by intent.
  * Converting that one is a decision in `src/components/ui/card.tsx` about what
  * a card on a surface band is, not a call-site override here.
  */
+/**
+ * The two frames a mockup is drawn in — chosen, never overridden. The phone
+ * used to pass `rounded-[1.9rem] border-0` through `className` beside the
+ * panel's own `rounded-panel border`: two utilities for one property resolve
+ * by stylesheet order, not by intent, and the panel's 20px corner won where
+ * the bezel nests one at 25px (pixel-craft class 6).
+ */
+const MOCKUP_FRAME = {
+  /** A screen on a page: the panel rung and one hairline. */
+  panel: "rounded-panel border border-border",
+  /**
+   * The screen inside `CaptainPhoneFrame`'s bezel. No hairline, because the
+   * bezel is its edge, and a corner that runs parallel to the bezel's: 40px
+   * (`rounded-[2.5rem]`) less the 9px frame and the 6px `p-1.5` is 25px.
+   */
+  screen: "rounded-[25px]",
+} as const;
+
 export function MarketingMockup({
   label,
   children,
+  frame = "panel",
   className = "",
 }: {
   label: string;
   children: ReactNode;
+  frame?: keyof typeof MOCKUP_FRAME;
   className?: string;
 }) {
   return (
     <div
       role="img"
       aria-label={label}
-      className={`overflow-hidden rounded-panel border border-border bg-surface shadow-bed text-left ${className}`}
+      className={`overflow-hidden ${MOCKUP_FRAME[frame]} bg-surface shadow-bed text-left ${className}`}
     >
       {children}
     </div>
@@ -66,7 +86,7 @@ export function CaptainPhoneFrame({
       className={`marketing-roll-call-frame rounded-[2.5rem] border-[9px] border-device-frame bg-device-frame p-1.5 shadow-2xl shadow-device-frame/20 ${className}`}
     >
       <div className="mx-auto mb-1.5 h-1.5 w-20 rounded-full bg-muted/50" />
-      <MarketingMockup label={label} className="rounded-[1.9rem] border-0">
+      <MarketingMockup label={label} frame="screen">
         <CaptainRollCallFallback locale={locale} />
       </MarketingMockup>
     </div>

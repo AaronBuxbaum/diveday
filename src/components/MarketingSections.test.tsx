@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { MarketingMockup, marketingMockups } from "./MarketingSections";
+import { CaptainPhoneFrame, MarketingMockup, marketingMockups } from "./MarketingSections";
 
 afterEach(cleanup);
 
@@ -66,5 +66,36 @@ describe("MarketingMockup", () => {
       <MarketingMockup label={label}>{marketingMockups.recap.render("en-US")}</MarketingMockup>,
     );
     expect(screen.getByRole("img", { name: label })).toBeInTheDocument();
+  });
+
+  it("draws a page's screenshot as a panel: the panel corner and one hairline", () => {
+    render(<MarketingMockup label="A screen">{null}</MarketingMockup>);
+    expect(screen.getByRole("img", { name: "A screen" })).toHaveClass(
+      "rounded-panel",
+      "border",
+      "border-border",
+    );
+  });
+});
+
+/**
+ * The screen inside the phone bezel. The frame used to ask for its corner by
+ * passing a second radius utility through `className`, beside the mockup's own
+ * `rounded-panel`; Tailwind emits one property's utilities in its own order,
+ * the panel rung won, and a 20px screen corner sat inside a 40px bezel where it
+ * nests at 25 (docs/design/pixel-craft.md, class 6). The corner is now the
+ * mockup's own choice, so no utility is left to lose.
+ */
+describe("CaptainPhoneFrame", () => {
+  it("rounds the screen concentric with the bezel, and draws no hairline inside it", () => {
+    render(<CaptainPhoneFrame label="The roll call on a phone" locale="en-US" />);
+    const screenBox = screen.getByRole("img", { name: "The roll call on a phone" });
+    // 40px bezel corner (`rounded-[2.5rem]`) − 9px frame − 6px `p-1.5` = 25px.
+    expect(screenBox).toHaveClass("rounded-[25px]");
+    expect(screenBox).not.toHaveClass("rounded-panel");
+    // Nothing to cancel either: the bezel is the screen's edge.
+    expect(screenBox).not.toHaveClass("border");
+    expect(screenBox).not.toHaveClass("border-0");
+    expect(screenBox).not.toHaveClass("rounded-[1.9rem]");
   });
 });
