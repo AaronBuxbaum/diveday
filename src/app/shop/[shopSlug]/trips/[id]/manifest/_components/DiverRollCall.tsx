@@ -47,6 +47,7 @@ import {
   rollCallMarkState,
   rollCallRecordedTone,
   rollCallRowState,
+  rollCallRuleClass,
   rollCallScrollMargin,
 } from "./RollCallControls";
 
@@ -416,7 +417,8 @@ export function DiverRollCall({
           visually-last would lack one. Each row draws its own instead, off the
           two orders it actually has — and on an inner wrapper rather than the
           `<li>`, whose tone classes set `border-danger`/`border-success` for
-          the 4px left edge and would win the top edge's colour too.
+          the 4px left edge and would win the top edge's colour too
+          (`rollCallRuleClass`, which the crew list draws its rules off too).
 
           **`print:block` is what actually holds the printed order**, rather
           than `print:order-none` alone: `order` is inert outside a flex or
@@ -491,9 +493,10 @@ export function DiverRollCall({
           // The hairline above this row, in each of the two orders. On screen
           // the first row is the first alarmed one when there is any; on paper
           // it is always the top of the manifest.
-          const ruleClass = `${
-            diver.bookingId === firstOnScreenBookingId ? "border-t-0" : "border-t"
-          } border-border ${index === 0 ? "print:border-t-0" : "print:border-t"}`;
+          const ruleClass = rollCallRuleClass({
+            firstOnScreen: diver.bookingId === firstOnScreenBookingId,
+            firstOnPaper: index === 0,
+          });
           // A diver only boards at the dock once readiness clears them. Their
           // row then carries a *static* held ring rather than a tap: the act
           // that unblocks them is ashore on the Trip tab, and offering a tap

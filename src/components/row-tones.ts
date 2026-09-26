@@ -78,3 +78,30 @@ export const ROLL_CALL_ROW_TONE = {
   // here while a surface still asks for it, is a compile error rather than a
   // roll-call row that silently renders unstyled.
 } as const satisfies Record<RollCallRecordedTone | "awaiting" | "blocked", string>;
+
+/**
+ * **The hairline between two roll-call rows, drawn inside the row.**
+ *
+ * Every tone above sets the row's `border-*` colour for its 4px stripe, and
+ * that colour is the whole border's: a `divide-y divide-border` rule on the
+ * row itself took it, so the crew list's rules read `border-strong` on an
+ * untouched row where the diver rules read `border`, and would read green or
+ * red on a boarded or missing one (pixel-craft class 12). So the rule goes on
+ * the row's inner wrapper, whose border nothing tones, in the rule colour.
+ *
+ * It is skipped above whichever row each medium shows first, and the two can
+ * differ: on screen an alarmed diver row is `order-first`, while the printed
+ * list is block layout in manifest order (`print:order-none`). A list that
+ * never reorders passes the same answer for both.
+ */
+export function rollCallRuleClass({
+  firstOnScreen,
+  firstOnPaper,
+}: {
+  firstOnScreen: boolean;
+  firstOnPaper: boolean;
+}): string {
+  return `${firstOnScreen ? "border-t-0" : "border-t"} border-border ${
+    firstOnPaper ? "print:border-t-0" : "print:border-t"
+  }`;
+}

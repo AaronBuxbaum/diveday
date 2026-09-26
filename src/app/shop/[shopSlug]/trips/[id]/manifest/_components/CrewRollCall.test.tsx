@@ -180,3 +180,39 @@ describe("the mark's room for its focus ring", () => {
     expect(mark).toHaveClass("relative", "after:-inset-y-2.5", "after:-inset-x-3");
   });
 });
+
+describe("the crew list's hairlines", () => {
+  /**
+   * **The rule between two crew rows is the rule colour, never the row's tone**
+   * (pixel-craft class 12, K-165). The list drew its rules with `divide-y
+   * divide-border`, which colours each `<li>`'s own border — and every row's
+   * tone (`ROLL_CALL_ROW_TONE`) sets that border's colour for its 4px stripe,
+   * and won. An untouched crew rule read `border-strong` where the diver rules
+   * read `border`, and a boarded or missing crew member's would turn green or
+   * red. The rule is drawn inside the row now, off the diver list's helper.
+   */
+  it("draws each rule inside its row, in the rule colour, from the second row down", () => {
+    const { container } = renderCrew({
+      members: [
+        crew(),
+        crew({
+          id: "00000000-0000-4000-8000-0000000000c2",
+          fullName: "Sal Moretti",
+          rollCall: notBackAt(),
+        }),
+      ],
+    });
+    const rows = [...container.querySelectorAll<HTMLElement>("li[id^='crew-row-']")];
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.parentElement?.className).not.toMatch(/(^|\s)divide-/);
+    const rule = (row: HTMLElement | undefined) => row?.firstElementChild?.className ?? "";
+    expect(rule(rows[0])).toContain("border-t-0");
+    expect(rule(rows[0])).toContain("print:border-t-0");
+    expect(rule(rows[1])).toMatch(/(^|\s)border-t(\s|$)/);
+    expect(rule(rows[1])).toContain("border-border");
+    expect(rule(rows[1])).toContain("print:border-t");
+    // The tone keeps its colour on the row's own box, whose one border is the
+    // stripe.
+    expect(rows[1]?.className).toContain("border-danger");
+  });
+});

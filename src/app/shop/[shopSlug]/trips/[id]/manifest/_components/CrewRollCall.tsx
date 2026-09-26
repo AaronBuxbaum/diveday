@@ -35,6 +35,7 @@ import {
   rollCallMarkState,
   rollCallRecordedTone,
   rollCallRowState,
+  rollCallRuleClass,
   rollCallScrollMargin,
 } from "./RollCallControls";
 
@@ -163,14 +164,21 @@ export function CrewRollCall({
               has not surfaced; the typed "how many crew are aboard" count
               that used to sit below this list named nobody. Same control,
               same append-only write, same undo as a diver's — the subject is
-              a person, not a booking. */}
+              a person, not a booking.
+
+              **No `divide-y`.** It rules the `<li>` itself, and each row's tone
+              colours the row's whole border for its stripe, so the rule came
+              out `border-strong` on an untouched row — green or red on a
+              boarded or missing one — where the diver list's reads `border`.
+              Each row draws its own rule inside, off the diver list's helper
+              (`rollCallRuleClass`). */}
           <ul
             className={sectionCardClass({
               padding: "none",
-              className: "mt-3 divide-y divide-border overflow-hidden",
+              className: "mt-3 overflow-hidden",
             })}
           >
-            {crew.map((member) => {
+            {crew.map((member, index) => {
               const rc = member.rollCall;
               const personTrail = personTrailWithCurrentRecord({
                 trail: todayTrailBySubject?.get(member.id) ?? [],
@@ -240,7 +248,12 @@ export function CrewRollCall({
                     recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : ROLL_CALL_ROW_TONE.awaiting
                   }`}
                 >
-                  <div className="flex items-start">
+                  <div
+                    className={`flex items-start ${rollCallRuleClass({
+                      firstOnScreen: index === 0,
+                      firstOnPaper: index === 0,
+                    })}`}
+                  >
                     <PersonSheet
                       name={member.fullName}
                       triggerLabel={t("manifest.openPersonDetails", { name: member.fullName })}

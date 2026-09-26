@@ -115,6 +115,12 @@ export {
  * already looks for them.
  */
 export { ROLL_CALL_ROW_TONE };
+/**
+ * The rule between two rows, drawn inside each row so no tone can colour it —
+ * the diver and crew lists both draw it off this one helper, from the same
+ * shared vocabulary as the fills.
+ */
+export { rollCallRuleClass } from "@/components/row-tones";
 
 /**
  * The scroll margin every roll-call row wears, diver and crew alike.
