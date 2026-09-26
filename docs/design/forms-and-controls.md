@@ -728,8 +728,16 @@ and `danger-ghost` paint only on hover, and their tint with the padding gone sat
 side of "Delete Morgan Vale" (pixel probe, 2026-09-25), so they get `-mx-2 px-2`: the label sits
 where a padless one would, and the tint reaches 8px past it. A ledger row keeps the same 8px, for
 the same reason (`FILL_ROOM` in `src/components/ui/ledger.tsx`). The variants painted at rest
-(`primary`, `secondary`, `outline`, `danger`, `danger-solid`, `sky`) are boxes, and a box lines up by its edge,
-not its label, so the type refuses `flush` on them.
+(`primary`, `secondary`, `outline`, `danger`, `danger-solid`, `sky`) are boxes, and a box lines up
+by its edge, not its label, so the type refuses `flush` on them.
+
+**A quiet button that ends a padded box passes `outdent`, `flush`'s vertical twin.** A `ghost`
+`sm` is a 44px box around a 20px line, so 12px of box sits under its word; last in a card, that box
+adds to the card's padding (the team card measured 21px over the name and 33px under "Disable").
+`outdent: "block-end"` gives the unseen half back as a negative bottom margin and keeps the target
+whole; `"block-end-phone"` does it below `sm` only, for actions that drop to a line of their own
+there. Never on a button that shares its line with a visible box: centred in the row, it would
+rise by half the margin.
 
 The same trap applies to the type scale, which is why it lives on the sizes: a `text-base` passed
 through `className` cannot reliably beat a size's `text-sm`. Pick the size that already says it.

@@ -103,7 +103,13 @@ export default async function SafetyChecklistPage({
                       type="submit"
                       disabled={index === 0}
                       aria-label={t("settings.safetyChecklist.moveUp")}
-                      className={buttonClass({ variant: "ghost", size: "icon-sm" })}
+                      // Below `sm` the actions are the row's last line, and
+                      // their unseen lower half sinks into its padding.
+                      className={buttonClass({
+                        variant: "ghost",
+                        size: "icon-sm",
+                        outdent: "block-end-phone",
+                      })}
                     >
                       <DiveDayIcon name="arrow-up" className="size-4" />
                     </button>
@@ -115,7 +121,11 @@ export default async function SafetyChecklistPage({
                       type="submit"
                       disabled={index === items.length - 1}
                       aria-label={t("settings.safetyChecklist.moveDown")}
-                      className={buttonClass({ variant: "ghost", size: "icon-sm" })}
+                      className={buttonClass({
+                        variant: "ghost",
+                        size: "icon-sm",
+                        outdent: "block-end-phone",
+                      })}
                     >
                       <DiveDayIcon name="arrow-down" className="size-4" />
                     </button>
@@ -129,7 +139,11 @@ export default async function SafetyChecklistPage({
                         (ADR 20260820-every-delete-is-soft). */}
                     <button
                       type="submit"
-                      className={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                      className={buttonClass({
+                        variant: "danger-ghost",
+                        size: "sm",
+                        outdent: "block-end-phone",
+                      })}
                     >
                       {t("settings.safetyChecklist.delete")}
                     </button>

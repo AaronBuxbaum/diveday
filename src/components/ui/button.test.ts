@@ -192,6 +192,68 @@ describe("buttonClass", () => {
     });
   });
 
+  describe("outdent", () => {
+    // A quiet `sm` button is a 44px box around a 20px line: 12px of box under
+    // its word that nobody sees. Last in a padded card, that box adds to the
+    // padding: the team card measured 21px above the name and 33px under
+    // "Disable", the safety checklist at 390 16px against 28px (pixel probe,
+    // K-43). `outdent` sinks the unseen half into the padding and keeps the
+    // target whole.
+    const tokens = (classes: string) => classes.split(" ");
+
+    it("pulls the box's end up by the half of it nobody sees, at every width or below sm", () => {
+      const always = tokens(
+        buttonClass({ variant: "danger-ghost", size: "sm", outdent: "block-end" }),
+      );
+      expect(always).toContain("-mb-3");
+      // An inline-flex button's margin box sits on its line's baseline, and the
+      // line's own strut would keep a pixel of the height the margin gave
+      // back; aligned to the line's bottom, the line is exactly the margin box.
+      expect(always).toContain("align-bottom");
+      expect(always).toContain("min-h-11");
+
+      const phone = tokens(
+        buttonClass({ variant: "ghost", size: "icon-sm", outdent: "block-end-phone" }),
+      );
+      expect(phone).toContain("max-sm:-mb-3");
+      expect(phone).toContain("max-sm:align-bottom");
+      expect(phone).not.toContain("-mb-3");
+    });
+
+    it("measures the unseen half from the size: 12px on sm and md, 16px on the 56px dock target", () => {
+      for (const size of ["sm", "md", "icon", "icon-sm"] as const) {
+        expect(
+          tokens(buttonClass({ variant: "ghost", size, outdent: "block-end" })),
+          size,
+        ).toContain("-mb-3");
+      }
+      expect(
+        tokens(buttonClass({ variant: "ghost", size: "boat", outdent: "block-end" })),
+      ).toContain("-mb-4");
+    });
+
+    it("refuses outdent on a variant painted at rest, whose box is what the eye measures", () => {
+      // @ts-expect-error — a bordered box's end is its border, not its word.
+      buttonClass({ variant: "secondary", outdent: "block-end" });
+      const forced = "block-end" as unknown as undefined;
+      for (const variant of PAINTED_AT_REST) {
+        expect(buttonClass({ variant, size: "sm", outdent: forced }), variant).toBe(
+          buttonClass({ variant, size: "sm" }),
+        );
+      }
+      // A control that swaps between a box and a ghost (the team card's
+      // Enable / Disable) passes it always; only the ghost takes it.
+      const swap = (disabled: boolean) =>
+        buttonClass({
+          variant: disabled ? "secondary" : "danger-ghost",
+          size: "sm",
+          outdent: "block-end",
+        });
+      expect(tokens(swap(false))).toContain("-mb-3");
+      expect(tokens(swap(true))).not.toContain("-mb-3");
+    });
+  });
+
   describe("outline", () => {
     it("is secondary with the border that holds 3:1 against the ground, for the public pages", () => {
       // The public pages had each chosen `border-border-strong` by hand; the

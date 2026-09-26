@@ -398,10 +398,58 @@ function horizontalPadding(variant: ButtonVariant, x: string, flush: boolean) {
   return x;
 }
 
+/**
+ * **`outdent` is `flush`'s vertical twin, for a quiet button that ends a padded
+ * box.** A `ghost` `sm` is a 44px box around a 20px line, so 12px of box sits
+ * under its word that nobody sees; last in a card, that box adds to the card's
+ * padding, and the card reads bottom-heavy — the team card measured 21px above
+ * the name and 33px under "Disable", the safety checklist at 390 16px against
+ * 28px (pixel probe, 2026-09-25). `block-end` gives the unseen half back as a
+ * negative bottom margin, so the target stays whole while that half sits in
+ * the padding; `block-end-phone` does it below `sm` only, for a button that
+ * drops to a line of its own there (`ListItemActions`).
+ *
+ * `align-bottom` rides with it: a button in a `<form>` is an inline box on the
+ * form's line, and the line's strut would keep a pixel of the height the
+ * margin gave back. Aligned to the line's bottom, the line is the margin box.
+ *
+ * Only on a variant that paints nothing at rest — a bordered box's end is its
+ * border, not its word — and never where the button shares its line with a
+ * visible box: centred in a row, the pulled-up margin would lift it 6px.
+ */
+export type ButtonOutdent = "block-end" | "block-end-phone";
+
+/**
+ * The unseen half of each size's box, (height − line) / 2: 12px on the 44px
+ * and 48px sizes, 16px on the 56px ones. Spelled whole, for Tailwind to find.
+ */
+const OUTDENT_12 = {
+  "block-end": "-mb-3 align-bottom",
+  "block-end-phone": "max-sm:-mb-3 max-sm:align-bottom",
+} as const;
+const OUTDENT_16 = {
+  "block-end": "-mb-4 align-bottom",
+  "block-end-phone": "max-sm:-mb-4 max-sm:align-bottom",
+} as const;
+const OUTDENT: Record<ButtonSize, Record<ButtonOutdent, string>> = {
+  sm: OUTDENT_12,
+  md: OUTDENT_12,
+  icon: OUTDENT_12,
+  "icon-sm": OUTDENT_12,
+  boat: OUTDENT_16,
+  mark: OUTDENT_16,
+};
+
+function blockEndOutdent(variant: ButtonVariant, size: ButtonSize, outdent?: ButtonOutdent) {
+  if (!outdent || !(PAINTS_NOTHING.has(variant) || HOVER_FILL.has(variant))) return "";
+  return OUTDENT[size][outdent];
+}
+
 export function buttonClass<V extends ButtonVariant = "primary">({
   variant = "primary" as V,
   size = "md",
   flush = false,
+  outdent,
   busy = false,
   shape = "rounded",
   className = "",
@@ -418,6 +466,12 @@ export function buttonClass<V extends ButtonVariant = "primary">({
    */
   flush?: V extends PaintedAtRest ? false : boolean;
   /**
+   * Sink the unseen lower half of a quiet button's target into the padding of
+   * the box it ends, everywhere (`block-end`) or below `sm` (`block-end-phone`).
+   * Refused on a variant painted at rest. See `OUTDENT`.
+   */
+  outdent?: V extends PaintedAtRest ? undefined : ButtonOutdent;
+  /**
    * This control's disabled state means "in flight", not "unavailable" — every
    * `SubmitButton`, which disables itself for the duration of its own submit.
    * Renders a wait cursor instead of a not-allowed one. See `DISABLED`.
@@ -427,9 +481,10 @@ export function buttonClass<V extends ButtonVariant = "primary">({
 } = {}) {
   const { x, rest } = sizes[size];
   const corner = SHAPES[CIRCLES.has(size) ? "pill" : shape];
+  const end = blockEndOutdent(variant, size, outdent);
   return `${base} ${DISABLED[busy ? "busy" : "default"]} ${variants[variant]} ${rest} ${corner} ${horizontalPadding(
     variant,
     x,
     flush,
-  )} ${className}`.trim();
+  )}${end ? ` ${end}` : ""} ${className}`.trim();
 }

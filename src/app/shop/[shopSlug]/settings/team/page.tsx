@@ -463,8 +463,12 @@ function StaffRow({
                   variant: isDisabled ? "secondary" : "danger-ghost",
                   size: "sm",
                   // On `danger-ghost`, the word ends on the card's edge (the
-                  // rows' values above end there); a `secondary` box ignores it.
+                  // rows' values above end there), and the unseen half of its
+                  // target sinks into the card's padding, so the card has as
+                  // much room under "Disable" as over the name. A `secondary`
+                  // box ignores both.
                   flush: true,
+                  outdent: "block-end",
                 })}
               >
                 {isDisabled
