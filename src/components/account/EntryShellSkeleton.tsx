@@ -1,5 +1,5 @@
 import { entryMainClass, entryPanelClass } from "@/components/account/EntryShell";
-import { type SkeletonLines, SkeletonLineBars } from "@/components/ShopPageHeader";
+import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
 
 /**
  * Body-shaped skeleton matching `EntryShell` (design principle 1): centered
