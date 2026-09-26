@@ -126,24 +126,29 @@ export { ROLL_CALL_ROW_TONE };
  * two magic numbers would mean a future change to the panel's height silently
  * fixing one list and not the other.
  *
- * Two terms, and only one of them is a number. The panel pins at the chrome
- * bar's own height, so the margin has to clear the bar *and* the panel: the
- * bar's share is `var(--chrome-h)`, read from the same declaration the bar sets
- * its height from (ADR 20260827-clearwater-surface-language, decision 10), and
- * the rem is the panel's own height at its tallest for the checkpoint kind —
- * after a dive it can carry up to three pinned danger lines. Content-driven, so
- * it can only be allowed for; the chrome half no longer has to be.
+ * **The margin is the panel's measured height and a 1rem gap, and nothing for
+ * the bar.** A jump lands a row at the page's `scroll-padding-top` plus this
+ * margin, and that padding is already the chrome bar (`html` in globals.css,
+ * `var(--chrome-h)`, matched on the manifest at every width because the bar is
+ * in the DOM even where it is hidden). The panel pins at that same line,
+ * `top-(--chrome-h)`, so what is left to clear is the panel itself.
+ *
+ * The panel's height is content — after a dive it carries up to three pinned
+ * danger lines and the chips naming who is missing, and on a phone it stacks
+ * and wraps each of them — so it is measured, not written down: `PanelHeight`
+ * publishes it as `--roll-call-panel-h` on the column these rows share with
+ * it. The rems are only the fallback before that has run. Written down, with
+ * the bar counted twice, a jumped-to row landed at y 352 under a 426px card
+ * reaching to y 482 at 390 (pixel-craft class 9).
  *
  * A jump that buries the name under the panel is what invites a tap on the
  * *next* visible row's mark, for the wrong person (dive-domain review
  * 20260810) — which is why this is bounded by the panel rather than by taste.
- * It was `scroll-mt-64`/`scroll-mt-80`, both of which folded in 80px of a
- * 69px bar that no longer exists.
  */
 export function rollCallScrollMargin(isDeparture: boolean): string {
   return isDeparture
-    ? "scroll-mt-[calc(var(--chrome-h)+11rem)]"
-    : "scroll-mt-[calc(var(--chrome-h)+15rem)]";
+    ? "scroll-mt-[calc(var(--roll-call-panel-h,11rem)+1rem)]"
+    : "scroll-mt-[calc(var(--roll-call-panel-h,15rem)+1rem)]";
 }
 
 /**
