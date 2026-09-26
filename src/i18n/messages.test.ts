@@ -60,10 +60,11 @@ describe("a number and its unit", () => {
   it("are joined by a no-break space in every bundle, staff and diver alike", () => {
     // "Images and PDFs up to 5 MB." broke between "5" and "MB." on four
     // switching guides at 1280 (K-203). A plain space is a line break waiting
-    // for the right width; U+00A0 keeps the size one unit.
+    // for the right width; U+00A0 keeps the size one unit. The number may be a
+    // placeholder: "over {maxMb} MB" renders as the same breakable "5 MB".
     const split = bundleFiles(LOCALES).flatMap((file) =>
       Object.entries(flatten(JSON.parse(readFileSync(file, "utf8"))))
-        .filter(([, message]) => /\d (?:KB|MB|GB)\b/.test(message))
+        .filter(([, message]) => /(?:\d|\}) (?:KB|MB|GB)\b/.test(message))
         .map(([key]) => `${relative(LOCALES, file)}: ${key}`),
     );
     expect(split).toEqual([]);

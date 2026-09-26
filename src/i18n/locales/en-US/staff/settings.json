@@ -887,7 +887,7 @@
       "notOwnerOrManager": "Importing contacts is limited to the shop’s owner or manager.",
       "csvRequired": "Choose a CSV file to import.",
       "noImportableRows": "No rows could be imported. Every row was missing a name or duplicated.",
-      "fileTooLarge": "The file is too large. The limit is {limitMb} MB.",
+      "fileTooLarge": "The file is too large. The limit is {limitMb}\u00a0MB.",
       "fileEmpty": "The file is empty.",
       "tooManyColumns": "Too many columns ({count}). The limit is {limit}.",
       "tooManyRows": "Too many rows ({count}). The limit is {limit} per import, so split the file and import it in batches.",

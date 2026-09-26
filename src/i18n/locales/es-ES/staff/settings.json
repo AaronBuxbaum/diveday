@@ -887,7 +887,7 @@
       "notOwnerOrManager": "Importar contactos está limitado al propietario o gerente del centro.",
       "csvRequired": "Elige un archivo CSV para importar.",
       "noImportableRows": "No se pudo importar ninguna fila. A todas les faltaba un nombre o estaban duplicadas.",
-      "fileTooLarge": "El archivo es demasiado grande. El límite es {limitMb} MB.",
+      "fileTooLarge": "El archivo es demasiado grande. El límite es {limitMb}\u00a0MB.",
       "fileEmpty": "El archivo está vacío.",
       "tooManyColumns": "Demasiadas columnas ({count}). El límite es {limit}.",
       "tooManyRows": "Demasiadas filas ({count}). El límite es {limit} por importación, así que divide el archivo e impórtalo en lotes.",

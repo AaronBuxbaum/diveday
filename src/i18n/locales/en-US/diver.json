@@ -768,7 +768,7 @@
     "addAPhoto": "Add a photo",
     "addAnotherPhoto": "Add another photo",
     "photoWrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
-    "photoTooBigSuffix": ": that’s over {maxMb} MB. Try a smaller photo.",
+    "photoTooBigSuffix": ": that’s over {maxMb}\u00a0MB. Try a smaller photo.",
     "photoTooMany": "Pick up to {max, plural, one {# photo} other {# photos}} at a time.",
     "addingPhoto": "Adding…",
     "addToMyRecap": "Add to my recap",
