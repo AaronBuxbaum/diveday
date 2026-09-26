@@ -22,6 +22,7 @@ export type DiveDaySharedIconName =
   | "chevron-right"
   | "door-chevron"
   | "more"
+  | "close"
   | "warning"
   | "boat"
   | `waiver-action-${WaiverActionIconName}`
@@ -112,6 +113,14 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
       <circle cx="5" cy="12" r="2" fill="currentColor" stroke="none" />
       <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
       <circle cx="19" cy="12" r="2" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // A remove control's cross, in the family's weight: a typed "×" renders at
+  // the font's size, 8px of ink in a 48px icon button (pixel-craft K-545).
+  close: (
+    <>
+      <path d="M6 6l12 12" />
+      <path d="M18 6 6 18" />
     </>
   ),
   "waiver-action-email": (

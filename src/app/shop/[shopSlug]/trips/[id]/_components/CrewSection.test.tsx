@@ -478,6 +478,24 @@ describe("CrewSection standing crew clash", () => {
   });
 
   /**
+   * The unassign mark is drawn, from the app's own icon family, at the size
+   * of the words beside it. It was a typed "×": 8px of ink in the 48px box,
+   * smaller than the name and the job picker on its row (pixel-craft K-545).
+   * The accessible name stays the sentence, never the glyph.
+   */
+  it("draws its remove control as a mark, named by the sentence", () => {
+    render(
+      <CrewSection {...props} updateCrewAction={vi.fn(async () => ({ ok: true }))} copy={COPY} />,
+    );
+    const remove = screen.getByRole("button", { name: "Remove Marisol Vega from crew" });
+    const mark = remove.querySelector("svg");
+    expect(mark).not.toBeNull();
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+    expect(mark).toHaveClass("size-4");
+    expect(remove).not.toHaveTextContent("×");
+  });
+
+  /**
    * The silent case, which is every ordinary departure: a morning two-tank and
    * an afternoon single are how a divemaster works a Saturday, so a panel that
    * marked them would be the saturation failure #757 and #1203 paid for once.

@@ -473,7 +473,7 @@ export function CrewSection({
                       className={buttonClass({ variant: "danger-ghost", size: "icon" })}
                       aria-label={fill(copy.unassignAria, { name: entry.fullName })}
                     >
-                      ×
+                      <DiveDayIcon name="close" className="size-4" />
                     </button>
                   </span>
                 </li>

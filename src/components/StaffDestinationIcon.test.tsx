@@ -74,6 +74,20 @@ describe("a trimmed glyph", () => {
 });
 
 /**
+ * **A remove control draws its cross**, in the family's stroke, rather than
+ * typing a "×" that renders at the font's size and weight (pixel-craft K-545).
+ */
+describe("the close glyph", () => {
+  it("is two strokes corner to corner, in the shared weight", () => {
+    const { container } = render(<DiveDayIcon name="close" />);
+    const svg = container.querySelector("svg");
+    expect(svg?.querySelectorAll("path")).toHaveLength(2);
+    expect(svg).toHaveAttribute("stroke-width", "1.8");
+    expect(svg).toHaveAttribute("viewBox", "0 0 24 24");
+  });
+});
+
+/**
  * **The empty-state bubbles fill their box.** They reached only y 4.6–18.8 of
  * the 24-unit square, so `EmptyState` drew 7–8px of blank box above the ink
  * and its panel read bottom-heavy: 47px from the top border to the bubbles
