@@ -59,7 +59,8 @@ describe("the paper each call site keeps clear of its code", () => {
   };
 
   async function modules(value: string) {
-    const actual = await vi.importActual<typeof import("qrcode")>("qrcode");
+    // The encoder is CommonJS, read the way `SheetCode` reads it: its default.
+    const actual = await vi.importActual<{ default: typeof import("qrcode") }>("qrcode");
     return actual.default.create(value).modules.size;
   }
 
