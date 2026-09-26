@@ -87,6 +87,9 @@ export function UndoToast({
   }
 
   if (!visible) return null;
+  // `ps-4 pe-1`, not `px-4`: Undo's own `px-3` supplies the rest of the end
+  // inset, so the word ends 16px inside the toast as the message starts 16px
+  // inside it. Both sides at `px-4` put Undo 7px further in (pixel-craft K-102).
   return (
     <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 print:hidden">
       <div
@@ -95,7 +98,7 @@ export function UndoToast({
         onMouseLeave={resume}
         onFocusCapture={pause}
         onBlurCapture={resume}
-        className={`flex items-center gap-4 rounded-inset border border-border bg-surface px-4 py-3 shadow-2xl ${
+        className={`flex items-center gap-4 rounded-inset border border-border bg-surface py-3 ps-4 pe-1 shadow-2xl ${
           dismissing ? "toast-dismiss" : "rise-in"
         }`}
       >

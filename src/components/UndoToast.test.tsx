@@ -37,6 +37,27 @@ describe("the Undo button", () => {
     expect(undo).toHaveClass("min-h-11");
     expect(undo).not.toHaveClass("min-h-9");
   });
+
+  /**
+   * The toast's end padding and Undo's own padding add up to its start
+   * padding, so the word "Undo" ends as far from the toast's end as the
+   * message starts from its start. Both sides were `px-4` with the button's
+   * padding on top: 19px in at the start, 26px at the end (pixel-craft K-102).
+   */
+  it("ends as far inside the toast as the message starts", () => {
+    render(<UndoToast {...PROPS} />);
+    const toast = screen.getByRole("status");
+    const undo = screen.getByRole("button", { name: "Undo" });
+    const px = (element: HTMLElement, prefix: string) =>
+      Number(
+        [...element.classList]
+          .map((token) => token.match(new RegExp(`^${prefix}-(\\d+(?:\\.\\d+)?)$`)))
+          .find(Boolean)?.[1],
+      ) * 4;
+
+    expect(toast).not.toHaveClass("px-4");
+    expect(px(toast, "pe") + px(undo, "px")).toBe(px(toast, "ps"));
+  });
 });
 
 describe("UndoToast auto-dismiss", () => {
