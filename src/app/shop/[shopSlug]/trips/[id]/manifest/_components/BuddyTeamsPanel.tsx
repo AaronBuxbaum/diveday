@@ -3,7 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
-import { controlClass, Field, FormStatus } from "@/components/ui/form";
+import { controlClassFor, Field, FormStatus } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
@@ -324,7 +324,14 @@ export function BuddyTeamsPanel({
                           `<select>` keeps `required`; the server refusal it
                           pairs with is real. */}
                       <Field label={t("manifest.buddyAddMemberLabel")} markRequired={false}>
-                        <select name="member" required defaultValue="" className={controlClass}>
+                        {/* `md`, the height of the Add button this row
+                            bottom-aligns it with. */}
+                        <select
+                          name="member"
+                          required
+                          defaultValue=""
+                          className={controlClassFor("md")}
+                        >
                           <option value="" disabled>
                             {t("manifest.buddySelectPlaceholder")}
                           </option>

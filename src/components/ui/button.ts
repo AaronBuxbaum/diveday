@@ -284,9 +284,10 @@ const sizes = {
    * leading-none`. A wrapper gap is why a control drifts four ways, so the
    * gap is what gets closed.
    *
-   * The width is `w-11` against the base's `min-h-11` rather than `size-11`:
-   * a fixed height would clip a glyph whose line box is taller than 44px,
-   * where a floor grows with it.
+   * The width is `w-12` against `min-h-12` rather than `size-12`: a fixed
+   * height would clip a glyph whose line box is taller than 48px, where a
+   * floor grows with it. 48px, not the 44px floor, so the square stands level
+   * with `md` and with a `controlClassFor("md")` box on the same line.
    */
   icon: { x: "px-0", rest: "w-12 min-h-12 text-base" },
   /**
@@ -303,7 +304,7 @@ const sizes = {
    * no label at all, for the manifest's one-tap-per-person row (ADR
    * 20260827-the-departure-is-two-working-surfaces, decision 3).
    *
-   * Not `icon` and not `boat`, for a reason each. `icon` is the 44px desk
+   * Not `icon` and not `boat`, for a reason each. `icon` is the 48px desk
    * target, and this is worked one-handed on a wet deck where 56px is the
    * floor. `boat` is that 56px — but as a *minimum height* on a label-shaped
    * box, so a glyph-only button on it comes out 56 tall and about 60 wide, an

@@ -8,7 +8,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_BOX, INSET_NOTE_CLASS } from "@/components/ui/card";
-import { controlClass, FormStatus } from "@/components/ui/form";
+import { controlClass, controlClassFor, FormStatus } from "@/components/ui/form";
 import type { TripCrewChange } from "@/db/trips";
 import { fill } from "@/i18n/fill";
 import { TRIP_CREW_ROLES, type TripCrewRole } from "@/lib/crew-roles";
@@ -446,7 +446,9 @@ export function CrewSection({
                           const next = event.currentTarget.value;
                           void handleRole(entry.id, next === "" ? null : (next as TripCrewRole));
                         }}
-                        className={controlClass}
+                        // `md`, the height of the `icon` remove square beside
+                        // it: a row with a text control in it is an `md` row.
+                        className={controlClassFor("md")}
                       >
                         <option value="">{copy.roleUnspecified}</option>
                         {TRIP_CREW_ROLES.map((role) => (
@@ -456,7 +458,7 @@ export function CrewSection({
                         ))}
                       </select>
                     </span>
-                    {/* A square 44px target holding one glyph: 44px tall but
+                    {/* A square 48px target holding one glyph: 44px tall but
                         ~24px wide was a sliver of a target for a dockside tap
                         that drops a crew member (design/principles.md #2). The
                         box is `size: "icon"` rather than a hand-spelled

@@ -285,6 +285,44 @@ describe("CrewSection per-trip role picker", () => {
   });
 });
 
+/**
+ * **The role select stands level with the remove square beside it.** The
+ * select was the stacked field's 44px at 14px type beside an `icon` square's
+ * 48px (`trip-crew-clash`; K-10, K-45): a row with a text control in it is an
+ * `md` row, and a control's type is 16px at every size.
+ */
+describe("CrewSection control sizes", () => {
+  it("draws the role select at md beside its md remove square, and every select at 16px", () => {
+    const staff: StaffList = [
+      staffMember("staff-1", "Keiko Tanaka", ["divemaster"]),
+      staffMember("staff-2", "Ana Souza", ["captain"]),
+    ];
+    render(
+      <CrewSection
+        tripId="trip-a"
+        staff={staff}
+        crewRoles={{ "staff-1": null }}
+        crewIds={["staff-1"]}
+        onShiftIds={["staff-1", "staff-2"]}
+        crewGapCode="none"
+        shopSlug="blue-mantis"
+        updateCrewAction={vi.fn(async () => ({ ok: true }))}
+        copy={COPY}
+      />,
+    );
+
+    const role = screen.getByLabelText("Job Keiko Tanaka is doing on this trip");
+    const remove = role.closest("li")?.querySelector("button");
+    expect(role).toHaveClass("min-h-12");
+    expect(role).not.toHaveClass("min-h-11");
+    expect(remove).toHaveClass("min-h-12");
+    for (const select of screen.getAllByRole("combobox")) {
+      expect(select).toHaveClass("text-base");
+      expect(select).not.toHaveClass("text-sm");
+    }
+  });
+});
+
 describe("CrewSection shift coverage", () => {
   it("warns per uncovered crew member at a shop that schedules shifts", () => {
     render(

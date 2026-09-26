@@ -280,6 +280,21 @@ describe("LastMinuteDealSection recipient review", () => {
     expect(tones[0]).toContain("text-muted");
   });
 
+  /**
+   * **The discount box stands level with the send button beside it.** Both
+   * sit bottom-aligned in one row, and the box was the stacked field's 44px
+   * beside the button's `md` 48px, so their tops stood 4px apart
+   * (`trip-guests-deal-seeded`; K-10). A row with a text control in it is an
+   * `md` row.
+   */
+  it("draws the discount box at md, the height of the send button beside it", () => {
+    renderSection([recipient("Ravi Menon", "advanced_open_water")], null);
+    const discount = screen.getByLabelText("Discount percent");
+    expect(discount).toHaveClass("min-h-12");
+    expect(discount).not.toHaveClass("min-h-11");
+    expect(screen.getByRole("button", { name: /Send to/ })).toHaveClass("min-h-12");
+  });
+
   it("caps the drawn list, counts the rest, and never hides someone below the bar", () => {
     const many = [
       ...Array.from({ length: 11 }, (_, index) => recipient(`Instructor ${index}`, "instructor")),
