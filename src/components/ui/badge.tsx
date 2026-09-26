@@ -97,14 +97,23 @@ export function Badge({
   const mark = toneMark ? toneToMark(tone) : undefined;
   const markSize = size === "lg" ? "md" : "sm";
   return (
+    // `items-baseline`, with the mark `self-center`: the word sets the pill's
+    // baseline, never the mark. With no baseline-aligned item an inline-flex
+    // box takes its baseline from its first item, and an `<svg>`'s is its
+    // bottom edge, 22px down a 28px pill where the word's is 19; aligned on
+    // it, "Delivery proven" would sit 3px above the card title beside it
+    // (pixel-craft class 1, the FactSource chip's mechanism). Inside the pill
+    // nothing moves: the word's line still sets its height and the mark still
+    // centres on it. A drawn mark a caller passes in centres itself the same
+    // way (badge.test.tsx sweeps for one that does not).
     <span
-      className={`inline-flex items-center rounded-full font-medium ${
+      className={`inline-flex items-baseline rounded-full font-medium ${
         mark ? "gap-1" : ""
       } ${sizeClass[size]} ${toneClass[tone]}${tabularNums ? " tabular-nums" : ""}${
         className ? ` ${className}` : ""
       }`}
     >
-      {mark ? <StatusMark variant={mark} size={markSize} /> : null}
+      {mark ? <StatusMark variant={mark} size={markSize} className="self-center" /> : null}
       {children}
     </span>
   );

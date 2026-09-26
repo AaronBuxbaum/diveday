@@ -4,6 +4,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { Badge } from "./badge";
 import {
   cardSummaryClass,
   INSET_NOTE_BOX,
@@ -362,6 +363,34 @@ describe("SectionCard", () => {
       ?.parentElement;
     expect(header).toHaveClass("items-baseline");
     expect(header).not.toHaveClass("items-start");
+  });
+
+  /**
+   * A toned badge is the other action a header carries (the backup
+   * destination, each integration, the WhatsApp number), and its first item
+   * is a drawn mark whose baseline is its bottom edge. The header can only
+   * share a baseline the badge hands it from its word: aligned on the mark,
+   * "Delivery proven" would sit 3px above "Backups are set up"
+   * (settings-export at 1280). The badge owns that (badge.test.tsx); this
+   * pins the pairing.
+   */
+  it("sets the title on a toned badge's word, not on its mark", () => {
+    render(
+      <SectionCard
+        title="Backups are set up"
+        actions={<Badge tone="success">Delivery proven</Badge>}
+      >
+        body
+      </SectionCard>,
+    );
+    const header = screen.getByRole("heading", { name: "Backups are set up" }).parentElement
+      ?.parentElement;
+    expect(header).toHaveClass("items-baseline");
+    const badge = screen.getByText("Delivery proven");
+    expect(header).toContainElement(badge);
+    expect(badge).toHaveClass("inline-flex", "items-baseline");
+    expect(badge).not.toHaveClass("items-center");
+    expect(badge.querySelector("svg")).toHaveClass("self-center");
   });
 
   /**
