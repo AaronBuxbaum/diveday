@@ -100,3 +100,25 @@ describe("the trigger's caret", () => {
     expect(caret).toHaveClass("size-4");
   });
 });
+
+/**
+ * **The sheet's shell and header are the shared ones** (K-557, K-269): its top
+ * corners on the 20px panel rung, not an arbitrary 22px, and its pill, name
+ * and close centred on one row with the subtitle under all three.
+ */
+describe("the opened sheet's geometry", () => {
+  it("rounds on the panel rung and centres its header row", () => {
+    render(<PersonSheet {...props} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveClass("rounded-t-panel");
+    expect(dialog.className).not.toMatch(/rounded-t-\[/);
+
+    const header = screen.getByRole("heading", { name: "Meera Iyer" }).parentElement;
+    expect(header).toHaveClass("grid", "items-center");
+    const group = screen.getByText("Not back aboard").parentElement;
+    expect(group).toHaveClass("items-center");
+    expect(group).toContainElement(screen.getByRole("button", { name: "Close person details" }));
+    expect(screen.getByText("Diver · Own kit")).toHaveClass("col-span-2");
+  });
+});

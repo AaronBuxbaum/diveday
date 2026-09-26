@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
-import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { SHEET_PANEL_CLASS, SheetHeader } from "@/components/ui/sheet";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import { motionMs } from "@/lib/motion";
@@ -143,43 +143,41 @@ export function PersonSheet({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         tabIndex={-1}
-        className={`max-h-[min(90dvh,48rem)] w-full overflow-y-auto overscroll-contain rounded-t-[22px] border-t border-border bg-surface px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-2 shadow-2xl outline-none sm:mx-auto sm:max-w-2xl sm:px-7 ${closing ? "sheet-out" : "rise-in"}`}
+        className={`${SHEET_PANEL_CLASS} outline-none ${closing ? "sheet-out" : "rise-in"}`}
       >
         <div aria-hidden="true" className="mx-auto h-1 w-10 rounded-full bg-border-strong" />
-        <header className="mt-3 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 id={titleId} className={LEAD_TITLE_CLASS}>
-              {name}
-            </h2>
-            <p id={descriptionId} className="mt-1 text-sm text-muted">
-              {subtitle}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-start gap-2">
-            {status}
-            <button
-              type="button"
-              aria-label={closeLabel}
-              className="grid size-11 place-items-center rounded-full text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
-              onClick={close}
-            >
-              {/* `size-5`, as `DiverSheet` draws the same ×: with only a
-                  `viewBox` it stretched to its cell, 26px of ink beside the
-                  name. */}
-              <svg
-                aria-hidden="true"
-                className="size-5"
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
+        <SheetHeader
+          titleId={titleId}
+          descriptionId={descriptionId}
+          title={name}
+          subtitle={subtitle}
+          actions={
+            <>
+              {status}
+              <button
+                type="button"
+                aria-label={closeLabel}
+                className="grid size-11 place-items-center rounded-full text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
+                onClick={close}
               >
-                <path d="m5 5 10 10M15 5 5 15" />
-              </svg>
-            </button>
-          </div>
-        </header>
+                {/* `size-5`, as `DiverSheet` draws the same ×: with only a
+                    `viewBox` it stretched to its cell, 26px of ink beside the
+                    name. */}
+                <svg
+                  aria-hidden="true"
+                  className="size-5"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                >
+                  <path d="m5 5 10 10M15 5 5 15" />
+                </svg>
+              </button>
+            </>
+          }
+        />
 
         <section className="mt-5" aria-label={todayLabel}>
           <p className={groupLabelClass()}>{todayLabel}</p>
