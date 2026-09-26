@@ -519,3 +519,33 @@ describe("ShopNotice's mark", () => {
     expect(notice.firstElementChild).toHaveClass("min-w-0", "flex-1");
   });
 });
+
+/**
+ * **A header that leads with the shop's own words draws them first** (K-382).
+ * `ShopPageHeader`'s `brand` block — the tagline, 20px over the eyebrow — is
+ * how a framed trip page names its shop, because the frame has no chrome above
+ * it. A skeleton without it promised the eyebrow and the title a line or two
+ * higher than they land.
+ */
+describe("the skeleton's brand block", () => {
+  it("draws the tagline's lines above the eyebrow, 20px over it, as the header does", () => {
+    const { container } = render(
+      <ShopPageHeaderSkeleton description={false} brand={{ base: 2, sm: 1 }} />,
+    );
+    const block = container.firstElementChild?.firstElementChild;
+    expect(block).toHaveClass("mb-5");
+    const lines = Array.from(block?.children ?? []);
+    // A tagline is a `text-base` line: a 24px box each, the second one a
+    // phone's alone.
+    expect(lines).toHaveLength(2);
+    for (const line of lines) expect(line).toHaveClass("h-6");
+    expect(lines[1]).toHaveClass("sm:hidden");
+    // The eyebrow still follows it, where the header puts it.
+    expect(block?.nextElementSibling).toHaveClass("h-4");
+  });
+
+  it("is not drawn for a header without one", () => {
+    const { container } = render(<ShopPageHeaderSkeleton description={false} />);
+    expect(container.querySelector(".mb-5")).toBeNull();
+  });
+});

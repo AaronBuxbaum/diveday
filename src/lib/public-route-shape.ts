@@ -73,7 +73,7 @@
 
 import { isDemoStoryId } from "./demo-stories";
 import { parseDiveSiteSlug } from "./dive-site-slug";
-import { isEmbedWidget } from "./embed-routes";
+import { EMBEDDED_TRIP_SEGMENT, isEmbedWidget } from "./embed-routes";
 import { getMigrationGuide } from "./migration-guides";
 import { PUBLIC_SHOP_PREFIX } from "./public-routes";
 import { isRegionSlug, REGIONS_PATH } from "./region";
@@ -211,6 +211,13 @@ function shopNamespaceShape(segments: string[]): PublicRouteShape | null {
     // an ordering two files away.
     if (first === "embed") return isEmbedWidget(second) ? shop : { kind: "malformed", shopSlug };
     return null;
+  }
+  // The framed trip page's own segment, which the proxy only ever rewrites onto
+  // and refuses by name (`isInternalEmbedRoute`) before it asks for a shape.
+  // Said again here for the widget line's reason: it names nothing a request
+  // may ask for.
+  if (rest.length === 3 && first === "trips" && third === EMBEDDED_TRIP_SEGMENT) {
+    return { kind: "malformed", shopSlug };
   }
   if (rest.length === 3 && first === "trips" && second && third && TRIP_CHILDREN.has(third)) {
     return tripShape(shopSlug, second);

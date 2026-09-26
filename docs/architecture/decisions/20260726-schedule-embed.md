@@ -93,3 +93,28 @@ new option is a new attribute, never a renamed one. Two new runtime facts: `qrco
 dependencies to draw the QR code in the shop's browser from the same target URL (MIT; nothing is
 stored for it), and `requestLocale` now honours an embed's fixed language, forwarded by the proxy
 as a header, ahead of the visitor's cookie — the cookie cannot reach a third-party frame anyway.
+
+## Amendment, 2026-09-25 — each framed page renders from a segment of its own
+
+`?embed=1` is a query parameter, and a segment's `loading.tsx` cannot read one, so the framed
+schedule and trip page streamed into a shop's iframe under their full-page skeletons: the
+storefront's identity band in a `max-w-6xl` column, the trip page's centred 528px `max-w-xl` column,
+each then snapping to the frame's full-width `px-3 py-4` column when the body arrived (pixel-craft
+class 11; K-371, K-382). The proxy is the one layer that reads the query before the shell goes out,
+so `src/proxy.ts` now rewrites a genuine embed request (the same exactly-one-`?embed=1` test as
+before) onto an internal segment: `/s/<slug>` onto `/s/<slug>/embed/schedule`, a static segment the
+router prefers to `embed/[widget]`, and `/s/<slug>/trips/<id>` onto `/s/<slug>/trips/<id>/embed`
+(`embedRenderPath` in `src/lib/embed-routes.ts`). Each segment's page renders the very same page
+function with the mode set, and its `loading.tsx` is the frame's shape: the week ledger's rows, or
+the trip page's column at the frame's width.
+
+This is not the dedicated `/embed/*` tree this record rejected. There is still one page per surface
+and one copy of its booking and capacity logic; the segment is a rewrite target, not a surface. The
+browser's URL does not change, so the snippet, the canonical, every link inside the frame and the
+2026-08-03 redirects are untouched. What the framing policy decides is still decided by the request
+the host page made: the framing exception, the embed header and the request path header all read the
+public URL. Neither segment is a URL anyone may request: a direct request for either is a plain 404
+in the proxy (`isInternalEmbedRoute`), before any lookup, and `schedule` stays off the widget list
+so it can never be framable by path. The layout's chrome placeholder, a brief 56px bar inside the
+frame, remains the accepted cost it was: the layout sits above both segments and cannot see the
+query either.

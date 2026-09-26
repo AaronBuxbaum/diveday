@@ -233,6 +233,87 @@ describe("proxy embed handling", () => {
   });
 });
 
+/**
+ * **A framed page renders from a segment of its own** (K-371, K-382). A
+ * segment's `loading.tsx` cannot read `?embed=1`, so the framed schedule and
+ * trip page streamed in under their full-page skeletons and then snapped to the
+ * frame's column. The proxy is the one layer that reads the query before the
+ * shell goes out, so it routes an embed request onto an internal segment whose
+ * skeleton is the frame's — and refuses that segment to anybody who asks for
+ * it by name.
+ */
+describe("the framed pages' own segments", () => {
+  const TRIP_ID = "11111111-2222-4333-8444-555555555555";
+
+  beforeEach(() => {
+    existence.answer = true;
+    existence.throws = false;
+    existence.liveShops = null;
+  });
+
+  function rewriteTarget(res: Response): URL | null {
+    const value = res.headers.get("x-middleware-rewrite");
+    return value ? new URL(value) : null;
+  }
+
+  it("rewrites the framed schedule onto its own segment, keeping every query the page reads", async () => {
+    const res = await run(request("/s/blue-mantis?embed=1&month=2026-08&credit=host"));
+    const target = rewriteTarget(res);
+    expect(target?.pathname).toBe("/s/blue-mantis/embed/schedule");
+    expect(target?.searchParams.get("embed")).toBe("1");
+    expect(target?.searchParams.get("month")).toBe("2026-08");
+    expect(target?.searchParams.get("credit")).toBe("host");
+    // Everything else is decided by the request the host page made: it is an
+    // embed, it may be framed, and its path is the public one.
+    expect(res.headers.get(`x-middleware-request-${EMBED_REQUEST_HEADER}`)).toBe("1");
+    expect(res.headers.get(`x-middleware-request-${REQUEST_PATH_HEADER}`)).toBe("/s/blue-mantis");
+    expect(res.headers.get("X-Frame-Options")).toBeNull();
+  });
+
+  it("rewrites the framed trip page onto its own segment", async () => {
+    const res = await run(request(`/s/blue-mantis/trips/${TRIP_ID}?embed=1&booking=abc`));
+    const target = rewriteTarget(res);
+    expect(target?.pathname).toBe(`/s/blue-mantis/trips/${TRIP_ID}/embed`);
+    expect(target?.searchParams.get("booking")).toBe("abc");
+    expect(res.headers.get(`x-middleware-request-${REQUEST_PATH_HEADER}`)).toBe(
+      `/s/blue-mantis/trips/${TRIP_ID}`,
+    );
+    expect(res.headers.get("X-Frame-Options")).toBeNull();
+  });
+
+  it("leaves the unframed pages, a repeated embed parameter and a widget where they are", async () => {
+    for (const url of [
+      "/s/blue-mantis",
+      "/s/blue-mantis?embed=0",
+      "/s/blue-mantis?embed=1&embed=0",
+      `/s/blue-mantis/trips/${TRIP_ID}`,
+      "/s/blue-mantis/embed/grid",
+    ]) {
+      const res = await run(request(url));
+      expect(rewriteTarget(res), url).toBeNull();
+    }
+  });
+
+  it("refuses either segment requested by name, with or without ?embed=1", async () => {
+    for (const url of [
+      "/s/blue-mantis/embed/schedule",
+      "/s/blue-mantis/embed/schedule?embed=1",
+      `/s/blue-mantis/trips/${TRIP_ID}/embed`,
+      `/s/blue-mantis/trips/${TRIP_ID}/embed?embed=1`,
+    ]) {
+      const res = await run(request(url));
+      expect(res.status, url).toBe(404);
+      expect(rewriteTarget(res), url).toBeNull();
+    }
+  });
+
+  it("lets the edge refusal win over the embed rewrite", async () => {
+    existence.answer = false;
+    const res = await run(request(`/s/blue-mantis/trips/${TRIP_ID}?embed=1`));
+    expect(rewriteTarget(res)?.pathname).toBe("/_not-found");
+  });
+});
+
 describe("the public namespace's edge refusal", () => {
   const TRIP_ID = "11111111-2222-4333-8444-555555555555";
 

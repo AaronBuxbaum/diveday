@@ -26,8 +26,10 @@ import {
   EMBED_FONT_HEADER,
   EMBED_LOCALE_HEADER,
   EMBED_REQUEST_HEADER,
+  embedRenderPath,
   isEmbeddableShopRoute,
   isEmbedWidgetRoute,
+  isInternalEmbedRoute,
   isUnknownEmbedWidgetRoute,
   parseEmbedBrandParam,
   parseEmbedFontParam,
@@ -596,6 +598,16 @@ function databaseUnavailable(error: unknown, shape: PublicRouteQuery): null {
   return null;
 }
 
+/**
+ * The internal segment a framed page renders from, carrying the request's own
+ * query: the page reads `?month=`, `?booking=`, `?credit=` and the rest off it
+ * exactly as it would have at the public path, and `?embed=1` still says what
+ * the render is.
+ */
+function embedRenderUrl(req: NextRequest, pathname: string): URL {
+  return new URL(`${pathname}${req.nextUrl.search}`, req.nextUrl);
+}
+
 export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response | undefined> {
   // The route pattern alone (isEmbeddableShopRoute) isn't a request — a plain
   // visit to /s/x with no ?embed=1 must stay denied. Only an
@@ -608,9 +620,15 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // exactly one value keeps this in lockstep with how the page reads it.
   // An embed path naming no widget is a 404 here, not in the page: the
   // static shell would already have answered 200 (see isUnknownEmbedWidgetRoute).
+  // So is either segment a framed page renders from, asked for by name: they
+  // exist to be rewritten onto (below), never to be requested
+  // (isInternalEmbedRoute).
   // With a body: Chromium treats a bodiless error status as a failed
   // navigation (ERR_HTTP_RESPONSE_CODE_FAILURE) rather than a 404 page.
-  if (isUnknownEmbedWidgetRoute(req.nextUrl.pathname)) {
+  if (
+    isUnknownEmbedWidgetRoute(req.nextUrl.pathname) ||
+    isInternalEmbedRoute(req.nextUrl.pathname)
+  ) {
     return new NextResponse("Not found", {
       status: 404,
       headers: { "content-type": "text/plain; charset=utf-8" },
@@ -688,9 +706,22 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // used to guard against no longer exists at this layer. The one Set-Cookie
   // this function issues is the partner referral below, which is not a
   // credential and carries nothing about who the reader is.
+  //
+  // **A framed schedule or trip page renders from a segment of its own**
+  // (K-371, K-382; ADR 20260726-schedule-embed, amendment 2026-09-25). A
+  // segment's `loading.tsx` cannot read `?embed=1`, so both streamed into a
+  // shop's iframe under their full-page skeletons and then snapped to the
+  // frame's column. This is the one layer that reads the query before the
+  // shell goes out, so an embed request is rewritten onto the internal segment
+  // `embedRenderPath` names, query and all, whose skeleton is the frame's own.
+  // Everything else above and below is decided by the request the host page
+  // made: the framing exception, the embed header, and the original pathname.
+  // A refusal and the auth gate both outrank it.
+  const embedRender = isEmbedRequest ? embedRenderPath(req.nextUrl.pathname) : null;
   const res = refused
     ? NextResponse.rewrite(new URL(NOT_FOUND_ROUTE, req.nextUrl))
-    : ((await authGateResponse(req)) ?? NextResponse.next());
+    : ((await authGateResponse(req)) ??
+      (embedRender ? NextResponse.rewrite(embedRenderUrl(req, embedRender)) : NextResponse.next()));
   // **A refusal says for itself that it is not cacheable.** The rewrite keeps
   // the original URL, so whatever the `/_not-found` render emits is what
   // attaches to the refused path — and a negative answer pinned at a shared

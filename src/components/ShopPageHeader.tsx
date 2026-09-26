@@ -313,6 +313,8 @@ export function ShopPageHeader({
  *   - `h-6`  — the description `<p>`'s unsized line box (1rem × 1.5)
  *   - `mt-2` after the eyebrow and before the description, `mt-3` before meta,
  *     and `mb-8` on the wrapper — all straight off `<header className="mb-8">`.
+ *   - `mb-5` under the `brand` block, whose tagline is an `h-6` `text-base`
+ *     line — the header's own block, where a framed page names its shop.
  *
  * Widths stay per-caller: a bar should be about as wide as the words it stands
  * in for, and that is the page's business, not this component's. So do line
@@ -320,6 +322,7 @@ export function ShopPageHeader({
  * that wraps, and how far a page's words wrap at 390px is the page's too.
  */
 export function ShopPageHeaderSkeleton({
+  brand,
   eyebrow = true,
   titleWidth = "w-64",
   titleLines = 1,
@@ -329,6 +332,13 @@ export function ShopPageHeaderSkeleton({
   meta,
   actions = false,
 }: {
+  /**
+   * The header carries `brand`: how many lines its tagline wraps to, drawn
+   * above the eyebrow as the header draws the block (K-382: the framed trip
+   * page, which names its shop there because the frame has no chrome). Left
+   * out for a header without one.
+   */
+  brand?: SkeletonLines;
   /** Pass `false` for a header with no eyebrow — the `<h1>` then loses its `mt-2`, same as the real one. */
   eyebrow?: boolean;
   /** Tailwind width classes for the title bar (e.g. `"w-72 max-w-full"`). */
@@ -361,6 +371,11 @@ export function ShopPageHeaderSkeleton({
   const actionRows = actions === true ? 1 : actions === false ? 0 : actions;
   return (
     <div className="mb-8">
+      {brand ? (
+        <div className="mb-5">
+          <SkeletonLineBars lines={brand} height="h-6" width="w-80 max-w-full" />
+        </div>
+      ) : null}
       {eyebrow ? <div className="h-4 w-24 rounded bg-surface-sunken" /> : null}
       <div className={eyebrow ? "mt-2" : undefined}>
         <SkeletonLineBars lines={titleLines} height="h-11" width={titleWidth} />
