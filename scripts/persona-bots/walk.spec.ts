@@ -366,11 +366,18 @@ async function openPage(
       extraHTTPHeaders: { "accept-language": locale },
     });
     await context.addCookies([{ name: "diveday_locale", value: locale, url: PERSONA_BASE_URL }]);
-    // The same three the e2e fleet blocks (`e2e/fixtures.ts`), for the same
-    // reasons: an aborted map frame is what stops `load` from ever firing on a
-    // runner with no route to Google, and a font that arrives after paint
-    // changes what `color-contrast` measures.
-    await context.route("https://maps.google.com/**", (route) => route.abort());
+    // The same three the e2e fleet answers (`e2e/fixtures.ts`), for the same
+    // reasons: an answered map frame is what lets `load` fire on a runner with
+    // no route to Google, and a font that arrives after paint changes what
+    // `color-contrast` measures. The map gets an empty page, not an abort,
+    // whose error frame would draw Chrome's broken-frame glyph under a route.
+    await context.route("https://maps.google.com/**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: "<!doctype html><title></title>",
+      }),
+    );
     await context.route("https://fonts.googleapis.com/**", (route) =>
       route.fulfill({ status: 200, contentType: "text/css", body: "" }),
     );

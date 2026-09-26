@@ -115,8 +115,9 @@ async function expectNoA11yViolations(page: Page) {
   // aborted map frame is the page's only one. It does not wedge on macOS
   // (measured at 523ms against a warm e2e server), so the Linux-runner half of
   // that is unproven; the useful half is that the culprit is a third-party
-  // iframe this harness deliberately kills, not anything a diver's phone does.
-  // Which is the whole argument for waiting on content instead.
+  // iframe this harness deliberately killed (it answers it with an empty page
+  // now, pixel-craft K-511), not anything a diver's phone does. Which is the
+  // whole argument for waiting on content instead.
   //
   // **Order still matters.** The title assertion is last, immediately before
   // `analyze()`, so the document axe reads is the one this checked. Asserting it
