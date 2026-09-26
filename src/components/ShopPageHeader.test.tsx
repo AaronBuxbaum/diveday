@@ -158,6 +158,33 @@ describe("the eyebrow's line box", () => {
  * with the mark centred in it — and that line's baseline is the one the row
  * lines up with the words' first line, wherever that line is.
  */
+/**
+ * **Below `sm` the header's doors share the band; what is not a door keeps
+ * its own width.** Two buttons stretched to equal halves read as one tidy
+ * row. But the rule grew *every* child, and the offline manifest passes two
+ * status pills as its actions: at 390px each became a half-width bar with its
+ * words hugging the left and 91px of empty fill on the right (K-65).
+ */
+describe("the header's actions below sm", () => {
+  it("grow only the links, buttons and forms, never a status pill", () => {
+    render(
+      <ShopPageHeader
+        title="Roll call"
+        actions={
+          <>
+            <a href="/shop/blue-mantis/orders/new">New order</a>
+            <span>Offline</span>
+          </>
+        }
+      />,
+    );
+    const band = screen.getByRole("link", { name: "New order" }).parentElement;
+    const classes = band?.className.split(/\s+/) ?? [];
+    expect(classes).toContain("max-sm:[&>:is(a,button,form)]:grow");
+    expect(classes).not.toContain("max-sm:[&>*]:grow");
+  });
+});
+
 describe("ShopNotice's mark", () => {
   it("sits beside the first line of the words rather than on a line above them", () => {
     render(

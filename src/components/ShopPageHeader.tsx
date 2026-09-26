@@ -239,9 +239,15 @@ export function ShopPageHeader({
         </div>
         {/* Below `sm` the header stacks and its actions share the row, each
             growing to an equal share, so two doors read as one tidy band
-            rather than two buttons of different widths hugging the left. */}
+            rather than two buttons of different widths hugging the left.
+            Doors only — a link, a button, a form holding one. The offline
+            manifest's actions are two status pills, and growing every child
+            stretched each into a half-width bar with its words hugging the
+            left and 91px of empty fill beside them (K-65). */}
         {actions ? (
-          <div className="flex shrink-0 flex-wrap gap-2 max-sm:[&>*]:grow">{actions}</div>
+          <div className="flex shrink-0 flex-wrap gap-2 max-sm:[&>:is(a,button,form)]:grow">
+            {actions}
+          </div>
         ) : null}
       </div>
     </header>
