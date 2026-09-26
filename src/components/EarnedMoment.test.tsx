@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { EARNED_MOMENT_SURFACE, EarnedMoment, EarnedMomentLine } from "./EarnedMoment";
+import { sectionCardClass } from "./ui/card";
 
 afterEach(cleanup);
 
@@ -60,6 +61,17 @@ describe("EarnedMoment", () => {
     render(<EarnedMoment title="You're booked" />);
     const heading = screen.getByRole("heading", { name: "You're booked" });
     expect(heading.className).not.toMatch(/(^|\s)mt-/);
+  });
+
+  it("pads its content on SectionCard's lg rung, so its text starts where the cards beside it start", () => {
+    // `p-6 sm:p-7` put the recap's welcome text 4px right of every card under
+    // it: x 405 against 401 at 1280, 45 against 41 at 390. The rung is read from
+    // `sectionCardClass`, so the two cannot drift apart again.
+    const padding = (classes: string) =>
+      classes.split(/\s+/).filter((token) => /^(?:sm:)?p-/.test(token));
+    const { container } = render(<EarnedMoment title="Welcome back" />);
+    const section = container.querySelector("section");
+    expect(padding(section?.className ?? "")).toEqual(padding(sectionCardClass({ padding: "lg" })));
   });
 
   it("keeps the 4px between an eyebrow and the heading on the eyebrow", () => {

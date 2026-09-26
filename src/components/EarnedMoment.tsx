@@ -105,8 +105,11 @@ export function EarnedMoment({
   as?: "h1" | "h2";
 }) {
   return (
+    // `p-5 sm:p-6` is SectionCard's `lg` rung (`sectionCardClass`), so the
+    // moment's text starts on the same x as the cards stacked under it; the
+    // test reads the rung from card.tsx, so the two cannot drift.
     <section
-      className={`relative overflow-hidden rise-in rounded-panel border border-accent/40 bg-accent/10 p-6 sm:p-7 ${className}`.trim()}
+      className={`relative overflow-hidden rise-in rounded-panel border border-accent/40 bg-accent/10 p-5 sm:p-6 ${className}`.trim()}
     >
       {/* The 4px between eyebrow and heading belongs to the eyebrow: on the
           heading it pushed a lone title 2px below the panel's centre. */}
