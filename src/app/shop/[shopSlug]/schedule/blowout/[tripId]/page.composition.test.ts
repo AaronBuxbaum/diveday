@@ -27,6 +27,13 @@ function tableBody(): string {
  * 17–37px target on all nine rows at 390. `RowLink` is the table's own door —
  * a 44px floor and an overlay across the cell — and its overlay positions
  * against `Tr`'s `relative`, so a row that holds one is a `Tr`.
+ *
+ * That overlay covers the cell it sits in, and the "Call {phone}" line for a
+ * diver with no email sits in the same cell. Under it, every tap on the number
+ * opened the record and the number could not be selected or tapped to call, on
+ * the one page whose job is reaching the divers the cascade could not email.
+ * So the line is lifted over the overlay, as `LedgerRow` lifts its trailing
+ * slot.
  */
 describe("the diver cell", () => {
   it("opens the diver through the table's RowLink", () => {
@@ -39,6 +46,12 @@ describe("the diver cell", () => {
   it("sets each diver in the table's Tr, which the link's overlay positions against", () => {
     expect(tableBody()).toMatch(/<Tr key=\{diver\.id\}>/);
     expect(tableBody()).not.toMatch(/<tr\b/);
+  });
+
+  it("lifts the call line above the name's overlay, so the number stays reachable", () => {
+    expect(tableBody()).toMatch(
+      /<div className="relative z-10 text-xs text-muted">\s*\{t\("blowout\.record\.callThem"/,
+    );
   });
 });
 

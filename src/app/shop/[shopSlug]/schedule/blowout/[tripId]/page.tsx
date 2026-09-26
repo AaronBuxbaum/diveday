@@ -262,8 +262,13 @@ export default async function BlowoutPage({
                     >
                       {diver.fullName}
                     </RowLink>
+                    {/* Over the name's overlay (`relative z-10`, as
+                        `LedgerRow` lifts its trailing slot): under it, a tap on
+                        the number opened the record, and the number could be
+                        neither selected nor tapped to call — on the page for
+                        reaching the divers the cascade could not email. */}
                     {diver.messageStatus === "no_email" && diver.phone ? (
-                      <div className="text-xs text-muted">
+                      <div className="relative z-10 text-xs text-muted">
                         {t("blowout.record.callThem", {
                           phone: displayStoredPhone(diver.phone),
                         })}
