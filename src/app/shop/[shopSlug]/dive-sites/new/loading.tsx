@@ -22,7 +22,11 @@ export default function NewDiveSiteLoading() {
         {/* The back link above the header. */}
         <div className="h-5 w-36 rounded bg-surface-sunken" />
         <div className="mt-4">
-          <ShopPageHeaderSkeleton titleWidth="w-56" descriptionWidth="w-80 max-w-full" />
+          <ShopPageHeaderSkeleton
+            titleWidth="w-56"
+            description
+            descriptionWidth="w-80 max-w-full"
+          />
         </div>
 
         <div className="mt-8 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">

@@ -17,6 +17,7 @@ export default function RegionLoading() {
         <div className="animate-pulse">
           <ShopPageHeaderSkeleton
             titleWidth="w-72 max-w-full"
+            description
             descriptionWidth="w-full max-w-2xl"
           />
         </div>

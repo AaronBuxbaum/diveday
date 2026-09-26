@@ -304,7 +304,7 @@ export function ShopPageHeader({
 export function ShopPageHeaderSkeleton({
   eyebrow = true,
   titleWidth = "w-64",
-  description = true,
+  description,
   descriptionWidth = "w-80",
   meta,
 }: {
@@ -312,7 +312,13 @@ export function ShopPageHeaderSkeleton({
   eyebrow?: boolean;
   /** Tailwind width classes for the title bar (e.g. `"w-72 max-w-full"`). */
   titleWidth?: string;
-  description?: boolean;
+  /**
+   * Whether the page's header has a description line. **Required** (K-28):
+   * it used to default to `true`, and most loading files took the default,
+   * including pages whose header has none — a 32px bar-and-gap the page never
+   * had, and a drop of everything below it when the page landed.
+   */
+  description: boolean;
   /** Tailwind width classes for the description bar. */
   descriptionWidth?: string;
   /** Bars for a header that carries `meta` — the trip tabs' seat badge and date line. */

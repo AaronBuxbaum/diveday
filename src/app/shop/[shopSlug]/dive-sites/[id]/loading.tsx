@@ -20,7 +20,11 @@ export default function DiveSiteLoading() {
         {/* The back link above the header. */}
         <div className="h-5 w-36 rounded bg-surface-sunken" />
         <div className="mt-4">
-          <ShopPageHeaderSkeleton titleWidth="w-72 max-w-full" descriptionWidth="w-full max-w-xl" />
+          <ShopPageHeaderSkeleton
+            titleWidth="w-72 max-w-full"
+            description
+            descriptionWidth="w-full max-w-xl"
+          />
         </div>
 
         <div className="mt-8 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">

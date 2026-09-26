@@ -6,7 +6,7 @@ export default function Loading() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-64" descriptionWidth="w-full max-w-md" />
+        <ShopPageHeaderSkeleton titleWidth="w-64" description descriptionWidth="w-full max-w-md" />
         <div className={sectionCardClass({ padding: "lg", className: "h-80" })} />
       </div>
     </main>

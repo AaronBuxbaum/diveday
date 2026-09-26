@@ -16,7 +16,7 @@ export default function NewBookingLoading() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-56" descriptionWidth="w-full max-w-lg" />
+        <ShopPageHeaderSkeleton titleWidth="w-56" description={false} />
         <div className="mt-8 h-3 w-36 rounded bg-surface-sunken" />
         <div className="mt-4 space-y-6">
           {[0, 1].map((day) => (

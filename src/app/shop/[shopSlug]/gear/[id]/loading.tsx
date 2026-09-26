@@ -7,7 +7,7 @@ export default function GearUnitLoading() {
       <div className="animate-pulse">
         <div className="h-4 w-28 rounded bg-surface-sunken" />
         <div className="mt-4">
-          <ShopPageHeaderSkeleton descriptionWidth="w-64 max-w-full" />
+          <ShopPageHeaderSkeleton description descriptionWidth="w-64 max-w-full" />
         </div>
         <div className="mt-8 flex flex-col gap-10">
           {[0, 1, 2].map((i) => (

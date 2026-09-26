@@ -22,6 +22,7 @@ export default function RegionsLoading() {
           <ShopPageHeaderSkeleton
             eyebrow={false}
             titleWidth="w-64"
+            description
             descriptionWidth="w-full max-w-2xl"
           />
         </div>

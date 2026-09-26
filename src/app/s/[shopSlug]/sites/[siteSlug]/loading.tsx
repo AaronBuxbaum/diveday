@@ -18,6 +18,7 @@ export default function DiveSitePageLoading() {
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton
           titleWidth="w-72 max-w-full"
+          description
           descriptionWidth="w-96 max-w-full"
           meta={<div className="h-5 w-56 max-w-full rounded bg-surface-sunken" />}
         />

@@ -15,7 +15,7 @@ export default function StaffCoursesLoading() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-48" descriptionWidth="w-full max-w-xl" />
+        <ShopPageHeaderSkeleton titleWidth="w-48" description={false} />
         <div className="mt-8 space-y-8">
           {[0, 1].map((group) => (
             <div key={group}>

@@ -16,7 +16,7 @@ export default function OrdersIndexLoading() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton descriptionWidth="w-80 max-w-full" />
+        <ShopPageHeaderSkeleton description={false} />
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <div className="h-11 w-full rounded-lg bg-surface-sunken sm:w-80" />

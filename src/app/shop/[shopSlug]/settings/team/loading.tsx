@@ -9,7 +9,7 @@ export default function TeamSettingsLoading() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-40" descriptionWidth="w-full max-w-xl" />
+        <ShopPageHeaderSkeleton titleWidth="w-40" description={false} />
         {/* The invite card, then the roster of person-cards — the order the
             page renders them in, at the page's own `space-y-10`. */}
         <div className="space-y-10">

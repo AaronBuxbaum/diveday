@@ -16,7 +16,7 @@ export default function Loading() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-56" descriptionWidth="w-full max-w-xl" />
+        <ShopPageHeaderSkeleton titleWidth="w-56" description descriptionWidth="w-full max-w-xl" />
         {/* Shell and rhythm from the same places the page takes them — the
             page's two halves at `space-y-10`, the backups cards at the tighter
             within-a-section gap. */}
