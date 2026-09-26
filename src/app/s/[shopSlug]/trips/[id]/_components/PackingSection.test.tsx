@@ -124,6 +124,25 @@ describe("PackingSection — the dock-day rhythm's meeting point", () => {
     expect(screen.getByText("North Jetty Marina")).toBeInTheDocument();
   });
 
+  it("centres each step's circle on its time's line", () => {
+    // The 24px circle sat `top-0.5` beside a 20px `text-sm` line, so its
+    // centre fell 14px down the row against the time's 10: the circles hung
+    // 3–4px below their times on every row (K-160). One 24px line box for the
+    // time and its label, and the circle at the row's top, share a centre at
+    // 12 — with no nudge left to compensate for.
+    const { container } = renderRhythm({ meetingPointLabel: null, meetingPointAddress: null });
+    const rows = container.querySelectorAll("ol > li");
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      const circle = row.querySelector(".rounded-full");
+      expect(circle).toHaveClass("size-6", "top-0");
+      expect(circle).not.toHaveClass("top-0.5");
+      const [time, label] = row.querySelectorAll(":scope > div:not(.absolute) > span");
+      expect(time).toHaveClass("leading-6");
+      expect(label).toHaveClass("leading-6");
+    }
+  });
+
   it("says nothing extra when the departure has no meeting point of its own", () => {
     renderRhythm({ meetingPointLabel: null, meetingPointAddress: null });
     expect(screen.queryByText(/North Jetty/)).not.toBeInTheDocument();
