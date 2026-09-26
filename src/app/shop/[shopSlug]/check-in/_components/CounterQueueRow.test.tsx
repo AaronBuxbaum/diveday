@@ -2,6 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { buttonClass } from "@/components/ui/button";
 import type { CheckInQueueRow } from "@/db/check-in";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { NoShowClaim } from "@/lib/no-show";
@@ -606,6 +607,19 @@ describe("the row's box", () => {
     expect(form?.className).not.toMatch(/(?:^|\s)-m[xe]-/);
     expect(undo).toHaveClass("w-full", "ps-2");
     expect(undo.className).not.toMatch(/(?:^|\s)p[xe]-/);
+  });
+
+  /**
+   * **The pass's words end on the column** (pixel-craft class 3, K-320). A
+   * `link` paints nothing around its words, and `sm`'s `px-3` put "Print a
+   * pass" 12px inside the edge every badge and "All boarded" end on (1051
+   * against 1063 at 1280). `flush` drops the padding and keeps the 44px floor;
+   * the row's `gap-3` is still the room between the undo and the pass.
+   */
+  it("ends the settled row's pass on the column's edge", () => {
+    renderRow({ bookingStatus: "checked_in" });
+    const pass = screen.getByRole("button", { name: "Print a pass" });
+    expect(pass.className).toBe(buttonClass({ variant: "link", size: "sm", flush: true }));
   });
 });
 

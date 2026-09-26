@@ -695,11 +695,14 @@ function PassDoor({ shopSlug, row, t }: { shopSlug: string; row: QueueRow; t: St
       {/* `link` weight, not `ghost`: it is the settled row's one remaining act
           and the row beside it is a receipt. A filled-looking control repeated
           down five finished rows is the loudest thing in a group whose whole
-          point is that there is nothing left to do in it. */}
+          point is that there is nothing left to do in it. `flush`, because a
+          link paints nothing around its words: `sm`'s `px-3` ended them 12px
+          inside the column every badge and "All boarded" end on (K-320). The
+          row's `gap-3` is still the room between the undo and the pass. */}
       <SubmitButton
         pendingLabel={t("print.counter.passDoor")}
         ariaLabel={t("print.counter.passDoor")}
-        className={buttonClass({ variant: "link", size: "sm" })}
+        className={buttonClass({ variant: "link", size: "sm", flush: true })}
       >
         {t("print.counter.passDoor")}
       </SubmitButton>
