@@ -133,6 +133,7 @@ export default defineConfig({
       MEDIA_BUCKET_NAME: "diveday-media",
       MEDIA_AWS_REGION: "us-east-1",
       DIVEDAY_CLOCK: TEST_FROZEN_CLOCK,
+      TZ: "UTC",
     },
   },
   resolve: {

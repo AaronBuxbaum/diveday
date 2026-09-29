@@ -14,6 +14,9 @@ if (typeof window !== "undefined") {
   }
 }
 
+// Pin TZ=UTC so PGlite and date operations resolve consistently regardless of host machine timezone.
+process.env.TZ = "UTC";
+
 // A db-backed file gets a ceiling sized for a PGlite hydration rather than
 // for pure logic; the reasoning is in `./db-timeout.ts`. This file runs once
 // per test file, which is what makes a per-file answer possible at all.

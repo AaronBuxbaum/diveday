@@ -70,10 +70,15 @@ describe("every loading.tsx this repo ships", () => {
         if (entry.isDirectory()) walk(full);
         else if (entry.name === "loading.tsx") {
           const source = readFileSync(full, "utf8");
+          // Skeletons that put animate-pulse directly on `<main>`, whether inlined
+          // or rendered via shared skeleton helpers (LegalDocumentSkeleton, GuideBodySkeleton).
+          const delegatesToMainSkeleton =
+            source.includes("LegalDocumentSkeleton") || source.includes("GuideBodySkeleton");
           found.push({
             file: path.relative(REPO, full),
-            onMain: /<main[^>]*className="[^"]*animate-pulse/.test(source),
-            anywhere: source.includes("animate-pulse"),
+            onMain:
+              /<main[^>]*className="[^"]*animate-pulse/.test(source) || delegatesToMainSkeleton,
+            anywhere: source.includes("animate-pulse") || delegatesToMainSkeleton,
           });
         }
       }

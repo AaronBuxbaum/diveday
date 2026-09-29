@@ -15,5 +15,6 @@ export default async function globalSetup(): Promise<void> {
   process.env.DATABASE_URL = "";
   process.env.DATABASE_URL_UNPOOLED = "";
   process.env.DIVEDAY_CLOCK = TEST_FROZEN_CLOCK;
+  process.env.TZ = "UTC";
   await ensureTestDbTemplate();
 }
