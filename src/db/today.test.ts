@@ -521,7 +521,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     // The packing list reads on the departure now (ADR 20260919-one-idea,
     // slice 23c), so the day's row lands on its section rather than on a
     // route no staffer navigates to.
-    expect(prepAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}#packing-list`);
+    expect(prepAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}/prep#packing-list`);
 
     const rents = {
       rentsBcd: true,
