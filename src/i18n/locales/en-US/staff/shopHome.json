@@ -40,7 +40,7 @@
       "owner": {
         "title": "You’re steering the whole shop",
         "desc": "Today is your work queue: bookings, blockers, and today’s departures in one place.",
-        "tryThis": "Open Board to see this week’s departures."
+        "tryThis": "Open Schedule to see this week’s departures."
       },
       "manager": {
         "title": "Keeping the shop running day to day",

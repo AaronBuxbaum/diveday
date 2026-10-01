@@ -223,16 +223,21 @@ async function expectNoA11yViolations(page: Page) {
   // **Scan the settled page, not a frame of an entrance.** A `rise-in` banner
   // is mid-fade for its first 200ms, and axe measures the blended ink: the
   // cert-gate refusal read #bc4249 on #fae8e9 (4.43:1) on its way to the
-  // token's own pair. Every finite animation is waited out; a looping one
-  // (a pulse) never finishes and is left alone.
-  await page.evaluate(() =>
-    Promise.all(
-      document
-        .getAnimations()
-        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
-        .map((animation) => animation.finished.catch(() => undefined)),
-    ),
-  );
+  // token's own pair. Every finite animation is jumped to its end state
+  // rather than awaited: awaiting `finished` hung on pages whose animations
+  // never settle (a paused one, one on a node a stream replaced), and
+  // `finish()` lands the same frame at once. A looping one (a pulse) has no
+  // end and is left running.
+  await page.evaluate(() => {
+    for (const animation of document.getAnimations()) {
+      if (animation.effect?.getTiming().iterations === Infinity) continue;
+      try {
+        animation.finish();
+      } catch {
+        // A zero-rate or otherwise unfinishable animation keeps its frame.
+      }
+    }
+  });
 
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag22aa"])

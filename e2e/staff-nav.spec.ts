@@ -187,8 +187,10 @@ test.describe("owner", () => {
     // masthead readable.
     const clearance = await page.evaluate(() => {
       const bar = document.querySelector("[data-chrome-bar]")?.getBoundingClientRect();
-      const back = [...document.querySelectorAll("a")]
-        .find((anchor) => /board/i.test(anchor.textContent ?? ""))
+      // The masthead's way back up, named for the section it returns to.
+      // Read inside `main`: the sidebar carries a "Schedule" link too.
+      const back = [...document.querySelectorAll("main a")]
+        .find((anchor) => /^schedule$/i.test(anchor.textContent?.trim() ?? ""))
         ?.getBoundingClientRect();
       return bar && back ? Math.round(back.top - bar.bottom) : null;
     });

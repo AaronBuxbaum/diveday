@@ -3926,7 +3926,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/${unique}`);
         // The line's own tour link, which is what the line exists to keep.
         await page
-          .getByRole("link", { name: "Open Board to see this week’s departures." })
+          .getByRole("link", { name: "Open Schedule to see this week’s departures." })
           .waitFor();
         // ...and proof it is the line and not the card: the two forms share
         // that link, so waiting on it alone would pass on either.
@@ -8279,7 +8279,7 @@ test.describe("print", () => {
     // **Three composed headers, and none of their chrome on paper.** This used
     // to count the two tab strips the composed surfaces brought with them;
     // slice 23c deleted the strip (ADR 20260919-one-idea), and what each
-    // header carries now is its way back up — "Board" on the packet's own,
+    // header carries now is its way back up — "Schedule" on the packet's own,
     // "Trip" on the manifest's and the prep list's. `TripPageHeader` marks all
     // three `print:hidden` for exactly this reason, and a paper sheet with a
     // link on it is the regression.
