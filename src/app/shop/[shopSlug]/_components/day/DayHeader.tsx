@@ -53,9 +53,10 @@ export function DayHeader({
        * **Sky to both edges.** The home's `<main>` is `mx-auto max-w-5xl`, so a
        * band that stopped at its content box would be a panel of sky with the
        * page's ground either side of it — which is the one thing the boards do
-       * not do. `mx-[calc(50%-50vw)] w-screen` walks the band back out to the
-       * viewport from inside that centred column; it is safe here (and only
-       * here) because `body { overflow-x: clip }` in `globals.css` contains the
+       * not do. The calc margin and width walk the band back out from inside
+       * that centred column to the content area's edges (the viewport less
+       * `--shell-start`, the sidebar's width from `lg` up); it is safe because
+       * `body { overflow-x: clip }` in `globals.css` contains the
        * scrollbar's width without opening a horizontal scroll container, so the
        * sticky staff nav keeps sticking. `-mt-8 sm:-mt-10` eats `main`'s own
        * top padding, because a sky with a margin above it is a picture of sky.

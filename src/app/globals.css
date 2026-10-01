@@ -531,6 +531,21 @@ body {
 }
 
 /*
+ * **The roll call's whole content area is the boat.** `.boat-mode` paints its
+ * own ground, but it sits inside the page's padded column, so on its own the
+ * navy stopped at the column's edge with the roll call flush against it and
+ * paper all round. The content area takes the same ground (`.boat-mode`'s
+ * `--background`, stated once more because this element is outside it), so
+ * the page's own padding insets the roll call on navy. Screen only: paper
+ * prints the manifest in ink.
+ */
+@media screen {
+  #shop-main-content:has(> main > div.boat-mode) {
+    background-color: #0a141c;
+  }
+}
+
+/*
  * **Boat mode — Night Dive** (ADR 20261001-logbook). The roll call wears it in
  * both schemes: deep navy, white ink, and marine safety yellow as the one
  * action colour, in Atkinson Hyperlegible. Every pair clears AA by a wide

@@ -265,7 +265,7 @@ describe("VoyageHeader", () => {
       [...(element?.classList ?? [])].filter((name) => !drop.includes(name)).sort();
     const band = container.querySelector(".sky");
     const frameBand = frame.querySelector("header")?.firstElementChild;
-    expect(classes(band)).toContain("w-screen");
+    expect(classes(band)).toContain("w-[calc(100vw-var(--shell-start))]");
     expect(classes(frameBand, "bg-surface-sunken")).toEqual(classes(band, "sky"));
     expect(classes(frameBand?.firstElementChild)).toEqual(classes(band?.firstElementChild));
     const drawn = screen.getByRole("img", { name: /drawn as its voyage/ });

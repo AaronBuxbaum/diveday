@@ -20,8 +20,8 @@ describe("the departure's loading frame", () => {
     const first = container.firstElementChild?.firstElementChild;
     expect(first?.tagName).toBe("HEADER");
     expect(first?.firstElementChild).toHaveClass(
-      "w-screen",
-      "mx-[calc(50%-50vw)]",
+      "w-[calc(100vw-var(--shell-start))]",
+      "mx-[calc(50%-50vw+var(--shell-start)/2)]",
       "-mt-8",
       "sm:-mt-10",
       "pt-5",
