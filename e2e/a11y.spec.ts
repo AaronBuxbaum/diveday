@@ -1373,13 +1373,25 @@ test.describe("tap targets on a phone", () => {
           const label = element.closest("label");
           return Boolean(label && label.getBoundingClientRect().height >= 44);
         };
+        // A target stretched by an absolute `::after` (the counter queue's name
+        // door: a 28px line, `after:-inset-y-2`) is as tall as that pseudo-box,
+        // which is what a finger meets and what the pixel probe's `hitBox` reads.
+        const afterCoversIt = (element: Element) => {
+          const after = getComputedStyle(element, "::after");
+          if (after.position !== "absolute") return false;
+          const height =
+            element.getBoundingClientRect().height -
+            (Number.parseFloat(after.top) || 0) -
+            (Number.parseFloat(after.bottom) || 0);
+          return height >= 44;
+        };
         return [...document.querySelectorAll("a, button, input, summary")]
           .filter((element) => {
             const style = getComputedStyle(element);
             const box = element.getBoundingClientRect();
             if (style.display === "none" || style.visibility === "hidden") return false;
             if (box.width === 0 || box.height >= 44) return false;
-            return !isSkipLink(element) && !labelCoversIt(element);
+            return !isSkipLink(element) && !labelCoversIt(element) && !afterCoversIt(element);
           })
           .map((element) => {
             const box = element.getBoundingClientRect();

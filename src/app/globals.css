@@ -1058,6 +1058,17 @@ textarea {
   margin: 0.5in;
 }
 
+/*
+ * **On screen, a packet's sheets stand apart.** Each sheet opens on its
+ * header's eyebrow, whose 44px target rises 28px above its line — straight
+ * into the last control of the sheet before it (the manifest's emergency
+ * button), which axe reads as a partly covered target (WCAG 2.5.8). On paper
+ * every sheet starts a page of its own, and the print block puts this back.
+ */
+.trip-print-bundle .print-bundle-page + .print-bundle-page {
+  margin-top: 3rem;
+}
+
 @media print {
   /**
    * **Nothing interactive reaches the trip packet's paper, by construction.**
@@ -1480,6 +1491,7 @@ textarea {
   .trip-print-bundle .print-bundle-page {
     break-before: page;
     padding-top: 0;
+    margin-top: 0;
   }
 
   .trip-print-bundle .print-bundle-page:first-of-type {
