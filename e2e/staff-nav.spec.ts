@@ -77,12 +77,7 @@ test.describe("owner", () => {
   test("a departure lights the week it sails in, because the board claims it", async ({ page }) => {
     await page.goto("/shop/blue-mantis/schedule/board");
     const bar = page.locator("header").getByRole("navigation", { name: "When" });
-    await page
-      .getByRole("main")
-      .getByRole("link")
-      .filter({ hasText: /Reef|Wreck|Night/ })
-      .first()
-      .click();
+    await page.locator("[data-week-board] a[data-departure-door]").first().click();
     await expect(page).toHaveURL(/\/trips\//);
     // **Lit, and `"true"` rather than `"page"`** — the distinction #1938 is
     // about, on the surface that makes it. The board *claims* `/trips` (its
@@ -116,11 +111,7 @@ test.describe("owner", () => {
    */
   test("a departure opened from a scrolled board starts at its own top", async ({ page }) => {
     await page.goto("/shop/blue-mantis/schedule/board");
-    const departure = page
-      .getByRole("main")
-      .getByRole("link")
-      .filter({ hasText: /Reef|Wreck|Night/ })
-      .first();
+    const departure = page.locator("[data-week-board] a[data-departure-door]").first();
     await expect(departure).toBeVisible();
 
     // **Open the departure once and come back, the way a staffer does.**
