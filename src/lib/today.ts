@@ -19,6 +19,7 @@ import type { DiveIntentCount } from "./dive-intent";
 import type { CrewIncompleteReason } from "./manifests";
 import type { AboardBlockerKind, ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import type { SeasonStart } from "./season";
+import type { TripPhase } from "./trip-phase";
 import type { TripStageReading } from "./trip-stages";
 import { utcToWallTime } from "./zoned";
 
@@ -1225,6 +1226,12 @@ export type SpineDeparture = {
    * crew has tapped nothing, which renders nothing — never "Unknown".
    */
   stage?: TripStageReading | null;
+  /**
+   * Where the departure is in its own day (`tripPhaseOf`, read from the raw
+   * tap). Optional so a hand-built station in a test can leave it out, which
+   * renders no stage pill.
+   */
+  phase?: TripPhase | null;
   /**
    * **What the divers aboard came for, as counts** (D12/#1172 with D23/#1183,
    * issue #1386). Empty on a departure nobody answered on, which is the

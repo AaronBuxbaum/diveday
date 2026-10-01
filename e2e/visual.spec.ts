@@ -8483,7 +8483,7 @@ for (const scheme of ["light", "dark"] as const) {
       privateShop,
     }) => {
       // The home itself, and nothing to open. The question is bound to no
-      // departure, so `assembleDaySpine` files it under "At the desk", which
+      // departure, and it ranks in Today's one "Needs you" list, which
       // the spine renders unfolded — where the old `?view=urgency` queue put it
       // inside a "This week" band a reader had to expand. That queue is gone
       // (ADR 20260827-clearwater-surface-language), `?view=` 308s here, and

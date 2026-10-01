@@ -117,7 +117,7 @@ hand's seventh drawing, because Key Largo dives one every week.
 | 13d — the embed catalogue and the generator | shipped | `src/lib/embed-snippets.ts` | `src/lib/embed-snippets.test.ts` |
 | 13e — the offer on the marketing pages | shipped | `src/lib/migration-guides.ts` | `src/lib/migration-guides.test.ts` |
 | 13f — the drawn site mark | shipped | `src/components/illustration/SiteMark.tsx` | `src/components/illustration/SiteMark.test.tsx` |
-| 13g — the water closes over finished work | shipped | `src/app/shop/[shopSlug]/_components/today/StationSettles.tsx` | `src/app/shop/[shopSlug]/_components/today/StationSettles.test.tsx` |
+| 13g — the water closes over finished work | dropped | retired by ADR 20261001-logbook: Today's jobs are one list, not rows inside each departure | — |
 | 13h — the count that fills | shipped | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.tsx` | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.test.tsx` |
 | 13i — the diver's day, drawn | shipped | `src/app/ready/[token]/_components/AfterState.tsx` | `src/app/ready/[token]/_components/AfterState.test.tsx` |
 | 13j — the night palette | shipped | `src/app/globals.css` | `src/lib/night-palette.test.ts` |

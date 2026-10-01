@@ -605,6 +605,10 @@ new domain concept, define it here in the same PR.
   is Schedule's job, not a triage list's. Defined once in `src/lib/operational-window.ts`; each
   surface derives its bounds from there rather than declaring its own. Reports is deliberately
   outside this model — a calendar month is genuinely its job.
+- **Needs you** — the one list of jobs on Today (ADR 20261001-logbook, decision 4): every row from
+  Today's work queue, at a boat or at the desk, ranked together by tone and then by when it is due,
+  each naming its own boat on a quiet line. It sits under the day's departures, which carry no rows
+  of their own. A status list, not a page: an empty one is not drawn.
 - **Not ready** — the **by-departure view** of Today's work queue (`?view=departures`), not a page
   of its own: the same blocked divers the urgency view ranks chronologically, grouped instead under
   the boat each one holds up, with a per-departure batch waiver send. It had its own route until

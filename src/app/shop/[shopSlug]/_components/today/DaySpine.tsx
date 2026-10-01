@@ -10,10 +10,8 @@ import { SiteMark } from "@/components/illustration/SiteMark";
 import { SubmitButton } from "@/components/SubmitButton";
 import { sendHoldCopy } from "@/components/send-hold-copy";
 import { buttonClass } from "@/components/ui/button";
-import { TONE_PANEL_LG_CLASS } from "@/components/ui/card";
-import { GroupLabel, LedgerGroup, LedgerRow, type LedgerRowKindTone } from "@/components/ui/ledger";
+import { LedgerGroup, LedgerRow, type LedgerRowKindTone } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DayCloseoutRecord } from "@/db/closeout";
 import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -28,11 +26,11 @@ import {
   type DayStation as DayStationData,
   type FactOfScale,
   getSeasonalBriefing,
+  sortStationRows,
   spineJobCount,
   type TodayAction,
   todaysBoatsAreClear,
 } from "@/lib/today";
-import { hasSailed } from "@/lib/trips";
 import { ClosingBlock } from "./ClosingBlock";
 import { ClosingStation } from "./ClosingStation";
 import { DayStation } from "./DayStation";
@@ -269,6 +267,9 @@ function StationRow({
   // (the desk's two counting rows), so neither the separator nor the second
   // span renders — a dangling " · " is the shape of a sentence that was
   // deleted rather than one that never existed.
+  // In the one "Needs you" list a row names its boat itself, on a quiet line
+  // under its words. A row about the departure has no person to lead with, so
+  // its sentence starts the line and the boat sits under it like every other.
   const sentence = (
     <>
       {action.aboutDeparture ? null : (
@@ -283,6 +284,9 @@ function StationRow({
       )}
       {action.detail ? (
         <span className={tone === "neutral" ? "text-muted" : undefined}>{action.detail}</span>
+      ) : null}
+      {action.departure ? (
+        <span className="block text-sm text-muted">{action.departure.label}</span>
       ) : null}
     </>
   );
@@ -397,22 +401,26 @@ function Stations({
   controls: RowControls;
 }) {
   return (
-    <ol className="flex flex-col gap-5">
-      {stations.map((station) => (
-        <DayStation
-          key={station.tripId}
-          station={station}
-          shopSlug={shopSlug}
-          locale={locale}
-          timeZone={timeZone}
-          currency={currency}
-          crewed={crewedTripIds.has(station.tripId)}
-          t={controls.t}
-        >
-          <StationRows rows={station.rows} controls={controls} />
-        </DayStation>
-      ))}
-    </ol>
+    <>
+      <ol className="flex flex-col gap-5">
+        {stations.map((station) => (
+          <DayStation
+            key={station.tripId}
+            station={station}
+            shopSlug={shopSlug}
+            locale={locale}
+            timeZone={timeZone}
+            currency={currency}
+            crewed={crewedTripIds.has(station.tripId)}
+            t={controls.t}
+          />
+        ))}
+      </ol>
+      <StationRows
+        rows={sortStationRows(stations.flatMap((station) => station.rows))}
+        controls={controls}
+      />
+    </>
   );
 }
 
@@ -629,29 +637,18 @@ export function DaySpine({
     !factOfScaleLine &&
     todaysBoatsAreClear(spine);
   const closing = evening?.close.closing === true;
-  // The next boat out, carrying the standing one-hour late-arrival buffer:
-  // its site mark is the one on the spine that wears the coral detail.
-  const nextTripId =
-    entries
-      .flatMap((entry) => (entry.kind === "live" ? [entry.station] : []))
-      .find((station) => !hasSailed(station.startsAt, now))?.tripId ?? null;
-  const nextStation = entries
-    .flatMap((entry) => (entry.kind === "live" ? [entry.station] : []))
-    .find((station) => station.tripId === nextTripId);
-  const firstThing = nextStation?.rows.find(
-    (row): row is TodayAction & { href: string } =>
-      ACTION_KIND_META[row.kind].tone === "danger" &&
-      typeof row.href === "string" &&
-      !row.waiver &&
-      !row.resend &&
-      !row.invite &&
-      !row.payment?.orderId &&
-      !row.helpRequest,
-  );
   const closingLeftoverIds = new Set(
     closing && evening ? evening.leftovers.map((leftover) => leftover.id) : [],
   );
   const deskActions = spine.desk.filter((action) => !closingLeftoverIds.has(action.id));
+  // **One "Needs you" list** (ADR 20261001-logbook, decision 4): every job on
+  // today's boats and at the desk, ranked together — danger first, then by
+  // when it is due — rather than filed under each boat. A row names its own
+  // boat, so nothing is lost by lifting it out of the card.
+  const needsYou = sortStationRows([
+    ...spine.stations.flatMap((station) => station.rows),
+    ...deskActions,
+  ]);
 
   return (
     <div className="flex flex-col gap-10">
@@ -797,83 +794,76 @@ export function DaySpine({
 
       {sessions}
 
-      {/* **The one obvious next action** (H-62, made literal — the board's
-          "First thing" panel). The next boat out has its rows in severity
-          order already; when the first of them is danger-toned and is a door,
-          it is lifted above the spine as one panel: the glyph, the kind as
-          its label, the person, the sentence, the fix as the page's one
-          primary. It is a *repeat* of the row beneath, on purpose — the spine
-          is the record and this is the answer to "what first?", and a reader
-          who scrolls past it loses nothing. Rows that perform their fix
-          inline (a waiver send) stay where their control is. */}
-      {firstThing ? (
-        <section
-          aria-labelledby="first-thing-label"
-          // The stations' `lg` inset: it was `p-5 sm:px-6`, 4px shallower
-          // than the station under it from `sm` up.
-          className={`flex flex-col gap-4 ${TONE_PANEL_LG_CLASS} border-danger/30 bg-surface sm:flex-row sm:items-center sm:gap-5`}
-        >
-          <span
-            aria-hidden="true"
-            className="grid size-12 shrink-0 place-items-center rounded-full bg-danger-tint text-danger"
-          >
-            <StatusMark variant="danger" size="lg" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <GroupLabel as="p" id="first-thing-label" tone="danger">
-              {t("shopHome.spine.firstThing", { kind: t(ACTION_KIND_KEYS[firstThing.kind]) })}
-            </GroupLabel>
-            <p className={`mt-1 ${SECTION_TITLE_CLASS} tracking-tight`}>
-              {firstThing.aboutDeparture ? firstThing.detail : firstThing.subject}
-            </p>
-            {firstThing.aboutDeparture ? null : <p className="text-muted">{firstThing.detail}</p>}
-          </div>
-          <Link href={firstThing.href} className={buttonClass({ className: "shrink-0" })}>
-            {firstThing.actionLabel}
-          </Link>
-        </section>
+      {entries.length > 0 ? (
+        <LedgerGroup as="h2" label={t("shopHome.spine.departuresLabel")}>
+          <ol className="flex flex-col gap-5">
+            {entries.map((entry) =>
+              entry.kind === "live" ? (
+                <DayStation
+                  key={entry.station.tripId}
+                  station={entry.station}
+                  shopSlug={shopSlug}
+                  locale={locale}
+                  timeZone={timeZone}
+                  currency={currency}
+                  crewed={crewed.has(entry.station.tripId)}
+                  // Today's live departures carry the log door too, not only
+                  // the settled ones (ADR 20260804-incident-export-owner-gate's
+                  // amendment).
+                  canOpenLog={evening?.canOpenLog ?? false}
+                  t={t}
+                />
+              ) : evening ? (
+                <ClosingStation
+                  key={entry.close.tripId}
+                  close={entry.close}
+                  headCountClose={evening.headCountCloses.get(entry.close.tripId) ?? null}
+                  shopSlug={shopSlug}
+                  locale={locale}
+                  timeZone={timeZone}
+                  canOpenLog={evening.canOpenLog}
+                  t={t}
+                >
+                  {evening.recapEditors.get(entry.close.tripId) ?? null}
+                </ClosingStation>
+              ) : null,
+            )}
+          </ol>
+        </LedgerGroup>
       ) : null}
 
-      {entries.length > 0 ? (
-        // Panels, not a rail: each station is a `SectionCard` on the bed and
-        // the column spaces them (ADR 20260904-reef-all-the-way-down, 16a).
-        <ol className="flex flex-col gap-5">
-          {entries.map((entry) =>
-            entry.kind === "live" ? (
-              <DayStation
-                key={entry.station.tripId}
-                station={entry.station}
-                shopSlug={shopSlug}
-                locale={locale}
-                timeZone={timeZone}
-                currency={currency}
-                crewed={crewed.has(entry.station.tripId)}
-                // Today's live departures carry the log door too, not only the
-                // settled ones (ADR 20260804-incident-export-owner-gate's
-                // amendment). `evening` is absent only when the page has no day
-                // to close over, which is also when there is no station here.
-                canOpenLog={evening?.canOpenLog ?? false}
-                next={entry.station.tripId === nextTripId}
-                t={t}
+      {needsYou.length > 0 || showPaymentsRow || drafts.length > 0 ? (
+        <LedgerGroup as="h2" label={t("shopHome.spine.needsYouLabel")}>
+          <ul>
+            {needsYou.map((action) => (
+              <StationRow key={rowKey(action)} action={action} controls={controls} />
+            ))}
+            {/* What the reader started and did not finish — a draft is theirs
+                alone, so the row is too. Renders nothing when there is none. */}
+            {drafts.map((draft) => (
+              <SpineRow
+                key={`draft:${draft.form}`}
+                tone="neutral"
+                kind={t("today.unfinished.label")}
+                door={{ href: draft.href, linkLabel: t("today.unfinished.resume") }}
               >
-                <StationRows rows={entry.station.rows} controls={controls} />
-              </DayStation>
-            ) : evening ? (
-              <ClosingStation
-                key={entry.close.tripId}
-                close={entry.close}
-                headCountClose={evening.headCountCloses.get(entry.close.tripId) ?? null}
-                shopSlug={shopSlug}
-                locale={locale}
-                timeZone={timeZone}
-                canOpenLog={evening.canOpenLog}
-                t={t}
+                <span className="text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</span>
+              </SpineRow>
+            ))}
+            {showPaymentsRow ? (
+              <SpineRow
+                tone="neutral"
+                kind={t("shopHome.spine.deskPaymentsKind")}
+                door={{
+                  href: `/shop/${shopSlug}/settings#stripe`,
+                  linkLabel: t("shopHome.spine.deskPaymentsAction"),
+                }}
               >
-                {evening.recapEditors.get(entry.close.tripId) ?? null}
-              </ClosingStation>
-            ) : null,
-          )}
-        </ol>
+                <span className="text-muted">{t("shopHome.spine.deskPaymentsRow")}</span>
+              </SpineRow>
+            ) : null}
+          </ul>
+        </LedgerGroup>
       ) : null}
 
       {/* The whole week is in order — the queue's own good-news moment, and the
@@ -899,45 +889,6 @@ export function DaySpine({
             </Link>
           }
         />
-      ) : null}
-
-      {deskActions.length > 0 || showPaymentsRow || drafts.length > 0 ? (
-        <LedgerGroup as="h2" label={t("shopHome.spine.deskLabel")}>
-          <ul>
-            {/* A closing leftover owns the row once the day settles. Keep
-                standing desk work here, but never paint one action twice. */}
-            {deskActions.map((action) => (
-              <StationRow key={rowKey(action)} action={action} controls={controls} />
-            ))}
-            {/* What the reader started and did not finish — a draft is theirs
-                alone, so the row is too. Renders nothing when there is none. */}
-            {/* The two desk rows that are not jobs take a job's anatomy all
-                the same (`SpineRow`), so their sentences start on the column
-                and at the size every row's above them does. */}
-            {drafts.map((draft) => (
-              <SpineRow
-                key={`draft:${draft.form}`}
-                tone="neutral"
-                kind={t("today.unfinished.label")}
-                door={{ href: draft.href, linkLabel: t("today.unfinished.resume") }}
-              >
-                <span className="text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</span>
-              </SpineRow>
-            ))}
-            {showPaymentsRow ? (
-              <SpineRow
-                tone="neutral"
-                kind={t("shopHome.spine.deskPaymentsKind")}
-                door={{
-                  href: `/shop/${shopSlug}/settings#stripe`,
-                  linkLabel: t("shopHome.spine.deskPaymentsAction"),
-                }}
-              >
-                <span className="text-muted">{t("shopHome.spine.deskPaymentsRow")}</span>
-              </SpineRow>
-            ) : null}
-          </ul>
-        </LedgerGroup>
       ) : null}
 
       {/* **What today made, above the act that ends the day.** A reading, not

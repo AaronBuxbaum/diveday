@@ -74,17 +74,11 @@ describe("the motion tokens", () => {
    * listed by name: a ceiling is a limit rather than a speed.
    */
   it("runs every animation utility off a rung, bar the drawn moments", () => {
-    // Each of these is a drawn moment rather than a speed — the water closing
-    // over finished work, the boat leaving, and the marketing hero's one
+    // Each of these is a drawn moment rather than a speed — the boat leaving, and the marketing hero's one
     // reveal. They state a duration because they *are* the exception the
     // 600ms ceiling exists for, so the ceiling is asserted below rather than
     // waived.
-    const MOMENTS = [
-      "swell-across",
-      "boat-leaves",
-      "marketing-device-arrive",
-      "marketing-roll-call-settle",
-    ];
+    const MOMENTS = ["boat-leaves", "marketing-device-arrive", "marketing-roll-call-settle"];
     const literals = [...CSS.matchAll(/animation:\s*([\w-]+)\s+(\d+)ms/g)];
     expect(
       literals.filter(([, name]) => !MOMENTS.includes(name)).map(([, n, ms]) => `${n} ${ms}ms`),

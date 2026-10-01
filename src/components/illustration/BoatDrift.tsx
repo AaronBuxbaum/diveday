@@ -16,7 +16,7 @@ import type { TripStage } from "@/lib/trip-stages";
  *
  * - **Once, and only on a transition this reader watched.** A `null` ref until
  *   the first effect runs, so a page that *arrives* already underway does not
- *   animate — the same first-paint guard `StationSettles` carries. A boat that
+ *   animate — the same first-paint guard every drawn moment carries. A boat that
  *   left an hour ago is a fact, not a thing that just happened.
  * - **Never while a field has focus.** A drawing that moves under a staffer
  *   mid-sentence is the failure the rule was written against, so the animation

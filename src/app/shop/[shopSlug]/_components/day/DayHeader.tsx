@@ -1,95 +1,46 @@
 import type { ReactNode } from "react";
-import { DayStrip, type DayStripProps } from "@/components/day/DayStrip";
-import { SkyBand } from "@/components/day/SkyBand";
-import type { SkyScheme } from "@/lib/sky-scheme";
+import { PAGE_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
- * **The top of the day** — ADR 20260919-one-idea, decision I · Tide, slice 23a.
+ * **The top of the day** — ADR 20261001-logbook, decision 4, which retires the
+ * sky band ADR 20260919-one-idea's slice 23a put here.
  *
- * The staff home opens with the sky over the shop at the hour it is being read,
- * the date, the day in one line, and the day's own picture. It replaces the
- * greeting and the eyebrow the home carried until now: Tide's floor deletes
- * both, and what stands where they were is the thing they were describing.
+ * The date is the page's name, the weekday sits above it, and the day is said
+ * in one line under it. The sky band, the sun-arc strip and the sunrise line
+ * that stood here were cut in the Logbook restart: they were a picture of the
+ * day standing above the day's work, and Today now opens on the work.
  *
- * **Light by day because it is day.** The band follows the sun over the shop
- * rather than the reader's colour scheme, which is H-77's "light mode should
- * render light" answered without a toggle.
- *
- * Every word arrives already worded and zoned. A staff component takes words as
- * props (`staffTranslator` is server-side only), and a rendered time carries
- * the shop's zone or it is four hours wrong on the one screen a crew reads to
- * decide when to leave.
+ * Every word arrives already worded and zoned: a staff component takes words
+ * as props (`staffTranslator` is server-side only).
  */
-
 export function DayHeader({
-  scheme,
   weekday,
   date,
   summary,
-  almanac,
-  strip,
   action,
   children,
 }: {
-  scheme: SkyScheme;
   /** "Thursday" — the day of the week, on its own line above the date. */
   weekday: string;
-  /** "August 27" — the date as a name, the largest thing on the page. */
+  /** "August 27" — the date as a name, the page's one heading. */
   date: string;
   /** The day in one line: the boats, and what is still waiting. */
   summary: ReactNode;
-  /** Sunrise and sunset, or nothing at all where the shop has no coordinates. */
-  almanac: string | null;
-  /** The day's picture. Omitted on a day with nothing to draw. */
-  strip: DayStripProps | null;
   /** The header's one action — the paper day, on a day that has boats. */
   action?: ReactNode;
-  /** What the page says under the band: the notices, the next departure, offline. */
+  /** What the page says under the line: the next departure, offline. */
   children?: ReactNode;
 }) {
   return (
     <header className="mb-8">
-      {/*
-       * **Sky to both edges.** The home's `<main>` is `mx-auto max-w-5xl`, so a
-       * band that stopped at its content box would be a panel of sky with the
-       * page's ground either side of it — which is the one thing the boards do
-       * not do. The calc margin and width walk the band back out from inside
-       * that centred column to the content area's edges (the viewport less
-       * `--shell-start`, the sidebar's width from `lg` up); it is safe because
-       * `body { overflow-x: clip }` in `globals.css` contains the
-       * scrollbar's width without opening a horizontal scroll container, so the
-       * sticky staff nav keeps sticking. `-mt-8 sm:-mt-10` eats `main`'s own
-       * top padding, because a sky with a margin above it is a picture of sky.
-       *
-       * The gutter moves inward with the content, so the band's own inner
-       * column carries `max-w-5xl px-4 sm:px-6` — `main`'s exact border box and
-       * padding — and the date lines up with the first station under it to the
-       * pixel.
-       */}
-      <SkyBand
-        scheme={scheme}
-        className="mx-[calc(50%-50vw+var(--shell-start)/2)] -mt-8 mb-6 w-[calc(100vw-var(--shell-start))] pt-6 pb-5 print:mx-0 print:w-full sm:-mt-10 sm:pt-8"
-      >
-        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
-          <div className="flex items-start gap-4">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-(--sky-ink-soft)">{weekday}</p>
-              <h1 className="font-rounded text-[34px] leading-10 font-bold tracking-tight">
-                {date}
-              </h1>
-            </div>
-            {action ? <div className="ms-auto shrink-0">{action}</div> : null}
-          </div>
-          {/* **Under the date's row, not in it** (pixel-craft K-523). The
-              action holds its column the row's full height, so a summary
-              beside it wrapped in what the pill left: three lines at 390,
-              "dock." alone on the last, empty sky to its right. Here it runs
-              the band's whole measure. */}
-          <p className="mt-1 text-[15px] text-(--sky-ink-soft)">{summary}</p>
-          {strip ? <DayStrip {...strip} className="mt-3 h-24 w-full sm:h-28" /> : null}
-          {almanac ? <p className="mt-2 text-[13px] text-(--sky-ink-soft)">{almanac}</p> : null}
+      <div className="flex items-start gap-4">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-muted">{weekday}</p>
+          <h1 className={PAGE_TITLE_CLASS}>{date}</h1>
         </div>
-      </SkyBand>
+        {action ? <div className="ms-auto shrink-0">{action}</div> : null}
+      </div>
+      {summary ? <p className="mt-1 text-muted">{summary}</p> : null}
       {children}
     </header>
   );

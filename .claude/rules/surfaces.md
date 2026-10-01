@@ -64,9 +64,11 @@ stay in `AGENTS.md`.
   record of people, the packing list an instruction about a check-in that is not happening
   (dive-domain review 20260920). `/guests` survives for bookmarks and `print/` composes prep as a
   component for the paper day.
-- **The shop home** is one chronological spine (`_components/today/DaySpine.tsx`,
-  `DayStation.tsx`); the close-out is its evening state (`ClosingBlock.tsx`) and `/close-out` is a
-  308 to it. `?view=` and `/blockers` 308 home (ADR 20260827-clearwater-surface-language). A
+- **The shop home** is the day's departures, then one "Needs you" list (ADR 20261001-logbook,
+  decision 4): `_components/today/DaySpine.tsx` composes them, `DayStation.tsx` is a departure
+  card (time, stage pill from `tripPhaseOf`, readiness bar), and every job on the day, at a boat
+  or at the desk, ranks in the one list and names its own boat. The close-out is its evening state
+  (`ClosingBlock.tsx`) and `/close-out` is a 308 to it. `?view=` and `/blockers` 308 home (ADR 20260827-clearwater-surface-language). A
   departure's **log** is generated from there (`trips/[id]/log`, owner-only).
 - **The back-office queues** are **not on Reports** — each sits with the object it is about and
   renders *nothing* when empty: stuck payment operations on the Orders index behind
