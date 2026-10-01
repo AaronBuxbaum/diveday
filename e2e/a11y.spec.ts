@@ -223,26 +223,25 @@ async function expectNoA11yViolations(page: Page) {
   // **Scan the settled page, not a frame of an entrance.** A `rise-in` banner
   // is mid-fade for its first 200ms, and axe measures the blended ink: the
   // cert-gate refusal read #bc4249 on #fae8e9 (4.43:1) on its way to the
-  // token's own pair. Every finite animation is jumped to its end state
-  // rather than awaited: awaiting `finished` hung on pages whose animations
-  // never settle (a paused one, one on a node a stream replaced), and
-  // `finish()` lands the same frame at once. A looping one (a pulse) has no
-  // end and is left running.
-  await page.evaluate(() => {
-    for (const animation of document.getAnimations()) {
-      if (animation.effect?.getTiming().iterations === Infinity) continue;
-      try {
-        animation.finish();
-      } catch {
-        // A zero-rate or otherwise unfinishable animation keeps its frame.
-      }
-    }
-  });
+  // token's own pair. Neither awaiting each animation's `finished` (it hung on
+  // animations that never settle) nor calling `finish()` (a banner React
+  // remounts after the call starts its entrance again) holds, so the scan
+  // reads the page as a reduced-motion reader sees it: globals.css's
+  // kill-switch lands every entrance on its last frame, whenever it mounts.
+  const reducedAlready = await page.evaluate(
+    () => matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
 
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
     .disableRules(["document-title"])
     .analyze();
+  // A describe that asked for reduced motion keeps it; everyone else gets motion back.
+  if (!reducedAlready) await page.emulateMedia({ reducedMotion: "no-preference" });
   expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
 }
 
