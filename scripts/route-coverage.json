@@ -295,11 +295,8 @@
     "visual": [
       "today",
       "today-all-home",
-      "today-band-dawn",
-      "today-band-dusk",
-      "today-band-night",
-      "today-diver-sheet",
       "identity-menu-open",
+      "nav-more",
       "today-empty",
       "today-evening",
       "today-evening-closed",

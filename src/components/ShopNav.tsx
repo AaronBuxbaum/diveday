@@ -15,11 +15,13 @@ import {
   type StaffDestinationId,
   type StaffDestinationLabels,
   type StaffDestinationTitles,
+  type StaffNavOffers,
   staffDestination,
   staffDestinationHref,
+  staffNavSections,
   staffShopRoot,
 } from "@/lib/staff-destinations";
-import { ShopPlaceMenu, ShopPlaceNav, type ShopPlaceNavCopy } from "./ShopPlaceNav";
+import { type ShopSectionNavCopy, ShopSidebar, ShopTabBar } from "./ShopSectionNav";
 import { CommandPalette } from "./search/CommandPalette";
 
 async function signOutAction() {
@@ -59,12 +61,68 @@ function destinationTitlesFor(t: (key: StaffMessageKey) => string): StaffDestina
   return Object.fromEntries(entries.map(([id, key]) => [id, t(key)]));
 }
 
+/**
+ * The words both forms of the section nav read — the sidebar and the phone's
+ * tab bar — resolved once so the two cannot call a section two things.
+ */
+function sectionNavCopy(
+  t: ReturnType<typeof staffTranslator>,
+  blockers: number,
+): ShopSectionNavCopy {
+  return {
+    navAriaLabel: t("shared.shopSections.navAriaLabel"),
+    sections: {
+      today: t("shared.shopSections.today"),
+      schedule: t("shared.shopSections.schedule"),
+      divers: t("shared.shopSections.divers"),
+      inbox: t("shared.shopSections.inbox"),
+      money: t("shared.shopSections.money"),
+      courses: t("shared.shopSections.courses"),
+      gear: t("shared.shopSections.gear"),
+      settings: t("shared.shopSections.settings"),
+    },
+    more: t("shared.shopSections.more"),
+    blockedLabel: t("shared.shopNavLinks.badgeBlocked", { count: blockers }),
+  };
+}
+
+/**
+ * **The sidebar, from `lg` up** (ADR 20261001-logbook, decision 1). Rendered
+ * by the staff layout beside the page rather than inside the bar, so it can
+ * stand the full height under it.
+ */
+export function ShopNavSidebar({
+  shopSlug,
+  navGates,
+  navOffers,
+  navCounts,
+  locale,
+}: {
+  shopSlug: string;
+  navGates: StaffDestinationGates;
+  navOffers: StaffNavOffers;
+  navCounts?: { blockers: number };
+  locale: string;
+}) {
+  const t = staffTranslator(locale);
+  return (
+    <ShopSidebar
+      root={staffShopRoot(shopSlug)}
+      gates={navGates}
+      items={staffNavSections(navGates, navOffers)}
+      blocked={navCounts?.blockers}
+      copy={sectionNavCopy(t, navCounts?.blockers ?? 0)}
+    />
+  );
+}
+
 export function ShopNav({
   shopSlug,
   shopName,
   logoUrl,
   boatBoardingHref,
   navGates,
+  navOffers,
   navCounts,
   locale,
   setLocale,
@@ -77,6 +135,8 @@ export function ShopNav({
   boatBoardingHref?: string;
   /** Owner/manager surfaces (H-14) to hide from the bar and search for everyone else. */
   navGates: StaffDestinationGates;
+  /** Whether the shop teaches and keeps a fleet, so Courses and Gear show. */
+  navOffers: StaffNavOffers;
   /** Divers held back by medical review, drawn on Today (task 83). */
   navCounts?: { blockers: number };
   locale: string;
@@ -100,69 +160,30 @@ export function ShopNav({
   }));
   const destinationLabels = destinationLabelsFor(t);
   const destinationTitles = destinationTitlesFor(t);
-  // Shared by the desk bar's pills and the phone's folded calendar, so a
-  // badge can never say different things in the two places it renders.
-  const badgeLabels = {
-    blockers: t("shared.shopNavLinks.badgeBlocked", {
-      count: navCounts?.blockers ?? 0,
-    }),
-  };
-  // One record, read by both forms of the same nav — the desk bar's pills and
-  // the phone's calendar — so the two cannot come to disagree about what a
-  // time is called.
-  const placeCopy: ShopPlaceNavCopy = {
-    navAriaLabel: t("shared.shopPlaceNav.navAriaLabel"),
-    places: {
-      day: t("shared.shopPlaceNav.today"),
-      week: t("shared.shopPlaceNav.week"),
-      season: t("shared.shopPlaceNav.season"),
-    },
-    blockedLabel: badgeLabels.blockers,
-  };
+  const sectionCopy = sectionNavCopy(t, navCounts?.blockers ?? 0);
   return (
     <>
-      {/*
-       * The one bar both shells wear — 56px, the page background behind a
-       * blur, one hairline, no shadow (ADR
-       * 20260827-clearwater-surface-language, decision 10).
-       *
-       * What it carries is now the whole of Tide's answer to "where am I":
-       * the shop's name, the three times, and the search (ADR
-       * 20260919-one-idea, slice 23b). From `lg` up the three stand as pills
-       * in the centre slot; below it they fold into the calendar beside the
-       * search, because the bar is a fixed height and nothing in it may wrap —
-       * every slot shrinks instead, and a long shop name ellipses (see
-       * ShopIdentityMenu: its button shrinks, down to the 44px `min-w-11`
-       * round the mark, and its label carries `min-w-0`).
-       */}
+      {/* The one bar both shells wear (ADR 20260827-clearwater-surface-language,
+          decision 10): the shop's name and the search. The sections are the
+          sidebar beside the page from `lg` up and the tab bar below it (ADR
+          20261001-logbook). */}
       <ChromeBar
         staffChrome
         leading={
-          /* The identity block is the shop's own disclosure — Settings,
-             then this reader's language and the way out — rather than
-             standing in permanent chrome: the rarest controls in the header
-             do not get all-day screen time (principle 10). Settings is here
-             because it is the one place with no hour in it and there is no
-             nav left to hold it (ADR 20260919-one-idea, slice 23b); home
-             stays one tap away as Today, in the three times beside this. */
+          /* The identity block is the shop's name and this reader's own
+             controls: their calendar feed, their language, the way out. The
+             sections live in the nav (ADR 20261001-logbook). */
           <div className="flex min-w-0 shrink items-center">
             <ShopIdentityMenu
               shopName={shopName}
               logoUrl={logoUrl}
-              // The one place with no hour in it, behind the shop's own name —
-              // and absent rather than refusing for a role that may not open
-              // it (ADR 20260919-one-idea, slice 23b).
-              settingsHref={
-                navGates.settings
-                  ? staffDestinationHref(root, staffDestination("settings"))
-                  : undefined
-              }
+              calendarHref={staffDestinationHref(root, staffDestination("calendarFeed"))}
               signOutAction={signOutAction}
               locale={locale}
               languages={languages}
               setLocaleAction={setLocale}
               copy={{
-                settings: t("shared.shopNavLinks.settings"),
+                calendar: t("shared.shopNavLinks.calendarFeed"),
                 language: t("shared.shopNav.language"),
                 signOut: t("shared.shopNav.signOut"),
                 signOutConfirm: t("shared.shopNav.signOutConfirm"),
@@ -198,35 +219,8 @@ export function ShopNav({
             />
           </div>
         }
-        center={
-          /* **The three times, and nothing else** (ADR 20260919-one-idea,
-             slice 23b). Five noun tabs, a "More" menu and a phone dock all
-             left with the nav they belonged to; what stands is Today, Week
-             and Season, which is what the desk bar is drawn with. Below `lg`
-             these give way to the calendar in the trailing slot — the same
-             three, folded, because the bar is a fixed height and nothing in
-             it may wrap. */
-          <ShopPlaceNav
-            root={root}
-            gates={navGates}
-            blocked={navCounts?.blockers}
-            copy={placeCopy}
-            className="hidden lg:flex"
-          />
-        }
         trailing={
           <>
-            {/* **The date the phone's bar carries**, drawn as the calendar
-                `Tide.dc.html`'s pocket puts left of the magnifier. It is the
-                fold of the centre slot's pills and nothing more: one registry
-                read, one set of words, one answer about which time is lit. */}
-            <ShopPlaceMenu
-              root={root}
-              gates={navGates}
-              blocked={navCounts?.blockers}
-              copy={placeCopy}
-              className="lg:hidden"
-            />
             {/* Trips are created from the Schedule, where the surrounding week
                 is visible. */}
             <CommandPalette
@@ -271,6 +265,13 @@ export function ShopNav({
             />
           </>
         }
+      />
+      <ShopTabBar
+        root={root}
+        gates={navGates}
+        items={staffNavSections(navGates, navOffers)}
+        blocked={navCounts?.blockers}
+        copy={sectionCopy}
       />
     </>
   );

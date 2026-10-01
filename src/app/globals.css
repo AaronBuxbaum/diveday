@@ -95,12 +95,6 @@
    */
   --primary-tint: #e2f0f4;
 
-  /* The water band's four washes. Logbook draws no clock into the page, so
-     all four are the one day wash, which is --primary-tint. */
-  --water-dawn: #e2f0f4;
-  --water-day: #e2f0f4;
-  --water-dusk: #e2f0f4;
-  --water-night: #e2f0f4;
   --success-tint: #e2f2e8;
   --warning-tint: #fbefdc;
   --danger-tint: #fbe6e7;
@@ -161,11 +155,6 @@
      */
     --accent-tint: #33240f;
     --primary-tint: #12303a;
-
-    --water-dawn: #12303a;
-    --water-day: #12303a;
-    --water-dusk: #12303a;
-    --water-night: #12303a;
     --success-tint: #123022;
     --warning-tint: #33280f;
     --danger-tint: #3a191c;
@@ -285,6 +274,29 @@
    * A token cannot drift from itself.
    */
   --chrome-h: 3.5rem;
+  /*
+   * The staff nav's two forms (ADR 20261001-logbook, decision 1): the sidebar's
+   * width from `lg` up, and the phone tab bar's height below it. The tab bar's
+   * is 0 until the staff shell draws one (the rule below), so a toast or a
+   * sticky Save bar that sits *on* it reads one token on every shell.
+   */
+  --sidebar-w: 14rem;
+  --tabbar-h: 0px;
+  /* How much of the window's start edge the shell's sidebar takes, so a
+     full-bleed band spans the page column rather than the window. */
+  --shell-start: 0px;
+}
+
+@media (min-width: 1024px) {
+  html:has([data-staff-sidebar]) {
+    --shell-start: var(--sidebar-w);
+  }
+}
+
+@media (max-width: 1023px) {
+  html:has([data-staff-tabbar]) {
+    --tabbar-h: 4rem;
+  }
 }
 
 @theme inline {
@@ -425,7 +437,7 @@ html:has([data-chrome-bar]) {
  * hairline — for the server's paint and a browser with no `ResizeObserver`.
  */
 html:has([data-sticky-actions]) {
-  scroll-padding-bottom: var(--sticky-actions-h, calc(3rem + 1.5rem + 1px));
+  scroll-padding-bottom: calc(var(--sticky-actions-h, calc(3rem + 1.5rem + 1px)) + var(--tabbar-h));
 }
 
 /*
@@ -514,6 +526,7 @@ body {
 
   html:has(#shop-main-content > main > div.boat-mode) {
     --chrome-h: 0px;
+    --tabbar-h: 0px;
   }
 }
 
@@ -548,6 +561,12 @@ body {
   --success-tint: #123222;
   --warning-tint: #36280f;
   --danger-tint: #3b1a1c;
+  /* Redeclared here because `:root` resolved them from *its* status
+     colours: inherited, they would be light-page green and amber on these
+     navy tints (2.2:1). On the night palette the status colour is already
+     the strong one. */
+  --success-strong: var(--success);
+  --warning-strong: var(--warning);
   --font-sans: var(--font-boat);
   background-color: var(--background);
   color: var(--foreground);
@@ -939,6 +958,17 @@ textarea {
 
 @page {
   margin: 0.5in;
+}
+
+/*
+ * **On screen, a packet's sheets stand apart.** Each sheet opens on its
+ * header's eyebrow, whose 44px target rises 28px above its line — straight
+ * into the last control of the sheet before it (the manifest's emergency
+ * button), which axe reads as a partly covered target (WCAG 2.5.8). On paper
+ * every sheet starts a page of its own, and the print block puts this back.
+ */
+.trip-print-bundle .print-bundle-page + .print-bundle-page {
+  margin-top: 3rem;
 }
 
 @media print {
@@ -1364,6 +1394,7 @@ textarea {
   .trip-print-bundle .print-bundle-page {
     break-before: page;
     padding-top: 0;
+    margin-top: 0;
   }
 
   .trip-print-bundle .print-bundle-page:first-of-type {
@@ -1623,55 +1654,6 @@ textarea {
     color: var(--foreground);
   }
 }
-
-/*
- * The water band — Reef's page top (ADR 20260901-diveday-reimagined, decision
- * 1). The lagoon wash settles into the sand over the first 168px of every
- * staff page, behind the header; below that the ground is the ground. Drawn
- * from the tokens, so the night palette and the boat/glare skins each get
- * their own water, and a shop's brand never reaches it (this is a staff
- * surface). A wash carries no fact and is not a drawing, which is why it may
- * sit behind a manifest where the swell may not.
- */
-.water-band {
-  /* One gradient, four crests. The shape is the shipped one — the crest
-     settling into the sand it sits on — and `--water-crest` swaps only
-     which water it is. The 55% stop stays a mix *of the crest with the
-     ground*, which is what makes the band fade rather than end, and is why
-     each skin (boat, glare, print, high contrast) still gets its own water
-     without naming a colour of its own.
-
-     The wash and its height are published as properties as well as painted,
-     because one thing inside the band has to repaint it: the settings rail's
-     sticky group label (`.settings-rail-label`, below), which covers the rows
-     scrolling under it with the water that is behind it. A custom property's
-     `var()`s resolve where it is declared, so a descendant reads the gradient
-     in this element's crest, whichever hour `WaterBandStyle` set. */
-  --water-crest: var(--water-day);
-  --water-wash: linear-gradient(
-    180deg,
-    var(--water-crest) 0%,
-    color-mix(in srgb, var(--water-crest) 40%, var(--background)) 55%,
-    var(--background) 100%
-  );
-  --water-band-h: 168px;
-  background-image: var(--water-wash);
-  background-repeat: no-repeat;
-  background-size: 100% var(--water-band-h);
-}
-
-/* The other three hours are re-pointed by `src/components/WaterBandStyle.tsx`,
-   which the staff shell streams in beside the page: an id selector on the
-   staff content wrapper, which outranks this class. They were three rules
-   here, selected by a `data-water-band` attribute on that same element — but
-   setting an attribute meant reading the shop's clock *above* `{children}`,
-   which cost every staff route its static shell (issue 1446). The default
-   above is still the day wash, so a page rendered without a shop — and every
-   other surface wearing this class — reads exactly as it did.
-
-   Written without a `#`: the rule below this block is checked for a literal
-   colour by `water-band-palette.test.ts`, which reads the stylesheet as text
-   and cannot tell an id selector or an issue number from a hex triple. */
 
 /* Marketing sections reveal once, only after the browser has confirmed they
    start below the first viewport. The client component leaves above-fold
@@ -2311,35 +2293,14 @@ details[open]::details-content {
 }
 
 /*
- * **The settings rail's group label is filled only while it is stuck, and
- * filled with the water behind it.**
- *
- * The label is sticky inside the rail's own scroll box, and it needs a fill so
- * the rows slide under the group's name rather than through it. At rest it
- * needs none, and there it sits on the staff page's water-band wash: an
- * always-opaque label painted a flat grey slab across the blue (the pixel
- * probe measured it 256x24 at the top of every settings page). So the fill
- * belongs to the stuck state, which only a scroll-state container query can
- * see. The label is the container and its words' box takes the fill, since a
- * container cannot style itself.
- *
- * **The fill is the band's own gradient, never a flat `--background`.** The
- * rail opens on the current row (`SettingsRail.tsx`), so on every page whose
- * row is below the box's fold a label is stuck at the box's top on landing,
- * and the box's top is inside the wash: a flat ground fill was the same slab,
- * 24px higher. The rail publishes each label's depth into the band as
- * `--rail-label-depth` (it cannot be read from here: the band scrolls with
- * the page and the rail's box does not), and the fill shifts the gradient up
- * by that much over the ground's own colour, which is what shows once the
- * label is deeper than the band. Until the rail has measured (before it
- * hydrates, or on a page with no band) the depth defaults to the band's full
- * height, which leaves the plain ground. A browser without scroll-state
- * queries fills every label this way, which is as right at rest as stuck.
+ * **A settings-rail group label is opaque while rows slide under it.** The
+ * label is sticky inside the rail's own scroll box; the fill belongs to the
+ * stuck state, which only a scroll-state container query can see, so the
+ * label is the container and its words' box takes the fill. A browser without
+ * scroll-state queries fills every label, which is the safe way to be wrong.
  */
 .settings-rail-label {
-  --rail-label-fill:
-    var(--background) var(--water-wash, none) no-repeat 0
-    calc(-1 * var(--rail-label-depth, var(--water-band-h, 0px))) / 100% var(--water-band-h, 0px);
+  --rail-label-fill: var(--background);
 }
 
 .settings-rail-label > span {

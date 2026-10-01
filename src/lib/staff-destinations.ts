@@ -52,59 +52,62 @@ export const STAFF_DESTINATION_BADGE_TONES: Record<StaffDestinationBadge, "prima
 };
 
 /**
- * **Where a destination sits in time** — ADR 20260919-one-idea, decision I ·
- * Tide, slice 23b.
+ * **The sections of the shop** — ADR 20261001-logbook, decision 1.
  *
- * This was `StaffNavGroup`: `primary` for the tabs always on screen, `daily`
- * and `setup` for the two groups inside "More". Those are kinds of *noun* — a
- * shop was asked which of twenty-one things it wanted, and the answer had to
- * be a row in a bar, a row in a menu, or a row in a sheet rising from a dock.
- * Tide asks a different question: **when does this thing happen?** A boat is a
- * moment on the day, a course is sessions on days, a request is a day somebody
- * asked for, money is what the days made. Only what a shop *configures* has no
- * hour at all.
+ * The nav is plain nouns, always on screen: a labelled sidebar from `lg` up and
+ * a bottom tab bar below it. Every destination belongs to exactly one section,
+ * and the section is what lights when a staffer is anywhere inside it, so a
+ * departure lights Schedule and the team page lights Settings.
  *
- * - `day` — what is happening now: the day itself, the dock this morning, what
- *   divers wrote back.
- * - `week` — what is coming: the board, who is working it, the courses running
- *   across it, the days divers asked for.
- * - `season` — what the days added up to: the money, the month, the reviews.
- * - `shop` — the only one with no hour, and the reason it is a place at all:
- *   what a shop sets up rather than works. It lives behind the shop's own name
- *   (the ADR: "Only Settings has no hour and lives behind the shop's name").
- *
- * **Nothing is `null` any more, and that is the point.** `navGroup: null` used
- * to mean "real, reachable, but not in the header" — a hole the old bar needed
- * because it could only hold so many rows. A place is not a slot, so there is
- * nothing to be left out of: an act like the walk-in counter still happens on
- * the day, and saying so costs the bar nothing.
- *
- * The bar renders **three** of these and never a list of destinations: Today,
- * Week and Season, one link each (`STAFF_BAR_PLACES`). Everything else is
- * reached through the day it sits on, or through the search — which is a
- * control in the bar at every width, not a keyboard shortcut. That distinction
- * is load-bearing: ADR 20260813-more-is-the-shops-other-door retired an
- * earlier bar on the grounds that "fourteen destinations reachable only by ⌘K
- * was a desktop-keyboard answer to a phone-thumb question", and it still is.
+ * The time-based bar this replaces (Today · Week · Season, ADR
+ * 20260919-one-idea) hid seventeen of twenty-one destinations behind the
+ * search. Nothing here is search-only any more: the search is a shortcut to
+ * places the nav already shows.
  */
-export type StaffPlace = "day" | "week" | "season" | "shop";
+export type StaffSection =
+  | "today"
+  | "schedule"
+  | "divers"
+  | "inbox"
+  | "money"
+  | "courses"
+  | "gear"
+  | "settings";
 
 /**
- * The three the bar wears, in order, each one link rather than a group.
- *
- * Drawn that way: the desk bar on `Tide.dc.html` is the shop's name, then
- * `Today · Week · Season`, then the search, then the reader. The pills are
- * times, so the pages behind them may be rebuilt (the board becomes the week
- * in 23f, the season grows in 23g) without the bar changing at all.
+ * The sections in nav order, each led by the destination its row opens.
+ * Courses and Gear are offered only to a shop that uses them
+ * (`StaffNavOffers`); Settings sits at the foot of the sidebar.
  */
-export const STAFF_BAR_PLACES = [
-  { place: "day", id: "today" },
-  { place: "week", id: "board" },
-  { place: "season", id: "reports" },
-] as const satisfies readonly { place: StaffPlace; id: StaffDestinationId }[];
+export const STAFF_NAV_SECTIONS = [
+  { section: "today", id: "today" },
+  { section: "schedule", id: "board" },
+  { section: "divers", id: "divers" },
+  { section: "inbox", id: "inbox" },
+  { section: "money", id: "orders" },
+  { section: "courses", id: "courses" },
+  { section: "gear", id: "gear" },
+  { section: "settings", id: "settings" },
+] as const satisfies readonly { section: StaffSection; id: StaffDestinationId }[];
 
-/** One of the three the bar wears — never `shop`, which is behind the name. */
-export type StaffBarPlace = (typeof STAFF_BAR_PLACES)[number]["place"];
+/**
+ * The phone's tab bar: four sections and a More sheet holding the rest. These
+ * four are the ones a phone is in a hand for — the day, the board, a person,
+ * a message.
+ */
+export const STAFF_PHONE_TABS = [
+  "today",
+  "schedule",
+  "divers",
+  "inbox",
+] as const satisfies readonly StaffSection[];
+
+/**
+ * Sections a shop sees only once it uses them. A shop that teaches no course
+ * or keeps no rental fleet would otherwise carry a nav row that opens onto an
+ * empty page every day. Both stay in the search, so a shop can start.
+ */
+export type StaffNavOffers = { courses: boolean; gear: boolean };
 
 export type StaffDestinationId =
   | "today"
@@ -211,8 +214,8 @@ export type StaffDestination = {
   readonly id: StaffDestinationId;
   /** Path below `/shop/<shopSlug>`; `""` is the shop home (Today). */
   readonly suffix: string;
-  /** When this thing happens. Never absent — a place is not a slot. */
-  readonly place: StaffPlace;
+  /** The nav section this destination lights. */
+  readonly section: StaffSection;
   /** Whether the command palette offers it under "Go to". */
   readonly inPalette: boolean;
   /** Permission required to see it anywhere; absent means everyone. */
@@ -230,208 +233,63 @@ export type StaffDestination = {
 };
 
 /**
- * Order matters: it is the order the nav renders each group and the order the
- * palette lists "Go to".
+ * Order matters: it is the order the palette lists "Go to", and within a
+ * section the first visible destination is the one a section row opens when
+ * its lead is gated away.
  */
 export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
-  // Carries the blocked-diver badge because Today is now where blocked divers
-  // are read — both ways of reading them (ADR 20260803-not-ready-is-a-view) —
-  // and, since H-62, where the day is closed as well. **There is no Close-out
-  // destination**: the evening is a state this page settles into, not a place
-  // to go (ADR 20260827-clearwater-surface-language, decision 4). An entry
-  // pointing at the bare home would be a second row landing on Today's own
-  // URL, which this registry's unique-URL invariant refuses outright — so the
-  // palette answers "close the day" with a command carrying an anchor, not
-  // with a destination.
-  {
-    id: "today",
-    suffix: "",
-    place: "day",
-    inPalette: true,
-    badge: "blockers",
-  },
-  { id: "checkIn", suffix: "/check-in", place: "day", inPalette: true },
-  // **There is no "Not ready" destination.** It was a page, then Today's
-  // by-departure view behind `?view=departures`, and it is now neither: the
-  // shop home is one chronological spine and a blocked diver is a row on the
-  // station of the boat waiting for them (ADR
-  // 20260827-clearwater-surface-language, decision 4). An entry pointing at the
-  // bare home would be a second palette row landing on Today's own URL — the
-  // duplicate control principle 8 forbids, and one this registry's
-  // unique-URL invariant refuses outright. Today keeps the blocked badge.
-  { id: "divers", suffix: "/divers", place: "day", inPalette: true },
-  // Staff work a departure on /trips/[id], which is the board's detail view —
-  // keep the board tab lit so they don't lose their place.
+  // Carries the blocked-diver badge: Today is where blocked divers are read,
+  // and where the day is closed. There is no Close-out destination — the
+  // evening is a state Today settles into (ADR
+  // 20260827-clearwater-surface-language, decision 4).
+  { id: "today", suffix: "", section: "today", inPalette: true, badge: "blockers" },
+  // The counter and its walk-in door belong to the day until the departure
+  // page's own Check-in tab takes them (ADR 20261001-logbook, decision 2).
+  { id: "checkIn", suffix: "/check-in", section: "today", inPalette: true },
+  { id: "walkIn", suffix: "/check-in/walk-in", section: "today", inPalette: true },
+  { id: "divers", suffix: "/divers", section: "divers", inPalette: true },
+  // A departure is the board's detail view, so `/trips/**` lights Schedule.
   {
     id: "board",
     suffix: "/schedule/board",
-    place: "week",
+    section: "schedule",
     inPalette: true,
-    // Trips are the board's detail views, so a departure lights the week it
-    // sails in. (Staffing used to be claimed here too; it is its own `week`
-    // destination now, and lights itself.)
     alsoMatch: ["/trips"],
   },
-  // The global "seat a diver" door. It is an action rather than a place, so it
-  // stays out of the header — the board hosts its own button and the palette
-  // answers for it everywhere else. It is *here* because the registry is the
-  // only place a destination may be declared: it used to be a hand-written
-  // palette item, which is exactly the drift this file exists to end.
-  { id: "addBooking", suffix: "/bookings/new", place: "day", inPalette: true },
-  // A way into Check-in rather than a destination of its own, so it stays out
-  // of the header and lives where someone types what they want.
-  { id: "walkIn", suffix: "/check-in/walk-in", place: "day", inPalette: true },
-  // The desk phone's door (N-22): one capture that becomes a date request, a
-  // wait-list entry or a booking. Palette-only for the same reason `addBooking`
-  // and `walkIn` are — it is an *act*, not a place a shop stands in, and the
-  // bar wears three times and no acts at all. It is *here* because the registry
-  // is the only place a destination may be declared at all, and its `place` is
-  // the day because that is the day it interrupts.
-  //
-  // Ungated, deliberately: gating this would take the phone away from the
-  // person most likely to answer it. It used to be the odd one out — the
-  // Requests page one of its three outcomes writes to, and redirects to, sat
-  // behind `reports` — and since 2026-09-16 that page is ungated too, so the
-  // call and the row it becomes are now reachable by the same people.
-  { id: "tookACall", suffix: "/calls", place: "day", inPalette: true },
-  { id: "staffing", suffix: "/staffing", place: "week", inPalette: true },
-  { id: "courses", suffix: "/courses", place: "week", inPalette: true },
-  { id: "diveSites", suffix: "/dive-sites", place: "shop", inPalette: true },
-  // The rental fleet register (ADR 20260815-minimal-gear-register), and the
-  // **day's** work rather than the shop's: packing, handing over and chasing
-  // returns is a morning's rhythm, not configuration.
-  //
-  // It was `navGroup: "daily"` and slice 23b mapped it to `place: "shop"`,
-  // which inverted it — that place is what a shop *sets up*, and it is
-  // defined by living behind the shop's own name. Gear never did: Settings
-  // has a door to the site library, the waiver template, promo codes, the
-  // team and the calendar feed, and never had one to the fleet. So the row
-  // said "behind the shop's name" while its own comment said "the day's
-  // rhythm", and the register was reachable by the search alone on any
-  // morning nothing had gone wrong. `settings-doors.test.ts` now refuses
-  // the mismatch in either direction (#1937).
-  //
-  // Filed under the day it belongs to, it keeps the company it always had:
-  // `divers`, `checkIn`, `walkIn` and `inbox` are whole lists too, and they
-  // are the day's because a diver, a counter and a message are worked on a
-  // day. So is a wetsuit that goes out at eight and is chased at four.
-  //
-  // Ungated: gear is any-staff work (H-06 already lets any staff member
-  // substitute a real available item, "because that is the day's work"). Its
-  // pending-work signal is Today's gear rows, never a nav badge — same rule
-  // as Reviews.
-  { id: "gear", suffix: "/gear", place: "day", inPalette: true },
-  // The waiver template and signature log — owner/manager work, and part of
-  // running the shop rather than setting it up: the log is where a signature
-  // question gets answered on a working day.
-  {
-    id: "waivers",
-    suffix: "/waivers",
-    place: "shop",
-    inPalette: true,
-    gate: "waivers",
-  },
-  // Its pending-work signal lives on Today's queue (a `reviews_pending`
-  // row), the same pattern as stuck payments — a queue's badge belongs on the
-  // page that ranks work, not on a nav row.
-  //
-  // Ungated, and the absent `gate:` covers the destination only: moderating
-  // public words is any-staff work, but the private "asked us to fix" panel
-  // *inside* the page carries its own owner/manager gate (issue #1410), in the
-  // page and again in its action.
-  { id: "reviews", suffix: "/reviews", place: "season", inPalette: true },
-  // Divers asking for a day that is not on the board. Part of the shop's
-  // running cadence rather than its setup — a shop reads this the way it reads
-  // reviews, on its own rhythm, and answers it by putting a departure up, which
-  // is why it sits in the **week**: a request is a day that is not on the board
-  // yet.
-  //
-  // **Ungated since 2026-09-16**, and the gate was *deleted* rather than
-  // relaxed, the way the inbox's was (issue #1679, an H-14 amendment).
-  //
-  // It carried the `reports` gate on two grounds. The privacy one stopped being
-  // true on 2026-09-10: the inbox one row below renders the same thing for a
-  // message from an address with no diver record — a stranger's address or
-  // number, their subject and their message — to every live staff role, and
-  // lets them answer it in the shop's name. A rule that refuses a captain here
-  // and admits them one tab across is not drawing a line, it is describing
-  // where two features happened to ship.
-  //
-  // The commercial one — deciding which unscheduled day is worth a boat is the
-  // desk's work, not the water's — survived longer and lost on the same
-  // argument that opened the inbox: the person best placed to answer a diver
-  // asking for a Tuesday is whoever is at the counter on Tuesday. Putting a
-  // departure on the board is still the board's own work and unchanged by this.
-  //
-  // One thing this repairs rather than widens: `/calls` (the desk phone's door)
-  // has always been ungated, and its `date-request` outcome *redirects* to this
-  // page. A captain who took a call and wrote down a request was sent straight
-  // into a refusal for the row they had just written.
-  { id: "requests", suffix: "/requests", place: "week", inPalette: true },
-  // What divers wrote back (ADR 20260907-two-way-inbox). Work a shop reads on
-  // its own rhythm and empties by answering, beside Requests and Reviews — but
-  // filed under the **day**, not the week: an unanswered message is somebody
-  // waiting on today's answer, and Today's queue is where it signals.
-  //
-  // Ungated since 2026-09-10: it carried an owner/manager gate of its own for
-  // the three days between shipping and the owner reading both halves of that
-  // gate's argument the other way (issues #1505/#1518, an H-14 amendment —
-  // the reasoning is in ADR 20260907-two-way-inbox decision 9, and the code it
-  // governs is `replyToDiverAction`). Its pending-work signal is Today's
-  // `unanswered_messages` row, never a nav badge — the same rule Reviews
-  // follows.
-  { id: "inbox", suffix: "/inbox", place: "day", inPalette: true },
-  // Money the shop reads daily, filed under what the days added up to: an
-  // order outlives the day it was taken, and the Orders index is where a
-  // shop asks the season a question about one. Ungated and palette-visible,
-  // and the page's own links keep the money workflow reachable in context.
-  { id: "orders", suffix: "/orders", place: "season", inPalette: true },
-  // The monthly read of the money Orders tracks daily, and the plainest
-  // `season` there is — the bar's third time points here.
-  { id: "reports", suffix: "/reports", place: "season", inPalette: true, gate: "reports" },
-  // Team and Promo codes still have doors on Settings' own cards — but a card
-  // on a page you must already be on is a cross-link, not a menu presence,
-  // and these two lead "Set up" because they are the configuration acts a
-  // shop actually repeats (a new hire, a season's discount).
-  { id: "team", suffix: "/settings/team", place: "shop", inPalette: true, gate: "team" },
-  { id: "promoCodes", suffix: "/promos", place: "shop", inPalette: true, gate: "reports" },
-  // The one page under `/settings` that is *not* shop configuration: a
-  // staffer's own calendar subscription, a personal feed of their own shifts,
-  // filed there by URL only. It needs its own entry precisely because Settings
-  // above it is gated — without a door of its own it would vanish from the
-  // nav and the palette for every role that most wants it, and be reachable
-  // only by typing the URL. Ungated, so for daily crew it is what keeps the
-  // "Set up" group from ever rendering empty.
-  {
-    id: "calendarFeed",
-    suffix: "/settings/calendar",
-    place: "shop",
-    inPalette: true,
-  },
-  // Last, always: Settings is where a shop goes when nothing else on the menu
-  // was the answer, so it closes the "Set up" group — a group with that name
-  // ending anywhere else would be a joke missing its punchline.
-  //
-  // **The one place with no hour in it**, which is why `place` is `shop` and
-  // the bar — three times — cannot hold it. So it is back behind the shop's own
-  // name, where it lived before the More groups took it (ADR
-  // 20260919-one-idea, slice 23b): the objection then was that one destination
-  // in two menus is the duplicate control principle 8 forbids, and with the nav
-  // gone there is no second menu for it to be in. `ShopIdentityMenu` draws it
-  // above the rule, apart from the language and the way out, because those are
-  // about *this reader and this session* and this is about the shop.
-  //
-  // No `alsoMatch` any more: Promo codes, Dive sites and Waivers each light
-  // their own row now, and `/settings/*` sub-pages light this one by prefix —
-  // except Team and the calendar feed, whose own rows win by being the more
-  // specific match (`currentStaffNavDestinationId`).
-  {
-    id: "settings",
-    suffix: "/settings",
-    place: "shop",
-    inPalette: true,
-    gate: "settings",
-  },
+  // The global "seat a diver" door: an act, declared here because the
+  // registry is the only place a destination may be declared.
+  { id: "addBooking", suffix: "/bookings/new", section: "schedule", inPalette: true },
+  { id: "staffing", suffix: "/staffing", section: "schedule", inPalette: true },
+  // Everything a diver says to the shop is one section: messages, the desk
+  // phone's capture, days asked for, and reviews. Each is ungated — the
+  // person best placed to answer is whoever is at the counter (issues #1505,
+  // #1679). Reviews' private "asked us to fix" panel keeps its own gate inside
+  // the page (issue #1410).
+  { id: "inbox", suffix: "/inbox", section: "inbox", inPalette: true },
+  { id: "requests", suffix: "/requests", section: "inbox", inPalette: true },
+  { id: "tookACall", suffix: "/calls", section: "inbox", inPalette: true },
+  { id: "reviews", suffix: "/reviews", section: "inbox", inPalette: true },
+  // Money: the orders a shop takes every day, then the month's reading of
+  // them and the discounts that shaped them.
+  { id: "orders", suffix: "/orders", section: "money", inPalette: true },
+  { id: "reports", suffix: "/reports", section: "money", inPalette: true, gate: "reports" },
+  { id: "promoCodes", suffix: "/promos", section: "money", inPalette: true, gate: "reports" },
+  { id: "courses", suffix: "/courses", section: "courses", inPalette: true },
+  // The rental fleet (ADR 20260815-minimal-gear-register). Ungated: gear is
+  // any-staff work (H-06).
+  { id: "gear", suffix: "/gear", section: "gear", inPalette: true },
+  // What a shop sets up rather than works.
+  { id: "diveSites", suffix: "/dive-sites", section: "settings", inPalette: true },
+  { id: "waivers", suffix: "/waivers", section: "settings", inPalette: true, gate: "waivers" },
+  { id: "team", suffix: "/settings/team", section: "settings", inPalette: true, gate: "team" },
+  // A staffer's own calendar subscription, filed under `/settings` by URL
+  // only. Ungated, so the roles that most want it keep a door when Settings
+  // itself is gated away.
+  { id: "calendarFeed", suffix: "/settings/calendar", section: "settings", inPalette: true },
+  // Last: Settings is where a shop goes when nothing else was the answer.
+  // `/settings/*` sub-pages light it by prefix; Team and the calendar feed win
+  // their own paths by being the longer match.
+  { id: "settings", suffix: "/settings", section: "settings", inPalette: true, gate: "settings" },
 ];
 
 /** The `/shop/<shopSlug>` prefix every destination hangs off. */
@@ -501,19 +359,37 @@ export function visibleStaffDestinations(
   return STAFF_DESTINATIONS.filter((destination) => passesGate(destination, gates));
 }
 
+/** One row of the staff nav: the section and the destination its row opens. */
+export type StaffNavItem = { section: StaffSection; destination: StaffDestination };
+
 /**
- * The bar's three, minus any this viewer may not see.
+ * The sections this viewer's nav shows, in order.
  *
- * Season is `reports`, which is gated: a captain's bar is Today and Week, and
- * a two-pill bar is the honest picture rather than a pill that refuses. The
- * filtering lives here, with the gate, so the bar cannot forget to ask.
+ * A row opens its lead destination; when that one is gated away it opens the
+ * section's first visible destination instead, and a section with nothing
+ * visible is absent rather than refusing (ADR
+ * 20260724-role-gated-surfaces-hide-not-explain). Settings is the exception:
+ * a crew member's only door under it is their own calendar feed, and a row
+ * called "Settings" opening that would be a lie, so the section goes and the
+ * feed stays in the search and the shop's own menu.
  */
-export function staffBarPlaces(
+export function staffNavSections(
   gates: StaffDestinationGates,
-): readonly { place: StaffBarPlace; destination: StaffDestination }[] {
-  return STAFF_BAR_PLACES.map(({ place, id }) => ({ place, destination: staffDestination(id) }))
-    .filter(({ destination }) => passesGate(destination, gates))
-    .map(({ place, destination }) => ({ place, destination }));
+  offers: StaffNavOffers,
+): readonly StaffNavItem[] {
+  const visible = visibleStaffDestinations(gates);
+  const items: StaffNavItem[] = [];
+  for (const { section, id } of STAFF_NAV_SECTIONS) {
+    if ((section === "courses" || section === "gear") && !offers[section]) continue;
+    const lead = visible.find((destination) => destination.id === id);
+    const destination =
+      lead ??
+      (section === "settings"
+        ? undefined
+        : visible.find((candidate) => candidate.section === section));
+    if (destination) items.push({ section, destination });
+  }
+  return items;
 }
 
 /** The "Go to" rows the command palette offers this viewer. */
@@ -550,13 +426,9 @@ function destinationClaim(pathname: string, root: string, destination: StaffDest
  * The destination this page belongs to — exactly one, or none. Most specific
  * claim wins, so `/settings/team` resolves to Team rather than the Settings
  * entry above it; ties fall to registry order (the shop root is Today).
- *
- * It no longer skips anything. It used to ignore every `navGroup: null` entry
- * so that the walk-in counter's more specific path could not steal the
- * Check-in tab's light — a guard the old bar needed because those two were
- * different rows in it. They are the same *place* now (both happen on the
- * day), so the question that guard existed to protect cannot be asked wrongly:
- * whichever of them claims the path, the answer is the day either way.
+ * Only the *section* is ever drawn, so whichever of two same-section
+ * destinations claims a path (the walk-in counter under Check-in), the light
+ * is the same.
  */
 export function currentStaffDestination(
   pathname: string,
@@ -576,35 +448,28 @@ export function currentStaffDestination(
 }
 
 /**
- * **Which of the bar's three is lit**, or none.
- *
- * The bar wears Today, Week and Season, so a page under `shop` — Settings,
- * the site library, the waiver template, promo codes — lights nothing, and
- * that is correct rather than a gap: every one of them lives behind the
- * shop's own name, which is its own control at the other end of the bar.
- * That "every" is the whole test of the place, and the gear register failed
- * it until #1937: it has no door there, because chasing a wetsuit is the
- * day's work. It is `day` now.
+ * **Which section is lit**, or none: the section of whichever destination
+ * claims this path. A departure lights Schedule (the board claims `/trips`),
+ * the team page lights Settings.
  */
-export function currentStaffPlace(
+export function currentStaffSection(
   pathname: string,
   root: string,
   gates: StaffDestinationGates,
-): StaffPlace | null {
-  return currentStaffDestination(pathname, root, gates)?.place ?? null;
+): StaffSection | null {
+  return currentStaffDestination(pathname, root, gates)?.section ?? null;
 }
 
 /**
  * **Whether this destination's own link is the page being read**, which is the
  * difference between ARIA's two `aria-current` values.
  *
- * The bar's three are places in *time*, not pages. `currentStaffPlace` answers
- * "which of day / week / season am I standing in", and on most staff URLs the
- * lit link navigates away: a staffer on `/divers` lights Today, whose link
- * opens the shop root. Marking that `aria-current="page"` tells a screen-reader
- * user they are already where the link goes (#1938). `"page"` is the current
- * page within a set of links to pages; `"true"` is ARIA's value for the current
- * item in a set, not otherwise specified — which is what a place is.
+ * A lit section is not always the page its row opens: a staffer on a
+ * departure lights Schedule, whose link opens the board. Marking that
+ * `aria-current="page"` tells a screen-reader user they are already where the
+ * link goes (#1938). `"page"` is the current page within a set of links to
+ * pages; `"true"` is ARIA's value for the current item in a set, not otherwise
+ * specified — which is what a section is.
  *
  * **It compares the href, not the destination id**, and that is the whole
  * subtlety. `currentStaffDestination` resolves a *subtree*, because

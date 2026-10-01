@@ -19,30 +19,19 @@ stay in `AGENTS.md`.
   `src/app/s/[shopSlug]/layout.tsx` and rendered by `src/components/PublicShopChrome.tsx`. Add a
   public destination there, never as a per-page cross-link; the whole header is dropped in
   `?embed=1`.
-- **Where staff can go** (the bar's three times, ⌘K "Go to"): derive from
-  `src/lib/staff-destinations.ts`, which is a registry of **places in time** — `day`, `week`,
-  `season`, `shop` — not of nav slots (ADR 20260919-one-idea, slice 23b). It has **two** consumers,
-  not three: `src/components/ShopPlaceNav.tsx` renders Today / Week / Season and nothing else, and
-  `src/components/search/CommandPalette.tsx` is how everything else is reached. The first ships two
-  forms of one nav — pills from `lg`, `ShopPlaceMenu`'s calendar below it — and they are in one file
-  reading one hoisted copy record for that reason. `src/components/ShopNav.tsx` resolves it, and
-  `currentStaffPlace` is the one answer to "which of the three is lit". Add a destination to the
-  registry, never to a consumer — and give it the time it happens at, because nothing is `null` any
-  more.
-  **The search is a control in the bar at every width, never only a shortcut**: ADR
-  20260813-more-is-the-shops-other-door retired an earlier bar for making fourteen destinations
-  ⌘K-only, and that finding outlived the bar it retired.
-  **A diver is the one answer it gives that is not a place.** Tide files everything under an hour
-  and a person has none, so the palette's diver rows point at the day carrying `?diver=<id>` and
-  `src/components/DiverSheet.tsx` lays them over it — never a navigation to `divers/[personId]`,
-  which would spend the day to answer a question that is usually one glance (ADR
-  20260919-one-idea, slice 23e). The sheet is a **reading**: it renders the record's own
-  `DiverStatusLedger` and `DiverStory`, so the two surfaces cannot disagree about a person, and
-  every act is a link to the record — the record's twelve forms all redirect with a `?notice=`,
-  and a redirect tears an overlay off the screen. Its portal waits for a `document`, because
-  unlike `PersonSheet` the *server* decides this one is open.
-  `src/components/ShopIdentityMenu.tsx` holds the shop's one place with no hour in it — Settings,
-  above the rule — and below it the reader's own session (language, sign out).
+- **Where staff can go**: derive from `src/lib/staff-destinations.ts`, a registry of
+  destinations each filed under one **section** — Today, Schedule, Divers, Inbox, Money, Courses,
+  Gear, Settings (ADR 20261001-logbook). It has **two** consumers:
+  `src/components/ShopSectionNav.tsx` (the labelled sidebar from `lg` up, the phone tab bar below
+  it — Today, Schedule, Divers, Inbox and More) and `src/components/search/CommandPalette.tsx`, the
+  shortcut to everything. `staffNavSections` decides which rows a viewer sees (a gated section is
+  absent; Courses and Gear only for a shop that teaches or keeps a fleet) and `currentStaffSection`
+  is the one answer to "which row is lit". Add a destination to the registry with its section,
+  never to a consumer. The sidebar is its own `<Suspense>` boundary in the staff layout, beside the
+  page; the tab bar sets `--tabbar-h`, which anything fixed to the foot (toasts, the sticky Save
+  bar) stands off. A diver the search finds opens their record, `divers/[personId]`.
+  `src/components/ShopIdentityMenu.tsx` holds what is the reader's own: their calendar feed, their
+  language, sign out.
 - **Bearer-token pages** (`src/app/waivers/[token]`, `ready/[token]`, `recap/[token]`,
   `verify/[token]`, `reset-password/[token]`, `calendar/[token]`): the URL *is* the capability;
   read [docs/engineering/capability-telemetry-runbook.md](../../docs/engineering/capability-telemetry-runbook.md)

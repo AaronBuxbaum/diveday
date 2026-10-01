@@ -82,8 +82,7 @@ when you open the file.
 | The staff schedule builder (add / move / copy / remove a departure) | `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx` + `schedule/board/actions.ts`; mutations in `src/db/trips-schedule.ts`, reached through the `@/db/trips` barrel. The one place a trip is created |
 | A repeating trip (every Saturday, Mon+Thu, daily) | `src/lib/recurrence.ts` (pure cadence math), `src/db/trips-series.ts` (materialization), nightly roll at `src/app/api/cron/trip-series/` |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
-| Where staff can go (the bar's Today/Week/Season, ⌘K "Go to") | one registry of times, `src/lib/staff-destinations.ts`; two consumers — `src/components/ShopPlaceNav.tsx`, `src/components/search/CommandPalette.tsx` |
-| A diver, who has no hour to file them under | laid over the day as a sheet — `?diver=<id>`, `src/components/DiverSheet.tsx`; every act is still `divers/[personId]` |
+| Where staff can go (the sidebar, the phone tab bar, ⌘K "Go to") | one registry of sections, `src/lib/staff-destinations.ts`; two consumers — `src/components/ShopSectionNav.tsx`, `src/components/search/CommandPalette.tsx` |
 | SMS delivery receipts | `src/lib/notifications/sms-events.ts` + `src/app/api/webhooks/sms/`; runbook [docs/engineering/sms-delivery-receipts-runbook.md](docs/engineering/sms-delivery-receipts-runbook.md) |
 | Environment variables — adding one, or asking who supplies one | one registry, `config/env-registry.mjs`; everything else is generated from it (ADR 20260812-env-provenance-registry) |
 | AWS credentials, and what deploying still leaves for a human | §16 and §17 of `infra/lib/infra-stack.ts`; [docs/engineering/infrastructure-runbook.md](docs/engineering/infrastructure-runbook.md). **Two stacks, one region knob**: mail is its own stack (`infra/lib/email-stack.ts`) and every region is `config/aws-regions.mjs` |

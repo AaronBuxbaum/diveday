@@ -985,7 +985,7 @@ export function StickyFormActions({
   return (
     <div
       data-sticky-actions=""
-      className={`sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 ${className}`}
+      className={`sticky bottom-(--tabbar-h) z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 ${className}`}
     >
       <StickyActionsInset />
       {children}

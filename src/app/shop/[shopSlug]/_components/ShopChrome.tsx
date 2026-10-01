@@ -1,16 +1,18 @@
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { switchDemoRoleAction } from "@/app/actions/demo";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
 import { setLocaleAction } from "@/app/actions/set-locale";
 import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
-import { ShopNav } from "@/components/ShopNav";
+import { ShopNav, ShopNavSidebar } from "@/components/ShopNav";
 import { SkipLink } from "@/components/SkipLink";
-import { WaterBandStyle } from "@/components/WaterBandStyle";
 import { countBlockedDivers } from "@/db/blockers";
 import { getDb } from "@/db/client";
+import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { countGearItems } from "@/db/gear";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { todayNextDepartureTripId } from "@/db/today";
@@ -28,7 +30,6 @@ import {
 import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
-import { waterBandFor } from "@/lib/water-band";
 
 /**
  * **Everything above a staff page that has to be asked of this request** — the
@@ -64,8 +65,8 @@ import { waterBandFor } from "@/lib/water-band";
  * it is part of the same change.
  *
  * What `ownShop` adds is the second half: every piece of chrome that names a
- * shop — its name, its counts, its next departure, the demo banner, the water
- * band, the offline priming — is behind it, so nothing here renders for a
+ * shop — its name, its counts, its next departure, the demo banner, the
+ * offline priming — is behind it, so nothing here renders for a
  * request that has not proved it may see this shop. That matters most for a
  * request whose session did not resolve at all: the two refusals below both
  * require a session, and the edge check in `src/proxy.ts` is a cookie-presence
@@ -73,8 +74,12 @@ import { waterBandFor } from "@/lib/water-band";
  * `session` null. The page beside this one refuses it; this renders it
  * nothing.
  */
-export async function ShopChrome({ params }: { params: Promise<{ shopSlug: string }> }) {
-  const { shopSlug } = await params;
+/**
+ * Every read the chrome makes, once per request: the bar and the sidebar are
+ * two boundaries (the sidebar stands beside the page, the bar above it), and
+ * `cache` is what keeps them one set of queries and one tenant gate.
+ */
+const loadShopChrome = cache(async (shopSlug: string) => {
   const db = await getDb();
   // The shop row and the session don't depend on one another — resolve them
   // together instead of serially, and nothing else is read until the two
@@ -143,9 +148,6 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
     }
   }
 
-  const demoT = showBanner ? diverTranslator(locale) : undefined;
-  const staffT = staffTranslator(locale);
-
   // Staff, not merely this shop's session. `OfflineManifestAutoSave` below
   // already asks both questions; the nav asked only the first, and it carries
   // the blocked-diver count — divers held back by medical review — as well as
@@ -168,7 +170,11 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
   // back by medical review. The whole chrome already streams beside the page,
   // which is what issue #1446 was about; buying 37ms off the chrome by
   // mislabelling a safety count is not a trade worth making.
-  const [navBlockersCount, boatBoardingHref] =
+  //
+  // Whether the shop teaches and keeps a fleet decides whether Courses and
+  // Gear are rows in the nav (ADR 20261001-logbook); two existence reads,
+  // in the same round trip.
+  const [navBlockersCount, boatBoardingHref, teaches, gearCount] =
     showNav && shop
       ? await Promise.all([
           countBlockedDivers(db, shop.id, nowDate()),
@@ -176,21 +182,57 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
             // The manifest opens on its "Before departure" checkpoint — the boarding pass.
             tripId ? `/shop/${shopSlug}/trips/${tripId}/manifest` : undefined,
           ),
+          hasActiveCourses(db, shop.id),
+          countGearItems(db, shop.id),
         ])
-      : [0, undefined];
+      : [0, undefined, false, 0];
+
+  const navGates = session?.user
+    ? {
+        waivers: canManageWaiverTemplates(session.user.roles),
+        reports: canViewShopReports(session.user.roles),
+        team: canManageStaffAccounts(session.user.roles),
+        settings: canManageShopSettings(session.user.roles),
+      }
+    : { waivers: false, reports: false, team: false, settings: false };
+
+  return {
+    shop,
+    session,
+    ownShop,
+    showBanner,
+    locale,
+    availableRoles,
+    currentRole,
+    showNav,
+    navBlockersCount,
+    boatBoardingHref,
+    navGates,
+    navOffers: { courses: teaches, gear: gearCount > 0 },
+  };
+});
+
+export async function ShopChrome({ params }: { params: Promise<{ shopSlug: string }> }) {
+  const { shopSlug } = await params;
+  const {
+    shop,
+    session,
+    ownShop,
+    showBanner,
+    locale,
+    availableRoles,
+    currentRole,
+    showNav,
+    navBlockersCount,
+    boatBoardingHref,
+    navGates,
+    navOffers,
+  } = await loadShopChrome(shopSlug);
+  const demoT = showBanner ? diverTranslator(locale) : undefined;
+  const staffT = staffTranslator(locale);
 
   return (
     <>
-      {/* Reef's page top, at the shop's own hour — see `WaterBandStyle` for why
-          it is a `<style>` and not an attribute. Behind `ownShop` like every
-          other shop read here, so nothing is emitted and the day wash on the
-          base class stands: an unknown slug has no zone, and a request whose
-          session did not resolve has not proved it may see this one. The
-          refusals above only fire for a request that *has* a session, and the
-          proxy's own bounce is a cookie-presence check rather than a signature
-          one, so a forged cookie reaches here with `session` null — the page
-          beside this one still refuses it, and this renders it nothing. */}
-      {ownShop && shop ? <WaterBandStyle band={waterBandFor(nowDate(), shop.timezone)} /> : null}
       {/* Every /shop page fronts ShopNav's 10-15 header tab stops (persona 14,
           ux-personas-20260730-findings.md) — this jumps a keyboard user past it and the
           demo banner straight to the page's own content. Unconditional, like
@@ -239,12 +281,8 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
           shopName={shop.name}
           logoUrl={shop.logoUrl ?? undefined}
           boatBoardingHref={boatBoardingHref}
-          navGates={{
-            waivers: canManageWaiverTemplates(session.user.roles),
-            reports: canViewShopReports(session.user.roles),
-            team: canManageStaffAccounts(session.user.roles),
-            settings: canManageShopSettings(session.user.roles),
-          }}
+          navGates={navGates}
+          navOffers={navOffers}
           navCounts={{ blockers: navBlockersCount }}
           locale={locale}
           setLocale={setLocaleAction}
@@ -259,6 +297,38 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
       {ownShop && session?.user && isStaff(session.user.roles) ? <OfflineManifestAutoSave /> : null}
     </>
   );
+}
+
+/**
+ * **The sidebar, beside the page from `lg` up** (ADR 20261001-logbook). Its own
+ * boundary in the layout, reading the same cached chrome as the bar. Sticky
+ * under the bar and the window's height below it, so the nav never scrolls
+ * away; nothing renders below `lg`, where the tab bar stands instead.
+ */
+export async function ShopSidebarSlot({ params }: { params: Promise<{ shopSlug: string }> }) {
+  const { shopSlug } = await params;
+  const { shop, showNav, navGates, navOffers, navBlockersCount, locale } =
+    await loadShopChrome(shopSlug);
+  if (!showNav || !shop) return null;
+  return (
+    <aside data-staff-sidebar="" className={SIDEBAR_CLASS}>
+      <ShopNavSidebar
+        shopSlug={shopSlug}
+        navGates={navGates}
+        navOffers={navOffers}
+        navCounts={{ blockers: navBlockersCount }}
+        locale={locale}
+      />
+    </aside>
+  );
+}
+
+const SIDEBAR_CLASS =
+  "sticky top-(--chrome-h) hidden h-[calc(100dvh-var(--chrome-h))] w-(--sidebar-w) shrink-0 overflow-y-auto border-e border-border bg-surface lg:block print:hidden";
+
+/** The sidebar's own width, held while the chrome streams in. */
+export function ShopSidebarSkeleton() {
+  return <div aria-hidden="true" className="hidden w-(--sidebar-w) shrink-0 lg:block" />;
 }
 
 /**

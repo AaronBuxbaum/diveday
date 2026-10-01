@@ -1,5 +1,6 @@
 import { strFromU8, unzipSync } from "fflate";
 import { expect, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
+import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
  * The full-shop export flow (ADR 20260722-full-shop-export): the promise that
@@ -124,7 +125,8 @@ test.describe("the crew sheet", () => {
 
     // The bytes themselves. The seeded shop rosters its instructor onto this
     // month's course sessions, so the sheet is not just a header row.
-    const thisMonth = new Date().toISOString().slice(0, 7);
+    // The app's month, not the runner's: the server reads the frozen clock.
+    const thisMonth = E2E_FROZEN_CLOCK.slice(0, 7);
     const response = await request.get(
       `/shop/blue-mantis/settings/export/crew-sheet?month=${thisMonth}`,
     );

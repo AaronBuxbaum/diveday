@@ -97,7 +97,6 @@ export function SettingsRail({
   useEffect(() => {
     if (currentId && scrollerRef.current) revealCurrentRow(scrollerRef.current);
   }, [currentId]);
-  useLabelWashDepth(scrollerRef);
 
   return (
     <nav aria-label={ariaLabel} className={SETTINGS_RAIL_COLUMN_CLASS}>
@@ -128,14 +127,9 @@ export function SettingsRail({
 
                   Sticky inside the rail's scroll area, and opaque while it is
                   stuck, so the rows slide under their own group's name rather
-                  than past it. Only then: at rest the first label sits on the
-                  staff page's water-band wash, where an always-opaque label
-                  was a grey slab across the blue. `settings-rail-label`
-                  (globals.css) paints the words' box from a scroll-state
-                  query, which is why they sit in a span of their own: a
-                  container cannot style itself. And the fill is that wash,
-                  lined up by `useLabelWashDepth`, because a label stuck at the
-                  box's top is still inside it. */}
+                  than past it. `settings-rail-label` (globals.css) paints the
+                  words' box from a scroll-state query, which is why they sit
+                  in a span of their own: a container cannot style itself. */}
                 <GroupLabel
                   id={`settings-rail-${group.id}`}
                   tone={isCurrentGroup ? "primary" : "muted"}
@@ -230,52 +224,6 @@ function settleOnRowEdge(scroller: HTMLElement, box: DOMRect) {
     .map((item) => item.getBoundingClientRect())
     .find((item) => item.bottom > labelBottom);
   if (cut && cut.top < edge) scroller.scrollTop -= edge - cut.top;
-}
-
-/**
- * Publish each group label's depth into the page's water band as
- * `--rail-label-depth`, so a filled label paints the stretch of the wash that
- * is behind it (globals.css, `.settings-rail-label`) rather than a flat slab of
- * ground across the blue.
- *
- * Measured, because no stylesheet can know it: the band is the shop layout's
- * background and scrolls with the page, while the rail's box is sticky and
- * scrolls on its own. So it is read on landing and again whenever the page or
- * the rail scrolls or the window resizes, one frame at a time. A page with no
- * band, or a rail that is not drawn (`hidden` below `lg`), publishes nothing,
- * and the fill stays the plain ground.
- */
-function useLabelWashDepth(scrollerRef: React.RefObject<HTMLDivElement | null>) {
-  useEffect(() => {
-    const scroller = scrollerRef.current;
-    const band = scroller?.closest<HTMLElement>(".water-band");
-    if (!scroller || !band) return;
-    let frame = 0;
-    const measure = () => {
-      frame = 0;
-      if (scroller.getBoundingClientRect().height === 0) return;
-      const bandTop = band.getBoundingClientRect().top;
-      const labels = Array.from(scroller.querySelectorAll<HTMLElement>(".settings-rail-label"));
-      // Every read before any write, so the frame lays out once.
-      const depths = labels.map((label) => `${label.getBoundingClientRect().top - bandTop}px`);
-      labels.forEach((label, index) => {
-        label.style.setProperty("--rail-label-depth", depths[index] ?? null);
-      });
-    };
-    const schedule = () => {
-      if (!frame) frame = window.requestAnimationFrame(measure);
-    };
-    measure();
-    window.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule);
-    scroller.addEventListener("scroll", schedule, { passive: true });
-    return () => {
-      if (frame) window.cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
-      scroller.removeEventListener("scroll", schedule);
-    };
-  }, [scrollerRef]);
 }
 
 function RailLink({

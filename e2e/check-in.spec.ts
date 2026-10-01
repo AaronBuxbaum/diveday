@@ -224,7 +224,9 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   const firstTrip = tripSection.locator("ul li a").filter({ visible: true }).first();
   await expect(firstTrip).toBeVisible();
   const tripText = await firstTrip.innerText();
-  const tripTitle = tripText.split(" · ")[0];
+  // The picker binds its separators with a no-break space (K-246), so the
+  // dot is not always flanked by plain spaces.
+  const tripTitle = tripText.split(/\s·\s/)[0];
   if (!tripTitle) throw new Error("could not read a trip title from the walk-in picker");
   await firstTrip.click();
   // The departure is a path segment, not a `?tripId=` — which is what lets a

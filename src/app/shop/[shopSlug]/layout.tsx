@@ -1,5 +1,10 @@
 import { Suspense } from "react";
-import { ShopChrome, ShopChromeSkeleton } from "./_components/ShopChrome";
+import {
+  ShopChrome,
+  ShopChromeSkeleton,
+  ShopSidebarSkeleton,
+  ShopSidebarSlot,
+} from "./_components/ShopChrome";
 
 /**
  * Staff-surface shell. Every page below it is staff-only — the diver-facing
@@ -40,27 +45,22 @@ export default function ShopLayout({
       <Suspense fallback={<ShopChromeSkeleton />}>
         <ShopChrome params={params} />
       </Suspense>
-      {/* **Nothing owns the bottom edge.** The phone dock did, so this wrapper
-          published the clearance it demanded and padded itself by it, and every
-          fixed element down there (the toasts, a sticky form action row) added
-          the same offset. The dock left with the nav of nouns (ADR
-          20260919-one-idea, slice 23b) and the clearance went with it: a page
-          ends where the page ends. */}
-      {/* `water-band`: Reef's page top — the lagoon wash settling into sand
-          over the first 168px, behind every staff page's header (ADR
-          20260901-diveday-reimagined, decision 1; the system sheet's "water
-          band wash → sand · page tops only"). A wash, not a drawing, so it
-          may sit behind a manifest; the swell that rides it on the home is
-          the drawing, and that one stays on the home.
-
-          The wash's *hour* (ADR 20260904-reef-all-the-way-down, decision 2,
-          Budget rule 1) is four washes by the **shop's** clock, which is a
-          shop read — so it can no longer be an attribute on this element,
-          which wraps `{children}`. `ShopChrome` emits it as a `<style>`
-          setting the same `--water-crest` this element's own class defaults;
-          same property, same pixels, no request read above the page. */}
-      <div id="shop-main-content" tabIndex={-1} className="water-band min-h-0 flex-1 outline-none">
-        {children}
+      {/* The page beside the sidebar from `lg` up (ADR 20261001-logbook). The
+          sidebar is its own boundary, holding its width while it streams, so
+          the page never shifts sideways when the nav arrives. Below `lg` the
+          tab bar is fixed to the foot and `--tabbar-h` pads the page clear of
+          it. */}
+      <div className="flex min-h-0 flex-1">
+        <Suspense fallback={<ShopSidebarSkeleton />}>
+          <ShopSidebarSlot params={params} />
+        </Suspense>
+        <div
+          id="shop-main-content"
+          tabIndex={-1}
+          className="min-h-0 min-w-0 flex-1 pb-(--tabbar-h) outline-none"
+        >
+          {children}
+        </div>
       </div>
     </>
   );

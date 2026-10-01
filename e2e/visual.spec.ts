@@ -32,7 +32,6 @@ import {
   openTripTab,
   STAFF_DAY_HEADING,
   saveDiveIntent,
-  seededDiverId,
   seededTripId,
   threadStatus,
   waiverLinkFromResult,
@@ -4031,25 +4030,6 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **The one thing the search finds that has no hour** (ADR
-       * 20260919-one-idea, decision I · Tide, slice 23e). A diver laid over the
-       * day rather than opened instead of it: the sheet rises from the foot,
-       * the day dims behind it, and the reading is the record's own story
-       * ledger — the same component, so the two surfaces cannot come to say
-       * different things about one person.
-       *
-       * Reached by URL rather than through the palette: the palette has its
-       * own captures, and a frame that has to type into a combobox first is a
-       * frame that can fail for a reason that is not about pixels.
-       */
-      test(`a diver reads as a sheet over the day (${scheme})`, async ({ page }) => {
-        const personId = await seededDiverId(page, "blue-mantis", "Priya Sharma");
-        await page.goto(`/shop/blue-mantis?diver=${personId}`);
-        await page.getByRole("dialog").getByRole("heading", { name: "Priya Sharma" }).waitFor();
-        await capture(page, "today-diver-sheet", scheme);
-      });
-
-      /**
        * **A station once a blocked diver is on the boat.**
        *
        * The station's aboard line says what the blocker *is* — a medical hold, a
@@ -4101,27 +4081,19 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today-crew-uncounted", scheme);
       });
 
-      // **`nav-more-menu` and `nav-more-sheet` retired with their surfaces.**
-      // They photographed the header's "More" menu and the bottom sheet rising
-      // from the phone dock's sixth slot — the nav's other door (ADR
-      // 20260813-more-is-the-shops-other-door). The bar is three times now and
-      // there is no More and no dock to open (ADR 20260919-one-idea, slice
-      // 23b). What replaced them as the way to everything else is the search,
-      // which `command-palette` and `command-palette-results` already
-      // photograph; the bar itself is in every `/shop/**` capture in this file.
-      //
-      // One disclosed surface did replace them, and it is below: the date the
-      // phone's bar carries, which folds the three times the desk bar wears as
-      // pills. Opened at the phone viewport because it only exists below `lg`
-      // — the 1280 image is deliberately the plain page, exactly as the More
-      // menu's 390 image used to be.
-      test(`the phone's date folds the three times (${scheme})`, async ({ page }) => {
+      // The phone's More menu: the sections the tab bar's four leave out (ADR
+      // 20261001-logbook). Opened at the phone viewport because it only exists
+      // below `lg`; the 1280 image is the plain page with its sidebar.
+      test(`the phone's More menu (${scheme})`, async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto("/shop/blue-mantis");
         await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
-        await page.locator("header [data-place-menu]").click();
-        await page.getByRole("navigation", { name: "When" }).waitFor();
-        await capture(page, "nav-when", scheme);
+        await page
+          .getByRole("navigation", { name: "Sections", exact: true })
+          .getByRole("button", { name: "More" })
+          .click();
+        await page.getByRole("link", { name: "Money" }).waitFor();
+        await capture(page, "nav-more", scheme);
       });
 
       // **The `blockers` capture retired with its surface.** It photographed
@@ -6823,7 +6795,7 @@ for (const scheme of ["light", "dark"] as const) {
         // waiting on the server-rendered legend alone let the capture land
         // mid-mount. ("Day by day" now names two elements — the rail's anchor
         // and the section's own legend — so it is no longer a locator.)
-        await page.getByRole("navigation", { name: "Sections" }).waitFor();
+        await page.getByRole("navigation", { name: "Sections", exact: true }).waitFor();
         await page.getByLabel("Day 1 — what happens").waitFor();
         await capture(page, "course-edit", scheme);
       });
@@ -8430,104 +8402,7 @@ test.describe("print", () => {
  * blue-mantis would hand a blank emergency card to whichever spec ran next in
  * this worker (ADR 20260815-per-test-private-shops).
  */
-/**
- * **The water band's four washes** — ADR 20260904-reef-all-the-way-down,
- * decision 2, Budget rule 1.
- *
- * The band follows the *shop's* clock, and the fleet's clock cannot move:
- * `DIVEDAY_CLOCK` is one process-wide value shared by the server, the seed and
- * the browser (`e2e/servers.ts`), which is why `seed-evening` moves departures
- * rather than time. So the shop moves. At the frozen instant these three zones
- * read 06:30, 18:30 and 03:30, and the day wash is already photographed by
- * every other capture of this page — `today` and its siblings are a New York
- * shop at 09:30.
- *
- * A private shop per capture, with a pinned identity for the reason the
- * emergency-reference block below states: a minted shop's name is drawn at
- * random and renders in the header. The seeded departures keep their instants,
- * so these boards read at odd local hours; the frame is the band, not the
- * board.
- *
- * Twelve screenshots (three washes, two schemes, two viewports) for a rule
- * whose whole surface is a background gradient. That is the price of
- * photographing it rather than asserting a class name, and this file's own
- * docblock asks that it be stated rather than absorbed.
- */
-/**
- * The wash the staff content wrapper is actually painting, and the token it
- * should be — resolved by the browser, not read off the DOM.
- *
- * Waiting on `style[data-water-band="…"]` proves the shell rendered as this
- * shop; it does not prove the declaration *won*. Since issue 1446 the hour is
- * set by an id selector from a `<style>` (`src/components/WaterBandStyle.tsx`)
- * rather than by an attribute the stylesheet selects on, so a specificity
- * mistake would leave every one of these captures painting the day wash while
- * the wait still resolved — an unexplained pixel diff at best, and a silently
- * wrong baseline if one were taken in that state.
- */
-async function waterCrest(page: Page, wash: string) {
-  return await page.evaluate((band) => {
-    const wrapper = document.querySelector("#shop-main-content");
-    if (!wrapper) throw new Error("no #shop-main-content");
-    const root = getComputedStyle(document.documentElement);
-    return {
-      crest: getComputedStyle(wrapper).getPropertyValue("--water-crest").trim(),
-      expected: root.getPropertyValue(`--water-${band}`).trim(),
-      day: root.getPropertyValue("--water-day").trim(),
-    };
-  }, wash);
-}
-
 for (const scheme of ["light", "dark"] as const) {
-  // Three describes rather than a loop over a table, because the capture name
-  // has to be a literal: `scripts/check-route-coverage.mjs` reads the
-  // `capture(page, "…")` calls out of this file to know what each route is
-  // covered by, and a template literal is invisible to it.
-  test.describe(`${scheme} mode — the water band at dawn`, () => {
-    test.use({
-      colorScheme: scheme,
-      viewport: { width: 1280, height: 800 },
-      privateShopSlug: "coral-ledge-divers",
-      privateShopTimezone: "America/Los_Angeles",
-    });
-
-    test(`the shop home wears the dawn wash (${scheme})`, async ({ page, privateShop }) => {
-      await page.goto(`/shop/${privateShop.slug}`);
-      // The attribute the wash is chosen by, not a timing guess: it is
-      // server-rendered by `ShopChrome`, so its presence is the page having
-      // rendered as this shop rather than as the shell. It moved from the
-      // content wrapper onto the `<style>` that sets the wash when the staff
-      // shell became synchronous (issue #1446) — same fact, same render, and
-      // `attached` rather than the default `visible` because a `<style>` never
-      // is.
-      await page.locator('style[data-water-band="dawn"]').waitFor({ state: "attached" });
-      // The declaration won, not merely rendered — see `waterCrest`.
-      const wash = await waterCrest(page, "dawn");
-      expect(wash.crest).toBe(wash.expected);
-      expect(wash.crest).not.toBe(wash.day);
-      await capture(page, "today-band-dawn", scheme);
-    });
-  });
-
-  test.describe(`${scheme} mode — the water band at dusk`, () => {
-    test.use({
-      colorScheme: scheme,
-      viewport: { width: 1280, height: 800 },
-      privateShopSlug: "windward-bell-divers",
-      privateShopTimezone: "Indian/Maldives",
-    });
-
-    test(`the shop home wears the dusk wash (${scheme})`, async ({ page, privateShop }) => {
-      await page.goto(`/shop/${privateShop.slug}`);
-      await page.locator('style[data-water-band="dusk"]').waitFor({ state: "attached" });
-      // The declaration won, not merely rendered — see `waterCrest`.
-      const wash = await waterCrest(page, "dusk");
-      expect(wash.crest).toBe(wash.expected);
-      expect(wash.crest).not.toBe(wash.day);
-      await capture(page, "today-band-dusk", scheme);
-    });
-  });
-
   /**
    * **The storefront is the day** — ADR 20260919-one-idea, decision I · Tide,
    * slice 23d. The band at the top of a shop's public page is one frame with
@@ -8566,25 +8441,6 @@ for (const scheme of ["light", "dark"] as const) {
       // The shop's name is inside the band, and no photograph replaced it.
       await expect(sky.getByRole("heading", { level: 1 })).toBeVisible();
       await capture(page, "storefront-sky", scheme);
-    });
-  });
-
-  test.describe(`${scheme} mode — the water band at night`, () => {
-    test.use({
-      colorScheme: scheme,
-      viewport: { width: 1280, height: 800 },
-      privateShopSlug: "lantern-bay-divers",
-      privateShopTimezone: "Pacific/Honolulu",
-    });
-
-    test(`the shop home wears the night wash (${scheme})`, async ({ page, privateShop }) => {
-      await page.goto(`/shop/${privateShop.slug}`);
-      await page.locator('style[data-water-band="night"]').waitFor({ state: "attached" });
-      // The declaration won, not merely rendered — see `waterCrest`.
-      const wash = await waterCrest(page, "night");
-      expect(wash.crest).toBe(wash.expected);
-      expect(wash.crest).not.toBe(wash.day);
-      await capture(page, "today-band-night", scheme);
     });
   });
 }

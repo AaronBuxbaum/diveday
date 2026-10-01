@@ -318,18 +318,12 @@ export function CommandPalette({
       }
       out.push({ id: "answer", items });
     }
-    // **A diver opens over the day, not instead of it.** Tide files everything
-    // under an hour and a person is the one thing that has none, so the search
-    // lays them over the day rather than taking the staffer off it to answer
-    // what is usually one glance (ADR 20260919-one-idea, decision I · Tide —
-    // "found by search and opened as a sheet over the day"; slice 23e). The
-    // day is the destination from wherever the palette was opened, which is
-    // also what makes this one rule rather than a special case per surface.
+    // A diver opens their record (ADR 20261001-logbook).
     const diverItems: PaletteItem[] = results.divers.map((diver) => ({
       key: `diver:${diver.id}`,
       label: diver.fullName,
       detail: diver.detail ?? undefined,
-      href: `${root}?diver=${diver.id}`,
+      href: `${root}/divers/${diver.id}`,
       icon: <PaletteGlyph name="diver" />,
     }));
     // "Add a diver called <whatever you typed>" matches *every* query by

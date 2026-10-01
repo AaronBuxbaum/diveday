@@ -67,7 +67,7 @@ export function DayHeader({
        */}
       <SkyBand
         scheme={scheme}
-        className="mx-[calc(50%-50vw)] -mt-8 mb-6 w-screen pt-6 pb-5 print:mx-0 print:w-full sm:-mt-10 sm:pt-8"
+        className="mx-[calc(50%-50vw+var(--shell-start)/2)] -mt-8 mb-6 w-[calc(100vw-var(--shell-start))] pt-6 pb-5 print:mx-0 print:w-full sm:-mt-10 sm:pt-8"
       >
         <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
           <div className="flex items-start gap-4">

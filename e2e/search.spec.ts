@@ -29,13 +29,9 @@ test("the command palette finds a diver by name and ⌘K jumps to a page shortcu
   const option = page.getByRole("option", { name: "Priya Sharma", exact: true });
   await expect(option).toBeVisible();
   await option.click();
-  // **Over the day, not instead of it** (ADR 20260919-one-idea, decision I ·
-  // Tide, slice 23e). A person is the one thing Tide's hours cannot file, so
-  // the search lays them over the day rather than spending it.
-  await expect(page).toHaveURL(/\/shop\/blue-mantis\?diver=[a-f0-9-]+$/);
-  await expect(
-    page.getByRole("dialog").getByRole("heading", { name: "Priya Sharma" }),
-  ).toBeVisible();
+  // A diver opens their record (ADR 20261001-logbook).
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers\/[a-f0-9-]+$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
   // ⌘K reopens the palette anywhere, and a "Go to" shortcut jumps to a page.
   await page.keyboard.press("ControlOrMeta+k");

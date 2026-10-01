@@ -54,8 +54,8 @@ describe("DayHeader", () => {
   it("bleeds the sky to both edges of the viewport", () => {
     const { container } = render(<DayHeader {...BASE} />);
     const sky = container.querySelector(".sky");
-    expect(sky?.className).toContain("w-screen");
-    expect(sky?.className).toContain("mx-[calc(50%-50vw)]");
+    expect(sky?.className).toContain("w-[calc(100vw-var(--shell-start))]");
+    expect(sky?.className).toContain("mx-[calc(50%-50vw+var(--shell-start)/2)]");
     // And the words inside it line up with the column under them.
     expect(sky?.querySelector(".max-w-5xl")).toBeTruthy();
   });
