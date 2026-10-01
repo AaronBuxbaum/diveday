@@ -42,7 +42,7 @@ test.describe("owner", () => {
   test("the sidebar names every section, and the one you are on is lit", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
 
-    const nav = page.getByRole("navigation", { name: "Sections", exact: true });
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
     await expect(nav.getByRole("link")).toHaveText([
       /^Today/,
       "Schedule",
@@ -66,7 +66,7 @@ test.describe("owner", () => {
 
   test("a departure lights Schedule, because the board claims it", async ({ page }) => {
     await page.goto("/shop/blue-mantis/schedule/board");
-    const nav = page.getByRole("navigation", { name: "Sections", exact: true });
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
     const door = page.locator("[data-week-board] a[data-departure-door]").first();
     const title = (await door.getAttribute("aria-label")) ?? "";
     await door.click();
@@ -131,7 +131,7 @@ test.describe("owner", () => {
     await expect(page).toHaveURL(/\/trips\//);
     await expect(page.locator("#roster")).toBeVisible();
     await page
-      .getByRole("navigation", { name: "Sections", exact: true })
+      .getByRole("navigation", { name: "Main", exact: true })
       .getByRole("link", { name: "Schedule" })
       .click();
     await expect(page).toHaveURL(/\/schedule\/board$/);
@@ -197,7 +197,7 @@ test.describe("owner", () => {
   });
 
   test("a page under a section lights that section", async ({ page }) => {
-    const nav = page.getByRole("navigation", { name: "Sections", exact: true });
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
     for (const [suffix, section] of [
       ["/dive-sites", "Settings"],
       ["/settings/team", "Settings"],
@@ -257,7 +257,7 @@ test.describe("captain", () => {
 
   test("a section the role cannot open is absent, not shown and refused", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
-    const nav = page.getByRole("navigation", { name: "Sections", exact: true });
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
     // Settings is gated, and its one door a captain may open is their own
     // calendar feed, which is in the shop's menu. Money stays: Orders is open
     // to every staff role.
@@ -289,7 +289,7 @@ test.describe("the phone", () => {
 
   test("carries four sections and More in a tab bar at the foot", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
-    const tabs = page.getByRole("navigation", { name: "Sections", exact: true });
+    const tabs = page.getByRole("navigation", { name: "Main", exact: true });
     await expect(tabs.getByRole("link")).toHaveText([/^Today/, "Schedule", "Divers", "Inbox"]);
     await expect(tabs.getByRole("button", { name: "More" })).toBeVisible();
 
@@ -310,7 +310,7 @@ test.describe("the phone", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis");
-    const tabs = page.getByRole("navigation", { name: "Sections", exact: true });
+    const tabs = page.getByRole("navigation", { name: "Main", exact: true });
     await tabs.getByRole("button", { name: "More" }).click();
     await expect(tabs.getByRole("link")).toHaveText([
       /^Today/,

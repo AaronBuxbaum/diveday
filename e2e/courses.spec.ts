@@ -1085,7 +1085,7 @@ test.describe("the course editor over a wander through the app", () => {
     // matched by prefix.
     const goByBar = async (name: RegExp) => {
       await page
-        .getByRole("navigation", { name: "Sections", exact: true })
+        .getByRole("navigation", { name: "Main", exact: true })
         .getByRole("link", { name })
         .click();
     };

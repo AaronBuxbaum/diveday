@@ -4089,7 +4089,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis");
         await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
         await page
-          .getByRole("navigation", { name: "Sections", exact: true })
+          .getByRole("navigation", { name: "Main", exact: true })
           .getByRole("button", { name: "More" })
           .click();
         await page.getByRole("link", { name: "Money" }).waitFor();
