@@ -54,7 +54,10 @@ test("the day is named, said once, and followed by its departures and what needs
 
   // A departure still ahead wears its stage and says how ready its divers
   // are; the seeded morning boat is already home, and reads as settled.
-  const live = page.locator("ol > li").filter({ hasText: /\d+ of \d+ ready/ }).first();
+  const live = page
+    .locator("ol > li")
+    .filter({ hasText: /\d+ of \d+ ready/ })
+    .first();
   await expect(live.getByText(/^(Prep|Check-in|Aboard|Back)$/)).toBeVisible();
   await expect(live.getByText(/^\d+ of \d+ ready$/)).toBeVisible();
 

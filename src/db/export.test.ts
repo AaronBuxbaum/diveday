@@ -1205,7 +1205,14 @@ describe("full-shop export dataset", () => {
         candidate.some((cell) => cell === ANONYMIZED_PERSON_NAME),
       );
       expect(cells).toHaveLength(1);
-      const serialized = JSON.stringify(cells[0]);
+      // Ids and timestamps are generated, and a random uuid can carry "0155"
+      // as easily as a phone can: read only the cells that hold words.
+      const UUID_OR_INSTANT = /^([0-9a-f]{8}-[0-9a-f-]{27}|\d{4}-\d{2}-\d{2}T[\d:.]+Z)$/;
+      const serialized = JSON.stringify(
+        (cells[0] ?? []).filter(
+          (cell) => !(typeof cell === "string" && UUID_OR_INSTANT.test(cell)),
+        ),
+      );
       for (const secret of ["Erased Erica", "erica@example.com", "0155", "1988-02-02", "DAN #55"]) {
         expect(serialized).not.toContain(secret);
       }
