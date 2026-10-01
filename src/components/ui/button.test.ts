@@ -8,6 +8,8 @@ import {
   buttonClass,
   proseLinkClass,
   tapTargetLineClass,
+  tapTargetLinkClass,
+  tapTargetOverhangClass,
 } from "./button";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -989,5 +991,19 @@ describe("proseLinkClass", () => {
       /className="underline"/.test(readFileSync(file, "utf8")),
     );
     expect(offenders.map((file) => relative(SRC_DIR, file))).toEqual([]);
+  });
+});
+
+describe("the tap-target link floors", () => {
+  // K-C1 (probe 2026-10-01): a linked "TRIP" eyebrow measured 43.9×44px — a
+  // short word left the box under 44px wide, because only the height had a floor.
+  it("floors the width as well as the height, so a four-letter word is still 44px square", () => {
+    for (const cls of [
+      tapTargetLinkClass,
+      tapTargetOverhangClass.up.target,
+      tapTargetOverhangClass.down.target,
+    ]) {
+      expect(cls.split(" ")).toEqual(expect.arrayContaining(["min-h-11", "min-w-11"]));
+    }
   });
 });

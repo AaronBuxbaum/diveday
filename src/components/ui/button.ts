@@ -354,8 +354,8 @@ const sizes = {
  * stylesheet order, not by the order they are written.
  */
 export const tapTargetOverhangClass = {
-  up: { line: "flex items-end", target: "inline-flex min-h-11 items-end" },
-  down: { line: "flex items-start", target: "inline-flex min-h-11 items-start" },
+  up: { line: "flex items-end", target: "inline-flex min-h-11 min-w-11 items-end" },
+  down: { line: "flex items-start", target: "inline-flex min-h-11 min-w-11 items-start" },
 } as const;
 
 /**
@@ -373,7 +373,7 @@ export const tapTargetOverhangClass = {
  * `inline-flex items-center` is what lets the floor apply to an inline link at
  * all: `min-height` does nothing to a non-replaced inline box.
  */
-export const tapTargetLinkClass = "inline-flex min-h-11 items-center";
+export const tapTargetLinkClass = "inline-flex min-h-11 min-w-11 items-center";
 
 /**
  * **A link inside a sentence**: the words' own ink, underlined, and the link

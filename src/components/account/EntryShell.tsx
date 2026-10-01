@@ -136,9 +136,9 @@ export function EntryShell({
  * {shop}.", and neither is this slot's to size.
  */
 const FOOTER_LINK_SLOT =
-  "[:where(&)_a]:inline-flex [:where(&)_a]:min-h-11 [:where(&)_a]:items-center [:where(&)_a]:-my-3";
+  "[:where(&)_a]:inline-flex [:where(&)_a]:min-h-11 [:where(&)_a]:min-w-11 [:where(&)_a]:items-center [:where(&)_a]:-my-3";
 const ACTION_LINK_SLOT =
-  "[:where(&)>a]:inline-flex [:where(&)>a]:min-h-11 [:where(&)>a]:items-center [:where(&)>a]:-my-3";
+  "[:where(&)>a]:inline-flex [:where(&)>a]:min-h-11 [:where(&)>a]:min-w-11 [:where(&)>a]:items-center [:where(&)>a]:-my-3";
 
 /**
  * The centered column every door shares. Exported so `EntryShellSkeleton`
