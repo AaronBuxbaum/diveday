@@ -25,176 +25,97 @@
 /*
  * Design tokens — the single source of truth for color, motion, and radius.
  * Semantic names only: components never reference raw hex values.
- * Palette story (Tide's surface, ADR 20260919-one-idea, decision I · Tide):
- * cool grey ground under white groups (light) / black under near-black groups
- * (dark), one DiveDay blue as the action color, warm orange as the rare accent.
- * The names beside each token below say what it *is* on the page, not what it
- * is made of — the wash tokens keep water and sand as names because the wash
- * is still water settling into sand.
+ * Palette story (Logbook, ADR 20261001-logbook): paper with a faint sea-green
+ * cast under white groups, slate ink, one sea-teal action colour and a rare
+ * marine-amber accent; at depth, deep slate. `.boat-mode` is Night Dive:
+ * navy and safety yellow in both schemes, for the roll call.
  * See docs/design/principles.md before adding or changing tokens.
  */
 
 :root {
-  /* Surfaces */
-  --background: #f2f2f7; /* the ground everything sits on */
+  /* Surfaces — paper with a faint sea-green cast, white groups on it */
+  --background: #f4f6f4; /* the ground everything sits on */
   --surface: #ffffff; /* a group's own paper */
-  --surface-sunken: #ececf1; /* a well inside a group — a track, a field */
-  --border: #e3e3e8; /* the hairline between two of them */
-  /* Form controls only: ≥3:1 against --background (dock test, WCAG 1.4.11) */
-  --border-strong: #86868b;
+  --surface-sunken: #eaedea; /* a well inside a group — a track, a field */
+  --border: #dde2df; /* the hairline between two of them */
+  /* Form controls only: ≥3:1 against --background (dock test, WCAG 1.4.11): 3.57 */
+  --border-strong: #78838a;
 
-  /* Ink */
-  --foreground: #1d1d1f; /* deep-sea ink */
-  /* 5.05:1 on --surface-sunken, the tightest pair muted ink sits on (a notice
-     bar, a segmented track); #5b6f77 measured 4.48 there — axe, 2026-09-02. */
-  --muted: #66666c;
+  /* Ink — slate */
+  --foreground: #16232c;
+  /* 5.25:1 on --surface-sunken, the tightest pair muted ink sits on. */
+  --muted: #56636b;
 
   /*
    * Device bezel for the marketing phone mockups. Deliberately NOT
    * --foreground: ink flips light in dark mode, and a bezel that flips with
-   * it renders as a glowing white phone — the brightest object on a dark
-   * page. A phone frame is dark in both schemes.
+   * it renders as a glowing white phone. A phone frame is dark in both schemes.
    */
-  --device-frame: #1d1d1f;
-  /* Paper on the bezel, and on any scrim drawn in `--device-frame`: the
-     storefront hero's name sits on such a scrim over the shop's photograph,
-     and `text-surface` there flipped to ink at night — dark words on a dark
-     wash. Like the frame itself, this does not follow the scheme. */
+  --device-frame: #16232c;
+  /* Paper on the bezel, and on any scrim drawn in `--device-frame`. Like the
+     frame itself, this does not follow the scheme. */
   --device-frame-foreground: #ffffff;
 
-  /* Action — lagoon */
-  --primary: #0064d2;
-  --primary-hover: #0050ab; /* lagoon, deep */
+  /* Action — sea teal. 5.81:1 on --surface, white on it 5.81:1. */
+  --primary: #0b6e8a;
+  --primary-hover: #08566c;
   --primary-foreground: #ffffff;
   /* Derived, not redeclared per skin: resolves against whichever --primary is
-     in scope (default/dark/boat-mode/glare-mode), same lazy-substitution
-     behavior the color-mix()s elsewhere in this file rely on. */
+     in scope (default/dark/boat-mode/glare-mode). */
   --primary-sunken: color-mix(in srgb, var(--primary) 65%, black);
   /*
-   * Keyboard focus indicator. Full-strength --primary, derived the same lazy
-   * way as --primary-sunken so every skin gets its own ring for free — a skin
-   * that retunes --primary retunes its ring with it, which a redeclared hex in
-   * each block would silently stop doing.
-   *
-   * Was `color-mix(in srgb, var(--primary) 55%, transparent)`, which composited
-   * to 2.21–2.32:1 against the light surfaces and 2.57–2.69:1 in boat/glare
-   * light — under WCAG 1.4.11's 3:1 for a focus indicator, i.e. a ring a
-   * keyboard user could lose entirely in sun. Undiluted, the worst case across
-   * every skin and surface is 4.66:1 (light on --surface-sunken); light 4.66–
-   * 5.36, dark 9.05–10.57, boat 6.69–11.38, glare 6.87–12.59.
-   *
-   * **Not on the sky.** A `SkyBand` is dark in both schemes, and lagoon on it
-   * measured 1.02–3.62:1 (1.28 at the day sky's foot), so `.sky` retokens the
-   * ring to its own white ink: 5.24 at worst (dawn's foot), day 7.17–10.62,
-   * dusk 5.70–17.04, night 16.44–20.23, and 17.10 / 17.84 on the flattened
-   * `prefers-contrast` and glare skies.
+   * Keyboard focus indicator: full-strength --primary, derived lazily so every
+   * skin gets its own ring. Worst case light is 4.93:1 on --surface-sunken.
+   * `.sky` retokens it to white ink on the dark bands.
    */
   --focus-ring: var(--primary);
 
-  /* Accent — coral, used sparingly for moments of delight */
-  --accent: #ff9500;
-  --accent-foreground: #331c00;
-  /* Coral's two companions (Reef): the deep value is ink *on* the wash, the
-     wash is the bed an earned moment sits on. Neither is ever a status. */
-  --accent-deep: #a85200;
-  --accent-tint: #fff0dc;
+  /* Accent — marine amber, the rare second colour. Never a status. */
+  --accent: #d97a1e;
+  --accent-foreground: #2b1600;
+  --accent-deep: #8a4a0c;
+  --accent-tint: #fbefe0;
   /* Water that carries no fact — a decorative fill behind a count that is
      already spelled out in figures. Never a status, never behind reading text. */
-  --shallows: #9ecbff;
+  --shallows: #a9d3df;
 
   /* Feedback */
-  --success: #16794a;
-  --warning: #a85200;
-  --danger: #d70015;
-  --info: #3b42c4;
-  /*
-   * A small-badge success/warning text on its own `/10`-opacity tinted fill
-   * measured ~4.38:1 — just under AA at 12px. Derived like --primary-sunken:
-   * one lazily-resolving declaration that tracks whichever --success/--warning
-   * is in scope (default/dark/boat-mode/glare-mode) rather than redeclared
-   * per skin. The nudge is tiny (a few % black) because the gap was tiny.
-   */
+  --success: #1c7445;
+  --warning: #8f5409;
+  --danger: #b3262f;
+  --info: #3b4fb8;
   --success-strong: color-mix(in srgb, black 6%, var(--success));
   --warning-strong: color-mix(in srgb, black 6%, var(--warning));
 
   /*
-   * **The tinted fill a coloured ink sits on, resolved once against
-   * `--surface` and therefore opaque.**
-   *
-   * A `bg-success/10` fill is translucent, so what the text above it actually
-   * contrasts against is 10% of the hue over *whatever is behind the element* —
-   * and every ratio this palette was tuned to assumed that was white. It often
-   * is not. Turning axe's `color-contrast` rule back on (issue #793) found 24
-   * failing nodes and every one of them was this: a status pill on the page
-   * background rather than on a card (`#e4e0d6`, not `#e8f2ec`, costing 0.65),
-   * a `bg-primary/10` badge nested inside a `bg-success/10` boarded row on
-   * `/check-in` (4.09:1, the worst on the list), and in dark mode a danger
-   * count badge sitting inside the current nav tab's own primary tint.
-   *
-   * Nesting is not the whole of it, and that is why the fix is a token rather
-   * than a rule about nesting: the same pill fails simply by sitting on
-   * `--background` instead of a card. An opaque fill makes the composite
-   * deterministic — every ink/tint pair is the number the palette computed,
-   * wherever the element is mounted. Measured, light: primary 4.67, `-strong`
-   * success and warning 4.86, danger 5.45. Dark: 5.2 to 8.0.
-   *
-   * Derived like `--primary-sunken` so a skin that retunes a hue or a surface
-   * retunes its tints with it, and so boat-mode and glare-mode get theirs free.
+   * **The tinted fill a coloured ink sits on, opaque.** A translucent tint's
+   * contrast depends on whatever is behind it; an opaque one is the number
+   * computed here wherever it is mounted. Light: primary 4.99, success 4.98,
+   * warning 5.37, danger 5.43, amber deep on its wash 6.04.
    */
-  /* Reef's washes: a drawn tint per signal rather than a 10% mix, so each
-     sits on the warm shell without going grey. The night palette draws its
-     own (13j, in the dark block below). */
-  /* 4.72:1 under --primary as text (a current nav chip is `bg-primary-tint
-     text-primary`); #dceef0 measured 4.47 — axe, 2026-09-02. */
-  --primary-tint: #e6f0ff;
+  --primary-tint: #e2f0f4;
 
-  /* **The water band's four washes** — ADR 20260904-reef-all-the-way-down,
-     decision 2, Budget rule 1. The page top follows the shop's clock: dawn
-     5-8, day, dusk 17-20, night. Lagoon-family and sand only, never coral,
-     and never a status — `src/lib/water-band-palette.test.ts` holds all three
-     against these values rather than against their names. Drawn hues rather
-     than one tint dimmed four ways, for the reason the night palette's washes
-     are drawn: a mix loses the hue that made it its own colour. `--water-day`
-     carries `--primary-tint`'s exact value, because rule 1 says the day wash
-     is the one that ships; the test pins that equality so the two cannot
-     drift apart in silence. */
-  --water-dawn: #efeff7;
-  --water-day: #e6f0ff;
-  --water-dusk: #eaeef8;
-  --water-night: #e9edf6;
-  --success-tint: #e3f2ea;
-  --warning-tint: #fdefdf;
-  --danger-tint: #fdeaeb;
+  /* The water band's four washes. Logbook draws no clock into the page, so
+     all four are the one day wash, which is --primary-tint. */
+  --water-dawn: #e2f0f4;
+  --water-day: #e2f0f4;
+  --water-dusk: #e2f0f4;
+  --water-night: #e2f0f4;
+  --success-tint: #e2f2e8;
+  --warning-tint: #fbefdc;
+  --danger-tint: #fbe6e7;
 
-  /* Shape — Tide's ladder: control 12 · inset 12 · panel 20 · pill 999 (ADR
-     20260919-one-idea, decision I · Tide). Two radii and a capsule, which is
-     the device's own ladder: `--radius` is the control rung, which every
-     `rounded-lg` reads, and `--radius-panel` the group a page is made of.
-     **Inset now shares the control rung** rather than standing between them —
-     a well carved out of a group is a control-shaped hole, and a third rung
-     between 12 and 20 is a difference nobody can see. Nothing on a staff
-     surface is squarer than the control or sits between the rungs, except a
-     nested corner derived from its ancestor, spelled only as
-     `SEGMENT_CORNER` (7, in `ui/segmented.ts`) or `PANEL_INNER_RADIUS` (19,
-     in `ui/card.tsx`). Tailwind's own `rounded-xl`/`rounded-2xl` (12/16)
-     are not on the ladder and `card.test.tsx` refuses them. Reef's ladder
-     was 10 · 18 · 28, and its control read 12 from Clearwater until
-     2026-09-02. */
-  --radius: 0.75rem;
-  --radius-inset: 0.75rem;
-  --radius-panel: 1.25rem;
-  /* The warm bed a resting panel sits on. Reef's one reversal of Clearwater
-     decision 1, for the panel alone: menus, sheets and toasts keep their own
-     lift, and the header tiles and markers stay flat. */
-  --shadow-bed: 0 1px 2px rgba(0, 0, 0, 0.04), 0 10px 26px rgba(0, 0, 0, 0.05);
+  /* Shape — Logbook's ladder: control 8 · inset 8 · panel 12 · pill 999 (ADR
+     20261001-logbook). Hairlines do the separating; corners stay small. */
+  --radius: 0.5rem;
+  --radius-inset: 0.5rem;
+  --radius-panel: 0.75rem;
+  /* A resting panel is set off by its hairline, not a lift. */
+  --shadow-bed: 0 1px 2px rgba(22, 35, 44, 0.05);
 
   /*
-   * Tell the browser which way our palette runs, so the parts of a form we do
-   * not draw ourselves follow it: the calendar glyph inside `<input type=
-   * "date">`, the date/time picker panels, native select popups, autofill,
-   * and scrollbars. Without it those stay in the browser's light default —
-   * on the dark theme the date picker's near-black calendar icon sat on a
-   * near-black field and effectively disappeared.
+   * Tell the browser which way our palette runs, so native form parts (date
+   * pickers, select popups, autofill, scrollbars) follow it.
    */
   color-scheme: light;
 }
@@ -203,65 +124,52 @@
   :root {
     color-scheme: dark;
 
-    /* Surfaces */
-    --background: #000000; /* open ocean at depth */
-    --surface: #1c1c1e;
-    --surface-sunken: #0b0b0d;
-    --border: #2c2c2e;
-    --border-strong: #7c7c80;
+    /* Surfaces — deep slate, designed rather than inverted */
+    --background: #0f171c;
+    --surface: #162129;
+    --surface-sunken: #0b1216;
+    --border: #25333c;
+    --border-strong: #6c7f8a;
 
     /* Ink */
-    --foreground: #f5f5f7;
-    --muted: #9b9ba1;
+    --foreground: #e4ebef;
+    --muted: #97a7b1;
 
-    /* Bezel stays dark at depth (see the light-scheme note). */
-    --device-frame: #1c1c1e;
+    /* Bezel stays dark at depth. */
+    --device-frame: #0b1216;
 
-    /* Action — lagoon, brightened for contrast at depth */
-    --primary: #0a84ff;
-    --primary-hover: #4da3ff;
-    --primary-foreground: #001a33;
+    /* Action — sea teal, lifted. 7.41:1 on --surface; its ink on it 7.49. */
+    --primary: #4fbcd8;
+    --primary-hover: #7fd0e4;
+    --primary-foreground: #04222c;
 
     /* Accent */
-    --accent: #ff9f0a;
+    --accent: #f0a24a;
     --accent-foreground: #241400;
 
     /* Feedback */
-    --success: #30d158;
-    --warning: #ff9f0a;
-    --danger: #ff453a;
-    --info: #7d88ff;
-    --accent-deep: #ffbe5c;
-    --shallows: #1f5c94;
+    --success: #5dd08f;
+    --warning: #f1b65d;
+    --danger: #ff7e86;
+    --info: #9aa8ff;
+    --accent-deep: #f6c27f;
+    --shallows: #1d4f5e;
     /*
-     * The night palette, drawn (ADR 20260901-diveday-reimagined, slice 13j).
-     * Reef drew no dark scheme, so open ocean stays the ground and the
-     * brand's night values stand (docs/design/brand.md); what it had to draw
-     * was the washes. A 10% mix of a signal over the shell goes grey at
-     * depth exactly as it did on the warm shell by day — the danger wash
-     * mixed to `#252a34`, a blue-grey with no red in it, and the warning wash
-     * to `#25322c`, a green. Each is now its own deep hue, chosen so the
-     * signal reads as itself on it and its ink clears AA on it: primary 7.27,
-     * success 7.93 (its `-strong` 7.01), warning 8.29 (`-strong` 7.33), danger
-     * 5.69, coral's deep on its wash 8.76; the reading ink on every wash
-     * 11.6–13.9 and the muted ink 5.3–6.3 (measured 2026-09-02).
-     * `src/lib/night-palette.test.ts` reads this block back and holds every
-     * pair, and that a wash is a hue and never a mix.
+     * The night washes, each a hue of its own so the signal reads as itself
+     * on it: primary 6.30, success 7.40, warning 7.99, danger 6.42, amber
+     * deep 9.24. `src/lib/night-palette.test.ts` holds every pair.
      */
-    --accent-tint: #2e1e05;
-    --primary-tint: #0a1c33;
+    --accent-tint: #33240f;
+    --primary-tint: #12303a;
 
-    /* The same four at depth. Contrast rises as a wash darkens here, so the
-       night palette's constraint is the opposite of the light one: these stay
-       far enough above `--background` to read as water at all. */
-    --water-dawn: #15182c;
-    --water-day: #0a1c33;
-    --water-dusk: #191d33;
-    --water-night: #0d1626;
-    --success-tint: #0b2617;
-    --warning-tint: #2b1e08;
-    --danger-tint: #301110;
-    --shadow-bed: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 26px rgba(0, 0, 0, 0.45);
+    --water-dawn: #12303a;
+    --water-day: #12303a;
+    --water-dusk: #12303a;
+    --water-night: #12303a;
+    --success-tint: #123022;
+    --warning-tint: #33280f;
+    --danger-tint: #3a191c;
+    --shadow-bed: 0 1px 2px rgba(0, 0, 0, 0.45);
   }
 }
 
@@ -413,38 +321,24 @@
   --radius-panel: var(--radius-panel);
   --shadow-bed: var(--shadow-bed);
   /*
-   * **The device's own face, with Geist behind it** — ADR 20260919-one-idea §1,
-   * carrying 20260918-nothing-to-explain's 22a.
-   *
-   * Round 2 of the 2026-09-18 canvas reversed H-64's "Geist is the only face":
-   * an app that wants to feel like the device it runs on wears the face that
-   * device already reads in. So the stack leads with the system face and keeps
-   * Geist as the fallback — which is what CI, every Linux runner and every
-   * visual baseline resolve to, unchanged. Nothing moves on the pixels we
-   * photograph; an iPhone and a Mac get SF, which is the whole point.
+   * **IBM Plex Sans, everywhere** (ADR 20261001-logbook). One face the app
+   * owns rather than the device's: it reads the same on a Mac, an Android
+   * phone at the dock and CI's Linux runner, and its figures are clear at
+   * small sizes. Self-hosted by `next/font` in the root layout.
    */
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-geist-sans),
-    system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
   /*
-   * **Figures**, and only figures: a time, a count, a seat tally. `ui-rounded`
-   * is SF Rounded on Apple devices and falls through to the sans stack
-   * everywhere else, so a figure is never a *different* face — it is the same
-   * face, rounder, where the device has one. Pair it with `tabular-nums`; a
-   * count that reflows as it changes is a count you cannot read at a glance.
-   *
-   * Declared on this layer and first read on the one above it — the staff
-   * home's date (`DayHeader`, ADR 20260919-one-idea slice 23a) — because a
-   * surface has to exist before anything can be drawn on it. It is
-   * `font-rounded` in a class, through Tailwind's `--font-*` namespace.
+   * **Figures**: a time, a count, a seat tally. The same face; pair it with
+   * `tabular-nums` so a count that changes does not reflow.
    */
-  --font-rounded: ui-rounded, "SF Pro Rounded", var(--font-sans);
-  /* The shop's chosen headline face on its own storefront (Harbor, ADR
-     20260901-diveday-reimagined). `BrandStyle` sets `--brand-display`; with
-     none set the utility resolves to Geist, so a heading wearing it is never
-     wrong, only sometimes the shop's. Headings only — never a fact. */
-  --font-brand-display: var(--brand-display, var(--font-geist-sans));
+  --font-rounded: var(--font-sans);
+  /* Boat mode's face: Atkinson Hyperlegible, drawn for legibility, for the
+     roll call read in sun and spray. `.boat-mode` switches `--font-sans`. */
+  --font-boat: var(--font-atkinson), var(--font-plex-sans), system-ui, sans-serif;
+  /* The shop's chosen headline face on its own storefront. With none set it
+     resolves to Plex, so a heading wearing it is never wrong. Headings only. */
+  --font-brand-display: var(--brand-display, var(--font-plex-sans));
 }
 
 /*
@@ -623,39 +517,41 @@ body {
   }
 }
 
+/*
+ * **Boat mode — Night Dive** (ADR 20261001-logbook). The roll call wears it in
+ * both schemes: deep navy, white ink, and marine safety yellow as the one
+ * action colour, in Atkinson Hyperlegible. Every pair clears AA by a wide
+ * margin: ink 15.0 on the surface, muted 8.3, yellow 11.2, ink on yellow 12.6.
+ * It replaces the ambient-light switch and the separate glare skin as the
+ * single high-contrast surface.
+ */
 .boat-mode {
-  --surface-sunken: #edf2f1;
-  --border: #8ba0a4;
-  --border-strong: #3f565d;
-  --foreground: #062631;
-  --muted: #294851;
-  --primary: #075985;
-  --primary-hover: #0c4a6e;
-  --primary-foreground: #ffffff;
-  --success: #166534;
-  --warning: #92400e;
-  --danger: #991b1b;
-  --info: #3730a3;
-}
-
-@media (prefers-color-scheme: dark) {
-  .boat-mode {
-    /* Higher-contrast than the app's dark palette: brighter ink and action,
-     * lifted borders, so a night-dive deck can still scan the roster at a
-     * glance without a white screen. */
-    --surface-sunken: #04121a;
-    --border: #37606f;
-    --border-strong: #6d94a6;
-    --foreground: #f2fafb;
-    --muted: #a7c2ca;
-    --primary: #38dbf3;
-    --primary-hover: #7fe9f9;
-    --primary-foreground: #041f27;
-    --success: #5ce68f;
-    --warning: #fcc63a;
-    --danger: #fb8888;
-    --info: #a5b4fc;
-  }
+  color-scheme: dark;
+  --background: #0a141c;
+  --surface: #13222d;
+  --surface-sunken: #071017;
+  --border: #2b4352;
+  --border-strong: #7d98a8;
+  --foreground: #f2f7fa;
+  --muted: #a9bcc8;
+  --primary: #ffd23f;
+  --primary-hover: #ffe38a;
+  --primary-foreground: #1a1500;
+  --primary-tint: #2e2a12;
+  --accent: #ffd23f;
+  --accent-deep: #ffe38a;
+  --accent-tint: #2e2a12;
+  --success: #58e08f;
+  --warning: #ffb648;
+  --danger: #ff7a7a;
+  --info: #a5b4fc;
+  --success-tint: #123222;
+  --warning-tint: #36280f;
+  --danger-tint: #3b1a1c;
+  --font-sans: var(--font-boat);
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-boat);
 }
 
 /*
@@ -672,30 +568,17 @@ body {
  */
 @media (prefers-contrast: more) and (prefers-color-scheme: light) {
   :root {
-    --border: #6b6a63;
-    --border-strong: #3f3d37;
-    --muted: #33454d;
-  }
-
-  .boat-mode {
-    --border: #6b7d82;
-    --border-strong: #263f47;
-    --muted: #1f3b44;
+    --border: #6d7880;
+    --border-strong: #3a464d;
+    --muted: #39454c;
   }
 }
 
 @media (prefers-contrast: more) and (prefers-color-scheme: dark) {
   :root {
-    --border: #4f7285;
-    --border-strong: #8fb4c6;
-    --muted: #c3d8de;
-    --foreground: #ffffff;
-  }
-
-  .boat-mode {
-    --border: #6f97a8;
-    --border-strong: #9cbcc9;
-    --muted: #c8dde4;
+    --border: #4a5e69;
+    --border-strong: #92a7b3;
+    --muted: #c3d0d7;
     --foreground: #ffffff;
   }
 }
@@ -1096,6 +979,7 @@ textarea {
   :root,
   :root.glare-mode,
   .boat-mode {
+    color-scheme: light;
     --background: #ffffff;
     --surface: #ffffff;
     --surface-sunken: #ffffff;

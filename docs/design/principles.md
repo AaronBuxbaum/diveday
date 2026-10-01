@@ -548,16 +548,13 @@ dock test, and one-primary all still apply.
 ## Tokens (the mechanics)
 
 Defined in `src/app/globals.css`, bound to Tailwind — see
-[ADR-0004](../architecture/decisions/0004-design-tokens.md) for the rules. Palette story (I · Tide,
-ADR [20260919-one-idea](../architecture/decisions/20260919-one-idea.md)): a cool grey ground
-under white groups (light) / black under near-black groups (dark); **lagoon** (`--primary`), the one
-DiveDay blue, is the action color; **coral** (`--accent`), a warm orange, is rationed for earned
-moments — its every sanctioned appearance is the **coral budget**,
+[ADR-0004](../architecture/decisions/0004-design-tokens.md) for the rules. Palette story (Logbook,
+ADR [20261001-logbook](../architecture/decisions/20261001-logbook.md)): paper with a faint sea-green
+cast under white groups (light) / deep slate (dark); **sea teal** (`--primary`) is the one action
+colour; **amber** (`--accent`) is rationed for earned moments under the
 [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
-decision 11 (one table, at most one earned coral moment per surface — Reef adds the drawn hand's
-single warm detail beside it, [20260901-diveday-reimagined](../architecture/decisions/20260901-diveday-reimagined.md) —
-and a new moment takes a row in the same change); feedback colors (`--success`,
-`--warning`, `--danger`) never carry meaning alone.
+decision 11 budget; feedback colours (`--success`, `--warning`, `--danger`) never carry meaning alone.
+`.boat-mode` is Night Dive (navy, white ink, safety yellow) in both schemes.
 
 **Where the palette actually stands.** AA is the bar, and the light palette does not clear it
 everywhere yet — so do not describe the app as WCAG AA conformant, in docs, in a page, or in a
@@ -565,7 +562,7 @@ PR description. One known light-mode gap is open and deliberately deferred pendi
 decision: input placeholders (3.07:1 on `--surface-sunken`), tracked in
 [product/features/roadmap.md](../product/features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision).
 Everything else measured clears AA, and `--focus-ring` clears WCAG 1.4.11's 3:1 in all four
-palettes (worst case 4.66:1).
+palettes (worst case 4.93:1).
 
 **CI does catch a contrast regression now**, on every surface `e2e/a11y.spec.ts` scans — the axe
 scan's `color-contrast` rule was turned back on 2026-08-23 with no exclusion list at all (issue

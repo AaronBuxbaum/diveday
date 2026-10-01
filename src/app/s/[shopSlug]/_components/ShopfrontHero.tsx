@@ -107,7 +107,7 @@ export function ShopfrontHero({
     <div className="min-w-0">
       {/* Headings wear the shop's display face (Harbor — ADR
           20260901-diveday-reimagined, decision 2); every fact beneath stays in
-          Geist and ink, so the face can never label a rating, a count or a claim. */}
+          Plex and ink, so the face can never label a rating, a count or a claim. */}
       {heroImage ? (
         <div className="relative mb-6 overflow-hidden rounded-panel border border-border bg-surface-sunken shadow-bed">
           <StoredPhoto

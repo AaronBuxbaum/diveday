@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Noto_Sans_Symbols_2 } from "next/font/google";
+import {
+  Atkinson_Hyperlegible,
+  IBM_Plex_Mono,
+  IBM_Plex_Sans,
+  Noto_Sans_Symbols_2,
+} from "next/font/google";
 import { Suspense } from "react";
 import { THEME_COLORS } from "./_brand/colors";
 import "./globals.css";
@@ -18,20 +23,34 @@ import { publicAppUrl } from "@/lib/notifications/app-url";
 import { openGraphSite, sharedLinkCardImage } from "@/lib/site-metadata";
 import { Observability } from "./observability-client";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Logbook's one face (ADR 20261001-logbook). `latin-ext` because divers'
+// names are not all ASCII (Bjørn, Łucja, Şule), and a fallback glyph in the
+// middle of a name on a manifest is the wrong place for a second typeface.
+const plexSans = IBM_Plex_Sans({
+  variable: "--font-plex-sans",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
+  weight: ["400", "600"],
 });
 
-// Geist's "latin" subset does not cover the arrows, checkmarks, and dingbats
+// Boat mode's face, drawn for legibility in sun and spray. Only the roll call
+// wears it, so it does not preload on every page.
+const atkinson = Atkinson_Hyperlegible({
+  variable: "--font-atkinson",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "700"],
+  preload: false,
+});
+
+// Plex's "latin" subset does not cover the arrows, checkmarks, and dingbats
 // (→ ✓ ★ ☀ …) this app renders in real UI — they fell back to whatever font
 // the OS happened to have, which is the runner image's fontconfig in CI.
-// Self-hosting them the same way as Geist pins that fallback to the build,
+// Self-hosting them the same way as Plex pins that fallback to the build,
 // closing the residual risk ADR 20260730-pinned-browser-visual-determinism
 // left open. `preload: false`: these only cover rare glyphs, not the
 // above-the-fold text every page pays for on first paint.
@@ -131,7 +150,7 @@ export default function RootLayout({
       // indicator can match at all, which it never could (issue #733).
       dir={localeDirection(DEFAULT_DIVER_LOCALE)}
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${notoSymbols.variable} h-full antialiased`}
+      className={`${plexSans.variable} ${plexMono.variable} ${atkinson.variable} ${notoSymbols.variable} h-full antialiased`}
     >
       <head>
         <script

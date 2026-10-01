@@ -31,7 +31,7 @@ import {
  *
  * The face is loaded here exactly as the storefront loads it — one Google
  * Fonts stylesheet for the chosen family — and only when a family is chosen;
- * with none, the sample is Geist, which is what the storefront shows too.
+ * with none, the sample is Plex, which is what the storefront shows too.
  */
 export function BrandPreview({
   shopName,

@@ -43,13 +43,13 @@ describe("the segment's corner", () => {
     expect(SEGMENT_CORNER).toBe("rounded-[calc(var(--radius-inset)-var(--spacing)-1px)]");
   });
 
-  it("comes to 7px on today's tokens — 12, less 1px of border and 4px of padding", () => {
+  it("comes to 3px on today's tokens — 8, less 1px of border and 4px of padding", () => {
     const inset = CSS.match(/--radius-inset:\s*([\d.]+)rem;/);
     expect(inset, "globals.css declares --radius-inset in rem").not.toBeNull();
     // `p-1` is one `--spacing`, and the app leaves Tailwind's 0.25rem alone.
     expect(CSS).not.toMatch(/--spacing:/);
     const px = Number(inset?.[1]) * 16 - 0.25 * 16 - 1;
-    expect(px).toBe(7);
+    expect(px).toBe(3);
   });
 
   it("is on every segment, selected or not, and never the control rung", () => {
