@@ -1,6 +1,10 @@
 {
-  "boardEyebrow": "Schedule",
-  "boardTitle": "Board",
+  "boardTitle": "Schedule",
+  "views": {
+    "label": "Schedule views",
+    "week": "Week",
+    "crew": "Crew"
+  },
   "viewPublicPage": "View public page",
   "scheduleTrip": "Schedule a trip",
   "notices": {

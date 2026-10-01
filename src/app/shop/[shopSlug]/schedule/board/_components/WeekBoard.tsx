@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { SiteMark } from "@/components/illustration/SiteMark";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel, groupLabelClass } from "@/components/ui/ledger";
@@ -9,15 +8,9 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { WeekPager } from "@/components/ui/week-pager";
 import { fill } from "@/i18n/fill";
-import type { SiteMarkCode } from "@/lib/site-mark";
 import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import { isSoldOut, seatFill } from "@/lib/week-seats";
-import {
-  WEEK_DAY_GRID_CLASS,
-  WEEK_EMPTY_DAY_CLASS,
-  WEEK_MARK_CLASS,
-  WEEK_ROW_BOX_CLASS,
-} from "./week-geometry";
+import { WEEK_DAY_GRID_CLASS, WEEK_EMPTY_DAY_CLASS, WEEK_ROW_BOX_CLASS } from "./week-geometry";
 
 /**
  * What every departure the grid draws — a day cell or a spanning course bar —
@@ -71,8 +64,6 @@ export type WeekEntry = WeekDeparture & {
   /** Preformatted departure time, e.g. "7:00 AM". */
   time: string;
   seats: WeekSeats;
-  /** Which drawing marks it — read off the site's name (`siteMarkFor`). */
-  mark: SiteMarkCode;
   /** "Molasses Reef · Mantis II · 10 of 12 · $95", or "Sailed · 9 of 12" for a boat already home. */
   meta: string;
   /**
@@ -400,7 +391,6 @@ function WeekBoat({
   seats,
   meta,
   time,
-  mark,
   runs,
   crewLine,
   hasUsualCrew,
@@ -416,7 +406,6 @@ function WeekBoat({
   meta: string;
   /** Preformatted; a course bar has none of its own, so its day leads instead. */
   time: string | null;
-  mark: SiteMarkCode | null;
   /** "3 days", on a course that owns more than the day it starts. */
   runs: string | null;
   /**
@@ -450,10 +439,6 @@ function WeekBoat({
     <div
       className={`group/boat pressable-row relative ${WEEK_ROW_BOX_CLASS} hover:bg-surface has-[a:focus-visible]:bg-surface`}
     >
-      {/* The drawn site mark leads the row (ADR 20260901-diveday-reimagined,
-          slice 13f). No coral: the budget is one creature's detail per
-          surface, and a week has no one boat to give it to. */}
-      {mark ? <SiteMark mark={mark} size="sm" coral={false} className={WEEK_MARK_CLASS} /> : null}
       <div className="min-w-0 flex-1">
         {/* The lead line is what the canvas draws: when it leaves, how full it
             is, and the count. The bar sits between them rather than after, so
@@ -774,7 +759,6 @@ export function WeekBoard({
                           seats={span.seats}
                           meta={span.meta}
                           time={null}
-                          mark={null}
                           runs={span.runsLabel}
                           crewLine={null}
                           hasUsualCrew={usualCrew !== null}
@@ -794,7 +778,6 @@ export function WeekBoard({
                           seats={entry.seats}
                           meta={entry.meta}
                           time={entry.time}
-                          mark={entry.mark}
                           runs={null}
                           crewLine={
                             isUsualCrew(entry.crew, usualCrew)

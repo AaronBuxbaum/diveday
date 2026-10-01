@@ -23,7 +23,7 @@ test("the first-booking story opens the shop's own public page, with no sign-in"
   // so its absence is not what makes this the customer's view. The staff nav is:
   // none of the tabs a signed-in shop works from are on this page.
   await expect(page).toHaveURL(/\/s\/[^/]+$/);
-  await expect(page.getByRole("link", { name: "Board", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Inbox", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Check-in", exact: true })).toHaveCount(0);
 });
 

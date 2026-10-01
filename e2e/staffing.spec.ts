@@ -68,7 +68,7 @@ test("an owner puts a shift in a day, steps a week off it, and takes it back off
   const note = `Boat 2 ${e2eNow().getTime()}`;
 
   await page.goto(`/shop/${privateShop.slug}/staffing`);
-  await expect(page.getByRole("heading", { level: 1, name: "Staffing" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
   const week = weekOf(page);
   // The seeded shift is on today, which is inside the week the page opens on.
   await expect(week.getByText("Demo schedule").first()).toBeVisible();
@@ -175,7 +175,7 @@ test.describe("staffing", () => {
 
     await page.goto(STAFFING);
     const week = weekOf(page);
-    await expect(page.getByRole("heading", { level: 1, name: "Staffing" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
     // Nobody booked is nobody to supervise, so there is nothing to warn about
     // yet — the expected state must not arrive as an alert.
     await expect(week.getByText(title)).toHaveCount(0);
@@ -208,7 +208,7 @@ test.describe("staffing", () => {
     // The window form is gone; the two params it wrote are ignored, not
     // refused, so a bookmark a shop kept still opens the page.
     await page.goto(`${STAFFING}?from=${daysFromNow(30)}&to=${daysFromNow(37)}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Staffing" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
     await expect(weekOf(page).getByText("Demo schedule").first()).toBeVisible();
     // Already on this week, so the way home is absent rather than disabled.
     await expect(page.getByRole("link", { name: "This week" })).toHaveCount(0);
@@ -224,7 +224,7 @@ test.describe("staffing, as the daily crew", () => {
     // still needs to see who is on today. Same shape as the schedule board's
     // "a captain sees the board but none of its controls".
     await page.goto(STAFFING);
-    await expect(page.getByRole("heading", { level: 1, name: "Staffing" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
     await expect(weekOf(page).getByText("Demo schedule").first()).toBeVisible();
 
     // No door, and no act inside a chip — a control that refuses is worse than
@@ -248,7 +248,7 @@ test.describe("staffing, as the daily crew", () => {
     // into it — and `privateShop` cannot be used from a file that already
     // carries a staff session anyway (its own note in `e2e/fixtures.ts`).
     await page.goto(STAFFING);
-    await page.getByRole("heading", { level: 1, name: "Staffing" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Schedule" }).waitFor();
 
     await page.getByText("Tell the shop you’re away").click();
     const away = page.locator("#add-away");
@@ -275,7 +275,7 @@ test.describe("a crew member asks to work a short-handed departure", () => {
   test("the ask lands on the departure, and the owner is the one who answers", async ({ page }) => {
     // Reset-owned rows again, so the demo shop is the right place to write them.
     await page.goto(STAFFING);
-    await page.getByRole("heading", { level: 1, name: "Staffing" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Schedule" }).waitFor();
     // By the accessible name, not the visible label: every gap's button reads
     // "Ask for this one", so the departure it is about lives in the `ariaLabel`
     // (`SubmitButton`) — which is also what a screen reader hears.
@@ -290,5 +290,28 @@ test.describe("a crew member asks to work a short-handed departure", () => {
     // And no way to answer their own ask — that is the owner's, and the domain
     // layer refuses it besides.
     await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
+  });
+});
+
+test.describe("schedule views", () => {
+  signedInAsOwner();
+
+  /**
+   * **Schedule is one place with two views** (ADR 20261001-logbook): the week of
+   * departures and the same week by crew, one tab apart, and a step to another
+   * week survives the switch.
+   */
+  test("the week and its crew are two views of one Schedule, and the week travels between them", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/schedule/board?week=2026-08-03");
+    const views = page.getByRole("navigation", { name: "Schedule views" });
+    await expect(views.getByRole("link", { name: "Week" })).toHaveAttribute("aria-current", "page");
+    await views.getByRole("link", { name: "Crew" }).click();
+    await page.waitForURL(/\/staffing\?week=2026-08-03$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
+    await expect(views.getByRole("link", { name: "Crew" })).toHaveAttribute("aria-current", "page");
+    await views.getByRole("link", { name: "Week" }).click();
+    await page.waitForURL(/\/schedule\/board\?week=2026-08-03$/);
   });
 });

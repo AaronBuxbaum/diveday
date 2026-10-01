@@ -10,7 +10,7 @@ import {
   type WeekEntry,
   type WeekSpan,
 } from "./WeekBoard";
-import { WEEK_EMPTY_DAY_CLASS, WEEK_MARK_CLASS } from "./week-geometry";
+import { WEEK_EMPTY_DAY_CLASS } from "./week-geometry";
 
 afterEach(cleanup);
 
@@ -50,7 +50,6 @@ function entry(overrides: Partial<WeekEntry> = {}): WeekEntry {
     ref: "Two-Tank Reef, Thu, Aug 27 7:00 AM",
     time: "7:00 AM",
     seats: { booked: 8, capacity: 12 },
-    mark: "reef",
     meta: "Molasses Reef · 8 of 12 · $95",
     crew: [],
     ...overrides,
@@ -261,18 +260,10 @@ describe("the day rail (K-326, K-327, K-328)", () => {
     for (const none of empty) expect(none).toHaveClass(...WEEK_EMPTY_DAY_CLASS.split(" "));
   });
 
-  it("centres a departure's site mark on that first line", () => {
-    // The 30px tile hung 2px down its row, so its centre sat 1px under the
-    // line's, as it had under the 36px line before.
-    board(week({}, [entry()]));
-    const first = screen.getByText("7:00 AM").parentElement as HTMLElement;
-    const tile = first.closest("li")?.querySelector("[data-site-mark]") as HTMLElement;
-    expect(tile.parentElement).toHaveClass("items-start");
-    const height = Number(token(tile, /^h-\[(\d+)px\]$/));
-    const line = spacing(first, ["min-h"], "phone");
-    expect(spacing(tile, ["mt", "my"], "phone") + height / 2).toBe(line / 2);
-    // The skeleton's tile takes the same offset (loading.test.tsx).
-    expect(tile).toHaveClass(...WEEK_MARK_CLASS.split(" "));
+  /** The Logbook restart decorates only what carries data (ADR 20261001-logbook). */
+  it("opens a departure's row on its time, with no drawing of the site", () => {
+    const { container } = board(week({}, [entry()]));
+    expect(container.querySelector("[data-site-mark]")).toBeNull();
   });
 });
 

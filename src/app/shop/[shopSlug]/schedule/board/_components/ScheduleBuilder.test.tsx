@@ -287,7 +287,6 @@ function weekFrom(days: FixtureDay[], overrides: Partial<BuilderWeek> = {}): Bui
         startTime: trip.startTime,
         title: trip.title,
         time: trip.timeRange.split(" – ")[0] ?? trip.timeRange,
-        mark: "reef" as const,
         meta: [trip.diveSiteName, `${trip.booked} of ${trip.capacity}`].filter(Boolean).join(" · "),
         seats: { booked: trip.booked, capacity: trip.capacity },
         crew: trip.crew,
@@ -1358,7 +1357,6 @@ describe("ScheduleBuilder week board", () => {
 
   function weekEntry(overrides: Partial<WeekEntry> & { tripId: string; dateIso: string }) {
     return {
-      mark: "reef" as const,
       startTime: "07:00",
       title: "Two-Tank Reef",
       time: "7:00 AM",

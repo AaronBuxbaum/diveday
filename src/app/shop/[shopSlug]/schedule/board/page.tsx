@@ -36,7 +36,6 @@ import { currencyFractionDigits, maxPriceMajor, toShopCurrency } from "@/lib/mon
 import { publicSchedulePath } from "@/lib/public-routes";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import { requireShopSurface } from "@/lib/session";
-import { siteMarkFor } from "@/lib/site-mark";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { uuidParam } from "@/lib/uuid";
@@ -50,6 +49,7 @@ import {
 } from "@/lib/week-board";
 import { weekSeatTally } from "@/lib/week-seats";
 import { toDateInputValue, toTimeInputValue, utcToWallTime } from "@/lib/zoned";
+import { ScheduleViews } from "../_components/ScheduleViews";
 import {
   type BuilderCopy,
   type BuilderInitialCourse,
@@ -81,7 +81,7 @@ import {
 export const instant = true;
 
 export const metadata: Metadata = {
-  title: "Board — DiveDay",
+  title: "Schedule — DiveDay",
   // Staff-only operations surface, never a public document.
   robots: { index: false, follow: false },
 };
@@ -662,7 +662,6 @@ export default async function ScheduleBoardPage({
         startTime: toTimeInputValue(utcToWallTime(entry.startsAt, tz)),
         title: entry.title,
         time: formatTime(entry.startsAt, locale, tz),
-        mark: siteMarkFor({ siteName: entry.diveSiteName, isCourse: entry.courseId !== null }),
         // **The site leads, because it is what differs.** Every title in a
         // column shares its prefix — "Dawn Two-Tank — …", "Morning Two-Tank —
         // …" — and a 150px column clips exactly the half that distinguishes
@@ -867,10 +866,8 @@ export default async function ScheduleBoardPage({
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        // The board's own name, from the staff bundle. It used to borrow the
-        // public schedule's heading, so `/s/<slug>` and this page both said
-        // "Schedule" while the nav tab called it something else again.
-        eyebrow={st("schedule.boardEyebrow")}
+        // The section's own name: the nav row, this heading and the Crew
+        // view's heading all say "Schedule" (ADR 20261001-logbook).
         title={st("schedule.boardTitle")}
         // **The header stands down while the board is empty** (issue 797).
         // With nothing upcoming, this cluster offered a new owner three doors
@@ -935,6 +932,17 @@ export default async function ScheduleBoardPage({
             </>
           ) : undefined
         }
+      />
+
+      <ScheduleViews
+        shopSlug={shopSlug}
+        current="week"
+        week={weekStartIso}
+        copy={{
+          label: st("schedule.views.label"),
+          week: st("schedule.views.week"),
+          crew: st("schedule.views.crew"),
+        }}
       />
 
       {/* The four-tile overview row is gone on purpose: "Departures 46 /

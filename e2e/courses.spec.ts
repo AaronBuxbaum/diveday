@@ -327,7 +327,7 @@ test.describe("staff", () => {
     // 20260806-one-trip-create-form) — the panel opens with the course
     // preselected and the title placeholder already shaped for it.
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/schedule\/board\?course=[0-9a-f-]{36}$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Board" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
     // By name, not label: every board row carries an aria-label naming the
     // departure ("Copy Open Water Diver — …"), and a substring label match
     // sweeps those up alongside the panel's own select.

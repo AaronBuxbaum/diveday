@@ -53,6 +53,10 @@ stay in `AGENTS.md`.
   + `schedule/board/actions.ts`; mutations in `src/db/trips-schedule.ts`. The add panel is the
   **one place a trip is created**; `/shop/[shopSlug]/trips/new` is a 308 to
   `schedule/board?add=full` (ADR 20260806-one-trip-create-form).
+- **Schedule is one place with two views** (ADR 20261001-logbook): Week (`schedule/board`, the
+  departures and the builder) and Crew (`staffing/`, the same week by who is working it), both
+  titled "Schedule" under `schedule/_components/ScheduleViews.tsx`, which carries `?week=` across.
+  A third reading of the week is a third view there, never a page of its own.
 - **A departure is five tabs under a stage stepper** (ADR 20261001-logbook, decision 3):
   Divers (`trips/[id]/page.tsx`, the roster), Check-in (the day counter at `check-in?trip=`),
   Boat (`manifest/`), Gear (`prep/`, the packing list) and Details (`trips/[id]?view=details`,

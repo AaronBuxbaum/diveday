@@ -92,7 +92,7 @@ test("the command palette also finds dive sites, courses, and every gated nav de
   const shortcuts = page.getByRole("combobox", { name: /Search divers/ });
   for (const [query, urlPattern] of [
     ["Check-in", /\/check-in$/],
-    ["Staffing", /\/staffing$/],
+    ["Crew schedule", /\/staffing$/],
     ["Dive sites", /\/dive-sites$/],
     ["Courses", /\/courses$/],
     ["Reviews", /\/reviews$/],

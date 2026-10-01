@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   WEEK_DAY_GRID_CLASS,
   WEEK_EMPTY_DAY_CLASS,
-  WEEK_MARK_CLASS,
   WEEK_ROW_BOX_CLASS,
 } from "./_components/week-geometry";
 import ScheduleBoardLoading from "./loading";
@@ -46,7 +45,7 @@ describe("the schedule board's loading skeleton (K-466)", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("draws an empty day, and a departure's site mark, in the board's own boxes", () => {
+  it("draws an empty day, and a departure, in the board's own boxes", () => {
     // An empty day drew `min-h-8` and `py-2` on one border-box, 32px tall
     // where the board's was 36: one box spelled twice, and neither on the
     // rail's line. The arithmetic is WeekBoard.test.tsx's, on the string both
@@ -56,8 +55,5 @@ describe("the schedule board's loading skeleton (K-466)", () => {
     expect(all.filter((element) => element.className === WEEK_EMPTY_DAY_CLASS)).toHaveLength(3);
     const rows = all.filter((element) => element.className === WEEK_ROW_BOX_CLASS);
     expect(rows).toHaveLength(6);
-    for (const row of rows) {
-      expect(row.firstElementChild).toHaveClass(...WEEK_MARK_CLASS.split(" "));
-    }
   });
 });

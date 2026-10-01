@@ -220,6 +220,20 @@ async function expectNoA11yViolations(page: Page) {
   });
   expect(duplicateIds, JSON.stringify(duplicateIds, null, 2)).toEqual([]);
 
+  // **Scan the settled page, not a frame of an entrance.** A `rise-in` banner
+  // is mid-fade for its first 200ms, and axe measures the blended ink: the
+  // cert-gate refusal read #bc4249 on #fae8e9 (4.43:1) on its way to the
+  // token's own pair. Every finite animation is waited out; a looping one
+  // (a pulse) never finishes and is left alone.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  );
+
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
     .disableRules(["document-title"])
@@ -540,13 +554,13 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       // block: the two inactive branches are `disabled` fieldsets that stay in
       // the DOM, so this scan sees the whole form either way.
       { path: "/shop/blue-mantis/calls?outcome=date-request", heading: "Took a call" },
-      { path: "/shop/blue-mantis/schedule/board", heading: "Board" },
+      { path: "/shop/blue-mantis/schedule/board", heading: "Schedule" },
       // Creating a trip is the board's own add panel now (ADR
       // 20260806-one-trip-create-form), and `?add=full` is the deep end of it
       // — the whole former `/trips/new` form, disclosed inline. `/trips/new`
       // itself is a permanent redirect here, so this scans the surface the
       // fields actually live on.
-      { path: "/shop/blue-mantis/schedule/board?add=full", heading: "Board" },
+      { path: "/shop/blue-mantis/schedule/board?add=full", heading: "Schedule" },
       { path: "/shop/blue-mantis/divers", heading: "Divers" },
     ]);
   });
@@ -568,7 +582,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       { path: "/shop/blue-mantis/promos", heading: "Discounts a diver can type" },
       { path: "/shop/blue-mantis/reviews", heading: "What divers said" },
       { path: "/shop/blue-mantis/reports", heading: "How’s your month" },
-      { path: "/shop/blue-mantis/staffing", heading: "Staffing" },
+      { path: "/shop/blue-mantis/staffing", heading: "Schedule" },
       { path: "/shop/blue-mantis/courses", heading: "Courses" },
       { path: "/shop/blue-mantis/waivers", heading: "The release" },
       { path: "/shop/blue-mantis/dive-sites", heading: "Dive-site library" },
@@ -1072,7 +1086,7 @@ test.describe("automated accessibility scans of the staff overlays", () => {
     // row and steals focus into its first field (ScheduleBuilder.tsx's
     // autofocus panel) — all of it markup a URL can't reach.
     await page.goto("/shop/blue-mantis/schedule/board");
-    await expect(page.getByRole("heading", { level: 1, name: "Board" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
     const trigger = page.getByRole("button", { name: /^Move, copy, or remove / }).first();
 
     // The open action list itself — the app's other hand-rolled disclosure.

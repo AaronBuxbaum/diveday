@@ -4497,7 +4497,7 @@ for (const scheme of ["light", "dark"] as const) {
       // below `lg` (the same call H-63 made for the board).
       test(`the staffing week renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/staffing");
-        await page.getByRole("heading", { name: "Staffing", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await capture(page, "staffing", scheme);
       });
 
@@ -4745,7 +4745,7 @@ for (const scheme of ["light", "dark"] as const) {
       // carrying its crew and one quiet "⋯" disclosure for move/copy/remove.
       test(`the schedule board renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
-        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await boardListSettled(page);
         await capture(page, "schedule-builder", scheme);
       });
@@ -4770,7 +4770,7 @@ for (const scheme of ["light", "dark"] as const) {
         day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
         const asked = day.toISOString().slice(0, 10);
         await page.goto(`/shop/blue-mantis/schedule/board?week=${asked}`);
-        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await boardListSettled(page);
         await page.getByText("Asked for").waitFor();
         await capture(page, "schedule-builder-asked", scheme);
@@ -4806,7 +4806,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the move panel says what a move will cost (${scheme})`, async ({ page }) => {
         const title = "Wreck Trip — Spiegel Grove";
         await page.goto("/shop/blue-mantis/schedule/board");
-        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await boardListSettled(page);
         await page
           .getByRole("button", { name: new RegExp(`^Move, copy, or remove ${title},`) })
@@ -4854,7 +4854,7 @@ for (const scheme of ["light", "dark"] as const) {
         const title = "Wreck Trip — Spiegel Grove";
         const host = "Two-Tank Reef — Christ of the Abyss";
         await page.goto("/shop/blue-mantis/schedule/board");
-        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await boardListSettled(page);
         await page
           .getByRole("button", { name: new RegExp(`^Move, copy, or remove ${title},`) })
@@ -4924,7 +4924,7 @@ for (const scheme of ["light", "dark"] as const) {
           new RegExp(`^${verb} ${moveBlocked.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")},`);
 
         await page.goto("/shop/blue-mantis/schedule/board");
-        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await boardListSettled(page);
         await page
           .getByRole("button", { name: rowAction("Move, copy, or remove") })
@@ -4944,7 +4944,7 @@ for (const scheme of ["light", "dark"] as const) {
       // "More options".
       test(`the add-a-departure panel renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
-        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await page.getByRole("link", { name: "Add a departure", exact: true }).click();
         await addPanelSettled(page);
         await boardListSettled(page);
@@ -4960,7 +4960,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
-        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await page.getByRole("link", { name: "Add a departure", exact: true }).click();
         await addPanelSettled(page);
         // By control name, not by label: the quick row and dive one both carry
@@ -4984,7 +4984,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/schedule/board?add=full");
-        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await page.getByRole("button", { name: "Fewer options" }).waitFor();
         await addPanelSettled(page);
         await boardListSettled(page);
@@ -5007,7 +5007,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("How often").selectOption("1");
         await page.getByRole("button", { name: "Put it on the board" }).click();
         // **The write's own signal, not the page's heading.** `?add=full` is
-        // the board with the panel open, so the "Board" heading is already on
+        // the board with the panel open, so the "Schedule" heading is already on
         // screen and waiting for it waits for nothing — and the crawl below
         // reads the week with `count()`, which does not auto-wait, so it
         // walked past a departure still being written and hunted it to the
