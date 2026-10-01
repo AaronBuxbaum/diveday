@@ -5643,6 +5643,8 @@ for (const scheme of ["light", "dark"] as const) {
         // Matching the stem keeps this test about the deal panel.
         await expect(page.getByRole("status")).toContainText("Requirements updated.");
 
+        // The save lands on Details; the deal panel and the wait list are on Divers.
+        await openTripTab(page, "Trip");
         await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
         await page.getByRole("heading", { name: "Nobody to send this to yet" }).waitFor();
         await waitForHashLanding(page);
@@ -5713,6 +5715,8 @@ for (const scheme of ["light", "dark"] as const) {
         // test about the wait list.
         await expect(page.getByRole("status")).toContainText("Requirements updated.");
 
+        // The save lands on Details; the deal panel and the wait list are on Divers.
+        await openTripTab(page, "Trip");
         await page.goto(`/shop/blue-mantis/trips/${tripId}#waitlist`);
         // Scoped to the ledger: the deal panel further down the same page
         // renders the identical phrase for its own recipients, and this test is

@@ -10,7 +10,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { isPrepGrouping, type PrepGrouping } from "@/lib/dive-prep";
-import { PREP_SECTION_ID } from "@/lib/element-id";
+import { PREP_SECTION_ID, scopedId } from "@/lib/element-id";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
@@ -121,8 +121,9 @@ export default async function TripPrepPage({
         phase={phase}
         copy={tripTabsCopy(t)}
       />
-      {/* The anchor every "fix the packing list" link lands on. */}
-      <div id={PREP_SECTION_ID} className="mt-10 scroll-mt-6">
+      {/* The anchor every "fix the packing list" link lands on, prefixed like
+          every other id here when the paper day composes this page per departure. */}
+      <div id={scopedId(idPrefix, PREP_SECTION_ID)} className="mt-10 scroll-mt-6">
         <PrepBody
           prep={prep}
           t={t}

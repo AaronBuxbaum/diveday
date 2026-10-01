@@ -280,7 +280,15 @@ export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep")
   const root = url.pathname.match(/^(.*\/trips\/[^/?#]+)/)?.[1];
   if (!root) throw new Error(`openTripTab called from ${url.pathname}, which is not a departure`);
   const target = tab === "Trip" ? root : `${root}/${tab.toLowerCase()}`;
-  if (url.pathname === target) return;
+  // Divers and Details share a path: Details is `?view=details`, and an About
+  // form's save lands on Details with a `form=` that `FlashParams` strips, so the
+  // address bar alone cannot say the roster is open. The tab strip can.
+  const onTarget =
+    url.pathname === target &&
+    (tab !== "Trip" ||
+      (await page.locator('nav[data-trip-tabs] a[aria-current="page"]').getAttribute("href")) ===
+        root);
+  if (onTarget) return;
   await page.goto(target);
   await page.waitForURL(
     tab === "Trip" ? TRIP_ROOT_URL : new RegExp(`/${tab.toLowerCase()}(\\?|#|$)`),
