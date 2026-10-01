@@ -1624,7 +1624,7 @@ describe("ScheduleBuilder week board", () => {
     const flag = within(grid()).getByRole("link", {
       name: "Set a price for Christ of the Abyss, Sun, Aug 30 11:30 AM – 3:00 PM",
     });
-    expect(flag).toHaveAttribute("href", "/shop/blue-mantis/trips/sunday-1#details");
+    expect(flag).toHaveAttribute("href", "/shop/blue-mantis/trips/sunday-1?view=details#details");
     expect(flag.textContent).toContain("No price set");
     expect(flag.querySelector("svg")).not.toBeNull();
   });
@@ -1800,7 +1800,7 @@ describe("ScheduleBuilder week board", () => {
     const flag = within(grid()).getByRole("link", {
       name: "Set a price for Open Water Diver — three-day course, Aug 28 – 30, 2026",
     });
-    expect(flag).toHaveAttribute("href", "/shop/blue-mantis/trips/course-1#details");
+    expect(flag).toHaveAttribute("href", "/shop/blue-mantis/trips/course-1?view=details#details");
     expect(flag.textContent).toContain("No price set");
     expect(flag.querySelector("svg")).not.toBeNull();
   });

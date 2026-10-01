@@ -4,6 +4,21 @@
     "manifest": "Manifest",
     "prep": "Prep"
   },
+  "tabs": {
+    "label": "Departure",
+    "divers": "Divers",
+    "checkin": "Check-in",
+    "boat": "Boat",
+    "gear": "Gear",
+    "details": "Details"
+  },
+  "phases": {
+    "label": "Stage",
+    "prep": "Prep",
+    "checkin": "Check-in",
+    "aboard": "Aboard",
+    "back": "Back"
+  },
   "about": {
     "heading": "About this departure",
     "add": "Add",
@@ -120,7 +135,8 @@
     "overRatio": "Over student ratio",
     "overIntroRatio": "Over intro ratio",
     "prepGaps": "{count, plural, one {# diver is missing rental sizes} other {# divers are missing rental sizes}}",
-    "awaitingPayment": "{count, plural, one {# order is awaiting payment} other {# orders are awaiting payment}}"
+    "awaitingPayment": "{count, plural, one {# order is awaiting payment} other {# orders are awaiting payment}}",
+    "noRequirements": "Set the requirements before anyone can board"
   },
   "detail": {
     "viewBookingPage": "View booking page",

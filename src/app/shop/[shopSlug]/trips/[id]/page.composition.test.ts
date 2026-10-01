@@ -9,29 +9,28 @@ import { describe, expect, it } from "vitest";
  */
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
 
-describe("the departure page's packing-list anchor", () => {
+describe("the departure's tabs", () => {
   /**
-   * The anchor wrapper renders on every departure so the skeleton holds the
-   * position five links land on while the gear reads run. On a departure
-   * nobody is booked on the packing list renders no node at all (see
-   * `PrepBody.test.tsx`), and the pixel probe measured the wrapper 0px tall
-   * and still holding its `mt-10` open: a 40px gap where siblings sit 20px
-   * apart (trip-repeating-cadence, trip-repeating-panel). React's Suspense
-   * markers are comments, which `:empty` ignores, so `empty:hidden` takes the
-   * wrapper out of the flow exactly when the list says nothing, and never
-   * while the skeleton or a read-failure banner is in it.
+   * ADR 20261001-logbook, decision 3: the departure is five tabs under a stage
+   * stepper. This page is two of them, Divers and Details, chosen by `?view=`
+   * or by an About form's own notice, so a save on Details lands back on it.
    */
-  it("carries empty:hidden, and holds nothing but the Suspense boundary that may resolve to nothing", () => {
-    const open = SOURCE.indexOf("<div id={PREP_SECTION_ID}");
-    expect(open).toBeGreaterThan(-1);
-    const tagEnd = SOURCE.indexOf(">", open);
-    const tag = SOURCE.slice(open, tagEnd + 1);
-    expect(tag).toMatch(/className="[^"]*\bempty:hidden\b[^"]*"/);
+  it("draws the tabs right under the masthead, on every departure", () => {
+    const body = SOURCE.slice(SOURCE.indexOf("export default async function"));
+    const masthead = body.indexOf("<VoyageHeader");
+    const tabs = body.indexOf("<TripTabs");
+    expect(tabs).toBeGreaterThan(masthead);
+    // Never behind `cancelled`: the Boat tab is a blown-out departure's way to
+    // its roll call (dive-domain review 20260920).
+    const opener = body.slice(body.lastIndexOf("\n", tabs - 1), tabs);
+    expect(opener.trim()).toBe("");
+    expect(body.slice(body.lastIndexOf("*/}", tabs), tabs)).not.toMatch(/\?|&&/);
+  });
 
-    const close = SOURCE.indexOf("</div>", tagEnd);
-    const inside = SOURCE.slice(tagEnd + 1, close).trim();
-    expect(inside.startsWith("<Suspense")).toBe(true);
-    expect(inside.endsWith("</Suspense>")).toBe(true);
+  it("shows Details or Divers, never both, and packs nothing here", () => {
+    expect(SOURCE).toMatch(/\{showDetails \? \(\s*<TripAboutSection/);
+    expect(SOURCE).not.toContain('PREP_SECTION_ID}"');
+    expect(SOURCE).not.toContain("<TripPrepSection");
   });
 });
 
@@ -83,10 +82,6 @@ describe("the departure's section rhythm", () => {
         body.indexOf("<FormStatus", body.indexOf("{cancelled && (canConfigure")),
       ),
       body.slice(body.indexOf("{pulseFacts.length > 0 ? ("), body.indexOf("{pulseFacts.map")),
-      body.slice(
-        body.indexOf("<div id={PREP_SECTION_ID}"),
-        body.indexOf("<Suspense", body.indexOf("<div id={PREP_SECTION_ID}")),
-      ),
     ];
     for (const block of blocks) expect(block).not.toMatch(/(^|[\s"`])mt-(4|5|6|8|10)\b/);
 

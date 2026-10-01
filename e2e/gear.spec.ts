@@ -176,19 +176,14 @@ test.describe("staff", () => {
   });
 
   /**
-   * **The four counter flows below start on the departure, not on `/prep`.**
-   *
-   * The packing list reads there now (ADR 20260919-one-idea, slice 23c), the
-   * gear forms redirect there, and `/prep` is no longer linked from anywhere —
-   * so a spec that still walked in through it would be green about a door
-   * nobody uses. The assignments section is the same `PrepBody` on both, which
-   * is why only the `goto` changed.
+   * **The four counter flows below start on the departure's Gear tab**, where
+   * the packing list reads and the gear forms land (ADR 20261001-logbook).
    */
   test("assigns a free unit on the wreck trip's departure page and releases it again", async ({
     page,
   }) => {
     const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
-    await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
     await expect(
       page.getByRole("heading", { name: "Rental assignments", exact: true }),
     ).toBeVisible();
@@ -239,7 +234,7 @@ test.describe("staff", () => {
     page,
   }) => {
     const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
-    await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
     const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
     await expect(assignments.getByRole("heading", { name: "Rental assignments" })).toBeVisible();
 
@@ -291,7 +286,7 @@ test.describe("staff", () => {
     // it afterwards is a race this test has no reason to run.
     const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
     await request.post("/api/test/seed-trouble-states?gearOut=1");
-    await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
     const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
 
     // Exactly one diver has a set out, so exactly one pane exists. A pane on a
@@ -320,7 +315,7 @@ test.describe("staff", () => {
 
   test("prints a diver their own rental ticket from the departure", async ({ page }) => {
     const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
-    await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
     const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
     // The door only exists on a row that has units on it, which is the whole
     // rule: a slip listing nothing is a wrong slip, not a short one.

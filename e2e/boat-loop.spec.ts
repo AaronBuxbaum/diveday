@@ -16,31 +16,38 @@ import { openOnThisPhone, openTripAbout } from "./helpers";
 
 signedInAsOwner();
 
-test("the departure reaches its manifest, and carries its packing list", async ({ page }) => {
+test("the departure's tabs reach its gear and its manifest", async ({ page }) => {
   await page.goto("/shop/blue-mantis");
 
   // A station's title is the door to its departure (ADR
-  // 20260827-clearwater-surface-language, decision 4 — the station carries the
-  // day's work, not a second set of destination buttons).
+  // 20260827-clearwater-surface-language, decision 4).
   await page.locator("ol li h3 a").first().click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
 
-  // **The packing list is on this page.** Prep stopped being a tab in slice
-  // 23c (ADR 20260919-one-idea) — the list a crew works down with their hands
-  // full reads under the roster it is derived from, rather than one tap away
-  // from it. Its own heading, not the tab's word, is what proves it is here.
+  // **Five tabs under the hour** (ADR 20261001-logbook, decision 3), the
+  // Divers tab open, with the stage the departure is in above them.
+  const tabs = page.getByRole("navigation", { name: "Departure" });
+  await expect(tabs.getByRole("link")).toHaveText([
+    "Divers",
+    "Check-in",
+    "Boat",
+    "Gear",
+    "Details",
+  ]);
+  await expect(tabs.getByRole("link", { name: "Divers" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("list", { name: "Stage" })).toBeVisible();
+
+  // **The packing list is the Gear tab**, not the bottom of the roster.
+  await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toHaveCount(0);
+  await tabs.getByRole("link", { name: "Gear" }).click();
+  await expect(page).toHaveURL(/\/prep$/);
   await expect(page.getByRole("heading", { name: "Tanks", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toBeVisible();
 
-  // **And there is no strip of nouns above the hour.** The whole point of the
-  // slice: the departure is one page, so a nav that offers to take you to
-  // parts of it would be offering to take you where you already are.
-  await expect(page.getByRole("navigation", { name: "Trip" })).toHaveCount(0);
-
-  // The manifest is the one surface that could not join the page — a
-  // `?checkpoint=` URL contract with a service worker and an encrypted offline
-  // store hanging off it — so it is one chip in the band.
-  await page.getByRole("link", { name: "Manifest" }).click();
+  await page
+    .getByRole("navigation", { name: "Departure" })
+    .getByRole("link", { name: "Boat" })
+    .click();
   await expect(page).toHaveURL(/\/manifest/);
 
   // Every per-device preference rests behind the "On this phone" line (ADR
@@ -56,18 +63,18 @@ test("the departure reaches its manifest, and carries its packing list", async (
       ? scrolling.scrollHeight - (scrolling.scrollTop + element.getBoundingClientRect().bottom)
       : 0;
   });
-  // The grouped device controls sit near the end of the manifest while still
-  // leaving room for the page's footer spacing.
   // The quiet desktop emergency footer is part of this surface's document
   // flow, so leave room for its 44px target and the page's bottom padding.
   expect(distanceFromPageEnd).toBeLessThan(120);
 
-  // **And the way back is up, not sideways.** The manifest's eyebrow names the
-  // departure it belongs to, which is the page that holds everything else.
-  await page.getByRole("link", { name: "Trip", exact: true }).click();
+  // **And back across to the roster.**
+  await page
+    .getByRole("navigation", { name: "Departure" })
+    .getByRole("link", { name: "Divers" })
+    .click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
   await expect(boatMode).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Guests" })).toBeVisible();
 });
 
 test("staff can view or copy a trip's public booking page from its overview", async ({

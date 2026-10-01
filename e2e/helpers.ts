@@ -259,19 +259,12 @@ export async function openTripFromBoard(page: Page, title: string) {
 }
 
 /**
- * Move between a departure's surfaces.
+ * Move between a departure's surfaces: Trip is the Divers tab, Manifest the
+ * Boat tab, Prep the Gear tab (ADR 20261001-logbook, decision 3).
  *
- * **There is no tab strip any more** (ADR 20260919-one-idea, slice 23c). The
- * packing list reads on the departure page itself, and the manifest is reached
- * from one chip in the sky band. `/prep` survives as its own route because the
- * paper day composes it, and it renders the same `PrepBody` — so a capture
- * taken there still photographs the real thing, on a page that is only the
- * list rather than the whole departure.
- *
- * So this navigates by URL rather than by clicking a strip that is gone. It is
- * deliberately not a `getByRole("link")` on the band's Manifest chip: a helper
- * every spec leans on should put the caller on a surface, and
- * `boat-loop.spec.ts` is where the chip itself is the subject.
+ * This navigates by URL rather than by clicking a tab: a helper every spec
+ * leans on should put the caller on a surface, and `boat-loop.spec.ts` is
+ * where the tabs themselves are the subject.
  */
 export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep") {
   // **Wait for the departure before reading the address bar.** A click that
@@ -317,9 +310,23 @@ const TRIP_ROOT_URL = /\/trips\/[^/?#]+(?:[?#]|$)/;
 /** Any of a departure's surfaces — the root itself, or one of its sub-pages. */
 const TRIP_SURFACE_URL = /\/trips\/[^/?#]+/;
 
-/** Open the Trip surface's compact About disclosure before using its details. */
+/**
+ * Open the departure's Details tab and its About disclosure before using its
+ * details. Details is its own tab (ADR 20261001-logbook), so a caller standing
+ * on Divers is moved across by URL first.
+ */
 export async function openTripAbout(page: Page): Promise<Locator> {
   const about = page.locator("details#about");
+  // A caller often clicks its way here, and the click resolves before the URL
+  // commits: wait for the departure's own tabs before reading the address.
+  await page.waitForURL(TRIP_ROOT_URL);
+  await expect(page.getByRole("navigation", { name: "Departure" })).toBeVisible();
+  const url = new URL(page.url());
+  if (url.searchParams.get("view") !== "details" && (await about.count()) === 0) {
+    url.searchParams.set("view", "details");
+    url.hash = "";
+    await page.goto(url.toString());
+  }
   await expect(about).toBeVisible();
   if ((await about.getAttribute("open")) === null) {
     await about.locator(":scope > summary").click();

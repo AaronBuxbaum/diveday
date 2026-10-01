@@ -304,7 +304,10 @@ test.describe("staff", () => {
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
-    await page.getByRole("link", { name: "Manifest" }).click();
+    await page
+      .getByRole("navigation", { name: "Departure" })
+      .getByRole("link", { name: "Boat" })
+      .click();
     await page.getByRole("heading", { name: "Buddy teams" }).click();
     // The whole of what D23 gets: an aggregate on the team builder, with no
     // name in it and no suggested pairing.

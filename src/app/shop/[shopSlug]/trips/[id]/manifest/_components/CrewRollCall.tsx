@@ -146,7 +146,7 @@ export function CrewRollCall({
         <div className={`mt-3 ${TONE_PANEL_CLASS} border-warning/50 bg-warning/10`}>
           <p className="max-w-prose text-sm">{t("manifest.noCrew")}</p>
           <Link
-            href={`/shop/${shopSlug}/trips/${tripId}#crew`}
+            href={`/shop/${shopSlug}/trips/${tripId}?view=details#crew`}
             className={buttonClass({ size: "boat", className: "mt-3 print:hidden" })}
           >
             {t("manifest.addCrewToTrip")}
@@ -427,7 +427,7 @@ export function CrewRollCall({
         // divemaster is added. The roll call names whoever the trip names
         // *now*, so the way to correct it is the trip's own crew list.
         <Link
-          href={`/shop/${shopSlug}/trips/${tripId}#crew`}
+          href={`/shop/${shopSlug}/trips/${tripId}?view=details#crew`}
           className={buttonClass({ variant: "secondary", className: "mt-4 print:hidden" })}
         >
           {t("manifest.manageCrewOnTrip")}

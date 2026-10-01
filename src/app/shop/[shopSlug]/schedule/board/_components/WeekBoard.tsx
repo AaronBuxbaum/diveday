@@ -328,7 +328,7 @@ function PriceFlag({
 }) {
   return (
     <Link
-      href={`/shop/${shopSlug}/trips/${departure.tripId}#details`}
+      href={`/shop/${shopSlug}/trips/${departure.tripId}?view=details#details`}
       aria-label={fill(copy.noPriceSetAria, { ref: departure.ref })}
       className={`${FLAG_CLASS} text-warning-strong`}
     >

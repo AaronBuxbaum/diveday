@@ -83,7 +83,7 @@ export default async function RentalTicketPage({
   // assignments section that carries the Rental ticket link renders there, and
   // a slip printed for eight divers used to put the staffer out on `/prep`
   // eight times (dive-domain review 20260920).
-  const backTo = `${shopPath(shopSlug, "trips", tripId)}#${PREP_SECTION_ID}`;
+  const backTo = `${shopPath(shopSlug, "trips", tripId, "prep")}#${PREP_SECTION_ID}`;
 
   return (
     <div id="rental-ticket">

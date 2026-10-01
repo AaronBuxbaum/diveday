@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import type { DayStripProps } from "@/components/day/DayStrip";
 import { FlashParams } from "@/components/FlashParams";
@@ -14,6 +13,7 @@ import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManagePaymentSettings, canPersonRefund } from "@/db/authz";
 import { listBoats } from "@/db/boats";
 import { listTripLenses } from "@/db/trip-lenses";
+import { latestTripStage } from "@/db/trip-stages";
 import { getTripGuests } from "@/db/trips-guests";
 import { getTripOverview } from "@/db/trips-overview";
 import { languageNameIn } from "@/i18n/language-labels";
@@ -26,7 +26,6 @@ import { DSD_RATIO } from "@/lib/course-ratios";
 import { dayStripGeometry, dayStripTicks, dayStripWindow } from "@/lib/day-strip";
 import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { depthInUnit } from "@/lib/depth-units";
-import { isPrepGrouping } from "@/lib/dive-prep";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import {
@@ -50,6 +49,7 @@ import { daylightProgressAt, skyReadingFor } from "@/lib/sky-scheme";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
+import { tripPhaseOf } from "@/lib/trip-phase";
 import { uuidParam } from "@/lib/uuid";
 import { calendarDayNoons, dayHourBoundaries, utcToWallTime as wallTimeOf } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
@@ -66,9 +66,10 @@ import {
 } from "./_components/SeriesSection";
 import { TripAboutSection } from "./_components/TripAboutSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
-import { TripAddDiverLink, TripCapacityBadge, TripSurfaceLink } from "./_components/TripPageHeader";
-import { TripPrepSection } from "./_components/TripPrepSection";
+import { TripAddDiverLink, TripCapacityBadge } from "./_components/TripPageHeader";
 import { TripRosterContent } from "./_components/TripRosterContent";
+import { TripTabs } from "./_components/TripTabs";
+import { tripTabsCopy } from "./_components/trip-tabs-copy";
 import { VoyageHeader } from "./_components/VoyageHeader";
 import {
   addInternalNoteAction,
@@ -100,7 +101,6 @@ import {
   updateSeriesCadenceAction,
   updateTripCrewAction,
 } from "./actions";
-import { PrepBodySkeleton } from "./prep/_components/PrepBodySkeleton";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -154,8 +154,8 @@ export default async function ManageTripPage({
     confirmName?: string;
     confirmEmail?: string;
     confirmPhone?: string;
-    /** The packing list's grouping; anything unrecognised reads as by-item. */
-    group?: string;
+    /** `details` opens the Details tab; anything else is the Divers tab. */
+    view?: string;
   }>;
 }) {
   const [
@@ -172,7 +172,7 @@ export default async function ManageTripPage({
       confirmName,
       confirmEmail,
       confirmPhone,
-      group,
+      view,
     },
   ] = await Promise.all([params, searchParams]);
   // An unparseable id names no row. Guarded here rather than in the query
@@ -185,7 +185,7 @@ export default async function ManageTripPage({
   // Locale and the trip row both depend on `shop` but not on each other.
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const [overview, guests, shopBoats, shopLenses, mayDiscount, mayWriteOffPayment] =
+  const [overview, guests, shopBoats, shopLenses, mayDiscount, mayWriteOffPayment, stageReading] =
     await Promise.all([
       getTripOverview(db, shop, tripId, session.user.personId),
       getTripGuests(db, shop, tripId, { diverQuery: diverq, confirmName }),
@@ -198,6 +198,7 @@ export default async function ManageTripPage({
       listTripLenses(db, shop.id),
       canPersonManagePaymentSettings(db, shop.id, session.user.personId),
       canPersonRefund(db, shop.id, session.user.personId),
+      latestTripStage(db, shop.id, tripId),
     ]);
   if (!overview || !guests) notFound();
   const {
@@ -314,7 +315,18 @@ export default async function ManageTripPage({
           ? [
               {
                 text: t("trips.pulse.needsInstructor"),
-                href: "#crew",
+                href: "?view=details#crew",
+                tone: "danger" as const,
+              },
+            ]
+          : []),
+        // No requirements row blocks every diver at boarding
+        // (`requirements_not_configured`), and the fix lives on Details.
+        ...(requirement === null && !cancelled && !trip.course
+          ? [
+              {
+                text: t("trips.pulse.noRequirements"),
+                href: "?view=details#requirements",
                 tone: "danger" as const,
               },
             ]
@@ -323,7 +335,7 @@ export default async function ManageTripPage({
           ? [
               {
                 text: t("trips.pulse.overRatio"),
-                href: "#crew",
+                href: "?view=details#crew",
                 tone: "danger" as const,
               },
             ]
@@ -332,12 +344,8 @@ export default async function ManageTripPage({
           ? [
               {
                 text: t("trips.pulse.prepGaps", { count: pulse.prepGaps }),
-                // An anchor, like every other fact on this strip. It pointed
-                // at `/prep` back when that was a tab; now the list is further
-                // down this very page, and navigating off it to a second copy
-                // of what the reader is already looking at is a round trip to
-                // nowhere (dive-domain review 20260920).
-                href: `#${PREP_SECTION_ID}`,
+                // The packing list is the Gear tab (ADR 20261001-logbook).
+                href: `${shopPath(shopSlug, "trips", tripId, "prep")}#${PREP_SECTION_ID}`,
               },
             ]
           : []),
@@ -425,7 +433,18 @@ export default async function ManageTripPage({
       ? tripNotice
       : undefined;
   const rosterPageNotice = tripNotice && tripNotice.form === "roster" ? tripNotice : undefined;
-  const aboutOpen = Boolean(tripNotice && aboutForms.has(tripNotice.form));
+  // **Details is its own tab**, and a save on it lands back on it: the About
+  // forms redirect to the departure with their `form`, which is enough to
+  // know which tab the answer belongs to, so no action needs to know the tab.
+  const showDetails = view === "details" || Boolean(tripNotice && aboutForms.has(tripNotice.form));
+  const phase = tripPhaseOf({
+    startsAt: trip.startsAt,
+    endsAt: trip.endsAt,
+    now: nowDate(),
+    timeZone: shop.timezone,
+    stage: stageReading,
+    cancelled,
+  });
 
   const siteNames = diveSites.sites.map((site) => site.name);
   const planSummary = siteNames.length > 0 ? siteNames.join(" + ") : t("trips.about.noneSet");
@@ -776,12 +795,7 @@ export default async function ManageTripPage({
             over the sky at the hour it is being read, with the voyage drawn
             beneath it. The capacity ring retires here: "9 of 12" is in the line
             under the title, in words, and a ring saying it again beside it was
-            the same fact twice.
-
-            Trip only, for now. `TripPageHeader` still dresses Manifest and Prep,
-            and the sky reaching them belongs with the slice that makes the three
-            one page — which touches the roll call, so it gets its own
-            `dive-domain-expert` review rather than riding along with this one. */}
+            the same fact twice. */}
         <VoyageHeader
           scheme={voyageSky.scheme}
           back={
@@ -803,46 +817,29 @@ export default async function ManageTripPage({
             ) : undefined
           }
           action={
-            <>
-              {/* **The departure's one way to the roll call, on every departure
-                  there is.** The tab strip is gone (ADR 20260919-one-idea, slice
-                  23c) and the manifest is the one surface that could not fold in
-                  with Prep — it is a `?checkpoint=` URL contract with external
-                  deep-links, a service worker and an encrypted offline store
-                  hanging off it. So it stands here, in the band, where a crew on
-                  a dock reaches it in one tap rather than by scrolling to find
-                  it.
-
-                  **Not gated on `cancelled`**, unlike the hull below it and the
-                  Add diver beside it. Those two are predictions — a boat that is
-                  not going and a seat nobody should sell — and a roll call is
-                  evidence. A blow-out cancels the *trip* and leaves every
-                  booking active (the glossary's *Blow-out*), so the call that
-                  comes at 06:40 with six people already tapped aboard is exactly
-                  when a crew needs the roll call most, to put them back ashore
-                  and close the count. `pulseNeeded` is false on a cancellation
-                  too, so gating this left the page with no door to any other
-                  surface at all (dive-domain review 20260920).
-
-                  And not on the hull: a shore dive has a roll call and no
-                  boat. */}
-              <TripSurfaceLink
+            cancelled ? undefined : (
+              <TripAddDiverLink
                 onSky
-                icon="checkIn"
-                href={shopPath(shopSlug, "trips", tripId, "manifest")}
-                label={t("trips.surfaces.manifest")}
+                // The roster's own band, on the Divers tab: from Details the
+                // anchor is not on the page.
+                href={`${shopPath(shopSlug, "trips", tripId)}#add-diver`}
+                label={t("trips.addDiver.addDiver")}
+                compactLabel={t("trips.about.add")}
+                ariaLabel={t("trips.about.addDiverJump")}
               />
-              {cancelled ? null : (
-                <TripAddDiverLink
-                  onSky
-                  href="#add-diver"
-                  label={t("trips.addDiver.addDiver")}
-                  compactLabel={t("trips.about.add")}
-                  ariaLabel={t("trips.about.addDiverJump")}
-                />
-              )}
-            </>
+            )
           }
+        />
+        {/* **The roll call is a tab on every departure, cancelled or not.** A
+            blow-out cancels the trip and leaves every booking active, so the
+            crew may still need the roll call to put people back ashore
+            (dive-domain review 20260920). The tabs never hide on cancellation. */}
+        <TripTabs
+          shopSlug={shopSlug}
+          tripId={tripId}
+          current={showDetails ? "details" : "divers"}
+          phase={phase}
+          copy={tripTabsCopy(t)}
         />
 
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />
@@ -878,64 +875,65 @@ export default async function ManageTripPage({
           </section>
         ) : null}
 
-        <TripAboutSection
-          heading={t("trips.about.heading")}
-          detailsLabel={t("trips.about.details")}
-          closeLabel={t("trips.about.close")}
-          summary={aboutSummaryNode}
-          conditionsSummary={conditionsSummary}
-          open={aboutOpen}
-          openOnHash={ABOUT_ROW_HASHES}
-          rows={[
-            {
-              id: "details",
-              label: t("trips.about.plan"),
-              // The missing price rides on the row rather than inside the editor
-              // it is about: it is the one thing about the plan that is a
-              // problem, and the board's "Set a price for …" link lands here
-              // (task 150, UX persona lens 17).
-              value:
-                trip.priceCents === null && !cancelled ? (
-                  <>
-                    {planSummary}
-                    <span className="mt-0.5 block font-medium text-warning-strong">
-                      {t("trips.details.summaryNoPrice")}
-                    </span>
-                  </>
-                ) : (
-                  planSummary
-                ),
-              editLabel: t("trips.details.edit"),
-              editorOpen: Boolean(detailsStatus),
-              editor: canConfigure ? (
-                <DetailsSection
-                  action={saveDetails.bind(null, shopSlug, tripId)}
-                  status={detailsStatus}
-                  trip={trip}
-                  diveSiteList={diveSiteList}
-                  tripDiveList={tripDiveList}
-                  startWall={startWall}
-                  endWall={endWall}
-                  dayCount={Math.max(1, scheduleDays.length)}
-                  locale={locale}
-                  currency={toShopCurrency(shop.currency)}
-                  boats={shopBoats.map((boat) => ({ id: boat.id, name: boat.name }))}
-                  lenses={shopLenses.map((lens) => ({ id: lens.id, name: lens.name }))}
-                  hasBoatDiving={shop.hasBoatDiving}
-                  hasShoreDiving={shop.hasShoreDiving}
-                  hasPoolDiving={shop.hasPoolDiving}
-                />
-              ) : undefined,
-            },
-            {
-              id: "conditions",
-              label: t("trips.about.conditions"),
-              value: conditionsSummary,
-              editLabel: hasCrewPrediction(trip)
-                ? t("trips.conditions.editPublished")
-                : t("trips.conditions.editEmpty"),
-              editorOpen: Boolean(conditionsStatus),
-              /* Conditions are crew-entered (glossary) — open to all staff. Its
+        {showDetails ? (
+          <TripAboutSection
+            heading={t("trips.about.heading")}
+            detailsLabel={t("trips.about.details")}
+            closeLabel={t("trips.about.close")}
+            summary={aboutSummaryNode}
+            conditionsSummary={conditionsSummary}
+            open
+            openOnHash={ABOUT_ROW_HASHES}
+            rows={[
+              {
+                id: "details",
+                label: t("trips.about.plan"),
+                // The missing price rides on the row rather than inside the editor
+                // it is about: it is the one thing about the plan that is a
+                // problem, and the board's "Set a price for …" link lands here
+                // (task 150, UX persona lens 17).
+                value:
+                  trip.priceCents === null && !cancelled ? (
+                    <>
+                      {planSummary}
+                      <span className="mt-0.5 block font-medium text-warning-strong">
+                        {t("trips.details.summaryNoPrice")}
+                      </span>
+                    </>
+                  ) : (
+                    planSummary
+                  ),
+                editLabel: t("trips.details.edit"),
+                editorOpen: Boolean(detailsStatus),
+                editor: canConfigure ? (
+                  <DetailsSection
+                    action={saveDetails.bind(null, shopSlug, tripId)}
+                    status={detailsStatus}
+                    trip={trip}
+                    diveSiteList={diveSiteList}
+                    tripDiveList={tripDiveList}
+                    startWall={startWall}
+                    endWall={endWall}
+                    dayCount={Math.max(1, scheduleDays.length)}
+                    locale={locale}
+                    currency={toShopCurrency(shop.currency)}
+                    boats={shopBoats.map((boat) => ({ id: boat.id, name: boat.name }))}
+                    lenses={shopLenses.map((lens) => ({ id: lens.id, name: lens.name }))}
+                    hasBoatDiving={shop.hasBoatDiving}
+                    hasShoreDiving={shop.hasShoreDiving}
+                    hasPoolDiving={shop.hasPoolDiving}
+                  />
+                ) : undefined,
+              },
+              {
+                id: "conditions",
+                label: t("trips.about.conditions"),
+                value: conditionsSummary,
+                editLabel: hasCrewPrediction(trip)
+                  ? t("trips.conditions.editPublished")
+                  : t("trips.conditions.editEmpty"),
+                editorOpen: Boolean(conditionsStatus),
+                /* Conditions are crew-entered (glossary) — open to all staff. Its
                fields are uncontrolled (`defaultValue`, not `value`), so a save
                or clear that lands via a same-route re-render rather than a
                fresh mount leaves the old value on screen — the same
@@ -947,352 +945,316 @@ export default async function ManageTripPage({
                would hold identical across a save-then-clear in the same test)
                forces the remount `defaultValue` needs on any actual change to
                what these inputs show. */
-              editor: (
-                <ConditionsSection
-                  key={[
-                    trip.waterTemperatureC,
-                    trip.visibilityMeters,
-                    trip.surfaceConditions,
-                    trip.conditionsSummary,
-                  ].join("|")}
-                  saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
-                  clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
-                  status={conditionsStatus}
-                  trip={trip}
-                  locale={locale}
-                  timezone={shop.timezone}
-                  temperatureUnit={temperatureUnitFor(shop)}
-                  depthUnit={shop.depthUnit}
-                  automatedForecast={automatedForecast}
-                  tideLines={tideLines}
-                />
-              ),
-            },
-            {
-              id: "requirements",
-              label: t("trips.about.whoCanBook"),
-              value: requirementsSummary,
-              // A course session's gate is frozen — `saveRequirementsAction`
-              // refuses to edit it — so its row opens onto where the rules come
-              // from rather than onto a form, and says so in the word on the
-              // control.
-              editLabel: trip.course ? t("trips.about.details") : t("trips.requirements.edit"),
-              // Fail-closed, open: with no requirements row readiness blocks
-              // every diver, so that state may never wait behind a tap. A frozen
-              // course gate opens for the opposite reason — one read-only
-              // sentence has nothing worth folding away.
-              editorOpen:
-                Boolean(requirementsStatus) || requirement === null || Boolean(trip.course),
-              editor: canConfigure ? (
-                <RequirementsSection
-                  action={saveRequirementsAction.bind(null, shopSlug, tripId)}
-                  status={requirementsStatus}
-                  trip={trip}
-                  requirement={requirement}
-                  siteRequirement={siteRequirement}
-                  siteNames={diveSites.sites.map((site) => site.name)}
-                  locale={locale}
-                />
-              ) : undefined,
-            },
-            {
-              id: "about-crew",
-              label: t("trips.about.boatAndCrew"),
-              value: boatCrewSummary,
-              editLabel: t("trips.crew.edit"),
-              // **A row with open work stays open** (principles.md §9's
-              // "collapse the settled row", read the other way). A boat with
-              // nobody on it, a clash, a course with no instructor, a shortfall
-              // against the shop's own target or a language nobody aboard
-              // speaks are all things a staffer is here to fix — and the two
-              // safety-adjacent ones are also linked from the pulse above,
-              // which is what makes `#crew` land on something rather than on a
-              // closed row.
-              editorOpen: crewRowOpen,
-              /* Who's aboard is manifest accuracy (glossary) — open to all
+                editor: (
+                  <ConditionsSection
+                    key={[
+                      trip.waterTemperatureC,
+                      trip.visibilityMeters,
+                      trip.surfaceConditions,
+                      trip.conditionsSummary,
+                    ].join("|")}
+                    saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
+                    clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
+                    status={conditionsStatus}
+                    trip={trip}
+                    locale={locale}
+                    timezone={shop.timezone}
+                    temperatureUnit={temperatureUnitFor(shop)}
+                    depthUnit={shop.depthUnit}
+                    automatedForecast={automatedForecast}
+                    tideLines={tideLines}
+                  />
+                ),
+              },
+              {
+                id: "requirements",
+                label: t("trips.about.whoCanBook"),
+                value: requirementsSummary,
+                // A course session's gate is frozen — `saveRequirementsAction`
+                // refuses to edit it — so its row opens onto where the rules come
+                // from rather than onto a form, and says so in the word on the
+                // control.
+                editLabel: trip.course ? t("trips.about.details") : t("trips.requirements.edit"),
+                // Fail-closed, open: with no requirements row readiness blocks
+                // every diver, so that state may never wait behind a tap. A frozen
+                // course gate opens for the opposite reason — one read-only
+                // sentence has nothing worth folding away.
+                editorOpen:
+                  Boolean(requirementsStatus) || requirement === null || Boolean(trip.course),
+                editor: canConfigure ? (
+                  <RequirementsSection
+                    action={saveRequirementsAction.bind(null, shopSlug, tripId)}
+                    status={requirementsStatus}
+                    trip={trip}
+                    requirement={requirement}
+                    siteRequirement={siteRequirement}
+                    siteNames={diveSites.sites.map((site) => site.name)}
+                    locale={locale}
+                  />
+                ) : undefined,
+              },
+              {
+                id: "about-crew",
+                label: t("trips.about.boatAndCrew"),
+                value: boatCrewSummary,
+                editLabel: t("trips.crew.edit"),
+                // **A row with open work stays open** (principles.md §9's
+                // "collapse the settled row", read the other way). A boat with
+                // nobody on it, a clash, a course with no instructor, a shortfall
+                // against the shop's own target or a language nobody aboard
+                // speaks are all things a staffer is here to fix — and the two
+                // safety-adjacent ones are also linked from the pulse above,
+                // which is what makes `#crew` land on something rather than on a
+                // closed row.
+                editorOpen: crewRowOpen,
+                /* Who's aboard is manifest accuracy (glossary) — open to all
                staff. Per-person assign/unassign (updateTripCrewAction), the
                same mutation the schedule board uses — not a whole-set replace
                — so two staff editing crew at once can no longer clobber each
                other (Lens 17 task 139). */
-              editor: (
-                <CrewSection
-                  shopSlug={shopSlug}
-                  tripId={tripId}
-                  staff={staff}
-                  crewIds={crewIds}
-                  crewRoles={Object.fromEntries(tripRoleByPerson)}
-                  // A cancelled departure isn't sailing, so its crew panel drops
-                  // the live-trip nudges — the ratio gates, the shop's target,
-                  // and the shift-coverage badges are all about a boat that will
-                  // leave.
-                  onShiftIds={cancelled ? null : onShiftIds}
-                  // Marked on the About summary strip as well
-                  // (`aboutSummaryNode` above), because this row is inside a
-                  // disclosure that is closed on an ordinary visit.
-                  clashes={liveClashes}
-                  crewGapCode={cancelled ? "none" : crewGap.code}
-                  updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
-                  copy={{
-                    heading: t("trips.crew.heading"),
-                    courseNeedsInstructor: t("trips.crew.courseNeedsInstructor"),
-                    overRatioWarning,
-                    underTargetNote: cancelled ? null : underTargetNote,
-                    languageGapNote: cancelled ? null : languageGapNote,
-                    noStaff: t("trips.crew.noCrew"),
-                    notAssignedYet: t("trips.crew.notAssignedYet"),
-                    assignLabel: t("trips.crew.assignLabel"),
-                    assignOption: t("trips.crew.assignOption"),
-                    unassignAria: t.raw("trips.crew.unassignAria"),
-                    assignFailed: t("trips.crew.assignFailed"),
-                    // `t.raw`: `{name}` is whoever the staffer just picked,
-                    // which only the component knows (src/i18n/fill.ts).
-                    assignClash: t.raw("trips.crew.assignClash"),
-                    // `t.raw`: `{departure}` is the other boat's own title,
-                    // which only the component has per row (src/i18n/fill.ts).
-                    clash: t.raw("trips.crew.clash"),
-                    roleAria: t.raw("trips.crew.roleAria"),
-                    roleUnspecified: t("trips.crew.roleUnspecified"),
-                    roleOptions: {
-                      instructor: t("trips.crew.roleInstructor"),
-                      divemaster: t("trips.crew.roleDivemaster"),
-                      captain: t("trips.crew.roleCaptain"),
-                      crew: t("trips.crew.roleCrew"),
-                    },
-                    onShift: t("trips.crew.onShift"),
-                    notOnShift: t("trips.crew.notOnShift"),
-                    manageShifts: t("trips.crew.manageShifts"),
-                  }}
-                />
-              ),
-            },
-            {
-              id: "series",
-              label: t("trips.about.repeats"),
-              value: repeatsRowValue,
-              editLabel: t("tripSeries.panel.editCadence"),
-              editorOpen: Boolean(seriesStatus),
-              editor:
-                canConfigure && series ? (
-                  <SeriesCadenceEditor
-                    intervalWeeks={series.intervalWeeks}
-                    weekdays={series.weekdayMask}
-                    endsOn={series.endsOn}
-                    anchorDate={series.anchorDate}
-                    offCadence={offCadence.map((date) => ({
-                      id: date.id,
-                      title: date.title,
-                      // Formatted here, where the request locale and the shop's
-                      // zone both are — the panel is handed words, never
-                      // instants.
-                      label: formatShortDate(date.startsAt, locale, shop.timezone),
-                      booked: date.booked,
-                    }))}
-                    weekdayNames={weekdayNames(locale)}
-                    status={seriesStatus}
-                    cadenceAction={updateSeriesCadenceAction.bind(
-                      null,
-                      shopSlug,
-                      tripId,
-                      series.id,
-                    )}
-                    cancelOffCadenceAction={cancelOffCadenceSeriesAction.bind(
-                      null,
-                      shopSlug,
-                      tripId,
-                      series.id,
-                    )}
-                    locale={locale}
+                editor: (
+                  <CrewSection
+                    shopSlug={shopSlug}
+                    tripId={tripId}
+                    staff={staff}
+                    crewIds={crewIds}
+                    crewRoles={Object.fromEntries(tripRoleByPerson)}
+                    // A cancelled departure isn't sailing, so its crew panel drops
+                    // the live-trip nudges — the ratio gates, the shop's target,
+                    // and the shift-coverage badges are all about a boat that will
+                    // leave.
+                    onShiftIds={cancelled ? null : onShiftIds}
+                    // Marked on the About summary strip as well
+                    // (`aboutSummaryNode` above), because this row is inside a
+                    // disclosure that is closed on an ordinary visit.
+                    clashes={liveClashes}
+                    crewGapCode={cancelled ? "none" : crewGap.code}
+                    updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
+                    copy={{
+                      heading: t("trips.crew.heading"),
+                      courseNeedsInstructor: t("trips.crew.courseNeedsInstructor"),
+                      overRatioWarning,
+                      underTargetNote: cancelled ? null : underTargetNote,
+                      languageGapNote: cancelled ? null : languageGapNote,
+                      noStaff: t("trips.crew.noCrew"),
+                      notAssignedYet: t("trips.crew.notAssignedYet"),
+                      assignLabel: t("trips.crew.assignLabel"),
+                      assignOption: t("trips.crew.assignOption"),
+                      unassignAria: t.raw("trips.crew.unassignAria"),
+                      assignFailed: t("trips.crew.assignFailed"),
+                      // `t.raw`: `{name}` is whoever the staffer just picked,
+                      // which only the component knows (src/i18n/fill.ts).
+                      assignClash: t.raw("trips.crew.assignClash"),
+                      // `t.raw`: `{departure}` is the other boat's own title,
+                      // which only the component has per row (src/i18n/fill.ts).
+                      clash: t.raw("trips.crew.clash"),
+                      roleAria: t.raw("trips.crew.roleAria"),
+                      roleUnspecified: t("trips.crew.roleUnspecified"),
+                      roleOptions: {
+                        instructor: t("trips.crew.roleInstructor"),
+                        divemaster: t("trips.crew.roleDivemaster"),
+                        captain: t("trips.crew.roleCaptain"),
+                        crew: t("trips.crew.roleCrew"),
+                      },
+                      onShift: t("trips.crew.onShift"),
+                      notOnShift: t("trips.crew.notOnShift"),
+                      manageShifts: t("trips.crew.manageShifts"),
+                    }}
                   />
-                ) : undefined,
-            },
-          ]}
-          actions={
-            <>
-              {/* All three flush, so whichever starts a line — the first, or one
+                ),
+              },
+              {
+                id: "series",
+                label: t("trips.about.repeats"),
+                value: repeatsRowValue,
+                editLabel: t("tripSeries.panel.editCadence"),
+                editorOpen: Boolean(seriesStatus),
+                editor:
+                  canConfigure && series ? (
+                    <SeriesCadenceEditor
+                      intervalWeeks={series.intervalWeeks}
+                      weekdays={series.weekdayMask}
+                      endsOn={series.endsOn}
+                      anchorDate={series.anchorDate}
+                      offCadence={offCadence.map((date) => ({
+                        id: date.id,
+                        title: date.title,
+                        // Formatted here, where the request locale and the shop's
+                        // zone both are — the panel is handed words, never
+                        // instants.
+                        label: formatShortDate(date.startsAt, locale, shop.timezone),
+                        booked: date.booked,
+                      }))}
+                      weekdayNames={weekdayNames(locale)}
+                      status={seriesStatus}
+                      cadenceAction={updateSeriesCadenceAction.bind(
+                        null,
+                        shopSlug,
+                        tripId,
+                        series.id,
+                      )}
+                      cancelOffCadenceAction={cancelOffCadenceSeriesAction.bind(
+                        null,
+                        shopSlug,
+                        tripId,
+                        series.id,
+                      )}
+                      locale={locale}
+                    />
+                  ) : undefined,
+              },
+            ]}
+            actions={
+              <>
+                {/* All three flush, so whichever starts a line — the first, or one
                   wrapped on a phone — puts its word on the panel's column; the
                   row's gap hands back what they gave up (TripAboutSection). */}
-              <CopyLinkButton
-                path={publicTripPath(shopSlug, tripId)}
-                label={t("trips.detail.copyBookingLink")}
-                copiedLabel={t("trips.detail.linkCopied")}
-                failedLabel={t("trips.detail.linkCopyFailed")}
-                flush
-              />
-              <Link
-                href={publicTripPath(shopSlug, tripId)}
-                target="_blank"
-                rel="noreferrer"
-                className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
-              >
-                {t("trips.about.viewPublic")}
-              </Link>
-              <PrintTripBundleButton
-                href={shopPath(shopSlug, "trips", tripId, "print")}
-                label={t("trips.about.printPacket")}
-                popupBlockedLabel={t("shared.printButton.popupBlocked")}
-                recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
-                flush
-              />
-            </>
-          }
-          moreLabel={t("trips.about.more")}
-          moreOpen={Boolean(lifecycleStatus)}
-          more={
-            cancelled ? undefined : (
-              <>
-                <FormStatus tone={lifecycleStatus?.tone} className="mb-2">
-                  {lifecycleStatus?.text}
-                </FormStatus>
-                {canConfigure && series ? (
-                  <SeriesMoreActions
-                    futureScheduledCount={series.futureScheduledCount}
-                    endsOn={series.endsOn}
-                    applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
-                    cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
-                    repeatAction={setSeriesRepeatAction.bind(null, shopSlug, tripId, series.id)}
-                    locale={locale}
-                  />
-                ) : null}
-                {/* The blow-out carries no caption here because the page it
+                <CopyLinkButton
+                  path={publicTripPath(shopSlug, tripId)}
+                  label={t("trips.detail.copyBookingLink")}
+                  copiedLabel={t("trips.detail.linkCopied")}
+                  failedLabel={t("trips.detail.linkCopyFailed")}
+                  flush
+                />
+                <Link
+                  href={publicTripPath(shopSlug, tripId)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
+                >
+                  {t("trips.about.viewPublic")}
+                </Link>
+                <PrintTripBundleButton
+                  href={shopPath(shopSlug, "trips", tripId, "print")}
+                  label={t("trips.about.printPacket")}
+                  popupBlockedLabel={t("shared.printButton.popupBlocked")}
+                  recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
+                  flush
+                />
+              </>
+            }
+            moreLabel={t("trips.about.more")}
+            moreOpen={Boolean(lifecycleStatus)}
+            more={
+              cancelled ? undefined : (
+                <>
+                  <FormStatus tone={lifecycleStatus?.tone} className="mb-2">
+                    {lifecycleStatus?.text}
+                  </FormStatus>
+                  {canConfigure && series ? (
+                    <SeriesMoreActions
+                      futureScheduledCount={series.futureScheduledCount}
+                      endsOn={series.endsOn}
+                      applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
+                      cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
+                      repeatAction={setSeriesRepeatAction.bind(null, shopSlug, tripId, series.id)}
+                      locale={locale}
+                    />
+                  ) : null}
+                  {/* The blow-out carries no caption here because the page it
                     opens is one: "This cancels {trip} and sends every booked
                     diver one message…" is its first line, and it is the confirm
                     (ADR 20260804-blowout-cascade). */}
-                <Link
-                  href={shopPath(shopSlug, "schedule", "blowout", tripId)}
-                  className={buttonClass({ variant: "danger-ghost", size: "sm", flush: true })}
-                >
-                  {t("trips.detail.weatherBlowout")}
-                </Link>
-                <form action={cancelTripAction.bind(null, shopSlug, tripId)} className="w-full">
-                  <InlineConfirm
-                    triggerLabel={t("trips.about.cancel")}
-                    message={t("trips.detail.cancelHint")}
-                    confirmLabel={t("trips.detail.cancelConfirm")}
-                    cancelLabel={t("trips.roster.neverMind")}
-                    pendingLabel={t("trips.detail.cancelling")}
-                    triggerClassName={buttonClass({
-                      variant: "danger-ghost",
-                      size: "sm",
-                      flush: true,
-                    })}
-                    confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
-                  />
-                </form>
-              </>
-            )
-          }
-        />
-
-        {pulseNeeded ? (
-          <MinimumSeatsBand
-            trip={trip}
-            booked={trip.booked}
-            locale={locale}
-            timeZone={shop.timezone}
-            t={t}
+                  <Link
+                    href={shopPath(shopSlug, "schedule", "blowout", tripId)}
+                    className={buttonClass({ variant: "danger-ghost", size: "sm", flush: true })}
+                  >
+                    {t("trips.detail.weatherBlowout")}
+                  </Link>
+                  <form action={cancelTripAction.bind(null, shopSlug, tripId)} className="w-full">
+                    <InlineConfirm
+                      triggerLabel={t("trips.about.cancel")}
+                      message={t("trips.detail.cancelHint")}
+                      confirmLabel={t("trips.detail.cancelConfirm")}
+                      cancelLabel={t("trips.roster.neverMind")}
+                      pendingLabel={t("trips.detail.cancelling")}
+                      triggerClassName={buttonClass({
+                        variant: "danger-ghost",
+                        size: "sm",
+                        flush: true,
+                      })}
+                      confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
+                    />
+                  </form>
+                </>
+              )
+            }
           />
-        ) : null}
+        ) : (
+          <>
+            {pulseNeeded ? (
+              <MinimumSeatsBand
+                trip={trip}
+                booked={trip.booked}
+                locale={locale}
+                timeZone={shop.timezone}
+                t={t}
+              />
+            ) : null}
 
-        {/* **The stack's gap is measured to the words** (K-262). Each fact is
+            {/* **The stack's gap is measured to the words** (K-262). Each fact is
             a 44px link round a 20px line, and its words sat 12px inside each
             40px gap. Each link gives that unseen 12px back as `-my-3`, so the
             row is its words' height and the targets overhang the gaps;
             `gap-y-7` keeps a wrapped line's box 4px clear of the one above.
             Not on the row: the stack's end margin is `:where()`, and the
             row's own `-my-3` would replace it and pull the roster up. */}
-        {pulseFacts.length > 0 ? (
-          <div className="flex flex-wrap gap-x-4 gap-y-7">
-            {pulseFacts.map((fact) => (
-              <Link
-                key={fact.href}
-                href={fact.href}
-                className={`-my-3 inline-flex min-h-11 items-center text-sm font-medium hover:underline ${
-                  fact.tone === "danger" ? "text-danger" : "text-primary"
-                }`}
-              >
-                {fact.text}
-              </Link>
-            ))}
-          </div>
-        ) : null}
+            {pulseFacts.length > 0 ? (
+              <div className="flex flex-wrap gap-x-4 gap-y-7">
+                {pulseFacts.map((fact) => (
+                  <Link
+                    key={fact.href}
+                    href={fact.href}
+                    className={`-my-3 inline-flex min-h-11 items-center text-sm font-medium hover:underline ${
+                      fact.tone === "danger" ? "text-danger" : "text-primary"
+                    }`}
+                  >
+                    {fact.text}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
 
-        <TripRosterContent
-          guests={guests}
-          hull={boat ? { name: boat.name, color: boat.hullColor, crew: assignedCrew } : null}
-          shopSlug={shopSlug}
-          shopName={shop.name}
-          locale={locale}
-          timezone={shop.timezone}
-          depthUnit={shop.depthUnit}
-          shopRentalItems={shop.rentalItems}
-          tripNotice={tripNotice}
-          pageNotice={rosterPageNotice}
-          noteDeleted={
-            noteBookingId && noteBody ? { bookingId: noteBookingId, body: noteBody } : undefined
-          }
-          confirmName={confirmName}
-          confirmEmail={confirmEmail}
-          confirmPhone={confirmPhone}
-          undoBookingId={
-            notice?.startsWith("booking-removed") && notice !== "booking-removed-refunded"
-              ? bid
-              : undefined
-          }
-          keepOpenBookingId={
-            notice === "contact-saved" || notice === "contact-incomplete" || notice === "payment"
-              ? bid
-              : undefined
-          }
-          // The one paper-release refusal with a way through (issue #1573),
-          // scoped to the seat the action named so a roster of minors does not
-          // all sprout the staffer's confirmation.
-          namesakeRefusedBookingId={notice === "waiver-guardian-name" ? bid : undefined}
-          mayDiscount={mayDiscount}
-          mayWriteOffPayment={mayWriteOffPayment}
-          compact
-          actions={rosterActions}
-          // **Who is aboard, then what to pull for them.** The packing list is
-          // derived from the roster directly above it, so it reads as that
-          // list's consequence rather than a fourth tab (ADR 20260919-one-idea,
-          // slice 23c). It waits behind its own boundary because its six gear
-          // reads are nobody else's to wait on.
-          afterRoster={
-            // **The anchor is outside the boundary, not inside it.** Five links
-            // land on `#packing-list` — the day's two prep rows, this page's own
-            // pulse fact, the rental slip's way back and the returning-diver
-            // demo story.
-            //
-            // Measured both ways on a cold navigation straight to the hash, and
-            // they scroll identically: Next resolves a hash target that arrives
-            // with the stream. So this is not a fix for a broken jump. It is
-            // there so the *skeleton* holds the anchor's position while the six
-            // gear queries run — the id on a wrapper that always renders means
-            // the scroll lands once, rather than landing late and moving when
-            // the section replaces a fallback that was not the target.
-            //
-            // **And it takes no room when the list has nothing to say.** On a
-            // departure nobody is booked on, the list renders no node at all
-            // (the roster above already says the boat is empty), and the pixel
-            // probe measured this wrapper 0px tall still holding its `mt-10`
-            // open: 40px where its siblings sit 20px apart. Its gap is the
-            // stack's now, and a stack spaces an element only while it is laid
-            // out: `empty:hidden` removes it then and only then. Suspense's
-            // markers are comments, which `:empty` ignores, and the skeleton or
-            // a read-failure banner inside it is a child, which it does not.
-            <div id={PREP_SECTION_ID} className="scroll-mt-6 empty:hidden">
-              <Suspense fallback={<PrepBodySkeleton className="space-y-10" />}>
-                <TripPrepSection
-                  shop={shop}
-                  tripId={tripId}
-                  cancelled={cancelled}
-                  locale={locale}
-                  notice={notice}
-                  grouping={isPrepGrouping(group) ? group : "item"}
-                />
-              </Suspense>
-            </div>
-          }
-        />
+            <TripRosterContent
+              guests={guests}
+              hull={boat ? { name: boat.name, color: boat.hullColor, crew: assignedCrew } : null}
+              shopSlug={shopSlug}
+              shopName={shop.name}
+              locale={locale}
+              timezone={shop.timezone}
+              depthUnit={shop.depthUnit}
+              shopRentalItems={shop.rentalItems}
+              tripNotice={tripNotice}
+              pageNotice={rosterPageNotice}
+              noteDeleted={
+                noteBookingId && noteBody ? { bookingId: noteBookingId, body: noteBody } : undefined
+              }
+              confirmName={confirmName}
+              confirmEmail={confirmEmail}
+              confirmPhone={confirmPhone}
+              undoBookingId={
+                notice?.startsWith("booking-removed") && notice !== "booking-removed-refunded"
+                  ? bid
+                  : undefined
+              }
+              keepOpenBookingId={
+                notice === "contact-saved" ||
+                notice === "contact-incomplete" ||
+                notice === "payment"
+                  ? bid
+                  : undefined
+              }
+              // The one paper-release refusal with a way through (issue #1573),
+              // scoped to the seat the action named so a roster of minors does not
+              // all sprout the staffer's confirmation.
+              namesakeRefusedBookingId={notice === "waiver-guardian-name" ? bid : undefined}
+              mayDiscount={mayDiscount}
+              mayWriteOffPayment={mayWriteOffPayment}
+              compact
+              actions={rosterActions}
+            />
+          </>
+        )}
       </div>
     </>
   );

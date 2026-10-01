@@ -1449,7 +1449,7 @@ export async function getTodayWork(
         aboutDeparture: true,
         detail: missingFitDetailText(t, withoutFit),
         actionLabel: openPrepListActionText(t),
-        href: `${tripHref}#${PREP_SECTION_ID}`,
+        href: `${tripHref}/prep#${PREP_SECTION_ID}`,
         dueAt: trip.startsAt,
       });
     }
@@ -1466,7 +1466,7 @@ export async function getTodayWork(
         aboutDeparture: true,
         detail: ungatedNitroxDetailText(t, ungatedCount),
         actionLabel: openPrepListActionText(t),
-        href: `${tripHref}#${PREP_SECTION_ID}`,
+        href: `${tripHref}/prep#${PREP_SECTION_ID}`,
         dueAt: trip.startsAt,
       });
     }
@@ -1547,7 +1547,7 @@ export async function getTodayWork(
         actionLabel: openCrewActionText(t),
         // The trip's crew editor, not the bare Overview it used to land on
         // (Lens 17 task 139) — the fix for either gap lives right there.
-        href: `${tripHref}#crew`,
+        href: `${tripHref}?view=details#crew`,
         dueAt: trip.startsAt,
       });
     }
@@ -1595,7 +1595,7 @@ export async function getTodayWork(
             ? uncrewedCourseDetailText(t, ratioGap.divers)
             : uncrewedDepartureDetailText(t, ratioGap.divers),
           actionLabel: openCrewActionText(t),
-          href: `${tripHref}#crew`,
+          href: `${tripHref}?view=details#crew`,
           dueAt: trip.startsAt,
         });
       } else {
@@ -1614,7 +1614,7 @@ export async function getTodayWork(
             diversPerDivemaster,
           ),
           actionLabel: openCrewActionText(t),
-          href: `${tripHref}#crew`,
+          href: `${tripHref}?view=details#crew`,
           dueAt: trip.startsAt,
         });
       }

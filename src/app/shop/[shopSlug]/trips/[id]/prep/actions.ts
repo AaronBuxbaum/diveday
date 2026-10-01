@@ -64,33 +64,25 @@ const assignSchema = z.object({
 });
 
 /**
- * **Where a gear form lands its staffer: the departure, not `/prep`.**
+ * **Where a gear form lands its staffer: the departure's Gear tab.**
  *
- * The packing list stopped being a tab of its own and reads on the departure
- * page now (ADR 20260919-one-idea, slice 23c), so that is where these forms
- * are submitted from and where their `?notice=` belongs. `/prep` still renders
- * the same list — the paper day composes it — but sending someone there after
- * a hand-over would drop them on a page with no roster and no way back to the
- * one they were working.
+ * The packing list is the Gear tab (ADR 20261001-logbook, decision 3), so that
+ * is where these forms are submitted from and where their `?notice=` belongs.
  *
  * One helper rather than five call sites, because the five must agree: a
  * redirect and the `revalidatePath` beside it naming different paths is a
  * staffer watching a stale count.
  */
 function departureOf(shopSlug: string, tripId: string) {
-  return shopPath(shopSlug, "trips", tripId);
+  return shopPath(shopSlug, "trips", tripId, "prep");
 }
 
 /**
- * The same departure, landing on the list rather than its hour.
- *
- * `assignGearUnit`'s docblock below already argues the cost of a redirect per
- * row — "the staffer back to the top of a long page" — and the page these four
- * now land on is several times longer than the `/prep` that was written
- * against. A counter working down twenty-one divers at 06:15 gets the section
- * they tapped in, with the answer to that tap in it (dive-domain review
- * 20260920). `revalidatePath` takes the bare path: a fragment is the browser's
- * business and names no route.
+ * The Gear tab, landing on the list rather than the top of the page: a counter
+ * working down twenty-one divers at 06:15 gets the section they tapped in, with
+ * the answer to that tap in it (dive-domain review 20260920).
+ * `revalidatePath` takes the bare path: a fragment is the browser's business
+ * and names no route.
  */
 function packingListOf(shopSlug: string, tripId: string) {
   return `${departureOf(shopSlug, tripId)}#${PREP_SECTION_ID}`;

@@ -53,12 +53,15 @@ import { webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { requireShopSurface } from "@/lib/session";
 import { seenChipSlugs, seenSiteFor } from "@/lib/sightings";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { divesWithMatch } from "@/lib/support-needs";
 import { STAGE_TAP_KEYS, TRIP_STAGES } from "@/lib/trip-stages";
 import { hasSailed } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
+import { TripTabs } from "../_components/TripTabs";
+import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CrewRollCall } from "./_components/CrewRollCall";
@@ -686,8 +689,8 @@ export default async function TripManifestPage({
           call reading "6 of 9 aboard" invites reading the seat count as a
           boarding count. */}
       <TripPageHeader
-        boardHref={shopPath(shopSlug, "trips", tripId)}
-        backLabel={t("trips.surfaces.trip")}
+        boardHref={shopPath(shopSlug, "schedule", "board")}
+        backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
         trip={manifest.trip}
         locale={locale}
         timeZone={shop.timezone}
@@ -716,6 +719,16 @@ export default async function TripManifestPage({
             />
           </ManifestMoreMenu>
         }
+      />
+      {/* No stepper here: the crew's own stage strip below is this tab's
+          reading of where the boat is, and a second one above it would be the
+          same fact twice. */}
+      <TripTabs
+        shopSlug={shopSlug}
+        tripId={tripId}
+        current="boat"
+        phase={null}
+        copy={tripTabsCopy(t)}
       />
       {/* Souls on board, on paper only. The printed manifest is the document
           that goes ashore with the dock or into a coastguard's hands, and the

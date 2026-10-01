@@ -30,6 +30,9 @@ test.describe("weather blow-out cascade", () => {
   test("one tap, one confirm: cancel the reef charter and land on the cascade record", async ({
     page,
   }) => {
+    // Five pages and a confirm: the board, the departure, the confirm, the
+    // cascade, and the departure's Divers, Details and Gear tabs after it.
+    test.setTimeout(30_000);
     // `openTripFromBoard` clicks a row on the board; it does not navigate to
     // it. `signedInAsOwner` only seeds storage state, so without this the test
     // ran against a blank page and timed out looking for the listitem.
@@ -107,7 +110,8 @@ test.describe("weather blow-out cascade", () => {
      * lands after check-in has started, with six divers already tapped aboard
      * and a crew that now needs to put them back ashore and close the count.
      */
-    await expect(page.getByRole("link", { name: "Manifest" })).toBeVisible();
+    const tabs = page.getByRole("navigation", { name: "Departure" });
+    await expect(tabs.getByRole("link", { name: "Boat" })).toBeVisible();
 
     /**
      * **And nothing is packed for a boat that is not going.** Every count on
@@ -116,10 +120,16 @@ test.describe("weather blow-out cascade", () => {
      * happening. Said rather than simply absent, because a list that vanishes
      * without a word reads as "nothing to pull".
      */
+    await tabs.getByRole("link", { name: "Gear" }).click();
+    await expect(page).toHaveURL(/\/prep$/);
+    await expect(page.getByText("The departure is cancelled. Nothing to pack.")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Tanks", exact: true })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toHaveCount(0);
-    await expect(page.getByText("The departure is cancelled. Nothing to pack.")).toBeVisible();
 
+    await page
+      .getByRole("navigation", { name: "Departure" })
+      .getByRole("link", { name: "Divers" })
+      .click();
     await page.getByRole("link", { name: "View the blow-out cascade" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
   });

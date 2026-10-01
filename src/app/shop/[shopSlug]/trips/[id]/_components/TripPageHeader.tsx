@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { EyebrowBackLink, SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -208,45 +207,6 @@ export function TripPageHeaderSkeleton({
         <div className="h-lh w-56 max-w-full rounded bg-surface-sunken" />
       </div>
     </div>
-  );
-}
-
-/**
- * **A door out of the departure, wearing the band's own chip.**
- *
- * One of these, for the manifest: the departure lost its tab strip in slice
- * 23c (ADR 20260919-one-idea) and every other surface folded into the page,
- * but the manifest could not — `?checkpoint=` is a URL contract with external
- * deep-links, a service worker and an encrypted offline store hanging off it.
- * So it is reached the way the hour is read, from the band.
- *
- * Same `sky` variant and the same reason as `TripAddDiverLink` below it: the
- * accent measures 1.76:1 against `--sky-day`, so a link standing on the sky
- * brings its own opaque box or it is not there.
- */
-export function TripSurfaceLink({
-  href,
-  label,
-  icon,
-  onSky = false,
-}: {
-  href: string;
-  label: string;
-  icon: Parameters<typeof DiveDayIcon>[0]["name"];
-  onSky?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={
-        onSky
-          ? buttonClass({ variant: "sky", size: "sm", className: "gap-1.5" })
-          : buttonClass({ variant: "link", className: "gap-1.5" })
-      }
-    >
-      <DiveDayIcon name={icon} className="size-4" />
-      {label}
-    </Link>
   );
 }
 
