@@ -15,10 +15,9 @@ import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
-import { savePublicBoatLineAction, saveYearOnDivedayAction } from "./actions";
+import { saveYearOnDivedayAction } from "./actions";
 import { DisplayLinksPanel } from "./DisplayLinksPanel";
 import type { DisplayLinkCopy, DisplayLinkView } from "./display-panel-types";
-import { WorldPanel } from "./WorldPanel";
 
 /**
  * What the year switch says back. Resolved through `noticeFromParam` and never
@@ -159,24 +158,6 @@ export default async function LobbyDisplayPage({
         description={t("display.description")}
       />
       <DisplayLinksPanel copy={copy} screens={screens} maxLabelLength={DISPLAY_LABEL_MAX_LENGTH} />
-      {/* **What the world can see** (ADR 20260908-one-hand, decision 6, lever
-          U). Below the screens rather than above them: the page's own subject
-          is the links a shop puts on its own walls, and this is the one row
-          about what leaves the building. */}
-      <WorldPanel
-        action={savePublicBoatLineAction}
-        on={shop.publicBoatLine}
-        copy={{
-          heading: t("display.world.heading"),
-          rowHeading: t("display.world.boatLine.heading"),
-          detail: t("display.world.boatLine.detail"),
-          valueOn: t("display.world.boatLine.valueOn"),
-          valueOff: t("display.world.boatLine.valueOff"),
-          submit: t("display.world.boatLine.submit"),
-          submitting: t("display.world.boatLine.submitting"),
-        }}
-      />
-
       {/*
         **What the shop shows the world, on the page about screens the shop
         puts things on** (ADR 20260908-one-hand, decision 6, lever T). The

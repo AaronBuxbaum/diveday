@@ -355,6 +355,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // bundle hold a region that disagrees with the address printed beside it --
     // the one way those two can drift -- and re-deriving costs a function call.
     "region_slug",
+    // The switch for the public boat line, which was cut with the page it
+    // published. Nothing reads or writes it; the column waits for its drop.
+    "public_boat_line",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   trip_lenses: ["shop_id"],

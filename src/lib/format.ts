@@ -318,10 +318,9 @@ export function formatTimeRangeTz(
  * not be standing in it.
  *
  * The public schedule leaves its times bare on purpose: local time is the
- * honest default for somebody in the shop's own town. The follow-the-boat page
- * is the case that argues the other way — it is a link a diver pastes into a
- * group chat, and whoever opens it may be three zones away, deciding when to
- * leave for the dock.
+ * honest default for somebody in the shop's own town. A message a diver
+ * forwards is the case that argues the other way — whoever opens it may be
+ * three zones away, deciding when to leave for the dock.
  */
 export function formatTimeTz(date: Date, locale = "en-US", timeZone: string): string {
   return keepUnitsWhole(

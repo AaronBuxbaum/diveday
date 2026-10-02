@@ -62,7 +62,6 @@ describe("publicRouteShape", () => {
     expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}/calendar`)).toEqual(shape);
     expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}/arrival-card`)).toEqual(shape);
     expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}/ready`)).toEqual(shape);
-    expect(publicRouteShape(`/s/${SHOP}/boats/${TRIP_ID}`)).toEqual(shape);
   });
 
   it("calls an id that is not a uuid malformed rather than putting it in a query", () => {
@@ -73,10 +72,6 @@ describe("publicRouteShape", () => {
       shopSlug: SHOP,
     });
     expect(publicRouteShape(`/s/${SHOP}/trips/nope/calendar`)).toEqual({
-      kind: "malformed",
-      shopSlug: SHOP,
-    });
-    expect(publicRouteShape(`/s/${SHOP}/boats/nope`)).toEqual({
       kind: "malformed",
       shopSlug: SHOP,
     });

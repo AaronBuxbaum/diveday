@@ -933,7 +933,6 @@ export async function loadShopExportBundleInput(
             // restored from one must not come back published.
             "search_listing_opt_out_at",
             "tide_window_public",
-            "public_boat_line",
             // The shop's yes for its year card on DiveDay's pages, which is the
             // shop's setting and so the shop's to take with it.
             "show_year_on_diveday",
@@ -997,7 +996,6 @@ export async function loadShopExportBundleInput(
               shop.seasonStartDay,
               shop.searchListingOptOutAt,
               shop.tideWindowPublic,
-              shop.publicBoatLine,
               shop.showYearOnDiveday,
               shop.tagline,
               shop.description,

@@ -168,7 +168,6 @@
       "schedule-filters.spec.ts",
       "schedule-lenses.spec.ts",
       "schedule-trip.spec.ts",
-      "season-events.spec.ts",
       "seo.spec.ts",
       "storefront-brand.spec.ts",
       "tenant-isolation.spec.ts",
@@ -182,11 +181,6 @@
       "schedule-lens",
       "schedule-off-season"
     ],
-    "a11y": ["a11y.spec.ts"]
-  },
-  "/s/[shopSlug]/boats/[tripId]": {
-    "e2e": ["follow-the-boat.spec.ts", "a11y.spec.ts"],
-    "visual": ["follow-the-boat"],
     "a11y": ["a11y.spec.ts"]
   },
   "/s/[shopSlug]/courses": {
@@ -245,7 +239,6 @@
       "schedule-embed.spec.ts",
       "seat-claim.spec.ts",
       "sightings.spec.ts",
-      "tide-window.spec.ts",
       "trip-admission.spec.ts",
       "trips.spec.ts"
     ],
@@ -518,17 +511,14 @@
       "nitrox.spec.ts",
       "recap.spec.ts",
       "role-permissions.spec.ts",
-      "season-events.spec.ts",
       "settings-editor-pages.spec.ts",
       "settings-findability.spec.ts",
       "tax.spec.ts",
-      "tide-window.spec.ts",
       "whatsapp-settings.spec.ts"
     ],
     "visual": [
       "settings-address",
       "settings-data-unfinished",
-      "settings-hospitality",
       "settings-payments",
       "settings-profile",
       "settings-tax",
@@ -541,14 +531,9 @@
     "visual": ["settings-boats"],
     "a11y": []
   },
-  "/shop/[shopSlug]/settings/kinds-of-day": {
+  "/shop/[shopSlug]/settings/trip-tags": {
     "e2e": ["schedule-lenses.spec.ts", "settings-editor-pages.spec.ts"],
-    "visual": ["settings-kinds-of-day"],
-    "a11y": []
-  },
-  "/shop/[shopSlug]/settings/seasons": {
-    "e2e": ["season-events.spec.ts", "settings-editor-pages.spec.ts"],
-    "visual": ["settings-seasons"],
+    "visual": ["settings-trip-tags"],
     "a11y": []
   },
   "/shop/[shopSlug]/settings/calendar": {

@@ -14,8 +14,7 @@ const BUDDY_LINK_ID = "buddy-link";
 /**
  * **Bring a buddy next time** — ADR 20260908-one-hand, decision 6, lever W.
  *
- * The share sheet first, a clipboard copy where there is none, which is the
- * same shape `FollowShareRow` uses one state earlier in this thread. A browser
+ * The share sheet first, a clipboard copy where there is none. A browser
  * without the Web Share API is a laptop, where a copied link is what a person
  * wanted anyway.
  *

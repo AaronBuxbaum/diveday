@@ -50,17 +50,6 @@
     "revoked": "Enlace revocado.",
     "renewed": "Enlace renovado."
   },
-  "world": {
-    "heading": "Lo que puede ver el mundo",
-    "boatLine": {
-      "heading": "En qué punto de su día va cada barco",
-      "detail": "En la página pública y en el enlace que comparte un buceador. Una palabra de estado y una hora, nunca quién va a bordo.",
-      "valueOn": "Activado",
-      "valueOff": "Desactivado",
-      "submit": "Guardar",
-      "submitting": "Guardando…"
-    }
-  },
   "year": {
     "heading": "Nuestro año en las páginas de DiveDay",
     "label": "Mostrar nuestro año",

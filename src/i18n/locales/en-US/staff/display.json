@@ -50,17 +50,6 @@
     "revoked": "Link revoked.",
     "renewed": "Link renewed."
   },
-  "world": {
-    "heading": "What the world can see",
-    "boatLine": {
-      "heading": "Where each boat is in its day",
-      "detail": "On the storefront, and on the link a diver shares. A stage word and a time, never who is aboard.",
-      "valueOn": "On",
-      "valueOff": "Off",
-      "submit": "Save",
-      "submitting": "Saving…"
-    }
-  },
   "year": {
     "heading": "Our year on DiveDay’s pages",
     "label": "Show our year",

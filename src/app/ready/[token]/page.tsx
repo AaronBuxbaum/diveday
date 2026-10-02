@@ -4,7 +4,6 @@ import { connection } from "next/server";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
 import { ChangedFacts, type FitRecall } from "@/app/ready/[token]/_components/ChangedFacts";
-import { FollowShareRow } from "@/app/ready/[token]/_components/FollowShareRow";
 import {
   ThreadSpine,
   type ThreadSpineStep,
@@ -47,7 +46,6 @@ import {
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { publicBoatLine } from "@/db/boat-line";
 import {
   hasLiveArrivalCapability,
   resolveRevokedBookingCapability,
@@ -100,7 +98,6 @@ import {
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import {
-  publicBoatPath,
   publicSchedulePath,
   publicTripArrivalCardPath,
   publicTripCalendarPath,
@@ -1714,43 +1711,29 @@ export default async function DiverReadinessPage({
   // One round trip, not two: the trip reads are scoped by `shop.id`, which the
   // verified capability already resolved, so none of them has to wait on the
   // shop row `PackingSection` needs for its units and rental catalogue.
-  const [
-    fullShop,
-    fullTrip,
-    tripDives,
-    changeEvents,
-    publicCrew,
-    boatStage,
-    followLine,
-    hasArrivalCode,
-  ] = await Promise.all([
-    getShopBySlug(db, shop.slug),
-    getTripWithBooked(db, shop.id, data.trip.id),
-    listTripDives(db, shop.id, data.trip.id),
-    listTripChangeEvents(db, shop.id, data.trip.id),
-    // Only the crew who agreed to be named (issue #1181, D21). This thread is
-    // reached by a capability URL rather than indexed, but the consent is the
-    // person's answer about divers, not about search engines — so it is the
-    // same filter and the same words as the public page.
-    tripPublicCrew(db, shop.id, data.trip.id),
-    // Where the crew last said this boat was (ADR
-    // 20260904-reef-all-the-way-down, Budget rule 4). Read whatever its age;
-    // `liveStageOf` below decides whether it still speaks, so a stage nobody
-    // cleared cannot follow a diver into next week.
-    latestTripStage(db, shop.id, data.trip.id),
-    // The page the share row below hands over (ADR 20260908-one-hand,
-    // decision 6, lever U). Asked as the reader of that page would ask it,
-    // rather than assembled from a switch and three conditions here: the row
-    // then offers a link exactly when the link answers, and a shop that has
-    // not said yes gets no row at all.
-    publicBoatLine(db, { shopSlug: shop.slug, tripId: data.trip.id, now: nowDate() }),
-    // Has this booking ever handed out an arrival code? Only the arrival-card
-    // download mints one, so this is "did somebody save the card", and it is
-    // what decides whether the card below offers a way to stop the code on it
-    // (issue #1729). The same rule the self-cancel follows: no control here
-    // that could only ever come back having done nothing.
-    hasLiveArrivalCapability(db, { shopId: shop.id, bookingId }),
-  ]);
+  const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage, hasArrivalCode] =
+    await Promise.all([
+      getShopBySlug(db, shop.slug),
+      getTripWithBooked(db, shop.id, data.trip.id),
+      listTripDives(db, shop.id, data.trip.id),
+      listTripChangeEvents(db, shop.id, data.trip.id),
+      // Only the crew who agreed to be named (issue #1181, D21). This thread is
+      // reached by a capability URL rather than indexed, but the consent is the
+      // person's answer about divers, not about search engines — so it is the
+      // same filter and the same words as the public page.
+      tripPublicCrew(db, shop.id, data.trip.id),
+      // Where the crew last said this boat was (ADR
+      // 20260904-reef-all-the-way-down, Budget rule 4). Read whatever its age;
+      // `liveStageOf` below decides whether it still speaks, so a stage nobody
+      // cleared cannot follow a diver into next week.
+      latestTripStage(db, shop.id, data.trip.id),
+      // Has this booking ever handed out an arrival code? Only the arrival-card
+      // download mints one, so this is "did somebody save the card", and it is
+      // what decides whether the card below offers a way to stop the code on it
+      // (issue #1729). The same rule the self-cancel follows: no control here
+      // that could only ever come back having done nothing.
+      hasLiveArrivalCapability(db, { shopId: shop.id, bookingId }),
+    ]);
   // The boat's own line, composed here: word order and where the site sits in
   // the sentence are the locale's choice, and `liveStageOf` is what stops a
   // stage nobody cleared speaking for a departure that ended yesterday.
@@ -1804,12 +1787,6 @@ export default async function DiverReadinessPage({
   const shareOrigin = publicAppUrl();
   const tripPath = publicTripPath(shop.slug, data.trip.id);
   const shareTripUrl = shareOrigin ? new URL(tripPath, `${shareOrigin}/`).toString() : tripPath;
-  // The boat's own page, for the row that hands it to whoever is waiting on
-  // the dock (ADR 20260908-one-hand, decision 6, lever U). Same absolute-where-
-  // configured construction as the trip link above, and for the same reason:
-  // this one exists to be pasted into a group chat.
-  const followPath = publicBoatPath(shop.slug, data.trip.id);
-  const followUrl = shareOrigin ? new URL(followPath, `${shareOrigin}/`).toString() : followPath;
 
   // Dive 1 first, in the dive plan's own order: where a site names its own
   // time in the water, that is what the day's rhythm counts rather than the
@@ -2286,24 +2263,6 @@ export default async function DiverReadinessPage({
           <>
             {stageLine ? (
               <BoatStageLine sentence={stageLine.sentence} said={stageLine.said} />
-            ) : null}
-            {/* **Share with whoever is waiting for you** (ADR 20260908-one-hand,
-                decision 6, lever U). Beneath the boat's own line, because it
-                offers the same fact to a second person; absent entirely for a
-                shop that has not turned the line on. */}
-            {followLine ? (
-              <FollowShareRow
-                url={followUrl}
-                text={t("boatLine.share.text", {
-                  boat: followLine.trip.boatName ?? followLine.trip.title,
-                  shop: followLine.shop.name,
-                })}
-                heading={t("boatLine.share.heading")}
-                detail={t("boatLine.share.detail")}
-                action={t("boatLine.share.action")}
-                copied={t("boatLine.share.copied")}
-                copyFailed={t("boatLine.share.copyFailed")}
-              />
             ) : null}
             <ThreadStatus
               done={spine.done}

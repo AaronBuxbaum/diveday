@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, lte } from "drizzle-orm";
 import { MINUTE_MS, nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
-import { shops, tripDives, tripStageEvents, trips } from "./schema";
+import { tripDives, tripStageEvents, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -12,9 +12,8 @@ import { liveTrip } from "./trips-live";
  * The clamp is the whole point. `liveShopStage` refuses a reading stamped after
  * the moment it is read — a word from the future is not a word anyone has said
  * — so an unclamped `startsAt + 20m` on a boat that left ten minutes ago seeds a
- * row that no surface will ever render, and the demo's chip, its storefront
- * panel and every diver's line all come up blank on the one shop every capture
- * is of.
+ * row that no surface will ever render, and the demo's chip and every diver's
+ * line come up blank on the one shop every capture is of.
  */
 export function demoStageRecordedAt(startsAt: Date, now: Date): Date {
   return new Date(Math.min(startsAt.getTime() + 20 * MINUTE_MS, now.getTime()));
@@ -25,8 +24,8 @@ export function demoStageRecordedAt(startsAt: Date, now: Date): Date {
  * decision 2, Budget rule 4.
  *
  * One tap on today's departure, twenty minutes after it left the dock, so the
- * demo shop reads the way the canvas draws it: a chip on the home's station, a
- * live panel on the storefront, a line on the diver's link. It is deliberately
+ * demo shop reads the way the canvas draws it: a chip on the home's station and
+ * a line on the diver's link. It is deliberately
  * `underway` rather than `home` — `home` publishes nothing, so seeding it
  * would leave the whole slice invisible on the one shop every capture is of.
  *
@@ -83,13 +82,6 @@ export async function seedTripStage(
     .where(eq(tripDives.tripId, today.id))
     .orderBy(asc(tripDives.diveNumber))
     .limit(1);
-
-  // ...and the demo shop has said the world may read it (ADR
-  // 20260908-one-hand, decision 6, lever U). Every shop starts with this off,
-  // which is the right default and the wrong demo: with it off the storefront's
-  // panel, the Follow door and the boat's own page are all invisible on the one
-  // shop every capture is of.
-  await db.update(shops).set({ publicBoatLine: true }).where(eq(shops.id, shopId));
 
   await db.insert(tripStageEvents).values({
     shopId,

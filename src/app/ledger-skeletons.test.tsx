@@ -9,7 +9,6 @@ import { sectionCardClass } from "@/components/ui/card";
 import { LedgerRow, ledgerRowBoxClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { staffTranslator } from "@/i18n/staff-messages";
-import PublicBoatLoading from "./s/[shopSlug]/boats/[tripId]/loading";
 import PublicReviewsLoading from "./s/[shopSlug]/reviews/loading";
 import PublicSiteLoading from "./s/[shopSlug]/sites/[siteSlug]/loading";
 import BookingNewLoading from "./shop/[shopSlug]/bookings/new/loading";
@@ -65,7 +64,6 @@ const SKELETONS: [name: string, loadedBy: string, Skeleton: ComponentType][] = [
   ["Today", "DaySpine's station rows", TodayLoading],
   ["public dive site", "the site's departures", PublicSiteLoading],
   ["public reviews", "ShopReviews", PublicReviewsLoading],
-  ["public boat", "BoatLine and the page's two door rows", PublicBoatLoading],
 ];
 
 /**

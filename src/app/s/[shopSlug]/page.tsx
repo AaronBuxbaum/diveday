@@ -23,7 +23,6 @@ import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { listSeasonEvents } from "@/db/season-events";
 import { shopBySlugCached } from "@/db/shops";
 import { listTripLenses } from "@/db/trip-lenses";
-import { liveShopStage } from "@/db/trip-stages";
 import {
   countShopTrips,
   nextSessionStartByCourse,
@@ -61,7 +60,6 @@ import { publicAppUrl } from "@/lib/notifications";
 import { offSeason } from "@/lib/off-season";
 import {
   publicAvailabilityPath,
-  publicBoatPath,
   publicCoursePath,
   publicCoursesPath,
   publicSchedulePath,
@@ -80,13 +78,11 @@ import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { skyReadingFor } from "@/lib/sky-scheme";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
 import { resolveLens } from "@/lib/trip-lenses";
-import { STAGE_SENTENCE_KEYS } from "@/lib/trip-stages";
 import { capacityLabel, nextBookableDeparture } from "@/lib/trips";
-import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { CoursesShelf } from "./_components/CoursesShelf";
 import { FindMyBookingForm } from "./_components/FindMyBookingForm";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
-import { LiveBoatPanel } from "./_components/LiveBoatPanel";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
@@ -384,7 +380,7 @@ export default async function SchedulePage({
   //
   // Both, and the courses shelf, stand down inside the frame: `?embed=1`
   // renders neither the hero nor the shelves.
-  const [range, { trips: upcoming, nextCursor }, reviewAggregate, activeCourses, boats, liveStage] =
+  const [range, { trips: upcoming, nextCursor }, reviewAggregate, activeCourses, boats] =
     await Promise.all([
       upcomingScheduleRange(db, shop.id, now, { publicOnly: true }),
       pagedUpcomingTripsWithCounts(db, shop.id, {
@@ -401,44 +397,7 @@ export default async function SchedulePage({
       // The fleet, for the storefront's boats section (Harbor). Not in the
       // widget: an embed is the list-first window and names no hulls.
       isEmbed ? [] : listBoats(db, shop.id),
-      // The boat a crew said is out (ADR 20260904-reef-all-the-way-down,
-      // Budget rule 4). Bounded to today's own window so a stage nobody
-      // cleared cannot speak for a week, and never read inside the frame.
-      // A shop that has not said the world may read its boats publishes none
-      // of this (ADR 20260908-one-hand, decision 6, lever U, owner call j):
-      // the panel, its Follow door and the boat's own page go together, and
-      // the switch is off until a shop turns it on.
-      isEmbed || !shop.publicBoatLine
-        ? null
-        : liveShopStage(db, shop.id, now, shopDayBounds(now, shop.timezone).from),
     ]);
-  // The sentences, composed here because word order and the site's place in
-  // them are a locale's choice rather than a component's. The boat is the
-  // hull's name when the shop has one on file and the departure's own title
-  // when it does not — never "the boat", which names nothing a visitor can
-  // recognise from the dock.
-  const liveStageSentence = liveStage
-    ? liveStage.stage === "underway" && !liveStage.siteName
-      ? t("tripStage.underwayNoSite", { boat: liveStage.boatName ?? liveStage.tripTitle })
-      : t(STAGE_SENTENCE_KEYS[liveStage.stage], {
-          boat: liveStage.boatName ?? liveStage.tripTitle,
-          site: liveStage.siteName ?? "",
-        })
-    : "";
-  const liveStageMeta = liveStage
-    ? [
-        t("tripStage.said", {
-          time: formatTime(liveStage.recordedAt, locale, shop.timezone),
-        }),
-        liveStage.endsAt
-          ? t("tripStage.liveBack", {
-              back: formatTime(liveStage.endsAt, locale, shop.timezone),
-            })
-          : null,
-      ]
-        .filter(Boolean)
-        .join(" ")
-    : "";
   // The widget shows a window; the page shows the schedule. Sliced here rather
   // than asked for in the query so the two surfaces read the same list and can
   // never disagree about what is next (issue #805).
@@ -598,16 +557,13 @@ export default async function SchedulePage({
   const firstSkippedBoat = skippedBoats > 0 ? visibleUpcoming[0] : null;
   /**
    * How many panels the identity band has to lay out. Counted rather than
-   * inferred from the rendered children, because a grid wrapper around four
+   * inferred from the rendered children, because a grid wrapper around three
    * conditionals still draws its own top margin when every one of them is
    * false — an empty 24px band above the schedule on the commonest shop of
-   * all, the one with no live boat and no season written down.
+   * all, the one with no next boat and no season written down.
    */
   const identityPanels =
-    (quiet.quiet ? 1 : 0) +
-    (liveStage ? 1 : 0) +
-    (nextBoat ? 1 : 0) +
-    (seasonEntries.length > 0 ? 1 : 0);
+    (quiet.quiet ? 1 : 0) + (nextBoat ? 1 : 0) + (seasonEntries.length > 0 ? 1 : 0);
 
   // The month rail: one row of "where am I / step a month" instead of the
   // full month grid this page used to open with. The grid duplicated every
@@ -870,28 +826,6 @@ export default async function SchedulePage({
                     no bookable boat. */}
                 {quiet.quiet ? (
                   <OffSeasonPanel heading={t("schedule.offSeason.heading")} line={quietLine} />
-                ) : null}
-                {/* **The boat that is out** — ADR 20260904-reef-all-the-way-down,
-                    decision 2, Budget rule 4. Before the next departure, because a
-                    visitor who can see a boat leave from the dock is asking about
-                    today before they are asking about Saturday. Never in embed
-                    mode: `?embed=1` is a window onto the schedule, and a live
-                    panel would spend a third of a widget on a fact the host page
-                    did not ask for. */}
-                {liveStage ? (
-                  <LiveBoatPanel
-                    stage={liveStage.stage}
-                    eyebrow={t("tripStage.liveEyebrow")}
-                    sentence={liveStageSentence}
-                    meta={liveStageMeta}
-                    // The door to that boat's own day (ADR 20260908-one-hand,
-                    // decision 6, lever U). Reached only when the switch is on,
-                    // because `liveStage` is null without it.
-                    follow={{
-                      href: publicBoatPath(shopSlug, liveStage.tripId),
-                      label: t("boatLine.follow"),
-                    }}
-                  />
                 ) : null}
                 {nextBoat ? (
                   <NextBoatCard
