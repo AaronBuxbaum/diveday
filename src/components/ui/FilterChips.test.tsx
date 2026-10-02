@@ -263,6 +263,37 @@ describe("the current chip on a phone", () => {
     expect(row().scrollLeft).toBe(0);
   });
 
+  it("scrolls again when the row starts to overflow after it arrived", () => {
+    // A page that loads wide and narrows to a phone — a rotated tablet, or a
+    // capture that resizes after load — overflows only once the row has been
+    // laid out, so the first pass found nothing to do and the current chip
+    // stayed off screen.
+    const layout = { scrollWidth: 390 };
+    stubLayout();
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains("chip-scroller") ? layout.scrollWidth : 0;
+    });
+    const observers: Array<() => void> = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: () => void) {
+          observers.push(callback);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    render(<FilterChips label="Roster views" chips={five} />);
+    expect(row().scrollLeft).toBe(0);
+    layout.scrollWidth = 700;
+    for (const notify of observers) notify();
+    expect(row().scrollLeft).toBeCloseTo(536.7 - 16);
+    vi.unstubAllGlobals();
+  });
+
   it("leaves the row at its start when the current chip is already whole on screen", () => {
     stubLayout({ active: { left: 118.5, width: 116.4 } });
     render(<FilterChips label="Roster views" chips={five} />);
