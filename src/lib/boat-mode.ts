@@ -16,9 +16,10 @@ export const BOAT_MODE_CLASS = "boat-mode";
  * flashes the paper palette on load. Static, with no user input in it.
  */
 export function boatModeScript(): string {
-  const key = JSON.stringify(BOAT_MODE_STORAGE_KEY);
-  const cls = JSON.stringify(BOAT_MODE_CLASS);
-  return `(function(){try{if(localStorage.getItem(${key})==="on")document.documentElement.classList.add(${cls})}catch(e){}})()`;
+  // A literal, not built from the constants above: nothing is interpolated
+  // into code that runs before the page does. `boat-mode.test.ts` holds it to
+  // the constants.
+  return '(function(){try{if(localStorage.getItem("diveday:boat-mode")==="on")document.documentElement.classList.add("boat-mode")}catch(e){}})()';
 }
 
 /** Turns Boat mode on or off for this device, now and on later loads. */
