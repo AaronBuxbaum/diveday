@@ -483,16 +483,11 @@ body {
 }
 
 /*
- * Dock/boat surfaces follow the device's own light/dark preference — bright
- * light by day so the manifest reads in full sun, dark for a night dive when a
- * white screen would blind the deck. What boat-mode adds on top of the app
- * palette is *contrast*: it darkens ink, borders, and the action color in light
- * and lifts them in dark, so the roll call reads well above the rest of the
- * app — every boat-mode ink/action token clears 6.2:1 against its own surfaces
- * in both schemes, where the app palette's worst token sits at 4.4:1. That is
- * comfortably past AA and short of AAA's 7:1 for normal text; don't describe it
- * as AAA. Big touch targets live in the components. Keep this semantic so the
- * roll-call screens can opt in without changing the app.
+ * Dock/boat surfaces wear Boat mode (`.boat-mode`, below): one Night Dive
+ * palette in both schemes, high contrast rather than following the device's
+ * light or dark preference (ADR 20261001-logbook, decision 6). Big touch
+ * targets live in the components. Keep this semantic so the roll-call
+ * screens can opt in without changing the app.
  */
 
 /*

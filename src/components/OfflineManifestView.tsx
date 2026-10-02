@@ -19,6 +19,7 @@ import { freshnessInkClass, OfflineFreshnessPill } from "@/components/OfflineFre
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
 import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { watchRollCallTouches } from "@/components/roll-call-touch-guard";
 import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SkipLink } from "@/components/SkipLink";
@@ -388,6 +389,8 @@ function savedCopyReducer(state: SavedCopyState, action: SavedCopyAction): Saved
 }
 
 export function OfflineManifestView() {
+  // A palm or spray on the glass is not a mark (roll-call-touch-guard).
+  useEffect(() => watchRollCallTouches(), []);
   // Memoized so `reconcile`/`reconcileList` below (and the effect that reruns
   // whenever they change) stay referentially stable across renders — the
   // device's language doesn't change mid-session, so recreating the
@@ -1419,7 +1422,10 @@ export function OfflineManifestView() {
   });
 
   return (
-    <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
+    <main
+      data-roll-call-surface
+      className="boat-mode mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6"
+    >
       <PullToRefresh onRefresh={reconcile}>
         <OfflineShellVersionBanner copy={shellVersionCopy} />
         {discardNotice}
@@ -1758,14 +1764,13 @@ export function OfflineManifestView() {
             it in words. */}
         {/* **The label fits its tile, or wraps inside it; it never spills
             into the next.** Uppercase, "EMBARCADOS" needed 86px where a `p-3`
-            tile leaves 75 at 360, and glare mode (this page mounts it) forces
-            every `text-xs` to 16px, where no inset a phone tile can give holds
-            it: about 112px in a 100px box at 390. Narrowing the tiles' inset
+            tile leaves 75 at 360. Narrowing the tiles' inset
             below `sm` fixed only the 360 case and left every phone's tiles
             reading cramped, 7px from their borders beside panels inset 16-20.
-            In sentence case the words fit a `p-3` tile at 12px, and at glare's
-            16px they hyphenate in the page's language (`lang`) or, where the
-            browser has no dictionary, break inside the tile. The gap stays 8px
+            In sentence case the words fit a `p-3` tile at 14px (`text-sm`: the
+            counts are safety reading, never 12px muted), and anything longer
+            hyphenates in the page's language (`lang`) or, where the browser
+            has no dictionary, breaks inside the tile. The gap stays 8px
             below `sm`: three tiles on a phone. */}
         <section className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
           {[
@@ -1776,7 +1781,7 @@ export function OfflineManifestView() {
             <div key={String(label)} className="rounded-lg border border-border bg-surface p-3">
               <p
                 lang={locale}
-                className="text-xs font-semibold text-muted hyphens-auto wrap-break-word"
+                className="text-sm font-semibold text-muted hyphens-auto wrap-break-word"
               >
                 {label}
               </p>

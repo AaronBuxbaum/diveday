@@ -79,7 +79,10 @@ export function SendHold<Outcome>({
   const seconds = ticket ? heldSendSecondsLeft(ticket.holdMs, elapsedMs) : 0;
 
   // Release at zero. The server decides whether the hold has drained; a
-  // `pending` answer is a skewed clock, and the next tick asks again.
+  // `pending` answer is a skewed clock, and the next tick asks again — which
+  // is why the tick (`elapsedMs`) is a dependency: at zero, `seconds` stops
+  // changing, and an effect keyed on it alone never asked a second time.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `elapsedMs` is the retry trigger, read through `seconds`.
   useEffect(() => {
     if (!ticket || seconds > 0 || busy.current) return;
     busy.current = true;
@@ -94,7 +97,7 @@ export function SendHold<Outcome>({
       .finally(() => {
         busy.current = false;
       });
-  }, [ticket, seconds, release, onOutcome]);
+  }, [ticket, seconds, elapsedMs, release, onOutcome]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

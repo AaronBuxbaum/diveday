@@ -81,4 +81,23 @@ describe("SendHold", () => {
     });
     expect(props.release).not.toHaveBeenCalled();
   });
+
+  it("asks again on the next tick when the server says the hold has not drained", async () => {
+    const release = vi
+      .fn()
+      .mockResolvedValueOnce({ status: "pending" as const })
+      .mockResolvedValue({ status: "done" as const, outcome: "sent" });
+    const props = renderHold({ release });
+    await tapSend();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(TICKET.holdMs);
+    });
+    expect(release).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(release).toHaveBeenCalledTimes(2);
+    expect(props.onOutcome).toHaveBeenCalledWith("sent");
+    expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
+  });
 });

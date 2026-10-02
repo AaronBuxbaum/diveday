@@ -478,7 +478,7 @@ export function OfflineManifestManager({
           20260827-the-departure-is-two-working-surfaces, decision 2: device
           settings and offline detail are "ashore, not here"). Everything this
           *device* does — hold an offline copy, wake itself for a refresh,
-          ignore spray on the glass, buzz — is one per-phone concern rather than
+          buzz — is one per-phone concern rather than
           anything about this departure, and at full height it spent the foot of
           every manifest on preferences nobody changes twice.
 
@@ -597,8 +597,7 @@ export function OfflineManifestManager({
             {/* `empty:hidden` because the rows the surface passes in render
                 *nothing* under ordinary conditions — the push opt-in while it is
                 still checking the device and on any deployment with no VAPID
-                keys, the spray-guard toggle until it has read this device's
-                stored preference — and a separator above nothing is a rule
+                keys, the haptics switch on a phone that cannot vibrate — and a separator above nothing is a rule
                 across an empty band. */}
             <div className="border-t border-border pt-5 empty:hidden">{children}</div>
           </div>

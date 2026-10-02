@@ -32,8 +32,8 @@ import type { CrewReading, CrewState, HullGeometry, SeatReading, SeatState } fro
  * - **booked** — paper, with a solid line at full weight. The canvas drew it
  *   exactly so (`.deck .seat`, `background:#fff; border:1.5px solid`), and an
  *   earlier draft here dropped the border: a white seat on an unpainted hull's
- *   `--surface-sunken` body is 1.2:1 in light and **1.05:1 in Glare Mode**, the
- *   one mode built for this surface's weather, which left an open seat more
+ *   `--surface-sunken` body was 1.2:1 in light and lower still in the old glare
+ *   skin built for this surface's weather, which left an open seat more
  *   visible than a taken one and inverted the picture's whole first reading
  *   (dive-domain review 20260919).
  * - **awaiting** — the rows' own slate, a solid line at full weight, and a

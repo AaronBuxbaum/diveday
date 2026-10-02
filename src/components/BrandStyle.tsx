@@ -27,8 +27,8 @@ import {
  * specificity, so a single `:root` block wins in *both* schemes and a branded
  * storefront wore its light-mode colour at depth, at ~3:1 (issue #1265). The
  * media query is the whole mechanism: `data-theme` appears nowhere in
- * globals.css, and the dark palette lives only behind that query. The three
- * skins that redeclare `--primary` on a *class* — boat mode, glare mode, print
+ * globals.css, and the dark palette lives only behind that query. The
+ * two skins that redeclare `--primary` on a *class* — boat mode and print
  * — still win over both blocks on specificity, which is right: each is a
  * deliberate override of the shop's colour for a reader who asked for it.
  *
