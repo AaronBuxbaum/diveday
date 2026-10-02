@@ -415,9 +415,8 @@ describe("formatOrdinal", () => {
 
 describe("formatHourShort", () => {
   /**
-   * The hour under a tick on the day strip. `formatHourOfDay` prints "6:00 AM",
-   * and four of those side by side touch at 390 — the minute on a tick is a
-   * digit nobody reads.
+   * The hour under a tick on the day strip. "6:00 AM" four times side by side
+   * touches at 390 — the minute on a tick is a digit nobody reads.
    */
   it("says the hour and no minute", () => {
     expect(formatHourShort(6, "en-US")).toBe("6\u00A0AM");

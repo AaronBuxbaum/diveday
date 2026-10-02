@@ -3,7 +3,7 @@ import { expect, READ_ONLY, test } from "./fixtures";
 
 /**
  * **The storefront's lens rail** — ADR 20260904-reef-all-the-way-down,
- * decision 2 (issue #1162): the shop's own words for its kinds of day, as a row
+ * decision 2 (issue #1162): the shop's own trip tags, as a row
  * of views onto the departures below.
  *
  * READ_ONLY holds throughout: this opens the public schedule and follows links.
@@ -12,7 +12,7 @@ import { expect, READ_ONLY, test } from "./fixtures";
  */
 
 /** The rail, by its accessible name. `FilterChips` renders it as a `<nav>`. */
-const rail = (page: Page) => page.getByRole("navigation", { name: "Kinds of day" });
+const rail = (page: Page) => page.getByRole("navigation", { name: "Trip tags" });
 
 /**
  * The storefront's one card. `getByRole` matches an accessible name by

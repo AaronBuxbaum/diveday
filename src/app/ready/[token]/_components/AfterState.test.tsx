@@ -48,7 +48,6 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
       depthUnit: "meters",
       temperatureUnit: "celsius",
       reviewUrl: null,
-      signOffNote: null,
       brandColor: null,
       brandDisplayFont: null,
     },
@@ -501,7 +500,6 @@ describe("one primary at rest", () => {
             reviewUrl: "https://g.page/r/blue-mantis/review",
             brandColor: null,
             brandDisplayFont: null,
-            signOffNote: null,
           },
           ownReview: { rating: 5, comment: "Vis was unreal." },
           params: { review: "published" },
@@ -525,7 +523,6 @@ describe("one primary at rest", () => {
             reviewUrl: "https://g.page/r/blue-mantis/review",
             brandColor: null,
             brandDisplayFont: null,
-            signOffNote: null,
           },
           ownReview: { rating: 5, comment: "Vis was unreal." },
         })}
@@ -611,36 +608,6 @@ describe("the keepsake prints like a logbook page", () => {
     const facts = screen.getByTestId(AFTER_STATE_TEST_IDS.record).querySelector("dl");
     expect(facts).toHaveClass("print:border-t", "divide-y");
     expect(facts).not.toHaveClass("border-t");
-  });
-});
-
-/**
- * **The shop's own sign-off, and only where the crew wrote none** (issue
- * #1212). Two answers to one question is the defect, so the crew's words
- * always win, and the standing sentence stands in only for the days nobody
- * wrote anything.
- */
-describe("the shop's sign-off", () => {
-  const signOff = "Thanks for diving with us. The kettle's always on.";
-  const withSignOff = (overrides: Partial<AfterStateProps> = {}) =>
-    props({
-      ...overrides,
-      shop: { ...props().shop, signOffNote: signOff },
-    });
-
-  it("renders when the crew wrote no shout-out", () => {
-    render(<AfterState {...withSignOff({ shoutout: null })} />);
-    expect(screen.getByText(signOff)).toBeInTheDocument();
-  });
-
-  it("stays silent under a shout-out somebody wrote today", () => {
-    render(<AfterState {...withSignOff({ shoutout: "Come back for the wreck." })} />);
-    expect(screen.queryByText(signOff)).toBeNull();
-  });
-
-  it("leaves the page with exactly one primary", () => {
-    const { container } = render(<AfterState {...withSignOff({ shoutout: null })} />);
-    expect(primaries(container)).toHaveLength(1);
   });
 });
 

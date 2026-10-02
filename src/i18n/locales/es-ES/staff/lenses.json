@@ -1,8 +1,8 @@
 {
-  "heading": "Tipos de día",
+  "heading": "Etiquetas de salida",
   "nameLabel": "Nombre",
-  "nameHint": "Los buceadores ven esta palabra en tu calendario y pueden filtrar por ella.",
-  "createTitle": "Añadir un tipo de día",
+  "nameHint": "Los buceadores ven esta etiqueta en tu calendario y pueden filtrar por ella.",
+  "createTitle": "Añadir una etiqueta de salida",
   "submit": "Guardar",
   "submitting": "Guardando...",
   "add": "Añadir",
@@ -11,13 +11,12 @@
   "deleteConfirm": "Eliminar",
   "deleteCancel": "Mejor no",
   "deletePending": "Eliminando…",
-  "deleteDepartures": "{count, plural, one {# salida lleva esta palabra y la pierde.} other {# salidas llevan esta palabra y la pierden.}}",
-  "noLenses": "Todavía no hay tipos de día.",
-  "created": "Tipo de día añadido.",
-  "updated": "Tipo de día guardado.",
-  "deleted": "Tipo de día eliminado.",
-  "invalid": "Ponle un nombre al tipo de día.",
-  "tripFieldLabel": "Tipo de día",
-  "tripFieldNone": "Ninguno",
-  "tripFieldFromSeason": "De {season}"
+  "deleteDepartures": "{count, plural, one {# salida lleva esta etiqueta y la pierde.} other {# salidas llevan esta etiqueta y la pierden.}}",
+  "noLenses": "Todavía no hay etiquetas de salida.",
+  "created": "Etiqueta de salida añadida.",
+  "updated": "Etiqueta de salida guardada.",
+  "deleted": "Etiqueta de salida eliminada.",
+  "invalid": "Ponle un nombre a la etiqueta de salida.",
+  "tripFieldLabel": "Etiqueta de salida",
+  "tripFieldNone": "Ninguna"
 }

@@ -42,7 +42,7 @@ type MessageModeProps = SharedProps & {
   /**
    * The size the armed block's Cancel is drawn at, which should be the size
    * of the confirm beside it: one size per row. `sm`, the default, is a list
-   * row's; a row of `md` controls passes `md` (kinds of day).
+   * row's; a row of `md` controls passes `md` (trip tags).
    */
   size?: ButtonSize;
 };
@@ -78,7 +78,7 @@ export type InlineConfirmProps = MessageModeProps | CompactModeProps;
  * Must be rendered inside the `<form action={...}>` whose submit it guards —
  * or, given `formAction`, inside another action's form, whose fields it then
  * shares: a row's Delete in the row's edit form, on one line with its Save
- * (kinds of day, seasons, boats), where a form of its own had pushed it onto
+ * (trip tags, boats), where a form of its own had pushed it onto
  * a line by itself.
  * Unarmed, it's always a plain `type="button"` that never submits anything;
  * no request is sent until a deliberate second tap, and none is sent by

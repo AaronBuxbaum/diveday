@@ -313,12 +313,7 @@ export async function sendDueReminders(
     // runs hourly and a cadence bucket is hours wide (the 24-hour reminder is
     // due from T-24h right up to departure, and any 24-hour span contains a
     // whole daytime window), so skipping the quiet passes cannot close it.
-    if (
-      !maySendNow(cadence.kind, now, row.shop.timezone, {
-        startHour: row.shop.sendWindowStartHour,
-        endHour: row.shop.sendWindowEndHour,
-      })
-    ) {
+    if (!maySendNow(cadence.kind, now, row.shop.timezone)) {
       summary.held += 1;
       continue;
     }

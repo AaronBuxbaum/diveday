@@ -44,7 +44,7 @@ describe("Settings is the door to everything in its section", () => {
     // which is the hole `sourcery-ai` found on #1939.
     //
     // Settings' own sub-pages are the deliberate exception, and the reason the
-    // fix is not a plain set equality: `/settings/boats`, `/settings/seasons`,
+    // fix is not a plain set equality: `/settings/boats`, `/settings/trip-tags`,
     // `/settings/security` and a dozen more are surfaces *under* this page
     // rather than destinations, so the registry does not know them and should
     // not. Anything else — a door to a top-level `/shop/<slug>/<something>`

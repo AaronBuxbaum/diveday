@@ -2,11 +2,9 @@ import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "./clock";
 import {
   DEFAULT_FLY_SAFE_HOURS,
-  FLY_SAFE_LIMITS,
   type FlySafeInput,
   flySafeFrom,
   flySafeMessageKey,
-  parseFlySafeHours,
 } from "./fly-safe";
 import { formatWeekdayTime } from "./format";
 import { DEPARTURE_BUFFER_MS } from "./trips";
@@ -155,9 +153,7 @@ describe("flySafeFrom", () => {
     // and the hours alone, which left the one thing that was wrong unpinned:
     // the day's record is short of its plan, so tank one's exit is the last
     // *recorded* one rather than the last one, and the clock started there. On
-    // a two-tank morning charter that is about two and a half hours early, and
-    // at the settable minimum of 18 repetitive hours it lands under DAN's
-    // floor.
+    // a two-tank morning charter that is about two and a half hours early.
     const exit = new Date("2026-07-25T20:10:00.000Z");
     const result = flySafeFrom({
       executedDives: [{ diveNumber: 1, exitedAt: exit }],
@@ -265,9 +261,8 @@ describe("flySafeFrom", () => {
     // The hole this pins: the branch gated on `hasReturned` — scheduled return
     // plus the buffer, because boats run late — and then anchored on the bare
     // scheduled time, computing as if the same boat tied up punctually. A day
-    // due back at 22:00Z that comes in at 23:30Z read an hour early, and at the
-    // settable minimum of 18 repetitive hours that is a real interval of 17,
-    // under DAN's floor in a sentence that ends by citing DAN.
+    // due back at 22:00Z that comes in at 23:30Z read an hour early, in a
+    // sentence that ends by citing DAN.
     const result = flySafeFrom({
       executedDives: [],
       plannedDives: 2,
@@ -388,34 +383,18 @@ describe("flySafeFrom", () => {
   });
 });
 
-describe("parseFlySafeHours", () => {
-  it("accepts whole hours inside DAN's floors and the three-day ceiling", () => {
-    expect(parseFlySafeHours({ single: "18", repetitive: "24" })).toEqual({
-      single: 18,
-      repetitive: 24,
-    });
-    expect(parseFlySafeHours({ single: 12, repetitive: 18 })).toEqual({
-      single: 12,
-      repetitive: 18,
-    });
+describe("DEFAULT_FLY_SAFE_HOURS", () => {
+  it("is the fixed rule: 18 hours after one dive, 24 after more", () => {
+    expect(DEFAULT_FLY_SAFE_HOURS).toEqual({ single: 18, repetitive: 24 });
   });
 
-  it("refuses a value under DAN's minimum, over the ceiling, fractional, or missing", () => {
-    expect(parseFlySafeHours({ single: "11", repetitive: "24" })).toBeNull();
-    expect(parseFlySafeHours({ single: "18", repetitive: "17" })).toBeNull();
-    expect(parseFlySafeHours({ single: "18", repetitive: "73" })).toBeNull();
-    expect(parseFlySafeHours({ single: "18.5", repetitive: "24" })).toBeNull();
-    expect(parseFlySafeHours({ single: "18" })).toBeNull();
-    expect(parseFlySafeHours({ single: "abc", repetitive: "24" })).toBeNull();
+  it("sits at or above DAN's published minimums so the attribution stays true", () => {
+    expect(DEFAULT_FLY_SAFE_HOURS.single).toBeGreaterThanOrEqual(12);
+    expect(DEFAULT_FLY_SAFE_HOURS.repetitive).toBeGreaterThanOrEqual(18);
   });
 
-  it("refuses a repetitive wait shorter than the single one", () => {
-    expect(parseFlySafeHours({ single: "30", repetitive: "24" })).toBeNull();
-  });
-
-  it("floors at DAN's published minimums so the attribution stays true", () => {
-    expect(FLY_SAFE_LIMITS.single.min).toBe(12);
-    expect(FLY_SAFE_LIMITS.repetitive.min).toBe(18);
+  it("never lets the repetitive reading shorten a wait", () => {
+    expect(DEFAULT_FLY_SAFE_HOURS.repetitive).toBeGreaterThanOrEqual(DEFAULT_FLY_SAFE_HOURS.single);
   });
 });
 

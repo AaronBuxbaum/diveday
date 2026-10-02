@@ -97,7 +97,7 @@ describe("the Follow door's line", () => {
     return screen.getByRole("link", { name: "Follow" });
   }
 
-  it("is drawn the way the season band's link is: sm, flush with the words above", () => {
+  it("is drawn as a quiet link: sm, flush with the words above", () => {
     expect(follow().className).toBe(buttonClass({ variant: "link", size: "sm", flush: true }));
   });
 

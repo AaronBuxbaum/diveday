@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TideWindow } from "@/lib/tides";
-import { diverTranslator } from "./messages";
 import { staffTranslator } from "./staff-messages";
-import { diverTideWindowText, staffTideWindowText } from "./tide-labels";
+import { staffTideWindowText } from "./tide-labels";
 
 /**
  * The endpoint behind this sentence is `predictions` at `hilo` interval over
@@ -44,21 +43,13 @@ describe("the tide sentence", () => {
     );
   });
 
-  it("keeps the diver's line in step with the staff line, in both languages", () => {
-    const window = turnAt(74, "low");
-    expect(diverTideWindowText(diverTranslator("en-US"), window, null, "1:19 PM")).toContain(
-      "Next low water at 1:19 PM",
-    );
-    for (const line of [
-      staffTideWindowText(staffTranslator("es-ES"), window, null, "13:19"),
-      diverTideWindowText(diverTranslator("es-ES"), window, null, "13:19"),
-    ]) {
-      expect(line).toContain("Próxima bajamar a las 13:19");
-      // `Estoa` is Spanish for slack water, and carried the same overclaim the
-      // English prefix did. It survives only where the *shop* said the site
-      // dives best at slack, which is the shop's own words about its own reef.
-      expect(line).not.toContain("Estoa a las");
-    }
+  it("says the same thing in Spanish", () => {
+    const line = staffTideWindowText(staffTranslator("es-ES"), turnAt(74, "low"), null, "13:19");
+    expect(line).toContain("Próxima bajamar a las 13:19");
+    // `Estoa` is Spanish for slack water, and carried the same overclaim the
+    // English prefix did. It survives only where the *shop* said the site
+    // dives best at slack, which is the shop's own words about its own reef.
+    expect(line).not.toContain("Estoa a las");
   });
 
   it("still says the shop's own preference in the shop's own terms", () => {

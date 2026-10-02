@@ -7,15 +7,15 @@ import { DEPARTURE_BUFFER_MS, hasReturned } from "./trips";
  *
  * Informs, never gates. DAN's published guidance is a *minimum* preflight
  * surface interval — 12 hours after a single no-decompression dive, 18 after
- * repetitive dives or multiple days of diving — and a shop may ask its divers
- * to wait longer. So the hours are the shop's own pair (`shops.fly_safe_hours_*`,
- * defaults 18 and 24), and the floors below are DAN's minimums. The sentence
- * a diver reads names the shop as the author of the figure and DAN as the
+ * repetitive dives or multiple days of diving — and DiveDay asks for longer:
+ * 18 and 24 hours, {@link DEFAULT_FLY_SAFE_HOURS}, one fixed rule for every
+ * shop. (It was a per-shop setting, `shops.fly_safe_hours_*`, until ADR
+ * 20261001-logbook cut it; the defaults it shipped with are the rule now.)
+ * The sentence a diver reads names the shop as the one asking and DAN as the
  * practice behind it ("{shop} asks you to wait at least until {when} before
  * flying: 24 hours after your last dive with us, following DAN's guidance")
  * rather than putting the figure in DAN's mouth: DAN publishes 12 and 18, so
- * a sentence reading "24 hours, by DAN's guidance" misquotes it, and a setting
- * under DAN's floor would leave even the weaker claim false.
+ * a sentence reading "24 hours, by DAN's guidance" misquotes it.
  *
  * For the same reason the lead-in states the interval rather than a verdict.
  * It read "Fly-safe from {when}:" until issue #1433: a minimum that lowers DCS
@@ -73,9 +73,8 @@ import { DEPARTURE_BUFFER_MS, hasReturned } from "./trips";
  * a pressurised cabin is only the common case. A shop with a mountain road
  * between the dock and the airport has divers whose real exposure is the drive,
  * hours before the flight this names, and nothing in DiveDay knows the road is
- * there. A shop whose divers take one asks them for more than the defaults;
- * the diver's sentence stays a sentence about flying, because naming a road
- * DiveDay cannot see would be the same guess in longer words.
+ * there. The diver's sentence stays a sentence about flying, because naming a
+ * road DiveDay cannot see would be the same guess in longer words.
  *
  * Two things this deliberately does not do. It never computes from a dive
  * profile — depth and bottom time are a computer's business, and DiveDay is
@@ -103,22 +102,12 @@ export type FlySafeReason = "one_dive" | "dives_recorded" | "dives_planned" | "e
 
 export type FlySafeHours = { single: number; repetitive: number };
 
-export const DEFAULT_FLY_SAFE_HOURS: FlySafeHours = { single: 18, repetitive: 24 };
-
 /**
- * What each field accepts — the Settings form's `min`/`max`, the action that
- * refuses a forged submission, and the table's CHECK constraints all read from
- * here. The floors are DAN's own minimums (see above); the ceiling is three
- * days, past which the number has stopped describing a preflight interval.
+ * **The fixed rule.** Both figures sit above DAN's published minimums (12 and
+ * 18), and the repetitive wait is longer than the single one, so reaching
+ * `repetitive` can only ever lengthen a wait — `fly-safe.test.ts` pins both.
  */
-export const FLY_SAFE_LIMITS = {
-  single: { min: 12, max: 72 },
-  repetitive: { min: 18, max: 72 },
-} as const satisfies Record<keyof FlySafeHours, { min: number; max: number }>;
-
-export const FLY_SAFE_FIELDS = ["single", "repetitive"] as const satisfies ReadonlyArray<
-  keyof FlySafeHours
->;
+export const DEFAULT_FLY_SAFE_HOURS: FlySafeHours = { single: 18, repetitive: 24 };
 
 /**
  * How far back "multiple days of diving" reaches: this many **local calendar
@@ -137,31 +126,11 @@ export const FLY_SAFE_FIELDS = ["single", "repetitive"] as const satisfies Reado
  * Two rather than one because a diver on a three-day package who takes a day
  * off the boat is still diving multiple days; more than two starts describing
  * a holiday rather than a surface interval. Erring wide costs a diver hours
- * ashore and nothing else: {@link parseFlySafeHours} refuses a `repetitive`
- * shorter than a `single`, so reading repetitive can only ever lengthen a
+ * ashore and nothing else: {@link DEFAULT_FLY_SAFE_HOURS}'s `repetitive` is
+ * longer than its `single`, so reading repetitive can only ever lengthen a
  * wait.
  */
 export const FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS = 2;
-
-/**
- * A submitted pair, or `null` if either is not a whole number inside its own
- * bounds, or the repetitive wait is shorter than the single one — a shop that
- * asked less of a two-tank day than of a one-tank day has typed them the wrong
- * way round, and the honest answer is to refuse rather than to swap them.
- */
-export function parseFlySafeHours(
-  values: Partial<Record<keyof FlySafeHours, unknown>>,
-): FlySafeHours | null {
-  const parsed = {} as FlySafeHours;
-  for (const field of FLY_SAFE_FIELDS) {
-    const hours = Number(values[field]);
-    const { min, max } = FLY_SAFE_LIMITS[field];
-    if (!Number.isInteger(hours) || hours < min || hours > max) return null;
-    parsed[field] = hours;
-  }
-  if (parsed.repetitive < parsed.single) return null;
-  return parsed;
-}
 
 export type FlySafeInput = {
   /**
@@ -183,6 +152,7 @@ export type FlySafeInput = {
    */
   divedRecently: boolean;
   now: Date;
+  /** Always {@link DEFAULT_FLY_SAFE_HOURS} in the product; a parameter so the arithmetic stays pure. */
   hours: FlySafeHours;
 };
 
@@ -211,8 +181,8 @@ export type FlySafeResult = {
  *   {@link FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS}. A record short of its plan is a
  *   crew that logged one tank of two more often than it is a day cut to one
  *   tank, and the longer wait is the one that costs a diver nothing if wrong.
- *   None of the three can ever *shorten* a wait: {@link parseFlySafeHours}
- *   refuses a `repetitive` shorter than `single`, so reaching repetitive is
+ *   None of the three can ever *shorten* a wait: {@link DEFAULT_FLY_SAFE_HOURS}
+ *   has a `repetitive` longer than its `single`, so reaching repetitive is
  *   monotonic by construction.
  * - **Anchor.** The latest recorded exit, provided the record is whole — as
  *   many dives logged as the departure planned, none of them later-numbered
@@ -251,9 +221,8 @@ export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
   // without its exit, and the basis above already reads it that way. The
   // anchor has to agree: on a two-tank morning charter with only tank one
   // logged, its exit is around 09:45 against a 12:15 return, so anchoring
-  // there hands the diver a time two and a half hours early — at the
-  // settable minimum of 18 repetitive hours, a real interval of about 15.5,
-  // under DAN's floor in a sentence that ends by citing DAN.
+  // there hands the diver a time two and a half hours early, in a sentence
+  // that ends by citing DAN.
   const recordShortOfPlan = executedDives.length < plannedDives;
 
   if (lastExit && !laterDiveUntimed && !recordShortOfPlan) {

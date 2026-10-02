@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /**
- * **The "Add a …" panel under a settings list** — kinds of day, seasons,
+ * **The "Add a …" panel under a settings list** — trip tags and
  * boats: a dashed, sunken box holding the form that adds one more row to the
  * list directly above it.
  *

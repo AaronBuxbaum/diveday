@@ -5,7 +5,7 @@ import type { DbExecutor } from "./client";
 import { tripLenses, trips } from "./schema";
 
 /**
- * **The demo shop's own words for its kinds of day** — ADR
+ * **The demo shop's trip tags** — ADR
  * 20260904-reef-all-the-way-down, decision 2 (issue #1162).
  *
  * Six words in the order the canvas draws its rail, which is also the order

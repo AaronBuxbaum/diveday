@@ -132,12 +132,6 @@ export type AfterStateProps = {
      */
     brandColor: string | null;
     brandDisplayFont: BrandDisplayFontCode | null;
-    /**
-     * How this shop signs off a finished day (issue #1212). Read only where
-     * the crew wrote nothing of their own: a standing sentence never talks
-     * over one somebody wrote today.
-     */
-    signOffNote: string | null;
   };
   /** The day's site, drawn in the illustration hand on the record's face. */
   siteMark: SiteMarkCode;
@@ -470,11 +464,6 @@ export function AfterState({
           </blockquote>
           <figcaption className="mt-2 text-sm text-muted">{t("recap.fromYourCrew")}</figcaption>
         </figure>
-      ) : shop.signOffNote?.trim() ? (
-        // The shop's standing sign-off, in the shop's own words and only where
-        // the crew wrote none for this diver (issue #1212). Uncaptioned: it is
-        // a sentence, not a quotation the reader has to attribute.
-        <p className="mt-10 text-base print:hidden">{shop.signOffNote.trim()}</p>
       ) : null}
 
       {/* What a course day left the student holding — before the review ask,

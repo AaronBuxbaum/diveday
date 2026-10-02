@@ -1,5 +1,4 @@
 import { type TidePreference, type TideWindow, tidePreferenceMet } from "@/lib/tides";
-import type { DiverTranslator } from "./messages";
 import type { StaffTranslator } from "./staff-messages";
 
 /**
@@ -8,15 +7,13 @@ import type { StaffTranslator } from "./staff-messages";
  *
  * `src/lib/tides.ts` hands back codes (a phase, the nearest turn, whether the
  * shop's preference is met); these two helpers are where the codes become the
- * sentence a captain reads on three staff surfaces and a diver reads on one.
- * Each bundle owns its own template — the staff line says "this departure",
- * the diver line says "the boat" — and the phase and preference words live
- * inside the ICU `select`s rather than in a second map, so a translator sees
- * the whole sentence at once.
+ * sentence a captain reads on three staff surfaces. The phase and preference
+ * words live inside the ICU `select`s rather than in a second map, so a
+ * translator sees the whole sentence at once.
  *
  * The caller formats `time` in the shop's zone before calling; a helper that
  * took a `Date` would need the zone and locale too, and the two surfaces
- * already have `formatTime` in hand.
+ * already has `formatTime` in hand.
  */
 
 type TideWindowParams = {
@@ -67,15 +64,6 @@ export function staffTideWindowText(
   return t("shared.tide.window", params(window, preference, time));
 }
 
-export function diverTideWindowText(
-  t: DiverTranslator,
-  window: TideWindow,
-  preference: TidePreference | null | undefined,
-  time: string,
-): string {
-  return t("trip.tideWindow", params(window, preference, time));
-}
-
 /**
  * **Whose water the sentence above is** (issue #1732).
  *
@@ -86,14 +74,9 @@ export function diverTideWindowText(
  * whole point of the editor's echo, and putting them back on the line a crew
  * reads would undo it.
  *
- * Both surfaces call the same shape and each bundle owns its own words, the
- * way the sentence above does. A `null` station means no call: the sentence
- * stands and the footnote is simply absent.
+ * A `null` station means no call: the sentence stands and the footnote is
+ * simply absent.
  */
 export function staffTideStationText(t: StaffTranslator, station: string): string {
   return t("shared.tide.station", { station });
-}
-
-export function diverTideStationText(t: DiverTranslator, station: string): string {
-  return t("trip.tideStation", { station });
 }

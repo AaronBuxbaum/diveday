@@ -110,21 +110,6 @@ arrival queue is its own array on the envelope, and its writers cannot reach `ro
 all. A person is aboard when somebody at the rail says so. ADR
 [20260907-the-counter-survives-offline](../architecture/decisions/20260907-the-counter-survives-offline.md).
 
-## The reef's calendar (delivered 2026-09-07)
-
-N-02 of the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1485). A shop writes
-the weeks it plans its year around in its own words — lobster mini-season, a grouper aggregation,
-turtle nesting, a lionfish derby — at Settings → Seasons and events: a name, its own sentence, an
-inclusive date range, and optionally one of the shop's kinds of day. While a window is live the
-storefront carries a band above the schedule with those words and a link to the narrowed board; a
-month before it opens, the shop's own queue carries one `later` row about it and then goes quiet
-once the week arrives. The dates are calendar dates with no instant in them and "live" is asked
-against today in the shop's timezone (`src/lib/season-events.ts`); `season_events` carries
-`deleted_at` and a partial index like every other table a user can delete from. DiveDay supplies the
-frame and nothing inside it — there is no seeded catalog of seasons, on the same argument as a dive
-site's briefing (ADR
-[20260813-dive-site-briefings-are-the-shops-own-words](../architecture/decisions/20260813-dive-site-briefings-are-the-shops-own-words.md)).
-
 ## Moon and light on night departures (delivered 2026-09-07)
 
 N-03 from the 2026-09-07 improvement-ideas decision sheet (issue #1467). Any departure still out at
@@ -229,8 +214,8 @@ tide station and when it dives best (`any` / `slack` / `flood` / `ebb`); the sta
 the board's add panel and the departure page then say one line — "Next high water at 9:40 AM; this
 departure reaches the site on the flood" — read at the boat's own arrival there (`src/lib/tides.ts` for the
 window, `src/lib/departure-tides.ts` for the composition, `src/lib/tide-predictions.ts` for the
-seam). Divers read the same line on the public departure page only once the shop switches it on in
-Settings (`shops.tide_window_public`, default off). Informs; gates nothing. The demo reads both Key
+seam). Staff only: the diver-facing line and its Settings switch were cut by ADR
+[20261001-logbook](../architecture/decisions/20261001-logbook.md). Informs; gates nothing. The demo reads both Key
 Largo sites against Carysfort Reef (8723583). ADR
 [20260907-noaa-tide-predictions](../architecture/decisions/20260907-noaa-tide-predictions.md).
 
@@ -239,8 +224,8 @@ Largo sites against Carysfort Reef (8723583). ADR
 N-04 from the 2026-09-07 improvement-ideas decision sheet (issue #1425). Once the crew has logged
 the day, the thread's after-state and the `trip_recap` email say "{shop} asks you to wait at least
 until Wednesday 6:10 PM before flying: 24 hours after your last dive with us, following DAN's
-guidance" — the shop's own pair of hours (`shops.fly_safe_hours_single` / `_repetitive`, the
-Settings row headed **Earliest flight**, floored at DAN's 12 and 18), counted from the last recorded
+guidance" — DiveDay's fixed pair of hours (`DEFAULT_FLY_SAFE_HOURS`, 18 single and 24 repetitive,
+above DAN's 12 and 18; the per-shop Settings row was cut by ADR 20261001-logbook), counted from the last recorded
 exit by `src/lib/fly-safe.ts`, or from the buffered return once the boat is home; repetitive
 whenever the day held more than one dive by record or by plan. Where the figure rests on something
 the diver cannot check — a plan of more than one dive the log is short of, or a dive day in the two
@@ -1645,8 +1630,7 @@ instead of their ordinary success code. Pinned by `_lib/status.test.ts`,
 Slice 6i of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
 decision 8. `/s/[shopSlug]` opens on **the shop**, not on the word "Schedule": the name at display
 scale as the page's `h1`, the shop's own tagline, the review aggregate — drawn stars in the accent,
-the figure and the count — and one conservation line joining every commitment the shop ticked,
-with the "stated by the shop, not verified by DiveDay" guard intact behind it. The band renders
+the figure and the count. The band renders
 **only what the shop authored**: no tagline it
 has not written, no rating nobody has left, no DiveDay filler in place of either. Day zero is a
 name and nothing else, and it is a shape rather than a failure state.

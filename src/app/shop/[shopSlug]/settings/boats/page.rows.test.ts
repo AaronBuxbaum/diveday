@@ -21,7 +21,7 @@ function descriptionControls(source: string): string[] {
  * labels were placeholders, which a box clips and a keystroke erases: at 1280
  * the 128px capacity box read "Capacity (se", and at 390 the description box
  * hid twenty characters of its own label (K-145, SETTINGS-2-03). Each box now
- * stands under a `Field` caption, as the seasons form beside it does.
+ * stands under a `Field` caption.
  */
 describe("the boats add form", () => {
   it("captions every box with a Field, not a placeholder", () => {

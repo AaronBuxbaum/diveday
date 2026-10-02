@@ -1,8 +1,8 @@
 {
-  "heading": "Kinds of day",
+  "heading": "Trip tags",
   "nameLabel": "Name",
-  "nameHint": "Divers see this word on your schedule and can filter by it.",
-  "createTitle": "Add a kind of day",
+  "nameHint": "Divers see this tag on your schedule and can filter by it.",
+  "createTitle": "Add a trip tag",
   "submit": "Save",
   "submitting": "Saving...",
   "add": "Add",
@@ -11,13 +11,12 @@
   "deleteConfirm": "Delete",
   "deleteCancel": "Never mind",
   "deletePending": "Deleting…",
-  "deleteDepartures": "{count, plural, one {# departure carries this word and loses it.} other {# departures carry this word and lose it.}}",
-  "noLenses": "No kinds of day yet.",
-  "created": "Kind of day added.",
-  "updated": "Kind of day saved.",
-  "deleted": "Kind of day deleted.",
-  "invalid": "Give the kind of day a name.",
-  "tripFieldLabel": "Kind of day",
-  "tripFieldNone": "None",
-  "tripFieldFromSeason": "From {season}"
+  "deleteDepartures": "{count, plural, one {# departure carries this tag and loses it.} other {# departures carry this tag and lose it.}}",
+  "noLenses": "No trip tags yet.",
+  "created": "Trip tag added.",
+  "updated": "Trip tag saved.",
+  "deleted": "Trip tag deleted.",
+  "invalid": "Give the trip tag a name.",
+  "tripFieldLabel": "Trip tag",
+  "tripFieldNone": "None"
 }

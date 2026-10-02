@@ -35,10 +35,9 @@ import {
   people,
   priorVisits,
   recapPhotos,
-  shops,
   trips,
 } from "./schema";
-import { setShopCurrency, setShopFlySafeHours, setShopReviewUrl } from "./shops";
+import { setShopCurrency, setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -61,18 +60,14 @@ async function recapContext() {
   ]);
   if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
   const bookingId = party.bookings[0].bookingId;
-  // **This shop sends around the clock**, so the cases below are about the
-  // four-hour pause and nothing else. A recap is also held outside the shop's
-  // own civil hours (`src/lib/send-window.ts`, issue #697) — the reef boat ties
-  // up at 6 PM, so its recap comes due at 11 PM and a default shop would hold
-  // it until morning. That rule has its own cases at the bottom of this file;
-  // mixing it into every delay assertion would test two things at once.
-  await db
-    .update(shops)
-    .set({ sendWindowStartHour: 0, sendWindowEndHour: 24 })
-    .where(eq(shops.id, shop.id));
-  // Five hours after the reef trip ends clears the mandatory four-hour pause.
-  const afterTrip = new Date(reef.endsAt.getTime() + 5 * 60 * 60 * 1000);
+  // **The morning after**, so the cases below are about the four-hour pause
+  // and nothing else. A recap is also held outside the shop's own civil hours
+  // (`src/lib/send-window.ts`, issue #697) — the reef boat ties up at 6 PM, so
+  // its recap comes due at 11 PM and is held until morning. That rule has its
+  // own cases at the bottom of this file; mixing it into every delay assertion
+  // would test two things at once. Fifteen hours after the boat ties up is
+  // 9 AM local: past the mandatory four-hour pause and inside the window.
+  const afterTrip = new Date(reef.endsAt.getTime() + 15 * 60 * 60 * 1000);
   return { db, shop, reef, bookingId, afterTrip };
 }
 
@@ -823,10 +818,10 @@ describe("sendDueRecaps", () => {
   /**
    * The email carries the same fly-safe instant the after-state renders
    * (issue #1425): counted from the last exit the crew recorded, by the
-   * shop's own hours — and nothing at all when nothing was recorded and the
+   * fixed hours (`DEFAULT_FLY_SAFE_HOURS`) — and nothing at all when nothing was recorded and the
    * scheduled return is what the clock would have to guess from.
    */
-  it("carries when the diver may fly, counted from the last recorded exit by the shop's hours", async () => {
+  it("carries when the diver may fly, counted from the last recorded exit by the fixed hours", async () => {
     const { db, shop, reef, bookingId, afterTrip } = await recapContext();
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("no staff");
@@ -845,8 +840,6 @@ describe("sendDueRecaps", () => {
       });
       expect(recorded.ok).toBe(true);
     }
-    await setShopFlySafeHours(db, shop.id, { single: 18, repetitive: 30 });
-
     const email = fakeEmail();
     await sendDueRecaps(db, {
       now: afterTrip,
@@ -857,8 +850,8 @@ describe("sendDueRecaps", () => {
     const mine = email.sent.find((n) => n.kind === "trip_recap" && n.bookingId === bookingId);
     if (mine?.kind !== "trip_recap") throw new Error("recap notification missing");
     expect(mine.flySafe).toEqual({
-      from: new Date(lastExit.getTime() + 30 * 60 * 60 * 1000),
-      hours: 30,
+      from: new Date(lastExit.getTime() + 24 * 60 * 60 * 1000),
+      hours: 24,
       basis: "repetitive",
       reason: "dives_recorded",
       anchor: "last_dive",
@@ -936,7 +929,6 @@ describe("sendDueRecaps", () => {
     });
     expect(todayDive.ok).toBe(true);
     await db.update(trips).set({ plannedDives: 1 }).where(eq(trips.id, reef.id));
-    await setShopFlySafeHours(db, shop.id, { single: 12, repetitive: 24 });
 
     const email = fakeEmail();
     await sendDueRecaps(db, {
@@ -951,10 +943,10 @@ describe("sendDueRecaps", () => {
       return sent.flySafe;
     };
 
-    // Rae's first day in the water: 12 hours, the shop's single-dive figure.
+    // Rae's first day in the water: 18 hours, the single-dive figure.
     expect(flySafeFor(bookingId)).toEqual({
-      from: new Date(lastExit.getTime() + 12 * 60 * 60 * 1000),
-      hours: 12,
+      from: new Date(lastExit.getTime() + 18 * 60 * 60 * 1000),
+      hours: 18,
       basis: "single",
       reason: "one_dive",
       anchor: "last_dive",
@@ -1024,11 +1016,10 @@ describe("sendDueRecaps", () => {
       });
       expect(todayDive.ok).toBe(true);
       await db.update(trips).set({ plannedDives: 1 }).where(eq(trips.id, reef.id));
-      await setShopFlySafeHours(db, shop.id, { single: 12, repetitive: 24 });
 
       expect((await getRecapPageData(db, bookingId))?.flySafe, status).toMatchObject({
         basis: "single",
-        hours: 12,
+        hours: 18,
       });
       void afterTrip;
     }
@@ -1163,16 +1154,17 @@ describe("sendDueRecaps", () => {
     expect(unpauseResult.ok).toBe(true);
     expect(unpauseResult.autoSendAt?.getTime()).toBe(reef.endsAt.getTime() + 4 * 60 * 60 * 1000);
 
-    // Unpause late (5 hours after trip ends, so unpause + 1h = 6h is later)
-    const lateUnpause = new Date(reef.endsAt.getTime() + 5 * 60 * 60 * 1000);
+    // Unpause late (14 hours after trip ends — 8 AM next morning, inside the
+    // send window — so unpause + 1h = 15h is later)
+    const lateUnpause = new Date(reef.endsAt.getTime() + 14 * 60 * 60 * 1000);
     const lateResult = await unpauseTripRecapAutoSend(db, shop.id, reef.id, lateUnpause);
     expect(lateResult.ok).toBe(true);
     expect(lateResult.autoSendAt?.getTime()).toBe(lateUnpause.getTime() + 1 * 60 * 60 * 1000);
 
-    // At 5h30m (before unpause + 1h), auto send should not trigger
+    // At 14h30m (before unpause + 1h), auto send should not trigger
     const emailBefore = fakeEmail();
     await sendDueRecaps(db, {
-      now: new Date(reef.endsAt.getTime() + 5.5 * 60 * 60 * 1000),
+      now: new Date(reef.endsAt.getTime() + 14.5 * 60 * 60 * 1000),
       emailProvider: emailBefore.provider,
       smsProvider: fakeSms().provider,
       appOrigin: ORIGIN,
@@ -1181,10 +1173,10 @@ describe("sendDueRecaps", () => {
       emailBefore.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId),
     ).toHaveLength(0);
 
-    // At 6h05m (after unpause + 1h), auto send triggers
+    // At 15h06m (after unpause + 1h), auto send triggers
     const emailAfter = fakeEmail();
     await sendDueRecaps(db, {
-      now: new Date(reef.endsAt.getTime() + 6.1 * 60 * 60 * 1000),
+      now: new Date(reef.endsAt.getTime() + 15.1 * 60 * 60 * 1000),
       emailProvider: emailAfter.provider,
       smsProvider: fakeSms().provider,
       appOrigin: ORIGIN,
@@ -1354,11 +1346,7 @@ describe("recaps against the shop's civil hours", () => {
   /** The reef boat ties up at 6 PM local, so its recap comes due at 11 PM. */
   async function nightContext() {
     const ctx = await recapContext();
-    await ctx.db
-      .update(shops)
-      .set({ sendWindowStartHour: 8, sendWindowEndHour: 20 })
-      .where(eq(shops.id, ctx.shop.id));
-    return ctx;
+    return { ...ctx, afterTrip: new Date(ctx.reef.endsAt.getTime() + 5 * 60 * 60 * 1000) };
   }
 
   it("holds a recap that comes due in the middle of the night", async () => {

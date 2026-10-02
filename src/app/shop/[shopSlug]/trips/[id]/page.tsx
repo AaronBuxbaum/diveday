@@ -193,7 +193,7 @@ export default async function ManageTripPage({
       // a picker for what the departure will sail on, not a record of what it
       // did (`listBoatsForHistory` is the other one).
       shop.hasBoatDiving ? listBoats(db, shop.id) : [],
-      // The shop's own words for its kinds of day, for the select beside the
+      // The shop's trip tags, for the select beside the
       // hull (ADR 20260904-reef-all-the-way-down, decision 2).
       listTripLenses(db, shop.id),
       canPersonManagePaymentSettings(db, shop.id, session.user.personId),

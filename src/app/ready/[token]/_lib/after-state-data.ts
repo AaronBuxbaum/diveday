@@ -104,7 +104,6 @@ export async function buildAfterStateProps(input: {
       reviewUrl: shop.reviewUrl,
       brandColor: shop.brandColor,
       brandDisplayFont: shop.brandDisplayFont,
-      signOffNote: shop.signOffNote,
     },
     trip,
     course: data.course,
